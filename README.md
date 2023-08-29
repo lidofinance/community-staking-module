@@ -32,6 +32,13 @@ yarn test
 forge install rari-capital/solmate
 ```
 
+- Deploy to local fork via Hardhat.
+
+```bash
+anvil
+npx hardhat run --network localhost scripts/deploy.ts
+```
+
 ### Notes
 
 Whenever you install new libraries using Foundry, make sure to update your
