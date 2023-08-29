@@ -3,9 +3,12 @@
   "version": "0.0.1",
   "description": "Community Staking Module for Lido protocol",
   "repository": "https://github.com/lidofinance/community-staking-module.git",
-  "author": "Community Staking Team <cms@lido.fi>",
+  "author": "Community Staking Team <csm@lido.fi>",
   "license": "GPL-3.0",
   "private": true,
+  "scripts": {
+    "test": "hardhat test"
+  },
   "dependencies": {
     "hardhat": "^2.17.2"
   },
