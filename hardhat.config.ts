@@ -12,7 +12,15 @@ function getRemappings() {
 }
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.21",
+  solidity: {
+    version: "0.8.21",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 1_000,
+      },
+    },
+  },
   paths: {
     sources: "./src", // Use ./src rather than ./contracts as Hardhat expects
     cache: "./cache_hardhat", // Use a different cache for Hardhat than Foundry
