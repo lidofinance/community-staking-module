@@ -1,22 +1,49 @@
 ---
-name: test
+name: Tests and Checks
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  pull_request:
 
 env:
   FOUNDRY_PROFILE: ci
 
 jobs:
-  check:
-    strategy:
-      fail-fast: true
+  security:
+    uses: lidofinance/linters/.github/workflows/security.yml@master
+  actions:
+    uses: lidofinance/linters/.github/workflows/actions.yml@master
 
+  prettier:
+    name: Prettier
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Install node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          cache: yarn
+          cache-dependency-path: "**/yarn.lock"
+
+      - name: Install Node dependencies
+        run: yarn install --immutable
+
+      - name: Prettier check
+        run: yarn lint:check
+
+  foundry:
     name: Foundry project
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
+          persist-credentials: false
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -27,23 +54,19 @@ jobs:
         run: |
           forge --version
           forge build --sizes
-        id: build
 
       - name: Run Forge tests
         run: |
           forge test -vvv
-        id: test
 
   hardhat:
-    strategy:
-      fail-fast: true
-
     name: Hardhat project
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
+          persist-credentials: false
 
       - name: Install node
         uses: actions/setup-node@v3
@@ -57,4 +80,3 @@ jobs:
 
       - name: Run Hardhat tests
         run: yarn test
-        id: hardhat-test
