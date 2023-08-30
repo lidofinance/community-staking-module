@@ -4,7 +4,7 @@ pragma solidity ^0.8.21;
 import "forge-std/Test.sol";
 import "../../src/CommunityStakingModule.sol";
 
-contract Init is Test {
+contract CSMInitTest is Test {
     CommunityStakingModule public csm;
 
     function setUp() public {
