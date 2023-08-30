@@ -5,9 +5,7 @@ async function main() {
 
   await counter.waitForDeployment();
 
-  console.log(
-    `Counter deployed to ${counter.target}`
-  );
+  console.log(`Counter deployed to ${counter.target}`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
