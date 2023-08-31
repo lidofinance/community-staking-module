@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.21;
 
-contract stETHMock {
+contract StETHMock {
     uint256 public totalPooledEther;
     uint256 public totalShares;
     mapping(address => uint256) public shares;

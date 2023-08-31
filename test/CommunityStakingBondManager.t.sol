@@ -5,11 +5,11 @@ pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
 import "../src/CommunityStakingBondManager.sol";
-import { stETHMock } from "./mock_contracts/stETHMock.sol";
+import { StETHMock } from "../src/test_helpers/StETHMock.sol";
 
 contract CommunityStakingBondManagerTest is Test {
     CommunityStakingBondManager public bondManager;
-    stETHMock public stETH;
+    StETHMock public stETH;
 
     address internal stranger;
     address internal alice;
@@ -30,7 +30,7 @@ contract CommunityStakingBondManagerTest is Test {
         address[] memory penalizeRoleMembers = new address[](1);
         penalizeRoleMembers[0] = alice;
 
-        stETH = new stETHMock(8013386371917025835991984);
+        stETH = new StETHMock(8013386371917025835991984);
         stETH.mintShares(address(stETH), 7059313073779349112833523);
         bondManager = new CommunityStakingBondManager(
             2 ether,
@@ -204,7 +204,7 @@ contract CommunityStakingBondManagerTest is Test {
         assertEq(stETH.sharesOf(burner), 32 * 10 ** 18);
     }
 
-    function test_penalize_RevertWhenCallerHasNotRole() public {
+    function test_penalize_RevertWhenCallerHasNoRole() public {
         vm.expectRevert(
             "AccessControl: account 0x0000000000000000000000000000000000000309 is missing role 0xf3c54f9b8dbd8c6d8596d09d52b61d4bdce01620000dd9d49c5017dca6e62158"
         );

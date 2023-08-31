@@ -121,9 +121,9 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
             ,
             ,
             ,
+            ,
             uint64 totalWithdrawnValidators,
             uint64 totalAddedValidators,
-            ,
 
         ) = CSM.getNodeOperator(nodeOperatorId, false);
         return
