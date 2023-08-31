@@ -39,4 +39,12 @@ interface IStETH {
         address _recipient,
         uint256 _sharesAmount
     ) external returns (uint256);
+
+    /**
+     * @notice Moves `_sharesAmount` token shares from the caller's account to the `_recipient` account.
+     */
+    function transferShares(
+        address _recipient,
+        uint256 _sharesAmount
+    ) external returns (uint256);
 }
