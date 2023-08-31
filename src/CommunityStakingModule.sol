@@ -68,8 +68,8 @@ contract CommunityStakingModule is IStakingModule {
     }
 
     function getNodeOperatorIds(
-        uint256 /*_offset*/,
-        uint256 /*_limit*/
+        uint256,
+        /*_offset*/ uint256 /*_limit*/
     ) external view returns (uint256[] memory /*nodeOperatorIds*/) {
         revert("NOT_IMPLEMENTED");
     }
@@ -124,11 +124,11 @@ contract CommunityStakingModule is IStakingModule {
     }
 
     function obtainDepositData(
-        uint256 /*_depositsCount*/,
-        bytes calldata
+        uint256,
+        /*_depositsCount*/ bytes calldata
     )
         external
-        returns (bytes memory /*publicKeys*/, bytes memory /*signatures*/)
+        returns (bytes memory, /*publicKeys*/ bytes memory /*signatures*/)
     {
         revert("NOT_IMPLEMENTED");
     }
