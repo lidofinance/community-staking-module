@@ -83,12 +83,12 @@ contract CommunityStakingBondManagerTest is Test {
         assertEq(bondManager.getBondEth(0), 36324667688196920249);
     }
 
-    function test_getRequiredBondEth_OneWithdrownValidator() public {
+    function test_getRequiredBondEth_OneWithdrawnValidator() public {
         _mock_getNodeOperator(0, alice, 1, 16);
         assertEq(bondManager.getRequiredBondEth(0), 30 ether);
     }
 
-    function test_getRequiredBondEth_NoWithdrownValidators() public {
+    function test_getRequiredBondEth_NoWithdrawnValidators() public {
         _mock_getNodeOperator(0, alice, 0, 16);
         assertEq(bondManager.getRequiredBondEth(0), 32 ether);
     }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.21;
-ˇ
+
 /// @title Lido's Staking Module interface
 interface IStakingModule {
     /// @notice Returns the type of the staking module
