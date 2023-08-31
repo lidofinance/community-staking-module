@@ -18,7 +18,7 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
 
     ILidoLocator private immutable LIDO_LOCATOR;
     ICommunityStakingModule private immutable CSM;
-    ICommunityStakingFeeDistributor private immutable CSFD;
+    ICommunityStakingFeeDistributor private immutable FEE_DISTRIBUTOR;
     uint256 private immutable COMMON_BOND_SIZE;
 
     // Events
@@ -66,12 +66,18 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
 
         _setupRole(DEFAULT_ADMIN_ROLE, _admin);
         for (uint256 i; i < _penalizeRoleMembers.length; ++i) {
+            require(
+                _penalizeRoleMembers[i] != address(0),
+                "penalize role member is zero address"
+            );
             _setupRole(PENALIZE_BOND_ROLE, _penalizeRoleMembers[i]);
         }
 
         LIDO_LOCATOR = ILidoLocator(_lidoLocator);
         CSM = ICommunityStakingModule(_communityStakingModule);
-        CSFD = ICommunityStakingFeeDistributor(_communityStakingFeeDistributor);
+        FEE_DISTRIBUTOR = ICommunityStakingFeeDistributor(
+            _communityStakingFeeDistributor
+        );
 
         COMMON_BOND_SIZE = _commonBondSize;
     }
@@ -158,7 +164,10 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
             msg.sender == rewardAddress,
             "only reward address can claim rewards"
         );
-        uint256 feeRewards = CSFD.distributeFees(rewardsProof, feeReward);
+        uint256 feeRewards = FEE_DISTRIBUTOR.distributeFees(
+            rewardsProof,
+            feeReward
+        );
         bondShares[feeReward.nodeOperatorId] += feeRewards;
         uint256 claimed = _claimBondRewards(
             feeReward.nodeOperatorId,
@@ -196,8 +205,8 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         address rewardAddress,
         uint256 shares
     ) private returns (uint256) {
-        uint256 actualBondShares = getBondShares(0);
-        uint256 requiredBondShares = getRequiredBondShares(0);
+        uint256 actualBondShares = getBondShares(nodeOperatorId);
+        uint256 requiredBondShares = getRequiredBondShares(nodeOperatorId);
         uint256 claimableShares = actualBondShares >= requiredBondShares
             ? actualBondShares - requiredBondShares
             : 0;
