@@ -8,7 +8,7 @@ import { AccessControlEnumerable } from "@openzeppelin/contracts/access/AccessCo
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { ICommunityStakingModule } from "./interfaces/ICommunityStakingModule.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
-import { FeeReward, ICommunityStakingFeeDistributor } from "./interfaces/ICommunityStakingFeeDistributor.sol";
+import { ICommunityStakingFeeDistributor } from "./interfaces/ICommunityStakingFeeDistributor.sol";
 
 contract CommunityStakingBondManager is AccessControlEnumerable {
     bytes32 public constant PENALIZE_BOND_ROLE =
@@ -149,15 +149,18 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
 
     /// @notice Claims full reward (fee + bond) for the given node operator (in stETH)
     /// @param rewardsProof merkle proof of the rewards.
-    /// @param feeReward fee reward leaf
+    /// @param nodeOperatorId id of the node operator to claim rewards for.
+    /// @param cummulativeFeeShares cummulative fee shares for the node operator.
     /// @param sharesToClaim amount of shares to claim.
+    /// @return amount of shares claimed.
     function claimRewards(
         bytes32[] memory rewardsProof,
-        FeeReward calldata feeReward,
+        uint256 nodeOperatorId,
+        uint256 cummulativeFeeShares,
         uint256 sharesToClaim
     ) external returns (uint256) {
         (, , address rewardAddress, , , , , ) = CSM.getNodeOperator(
-            feeReward.nodeOperatorId,
+            nodeOperatorId,
             false
         );
         require(
@@ -166,15 +169,16 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         );
         uint256 feeRewards = FEE_DISTRIBUTOR.distributeFees(
             rewardsProof,
-            feeReward
+            nodeOperatorId,
+            cummulativeFeeShares
         );
-        bondShares[feeReward.nodeOperatorId] += feeRewards;
+        bondShares[nodeOperatorId] += feeRewards;
         uint256 claimed = _claimBondRewards(
-            feeReward.nodeOperatorId,
+            nodeOperatorId,
             rewardAddress,
             sharesToClaim
         );
-        emit RewardsClaimed(feeReward.nodeOperatorId, rewardAddress, claimed);
+        emit RewardsClaimed(nodeOperatorId, rewardAddress, claimed);
         return claimed;
     }
 

@@ -6,7 +6,6 @@ pragma solidity 0.8.21;
 import "forge-std/Test.sol";
 import "../src/CommunityStakingBondManager.sol";
 import { stETHMock } from "./mock_contracts/stETHMock.sol";
-import { FeeReward } from "../src/interfaces/ICommunityStakingFeeDistributor.sol";
 
 contract CommunityStakingBondManagerTest is Test {
     CommunityStakingBondManager public bondManager;
@@ -109,7 +108,8 @@ contract CommunityStakingBondManagerTest is Test {
         uint256 bondSharesBefore = bondManager.getBondShares(0);
         uint256 claimedShares = bondManager.claimRewards(
             new bytes32[](1),
-            FeeReward(0, sharesAsFee),
+            0,
+            sharesAsFee,
             0.05 * 10 ** 18
         );
         vm.stopPrank();
@@ -138,7 +138,8 @@ contract CommunityStakingBondManagerTest is Test {
         uint256 requiredBondShares = bondManager.getRequiredBondShares(0);
         uint256 claimedShares = bondManager.claimRewards(
             new bytes32[](1),
-            FeeReward(0, sharesAsFee),
+            0,
+            sharesAsFee,
             100 * 10 ** 18
         );
         uint256 bondSharesAfter = bondManager.getBondShares(0);
@@ -154,11 +155,7 @@ contract CommunityStakingBondManagerTest is Test {
         _mock_getNodeOperator(0, stranger, 0, 16);
 
         vm.startPrank(alice);
-        bondManager.claimRewards(
-            new bytes32[](1),
-            FeeReward(0, 1),
-            1 * 10 ** 18
-        );
+        bondManager.claimRewards(new bytes32[](1), 0, 1, 1 * 10 ** 18);
         vm.stopPrank();
     }
 
