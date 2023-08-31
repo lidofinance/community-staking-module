@@ -231,9 +231,9 @@ contract CommunityStakingBondManagerTest is Test {
                 uint256(0),
                 rewardAddress,
                 uint256(0),
+                uint256(0),
                 totalWithdrawnValidators,
                 totalAddedValidators,
-                uint256(0),
                 uint256(0)
             )
         );
