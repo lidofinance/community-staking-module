@@ -6,50 +6,45 @@ pragma solidity 0.8.21;
 import "forge-std/Test.sol";
 import "../src/CommunityStakingBondManager.sol";
 import { StETHMock } from "../src/test_helpers/StETHMock.sol";
+import { LidoLocatorMock } from "../src/test_helpers/LidoLocatorMock.sol";
+import { CommunityStakingModuleMock } from "../src/test_helpers/CommunityStakingModuleMock.sol";
+import { CommunityStakingFeeDistributorMock } from "../src/test_helpers/CommunityStakingFeeDistributorMock.sol";
 
 contract CommunityStakingBondManagerTest is Test {
     CommunityStakingBondManager public bondManager;
     StETHMock public stETH;
+    CommunityStakingModuleMock public communityStakingModule;
+    CommunityStakingFeeDistributorMock public communityStakingFeeDistributor;
+    LidoLocatorMock public locator;
 
     address internal stranger;
     address internal alice;
-    address internal locator;
     address internal burner;
-
-    address internal communityStakingModule;
-    address internal communityStakingFeeDistributor;
 
     function setUp() public {
         stranger = address(777);
         alice = address(1);
-        locator = address(2);
         burner = address(21);
-        communityStakingModule = address(4);
-        communityStakingFeeDistributor = address(5);
 
         address[] memory penalizeRoleMembers = new address[](1);
         penalizeRoleMembers[0] = alice;
 
+        communityStakingModule = new CommunityStakingModuleMock();
         stETH = new StETHMock(8013386371917025835991984);
         stETH.mintShares(address(stETH), 7059313073779349112833523);
+        locator = new LidoLocatorMock(address(stETH), burner);
+        communityStakingFeeDistributor = new CommunityStakingFeeDistributorMock(
+            address(locator)
+        );
         bondManager = new CommunityStakingBondManager(
             2 ether,
             alice,
-            locator,
-            communityStakingModule,
-            communityStakingFeeDistributor,
+            address(locator),
+            address(communityStakingModule),
+            address(communityStakingFeeDistributor),
             penalizeRoleMembers
         );
-        vm.mockCall(
-            locator,
-            abi.encodeWithSelector(ILidoLocator.lido.selector),
-            abi.encode(address(stETH))
-        );
-        vm.mockCall(
-            locator,
-            abi.encodeWithSelector(ILidoLocator.burner.selector),
-            abi.encode(burner)
-        );
+        communityStakingFeeDistributor.setBondManager(address(bondManager));
     }
 
     function test_totalBondShares() public {
@@ -83,12 +78,32 @@ contract CommunityStakingBondManagerTest is Test {
     }
 
     function test_getRequiredBondEth_OneWithdrawnValidator() public {
-        _mock_getNodeOperator(0, alice, 1, 16);
+        communityStakingModule.setNodeOperator(
+            0,
+            true,
+            "Alice",
+            alice,
+            16,
+            0,
+            1,
+            16,
+            16
+        );
         assertEq(bondManager.getRequiredBondEth(0), 30 ether);
     }
 
     function test_getRequiredBondEth_NoWithdrawnValidators() public {
-        _mock_getNodeOperator(0, alice, 0, 16);
+        communityStakingModule.setNodeOperator(
+            0,
+            true,
+            "Alice",
+            alice,
+            16,
+            0,
+            0,
+            16,
+            16
+        );
         assertEq(bondManager.getRequiredBondEth(0), 32 ether);
     }
 
@@ -99,10 +114,22 @@ contract CommunityStakingBondManagerTest is Test {
         bondManager.deposit(0, stETH.sharesOf(stranger));
         vm.stopPrank();
 
-        _mock_getNodeOperator(0, stranger, 0, 16);
+        communityStakingModule.setNodeOperator(
+            0,
+            true,
+            "Stranger",
+            stranger,
+            16,
+            0,
+            0,
+            16,
+            16
+        );
 
-        uint256 sharesAsFee = stETH.submit(address(bondManager), 0.1 ether);
-        _mock_distibuteFee(sharesAsFee);
+        uint256 sharesAsFee = stETH.submit(
+            address(communityStakingFeeDistributor),
+            0.1 ether
+        );
 
         vm.startPrank(stranger);
         uint256 bondSharesBefore = bondManager.getBondShares(0);
@@ -129,10 +156,22 @@ contract CommunityStakingBondManagerTest is Test {
         bondManager.deposit(0, stETH.sharesOf(stranger));
         vm.stopPrank();
 
-        _mock_getNodeOperator(0, stranger, 0, 16);
+        communityStakingModule.setNodeOperator(
+            0,
+            true,
+            "Stranger",
+            stranger,
+            16,
+            0,
+            0,
+            16,
+            16
+        );
 
-        uint256 sharesAsFee = stETH.submit(address(bondManager), 0.1 ether);
-        _mock_distibuteFee(sharesAsFee);
+        uint256 sharesAsFee = stETH.submit(
+            address(communityStakingFeeDistributor),
+            0.1 ether
+        );
 
         vm.startPrank(stranger);
         uint256 requiredBondShares = bondManager.getRequiredBondShares(0);
@@ -151,9 +190,19 @@ contract CommunityStakingBondManagerTest is Test {
     }
 
     function test_claimRewards_RevertWhenCallerIsNotRewardAddress() public {
-        vm.expectRevert("only reward address can claim rewards");
-        _mock_getNodeOperator(0, stranger, 0, 16);
+        communityStakingModule.setNodeOperator(
+            0,
+            true,
+            "Stranger",
+            stranger,
+            16,
+            0,
+            0,
+            16,
+            16
+        );
 
+        vm.expectRevert("only reward address can claim rewards");
         vm.startPrank(alice);
         bondManager.claimRewards(new bytes32[](1), 0, 1, 1 * 10 ** 18);
         vm.stopPrank();
@@ -211,41 +260,5 @@ contract CommunityStakingBondManagerTest is Test {
         vm.startPrank(stranger);
         bondManager.penalize(0, 20);
         vm.stopPrank();
-    }
-
-    function _mock_getNodeOperator(
-        uint256 nodeOperatorId,
-        address rewardAddress,
-        uint64 totalWithdrawnValidators,
-        uint64 totalAddedValidators
-    ) internal {
-        vm.mockCall(
-            communityStakingModule,
-            abi.encodeWithSelector(
-                ICommunityStakingModule.getNodeOperator.selector,
-                nodeOperatorId,
-                false
-            ),
-            abi.encode(
-                uint256(0),
-                uint256(0),
-                rewardAddress,
-                uint256(0),
-                uint256(0),
-                totalWithdrawnValidators,
-                totalAddedValidators,
-                uint256(0)
-            )
-        );
-    }
-
-    function _mock_distibuteFee(uint256 shares) internal {
-        vm.mockCall(
-            communityStakingFeeDistributor,
-            abi.encodeWithSelector(
-                ICommunityStakingFeeDistributor.distributeFees.selector
-            ),
-            abi.encode(shares)
-        );
     }
 }
