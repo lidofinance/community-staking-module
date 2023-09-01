@@ -68,8 +68,13 @@ describe("CommunityStakingBondManager", async () => {
       await loadFixture(deployBondManager);
     await stETH.mintShares(stranger, BigInt(32 * 10 ** 18));
 
-    await bondManager.connect(stranger).deposit(0, BigInt(32 * 10 ** 18));
+    const tx = await bondManager
+      .connect(stranger)
+      .deposit(0, BigInt(32 * 10 ** 18));
 
+    expect(tx)
+      .to.emit(bondManager, "BondDeposited")
+      .withArgs(0, stranger.address, BigInt(32 * 10 ** 18));
     expect(await bondManager.getBondShares(0)).to.equal(BigInt(32 * 10 ** 18));
   });
 
@@ -144,11 +149,14 @@ describe("CommunityStakingBondManager", async () => {
     await stETH.submit(feeDistributor.target, BigInt(0.1 * 10 ** 18));
 
     const requiredBondShares = await bondManager.getRequiredBondShares(0);
-    await bondManager
+    const tx = await bondManager
       .connect(stranger)
       .claimRewards([], 0, sharesAsFee, BigInt(100 * 10 ** 18));
     const bondSharesAfter = await bondManager.getBondShares(0);
 
+    expect(tx)
+      .to.emit(bondManager, "RewardsClaimed")
+      .withArgs(0, stranger.address, sharesAsFee);
     expect(await stETH.sharesOf(stranger)).to.be.equal(sharesAsFee);
     expect(bondSharesAfter).to.be.equal(requiredBondShares);
   });
@@ -181,8 +189,13 @@ describe("CommunityStakingBondManager", async () => {
 
     await bondManager.connect(stranger).deposit(0, BigInt(32 * 10 ** 18));
 
-    await bondManager.connect(alice).penalize(0, BigInt(1 * 10 ** 18));
+    const tx = await bondManager
+      .connect(alice)
+      .penalize(0, BigInt(1 * 10 ** 18));
 
+    expect(tx)
+      .to.emit(bondManager, "BondPenalized")
+      .withArgs(0, BigInt(1 * 10 ** 18), BigInt(1 * 10 ** 18));
     expect(await bondManager.getBondShares(0)).to.equal(BigInt(31 * 10 ** 18));
     expect(await stETH.sharesOf(burner)).to.equal(BigInt(1 * 10 ** 18));
   });
@@ -194,8 +207,13 @@ describe("CommunityStakingBondManager", async () => {
 
     await bondManager.connect(stranger).deposit(0, BigInt(32 * 10 ** 18));
 
-    await bondManager.connect(alice).penalize(0, BigInt(33 * 10 ** 18));
+    const tx = await bondManager
+      .connect(alice)
+      .penalize(0, BigInt(33 * 10 ** 18));
 
+    expect(tx)
+      .to.emit(bondManager, "BondPenalized")
+      .withArgs(0, BigInt(33 * 10 ** 18), BigInt(32 * 10 ** 18));
     expect(await bondManager.getBondShares(0)).to.equal(BigInt(0));
     expect(await stETH.sharesOf(burner)).to.equal(BigInt(32 * 10 ** 18));
   });
@@ -207,8 +225,13 @@ describe("CommunityStakingBondManager", async () => {
 
     await bondManager.connect(stranger).deposit(0, BigInt(32 * 10 ** 18));
 
-    await bondManager.connect(alice).penalize(0, BigInt(32 * 10 ** 18));
+    const tx = await bondManager
+      .connect(alice)
+      .penalize(0, BigInt(32 * 10 ** 18));
 
+    expect(tx)
+      .to.emit(bondManager, "BondPenalized")
+      .withArgs(0, BigInt(32 * 10 ** 18), BigInt(32 * 10 ** 18));
     expect(await bondManager.getBondShares(0)).to.equal(BigInt(0));
     expect(await stETH.sharesOf(burner)).to.equal(BigInt(32 * 10 ** 18));
   });

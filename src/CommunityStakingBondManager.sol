@@ -27,7 +27,11 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         address indexed from,
         uint256 shares
     );
-    event BondPenalized(uint256 nodeOperatorId, uint256 shares);
+    event BondPenalized(
+        uint256 nodeOperatorId,
+        uint256 penaltyShares,
+        uint256 coveringShares
+    );
     event RewardsClaimed(
         uint256 nodeOperatorId,
         address indexed to,
@@ -197,7 +201,7 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
             coveringShares
         );
         bondShares[nodeOperatorId] -= coveringShares;
-        emit BondPenalized(nodeOperatorId, coveringShares);
+        emit BondPenalized(nodeOperatorId, shares, coveringShares);
     }
 
     function _stETH() internal view returns (IStETH) {
