@@ -12,7 +12,7 @@ contract StETHMock {
         totalPooledEther = _totalPooledEther;
     }
 
-    function submit(address _sender, uint256 _value) public returns (uint256) {
+    function _submit(address _sender, uint256 _value) public returns (uint256) {
         uint256 sharesToMint = getSharesByPooledEth(_value);
         mintShares(_sender, sharesToMint);
         addTotalPooledEther(_value);

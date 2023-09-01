@@ -10,8 +10,6 @@ import {
 } from "../typechain-types/src/test_helpers";
 import { CommunityStakingBondManager } from "../typechain-types";
 
-// todo: check emmited events
-
 describe("CommunityStakingBondManager", async () => {
   async function deployBondManager() {
     const [stranger, alice] = await ethers.getSigners();
@@ -109,7 +107,7 @@ describe("CommunityStakingBondManager", async () => {
   it("should claim rewards", async () => {
     const { stranger, stETH, bondManager, csm, feeDistributor } =
       await loadFixture(deployBondManager);
-    await stETH.submit(stranger, BigInt(32 * 10 ** 18));
+    await stETH._submit(stranger, BigInt(32 * 10 ** 18));
 
     const sharesAfterSubmit = await stETH.sharesOf(stranger);
     await bondManager.connect(stranger).deposit(0, sharesAfterSubmit);
@@ -119,7 +117,7 @@ describe("CommunityStakingBondManager", async () => {
     const sharesAsFee = await stETH.getSharesByPooledEth(
       BigInt(0.1 * 10 ** 18),
     );
-    await stETH.submit(feeDistributor.target, BigInt(0.1 * 10 ** 18));
+    await stETH._submit(feeDistributor.target, BigInt(0.1 * 10 ** 18));
 
     const bondSharesBefore = await bondManager.getBondShares(0);
     const sharesToClaim = BigInt(0.05 * 10 ** 18);
@@ -136,7 +134,7 @@ describe("CommunityStakingBondManager", async () => {
   it("should claim rewards when amout to claim is hither than rewards", async () => {
     const { stranger, stETH, bondManager, csm, feeDistributor } =
       await loadFixture(deployBondManager);
-    await stETH.submit(stranger, BigInt(32 * 10 ** 18));
+    await stETH._submit(stranger, BigInt(32 * 10 ** 18));
 
     const sharesAfterSubmit = await stETH.sharesOf(stranger);
     await bondManager.connect(stranger).deposit(0, sharesAfterSubmit);
@@ -146,7 +144,7 @@ describe("CommunityStakingBondManager", async () => {
     const sharesAsFee = await stETH.getSharesByPooledEth(
       BigInt(0.1 * 10 ** 18),
     );
-    await stETH.submit(feeDistributor.target, BigInt(0.1 * 10 ** 18));
+    await stETH._submit(feeDistributor.target, BigInt(0.1 * 10 ** 18));
 
     const requiredBondShares = await bondManager.getRequiredBondShares(0);
     const tx = await bondManager
@@ -164,7 +162,7 @@ describe("CommunityStakingBondManager", async () => {
   it("should revert claim rewards when caller is not reward address", async () => {
     const { stranger, alice, stETH, bondManager, csm, feeDistributor } =
       await loadFixture(deployBondManager);
-    await stETH.submit(stranger, BigInt(32 * 10 ** 18));
+    await stETH._submit(stranger, BigInt(32 * 10 ** 18));
 
     const sharesAfterSubmit = await stETH.sharesOf(stranger);
     await bondManager.connect(stranger).deposit(0, sharesAfterSubmit);
@@ -174,7 +172,7 @@ describe("CommunityStakingBondManager", async () => {
     const sharesAsFee = await stETH.getSharesByPooledEth(
       BigInt(0.1 * 10 ** 18),
     );
-    await stETH.submit(feeDistributor.target, BigInt(0.1 * 10 ** 18));
+    await stETH._submit(feeDistributor.target, BigInt(0.1 * 10 ** 18));
     await expect(
       bondManager
         .connect(alice)

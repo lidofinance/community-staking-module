@@ -156,13 +156,12 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
     /// @param nodeOperatorId id of the node operator to claim rewards for.
     /// @param cummulativeFeeShares cummulative fee shares for the node operator.
     /// @param sharesToClaim amount of shares to claim.
-    /// @return amount of shares claimed.
     function claimRewards(
         bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
         uint256 cummulativeFeeShares,
         uint256 sharesToClaim
-    ) external returns (uint256) {
+    ) external {
         (, , address rewardAddress, , , , , ) = CSM.getNodeOperator(
             nodeOperatorId,
             false
@@ -183,7 +182,6 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
             sharesToClaim
         );
         emit RewardsClaimed(nodeOperatorId, rewardAddress, claimed);
-        return claimed;
     }
 
     /// @notice Penalize bond by burning shares

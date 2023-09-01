@@ -54,15 +54,17 @@ contract CommunityStakingBondManagerTest is Test {
 
     function test_totalBondEth() public {
         stETH.mintShares(address(bondManager), 32 * 10 ** 18);
-        assertEq(bondManager.totalBondEth(), 36324667688196920249);
+        assertEq(
+            bondManager.totalBondEth(),
+            stETH.getPooledEthByShares(32 * 10 ** 18)
+        );
     }
 
     function test_deposit() public {
         stETH.mintShares(stranger, 32 * 10 ** 18);
 
-        vm.startPrank(stranger);
+        vm.prank(stranger);
         bondManager.deposit(0, 32 * 10 ** 18);
-        vm.stopPrank();
 
         assertEq(bondManager.getBondShares(0), 32 * 10 ** 18);
     }
@@ -70,137 +72,128 @@ contract CommunityStakingBondManagerTest is Test {
     function test_getBondEth() public {
         stETH.mintShares(stranger, 32 * 10 ** 18);
 
-        vm.startPrank(stranger);
+        vm.prank(stranger);
         bondManager.deposit(0, 32 * 10 ** 18);
-        vm.stopPrank();
 
         assertEq(bondManager.getBondEth(0), 36324667688196920249);
     }
 
     function test_getRequiredBondEth_OneWithdrawnValidator() public {
-        communityStakingModule.setNodeOperator(
-            0,
-            true,
-            "Alice",
-            alice,
-            16,
-            0,
-            1,
-            16,
-            16
-        );
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "Alice",
+            _rewardAddress: alice,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 1,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
         assertEq(bondManager.getRequiredBondEth(0), 30 ether);
     }
 
     function test_getRequiredBondEth_NoWithdrawnValidators() public {
-        communityStakingModule.setNodeOperator(
-            0,
-            true,
-            "Alice",
-            alice,
-            16,
-            0,
-            0,
-            16,
-            16
-        );
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "Alice",
+            _rewardAddress: alice,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 0,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
         assertEq(bondManager.getRequiredBondEth(0), 32 ether);
     }
 
     function test_claimRewards() public {
-        stETH.submit(stranger, 32 ether);
+        stETH._submit(stranger, 32 ether);
 
         vm.startPrank(stranger);
         bondManager.deposit(0, stETH.sharesOf(stranger));
-        vm.stopPrank();
 
-        communityStakingModule.setNodeOperator(
-            0,
-            true,
-            "Stranger",
-            stranger,
-            16,
-            0,
-            0,
-            16,
-            16
-        );
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "Stranger",
+            _rewardAddress: stranger,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 0,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
 
-        uint256 sharesAsFee = stETH.submit(
+        uint256 sharesAsFee = stETH._submit(
             address(communityStakingFeeDistributor),
             0.1 ether
         );
 
-        vm.startPrank(stranger);
         uint256 bondSharesBefore = bondManager.getBondShares(0);
-        uint256 claimedShares = bondManager.claimRewards(
+        bondManager.claimRewards(
             new bytes32[](1),
             0,
             sharesAsFee,
             0.05 * 10 ** 18
         );
-        vm.stopPrank();
 
-        assertEq(claimedShares, 0.05 * 10 ** 18);
-        assertEq(stETH.sharesOf(address(stranger)), claimedShares);
+        assertEq(stETH.sharesOf(address(stranger)), 0.05 * 10 ** 18);
         assertEq(
             bondManager.getBondShares(0),
-            (bondSharesBefore + sharesAsFee) - claimedShares
+            (bondSharesBefore + sharesAsFee) - 0.05 * 10 ** 18
         );
     }
 
     function test_claimRewards_WhenAmountToClaimIsHigherThanRewards() public {
-        stETH.submit(stranger, 32 ether);
+        stETH._submit(stranger, 32 ether);
 
         vm.startPrank(stranger);
         bondManager.deposit(0, stETH.sharesOf(stranger));
-        vm.stopPrank();
 
-        communityStakingModule.setNodeOperator(
-            0,
-            true,
-            "Stranger",
-            stranger,
-            16,
-            0,
-            0,
-            16,
-            16
-        );
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "Stranger",
+            _rewardAddress: stranger,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 0,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
 
-        uint256 sharesAsFee = stETH.submit(
+        uint256 sharesAsFee = stETH._submit(
             address(communityStakingFeeDistributor),
             0.1 ether
         );
 
-        vm.startPrank(stranger);
         uint256 requiredBondShares = bondManager.getRequiredBondShares(0);
-        uint256 claimedShares = bondManager.claimRewards(
+        bondManager.claimRewards(
             new bytes32[](1),
             0,
             sharesAsFee,
             100 * 10 ** 18
         );
         uint256 bondSharesAfter = bondManager.getBondShares(0);
-        vm.stopPrank();
 
-        assertEq(claimedShares, sharesAsFee);
-        assertEq(stETH.sharesOf(address(stranger)), claimedShares);
+        assertEq(stETH.sharesOf(address(stranger)), sharesAsFee);
         assertEq(bondSharesAfter, requiredBondShares);
     }
 
     function test_claimRewards_RevertWhenCallerIsNotRewardAddress() public {
-        communityStakingModule.setNodeOperator(
-            0,
-            true,
-            "Stranger",
-            stranger,
-            16,
-            0,
-            0,
-            16,
-            16
-        );
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "Stranger",
+            _rewardAddress: stranger,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 0,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
 
         vm.expectRevert("only reward address can claim rewards");
         vm.startPrank(alice);
@@ -211,13 +204,11 @@ contract CommunityStakingBondManagerTest is Test {
     function test_penalize_LessThanDeposit() public {
         stETH.mintShares(stranger, 32 * 10 ** 18);
 
-        vm.startPrank(stranger);
+        vm.prank(stranger);
         bondManager.deposit(0, 32 * 10 ** 18);
-        vm.stopPrank();
 
-        vm.startPrank(alice);
+        vm.prank(alice);
         bondManager.penalize(0, 1 * 10 ** 18);
-        vm.stopPrank();
 
         assertEq(bondManager.getBondShares(0), 31 * 10 ** 18);
         assertEq(stETH.sharesOf(burner), 1 * 10 ** 18);
@@ -226,13 +217,11 @@ contract CommunityStakingBondManagerTest is Test {
     function test_penalize_MoreThanDeposit() public {
         stETH.mintShares(stranger, 32 * 10 ** 18);
 
-        vm.startPrank(stranger);
+        vm.prank(stranger);
         bondManager.deposit(0, 32 * 10 ** 18);
-        vm.stopPrank();
 
-        vm.startPrank(alice);
+        vm.prank(alice);
         bondManager.penalize(0, 33 * 10 ** 18);
-        vm.stopPrank();
 
         assertEq(bondManager.getBondShares(0), 0);
         assertEq(stETH.sharesOf(burner), 32 * 10 ** 18);
@@ -241,13 +230,11 @@ contract CommunityStakingBondManagerTest is Test {
     function test_penalize_EqualToDeposit() public {
         stETH.mintShares(stranger, 32 * 10 ** 18);
 
-        vm.startPrank(stranger);
+        vm.prank(stranger);
         bondManager.deposit(0, 32 * 10 ** 18);
-        vm.stopPrank();
 
-        vm.startPrank(alice);
+        vm.prank(alice);
         bondManager.penalize(0, 32 * 10 ** 18);
-        vm.stopPrank();
 
         assertEq(bondManager.getBondShares(0), 0);
         assertEq(stETH.sharesOf(burner), 32 * 10 ** 18);
@@ -257,8 +244,7 @@ contract CommunityStakingBondManagerTest is Test {
         vm.expectRevert(
             "AccessControl: account 0x0000000000000000000000000000000000000309 is missing role 0xf3c54f9b8dbd8c6d8596d09d52b61d4bdce01620000dd9d49c5017dca6e62158"
         );
-        vm.startPrank(stranger);
+        vm.prank(stranger);
         bondManager.penalize(0, 20);
-        vm.stopPrank();
     }
 }
