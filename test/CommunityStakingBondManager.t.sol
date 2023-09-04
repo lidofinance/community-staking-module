@@ -215,6 +215,38 @@ contract CommunityStakingBondManagerTest is Test {
         assertEq(bondSharesAfter, requiredBondShares);
     }
 
+    function test_claimRewards_RevertWhenRequiredBondIsEqualActual() public {
+        stETH._submit(stranger, 31 ether);
+
+        vm.startPrank(stranger);
+        bondManager.deposit(0, stETH.sharesOf(stranger));
+
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "Stranger",
+            _rewardAddress: stranger,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 0,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
+
+        uint256 sharesAsFee = stETH._submit(
+            address(communityStakingFeeDistributor),
+            1 ether
+        );
+
+        vm.expectRevert(CommunityStakingBondManager.NothingToClaim.selector);
+        bondManager.claimRewards(
+            new bytes32[](1),
+            0,
+            sharesAsFee,
+            1 * 10 ** 18
+        );
+    }
+
     function test_claimRewards_RevertWhenNothingToClaim() public {
         stETH._submit(stranger, 30 ether);
 

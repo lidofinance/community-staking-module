@@ -248,7 +248,7 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
     ) private returns (uint256) {
         uint256 actualBondShares = getBondShares(nodeOperatorId);
         uint256 requiredBondShares = getRequiredBondShares(nodeOperatorId);
-        if (requiredBondShares > actualBondShares) {
+        if (requiredBondShares >= actualBondShares) {
             revert NothingToClaim();
         }
         uint256 claimableShares = actualBondShares - requiredBondShares;
