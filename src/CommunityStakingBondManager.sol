@@ -11,6 +11,25 @@ import { IStETH } from "./interfaces/IStETH.sol";
 import { ICommunityStakingFeeDistributor } from "./interfaces/ICommunityStakingFeeDistributor.sol";
 
 contract CommunityStakingBondManager is AccessControlEnumerable {
+    event BondDeposited(
+        uint256 nodeOperatorId,
+        address indexed from,
+        uint256 shares
+    );
+    event BondPenalized(
+        uint256 nodeOperatorId,
+        uint256 penaltyShares,
+        uint256 burnedShares
+    );
+    event RewardsClaimed(
+        uint256 nodeOperatorId,
+        address indexed to,
+        uint256 shares
+    );
+
+    error NotOwnerToClaim(address msgSender, address owner);
+    error NothingToClaim();
+
     bytes32 public constant PENALIZE_BOND_ROLE =
         keccak256("PENALIZE_BOND_ROLE");
 
@@ -20,23 +39,6 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
     ICommunityStakingModule private immutable CSM;
     ICommunityStakingFeeDistributor private immutable FEE_DISTRIBUTOR;
     uint256 private immutable COMMON_BOND_SIZE;
-
-    // Events
-    event BondDeposited(
-        uint256 nodeOperatorId,
-        address indexed from,
-        uint256 shares
-    );
-    event BondPenalized(
-        uint256 nodeOperatorId,
-        uint256 penaltyShares,
-        uint256 coveringShares
-    );
-    event RewardsClaimed(
-        uint256 nodeOperatorId,
-        address indexed to,
-        uint256 shares
-    );
 
     /// @param _commonBondSize common bond size in ETH for all node operators.
     /// @param _admin admin role member address
@@ -129,7 +131,10 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
             uint64 totalWithdrawnValidators,
             uint64 totalAddedValidators,
 
-        ) = CSM.getNodeOperator(nodeOperatorId, false);
+        ) = CSM.getNodeOperator({
+                _nodeOperatorId: nodeOperatorId,
+                _fullInfo: false
+            });
         return
             (totalAddedValidators - totalWithdrawnValidators) *
             COMMON_BOND_SIZE;
@@ -151,7 +156,7 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         emit BondDeposited(nodeOperatorId, msg.sender, shares);
     }
 
-    /// @notice Claims full reward (fee + bond) for the given node operator (in stETH)
+    /// @notice Claims full reward (fee + bond) for the given node operator with desirable value
     /// @param rewardsProof merkle proof of the rewards.
     /// @param nodeOperatorId id of the node operator to claim rewards for.
     /// @param cummulativeFeeShares cummulative fee shares for the node operator.
@@ -162,14 +167,44 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         uint256 cummulativeFeeShares,
         uint256 sharesToClaim
     ) external {
-        (, , address rewardAddress, , , , , ) = CSM.getNodeOperator(
+        _claimRewards(
+            rewardsProof,
             nodeOperatorId,
-            false
+            cummulativeFeeShares,
+            sharesToClaim
         );
-        require(
-            msg.sender == rewardAddress,
-            "only reward address can claim rewards"
+    }
+
+    /// @notice Claims full reward (fee + bond) for the given node operator available for this moment
+    /// @param rewardsProof merkle proof of the rewards.
+    /// @param nodeOperatorId id of the node operator to claim rewards for.
+    /// @param cummulativeFeeShares cummulative fee shares for the node operator.
+    function claimRewards(
+        bytes32[] memory rewardsProof,
+        uint256 nodeOperatorId,
+        uint256 cummulativeFeeShares
+    ) external {
+        _claimRewards(
+            rewardsProof,
+            nodeOperatorId,
+            cummulativeFeeShares,
+            type(uint256).max
         );
+    }
+
+    function _claimRewards(
+        bytes32[] memory rewardsProof,
+        uint256 nodeOperatorId,
+        uint256 cummulativeFeeShares,
+        uint256 sharesToClaim
+    ) internal {
+        (, , address rewardAddress, , , , , ) = CSM.getNodeOperator({
+            _nodeOperatorId: nodeOperatorId,
+            _fullInfo: false
+        });
+        if (msg.sender != rewardAddress) {
+            revert NotOwnerToClaim(msg.sender, rewardAddress);
+        }
         uint256 feeRewards = FEE_DISTRIBUTOR.distributeFees(
             rewardsProof,
             nodeOperatorId,
@@ -213,9 +248,10 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
     ) private returns (uint256) {
         uint256 actualBondShares = getBondShares(nodeOperatorId);
         uint256 requiredBondShares = getRequiredBondShares(nodeOperatorId);
-        uint256 claimableShares = actualBondShares >= requiredBondShares
-            ? actualBondShares - requiredBondShares
-            : 0;
+        if (requiredBondShares > actualBondShares) {
+            revert NothingToClaim();
+        }
+        uint256 claimableShares = actualBondShares - requiredBondShares;
         uint256 sharesToTransfer = shares < claimableShares
             ? shares
             : claimableShares;

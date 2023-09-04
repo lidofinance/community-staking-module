@@ -132,6 +132,39 @@ contract CommunityStakingBondManagerTest is Test {
         );
 
         uint256 bondSharesBefore = bondManager.getBondShares(0);
+        bondManager.claimRewards(new bytes32[](1), 0, sharesAsFee);
+
+        assertEq(stETH.sharesOf(address(stranger)), sharesAsFee);
+        assertEq(
+            bondManager.getBondShares(0),
+            (bondSharesBefore + sharesAsFee) - sharesAsFee
+        );
+    }
+
+    function test_claimRewards_WithDesirableValue() public {
+        stETH._submit(stranger, 32 ether);
+
+        vm.startPrank(stranger);
+        bondManager.deposit(0, stETH.sharesOf(stranger));
+
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "Stranger",
+            _rewardAddress: stranger,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 0,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
+
+        uint256 sharesAsFee = stETH._submit(
+            address(communityStakingFeeDistributor),
+            0.1 ether
+        );
+
+        uint256 bondSharesBefore = bondManager.getBondShares(0);
         bondManager.claimRewards(
             new bytes32[](1),
             0,
@@ -182,6 +215,38 @@ contract CommunityStakingBondManagerTest is Test {
         assertEq(bondSharesAfter, requiredBondShares);
     }
 
+    function test_claimRewards_RevertWhenNothingToClaim() public {
+        stETH._submit(stranger, 30 ether);
+
+        vm.startPrank(stranger);
+        bondManager.deposit(0, stETH.sharesOf(stranger));
+
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "Stranger",
+            _rewardAddress: stranger,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 0,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
+
+        uint256 sharesAsFee = stETH._submit(
+            address(communityStakingFeeDistributor),
+            0.1 ether
+        );
+
+        vm.expectRevert(CommunityStakingBondManager.NothingToClaim.selector);
+        bondManager.claimRewards(
+            new bytes32[](1),
+            0,
+            sharesAsFee,
+            1 * 10 ** 18
+        );
+    }
+
     function test_claimRewards_RevertWhenCallerIsNotRewardAddress() public {
         communityStakingModule.setNodeOperator({
             _nodeOperatorId: 0,
@@ -195,7 +260,13 @@ contract CommunityStakingBondManagerTest is Test {
             _totalDepositedValidators: 16
         });
 
-        vm.expectRevert("only reward address can claim rewards");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CommunityStakingBondManager.NotOwnerToClaim.selector,
+                alice,
+                stranger
+            )
+        );
         vm.startPrank(alice);
         bondManager.claimRewards(new bytes32[](1), 0, 1, 1 * 10 ** 18);
         vm.stopPrank();

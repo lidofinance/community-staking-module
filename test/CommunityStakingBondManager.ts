@@ -120,10 +120,45 @@ describe("CommunityStakingBondManager", async () => {
     await stETH._submit(feeDistributor.target, BigInt(0.1 * 10 ** 18));
 
     const bondSharesBefore = await bondManager.getBondShares(0);
+    await bondManager
+      .connect(stranger)
+      .getFunction("claimRewards(bytes32[],uint256,uint256)")(
+      [],
+      0,
+      sharesAsFee,
+    );
+
+    expect(await stETH.sharesOf(stranger)).to.be.equal(sharesAsFee);
+    expect(await bondManager.getBondShares(0)).to.be.equal(
+      bondSharesBefore + sharesAsFee - sharesAsFee,
+    );
+  });
+
+  it("should claim rewards with disarable value", async () => {
+    const { stranger, stETH, bondManager, csm, feeDistributor } =
+      await loadFixture(deployBondManager);
+    await stETH._submit(stranger, BigInt(32 * 10 ** 18));
+
+    const sharesAfterSubmit = await stETH.sharesOf(stranger);
+    await bondManager.connect(stranger).deposit(0, sharesAfterSubmit);
+
+    await csm.setNodeOperator(0, true, "Stranger", stranger, 16, 0, 0, 16, 16);
+
+    const sharesAsFee = await stETH.getSharesByPooledEth(
+      BigInt(0.1 * 10 ** 18),
+    );
+    await stETH._submit(feeDistributor.target, BigInt(0.1 * 10 ** 18));
+
+    const bondSharesBefore = await bondManager.getBondShares(0);
     const sharesToClaim = BigInt(0.05 * 10 ** 18);
     await bondManager
       .connect(stranger)
-      .claimRewards([], 0, sharesAsFee, sharesToClaim);
+      .getFunction("claimRewards(bytes32[],uint256,uint256,uint256)")(
+      [],
+      0,
+      sharesAsFee,
+      sharesToClaim,
+    );
 
     expect(await stETH.sharesOf(stranger)).to.be.equal(sharesToClaim);
     expect(await bondManager.getBondShares(0)).to.be.equal(
@@ -149,7 +184,12 @@ describe("CommunityStakingBondManager", async () => {
     const requiredBondShares = await bondManager.getRequiredBondShares(0);
     const tx = await bondManager
       .connect(stranger)
-      .claimRewards([], 0, sharesAsFee, BigInt(100 * 10 ** 18));
+      .getFunction("claimRewards(bytes32[],uint256,uint256,uint256)")(
+      [],
+      0,
+      sharesAsFee,
+      BigInt(100 * 10 ** 18),
+    );
     const bondSharesAfter = await bondManager.getBondShares(0);
 
     expect(tx)
@@ -176,8 +216,41 @@ describe("CommunityStakingBondManager", async () => {
     await expect(
       bondManager
         .connect(alice)
-        .claimRewards([], 0, sharesAsFee, BigInt(100 * 10 ** 18)),
-    ).to.be.revertedWith("only reward address can claim rewards");
+        .getFunction("claimRewards(bytes32[],uint256,uint256,uint256)")(
+        [],
+        0,
+        sharesAsFee,
+        BigInt(100 * 10 ** 18),
+      ),
+    )
+      .to.be.revertedWithCustomError(bondManager, "NotOwnerToClaim")
+      .withArgs(alice.address, stranger.address);
+  });
+
+  it("should revert claim rewards when nothing to claim", async () => {
+    const { stranger, alice, stETH, bondManager, csm, feeDistributor } =
+      await loadFixture(deployBondManager);
+    await stETH._submit(stranger, BigInt(30 * 10 ** 18));
+
+    const sharesAfterSubmit = await stETH.sharesOf(stranger);
+    await bondManager.connect(stranger).deposit(0, sharesAfterSubmit);
+
+    await csm.setNodeOperator(0, true, "Stranger", stranger, 16, 0, 0, 16, 16);
+
+    const sharesAsFee = await stETH.getSharesByPooledEth(
+      BigInt(0.1 * 10 ** 18),
+    );
+    await stETH._submit(feeDistributor.target, BigInt(0.1 * 10 ** 18));
+    await expect(
+      bondManager
+        .connect(stranger)
+        .getFunction("claimRewards(bytes32[],uint256,uint256,uint256)")(
+        [],
+        0,
+        sharesAsFee,
+        BigInt(100 * 10 ** 18),
+      ),
+    ).to.be.revertedWithCustomError(bondManager, "NothingToClaim");
   });
 
   it("should penalize with value less than deposit", async () => {
