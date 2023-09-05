@@ -22,7 +22,16 @@ const config: HardhatUserConfig = {
       },
     },
   },
-  defaultNetwork: "localhost",
+  defaultNetwork: "anvil",
+  networks: {
+    hardhat: {
+      loggingEnabled: true,
+    },
+    anvil: {
+      url: "http://localhost:7545",
+      loggingEnabled: true,
+    },
+  },
   mocha: {
     rootHooks: {
       beforeAll: async () => {
