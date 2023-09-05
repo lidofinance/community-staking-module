@@ -14,11 +14,15 @@ const ANVIL_START_TIMEOUT = 10000;
 
 async function createAnvil(networkConfig: AnvilConfig) {
   let forkArg = [];
-  const port = networkConfig.url.split(":")[2];
+  const url = new URL(networkConfig.url);
   if (networkConfig.forking?.url) {
     forkArg.push("--fork-url", networkConfig.forking.url);
   }
-  const anvil = spawn("anvil", ["--port", port, ...forkArg], {});
+  const anvil = spawn(
+    "anvil",
+    ["--host", url.hostname, "--port", url.port, ...forkArg],
+    {},
+  );
 
   let started: boolean = false;
   anvil.stdout.on("data", (data) => {
