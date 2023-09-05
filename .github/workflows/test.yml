@@ -88,5 +88,10 @@ jobs:
       - name: Install Node dependencies
         run: yarn install --immutable
 
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
       - name: Run Hardhat tests
         run: yarn test
