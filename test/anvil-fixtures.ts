@@ -2,19 +2,27 @@ import "dotenv/config";
 import { ChildProcess, spawn } from "child_process";
 import { sleep } from "@nomicfoundation/hardhat-verify/internal/utilities";
 import chalk from "chalk";
+import { HardhatNetworkConfig } from "hardhat/src/types/config";
+
+interface AnvilConfig extends HardhatNetworkConfig {
+  url: string;
+}
 
 let anvilProcess: ChildProcess;
 const NETWORK_NAME = "anvil";
+const ANVIL_START_TIMEOUT = 10000;
 
-async function createAnvil(loggingEnabled: boolean = true) {
+async function createAnvil(networkConfig: AnvilConfig) {
   let forkArg = [];
-  if (process.env.RPC_URL !== undefined) {
-    forkArg.push("--fork-url", process.env.RPC_URL);
+  const port = networkConfig.url.split(":")[2];
+  if (networkConfig.forking?.url) {
+    forkArg.push("--fork-url", networkConfig.forking.url);
   }
-  const anvil = spawn("anvil", ["--port", "7545", ...forkArg], {});
+  const anvil = spawn("anvil", ["--port", port, ...forkArg], {});
+
   let started: boolean = false;
   anvil.stdout.on("data", (data) => {
-    if (loggingEnabled) {
+    if (networkConfig.loggingEnabled) {
       const dataList = data.toString().split("\n");
       process.stdout.write(chalk.green(dataList.slice(0, 1)) + "\n");
       process.stdout.write(`${dataList.slice(1).join("\n")}`);
@@ -26,7 +34,12 @@ async function createAnvil(loggingEnabled: boolean = true) {
   anvil.stderr.on("data", (data) => {
     process.stderr.write(chalk.red(`${data}`));
   });
+
+  const start = Date.now();
   while (!started) {
+    if (Date.now() - start > ANVIL_START_TIMEOUT) {
+      throw new Error("Anvil start timeout");
+    }
     await sleep(100);
   }
   return anvil;
@@ -34,18 +47,18 @@ async function createAnvil(loggingEnabled: boolean = true) {
 
 export async function anvilStart() {
   const hre = await import("hardhat");
-  const networkConfig = hre.userConfig.networks?.[NETWORK_NAME] ?? {};
-  const loggingEnabled =
-    "loggingEnabled" in networkConfig ? networkConfig.loggingEnabled : true;
   if (hre.network.name !== NETWORK_NAME) return;
 
-  anvilProcess = await createAnvil(loggingEnabled);
+  const networkConfig = hre.userConfig.networks?.[NETWORK_NAME] as AnvilConfig;
+
+  anvilProcess = await createAnvil(networkConfig);
 
   const originalRequest = hre.network.provider.request;
   hre.network.provider.request = (args) => {
-    console.log(args.method);
     if (args.method === "web3_clientVersion") {
-      return new Promise((resolve) => resolve("hardhatnetwork:anvil"));
+      return new Promise((resolve) =>
+        resolve(`hardhatnetwork:${NETWORK_NAME}`),
+      );
     }
     return originalRequest.apply(hre.network.provider, [args]);
   };
@@ -55,7 +68,7 @@ export async function anvilStart() {
 
 export async function anvilStop() {
   const hre = await import("hardhat");
-  if (hre.network.name !== "anvil") return;
+  if (hre.network.name !== NETWORK_NAME) return;
 
   anvilProcess.kill();
   console.log("Anvil stopped");

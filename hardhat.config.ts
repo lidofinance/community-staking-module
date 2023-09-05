@@ -29,6 +29,9 @@ const config: HardhatUserConfig = {
     },
     anvil: {
       url: "http://localhost:7545",
+      forking: {
+        url: process.env.RPC_URL ?? "",
+      },
       loggingEnabled: true,
     },
   },
