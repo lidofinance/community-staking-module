@@ -31,11 +31,12 @@ contract StakingRouterIntegrationTest is Test {
             stakingRouter.DEFAULT_ADMIN_ROLE(),
             0
         );
-        vm.prank(agent);
+        vm.startPrank(agent);
         stakingRouter.grantRole(
             stakingRouter.STAKING_MODULE_MANAGE_ROLE(),
             agent
         );
+        vm.stopPrank();
     }
 
     function test_connectCSMToRouter() public {
