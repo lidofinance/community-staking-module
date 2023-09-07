@@ -68,6 +68,9 @@ jobs:
       - name: Run Forge tests
         run: |
           forge test -vvv
+        env:
+          RPC_URL: ${{ secrets.RPC_URL }}
+          LIDO_LOCATOR_ADDRESS: "0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb"
 
   hardhat:
     name: Hardhat project
@@ -95,3 +98,5 @@ jobs:
 
       - name: Run Hardhat tests
         run: yarn test
+        env:
+          RPC_URL: ${{ secrets.RPC_URL }}

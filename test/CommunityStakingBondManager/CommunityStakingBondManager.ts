@@ -2,36 +2,26 @@ import { ethers } from "hardhat";
 import { expect } from "chai";
 
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import {
-  StETHMock,
-  LidoLocatorMock,
-  CommunityStakingModuleMock,
-  CommunityStakingFeeDistributorMock,
-} from "../typechain-types/src/test_helpers";
-import { CommunityStakingBondManager } from "../typechain-types";
 
 describe("CommunityStakingBondManager", async () => {
   async function deployBondManager() {
     const [stranger, alice] = await ethers.getSigners();
 
     const burner = ethers.Wallet.createRandom();
-    const csm = (await ethers.deployContract(
-      "CommunityStakingModuleMock",
-      [],
-    )) as CommunityStakingModuleMock;
-    const stETH = (await ethers.deployContract("StETHMock", [
+    const csm = await ethers.deployContract("CommunityStakingModuleMock", []);
+    const stETH = await ethers.deployContract("StETHMock", [
       8013386371917025835991984n,
-    ])) as StETHMock;
+    ]);
     await stETH.mintShares(stETH.target, 7059313073779349112833523n);
-    const lidoLocator = (await ethers.deployContract("LidoLocatorMock", [
+    const lidoLocator = await ethers.deployContract("LidoLocatorMock", [
       stETH,
       burner,
-    ])) as LidoLocatorMock;
-    const feeDistributor = (await ethers.deployContract(
+    ]);
+    const feeDistributor = await ethers.deployContract(
       "CommunityStakingFeeDistributorMock",
       [lidoLocator.target],
-    )) as CommunityStakingFeeDistributorMock;
-    const bondManager = (await ethers.deployContract(
+    );
+    const bondManager = await ethers.deployContract(
       "CommunityStakingBondManager",
       [
         BigInt(2 * 10 ** 18),
@@ -41,7 +31,7 @@ describe("CommunityStakingBondManager", async () => {
         feeDistributor.target,
         [alice],
       ],
-    )) as CommunityStakingBondManager;
+    );
     await feeDistributor.setBondManager(bondManager.target);
 
     return { stranger, alice, stETH, bondManager, csm, feeDistributor, burner };
