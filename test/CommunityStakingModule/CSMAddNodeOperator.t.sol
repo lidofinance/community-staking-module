@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.21;
+pragma solidity ^0.8.21;
 
 import "forge-std/Test.sol";
 import "../../src/CommunityStakingModule.sol";
 import "../../src/CommunityStakingBondManager.sol";
-import "../../src/test_helpers/LidoLocatorMock.sol";
-import "../../src/test_helpers/CommunityStakingFeeDistributorMock.sol";
 import "../../src/test_helpers/StETHMock.sol";
-import "../../src/test_helpers/CommunityStakingModuleMock.sol";
+import "../../src/test_helpers/CommunityStakingFeeDistributorMock.sol";
+import "../../src/test_helpers/LidoLocatorMock.sol";
 
-contract CSMInitTest is Test {
+contract CSMAddNodeOperator is Test {
     CommunityStakingModule public csm;
     CommunityStakingBondManager public bondManager;
 
@@ -20,11 +19,16 @@ contract CSMInitTest is Test {
     address internal stranger;
     address internal alice;
     address internal burner;
+    address internal nodeOperator;
 
     function setUp() public {
         alice = address(1);
+        nodeOperator = address(2);
         address[] memory penalizeRoleMembers = new address[](1);
         penalizeRoleMembers[0] = alice;
+        stETH = new StETHMock(8013386371917025835991984);
+        stETH.mintShares(address(stETH), 7059313073779349112833523);
+        stETH.mintShares(address(nodeOperator), 32 * 10 ** 18);
         locator = new LidoLocatorMock(address(stETH), burner);
         communityStakingFeeDistributor = new CommunityStakingFeeDistributorMock(
             address(locator)
@@ -39,15 +43,12 @@ contract CSMInitTest is Test {
             address(communityStakingFeeDistributor),
             penalizeRoleMembers
         );
-    }
-
-    function test_InitContract() public {
-        assertEq(csm.getType(), "community-staking-module");
-        assertEq(csm.getNodeOperatorsCount(), 0);
-    }
-
-    function test_SetBondManager() public {
         csm.setBondManager(address(bondManager));
-        assertEq(address(csm.getBondManager()), address(bondManager));
+    }
+
+    function test_AddNodeOperator() public {
+        vm.prank(nodeOperator);
+        csm.addNodeOperator("test", nodeOperator, 1, "", "");
+        assertEq(csm.getNodeOperatorsCount(), 1);
     }
 }

@@ -148,8 +148,8 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
             ,
             ,
             ,
-            uint64 totalWithdrawnValidators,
-            uint64 totalAddedValidators,
+            uint256 totalWithdrawnValidators,
+            uint256 totalAddedValidators,
 
         ) = CSM.getNodeOperator({
                 _nodeOperatorId: nodeOperatorId,
@@ -233,18 +233,18 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
     /// @notice Claims full reward (fee + bond) for the given node operator with desirable value
     /// @param rewardsProof merkle proof of the rewards.
     /// @param nodeOperatorId id of the node operator to claim rewards for.
-    /// @param cummulativeFeeShares cummulative fee shares for the node operator.
+    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
     /// @param sharesToClaim amount of shares to claim.
     function claimRewards(
         bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
-        uint256 cummulativeFeeShares,
+        uint256 cumulativeFeeShares,
         uint256 sharesToClaim
     ) external {
         _claimRewards(
             rewardsProof,
             nodeOperatorId,
-            cummulativeFeeShares,
+            cumulativeFeeShares,
             sharesToClaim
         );
     }
@@ -252,16 +252,16 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
     /// @notice Claims full reward (fee + bond) for the given node operator available for this moment
     /// @param rewardsProof merkle proof of the rewards.
     /// @param nodeOperatorId id of the node operator to claim rewards for.
-    /// @param cummulativeFeeShares cummulative fee shares for the node operator.
+    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
     function claimRewards(
         bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
-        uint256 cummulativeFeeShares
+        uint256 cumulativeFeeShares
     ) external {
         _claimRewards(
             rewardsProof,
             nodeOperatorId,
-            cummulativeFeeShares,
+            cumulativeFeeShares,
             type(uint256).max
         );
     }
@@ -269,7 +269,7 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
     function _claimRewards(
         bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
-        uint256 cummulativeFeeShares,
+        uint256 cumulativeFeeShares,
         uint256 sharesToClaim
     ) internal {
         (, , address rewardAddress, , , , , ) = CSM.getNodeOperator({
@@ -282,7 +282,7 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         uint256 feeRewards = _feeDistributor().distributeFees(
             rewardsProof,
             nodeOperatorId,
-            cummulativeFeeShares
+            cumulativeFeeShares
         );
         bondShares[nodeOperatorId] += feeRewards;
         uint256 claimed = _claimBondRewards(
