@@ -9,21 +9,31 @@ import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
 
 contract StakingRouterIntegrationTest is Test {
-    uint256 mainnetFork;
+    uint256 networkFork;
 
     CommunityStakingModule public csm;
     ILidoLocator public locator;
     IStakingRouter public stakingRouter;
 
     address internal agent;
-    address internal locatorAddress =
-        0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb;
+
+    string RPC_URL;
+    string LIDO_LOCATOR_ADDRESS;
 
     function setUp() public {
-        mainnetFork = vm.createFork(vm.envString("RPC_URL"));
-        vm.selectFork(mainnetFork);
+        RPC_URL = vm.envOr("RPC_URL", string(""));
+        LIDO_LOCATOR_ADDRESS = vm.envOr("LIDO_LOCATOR_ADDRESS", string(""));
+        vm.skip(
+            keccak256(abi.encodePacked(RPC_URL)) ==
+                keccak256(abi.encodePacked("")) ||
+                keccak256(abi.encodePacked(LIDO_LOCATOR_ADDRESS)) ==
+                keccak256(abi.encodePacked(""))
+        );
 
-        locator = ILidoLocator(locatorAddress);
+        networkFork = vm.createFork(RPC_URL);
+        vm.selectFork(networkFork);
+
+        locator = ILidoLocator(vm.parseAddress(LIDO_LOCATOR_ADDRESS));
         stakingRouter = IStakingRouter(payable(locator.stakingRouter()));
         csm = new CommunityStakingModule("community-staking-module");
 
@@ -48,15 +58,9 @@ contract StakingRouterIntegrationTest is Test {
             _stakingModuleFee: 500,
             _treasuryFee: 500
         });
-        IStakingRouter.StakingModule[] memory modules = stakingRouter
-            .getStakingModules();
-        bool contains = false;
-        for (uint256 i = 0; i < modules.length; i++) {
-            if (modules[i].stakingModuleAddress == address(csm)) {
-                contains = true;
-                break;
-            }
-        }
-        assertTrue(contains);
+        uint256[] memory ids = stakingRouter.getStakingModuleIds();
+        IStakingRouter.StakingModule memory module = stakingRouter
+            .getStakingModule(ids[ids.length - 1]);
+        assertTrue(module.stakingModuleAddress == address(csm));
     }
 }
