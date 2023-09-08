@@ -156,6 +156,18 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         return _lido().getSharesByPooledEth(getRequiredBondEth(nodeOperatorId));
     }
 
+    function getRequiredBondEthForKeys(
+        uint256 keysCount
+    ) external view returns (uint256) {
+        return keysCount * COMMON_BOND_SIZE;
+    }
+
+    function getRequiredBondSharesForKeys(
+        uint256 keysCount
+    ) external view returns (uint256) {
+        return _lido().getSharesByPooledEth(keysCount * COMMON_BOND_SIZE);
+    }
+
     /// @notice Deposits stETH to the bond for the given node operator.
     /// @param nodeOperatorId id of the node operator to deposit bond for.
     /// @param shares amount of shares to deposit.

@@ -142,6 +142,47 @@ contract CommunityStakingBondManagerTest is Test {
         assertEq(bondManager.getRequiredBondEth(0), 32 ether);
     }
 
+    function test_getRequiredBondShares_OneWithdrawnValidator() public {
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "Alice",
+            _rewardAddress: alice,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 1,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
+        assertEq(bondManager.getRequiredBondShares(0), 26428201809357774385);
+    }
+
+    function test_getRequiredBondShares_NoWithdrawnValidators() public {
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "Alice",
+            _rewardAddress: alice,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 0,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
+        assertEq(bondManager.getRequiredBondShares(0), 28190081929981626011);
+    }
+
+    function test_getRequiredBondEthForKeys() public {
+        assertEq(bondManager.getRequiredBondEthForKeys(1), 2 ether);
+    }
+
+    function test_getRequiredBondSharesForKeys() public {
+        assertEq(
+            bondManager.getRequiredBondSharesForKeys(1),
+            1761880120623851625
+        );
+    }
+
     function test_claimRewards() public {
         vm.deal(stranger, 32 ether);
         vm.prank(stranger);
