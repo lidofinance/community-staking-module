@@ -74,6 +74,14 @@ contract FeeOracle is FeeOracleBase, AccessControlEnumerable {
         return lastConsolidatedEpoch + reportIntervalEpochs * fullIntervals;
     }
 
+    /// @notice Get the current report frame slots
+    function reportFrame() external view returns (uint64, uint64) {
+        return (
+            lastConsolidatedEpoch * BLOCKS_PER_EPOCH + 1,
+            nextReportEpoch() * BLOCKS_PER_EPOCH
+        );
+    }
+
     /// @notice Set the report interval
     /// @param _reportInterval Interval between reports in epochs
     function setReportInterval(

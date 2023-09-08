@@ -72,6 +72,22 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
         assertEq(oracle.nextReportEpoch(), 12);
     }
 
+    function test_reportFrame() public {
+        _vmSetEpoch(8);
+
+        oracle = new FeeOracle({
+            secondsPerBlock: 12,
+            blocksPerEpoch: 32,
+            genesisTime: 0,
+            reportInterval: 2,
+            admin: ORACLE_ADMIN
+        });
+
+        (uint64 start, uint64 end) = oracle.reportFrame();
+        assertEq(start, 257);
+        assertEq(end, 320);
+    }
+
     function test_setReportInterval() public {
         oracle = new FeeOracle({
             secondsPerBlock: 12,
