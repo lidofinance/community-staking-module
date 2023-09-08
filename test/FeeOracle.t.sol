@@ -31,19 +31,35 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
         new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 2, // > block.timestamp
-            reportInterval: 1,
+            genesisTime: 2 // > block.timestamp
+        });
+    }
+
+    function test_Initialize() public {
+        oracle = new FeeOracle({
+            secondsPerBlock: 12,
+            blocksPerEpoch: 32,
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 42,
+            reportInterval: 2,
             admin: ORACLE_ADMIN
         });
+
+        assertTrue(oracle.initialized(), "not initialized");
+
+        assertEq(oracle.lastConsolidatedEpoch(), 42);
+        assertEq(oracle.initializationEpoch(), 42);
+        assertEq(oracle.reportIntervalEpochs(), 2);
     }
 
     function test_currentEpoch() public {
         oracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 0,
-            reportInterval: 1,
-            admin: ORACLE_ADMIN
+            genesisTime: 0
         });
 
         assertEq(oracle.currentEpoch(), 0);
@@ -56,33 +72,57 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_nextReportEpoch() public {
-        _vmSetEpoch(8);
-
         oracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 0,
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 8,
             reportInterval: 2,
             admin: ORACLE_ADMIN
         });
 
+        _vmSetEpoch(8);
         assertEq(oracle.nextReportEpoch(), 10);
 
         _vmSetEpoch(13);
         assertEq(oracle.nextReportEpoch(), 12);
     }
 
-    function test_reportFrame() public {
-        _vmSetEpoch(8);
-
+    function test_RevertIf_LastConsolidationEpochInFuture() public {
         oracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 0,
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 42,
+            reportInterval: 1,
+            admin: ORACLE_ADMIN
+        });
+
+        _vmSetEpoch(41);
+        vm.expectRevert(stdError.arithmeticError);
+        oracle.nextReportEpoch();
+    }
+
+    function test_reportFrame() public {
+        oracle = new FeeOracle({
+            secondsPerBlock: 12,
+            blocksPerEpoch: 32,
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 8,
             reportInterval: 2,
             admin: ORACLE_ADMIN
         });
 
+        _vmSetEpoch(8);
         (uint64 start, uint64 end) = oracle.reportFrame();
         assertEq(start, 257);
         assertEq(end, 320);
@@ -92,8 +132,12 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
         oracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 0,
-            reportInterval: 1,
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 0,
+            reportInterval: 2,
             admin: ORACLE_ADMIN
         });
 
@@ -110,15 +154,19 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
         oracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 0,
-            reportInterval: 3,
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 0,
+            reportInterval: 2,
             admin: ORACLE_ADMIN
         });
 
-        _vmSetEpoch(7);
-
         _seedMembers(3);
         bytes32 newRoot = keccak256("new root");
+
+        _vmSetEpoch(7);
 
         // Memeber 0 submits a report
         vm.expectEmit(true, false, false, true, address(oracle));
@@ -148,8 +196,12 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
         oracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 0,
-            reportInterval: 3,
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 0,
+            reportInterval: 2,
             admin: ORACLE_ADMIN
         });
 
@@ -171,8 +223,12 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
         oracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 0,
-            reportInterval: 3,
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 7,
+            reportInterval: 2,
             admin: ORACLE_ADMIN
         });
 
@@ -196,9 +252,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
         oracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 0,
-            reportInterval: 1,
-            admin: ORACLE_ADMIN
+            genesisTime: 0
         });
 
         assertEq(oracle.hashLeaf(noIndex, shares), hash);
@@ -208,8 +262,12 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
         oracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 0,
-            reportInterval: 1,
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 0,
+            reportInterval: 2,
             admin: ORACLE_ADMIN
         });
 
@@ -227,8 +285,12 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
         oracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 0,
-            reportInterval: 1,
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 0,
+            reportInterval: 2,
             admin: ORACLE_ADMIN
         });
 
@@ -247,8 +309,12 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
         oracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 0,
-            reportInterval: 1,
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 0,
+            reportInterval: 2,
             admin: ORACLE_ADMIN
         });
 
@@ -263,8 +329,12 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
         oracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 0,
-            reportInterval: 1,
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 0,
+            reportInterval: 2,
             admin: ORACLE_ADMIN
         });
 
@@ -290,9 +360,13 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
         oracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 0,
-            reportInterval: 1,
-            admin: nextAddress()
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 0,
+            reportInterval: 2,
+            admin: ORACLE_ADMIN
         });
 
         address newMember = nextAddress();
@@ -312,8 +386,12 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
         oracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 0,
-            reportInterval: 1,
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 0,
+            reportInterval: 2,
             admin: ORACLE_ADMIN
         });
 
@@ -344,8 +422,12 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
         oracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 0,
-            reportInterval: 1,
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 0,
+            reportInterval: 2,
             admin: ORACLE_ADMIN
         });
 
@@ -376,8 +458,12 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
         oracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 0,
-            reportInterval: 1,
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 0,
+            reportInterval: 2,
             admin: ORACLE_ADMIN
         });
 
@@ -398,8 +484,12 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
         oracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 0,
-            reportInterval: 1,
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 0,
+            reportInterval: 2,
             admin: ORACLE_ADMIN
         });
 
@@ -416,8 +506,12 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
         oracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: 0,
-            reportInterval: 1,
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 0,
+            reportInterval: 2,
             admin: ORACLE_ADMIN
         });
 

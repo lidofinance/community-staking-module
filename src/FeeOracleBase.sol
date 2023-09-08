@@ -12,7 +12,8 @@ contract FeeOracleBase is Pausable {
     error InvalidEpoch(uint64 actual, uint64 expected);
     error ZeroAddress(string field);
     error GenesisTimeNotReached();
-    error IsNotInitialized();
+    error AlreadyInitialized();
+    error NotInitialized();
     error QuorumTooSmall();
     error ReportTooEarly();
     error ReportTooLate();
