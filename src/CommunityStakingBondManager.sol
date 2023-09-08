@@ -16,6 +16,12 @@ interface ILido is IStETH {
 
 interface IWstETH {
     function unwrap(uint256 _wstETHAmount) external returns (uint256);
+
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) external;
 }
 
 contract CommunityStakingBondManager is AccessControlEnumerable {
@@ -168,24 +174,24 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         return _lido().getSharesByPooledEth(keysCount * COMMON_BOND_SIZE);
     }
 
-    /// @notice Deposits stETH to the bond for the given node operator.
-    /// @param nodeOperatorId id of the node operator to deposit bond for.
-    /// @param shares amount of shares to deposit.
-    function deposit(uint256 nodeOperatorId, uint256 shares) public {
-        require(
-            nodeOperatorId < CSM.getNodeOperatorsCount(),
-            "node operator does not exist"
-        );
-        _lido().transferSharesFrom(msg.sender, address(this), shares);
-        bondShares[nodeOperatorId] += shares;
-        emit BondDeposited(nodeOperatorId, msg.sender, shares);
-    }
-
     /// @notice Deposits ETH to the bond for the given node operator.
     /// @param nodeOperatorId id of the node operator to deposit bond for.
-    function depositEth(uint256 nodeOperatorId) external payable {
+    function depositETH(
+        uint256 nodeOperatorId
+    ) external payable returns (uint256) {
         uint256 shares = _lido().submit{ value: msg.value }(address(0));
-        deposit(nodeOperatorId, shares);
+        return _depositShares(address(this), nodeOperatorId, shares);
+    }
+
+    /// @notice Deposits stETH to the bond for the given node operator.
+    /// @param nodeOperatorId id of the node operator to deposit bond for.
+    /// @param stETHAmount amount of stETH to deposit.
+    function depositStETH(
+        uint256 nodeOperatorId,
+        uint256 stETHAmount
+    ) external returns (uint256) {
+        uint256 shares = _lido().getSharesByPooledEth(stETHAmount);
+        return _depositShares(msg.sender, nodeOperatorId, shares);
     }
 
     /// @notice Deposits wstETH to the bond for the given node operator.
@@ -193,9 +199,29 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
     function depositWstETH(
         uint256 nodeOperatorId,
         uint256 wstETHAmount
-    ) external {
-        uint256 shares = WSTETH.unwrap(wstETHAmount);
-        deposit(nodeOperatorId, shares);
+    ) external returns (uint256) {
+        WSTETH.transferFrom(msg.sender, address(this), wstETHAmount);
+        uint256 stETHAmount = WSTETH.unwrap(wstETHAmount);
+        uint256 shares = _lido().getSharesByPooledEth(stETHAmount);
+        return _depositShares(address(this), nodeOperatorId, shares);
+    }
+
+    /// @notice Deposits stETH shares to the bond for the given node operator.
+    /// @param nodeOperatorId id of the node operator to deposit bond for.
+    /// @param shares amount of shares to deposit.
+    function _depositShares(
+        address from,
+        uint256 nodeOperatorId,
+        uint256 shares
+    ) internal returns (uint256) {
+        require(
+            nodeOperatorId < CSM.getNodeOperatorsCount(),
+            "node operator does not exist"
+        );
+        _lido().transferSharesFrom(from, address(this), shares);
+        bondShares[nodeOperatorId] += shares;
+        emit BondDeposited(nodeOperatorId, from, shares);
+        return shares;
     }
 
     /// @notice Claims full reward (fee + bond) for the given node operator with desirable value

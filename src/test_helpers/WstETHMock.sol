@@ -34,6 +34,15 @@ contract WstETHMock {
         return wstETHAmount;
     }
 
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) public {
+        _balance[sender] -= amount;
+        _balance[recipient] += amount;
+    }
+
     function _mint(address _account, uint256 _amount) internal {
         _totalSupply += _amount;
         _balance[_account] += _amount;
