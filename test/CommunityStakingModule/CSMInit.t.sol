@@ -48,6 +48,6 @@ contract CSMInitTest is Test {
 
     function test_SetBondManager() public {
         csm.setBondManager(address(bondManager));
-        assertEq(address(csm.getBondManager()), address(bondManager));
+        assertEq(address(csm.bondManagerAddress()), address(bondManager));
     }
 }

@@ -30,21 +30,28 @@ contract CommunityStakingModule is IStakingModule {
     uint256 private nonce;
     mapping(uint256 => NodeOperator) private nodeOperators;
 
-    ICommunityStakingBondManager private BOND_MANAGER;
+    address public bondManagerAddress;
 
     constructor(bytes32 _type) {
         moduleType = _type;
         nodeOperatorsCount = 0;
     }
 
-    function setBondManager(address _bondManager) external {
+    function setBondManager(address _bondManagerAddress) external {
         // TODO add role check
-        require(address(BOND_MANAGER) == address(0), "already initialized");
-        BOND_MANAGER = ICommunityStakingBondManager(_bondManager);
+        require(
+            address(bondManagerAddress) == address(0),
+            "already initialized"
+        );
+        bondManagerAddress = _bondManagerAddress;
     }
 
-    function getBondManager() external view returns (address) {
-        return address(BOND_MANAGER);
+    function _bondManager()
+        internal
+        view
+        returns (ICommunityStakingBondManager)
+    {
+        return ICommunityStakingBondManager(bondManagerAddress);
     }
 
     function getType() external view returns (bytes32) {
@@ -73,7 +80,7 @@ contract CommunityStakingModule is IStakingModule {
     ) external {
         // TODO sanity checks
         // TODO store keys
-        uint256 id = getNodeOperatorsCount();
+        uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
         no.name = _name;
         no.rewardAddress = _rewardAddress;
@@ -82,8 +89,8 @@ contract CommunityStakingModule is IStakingModule {
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
 
-        uint256 shares = BOND_MANAGER.getRequiredBondShares(id);
-        BOND_MANAGER.deposit(msg.sender, id, shares);
+        uint256 shares = _bondManager().getRequiredBondShares(id);
+        _bondManager().deposit(msg.sender, id, shares);
 
         _incrementNonce();
     }
@@ -93,28 +100,23 @@ contract CommunityStakingModule is IStakingModule {
         uint256 _keysCount,
         bytes calldata /*_publicKeys*/,
         bytes calldata /*_signatures*/
-    ) external {
+    ) external onlyActiveNodeOperator(_nodeOperatorId) {
         // TODO sanity checks
         // TODO store keys
-        require(
-            nodeOperators[_nodeOperatorId].active,
-            "node operator is not active"
-        );
         NodeOperator storage no = nodeOperators[_nodeOperatorId];
         no.totalAddedValidators += _keysCount;
-        uint256 shares = BOND_MANAGER.getRequiredBondShares(_nodeOperatorId);
-        BOND_MANAGER.deposit(msg.sender, _nodeOperatorId, shares);
+        uint256 shares = _bondManager().getRequiredBondShares(_nodeOperatorId);
+        _bondManager().deposit(msg.sender, _nodeOperatorId, shares);
 
         _incrementNonce();
     }
 
-    function depositBond(uint256 _nodeOperatorId, uint256 _shares) external {
+    function depositBond(
+        uint256 _nodeOperatorId,
+        uint256 _shares
+    ) external onlyActiveNodeOperator(_nodeOperatorId) {
         // TODO sanity checks
-        require(
-            nodeOperators[_nodeOperatorId].active,
-            "node operator is not active"
-        );
-        BOND_MANAGER.deposit(msg.sender, _nodeOperatorId, _shares);
+        _bondManager().deposit(msg.sender, _nodeOperatorId, _shares);
 
         _incrementNonce();
     }
@@ -271,5 +273,13 @@ contract CommunityStakingModule is IStakingModule {
 
     function _incrementNonce() internal {
         nonce++;
+    }
+
+    modifier onlyActiveNodeOperator(uint256 _nodeOperatorId) {
+        require(
+            nodeOperators[_nodeOperatorId].active,
+            "node operator is not active"
+        );
+        _;
     }
 }
