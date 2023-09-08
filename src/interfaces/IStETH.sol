@@ -64,4 +64,6 @@ interface IStETH {
         address _recipient,
         uint256 _amount
     ) external returns (bool);
+
+    function approve(address _spender, uint256 _amount) external returns (bool);
 }

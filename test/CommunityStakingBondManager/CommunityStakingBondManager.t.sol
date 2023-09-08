@@ -36,7 +36,6 @@ contract CommunityStakingBondManagerTest is Test {
         lidoStETH.mintShares(address(lidoStETH), 7059313073779349112833523);
         locator = new LidoLocatorMock(address(lidoStETH), burner);
         wstETH = new WstETHMock(address(lidoStETH));
-        // wstETH.selfMint(100 ether);
         bondManager = new CommunityStakingBondManager(
             2 ether,
             alice,
