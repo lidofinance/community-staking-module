@@ -30,19 +30,17 @@ contract FeeOracle is FeeOracleBase, AccessControlEnumerable {
         keccak256("ORACLE_MEMBER_ROLE");
 
     uint64 public lastConsolidatedEpoch;
+    uint64 public initializationEpoch;
     /// @notice Interval between reports
     uint64 public reportIntervalEpochs;
+
+    bool public initialized;
 
     constructor(
         uint64 secondsPerBlock,
         uint64 blocksPerEpoch,
-        uint64 genesisTime,
-        uint64 reportInterval,
-        address admin
+        uint64 genesisTime
     ) {
-        if (admin == address(0)) revert ZeroAddress("admin");
-        _setupRole(DEFAULT_ADMIN_ROLE, admin);
-
         if (genesisTime > block.timestamp) {
             revert GenesisTimeNotReached();
         }
@@ -50,9 +48,25 @@ contract FeeOracle is FeeOracleBase, AccessControlEnumerable {
         SECONDS_PER_BLOCK = secondsPerBlock;
         BLOCKS_PER_EPOCH = blocksPerEpoch;
         GENESIS_TIME = genesisTime;
+    }
 
-        lastConsolidatedEpoch = currentEpoch();
+    /// @notice Initialize the contract
+    function initialize(
+        uint64 _initializationEpoch,
+        uint64 reportInterval,
+        address admin
+    ) external {
+        if (initialized) revert AlreadyInitialized();
+
+        if (admin == address(0)) revert ZeroAddress("admin");
+        _setupRole(DEFAULT_ADMIN_ROLE, admin);
+
+        lastConsolidatedEpoch = _initializationEpoch;
+        initializationEpoch = _initializationEpoch;
+
         _setReportInterval(reportInterval);
+
+        initialized = true;
     }
 
     /// @notice Get current epoch
@@ -64,7 +78,8 @@ contract FeeOracle is FeeOracleBase, AccessControlEnumerable {
     }
 
     /// @notice Returns the next epoch to report
-    function nextReportEpoch() public view returns (uint64) {
+    function nextReportEpoch() public view onlyInitializied returns (uint64) {
+        // NOTE: underflow is expected here when lastConsolidatedEpoch in the future
         uint64 epochsElapsed = currentEpoch() - lastConsolidatedEpoch;
         if (epochsElapsed < reportIntervalEpochs) {
             return lastConsolidatedEpoch + reportIntervalEpochs;
@@ -75,7 +90,12 @@ contract FeeOracle is FeeOracleBase, AccessControlEnumerable {
     }
 
     /// @notice Get the current report frame slots
-    function reportFrame() external view returns (uint64, uint64) {
+    function reportFrame()
+        external
+        view
+        onlyInitializied
+        returns (uint64, uint64)
+    {
         return (
             lastConsolidatedEpoch * BLOCKS_PER_EPOCH + 1,
             nextReportEpoch() * BLOCKS_PER_EPOCH
@@ -105,7 +125,7 @@ contract FeeOracle is FeeOracleBase, AccessControlEnumerable {
         uint64 epoch,
         bytes32 newRoot,
         string memory _treeCid
-    ) external onlyRole(ORACLE_MEMBER_ROLE) whenNotPaused {
+    ) external onlyInitializied onlyRole(ORACLE_MEMBER_ROLE) whenNotPaused {
         uint64 _currentEpoch = currentEpoch();
         if (_currentEpoch < epoch) {
             revert ReportTooEarly();
@@ -226,5 +246,10 @@ contract FeeOracle is FeeOracleBase, AccessControlEnumerable {
     /// @notice Pause the contract
     function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
         _pause();
+    }
+
+    modifier onlyInitializied() {
+        if (!initialized) revert NotInitialized();
+        _;
     }
 }
