@@ -10,6 +10,14 @@ import { ICommunityStakingModule } from "./interfaces/ICommunityStakingModule.so
 import { IStETH } from "./interfaces/IStETH.sol";
 import { ICommunityStakingFeeDistributor } from "./interfaces/ICommunityStakingFeeDistributor.sol";
 
+interface ILido is IStETH {
+    function submit(address _referal) external payable returns (uint256);
+}
+
+interface IWstETH {
+    function unwrap(uint256 _wstETHAmount) external returns (uint256);
+}
+
 contract CommunityStakingBondManager is AccessControlEnumerable {
     event BondDeposited(
         uint256 nodeOperatorId,
@@ -32,26 +40,27 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
 
     bytes32 public constant PENALIZE_BOND_ROLE =
         keccak256("PENALIZE_BOND_ROLE");
+    address public FEE_DISTRIBUTOR;
 
     mapping(uint256 => uint256) private bondShares;
 
     ILidoLocator private immutable LIDO_LOCATOR;
     ICommunityStakingModule private immutable CSM;
-    ICommunityStakingFeeDistributor private immutable FEE_DISTRIBUTOR;
+    IWstETH private immutable WSTETH;
     uint256 private immutable COMMON_BOND_SIZE;
 
     /// @param _commonBondSize common bond size in ETH for all node operators.
     /// @param _admin admin role member address
     /// @param _lidoLocator lido locator contract address
+    /// @param _wstETH wstETH contract address
     /// @param _communityStakingModule community staking module contract address
-    /// @param _communityStakingFeeDistributor community staking fee distributor contract address
     /// @param _penalizeRoleMembers list of addresses with PENALIZE_BOND_ROLE
     constructor(
         uint256 _commonBondSize,
         address _admin,
         address _lidoLocator,
+        address _wstETH,
         address _communityStakingModule,
-        address _communityStakingFeeDistributor,
         address[] memory _penalizeRoleMembers
     ) {
         // check zero addresses
@@ -61,10 +70,7 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
             _communityStakingModule != address(0),
             "community staking module is zero address"
         );
-        require(
-            _communityStakingFeeDistributor != address(0),
-            "community staking fee distributor is zero address"
-        );
+        require(_wstETH != address(0), "wstETH is zero address");
         require(
             _penalizeRoleMembers.length > 0,
             "penalize role members is empty"
@@ -81,23 +87,27 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
 
         LIDO_LOCATOR = ILidoLocator(_lidoLocator);
         CSM = ICommunityStakingModule(_communityStakingModule);
-        FEE_DISTRIBUTOR = ICommunityStakingFeeDistributor(
-            _communityStakingFeeDistributor
-        );
+        WSTETH = IWstETH(_wstETH);
 
         COMMON_BOND_SIZE = _commonBondSize;
+    }
+
+    function setFeeDistrubutor(
+        address _fdAddress
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        FEE_DISTRIBUTOR = _fdAddress;
     }
 
     /// @notice Returns the total bond shares.
     /// @return total bond shares.
     function totalBondShares() public view returns (uint256) {
-        return _stETH().sharesOf(address(this));
+        return _lido().sharesOf(address(this));
     }
 
     /// @notice Returns the total bond size in ETH.
     /// @return total bond size in ETH.
     function totalBondEth() public view returns (uint256) {
-        return _stETH().getPooledEthByShares(totalBondShares());
+        return _lido().getPooledEthByShares(totalBondShares());
     }
 
     /// @notice Returns the bond shares for the given node operator.
@@ -113,7 +123,7 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
     /// @param nodeOperatorId id of the node operator to get bond for.
     /// @return bond size in ETH.
     function getBondEth(uint256 nodeOperatorId) public view returns (uint256) {
-        return _stETH().getPooledEthByShares(getBondShares(nodeOperatorId));
+        return _lido().getPooledEthByShares(getBondShares(nodeOperatorId));
     }
 
     /// @notice Returns the required bond size for the given node operator.
@@ -143,17 +153,37 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
     function getRequiredBondShares(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
-        return
-            _stETH().getSharesByPooledEth(getRequiredBondEth(nodeOperatorId));
+        return _lido().getSharesByPooledEth(getRequiredBondEth(nodeOperatorId));
     }
 
     /// @notice Deposits stETH to the bond for the given node operator.
     /// @param nodeOperatorId id of the node operator to deposit bond for.
     /// @param shares amount of shares to deposit.
-    function deposit(uint256 nodeOperatorId, uint256 shares) external {
-        _stETH().transferSharesFrom(msg.sender, address(this), shares);
+    function deposit(uint256 nodeOperatorId, uint256 shares) public {
+        require(
+            nodeOperatorId < CSM.getNodeOperatorsCount(),
+            "node operator does not exist"
+        );
+        _lido().transferSharesFrom(msg.sender, address(this), shares);
         bondShares[nodeOperatorId] += shares;
         emit BondDeposited(nodeOperatorId, msg.sender, shares);
+    }
+
+    /// @notice Deposits ETH to the bond for the given node operator.
+    /// @param nodeOperatorId id of the node operator to deposit bond for.
+    function depositEth(uint256 nodeOperatorId) external payable {
+        uint256 shares = _lido().submit{ value: msg.value }(address(0));
+        deposit(nodeOperatorId, shares);
+    }
+
+    /// @notice Deposits wstETH to the bond for the given node operator.
+    /// @param nodeOperatorId id of the node operator to deposit bond for.
+    function depositWstETH(
+        uint256 nodeOperatorId,
+        uint256 wstETHAmount
+    ) external {
+        uint256 shares = WSTETH.unwrap(wstETHAmount);
+        deposit(nodeOperatorId, shares);
     }
 
     /// @notice Claims full reward (fee + bond) for the given node operator with desirable value
@@ -205,7 +235,7 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         if (msg.sender != rewardAddress) {
             revert NotOwnerToClaim(msg.sender, rewardAddress);
         }
-        uint256 feeRewards = FEE_DISTRIBUTOR.distributeFees(
+        uint256 feeRewards = _feeDistributor().distributeFees(
             rewardsProof,
             nodeOperatorId,
             cummulativeFeeShares
@@ -228,7 +258,7 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
     ) external onlyRole(PENALIZE_BOND_ROLE) {
         uint256 currentBond = getBondShares(nodeOperatorId);
         uint256 coveringShares = shares < currentBond ? shares : currentBond;
-        _stETH().transferSharesFrom(
+        _lido().transferSharesFrom(
             address(this),
             LIDO_LOCATOR.burner(),
             coveringShares
@@ -237,8 +267,16 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         emit BondPenalized(nodeOperatorId, shares, coveringShares);
     }
 
-    function _stETH() internal view returns (IStETH) {
-        return IStETH(LIDO_LOCATOR.lido());
+    function _lido() internal view returns (ILido) {
+        return ILido(LIDO_LOCATOR.lido());
+    }
+
+    function _feeDistributor()
+        internal
+        view
+        returns (ICommunityStakingFeeDistributor)
+    {
+        return ICommunityStakingFeeDistributor(FEE_DISTRIBUTOR);
     }
 
     function _claimBondRewards(
@@ -255,7 +293,7 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         uint256 sharesToTransfer = shares < claimableShares
             ? shares
             : claimableShares;
-        _stETH().transferSharesFrom(
+        _lido().transferSharesFrom(
             address(this),
             rewardAddress,
             sharesToTransfer

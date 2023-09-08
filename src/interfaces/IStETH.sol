@@ -47,4 +47,21 @@ interface IStETH {
         address _recipient,
         uint256 _sharesAmount
     ) external returns (uint256);
+
+    /**
+     * @notice Moves `_pooledEthAmount` stETH from the caller's account to the `_recipient` account.
+     */
+    function transfer(
+        address _recipient,
+        uint256 _amount
+    ) external returns (bool);
+
+    /**
+     * @notice Moves `_pooledEthAmount` stETH from the `_sender` account to the `_recipient` account.
+     */
+    function transferFrom(
+        address _sender,
+        address _recipient,
+        uint256 _amount
+    ) external returns (bool);
 }
