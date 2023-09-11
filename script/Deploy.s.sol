@@ -17,14 +17,14 @@ contract Deploy is Script {
 
     address LIDO_LOCATOR_ADDRESS;
     address WSTETH_ADDRESS;
-    uint256 GENESIS_TIME;
+    uint256 CL_GENESIS_TIME;
     uint256 INITIALIZATION_EPOCH;
 
     function run() external {
         // TODO: proxy ???
         LIDO_LOCATOR_ADDRESS = vm.envAddress("LIDO_LOCATOR_ADDRESS");
         WSTETH_ADDRESS = vm.envAddress("WSTETH_ADDRESS");
-        GENESIS_TIME = vm.envUint("GENESIS_TIME");
+        CL_GENESIS_TIME = vm.envUint("CL_GENESIS_TIME");
         INITIALIZATION_EPOCH = vm.envUint("INITIALIZATION_EPOCH");
 
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
@@ -49,7 +49,7 @@ contract Deploy is Script {
         FeeOracle feeOracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
-            genesisTime: uint64(GENESIS_TIME)
+            genesisTime: uint64(CL_GENESIS_TIME)
         });
         feeOracle.initialize({
             _initializationEpoch: uint64(INITIALIZATION_EPOCH),
