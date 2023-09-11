@@ -183,6 +183,7 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
     function depositETH(
         uint256 nodeOperatorId
     ) external payable returns (uint256) {
+        // TODO: should be modifier. condition might be changed as well
         require(
             nodeOperatorId < CSM.getNodeOperatorsCount(),
             "node operator does not exist"
