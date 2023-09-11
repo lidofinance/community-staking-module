@@ -52,6 +52,16 @@ contract StETHMock {
     }
 
     /**
+     * @return the amount of tokens owned by the `_account`.
+     *
+     * @dev Balances are dynamic and equal the `_account`'s share in the amount of the
+     * total Ether controlled by the protocol. See `sharesOf`.
+     */
+    function balanceOf(address _account) external view returns (uint256) {
+        return getPooledEthByShares(shares[_account]);
+    }
+
+    /**
      * @notice Moves `_amount` token amount from the caller's account to the `_recipient` account.
      */
     function transferFrom(

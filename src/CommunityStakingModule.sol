@@ -85,6 +85,37 @@ contract CommunityStakingModule is IStakingModule {
         return (0, 0, 0);
     }
 
+    function addNodeOperatorWstETH(
+        string calldata _name,
+        address _rewardAddress,
+        uint256 _keysCount,
+        bytes calldata /*_publicKeys*/,
+        bytes calldata /*_signatures*/
+    ) external {
+        // TODO sanity checks
+        // TODO store keys
+        uint256 id = nodeOperatorsCount;
+        NodeOperator storage no = nodeOperators[id];
+        no.name = _name;
+        no.rewardAddress = _rewardAddress;
+        no.active = true;
+        no.totalAddedValidators = _keysCount;
+        nodeOperatorsCount++;
+        activeNodeOperatorsCount++;
+
+        uint256 requiredEth = _lido().getPooledEthByShares(
+            _bondManager().getRequiredBondSharesForKeys(_keysCount)
+        );
+
+        _bondManager().depositWstETH(
+            msg.sender,
+            id,
+            _lido().getSharesByPooledEth(requiredEth) // to get wstETH amount
+        );
+
+        _incrementNonce();
+    }
+
     function addNodeOperatorStETH(
         string calldata _name,
         address _rewardAddress,
@@ -103,10 +134,13 @@ contract CommunityStakingModule is IStakingModule {
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
 
-        uint256 shares = _bondManager().getRequiredBondSharesForKeys(
-            _keysCount
+        _bondManager().depositStETH(
+            msg.sender,
+            id,
+            _lido().getPooledEthByShares(
+                _bondManager().getRequiredBondSharesForKeys(_keysCount)
+            )
         );
-        _bondManager().depositStETH(msg.sender, id, shares);
 
         _incrementNonce();
     }
@@ -121,10 +155,13 @@ contract CommunityStakingModule is IStakingModule {
         // TODO sanity checks
         // TODO store keys
 
-        uint256 requiredEth = _bondManager().getRequiredBondEthForKeys(
-            _keysCount
+        require(
+            msg.value >=
+                _lido().getPooledEthByShares(
+                    _bondManager().getRequiredBondSharesForKeys(_keysCount)
+                ),
+            "not enough eth to deposit"
         );
-        require(msg.value == requiredEth);
 
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
@@ -140,6 +177,28 @@ contract CommunityStakingModule is IStakingModule {
         _incrementNonce();
     }
 
+    function addValidatorKeysWstETH(
+        uint256 _nodeOperatorId,
+        uint256 _keysCount,
+        bytes calldata /*_publicKeys*/,
+        bytes calldata /*_signatures*/
+    ) external onlyActiveNodeOperator(_nodeOperatorId) {
+        // TODO sanity checks
+        // TODO store keys
+
+        uint256 requiredEth = _lido().getPooledEthByShares(
+            _bondManager().getRequiredBondShares(_nodeOperatorId, _keysCount)
+        );
+
+        _bondManager().depositWstETH(
+            msg.sender,
+            _nodeOperatorId,
+            _lido().getSharesByPooledEth(requiredEth) // to get wstETH amount
+        );
+
+        _incrementNonce();
+    }
+
     function addValidatorKeysStETH(
         uint256 _nodeOperatorId,
         uint256 _keysCount,
@@ -149,22 +208,15 @@ contract CommunityStakingModule is IStakingModule {
         // TODO sanity checks
         // TODO store keys
 
-        // add validators before to affect required bond shares calculation
-        nodeOperators[_nodeOperatorId].totalAddedValidators += _keysCount;
-
-        uint256 requiredShares = _bondManager().getRequiredBondShares(
-            _nodeOperatorId
-        );
-        uint256 actualShares = _bondManager().getBondShares(_nodeOperatorId);
-        uint256 sharesToDeposit = requiredShares - actualShares;
-        if (sharesToDeposit < 0) {
-            sharesToDeposit = 0;
-        }
-
         _bondManager().depositStETH(
             msg.sender,
             _nodeOperatorId,
-            sharesToDeposit
+            _lido().getPooledEthByShares(
+                _bondManager().getRequiredBondShares(
+                    _nodeOperatorId,
+                    _keysCount
+                )
+            )
         );
 
         _incrementNonce();
@@ -179,18 +231,15 @@ contract CommunityStakingModule is IStakingModule {
         // TODO sanity checks
         // TODO store keys
 
-        // add validators before to affect required bond shares calculation
-        nodeOperators[_nodeOperatorId].totalAddedValidators += _keysCount;
-
-        uint256 receivedShares = _lido().getSharesByPooledEth(msg.value);
-        uint256 requiredShares = _bondManager().getRequiredBondShares(
-            _nodeOperatorId
-        );
-        uint256 actualShares = _bondManager().getBondShares(_nodeOperatorId);
-        // TODO should it be here? - 1
         require(
-            receivedShares >= (requiredShares - actualShares) - 1,
-            "not enough eth"
+            msg.value >=
+                _lido().getPooledEthByShares(
+                    _bondManager().getRequiredBondShares(
+                        _nodeOperatorId,
+                        _keysCount
+                    )
+                ),
+            "not enough eth to deposit"
         );
 
         _bondManager().depositETH{ value: msg.value }(
