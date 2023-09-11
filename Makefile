@@ -10,9 +10,9 @@ clean:
 	forge clean
 	rm -rf cache_foundry broadcast
 check:
-	prettier --config ./.prettierrc . --check
+	prettier --config ./.prettierrc **.{sol,ts} --check
 fix:
-	prettier --config ./.prettierrc . -w
+	prettier --config ./.prettierrc **.{sol,ts} -w
 test:
 	forge test -vvvvv
 
