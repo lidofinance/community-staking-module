@@ -5,6 +5,8 @@ pragma solidity 0.8.21;
 
 import { IStakingModule } from "./interfaces/IStakingModule.sol";
 import "./interfaces/ICommunityStakingBondManager.sol";
+import "./interfaces/ILidoLocator.sol";
+import "./interfaces/ILido.sol";
 
 struct NodeOperator {
     string name;
@@ -31,10 +33,14 @@ contract CommunityStakingModule is IStakingModule {
     mapping(uint256 => NodeOperator) private nodeOperators;
 
     address public bondManagerAddress;
+    address public lidoLocator;
 
-    constructor(bytes32 _type) {
+    constructor(bytes32 _type, address _locator) {
         moduleType = _type;
         nodeOperatorsCount = 0;
+
+        require(_locator != address(0), "lido locator is zero address");
+        lidoLocator = _locator;
     }
 
     function setBondManager(address _bondManagerAddress) external {
@@ -54,6 +60,14 @@ contract CommunityStakingModule is IStakingModule {
         return ICommunityStakingBondManager(bondManagerAddress);
     }
 
+    function _lidoLocator() internal view returns (ILidoLocator) {
+        return ILidoLocator(lidoLocator);
+    }
+
+    function _lido() internal view returns (ILido) {
+        return ILido(_lidoLocator().lido());
+    }
+
     function getType() external view returns (bytes32) {
         return moduleType;
     }
@@ -71,7 +85,7 @@ contract CommunityStakingModule is IStakingModule {
         return (0, 0, 0);
     }
 
-    function addNodeOperator(
+    function addNodeOperatorStETH(
         string calldata _name,
         address _rewardAddress,
         uint256 _keysCount,
@@ -89,13 +103,44 @@ contract CommunityStakingModule is IStakingModule {
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
 
-        uint256 shares = _bondManager().getRequiredBondShares(id);
-        _bondManager().deposit(msg.sender, id, shares);
+        uint256 shares = _bondManager().getRequiredBondSharesForKeys(
+            _keysCount
+        );
+        _bondManager().depositStETH(msg.sender, id, shares);
 
         _incrementNonce();
     }
 
-    function addValidatorKeys(
+    function addNodeOperatorETH(
+        string calldata _name,
+        address _rewardAddress,
+        uint256 _keysCount,
+        bytes calldata /*_publicKeys*/,
+        bytes calldata /*_signatures*/
+    ) external payable {
+        // TODO sanity checks
+        // TODO store keys
+
+        uint256 requiredEth = _bondManager().getRequiredBondEthForKeys(
+            _keysCount
+        );
+        require(msg.value == requiredEth);
+
+        uint256 id = nodeOperatorsCount;
+        NodeOperator storage no = nodeOperators[id];
+        no.name = _name;
+        no.rewardAddress = _rewardAddress;
+        no.active = true;
+        no.totalAddedValidators = _keysCount;
+        nodeOperatorsCount++;
+        activeNodeOperatorsCount++;
+
+        _bondManager().depositETH{ value: msg.value }(msg.sender, id);
+
+        _incrementNonce();
+    }
+
+    function addValidatorKeysStETH(
         uint256 _nodeOperatorId,
         uint256 _keysCount,
         bytes calldata /*_publicKeys*/,
@@ -103,20 +148,55 @@ contract CommunityStakingModule is IStakingModule {
     ) external onlyActiveNodeOperator(_nodeOperatorId) {
         // TODO sanity checks
         // TODO store keys
-        NodeOperator storage no = nodeOperators[_nodeOperatorId];
-        no.totalAddedValidators += _keysCount;
-        uint256 shares = _bondManager().getRequiredBondShares(_nodeOperatorId);
-        _bondManager().deposit(msg.sender, _nodeOperatorId, shares);
+
+        // add validators before to affect required bond shares calculation
+        nodeOperators[_nodeOperatorId].totalAddedValidators += _keysCount;
+
+        uint256 requiredShares = _bondManager().getRequiredBondShares(
+            _nodeOperatorId
+        );
+        uint256 actualShares = _bondManager().getBondShares(_nodeOperatorId);
+        uint256 sharesToDeposit = requiredShares - actualShares;
+        if (sharesToDeposit < 0) {
+            sharesToDeposit = 0;
+        }
+
+        _bondManager().depositStETH(
+            msg.sender,
+            _nodeOperatorId,
+            sharesToDeposit
+        );
 
         _incrementNonce();
     }
 
-    function depositBond(
+    function addValidatorKeysETH(
         uint256 _nodeOperatorId,
-        uint256 _shares
-    ) external onlyActiveNodeOperator(_nodeOperatorId) {
+        uint256 _keysCount,
+        bytes calldata /*_publicKeys*/,
+        bytes calldata /*_signatures*/
+    ) external payable onlyActiveNodeOperator(_nodeOperatorId) {
         // TODO sanity checks
-        _bondManager().deposit(msg.sender, _nodeOperatorId, _shares);
+        // TODO store keys
+
+        // add validators before to affect required bond shares calculation
+        nodeOperators[_nodeOperatorId].totalAddedValidators += _keysCount;
+
+        uint256 receivedShares = _lido().getSharesByPooledEth(msg.value);
+        uint256 requiredShares = _bondManager().getRequiredBondShares(
+            _nodeOperatorId
+        );
+        uint256 actualShares = _bondManager().getBondShares(_nodeOperatorId);
+        // TODO should it be here? - 1
+        require(
+            receivedShares >= (requiredShares - actualShares) - 1,
+            "not enough eth"
+        );
+
+        _bondManager().depositETH{ value: msg.value }(
+            msg.sender,
+            _nodeOperatorId
+        );
 
         _incrementNonce();
     }

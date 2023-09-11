@@ -8,12 +8,15 @@ import "../../src/test_helpers/LidoLocatorMock.sol";
 import "../../src/test_helpers/CommunityStakingFeeDistributorMock.sol";
 import "../../src/test_helpers/StETHMock.sol";
 import "../../src/test_helpers/CommunityStakingModuleMock.sol";
+import "../../src/test_helpers/WstETHMock.sol";
+import "../../src/test_helpers/LidoMock.sol";
 
 contract CSMInitTest is Test {
     CommunityStakingModule public csm;
     CommunityStakingBondManager public bondManager;
 
-    StETHMock public stETH;
+    LidoMock public lidoStETH;
+    WstETHMock public wstETH;
     CommunityStakingFeeDistributorMock public communityStakingFeeDistributor;
     LidoLocatorMock public locator;
 
@@ -25,18 +28,25 @@ contract CSMInitTest is Test {
         alice = address(1);
         address[] memory penalizeRoleMembers = new address[](1);
         penalizeRoleMembers[0] = alice;
-        locator = new LidoLocatorMock(address(stETH), burner);
-        communityStakingFeeDistributor = new CommunityStakingFeeDistributorMock(
+
+        lidoStETH = new LidoMock(8013386371917025835991984);
+        lidoStETH.mintShares(address(lidoStETH), 7059313073779349112833523);
+        locator = new LidoLocatorMock(address(lidoStETH), burner);
+        csm = new CommunityStakingModule(
+            "community-staking-module",
             address(locator)
         );
-
-        csm = new CommunityStakingModule("community-staking-module");
+        wstETH = new WstETHMock(address(lidoStETH));
+        communityStakingFeeDistributor = new CommunityStakingFeeDistributorMock(
+            address(locator),
+            address(bondManager)
+        );
         bondManager = new CommunityStakingBondManager(
             2 ether,
             alice,
             address(locator),
+            address(wstETH),
             address(csm),
-            address(communityStakingFeeDistributor),
             penalizeRoleMembers
         );
     }
