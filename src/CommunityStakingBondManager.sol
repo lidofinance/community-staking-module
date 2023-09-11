@@ -102,7 +102,7 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         COMMON_BOND_SIZE = _commonBondSize;
     }
 
-    function setFeeDistrubutor(
+    function setFeeDistributor(
         address _fdAddress
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         FEE_DISTRIBUTOR = _fdAddress;

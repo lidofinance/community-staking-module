@@ -52,7 +52,7 @@ contract CommunityStakingBondManagerTest is Test {
             address(bondManager)
         );
         vm.prank(admin);
-        bondManager.setFeeDistrubutor(address(communityStakingFeeDistributor));
+        bondManager.setFeeDistributor(address(communityStakingFeeDistributor));
     }
 
     function test_totalBondShares() public {
