@@ -12,8 +12,9 @@ contract CommunityStakingFeeDistributorMock {
 
     mapping(uint256 => uint256) public distributedFees;
 
-    constructor(address _lidoLocator) {
+    constructor(address _lidoLocator, address _bondManager) {
         LIDO_LOCATOR = ILidoLocator(_lidoLocator);
+        BOND_MANAGER_ADDRESS = _bondManager;
     }
 
     function distributeFees(
@@ -28,10 +29,6 @@ contract CommunityStakingFeeDistributorMock {
         );
         distributedFees[noIndex] += shares;
         return shares;
-    }
-
-    function setBondManager(address _bondManager) external {
-        BOND_MANAGER_ADDRESS = _bondManager;
     }
 
     function _stETH() internal view returns (IStETH) {

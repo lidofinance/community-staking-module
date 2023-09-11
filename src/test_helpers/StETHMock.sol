@@ -12,13 +12,6 @@ contract StETHMock {
         totalPooledEther = _totalPooledEther;
     }
 
-    function _submit(address _sender, uint256 _value) public returns (uint256) {
-        uint256 sharesToMint = getSharesByPooledEth(_value);
-        mintShares(_sender, sharesToMint);
-        addTotalPooledEther(_value);
-        return sharesToMint;
-    }
-
     function mintShares(address _account, uint256 _sharesAmount) public {
         shares[_account] += _sharesAmount;
         totalShares += _sharesAmount;
@@ -56,6 +49,38 @@ contract StETHMock {
      */
     function sharesOf(address _account) public view returns (uint256) {
         return shares[_account];
+    }
+
+    /**
+     * @notice Moves `_amount` token amount from the caller's account to the `_recipient` account.
+     */
+    function transferFrom(
+        address _sender,
+        address _recipient,
+        uint256 _amount
+    ) public returns (bool) {
+        uint256 _sharesToTransfer = getSharesByPooledEth(_amount);
+        transferSharesFrom(_sender, _recipient, _sharesToTransfer);
+        return true;
+    }
+
+    function transfer(
+        address _recipient,
+        uint256 _amount
+    ) public returns (bool) {
+        uint256 _sharesToTransfer = getSharesByPooledEth(_amount);
+        transferShares(_recipient, _sharesToTransfer);
+        return true;
+    }
+
+    function transferShares(
+        address _recipient,
+        uint256 _sharesAmount
+    ) public returns (uint256) {
+        require(shares[msg.sender] >= _sharesAmount, "not enough shares");
+        shares[msg.sender] -= _sharesAmount;
+        shares[_recipient] += _sharesAmount;
+        return _sharesAmount;
     }
 
     /**

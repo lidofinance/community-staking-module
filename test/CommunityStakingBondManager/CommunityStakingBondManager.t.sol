@@ -5,85 +5,170 @@ pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
 import "../../src/CommunityStakingBondManager.sol";
-import { StETHMock } from "../../src/test_helpers/StETHMock.sol";
+import { LidoMock } from "../../src/test_helpers/LidoMock.sol";
+import { WstETHMock } from "../../src/test_helpers/WstETHMock.sol";
 import { LidoLocatorMock } from "../../src/test_helpers/LidoLocatorMock.sol";
 import { CommunityStakingModuleMock } from "../../src/test_helpers/CommunityStakingModuleMock.sol";
 import { CommunityStakingFeeDistributorMock } from "../../src/test_helpers/CommunityStakingFeeDistributorMock.sol";
 
 contract CommunityStakingBondManagerTest is Test {
     CommunityStakingBondManager public bondManager;
-    StETHMock public stETH;
+    LidoMock public lidoStETH;
+    WstETHMock public wstETH;
     CommunityStakingModuleMock public communityStakingModule;
     CommunityStakingFeeDistributorMock public communityStakingFeeDistributor;
     LidoLocatorMock public locator;
 
+    address internal admin;
+    address internal user;
     address internal stranger;
-    address internal alice;
     address internal burner;
 
     function setUp() public {
-        stranger = address(777);
-        alice = address(1);
+        admin = address(1);
         burner = address(21);
 
+        user = address(2);
+        stranger = address(777);
+
         address[] memory penalizeRoleMembers = new address[](1);
-        penalizeRoleMembers[0] = alice;
+        penalizeRoleMembers[0] = admin;
 
         communityStakingModule = new CommunityStakingModuleMock();
-        stETH = new StETHMock(8013386371917025835991984);
-        stETH.mintShares(address(stETH), 7059313073779349112833523);
-        locator = new LidoLocatorMock(address(stETH), burner);
-        communityStakingFeeDistributor = new CommunityStakingFeeDistributorMock(
-            address(locator)
-        );
+        lidoStETH = new LidoMock(8013386371917025835991984);
+        lidoStETH.mintShares(address(lidoStETH), 7059313073779349112833523);
+        locator = new LidoLocatorMock(address(lidoStETH), burner);
+        wstETH = new WstETHMock(address(lidoStETH));
         bondManager = new CommunityStakingBondManager(
             2 ether,
-            alice,
+            admin,
             address(locator),
+            address(wstETH),
             address(communityStakingModule),
-            address(communityStakingFeeDistributor),
             penalizeRoleMembers
         );
-        communityStakingFeeDistributor.setBondManager(address(bondManager));
+        communityStakingFeeDistributor = new CommunityStakingFeeDistributorMock(
+            address(locator),
+            address(bondManager)
+        );
+        vm.prank(admin);
+        bondManager.setFeeDistrubutor(address(communityStakingFeeDistributor));
     }
 
     function test_totalBondShares() public {
-        stETH.mintShares(address(bondManager), 32 * 10 ** 18);
-        assertEq(bondManager.totalBondShares(), 32 * 10 ** 18);
+        lidoStETH.mintShares(address(bondManager), 32 * 1e18);
+        assertEq(bondManager.totalBondShares(), 32 * 1e18);
     }
 
     function test_totalBondEth() public {
-        stETH.mintShares(address(bondManager), 32 * 10 ** 18);
+        lidoStETH.mintShares(address(bondManager), 32 * 1e18);
         assertEq(
             bondManager.totalBondEth(),
-            stETH.getPooledEthByShares(32 * 10 ** 18)
+            lidoStETH.getPooledEthByShares(32 * 1e18)
         );
     }
 
-    function test_deposit() public {
-        stETH.mintShares(stranger, 32 * 10 ** 18);
+    function test_depositStETH() public {
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        uint256 shares = lidoStETH.submit{ value: 32 ether }({
+            _referal: address(0)
+        });
 
-        vm.prank(stranger);
-        bondManager.deposit(0, 32 * 10 ** 18);
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "User",
+            _rewardAddress: user,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 1,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
 
-        assertEq(bondManager.getBondShares(0), 32 * 10 ** 18);
+        vm.prank(user);
+        bondManager.depositStETH(0, 32 ether);
+
+        assertEq(bondManager.getBondShares(0), shares);
+    }
+
+    function test_depositETH() public {
+        vm.deal(user, 32 ether);
+
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "User",
+            _rewardAddress: user,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 1,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
+
+        vm.prank(user);
+        uint256 shares = bondManager.depositETH{ value: 32 ether }(0);
+
+        assertEq(bondManager.getBondShares(0), shares);
+    }
+
+    function test_depositWstETH() public {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        lidoStETH.submit{ value: 32 ether }({ _referal: address(0) });
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "User",
+            _rewardAddress: user,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 1,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
+
+        uint256 shares = bondManager.depositWstETH(0, wstETHAmount);
+
+        assertEq(bondManager.getBondShares(0), shares);
+    }
+
+    function test_deposit_RevertIfNotExistedOperator() public {
+        vm.expectRevert("node operator does not exist");
+        bondManager.depositStETH(0, 32 ether);
     }
 
     function test_getBondEth() public {
-        stETH.mintShares(stranger, 32 * 10 ** 18);
+        vm.deal(user, 32 ether);
 
-        vm.prank(stranger);
-        bondManager.deposit(0, 32 * 10 ** 18);
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "User",
+            _rewardAddress: user,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 1,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
 
-        assertEq(bondManager.getBondEth(0), 36324667688196920249);
+        vm.prank(user);
+        bondManager.depositETH{ value: 32 ether }(0);
+
+        assertEq(bondManager.getBondEth(0), 32 ether - 1);
     }
 
     function test_getRequiredBondEth_OneWithdrawnValidator() public {
         communityStakingModule.setNodeOperator({
             _nodeOperatorId: 0,
             _active: true,
-            _name: "Alice",
-            _rewardAddress: alice,
+            _name: "User",
+            _rewardAddress: user,
             _totalVettedValidators: 16,
             _totalExitedValidators: 0,
             _totalWithdrawnValidators: 1,
@@ -97,8 +182,8 @@ contract CommunityStakingBondManagerTest is Test {
         communityStakingModule.setNodeOperator({
             _nodeOperatorId: 0,
             _active: true,
-            _name: "Alice",
-            _rewardAddress: alice,
+            _name: "User",
+            _rewardAddress: user,
             _totalVettedValidators: 16,
             _totalExitedValidators: 0,
             _totalWithdrawnValidators: 0,
@@ -108,17 +193,57 @@ contract CommunityStakingBondManagerTest is Test {
         assertEq(bondManager.getRequiredBondEth(0), 32 ether);
     }
 
-    function test_claimRewards() public {
-        stETH._submit(stranger, 32 ether);
+    function test_getRequiredBondShares_OneWithdrawnValidator() public {
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "User",
+            _rewardAddress: user,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 1,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
+        assertEq(bondManager.getRequiredBondShares(0), 26428201809357774385);
+    }
 
-        vm.startPrank(stranger);
-        bondManager.deposit(0, stETH.sharesOf(stranger));
+    function test_getRequiredBondShares_NoWithdrawnValidators() public {
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "User",
+            _rewardAddress: user,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 0,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
+        assertEq(bondManager.getRequiredBondShares(0), 28190081929981626011);
+    }
+
+    function test_getRequiredBondEthForKeys() public {
+        assertEq(bondManager.getRequiredBondEthForKeys(1), 2 ether);
+    }
+
+    function test_getRequiredBondSharesForKeys() public {
+        assertEq(
+            bondManager.getRequiredBondSharesForKeys(1),
+            1761880120623851625
+        );
+    }
+
+    function test_claimRewards() public {
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        lidoStETH.submit{ value: 32 ether }({ _referal: address(0) });
 
         communityStakingModule.setNodeOperator({
             _nodeOperatorId: 0,
             _active: true,
-            _name: "Stranger",
-            _rewardAddress: stranger,
+            _name: "User",
+            _rewardAddress: user,
             _totalVettedValidators: 16,
             _totalExitedValidators: 0,
             _totalWithdrawnValidators: 0,
@@ -126,15 +251,17 @@ contract CommunityStakingBondManagerTest is Test {
             _totalDepositedValidators: 16
         });
 
-        uint256 sharesAsFee = stETH._submit(
-            address(communityStakingFeeDistributor),
-            0.1 ether
-        );
+        vm.deal(address(communityStakingFeeDistributor), 0.1 ether);
+        vm.prank(address(communityStakingFeeDistributor));
+        uint256 sharesAsFee = lidoStETH.submit{ value: 0.1 ether }(address(0));
+
+        vm.startPrank(user);
+        bondManager.depositStETH(0, 32 ether);
 
         uint256 bondSharesBefore = bondManager.getBondShares(0);
         bondManager.claimRewards(new bytes32[](1), 0, sharesAsFee);
 
-        assertEq(stETH.sharesOf(address(stranger)), sharesAsFee);
+        assertEq(lidoStETH.sharesOf(address(user)), sharesAsFee);
         assertEq(
             bondManager.getBondShares(0),
             (bondSharesBefore + sharesAsFee) - sharesAsFee
@@ -142,16 +269,15 @@ contract CommunityStakingBondManagerTest is Test {
     }
 
     function test_claimRewards_WithDesirableValue() public {
-        stETH._submit(stranger, 32 ether);
-
-        vm.startPrank(stranger);
-        bondManager.deposit(0, stETH.sharesOf(stranger));
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        lidoStETH.submit{ value: 32 ether }({ _referal: address(0) });
 
         communityStakingModule.setNodeOperator({
             _nodeOperatorId: 0,
             _active: true,
-            _name: "Stranger",
-            _rewardAddress: stranger,
+            _name: "User",
+            _rewardAddress: user,
             _totalVettedValidators: 16,
             _totalExitedValidators: 0,
             _totalWithdrawnValidators: 0,
@@ -159,37 +285,33 @@ contract CommunityStakingBondManagerTest is Test {
             _totalDepositedValidators: 16
         });
 
-        uint256 sharesAsFee = stETH._submit(
-            address(communityStakingFeeDistributor),
-            0.1 ether
-        );
+        vm.deal(address(communityStakingFeeDistributor), 0.1 ether);
+        vm.prank(address(communityStakingFeeDistributor));
+        uint256 sharesAsFee = lidoStETH.submit{ value: 0.1 ether }(address(0));
+
+        vm.startPrank(user);
+        bondManager.depositStETH(0, 32 ether);
 
         uint256 bondSharesBefore = bondManager.getBondShares(0);
-        bondManager.claimRewards(
-            new bytes32[](1),
-            0,
-            sharesAsFee,
-            0.05 * 10 ** 18
-        );
+        bondManager.claimRewards(new bytes32[](1), 0, sharesAsFee, 0.05 * 1e18);
 
-        assertEq(stETH.sharesOf(address(stranger)), 0.05 * 10 ** 18);
+        assertEq(lidoStETH.sharesOf(address(user)), 0.05 * 1e18);
         assertEq(
             bondManager.getBondShares(0),
-            (bondSharesBefore + sharesAsFee) - 0.05 * 10 ** 18
+            (bondSharesBefore + sharesAsFee) - 0.05 * 1e18
         );
     }
 
     function test_claimRewards_WhenAmountToClaimIsHigherThanRewards() public {
-        stETH._submit(stranger, 32 ether);
-
-        vm.startPrank(stranger);
-        bondManager.deposit(0, stETH.sharesOf(stranger));
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        lidoStETH.submit{ value: 32 ether }({ _referal: address(0) });
 
         communityStakingModule.setNodeOperator({
             _nodeOperatorId: 0,
             _active: true,
-            _name: "Stranger",
-            _rewardAddress: stranger,
+            _name: "User",
+            _rewardAddress: user,
             _totalVettedValidators: 16,
             _totalExitedValidators: 0,
             _totalWithdrawnValidators: 0,
@@ -197,35 +319,31 @@ contract CommunityStakingBondManagerTest is Test {
             _totalDepositedValidators: 16
         });
 
-        uint256 sharesAsFee = stETH._submit(
-            address(communityStakingFeeDistributor),
-            0.1 ether
-        );
+        vm.deal(address(communityStakingFeeDistributor), 0.1 ether);
+        vm.prank(address(communityStakingFeeDistributor));
+        uint256 sharesAsFee = lidoStETH.submit{ value: 0.1 ether }(address(0));
+
+        vm.startPrank(user);
+        bondManager.depositStETH(0, 32 ether);
 
         uint256 requiredBondShares = bondManager.getRequiredBondShares(0);
-        bondManager.claimRewards(
-            new bytes32[](1),
-            0,
-            sharesAsFee,
-            100 * 10 ** 18
-        );
+        bondManager.claimRewards(new bytes32[](1), 0, sharesAsFee, 100 * 1e18);
         uint256 bondSharesAfter = bondManager.getBondShares(0);
 
-        assertEq(stETH.sharesOf(address(stranger)), sharesAsFee);
+        assertEq(lidoStETH.sharesOf(address(user)), sharesAsFee);
         assertEq(bondSharesAfter, requiredBondShares);
     }
 
     function test_claimRewards_RevertWhenRequiredBondIsEqualActual() public {
-        stETH._submit(stranger, 31 ether);
-
-        vm.startPrank(stranger);
-        bondManager.deposit(0, stETH.sharesOf(stranger));
+        vm.deal(user, 31 ether);
+        vm.prank(user);
+        lidoStETH.submit{ value: 31 ether }({ _referal: address(0) });
 
         communityStakingModule.setNodeOperator({
             _nodeOperatorId: 0,
             _active: true,
-            _name: "Stranger",
-            _rewardAddress: stranger,
+            _name: "User",
+            _rewardAddress: user,
             _totalVettedValidators: 16,
             _totalExitedValidators: 0,
             _totalWithdrawnValidators: 0,
@@ -233,31 +351,27 @@ contract CommunityStakingBondManagerTest is Test {
             _totalDepositedValidators: 16
         });
 
-        uint256 sharesAsFee = stETH._submit(
-            address(communityStakingFeeDistributor),
-            1 ether
-        );
+        vm.deal(address(communityStakingFeeDistributor), 1 ether);
+        vm.prank(address(communityStakingFeeDistributor));
+        uint256 sharesAsFee = lidoStETH.submit{ value: 1 ether }(address(0));
+
+        vm.startPrank(user);
+        bondManager.depositStETH(0, 31 ether);
 
         vm.expectRevert(CommunityStakingBondManager.NothingToClaim.selector);
-        bondManager.claimRewards(
-            new bytes32[](1),
-            0,
-            sharesAsFee,
-            1 * 10 ** 18
-        );
+        bondManager.claimRewards(new bytes32[](1), 0, sharesAsFee, 1 * 1e18);
     }
 
     function test_claimRewards_RevertWhenNothingToClaim() public {
-        stETH._submit(stranger, 30 ether);
-
-        vm.startPrank(stranger);
-        bondManager.deposit(0, stETH.sharesOf(stranger));
+        vm.deal(user, 30 ether);
+        vm.prank(user);
+        lidoStETH.submit{ value: 30 ether }({ _referal: address(0) });
 
         communityStakingModule.setNodeOperator({
             _nodeOperatorId: 0,
             _active: true,
-            _name: "Stranger",
-            _rewardAddress: stranger,
+            _name: "User",
+            _rewardAddress: user,
             _totalVettedValidators: 16,
             _totalExitedValidators: 0,
             _totalWithdrawnValidators: 0,
@@ -265,26 +379,23 @@ contract CommunityStakingBondManagerTest is Test {
             _totalDepositedValidators: 16
         });
 
-        uint256 sharesAsFee = stETH._submit(
-            address(communityStakingFeeDistributor),
-            0.1 ether
-        );
+        vm.deal(address(communityStakingFeeDistributor), 0.1 ether);
+        vm.prank(address(communityStakingFeeDistributor));
+        uint256 sharesAsFee = lidoStETH.submit{ value: 0.1 ether }(address(0));
+
+        vm.startPrank(user);
+        bondManager.depositStETH(0, 30 ether);
 
         vm.expectRevert(CommunityStakingBondManager.NothingToClaim.selector);
-        bondManager.claimRewards(
-            new bytes32[](1),
-            0,
-            sharesAsFee,
-            1 * 10 ** 18
-        );
+        bondManager.claimRewards(new bytes32[](1), 0, sharesAsFee, 1 * 1e18);
     }
 
     function test_claimRewards_RevertWhenCallerIsNotRewardAddress() public {
         communityStakingModule.setNodeOperator({
             _nodeOperatorId: 0,
             _active: true,
-            _name: "Stranger",
-            _rewardAddress: stranger,
+            _name: "User",
+            _rewardAddress: user,
             _totalVettedValidators: 16,
             _totalExitedValidators: 0,
             _totalWithdrawnValidators: 0,
@@ -295,52 +406,97 @@ contract CommunityStakingBondManagerTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 CommunityStakingBondManager.NotOwnerToClaim.selector,
-                alice,
-                stranger
+                stranger,
+                user
             )
         );
-        vm.startPrank(alice);
-        bondManager.claimRewards(new bytes32[](1), 0, 1, 1 * 10 ** 18);
+        vm.startPrank(stranger);
+        bondManager.claimRewards(new bytes32[](1), 0, 1, 1 * 1e18);
         vm.stopPrank();
     }
 
     function test_penalize_LessThanDeposit() public {
-        stETH.mintShares(stranger, 32 * 10 ** 18);
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        lidoStETH.submit{ value: 32 ether }({ _referal: address(0) });
 
-        vm.prank(stranger);
-        bondManager.deposit(0, 32 * 10 ** 18);
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "User",
+            _rewardAddress: user,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 1,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
 
-        vm.prank(alice);
-        bondManager.penalize(0, 1 * 10 ** 18);
+        vm.prank(user);
+        bondManager.depositStETH(0, 32 ether);
 
-        assertEq(bondManager.getBondShares(0), 31 * 10 ** 18);
-        assertEq(stETH.sharesOf(burner), 1 * 10 ** 18);
+        vm.prank(admin);
+        bondManager.penalize(0, 1 * 1e18);
+
+        assertEq(bondManager.getBondEth(0), 30864848989106117958);
+        assertEq(lidoStETH.sharesOf(burner), 1 * 1e18);
     }
 
     function test_penalize_MoreThanDeposit() public {
-        stETH.mintShares(stranger, 32 * 10 ** 18);
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        lidoStETH.submit{ value: 32 ether }({ _referal: address(0) });
 
-        vm.prank(stranger);
-        bondManager.deposit(0, 32 * 10 ** 18);
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "User",
+            _rewardAddress: user,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 1,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
 
-        vm.prank(alice);
-        bondManager.penalize(0, 33 * 10 ** 18);
+        vm.prank(user);
+        bondManager.depositStETH(0, 32 ether);
+
+        uint256 shares = lidoStETH.getSharesByPooledEth(32 ether);
+
+        vm.prank(admin);
+        bondManager.penalize(0, 32 * 1e18);
 
         assertEq(bondManager.getBondShares(0), 0);
-        assertEq(stETH.sharesOf(burner), 32 * 10 ** 18);
+        assertEq(lidoStETH.sharesOf(burner), shares);
     }
 
     function test_penalize_EqualToDeposit() public {
-        stETH.mintShares(stranger, 32 * 10 ** 18);
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        lidoStETH.submit{ value: 32 ether }({ _referal: address(0) });
 
-        vm.prank(stranger);
-        bondManager.deposit(0, 32 * 10 ** 18);
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "User",
+            _rewardAddress: user,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 1,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
 
-        vm.prank(alice);
-        bondManager.penalize(0, 32 * 10 ** 18);
+        vm.prank(user);
+        bondManager.depositStETH(0, 32 ether);
+
+        uint256 shares = lidoStETH.getSharesByPooledEth(32 ether);
+        vm.prank(admin);
+        bondManager.penalize(0, shares);
 
         assertEq(bondManager.getBondShares(0), 0);
-        assertEq(stETH.sharesOf(burner), 32 * 10 ** 18);
+        assertEq(lidoStETH.sharesOf(burner), shares);
     }
 
     function test_penalize_RevertWhenCallerHasNoRole() public {

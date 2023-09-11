@@ -16,6 +16,7 @@ contract CommunityStakingModuleMock {
     }
 
     mapping(uint256 => NodeOperator) public nodeOperators;
+    uint256 public totalNodeOperatorsCount;
 
     constructor() {}
 
@@ -40,6 +41,7 @@ contract CommunityStakingModuleMock {
             _totalAddedValidators,
             _totalDepositedValidators
         );
+        totalNodeOperatorsCount++;
     }
 
     /// @notice Returns the node operator by id
@@ -73,5 +75,9 @@ contract CommunityStakingModuleMock {
         if (_fullInfo) {
             name = nodeOperator.name;
         }
+    }
+
+    function getNodeOperatorsCount() external view returns (uint256) {
+        return totalNodeOperatorsCount;
     }
 }
