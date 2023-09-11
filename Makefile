@@ -25,5 +25,5 @@ deploy-local:
 ifeq (${KEEP_ANVIL_AFTER_LOCAL_DEPLOY},false)
 	@pkill anvil
 else
-	@echo "\033[0;33m[WARNING] Anvil is keeping the run in the backgound: http://127.0.0.1:8545"
+	@echo "\033[0;33m[WARNING] Anvil is kept running in the background: http://127.0.0.1:8545"
 endif

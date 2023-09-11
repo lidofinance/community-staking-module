@@ -71,6 +71,7 @@ jobs:
         env:
           RPC_URL: ${{ secrets.RPC_URL }}
           LIDO_LOCATOR_ADDRESS: "0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb"
+          WSTETH_ADDRESS: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0"
 
   hardhat:
     name: Hardhat project
