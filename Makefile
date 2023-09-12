@@ -9,9 +9,9 @@ artifacts:
 clean:
 	forge clean
 	rm -rf cache_foundry broadcast
-check:
+lint-check:
 	prettier --config ./.prettierrc **.{sol,ts} --check
-fix:
+lint-fix:
 	prettier --config ./.prettierrc **.{sol,ts} -w
 test:
 	forge test -vvvvv
