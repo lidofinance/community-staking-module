@@ -9,5 +9,5 @@ import { IStETH } from "./IStETH.sol";
  * @title Interface defining Lido contract
  */
 interface ILido is IStETH {
-
+    function submit(address _referal) external payable returns (uint256);
 }
