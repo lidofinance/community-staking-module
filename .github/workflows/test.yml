@@ -72,32 +72,3 @@ jobs:
           RPC_URL: ${{ secrets.RPC_URL }}
           LIDO_LOCATOR_ADDRESS: "0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb"
           WSTETH_ADDRESS: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0"
-
-  hardhat:
-    name: Hardhat project
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          persist-credentials: false
-
-      - name: Install node
-        uses: actions/setup-node@v3
-        with:
-          node-version-file: ".nvmrc"
-          cache: yarn
-          cache-dependency-path: "**/yarn.lock"
-
-      - name: Install Node dependencies
-        run: yarn install --immutable
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
-
-      - name: Run Hardhat tests
-        run: yarn test
-        env:
-          RPC_URL: ${{ secrets.RPC_URL }}

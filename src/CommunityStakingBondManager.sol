@@ -7,12 +7,8 @@ import { AccessControlEnumerable } from "@openzeppelin/contracts/access/AccessCo
 
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { ICommunityStakingModule } from "./interfaces/ICommunityStakingModule.sol";
-import { IStETH } from "./interfaces/IStETH.sol";
+import { ILido } from "./interfaces/ILido.sol";
 import { ICommunityStakingFeeDistributor } from "./interfaces/ICommunityStakingFeeDistributor.sol";
-
-interface ILido is IStETH {
-    function submit(address _referal) external payable returns (uint256);
-}
 
 interface IWstETH {
     function approve(address _spender, uint256 _amount) external returns (bool);
@@ -148,8 +144,8 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
             ,
             ,
             ,
-            uint64 totalWithdrawnValidators,
-            uint64 totalAddedValidators,
+            uint256 totalWithdrawnValidators,
+            uint256 totalAddedValidators,
 
         ) = CSM.getNodeOperator({
                 _nodeOperatorId: nodeOperatorId,
@@ -178,11 +174,25 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         return _lido().getSharesByPooledEth(keysCount * COMMON_BOND_SIZE);
     }
 
-    /// @notice Deposits ETH to the bond for the given node operator.
-    /// @param nodeOperatorId id of the node operator to deposit bond for.
     function depositETH(
         uint256 nodeOperatorId
     ) external payable returns (uint256) {
+        return _depositETH(msg.sender, nodeOperatorId);
+    }
+
+    /// @notice Deposits ETH to the bond for the given node operator.
+    /// @param nodeOperatorId id of the node operator to deposit bond for.
+    function depositETH(
+        address from,
+        uint256 nodeOperatorId
+    ) external payable returns (uint256) {
+        return _depositETH(from, nodeOperatorId);
+    }
+
+    function _depositETH(
+        address from,
+        uint256 nodeOperatorId
+    ) internal returns (uint256) {
         // TODO: should be modifier. condition might be changed as well
         require(
             nodeOperatorId < CSM.getNodeOperatorsCount(),
@@ -190,25 +200,41 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         );
         uint256 shares = _lido().submit{ value: msg.value }(address(0));
         bondShares[nodeOperatorId] += shares;
-        emit BondDeposited(nodeOperatorId, msg.sender, shares);
+        emit BondDeposited(nodeOperatorId, from, shares);
         return shares;
+    }
+
+    function depositStETH(
+        uint256 nodeOperatorId,
+        uint256 stETHAmount
+    ) external returns (uint256) {
+        return _depositStETH(msg.sender, nodeOperatorId, stETHAmount);
     }
 
     /// @notice Deposits stETH to the bond for the given node operator.
     /// @param nodeOperatorId id of the node operator to deposit bond for.
     /// @param stETHAmount amount of stETH to deposit.
     function depositStETH(
+        address from,
         uint256 nodeOperatorId,
         uint256 stETHAmount
     ) external returns (uint256) {
+        return _depositStETH(from, nodeOperatorId, stETHAmount);
+    }
+
+    function _depositStETH(
+        address from,
+        uint256 nodeOperatorId,
+        uint256 stETHAmount
+    ) internal returns (uint256) {
         require(
             nodeOperatorId < CSM.getNodeOperatorsCount(),
             "node operator does not exist"
         );
         uint256 shares = _lido().getSharesByPooledEth(stETHAmount);
-        _lido().transferSharesFrom(msg.sender, address(this), shares);
+        _lido().transferSharesFrom(from, address(this), shares);
         bondShares[nodeOperatorId] += shares;
-        emit BondDeposited(nodeOperatorId, msg.sender, shares);
+        emit BondDeposited(nodeOperatorId, from, shares);
         return shares;
     }
 
@@ -233,18 +259,18 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
     /// @notice Claims full reward (fee + bond) for the given node operator with desirable value
     /// @param rewardsProof merkle proof of the rewards.
     /// @param nodeOperatorId id of the node operator to claim rewards for.
-    /// @param cummulativeFeeShares cummulative fee shares for the node operator.
+    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
     /// @param sharesToClaim amount of shares to claim.
     function claimRewards(
         bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
-        uint256 cummulativeFeeShares,
+        uint256 cumulativeFeeShares,
         uint256 sharesToClaim
     ) external {
         _claimRewards(
             rewardsProof,
             nodeOperatorId,
-            cummulativeFeeShares,
+            cumulativeFeeShares,
             sharesToClaim
         );
     }
@@ -252,16 +278,16 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
     /// @notice Claims full reward (fee + bond) for the given node operator available for this moment
     /// @param rewardsProof merkle proof of the rewards.
     /// @param nodeOperatorId id of the node operator to claim rewards for.
-    /// @param cummulativeFeeShares cummulative fee shares for the node operator.
+    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
     function claimRewards(
         bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
-        uint256 cummulativeFeeShares
+        uint256 cumulativeFeeShares
     ) external {
         _claimRewards(
             rewardsProof,
             nodeOperatorId,
-            cummulativeFeeShares,
+            cumulativeFeeShares,
             type(uint256).max
         );
     }
@@ -269,7 +295,7 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
     function _claimRewards(
         bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
-        uint256 cummulativeFeeShares,
+        uint256 cumulativeFeeShares,
         uint256 sharesToClaim
     ) internal {
         (, , address rewardAddress, , , , , ) = CSM.getNodeOperator({
@@ -282,7 +308,7 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         uint256 feeRewards = _feeDistributor().distributeFees(
             rewardsProof,
             nodeOperatorId,
-            cummulativeFeeShares
+            cumulativeFeeShares
         );
         bondShares[nodeOperatorId] += feeRewards;
         uint256 claimed = _claimBondRewards(

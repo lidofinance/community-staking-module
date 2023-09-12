@@ -20,10 +20,10 @@ interface ICommunityStakingModule is IStakingModule {
             bool active,
             string memory name,
             address rewardAddress,
-            uint64 totalVettedValidators,
-            uint64 totalExitedValidators,
-            uint64 totalWithdrawnValidators, // new
-            uint64 totalAddedValidators,
-            uint64 totalDepositedValidators
+            uint256 totalVettedValidators,
+            uint256 totalExitedValidators,
+            uint256 totalWithdrawnValidators, // new
+            uint256 totalAddedValidators,
+            uint256 totalDepositedValidators
         );
 }
