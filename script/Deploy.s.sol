@@ -36,7 +36,8 @@ contract Deploy is Script {
         locator = ILidoLocator(LIDO_LOCATOR_ADDRESS);
         wstETH = IWstETH(WSTETH_ADDRESS);
         CommunityStakingModule csm = new CommunityStakingModule(
-            "community-staking-module"
+            "community-staking-module",
+            address(locator)
         );
         CommunityStakingBondManager bondManager = new CommunityStakingBondManager({
                 _commonBondSize: 2 ether,
