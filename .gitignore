@@ -14,5 +14,6 @@ artifacts/
 cache_hardhat/
 
 # Foundry files
+broadcast/
 cache_foundry/
 out/

@@ -22,14 +22,18 @@ contract StakingRouterIntegrationTest is Test {
 
     string RPC_URL;
     string LIDO_LOCATOR_ADDRESS;
+    string WSTETH_ADDRESS;
 
     function setUp() public {
         RPC_URL = vm.envOr("RPC_URL", string(""));
         LIDO_LOCATOR_ADDRESS = vm.envOr("LIDO_LOCATOR_ADDRESS", string(""));
+        WSTETH_ADDRESS = vm.envOr("WSTETH_ADDRESS", string(""));
         vm.skip(
             keccak256(abi.encodePacked(RPC_URL)) ==
                 keccak256(abi.encodePacked("")) ||
                 keccak256(abi.encodePacked(LIDO_LOCATOR_ADDRESS)) ==
+                keccak256(abi.encodePacked("")) ||
+                keccak256(abi.encodePacked(WSTETH_ADDRESS)) ==
                 keccak256(abi.encodePacked(""))
         );
 
@@ -39,9 +43,7 @@ contract StakingRouterIntegrationTest is Test {
         locator = ILidoLocator(vm.parseAddress(LIDO_LOCATOR_ADDRESS));
         csm = new CommunityStakingModuleMock();
 
-        wstETH = IWstETH(
-            vm.parseAddress("0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0")
-        );
+        wstETH = IWstETH(vm.parseAddress(WSTETH_ADDRESS));
 
         alice = address(1);
         address[] memory penalizeRoleMembers = new address[](1);
