@@ -35,7 +35,10 @@ contract StakingRouterIntegrationTest is Test {
 
         locator = ILidoLocator(vm.parseAddress(LIDO_LOCATOR_ADDRESS));
         stakingRouter = IStakingRouter(payable(locator.stakingRouter()));
-        csm = new CommunityStakingModule("community-staking-module");
+        csm = new CommunityStakingModule(
+            "community-staking-module",
+            address(locator)
+        );
 
         agent = stakingRouter.getRoleMember(
             stakingRouter.DEFAULT_ADMIN_ROLE(),
