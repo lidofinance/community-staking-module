@@ -17,7 +17,7 @@ test: # in parallel
 	$(MAKE) test-unit & 
 	$(MAKE) test-integration
 test-unit:
-	forge test --match-path '*test/unit*'
+	forge test --no-match-path '*test/integration*'
 test-integration:
 	forge test --match-path '*test/integration*'
 
