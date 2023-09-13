@@ -26,14 +26,17 @@ contract FeeDistributorTest is Test, FeeDistributorBase {
     Stub internal bondManager;
     MerkleTree internal tree;
     StETHMock internal stETH;
+    Stub internal CSM;
 
     function setUp() public {
         csm = new CommunityStakingModuleMock();
         oracle = new OracleMock();
         bondManager = new Stub();
-        stETH = new StETHMock(8013386371917025835991984);
+        stETH = new StETHMock(0);
+        CSM = new Stub();
 
         feeDistributor = new FeeDistributor(
+            address(CSM),
             address(stETH),
             address(oracle),
             address(bondManager)
@@ -42,6 +45,9 @@ contract FeeDistributorTest is Test, FeeDistributorBase {
         tree = oracle.merkleTree();
 
         vm.label(address(bondManager), "BOND_MANAGER");
+        vm.label(address(oracle), "ORACLE");
+        vm.label(address(stETH), "STETH");
+        vm.label(address(CSM), "CSM");
     }
 
     function test_distributeFeesHappyPath() public {

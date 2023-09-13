@@ -52,15 +52,17 @@ contract Deploy is Script {
             blocksPerEpoch: 32,
             genesisTime: uint64(CL_GENESIS_TIME)
         });
-        feeOracle.initialize({
-            _initializationEpoch: uint64(INITIALIZATION_EPOCH),
-            reportInterval: 6300, // 28 days
-            admin: deployerAddress
-        });
         FeeDistributor feeDistributor = new FeeDistributor({
+            _CSM: address(csm),
             _stETH: locator.lido(),
             _oracle: address(feeOracle),
             _bondManager: address(bondManager)
+        });
+        feeOracle.initialize({
+            _initializationEpoch: uint64(INITIALIZATION_EPOCH),
+            reportInterval: 6300, // 28 days
+            _feeDistributor: address(feeDistributor),
+            admin: deployerAddress
         });
         bondManager.setFeeDistributor(address(feeDistributor));
         // TODO: csm.setBondManager(address(bondManager));
