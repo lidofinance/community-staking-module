@@ -32,10 +32,9 @@ contract CSMAddNodeOperator is Test {
         penalizeRoleMembers[0] = alice;
         lidoStETH = new LidoMock(8013386371917025835991984);
         lidoStETH.mintShares(address(lidoStETH), 7059313073779349112833523);
-        lidoStETH.mintShares(
-            address(nodeOperator),
-            lidoStETH.getSharesByPooledEth(2 ether)
-        );
+        vm.deal(nodeOperator, 2 ether);
+        vm.prank(nodeOperator);
+        lidoStETH.submit{ value: 2 ether }(address(0));
         locator = new LidoLocatorMock(address(lidoStETH), burner);
         wstETH = new WstETHMock(address(lidoStETH));
         communityStakingFeeDistributor = new CommunityStakingFeeDistributorMock(
@@ -61,6 +60,27 @@ contract CSMAddNodeOperator is Test {
         return (new bytes(0), new bytes(0));
     }
 
+    function test_AddNodeOperatorWstETH() public {
+        (bytes memory keys, bytes memory signatures) = getKeysSignatures();
+        vm.startPrank(nodeOperator);
+        wstETH.wrap(2 ether);
+        csm.addNodeOperatorWstETH("test", nodeOperator, 1, keys, signatures);
+        assertEq(csm.getNodeOperatorsCount(), 1);
+    }
+
+    function test_AddValidatorKeysWstETH() public {
+        (bytes memory keys, bytes memory signatures) = getKeysSignatures();
+        vm.startPrank(nodeOperator);
+        wstETH.wrap(2 ether);
+        csm.addNodeOperatorWstETH("test", nodeOperator, 1, keys, signatures);
+        uint256 noId = csm.getNodeOperatorsCount() - 1;
+
+        vm.deal(nodeOperator, 2 ether);
+        lidoStETH.submit{ value: 2 ether }(address(0));
+        wstETH.wrap(2 ether);
+        csm.addValidatorKeysWstETH(noId, 1, keys, signatures);
+    }
+
     function test_AddNodeOperatorStETH() public {
         (bytes memory keys, bytes memory signatures) = getKeysSignatures();
         vm.prank(nodeOperator);
@@ -74,11 +94,9 @@ contract CSMAddNodeOperator is Test {
         csm.addNodeOperatorStETH("test", nodeOperator, 1, keys, signatures);
         uint256 noId = csm.getNodeOperatorsCount() - 1;
 
-        lidoStETH.mintShares(
-            address(nodeOperator),
-            lidoStETH.getSharesByPooledEth(2 ether)
-        );
-        vm.prank(nodeOperator);
+        vm.deal(nodeOperator, 2 ether);
+        vm.startPrank(nodeOperator);
+        lidoStETH.submit{ value: 2 ether }(address(0));
         csm.addValidatorKeysStETH(noId, 1, keys, signatures);
     }
 

@@ -10,6 +10,11 @@ interface ICommunityStakingBondManager {
 
     function getBondEth(uint256 nodeOperatorId) external view returns (uint256);
 
+    function depositWstETH(
+        uint256 nodeOperatorId,
+        uint256 wstETHAmount
+    ) external returns (uint256);
+
     function depositStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount
@@ -18,6 +23,12 @@ interface ICommunityStakingBondManager {
     function depositETH(
         uint256 nodeOperatorId
     ) external payable returns (uint256);
+
+    function depositWstETH(
+        address from,
+        uint256 nodeOperatorId,
+        uint256 wstETHAmount
+    ) external returns (uint256);
 
     function depositStETH(
         address from,
@@ -34,15 +45,12 @@ interface ICommunityStakingBondManager {
         uint256 keysCount
     ) external view returns (uint256);
 
-    function getRequiredBondEthForKeys(
-        uint256 keysCount
-    ) external view returns (uint256);
-
-    function getRequiredBondEth(
+    function getRequiredBondShares(
         uint256 nodeOperatorId
     ) external view returns (uint256);
 
     function getRequiredBondShares(
-        uint256 nodeOperatorId
+        uint256 nodeOperatorId,
+        uint256 newKeysCount
     ) external view returns (uint256);
 }

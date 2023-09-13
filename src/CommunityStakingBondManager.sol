@@ -11,6 +11,8 @@ import { ILido } from "./interfaces/ILido.sol";
 import { ICommunityStakingFeeDistributor } from "./interfaces/ICommunityStakingFeeDistributor.sol";
 
 interface IWstETH {
+    function balanceOf(address account) external view returns (uint256);
+
     function approve(address _spender, uint256 _amount) external returns (bool);
 
     function wrap(uint256 _stETHAmount) external returns (uint256);
@@ -22,6 +24,14 @@ interface IWstETH {
         address recipient,
         uint256 amount
     ) external;
+
+    function getStETHByWstETH(
+        uint256 _wstETHAmount
+    ) external view returns (uint256);
+
+    function getWstETHByStETH(
+        uint256 _stETHAmount
+    ) external view returns (uint256);
 }
 
 contract CommunityStakingBondManager is AccessControlEnumerable {
@@ -35,14 +45,18 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         uint256 penaltyShares,
         uint256 burnedShares
     );
-    event RewardsClaimed(
+    event StETHRewardsClaimed(
         uint256 nodeOperatorId,
         address indexed to,
         uint256 shares
     );
+    event WstETHRewardsClaimed(
+        uint256 nodeOperatorId,
+        address indexed to,
+        uint256 wstETHAmount
+    );
 
     error NotOwnerToClaim(address msgSender, address owner);
-    error NothingToClaim();
 
     bytes32 public constant PENALIZE_BOND_ROLE =
         keccak256("PENALIZE_BOND_ROLE");
@@ -110,12 +124,6 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         return _lido().sharesOf(address(this));
     }
 
-    /// @notice Returns the total bond size in ETH.
-    /// @return total bond size in ETH.
-    function totalBondEth() public view returns (uint256) {
-        return _lido().getPooledEthByShares(totalBondShares());
-    }
-
     /// @notice Returns the bond shares for the given node operator.
     /// @param nodeOperatorId id of the node operator to get bond for.
     /// @return bond shares.
@@ -125,52 +133,63 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         return bondShares[nodeOperatorId];
     }
 
-    /// @notice Returns the bond size for the given node operator.
-    /// @param nodeOperatorId id of the node operator to get bond for.
-    /// @return bond size in ETH.
-    function getBondEth(uint256 nodeOperatorId) public view returns (uint256) {
-        return _lido().getPooledEthByShares(getBondShares(nodeOperatorId));
-    }
-
-    /// @notice Returns the required bond size for the given node operator.
-    /// @param nodeOperatorId id of the node operator to get required bond for.
-    /// @return required bond size in ETH.
-    function getRequiredBondEth(
+    /// @notice Returns excess bond for the given node operator.
+    /// @param nodeOperatorId id of the node operator to get bond rewards for.
+    /// @return excess bond in shares.
+    function getExcessBondShares(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
-        (
-            ,
-            ,
-            ,
-            ,
-            ,
-            uint256 totalWithdrawnValidators,
-            uint256 totalAddedValidators,
-
-        ) = CSM.getNodeOperator({
-                _nodeOperatorId: nodeOperatorId,
-                _fullInfo: false
-            });
+        uint256 activeKeys = _getNodeOperatorActiveKeys(nodeOperatorId);
+        uint256 currentBondShares = getBondShares(nodeOperatorId);
+        uint256 requiredBondShares = _lido().getSharesByPooledEth(
+            activeKeys * COMMON_BOND_SIZE
+        );
         return
-            (totalAddedValidators - totalWithdrawnValidators) *
-            COMMON_BOND_SIZE;
+            currentBondShares > requiredBondShares
+                ? currentBondShares - requiredBondShares
+                : 0;
     }
 
+    /// @notice Returns the required bond shares for the given node operator.
+    /// @param nodeOperatorId id of the node operator to get required bond for.
+    /// @return required bond shares.
     function getRequiredBondShares(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
-        return _lido().getSharesByPooledEth(getRequiredBondEth(nodeOperatorId));
+        return _getRequiredBondShares(nodeOperatorId, 0);
     }
 
-    function getRequiredBondEthForKeys(
-        uint256 keysCount
-    ) external view returns (uint256) {
-        return keysCount * COMMON_BOND_SIZE;
+    /// @notice Returns the required bond shares for the given node operator.
+    /// @param nodeOperatorId id of the node operator to get required bond for.
+    /// @param newKeysCount number of new keys to add.
+    /// @return required bond shares.
+    function getRequiredBondShares(
+        uint256 nodeOperatorId,
+        uint256 newKeysCount
+    ) public view returns (uint256) {
+        return _getRequiredBondShares(nodeOperatorId, newKeysCount);
     }
 
+    function _getRequiredBondShares(
+        uint256 nodeOperatorId,
+        uint256 newKeysCount
+    ) internal view returns (uint256) {
+        uint256 currentBondShares = getBondShares(nodeOperatorId);
+        uint256 requiredBondShares = _lido().getSharesByPooledEth(
+            (_getNodeOperatorActiveKeys(nodeOperatorId)) * COMMON_BOND_SIZE
+        ) + getRequiredBondSharesForKeys(newKeysCount);
+        return
+            requiredBondShares > currentBondShares
+                ? requiredBondShares - currentBondShares
+                : 0;
+    }
+
+    /// @notice Returns the required bond shares for the given number of keys.
+    /// @param keysCount number of keys to get required bond for.
+    /// @return required bond shares.
     function getRequiredBondSharesForKeys(
         uint256 keysCount
-    ) external view returns (uint256) {
+    ) public view returns (uint256) {
         return _lido().getSharesByPooledEth(keysCount * COMMON_BOND_SIZE);
     }
 
@@ -240,15 +259,36 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
 
     /// @notice Deposits wstETH to the bond for the given node operator.
     /// @param nodeOperatorId id of the node operator to deposit bond for.
+    /// @param wstETHAmount amount of wstETH to deposit.
     function depositWstETH(
         uint256 nodeOperatorId,
         uint256 wstETHAmount
     ) external returns (uint256) {
+        return _depositWstETH(msg.sender, nodeOperatorId, wstETHAmount);
+    }
+
+    /// @notice Deposits wstETH to the bond for the given node operator.
+    /// @param from address to deposit wstETH from.
+    /// @param nodeOperatorId id of the node operator to deposit bond for.
+    /// @param wstETHAmount amount of wstETH to deposit.
+    function depositWstETH(
+        address from,
+        uint256 nodeOperatorId,
+        uint256 wstETHAmount
+    ) external returns (uint256) {
+        return _depositWstETH(from, nodeOperatorId, wstETHAmount);
+    }
+
+    function _depositWstETH(
+        address from,
+        uint256 nodeOperatorId,
+        uint256 wstETHAmount
+    ) internal returns (uint256) {
         require(
             nodeOperatorId < CSM.getNodeOperatorsCount(),
             "node operator does not exist"
         );
-        WSTETH.transferFrom(msg.sender, address(this), wstETHAmount);
+        WSTETH.transferFrom(from, address(this), wstETHAmount);
         uint256 stETHAmount = WSTETH.unwrap(wstETHAmount);
         uint256 shares = _lido().getSharesByPooledEth(stETHAmount);
         bondShares[nodeOperatorId] += shares;
@@ -256,67 +296,115 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         return shares;
     }
 
+    /// @notice Claims full reward (fee + bond) for the given node operator available for this moment
+    /// @param rewardsProof merkle proof of the rewards.
+    /// @param nodeOperatorId id of the node operator to claim rewards for.
+    /// @param cumulativeFeeShares cummulative fee shares for the node operator.
+    function claimRewardsStETH(
+        bytes32[] memory rewardsProof,
+        uint256 nodeOperatorId,
+        uint256 cumulativeFeeShares
+    ) external {
+        (
+            address rewardAddress,
+            uint256 rewardShares
+        ) = _calculateFinalRewardShares(
+                rewardsProof,
+                nodeOperatorId,
+                cumulativeFeeShares
+            );
+        _lido().transferSharesFrom(address(this), rewardAddress, rewardShares);
+        bondShares[nodeOperatorId] -= rewardShares;
+        emit StETHRewardsClaimed(
+            nodeOperatorId,
+            rewardAddress,
+            _lido().getPooledEthByShares(rewardShares)
+        );
+    }
+
     /// @notice Claims full reward (fee + bond) for the given node operator with desirable value
     /// @param rewardsProof merkle proof of the rewards.
     /// @param nodeOperatorId id of the node operator to claim rewards for.
-    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
-    /// @param sharesToClaim amount of shares to claim.
-    function claimRewards(
+    /// @param cumulativeFeeShares cummulative fee shares for the node operator.
+    /// @param stETHAmount amount of stETH to claim.
+    function claimRewardsStETH(
         bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
-        uint256 sharesToClaim
+        uint256 stETHAmount
     ) external {
-        _claimRewards(
-            rewardsProof,
+        (
+            address rewardAddress,
+            uint256 rewardShares
+        ) = _calculateFinalRewardShares(
+                rewardsProof,
+                nodeOperatorId,
+                cumulativeFeeShares
+            );
+        uint256 shares = _lido().getSharesByPooledEth(stETHAmount);
+        rewardShares = shares < rewardShares ? shares : rewardShares;
+        _lido().transferSharesFrom(address(this), rewardAddress, rewardShares);
+        bondShares[nodeOperatorId] -= rewardShares;
+        emit StETHRewardsClaimed(
             nodeOperatorId,
-            cumulativeFeeShares,
-            sharesToClaim
+            rewardAddress,
+            _lido().getPooledEthByShares(rewardShares)
         );
     }
 
     /// @notice Claims full reward (fee + bond) for the given node operator available for this moment
     /// @param rewardsProof merkle proof of the rewards.
     /// @param nodeOperatorId id of the node operator to claim rewards for.
-    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
-    function claimRewards(
+    /// @param cumulativeFeeShares cummulative fee shares for the node operator.
+    function claimRewardsWstETH(
         bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares
-    ) external {
-        _claimRewards(
-            rewardsProof,
-            nodeOperatorId,
-            cumulativeFeeShares,
-            type(uint256).max
+    ) external returns (uint256) {
+        (
+            address rewardAddress,
+            uint256 rewardShares
+        ) = _calculateFinalRewardShares(
+                rewardsProof,
+                nodeOperatorId,
+                cumulativeFeeShares
+            );
+        uint256 wstETHAmount = WSTETH.wrap(
+            _lido().getPooledEthByShares(rewardShares)
         );
+        WSTETH.transferFrom(address(this), rewardAddress, wstETHAmount);
+        bondShares[nodeOperatorId] -= rewardShares;
+        emit WstETHRewardsClaimed(nodeOperatorId, rewardAddress, wstETHAmount);
+        return wstETHAmount;
     }
 
-    function _claimRewards(
+    /// @notice Claims full reward (fee + bond) for the given node operator available for this moment
+    /// @param rewardsProof merkle proof of the rewards.
+    /// @param nodeOperatorId id of the node operator to claim rewards for.
+    /// @param cumulativeFeeShares cummulative fee shares for the node operator.
+    /// @param wstETHAmount amount of wstETH to claim.
+    function claimRewardsWstETH(
         bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
-        uint256 sharesToClaim
-    ) internal {
-        (, , address rewardAddress, , , , , ) = CSM.getNodeOperator({
-            _nodeOperatorId: nodeOperatorId,
-            _fullInfo: false
-        });
-        if (msg.sender != rewardAddress) {
-            revert NotOwnerToClaim(msg.sender, rewardAddress);
-        }
-        uint256 feeRewards = _feeDistributor().distributeFees(
-            rewardsProof,
-            nodeOperatorId,
-            cumulativeFeeShares
-        );
-        bondShares[nodeOperatorId] += feeRewards;
-        uint256 claimed = _claimBondRewards(
-            nodeOperatorId,
-            rewardAddress,
-            sharesToClaim
-        );
-        emit RewardsClaimed(nodeOperatorId, rewardAddress, claimed);
+        uint256 wstETHAmount
+    ) external returns (uint256) {
+        (
+            address rewardAddress,
+            uint256 rewardShares
+        ) = _calculateFinalRewardShares(
+                rewardsProof,
+                nodeOperatorId,
+                cumulativeFeeShares
+            );
+        rewardShares = wstETHAmount < rewardShares
+            ? wstETHAmount
+            : rewardShares;
+        wstETHAmount = WSTETH.wrap(_lido().getPooledEthByShares(rewardShares));
+        WSTETH.transferFrom(address(this), rewardAddress, wstETHAmount);
+        bondShares[nodeOperatorId] -= rewardShares;
+        emit WstETHRewardsClaimed(nodeOperatorId, rewardAddress, wstETHAmount);
+        return wstETHAmount;
     }
 
     /// @notice Penalize bond by burning shares
@@ -349,26 +437,49 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         return ICommunityStakingFeeDistributor(FEE_DISTRIBUTOR);
     }
 
-    function _claimBondRewards(
+    function _getNodeOperatorActiveKeys(
+        uint256 nodeOperatorId
+    ) internal view returns (uint256) {
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint256 totalWithdrawnValidators,
+            uint256 totalAddedValidators,
+
+        ) = CSM.getNodeOperator({
+                _nodeOperatorId: nodeOperatorId,
+                _fullInfo: false
+            });
+        return totalAddedValidators - totalWithdrawnValidators;
+    }
+
+    function _getNodeOperatorRewardAddress(
+        uint256 nodeOperatorId
+    ) internal view returns (address) {
+        (, , address rewardAddress, , , , , ) = CSM.getNodeOperator({
+            _nodeOperatorId: nodeOperatorId,
+            _fullInfo: false
+        });
+        return rewardAddress;
+    }
+
+    function _calculateFinalRewardShares(
+        bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
-        address rewardAddress,
-        uint256 shares
-    ) private returns (uint256) {
-        uint256 actualBondShares = getBondShares(nodeOperatorId);
-        uint256 requiredBondShares = getRequiredBondShares(nodeOperatorId);
-        if (requiredBondShares >= actualBondShares) {
-            revert NothingToClaim();
+        uint256 cumulativeFeeShares
+    ) internal returns (address rewardAddress, uint256 rewardShares) {
+        rewardAddress = _getNodeOperatorRewardAddress(nodeOperatorId);
+        if (msg.sender != rewardAddress) {
+            revert NotOwnerToClaim(msg.sender, rewardAddress);
         }
-        uint256 claimableShares = actualBondShares - requiredBondShares;
-        uint256 sharesToTransfer = shares < claimableShares
-            ? shares
-            : claimableShares;
-        _lido().transferSharesFrom(
-            address(this),
-            rewardAddress,
-            sharesToTransfer
+        bondShares[nodeOperatorId] += _feeDistributor().distributeFees(
+            rewardsProof,
+            nodeOperatorId,
+            cumulativeFeeShares
         );
-        bondShares[nodeOperatorId] -= sharesToTransfer;
-        return sharesToTransfer;
+        rewardShares = getExcessBondShares(nodeOperatorId);
     }
 }

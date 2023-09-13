@@ -31,6 +31,8 @@ interface IStETH {
      */
     function sharesOf(address _account) external view returns (uint256);
 
+    function balanceOf(address _account) external view returns (uint256);
+
     /**
      * @notice Transfer `_sharesAmount` stETH shares from `_sender` to `_receiver` using allowance.
      */
