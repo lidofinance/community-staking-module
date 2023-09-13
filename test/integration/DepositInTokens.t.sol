@@ -18,7 +18,7 @@ contract StakingRouterIntegrationTest is Test {
     IWstETH public wstETH;
 
     address internal agent;
-    address internal alice;
+    address internal user;
 
     string RPC_URL;
     string LIDO_LOCATOR_ADDRESS;
@@ -43,13 +43,13 @@ contract StakingRouterIntegrationTest is Test {
             vm.parseAddress("0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0")
         );
 
-        alice = address(1);
+        user = vm.addr(1);
         address[] memory penalizeRoleMembers = new address[](1);
-        penalizeRoleMembers[0] = alice;
+        penalizeRoleMembers[0] = user;
 
         bondManager = new CommunityStakingBondManager(
             2 ether,
-            alice,
+            user,
             address(locator),
             address(wstETH),
             address(csm),
@@ -58,8 +58,8 @@ contract StakingRouterIntegrationTest is Test {
     }
 
     function test_depositStETH() public {
-        vm.deal(alice, 32 ether);
-        vm.prank(alice);
+        vm.deal(user, 32 ether);
+        vm.prank(user);
         uint256 shares = ILido(locator.lido()).submit{ value: 32 ether }({
             _referal: address(0)
         });
@@ -67,8 +67,8 @@ contract StakingRouterIntegrationTest is Test {
         csm.setNodeOperator({
             _nodeOperatorId: 0,
             _active: true,
-            _name: "Alice",
-            _rewardAddress: alice,
+            _name: "User",
+            _rewardAddress: user,
             _totalVettedValidators: 16,
             _totalExitedValidators: 0,
             _totalWithdrawnValidators: 1,
@@ -76,21 +76,23 @@ contract StakingRouterIntegrationTest is Test {
             _totalDepositedValidators: 16
         });
 
-        vm.prank(alice);
+        vm.prank(user);
         ILido(locator.lido()).approve(address(bondManager), ~uint256(0));
         bondManager.depositStETH(0, 32 ether);
 
+        assertEq(ILido(locator.lido()).balanceOf(user), 0);
         assertEq(bondManager.getBondShares(0), shares);
+        assertEq(bondManager.totalBondShares(), shares);
     }
 
     function test_depositETH() public {
-        vm.deal(alice, 32 ether);
+        vm.deal(user, 32 ether);
 
         csm.setNodeOperator({
             _nodeOperatorId: 0,
             _active: true,
-            _name: "Alice",
-            _rewardAddress: alice,
+            _name: "User",
+            _rewardAddress: user,
             _totalVettedValidators: 16,
             _totalExitedValidators: 0,
             _totalWithdrawnValidators: 1,
@@ -98,15 +100,17 @@ contract StakingRouterIntegrationTest is Test {
             _totalDepositedValidators: 16
         });
 
-        vm.prank(alice);
+        vm.prank(user);
         uint256 shares = bondManager.depositETH{ value: 32 ether }(0);
 
+        assertEq(user.balance, 0);
         assertEq(bondManager.getBondShares(0), shares);
+        assertEq(bondManager.totalBondShares(), shares);
     }
 
     function test_depositWstETH() public {
-        vm.deal(alice, 32 ether);
-        vm.startPrank(alice);
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
         ILido(locator.lido()).submit{ value: 32 ether }({
             _referal: address(0)
         });
@@ -117,8 +121,8 @@ contract StakingRouterIntegrationTest is Test {
         csm.setNodeOperator({
             _nodeOperatorId: 0,
             _active: true,
-            _name: "Alice",
-            _rewardAddress: alice,
+            _name: "User",
+            _rewardAddress: user,
             _totalVettedValidators: 16,
             _totalExitedValidators: 0,
             _totalWithdrawnValidators: 1,
@@ -126,10 +130,12 @@ contract StakingRouterIntegrationTest is Test {
             _totalDepositedValidators: 16
         });
 
-        vm.startPrank(alice);
+        vm.startPrank(user);
         wstETH.approve(address(bondManager), ~uint256(0));
         uint256 shares = bondManager.depositWstETH(0, wstETHAmount);
 
+        assertEq(wstETH.balanceOf(user), 0);
         assertEq(bondManager.getBondShares(0), shares);
+        assertEq(bondManager.totalBondShares(), shares);
     }
 }

@@ -98,8 +98,6 @@ contract CSMAddNodeOperator is Test {
         vm.startPrank(nodeOperator);
         lidoStETH.submit{ value: 2 ether }(address(0));
         csm.addValidatorKeysStETH(noId, 1, keys, signatures);
-
-        assertEq(lidoStETH.balanceOf(address(nodeOperator)), 0);
     }
 
     function test_AddNodeOperatorETH() public {

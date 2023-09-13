@@ -11,6 +11,8 @@ import { ILido } from "./interfaces/ILido.sol";
 import { ICommunityStakingFeeDistributor } from "./interfaces/ICommunityStakingFeeDistributor.sol";
 
 interface IWstETH {
+    function balanceOf(address account) external view returns (uint256);
+
     function approve(address _spender, uint256 _amount) external returns (bool);
 
     function wrap(uint256 _stETHAmount) external returns (uint256);
@@ -174,9 +176,8 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
     ) internal view returns (uint256) {
         uint256 currentBondShares = getBondShares(nodeOperatorId);
         uint256 requiredBondShares = _lido().getSharesByPooledEth(
-            (_getNodeOperatorActiveKeys(nodeOperatorId) + newKeysCount) *
-                COMMON_BOND_SIZE
-        );
+            (_getNodeOperatorActiveKeys(nodeOperatorId)) * COMMON_BOND_SIZE
+        ) + getRequiredBondSharesForKeys(newKeysCount);
         return
             requiredBondShares > currentBondShares
                 ? requiredBondShares - currentBondShares
