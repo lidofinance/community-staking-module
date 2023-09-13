@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.21;
 
-import { MerkleTree } from "../helpers/MerkleTree.sol";
+import { MerkleTree } from "test/helpers/MerkleTree.sol";
 
 contract OracleMock {
     MerkleTree public merkleTree = new MerkleTree();

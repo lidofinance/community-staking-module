@@ -13,8 +13,13 @@ lint-check:
 	prettier --config ./.prettierrc **.{sol,ts} --check
 lint-fix:
 	prettier --config ./.prettierrc **.{sol,ts} -w
-test:
-	forge test -vvvvv
+test: # in parallel
+	$(MAKE) test-unit & 
+	$(MAKE) test-ingegration
+test-unit:
+	forge test --match-path '*test/unit*'
+test-ingegration:
+	forge test --match-path '*test/integration*'
 
 deploy-prod:
 	forge script $(DEPLOY_SCRIPT_PATH) --force --rpc-url ${RPC_URL} --broadcast --slow
