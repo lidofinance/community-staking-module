@@ -4,18 +4,18 @@ pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
 
-import { FeeDistributorBase } from "src/FeeDistributorBase.sol";
-import { FeeDistributor } from "src/FeeDistributor.sol";
-import { FeeOracle } from "src/FeeOracle.sol";
+import { FeeDistributorBase } from "../../../src/FeeDistributorBase.sol";
+import { FeeDistributor } from "../../../src/FeeDistributor.sol";
+import { FeeOracle } from "../../../src/FeeOracle.sol";
 
-import { IFeeOracle } from "src/interfaces/IFeeOracle.sol";
-import { IStETH } from "src/interfaces/IStETH.sol";
+import { IFeeOracle } from "../../../src/interfaces/IFeeOracle.sol";
+import { IStETH } from "../../../src/interfaces/IStETH.sol";
 
-import { MerkleTree } from "test/helpers/MerkleTree.sol";
-import { CommunityStakingModuleMock } from "test/helpers/mocks/CommunityStakingModuleMock.sol";
-import { OracleMock } from "test/helpers/mocks/OracleMock.sol";
-import { StETHMock } from "test/helpers/mocks/StETHMock.sol";
-import { Stub } from "test/helpers/mocks/Stub.sol";
+import { MerkleTree } from "../../../test/helpers/MerkleTree.sol";
+import { CommunityStakingModuleMock } from "../../../test/helpers/mocks/CommunityStakingModuleMock.sol";
+import { OracleMock } from "../../../test/helpers/mocks/OracleMock.sol";
+import { StETHMock } from "../../../test/helpers/mocks/StETHMock.sol";
+import { Stub } from "../../../test/helpers/mocks/Stub.sol";
 
 contract FeeDistributorTest is Test, FeeDistributorBase {
     using stdStorage for StdStorage;

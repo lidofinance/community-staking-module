@@ -15,10 +15,10 @@ lint-fix:
 	prettier --config ./.prettierrc **.{sol,ts} -w
 test: # in parallel
 	$(MAKE) test-unit & 
-	$(MAKE) test-ingegration
+	$(MAKE) test-integration
 test-unit:
 	forge test --match-path '*test/unit*'
-test-ingegration:
+test-integration:
 	forge test --match-path '*test/integration*'
 
 deploy-prod:

@@ -4,10 +4,10 @@
 pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
-import { CommunityStakingModule } from "src/CommunityStakingModule.sol";
-import { IWstETH, ILido, CommunityStakingBondManager } from "src/CommunityStakingBondManager.sol";
-import { CommunityStakingModuleMock } from "test/helpers/mocks/CommunityStakingModuleMock.sol";
-import { ILidoLocator } from "src/interfaces/ILidoLocator.sol";
+import { CommunityStakingModule } from "../../src/CommunityStakingModule.sol";
+import { IWstETH, ILido, CommunityStakingBondManager } from "../../src/CommunityStakingBondManager.sol";
+import { CommunityStakingModuleMock } from "../helpers/mocks/CommunityStakingModuleMock.sol";
+import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 
 contract StakingRouterIntegrationTest is Test {
     uint256 networkFork;

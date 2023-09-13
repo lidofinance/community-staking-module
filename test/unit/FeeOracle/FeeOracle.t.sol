@@ -5,10 +5,10 @@ pragma solidity 0.8.21;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import { FeeOracleBase } from "src/FeeOracleBase.sol";
-import { FeeOracle } from "src/FeeOracle.sol";
+import { FeeOracleBase } from "../../../src/FeeOracleBase.sol";
+import { FeeOracle } from "../../../src/FeeOracle.sol";
 
-import { Utilities } from "test/helpers/Utilities.sol";
+import { Utilities } from "../../helpers/Utilities.sol";
 
 contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     using stdStorage for StdStorage;
