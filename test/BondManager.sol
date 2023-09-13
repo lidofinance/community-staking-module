@@ -4,12 +4,12 @@
 pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
-import { CommunityStakingBondManager } from "../../../src/CommunityStakingBondManager.sol";
-import { LidoMock } from "../../helpers/mocks/LidoMock.sol";
-import { WstETHMock } from "../../helpers/mocks/WstETHMock.sol";
-import { LidoLocatorMock } from "../../helpers/mocks/LidoLocatorMock.sol";
-import { CommunityStakingModuleMock } from "../../helpers/mocks/CommunityStakingModuleMock.sol";
-import { CommunityStakingFeeDistributorMock } from "../../helpers/mocks/CommunityStakingFeeDistributorMock.sol";
+import { CommunityStakingBondManager } from "../src/CommunityStakingBondManager.sol";
+import { LidoMock } from "./helpers/mocks/LidoMock.sol";
+import { WstETHMock } from "./helpers/mocks/WstETHMock.sol";
+import { LidoLocatorMock } from "./helpers/mocks/LidoLocatorMock.sol";
+import { CommunityStakingModuleMock } from "./helpers/mocks/CommunityStakingModuleMock.sol";
+import { CommunityStakingFeeDistributorMock } from "./helpers/mocks/CommunityStakingFeeDistributorMock.sol";
 
 contract CommunityStakingBondManagerTest is Test {
     CommunityStakingBondManager public bondManager;
