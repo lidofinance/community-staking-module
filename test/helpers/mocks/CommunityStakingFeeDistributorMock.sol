@@ -3,8 +3,8 @@
 
 pragma solidity 0.8.21;
 
-import { ILidoLocator } from "src/interfaces/ILidoLocator.sol";
-import { IStETH } from "src/interfaces/IStETH.sol";
+import { ILidoLocator } from "../../../src/interfaces/ILidoLocator.sol";
+import { IStETH } from "../../../src/interfaces/IStETH.sol";
 
 contract CommunityStakingFeeDistributorMock {
     ILidoLocator private immutable LIDO_LOCATOR;
