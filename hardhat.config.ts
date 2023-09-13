@@ -2,7 +2,6 @@ import fs from "fs";
 import "hardhat-preprocessor";
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
-import { anvilStop, anvilStart } from "./test/anvil-fixtures";
 
 function getRemappings() {
   return fs
@@ -33,16 +32,6 @@ const config: HardhatUserConfig = {
         url: process.env.RPC_URL ?? "",
       },
       loggingEnabled: true,
-    },
-  },
-  mocha: {
-    rootHooks: {
-      beforeAll: async () => {
-        await anvilStart();
-      },
-      afterAll: async () => {
-        await anvilStop();
-      },
     },
   },
   paths: {

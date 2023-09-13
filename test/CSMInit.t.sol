@@ -2,14 +2,13 @@
 pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
-import "../../src/CommunityStakingModule.sol";
-import "../../src/CommunityStakingBondManager.sol";
-import "../../src/test_helpers/LidoLocatorMock.sol";
-import "../../src/test_helpers/CommunityStakingFeeDistributorMock.sol";
-import "../../src/test_helpers/StETHMock.sol";
-import "../../src/test_helpers/CommunityStakingModuleMock.sol";
-import "../../src/test_helpers/WstETHMock.sol";
-import "../../src/test_helpers/LidoMock.sol";
+import "../src/CommunityStakingModule.sol";
+import "../src/CommunityStakingBondManager.sol";
+import "./helpers/mocks/StETHMock.sol";
+import "./helpers/mocks/CommunityStakingFeeDistributorMock.sol";
+import "./helpers/mocks/LidoLocatorMock.sol";
+import "./helpers/mocks/LidoMock.sol";
+import "./helpers/mocks/WstETHMock.sol";
 
 contract CSMInitTest is Test {
     CommunityStakingModule public csm;

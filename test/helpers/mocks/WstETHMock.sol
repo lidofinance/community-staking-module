@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.21;
 
-import { IStETH } from "../interfaces/IStETH.sol";
+import { IStETH } from "../../../src/interfaces/IStETH.sol";
 
 contract WstETHMock {
     IStETH public stETH;

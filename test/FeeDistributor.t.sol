@@ -12,23 +12,26 @@ import { IFeeOracle } from "../src/interfaces/IFeeOracle.sol";
 import { IStETH } from "../src/interfaces/IStETH.sol";
 
 import { MerkleTree } from "./helpers/MerkleTree.sol";
-import { OracleMock } from "./mocks/OracleMock.sol";
-import { StETHMock } from "./mocks/StETHMock.sol";
-import { Stub } from "./mocks/Stub.sol";
+import { CommunityStakingModuleMock } from "./helpers/mocks/CommunityStakingModuleMock.sol";
+import { OracleMock } from "./helpers/mocks/OracleMock.sol";
+import { StETHMock } from "./helpers/mocks/StETHMock.sol";
+import { Stub } from "./helpers/mocks/Stub.sol";
 
 contract FeeDistributorTest is Test, FeeDistributorBase {
     using stdStorage for StdStorage;
 
     FeeDistributor internal feeDistributor;
+    CommunityStakingModuleMock internal csm;
     OracleMock internal oracle;
     Stub internal bondManager;
     MerkleTree internal tree;
     StETHMock internal stETH;
 
     function setUp() public {
+        csm = new CommunityStakingModuleMock();
         oracle = new OracleMock();
         bondManager = new Stub();
-        stETH = new StETHMock();
+        stETH = new StETHMock(8013386371917025835991984);
 
         feeDistributor = new FeeDistributor(
             address(stETH),
@@ -47,6 +50,8 @@ contract FeeDistributorTest is Test, FeeDistributorBase {
         tree.pushLeaf(noIndex, shares);
         bytes32[] memory proof = tree.getProof(0);
 
+        stETH.mintShares(address(feeDistributor), shares);
+
         vm.expectEmit(true, true, false, true, address(feeDistributor));
         emit FeeDistributed(noIndex, shares);
 
@@ -57,7 +62,7 @@ contract FeeDistributorTest is Test, FeeDistributorBase {
             shares: shares
         });
 
-        assertEq(stETH.balanceOf(address(bondManager)), shares);
+        assertEq(stETH.sharesOf(address(bondManager)), shares);
     }
 
     function test_RevertIf_NotBondManager() public {
@@ -95,7 +100,7 @@ contract FeeDistributorTest is Test, FeeDistributorBase {
 
         vm.expectRevert(InvalidShares.selector);
         vm.prank(address(bondManager));
-        uint64 sharesToDistribute = feeDistributor.distributeFees({
+        feeDistributor.distributeFees({
             proof: proof,
             noIndex: noIndex,
             shares: shares
