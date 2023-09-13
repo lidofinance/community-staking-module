@@ -30,5 +30,5 @@ deploy-local:
 ifeq (${KEEP_ANVIL_AFTER_LOCAL_DEPLOY},false)
 	@pkill anvil
 else
-	@echo "\033[0;33m[WARNING] Anvil is kept running in the background: http://127.0.0.1:8545"
+	@tput setaf 3 && printf "[WARNING]" && tput sgr0 && echo " Anvil is kept running in the background: http://127.0.0.1:8545"
 endif
