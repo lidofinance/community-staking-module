@@ -6,6 +6,11 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
 import { FeeOracleBase } from "./FeeOracleBase.sol";
+import { IStETH } from "./interfaces/IStETH.sol";
+
+interface IFeeDistributor {
+    function receiveFees(uint256 shares) external;
+}
 
 /// @author madlabman
 contract FeeOracle is FeeOracleBase, AccessControlEnumerable {
@@ -29,8 +34,11 @@ contract FeeOracle is FeeOracleBase, AccessControlEnumerable {
     bytes32 public constant ORACLE_MEMBER_ROLE =
         keccak256("ORACLE_MEMBER_ROLE");
 
+    address public feeDistributor;
+
+    /// @dev Make it possible to traverse report intervals
+    uint64 public prevConsolidatedEpoch;
     uint64 public lastConsolidatedEpoch;
-    uint64 public initializationEpoch;
     /// @notice Interval between reports
     uint64 public reportIntervalEpochs;
 
@@ -54,6 +62,7 @@ contract FeeOracle is FeeOracleBase, AccessControlEnumerable {
     function initialize(
         uint64 _initializationEpoch,
         uint64 reportInterval,
+        address _feeDistributor,
         address admin
     ) external {
         if (initialized) revert AlreadyInitialized();
@@ -61,8 +70,13 @@ contract FeeOracle is FeeOracleBase, AccessControlEnumerable {
         if (admin == address(0)) revert ZeroAddress("admin");
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
 
+        if (_feeDistributor == address(0)) {
+            revert ZeroAddress("_feeDistributor");
+        }
+        feeDistributor = _feeDistributor;
+
+        prevConsolidatedEpoch = _initializationEpoch;
         lastConsolidatedEpoch = _initializationEpoch;
-        initializationEpoch = _initializationEpoch;
 
         _setReportInterval(reportInterval);
 
@@ -124,6 +138,7 @@ contract FeeOracle is FeeOracleBase, AccessControlEnumerable {
     function submitReport(
         uint64 epoch,
         bytes32 newRoot,
+        uint256 distributed,
         string memory _treeCid
     ) external onlyInitializied onlyRole(ORACLE_MEMBER_ROLE) whenNotPaused {
         uint64 _currentEpoch = currentEpoch();
@@ -163,11 +178,14 @@ contract FeeOracle is FeeOracleBase, AccessControlEnumerable {
             delete submissions[reportHash];
 
             // Consolidate report
+
+            prevConsolidatedEpoch = lastConsolidatedEpoch;
             lastConsolidatedEpoch = epoch;
             reportRoot = newRoot;
             _treeCid = _treeCid;
 
-            emit ReportConsolidated(epoch, newRoot, _treeCid);
+            IFeeDistributor(feeDistributor).receiveFees(distributed);
+            emit ReportConsolidated(epoch, newRoot, distributed, _treeCid);
         }
     }
 

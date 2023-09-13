@@ -11,6 +11,7 @@ import { IStETH } from "./interfaces/IStETH.sol";
 
 /// @author madlabman
 contract FeeDistributor is FeeDistributorBase {
+    address public immutable CSM;
     address public immutable STETH;
     address public immutable ORACLE;
     address public immutable BOND_MANAGER;
@@ -18,14 +19,21 @@ contract FeeDistributor is FeeDistributorBase {
     /// @notice Amount of shares sent to the BondManager in favor of the NO
     mapping(uint64 => uint64) public distributedShares;
 
-    constructor(address _stETH, address _oracle, address _bondManager) {
+    constructor(
+        address _CSM,
+        address _stETH,
+        address _oracle,
+        address _bondManager
+    ) {
         if (_bondManager == address(0)) revert ZeroAddress("_bondManager");
         if (_oracle == address(0)) revert ZeroAddress("_oracle");
         if (_stETH == address(0)) revert ZeroAddress("_stETH");
+        if (_CSM == address(0)) revert ZeroAddress("_CSM");
 
         BOND_MANAGER = _bondManager;
         ORACLE = _oracle;
         STETH = _stETH;
+        CSM = _CSM;
     }
 
     /// @notice Distribute fees to the BondManager
@@ -61,5 +69,12 @@ contract FeeDistributor is FeeDistributorBase {
         emit FeeDistributed(noIndex, sharesToDistribute);
 
         return sharesToDistribute;
+    }
+
+    /// Transfers shares from the CSM to the distributor
+    /// @param amount Amount of shares to transfer
+    function receiveFees(uint256 amount) external {
+        if (msg.sender != ORACLE) revert NotOracle();
+        IStETH(STETH).transferSharesFrom(CSM, address(this), amount);
     }
 }

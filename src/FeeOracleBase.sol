@@ -38,6 +38,7 @@ contract FeeOracleBase is Pausable {
     event ReportConsolidated(
         uint256 indexed epoch,
         bytes32 newRoot,
+        uint256 distributed,
         string treeCid
     );
 }

@@ -5,7 +5,10 @@ pragma solidity 0.8.21;
 /// @author madlabman
 contract FeeDistributorBase {
     error ZeroAddress(string field);
+
     error NotBondManager();
+    error NotOracle();
+
     error InvalidShares();
     error InvalidProof();
 
