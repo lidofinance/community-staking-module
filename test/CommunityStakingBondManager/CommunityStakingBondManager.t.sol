@@ -82,7 +82,9 @@ contract CommunityStakingBondManagerTest is Test {
         vm.prank(user);
         bondManager.depositStETH(0, 32 ether);
 
+        assertEq(lidoStETH.balanceOf(user), 0);
         assertEq(bondManager.getBondShares(0), shares);
+        assertEq(lidoStETH.sharesOf(address(bondManager)), shares);
     }
 
     function test_depositETH() public {
@@ -103,7 +105,9 @@ contract CommunityStakingBondManagerTest is Test {
         vm.prank(user);
         uint256 shares = bondManager.depositETH{ value: 32 ether }(0);
 
+        assertEq(address(user).balance, 0);
         assertEq(bondManager.getBondShares(0), shares);
+        assertEq(lidoStETH.sharesOf(address(bondManager)), shares);
     }
 
     function test_depositWstETH() public {
@@ -126,7 +130,9 @@ contract CommunityStakingBondManagerTest is Test {
 
         uint256 shares = bondManager.depositWstETH(0, wstETHAmount);
 
+        assertEq(wstETH.balanceOf(user), 0);
         assertEq(bondManager.getBondShares(0), shares);
+        assertEq(lidoStETH.sharesOf(address(bondManager)), shares);
     }
 
     function test_deposit_RevertIfNotExistedOperator() public {
@@ -353,6 +359,33 @@ contract CommunityStakingBondManagerTest is Test {
 
         assertEq(lidoStETH.sharesOf(address(user)), 0);
         assertEq(bondSharesAfter, bondSharesBefore + sharesAsFee);
+    }
+
+    function test_claimRewardsWstETH_RevertWhenCallerIsNotRewardAddress()
+        public
+    {
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "User",
+            _rewardAddress: user,
+            _totalVettedValidators: 16,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: 0,
+            _totalAddedValidators: 16,
+            _totalDepositedValidators: 16
+        });
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CommunityStakingBondManager.NotOwnerToClaim.selector,
+                stranger,
+                user
+            )
+        );
+        vm.startPrank(stranger);
+        bondManager.claimRewardsWstETH(new bytes32[](1), 0, 1, 1 ether);
+        vm.stopPrank();
     }
 
     function test_claimRewardsStETH_RevertWhenCallerIsNotRewardAddress()

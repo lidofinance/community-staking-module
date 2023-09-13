@@ -288,10 +288,11 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
             "node operator does not exist"
         );
         WSTETH.transferFrom(from, address(this), wstETHAmount);
-        WSTETH.unwrap(wstETHAmount);
-        bondShares[nodeOperatorId] += wstETHAmount;
-        emit BondDeposited(nodeOperatorId, msg.sender, wstETHAmount);
-        return wstETHAmount;
+        uint256 stETHAmount = WSTETH.unwrap(wstETHAmount);
+        uint256 shares = _lido().getSharesByPooledEth(stETHAmount);
+        bondShares[nodeOperatorId] += shares;
+        emit BondDeposited(nodeOperatorId, msg.sender, shares);
+        return shares;
     }
 
     /// @notice Claims full reward (fee + bond) for the given node operator available for this moment
