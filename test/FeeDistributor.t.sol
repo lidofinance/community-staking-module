@@ -11,13 +11,14 @@ import { FeeOracle } from "../src/FeeOracle.sol";
 import { IFeeOracle } from "../src/interfaces/IFeeOracle.sol";
 import { IStETH } from "../src/interfaces/IStETH.sol";
 
+import { Fixtures } from "./helpers/Fixtures.sol";
 import { MerkleTree } from "./helpers/MerkleTree.sol";
 import { CommunityStakingModuleMock } from "./helpers/mocks/CommunityStakingModuleMock.sol";
 import { OracleMock } from "./helpers/mocks/OracleMock.sol";
 import { StETHMock } from "./helpers/mocks/StETHMock.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 
-contract FeeDistributorTest is Test, FeeDistributorBase {
+contract FeeDistributorTest is Test, Fixtures, FeeDistributorBase {
     using stdStorage for StdStorage;
 
     FeeDistributor internal feeDistributor;
@@ -25,19 +26,15 @@ contract FeeDistributorTest is Test, FeeDistributorBase {
     OracleMock internal oracle;
     Stub internal bondManager;
     MerkleTree internal tree;
-    StETHMock internal stETH;
-    Stub internal CSM;
 
-    function setUp() public {
+    function setUp() public withLido {
         csm = new CommunityStakingModuleMock();
         oracle = new OracleMock();
         bondManager = new Stub();
-        stETH = new StETHMock(0);
-        CSM = new Stub();
 
         feeDistributor = new FeeDistributor(
-            address(CSM),
-            address(stETH),
+            address(csm),
+            address(lido.stETH),
             address(oracle),
             address(bondManager)
         );
@@ -46,8 +43,8 @@ contract FeeDistributorTest is Test, FeeDistributorBase {
 
         vm.label(address(bondManager), "BOND_MANAGER");
         vm.label(address(oracle), "ORACLE");
-        vm.label(address(stETH), "STETH");
-        vm.label(address(CSM), "CSM");
+        vm.label(address(lido.stETH), "STETH");
+        vm.label(address(csm), "CSM");
     }
 
     function test_distributeFeesHappyPath() public {
@@ -56,7 +53,7 @@ contract FeeDistributorTest is Test, FeeDistributorBase {
         tree.pushLeaf(noIndex, shares);
         bytes32[] memory proof = tree.getProof(0);
 
-        stETH.mintShares(address(feeDistributor), shares);
+        lido.stETH.mintShares(address(feeDistributor), shares);
 
         vm.expectEmit(true, true, false, true, address(feeDistributor));
         emit FeeDistributed(noIndex, shares);
@@ -68,7 +65,7 @@ contract FeeDistributorTest is Test, FeeDistributorBase {
             shares: shares
         });
 
-        assertEq(stETH.sharesOf(address(bondManager)), shares);
+        assertEq(lido.stETH.sharesOf(address(bondManager)), shares);
     }
 
     function test_RevertIf_NotBondManager() public {
