@@ -7,6 +7,7 @@ import { IStakingModule } from "./interfaces/IStakingModule.sol";
 import "./interfaces/ICommunityStakingBondManager.sol";
 import "./interfaces/ILidoLocator.sol";
 import "./interfaces/ILido.sol";
+import "./lib/SigningKeys.sol";
 
 struct NodeOperator {
     string name;
@@ -26,11 +27,16 @@ struct NodeOperator {
 }
 
 contract CommunityStakingModule is IStakingModule {
+    using SigningKeys for bytes32;
+
     uint256 private nodeOperatorsCount;
     uint256 private activeNodeOperatorsCount;
     bytes32 private moduleType;
     uint256 private nonce;
     mapping(uint256 => NodeOperator) private nodeOperators;
+
+    bytes32 public constant SIGNING_KEYS =
+        keccak256("lido.CommunityStakingModule.signingKeysMappingName");
 
     address public bondManagerAddress;
     address public lidoLocator;
@@ -89,8 +95,8 @@ contract CommunityStakingModule is IStakingModule {
         string calldata _name,
         address _rewardAddress,
         uint256 _keysCount,
-        bytes calldata /*_publicKeys*/,
-        bytes calldata /*_signatures*/
+        bytes calldata _publicKeys,
+        bytes calldata _signatures
     ) external {
         // TODO sanity checks
         // TODO store keys
@@ -113,15 +119,15 @@ contract CommunityStakingModule is IStakingModule {
             _lido().getSharesByPooledEth(requiredEth) // to get wstETH amount
         );
 
-        _incrementNonce();
+        _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
     }
 
     function addNodeOperatorStETH(
         string calldata _name,
         address _rewardAddress,
         uint256 _keysCount,
-        bytes calldata /*_publicKeys*/,
-        bytes calldata /*_signatures*/
+        bytes calldata _publicKeys,
+        bytes calldata _signatures
     ) external {
         // TODO sanity checks
         // TODO store keys
@@ -142,15 +148,15 @@ contract CommunityStakingModule is IStakingModule {
             )
         );
 
-        _incrementNonce();
+        _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
     }
 
     function addNodeOperatorETH(
         string calldata _name,
         address _rewardAddress,
         uint256 _keysCount,
-        bytes calldata /*_publicKeys*/,
-        bytes calldata /*_signatures*/
+        bytes calldata _publicKeys,
+        bytes calldata _signatures
     ) external payable {
         // TODO sanity checks
         // TODO store keys
@@ -174,14 +180,14 @@ contract CommunityStakingModule is IStakingModule {
 
         _bondManager().depositETH{ value: msg.value }(msg.sender, id);
 
-        _incrementNonce();
+        _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
     }
 
     function addValidatorKeysWstETH(
         uint256 _nodeOperatorId,
         uint256 _keysCount,
-        bytes calldata /*_publicKeys*/,
-        bytes calldata /*_signatures*/
+        bytes calldata _publicKeys,
+        bytes calldata _signatures
     ) external onlyActiveNodeOperator(_nodeOperatorId) {
         // TODO sanity checks
         // TODO store keys
@@ -196,14 +202,14 @@ contract CommunityStakingModule is IStakingModule {
             _lido().getSharesByPooledEth(requiredEth) // to get wstETH amount
         );
 
-        _incrementNonce();
+        _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
     }
 
     function addValidatorKeysStETH(
         uint256 _nodeOperatorId,
         uint256 _keysCount,
-        bytes calldata /*_publicKeys*/,
-        bytes calldata /*_signatures*/
+        bytes calldata _publicKeys,
+        bytes calldata _signatures
     ) external onlyActiveNodeOperator(_nodeOperatorId) {
         // TODO sanity checks
         // TODO store keys
@@ -219,14 +225,14 @@ contract CommunityStakingModule is IStakingModule {
             )
         );
 
-        _incrementNonce();
+        _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
     }
 
     function addValidatorKeysETH(
         uint256 _nodeOperatorId,
         uint256 _keysCount,
-        bytes calldata /*_publicKeys*/,
-        bytes calldata /*_signatures*/
+        bytes calldata _publicKeys,
+        bytes calldata _signatures
     ) external payable onlyActiveNodeOperator(_nodeOperatorId) {
         // TODO sanity checks
         // TODO store keys
@@ -247,7 +253,7 @@ contract CommunityStakingModule is IStakingModule {
             _nodeOperatorId
         );
 
-        _incrementNonce();
+        _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
     }
 
     function getNodeOperator(
@@ -390,14 +396,56 @@ contract CommunityStakingModule is IStakingModule {
         revert("NOT_IMPLEMENTED");
     }
 
+    function _addSigningKeys(
+        uint256 _nodeOperatorId,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures
+    ) internal onlyActiveNodeOperator(_nodeOperatorId) {
+        // TODO sanity checks
+        uint256 totalSigningKeysCount = nodeOperators[_nodeOperatorId]
+            .totalAddedValidators - _keysCount;
+
+        totalSigningKeysCount = SigningKeys.saveKeysSigs(
+            SIGNING_KEYS,
+            _nodeOperatorId,
+            totalSigningKeysCount,
+            _keysCount,
+            _publicKeys,
+            _signatures
+        );
+        _incrementNonce();
+    }
+
     function obtainDepositData(
-        uint256,
-        /*_depositsCount*/ bytes calldata
-    )
-        external
-        returns (bytes memory, /*publicKeys*/ bytes memory /*signatures*/)
-    {
-        revert("NOT_IMPLEMENTED");
+        uint256 _depositsCount,
+        bytes calldata /*_depositCalldata*/
+    ) external returns (bytes memory publicKeys, bytes memory signatures) {
+        (publicKeys, signatures) = SigningKeys.initKeysSigsBuf(_depositsCount);
+        uint256 loadedKeysCount = 0;
+        for (uint256 id; id < nodeOperatorsCount; id++) {
+            NodeOperator storage no = nodeOperators[id];
+            uint256 availableKeys = no.totalAddedValidators -
+                no.totalDepositedValidators;
+            if (availableKeys == 0) continue;
+
+            uint256 _startIndex = no.totalDepositedValidators;
+            uint256 _keysCount = _depositsCount > availableKeys
+                ? availableKeys
+                : _depositsCount;
+            SigningKeys.loadKeysSigs(
+                SIGNING_KEYS,
+                id,
+                _startIndex,
+                _keysCount,
+                publicKeys,
+                signatures,
+                loadedKeysCount
+            );
+            loadedKeysCount += _keysCount;
+
+            no.totalDepositedValidators += _keysCount;
+        }
     }
 
     function _incrementNonce() internal {
@@ -405,6 +453,10 @@ contract CommunityStakingModule is IStakingModule {
     }
 
     modifier onlyActiveNodeOperator(uint256 _nodeOperatorId) {
+        require(
+            _nodeOperatorId < nodeOperatorsCount,
+            "node operator does not exist"
+        );
         require(
             nodeOperators[_nodeOperatorId].active,
             "node operator is not active"
