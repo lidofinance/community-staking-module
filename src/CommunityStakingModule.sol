@@ -87,8 +87,19 @@ contract CommunityStakingModule is IStakingModule {
             uint256 depositableValidatorsCount
         )
     {
-        // TODO implement
-        return (0, 0, 0);
+        for (uint256 i = 0; i < nodeOperatorsCount; i++) {
+            totalExitedValidators += nodeOperators[i].totalExitedValidators;
+            totalDepositedValidators += nodeOperators[i]
+                .totalDepositedValidators;
+            depositableValidatorsCount +=
+                nodeOperators[i].totalAddedValidators -
+                nodeOperators[i].totalExitedValidators;
+        }
+        return (
+            totalExitedValidators,
+            totalDepositedValidators,
+            depositableValidatorsCount
+        );
     }
 
     function addNodeOperatorWstETH(
@@ -308,9 +319,9 @@ contract CommunityStakingModule is IStakingModule {
         stuckPenaltyEndTimestamp = no.stuckPenaltyEndTimestamp;
         totalExitedValidators = no.totalExitedValidators;
         totalDepositedValidators = no.totalDepositedValidators;
-        depositableValidatorsCount = no.isTargetLimitActive
-            ? no.targetLimit - no.totalDepositedValidators
-            : 0;
+        depositableValidatorsCount =
+            no.totalAddedValidators -
+            no.totalExitedValidators;
     }
 
     function getNonce() external view returns (uint256) {
@@ -425,6 +436,7 @@ contract CommunityStakingModule is IStakingModule {
         uint256 loadedKeysCount = 0;
         for (uint256 id; id < nodeOperatorsCount; id++) {
             NodeOperator storage no = nodeOperators[id];
+            // TODO replace total added to total vetted later
             uint256 availableKeys = no.totalAddedValidators -
                 no.totalDepositedValidators;
             if (availableKeys == 0) continue;
@@ -443,8 +455,11 @@ contract CommunityStakingModule is IStakingModule {
                 loadedKeysCount
             );
             loadedKeysCount += _keysCount;
-
+            // TODO maybe depositor bot should initiate this increment
             no.totalDepositedValidators += _keysCount;
+        }
+        if (loadedKeysCount != _depositsCount) {
+            revert("NOT_ENOUGH_KEYS");
         }
     }
 
