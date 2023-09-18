@@ -37,7 +37,8 @@ contract StakingRouterIntegrationTest is Test {
         stakingRouter = IStakingRouter(payable(locator.stakingRouter()));
         csm = new CommunityStakingModule(
             "community-staking-module",
-            address(locator)
+            address(locator),
+            address(90210) // FIXME
         );
 
         agent = stakingRouter.getRoleMember(

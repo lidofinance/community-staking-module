@@ -43,7 +43,8 @@ contract CSMAddNodeOperator is Test {
         );
         csm = new CommunityStakingModule(
             "community-staking-module",
-            address(locator)
+            address(locator),
+            address(90210) // FIXME
         );
         bondManager = new CommunityStakingBondManager(
             2 ether,

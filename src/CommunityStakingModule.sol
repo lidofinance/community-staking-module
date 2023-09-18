@@ -3,10 +3,16 @@
 
 pragma solidity 0.8.21;
 
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+
 import { IStakingModule } from "./interfaces/IStakingModule.sol";
 import "./interfaces/ICommunityStakingBondManager.sol";
 import "./interfaces/ILidoLocator.sol";
+import "./interfaces/IQueue.sol";
 import "./interfaces/ILido.sol";
+
+import { Batch } from "./lib/Batch.sol";
 
 struct NodeOperator {
     string name;
@@ -34,13 +40,22 @@ contract CommunityStakingModule is IStakingModule {
 
     address public bondManagerAddress;
     address public lidoLocator;
+    address public queue;
 
-    constructor(bytes32 _type, address _locator) {
+    event VettedSigningKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 approvedValidatorsCount
+    );
+
+    constructor(bytes32 _type, address _locator, address _queue) {
         moduleType = _type;
         nodeOperatorsCount = 0;
 
         require(_locator != address(0), "lido locator is zero address");
         lidoLocator = _locator;
+
+        require(_queue != address(0), "Queue address is zero address");
+        queue = _queue;
     }
 
     function setBondManager(address _bondManagerAddress) external {
@@ -267,7 +282,7 @@ contract CommunityStakingModule is IStakingModule {
             uint256 totalDepositedValidators
         )
     {
-        NodeOperator memory no = nodeOperators[_nodeOperatorId];
+        NodeOperator storage no = nodeOperators[_nodeOperatorId];
         active = no.active;
         name = _fullInfo ? no.name : "";
         rewardAddress = no.rewardAddress;
@@ -386,18 +401,169 @@ contract CommunityStakingModule is IStakingModule {
         // TODO implement
     }
 
+    // NOR signature
+    function setNodeOperatorStakingLimit(
+        uint256 _nodeOperatorId,
+        uint64 _vettedKeysCount
+    ) external {
+        NodeOperator storage no = nodeOperators[_nodeOperatorId];
+
+        require(_vettedKeysCount > no.totalVettedValidators, "invalid count");
+        require(_vettedKeysCount <= no.totalAddedValidators, "invalid count");
+
+        uint256 prevVettedKeysCount = no.totalVettedValidators;
+        no.totalVettedValidators = _vettedKeysCount;
+
+        uint64 start = SafeCast.toUint64(
+            prevVettedKeysCount == 0 ? 0 : prevVettedKeysCount - 1
+        );
+
+        uint64 end = _vettedKeysCount - 1;
+
+        bytes32 pointer = Batch.serialize({
+            nodeOperatorId: SafeCast.toUint64(_nodeOperatorId),
+            start: start,
+            end: end
+        });
+
+        IQueue(queue).enqueue(pointer);
+        emit VettedSigningKeysCountChanged(_nodeOperatorId, _vettedKeysCount);
+    }
+
+    function unvetKeys(uint64 _nodeOperatorId) external {
+        NodeOperator storage no = nodeOperators[_nodeOperatorId];
+        no.totalVettedValidators = no.totalDepositedValidators;
+        emit VettedSigningKeysCountChanged(
+            _nodeOperatorId,
+            no.totalVettedValidators
+        );
+    }
+
     function onWithdrawalCredentialsChanged() external {
         revert("NOT_IMPLEMENTED");
     }
 
     function obtainDepositData(
-        uint256,
-        /*_depositsCount*/ bytes calldata
+        uint256 _depositsCount,
+        bytes calldata /* _depositCalldata */
+    ) external returns (bytes memory publicKeys, bytes memory signatures) {
+        uint256 limit = _depositsCount;
+
+        for (;;) {
+            bytes32 p = IQueue(queue).peek();
+            if (p == bytes32(0)) {
+                break;
+            }
+
+            (uint256 nodeOperatorId, uint256 start, uint256 end) = Batch
+                .deserialize(p);
+
+            (
+                bytes memory _batchKeys,
+                bytes memory _batchSigs,
+                uint256 _batchSize
+            ) = _obtainKeysForBatch(nodeOperatorId, start, end, limit);
+
+            publicKeys = bytes.concat(publicKeys, _batchKeys);
+            signatures = bytes.concat(signatures, _batchSigs);
+
+            limit = limit - _batchSize;
+            if (limit == 0) {
+                break;
+            }
+        }
+    }
+
+    function _obtainKeysForBatch(
+        uint256 _nodeOperatorId,
+        uint256 _start,
+        uint256 _end,
+        uint256 limit
     )
-        external
-        returns (bytes memory, /*publicKeys*/ bytes memory /*signatures*/)
+        internal
+        returns (
+            bytes memory publicKeys,
+            bytes memory signatures,
+            uint256 count
+        )
     {
-        revert("NOT_IMPLEMENTED");
+        NodeOperator storage no = nodeOperators[_nodeOperatorId];
+
+        require(_start <= _end, "invalid range");
+
+        require(_end < no.totalVettedValidators, "NO was unvetted");
+        require(_end < no.totalAddedValidators, "not enough keys");
+
+        require(
+            no.totalDepositedValidators >= _start,
+            "invalid range: skipped keys"
+        );
+
+        uint256 _startIndex = Math.max(_start, no.totalDepositedValidators);
+        uint256 _endIndex = Math.min(_end, _startIndex + limit);
+
+        no.totalDepositedValidators = _endIndex + 1;
+        if (_end == _endIndex) {
+            IQueue(queue).dequeue();
+        }
+
+        // TODO implement
+        return (new bytes(0), new bytes(0), _endIndex - _startIndex + 1);
+    }
+
+    function cleanDepositQueue(uint256 batchesLimit) external {
+        bytes32 _prev = IQueue(queue).prev();
+
+        for (uint256 i; i < batchesLimit; i++) {
+            bytes32 _peek = IQueue(queue).peek(_prev);
+            if (_peek == bytes32(0)) {
+                break;
+            }
+
+            (uint256 nodeOperatorId, uint256 start, uint256 end) = Batch
+                .deserialize(_peek);
+            if (!_allKeysInBatchVetted(nodeOperatorId, start, end)) {
+                IQueue(queue).squash(_prev, _peek);
+            }
+
+            _prev = _peek;
+        }
+    }
+
+    function isQueueHasUnvettedKeys(
+        uint256 batchesLimit
+    ) external view returns (bool) {
+        bytes32 _prev = IQueue(queue).prev();
+
+        for (uint256 i; i < batchesLimit; i++) {
+            bytes32 _peek = IQueue(queue).peek(_prev);
+            if (_peek == bytes32(0)) {
+                break;
+            }
+
+            (uint256 nodeOperatorId, uint256 start, uint256 end) = Batch
+                .deserialize(_peek);
+            if (!_allKeysInBatchVetted(nodeOperatorId, start, end)) {
+                return true;
+            }
+
+            _prev = _peek;
+        }
+
+        return false;
+    }
+
+    function _allKeysInBatchVetted(
+        uint256 _nodeOperatorId,
+        uint256 _start,
+        uint256 _end
+    ) internal view returns (bool) {
+        NodeOperator storage no = nodeOperators[_nodeOperatorId];
+        require(
+            no.totalDepositedValidators >= _start,
+            "invalid range: skipped keys"
+        );
+        return _end < no.totalVettedValidators;
     }
 
     function _incrementNonce() internal {

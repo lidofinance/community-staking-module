@@ -37,7 +37,8 @@ contract Deploy is Script {
         wstETH = IWstETH(WSTETH_ADDRESS);
         CommunityStakingModule csm = new CommunityStakingModule(
             "community-staking-module",
-            address(locator)
+            address(locator),
+            address(90210) // FIXME
         );
         CommunityStakingBondManager bondManager = new CommunityStakingBondManager({
                 _commonBondSize: 2 ether,

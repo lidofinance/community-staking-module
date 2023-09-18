@@ -33,7 +33,8 @@ contract CSMInitTest is Test {
         locator = new LidoLocatorMock(address(lidoStETH), burner);
         csm = new CommunityStakingModule(
             "community-staking-module",
-            address(locator)
+            address(locator),
+            address(90210) // FIXME
         );
         wstETH = new WstETHMock(address(lidoStETH));
         communityStakingFeeDistributor = new CommunityStakingFeeDistributorMock(
