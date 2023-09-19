@@ -7,6 +7,7 @@ import { IStakingModule } from "./interfaces/IStakingModule.sol";
 import "./interfaces/ICommunityStakingBondManager.sol";
 import "./interfaces/ILidoLocator.sol";
 import "./interfaces/ILido.sol";
+
 import "./lib/SigningKeys.sol";
 
 struct NodeOperator {
@@ -27,16 +28,14 @@ struct NodeOperator {
 }
 
 contract CommunityStakingModule is IStakingModule {
-    using SigningKeys for bytes32;
-
     uint256 private nodeOperatorsCount;
     uint256 private activeNodeOperatorsCount;
     bytes32 private moduleType;
     uint256 private nonce;
     mapping(uint256 => NodeOperator) private nodeOperators;
 
-    bytes32 public constant SIGNING_KEYS =
-        keccak256("lido.CommunityStakingModule.signingKeysMappingName");
+    bytes32 public constant SIGNING_KEYS_POSITION =
+        keccak256("lido.CommunityStakingModule.signingKeysPosition");
 
     address public bondManagerAddress;
     address public lidoLocator;
@@ -413,14 +412,14 @@ contract CommunityStakingModule is IStakingModule {
         bytes calldata _publicKeys,
         bytes calldata _signatures
     ) internal onlyActiveNodeOperator(_nodeOperatorId) {
-        // TODO sanity checks
-        uint256 totalSigningKeysCount = nodeOperators[_nodeOperatorId]
+        // TODO: sanity checks
+        uint256 _startIndex = nodeOperators[_nodeOperatorId]
             .totalAddedValidators - _keysCount;
 
-        totalSigningKeysCount = SigningKeys.saveKeysSigs(
-            SIGNING_KEYS,
+        SigningKeys.saveKeysSigs(
+            SIGNING_KEYS_POSITION,
             _nodeOperatorId,
-            totalSigningKeysCount,
+            _startIndex,
             _keysCount,
             _publicKeys,
             _signatures
@@ -434,8 +433,12 @@ contract CommunityStakingModule is IStakingModule {
     ) external returns (bytes memory publicKeys, bytes memory signatures) {
         (publicKeys, signatures) = SigningKeys.initKeysSigsBuf(_depositsCount);
         uint256 loadedKeysCount = 0;
-        for (uint256 id; id < nodeOperatorsCount; id++) {
-            NodeOperator storage no = nodeOperators[id];
+        for (
+            uint256 nodeOperatorId;
+            nodeOperatorId < nodeOperatorsCount;
+            nodeOperatorId++
+        ) {
+            NodeOperator storage no = nodeOperators[nodeOperatorId];
             // TODO replace total added to total vetted later
             uint256 availableKeys = no.totalAddedValidators -
                 no.totalDepositedValidators;
@@ -446,8 +449,8 @@ contract CommunityStakingModule is IStakingModule {
                 ? availableKeys
                 : _depositsCount;
             SigningKeys.loadKeysSigs(
-                SIGNING_KEYS,
-                id,
+                SIGNING_KEYS_POSITION,
+                nodeOperatorId,
                 _startIndex,
                 _keysCount,
                 publicKeys,
