@@ -212,6 +212,73 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
 
         // Consensus is reached
         assertEq(oracle.reportRoot(), newRoot);
+        assertEq(oracle.treeCid(), "tree");
+    }
+
+    function test_submitReport_NoQuorum() public {
+        oracle = new FeeOracle({
+            secondsPerBlock: 12,
+            blocksPerEpoch: 32,
+            genesisTime: 0
+        });
+
+        oracle.initialize({
+            _initializationEpoch: 0,
+            reportInterval: 2,
+            _feeDistributor: FEE_DISTRIBUTOR,
+            admin: ORACLE_ADMIN
+        });
+
+        _seedMembers(3);
+        bytes32 newRoot = keccak256("new root");
+
+        _vmSetEpoch(7);
+
+        // Memeber 0 submits a report
+        vm.expectEmit(true, false, false, true, address(oracle));
+        emit ReportSubmitted(6, members[0], newRoot, "tree");
+
+        vm.prank(members[0]);
+        oracle.submitReport({
+            epoch: 6,
+            newRoot: newRoot,
+            distributed: 42,
+            _treeCid: "tree"
+        });
+
+        // Consensus is not reached yet
+        assertEq(oracle.reportRoot(), bytes32(0));
+        assertEq(oracle.treeCid(), "");
+
+        // Member 1 submits a report
+        vm.expectEmit(true, false, false, true, address(oracle));
+        emit ReportSubmitted(6, members[1], newRoot, "IT DIFFERS");
+
+        vm.prank(members[1]);
+        oracle.submitReport({
+            epoch: 6,
+            newRoot: newRoot,
+            distributed: 42,
+            _treeCid: "IT DIFFERS"
+        });
+
+        // Consensus is not reached
+        assertEq(oracle.reportRoot(), bytes32(0));
+
+        // Member 1 submits a report
+        vm.expectEmit(true, false, false, true, address(oracle));
+        emit ReportSubmitted(6, members[1], keccak256("IT DIFFERS"), "tree");
+
+        vm.prank(members[1]);
+        oracle.submitReport({
+            epoch: 6,
+            newRoot: keccak256("IT DIFFERS"),
+            distributed: 42,
+            _treeCid: "tree"
+        });
+
+        // Consensus is not reached
+        assertEq(oracle.reportRoot(), bytes32(0));
     }
 
     function test_RevertIf_TooEarly() public {
