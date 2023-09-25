@@ -3,7 +3,9 @@
 
 pragma solidity 0.8.21;
 
-contract StETHMock {
+import { PermitTokenBase } from "../Permit.sol";
+
+contract StETHMock is PermitTokenBase {
     uint256 public totalPooledEther;
     uint256 public totalShares;
     mapping(address => uint256) public shares;
@@ -105,5 +107,17 @@ contract StETHMock {
         shares[_sender] -= _sharesAmount;
         shares[_recipient] += _sharesAmount;
         return _sharesAmount;
+    }
+
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        emit Approval(owner, spender, value);
     }
 }

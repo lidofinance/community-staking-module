@@ -8,33 +8,10 @@ import { AccessControlEnumerable } from "@openzeppelin/contracts/access/AccessCo
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { ICommunityStakingModule } from "./interfaces/ICommunityStakingModule.sol";
 import { ILido } from "./interfaces/ILido.sol";
+import { IWstETH } from "./interfaces/IWstETH.sol";
 import { ICommunityStakingFeeDistributor } from "./interfaces/ICommunityStakingFeeDistributor.sol";
 
-interface IWstETH {
-    function balanceOf(address account) external view returns (uint256);
-
-    function approve(address _spender, uint256 _amount) external returns (bool);
-
-    function wrap(uint256 _stETHAmount) external returns (uint256);
-
-    function unwrap(uint256 _wstETHAmount) external returns (uint256);
-
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) external;
-
-    function getStETHByWstETH(
-        uint256 _wstETHAmount
-    ) external view returns (uint256);
-
-    function getWstETHByStETH(
-        uint256 _stETHAmount
-    ) external view returns (uint256);
-}
-
-contract CommunityStakingBondManager is AccessControlEnumerable {
+contract CommunityStakingBondManagerBase {
     event BondDeposited(
         uint256 nodeOperatorId,
         address indexed from,
@@ -55,6 +32,19 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         address indexed to,
         uint256 wstETHAmount
     );
+}
+
+contract CommunityStakingBondManager is
+    CommunityStakingBondManagerBase,
+    AccessControlEnumerable
+{
+    struct PermitInput {
+        uint256 value;
+        uint256 deadline;
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
 
     error NotOwnerToClaim(address msgSender, address owner);
 
@@ -257,6 +247,56 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         return shares;
     }
 
+    /// @notice Deposits stETH to the bond for the given node operator.
+    /// @param nodeOperatorId id of the node operator to deposit bond for.
+    /// @param stETHAmount amount of stETH to deposit.
+    /// @param permit permit to spend stETH.
+    function depositStETHWithPermit(
+        uint256 nodeOperatorId,
+        uint256 stETHAmount,
+        PermitInput calldata permit
+    ) external returns (uint256) {
+        return
+            _depositStETHWithPermit(
+                msg.sender,
+                nodeOperatorId,
+                stETHAmount,
+                permit
+            );
+    }
+
+    /// @notice Deposits stETH to the bond for the given node operator.
+    /// @param nodeOperatorId id of the node operator to deposit bond for.
+    /// @param stETHAmount amount of stETH to deposit.
+    /// @param permit permit to spend stETH.
+    function depositStETHWithPermit(
+        address from,
+        uint256 nodeOperatorId,
+        uint256 stETHAmount,
+        PermitInput calldata permit
+    ) external returns (uint256) {
+        return
+            _depositStETHWithPermit(from, nodeOperatorId, stETHAmount, permit);
+    }
+
+    function _depositStETHWithPermit(
+        address from,
+        uint256 nodeOperatorId,
+        uint256 stETHAmount,
+        PermitInput calldata _permit
+    ) internal returns (uint256) {
+        _lido().permit(
+            from,
+            address(this),
+            _permit.value,
+            _permit.deadline,
+            _permit.v,
+            _permit.r,
+            _permit.s
+        );
+        return _depositStETH(from, nodeOperatorId, stETHAmount);
+    }
+
     /// @notice Deposits wstETH to the bond for the given node operator.
     /// @param nodeOperatorId id of the node operator to deposit bond for.
     /// @param wstETHAmount amount of wstETH to deposit.
@@ -294,6 +334,62 @@ contract CommunityStakingBondManager is AccessControlEnumerable {
         bondShares[nodeOperatorId] += shares;
         emit BondDeposited(nodeOperatorId, msg.sender, shares);
         return shares;
+    }
+
+    /// @notice Deposits wstETH to the bond for the given node operator.
+    /// @param nodeOperatorId id of the node operator to deposit bond for.
+    /// @param wstETHAmount amount of wstETH to deposit.
+    /// @param permit permit to spend wstETH.
+    function depositWstETHWithPermit(
+        uint256 nodeOperatorId,
+        uint256 wstETHAmount,
+        PermitInput calldata permit
+    ) external returns (uint256) {
+        return
+            _depositWstETHWithPermit(
+                msg.sender,
+                nodeOperatorId,
+                wstETHAmount,
+                permit
+            );
+    }
+
+    /// @notice Deposits wstETH to the bond for the given node operator.
+    /// @param from address to deposit wstETH from.
+    /// @param nodeOperatorId id of the node operator to deposit bond for.
+    /// @param wstETHAmount amount of wstETH to deposit.
+    /// @param permit permit to spend wstETH.
+    function depositWstETHWithPermit(
+        address from,
+        uint256 nodeOperatorId,
+        uint256 wstETHAmount,
+        PermitInput calldata permit
+    ) external returns (uint256) {
+        return
+            _depositWstETHWithPermit(
+                from,
+                nodeOperatorId,
+                wstETHAmount,
+                permit
+            );
+    }
+
+    function _depositWstETHWithPermit(
+        address from,
+        uint256 nodeOperatorId,
+        uint256 stETHAmount,
+        PermitInput calldata permit
+    ) internal returns (uint256) {
+        WSTETH.permit(
+            from,
+            address(this),
+            permit.value,
+            permit.deadline,
+            permit.v,
+            permit.r,
+            permit.s
+        );
+        return _depositWstETH(from, nodeOperatorId, stETHAmount);
     }
 
     /// @notice Claims full reward (fee + bond) for the given node operator available for this moment

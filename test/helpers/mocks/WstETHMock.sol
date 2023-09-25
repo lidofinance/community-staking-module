@@ -4,8 +4,9 @@
 pragma solidity 0.8.21;
 
 import { IStETH } from "../../../src/interfaces/IStETH.sol";
+import { PermitTokenBase } from "../Permit.sol";
 
-contract WstETHMock {
+contract WstETHMock is PermitTokenBase {
     IStETH public stETH;
 
     mapping(address => uint256) public _balance;
@@ -67,6 +68,18 @@ contract WstETHMock {
         uint256 _wstETHAmount
     ) external view returns (uint256) {
         return stETH.getPooledEthByShares(_wstETHAmount);
+    }
+
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        emit Approval(owner, spender, value);
     }
 
     function _mint(address _account, uint256 _amount) internal {
