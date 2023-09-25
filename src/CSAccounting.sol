@@ -10,6 +10,7 @@ import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ILido } from "./interfaces/ILido.sol";
 import { IWstETH } from "./interfaces/IWstETH.sol";
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
+import { IWithdrawalQueue } from "./interfaces/IWithdrawalQueue.sol";
 
 contract CSAccountingBase {
     event ETHBondDeposited(
@@ -38,6 +39,11 @@ contract CSAccountingBase {
         uint256 amount
     );
     event WstETHRewardsClaimed(
+        uint256 indexed nodeOperatorId,
+        address to,
+        uint256 amount
+    );
+    event ETHRewardsRequested(
         uint256 indexed nodeOperatorId,
         address to,
         uint256 amount
@@ -542,6 +548,40 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         emit WstETHRewardsClaimed(nodeOperatorId, rewardAddress, wstETHAmount);
     }
 
+    /// @notice Request full reward (fee + bond) in Withdrawal NFT (unstETH) for the given node operator available for this moment.
+    /// @dev reverts if amount isn't between MIN_STETH_WITHDRAWAL_AMOUNT and MAX_STETH_WITHDRAWAL_AMOUNT
+    /// @param rewardsProof merkle proof of the rewards.
+    /// @param nodeOperatorId id of the node operator to request rewards for.
+    /// @param cumulativeFeeShares cummulative fee shares for the node operator.
+    /// @return requestIds an array of the created withdrawal request ids
+    function requestRewardsETH(
+        bytes32[] memory rewardsProof,
+        uint256 nodeOperatorId,
+        uint256 cumulativeFeeShares,
+        uint256 ETHAmount
+    ) external returns (uint256[] memory requestIds) {
+        address rewardAddress = _getNodeOperatorRewardAddress(nodeOperatorId);
+        _isSenderEligableToClaim(rewardAddress);
+        uint256 claimableShares = _pullFeeRewards(
+            rewardsProof,
+            nodeOperatorId,
+            cumulativeFeeShares
+        );
+        uint256 toClaim = ETHAmount < _ethByShares(claimableShares)
+            ? _sharesByEth(ETHAmount)
+            : claimableShares;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = _lido().getPooledEthByShares(toClaim);
+        requestIds = _withdrawalQueue().requestWithdrawals(
+            amounts,
+            rewardAddress
+        );
+        bondShares[nodeOperatorId] -= toClaim;
+        totalBondShares -= toClaim;
+        emit ETHRewardsRequested(nodeOperatorId, rewardAddress, amounts[0]);
+        return requestIds;
+    }
+
     /// @notice Penalize bond by burning shares
     /// @param nodeOperatorId id of the node operator to penalize bond for.
     /// @param shares amount shares to burn.
@@ -567,6 +607,10 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
 
     function _feeDistributor() internal view returns (ICSFeeDistributor) {
         return ICSFeeDistributor(FEE_DISTRIBUTOR);
+    }
+
+    function _withdrawalQueue() internal view returns (IWithdrawalQueue) {
+        return IWithdrawalQueue(LIDO_LOCATOR.withdrawalQueue());
     }
 
     function _getNodeOperatorActiveKeys(
