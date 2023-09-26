@@ -27,19 +27,7 @@ struct NodeOperator {
     bool isTargetLimitActive;
 }
 
-contract CommunityStakingModule is IStakingModule {
-    uint256 private nodeOperatorsCount;
-    uint256 private activeNodeOperatorsCount;
-    bytes32 private moduleType;
-    uint256 private nonce;
-    mapping(uint256 => NodeOperator) private nodeOperators;
-
-    bytes32 public constant SIGNING_KEYS_POSITION =
-        keccak256("lido.CommunityStakingModule.signingKeysPosition");
-
-    address public bondManagerAddress;
-    address public lidoLocator;
-
+contract CommunityStakingModuleBase {
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
         string name,
@@ -62,6 +50,20 @@ contract CommunityStakingModule is IStakingModule {
         uint256 indexed nodeOperatorId,
         uint256 totalKeysCount
     );
+}
+
+contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
+    uint256 private nodeOperatorsCount;
+    uint256 private activeNodeOperatorsCount;
+    bytes32 private moduleType;
+    uint256 private nonce;
+    mapping(uint256 => NodeOperator) private nodeOperators;
+
+    bytes32 public constant SIGNING_KEYS_POSITION =
+        keccak256("lido.CommunityStakingModule.signingKeysPosition");
+
+    address public bondManagerAddress;
+    address public lidoLocator;
 
     constructor(bytes32 _type, address _locator) {
         moduleType = _type;
@@ -240,6 +242,7 @@ contract CommunityStakingModule is IStakingModule {
             _lido().getSharesByPooledEth(requiredEth) // to get wstETH amount
         );
 
+        nodeOperators[_nodeOperatorId].totalAddedKeys += _keysCount;
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
     }
 
@@ -263,6 +266,7 @@ contract CommunityStakingModule is IStakingModule {
             )
         );
 
+        nodeOperators[_nodeOperatorId].totalAddedKeys += _keysCount;
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
     }
 
@@ -291,6 +295,7 @@ contract CommunityStakingModule is IStakingModule {
             _nodeOperatorId
         );
 
+        nodeOperators[_nodeOperatorId].totalAddedKeys += _keysCount;
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
     }
 
@@ -443,6 +448,7 @@ contract CommunityStakingModule is IStakingModule {
         bytes calldata _signatures
     ) internal onlyActiveNodeOperator(_nodeOperatorId) {
         // TODO: sanity checks
+        // totalAddedKeys must be incremented before _addSigningKeys call
         uint256 _startIndex = nodeOperators[_nodeOperatorId].totalAddedKeys -
             _keysCount;
 
