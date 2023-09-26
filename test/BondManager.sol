@@ -155,7 +155,7 @@ contract CommunityStakingBondManagerTest is
             32 ether,
             CommunityStakingBondManager.PermitInput({
                 value: 32 ether,
-                deadline: ~uint256(0),
+                deadline: type(uint256).max,
                 // mock permit signature
                 v: 0,
                 r: 0,
@@ -191,7 +191,7 @@ contract CommunityStakingBondManagerTest is
             wstETHAmount,
             CommunityStakingBondManager.PermitInput({
                 value: 32 ether,
-                deadline: ~uint256(0),
+                deadline: type(uint256).max,
                 // mock permit signature
                 v: 0,
                 r: 0,
@@ -414,14 +414,14 @@ contract CommunityStakingBondManagerTest is
         vm.stopPrank();
 
         vm.expectEmit(true, true, true, true, address(bondManager));
-        emit BondPenalized(0, 1 * 1e18, 1 * 1e18);
+        emit BondPenalized(0, 1e18, 1e18);
 
         uint256 bondSharesBefore = bondManager.getBondShares(0);
         vm.prank(admin);
-        bondManager.penalize(0, 1 * 1e18);
+        bondManager.penalize(0, 1e18);
 
-        assertEq(bondManager.getBondShares(0), bondSharesBefore - 1 * 1e18);
-        assertEq(stETH.sharesOf(address(burner)), 1 * 1e18);
+        assertEq(bondManager.getBondShares(0), bondSharesBefore - 1e18);
+        assertEq(stETH.sharesOf(address(burner)), 1e18);
     }
 
     function test_penalize_MoreThanDeposit() public {

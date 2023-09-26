@@ -81,7 +81,7 @@ contract DepositIntegrationTest is Test, PermitHelper {
             _referal: address(0)
         });
 
-        ILido(locator.lido()).approve(address(bondManager), ~uint256(0));
+        ILido(locator.lido()).approve(address(bondManager), type(uint256).max);
         bondManager.depositStETH(0, 32 ether);
 
         assertEq(ILido(locator.lido()).balanceOf(user), 0);
@@ -105,11 +105,11 @@ contract DepositIntegrationTest is Test, PermitHelper {
         ILido(locator.lido()).submit{ value: 32 ether }({
             _referal: address(0)
         });
-        ILido(locator.lido()).approve(address(wstETH), ~uint256(0));
+        ILido(locator.lido()).approve(address(wstETH), type(uint256).max);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
 
         vm.startPrank(user);
-        wstETH.approve(address(bondManager), ~uint256(0));
+        wstETH.approve(address(bondManager), type(uint256).max);
         uint256 shares = bondManager.depositWstETH(0, wstETHAmount);
 
         assertEq(wstETH.balanceOf(user), 0);
@@ -123,7 +123,7 @@ contract DepositIntegrationTest is Test, PermitHelper {
             address(bondManager),
             32 ether,
             vm.getNonce(user),
-            ~uint256(0),
+            type(uint256).max,
             address(locator.lido())
         );
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, digest);
@@ -139,7 +139,7 @@ contract DepositIntegrationTest is Test, PermitHelper {
             32 ether,
             CommunityStakingBondManager.PermitInput({
                 value: 32 ether,
-                deadline: ~uint256(0),
+                deadline: type(uint256).max,
                 v: v,
                 r: r,
                 s: s
@@ -157,7 +157,7 @@ contract DepositIntegrationTest is Test, PermitHelper {
             address(bondManager),
             32 ether,
             vm.getNonce(user),
-            ~uint256(0),
+            type(uint256).max,
             address(wstETH)
         );
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, digest);
@@ -167,7 +167,7 @@ contract DepositIntegrationTest is Test, PermitHelper {
         ILido(locator.lido()).submit{ value: 32 ether }({
             _referal: address(0)
         });
-        ILido(locator.lido()).approve(address(wstETH), ~uint256(0));
+        ILido(locator.lido()).approve(address(wstETH), type(uint256).max);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
 
         uint256 shares = bondManager.depositWstETHWithPermit(
@@ -175,7 +175,7 @@ contract DepositIntegrationTest is Test, PermitHelper {
             wstETHAmount,
             CommunityStakingBondManager.PermitInput({
                 value: 32 ether,
-                deadline: ~uint256(0),
+                deadline: type(uint256).max,
                 v: v,
                 r: r,
                 s: s
