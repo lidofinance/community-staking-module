@@ -18,8 +18,11 @@ contract Fixtures is StdCheats {
             Stub burner
         )
     {
-        stETH = new LidoMock(8013386371917025835991984);
-        stETH.mintShares(address(stETH), 7059313073779349112833523);
+        stETH = new LidoMock({ _totalPooledEther: 8013386371917025835991984 });
+        stETH.mintShares({
+            _account: address(stETH),
+            _sharesAmount: 7059313073779349112833523
+        });
         burner = new Stub();
         locator = new LidoLocatorMock(address(stETH), address(burner));
         wstETH = new WstETHMock(address(stETH));
