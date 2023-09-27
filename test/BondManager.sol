@@ -125,9 +125,7 @@ contract CommunityStakingBondManagerTest is
         emit BondDeposited(
             0,
             user,
-            stETH.getSharesByPooledEth(
-                stETH.getPooledEthByShares(wstETHAmount)
-            )
+            stETH.getSharesByPooledEth(stETH.getPooledEthByShares(wstETHAmount))
         );
 
         uint256 shares = bondManager.depositWstETH(0, wstETHAmount);
@@ -181,9 +179,7 @@ contract CommunityStakingBondManagerTest is
         emit BondDeposited(
             0,
             user,
-            stETH.getSharesByPooledEth(
-                stETH.getPooledEthByShares(wstETHAmount)
-            )
+            stETH.getSharesByPooledEth(stETH.getPooledEthByShares(wstETHAmount))
         );
 
         uint256 shares = bondManager.depositWstETHWithPermit(
@@ -266,6 +262,7 @@ contract CommunityStakingBondManagerTest is
         vm.prank(address(communityStakingFeeDistributor));
         uint256 sharesAsFee = stETH.submit{ value: 0.1 ether }(address(0));
 
+        vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
         bondManager.depositStETH(0, 32 ether);
@@ -291,6 +288,7 @@ contract CommunityStakingBondManagerTest is
         vm.prank(address(communityStakingFeeDistributor));
         uint256 sharesAsFee = stETH.submit{ value: 0.1 ether }(address(0));
 
+        vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
         bondManager.depositStETH(0, 32 ether);
@@ -299,9 +297,7 @@ contract CommunityStakingBondManagerTest is
         emit StETHRewardsClaimed(
             0,
             user,
-            stETH.getPooledEthByShares(
-                stETH.getSharesByPooledEth(0.05 ether)
-            )
+            stETH.getPooledEthByShares(stETH.getSharesByPooledEth(0.05 ether))
         );
 
         uint256 bondSharesBefore = bondManager.getBondShares(0);
@@ -328,6 +324,7 @@ contract CommunityStakingBondManagerTest is
         vm.prank(address(communityStakingFeeDistributor));
         uint256 sharesAsFee = stETH.submit{ value: 0.1 ether }(address(0));
 
+        vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
         bondManager.depositStETH(0, 32 ether);
@@ -358,6 +355,7 @@ contract CommunityStakingBondManagerTest is
         vm.prank(address(communityStakingFeeDistributor));
         uint256 sharesAsFee = stETH.submit{ value: 1 ether }(address(0));
 
+        vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 31 ether }({ _referal: address(0) });
         bondManager.depositStETH(0, 31 ether);

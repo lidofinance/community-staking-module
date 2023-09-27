@@ -70,18 +70,6 @@ contract WstETHMock is PermitTokenBase {
         return stETH.getPooledEthByShares(_wstETHAmount);
     }
 
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external {
-        emit Approval(owner, spender, value);
-    }
-
     function _mint(address _account, uint256 _amount) internal {
         _totalSupply += _amount;
         _balance[_account] += _amount;

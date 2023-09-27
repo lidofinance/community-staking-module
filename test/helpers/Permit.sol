@@ -10,6 +10,18 @@ contract PermitTokenBase {
         address indexed spender,
         uint256 value
     );
+
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        emit Approval(owner, spender, value);
+    }
 }
 
 // https://eips.ethereum.org/EIPS/eip-2612

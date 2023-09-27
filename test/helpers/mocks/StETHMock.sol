@@ -108,16 +108,4 @@ contract StETHMock is PermitTokenBase {
         shares[_recipient] += _sharesAmount;
         return _sharesAmount;
     }
-
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external {
-        emit Approval(owner, spender, value);
-    }
 }
