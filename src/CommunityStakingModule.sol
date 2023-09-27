@@ -133,13 +133,11 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         bytes calldata _signatures
     ) external {
         // TODO sanity checks
-        // TODO store keys
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
         no.name = _name;
         no.rewardAddress = _rewardAddress;
         no.active = true;
-        no.totalAddedKeys = _keysCount;
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
 
@@ -166,13 +164,11 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         bytes calldata _signatures
     ) external {
         // TODO sanity checks
-        // TODO store keys
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
         no.name = _name;
         no.rewardAddress = _rewardAddress;
         no.active = true;
-        no.totalAddedKeys = _keysCount;
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
 
@@ -197,7 +193,6 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         bytes calldata _signatures
     ) external payable {
         // TODO sanity checks
-        // TODO store keys
 
         require(
             msg.value >=
@@ -212,7 +207,6 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         no.name = _name;
         no.rewardAddress = _rewardAddress;
         no.active = true;
-        no.totalAddedKeys = _keysCount;
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
 
@@ -242,7 +236,6 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
             _lido().getSharesByPooledEth(requiredEth) // to get wstETH amount
         );
 
-        nodeOperators[_nodeOperatorId].totalAddedKeys += _keysCount;
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
     }
 
@@ -266,7 +259,6 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
             )
         );
 
-        nodeOperators[_nodeOperatorId].totalAddedKeys += _keysCount;
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
     }
 
@@ -295,7 +287,6 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
             _nodeOperatorId
         );
 
-        nodeOperators[_nodeOperatorId].totalAddedKeys += _keysCount;
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
     }
 
@@ -448,9 +439,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         bytes calldata _signatures
     ) internal onlyActiveNodeOperator(_nodeOperatorId) {
         // TODO: sanity checks
-        // totalAddedKeys must be incremented before _addSigningKeys call
-        uint256 _startIndex = nodeOperators[_nodeOperatorId].totalAddedKeys -
-            _keysCount;
+        uint256 _startIndex = nodeOperators[_nodeOperatorId].totalAddedKeys;
 
         SigningKeys.saveKeysSigs(
             SIGNING_KEYS_POSITION,
@@ -460,12 +449,14 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
             _publicKeys,
             _signatures
         );
-        _incrementNonce();
 
+        nodeOperators[_nodeOperatorId].totalAddedKeys += _keysCount;
         emit TotalKeysCountChanged(
             _nodeOperatorId,
             nodeOperators[_nodeOperatorId].totalAddedKeys
         );
+
+        _incrementNonce();
     }
 
     function obtainDepositData(

@@ -65,9 +65,9 @@ contract CSMAddNodeOperator is Test, Fixtures, Utilities, CommunityStakingModule
         wstETH.wrap(2 ether);
 
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(true, true, false, true, address(csm));
             emit TotalKeysCountChanged(0, 1);
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, "test", nodeOperator);
         }
 
@@ -90,7 +90,7 @@ contract CSMAddNodeOperator is Test, Fixtures, Utilities, CommunityStakingModule
         wstETH.wrap(2 ether);
         (keys, signatures) = keysSignatures(keysCount, 1);
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(true, true, false, true, address(csm));
             emit TotalKeysCountChanged(0, 2);
         }
         csm.addValidatorKeysWstETH(noId, 1, keys, signatures);
@@ -103,9 +103,9 @@ contract CSMAddNodeOperator is Test, Fixtures, Utilities, CommunityStakingModule
         );
 
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(true, true, false, true, address(csm));
             emit TotalKeysCountChanged(0, 1);
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, "test", nodeOperator);
         }
 
@@ -127,7 +127,7 @@ contract CSMAddNodeOperator is Test, Fixtures, Utilities, CommunityStakingModule
         vm.startPrank(nodeOperator);
         stETH.submit{ value: 2 ether }(address(0));
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(true, true, false, true, address(csm));
             emit TotalKeysCountChanged(0, 2);
         }
         csm.addValidatorKeysStETH(noId, 1, keys, signatures);
@@ -141,9 +141,9 @@ contract CSMAddNodeOperator is Test, Fixtures, Utilities, CommunityStakingModule
         vm.deal(nodeOperator, 2 ether);
 
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(true, true, false, true, address(csm));
             emit TotalKeysCountChanged(0, 1);
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, "test", nodeOperator);
         }
 
@@ -177,7 +177,7 @@ contract CSMAddNodeOperator is Test, Fixtures, Utilities, CommunityStakingModule
         vm.deal(nodeOperator, 2 ether);
         vm.prank(nodeOperator);
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(true, true, false, true, address(csm));
             emit TotalKeysCountChanged(0, 2);
         }
         csm.addValidatorKeysETH{ value: 2 ether }(noId, 1, keys, signatures);
