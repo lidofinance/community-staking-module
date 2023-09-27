@@ -4,6 +4,7 @@ pragma solidity ^0.8.21;
 import "forge-std/Test.sol";
 import "../src/CommunityStakingModule.sol";
 import "../src/CommunityStakingBondManager.sol";
+import "./helpers/Fixtures.sol";
 import "./helpers/mocks/StETHMock.sol";
 import "./helpers/mocks/CommunityStakingFeeDistributorMock.sol";
 import "./helpers/mocks/LidoLocatorMock.sol";
@@ -11,19 +12,18 @@ import "./helpers/mocks/LidoMock.sol";
 import "./helpers/mocks/WstETHMock.sol";
 import "./helpers/Utilities.sol";
 
-contract CSMAddNodeOperator is Test, Utilities {
+contract CSMAddNodeOperator is Test, Fixtures, Utilities {
+    LidoLocatorMock public locator;
+    WstETHMock public wstETH;
+    LidoMock public stETH;
+    Stub public burner;
+
     CommunityStakingModule public csm;
     CommunityStakingBondManager public bondManager;
-
-    LidoMock public lidoStETH;
-    WstETHMock public wstETH;
-    StETHMock public stETH;
     CommunityStakingFeeDistributorMock public communityStakingFeeDistributor;
-    LidoLocatorMock public locator;
 
     address internal stranger;
     address internal alice;
-    address internal burner;
     address internal nodeOperator;
 
     function setUp() public {
@@ -31,13 +31,13 @@ contract CSMAddNodeOperator is Test, Utilities {
         nodeOperator = address(2);
         address[] memory penalizeRoleMembers = new address[](1);
         penalizeRoleMembers[0] = alice;
-        lidoStETH = new LidoMock(8013386371917025835991984);
-        lidoStETH.mintShares(address(lidoStETH), 7059313073779349112833523);
+
+        (locator, wstETH, stETH, burner) = initLido();
+
         vm.deal(nodeOperator, 2 ether);
         vm.prank(nodeOperator);
-        lidoStETH.submit{ value: 2 ether }(address(0));
-        locator = new LidoLocatorMock(address(lidoStETH), burner);
-        wstETH = new WstETHMock(address(lidoStETH));
+        stETH.submit{ value: 2 ether }(address(0));
+
         communityStakingFeeDistributor = new CommunityStakingFeeDistributorMock(
             address(locator),
             address(bondManager)
@@ -79,7 +79,7 @@ contract CSMAddNodeOperator is Test, Utilities {
         uint256 noId = csm.getNodeOperatorsCount() - 1;
 
         vm.deal(nodeOperator, 2 ether);
-        lidoStETH.submit{ value: 2 ether }(address(0));
+        stETH.submit{ value: 2 ether }(address(0));
         wstETH.wrap(2 ether);
         csm.addValidatorKeysWstETH(noId, 1, keys, signatures);
     }
@@ -105,7 +105,7 @@ contract CSMAddNodeOperator is Test, Utilities {
 
         vm.deal(nodeOperator, 2 ether);
         vm.startPrank(nodeOperator);
-        lidoStETH.submit{ value: 2 ether }(address(0));
+        stETH.submit{ value: 2 ether }(address(0));
         csm.addValidatorKeysStETH(noId, 1, keys, signatures);
     }
 
