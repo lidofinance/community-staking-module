@@ -9,31 +9,19 @@ import { LidoLocatorMock } from "./mocks/LidoLocatorMock.sol";
 import { Stub } from "./mocks/Stub.sol";
 
 contract Fixtures is StdCheats {
-    struct LidoContracts {
-        LidoLocatorMock locator;
-        WstETHMock wstETH;
-        LidoMock stETH;
-        Stub burner;
-    }
-
-    LidoContracts public lido;
-
-    modifier withLido() {
-        LidoMock lidoStETH = new LidoMock(8013386371917025835991984);
-        lidoStETH.mintShares(address(lidoStETH), 7059313073779349112833523);
-        Stub burner = new Stub();
-        LidoLocatorMock locator = new LidoLocatorMock(
-            address(lidoStETH),
-            address(burner)
-        );
-        WstETHMock wstETH = new WstETHMock(address(lidoStETH));
-
-        lido = LidoContracts({
-            locator: locator,
-            wstETH: wstETH,
-            stETH: lidoStETH,
-            burner: burner
-        });
-        _;
+    function initLido()
+        public
+        returns (
+            LidoLocatorMock locator,
+            WstETHMock wstETH,
+            LidoMock stETH,
+            Stub burner
+        )
+    {
+        stETH = new LidoMock(8013386371917025835991984);
+        stETH.mintShares(address(stETH), 7059313073779349112833523);
+        burner = new Stub();
+        locator = new LidoLocatorMock(address(stETH), address(burner));
+        wstETH = new WstETHMock(address(stETH));
     }
 }

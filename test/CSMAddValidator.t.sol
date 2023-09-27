@@ -12,6 +12,11 @@ import "./helpers/mocks/LidoMock.sol";
 import "./helpers/mocks/WstETHMock.sol";
 
 contract CSMAddNodeOperator is Test, Fixtures {
+    LidoLocatorMock public locator;
+    WstETHMock public wstETH;
+    LidoMock public stETH;
+    Stub public burner;
+
     CommunityStakingModule public csm;
     CommunityStakingBondManager public bondManager;
     CommunityStakingFeeDistributorMock public communityStakingFeeDistributor;
@@ -20,29 +25,31 @@ contract CSMAddNodeOperator is Test, Fixtures {
     address internal alice;
     address internal nodeOperator;
 
-    function setUp() public withLido {
+    function setUp() public {
         alice = address(1);
         nodeOperator = address(2);
         address[] memory penalizeRoleMembers = new address[](1);
         penalizeRoleMembers[0] = alice;
 
+        (locator, wstETH, stETH, burner) = initLido();
+
         vm.deal(nodeOperator, 2 ether);
         vm.prank(nodeOperator);
-        lido.stETH.submit{ value: 2 ether }(address(0));
+        stETH.submit{ value: 2 ether }(address(0));
 
         communityStakingFeeDistributor = new CommunityStakingFeeDistributorMock(
-            address(lido.locator),
+            address(locator),
             address(bondManager)
         );
         csm = new CommunityStakingModule(
             "community-staking-module",
-            address(lido.locator)
+            address(locator)
         );
         bondManager = new CommunityStakingBondManager(
             2 ether,
             alice,
-            address(lido.locator),
-            address(lido.wstETH),
+            address(locator),
+            address(wstETH),
             address(csm),
             penalizeRoleMembers
         );
@@ -56,7 +63,7 @@ contract CSMAddNodeOperator is Test, Fixtures {
     function test_AddNodeOperatorWstETH() public {
         (bytes memory keys, bytes memory signatures) = getKeysSignatures();
         vm.startPrank(nodeOperator);
-        lido.wstETH.wrap(2 ether);
+        wstETH.wrap(2 ether);
         csm.addNodeOperatorWstETH("test", nodeOperator, 1, keys, signatures);
         assertEq(csm.getNodeOperatorsCount(), 1);
     }
@@ -64,13 +71,13 @@ contract CSMAddNodeOperator is Test, Fixtures {
     function test_AddValidatorKeysWstETH() public {
         (bytes memory keys, bytes memory signatures) = getKeysSignatures();
         vm.startPrank(nodeOperator);
-        lido.wstETH.wrap(2 ether);
+        wstETH.wrap(2 ether);
         csm.addNodeOperatorWstETH("test", nodeOperator, 1, keys, signatures);
         uint256 noId = csm.getNodeOperatorsCount() - 1;
 
         vm.deal(nodeOperator, 2 ether);
-        lido.stETH.submit{ value: 2 ether }(address(0));
-        lido.wstETH.wrap(2 ether);
+        stETH.submit{ value: 2 ether }(address(0));
+        wstETH.wrap(2 ether);
         csm.addValidatorKeysWstETH(noId, 1, keys, signatures);
     }
 
@@ -89,7 +96,7 @@ contract CSMAddNodeOperator is Test, Fixtures {
 
         vm.deal(nodeOperator, 2 ether);
         vm.startPrank(nodeOperator);
-        lido.stETH.submit{ value: 2 ether }(address(0));
+        stETH.submit{ value: 2 ether }(address(0));
         csm.addValidatorKeysStETH(noId, 1, keys, signatures);
     }
 

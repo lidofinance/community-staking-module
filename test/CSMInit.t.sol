@@ -12,32 +12,38 @@ import "./helpers/mocks/LidoMock.sol";
 import "./helpers/mocks/WstETHMock.sol";
 
 contract CSMInitTest is Test, Fixtures {
+    LidoLocatorMock public locator;
+    WstETHMock public wstETH;
+    LidoMock public stETH;
+    Stub public burner;
+
     CommunityStakingModule public csm;
     CommunityStakingBondManager public bondManager;
     CommunityStakingFeeDistributorMock public communityStakingFeeDistributor;
 
     address internal stranger;
     address internal alice;
-    address internal burner;
 
-    function setUp() public withLido {
+    function setUp() public {
         alice = address(1);
         address[] memory penalizeRoleMembers = new address[](1);
         penalizeRoleMembers[0] = alice;
 
+        (locator, wstETH, stETH, burner) = initLido();
+
         csm = new CommunityStakingModule(
             "community-staking-module",
-            address(lido.locator)
+            address(locator)
         );
         communityStakingFeeDistributor = new CommunityStakingFeeDistributorMock(
-            address(lido.locator),
+            address(locator),
             address(bondManager)
         );
         bondManager = new CommunityStakingBondManager(
             2 ether,
             alice,
-            address(lido.locator),
-            address(lido.wstETH),
+            address(locator),
+            address(wstETH),
             address(csm),
             penalizeRoleMembers
         );

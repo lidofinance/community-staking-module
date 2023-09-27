@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2023 Lido <info@fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.21;
 
@@ -21,20 +21,24 @@ import { Stub } from "./helpers/mocks/Stub.sol";
 contract FeeDistributorTest is Test, Fixtures, FeeDistributorBase {
     using stdStorage for StdStorage;
 
+    StETHMock internal stETH;
+
     FeeDistributor internal feeDistributor;
     CommunityStakingModuleMock internal csm;
     OracleMock internal oracle;
     Stub internal bondManager;
     MerkleTree internal tree;
 
-    function setUp() public withLido {
+    function setUp() public {
         csm = new CommunityStakingModuleMock();
         oracle = new OracleMock();
         bondManager = new Stub();
 
+        (, , stETH, ) = initLido();
+
         feeDistributor = new FeeDistributor(
             address(csm),
-            address(lido.stETH),
+            address(stETH),
             address(oracle),
             address(bondManager)
         );
@@ -43,7 +47,7 @@ contract FeeDistributorTest is Test, Fixtures, FeeDistributorBase {
 
         vm.label(address(bondManager), "BOND_MANAGER");
         vm.label(address(oracle), "ORACLE");
-        vm.label(address(lido.stETH), "STETH");
+        vm.label(address(stETH), "STETH");
         vm.label(address(csm), "CSM");
     }
 
@@ -53,7 +57,7 @@ contract FeeDistributorTest is Test, Fixtures, FeeDistributorBase {
         tree.pushLeaf(noIndex, shares);
         bytes32[] memory proof = tree.getProof(0);
 
-        lido.stETH.mintShares(address(feeDistributor), shares);
+        stETH.mintShares(address(feeDistributor), shares);
 
         vm.expectEmit(true, true, false, true, address(feeDistributor));
         emit FeeDistributed(noIndex, shares);
@@ -65,7 +69,7 @@ contract FeeDistributorTest is Test, Fixtures, FeeDistributorBase {
             shares: shares
         });
 
-        assertEq(lido.stETH.sharesOf(address(bondManager)), shares);
+        assertEq(stETH.sharesOf(address(bondManager)), shares);
     }
 
     function test_RevertIf_NotBondManager() public {
