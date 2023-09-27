@@ -10,8 +10,9 @@ import "./helpers/mocks/CommunityStakingFeeDistributorMock.sol";
 import "./helpers/mocks/LidoLocatorMock.sol";
 import "./helpers/mocks/LidoMock.sol";
 import "./helpers/mocks/WstETHMock.sol";
+import "./helpers/Utilities.sol";
 
-contract CSMAddNodeOperator is Test, Fixtures {
+contract CSMAddNodeOperator is Test, Fixtures, Utilities {
     LidoLocatorMock public locator;
     WstETHMock public wstETH;
     LidoMock public stETH;
@@ -56,12 +57,11 @@ contract CSMAddNodeOperator is Test, Fixtures {
         csm.setBondManager(address(bondManager));
     }
 
-    function getKeysSignatures() public returns (bytes memory, bytes memory) {
-        return (new bytes(0), new bytes(0));
-    }
-
     function test_AddNodeOperatorWstETH() public {
-        (bytes memory keys, bytes memory signatures) = getKeysSignatures();
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
         vm.startPrank(nodeOperator);
         wstETH.wrap(2 ether);
         csm.addNodeOperatorWstETH("test", nodeOperator, 1, keys, signatures);
@@ -69,7 +69,10 @@ contract CSMAddNodeOperator is Test, Fixtures {
     }
 
     function test_AddValidatorKeysWstETH() public {
-        (bytes memory keys, bytes memory signatures) = getKeysSignatures();
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
         vm.startPrank(nodeOperator);
         wstETH.wrap(2 ether);
         csm.addNodeOperatorWstETH("test", nodeOperator, 1, keys, signatures);
@@ -82,14 +85,20 @@ contract CSMAddNodeOperator is Test, Fixtures {
     }
 
     function test_AddNodeOperatorStETH() public {
-        (bytes memory keys, bytes memory signatures) = getKeysSignatures();
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
         vm.prank(nodeOperator);
         csm.addNodeOperatorStETH("test", nodeOperator, 1, keys, signatures);
         assertEq(csm.getNodeOperatorsCount(), 1);
     }
 
     function test_AddValidatorKeysStETH() public {
-        (bytes memory keys, bytes memory signatures) = getKeysSignatures();
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
         vm.prank(nodeOperator);
         csm.addNodeOperatorStETH("test", nodeOperator, 1, keys, signatures);
         uint256 noId = csm.getNodeOperatorsCount() - 1;
@@ -101,7 +110,10 @@ contract CSMAddNodeOperator is Test, Fixtures {
     }
 
     function test_AddNodeOperatorETH() public {
-        (bytes memory keys, bytes memory signatures) = getKeysSignatures();
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
         vm.deal(nodeOperator, 2 ether);
         vm.prank(nodeOperator);
         csm.addNodeOperatorETH{ value: 2 ether }(
@@ -115,7 +127,10 @@ contract CSMAddNodeOperator is Test, Fixtures {
     }
 
     function test_AddValidatorKeysETH() public {
-        (bytes memory keys, bytes memory signatures) = getKeysSignatures();
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
         vm.deal(nodeOperator, 2 ether);
         vm.prank(nodeOperator);
         csm.addNodeOperatorETH{ value: 2 ether }(
@@ -130,5 +145,28 @@ contract CSMAddNodeOperator is Test, Fixtures {
         vm.deal(nodeOperator, 2 ether);
         vm.prank(nodeOperator);
         csm.addValidatorKeysETH{ value: 2 ether }(noId, 1, keys, signatures);
+    }
+
+    function test_obtainDepositData_RevertWhenNoMoreKeys() public {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        vm.deal(nodeOperator, 2 ether);
+        vm.prank(nodeOperator);
+        csm.addNodeOperatorETH{ value: 2 ether }(
+            "test",
+            nodeOperator,
+            1,
+            keys,
+            signatures
+        );
+        (bytes memory obtainedKeys, bytes memory obtainedSignatures) = csm
+            .obtainDepositData(1, "");
+        assertEq(obtainedKeys, keys);
+        assertEq(obtainedSignatures, signatures);
+
+        vm.expectRevert(bytes("NOT_ENOUGH_KEYS"));
+        csm.obtainDepositData(1, "");
     }
 }
