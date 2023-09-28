@@ -1,13 +1,4 @@
 node_modules
-coverage*
-
 out/
-artifacts/
-
 cache/
-cache_hardhat/
-cache_foundry/
-
-typechain-types/
-
 lib/

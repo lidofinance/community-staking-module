@@ -4,16 +4,7 @@ node_modules/
 .idea
 .vscode
 
-coverage
-coverage.json
-typechain
-typechain-types/
-
-# Hardhat files
-artifacts/
-cache_hardhat/
-
 # Foundry files
 broadcast/
-cache_foundry/
+cache/
 out/
