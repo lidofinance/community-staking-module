@@ -62,27 +62,13 @@ contract CommunityStakingBondManagerTest is
         bondManager.setFeeDistributor(address(communityStakingFeeDistributor));
     }
 
-    function _createNodeOperator(uint64 ongoing, uint64 withdrawn) internal {
-        communityStakingModule.setNodeOperator({
-            _nodeOperatorId: 0,
-            _active: true,
-            _name: "User",
-            _rewardAddress: user,
-            _totalVettedValidators: ongoing,
-            _totalExitedValidators: 0,
-            _totalWithdrawnValidators: withdrawn,
-            _totalAddedValidators: ongoing,
-            _totalDepositedValidators: ongoing
-        });
-    }
-
     function test_totalBondShares() public {
         stETH.mintShares(address(bondManager), 32 * 1e18);
         assertEq(bondManager.totalBondShares(), 32 * 1e18);
     }
 
     function test_depositStETH() public {
-        _createNodeOperator({ ongoing: 16, withdrawn: 0 });
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         uint256 shares = stETH.submit{ value: 32 ether }({
@@ -100,7 +86,7 @@ contract CommunityStakingBondManagerTest is
     }
 
     function test_depositETH() public {
-        _createNodeOperator({ ongoing: 16, withdrawn: 0 });
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(user, 32 ether);
 
         vm.expectEmit(true, true, true, true, address(bondManager));
@@ -115,7 +101,7 @@ contract CommunityStakingBondManagerTest is
     }
 
     function test_depositWstETH() public {
-        _createNodeOperator({ ongoing: 16, withdrawn: 0 });
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
@@ -136,7 +122,7 @@ contract CommunityStakingBondManagerTest is
     }
 
     function test_depositStETHWithPermit() public {
-        _createNodeOperator({ ongoing: 16, withdrawn: 0 });
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         uint256 shares = stETH.submit{ value: 32 ether }({
@@ -167,7 +153,7 @@ contract CommunityStakingBondManagerTest is
     }
 
     function test_depositWstETHWithPermit() public {
-        _createNodeOperator({ ongoing: 16, withdrawn: 0 });
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
@@ -206,7 +192,7 @@ contract CommunityStakingBondManagerTest is
     }
 
     function test_getRequiredBondShares_OneWithdrawnValidator() public {
-        _createNodeOperator({ ongoing: 16, withdrawn: 1 });
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 1 });
         assertEq(
             bondManager.getRequiredBondShares(0),
             stETH.getSharesByPooledEth(30 ether)
@@ -214,7 +200,7 @@ contract CommunityStakingBondManagerTest is
     }
 
     function test_getRequiredBondShares_NoWithdrawnValidators() public {
-        _createNodeOperator({ ongoing: 16, withdrawn: 0 });
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         assertEq(
             bondManager.getRequiredBondShares(0),
             stETH.getSharesByPooledEth(32 ether)
@@ -229,7 +215,7 @@ contract CommunityStakingBondManagerTest is
     }
 
     function test_claimRewardsWstETH() public {
-        _createNodeOperator({ ongoing: 16, withdrawn: 0 });
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(address(communityStakingFeeDistributor), 0.1 ether);
         vm.prank(address(communityStakingFeeDistributor));
         uint256 sharesAsFee = stETH.submit{ value: 0.1 ether }(address(0));
@@ -257,7 +243,7 @@ contract CommunityStakingBondManagerTest is
     }
 
     function test_claimRewardsStETH() public {
-        _createNodeOperator({ ongoing: 16, withdrawn: 0 });
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(address(communityStakingFeeDistributor), 0.1 ether);
         vm.prank(address(communityStakingFeeDistributor));
         uint256 sharesAsFee = stETH.submit{ value: 0.1 ether }(address(0));
@@ -283,7 +269,7 @@ contract CommunityStakingBondManagerTest is
     }
 
     function test_claimRewardsStETH_WithDesirableValue() public {
-        _createNodeOperator({ ongoing: 16, withdrawn: 0 });
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(address(communityStakingFeeDistributor), 0.1 ether);
         vm.prank(address(communityStakingFeeDistributor));
         uint256 sharesAsFee = stETH.submit{ value: 0.1 ether }(address(0));
@@ -319,7 +305,7 @@ contract CommunityStakingBondManagerTest is
     function test_claimRewardsStETH_WhenAmountToClaimIsHigherThanRewards()
         public
     {
-        _createNodeOperator({ ongoing: 16, withdrawn: 0 });
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(address(communityStakingFeeDistributor), 0.1 ether);
         vm.prank(address(communityStakingFeeDistributor));
         uint256 sharesAsFee = stETH.submit{ value: 0.1 ether }(address(0));
@@ -350,7 +336,7 @@ contract CommunityStakingBondManagerTest is
     }
 
     function test_claimRewardsStETH_WhenRequiredBondIsEqualActual() public {
-        _createNodeOperator({ ongoing: 16, withdrawn: 0 });
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(address(communityStakingFeeDistributor), 1 ether);
         vm.prank(address(communityStakingFeeDistributor));
         uint256 sharesAsFee = stETH.submit{ value: 1 ether }(address(0));
@@ -374,7 +360,7 @@ contract CommunityStakingBondManagerTest is
     function test_claimRewardsWstETH_RevertWhenCallerIsNotRewardAddress()
         public
     {
-        _createNodeOperator({ ongoing: 16, withdrawn: 0 });
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -390,7 +376,7 @@ contract CommunityStakingBondManagerTest is
     function test_claimRewardsStETH_RevertWhenCallerIsNotRewardAddress()
         public
     {
-        _createNodeOperator({ ongoing: 16, withdrawn: 0 });
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -404,7 +390,7 @@ contract CommunityStakingBondManagerTest is
     }
 
     function test_penalize_LessThanDeposit() public {
-        _createNodeOperator({ ongoing: 16, withdrawn: 0 });
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
@@ -423,7 +409,7 @@ contract CommunityStakingBondManagerTest is
     }
 
     function test_penalize_MoreThanDeposit() public {
-        _createNodeOperator({ ongoing: 16, withdrawn: 0 });
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
@@ -442,7 +428,7 @@ contract CommunityStakingBondManagerTest is
     }
 
     function test_penalize_EqualToDeposit() public {
-        _createNodeOperator({ ongoing: 16, withdrawn: 0 });
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
@@ -466,5 +452,22 @@ contract CommunityStakingBondManagerTest is
         );
         vm.prank(stranger);
         bondManager.penalize(0, 20);
+    }
+
+    function _createNodeOperator(
+        uint64 ongoingVals,
+        uint64 withdrawnVals
+    ) internal {
+        communityStakingModule.setNodeOperator({
+            _nodeOperatorId: 0,
+            _active: true,
+            _name: "User",
+            _rewardAddress: user,
+            _totalVettedValidators: ongoingVals,
+            _totalExitedValidators: 0,
+            _totalWithdrawnValidators: withdrawnVals,
+            _totalAddedValidators: ongoingVals,
+            _totalDepositedValidators: ongoingVals
+        });
     }
 }
