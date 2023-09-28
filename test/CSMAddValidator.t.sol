@@ -12,12 +12,16 @@ import "./helpers/mocks/LidoMock.sol";
 import "./helpers/mocks/WstETHMock.sol";
 import "./helpers/Utilities.sol";
 
-contract CSMAddNodeOperator is Test, Fixtures, Utilities {
+contract CSMAddNodeOperator is
+    Test,
+    Fixtures,
+    Utilities,
+    CommunityStakingModuleBase
+{
     LidoLocatorMock public locator;
     WstETHMock public wstETH;
     LidoMock public stETH;
     Stub public burner;
-
     CommunityStakingModule public csm;
     CommunityStakingBondManager public bondManager;
     CommunityStakingFeeDistributorMock public communityStakingFeeDistributor;
@@ -64,6 +68,14 @@ contract CSMAddNodeOperator is Test, Fixtures, Utilities {
         );
         vm.startPrank(nodeOperator);
         wstETH.wrap(2 ether);
+
+        {
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalKeysCountChanged(0, 1);
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit NodeOperatorAdded(0, "test", nodeOperator);
+        }
+
         csm.addNodeOperatorWstETH("test", nodeOperator, 1, keys, signatures);
         assertEq(csm.getNodeOperatorsCount(), 1);
     }
@@ -81,6 +93,11 @@ contract CSMAddNodeOperator is Test, Fixtures, Utilities {
         vm.deal(nodeOperator, 2 ether);
         stETH.submit{ value: 2 ether }(address(0));
         wstETH.wrap(2 ether);
+        (keys, signatures) = keysSignatures(keysCount, 1);
+        {
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalKeysCountChanged(0, 2);
+        }
         csm.addValidatorKeysWstETH(noId, 1, keys, signatures);
     }
 
@@ -89,6 +106,14 @@ contract CSMAddNodeOperator is Test, Fixtures, Utilities {
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
+
+        {
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalKeysCountChanged(0, 1);
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit NodeOperatorAdded(0, "test", nodeOperator);
+        }
+
         vm.prank(nodeOperator);
         csm.addNodeOperatorStETH("test", nodeOperator, 1, keys, signatures);
         assertEq(csm.getNodeOperatorsCount(), 1);
@@ -106,6 +131,10 @@ contract CSMAddNodeOperator is Test, Fixtures, Utilities {
         vm.deal(nodeOperator, 2 ether);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: 2 ether }(address(0));
+        {
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalKeysCountChanged(0, 2);
+        }
         csm.addValidatorKeysStETH(noId, 1, keys, signatures);
     }
 
@@ -115,6 +144,14 @@ contract CSMAddNodeOperator is Test, Fixtures, Utilities {
             keysCount
         );
         vm.deal(nodeOperator, 2 ether);
+
+        {
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalKeysCountChanged(0, 1);
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit NodeOperatorAdded(0, "test", nodeOperator);
+        }
+
         vm.prank(nodeOperator);
         csm.addNodeOperatorETH{ value: 2 ether }(
             "test",
@@ -144,6 +181,10 @@ contract CSMAddNodeOperator is Test, Fixtures, Utilities {
 
         vm.deal(nodeOperator, 2 ether);
         vm.prank(nodeOperator);
+        {
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalKeysCountChanged(0, 2);
+        }
         csm.addValidatorKeysETH{ value: 2 ether }(noId, 1, keys, signatures);
     }
 

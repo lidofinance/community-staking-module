@@ -17,11 +17,17 @@ contract Utilities {
     function keysSignatures(
         uint256 keysCount
     ) public pure returns (bytes memory, bytes memory) {
+        return keysSignatures(keysCount, 0);
+    }
+
+    function keysSignatures(
+        uint256 keysCount,
+        uint16 startIndex
+    ) public pure returns (bytes memory, bytes memory) {
         bytes memory keys;
         bytes memory signatures;
-        for (uint16 i = 0; i < keysCount; i++) {
+        for (uint16 i = startIndex; i < startIndex + keysCount; i++) {
             bytes memory index = abi.encodePacked(i + 1);
-            //            bytes memory zeroKey = new bytes(48 - index.length);
             bytes memory key = bytes.concat(
                 new bytes(48 - index.length),
                 index

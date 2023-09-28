@@ -17,17 +17,42 @@ struct NodeOperator {
     uint256 targetLimit;
     uint256 targetLimitTimestamp;
     uint256 stuckPenaltyEndTimestamp;
-    uint256 totalExitedValidators;
-    uint256 totalAddedValidators;
-    uint256 totalWithdrawnValidators;
-    uint256 totalDepositedValidators;
-    uint256 totalVettedValidators;
+    uint256 totalExitedKeys;
+    uint256 totalAddedKeys;
+    uint256 totalWithdrawnKeys;
+    uint256 totalDepositedKeys;
+    uint256 totalVettedKeys;
     uint256 stuckValidatorsCount;
     uint256 refundedValidatorsCount;
     bool isTargetLimitActive;
 }
 
-contract CommunityStakingModule is IStakingModule {
+contract CommunityStakingModuleBase {
+    event NodeOperatorAdded(
+        uint256 indexed nodeOperatorId,
+        string name,
+        address rewardAddress
+    );
+
+    event VettedKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 approvedKeysCount
+    );
+    event DepositedKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 depositedKeysCount
+    );
+    event ExitedKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 exitedKeysCount
+    );
+    event TotalKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 totalKeysCount
+    );
+}
+
+contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
     uint256 private nodeOperatorsCount;
     uint256 private activeNodeOperatorsCount;
     bytes32 private moduleType;
@@ -87,12 +112,11 @@ contract CommunityStakingModule is IStakingModule {
         )
     {
         for (uint256 i = 0; i < nodeOperatorsCount; i++) {
-            totalExitedValidators += nodeOperators[i].totalExitedValidators;
-            totalDepositedValidators += nodeOperators[i]
-                .totalDepositedValidators;
+            totalExitedValidators += nodeOperators[i].totalExitedKeys;
+            totalDepositedValidators += nodeOperators[i].totalDepositedKeys;
             depositableValidatorsCount +=
-                nodeOperators[i].totalAddedValidators -
-                nodeOperators[i].totalExitedValidators;
+                nodeOperators[i].totalAddedKeys -
+                nodeOperators[i].totalExitedKeys;
         }
         return (
             totalExitedValidators,
@@ -109,13 +133,11 @@ contract CommunityStakingModule is IStakingModule {
         bytes calldata _signatures
     ) external {
         // TODO sanity checks
-        // TODO store keys
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
         no.name = _name;
         no.rewardAddress = _rewardAddress;
         no.active = true;
-        no.totalAddedValidators = _keysCount;
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
 
@@ -130,6 +152,8 @@ contract CommunityStakingModule is IStakingModule {
         );
 
         _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
+
+        emit NodeOperatorAdded(id, _name, _rewardAddress);
     }
 
     function addNodeOperatorStETH(
@@ -140,13 +164,11 @@ contract CommunityStakingModule is IStakingModule {
         bytes calldata _signatures
     ) external {
         // TODO sanity checks
-        // TODO store keys
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
         no.name = _name;
         no.rewardAddress = _rewardAddress;
         no.active = true;
-        no.totalAddedValidators = _keysCount;
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
 
@@ -159,6 +181,8 @@ contract CommunityStakingModule is IStakingModule {
         );
 
         _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
+
+        emit NodeOperatorAdded(id, _name, _rewardAddress);
     }
 
     function addNodeOperatorETH(
@@ -169,7 +193,6 @@ contract CommunityStakingModule is IStakingModule {
         bytes calldata _signatures
     ) external payable {
         // TODO sanity checks
-        // TODO store keys
 
         require(
             msg.value >=
@@ -184,13 +207,14 @@ contract CommunityStakingModule is IStakingModule {
         no.name = _name;
         no.rewardAddress = _rewardAddress;
         no.active = true;
-        no.totalAddedValidators = _keysCount;
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
 
         _bondManager().depositETH{ value: msg.value }(msg.sender, id);
 
         _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
+
+        emit NodeOperatorAdded(id, _name, _rewardAddress);
     }
 
     function addValidatorKeysWstETH(
@@ -287,11 +311,11 @@ contract CommunityStakingModule is IStakingModule {
         active = no.active;
         name = _fullInfo ? no.name : "";
         rewardAddress = no.rewardAddress;
-        totalExitedValidators = no.totalExitedValidators;
-        totalDepositedValidators = no.totalDepositedValidators;
-        totalAddedValidators = no.totalAddedValidators;
-        totalWithdrawnValidators = no.totalWithdrawnValidators;
-        totalVettedValidators = no.totalVettedValidators;
+        totalExitedValidators = no.totalExitedKeys;
+        totalDepositedValidators = no.totalDepositedKeys;
+        totalAddedValidators = no.totalAddedKeys;
+        totalWithdrawnValidators = no.totalWithdrawnKeys;
+        totalVettedValidators = no.totalVettedKeys;
     }
 
     function getNodeOperatorSummary(
@@ -316,11 +340,9 @@ contract CommunityStakingModule is IStakingModule {
         stuckValidatorsCount = no.stuckValidatorsCount;
         refundedValidatorsCount = no.refundedValidatorsCount;
         stuckPenaltyEndTimestamp = no.stuckPenaltyEndTimestamp;
-        totalExitedValidators = no.totalExitedValidators;
-        totalDepositedValidators = no.totalDepositedValidators;
-        depositableValidatorsCount =
-            no.totalAddedValidators -
-            no.totalExitedValidators;
+        totalExitedValidators = no.totalExitedKeys;
+        totalDepositedValidators = no.totalDepositedKeys;
+        depositableValidatorsCount = no.totalAddedKeys - no.totalExitedKeys;
     }
 
     function getNonce() external view returns (uint256) {
@@ -369,10 +391,14 @@ contract CommunityStakingModule is IStakingModule {
     }
 
     function updateExitedValidatorsCount(
-        bytes calldata /*_nodeOperatorIds*/,
-        bytes calldata /*_exitedValidatorsCounts*/
+        bytes calldata _nodeOperatorIds,
+        bytes calldata _exitedValidatorsCounts
     ) external {
         // TODO implement
+        //        emit ExitedKeysCountChanged(
+        //            _nodeOperatorId,
+        //            _exitedValidatorsCount
+        //        );
     }
 
     function updateRefundedValidatorsCount(
@@ -413,8 +439,7 @@ contract CommunityStakingModule is IStakingModule {
         bytes calldata _signatures
     ) internal onlyActiveNodeOperator(_nodeOperatorId) {
         // TODO: sanity checks
-        uint256 _startIndex = nodeOperators[_nodeOperatorId]
-            .totalAddedValidators - _keysCount;
+        uint256 _startIndex = nodeOperators[_nodeOperatorId].totalAddedKeys;
 
         SigningKeys.saveKeysSigs(
             SIGNING_KEYS_POSITION,
@@ -424,6 +449,13 @@ contract CommunityStakingModule is IStakingModule {
             _publicKeys,
             _signatures
         );
+
+        nodeOperators[_nodeOperatorId].totalAddedKeys += _keysCount;
+        emit TotalKeysCountChanged(
+            _nodeOperatorId,
+            nodeOperators[_nodeOperatorId].totalAddedKeys
+        );
+
         _incrementNonce();
     }
 
@@ -440,11 +472,10 @@ contract CommunityStakingModule is IStakingModule {
         ) {
             NodeOperator storage no = nodeOperators[nodeOperatorId];
             // TODO replace total added to total vetted later
-            uint256 availableKeys = no.totalAddedValidators -
-                no.totalDepositedValidators;
+            uint256 availableKeys = no.totalAddedKeys - no.totalDepositedKeys;
             if (availableKeys == 0) continue;
 
-            uint256 _startIndex = no.totalDepositedValidators;
+            uint256 _startIndex = no.totalDepositedKeys;
             uint256 _keysCount = _depositsCount > availableKeys
                 ? availableKeys
                 : _depositsCount;
@@ -459,7 +490,11 @@ contract CommunityStakingModule is IStakingModule {
             );
             loadedKeysCount += _keysCount;
             // TODO maybe depositor bot should initiate this increment
-            no.totalDepositedValidators += _keysCount;
+            no.totalDepositedKeys += _keysCount;
+            emit DepositedKeysCountChanged(
+                nodeOperatorId,
+                no.totalDepositedKeys
+            );
         }
         if (loadedKeysCount != _depositsCount) {
             revert("NOT_ENOUGH_KEYS");
