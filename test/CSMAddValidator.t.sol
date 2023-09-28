@@ -12,7 +12,12 @@ import "./helpers/mocks/LidoMock.sol";
 import "./helpers/mocks/WstETHMock.sol";
 import "./helpers/Utilities.sol";
 
-contract CSMAddNodeOperator is Test, Fixtures, Utilities, CommunityStakingModuleBase {
+contract CSMAddNodeOperator is
+    Test,
+    Fixtures,
+    Utilities,
+    CommunityStakingModuleBase
+{
     LidoLocatorMock public locator;
     WstETHMock public wstETH;
     LidoMock public stETH;
