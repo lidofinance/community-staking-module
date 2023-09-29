@@ -3,7 +3,9 @@
 
 pragma solidity 0.8.21;
 
-contract StETHMock {
+import { PermitTokenBase } from "../Permit.sol";
+
+contract StETHMock is PermitTokenBase {
     uint256 public totalPooledEther;
     uint256 public totalShares;
     mapping(address => uint256) public shares;

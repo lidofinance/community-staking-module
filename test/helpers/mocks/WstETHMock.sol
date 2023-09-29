@@ -4,8 +4,9 @@
 pragma solidity 0.8.21;
 
 import { IStETH } from "../../../src/interfaces/IStETH.sol";
+import { PermitTokenBase } from "../Permit.sol";
 
-contract WstETHMock {
+contract WstETHMock is PermitTokenBase {
     IStETH public stETH;
 
     mapping(address => uint256) public _balance;
