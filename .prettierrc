@@ -13,12 +13,6 @@
         "singleQuote": false,
         "bracketSpacing": true
       }
-    },
-    {
-      "files": ["*.ts"],
-      "options": {
-        "parser": "typescript"
-      }
     }
   ]
 }

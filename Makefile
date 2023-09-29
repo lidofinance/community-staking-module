@@ -8,18 +8,20 @@ artifacts:
 	forge compile --force
 clean:
 	forge clean
-	rm -rf cache_foundry broadcast
+	rm -rf cache broadcast out
 lint-check:
-	prettier --config ./.prettierrc **.{sol,ts} --check
+	yarn lint:check
 lint-fix:
-	prettier --config ./.prettierrc **.{sol,ts} -w
+	yarn lint:fix
 test: # in parallel
 	$(MAKE) test-unit & 
 	$(MAKE) test-integration
 test-unit:
-	forge test --no-match-path '*test/integration*'
+	forge test --no-match-path '*test/integration*' -vvv
 test-integration:
-	forge test --match-path '*test/integration*'
+	forge test --match-path '*test/integration*' -vvv
+coverage:
+	forge coverage
 
 anvil-fork:
 	exec anvil -f ${RPC_URL}
@@ -41,3 +43,14 @@ ifeq (${KEEP_ANVIL_AFTER_LOCAL_DEPLOY},false)
 else
 	@tput setaf 3 && printf "[WARNING]" && tput sgr0 && echo " Anvil is kept running in the background: http://127.0.0.1:8545"
 endif
+
+# aliases
+a: artifacts
+lc: lint-check
+lf: lint-fix
+t: test
+tu: test-unit
+ti: test-integration
+c: coverage
+af: anvil-fork
+ak: anvil-kill

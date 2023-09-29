@@ -45,16 +45,6 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
-      - name: Install node
-        uses: actions/setup-node@v3
-        with:
-          node-version-file: ".nvmrc"
-          cache: yarn
-          cache-dependency-path: "**/yarn.lock"
-
-      - name: Install Node dependencies
-        run: yarn install --immutable
-
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
