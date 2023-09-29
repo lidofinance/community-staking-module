@@ -124,7 +124,7 @@ contract CommunityStakingBondManagerTest is
     function test_depositStETHWithPermit() public {
         _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(user, 32 ether);
-        vm.startPrank(user);
+        vm.prank(user);
         uint256 shares = stETH.submit{ value: 32 ether }({
             _referal: address(0)
         });
@@ -134,7 +134,9 @@ contract CommunityStakingBondManagerTest is
         vm.expectEmit(true, true, true, true, address(bondManager));
         emit BondDeposited(0, user, stETH.getSharesByPooledEth(32 ether));
 
+        vm.prank(stranger);
         bondManager.depositStETHWithPermit(
+            user,
             0,
             32 ether,
             CommunityStakingBondManager.PermitInput({
@@ -158,6 +160,7 @@ contract CommunityStakingBondManagerTest is
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
         uint256 wstETHAmount = wstETH.wrap(32 ether);
+        vm.stopPrank();
 
         vm.expectEmit(true, true, true, true, address(wstETH));
         emit Approval(user, address(bondManager), 32 ether);
@@ -168,7 +171,9 @@ contract CommunityStakingBondManagerTest is
             stETH.getSharesByPooledEth(stETH.getPooledEthByShares(wstETHAmount))
         );
 
+        vm.prank(stranger);
         uint256 shares = bondManager.depositWstETHWithPermit(
+            user,
             0,
             wstETHAmount,
             CommunityStakingBondManager.PermitInput({

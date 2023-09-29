@@ -20,7 +20,9 @@ contract DepositIntegrationTest is Test, PermitHelper {
 
     address internal agent;
     address internal user;
+    address internal stranger;
     uint256 internal userPrivateKey;
+    uint256 internal strangerPrivateKey;
 
     string RPC_URL;
     string LIDO_LOCATOR_ADDRESS;
@@ -49,6 +51,8 @@ contract DepositIntegrationTest is Test, PermitHelper {
 
         userPrivateKey = 0xa11ce;
         user = vm.addr(userPrivateKey);
+        strangerPrivateKey = 0x517a4637;
+        stranger = vm.addr(strangerPrivateKey);
         address[] memory penalizeRoleMembers = new address[](1);
         penalizeRoleMembers[0] = user;
 
@@ -128,13 +132,16 @@ contract DepositIntegrationTest is Test, PermitHelper {
         );
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, digest);
 
-        vm.startPrank(user);
         vm.deal(user, 32 ether);
+        vm.startPrank(user);
         uint256 shares = ILido(locator.lido()).submit{ value: 32 ether }({
             _referal: address(0)
         });
+        vm.stopPrank();
 
+        vm.prank(stranger);
         bondManager.depositStETHWithPermit(
+            user,
             0,
             32 ether,
             CommunityStakingBondManager.PermitInput({
@@ -162,15 +169,18 @@ contract DepositIntegrationTest is Test, PermitHelper {
         );
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, digest);
 
-        vm.startPrank(user);
         vm.deal(user, 32 ether);
+        vm.startPrank(user);
         ILido(locator.lido()).submit{ value: 32 ether }({
             _referal: address(0)
         });
         ILido(locator.lido()).approve(address(wstETH), type(uint256).max);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
+        vm.stopPrank();
 
+        vm.prank(stranger);
         uint256 shares = bondManager.depositWstETHWithPermit(
+            user,
             0,
             wstETHAmount,
             CommunityStakingBondManager.PermitInput({

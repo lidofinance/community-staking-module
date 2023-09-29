@@ -332,7 +332,7 @@ contract CommunityStakingBondManager is
         uint256 stETHAmount = WSTETH.unwrap(wstETHAmount);
         uint256 shares = _lido().getSharesByPooledEth(stETHAmount);
         bondShares[nodeOperatorId] += shares;
-        emit BondDeposited(nodeOperatorId, msg.sender, shares);
+        emit BondDeposited(nodeOperatorId, from, shares);
         return shares;
     }
 
