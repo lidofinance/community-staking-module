@@ -10,7 +10,7 @@ library Batch {
         uint64 start,
         uint64 end
     ) internal pure returns (bytes32 s) {
-        return bytes32(abi.encodePacked(uint128(nodeOperatorId), start, end));
+        return bytes32(abi.encodePacked(nodeOperatorId, start, end));
     }
 
     /// @notice Deserialize node operator id and batch start and end epochs from a single bytes32 value
