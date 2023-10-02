@@ -453,12 +453,7 @@ contract CommunityStakingModule is IStakingModule {
     ) external returns (bytes memory publicKeys, bytes memory signatures) {
         uint256 limit = _depositsCount;
 
-        for (;;) {
-            bytes32 p = IQueue(queue).peek();
-            if (p == bytes32(0)) {
-                break;
-            }
-
+        for (bytes32 p = IQueue(queue).peek(); p != bytes32(0); ) {
             (uint256 nodeOperatorId, uint256 start, uint256 end) = Batch
                 .deserialize(p);
 
@@ -475,6 +470,8 @@ contract CommunityStakingModule is IStakingModule {
             if (limit == 0) {
                 break;
             }
+
+            p = IQueue(queue).peek();
         }
     }
 
