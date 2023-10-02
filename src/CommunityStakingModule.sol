@@ -524,7 +524,7 @@ contract CommunityStakingModule is IStakingModule {
 
             (uint256 nodeOperatorId, uint256 start, uint256 end) = Batch
                 .deserialize(_peek);
-            if (!_allKeysInBatchVetted(nodeOperatorId, start, end)) {
+            if (_unvettedKeysInBatch(nodeOperatorId, start, end)) {
                 IQueue(queue).squash(_prev, _peek);
             }
 
@@ -545,7 +545,7 @@ contract CommunityStakingModule is IStakingModule {
 
             (uint256 nodeOperatorId, uint256 start, uint256 end) = Batch
                 .deserialize(_peek);
-            if (!_allKeysInBatchVetted(nodeOperatorId, start, end)) {
+            if (_unvettedKeysInBatch(nodeOperatorId, start, end)) {
                 return true;
             }
 
@@ -555,7 +555,7 @@ contract CommunityStakingModule is IStakingModule {
         return false;
     }
 
-    function _allKeysInBatchVetted(
+    function _unvettedKeysInBatch(
         uint256 _nodeOperatorId,
         uint256 _start,
         uint256 _end
