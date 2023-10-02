@@ -6,7 +6,7 @@ pragma solidity 0.8.21;
 library Batch {
     /// @notice Serialize node operator id and batch start and end epochs into a single bytes32 value
     function serialize(
-        uint64 nodeOperatorId,
+        uint128 nodeOperatorId,
         uint64 start,
         uint64 end
     ) internal pure returns (bytes32 s) {
@@ -16,7 +16,7 @@ library Batch {
     /// @notice Deserialize node operator id and batch start and end epochs from a single bytes32 value
     function deserialize(
         bytes32 b
-    ) internal pure returns (uint64 nodeOperatorId, uint32 start, uint32 end) {
+    ) internal pure returns (uint128 nodeOperatorId, uint64 start, uint64 end) {
         assembly {
             nodeOperatorId := shr(128, b)
             start := shr(64, b)
