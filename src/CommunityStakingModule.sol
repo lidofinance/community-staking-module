@@ -408,8 +408,14 @@ contract CommunityStakingModule is IStakingModule {
     ) external {
         NodeOperator storage no = nodeOperators[_nodeOperatorId];
 
-        require(_vettedKeysCount > no.totalVettedValidators, "invalid count");
-        require(_vettedKeysCount <= no.totalAddedValidators, "invalid count");
+        require(
+            _vettedKeysCount > no.totalVettedValidators,
+            "Current vetted keys pointer is too far"
+        );
+        require(
+            _vettedKeysCount <= no.totalAddedValidators,
+            "New vetted keys pointer is too far"
+        );
 
         uint256 prevVettedKeysCount = no.totalVettedValidators;
         no.totalVettedValidators = _vettedKeysCount;
