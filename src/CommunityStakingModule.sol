@@ -417,21 +417,19 @@ contract CommunityStakingModule is IStakingModule {
             "New vetted keys pointer is too far"
         );
 
-        uint256 prevVettedKeysCount = no.totalVettedValidators;
-        no.totalVettedValidators = _vettedKeysCount;
-
         uint64 start = SafeCast.toUint64(
-            prevVettedKeysCount == 0 ? 0 : prevVettedKeysCount - 1
+            no.totalVettedValidators == 0 ? 0 : no.totalVettedValidators - 1
         );
 
         uint64 end = _vettedKeysCount - 1;
 
         bytes32 pointer = Batch.serialize({
-            nodeOperatorId: SafeCast.toUint64(_nodeOperatorId),
+            nodeOperatorId: SafeCast.toUint128(_nodeOperatorId),
             start: start,
             end: end
         });
 
+        no.totalVettedValidators = _vettedKeysCount;
         IQueue(queue).enqueue(pointer);
         emit VettedSigningKeysCountChanged(_nodeOperatorId, _vettedKeysCount);
     }
