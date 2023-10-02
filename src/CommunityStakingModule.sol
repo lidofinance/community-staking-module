@@ -466,6 +466,7 @@ contract CommunityStakingModule is IStakingModule {
             publicKeys = bytes.concat(publicKeys, _batchKeys);
             signatures = bytes.concat(signatures, _batchSigs);
 
+            // @dev _batchSize <= limit, forced by _obtainKeysForBatch
             limit = limit - _batchSize;
             if (limit == 0) {
                 break;
