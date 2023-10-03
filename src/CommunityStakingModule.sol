@@ -513,8 +513,11 @@ contract CommunityStakingModule is IStakingModule {
         return (new bytes(0), new bytes(0), _endIndex - _startIndex + 1);
     }
 
-    function cleanDepositQueue(uint256 batchesLimit) external {
-        bytes32 _prev = IQueue(queue).prev();
+    /// @dev returns the next pointer to start cleanup from
+    function cleanDepositQueue(uint256 batchesLimit, bytes32 _prev) external {
+        if (_prev == bytes32(0)) {
+            _prev = IQueue(queue).prev();
+        }
 
         for (uint256 i; i < batchesLimit; i++) {
             bytes32 _peek = IQueue(queue).peek(_prev);
@@ -522,9 +525,8 @@ contract CommunityStakingModule is IStakingModule {
                 break;
             }
 
-            (uint256 nodeOperatorId, uint256 start, uint256 end) = Batch
-                .deserialize(_peek);
-            if (_unvettedKeysInBatch(nodeOperatorId, start, end)) {
+            (uint256 nodeOperatorId, , uint256 end) = Batch.deserialize(_peek);
+            if (_unvettedKeysInBatch(nodeOperatorId, end)) {
                 IQueue(queue).squash(_prev, _peek);
             }
 
@@ -532,39 +534,39 @@ contract CommunityStakingModule is IStakingModule {
         }
     }
 
+    /// @dev returns the next pointer to start check from
     function isQueueHasUnvettedKeys(
-        uint256 batchesLimit
-    ) external view returns (bool) {
-        bytes32 _prev = IQueue(queue).prev();
+        uint256 batchesLimit,
+        bytes32 _prev
+    ) external view returns (bool, bytes32) {
+        bytes32 _peek;
+
+        if (_prev == bytes32(0)) {
+            _prev = IQueue(queue).prev();
+        }
 
         for (uint256 i; i < batchesLimit; i++) {
-            bytes32 _peek = IQueue(queue).peek(_prev);
+            _peek = IQueue(queue).peek(_prev);
             if (_peek == bytes32(0)) {
                 break;
             }
 
-            (uint256 nodeOperatorId, uint256 start, uint256 end) = Batch
-                .deserialize(_peek);
-            if (_unvettedKeysInBatch(nodeOperatorId, start, end)) {
-                return true;
+            (uint256 nodeOperatorId, , uint256 end) = Batch.deserialize(_peek);
+            if (_unvettedKeysInBatch(nodeOperatorId, end)) {
+                return (true, _prev);
             }
 
             _prev = _peek;
         }
 
-        return false;
+        return (false, _prev);
     }
 
     function _unvettedKeysInBatch(
         uint256 _nodeOperatorId,
-        uint256 _start,
         uint256 _end
     ) internal view returns (bool) {
         NodeOperator storage no = nodeOperators[_nodeOperatorId];
-        require(
-            no.totalDepositedValidators >= _start,
-            "invalid range: skipped keys"
-        );
         return _end < no.totalVettedValidators;
     }
 
