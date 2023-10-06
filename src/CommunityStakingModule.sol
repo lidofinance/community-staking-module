@@ -223,7 +223,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures
-    ) external onlyExistedNodeOperator(_nodeOperatorId) {
+    ) external onlyExistingNodeOperator(_nodeOperatorId) {
         // TODO sanity checks
         // TODO store keys
 
@@ -245,7 +245,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures
-    ) external onlyExistedNodeOperator(_nodeOperatorId) {
+    ) external onlyExistingNodeOperator(_nodeOperatorId) {
         // TODO sanity checks
         // TODO store keys
 
@@ -268,7 +268,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures
-    ) external payable onlyExistedNodeOperator(_nodeOperatorId) {
+    ) external payable onlyExistingNodeOperator(_nodeOperatorId) {
         // TODO sanity checks
         // TODO store keys
 
@@ -296,7 +296,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         string memory _name
     )
         external
-        onlyExistedNodeOperator(_nodeOperatorId)
+        onlyExistingNodeOperator(_nodeOperatorId)
         onlyNodeOperatorManager(_nodeOperatorId)
     {
         _onlyValidNodeOperatorName(_name);
@@ -533,7 +533,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         );
     }
 
-    modifier onlyExistedNodeOperator(uint256 _nodeOperatorId) {
+    modifier onlyExistingNodeOperator(uint256 _nodeOperatorId) {
         require(
             _nodeOperatorId < nodeOperatorsCount,
             "node operator does not exist"

@@ -244,4 +244,10 @@ contract CSMEditNodeOperatorInfo is CSMCommon {
         vm.expectRevert("SAME_NAME");
         csm.setNodeOperatorName(noId, "test");
     }
+
+    function test_setNodeOperatorName_revertIfNotExists() public {
+        vm.prank(nodeOperator);
+        vm.expectRevert("node operator does not exist");
+        csm.setNodeOperatorName(0, "test");
+    }
 }
