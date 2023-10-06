@@ -33,6 +33,7 @@ contract CommunityStakingModuleBase {
         string name,
         address rewardAddress
     );
+    event NodeOperatorNameSet(uint256 indexed nodeOperatorId, string name);
 
     event VettedKeysCountChanged(
         uint256 indexed nodeOperatorId,
@@ -61,13 +62,13 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
 
     bytes32 public constant SIGNING_KEYS_POSITION =
         keccak256("lido.CommunityStakingModule.signingKeysPosition");
+    uint256 public constant MAX_NODE_OPERATOR_NAME_LENGTH = 255;
 
     address public bondManagerAddress;
     address public lidoLocator;
 
     constructor(bytes32 _type, address _locator) {
         moduleType = _type;
-        nodeOperatorsCount = 0;
 
         require(_locator != address(0), "lido locator is zero address");
         lidoLocator = _locator;
@@ -222,7 +223,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures
-    ) external onlyActiveNodeOperator(_nodeOperatorId) {
+    ) external onlyExistedNodeOperator(_nodeOperatorId) {
         // TODO sanity checks
         // TODO store keys
 
@@ -244,7 +245,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures
-    ) external onlyActiveNodeOperator(_nodeOperatorId) {
+    ) external onlyExistedNodeOperator(_nodeOperatorId) {
         // TODO sanity checks
         // TODO store keys
 
@@ -267,7 +268,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures
-    ) external payable onlyActiveNodeOperator(_nodeOperatorId) {
+    ) external payable onlyExistedNodeOperator(_nodeOperatorId) {
         // TODO sanity checks
         // TODO store keys
 
@@ -288,6 +289,25 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         );
 
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
+    }
+
+    function setNodeOperatorName(
+        uint256 _nodeOperatorId,
+        string memory _name
+    )
+        external
+        onlyExistedNodeOperator(_nodeOperatorId)
+        onlyNodeOperatorManager(_nodeOperatorId)
+    {
+        _onlyValidNodeOperatorName(_name);
+        require(
+            keccak256(bytes(_name)) !=
+                keccak256(bytes(nodeOperators[_nodeOperatorId].name)),
+            "SAME_NAME"
+        );
+
+        nodeOperators[_nodeOperatorId].name = _name;
+        emit NodeOperatorNameSet(_nodeOperatorId, _name);
     }
 
     function getNodeOperator(
@@ -437,7 +457,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures
-    ) internal onlyActiveNodeOperator(_nodeOperatorId) {
+    ) internal {
         // TODO: sanity checks
         uint256 _startIndex = nodeOperators[_nodeOperatorId].totalAddedKeys;
 
@@ -505,14 +525,26 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         nonce++;
     }
 
-    modifier onlyActiveNodeOperator(uint256 _nodeOperatorId) {
+    function _onlyValidNodeOperatorName(string memory _name) internal pure {
+        require(
+            bytes(_name).length > 0 &&
+                bytes(_name).length <= MAX_NODE_OPERATOR_NAME_LENGTH,
+            "WRONG_NAME_LENGTH"
+        );
+    }
+
+    modifier onlyExistedNodeOperator(uint256 _nodeOperatorId) {
         require(
             _nodeOperatorId < nodeOperatorsCount,
             "node operator does not exist"
         );
+        _;
+    }
+
+    modifier onlyNodeOperatorManager(uint256 _nodeOperatorId) {
         require(
-            nodeOperators[_nodeOperatorId].active,
-            "node operator is not active"
+            nodeOperators[_nodeOperatorId].rewardAddress == msg.sender,
+            "sender is not eligible to manage node operator"
         );
         _;
     }
