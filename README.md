@@ -2,46 +2,43 @@
 
 ### Getting Started
 
-- Use Foundry:
+- Install [Foundry tools](https://book.getfoundry.sh/getting-started/installation)
+
+- Install project dependencies
 
 ```bash
 forge install
-forge test
 ```
 
-- Use Hardhat:
-
+- Config environment variables
 ```bash
-yarn install
-yarn test
+cp .env.example .env
 ```
+Fill vars in the `.env` file with your own values
 
 ### Features
 
-- Write / run tests with either Hardhat or Foundry:
+- Run tests
 
 ```bash
-forge test
-# or
-yarn test
+make test # run all tests
+make test-unit
+make test-inegration
 ```
 
-- Install libraries with Foundry which work with Hardhat.
+- Install libraries
 
 ```bash
 forge install rari-capital/solmate
 ```
 
-- Deploy to local fork via Hardhat.
+- Deploy to local fork
 
 ```bash
-anvil
-npx hardhat run --network localhost scripts/deploy.ts
+make deploy-local
 ```
 
 ### Notes
 
 Whenever you install new libraries using Foundry, make sure to update your
-`remappings.txt` file by running `forge remappings > remappings.txt`. This is
-required because we use `hardhat-preprocessor` and the `remappings.txt` file to
-allow Hardhat to resolve libraries you install with Foundry.
+`remappings.txt` file by running `forge remappings > remappings.txt`

@@ -11,32 +11,33 @@ import { FeeOracle } from "../src/FeeOracle.sol";
 import { IFeeOracle } from "../src/interfaces/IFeeOracle.sol";
 import { IStETH } from "../src/interfaces/IStETH.sol";
 
+import { Fixtures } from "./helpers/Fixtures.sol";
 import { MerkleTree } from "./helpers/MerkleTree.sol";
 import { CommunityStakingModuleMock } from "./helpers/mocks/CommunityStakingModuleMock.sol";
 import { OracleMock } from "./helpers/mocks/OracleMock.sol";
 import { StETHMock } from "./helpers/mocks/StETHMock.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 
-contract FeeDistributorTest is Test, FeeDistributorBase {
+contract FeeDistributorTest is Test, Fixtures, FeeDistributorBase {
     using stdStorage for StdStorage;
+
+    StETHMock internal stETH;
 
     FeeDistributor internal feeDistributor;
     CommunityStakingModuleMock internal csm;
     OracleMock internal oracle;
     Stub internal bondManager;
     MerkleTree internal tree;
-    StETHMock internal stETH;
-    Stub internal CSM;
 
     function setUp() public {
         csm = new CommunityStakingModuleMock();
         oracle = new OracleMock();
         bondManager = new Stub();
-        stETH = new StETHMock(0);
-        CSM = new Stub();
+
+        (, , stETH, ) = initLido();
 
         feeDistributor = new FeeDistributor(
-            address(CSM),
+            address(csm),
             address(stETH),
             address(oracle),
             address(bondManager)
@@ -47,7 +48,7 @@ contract FeeDistributorTest is Test, FeeDistributorBase {
         vm.label(address(bondManager), "BOND_MANAGER");
         vm.label(address(oracle), "ORACLE");
         vm.label(address(stETH), "STETH");
-        vm.label(address(CSM), "CSM");
+        vm.label(address(csm), "CSM");
     }
 
     function test_distributeFeesHappyPath() public {

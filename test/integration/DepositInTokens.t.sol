@@ -6,10 +6,11 @@ pragma solidity 0.8.21;
 import "forge-std/Test.sol";
 import { CommunityStakingModule } from "../../src/CommunityStakingModule.sol";
 import { IWstETH, ILido, CommunityStakingBondManager } from "../../src/CommunityStakingBondManager.sol";
+import { PermitHelper } from "../helpers/Permit.sol";
 import { CommunityStakingModuleMock } from "../helpers/mocks/CommunityStakingModuleMock.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 
-contract StakingRouterIntegrationTest is Test {
+contract DepositIntegrationTest is Test, PermitHelper {
     uint256 networkFork;
 
     CommunityStakingModuleMock public csm;
@@ -19,6 +20,9 @@ contract StakingRouterIntegrationTest is Test {
 
     address internal agent;
     address internal user;
+    address internal stranger;
+    uint256 internal userPrivateKey;
+    uint256 internal strangerPrivateKey;
 
     string RPC_URL;
     string LIDO_LOCATOR_ADDRESS;
@@ -45,7 +49,10 @@ contract StakingRouterIntegrationTest is Test {
 
         wstETH = IWstETH(vm.parseAddress(WSTETH_ADDRESS));
 
-        user = vm.addr(1);
+        userPrivateKey = 0xa11ce;
+        user = vm.addr(userPrivateKey);
+        strangerPrivateKey = 0x517a4637;
+        stranger = vm.addr(strangerPrivateKey);
         address[] memory penalizeRoleMembers = new address[](1);
         penalizeRoleMembers[0] = user;
 
@@ -57,14 +64,6 @@ contract StakingRouterIntegrationTest is Test {
             address(csm),
             penalizeRoleMembers
         );
-    }
-
-    function test_depositStETH() public {
-        vm.deal(user, 32 ether);
-        vm.prank(user);
-        uint256 shares = ILido(locator.lido()).submit{ value: 32 ether }({
-            _referal: address(0)
-        });
 
         csm.setNodeOperator({
             _nodeOperatorId: 0,
@@ -77,9 +76,16 @@ contract StakingRouterIntegrationTest is Test {
             _totalAddedValidators: 16,
             _totalDepositedValidators: 16
         });
+    }
 
-        vm.prank(user);
-        ILido(locator.lido()).approve(address(bondManager), ~uint256(0));
+    function test_depositStETH() public {
+        vm.startPrank(user);
+        vm.deal(user, 32 ether);
+        uint256 shares = ILido(locator.lido()).submit{ value: 32 ether }({
+            _referal: address(0)
+        });
+
+        ILido(locator.lido()).approve(address(bondManager), type(uint256).max);
         bondManager.depositStETH(0, 32 ether);
 
         assertEq(ILido(locator.lido()).balanceOf(user), 0);
@@ -88,21 +94,8 @@ contract StakingRouterIntegrationTest is Test {
     }
 
     function test_depositETH() public {
-        vm.deal(user, 32 ether);
-
-        csm.setNodeOperator({
-            _nodeOperatorId: 0,
-            _active: true,
-            _name: "User",
-            _rewardAddress: user,
-            _totalVettedValidators: 16,
-            _totalExitedValidators: 0,
-            _totalWithdrawnValidators: 1,
-            _totalAddedValidators: 16,
-            _totalDepositedValidators: 16
-        });
-
         vm.prank(user);
+        vm.deal(user, 32 ether);
         uint256 shares = bondManager.depositETH{ value: 32 ether }(0);
 
         assertEq(user.balance, 0);
@@ -111,30 +104,93 @@ contract StakingRouterIntegrationTest is Test {
     }
 
     function test_depositWstETH() public {
+        vm.startPrank(user);
+        vm.deal(user, 32 ether);
+        ILido(locator.lido()).submit{ value: 32 ether }({
+            _referal: address(0)
+        });
+        ILido(locator.lido()).approve(address(wstETH), type(uint256).max);
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+
+        vm.startPrank(user);
+        wstETH.approve(address(bondManager), type(uint256).max);
+        uint256 shares = bondManager.depositWstETH(0, wstETHAmount);
+
+        assertEq(wstETH.balanceOf(user), 0);
+        assertEq(bondManager.getBondShares(0), shares);
+        assertEq(bondManager.totalBondShares(), shares);
+    }
+
+    function test_depositStETHWithPermit() public {
+        bytes32 digest = stETHPermitDigest(
+            user,
+            address(bondManager),
+            32 ether,
+            vm.getNonce(user),
+            type(uint256).max,
+            address(locator.lido())
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, digest);
+
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        uint256 shares = ILido(locator.lido()).submit{ value: 32 ether }({
+            _referal: address(0)
+        });
+        vm.stopPrank();
+
+        vm.prank(stranger);
+        bondManager.depositStETHWithPermit(
+            user,
+            0,
+            32 ether,
+            CommunityStakingBondManager.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                v: v,
+                r: r,
+                s: s
+            })
+        );
+
+        assertEq(ILido(locator.lido()).balanceOf(user), 0);
+        assertEq(bondManager.getBondShares(0), shares);
+        assertEq(bondManager.totalBondShares(), shares);
+    }
+
+    function test_depositWstETHWithPermit() public {
+        bytes32 digest = wstETHPermitDigest(
+            user,
+            address(bondManager),
+            32 ether,
+            vm.getNonce(user),
+            type(uint256).max,
+            address(wstETH)
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, digest);
+
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         ILido(locator.lido()).submit{ value: 32 ether }({
             _referal: address(0)
         });
-        ILido(locator.lido()).approve(address(wstETH), ~uint256(0));
+        ILido(locator.lido()).approve(address(wstETH), type(uint256).max);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         vm.stopPrank();
 
-        csm.setNodeOperator({
-            _nodeOperatorId: 0,
-            _active: true,
-            _name: "User",
-            _rewardAddress: user,
-            _totalVettedValidators: 16,
-            _totalExitedValidators: 0,
-            _totalWithdrawnValidators: 1,
-            _totalAddedValidators: 16,
-            _totalDepositedValidators: 16
-        });
-
-        vm.startPrank(user);
-        wstETH.approve(address(bondManager), ~uint256(0));
-        uint256 shares = bondManager.depositWstETH(0, wstETHAmount);
+        vm.prank(stranger);
+        uint256 shares = bondManager.depositWstETHWithPermit(
+            user,
+            0,
+            wstETHAmount,
+            CommunityStakingBondManager.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                v: v,
+                r: r,
+                s: s
+            })
+        );
 
         assertEq(wstETH.balanceOf(user), 0);
         assertEq(bondManager.getBondShares(0), shares);

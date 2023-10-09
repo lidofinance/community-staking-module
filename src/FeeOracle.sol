@@ -155,7 +155,7 @@ contract FeeOracle is FeeOracleBase, AccessControlEnumerable {
         }
 
         // Get the current report
-        bytes32 reportHash = _getReportHash(epoch, newRoot);
+        bytes32 reportHash = _getReportHash(epoch, newRoot, _treeCid);
 
         // Check for double vote
         for (uint64 i; i < submissions[reportHash].length; ) {
@@ -182,7 +182,7 @@ contract FeeOracle is FeeOracleBase, AccessControlEnumerable {
             prevConsolidatedEpoch = lastConsolidatedEpoch;
             lastConsolidatedEpoch = epoch;
             reportRoot = newRoot;
-            _treeCid = _treeCid;
+            treeCid = _treeCid;
 
             IFeeDistributor(feeDistributor).receiveFees(distributed);
             emit ReportConsolidated(epoch, newRoot, distributed, _treeCid);
@@ -194,9 +194,10 @@ contract FeeOracle is FeeOracleBase, AccessControlEnumerable {
     /// @param _reportRoot Report Merkle tree root
     function _getReportHash(
         uint64 _slot,
-        bytes32 _reportRoot
+        bytes32 _reportRoot,
+        string memory _treeCid
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_slot, _reportRoot));
+        return keccak256(abi.encodePacked(_slot, _reportRoot, _treeCid));
     }
 
     /// @notice Get a hash of a leaf

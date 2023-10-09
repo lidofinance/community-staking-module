@@ -13,4 +13,32 @@ contract Utilities {
         seed = keccak256(abi.encodePacked(seed));
         return a;
     }
+
+    function keysSignatures(
+        uint256 keysCount
+    ) public pure returns (bytes memory, bytes memory) {
+        return keysSignatures(keysCount, 0);
+    }
+
+    function keysSignatures(
+        uint256 keysCount,
+        uint16 startIndex
+    ) public pure returns (bytes memory, bytes memory) {
+        bytes memory keys;
+        bytes memory signatures;
+        for (uint16 i = startIndex; i < startIndex + keysCount; i++) {
+            bytes memory index = abi.encodePacked(i + 1);
+            bytes memory key = bytes.concat(
+                new bytes(48 - index.length),
+                index
+            );
+            bytes memory sign = bytes.concat(
+                new bytes(96 - index.length),
+                index
+            );
+            keys = bytes.concat(keys, key);
+            signatures = bytes.concat(signatures, sign);
+        }
+        return (keys, signatures);
+    }
 }
