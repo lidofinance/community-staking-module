@@ -126,66 +126,6 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         );
     }
 
-    function addNodeOperatorWstETH(
-        string calldata _name,
-        address _rewardAddress,
-        uint256 _keysCount,
-        bytes calldata _publicKeys,
-        bytes calldata _signatures
-    ) external {
-        // TODO sanity checks
-        uint256 id = nodeOperatorsCount;
-        NodeOperator storage no = nodeOperators[id];
-        no.name = _name;
-        no.rewardAddress = _rewardAddress;
-        no.active = true;
-        nodeOperatorsCount++;
-        activeNodeOperatorsCount++;
-
-        uint256 requiredEth = _lido().getPooledEthByShares(
-            _bondManager().getRequiredBondSharesForKeys(_keysCount)
-        );
-
-        _bondManager().depositWstETH(
-            msg.sender,
-            id,
-            _lido().getSharesByPooledEth(requiredEth) // to get wstETH amount
-        );
-
-        _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
-
-        emit NodeOperatorAdded(id, _name, _rewardAddress);
-    }
-
-    function addNodeOperatorStETH(
-        string calldata _name,
-        address _rewardAddress,
-        uint256 _keysCount,
-        bytes calldata _publicKeys,
-        bytes calldata _signatures
-    ) external {
-        // TODO sanity checks
-        uint256 id = nodeOperatorsCount;
-        NodeOperator storage no = nodeOperators[id];
-        no.name = _name;
-        no.rewardAddress = _rewardAddress;
-        no.active = true;
-        nodeOperatorsCount++;
-        activeNodeOperatorsCount++;
-
-        _bondManager().depositStETH(
-            msg.sender,
-            id,
-            _lido().getPooledEthByShares(
-                _bondManager().getRequiredBondSharesForKeys(_keysCount)
-            )
-        );
-
-        _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
-
-        emit NodeOperatorAdded(id, _name, _rewardAddress);
-    }
-
     function addNodeOperatorETH(
         string calldata _name,
         address _rewardAddress,
@@ -194,6 +134,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         bytes calldata _signatures
     ) external payable {
         // TODO sanity checks
+        _onlyValidNodeOperatorName(_name);
 
         require(
             msg.value >=
@@ -218,23 +159,93 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         emit NodeOperatorAdded(id, _name, _rewardAddress);
     }
 
-    function addValidatorKeysWstETH(
-        uint256 _nodeOperatorId,
+    function addNodeOperatorStETH(
+        string calldata _name,
+        address _rewardAddress,
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures
-    ) external onlyExistingNodeOperator(_nodeOperatorId) {
+    ) external {
         // TODO sanity checks
-        // TODO store keys
+        _onlyValidNodeOperatorName(_name);
+
+        uint256 id = nodeOperatorsCount;
+        NodeOperator storage no = nodeOperators[id];
+        no.name = _name;
+        no.rewardAddress = _rewardAddress;
+        no.active = true;
+        nodeOperatorsCount++;
+        activeNodeOperatorsCount++;
+
+        _bondManager().depositStETH(
+            msg.sender,
+            id,
+            _lido().getPooledEthByShares(
+                _bondManager().getRequiredBondSharesForKeys(_keysCount)
+            )
+        );
+
+        _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
+
+        emit NodeOperatorAdded(id, _name, _rewardAddress);
+    }
+
+    function addNodeOperatorWstETH(
+        string calldata _name,
+        address _rewardAddress,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures
+    ) external {
+        // TODO sanity checks
+        _onlyValidNodeOperatorName(_name);
+
+        uint256 id = nodeOperatorsCount;
+        NodeOperator storage no = nodeOperators[id];
+        no.name = _name;
+        no.rewardAddress = _rewardAddress;
+        no.active = true;
+        nodeOperatorsCount++;
+        activeNodeOperatorsCount++;
 
         uint256 requiredEth = _lido().getPooledEthByShares(
-            _bondManager().getRequiredBondShares(_nodeOperatorId, _keysCount)
+            _bondManager().getRequiredBondSharesForKeys(_keysCount)
         );
 
         _bondManager().depositWstETH(
             msg.sender,
-            _nodeOperatorId,
+            id,
             _lido().getSharesByPooledEth(requiredEth) // to get wstETH amount
+        );
+
+        _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
+
+        emit NodeOperatorAdded(id, _name, _rewardAddress);
+    }
+
+    function addValidatorKeysETH(
+        uint256 _nodeOperatorId,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures
+    ) external payable onlyExistingNodeOperator(_nodeOperatorId) {
+        // TODO sanity checks
+        // TODO store keys
+
+        require(
+            msg.value >=
+                _lido().getPooledEthByShares(
+                    _bondManager().getRequiredBondShares(
+                        _nodeOperatorId,
+                        _keysCount
+                    )
+                ),
+            "not enough eth to deposit"
+        );
+
+        _bondManager().depositETH{ value: msg.value }(
+            msg.sender,
+            _nodeOperatorId
         );
 
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
@@ -263,29 +274,23 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
     }
 
-    function addValidatorKeysETH(
+    function addValidatorKeysWstETH(
         uint256 _nodeOperatorId,
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures
-    ) external payable onlyExistingNodeOperator(_nodeOperatorId) {
+    ) external onlyExistingNodeOperator(_nodeOperatorId) {
         // TODO sanity checks
         // TODO store keys
 
-        require(
-            msg.value >=
-                _lido().getPooledEthByShares(
-                    _bondManager().getRequiredBondShares(
-                        _nodeOperatorId,
-                        _keysCount
-                    )
-                ),
-            "not enough eth to deposit"
+        uint256 requiredEth = _lido().getPooledEthByShares(
+            _bondManager().getRequiredBondShares(_nodeOperatorId, _keysCount)
         );
 
-        _bondManager().depositETH{ value: msg.value }(
+        _bondManager().depositWstETH(
             msg.sender,
-            _nodeOperatorId
+            _nodeOperatorId,
+            _lido().getSharesByPooledEth(requiredEth) // to get wstETH amount
         );
 
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
