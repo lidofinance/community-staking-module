@@ -33,8 +33,7 @@ contract CSMInitTest is Test, Fixtures {
 
         csm = new CommunityStakingModule(
             "community-staking-module",
-            address(locator),
-            address(90210) // FIXME
+            address(locator)
         );
         communityStakingFeeDistributor = new CommunityStakingFeeDistributorMock(
             address(locator),

@@ -9,9 +9,9 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { ICommunityStakingBondManager } from "./interfaces/ICommunityStakingBondManager.sol";
 import { IStakingModule } from "./interfaces/IStakingModule.sol";
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
-import { IQueue } from "./interfaces/IQueue.sol";
 import { ILido } from "./interfaces/ILido.sol";
 
+import { QueueLib } from "./lib/QueueLib.sol";
 import { Batch } from "./lib/Batch.sol";
 
 import "./lib/SigningKeys.sol";
@@ -59,6 +59,8 @@ contract CommunityStakingModuleBase {
 }
 
 contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
+    using QueueLib for QueueLib.Queue;
+
     uint256 private nodeOperatorsCount;
     uint256 private activeNodeOperatorsCount;
     bytes32 private moduleType;
@@ -68,24 +70,22 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
     bytes32 public constant SIGNING_KEYS_POSITION =
         keccak256("lido.CommunityStakingModule.signingKeysPosition");
 
+    QueueLib.Queue public queue;
+
     address public bondManagerAddress;
     address public lidoLocator;
-    address public queue;
 
     event VettedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
         uint256 approvedValidatorsCount
     );
 
-    constructor(bytes32 _type, address _locator, address _queue) {
+    constructor(bytes32 _type, address _locator) {
         moduleType = _type;
         nodeOperatorsCount = 0;
 
         require(_locator != address(0), "lido locator is zero address");
         lidoLocator = _locator;
-
-        require(_queue != address(0), "Queue address is zero address");
-        queue = _queue;
     }
 
     function setBondManager(address _bondManagerAddress) external {
@@ -472,17 +472,14 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         });
 
         no.totalVettedKeys = _vettedKeysCount;
-        IQueue(queue).enqueue(pointer);
+        queue.enqueue(pointer);
         emit VettedSigningKeysCountChanged(_nodeOperatorId, _vettedKeysCount);
     }
 
     function unvetKeys(uint64 _nodeOperatorId) external {
         NodeOperator storage no = nodeOperators[_nodeOperatorId];
         no.totalVettedKeys = no.totalDepositedKeys;
-        emit VettedSigningKeysCountChanged(
-            _nodeOperatorId,
-            no.totalVettedKeys
-        );
+        emit VettedSigningKeysCountChanged(_nodeOperatorId, no.totalVettedKeys);
     }
 
     function onWithdrawalCredentialsChanged() external {
@@ -522,7 +519,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
     ) external returns (bytes memory publicKeys, bytes memory signatures) {
         uint256 limit = _depositsCount;
 
-        for (bytes32 p = IQueue(queue).front(); !Batch.isNil(p); ) {
+        for (bytes32 p = queue.peek(); !Batch.isNil(p); ) {
             (uint256 nodeOperatorId, uint256 start, uint256 end) = Batch
                 .deserialize(p);
 
@@ -541,7 +538,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
                 break;
             }
 
-            p = IQueue(queue).front();
+            p = queue.peek();
         }
     }
 
@@ -565,10 +562,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         require(_end < no.totalVettedKeys, "NO was unvetted");
         require(_end < no.totalAddedKeys, "not enough keys");
 
-        require(
-            no.totalDepositedKeys >= _start,
-            "invalid range: skipped keys"
-        );
+        require(no.totalDepositedKeys >= _start, "invalid range: skipped keys");
 
         uint256 _startIndex = Math.max(_start, no.totalDepositedKeys);
         uint256 _endIndex = Math.min(_end, _startIndex + limit);
@@ -576,7 +570,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
 
         no.totalDepositedKeys = _endIndex + 1;
         if (_end == _endIndex) {
-            IQueue(queue).dequeue();
+            queue.dequeue();
         }
 
         SigningKeys.loadKeysSigs(
@@ -596,18 +590,18 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         bytes32 pointer
     ) external returns (bytes32) {
         if (Batch.isNil(pointer)) {
-            pointer = IQueue(queue).frontPointer();
+            pointer = queue.front;
         }
 
         for (uint256 i; i < maxItems; i++) {
-            bytes32 item = IQueue(queue).at(pointer);
+            bytes32 item = queue.at(pointer);
             if (Batch.isNil(item)) {
                 break;
             }
 
             (uint256 nodeOperatorId, , uint256 end) = Batch.deserialize(item);
             if (_unvettedKeysInBatch(nodeOperatorId, end)) {
-                IQueue(queue).remove(pointer, item);
+                queue.remove(pointer, item);
             }
 
             pointer = item;
@@ -622,11 +616,11 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         bytes32 pointer
     ) external view returns (bool, bytes32) {
         if (Batch.isNil(pointer)) {
-            pointer = IQueue(queue).frontPointer();
+            pointer = queue.front;
         }
 
         for (uint256 i; i < maxItems; i++) {
-            bytes32 item = IQueue(queue).at(pointer);
+            bytes32 item = queue.at(pointer);
             if (Batch.isNil(item)) {
                 break;
             }

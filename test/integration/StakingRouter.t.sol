@@ -50,8 +50,7 @@ contract StakingRouterIntegrationTest is Test, Utilities {
 
         csm = new CommunityStakingModule(
             "community-staking-module",
-            address(locator),
-            address(90210) // FIXME
+            address(locator)
         );
         address[] memory penalizeRoleMembers = new address[](1);
         penalizeRoleMembers[0] = address(csm);
