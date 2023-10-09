@@ -6,11 +6,11 @@ pragma solidity 0.8.21;
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
+import { ICommunityStakingBondManager } from "./interfaces/ICommunityStakingBondManager.sol";
 import { IStakingModule } from "./interfaces/IStakingModule.sol";
-import "./interfaces/ICommunityStakingBondManager.sol";
-import "./interfaces/ILidoLocator.sol";
-import "./interfaces/IQueue.sol";
-import "./interfaces/ILido.sol";
+import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
+import { IQueue } from "./interfaces/IQueue.sol";
+import { ILido } from "./interfaces/ILido.sol";
 
 import { Batch } from "./lib/Batch.sol";
 
@@ -453,7 +453,7 @@ contract CommunityStakingModule is IStakingModule {
     ) external returns (bytes memory publicKeys, bytes memory signatures) {
         uint256 limit = _depositsCount;
 
-        for (bytes32 p = IQueue(queue).peek(); p != bytes32(0); ) {
+        for (bytes32 p = IQueue(queue).front(); !Batch.isNil(p); ) {
             (uint256 nodeOperatorId, uint256 start, uint256 end) = Batch
                 .deserialize(p);
 
@@ -472,7 +472,7 @@ contract CommunityStakingModule is IStakingModule {
                 break;
             }
 
-            p = IQueue(queue).peek();
+            p = IQueue(queue).front();
         }
     }
 
@@ -514,52 +514,55 @@ contract CommunityStakingModule is IStakingModule {
     }
 
     /// @dev returns the next pointer to start cleanup from
-    function cleanDepositQueue(uint256 batchesLimit, bytes32 _prev) external {
-        if (_prev == bytes32(0)) {
-            _prev = IQueue(queue).prev();
+    function cleanDepositQueue(
+        uint256 maxItems,
+        bytes32 pointer
+    ) external returns (bytes32) {
+        if (Batch.isNil(pointer)) {
+            pointer = IQueue(queue).frontPointer();
         }
 
-        for (uint256 i; i < batchesLimit; i++) {
-            bytes32 _peek = IQueue(queue).peek(_prev);
-            if (_peek == bytes32(0)) {
+        for (uint256 i; i < maxItems; i++) {
+            bytes32 item = IQueue(queue).at(pointer);
+            if (Batch.isNil(item)) {
                 break;
             }
 
-            (uint256 nodeOperatorId, , uint256 end) = Batch.deserialize(_peek);
+            (uint256 nodeOperatorId, , uint256 end) = Batch.deserialize(item);
             if (_unvettedKeysInBatch(nodeOperatorId, end)) {
-                IQueue(queue).squash(_prev, _peek);
+                IQueue(queue).remove(pointer, item);
             }
 
-            _prev = _peek;
+            pointer = item;
         }
+
+        return pointer;
     }
 
     /// @dev returns the next pointer to start check from
     function isQueueHasUnvettedKeys(
-        uint256 batchesLimit,
-        bytes32 _prev
+        uint256 maxItems,
+        bytes32 pointer
     ) external view returns (bool, bytes32) {
-        bytes32 _peek;
-
-        if (_prev == bytes32(0)) {
-            _prev = IQueue(queue).prev();
+        if (Batch.isNil(pointer)) {
+            pointer = IQueue(queue).frontPointer();
         }
 
-        for (uint256 i; i < batchesLimit; i++) {
-            _peek = IQueue(queue).peek(_prev);
-            if (_peek == bytes32(0)) {
+        for (uint256 i; i < maxItems; i++) {
+            bytes32 item = IQueue(queue).at(pointer);
+            if (Batch.isNil(item)) {
                 break;
             }
 
-            (uint256 nodeOperatorId, , uint256 end) = Batch.deserialize(_peek);
+            (uint256 nodeOperatorId, , uint256 end) = Batch.deserialize(item);
             if (_unvettedKeysInBatch(nodeOperatorId, end)) {
-                return (true, _prev);
+                return (true, pointer);
             }
 
-            _prev = _peek;
+            pointer = item;
         }
 
-        return (false, _prev);
+        return (false, pointer);
     }
 
     function _unvettedKeysInBatch(

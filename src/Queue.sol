@@ -4,58 +4,55 @@ pragma solidity 0.8.21;
 
 /// @author madlabman
 contract Queue {
+    bytes32 public constant NULL_POINTER = bytes32(0);
+
     mapping(bytes32 => bytes32) internal queue;
 
-    bytes32 public constant ZERO = bytes32(0);
-
-    bytes32 internal _head;
-    bytes32 internal _next;
-    bytes32 internal _prev;
+    bytes32 internal _front;
+    bytes32 internal _back;
 
     function enqueue(bytes32 item) external {
-        require(item != ZERO, "Queue: item is zero");
-        require(queue[item] == ZERO, "Queue: item already enqueued");
+        require(item != NULL_POINTER, "Queue: item is zero");
+        require(queue[item] == NULL_POINTER, "Queue: item already enqueued");
 
-        if (_prev == _next) {
-            _next = item;
+        if (_front == queue[_front]) {
+            queue[_front] = item;
         }
 
-        queue[_head] = item;
-        _head = item;
+        queue[_back] = item;
+        _back = item;
     }
 
     function dequeue() external notEmpty returns (bytes32 item) {
-        item = _next;
-        _next = queue[item];
-        _prev = item;
+        item = queue[_front];
+        _front = item;
     }
 
-    function prev() external view returns (bytes32) {
-        return _prev;
+    function frontPointer() external view returns (bytes32) {
+        return _front;
     }
 
-    function peek() external view returns (bytes32) {
-        return queue[_prev];
+    function front() external view returns (bytes32) {
+        return queue[_front];
     }
 
-    function peek(bytes32 item) external view returns (bytes32) {
-        return queue[item];
+    function at(bytes32 pointer) external view returns (bytes32) {
+        return queue[pointer];
     }
 
-    /// @notice Squash two adjacent items in the queue
-    function squash(bytes32 l, bytes32 r) external {
-        require(queue[l] == r, "Queue: items are not adjacent");
+    function remove(bytes32 pointerToItem, bytes32 item) external {
+        require(queue[pointerToItem] == item, "Queue: wrong pointer given");
 
-        queue[l] = queue[r];
-        queue[r] = ZERO;
+        queue[pointerToItem] = queue[item];
+        queue[item] = NULL_POINTER;
 
-        if (_head == r) {
-            _head = l;
+        if (_back == item) {
+            _back = pointerToItem;
         }
     }
 
     modifier notEmpty() {
-        require(_prev != _head, "Queue: empty");
+        require(_front != _back, "Queue: empty");
         _;
     }
 }

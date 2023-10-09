@@ -7,11 +7,11 @@ interface IQueue {
 
     function dequeue() external returns (bytes32);
 
-    function prev() external view returns (bytes32);
+    function frontPointer() external view returns (bytes32);
 
-    function peek() external view returns (bytes32);
+    function front() external view returns (bytes32);
 
-    function peek(bytes32) external view returns (bytes32);
+    function at(bytes32) external view returns (bytes32);
 
-    function squash(bytes32, bytes32) external;
+    function remove(bytes32, bytes32) external;
 }

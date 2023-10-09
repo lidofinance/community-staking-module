@@ -13,19 +13,22 @@ contract QueueTest is Test {
     bytes32 p2 = keccak256("0x02"); // 0xd3974deccfd8aa6b77f0fcc2c0014e6e0574d32e56c1d75717d2667b529cd073
 
     bytes32 buf;
+    bytes32 nil;
     Queue q;
 
     function setUp() public {
         q = new Queue();
+        nil = q.NULL_POINTER();
     }
 
     function test_enqueue() public {
-        assertEq(q.peek(), q.ZERO());
+        assertEq(q.front(), nil);
 
         q.enqueue(p0);
         q.enqueue(p1);
 
-        assertEq(q.peek(), p0);
+        assertEq(q.front(), p0);
+        assertEq(q.at(p0), p1);
     }
 
     function test_dequeue() public {
@@ -40,14 +43,14 @@ contract QueueTest is Test {
 
         buf = q.dequeue();
         assertEq(buf, p0);
-        assertEq(q.peek(), p1);
+        assertEq(q.front(), p1);
 
         buf = q.dequeue();
         assertEq(buf, p1);
-        assertEq(q.peek(), p2);
+        assertEq(q.front(), p2);
 
         q.dequeue();
-        assertEq(q.peek(), q.ZERO());
+        assertEq(q.front(), nil);
 
         {
             vm.expectRevert("Queue: empty");
@@ -55,13 +58,13 @@ contract QueueTest is Test {
         }
     }
 
-    function test_squash() public {
+    function test_remove() public {
         q.enqueue(p0);
         q.enqueue(p1);
         q.enqueue(p2);
         // [+*p0, p1, p2]
 
-        q.squash(p0, p1);
+        q.remove(p0, p1);
         // [+*p0, p2]
 
         q.dequeue();
@@ -72,18 +75,18 @@ contract QueueTest is Test {
 
         q.enqueue(p1);
         // [p0, +p2, *p1]
-        assertEq(q.peek(), p1);
+        assertEq(q.front(), p1);
 
-        q.squash(p2, p1);
+        q.remove(p2, p1);
         // [p0, +*p2]
-        assertEq(q.peek(), q.ZERO());
+        assertEq(q.front(), nil);
         {
             vm.expectRevert("Queue: empty");
             q.dequeue();
         }
 
-        q.squash(p0, p2);
+        q.remove(p0, p2);
         // [+*p0]
-        assertEq(q.peek(), q.ZERO());
+        assertEq(q.front(), nil);
     }
 }

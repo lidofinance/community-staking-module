@@ -23,4 +23,8 @@ library Batch {
             end := b
         }
     }
+
+    function isNil(bytes32 b) internal pure returns (bool) {
+        return b == bytes32(0);
+    }
 }
