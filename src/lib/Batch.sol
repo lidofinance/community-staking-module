@@ -4,7 +4,7 @@ pragma solidity 0.8.21;
 
 /// @author madlabman
 library Batch {
-    /// @notice Serialize node operator id and batch start and end epochs into a single bytes32 value
+    /// @notice Serialize node operator id, batch start and count of keys into a single bytes32 value
     function serialize(
         uint128 nodeOperatorId,
         uint64 start,
@@ -13,7 +13,7 @@ library Batch {
         return bytes32(abi.encodePacked(nodeOperatorId, start, count));
     }
 
-    /// @notice Deserialize node operator id and batch start and end epochs from a single bytes32 value
+    /// @notice Deserialize node operator id, batch start and count of keys from a single bytes32 value
     function deserialize(
         bytes32 b
     ) internal pure returns (uint128 nodeOperatorId, uint64 start, uint64 count) {
