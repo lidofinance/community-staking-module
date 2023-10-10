@@ -8,19 +8,19 @@ library Batch {
     function serialize(
         uint128 nodeOperatorId,
         uint64 start,
-        uint64 end
+        uint64 count
     ) internal pure returns (bytes32 s) {
-        return bytes32(abi.encodePacked(nodeOperatorId, start, end));
+        return bytes32(abi.encodePacked(nodeOperatorId, start, count));
     }
 
     /// @notice Deserialize node operator id and batch start and end epochs from a single bytes32 value
     function deserialize(
         bytes32 b
-    ) internal pure returns (uint128 nodeOperatorId, uint64 start, uint64 end) {
+    ) internal pure returns (uint128 nodeOperatorId, uint64 start, uint64 count) {
         assembly {
             nodeOperatorId := shr(128, b)
             start := shr(64, b)
-            end := b
+            count := b
         }
     }
 

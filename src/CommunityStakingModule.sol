@@ -463,12 +463,10 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
             no.totalVettedKeys == 0 ? 0 : no.totalVettedKeys - 1
         );
 
-        uint64 end = _vettedKeysCount - 1;
-
         bytes32 pointer = Batch.serialize({
             nodeOperatorId: SafeCast.toUint128(_nodeOperatorId),
             start: start,
-            end: end
+            count: _vettedKeysCount
         });
 
         no.totalVettedKeys = _vettedKeysCount;
@@ -517,70 +515,96 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         uint256 _depositsCount,
         bytes calldata /* _depositCalldata */
     ) external returns (bytes memory publicKeys, bytes memory signatures) {
+        (publicKeys, signatures) = SigningKeys.initKeysSigsBuf(_depositsCount);
         uint256 limit = _depositsCount;
+        uint256 loadedKeysCount = 0;
 
         for (bytes32 p = queue.peek(); !Batch.isNil(p); ) {
-            (uint256 nodeOperatorId, uint256 start, uint256 end) = Batch
-                .deserialize(p);
-
             (
-                bytes memory _batchKeys,
-                bytes memory _batchSigs,
-                uint256 _batchSize
-            ) = _obtainKeysForBatch(nodeOperatorId, start, end, limit);
+                uint256 nodeOperatorId,
+                uint256 startIndex,
+                uint256 keysCount,
+                bool noMoreKeys
+            ) = _batchDepositableKeys(p, limit);
 
-            publicKeys = bytes.concat(publicKeys, _batchKeys);
-            signatures = bytes.concat(signatures, _batchSigs);
+            if (noMoreKeys) {
+                queue.dequeue();
+            }
 
-            // @dev _batchSize <= limit, forced by _obtainKeysForBatch
-            limit = limit - _batchSize;
+            SigningKeys.loadKeysSigs(
+                SIGNING_KEYS_POSITION,
+                nodeOperatorId,
+                startIndex,
+                keysCount,
+                publicKeys,
+                signatures,
+                loadedKeysCount
+            );
+            loadedKeysCount += keysCount;
+
+            NodeOperator storage no = nodeOperators[nodeOperatorId];
+            no.totalDepositedKeys += keysCount;
+            emit DepositedKeysCountChanged(
+                nodeOperatorId,
+                no.totalDepositedKeys
+            );
+
+            // @dev keysCount <= limit, forced by _batchDepositableKeys
+            limit = limit - keysCount;
             if (limit == 0) {
                 break;
             }
 
             p = queue.peek();
         }
+
+        require(loadedKeysCount == _depositsCount, "NOT_ENOUGH_KEYS");
     }
 
-    function _obtainKeysForBatch(
-        uint256 _nodeOperatorId,
-        uint256 _start,
-        uint256 _end,
-        uint256 limit
+    function _batchDepositableKeys(
+        bytes32 _batch,
+        uint256 _limit
     )
         internal
+        view
         returns (
-            bytes memory publicKeys,
-            bytes memory signatures,
-            uint256 count
+            uint256 nodeOperatorId,
+            uint256 startIndex,
+            uint256 keysCount,
+            bool noMoreKeys
         )
     {
-        NodeOperator storage no = nodeOperators[_nodeOperatorId];
+        uint256 start;
+        uint256 count;
 
-        require(_start <= _end, "invalid range");
+        (nodeOperatorId, start, count) = Batch.deserialize(_batch);
 
-        require(_end < no.totalVettedKeys, "NO was unvetted");
-        require(_end < no.totalAddedKeys, "not enough keys");
+        NodeOperator storage no = nodeOperators[nodeOperatorId];
+        _assertIsValidBatch(no, start, count);
 
-        require(no.totalDepositedKeys >= _start, "invalid range: skipped keys");
+        startIndex = Math.max(start, no.totalDepositedKeys);
+        uint256 depositableKeysCount = start + count - startIndex;
+        keysCount = Math.min(_limit, depositableKeysCount);
+        noMoreKeys = depositableKeysCount == keysCount;
+    }
 
-        uint256 _startIndex = Math.max(_start, no.totalDepositedKeys);
-        uint256 _endIndex = Math.min(_end, _startIndex + limit);
-        count = _endIndex - _startIndex + 1;
-
-        no.totalDepositedKeys = _endIndex + 1;
-        if (_end == _endIndex) {
-            queue.dequeue();
-        }
-
-        SigningKeys.loadKeysSigs(
-            SIGNING_KEYS_POSITION,
-            _nodeOperatorId,
-            _startIndex,
-            count,
-            publicKeys,
-            signatures,
-            0
+    function _assertIsValidBatch(
+        NodeOperator storage no,
+        uint256 _start,
+        uint256 _count
+    ) internal view {
+        require(_count != 0, "Empty batch given");
+        require(
+            _unvettedKeysInBatch(no, _start, _count) == false,
+            "Batch contains unvetted keys"
+        );
+        require(
+            _start + _count <= no.totalAddedKeys,
+            "Invalid batch range: not enough keys"
+        );
+        require(
+            _start <= no.totalDepositedKeys,
+            "Invalid batch range: skipped keys"
         );
     }
 
@@ -599,8 +623,10 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
                 break;
             }
 
-            (uint256 nodeOperatorId, , uint256 end) = Batch.deserialize(item);
-            if (_unvettedKeysInBatch(nodeOperatorId, end)) {
+            (uint256 nodeOperatorId, uint256 start, uint256 count) = Batch
+                .deserialize(item);
+            NodeOperator storage no = nodeOperators[nodeOperatorId];
+            if (_unvettedKeysInBatch(no, start, count)) {
                 queue.remove(pointer, item);
             }
 
@@ -625,8 +651,10 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
                 break;
             }
 
-            (uint256 nodeOperatorId, , uint256 end) = Batch.deserialize(item);
-            if (_unvettedKeysInBatch(nodeOperatorId, end)) {
+            (uint256 nodeOperatorId, uint256 start, uint256 count) = Batch
+                .deserialize(item);
+            NodeOperator storage no = nodeOperators[nodeOperatorId];
+            if (_unvettedKeysInBatch(no, start, count)) {
                 return (true, pointer);
             }
 
@@ -637,11 +665,11 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
     }
 
     function _unvettedKeysInBatch(
-        uint256 _nodeOperatorId,
-        uint256 _end
+        NodeOperator storage no,
+        uint256 _start,
+        uint256 _count
     ) internal view returns (bool) {
-        NodeOperator storage no = nodeOperators[_nodeOperatorId];
-        return _end < no.totalVettedKeys;
+        return _start + _count > no.totalVettedKeys;
     }
 
     function _incrementNonce() internal {

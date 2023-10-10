@@ -101,17 +101,22 @@ contract StakingRouterIntegrationTest is Test, Utilities {
             _treasuryFee: 500
         });
         uint256[] memory ids = stakingRouter.getStakingModuleIds();
-        (bytes memory keys, bytes memory signatures) = keysSignatures(1);
+        (bytes memory keys, bytes memory signatures) = keysSignatures(2);
         address nodeOperator = address(2);
-        vm.deal(nodeOperator, 2 ether);
+        vm.deal(nodeOperator, 4 ether);
         vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: 2 ether }(
+        csm.addNodeOperatorETH{ value: 4 ether }(
             "test",
             nodeOperator,
-            1,
+            2,
             keys,
             signatures
         );
+
+        {
+            // Pretend to be a key validation oracle
+            csm.setNodeOperatorStakingLimit(0, 2);
+        }
 
         // It's impossible to process deposits if withdrawal requests amount is more than the buffered ether,
         // so we need to make sure that the buffered ether is enough by submitting this tremendous amount.
