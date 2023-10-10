@@ -591,6 +591,8 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         uint256 maxItems,
         bytes32 pointer
     ) external returns (bytes32) {
+        require(maxItems > 0, "Queue walkthrough limit is not set");
+
         if (Batch.isNil(pointer)) {
             pointer = queue.front;
         }
@@ -619,6 +621,8 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         uint256 maxItems,
         bytes32 pointer
     ) external view returns (bool, bytes32) {
+        require(maxItems > 0, "Queue walkthrough limit is not set");
+
         if (Batch.isNil(pointer)) {
             pointer = queue.front;
         }
