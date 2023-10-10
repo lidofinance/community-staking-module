@@ -80,9 +80,11 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         uint256 approvedValidatorsCount
     );
 
+    event StakingModuleTypeSet(bytes32 moduleType);
+
     constructor(bytes32 _type, address _locator) {
         moduleType = _type;
-        nodeOperatorsCount = 0;
+        emit StakingModuleTypeSet(_type);
 
         require(_locator != address(0), "lido locator is zero address");
         lidoLocator = ILidoLocator(_locator);
