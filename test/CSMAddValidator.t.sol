@@ -57,6 +57,10 @@ contract CSMCommon is Test, Fixtures, Utilities, CommunityStakingModuleBase {
     }
 
     function createNodeOperator() internal returns (uint256) {
+        return createNodeOperator("test");
+    }
+
+    function createNodeOperator(string memory name) internal returns (uint256) {
         uint256 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -64,7 +68,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CommunityStakingModuleBase {
         vm.deal(nodeOperator, 2 ether);
         vm.prank(nodeOperator);
         csm.addNodeOperatorETH{ value: 2 ether }(
-            "test",
+            name,
             nodeOperator,
             keysCount,
             keys,
@@ -243,6 +247,15 @@ contract CSMEditNodeOperatorInfo is CSMCommon {
         vm.prank(nodeOperator);
         vm.expectRevert("SAME_NAME");
         csm.setNodeOperatorName(noId, "test");
+    }
+
+    function test_setNodeOperatorName_revertIfNonUniqueName() public {
+        uint256 noId = createNodeOperator("test");
+        createNodeOperator("test2");
+
+        vm.prank(nodeOperator);
+        vm.expectRevert("NAME_ALREADY_EXISTS");
+        csm.setNodeOperatorName(noId, "test2");
     }
 
     function test_setNodeOperatorName_revertIfNotExists() public {

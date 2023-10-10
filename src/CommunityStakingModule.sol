@@ -59,6 +59,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
     bytes32 private moduleType;
     uint256 private nonce;
     mapping(uint256 => NodeOperator) private nodeOperators;
+    mapping(string => uint256) private nodeOperatorIdsByName;
 
     bytes32 public constant SIGNING_KEYS_POSITION =
         keccak256("lido.CommunityStakingModule.signingKeysPosition");
@@ -146,6 +147,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
 
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
+        nodeOperatorIdsByName[_name] = id;
         no.name = _name;
         no.rewardAddress = _rewardAddress;
         no.active = true;
@@ -171,6 +173,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
 
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
+        nodeOperatorIdsByName[_name] = id;
         no.name = _name;
         no.rewardAddress = _rewardAddress;
         no.active = true;
@@ -202,6 +205,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
 
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
+        nodeOperatorIdsByName[_name] = id;
         no.name = _name;
         no.rewardAddress = _rewardAddress;
         no.active = true;
@@ -304,15 +308,23 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         onlyExistingNodeOperator(_nodeOperatorId)
         onlyNodeOperatorManager(_nodeOperatorId)
     {
-        _onlyValidNodeOperatorName(_name);
         require(
             keccak256(bytes(_name)) !=
                 keccak256(bytes(nodeOperators[_nodeOperatorId].name)),
             "SAME_NAME"
         );
+        _onlyValidNodeOperatorName(_name);
 
+        nodeOperatorIdsByName[nodeOperators[_nodeOperatorId].name] = 0;
         nodeOperators[_nodeOperatorId].name = _name;
+        nodeOperatorIdsByName[_name] = _nodeOperatorId;
         emit NodeOperatorNameSet(_nodeOperatorId, _name);
+    }
+
+    function getNodeOperatorIdByName(
+        string memory _name
+    ) external view returns (uint256) {
+        return nodeOperatorIdsByName[_name];
     }
 
     function getNodeOperator(
@@ -530,12 +542,13 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         nonce++;
     }
 
-    function _onlyValidNodeOperatorName(string memory _name) internal pure {
+    function _onlyValidNodeOperatorName(string memory _name) internal view {
         require(
             bytes(_name).length > 0 &&
                 bytes(_name).length <= MAX_NODE_OPERATOR_NAME_LENGTH,
             "WRONG_NAME_LENGTH"
         );
+        require(nodeOperatorIdsByName[_name] == 0, "NAME_ALREADY_EXISTS");
     }
 
     modifier onlyExistingNodeOperator(uint256 _nodeOperatorId) {
