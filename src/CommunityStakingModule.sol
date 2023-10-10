@@ -72,8 +72,8 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
 
     QueueLib.Queue public queue;
 
-    address public bondManagerAddress;
-    address public lidoLocator;
+    ICommunityStakingBondManager public bondManager;
+    ILidoLocator public lidoLocator;
 
     event VettedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
@@ -85,32 +85,17 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         nodeOperatorsCount = 0;
 
         require(_locator != address(0), "lido locator is zero address");
-        lidoLocator = _locator;
+        lidoLocator = ILidoLocator(_locator);
     }
 
-    function setBondManager(address _bondManagerAddress) external {
+    function setBondManager(address _bondManager) external {
         // TODO add role check
-        require(
-            address(bondManagerAddress) == address(0),
-            "already initialized"
-        );
-        bondManagerAddress = _bondManagerAddress;
-    }
-
-    function _bondManager()
-        internal
-        view
-        returns (ICommunityStakingBondManager)
-    {
-        return ICommunityStakingBondManager(bondManagerAddress);
-    }
-
-    function _lidoLocator() internal view returns (ILidoLocator) {
-        return ILidoLocator(lidoLocator);
+        require(address(bondManager) == address(0), "already initialized");
+        bondManager = ICommunityStakingBondManager(_bondManager);
     }
 
     function _lido() internal view returns (ILido) {
-        return ILido(_lidoLocator().lido());
+        return ILido(lidoLocator.lido());
     }
 
     function getType() external view returns (bytes32) {
@@ -157,10 +142,10 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         activeNodeOperatorsCount++;
 
         uint256 requiredEth = _lido().getPooledEthByShares(
-            _bondManager().getRequiredBondSharesForKeys(_keysCount)
+            bondManager.getRequiredBondSharesForKeys(_keysCount)
         );
 
-        _bondManager().depositWstETH(
+        bondManager.depositWstETH(
             msg.sender,
             id,
             _lido().getSharesByPooledEth(requiredEth) // to get wstETH amount
@@ -187,11 +172,11 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
 
-        _bondManager().depositStETH(
+        bondManager.depositStETH(
             msg.sender,
             id,
             _lido().getPooledEthByShares(
-                _bondManager().getRequiredBondSharesForKeys(_keysCount)
+                bondManager.getRequiredBondSharesForKeys(_keysCount)
             )
         );
 
@@ -212,7 +197,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         require(
             msg.value >=
                 _lido().getPooledEthByShares(
-                    _bondManager().getRequiredBondSharesForKeys(_keysCount)
+                    bondManager.getRequiredBondSharesForKeys(_keysCount)
                 ),
             "not enough eth to deposit"
         );
@@ -225,7 +210,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
 
-        _bondManager().depositETH{ value: msg.value }(msg.sender, id);
+        bondManager.depositETH{ value: msg.value }(msg.sender, id);
 
         _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
 
@@ -242,10 +227,10 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         // TODO store keys
 
         uint256 requiredEth = _lido().getPooledEthByShares(
-            _bondManager().getRequiredBondShares(_nodeOperatorId, _keysCount)
+            bondManager.getRequiredBondShares(_nodeOperatorId, _keysCount)
         );
 
-        _bondManager().depositWstETH(
+        bondManager.depositWstETH(
             msg.sender,
             _nodeOperatorId,
             _lido().getSharesByPooledEth(requiredEth) // to get wstETH amount
@@ -263,14 +248,11 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         // TODO sanity checks
         // TODO store keys
 
-        _bondManager().depositStETH(
+        bondManager.depositStETH(
             msg.sender,
             _nodeOperatorId,
             _lido().getPooledEthByShares(
-                _bondManager().getRequiredBondShares(
-                    _nodeOperatorId,
-                    _keysCount
-                )
+                bondManager.getRequiredBondShares(_nodeOperatorId, _keysCount)
             )
         );
 
@@ -289,7 +271,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         require(
             msg.value >=
                 _lido().getPooledEthByShares(
-                    _bondManager().getRequiredBondShares(
+                    bondManager.getRequiredBondShares(
                         _nodeOperatorId,
                         _keysCount
                     )
@@ -297,10 +279,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
             "not enough eth to deposit"
         );
 
-        _bondManager().depositETH{ value: msg.value }(
-            msg.sender,
-            _nodeOperatorId
-        );
+        bondManager.depositETH{ value: msg.value }(msg.sender, _nodeOperatorId);
 
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
     }
