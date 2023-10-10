@@ -140,11 +140,8 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         _onlyValidNodeOperatorName(_name);
 
         require(
-            msg.value >=
-                _lido().getPooledEthByShares(
-                    _bondManager().getRequiredBondSharesForKeys(_keysCount)
-                ),
-            "not enough eth to deposit"
+            msg.value == _bondManager().getRequiredBondETHForKeys(_keysCount),
+            "eth value is not equal to required bond"
         );
 
         uint256 id = nodeOperatorsCount;
@@ -185,9 +182,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         _bondManager().depositStETH(
             msg.sender,
             id,
-            _lido().getPooledEthByShares(
-                _bondManager().getRequiredBondSharesForKeys(_keysCount)
-            )
+            _bondManager().getRequiredBondStETHForKeys(_keysCount)
         );
 
         _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
@@ -260,9 +255,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         _bondManager().depositStETHWithPermit(
             _from,
             id,
-            _lido().getPooledEthByShares(
-                _bondManager().getRequiredBondSharesForKeys(_keysCount)
-            ),
+            _bondManager().getRequiredBondStETHForKeys(_keysCount),
             _permit
         );
 
@@ -290,14 +283,10 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
 
-        uint256 requiredEth = _lido().getPooledEthByShares(
-            _bondManager().getRequiredBondSharesForKeys(_keysCount)
-        );
-
         _bondManager().depositWstETH(
             msg.sender,
             id,
-            _lido().getSharesByPooledEth(requiredEth) // to get wstETH amount
+            _bondManager().getRequiredBondWstETHForKeys(_keysCount)
         );
 
         _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
@@ -367,14 +356,10 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
 
-        uint256 requiredEth = _lido().getPooledEthByShares(
-            _bondManager().getRequiredBondSharesForKeys(_keysCount)
-        );
-
         _bondManager().depositWstETHWithPermit(
             _from,
             id,
-            _lido().getSharesByPooledEth(requiredEth), // to get wstETH amount
+            _bondManager().getRequiredBondWstETHForKeys(_keysCount),
             _permit
         );
 
@@ -393,14 +378,9 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         // TODO store keys
 
         require(
-            msg.value >=
-                _lido().getPooledEthByShares(
-                    _bondManager().getRequiredBondShares(
-                        _nodeOperatorId,
-                        _keysCount
-                    )
-                ),
-            "not enough eth to deposit"
+            msg.value ==
+                _bondManager().getRequiredBondETH(_nodeOperatorId, _keysCount),
+            "eth value is not equal to required bond"
         );
 
         _bondManager().depositETH{ value: msg.value }(
@@ -423,12 +403,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         _bondManager().depositStETH(
             msg.sender,
             _nodeOperatorId,
-            _lido().getPooledEthByShares(
-                _bondManager().getRequiredBondShares(
-                    _nodeOperatorId,
-                    _keysCount
-                )
-            )
+            _bondManager().getRequiredBondStETH(_nodeOperatorId, _keysCount)
         );
 
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
@@ -485,12 +460,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         _bondManager().depositStETHWithPermit(
             _from,
             _nodeOperatorId,
-            _lido().getPooledEthByShares(
-                _bondManager().getRequiredBondShares(
-                    _nodeOperatorId,
-                    _keysCount
-                )
-            ),
+            _bondManager().getRequiredBondStETH(_nodeOperatorId, _keysCount),
             _permit
         );
 
@@ -506,14 +476,10 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         // TODO sanity checks
         // TODO store keys
 
-        uint256 requiredEth = _lido().getPooledEthByShares(
-            _bondManager().getRequiredBondShares(_nodeOperatorId, _keysCount)
-        );
-
         _bondManager().depositWstETH(
             msg.sender,
             _nodeOperatorId,
-            _lido().getSharesByPooledEth(requiredEth) // to get wstETH amount
+            _bondManager().getRequiredBondWstETH(_nodeOperatorId, _keysCount)
         );
 
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
@@ -567,14 +533,10 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         // TODO sanity checks
         // TODO store keys
 
-        uint256 requiredEth = _lido().getPooledEthByShares(
-            _bondManager().getRequiredBondShares(_nodeOperatorId, _keysCount)
-        );
-
         _bondManager().depositWstETHWithPermit(
             _from,
             _nodeOperatorId,
-            _lido().getSharesByPooledEth(requiredEth), // to get wstETH amount
+            _bondManager().getRequiredBondWstETH(_nodeOperatorId, _keysCount),
             _permit
         );
 
