@@ -91,7 +91,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
     }
 
     function setBondManager(address _bondManager) external {
-        // TODO add role check
+        // TODO: add role check
         require(address(bondManager) == address(0), "already initialized");
         bondManager = ICommunityStakingBondManager(_bondManager);
     }
@@ -134,7 +134,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         bytes calldata _publicKeys,
         bytes calldata _signatures
     ) external {
-        // TODO sanity checks
+        // TODO: sanity checks
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
         no.name = _name;
@@ -165,7 +165,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         bytes calldata _publicKeys,
         bytes calldata _signatures
     ) external {
-        // TODO sanity checks
+        // TODO: sanity checks
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
         no.name = _name;
@@ -194,7 +194,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         bytes calldata _publicKeys,
         bytes calldata _signatures
     ) external payable {
-        // TODO sanity checks
+        // TODO: sanity checks
 
         require(
             msg.value >=
@@ -225,8 +225,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         bytes calldata _publicKeys,
         bytes calldata _signatures
     ) external onlyActiveNodeOperator(_nodeOperatorId) {
-        // TODO sanity checks
-        // TODO store keys
+        // TODO: sanity checks
 
         uint256 requiredEth = _lido().getPooledEthByShares(
             bondManager.getRequiredBondShares(_nodeOperatorId, _keysCount)
@@ -247,8 +246,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         bytes calldata _publicKeys,
         bytes calldata _signatures
     ) external onlyActiveNodeOperator(_nodeOperatorId) {
-        // TODO sanity checks
-        // TODO store keys
+        // TODO: sanity checks
 
         bondManager.depositStETH(
             msg.sender,
@@ -267,8 +265,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         bytes calldata _publicKeys,
         bytes calldata _signatures
     ) external payable onlyActiveNodeOperator(_nodeOperatorId) {
-        // TODO sanity checks
-        // TODO store keys
+        // TODO: sanity checks
 
         require(
             msg.value >=
@@ -376,21 +373,21 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
     }
 
     function onRewardsMinted(uint256 /*_totalShares*/) external {
-        // TODO implement
+        // TODO: implement
     }
 
     function updateStuckValidatorsCount(
         bytes calldata /*_nodeOperatorIds*/,
         bytes calldata /*_stuckValidatorsCounts*/
     ) external {
-        // TODO implement
+        // TODO: implement
     }
 
     function updateExitedValidatorsCount(
         bytes calldata _nodeOperatorIds,
         bytes calldata _exitedValidatorsCounts
     ) external {
-        // TODO implement
+        // TODO: implement
         //        emit ExitedKeysCountChanged(
         //            _nodeOperatorId,
         //            _exitedValidatorsCount
@@ -401,7 +398,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         uint256 /*_nodeOperatorId*/,
         uint256 /*_refundedValidatorsCount*/
     ) external {
-        // TODO implement
+        // TODO: implement
     }
 
     function updateTargetValidatorsLimits(
@@ -409,11 +406,11 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         bool /*_isTargetLimitActive*/,
         uint256 /*_targetLimit*/
     ) external {
-        // TODO implement
+        // TODO: implement
     }
 
     function onExitedAndStuckValidatorsCountsUpdated() external {
-        // TODO implement
+        // TODO: implement
     }
 
     function unsafeUpdateValidatorsCount(
@@ -421,7 +418,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         uint256 /*_exitedValidatorsKeysCount*/,
         uint256 /*_stuckValidatorsKeysCount*/
     ) external {
-        // TODO implement
+        // TODO: implement
     }
 
     // NOR signature
