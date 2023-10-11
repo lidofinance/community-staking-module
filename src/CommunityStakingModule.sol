@@ -61,19 +61,20 @@ contract CommunityStakingModuleBase {
 contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
     using QueueLib for QueueLib.Queue;
 
+    bytes32 public constant SIGNING_KEYS_POSITION =
+        keccak256("lido.CommunityStakingModule.signingKeysPosition");
+
+    uint256 public unvettingFee;
+    QueueLib.Queue public queue;
+
+    ICommunityStakingBondManager public bondManager;
+    ILidoLocator public lidoLocator;
+
     uint256 private nodeOperatorsCount;
     uint256 private activeNodeOperatorsCount;
     bytes32 private moduleType;
     uint256 private nonce;
     mapping(uint256 => NodeOperator) private nodeOperators;
-
-    bytes32 public constant SIGNING_KEYS_POSITION =
-        keccak256("lido.CommunityStakingModule.signingKeysPosition");
-
-    QueueLib.Queue public queue;
-
-    ICommunityStakingBondManager public bondManager;
-    ILidoLocator public lidoLocator;
 
     event VettedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
@@ -81,6 +82,24 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
     );
 
     event StakingModuleTypeSet(bytes32 moduleType);
+    event UnvettingFeeSet(uint256 unvettingFee);
+
+    modifier onlyActiveNodeOperator(uint256 _nodeOperatorId) {
+        require(
+            _nodeOperatorId < nodeOperatorsCount,
+            "node operator does not exist"
+        );
+        require(
+            nodeOperators[_nodeOperatorId].active,
+            "node operator is not active"
+        );
+        _;
+    }
+
+    modifier onlyKeyValidator() {
+        // TODO: check the role
+        _;
+    }
 
     constructor(bytes32 _type, address _locator) {
         moduleType = _type;
@@ -94,6 +113,12 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         // TODO: add role check
         require(address(bondManager) == address(0), "already initialized");
         bondManager = ICommunityStakingBondManager(_bondManager);
+    }
+
+    function setUnvettingFee(uint256 unvettingFee_) external {
+        // TODO: add role check
+        unvettingFee = unvettingFee_;
+        emit UnvettingFeeSet(unvettingFee_);
     }
 
     function _lido() internal view returns (ILido) {
@@ -421,20 +446,19 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         // TODO: implement
     }
 
-    // NOR signature
     function setNodeOperatorStakingLimit(
         uint256 _nodeOperatorId,
         uint64 _vettedKeysCount
-    ) external {
+    ) external onlyKeyValidator {
         NodeOperator storage no = nodeOperators[_nodeOperatorId];
 
         require(
             _vettedKeysCount > no.totalVettedKeys,
-            "Current vetted keys pointer is too far"
+            "Wrong _vettedKeysCount: less than already vetted"
         );
         require(
             _vettedKeysCount <= no.totalAddedKeys,
-            "New vetted keys pointer is too far"
+            "Wrong _vettedKeysCount: more than added"
         );
 
         uint64 start = SafeCast.toUint64(
@@ -452,10 +476,19 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         emit VettedSigningKeysCountChanged(_nodeOperatorId, _vettedKeysCount);
     }
 
-    function unvetKeys(uint64 _nodeOperatorId) external {
-        NodeOperator storage no = nodeOperators[_nodeOperatorId];
+    function unvetKeys(uint256 nodeOperatorId) external onlyKeyValidator {
+        _unvetKeys(nodeOperatorId);
+        bondManager.penalize(nodeOperatorId, unvettingFee);
+    }
+
+    function unsafeUnvetKeys(uint256 nodeOperatorId) external onlyKeyValidator {
+        _unvetKeys(nodeOperatorId);
+    }
+
+    function _unvetKeys(uint256 nodeOperatorId) internal {
+        NodeOperator storage no = nodeOperators[nodeOperatorId];
         no.totalVettedKeys = no.totalDepositedKeys;
-        emit VettedSigningKeysCountChanged(_nodeOperatorId, no.totalVettedKeys);
+        emit VettedSigningKeysCountChanged(nodeOperatorId, no.totalVettedKeys);
     }
 
     function onWithdrawalCredentialsChanged() external {
@@ -656,17 +689,5 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
 
     function _incrementNonce() internal {
         nonce++;
-    }
-
-    modifier onlyActiveNodeOperator(uint256 _nodeOperatorId) {
-        require(
-            _nodeOperatorId < nodeOperatorsCount,
-            "node operator does not exist"
-        );
-        require(
-            nodeOperators[_nodeOperatorId].active,
-            "node operator is not active"
-        );
-        _;
     }
 }
