@@ -15,7 +15,7 @@ import { QueueLib } from "./lib/QueueLib.sol";
 import { Batch } from "./lib/Batch.sol";
 
 import "./lib/SigningKeys.sol";
-import "./lib/StringToUint256WithZeroMap.sol";
+import "./lib/Uint256WithZeroMap.sol";
 
 struct NodeOperator {
     string name;
@@ -41,6 +41,10 @@ contract CSModuleBase {
         address rewardAddress
     );
     event NodeOperatorNameSet(uint256 indexed nodeOperatorId, string name);
+    event NodeOperatorRewardAddressSet(
+        uint256 indexed nodeOperatorId,
+        address rewardAddress
+    );
 
     event VettedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
@@ -71,7 +75,8 @@ contract CSModuleBase {
 }
 
 contract CSModule is IStakingModule, CSModuleBase {
-    using StringToUint256WithZeroMap for mapping(string => uint256);
+    using Uint256WithZeroMap for Uint256WithZeroMap.StringMap;
+    using Uint256WithZeroMap for Uint256WithZeroMap.AddressMap;
     using QueueLib for QueueLib.Queue;
 
     uint256 public constant MAX_NODE_OPERATOR_NAME_LENGTH = 255;
@@ -83,13 +88,13 @@ contract CSModule is IStakingModule, CSModuleBase {
 
     ICSAccounting public accounting;
     ILidoLocator public lidoLocator;
-
     uint256 private nodeOperatorsCount;
     uint256 private activeNodeOperatorsCount;
     bytes32 private moduleType;
     uint256 private nonce;
     mapping(uint256 => NodeOperator) private nodeOperators;
-    mapping(string => uint256) private nodeOperatorIdsByName;
+    Uint256WithZeroMap.StringMap private nodeOperatorIdsByName;
+    Uint256WithZeroMap.AddressMap private nodeOperatorIdsByRewardAddress;
 
     uint256 private _totalDepositedValidators;
     uint256 private _totalExitedValidators;
@@ -171,6 +176,7 @@ contract CSModule is IStakingModule, CSModuleBase {
     ) external payable {
         // TODO sanity checks
         _onlyValidNodeOperatorName(_name);
+        _onlyValidRewardAddress(_rewardAddress);
 
         require(
             msg.value == accounting.getRequiredBondETHForKeys(_keysCount),
@@ -180,6 +186,8 @@ contract CSModule is IStakingModule, CSModuleBase {
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
         nodeOperatorIdsByName.set(_name, id);
+        nodeOperatorIdsByRewardAddress.set(_rewardAddress, id);
+
         no.name = _name;
         no.rewardAddress = _rewardAddress;
         no.active = true;
@@ -202,10 +210,13 @@ contract CSModule is IStakingModule, CSModuleBase {
     ) external {
         // TODO: sanity checks
         _onlyValidNodeOperatorName(_name);
+        _onlyValidRewardAddress(_rewardAddress);
 
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
         nodeOperatorIdsByName.set(_name, id);
+        nodeOperatorIdsByRewardAddress.set(_rewardAddress, id);
+
         no.name = _name;
         no.rewardAddress = _rewardAddress;
         no.active = true;
@@ -265,10 +276,13 @@ contract CSModule is IStakingModule, CSModuleBase {
     ) external {
         // TODO sanity checks
         _onlyValidNodeOperatorName(_name);
+        _onlyValidRewardAddress(_rewardAddress);
 
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
         nodeOperatorIdsByName.set(_name, id);
+        nodeOperatorIdsByRewardAddress.set(_rewardAddress, id);
+
         no.name = _name;
         no.rewardAddress = _rewardAddress;
         no.active = true;
@@ -431,6 +445,28 @@ contract CSModule is IStakingModule, CSModuleBase {
         nodeOperators[_nodeOperatorId].name = _name;
         nodeOperatorIdsByName.set(_name, _nodeOperatorId);
         emit NodeOperatorNameSet(_nodeOperatorId, _name);
+    }
+
+    function setNodeOperatorRewardAddress(
+        uint256 nodeOperatorId,
+        address rewardAddress
+    )
+        external
+        onlyExistingNodeOperator(nodeOperatorId)
+        onlyNodeOperatorManager(nodeOperatorId)
+    {
+        require(
+            rewardAddress != nodeOperators[nodeOperatorId].rewardAddress,
+            "SAME_REWARD_ADDRESS"
+        );
+        _onlyValidRewardAddress(rewardAddress);
+
+        nodeOperatorIdsByRewardAddress.remove(
+            nodeOperators[nodeOperatorId].rewardAddress
+        );
+        nodeOperators[nodeOperatorId].rewardAddress = rewardAddress;
+        nodeOperatorIdsByRewardAddress.set(rewardAddress, nodeOperatorId);
+        emit NodeOperatorRewardAddressSet(nodeOperatorId, rewardAddress);
     }
 
     function getNodeOperatorIdByName(
@@ -861,6 +897,15 @@ contract CSModule is IStakingModule, CSModuleBase {
             "WRONG_NAME_LENGTH"
         );
         require(!nodeOperatorIdsByName.exists(_name), "NAME_ALREADY_EXISTS");
+    }
+
+    function _onlyValidRewardAddress(address rewardAddress) internal view {
+        require(rewardAddress != address(0), "ZERO_REWARD_ADDRESS");
+        require(rewardAddress != _lidoLocator().lido(), "LIDO_REWARD_ADDRESS");
+        require(
+            !nodeOperatorIdsByRewardAddress.exists(rewardAddress),
+            "REWARD_ADDRESS_ALREADY_EXISTS"
+        );
     }
 
     modifier onlyExistingNodeOperator(uint256 _nodeOperatorId) {

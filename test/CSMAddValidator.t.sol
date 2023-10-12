@@ -55,19 +55,22 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     }
 
     function createNodeOperator() internal returns (uint256) {
-        return createNodeOperator("test");
+        return createNodeOperator("test", nodeOperator);
     }
 
-    function createNodeOperator(string memory name) internal returns (uint256) {
+    function createNodeOperator(
+        string memory name,
+        address rewardAddress
+    ) internal returns (uint256) {
         uint256 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
-        vm.deal(nodeOperator, 2 ether);
-        vm.prank(nodeOperator);
+        vm.deal(rewardAddress, 2 ether);
+        vm.prank(rewardAddress);
         csm.addNodeOperatorETH{ value: 2 ether }(
             name,
-            nodeOperator,
+            rewardAddress,
             keysCount,
             keys,
             signatures
@@ -404,8 +407,8 @@ contract CSMEditNodeOperatorInfo is CSMCommon {
     }
 
     function test_setNodeOperatorName_revertIfNonUniqueName() public {
-        uint256 noId = createNodeOperator("test");
-        createNodeOperator("test2");
+        uint256 noId = createNodeOperator("test", nodeOperator);
+        createNodeOperator("test2", alice);
 
         vm.prank(nodeOperator);
         vm.expectRevert("NAME_ALREADY_EXISTS");
@@ -416,5 +419,74 @@ contract CSMEditNodeOperatorInfo is CSMCommon {
         vm.prank(nodeOperator);
         vm.expectRevert("node operator does not exist");
         csm.setNodeOperatorName(0, "test");
+    }
+
+    function test_setNodeOperatorRewardAddress() public {
+        uint256 noId = createNodeOperator();
+        vm.prank(nodeOperator);
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit NodeOperatorRewardAddressSet(noId, alice);
+        csm.setNodeOperatorRewardAddress(noId, alice);
+
+        address rewardAddress;
+        (, , rewardAddress, , , , , ) = csm.getNodeOperator(noId, true);
+        assertEq(rewardAddress, alice);
+    }
+
+    function test_setNodeOperatorRewardAddress_revertIfNotManager() public {
+        uint256 noId = createNodeOperator();
+        vm.prank(stranger);
+        vm.expectRevert("sender is not eligible to manage node operator");
+        csm.setNodeOperatorRewardAddress(noId, alice);
+    }
+
+    function test_setNodeOperatorRewardAddress_revertIfSameAddress() public {
+        uint256 noId = createNodeOperator();
+        vm.prank(nodeOperator);
+        vm.expectRevert("SAME_REWARD_ADDRESS");
+        csm.setNodeOperatorRewardAddress(noId, nodeOperator);
+    }
+
+    function test_setNodeOperatorRewardAddress_revertIfNotExists() public {
+        vm.prank(nodeOperator);
+        vm.expectRevert("node operator does not exist");
+        csm.setNodeOperatorRewardAddress(0, alice);
+    }
+
+    function test_setNodeOperatorRewardAddress_revertIfZeroAddress() public {
+        uint256 noId = createNodeOperator();
+        vm.prank(nodeOperator);
+        vm.expectRevert("ZERO_REWARD_ADDRESS");
+        csm.setNodeOperatorRewardAddress(noId, address(0));
+    }
+
+    function test_setNodeOperatorRewardAddress_revertIfLido() public {
+        uint256 noId = createNodeOperator();
+        address lidoAddress = locator.lido();
+
+        vm.prank(nodeOperator);
+        vm.expectRevert("LIDO_REWARD_ADDRESS");
+        csm.setNodeOperatorRewardAddress(noId, lidoAddress);
+    }
+
+    function test_setNodeOperatorRewardAddress_revertIfAddressChanged() public {
+        uint256 noId = createNodeOperator();
+        vm.prank(nodeOperator);
+        csm.setNodeOperatorRewardAddress(noId, alice);
+
+        vm.prank(nodeOperator);
+        vm.expectRevert("sender is not eligible to manage node operator");
+        csm.setNodeOperatorRewardAddress(noId, stranger);
+    }
+
+    function test_setNodeOperatorRewardAddress_revertIfNonUniqueAddress()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        createNodeOperator("test2", alice);
+
+        vm.prank(nodeOperator);
+        vm.expectRevert("REWARD_ADDRESS_ALREADY_EXISTS");
+        csm.setNodeOperatorRewardAddress(noId, alice);
     }
 }
