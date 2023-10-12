@@ -12,12 +12,7 @@ import "./helpers/mocks/LidoMock.sol";
 import "./helpers/mocks/WstETHMock.sol";
 import "./helpers/Utilities.sol";
 
-contract CSMAddNodeOperator is
-    Test,
-    Fixtures,
-    Utilities,
-    CommunityStakingModuleBase
-{
+contract CSMCommon is Test, Fixtures, Utilities, CommunityStakingModuleBase {
     LidoLocatorMock public locator;
     WstETHMock public wstETH;
     LidoMock public stETH;
@@ -61,6 +56,29 @@ contract CSMAddNodeOperator is
         csm.setBondManager(address(bondManager));
     }
 
+    function createNodeOperator() internal returns (uint256) {
+        return createNodeOperator("test");
+    }
+
+    function createNodeOperator(string memory name) internal returns (uint256) {
+        uint256 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        vm.deal(nodeOperator, 2 ether);
+        vm.prank(nodeOperator);
+        csm.addNodeOperatorETH{ value: 2 ether }(
+            name,
+            nodeOperator,
+            keysCount,
+            keys,
+            signatures
+        );
+        return csm.getNodeOperatorsCount() - 1;
+    }
+}
+
+contract CSMAddNodeOperator is CSMCommon {
     function test_AddNodeOperatorWstETH() public {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
@@ -81,19 +99,12 @@ contract CSMAddNodeOperator is
     }
 
     function test_AddValidatorKeysWstETH() public {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.startPrank(nodeOperator);
-        wstETH.wrap(2 ether);
-        csm.addNodeOperatorWstETH("test", nodeOperator, 1, keys, signatures);
-        uint256 noId = csm.getNodeOperatorsCount() - 1;
+        uint256 noId = createNodeOperator();
 
         vm.deal(nodeOperator, 2 ether);
         stETH.submit{ value: 2 ether }(address(0));
         wstETH.wrap(2 ether);
-        (keys, signatures) = keysSignatures(keysCount, 1);
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
         {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalKeysCountChanged(0, 2);
@@ -120,13 +131,8 @@ contract CSMAddNodeOperator is
     }
 
     function test_AddValidatorKeysStETH() public {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorStETH("test", nodeOperator, 1, keys, signatures);
-        uint256 noId = csm.getNodeOperatorsCount() - 1;
+        uint256 noId = createNodeOperator();
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
 
         vm.deal(nodeOperator, 2 ether);
         vm.startPrank(nodeOperator);
@@ -164,20 +170,8 @@ contract CSMAddNodeOperator is
     }
 
     function test_AddValidatorKeysETH() public {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.deal(nodeOperator, 2 ether);
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: 2 ether }(
-            "test",
-            nodeOperator,
-            1,
-            keys,
-            signatures
-        );
-        uint256 noId = csm.getNodeOperatorsCount() - 1;
+        uint256 noId = createNodeOperator();
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
 
         vm.deal(nodeOperator, 2 ether);
         vm.prank(nodeOperator);
@@ -187,7 +181,9 @@ contract CSMAddNodeOperator is
         }
         csm.addValidatorKeysETH{ value: 2 ether }(noId, 1, keys, signatures);
     }
+}
 
+contract CSMObtainDepositData is CSMCommon {
     function test_obtainDepositData_RevertWhenNoMoreKeys() public {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
@@ -209,5 +205,62 @@ contract CSMAddNodeOperator is
 
         vm.expectRevert(bytes("NOT_ENOUGH_KEYS"));
         csm.obtainDepositData(1, "");
+    }
+}
+
+contract CSMEditNodeOperatorInfo is CSMCommon {
+    function test_setNodeOperatorName() public {
+        uint256 noId = createNodeOperator();
+        vm.prank(nodeOperator);
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit NodeOperatorNameSet(noId, "newName");
+        csm.setNodeOperatorName(noId, "newName");
+
+        string memory name;
+        (, name, , , , , , ) = csm.getNodeOperator(noId, true);
+        assertEq(name, "newName");
+    }
+
+    function test_setNodeOperatorName_revertIfNotManager() public {
+        uint256 noId = createNodeOperator();
+        vm.prank(stranger);
+        vm.expectRevert("sender is not eligible to manage node operator");
+        csm.setNodeOperatorName(noId, "newName");
+    }
+
+    function test_setNodeOperatorName_revertIfInvalidLength() public {
+        uint256 noId = createNodeOperator();
+        vm.prank(nodeOperator);
+        vm.expectRevert("WRONG_NAME_LENGTH");
+        csm.setNodeOperatorName(noId, "");
+
+        string memory tooLongName = new string(
+            csm.MAX_NODE_OPERATOR_NAME_LENGTH() + 1
+        );
+        vm.prank(nodeOperator);
+        vm.expectRevert("WRONG_NAME_LENGTH");
+        csm.setNodeOperatorName(noId, tooLongName);
+    }
+
+    function test_setNodeOperatorName_revertIfSameName() public {
+        uint256 noId = createNodeOperator();
+        vm.prank(nodeOperator);
+        vm.expectRevert("SAME_NAME");
+        csm.setNodeOperatorName(noId, "test");
+    }
+
+    function test_setNodeOperatorName_revertIfNonUniqueName() public {
+        uint256 noId = createNodeOperator("test");
+        createNodeOperator("test2");
+
+        vm.prank(nodeOperator);
+        vm.expectRevert("NAME_ALREADY_EXISTS");
+        csm.setNodeOperatorName(noId, "test2");
+    }
+
+    function test_setNodeOperatorName_revertIfNotExists() public {
+        vm.prank(nodeOperator);
+        vm.expectRevert("node operator does not exist");
+        csm.setNodeOperatorName(0, "test");
     }
 }

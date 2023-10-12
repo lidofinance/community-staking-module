@@ -9,6 +9,7 @@ import "./interfaces/ILidoLocator.sol";
 import "./interfaces/ILido.sol";
 
 import "./lib/SigningKeys.sol";
+import "./lib/StringToUint256WithZeroMap.sol";
 
 struct NodeOperator {
     string name;
@@ -33,6 +34,7 @@ contract CommunityStakingModuleBase {
         string name,
         address rewardAddress
     );
+    event NodeOperatorNameSet(uint256 indexed nodeOperatorId, string name);
 
     event VettedKeysCountChanged(
         uint256 indexed nodeOperatorId,
@@ -53,21 +55,23 @@ contract CommunityStakingModuleBase {
 }
 
 contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
+    using StringToUint256WithZeroMap for mapping(string => uint256);
     uint256 private nodeOperatorsCount;
     uint256 private activeNodeOperatorsCount;
     bytes32 private moduleType;
     uint256 private nonce;
     mapping(uint256 => NodeOperator) private nodeOperators;
+    mapping(string => uint256) private nodeOperatorIdsByName;
 
     bytes32 public constant SIGNING_KEYS_POSITION =
         keccak256("lido.CommunityStakingModule.signingKeysPosition");
+    uint256 public constant MAX_NODE_OPERATOR_NAME_LENGTH = 255;
 
     address public bondManagerAddress;
     address public lidoLocator;
 
     constructor(bytes32 _type, address _locator) {
         moduleType = _type;
-        nodeOperatorsCount = 0;
 
         require(_locator != address(0), "lido locator is zero address");
         lidoLocator = _locator;
@@ -125,6 +129,72 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         );
     }
 
+    function addNodeOperatorETH(
+        string calldata _name,
+        address _rewardAddress,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures
+    ) external payable {
+        // TODO sanity checks
+        _onlyValidNodeOperatorName(_name);
+
+        require(
+            msg.value >=
+                _lido().getPooledEthByShares(
+                    _bondManager().getRequiredBondSharesForKeys(_keysCount)
+                ),
+            "not enough eth to deposit"
+        );
+
+        uint256 id = nodeOperatorsCount;
+        NodeOperator storage no = nodeOperators[id];
+        nodeOperatorIdsByName.set(_name, id);
+        no.name = _name;
+        no.rewardAddress = _rewardAddress;
+        no.active = true;
+        nodeOperatorsCount++;
+        activeNodeOperatorsCount++;
+
+        _bondManager().depositETH{ value: msg.value }(msg.sender, id);
+
+        _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
+
+        emit NodeOperatorAdded(id, _name, _rewardAddress);
+    }
+
+    function addNodeOperatorStETH(
+        string calldata _name,
+        address _rewardAddress,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures
+    ) external {
+        // TODO sanity checks
+        _onlyValidNodeOperatorName(_name);
+
+        uint256 id = nodeOperatorsCount;
+        NodeOperator storage no = nodeOperators[id];
+        nodeOperatorIdsByName.set(_name, id);
+        no.name = _name;
+        no.rewardAddress = _rewardAddress;
+        no.active = true;
+        nodeOperatorsCount++;
+        activeNodeOperatorsCount++;
+
+        _bondManager().depositStETH(
+            msg.sender,
+            id,
+            _lido().getPooledEthByShares(
+                _bondManager().getRequiredBondSharesForKeys(_keysCount)
+            )
+        );
+
+        _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
+
+        emit NodeOperatorAdded(id, _name, _rewardAddress);
+    }
+
     function addNodeOperatorWstETH(
         string calldata _name,
         address _rewardAddress,
@@ -133,8 +203,11 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         bytes calldata _signatures
     ) external {
         // TODO sanity checks
+        _onlyValidNodeOperatorName(_name);
+
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
+        nodeOperatorIdsByName.set(_name, id);
         no.name = _name;
         no.rewardAddress = _rewardAddress;
         no.active = true;
@@ -156,118 +229,12 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         emit NodeOperatorAdded(id, _name, _rewardAddress);
     }
 
-    function addNodeOperatorStETH(
-        string calldata _name,
-        address _rewardAddress,
-        uint256 _keysCount,
-        bytes calldata _publicKeys,
-        bytes calldata _signatures
-    ) external {
-        // TODO sanity checks
-        uint256 id = nodeOperatorsCount;
-        NodeOperator storage no = nodeOperators[id];
-        no.name = _name;
-        no.rewardAddress = _rewardAddress;
-        no.active = true;
-        nodeOperatorsCount++;
-        activeNodeOperatorsCount++;
-
-        _bondManager().depositStETH(
-            msg.sender,
-            id,
-            _lido().getPooledEthByShares(
-                _bondManager().getRequiredBondSharesForKeys(_keysCount)
-            )
-        );
-
-        _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
-
-        emit NodeOperatorAdded(id, _name, _rewardAddress);
-    }
-
-    function addNodeOperatorETH(
-        string calldata _name,
-        address _rewardAddress,
-        uint256 _keysCount,
-        bytes calldata _publicKeys,
-        bytes calldata _signatures
-    ) external payable {
-        // TODO sanity checks
-
-        require(
-            msg.value >=
-                _lido().getPooledEthByShares(
-                    _bondManager().getRequiredBondSharesForKeys(_keysCount)
-                ),
-            "not enough eth to deposit"
-        );
-
-        uint256 id = nodeOperatorsCount;
-        NodeOperator storage no = nodeOperators[id];
-        no.name = _name;
-        no.rewardAddress = _rewardAddress;
-        no.active = true;
-        nodeOperatorsCount++;
-        activeNodeOperatorsCount++;
-
-        _bondManager().depositETH{ value: msg.value }(msg.sender, id);
-
-        _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
-
-        emit NodeOperatorAdded(id, _name, _rewardAddress);
-    }
-
-    function addValidatorKeysWstETH(
-        uint256 _nodeOperatorId,
-        uint256 _keysCount,
-        bytes calldata _publicKeys,
-        bytes calldata _signatures
-    ) external onlyActiveNodeOperator(_nodeOperatorId) {
-        // TODO sanity checks
-        // TODO store keys
-
-        uint256 requiredEth = _lido().getPooledEthByShares(
-            _bondManager().getRequiredBondShares(_nodeOperatorId, _keysCount)
-        );
-
-        _bondManager().depositWstETH(
-            msg.sender,
-            _nodeOperatorId,
-            _lido().getSharesByPooledEth(requiredEth) // to get wstETH amount
-        );
-
-        _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
-    }
-
-    function addValidatorKeysStETH(
-        uint256 _nodeOperatorId,
-        uint256 _keysCount,
-        bytes calldata _publicKeys,
-        bytes calldata _signatures
-    ) external onlyActiveNodeOperator(_nodeOperatorId) {
-        // TODO sanity checks
-        // TODO store keys
-
-        _bondManager().depositStETH(
-            msg.sender,
-            _nodeOperatorId,
-            _lido().getPooledEthByShares(
-                _bondManager().getRequiredBondShares(
-                    _nodeOperatorId,
-                    _keysCount
-                )
-            )
-        );
-
-        _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
-    }
-
     function addValidatorKeysETH(
         uint256 _nodeOperatorId,
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures
-    ) external payable onlyActiveNodeOperator(_nodeOperatorId) {
+    ) external payable onlyExistingNodeOperator(_nodeOperatorId) {
         // TODO sanity checks
         // TODO store keys
 
@@ -288,6 +255,78 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         );
 
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
+    }
+
+    function addValidatorKeysStETH(
+        uint256 _nodeOperatorId,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures
+    ) external onlyExistingNodeOperator(_nodeOperatorId) {
+        // TODO sanity checks
+        // TODO store keys
+
+        _bondManager().depositStETH(
+            msg.sender,
+            _nodeOperatorId,
+            _lido().getPooledEthByShares(
+                _bondManager().getRequiredBondShares(
+                    _nodeOperatorId,
+                    _keysCount
+                )
+            )
+        );
+
+        _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
+    }
+
+    function addValidatorKeysWstETH(
+        uint256 _nodeOperatorId,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures
+    ) external onlyExistingNodeOperator(_nodeOperatorId) {
+        // TODO sanity checks
+        // TODO store keys
+
+        uint256 requiredEth = _lido().getPooledEthByShares(
+            _bondManager().getRequiredBondShares(_nodeOperatorId, _keysCount)
+        );
+
+        _bondManager().depositWstETH(
+            msg.sender,
+            _nodeOperatorId,
+            _lido().getSharesByPooledEth(requiredEth) // to get wstETH amount
+        );
+
+        _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
+    }
+
+    function setNodeOperatorName(
+        uint256 _nodeOperatorId,
+        string memory _name
+    )
+        external
+        onlyExistingNodeOperator(_nodeOperatorId)
+        onlyNodeOperatorManager(_nodeOperatorId)
+    {
+        require(
+            keccak256(bytes(_name)) !=
+                keccak256(bytes(nodeOperators[_nodeOperatorId].name)),
+            "SAME_NAME"
+        );
+        _onlyValidNodeOperatorName(_name);
+
+        nodeOperatorIdsByName.remove(nodeOperators[_nodeOperatorId].name);
+        nodeOperators[_nodeOperatorId].name = _name;
+        nodeOperatorIdsByName.set(_name, _nodeOperatorId);
+        emit NodeOperatorNameSet(_nodeOperatorId, _name);
+    }
+
+    function getNodeOperatorIdByName(
+        string memory _name
+    ) external view returns (uint256) {
+        return nodeOperatorIdsByName.get(_name);
     }
 
     function getNodeOperator(
@@ -437,7 +476,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures
-    ) internal onlyActiveNodeOperator(_nodeOperatorId) {
+    ) internal {
         // TODO: sanity checks
         uint256 _startIndex = nodeOperators[_nodeOperatorId].totalAddedKeys;
 
@@ -505,14 +544,27 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         nonce++;
     }
 
-    modifier onlyActiveNodeOperator(uint256 _nodeOperatorId) {
+    function _onlyValidNodeOperatorName(string memory _name) internal view {
+        require(
+            bytes(_name).length > 0 &&
+                bytes(_name).length <= MAX_NODE_OPERATOR_NAME_LENGTH,
+            "WRONG_NAME_LENGTH"
+        );
+        require(!nodeOperatorIdsByName.exists(_name), "NAME_ALREADY_EXISTS");
+    }
+
+    modifier onlyExistingNodeOperator(uint256 _nodeOperatorId) {
         require(
             _nodeOperatorId < nodeOperatorsCount,
             "node operator does not exist"
         );
+        _;
+    }
+
+    modifier onlyNodeOperatorManager(uint256 _nodeOperatorId) {
         require(
-            nodeOperators[_nodeOperatorId].active,
-            "node operator is not active"
+            nodeOperators[_nodeOperatorId].rewardAddress == msg.sender,
+            "sender is not eligible to manage node operator"
         );
         _;
     }
