@@ -56,6 +56,13 @@ contract CommunityStakingModuleBase {
         uint256 indexed nodeOperatorId,
         uint256 totalKeysCount
     );
+    event VettedSigningKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 approvedValidatorsCount
+    );
+
+    event StakingModuleTypeSet(bytes32 moduleType);
+    event UnvettingFeeSet(uint256 unvettingFee);
 }
 
 contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
@@ -75,14 +82,6 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
     bytes32 private moduleType;
     uint256 private nonce;
     mapping(uint256 => NodeOperator) private nodeOperators;
-
-    event VettedSigningKeysCountChanged(
-        uint256 indexed nodeOperatorId,
-        uint256 approvedValidatorsCount
-    );
-
-    event StakingModuleTypeSet(bytes32 moduleType);
-    event UnvettingFeeSet(uint256 unvettingFee);
 
     modifier onlyActiveNodeOperator(uint256 _nodeOperatorId) {
         require(
