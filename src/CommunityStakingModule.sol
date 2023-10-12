@@ -195,6 +195,82 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         emit NodeOperatorAdded(id, _name, _rewardAddress);
     }
 
+    function addNodeOperatorStETHWithPermit(
+        string calldata _name,
+        address _rewardAddress,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures,
+        ICommunityStakingBondManager.PermitInput calldata _permit
+    ) external {
+        return
+            _addNodeOperatorStETHWithPermit(
+                msg.sender,
+                _name,
+                _rewardAddress,
+                _keysCount,
+                _publicKeys,
+                _signatures,
+                _permit
+            );
+    }
+
+    function addNodeOperatorStETHWithPermit(
+        address _from,
+        string calldata _name,
+        address _rewardAddress,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures,
+        ICommunityStakingBondManager.PermitInput calldata _permit
+    ) external {
+        return
+            _addNodeOperatorStETHWithPermit(
+                _from,
+                _name,
+                _rewardAddress,
+                _keysCount,
+                _publicKeys,
+                _signatures,
+                _permit
+            );
+    }
+
+    function _addNodeOperatorStETHWithPermit(
+        address _from,
+        string calldata _name,
+        address _rewardAddress,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures,
+        ICommunityStakingBondManager.PermitInput calldata _permit
+    ) internal {
+        // TODO sanity checks
+        _onlyValidNodeOperatorName(_name);
+
+        uint256 id = nodeOperatorsCount;
+        NodeOperator storage no = nodeOperators[id];
+        nodeOperatorIdsByName.set(_name, id);
+        no.name = _name;
+        no.rewardAddress = _rewardAddress;
+        no.active = true;
+        nodeOperatorsCount++;
+        activeNodeOperatorsCount++;
+
+        _bondManager().depositStETHWithPermit(
+            _from,
+            id,
+            _lido().getPooledEthByShares(
+                _bondManager().getRequiredBondSharesForKeys(_keysCount)
+            ),
+            _permit
+        );
+
+        _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
+
+        emit NodeOperatorAdded(id, _name, _rewardAddress);
+    }
+
     function addNodeOperatorWstETH(
         string calldata _name,
         address _rewardAddress,
@@ -222,6 +298,84 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
             msg.sender,
             id,
             _lido().getSharesByPooledEth(requiredEth) // to get wstETH amount
+        );
+
+        _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
+
+        emit NodeOperatorAdded(id, _name, _rewardAddress);
+    }
+
+    function addNodeOperatorWstETHWithPermit(
+        string calldata _name,
+        address _rewardAddress,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures,
+        ICommunityStakingBondManager.PermitInput calldata _permit
+    ) external {
+        return
+            _addNodeOperatorWstETHWithPermit(
+                msg.sender,
+                _name,
+                _rewardAddress,
+                _keysCount,
+                _publicKeys,
+                _signatures,
+                _permit
+            );
+    }
+
+    function addNodeOperatorWstETHWithPermit(
+        address _from,
+        string calldata _name,
+        address _rewardAddress,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures,
+        ICommunityStakingBondManager.PermitInput calldata _permit
+    ) external {
+        return
+            _addNodeOperatorWstETHWithPermit(
+                _from,
+                _name,
+                _rewardAddress,
+                _keysCount,
+                _publicKeys,
+                _signatures,
+                _permit
+            );
+    }
+
+    function _addNodeOperatorWstETHWithPermit(
+        address _from,
+        string calldata _name,
+        address _rewardAddress,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures,
+        ICommunityStakingBondManager.PermitInput calldata _permit
+    ) internal {
+        // TODO sanity checks
+        _onlyValidNodeOperatorName(_name);
+
+        uint256 id = nodeOperatorsCount;
+        NodeOperator storage no = nodeOperators[id];
+        nodeOperatorIdsByName.set(_name, id);
+        no.name = _name;
+        no.rewardAddress = _rewardAddress;
+        no.active = true;
+        nodeOperatorsCount++;
+        activeNodeOperatorsCount++;
+
+        uint256 requiredEth = _lido().getPooledEthByShares(
+            _bondManager().getRequiredBondSharesForKeys(_keysCount)
+        );
+
+        _bondManager().depositWstETHWithPermit(
+            _from,
+            id,
+            _lido().getSharesByPooledEth(requiredEth), // to get wstETH amount
+            _permit
         );
 
         _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
@@ -280,6 +434,69 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
     }
 
+    function addValidatorKeysStETHWithPermit(
+        uint256 _nodeOperatorId,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures,
+        ICommunityStakingBondManager.PermitInput calldata _permit
+    ) external {
+        return
+            _addValidatorKeysStETHWithPermit(
+                msg.sender,
+                _nodeOperatorId,
+                _keysCount,
+                _publicKeys,
+                _signatures,
+                _permit
+            );
+    }
+
+    function addValidatorKeysStETHWithPermit(
+        address _from,
+        uint256 _nodeOperatorId,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures,
+        ICommunityStakingBondManager.PermitInput calldata _permit
+    ) external {
+        return
+            _addValidatorKeysStETHWithPermit(
+                _from,
+                _nodeOperatorId,
+                _keysCount,
+                _publicKeys,
+                _signatures,
+                _permit
+            );
+    }
+
+    function _addValidatorKeysStETHWithPermit(
+        address _from,
+        uint256 _nodeOperatorId,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures,
+        ICommunityStakingBondManager.PermitInput calldata _permit
+    ) internal onlyExistingNodeOperator(_nodeOperatorId) {
+        // TODO sanity checks
+        // TODO store keys
+
+        _bondManager().depositStETHWithPermit(
+            _from,
+            _nodeOperatorId,
+            _lido().getPooledEthByShares(
+                _bondManager().getRequiredBondShares(
+                    _nodeOperatorId,
+                    _keysCount
+                )
+            ),
+            _permit
+        );
+
+        _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
+    }
+
     function addValidatorKeysWstETH(
         uint256 _nodeOperatorId,
         uint256 _keysCount,
@@ -297,6 +514,68 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
             msg.sender,
             _nodeOperatorId,
             _lido().getSharesByPooledEth(requiredEth) // to get wstETH amount
+        );
+
+        _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
+    }
+
+    function addValidatorKeysWstETHWithPermit(
+        uint256 _nodeOperatorId,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures,
+        ICommunityStakingBondManager.PermitInput calldata _permit
+    ) external {
+        return
+            _addValidatorKeysWstETHWithPermit(
+                msg.sender,
+                _nodeOperatorId,
+                _keysCount,
+                _publicKeys,
+                _signatures,
+                _permit
+            );
+    }
+
+    function addValidatorKeysWstETHWithPermit(
+        address _from,
+        uint256 _nodeOperatorId,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures,
+        ICommunityStakingBondManager.PermitInput calldata _permit
+    ) external {
+        return
+            _addValidatorKeysWstETHWithPermit(
+                _from,
+                _nodeOperatorId,
+                _keysCount,
+                _publicKeys,
+                _signatures,
+                _permit
+            );
+    }
+
+    function _addValidatorKeysWstETHWithPermit(
+        address _from,
+        uint256 _nodeOperatorId,
+        uint256 _keysCount,
+        bytes calldata _publicKeys,
+        bytes calldata _signatures,
+        ICommunityStakingBondManager.PermitInput calldata _permit
+    ) internal onlyExistingNodeOperator(_nodeOperatorId) {
+        // TODO sanity checks
+        // TODO store keys
+
+        uint256 requiredEth = _lido().getPooledEthByShares(
+            _bondManager().getRequiredBondShares(_nodeOperatorId, _keysCount)
+        );
+
+        _bondManager().depositWstETHWithPermit(
+            _from,
+            _nodeOperatorId,
+            _lido().getSharesByPooledEth(requiredEth), // to get wstETH amount
+            _permit
         );
 
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
