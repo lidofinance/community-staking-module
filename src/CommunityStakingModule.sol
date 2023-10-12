@@ -534,11 +534,11 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
             (
                 uint256 nodeOperatorId,
                 uint256 startIndex,
-                uint256 keysCount,
-                bool noMoreKeys
-            ) = _batchDepositableKeys(p, limit);
+                uint256 depositableKeysCount
+            ) = _batchDepositableKeys(p);
 
-            if (noMoreKeys) {
+            uint256 keysCount = Math.min(limit, depositableKeysCount);
+            if (depositableKeysCount == keysCount) {
                 queue.dequeue();
             }
 
@@ -560,7 +560,6 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
                 no.totalDepositedKeys
             );
 
-            // @dev keysCount <= limit, forced by _batchDepositableKeys
             limit = limit - keysCount;
             if (limit == 0) {
                 break;
@@ -573,30 +572,26 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
     }
 
     function _batchDepositableKeys(
-        bytes32 _batch,
-        uint256 _limit
+        bytes32 batch
     )
         internal
         view
         returns (
             uint256 nodeOperatorId,
             uint256 startIndex,
-            uint256 keysCount,
-            bool noMoreKeys
+            uint256 depositableKeysCount
         )
     {
         uint256 start;
         uint256 count;
 
-        (nodeOperatorId, start, count) = Batch.deserialize(_batch);
+        (nodeOperatorId, start, count) = Batch.deserialize(batch);
 
         NodeOperator storage no = nodeOperators[nodeOperatorId];
         _assertIsValidBatch(no, start, count);
 
         startIndex = Math.max(start, no.totalDepositedKeys);
-        uint256 depositableKeysCount = start + count - startIndex;
-        keysCount = Math.min(_limit, depositableKeysCount);
-        noMoreKeys = depositableKeysCount == keysCount;
+        depositableKeysCount = start + count - startIndex;
     }
 
     function _assertIsValidBatch(
