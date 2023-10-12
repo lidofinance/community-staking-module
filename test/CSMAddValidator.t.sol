@@ -28,6 +28,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CommunityStakingModuleBase {
     function setUp() public {
         alice = address(1);
         nodeOperator = address(2);
+        stranger = address(3);
         address[] memory penalizeRoleMembers = new address[](1);
         penalizeRoleMembers[0] = alice;
 
@@ -78,7 +79,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CommunityStakingModuleBase {
     }
 }
 
-contract CSMAddNodeOperator is CSMCommon {
+contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
     function test_AddNodeOperatorWstETH() public {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
@@ -98,6 +99,43 @@ contract CSMAddNodeOperator is CSMCommon {
         assertEq(csm.getNodeOperatorsCount(), 1);
     }
 
+    function test_AddNodeOperatorWstETHWithPermit() public {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        vm.prank(nodeOperator);
+        uint256 wstETHAmount = wstETH.wrap(2 ether);
+
+        {
+            vm.expectEmit(true, true, true, true, address(wstETH));
+            emit Approval(nodeOperator, address(bondManager), wstETHAmount);
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalKeysCountChanged(0, 1);
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit NodeOperatorAdded(0, "test", nodeOperator);
+        }
+
+        vm.prank(stranger);
+        csm.addNodeOperatorWstETHWithPermit(
+            nodeOperator,
+            "test",
+            nodeOperator,
+            1,
+            keys,
+            signatures,
+            ICommunityStakingBondManager.PermitInput({
+                value: wstETHAmount,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+        assertEq(csm.getNodeOperatorsCount(), 1);
+    }
+
     function test_AddValidatorKeysWstETH() public {
         uint256 noId = createNodeOperator();
 
@@ -110,6 +148,45 @@ contract CSMAddNodeOperator is CSMCommon {
             emit TotalKeysCountChanged(0, 2);
         }
         csm.addValidatorKeysWstETH(noId, 1, keys, signatures);
+    }
+
+    function test_AddValidatorKeysWstETHWithPermit() public {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        vm.startPrank(nodeOperator);
+        wstETH.wrap(2 ether);
+        csm.addNodeOperatorWstETH("test", nodeOperator, 1, keys, signatures);
+        uint256 noId = csm.getNodeOperatorsCount() - 1;
+
+        vm.deal(nodeOperator, 2 ether);
+        stETH.submit{ value: 2 ether }(address(0));
+        uint256 wstETHAmount = wstETH.wrap(2 ether);
+        vm.stopPrank();
+        (keys, signatures) = keysSignatures(keysCount, 1);
+        {
+            vm.expectEmit(true, true, true, true, address(wstETH));
+            emit Approval(nodeOperator, address(bondManager), wstETHAmount);
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalKeysCountChanged(0, 2);
+        }
+        vm.prank(stranger);
+        csm.addValidatorKeysWstETHWithPermit(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICommunityStakingBondManager.PermitInput({
+                value: wstETHAmount,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
     }
 
     function test_AddNodeOperatorStETH() public {
@@ -130,6 +207,41 @@ contract CSMAddNodeOperator is CSMCommon {
         assertEq(csm.getNodeOperatorsCount(), 1);
     }
 
+    function test_AddNodeOperatorStETHWithPermit() public {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+
+        {
+            vm.expectEmit(true, true, true, true, address(stETH));
+            emit Approval(nodeOperator, address(bondManager), 2 ether);
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalKeysCountChanged(0, 1);
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit NodeOperatorAdded(0, "test", nodeOperator);
+        }
+
+        vm.prank(stranger);
+        csm.addNodeOperatorStETHWithPermit(
+            nodeOperator,
+            "test",
+            nodeOperator,
+            1,
+            keys,
+            signatures,
+            ICommunityStakingBondManager.PermitInput({
+                value: 2 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+        assertEq(csm.getNodeOperatorsCount(), 1);
+    }
+
     function test_AddValidatorKeysStETH() public {
         uint256 noId = createNodeOperator();
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
@@ -142,6 +254,42 @@ contract CSMAddNodeOperator is CSMCommon {
             emit TotalKeysCountChanged(0, 2);
         }
         csm.addValidatorKeysStETH(noId, 1, keys, signatures);
+    }
+
+    function test_AddValidatorKeysStETHWithPermit() public {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        vm.prank(nodeOperator);
+        csm.addNodeOperatorStETH("test", nodeOperator, 1, keys, signatures);
+        uint256 noId = csm.getNodeOperatorsCount() - 1;
+
+        vm.deal(nodeOperator, 2 ether);
+        vm.prank(nodeOperator);
+        stETH.submit{ value: 2 ether }(address(0));
+        {
+            vm.expectEmit(true, true, true, true, address(stETH));
+            emit Approval(nodeOperator, address(bondManager), 2 ether);
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalKeysCountChanged(0, 2);
+        }
+        vm.prank(stranger);
+        csm.addValidatorKeysStETHWithPermit(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICommunityStakingBondManager.PermitInput({
+                value: 2 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
     }
 
     function test_AddNodeOperatorETH() public {
