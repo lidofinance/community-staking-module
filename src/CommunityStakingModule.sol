@@ -96,6 +96,11 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         _;
     }
 
+    modifier onlyKeyValidatorOrNodeOperatorManager() {
+        // TODO: check the role
+        _;
+    }
+
     modifier onlyKeyValidator() {
         // TODO: check the role
         _;
@@ -476,7 +481,9 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         emit VettedSigningKeysCountChanged(_nodeOperatorId, _vettedKeysCount);
     }
 
-    function unvetKeys(uint256 nodeOperatorId) external onlyKeyValidator {
+    function unvetKeys(
+        uint256 nodeOperatorId
+    ) external onlyKeyValidatorOrNodeOperatorManager {
         _unvetKeys(nodeOperatorId);
         bondManager.penalize(nodeOperatorId, unvettingFee);
     }
