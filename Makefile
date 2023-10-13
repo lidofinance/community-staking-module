@@ -22,6 +22,8 @@ test-integration:
 	forge test --match-path '*test/integration*' -vvv
 coverage:
 	forge coverage
+coverage-lcov:
+	forge coverage --report lcov
 
 anvil-fork:
 	exec anvil -f ${RPC_URL}
@@ -52,5 +54,6 @@ t: test
 tu: test-unit
 ti: test-integration
 c: coverage
+cl: coverage-lcov
 af: anvil-fork
 ak: anvil-kill

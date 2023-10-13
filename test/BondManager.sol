@@ -126,7 +126,12 @@ contract CommunityStakingBondManagerTest is
         vm.deal(user, 64 ether);
         vm.startPrank(user);
         bondManager.depositETH{ value: 64 ether }(0);
-        assertEq(bondManager.getRequiredBondETH(0, 16), 0);
+        assertApproxEqAbs(
+            bondManager.getRequiredBondETH(0, 16),
+            0,
+            1, // max accuracy error
+            "required ETH should be ~0 for 16 validators to deposit"
+        );
     }
 
     function test_getRequiredBondStETH_WithExcessBond() public {
@@ -135,7 +140,12 @@ contract CommunityStakingBondManagerTest is
         vm.startPrank(user);
         stETH.submit{ value: 64 ether }({ _referal: address(0) });
         bondManager.depositStETH(0, 64 ether);
-        assertEq(bondManager.getRequiredBondStETH(0, 16), 0);
+        assertApproxEqAbs(
+            bondManager.getRequiredBondStETH(0, 16),
+            0,
+            1, // max accuracy error
+            "required stETH should be ~0 for 16 validators to deposit"
+        );
     }
 
     function test_getRequiredBondWstETH_WithExcessBond() public {
@@ -144,8 +154,13 @@ contract CommunityStakingBondManagerTest is
         vm.startPrank(user);
         stETH.submit{ value: 64 ether }({ _referal: address(0) });
         uint256 amount = wstETH.wrap(64 ether);
-        bondManager.depositStETH(0, amount);
-        assertEq(bondManager.getRequiredBondWstETH(0, 16), 0);
+        bondManager.depositWstETH(0, amount);
+        assertApproxEqAbs(
+            bondManager.getRequiredBondWstETH(0, 16),
+            0,
+            1, // max accuracy error
+            "required wstETH should be ~0 for 16 validators to deposit"
+        );
     }
 
     function test_getRequiredBondETHForKeys() public {
