@@ -1,0 +1,19 @@
+{
+  "extends": "solhint:recommended",
+  "plugins": ["lido-csm"],
+  "rules": {
+    "no-inline-assembly": "off",
+    "no-unused-import": "error",
+    "func-named-parameters": "error",
+    "func-visibility": ["error", { "ignoreConstructors": true }],
+    "reason-string": ["warn", { "maxLength": 64 }],
+    "immutable-vars-naming": ["warn", { "immutablesAsConstants": true }],
+    "lido-csm/vars-with-underscore": "error",
+    "lido-csm/enum-name-camelcase": "error",
+    "lido-csm/struct-name-camelcase": "error",
+    "lido-csm/interface-member-order": "error",
+    "lido-csm/interface-starts-with-i": "error",
+    "lido-csm/contract-ordering": "error",
+    "lido-csm/license-checker": "error"
+  }
+}
