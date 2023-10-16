@@ -19,7 +19,7 @@ interface ICSModule is IStakingModule {
         returns (
             bool active,
             string memory name,
-            address rewardAddress,
+            address managerAddress,
             uint256 totalVettedValidators,
             uint256 totalExitedValidators,
             uint256 totalWithdrawnValidators, // new
