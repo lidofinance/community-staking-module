@@ -17,6 +17,14 @@ contract CommunityStakingFeeDistributorMock {
         BOND_MANAGER_ADDRESS = _bondManager;
     }
 
+    function getFeesToDistribute(
+        bytes32[] calldata /*rewardProof*/,
+        uint256 /*noIndex*/,
+        uint256 shares
+    ) external returns (uint256) {
+        return shares;
+    }
+
     function distributeFees(
         bytes32[] calldata /*rewardProof*/,
         uint256 noIndex,

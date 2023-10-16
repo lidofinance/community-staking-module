@@ -137,32 +137,38 @@ contract CommunityStakingBondManager is
     /// @param nodeOperatorId id of the node operator to get rewards for.
     /// @return total rewards in ETH
     function getTotalRewardsETH(
-        uint256 nodeOperatorId,
         bytes32[] memory rewardsProof,
+        uint256 nodeOperatorId,
         uint256 cumulativeFeeShares
     ) public view returns (uint256) {
+        (uint256 current, uint256 required) = _currentRequiredBondShares(
+            _getNodeOperatorActiveKeys(nodeOperatorId)
+        );
+        current += _feeDistributor().getFeesToDistribute(
+            rewardsProof,
+            nodeOperatorId,
+            cumulativeFeeShares
+        );
+        uint256 excess = current > required ? current - required : 0;
+        uint256 missing = required > current ? required - current : 0;
         return
-            _lido().getPooledEthByShares(
-                _getTotalRewardsShares(
-                    nodeOperatorId,
-                    rewardsProof,
-                    cumulativeFeeShares
-                )
-            );
+            excess > missing
+                ? _lido().getPooledEthByShares(excess - missing)
+                : 0;
     }
 
     /// @notice Returns total rewards (bond + fees) in stETH for the given node operator.
     /// @param nodeOperatorId id of the node operator to get rewards for.
     /// @return total rewards in stETH
     function getTotalRewardsStETH(
-        uint256 nodeOperatorId,
         bytes32[] memory rewardsProof,
+        uint256 nodeOperatorId,
         uint256 cumulativeFeeShares
     ) public view returns (uint256) {
         return
             getTotalRewardsETH(
-                nodeOperatorId,
                 rewardsProof,
+                nodeOperatorId,
                 cumulativeFeeShares
             );
     }
@@ -171,35 +177,18 @@ contract CommunityStakingBondManager is
     /// @param nodeOperatorId id of the node operator to get rewards for.
     /// @return total rewards in wstETH
     function getTotalRewardsWstETH(
-        uint256 nodeOperatorId,
         bytes32[] memory rewardsProof,
+        uint256 nodeOperatorId,
         uint256 cumulativeFeeShares
     ) public view returns (uint256) {
         return
-            _getTotalRewardsShares(
-                nodeOperatorId,
-                rewardsProof,
-                cumulativeFeeShares
+            WSTETH.getWstETHByStETH(
+                getTotalRewardsStETH(
+                    rewardsProof,
+                    nodeOperatorId,
+                    cumulativeFeeShares
+                )
             );
-    }
-
-    function _getTotalRewardsShares(
-        uint256 nodeOperatorId,
-        bytes32[] memory rewardsProof,
-        uint256 cumulativeFeeShares
-    ) internal view returns (uint256) {
-        uint256 sharesToDistibute = _feeDistributor().getFeesToDistribute(
-            rewardsProof,
-            nodeOperatorId,
-            cumulativeFeeShares
-        );
-        uint256 current = getBondShares(nodeOperatorId) + sharesToDistibute;
-        uint256 required = _lido().getSharesByPooledEth(
-            getRequiredBondETHForKeys(
-                _getNodeOperatorActiveKeys(nodeOperatorId)
-            )
-        );
-        return current > required ? current - required : 0;
     }
 
     /// @notice Returns excess bond ETH for the given node operator.
@@ -208,11 +197,8 @@ contract CommunityStakingBondManager is
     function getExcessBondETH(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
-        uint256 current = _lido().getPooledEthByShares(
-            getBondShares(nodeOperatorId)
-        );
-        uint256 required = getRequiredBondETHForKeys(
-            _getNodeOperatorActiveKeys(nodeOperatorId)
+        (uint256 current, uint256 required) = _currentRequiredBondETH(
+            nodeOperatorId
         );
         return current > required ? current - required : 0;
     }
@@ -232,11 +218,7 @@ contract CommunityStakingBondManager is
     function getExcessBondWstETH(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
-        uint256 current = getBondShares(nodeOperatorId);
-        uint256 required = _getRequiredBondSharesForKeys(
-            _getNodeOperatorActiveKeys(nodeOperatorId)
-        );
-        return current > required ? current - required : 0;
+        return WSTETH.getWstETHByStETH(getExcessBondStETH(nodeOperatorId));
     }
 
     /// @notice Returns the missing bond ETH for the given node operator.
@@ -245,11 +227,8 @@ contract CommunityStakingBondManager is
     function getMissingBondETH(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
-        uint256 current = _lido().getPooledEthByShares(
-            getBondShares(nodeOperatorId)
-        );
-        uint256 required = getRequiredBondETHForKeys(
-            _getNodeOperatorActiveKeys(nodeOperatorId)
+        (uint256 current, uint256 required) = _currentRequiredBondETH(
+            nodeOperatorId
         );
         return required > current ? required - current : 0;
     }
@@ -269,11 +248,7 @@ contract CommunityStakingBondManager is
     function getMissingBondWstETH(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
-        uint256 current = getBondShares(nodeOperatorId);
-        uint256 required = _getRequiredBondSharesForKeys(
-            _getNodeOperatorActiveKeys(nodeOperatorId)
-        );
-        return required > current ? required - current : 0;
+        return WSTETH.getWstETHByStETH(getMissingBondStETH(nodeOperatorId));
     }
 
     /// @notice Returns the required bond ETH (inc. missed and excess) for the given node operator to upload new keys.
@@ -283,18 +258,16 @@ contract CommunityStakingBondManager is
         uint256 nodeOperatorId,
         uint256 additionalKeysCount
     ) public view returns (uint256) {
-        uint256 current = _lido().getPooledEthByShares(
-            getBondShares(nodeOperatorId)
-        );
-        uint256 required = getRequiredBondETHForKeys(
-            _getNodeOperatorActiveKeys(nodeOperatorId)
+        (uint256 current, uint256 required) = _currentRequiredBondETH(
+            nodeOperatorId
         );
         uint256 missing = required > current ? required - current : 0;
         uint256 excess = current > required ? current - required : 0;
         uint256 requiredForKeys = getRequiredBondETHForKeys(
             additionalKeysCount
         );
-        return missing + requiredForKeys - excess;
+        return
+            missing + requiredForKeys - (excess > requiredForKeys ? 0 : excess);
     }
 
     /// @notice Returns the required bond stETH (inc. missed and excess) for the given node operator to upload new keys.
@@ -315,13 +288,10 @@ contract CommunityStakingBondManager is
         uint256 nodeOperatorId,
         uint256 additionalKeysCount
     ) public view returns (uint256) {
-        uint256 current = getBondShares(nodeOperatorId);
-        uint256 required = _getRequiredBondSharesForKeys(
-            _getNodeOperatorActiveKeys(nodeOperatorId) + additionalKeysCount
-        );
-        uint256 missing = required > current ? required - current : 0;
-        uint256 excess = getExcessBondWstETH(nodeOperatorId);
-        return missing > excess ? missing - excess : 0;
+        return
+            WSTETH.getWstETHByStETH(
+                getRequiredBondStETH(nodeOperatorId, additionalKeysCount)
+            );
     }
 
     /// @notice Returns the required bond ETH for the given number of keys.
@@ -339,7 +309,7 @@ contract CommunityStakingBondManager is
     function getRequiredBondStETHForKeys(
         uint256 keysCount
     ) public view returns (uint256) {
-        return keysCount * COMMON_BOND_SIZE;
+        return getRequiredBondETHForKeys(keysCount);
     }
 
     /// @notice Returns the required bond wstETH for the given number of keys.
@@ -364,7 +334,9 @@ contract CommunityStakingBondManager is
     function getUnbondedKeysCount(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
-        return getRequiredBondETH(nodeOperatorId, 0) / COMMON_BOND_SIZE;
+        return
+            getRequiredBondETH(nodeOperatorId, 0) /
+            getRequiredBondETHForKeys(1);
     }
 
     /// @notice Returns the number of keys by the given bond ETH amount
@@ -784,12 +756,27 @@ contract CommunityStakingBondManager is
             nodeOperatorId,
             cumulativeFeeShares
         );
-        uint256 current = getBondShares(nodeOperatorId);
-        uint256 required = _lido().getSharesByPooledEth(
-            getRequiredBondETHForKeys(
-                _getNodeOperatorActiveKeys(nodeOperatorId)
-            )
+        (uint256 current, uint256 required) = _currentRequiredBondShares(
+            nodeOperatorId
         );
         claimableShares = current > required ? current - required : 0;
+    }
+
+    function _currentRequiredBondETH(
+        uint256 nodeOperatorId
+    ) internal view returns (uint256 current, uint256 required) {
+        current = _lido().getPooledEthByShares(getBondShares(nodeOperatorId));
+        required = getRequiredBondETHForKeys(
+            _getNodeOperatorActiveKeys(nodeOperatorId)
+        );
+    }
+
+    function _currentRequiredBondShares(
+        uint256 nodeOperatorId
+    ) internal view returns (uint256 current, uint256 required) {
+        current = getBondShares(nodeOperatorId);
+        required = _getRequiredBondSharesForKeys(
+            _getNodeOperatorActiveKeys(nodeOperatorId)
+        );
     }
 }

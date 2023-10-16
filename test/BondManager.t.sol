@@ -127,8 +127,8 @@ contract CommunityStakingBondManagerTest is
         vm.startPrank(user);
         bondManager.depositETH{ value: 64 ether }(0);
         assertApproxEqAbs(
-            bondManager.getRequiredBondETH(0, 16),
-            0,
+            bondManager.getRequiredBondETH(0, 8),
+            16 ether,
             1, // max accuracy error
             "required ETH should be ~0 for 16 validators to deposit"
         );
@@ -141,8 +141,8 @@ contract CommunityStakingBondManagerTest is
         stETH.submit{ value: 64 ether }({ _referal: address(0) });
         bondManager.depositStETH(0, 64 ether);
         assertApproxEqAbs(
-            bondManager.getRequiredBondStETH(0, 16),
-            0,
+            bondManager.getRequiredBondStETH(0, 8),
+            16 ether,
             1, // max accuracy error
             "required stETH should be ~0 for 16 validators to deposit"
         );
@@ -156,8 +156,8 @@ contract CommunityStakingBondManagerTest is
         uint256 amount = wstETH.wrap(64 ether);
         bondManager.depositWstETH(0, amount);
         assertApproxEqAbs(
-            bondManager.getRequiredBondWstETH(0, 16),
-            0,
+            bondManager.getRequiredBondWstETH(0, 8),
+            wstETH.getWstETHByStETH(16 ether),
             1, // max accuracy error
             "required wstETH should be ~0 for 16 validators to deposit"
         );
@@ -449,7 +449,48 @@ contract CommunityStakingBondManagerTest is
         bondManager.depositStETH(0, 32 ether);
     }
 
-    function test_claimRewardsWstETH() public {
+    function test_getTotalRewardsETH() public {
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
+        vm.deal(address(communityStakingFeeDistributor), 0.1 ether);
+        vm.prank(address(communityStakingFeeDistributor));
+        uint256 sharesAsFee = stETH.submit{ value: 0.1 ether }(address(0));
+        uint256 ETHAsFee = stETH.getPooledEthByShares(sharesAsFee);
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        bondManager.depositETH{ value: 32 ether }(0);
+
+        // todo: should we think about simulate rebase?
+        uint256 totalRewards = bondManager.getTotalRewardsETH(
+            new bytes32[](1),
+            0,
+            sharesAsFee
+        );
+
+        assertEq(totalRewards, ETHAsFee);
+    }
+
+    function test_getTotalRewardsStETH() public {
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
+        vm.deal(address(communityStakingFeeDistributor), 0.1 ether);
+        vm.prank(address(communityStakingFeeDistributor));
+        uint256 sharesAsFee = stETH.submit{ value: 0.1 ether }(address(0));
+        uint256 stETHAsFee = stETH.getPooledEthByShares(sharesAsFee);
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        bondManager.depositStETH(0, 32 ether);
+
+        // todo: should we think about simulate rebase?
+        uint256 totalRewards = bondManager.getTotalRewardsStETH(
+            new bytes32[](1),
+            0,
+            sharesAsFee
+        );
+
+        assertEq(totalRewards, stETHAsFee);
+    }
+
+    function test_getTotalRewardsWstETH() public {
         _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(address(communityStakingFeeDistributor), 0.1 ether);
         vm.prank(address(communityStakingFeeDistributor));
@@ -462,37 +503,85 @@ contract CommunityStakingBondManagerTest is
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
         bondManager.depositStETH(0, 32 ether);
 
-        vm.expectEmit(true, true, true, true, address(bondManager));
-        emit WstETHRewardsClaimed(
+        // todo: should we think about simulate rebase?
+        uint256 totalRewards = bondManager.getTotalRewardsWstETH(
+            new bytes32[](1),
             0,
-            user,
-            wstETH.getWstETHByStETH(stETH.getPooledEthByShares(sharesAsFee))
+            sharesAsFee
         );
 
-        uint256 bondSharesBefore = bondManager.getBondShares(0);
-        bondManager.claimRewardsWstETH(new bytes32[](1), 0, sharesAsFee);
-        uint256 bondSharesAfter = bondManager.getBondShares(0);
+        assertEq(totalRewards, wstETHAsFee);
+    }
 
-        assertEq(
-            wstETH.balanceOf(address(user)),
-            wstETHAsFee,
-            "user balance should be equal to fee reward"
+    function test_getExcessBondETH() public {
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
+        vm.deal(user, 64 ether);
+        vm.startPrank(user);
+        bondManager.depositETH{ value: 64 ether }(0);
+
+        assertApproxEqAbs(bondManager.getExcessBondETH(0), 32 ether, 1);
+    }
+
+    function test_getExcessBondStETH() public {
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
+        vm.deal(user, 64 ether);
+        vm.startPrank(user);
+        bondManager.depositETH{ value: 64 ether }(0);
+
+        assertApproxEqAbs(bondManager.getExcessBondStETH(0), 32 ether, 1);
+    }
+
+    function test_getExcessBondWstETH() public {
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
+        vm.deal(user, 64 ether);
+        vm.startPrank(user);
+        bondManager.depositETH{ value: 64 ether }(0);
+
+        assertApproxEqAbs(
+            bondManager.getExcessBondWstETH(0),
+            wstETH.getWstETHByStETH(32 ether),
+            1
         );
-        assertEq(
-            bondSharesAfter,
-            bondSharesBefore + 1 wei,
-            "bond shares after claim should contain wrapped fee accuracy error"
+    }
+
+    function test_getMissingBondETH() public {
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
+        vm.deal(user, 16 ether);
+        vm.startPrank(user);
+        bondManager.depositETH{ value: 16 ether }(0);
+
+        assertApproxEqAbs(bondManager.getMissingBondETH(0), 16 ether, 1);
+    }
+
+    function test_getMissingBondStETH() public {
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
+        vm.deal(user, 16 ether);
+        vm.startPrank(user);
+        bondManager.depositETH{ value: 16 ether }(0);
+
+        assertApproxEqAbs(bondManager.getMissingBondStETH(0), 16 ether, 1);
+    }
+
+    function test_getMissingBondWstETH() public {
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
+        vm.deal(user, 16 ether);
+        vm.startPrank(user);
+        bondManager.depositETH{ value: 16 ether }(0);
+
+        assertApproxEqAbs(
+            bondManager.getMissingBondWstETH(0),
+            wstETH.getWstETHByStETH(16 ether),
+            1
         );
-        assertEq(
-            wstETH.balanceOf(address(bondManager)),
-            0,
-            "bond manager wstETH balance should be 0"
-        );
-        assertEq(
-            stETH.sharesOf(address(bondManager)),
-            bondSharesBefore + 1 wei,
-            "bond manager after claim should contain wrapped fee accuracy error"
-        );
+    }
+
+    function test_getUnbondedKeysCount() public {
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
+        vm.deal(user, 17.57 ether);
+        vm.startPrank(user);
+        bondManager.depositETH{ value: 17.57 ether }(0);
+
+        assertEq(bondManager.getUnbondedKeysCount(0), 7);
     }
 
     function test_claimRewardsStETH() public {
@@ -539,22 +628,18 @@ contract CommunityStakingBondManagerTest is
         vm.deal(address(communityStakingFeeDistributor), 0.1 ether);
         vm.prank(address(communityStakingFeeDistributor));
         uint256 sharesAsFee = stETH.submit{ value: 0.1 ether }(address(0));
-
+        uint256 sharesToClaim = stETH.getSharesByPooledEth(0.05 ether);
+        uint256 stETHToClaim = stETH.getPooledEthByShares(sharesToClaim);
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
         bondManager.depositStETH(0, 32 ether);
 
         vm.expectEmit(true, true, true, true, address(bondManager));
-        emit StETHRewardsClaimed(
-            0,
-            user,
-            stETH.getPooledEthByShares(stETH.getSharesByPooledEth(0.05 ether))
-        );
+        emit StETHRewardsClaimed(0, user, stETHToClaim);
 
         uint256 bondSharesBefore = bondManager.getBondShares(0);
-        uint256 claimedShares = stETH.getSharesByPooledEth(0.05 ether);
-        uint256 claimedStETH = stETH.getPooledEthByShares(claimedShares);
+
         bondManager.claimRewardsStETH(
             new bytes32[](1),
             0,
@@ -565,12 +650,12 @@ contract CommunityStakingBondManagerTest is
 
         assertEq(
             stETH.balanceOf(address(user)),
-            claimedStETH,
+            stETHToClaim,
             "user balance should be equal to claimed"
         );
         assertEq(
             bondSharesAfter,
-            (bondSharesBefore + sharesAsFee) - claimedShares,
+            (bondSharesBefore + sharesAsFee) - sharesToClaim,
             "bond shares after should be equal to before and fee minus claimed shares"
         );
         assertEq(
@@ -685,22 +770,6 @@ contract CommunityStakingBondManagerTest is
         );
     }
 
-    function test_claimRewardsWstETH_RevertWhenCallerIsNotRewardAddress()
-        public
-    {
-        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                CommunityStakingBondManager.NotOwnerToClaim.selector,
-                stranger,
-                user
-            )
-        );
-        vm.prank(stranger);
-        bondManager.claimRewardsWstETH(new bytes32[](1), 0, 1, 1 ether);
-    }
-
     function test_claimRewardsStETH_RevertWhenCallerIsNotRewardAddress()
         public
     {
@@ -715,6 +784,112 @@ contract CommunityStakingBondManagerTest is
         );
         vm.prank(stranger);
         bondManager.claimRewardsStETH(new bytes32[](1), 0, 1, 1 ether);
+    }
+
+    function test_claimRewardsWstETH() public {
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
+        vm.deal(address(communityStakingFeeDistributor), 0.1 ether);
+        vm.prank(address(communityStakingFeeDistributor));
+        uint256 sharesAsFee = stETH.submit{ value: 0.1 ether }(address(0));
+        uint256 wstETHAsFee = wstETH.getWstETHByStETH(
+            stETH.getPooledEthByShares(sharesAsFee)
+        );
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        bondManager.depositStETH(0, 32 ether);
+
+        vm.expectEmit(true, true, true, true, address(bondManager));
+        emit WstETHRewardsClaimed(0, user, wstETHAsFee);
+
+        uint256 bondSharesBefore = bondManager.getBondShares(0);
+        bondManager.claimRewardsWstETH(new bytes32[](1), 0, sharesAsFee);
+        uint256 bondSharesAfter = bondManager.getBondShares(0);
+
+        assertEq(
+            wstETH.balanceOf(address(user)),
+            wstETHAsFee,
+            "user balance should be equal to fee reward"
+        );
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore + 1 wei,
+            "bond shares after claim should contain wrapped fee accuracy error"
+        );
+        assertEq(
+            wstETH.balanceOf(address(bondManager)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(bondManager)),
+            bondSharesBefore + 1 wei,
+            "bond manager after claim should contain wrapped fee accuracy error"
+        );
+    }
+
+    function test_claimRewardsWstETH_WithDesirableValue() public {
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
+        vm.deal(address(communityStakingFeeDistributor), 0.1 ether);
+        vm.prank(address(communityStakingFeeDistributor));
+        uint256 sharesAsFee = stETH.submit{ value: 0.1 ether }(address(0));
+        uint256 sharesToClaim = stETH.getSharesByPooledEth(0.05 ether);
+        uint256 wstETHToClaim = wstETH.getWstETHByStETH(
+            stETH.getPooledEthByShares(sharesToClaim)
+        );
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        bondManager.depositStETH(0, 32 ether);
+
+        vm.expectEmit(true, true, true, true, address(bondManager));
+        emit WstETHRewardsClaimed(0, user, wstETHToClaim);
+
+        uint256 bondSharesBefore = bondManager.getBondShares(0);
+        bondManager.claimRewardsWstETH(
+            new bytes32[](1),
+            0,
+            sharesAsFee,
+            stETH.getSharesByPooledEth(0.05 ether)
+        );
+        uint256 bondSharesAfter = bondManager.getBondShares(0);
+
+        assertEq(
+            wstETH.balanceOf(address(user)),
+            wstETHToClaim,
+            "user balance should be equal to fee reward"
+        );
+        assertEq(
+            bondSharesAfter,
+            (bondSharesBefore + sharesAsFee) - wstETHToClaim,
+            "bond shares after should be equal to before and fee minus claimed shares"
+        );
+        assertEq(
+            wstETH.balanceOf(address(bondManager)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(bondManager)),
+            (bondSharesBefore + sharesAsFee) - wstETHToClaim,
+            "bond shares after should be equal to before and fee minus claimed shares"
+        );
+    }
+
+    function test_claimRewardsWstETH_RevertWhenCallerIsNotRewardAddress()
+        public
+    {
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CommunityStakingBondManager.NotOwnerToClaim.selector,
+                stranger,
+                user
+            )
+        );
+        vm.prank(stranger);
+        bondManager.claimRewardsWstETH(new bytes32[](1), 0, 1, 1 ether);
     }
 
     function test_penalize_LessThanDeposit() public {
