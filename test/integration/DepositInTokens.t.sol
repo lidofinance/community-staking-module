@@ -41,7 +41,7 @@ contract DepositIntegrationTest is Test, PermitHelper {
                 keccak256(abi.encodePacked(""))
         );
 
-        networkFork = vm.createFork(RPC_URL);
+        networkFork = vm.createFork(RPC_URL, 17266005);
         vm.selectFork(networkFork);
 
         locator = ILidoLocator(vm.parseAddress(LIDO_LOCATOR_ADDRESS));
