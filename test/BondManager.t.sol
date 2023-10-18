@@ -128,9 +128,9 @@ contract CommunityStakingBondManagerTest is
         bondManager.depositETH{ value: 64 ether }(0);
         assertApproxEqAbs(
             bondManager.getRequiredBondETH(0, 8),
-            16 ether,
+            0,
             1, // max accuracy error
-            "required ETH should be ~0 for 16 validators to deposit"
+            "required ETH should be ~0 for the next 16 validators to deposit"
         );
     }
 
@@ -142,9 +142,9 @@ contract CommunityStakingBondManagerTest is
         bondManager.depositStETH(0, 64 ether);
         assertApproxEqAbs(
             bondManager.getRequiredBondStETH(0, 8),
-            16 ether,
+            0,
             1, // max accuracy error
-            "required stETH should be ~0 for 16 validators to deposit"
+            "required stETH should be ~0 for the next 16 validators to deposit"
         );
     }
 
@@ -157,9 +157,9 @@ contract CommunityStakingBondManagerTest is
         bondManager.depositWstETH(0, amount);
         assertApproxEqAbs(
             bondManager.getRequiredBondWstETH(0, 8),
-            wstETH.getWstETHByStETH(16 ether),
+            0,
             1, // max accuracy error
-            "required wstETH should be ~0 for 16 validators to deposit"
+            "required wstETH should be ~0 for the next 16 validators to deposit"
         );
     }
 
