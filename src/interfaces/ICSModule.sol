@@ -7,23 +7,20 @@ import { IStakingModule } from "./IStakingModule.sol";
 
 /// @title Lido's Community Staking Module interface
 interface ICSModule is IStakingModule {
+    struct NodeOperatorInfo {
+        bool active;
+        address managerAddress;
+        address rewardAddress;
+        uint256 totalVettedValidators;
+        uint256 totalExitedValidators;
+        uint256 totalWithdrawnValidators;
+        uint256 totalAddedValidators;
+        uint256 totalDepositedValidators;
+    }
     /// @notice Returns the node operator by id
-    /// @param _nodeOperatorId Node Operator id
-    /// @param _fullInfo If true, name will be returned as well
-    function getNodeOperator(
-        uint256 _nodeOperatorId,
-        bool _fullInfo
-    )
+    /// @param nodeOperatorId Node Operator id
+    function getNodeOperator(uint256 nodeOperatorId)
         external
         view
-        returns (
-            bool active,
-            string memory name,
-            address managerAddress,
-            uint256 totalVettedValidators,
-            uint256 totalExitedValidators,
-            uint256 totalWithdrawnValidators, // new
-            uint256 totalAddedValidators,
-            uint256 totalDepositedValidators
-        );
+        returns (NodeOperatorInfo memory);
 }

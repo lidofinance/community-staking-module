@@ -359,8 +359,7 @@ contract CsmSetNodeOperatorName is CSMCommon {
         emit NodeOperatorNameSet(noId, "newName");
         csm.setNodeOperatorName(noId, "newName");
 
-        string memory name;
-        (, name, , , , , , ) = csm.getNodeOperator(noId, true);
+        string memory name = csm.getNodeOperatorName(noId);
         assertEq(name, "newName");
     }
 
@@ -408,129 +407,18 @@ contract CsmSetNodeOperatorName is CSMCommon {
     }
 }
 
-contract CsmRequestNodeOperatorManagerAddressChange is CSMCommon {
-    function test_requestNodeOperatorManagerAddressChange() public {
-        uint256 noId = createNodeOperator();
-        vm.prank(nodeOperator);
-        vm.expectEmit(true, true, false, true, address(csm));
-        emit NodeOperatorManagerAddressChangeRequested(noId, alice);
-        csm.requestNodeOperatorManagerAddressChange(alice);
-
-        address managerAddress;
-        (, , managerAddress, , , , , ) = csm.getNodeOperator(noId, true);
-        assertEq(managerAddress, nodeOperator);
-    }
-
-    function test_requestNodeOperatorManagerAddressChange_revertIfSameAddress()
-        public
-    {
-        createNodeOperator();
-        vm.prank(nodeOperator);
-        vm.expectRevert(ExistingManagerAddress.selector);
-        csm.requestNodeOperatorManagerAddressChange(nodeOperator);
-    }
-
-    function test_requestNodeOperatorManagerAddressChange_revertIfNotExists()
-        public
-    {
-        vm.prank(nodeOperator);
-        vm.expectRevert(SenderIsNotManager.selector);
-        csm.requestNodeOperatorManagerAddressChange(alice);
-    }
-
-    function test_requestNodeOperatorManagerAddressChange_revertIfNonUniqueAddress()
-        public
-    {
-        createNodeOperator();
-        createNodeOperator("test2", alice);
-
-        vm.prank(nodeOperator);
-        vm.expectRevert(ExistingManagerAddress.selector);
-        csm.requestNodeOperatorManagerAddressChange(alice);
-    }
-
-    function test_requestNodeOperatorManagerAddressChange_revertIfNonUniqueRequestAddress()
-        public
-    {
-        createNodeOperator();
-        createNodeOperator("test2", alice);
-
-        vm.prank(alice);
-        csm.requestNodeOperatorManagerAddressChange(stranger);
-
-        vm.prank(nodeOperator);
-        vm.expectRevert(ExistingManagerAddress.selector);
-        csm.requestNodeOperatorManagerAddressChange(stranger);
-    }
-
-    function test_requestNodeOperatorManagerAddressChange_revertIfAddressChanged()
-        public
-    {
-        createNodeOperator();
-        vm.prank(nodeOperator);
-        csm.requestNodeOperatorManagerAddressChange(alice);
-        vm.prank(alice);
-        csm.confirmNodeOperatorManagerAddress();
-
-        vm.prank(nodeOperator);
-        vm.expectRevert(SenderIsNotManager.selector);
-        csm.requestNodeOperatorManagerAddressChange(stranger);
-    }
+contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
 }
 
-contract CsmConfirmNodeOperatorManagerAddress is CSMCommon {
-    function test_confirmNodeOperatorManagerAddress() public {
-        uint256 noId = createNodeOperator();
-        vm.prank(nodeOperator);
-        csm.requestNodeOperatorManagerAddressChange(alice);
-        vm.prank(alice);
+contract CsmConfirmNodeOperatorManagerAddressChange is CSMCommon {
+}
 
-        vm.expectEmit(true, true, false, true, address(csm));
-        emit NodeOperatorManagerAddressChanged(noId, alice);
-        csm.confirmNodeOperatorManagerAddress();
+contract CsmProposeNodeOperatorRewardAddressChange is CSMCommon {
 
-        address managerAddress;
-        (, , managerAddress, , , , , ) = csm.getNodeOperator(noId, true);
-        assertEq(managerAddress, alice);
-    }
+}
 
-    function test_confirmNodeOperatorManagerAddress_returnAddressBack() public {
-        uint256 noId = createNodeOperator();
-        vm.prank(nodeOperator);
-        csm.requestNodeOperatorManagerAddressChange(alice);
-        vm.prank(alice);
-        csm.confirmNodeOperatorManagerAddress();
+contract CsmConfirmNodeOperatorRewardAddressChange is CSMCommon {
+}
 
-        vm.prank(alice);
-        csm.requestNodeOperatorManagerAddressChange(nodeOperator);
-        vm.prank(nodeOperator);
-        csm.confirmNodeOperatorManagerAddress();
-
-        address managerAddress;
-        (, , managerAddress, , , , , ) = csm.getNodeOperator(noId, true);
-        assertEq(managerAddress, nodeOperator);
-    }
-
-    function test_confirmNodeOperatorManagerAddress_revertIfNotRequested()
-        public
-    {
-        createNodeOperator();
-        vm.prank(nodeOperator);
-        vm.expectRevert(NoManagerAddressChangeRequestFromSender.selector);
-        csm.confirmNodeOperatorManagerAddress();
-    }
-
-    function test_confirmNodeOperatorManagerAddress_revertIfDoubleConfirm()
-        public
-    {
-        createNodeOperator();
-        vm.prank(nodeOperator);
-        csm.requestNodeOperatorManagerAddressChange(alice);
-        vm.prank(alice);
-        csm.confirmNodeOperatorManagerAddress();
-
-        vm.prank(alice);
-        vm.expectRevert(NoManagerAddressChangeRequestFromSender.selector);
-        csm.confirmNodeOperatorManagerAddress();
-    }
+contract CsmResetNodeOperatorManagerAddress is CSMCommon {
 }

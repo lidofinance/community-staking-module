@@ -15,6 +15,18 @@ contract CommunityStakingModuleMock {
         uint64 totalDepositedValidators;
     }
 
+    struct NodeOperatorInfo {
+        bool active;
+        address managerAddress;
+        address rewardAddress;
+        uint256 totalVettedValidators;
+        uint256 totalExitedValidators;
+        uint256 totalWithdrawnValidators;
+        uint256 totalAddedValidators;
+        uint256 totalDepositedValidators;
+    }
+
+
     mapping(uint256 => NodeOperator) public nodeOperators;
     uint256 public totalNodeOperatorsCount;
 
@@ -45,36 +57,23 @@ contract CommunityStakingModuleMock {
     }
 
     /// @notice Returns the node operator by id
-    /// @param _nodeOperatorId Node Operator id
-    /// @param _fullInfo If true, name will be returned as well
-    function getNodeOperator(
-        uint256 _nodeOperatorId,
-        bool _fullInfo
-    )
-        external
-        view
-        returns (
-            bool active,
-            string memory name,
-            address rewardAddress,
-            uint64 totalVettedValidators,
-            uint64 totalExitedValidators,
-            uint64 totalWithdrawnValidators, // new
-            uint64 totalAddedValidators,
-            uint64 totalDepositedValidators
-        )
+    /// @param nodeOperatorId Node Operator id
+    function getNodeOperator(uint256 nodeOperatorId)
+    external
+    view
+    returns (NodeOperatorInfo memory)
     {
-        NodeOperator memory nodeOperator = nodeOperators[_nodeOperatorId];
-        active = nodeOperator.active;
-        rewardAddress = nodeOperator.rewardAddress;
-        totalVettedValidators = nodeOperator.totalVettedValidators;
-        totalExitedValidators = nodeOperator.totalExitedValidators;
-        totalWithdrawnValidators = nodeOperator.totalWithdrawnValidators;
-        totalAddedValidators = nodeOperator.totalAddedValidators;
-        totalDepositedValidators = nodeOperator.totalDepositedValidators;
-        if (_fullInfo) {
-            name = nodeOperator.name;
-        }
+        NodeOperator memory no = nodeOperators[nodeOperatorId];
+        NodeOperatorInfo memory info;
+        info.active = no.active;
+        info.managerAddress = no.rewardAddress;
+        info.rewardAddress = no.rewardAddress;
+        info.totalVettedValidators = no.totalVettedValidators;
+        info.totalExitedValidators = no.totalExitedValidators;
+        info.totalWithdrawnValidators = no.totalWithdrawnValidators;
+        info.totalAddedValidators = no.totalAddedValidators;
+        info.totalDepositedValidators = no.totalDepositedValidators;
+        return info;
     }
 
     function addValidator(uint256 _nodeOperatorId, uint256 _valsToAdd) public {
