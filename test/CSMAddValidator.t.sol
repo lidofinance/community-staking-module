@@ -55,11 +55,10 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     }
 
     function createNodeOperator() internal returns (uint256) {
-        return createNodeOperator("test", nodeOperator);
+        return createNodeOperator(nodeOperator);
     }
 
     function createNodeOperator(
-        string memory name,
         address managerAddress
     ) internal returns (uint256) {
         uint256 keysCount = 1;
@@ -69,7 +68,6 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         vm.deal(managerAddress, 2 ether);
         vm.prank(managerAddress);
         csm.addNodeOperatorETH{ value: 2 ether }(
-            name,
             keysCount,
             keys,
             signatures
@@ -91,10 +89,10 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, "test", nodeOperator);
+            emit NodeOperatorAdded(0, nodeOperator);
         }
 
-        csm.addNodeOperatorWstETH("test", 1, keys, signatures);
+        csm.addNodeOperatorWstETH(1, keys, signatures);
         assertEq(csm.getNodeOperatorsCount(), 1);
     }
 
@@ -199,11 +197,11 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, "test", nodeOperator);
+            emit NodeOperatorAdded(0, nodeOperator);
         }
 
         vm.prank(nodeOperator);
-        csm.addNodeOperatorStETH("test", 1, keys, signatures);
+        csm.addNodeOperatorStETH(1, keys, signatures);
         assertEq(csm.getNodeOperatorsCount(), 1);
     }
 
@@ -304,11 +302,11 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, "test", nodeOperator);
+            emit NodeOperatorAdded(0, nodeOperator);
         }
 
         vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: 2 ether }("test", 1, keys, signatures);
+        csm.addNodeOperatorETH{ value: 2 ether }(1, keys, signatures);
         assertEq(csm.getNodeOperatorsCount(), 1);
     }
 
@@ -335,7 +333,7 @@ contract CSMObtainDepositData is CSMCommon {
         );
         vm.deal(nodeOperator, 2 ether);
         vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: 2 ether }("test", 1, keys, signatures);
+        csm.addNodeOperatorETH{ value: 2 ether }(1, keys, signatures);
 
         {
             // Pretend to be a key validation oracle
@@ -348,62 +346,6 @@ contract CSMObtainDepositData is CSMCommon {
 
         vm.expectRevert(bytes("NOT_ENOUGH_KEYS"));
         csm.obtainDepositData(1, "");
-    }
-}
-
-contract CsmSetNodeOperatorName is CSMCommon {
-    function test_setNodeOperatorName() public {
-        uint256 noId = createNodeOperator();
-        vm.prank(nodeOperator);
-        vm.expectEmit(true, true, false, true, address(csm));
-        emit NodeOperatorNameSet(noId, "newName");
-        csm.setNodeOperatorName(noId, "newName");
-
-        string memory name = csm.getNodeOperatorName(noId);
-        assertEq(name, "newName");
-    }
-
-    function test_setNodeOperatorName_revertIfNotManager() public {
-        uint256 noId = createNodeOperator();
-        vm.prank(stranger);
-        vm.expectRevert("sender is not eligible to manage node operator");
-        csm.setNodeOperatorName(noId, "newName");
-    }
-
-    function test_setNodeOperatorName_revertIfInvalidLength() public {
-        uint256 noId = createNodeOperator();
-        vm.prank(nodeOperator);
-        vm.expectRevert("WRONG_NAME_LENGTH");
-        csm.setNodeOperatorName(noId, "");
-
-        string memory tooLongName = new string(
-            csm.MAX_NODE_OPERATOR_NAME_LENGTH() + 1
-        );
-        vm.prank(nodeOperator);
-        vm.expectRevert("WRONG_NAME_LENGTH");
-        csm.setNodeOperatorName(noId, tooLongName);
-    }
-
-    function test_setNodeOperatorName_revertIfSameName() public {
-        uint256 noId = createNodeOperator();
-        vm.prank(nodeOperator);
-        vm.expectRevert("SAME_NAME");
-        csm.setNodeOperatorName(noId, "test");
-    }
-
-    function test_setNodeOperatorName_revertIfNonUniqueName() public {
-        uint256 noId = createNodeOperator("test", nodeOperator);
-        createNodeOperator("test2", alice);
-
-        vm.prank(nodeOperator);
-        vm.expectRevert("NAME_ALREADY_EXISTS");
-        csm.setNodeOperatorName(noId, "test2");
-    }
-
-    function test_setNodeOperatorName_revertIfNotExists() public {
-        vm.prank(nodeOperator);
-        vm.expectRevert("node operator does not exist");
-        csm.setNodeOperatorName(0, "test");
     }
 }
 

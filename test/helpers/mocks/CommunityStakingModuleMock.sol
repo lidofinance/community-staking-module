@@ -6,7 +6,6 @@ pragma solidity 0.8.21;
 contract CommunityStakingModuleMock {
     struct NodeOperator {
         bool active;
-        string name;
         address rewardAddress;
         uint64 totalVettedValidators;
         uint64 totalExitedValidators;
@@ -35,7 +34,6 @@ contract CommunityStakingModuleMock {
     function setNodeOperator(
         uint256 _nodeOperatorId,
         bool _active,
-        string memory _name,
         address _rewardAddress,
         uint64 _totalVettedValidators,
         uint64 _totalExitedValidators,
@@ -45,7 +43,6 @@ contract CommunityStakingModuleMock {
     ) external {
         nodeOperators[_nodeOperatorId] = NodeOperator(
             _active,
-            _name,
             _rewardAddress,
             _totalVettedValidators,
             _totalExitedValidators,
