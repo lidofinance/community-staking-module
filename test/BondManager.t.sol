@@ -63,8 +63,12 @@ contract CommunityStakingBondManagerTest is
     }
 
     function test_totalBondShares() public {
-        stETH.mintShares(address(bondManager), 32 * 1e18);
-        assertEq(bondManager.totalBondShares(), 32 * 1e18);
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        bondManager.depositETH{ value: 32 ether }(0);
+        uint256 sharesToDeposit = stETH.getSharesByPooledEth(32 ether);
+        assertEq(bondManager.totalBondShares(), sharesToDeposit);
     }
 
     function test_getRequiredBondETH() public {
@@ -127,7 +131,7 @@ contract CommunityStakingBondManagerTest is
         vm.startPrank(user);
         bondManager.depositETH{ value: 64 ether }(0);
         assertApproxEqAbs(
-            bondManager.getRequiredBondETH(0, 8),
+            bondManager.getRequiredBondETH(0, 16),
             0,
             1, // max accuracy error
             "required ETH should be ~0 for the next 16 validators to deposit"
@@ -141,7 +145,7 @@ contract CommunityStakingBondManagerTest is
         stETH.submit{ value: 64 ether }({ _referal: address(0) });
         bondManager.depositStETH(0, 64 ether);
         assertApproxEqAbs(
-            bondManager.getRequiredBondStETH(0, 8),
+            bondManager.getRequiredBondStETH(0, 16),
             0,
             1, // max accuracy error
             "required stETH should be ~0 for the next 16 validators to deposit"
@@ -156,7 +160,7 @@ contract CommunityStakingBondManagerTest is
         uint256 amount = wstETH.wrap(64 ether);
         bondManager.depositWstETH(0, amount);
         assertApproxEqAbs(
-            bondManager.getRequiredBondWstETH(0, 8),
+            bondManager.getRequiredBondWstETH(0, 16),
             0,
             1, // max accuracy error
             "required wstETH should be ~0 for the next 16 validators to deposit"

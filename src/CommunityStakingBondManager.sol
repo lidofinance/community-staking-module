@@ -62,6 +62,7 @@ contract CommunityStakingBondManager is
         keccak256("PENALIZE_BOND_ROLE");
     address public FEE_DISTRIBUTOR;
 
+    uint256 public totalBondShares;
     mapping(uint256 => uint256) private bondShares;
 
     ILidoLocator private immutable LIDO_LOCATOR;
@@ -116,12 +117,6 @@ contract CommunityStakingBondManager is
         address _fdAddress
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         FEE_DISTRIBUTOR = _fdAddress;
-    }
-
-    /// @notice Returns the total bond shares.
-    /// @return total bond shares.
-    function totalBondShares() public view returns (uint256) {
-        return _lido().sharesOf(address(this));
     }
 
     /// @notice Returns the bond shares for the given node operator.
@@ -386,6 +381,7 @@ contract CommunityStakingBondManager is
         );
         uint256 shares = _lido().submit{ value: msg.value }(address(0));
         bondShares[nodeOperatorId] += shares;
+        totalBondShares += shares;
         emit ETHBondDeposited(nodeOperatorId, from, msg.value);
         return shares;
     }
@@ -423,6 +419,7 @@ contract CommunityStakingBondManager is
         uint256 shares = _sharesByEth(stETHAmount);
         _lido().transferSharesFrom(from, address(this), shares);
         bondShares[nodeOperatorId] += shares;
+        totalBondShares += shares;
         emit StETHBondDeposited(nodeOperatorId, from, stETHAmount);
         return shares;
     }
@@ -512,6 +509,7 @@ contract CommunityStakingBondManager is
         uint256 stETHAmount = WSTETH.unwrap(wstETHAmount);
         uint256 shares = _sharesByEth(stETHAmount);
         bondShares[nodeOperatorId] += shares;
+        totalBondShares += shares;
         emit WstETHBondDeposited(nodeOperatorId, from, wstETHAmount);
         return shares;
     }
@@ -598,6 +596,7 @@ contract CommunityStakingBondManager is
             claimableShares
         );
         bondShares[nodeOperatorId] -= claimableShares;
+        totalBondShares -= claimableShares;
         emit StETHRewardsClaimed(
             nodeOperatorId,
             rewardAddress,
@@ -635,6 +634,7 @@ contract CommunityStakingBondManager is
             claimableShares
         );
         bondShares[nodeOperatorId] -= claimableShares;
+        totalBondShares -= claimableShares;
         emit StETHRewardsClaimed(
             nodeOperatorId,
             rewardAddress,
@@ -665,6 +665,7 @@ contract CommunityStakingBondManager is
         uint256 wstETHAmount = WSTETH.wrap(_ethByShares(claimableShares));
         WSTETH.transferFrom(address(this), rewardAddress, wstETHAmount);
         bondShares[nodeOperatorId] -= wstETHAmount;
+        totalBondShares -= wstETHAmount;
         emit WstETHRewardsClaimed(nodeOperatorId, rewardAddress, wstETHAmount);
     }
 
@@ -696,6 +697,7 @@ contract CommunityStakingBondManager is
         wstETHAmount = WSTETH.wrap(_ethByShares(claimableShares));
         WSTETH.transferFrom(address(this), rewardAddress, wstETHAmount);
         bondShares[nodeOperatorId] -= wstETHAmount;
+        totalBondShares -= wstETHAmount;
         emit WstETHRewardsClaimed(nodeOperatorId, rewardAddress, wstETHAmount);
     }
 
@@ -714,6 +716,7 @@ contract CommunityStakingBondManager is
             coveringShares
         );
         bondShares[nodeOperatorId] -= coveringShares;
+        totalBondShares -= coveringShares;
         emit BondPenalized(nodeOperatorId, shares, coveringShares);
     }
 
@@ -769,11 +772,13 @@ contract CommunityStakingBondManager is
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares
     ) internal returns (uint256 claimableShares) {
-        bondShares[nodeOperatorId] += _feeDistributor().distributeFees(
+        uint256 distributed = _feeDistributor().distributeFees(
             rewardsProof,
             nodeOperatorId,
             cumulativeFeeShares
         );
+        bondShares[nodeOperatorId] += distributed;
+        totalBondShares += distributed;
         (uint256 current, uint256 required) = _bondSharesSummary(
             nodeOperatorId
         );
