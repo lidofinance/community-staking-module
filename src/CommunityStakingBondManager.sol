@@ -13,34 +13,34 @@ import { ICommunityStakingFeeDistributor } from "./interfaces/ICommunityStakingF
 
 contract CommunityStakingBondManagerBase {
     event ETHBondDeposited(
-        uint256 nodeOperatorId,
-        address indexed from,
-        uint256 ethAmount
+        uint256 indexed nodeOperatorId,
+        address from,
+        uint256 amount
     );
     event StETHBondDeposited(
-        uint256 nodeOperatorId,
-        address indexed from,
-        uint256 stETHAmount
+        uint256 indexed nodeOperatorId,
+        address from,
+        uint256 amount
     );
     event WstETHBondDeposited(
-        uint256 nodeOperatorId,
-        address indexed from,
-        uint256 wstETHAmount
+        uint256 indexed nodeOperatorId,
+        address from,
+        uint256 amount
     );
     event BondPenalized(
-        uint256 nodeOperatorId,
+        uint256 indexed nodeOperatorId,
         uint256 penaltyShares,
         uint256 burnedShares
     );
     event StETHRewardsClaimed(
-        uint256 nodeOperatorId,
-        address indexed to,
-        uint256 stETHAmount
+        uint256 indexed nodeOperatorId,
+        address to,
+        uint256 amount
     );
     event WstETHRewardsClaimed(
-        uint256 nodeOperatorId,
-        address indexed to,
-        uint256 wstETHAmount
+        uint256 indexed nodeOperatorId,
+        address to,
+        uint256 amount
     );
 }
 
