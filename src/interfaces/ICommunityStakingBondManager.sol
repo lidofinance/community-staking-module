@@ -75,15 +75,29 @@ interface ICommunityStakingBondManager {
         uint256 nodeOperatorId
     ) external payable returns (uint256);
 
-    function getRequiredBondSharesForKeys(
+    function getRequiredBondETHForKeys(
         uint256 keysCount
     ) external view returns (uint256);
 
-    function getRequiredBondShares(
-        uint256 nodeOperatorId
+    function getRequiredBondStETHForKeys(
+        uint256 keysCount
     ) external view returns (uint256);
 
-    function getRequiredBondShares(
+    function getRequiredBondWstETHForKeys(
+        uint256 keysCount
+    ) external view returns (uint256);
+
+    function getRequiredBondETH(
+        uint256 nodeOperatorId,
+        uint256 newKeysCount
+    ) external view returns (uint256);
+
+    function getRequiredBondStETH(
+        uint256 nodeOperatorId,
+        uint256 newKeysCount
+    ) external view returns (uint256);
+
+    function getRequiredBondWstETH(
         uint256 nodeOperatorId,
         uint256 newKeysCount
     ) external view returns (uint256);

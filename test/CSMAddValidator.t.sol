@@ -34,9 +34,9 @@ contract CSMCommon is Test, Fixtures, Utilities, CommunityStakingModuleBase {
 
         (locator, wstETH, stETH, burner) = initLido();
 
-        vm.deal(nodeOperator, 2 ether);
+        vm.deal(nodeOperator, 2 ether + 1 wei);
         vm.prank(nodeOperator);
-        stETH.submit{ value: 2 ether }(address(0));
+        stETH.submit{ value: 2 ether + 1 wei }(address(0));
 
         communityStakingFeeDistributor = new CommunityStakingFeeDistributorMock(
             address(locator),
@@ -86,7 +86,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             keysCount
         );
         vm.startPrank(nodeOperator);
-        wstETH.wrap(2 ether);
+        wstETH.wrap(2 ether + 1 wei);
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
@@ -138,10 +138,10 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
     function test_AddValidatorKeysWstETH() public {
         uint256 noId = createNodeOperator();
-
-        vm.deal(nodeOperator, 2 ether);
-        stETH.submit{ value: 2 ether }(address(0));
-        wstETH.wrap(2 ether);
+        uint256 toWrap = 2 ether + 1 wei;
+        vm.deal(nodeOperator, toWrap);
+        stETH.submit{ value: toWrap }(address(0));
+        wstETH.wrap(toWrap);
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
         {
             vm.expectEmit(true, true, false, true, address(csm));
@@ -156,13 +156,14 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             keysCount
         );
         vm.startPrank(nodeOperator);
-        wstETH.wrap(2 ether);
+        uint256 toWrap = 2 ether + 1 wei;
+        wstETH.wrap(toWrap);
         csm.addNodeOperatorWstETH("test", nodeOperator, 1, keys, signatures);
         uint256 noId = csm.getNodeOperatorsCount() - 1;
 
-        vm.deal(nodeOperator, 2 ether);
-        stETH.submit{ value: 2 ether }(address(0));
-        uint256 wstETHAmount = wstETH.wrap(2 ether);
+        vm.deal(nodeOperator, toWrap);
+        stETH.submit{ value: toWrap }(address(0));
+        uint256 wstETHAmount = wstETH.wrap(toWrap);
         vm.stopPrank();
         (keys, signatures) = keysSignatures(keysCount, 1);
         {
@@ -265,12 +266,13 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         csm.addNodeOperatorStETH("test", nodeOperator, 1, keys, signatures);
         uint256 noId = csm.getNodeOperatorsCount() - 1;
 
-        vm.deal(nodeOperator, 2 ether);
+        uint256 required = bondManager.getRequiredBondStETH(0, 1);
+        vm.deal(nodeOperator, required);
         vm.prank(nodeOperator);
-        stETH.submit{ value: 2 ether }(address(0));
+        stETH.submit{ value: required }(address(0));
         {
             vm.expectEmit(true, true, true, true, address(stETH));
-            emit Approval(nodeOperator, address(bondManager), 2 ether);
+            emit Approval(nodeOperator, address(bondManager), required);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalKeysCountChanged(0, 2);
         }
@@ -282,7 +284,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             keys,
             signatures,
             ICommunityStakingBondManager.PermitInput({
-                value: 2 ether,
+                value: required,
                 deadline: type(uint256).max,
                 // mock permit signature
                 v: 0,
@@ -321,13 +323,14 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         uint256 noId = createNodeOperator();
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
 
-        vm.deal(nodeOperator, 2 ether);
+        uint256 required = bondManager.getRequiredBondETH(0, 1);
+        vm.deal(nodeOperator, required);
         vm.prank(nodeOperator);
         {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalKeysCountChanged(0, 2);
         }
-        csm.addValidatorKeysETH{ value: 2 ether }(noId, 1, keys, signatures);
+        csm.addValidatorKeysETH{ value: required }(noId, 1, keys, signatures);
     }
 }
 

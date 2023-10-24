@@ -8,3 +8,4 @@ node_modules/
 broadcast/
 cache/
 out/
+lcov.info

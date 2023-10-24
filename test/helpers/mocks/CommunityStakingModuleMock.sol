@@ -77,6 +77,12 @@ contract CommunityStakingModuleMock {
         }
     }
 
+    function addValidator(uint256 _nodeOperatorId, uint256 _valsToAdd) public {
+        nodeOperators[_nodeOperatorId].totalAddedValidators += uint64(
+            _valsToAdd
+        );
+    }
+
     function getNodeOperatorsCount() external view returns (uint256) {
         return totalNodeOperatorsCount;
     }

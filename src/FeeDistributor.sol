@@ -36,17 +36,15 @@ contract FeeDistributor is FeeDistributorBase {
         CSM = _CSM;
     }
 
-    /// @notice Distribute fees to the BondManager
+    /// @notice Returns the amount of shares that can be distributed in favor of the NO
     /// @param proof Merkle proof of the leaf
     /// @param noIndex Index of the NO
     /// @param shares Total amount of shares earned as fees
-    function distributeFees(
+    function getFeesToDistribute(
         bytes32[] calldata proof,
         uint64 noIndex,
         uint64 shares
-    ) external returns (uint64) {
-        if (msg.sender != BOND_MANAGER) revert NotBondManager();
-
+    ) public view returns (uint64) {
         bool isValid = MerkleProof.verifyCalldata(
             proof,
             IFeeOracle(ORACLE).reportRoot(),
@@ -58,12 +56,25 @@ contract FeeDistributor is FeeDistributorBase {
             revert InvalidShares();
         }
 
-        if (distributedShares[noIndex] == shares) {
+        return shares - distributedShares[noIndex];
+    }
+
+    /// @notice Distribute fees to the BondManager in favor of the NO
+    /// @param proof Merkle proof of the leaf
+    /// @param noIndex Index of the NO
+    /// @param shares Total amount of shares earned as fees
+    function distributeFees(
+        bytes32[] calldata proof,
+        uint64 noIndex,
+        uint64 shares
+    ) external returns (uint64) {
+        if (msg.sender != BOND_MANAGER) revert NotBondManager();
+
+        uint64 sharesToDistribute = getFeesToDistribute(proof, noIndex, shares);
+        if (sharesToDistribute == 0) {
             // To avoid breaking claim rewards logic
             return 0;
         }
-
-        uint64 sharesToDistribute = shares - distributedShares[noIndex];
         distributedShares[noIndex] += sharesToDistribute;
         IStETH(STETH).transferShares(BOND_MANAGER, sharesToDistribute);
         emit FeeDistributed(noIndex, sharesToDistribute);
