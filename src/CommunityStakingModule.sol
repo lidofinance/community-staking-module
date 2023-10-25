@@ -570,6 +570,11 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
             _totalDepositedValidators += keysCount;
             NodeOperator storage no = nodeOperators[nodeOperatorId];
             no.totalDepositedKeys += keysCount;
+            require(
+                no.totalDepositedKeys <= no.totalVettedKeys,
+                "too many keys"
+            );
+
             emit DepositedSigningKeysCountChanged(
                 nodeOperatorId,
                 no.totalDepositedKeys
