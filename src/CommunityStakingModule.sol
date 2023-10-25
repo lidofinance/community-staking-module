@@ -86,6 +86,10 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
     uint256 private nonce;
     mapping(uint256 => NodeOperator) private nodeOperators;
 
+    uint256 private _totalDepositedValidators;
+    uint256 private _totalExitedValidators;
+    uint256 private _totalAddedValidators;
+
     modifier onlyActiveNodeOperator(uint256 _nodeOperatorId) {
         require(
             _nodeOperatorId < nodeOperatorsCount,
@@ -141,22 +145,15 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         external
         view
         returns (
-            uint256 totalExitedValidators,
-            uint256 totalDepositedValidators,
-            uint256 depositableValidatorsCount
+            uint256 /* totalExitedValidators */,
+            uint256 /* totalDepositedValidators */,
+            uint256 /* depositableValidatorsCount */
         )
     {
-        for (uint256 i = 0; i < nodeOperatorsCount; i++) {
-            totalExitedValidators += nodeOperators[i].totalExitedKeys;
-            totalDepositedValidators += nodeOperators[i].totalDepositedKeys;
-            depositableValidatorsCount +=
-                nodeOperators[i].totalAddedKeys -
-                nodeOperators[i].totalExitedKeys;
-        }
         return (
-            totalExitedValidators,
-            totalDepositedValidators,
-            depositableValidatorsCount
+            _totalExitedValidators,
+            _totalDepositedValidators,
+            _totalAddedValidators - _totalExitedValidators
         );
     }
 
@@ -524,6 +521,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
             _signatures
         );
 
+        _totalAddedValidators += _keysCount;
         nodeOperators[_nodeOperatorId].totalAddedKeys += _keysCount;
         emit TotalSigningKeysCountChanged(
             _nodeOperatorId,
@@ -564,6 +562,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
             );
             loadedKeysCount += keysCount;
 
+            _totalDepositedValidators += keysCount;
             NodeOperator storage no = nodeOperators[nodeOperatorId];
             no.totalDepositedKeys += keysCount;
             emit DepositedSigningKeysCountChanged(
