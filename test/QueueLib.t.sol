@@ -29,14 +29,13 @@ contract QueueLibTest is Test {
     }
 
     function test_dequeue() public {
-        {
-            vm.expectRevert("Queue: empty");
-            q.dequeue();
-        }
+        assertTrue(q.isEmpty());
 
         q.enqueue(p0);
         q.enqueue(p1);
         q.enqueue(p2);
+
+        assertFalse(q.isEmpty());
 
         buf = q.dequeue();
         assertEq(buf, p0);
@@ -48,10 +47,41 @@ contract QueueLibTest is Test {
 
         q.dequeue();
         assertEq(q.peek(), nil);
+        assertTrue(q.isEmpty());
+    }
+
+    function test_list() public {
+        q.enqueue(p0);
+        q.enqueue(p1);
+        q.enqueue(p2);
 
         {
-            vm.expectRevert("Queue: empty");
-            q.dequeue();
+            (bytes32[] memory items, bytes32 pointer, uint256 count) = q.list(
+                q.front,
+                2
+            );
+            assertEq(count, 2);
+            assertEq(pointer, p1);
+            assertEq(items[0], p0);
+            assertEq(items[1], p1);
+        }
+
+        {
+            (bytes32[] memory items, bytes32 pointer, uint256 count) = q.list(
+                p1,
+                999
+            );
+            assertEq(count, 1);
+            assertEq(pointer, p2);
+            assertEq(items[0], p2);
+        }
+
+        q.dequeue();
+
+        {
+            (, bytes32 pointer, uint256 count) = q.list(q.front, 0);
+            assertEq(count, 0);
+            assertEq(pointer, q.front);
         }
     }
 
@@ -77,13 +107,12 @@ contract QueueLibTest is Test {
         q.remove(p2, p1);
         // [p0, +*p2]
         assertEq(q.peek(), nil);
-        {
-            vm.expectRevert("Queue: empty");
-            q.dequeue();
-        }
+        assertTrue(q.isEmpty());
 
         q.remove(p0, p2);
         // [+*p0]
         assertEq(q.peek(), nil);
     }
+
+    // TODO: test with revert on library call
 }

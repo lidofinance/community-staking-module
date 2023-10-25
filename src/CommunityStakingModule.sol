@@ -665,6 +665,27 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         return pointer;
     }
 
+    function depositQueue(
+        uint256 maxItems,
+        bytes32 pointer
+    )
+        external
+        view
+        returns (
+            bytes32[] memory items,
+            bytes32 /* pointer */,
+            uint256 /* count */
+        )
+    {
+        require(maxItems > 0, "Queue walkthrough limit is not set");
+
+        if (Batch.isNil(pointer)) {
+            pointer = queue.front;
+        }
+
+        return queue.list(pointer, maxItems);
+    }
+
     /// @dev returns the next pointer to start check from
     function isQueueHasUnvettedKeys(
         uint256 maxItems,

@@ -38,6 +38,31 @@ library QueueLib {
         return self.queue[pointer];
     }
 
+    function list(Queue storage self, bytes32 pointer, uint256 limit) internal notEmpty(self) view returns (
+        bytes32[] memory items,
+        bytes32 /* pointer */,
+        uint256 /* count */
+    ) {
+        items = new bytes32[](limit);
+
+        uint256 i;
+        for (; i < limit; i++) {
+            bytes32 item = self.queue[pointer];
+            if (item == NULL_POINTER) {
+                break;
+            }
+            
+            items[i] = item;
+            pointer = item;
+        }
+
+        return (items, pointer, i);
+    }
+
+    function isEmpty(Queue storage self) internal view returns (bool) {
+        return self.front == self.back;
+    }
+
     function remove(Queue storage self, bytes32 pointerToItem, bytes32 item) internal {
         require(self.queue[pointerToItem] == item, "Queue: wrong pointer given");
 
@@ -50,7 +75,7 @@ library QueueLib {
     }
 
     modifier notEmpty(Queue storage self) {
-        require(self.front != self.back, "Queue: empty");
+        require(!isEmpty(self), "Queue: empty");
         _;
     }
 }
