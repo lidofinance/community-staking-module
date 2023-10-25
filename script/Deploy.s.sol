@@ -7,7 +7,7 @@ import "forge-std/Script.sol";
 
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { CommunityStakingModule } from "../src/CommunityStakingModule.sol";
-import { CommunityStakingBondManager, IWstETH } from "../src/CommunityStakingBondManager.sol";
+import { CommunityStakingAccounting, IWstETH } from "../src/CommunityStakingAccounting.sol";
 import { FeeDistributor } from "../src/FeeDistributor.sol";
 import { FeeOracle } from "../src/FeeOracle.sol";
 
@@ -39,14 +39,14 @@ contract Deploy is Script {
             "community-staking-module",
             address(locator)
         );
-        CommunityStakingBondManager bondManager = new CommunityStakingBondManager({
-                _commonBondSize: 2 ether,
-                _admin: deployerAddress,
-                _lidoLocator: address(locator),
-                _communityStakingModule: address(csm),
-                _wstETH: address(wstETH),
-                _penalizeRoleMembers: penalizers
-            });
+        CommunityStakingAccounting accounting = new CommunityStakingAccounting({
+            _commonBondSize: 2 ether,
+            _admin: deployerAddress,
+            _lidoLocator: address(locator),
+            _communityStakingModule: address(csm),
+            _wstETH: address(wstETH),
+            _penalizeRoleMembers: penalizers
+        });
         FeeOracle feeOracle = new FeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
@@ -56,7 +56,7 @@ contract Deploy is Script {
             _CSM: address(csm),
             _stETH: locator.lido(),
             _oracle: address(feeOracle),
-            _bondManager: address(bondManager)
+            _accounting: address(accounting)
         });
         feeOracle.initialize({
             _initializationEpoch: uint64(INITIALIZATION_EPOCH),
@@ -64,8 +64,8 @@ contract Deploy is Script {
             _feeDistributor: address(feeDistributor),
             admin: deployerAddress
         });
-        bondManager.setFeeDistributor(address(feeDistributor));
-        // TODO: csm.setBondManager(address(bondManager));
+        accounting.setFeeDistributor(address(feeDistributor));
+        // TODO: csm.setBondManager(address(accounting));
 
         vm.stopBroadcast();
     }

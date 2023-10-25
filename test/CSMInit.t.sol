@@ -3,7 +3,7 @@ pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
 import "../src/CommunityStakingModule.sol";
-import "../src/CommunityStakingBondManager.sol";
+import "../src/CommunityStakingAccounting.sol";
 import "./helpers/Fixtures.sol";
 import "./helpers/mocks/StETHMock.sol";
 import "./helpers/mocks/CommunityStakingFeeDistributorMock.sol";
@@ -18,7 +18,7 @@ contract CSMInitTest is Test, Fixtures {
     Stub public burner;
 
     CommunityStakingModule public csm;
-    CommunityStakingBondManager public bondManager;
+    CommunityStakingAccounting public accounting;
     CommunityStakingFeeDistributorMock public communityStakingFeeDistributor;
 
     address internal stranger;
@@ -37,9 +37,9 @@ contract CSMInitTest is Test, Fixtures {
         );
         communityStakingFeeDistributor = new CommunityStakingFeeDistributorMock(
             address(locator),
-            address(bondManager)
+            address(accounting)
         );
-        bondManager = new CommunityStakingBondManager(
+        accounting = new CommunityStakingAccounting(
             2 ether,
             alice,
             address(locator),
@@ -54,8 +54,8 @@ contract CSMInitTest is Test, Fixtures {
         assertEq(csm.getNodeOperatorsCount(), 0);
     }
 
-    function test_SetBondManager() public {
-        csm.setBondManager(address(bondManager));
-        assertEq(address(csm.bondManagerAddress()), address(bondManager));
+    function test_SetAccounting() public {
+        csm.setAccounting(address(accounting));
+        assertEq(address(csm.accountingAddress()), address(accounting));
     }
 }

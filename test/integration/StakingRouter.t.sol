@@ -7,10 +7,10 @@ import "forge-std/Test.sol";
 import { CommunityStakingModule, NodeOperator } from "../../src/CommunityStakingModule.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
-import { IWstETH } from "../../src/CommunityStakingBondManager.sol";
+import { CommunityStakingAccounting } from "../../src/CommunityStakingAccounting.sol";
 import { ILido } from "../../src/interfaces/ILido.sol";
+import { IWstETH } from "../../src/interfaces/IWstETH.sol";
 import "../helpers/Utilities.sol";
-import "../../src/CommunityStakingBondManager.sol";
 
 contract StakingRouterIntegrationTest is Test, Utilities {
     uint256 networkFork;
@@ -54,15 +54,15 @@ contract StakingRouterIntegrationTest is Test, Utilities {
         );
         address[] memory penalizeRoleMembers = new address[](1);
         penalizeRoleMembers[0] = address(csm);
-        CommunityStakingBondManager bondManager = new CommunityStakingBondManager(
-                2 ether,
-                address(csm),
-                address(locator),
-                address(wstETH),
-                address(csm),
-                penalizeRoleMembers
-            );
-        csm.setBondManager(address(bondManager));
+        CommunityStakingAccounting accounting = new CommunityStakingAccounting(
+            2 ether,
+            address(csm),
+            address(locator),
+            address(wstETH),
+            address(csm),
+            penalizeRoleMembers
+        );
+        csm.setAccounting(address(accounting));
 
         agent = stakingRouter.getRoleMember(
             stakingRouter.DEFAULT_ADMIN_ROLE(),

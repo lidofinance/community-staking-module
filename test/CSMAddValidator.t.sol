@@ -3,7 +3,7 @@ pragma solidity ^0.8.21;
 
 import "forge-std/Test.sol";
 import "../src/CommunityStakingModule.sol";
-import "../src/CommunityStakingBondManager.sol";
+import "../src/CommunityStakingAccounting.sol";
 import "./helpers/Fixtures.sol";
 import "./helpers/mocks/StETHMock.sol";
 import "./helpers/mocks/CommunityStakingFeeDistributorMock.sol";
@@ -18,7 +18,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CommunityStakingModuleBase {
     LidoMock public stETH;
     Stub public burner;
     CommunityStakingModule public csm;
-    CommunityStakingBondManager public bondManager;
+    CommunityStakingAccounting public accounting;
     CommunityStakingFeeDistributorMock public communityStakingFeeDistributor;
 
     address internal stranger;
@@ -40,13 +40,13 @@ contract CSMCommon is Test, Fixtures, Utilities, CommunityStakingModuleBase {
 
         communityStakingFeeDistributor = new CommunityStakingFeeDistributorMock(
             address(locator),
-            address(bondManager)
+            address(accounting)
         );
         csm = new CommunityStakingModule(
             "community-staking-module",
             address(locator)
         );
-        bondManager = new CommunityStakingBondManager(
+        accounting = new CommunityStakingAccounting(
             2 ether,
             alice,
             address(locator),
@@ -54,7 +54,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CommunityStakingModuleBase {
             address(csm),
             penalizeRoleMembers
         );
-        csm.setBondManager(address(bondManager));
+        csm.setAccounting(address(accounting));
     }
 
     function createNodeOperator() internal returns (uint256) {
@@ -109,7 +109,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, true, true, address(wstETH));
-            emit Approval(nodeOperator, address(bondManager), wstETHAmount);
+            emit Approval(nodeOperator, address(accounting), wstETHAmount);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
@@ -124,7 +124,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             1,
             keys,
             signatures,
-            ICommunityStakingBondManager.PermitInput({
+            ICommunityStakingAccounting.PermitInput({
                 value: wstETHAmount,
                 deadline: type(uint256).max,
                 // mock permit signature
@@ -168,7 +168,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         (keys, signatures) = keysSignatures(keysCount, 1);
         {
             vm.expectEmit(true, true, true, true, address(wstETH));
-            emit Approval(nodeOperator, address(bondManager), wstETHAmount);
+            emit Approval(nodeOperator, address(accounting), wstETHAmount);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalKeysCountChanged(0, 2);
         }
@@ -179,7 +179,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             1,
             keys,
             signatures,
-            ICommunityStakingBondManager.PermitInput({
+            ICommunityStakingAccounting.PermitInput({
                 value: wstETHAmount,
                 deadline: type(uint256).max,
                 // mock permit signature
@@ -216,7 +216,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, true, true, address(stETH));
-            emit Approval(nodeOperator, address(bondManager), 2 ether);
+            emit Approval(nodeOperator, address(accounting), 2 ether);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
@@ -231,7 +231,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             1,
             keys,
             signatures,
-            ICommunityStakingBondManager.PermitInput({
+            ICommunityStakingAccounting.PermitInput({
                 value: 2 ether,
                 deadline: type(uint256).max,
                 // mock permit signature
@@ -266,13 +266,13 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         csm.addNodeOperatorStETH("test", nodeOperator, 1, keys, signatures);
         uint256 noId = csm.getNodeOperatorsCount() - 1;
 
-        uint256 required = bondManager.getRequiredBondStETH(0, 1);
+        uint256 required = accounting.getRequiredBondStETH(0, 1);
         vm.deal(nodeOperator, required);
         vm.prank(nodeOperator);
         stETH.submit{ value: required }(address(0));
         {
             vm.expectEmit(true, true, true, true, address(stETH));
-            emit Approval(nodeOperator, address(bondManager), required);
+            emit Approval(nodeOperator, address(accounting), required);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalKeysCountChanged(0, 2);
         }
@@ -283,7 +283,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             1,
             keys,
             signatures,
-            ICommunityStakingBondManager.PermitInput({
+            ICommunityStakingAccounting.PermitInput({
                 value: required,
                 deadline: type(uint256).max,
                 // mock permit signature
@@ -323,7 +323,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         uint256 noId = createNodeOperator();
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
 
-        uint256 required = bondManager.getRequiredBondETH(0, 1);
+        uint256 required = accounting.getRequiredBondETH(0, 1);
         vm.deal(nodeOperator, required);
         vm.prank(nodeOperator);
         {

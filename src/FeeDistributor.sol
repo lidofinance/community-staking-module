@@ -14,7 +14,7 @@ contract FeeDistributor is FeeDistributorBase {
     address public immutable CSM;
     address public immutable STETH;
     address public immutable ORACLE;
-    address public immutable BOND_MANAGER;
+    address public immutable ACCOUNTING;
 
     /// @notice Amount of shares sent to the BondManager in favor of the NO
     mapping(uint64 => uint64) public distributedShares;
@@ -23,14 +23,14 @@ contract FeeDistributor is FeeDistributorBase {
         address _CSM,
         address _stETH,
         address _oracle,
-        address _bondManager
+        address _accounting
     ) {
-        if (_bondManager == address(0)) revert ZeroAddress("_bondManager");
+        if (_accounting == address(0)) revert ZeroAddress("_accounting");
         if (_oracle == address(0)) revert ZeroAddress("_oracle");
         if (_stETH == address(0)) revert ZeroAddress("_stETH");
         if (_CSM == address(0)) revert ZeroAddress("_CSM");
 
-        BOND_MANAGER = _bondManager;
+        ACCOUNTING = _accounting;
         ORACLE = _oracle;
         STETH = _stETH;
         CSM = _CSM;
@@ -68,7 +68,7 @@ contract FeeDistributor is FeeDistributorBase {
         uint64 noIndex,
         uint64 shares
     ) external returns (uint64) {
-        if (msg.sender != BOND_MANAGER) revert NotBondManager();
+        if (msg.sender != ACCOUNTING) revert NotBondManager();
 
         uint64 sharesToDistribute = getFeesToDistribute(proof, noIndex, shares);
         if (sharesToDistribute == 0) {
@@ -76,7 +76,7 @@ contract FeeDistributor is FeeDistributorBase {
             return 0;
         }
         distributedShares[noIndex] += sharesToDistribute;
-        IStETH(STETH).transferShares(BOND_MANAGER, sharesToDistribute);
+        IStETH(STETH).transferShares(ACCOUNTING, sharesToDistribute);
         emit FeeDistributed(noIndex, sharesToDistribute);
 
         return sharesToDistribute;
