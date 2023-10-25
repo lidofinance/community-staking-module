@@ -40,28 +40,31 @@ contract CommunityStakingModuleBase {
         address rewardAddress
     );
 
-    event VettedKeysCountChanged(
-        uint256 indexed nodeOperatorId,
-        uint256 approvedKeysCount
-    );
-    event DepositedKeysCountChanged(
-        uint256 indexed nodeOperatorId,
-        uint256 depositedKeysCount
-    );
-    event ExitedKeysCountChanged(
-        uint256 indexed nodeOperatorId,
-        uint256 exitedKeysCount
-    );
-    event TotalKeysCountChanged(
-        uint256 indexed nodeOperatorId,
-        uint256 totalKeysCount
-    );
     event VettedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
         uint256 approvedValidatorsCount
     );
+    event DepositedSigningKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 depositedValidatorsCount
+    );
+    event ExitedSigningKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 exitedValidatorsCount
+    );
+    event TotalSigningKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 totalValidatorsCount
+    );
+
+    event BatchEnqueued(
+        uint256 indexed nodeOperatorId,
+        uint256 startIndex,
+        uint256 count
+    );
 
     event StakingModuleTypeSet(bytes32 moduleType);
+    event LocatorContractSet(address locatorAddress);
     event UnvettingFeeSet(uint256 unvettingFee);
 }
 
@@ -111,6 +114,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
 
         require(_locator != address(0), "lido locator is zero address");
         lidoLocator = ILidoLocator(_locator);
+        emit LocatorContractSet(_locator);
     }
 
     function setBondManager(address _bondManager) external {
@@ -417,7 +421,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         bytes calldata _exitedValidatorsCounts
     ) external {
         // TODO: implement
-        //        emit ExitedKeysCountChanged(
+        //        emit ExitedSigningKeysCountChanged(
         //            _nodeOperatorId,
         //            _exitedValidatorsCount
         //        );
@@ -477,6 +481,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
 
         no.totalVettedKeys = _vettedKeysCount;
         queue.enqueue(pointer);
+        emit BatchEnqueued(_nodeOperatorId, start, _vettedKeysCount);
         emit VettedSigningKeysCountChanged(_nodeOperatorId, _vettedKeysCount);
     }
 
@@ -520,7 +525,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         );
 
         nodeOperators[_nodeOperatorId].totalAddedKeys += _keysCount;
-        emit TotalKeysCountChanged(
+        emit TotalSigningKeysCountChanged(
             _nodeOperatorId,
             nodeOperators[_nodeOperatorId].totalAddedKeys
         );
@@ -561,7 +566,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
 
             NodeOperator storage no = nodeOperators[nodeOperatorId];
             no.totalDepositedKeys += keysCount;
-            emit DepositedKeysCountChanged(
+            emit DepositedSigningKeysCountChanged(
                 nodeOperatorId,
                 no.totalDepositedKeys
             );

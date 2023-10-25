@@ -71,7 +71,7 @@ contract CSMAddNodeOperator is
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalKeysCountChanged(0, 1);
+            emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, "test", nodeOperator);
         }
@@ -96,7 +96,7 @@ contract CSMAddNodeOperator is
         (keys, signatures) = keysSignatures(keysCount, 1);
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalKeysCountChanged(0, 2);
+            emit TotalSigningKeysCountChanged(0, 2);
         }
         csm.addValidatorKeysWstETH(noId, 1, keys, signatures);
     }
@@ -109,7 +109,7 @@ contract CSMAddNodeOperator is
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalKeysCountChanged(0, 1);
+            emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, "test", nodeOperator);
         }
@@ -133,7 +133,7 @@ contract CSMAddNodeOperator is
         stETH.submit{ value: 2 ether }(address(0));
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalKeysCountChanged(0, 2);
+            emit TotalSigningKeysCountChanged(0, 2);
         }
         csm.addValidatorKeysStETH(noId, 1, keys, signatures);
     }
@@ -147,7 +147,7 @@ contract CSMAddNodeOperator is
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalKeysCountChanged(0, 1);
+            emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, "test", nodeOperator);
         }
@@ -183,7 +183,7 @@ contract CSMAddNodeOperator is
         vm.prank(nodeOperator);
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalKeysCountChanged(0, 2);
+            emit TotalSigningKeysCountChanged(0, 2);
         }
         csm.addValidatorKeysETH{ value: 2 ether }(noId, 1, keys, signatures);
     }
