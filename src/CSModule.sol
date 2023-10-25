@@ -47,10 +47,7 @@ struct NodeOperatorInfo {
 }
 
 contract CSModuleBase {
-    event NodeOperatorAdded(
-        uint256 indexed nodeOperatorId,
-        address from
-    );
+    event NodeOperatorAdded(uint256 indexed nodeOperatorId, address from);
     event NodeOperatorManagerAddressChangeProposed(
         uint256 indexed nodeOperatorId,
         address proposedAddress
@@ -246,26 +243,22 @@ contract CSModule is IStakingModule, CSModuleBase {
 
         _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
 
-        emit NodeOperatorAdded(id, _name, _rewardAddress);
+        emit NodeOperatorAdded(id, msg.sender);
     }
 
     function addNodeOperatorStETHWithPermit(
         address _from,
-        string calldata _name,
-        address _rewardAddress,
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures,
         ICSAccounting.PermitInput calldata _permit
     ) external {
         // TODO sanity checks
-        _onlyValidNodeOperatorName(_name);
 
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
-        nodeOperatorIdsByName.set(_name, id);
-        no.name = _name;
-        no.rewardAddress = _rewardAddress;
+        no.rewardAddress = msg.sender;
+        no.managerAddress = msg.sender;
         no.active = true;
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
@@ -306,26 +299,22 @@ contract CSModule is IStakingModule, CSModuleBase {
 
         _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
 
-        emit NodeOperatorAdded(id, _name, _rewardAddress);
+        emit NodeOperatorAdded(id, msg.sender);
     }
 
     function addNodeOperatorWstETHWithPermit(
         address _from,
-        string calldata _name,
-        address _rewardAddress,
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures,
         ICSAccounting.PermitInput calldata _permit
     ) external {
         // TODO sanity checks
-        _onlyValidNodeOperatorName(_name);
 
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
-        nodeOperatorIdsByName.set(_name, id);
-        no.name = _name;
-        no.rewardAddress = _rewardAddress;
+        no.rewardAddress = msg.sender;
+        no.managerAddress = msg.sender;
         no.active = true;
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;

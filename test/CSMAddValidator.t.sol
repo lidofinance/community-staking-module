@@ -106,13 +106,11 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, "test", nodeOperator);
+            emit NodeOperatorAdded(0, stranger);
         }
 
         vm.prank(stranger);
         csm.addNodeOperatorWstETHWithPermit(
-            nodeOperator,
-            "test",
             nodeOperator,
             1,
             keys,
@@ -151,7 +149,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         vm.startPrank(nodeOperator);
         uint256 toWrap = 2 ether + 1 wei;
         wstETH.wrap(toWrap);
-        csm.addNodeOperatorWstETH("test", nodeOperator, 1, keys, signatures);
+        csm.addNodeOperatorWstETH(1, keys, signatures);
         uint256 noId = csm.getNodeOperatorsCount() - 1;
 
         vm.deal(nodeOperator, toWrap);
@@ -213,13 +211,11 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, "test", nodeOperator);
+            emit NodeOperatorAdded(0, stranger);
         }
 
         vm.prank(stranger);
         csm.addNodeOperatorStETHWithPermit(
-            nodeOperator,
-            "test",
             nodeOperator,
             1,
             keys,
@@ -256,7 +252,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             keysCount
         );
         vm.prank(nodeOperator);
-        csm.addNodeOperatorStETH("test", nodeOperator, 1, keys, signatures);
+        csm.addNodeOperatorStETH(1, keys, signatures);
         uint256 noId = csm.getNodeOperatorsCount() - 1;
 
         uint256 required = accounting.getRequiredBondStETH(0, 1);

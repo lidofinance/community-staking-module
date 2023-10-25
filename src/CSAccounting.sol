@@ -572,8 +572,9 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     function _getNodeOperatorActiveKeys(
         uint256 nodeOperatorId
     ) internal view returns (uint256) {
-        ICommunityStakingModule.NodeOperatorInfo memory nodeOperator = CSM
-            .getNodeOperator(nodeOperatorId);
+        ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
+            nodeOperatorId
+        );
         return
             nodeOperator.totalAddedValidators -
             nodeOperator.totalWithdrawnValidators;
@@ -582,8 +583,9 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     function _getNodeOperatorRewardAddress(
         uint256 nodeOperatorId
     ) internal view returns (address) {
-        ICommunityStakingModule.NodeOperatorInfo memory nodeOperator = CSM
-            .getNodeOperator(nodeOperatorId);
+        ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
+            nodeOperatorId
+        );
         return nodeOperator.rewardAddress;
     }
 
