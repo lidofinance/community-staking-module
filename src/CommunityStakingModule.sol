@@ -482,6 +482,8 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
 
         emit BatchEnqueued(nodeOperatorId, start, count);
         emit VettedSigningKeysCountChanged(nodeOperatorId, vettedKeysCount);
+
+        _incrementNonce();
     }
 
     function unvetKeys(
@@ -499,6 +501,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
         no.totalVettedKeys = no.totalDepositedKeys;
         emit VettedSigningKeysCountChanged(nodeOperatorId, no.totalVettedKeys);
+        _incrementNonce();
     }
 
     function onWithdrawalCredentialsChanged() external {
@@ -546,7 +549,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
                 uint256 nodeOperatorId,
                 uint256 startIndex,
                 uint256 depositableKeysCount
-            ) = _batchDepositableKeys(p);
+            ) = _depositableKeysInBatch(p);
 
             uint256 keysCount = Math.min(limit, depositableKeysCount);
             if (depositableKeysCount == keysCount) {
@@ -581,9 +584,10 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         }
 
         require(loadedKeysCount == _depositsCount, "NOT_ENOUGH_KEYS");
+        _incrementNonce();
     }
 
-    function _batchDepositableKeys(
+    function _depositableKeysInBatch(
         bytes32 batch
     )
         internal
