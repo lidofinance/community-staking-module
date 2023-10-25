@@ -205,7 +205,7 @@ contract CSMAddNodeOperator is
 
         {
             // Pretend to be a key validation oracle
-            csm.setNodeOperatorStakingLimit(0, 1);
+            csm.vetKeys(0, 1);
         }
 
         (bytes memory obtainedKeys, bytes memory obtainedSignatures) = csm

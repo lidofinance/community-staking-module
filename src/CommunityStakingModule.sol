@@ -451,35 +451,37 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         // TODO: implement
     }
 
-    function setNodeOperatorStakingLimit(
-        uint256 _nodeOperatorId,
-        uint64 _vettedKeysCount
+    function vetKeys(
+        uint256 nodeOperatorId,
+        uint64 vettedKeysCount
     ) external onlyKeyValidator {
-        NodeOperator storage no = nodeOperators[_nodeOperatorId];
+        NodeOperator storage no = nodeOperators[nodeOperatorId];
 
         require(
-            _vettedKeysCount > no.totalVettedKeys,
-            "Wrong _vettedKeysCount: less than already vetted"
+            vettedKeysCount > no.totalVettedKeys,
+            "Wrong vettedKeysCount: less than already vetted"
         );
         require(
-            _vettedKeysCount <= no.totalAddedKeys,
-            "Wrong _vettedKeysCount: more than added"
+            vettedKeysCount <= no.totalAddedKeys,
+            "Wrong vettedKeysCount: more than added"
         );
 
+        uint64 count = SafeCast.toUint64(vettedKeysCount - no.totalVettedKeys);
         uint64 start = SafeCast.toUint64(
             no.totalVettedKeys == 0 ? 0 : no.totalVettedKeys - 1
         );
 
         bytes32 pointer = Batch.serialize({
-            nodeOperatorId: SafeCast.toUint128(_nodeOperatorId),
+            nodeOperatorId: SafeCast.toUint128(nodeOperatorId),
             start: start,
-            count: _vettedKeysCount
+            count: count
         });
 
-        no.totalVettedKeys = _vettedKeysCount;
+        no.totalVettedKeys = vettedKeysCount;
         queue.enqueue(pointer);
-        emit BatchEnqueued(_nodeOperatorId, start, _vettedKeysCount);
-        emit VettedSigningKeysCountChanged(_nodeOperatorId, _vettedKeysCount);
+
+        emit BatchEnqueued(nodeOperatorId, start, count);
+        emit VettedSigningKeysCountChanged(nodeOperatorId, vettedKeysCount);
     }
 
     function unvetKeys(

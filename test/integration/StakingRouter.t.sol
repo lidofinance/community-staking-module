@@ -115,7 +115,7 @@ contract StakingRouterIntegrationTest is Test, Utilities {
 
         {
             // Pretend to be a key validation oracle
-            csm.setNodeOperatorStakingLimit(0, 2);
+            csm.vetKeys(0, 2);
         }
 
         // It's impossible to process deposits if withdrawal requests amount is more than the buffered ether,
