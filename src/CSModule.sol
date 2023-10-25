@@ -97,6 +97,7 @@ contract CSModuleBase {
     event LocatorContractSet(address locatorAddress);
     event UnvettingFeeSet(uint256 unvettingFee);
 
+    error NodeOperatorDoesNotExist();
     error SenderIsNotManagerAddress();
     error SenderIsNotRewardAddress();
     error SenderIsNotProposedAddress();
@@ -438,14 +439,16 @@ contract CSModule is IStakingModule, CSModuleBase {
         uint256 nodeOperatorId,
         address proposedAddress
     )
+        external
         onlyExistingNodeOperator(nodeOperatorId)
         onlyNodeOperatorManager(nodeOperatorId)
-        external
     {
         if (nodeOperators[nodeOperatorId].managerAddress == proposedAddress)
             revert SameAddress();
-        if (nodeOperators[nodeOperatorId].proposedManagerAddress == proposedAddress)
-            revert AlreadyProposed();
+        if (
+            nodeOperators[nodeOperatorId].proposedManagerAddress ==
+            proposedAddress
+        ) revert AlreadyProposed();
 
         nodeOperators[nodeOperatorId].proposedManagerAddress = proposedAddress;
         emit NodeOperatorManagerAddressChangeProposed(
@@ -454,27 +457,35 @@ contract CSModule is IStakingModule, CSModuleBase {
         );
     }
 
-    function confirmNodeOperatorManagerAddressChange(uint256 nodeOperatorId) onlyExistingNodeOperator(nodeOperatorId) external {
+    function confirmNodeOperatorManagerAddressChange(
+        uint256 nodeOperatorId
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
         if (nodeOperators[nodeOperatorId].proposedManagerAddress != msg.sender)
             revert SenderIsNotProposedAddress();
         address oldAddress = nodeOperators[nodeOperatorId].managerAddress;
         nodeOperators[nodeOperatorId].managerAddress = msg.sender;
         nodeOperators[nodeOperatorId].proposedManagerAddress = address(0);
-        emit NodeOperatorManagerAddressChanged(nodeOperatorId, oldAddress, msg.sender);
+        emit NodeOperatorManagerAddressChanged(
+            nodeOperatorId,
+            oldAddress,
+            msg.sender
+        );
     }
 
-
     function proposeNodeOperatorRewardAddressChange(
-        uint256 nodeOperatorId, address proposedAddress
+        uint256 nodeOperatorId,
+        address proposedAddress
     )
+        external
         onlyExistingNodeOperator(nodeOperatorId)
         onlyNodeOperatorRewardAddress(nodeOperatorId)
-        external
     {
         if (nodeOperators[nodeOperatorId].rewardAddress == proposedAddress)
             revert SameAddress();
-        if (nodeOperators[nodeOperatorId].proposedRewardAddress == proposedAddress)
-            revert AlreadyProposed();
+        if (
+            nodeOperators[nodeOperatorId].proposedRewardAddress ==
+            proposedAddress
+        ) revert AlreadyProposed();
 
         nodeOperators[nodeOperatorId].proposedRewardAddress = proposedAddress;
         emit NodeOperatorRewardAddressChangeProposed(
@@ -483,26 +494,47 @@ contract CSModule is IStakingModule, CSModuleBase {
         );
     }
 
-    function confirmNodeOperatorRewardAddressChange(uint256 nodeOperatorId) onlyExistingNodeOperator(nodeOperatorId) external {
+    function confirmNodeOperatorRewardAddressChange(
+        uint256 nodeOperatorId
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
         if (nodeOperators[nodeOperatorId].proposedRewardAddress != msg.sender)
             revert SenderIsNotProposedAddress();
         address oldAddress = nodeOperators[nodeOperatorId].rewardAddress;
         nodeOperators[nodeOperatorId].rewardAddress = msg.sender;
         nodeOperators[nodeOperatorId].proposedRewardAddress = address(0);
-        emit NodeOperatorRewardAddressChanged(nodeOperatorId, oldAddress, msg.sender);
+        emit NodeOperatorRewardAddressChanged(
+            nodeOperatorId,
+            oldAddress,
+            msg.sender
+        );
     }
 
-    function resetNodeOperatorManagerAddress(uint256 nodeOperatorId) onlyExistingNodeOperator(nodeOperatorId) onlyNodeOperatorRewardAddress(nodeOperatorId) external {
-        address previousManagerAddress = nodeOperators[nodeOperatorId].managerAddress;
-        nodeOperators[nodeOperatorId].managerAddress = nodeOperators[nodeOperatorId].rewardAddress;
-        emit NodeOperatorManagerAddressChanged(nodeOperatorId, previousManagerAddress, nodeOperators[nodeOperatorId].rewardAddress);
-    }
-
-    function getNodeOperator(uint256 nodeOperatorId)
+    function resetNodeOperatorManagerAddress(
+        uint256 nodeOperatorId
+    )
         external
-        view
-        returns (NodeOperatorInfo memory)
+        onlyExistingNodeOperator(nodeOperatorId)
+        onlyNodeOperatorRewardAddress(nodeOperatorId)
     {
+        if (
+            nodeOperators[nodeOperatorId].managerAddress ==
+            nodeOperators[nodeOperatorId].rewardAddress
+        ) revert SameAddress();
+        address previousManagerAddress = nodeOperators[nodeOperatorId]
+            .managerAddress;
+        nodeOperators[nodeOperatorId].managerAddress = nodeOperators[
+            nodeOperatorId
+        ].rewardAddress;
+        emit NodeOperatorManagerAddressChanged(
+            nodeOperatorId,
+            previousManagerAddress,
+            nodeOperators[nodeOperatorId].rewardAddress
+        );
+    }
+
+    function getNodeOperator(
+        uint256 nodeOperatorId
+    ) external view returns (NodeOperatorInfo memory) {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
         NodeOperatorInfo memory info;
         info.active = no.active;
@@ -904,10 +936,8 @@ contract CSModule is IStakingModule, CSModuleBase {
     }
 
     modifier onlyExistingNodeOperator(uint256 _nodeOperatorId) {
-        require(
-            _nodeOperatorId < nodeOperatorsCount,
-            "node operator does not exist"
-        );
+        if (_nodeOperatorId >= nodeOperatorsCount)
+            revert NodeOperatorDoesNotExist();
         _;
     }
 

@@ -25,7 +25,6 @@ contract CommunityStakingModuleMock {
         uint256 totalDepositedValidators;
     }
 
-
     mapping(uint256 => NodeOperator) public nodeOperators;
     uint256 public totalNodeOperatorsCount;
 
@@ -55,11 +54,9 @@ contract CommunityStakingModuleMock {
 
     /// @notice Returns the node operator by id
     /// @param nodeOperatorId Node Operator id
-    function getNodeOperator(uint256 nodeOperatorId)
-    external
-    view
-    returns (NodeOperatorInfo memory)
-    {
+    function getNodeOperator(
+        uint256 nodeOperatorId
+    ) external view returns (NodeOperatorInfo memory) {
         NodeOperator memory no = nodeOperators[nodeOperatorId];
         NodeOperatorInfo memory info;
         info.active = no.active;
