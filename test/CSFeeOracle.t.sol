@@ -5,13 +5,13 @@ pragma solidity 0.8.21;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import { FeeOracleBase } from "../src/FeeOracleBase.sol";
-import { FeeOracle } from "../src/FeeOracle.sol";
+import { CSFeeOracleBase } from "../src/CSFeeOracleBase.sol";
+import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 
 import { DistributorMock } from "./helpers/mocks/DistributorMock.sol";
 import { Utilities } from "./helpers/Utilities.sol";
 
-contract FeeOracleTest is Test, Utilities, FeeOracleBase {
+contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
     using stdStorage for StdStorage;
 
     address internal constant ORACLE_ADMIN =
@@ -22,7 +22,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     address internal FEE_DISTRIBUTOR;
 
     address[] internal members;
-    FeeOracle internal oracle;
+    CSFeeOracle internal oracle;
 
     function setUp() public {
         FEE_DISTRIBUTOR = address(new DistributorMock());
@@ -34,7 +34,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     function test_RevertIf_GenesisTimeInFuture() public {
         vm.expectRevert(GenesisTimeNotReached.selector);
         vm.warp(1);
-        new FeeOracle({
+        new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 2 // > block.timestamp
@@ -42,7 +42,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_Initialize() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -63,7 +63,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_currentEpoch() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -79,7 +79,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_nextReportEpoch() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -100,7 +100,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_RevertIf_LastConsolidationEpochInFuture() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -119,7 +119,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_reportFrame() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -139,7 +139,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_setReportInterval() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -162,7 +162,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_submitReport() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -216,7 +216,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_submitReport_NoQuorum() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -282,7 +282,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_RevertIf_TooEarly() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -311,7 +311,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     function test_RevertIf_TooLate() public {
         _vmSetEpoch(8);
 
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -342,7 +342,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
 
         bytes32 hash = 0x20b6ee98002cfd33f27ed874d1aaebcd4ed99991dc504b273af77a78553c4afe;
 
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -352,7 +352,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_setQuorum() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -376,7 +376,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_RevertIf_SetQuorumNotAdmin() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -401,7 +401,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_RevertIf_QuorumTooSmall() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -422,7 +422,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_addMember() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -454,7 +454,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_RevertIf_NotAdmin_AddMember() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -481,7 +481,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_removeMember() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -518,7 +518,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_RevertIF_NotAdmin_RemoveMember() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -555,7 +555,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_RevertIF_NotExistent_RemoveMember() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -582,7 +582,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_pause() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0
@@ -605,7 +605,7 @@ contract FeeOracleTest is Test, Utilities, FeeOracleBase {
     }
 
     function test_unpause() public {
-        oracle = new FeeOracle({
+        oracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: 0

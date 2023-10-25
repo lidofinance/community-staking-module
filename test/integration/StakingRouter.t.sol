@@ -4,10 +4,10 @@
 pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
-import { CommunityStakingModule, NodeOperator } from "../../src/CommunityStakingModule.sol";
+import { CSModule, NodeOperator } from "../../src/CSModule.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
-import { CommunityStakingAccounting } from "../../src/CommunityStakingAccounting.sol";
+import { CSAccounting } from "../../src/CSAccounting.sol";
 import { ILido } from "../../src/interfaces/ILido.sol";
 import { IWstETH } from "../../src/interfaces/IWstETH.sol";
 import "../helpers/Utilities.sol";
@@ -15,7 +15,7 @@ import "../helpers/Utilities.sol";
 contract StakingRouterIntegrationTest is Test, Utilities {
     uint256 networkFork;
 
-    CommunityStakingModule public csm;
+    CSModule public csm;
     ILidoLocator public locator;
     IStakingRouter public stakingRouter;
     ILido public lido;
@@ -48,13 +48,10 @@ contract StakingRouterIntegrationTest is Test, Utilities {
         vm.label(address(lido), "lido");
         vm.label(address(stakingRouter), "stakingRouter");
 
-        csm = new CommunityStakingModule(
-            "community-staking-module",
-            address(locator)
-        );
+        csm = new CSModule("community-staking-module", address(locator));
         address[] memory penalizeRoleMembers = new address[](1);
         penalizeRoleMembers[0] = address(csm);
-        CommunityStakingAccounting accounting = new CommunityStakingAccounting(
+        CSAccounting accounting = new CSAccounting(
             2 ether,
             address(csm),
             address(locator),

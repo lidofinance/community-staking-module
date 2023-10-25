@@ -5,7 +5,7 @@ pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
 
-import { CommunityStakingAccountingBase, CommunityStakingAccounting } from "../src/CommunityStakingAccounting.sol";
+import { CSAccountingBase, CSAccounting } from "../src/CSAccounting.sol";
 import { PermitTokenBase } from "./helpers/Permit.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 import { LidoMock } from "./helpers/mocks/LidoMock.sol";
@@ -15,18 +15,13 @@ import { CommunityStakingModuleMock } from "./helpers/mocks/CommunityStakingModu
 import { CommunityStakingFeeDistributorMock } from "./helpers/mocks/CommunityStakingFeeDistributorMock.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 
-contract CommunityStakingAccountingTest is
-    Test,
-    Fixtures,
-    PermitTokenBase,
-    CommunityStakingAccountingBase
-{
+contract CSAccountingTest is Test, Fixtures, PermitTokenBase, CSAccountingBase {
     LidoLocatorMock internal locator;
     WstETHMock internal wstETH;
     LidoMock internal stETH;
     Stub internal burner;
 
-    CommunityStakingAccounting public accounting;
+    CSAccounting public accounting;
     CommunityStakingModuleMock public stakingModule;
     CommunityStakingFeeDistributorMock public feeDistributor;
 
@@ -46,7 +41,7 @@ contract CommunityStakingAccountingTest is
         (locator, wstETH, stETH, burner) = initLido();
 
         stakingModule = new CommunityStakingModuleMock();
-        accounting = new CommunityStakingAccounting(
+        accounting = new CSAccounting(
             2 ether,
             admin,
             address(locator),
@@ -373,7 +368,7 @@ contract CommunityStakingAccountingTest is
             user,
             0,
             32 ether,
-            CommunityStakingAccounting.PermitInput({
+            CSAccounting.PermitInput({
                 value: 32 ether,
                 deadline: type(uint256).max,
                 // mock permit signature
@@ -421,7 +416,7 @@ contract CommunityStakingAccountingTest is
             user,
             0,
             wstETHAmount,
-            CommunityStakingAccounting.PermitInput({
+            CSAccounting.PermitInput({
                 value: 32 ether,
                 deadline: type(uint256).max,
                 // mock permit signature
@@ -796,7 +791,7 @@ contract CommunityStakingAccountingTest is
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                CommunityStakingAccounting.NotOwnerToClaim.selector,
+                CSAccounting.NotOwnerToClaim.selector,
                 stranger,
                 user
             )
@@ -907,7 +902,7 @@ contract CommunityStakingAccountingTest is
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                CommunityStakingAccounting.NotOwnerToClaim.selector,
+                CSAccounting.NotOwnerToClaim.selector,
                 stranger,
                 user
             )

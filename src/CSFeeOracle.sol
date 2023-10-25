@@ -5,7 +5,7 @@ pragma solidity 0.8.21;
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
-import { FeeOracleBase } from "./FeeOracleBase.sol";
+import { CSFeeOracleBase } from "./CSFeeOracleBase.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
 
 interface IFeeDistributor {
@@ -13,7 +13,7 @@ interface IFeeDistributor {
 }
 
 /// @author madlabman
-contract FeeOracle is FeeOracleBase, AccessControlEnumerable {
+contract CSFeeOracle is CSFeeOracleBase, AccessControlEnumerable {
     /// @notice Merkle Tree root
     bytes32 public reportRoot;
 

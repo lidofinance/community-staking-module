@@ -4,13 +4,13 @@ pragma solidity 0.8.21;
 
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
-import { FeeDistributorBase } from "./FeeDistributorBase.sol";
+import { CSFeeDistributorBase } from "./CSFeeDistributorBase.sol";
 
-import { IFeeOracle } from "./interfaces/IFeeOracle.sol";
+import { ICSFeeOracle } from "./interfaces/ICSFeeOracle.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
 
 /// @author madlabman
-contract FeeDistributor is FeeDistributorBase {
+contract CSFeeDistributor is CSFeeDistributorBase {
     address public immutable CSM;
     address public immutable STETH;
     address public immutable ORACLE;
@@ -47,8 +47,8 @@ contract FeeDistributor is FeeDistributorBase {
     ) public view returns (uint64) {
         bool isValid = MerkleProof.verifyCalldata(
             proof,
-            IFeeOracle(ORACLE).reportRoot(),
-            IFeeOracle(ORACLE).hashLeaf(noIndex, shares)
+            ICSFeeOracle(ORACLE).reportRoot(),
+            ICSFeeOracle(ORACLE).hashLeaf(noIndex, shares)
         );
         if (!isValid) revert InvalidProof();
 

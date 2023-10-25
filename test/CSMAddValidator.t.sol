@@ -2,8 +2,8 @@
 pragma solidity ^0.8.21;
 
 import "forge-std/Test.sol";
-import "../src/CommunityStakingModule.sol";
-import "../src/CommunityStakingAccounting.sol";
+import "../src/CSModule.sol";
+import "../src/CSAccounting.sol";
 import "./helpers/Fixtures.sol";
 import "./helpers/mocks/StETHMock.sol";
 import "./helpers/mocks/CommunityStakingFeeDistributorMock.sol";
@@ -12,13 +12,13 @@ import "./helpers/mocks/LidoMock.sol";
 import "./helpers/mocks/WstETHMock.sol";
 import "./helpers/Utilities.sol";
 
-contract CSMCommon is Test, Fixtures, Utilities, CommunityStakingModuleBase {
+contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     LidoLocatorMock public locator;
     WstETHMock public wstETH;
     LidoMock public stETH;
     Stub public burner;
-    CommunityStakingModule public csm;
-    CommunityStakingAccounting public accounting;
+    CSModule public csm;
+    CSAccounting public accounting;
     CommunityStakingFeeDistributorMock public communityStakingFeeDistributor;
 
     address internal stranger;
@@ -42,11 +42,8 @@ contract CSMCommon is Test, Fixtures, Utilities, CommunityStakingModuleBase {
             address(locator),
             address(accounting)
         );
-        csm = new CommunityStakingModule(
-            "community-staking-module",
-            address(locator)
-        );
-        accounting = new CommunityStakingAccounting(
+        csm = new CSModule("community-staking-module", address(locator));
+        accounting = new CSAccounting(
             2 ether,
             alice,
             address(locator),
@@ -124,7 +121,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             1,
             keys,
             signatures,
-            ICommunityStakingAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: wstETHAmount,
                 deadline: type(uint256).max,
                 // mock permit signature
@@ -179,7 +176,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             1,
             keys,
             signatures,
-            ICommunityStakingAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: wstETHAmount,
                 deadline: type(uint256).max,
                 // mock permit signature
@@ -231,7 +228,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             1,
             keys,
             signatures,
-            ICommunityStakingAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 2 ether,
                 deadline: type(uint256).max,
                 // mock permit signature
@@ -283,7 +280,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             1,
             keys,
             signatures,
-            ICommunityStakingAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: required,
                 deadline: type(uint256).max,
                 // mock permit signature

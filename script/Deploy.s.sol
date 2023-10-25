@@ -6,10 +6,10 @@ pragma solidity 0.8.21;
 import "forge-std/Script.sol";
 
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
-import { CommunityStakingModule } from "../src/CommunityStakingModule.sol";
-import { CommunityStakingAccounting, IWstETH } from "../src/CommunityStakingAccounting.sol";
-import { FeeDistributor } from "../src/FeeDistributor.sol";
-import { FeeOracle } from "../src/FeeOracle.sol";
+import { CSModule } from "../src/CSModule.sol";
+import { CSAccounting, IWstETH } from "../src/CSAccounting.sol";
+import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
+import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 
 contract Deploy is Script {
     ILidoLocator public locator;
@@ -35,11 +35,11 @@ contract Deploy is Script {
         vm.startBroadcast(deployerPrivateKey);
         locator = ILidoLocator(LIDO_LOCATOR_ADDRESS);
         wstETH = IWstETH(WSTETH_ADDRESS);
-        CommunityStakingModule csm = new CommunityStakingModule(
+        CSModule csm = new CSModule(
             "community-staking-module",
             address(locator)
         );
-        CommunityStakingAccounting accounting = new CommunityStakingAccounting({
+        CSAccounting accounting = new CSAccounting({
             _commonBondSize: 2 ether,
             _admin: deployerAddress,
             _lidoLocator: address(locator),
@@ -47,12 +47,12 @@ contract Deploy is Script {
             _wstETH: address(wstETH),
             _penalizeRoleMembers: penalizers
         });
-        FeeOracle feeOracle = new FeeOracle({
+        CSFeeOracle feeOracle = new CSFeeOracle({
             secondsPerBlock: 12,
             blocksPerEpoch: 32,
             genesisTime: uint64(CL_GENESIS_TIME)
         });
-        FeeDistributor feeDistributor = new FeeDistributor({
+        CSFeeDistributor feeDistributor = new CSFeeDistributor({
             _CSM: address(csm),
             _stETH: locator.lido(),
             _oracle: address(feeOracle),

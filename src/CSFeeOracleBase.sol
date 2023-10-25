@@ -5,7 +5,7 @@ pragma solidity 0.8.21;
 import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
 
 /// @author madlabman
-contract FeeOracleBase is Pausable {
+contract CSFeeOracleBase is Pausable {
     error AlreadyMember(address member);
     error NotMember(address member);
 

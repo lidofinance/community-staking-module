@@ -6,12 +6,12 @@ pragma solidity 0.8.21;
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
-import { ICommunityStakingModule } from "./interfaces/ICommunityStakingModule.sol";
+import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ILido } from "./interfaces/ILido.sol";
 import { IWstETH } from "./interfaces/IWstETH.sol";
-import { ICommunityStakingFeeDistributor } from "./interfaces/ICommunityStakingFeeDistributor.sol";
+import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 
-contract CommunityStakingAccountingBase {
+contract CSAccountingBase {
     event ETHBondDeposited(
         uint256 indexed nodeOperatorId,
         address from,
@@ -44,10 +44,7 @@ contract CommunityStakingAccountingBase {
     );
 }
 
-contract CommunityStakingAccounting is
-    CommunityStakingAccountingBase,
-    AccessControlEnumerable
-{
+contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     struct PermitInput {
         uint256 value;
         uint256 deadline;
@@ -66,7 +63,7 @@ contract CommunityStakingAccounting is
     mapping(uint256 => uint256) private bondShares;
 
     ILidoLocator private immutable LIDO_LOCATOR;
-    ICommunityStakingModule private immutable CSM;
+    ICSModule private immutable CSM;
     IWstETH private immutable WSTETH;
     uint256 private immutable COMMON_BOND_SIZE;
 
@@ -107,7 +104,7 @@ contract CommunityStakingAccounting is
         }
 
         LIDO_LOCATOR = ILidoLocator(_lidoLocator);
-        CSM = ICommunityStakingModule(_communityStakingModule);
+        CSM = ICSModule(_communityStakingModule);
         WSTETH = IWstETH(_wstETH);
 
         COMMON_BOND_SIZE = _commonBondSize;
@@ -568,12 +565,8 @@ contract CommunityStakingAccounting is
         return ILido(LIDO_LOCATOR.lido());
     }
 
-    function _feeDistributor()
-        internal
-        view
-        returns (ICommunityStakingFeeDistributor)
-    {
-        return ICommunityStakingFeeDistributor(FEE_DISTRIBUTOR);
+    function _feeDistributor() internal view returns (ICSFeeDistributor) {
+        return ICSFeeDistributor(FEE_DISTRIBUTOR);
     }
 
     function _getNodeOperatorActiveKeys(

@@ -2,8 +2,8 @@
 pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
-import "../src/CommunityStakingModule.sol";
-import "../src/CommunityStakingAccounting.sol";
+import "../src/CSModule.sol";
+import "../src/CSAccounting.sol";
 import "./helpers/Fixtures.sol";
 import "./helpers/mocks/StETHMock.sol";
 import "./helpers/mocks/CommunityStakingFeeDistributorMock.sol";
@@ -17,8 +17,8 @@ contract CSMInitTest is Test, Fixtures {
     LidoMock public stETH;
     Stub public burner;
 
-    CommunityStakingModule public csm;
-    CommunityStakingAccounting public accounting;
+    CSModule public csm;
+    CSAccounting public accounting;
     CommunityStakingFeeDistributorMock public communityStakingFeeDistributor;
 
     address internal stranger;
@@ -31,15 +31,12 @@ contract CSMInitTest is Test, Fixtures {
 
         (locator, wstETH, stETH, burner) = initLido();
 
-        csm = new CommunityStakingModule(
-            "community-staking-module",
-            address(locator)
-        );
+        csm = new CSModule("community-staking-module", address(locator));
         communityStakingFeeDistributor = new CommunityStakingFeeDistributorMock(
             address(locator),
             address(accounting)
         );
-        accounting = new CommunityStakingAccounting(
+        accounting = new CSAccounting(
             2 ether,
             alice,
             address(locator),

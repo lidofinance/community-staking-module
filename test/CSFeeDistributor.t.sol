@@ -4,11 +4,11 @@ pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
 
-import { FeeDistributorBase } from "../src/FeeDistributorBase.sol";
-import { FeeDistributor } from "../src/FeeDistributor.sol";
-import { FeeOracle } from "../src/FeeOracle.sol";
+import { CSFeeDistributorBase } from "../src/CSFeeDistributorBase.sol";
+import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
+import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 
-import { IFeeOracle } from "../src/interfaces/IFeeOracle.sol";
+import { ICSFeeOracle } from "../src/interfaces/ICSFeeOracle.sol";
 import { IStETH } from "../src/interfaces/IStETH.sol";
 
 import { Fixtures } from "./helpers/Fixtures.sol";
@@ -18,12 +18,12 @@ import { OracleMock } from "./helpers/mocks/OracleMock.sol";
 import { StETHMock } from "./helpers/mocks/StETHMock.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 
-contract FeeDistributorTest is Test, Fixtures, FeeDistributorBase {
+contract CSFeeDistributorTest is Test, Fixtures, CSFeeDistributorBase {
     using stdStorage for StdStorage;
 
     StETHMock internal stETH;
 
-    FeeDistributor internal feeDistributor;
+    CSFeeDistributor internal feeDistributor;
     CommunityStakingModuleMock internal csm;
     OracleMock internal oracle;
     Stub internal bondManager;
@@ -36,7 +36,7 @@ contract FeeDistributorTest is Test, Fixtures, FeeDistributorBase {
 
         (, , stETH, ) = initLido();
 
-        feeDistributor = new FeeDistributor(
+        feeDistributor = new CSFeeDistributor(
             address(csm),
             address(stETH),
             address(oracle),

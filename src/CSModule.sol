@@ -4,7 +4,7 @@
 pragma solidity 0.8.21;
 
 import { IStakingModule } from "./interfaces/IStakingModule.sol";
-import "./interfaces/ICommunityStakingAccounting.sol";
+import "./interfaces/ICSAccounting.sol";
 import "./interfaces/ILidoLocator.sol";
 import "./interfaces/ILido.sol";
 
@@ -28,7 +28,7 @@ struct NodeOperator {
     bool isTargetLimitActive;
 }
 
-contract CommunityStakingModuleBase {
+contract CSModuleBase {
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
         string name,
@@ -54,7 +54,7 @@ contract CommunityStakingModuleBase {
     );
 }
 
-contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
+contract CSModule is IStakingModule, CSModuleBase {
     using StringToUint256WithZeroMap for mapping(string => uint256);
     uint256 private nodeOperatorsCount;
     uint256 private activeNodeOperatorsCount;
@@ -86,8 +86,8 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         accountingAddress = _accountingAddress;
     }
 
-    function _accounting() internal view returns (ICommunityStakingAccounting) {
-        return ICommunityStakingAccounting(accountingAddress);
+    function _accounting() internal view returns (ICSAccounting) {
+        return ICSAccounting(accountingAddress);
     }
 
     function _lidoLocator() internal view returns (ILidoLocator) {
@@ -193,7 +193,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures,
-        ICommunityStakingAccounting.PermitInput calldata _permit
+        ICSAccounting.PermitInput calldata _permit
     ) external {
         // TODO sanity checks
         _onlyValidNodeOperatorName(_name);
@@ -256,7 +256,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures,
-        ICommunityStakingAccounting.PermitInput calldata _permit
+        ICSAccounting.PermitInput calldata _permit
     ) external {
         // TODO sanity checks
         _onlyValidNodeOperatorName(_name);
@@ -329,7 +329,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures,
-        ICommunityStakingAccounting.PermitInput calldata _permit
+        ICSAccounting.PermitInput calldata _permit
     ) external {
         // TODO sanity checks
         // TODO store keys
@@ -368,7 +368,7 @@ contract CommunityStakingModule is IStakingModule, CommunityStakingModuleBase {
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures,
-        ICommunityStakingAccounting.PermitInput calldata _permit
+        ICSAccounting.PermitInput calldata _permit
     ) external {
         // TODO sanity checks
         // TODO store keys

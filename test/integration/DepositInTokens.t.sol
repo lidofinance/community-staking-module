@@ -4,8 +4,8 @@
 pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
-import { CommunityStakingModule } from "../../src/CommunityStakingModule.sol";
-import { CommunityStakingAccounting } from "../../src/CommunityStakingAccounting.sol";
+import { CSModule } from "../../src/CSModule.sol";
+import { CSAccounting } from "../../src/CSAccounting.sol";
 import { PermitHelper } from "../helpers/Permit.sol";
 import { CommunityStakingModuleMock } from "../helpers/mocks/CommunityStakingModuleMock.sol";
 import { IWstETH } from "../../src/interfaces/IWstETH.sol";
@@ -16,7 +16,7 @@ contract DepositIntegrationTest is Test, PermitHelper {
     uint256 networkFork;
 
     CommunityStakingModuleMock public csm;
-    CommunityStakingAccounting public accounting;
+    CSAccounting public accounting;
     ILidoLocator public locator;
     IWstETH public wstETH;
 
@@ -58,7 +58,7 @@ contract DepositIntegrationTest is Test, PermitHelper {
         address[] memory penalizeRoleMembers = new address[](1);
         penalizeRoleMembers[0] = user;
 
-        accounting = new CommunityStakingAccounting(
+        accounting = new CSAccounting(
             2 ether,
             user,
             address(locator),
@@ -146,7 +146,7 @@ contract DepositIntegrationTest is Test, PermitHelper {
             user,
             0,
             32 ether,
-            CommunityStakingAccounting.PermitInput({
+            CSAccounting.PermitInput({
                 value: 32 ether,
                 deadline: type(uint256).max,
                 v: v,
@@ -185,7 +185,7 @@ contract DepositIntegrationTest is Test, PermitHelper {
             user,
             0,
             wstETHAmount,
-            CommunityStakingAccounting.PermitInput({
+            CSAccounting.PermitInput({
                 value: 32 ether,
                 deadline: type(uint256).max,
                 v: v,

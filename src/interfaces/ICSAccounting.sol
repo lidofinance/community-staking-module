@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.21;
 
-interface ICommunityStakingAccounting {
+interface ICSAccounting {
     struct PermitInput {
         uint256 value;
         uint256 deadline;
