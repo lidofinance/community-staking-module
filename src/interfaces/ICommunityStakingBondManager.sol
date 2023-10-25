@@ -4,15 +4,35 @@
 pragma solidity 0.8.21;
 
 interface ICommunityStakingBondManager {
+    struct PermitInput {
+        uint256 value;
+        uint256 deadline;
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
+
     function getBondShares(
         uint256 nodeOperatorId
     ) external view returns (uint256);
 
     function getBondEth(uint256 nodeOperatorId) external view returns (uint256);
 
+    function depositWstETHWithPermit(
+        uint256 nodeOperatorId,
+        uint256 wstETHAmount,
+        PermitInput calldata permit
+    ) external returns (uint256);
+
     function depositWstETH(
         uint256 nodeOperatorId,
         uint256 wstETHAmount
+    ) external returns (uint256);
+
+    function depositStETHWithPermit(
+        uint256 nodeOperatorId,
+        uint256 stETHAmount,
+        PermitInput calldata permit
     ) external returns (uint256);
 
     function depositStETH(
@@ -24,10 +44,24 @@ interface ICommunityStakingBondManager {
         uint256 nodeOperatorId
     ) external payable returns (uint256);
 
+    function depositWstETHWithPermit(
+        address from,
+        uint256 nodeOperatorId,
+        uint256 wstETHAmount,
+        PermitInput calldata permit
+    ) external returns (uint256);
+
     function depositWstETH(
         address from,
         uint256 nodeOperatorId,
         uint256 wstETHAmount
+    ) external returns (uint256);
+
+    function depositStETHWithPermit(
+        address from,
+        uint256 nodeOperatorId,
+        uint256 stETHAmount,
+        PermitInput calldata permit
     ) external returns (uint256);
 
     function depositStETH(
@@ -41,15 +75,29 @@ interface ICommunityStakingBondManager {
         uint256 nodeOperatorId
     ) external payable returns (uint256);
 
-    function getRequiredBondSharesForKeys(
+    function getRequiredBondETHForKeys(
         uint256 keysCount
     ) external view returns (uint256);
 
-    function getRequiredBondShares(
-        uint256 nodeOperatorId
+    function getRequiredBondStETHForKeys(
+        uint256 keysCount
     ) external view returns (uint256);
 
-    function getRequiredBondShares(
+    function getRequiredBondWstETHForKeys(
+        uint256 keysCount
+    ) external view returns (uint256);
+
+    function getRequiredBondETH(
+        uint256 nodeOperatorId,
+        uint256 newKeysCount
+    ) external view returns (uint256);
+
+    function getRequiredBondStETH(
+        uint256 nodeOperatorId,
+        uint256 newKeysCount
+    ) external view returns (uint256);
+
+    function getRequiredBondWstETH(
         uint256 nodeOperatorId,
         uint256 newKeysCount
     ) external view returns (uint256);
