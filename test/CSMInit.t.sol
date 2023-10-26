@@ -53,6 +53,6 @@ contract CSMInitTest is Test, Fixtures {
 
     function test_SetAccounting() public {
         csm.setAccounting(address(accounting));
-        assertEq(address(csm.accountingAddress()), address(accounting));
+        assertEq(address(csm.accounting()), address(accounting));
     }
 }
