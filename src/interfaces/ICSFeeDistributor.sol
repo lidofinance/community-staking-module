@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.21;
 
-interface ICommunityStakingFeeDistributor {
+interface ICSFeeDistributor {
     function getFeesToDistribute(
         bytes32[] calldata rewardProof,
         uint256 noIndex,

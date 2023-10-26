@@ -6,12 +6,12 @@ pragma solidity 0.8.21;
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
-import { ICommunityStakingModule } from "./interfaces/ICommunityStakingModule.sol";
+import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ILido } from "./interfaces/ILido.sol";
 import { IWstETH } from "./interfaces/IWstETH.sol";
-import { ICommunityStakingFeeDistributor } from "./interfaces/ICommunityStakingFeeDistributor.sol";
+import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 
-contract CommunityStakingBondManagerBase {
+contract CSAccountingBase {
     event ETHBondDeposited(
         uint256 indexed nodeOperatorId,
         address from,
@@ -44,10 +44,7 @@ contract CommunityStakingBondManagerBase {
     );
 }
 
-contract CommunityStakingBondManager is
-    CommunityStakingBondManagerBase,
-    AccessControlEnumerable
-{
+contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     struct PermitInput {
         uint256 value;
         uint256 deadline;
@@ -66,7 +63,7 @@ contract CommunityStakingBondManager is
     mapping(uint256 => uint256) private bondShares;
 
     ILidoLocator private immutable LIDO_LOCATOR;
-    ICommunityStakingModule private immutable CSM;
+    ICSModule private immutable CSM;
     IWstETH private immutable WSTETH;
     uint256 private immutable COMMON_BOND_SIZE;
 
@@ -107,7 +104,7 @@ contract CommunityStakingBondManager is
         }
 
         LIDO_LOCATOR = ILidoLocator(_lidoLocator);
-        CSM = ICommunityStakingModule(_communityStakingModule);
+        CSM = ICSModule(_communityStakingModule);
         WSTETH = IWstETH(_wstETH);
 
         COMMON_BOND_SIZE = _commonBondSize;
@@ -356,24 +353,10 @@ contract CommunityStakingBondManager is
     /// @notice Deposits ETH to the bond for the given node operator.
     /// @param nodeOperatorId id of the node operator to deposit bond for.
     function depositETH(
-        uint256 nodeOperatorId
-    ) external payable returns (uint256) {
-        return _depositETH(msg.sender, nodeOperatorId);
-    }
-
-    /// @notice Deposits ETH to the bond for the given node operator.
-    /// @param nodeOperatorId id of the node operator to deposit bond for.
-    function depositETH(
         address from,
         uint256 nodeOperatorId
     ) external payable returns (uint256) {
-        return _depositETH(from, nodeOperatorId);
-    }
-
-    function _depositETH(
-        address from,
-        uint256 nodeOperatorId
-    ) internal returns (uint256) {
+        from = (from == address(0)) ? msg.sender : from;
         // TODO: should be modifier. condition might be changed as well
         require(
             nodeOperatorId < CSM.getNodeOperatorsCount(),
@@ -390,20 +373,34 @@ contract CommunityStakingBondManager is
     /// @param nodeOperatorId id of the node operator to deposit bond for.
     /// @param stETHAmount amount of stETH to deposit.
     function depositStETH(
+        address from,
         uint256 nodeOperatorId,
         uint256 stETHAmount
     ) external returns (uint256) {
-        return _depositStETH(msg.sender, nodeOperatorId, stETHAmount);
+        from = (from == address(0)) ? msg.sender : from;
+        return _depositStETH(from, nodeOperatorId, stETHAmount);
     }
 
     /// @notice Deposits stETH to the bond for the given node operator.
     /// @param nodeOperatorId id of the node operator to deposit bond for.
     /// @param stETHAmount amount of stETH to deposit.
-    function depositStETH(
+    /// @param permit permit to spend stETH.
+    function depositStETHWithPermit(
         address from,
         uint256 nodeOperatorId,
-        uint256 stETHAmount
+        uint256 stETHAmount,
+        PermitInput calldata permit
     ) external returns (uint256) {
+        from = (from == address(0)) ? msg.sender : from;
+        _lido().permit(
+            from,
+            address(this),
+            permit.value,
+            permit.deadline,
+            permit.v,
+            permit.r,
+            permit.s
+        );
         return _depositStETH(from, nodeOperatorId, stETHAmount);
     }
 
@@ -424,66 +421,6 @@ contract CommunityStakingBondManager is
         return shares;
     }
 
-    /// @notice Deposits stETH to the bond for the given node operator.
-    /// @param nodeOperatorId id of the node operator to deposit bond for.
-    /// @param stETHAmount amount of stETH to deposit.
-    /// @param permit permit to spend stETH.
-    function depositStETHWithPermit(
-        uint256 nodeOperatorId,
-        uint256 stETHAmount,
-        PermitInput calldata permit
-    ) external returns (uint256) {
-        return
-            _depositStETHWithPermit(
-                msg.sender,
-                nodeOperatorId,
-                stETHAmount,
-                permit
-            );
-    }
-
-    /// @notice Deposits stETH to the bond for the given node operator.
-    /// @param nodeOperatorId id of the node operator to deposit bond for.
-    /// @param stETHAmount amount of stETH to deposit.
-    /// @param permit permit to spend stETH.
-    function depositStETHWithPermit(
-        address from,
-        uint256 nodeOperatorId,
-        uint256 stETHAmount,
-        PermitInput calldata permit
-    ) external returns (uint256) {
-        return
-            _depositStETHWithPermit(from, nodeOperatorId, stETHAmount, permit);
-    }
-
-    function _depositStETHWithPermit(
-        address from,
-        uint256 nodeOperatorId,
-        uint256 stETHAmount,
-        PermitInput calldata _permit
-    ) internal returns (uint256) {
-        _lido().permit(
-            from,
-            address(this),
-            _permit.value,
-            _permit.deadline,
-            _permit.v,
-            _permit.r,
-            _permit.s
-        );
-        return _depositStETH(from, nodeOperatorId, stETHAmount);
-    }
-
-    /// @notice Deposits wstETH to the bond for the given node operator.
-    /// @param nodeOperatorId id of the node operator to deposit bond for.
-    /// @param wstETHAmount amount of wstETH to deposit.
-    function depositWstETH(
-        uint256 nodeOperatorId,
-        uint256 wstETHAmount
-    ) external returns (uint256) {
-        return _depositWstETH(msg.sender, nodeOperatorId, wstETHAmount);
-    }
-
     /// @notice Deposits wstETH to the bond for the given node operator.
     /// @param from address to deposit wstETH from.
     /// @param nodeOperatorId id of the node operator to deposit bond for.
@@ -493,6 +430,30 @@ contract CommunityStakingBondManager is
         uint256 nodeOperatorId,
         uint256 wstETHAmount
     ) external returns (uint256) {
+        from = (from == address(0)) ? msg.sender : from;
+        return _depositWstETH(from, nodeOperatorId, wstETHAmount);
+    }
+
+    /// @notice Deposits wstETH to the bond for the given node operator.
+    /// @param from address to deposit wstETH from.
+    /// @param nodeOperatorId id of the node operator to deposit bond for.
+    /// @param wstETHAmount amount of wstETH to deposit.
+    /// @param permit permit to spend wstETH.
+    function depositWstETHWithPermit(
+        address from,
+        uint256 nodeOperatorId,
+        uint256 wstETHAmount,
+        PermitInput calldata permit
+    ) external returns (uint256) {
+        WSTETH.permit(
+            from,
+            address(this),
+            permit.value,
+            permit.deadline,
+            permit.v,
+            permit.r,
+            permit.s
+        );
         return _depositWstETH(from, nodeOperatorId, wstETHAmount);
     }
 
@@ -514,96 +475,6 @@ contract CommunityStakingBondManager is
         return shares;
     }
 
-    /// @notice Deposits wstETH to the bond for the given node operator.
-    /// @param nodeOperatorId id of the node operator to deposit bond for.
-    /// @param wstETHAmount amount of wstETH to deposit.
-    /// @param permit permit to spend wstETH.
-    function depositWstETHWithPermit(
-        uint256 nodeOperatorId,
-        uint256 wstETHAmount,
-        PermitInput calldata permit
-    ) external returns (uint256) {
-        return
-            _depositWstETHWithPermit(
-                msg.sender,
-                nodeOperatorId,
-                wstETHAmount,
-                permit
-            );
-    }
-
-    /// @notice Deposits wstETH to the bond for the given node operator.
-    /// @param from address to deposit wstETH from.
-    /// @param nodeOperatorId id of the node operator to deposit bond for.
-    /// @param wstETHAmount amount of wstETH to deposit.
-    /// @param permit permit to spend wstETH.
-    function depositWstETHWithPermit(
-        address from,
-        uint256 nodeOperatorId,
-        uint256 wstETHAmount,
-        PermitInput calldata permit
-    ) external returns (uint256) {
-        return
-            _depositWstETHWithPermit(
-                from,
-                nodeOperatorId,
-                wstETHAmount,
-                permit
-            );
-    }
-
-    function _depositWstETHWithPermit(
-        address from,
-        uint256 nodeOperatorId,
-        uint256 stETHAmount,
-        PermitInput calldata permit
-    ) internal returns (uint256) {
-        WSTETH.permit(
-            from,
-            address(this),
-            permit.value,
-            permit.deadline,
-            permit.v,
-            permit.r,
-            permit.s
-        );
-        return _depositWstETH(from, nodeOperatorId, stETHAmount);
-    }
-
-    /// @notice Claims full reward (fee + bond) for the given node operator available for this moment
-    /// @param rewardsProof merkle proof of the rewards.
-    /// @param nodeOperatorId id of the node operator to claim rewards for.
-    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
-    function claimRewardsStETH(
-        bytes32[] memory rewardsProof,
-        uint256 nodeOperatorId,
-        uint256 cumulativeFeeShares
-    ) external {
-        address rewardAddress = _getNodeOperatorRewardAddress(nodeOperatorId);
-        _isSenderEligableToClaim(rewardAddress);
-        uint256 claimableShares = _pullFeeRewards(
-            rewardsProof,
-            nodeOperatorId,
-            cumulativeFeeShares
-        );
-        if (claimableShares == 0) {
-            emit StETHRewardsClaimed(nodeOperatorId, rewardAddress, 0);
-            return;
-        }
-        _lido().transferSharesFrom(
-            address(this),
-            rewardAddress,
-            claimableShares
-        );
-        bondShares[nodeOperatorId] -= claimableShares;
-        totalBondShares -= claimableShares;
-        emit StETHRewardsClaimed(
-            nodeOperatorId,
-            rewardAddress,
-            _ethByShares(claimableShares)
-        );
-    }
-
     /// @notice Claims full reward (fee + bond) for the given node operator with desirable value
     /// @param rewardsProof merkle proof of the rewards.
     /// @param nodeOperatorId id of the node operator to claim rewards for.
@@ -622,51 +493,21 @@ contract CommunityStakingBondManager is
             nodeOperatorId,
             cumulativeFeeShares
         );
-        uint256 shares = _sharesByEth(stETHAmount);
-        claimableShares = shares < claimableShares ? shares : claimableShares;
         if (claimableShares == 0) {
             emit StETHRewardsClaimed(nodeOperatorId, rewardAddress, 0);
             return;
         }
-        _lido().transferSharesFrom(
-            address(this),
-            rewardAddress,
-            claimableShares
-        );
-        bondShares[nodeOperatorId] -= claimableShares;
-        totalBondShares -= claimableShares;
+        uint256 toClaim = stETHAmount < _ethByShares(claimableShares)
+            ? _sharesByEth(stETHAmount)
+            : claimableShares;
+        _lido().transferSharesFrom(address(this), rewardAddress, toClaim);
+        bondShares[nodeOperatorId] -= toClaim;
+        totalBondShares -= toClaim;
         emit StETHRewardsClaimed(
             nodeOperatorId,
             rewardAddress,
-            _ethByShares(claimableShares)
+            _ethByShares(toClaim)
         );
-    }
-
-    /// @notice Claims full reward (fee + bond) for the given node operator available for this moment
-    /// @param rewardsProof merkle proof of the rewards.
-    /// @param nodeOperatorId id of the node operator to claim rewards for.
-    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
-    function claimRewardsWstETH(
-        bytes32[] memory rewardsProof,
-        uint256 nodeOperatorId,
-        uint256 cumulativeFeeShares
-    ) external {
-        address rewardAddress = _getNodeOperatorRewardAddress(nodeOperatorId);
-        _isSenderEligableToClaim(rewardAddress);
-        uint256 claimableShares = _pullFeeRewards(
-            rewardsProof,
-            nodeOperatorId,
-            cumulativeFeeShares
-        );
-        if (claimableShares == 0) {
-            emit WstETHRewardsClaimed(nodeOperatorId, rewardAddress, 0);
-            return;
-        }
-        uint256 wstETHAmount = WSTETH.wrap(_ethByShares(claimableShares));
-        WSTETH.transferFrom(address(this), rewardAddress, wstETHAmount);
-        bondShares[nodeOperatorId] -= wstETHAmount;
-        totalBondShares -= wstETHAmount;
-        emit WstETHRewardsClaimed(nodeOperatorId, rewardAddress, wstETHAmount);
     }
 
     /// @notice Claims full reward (fee + bond) for the given node operator available for this moment
@@ -687,14 +528,14 @@ contract CommunityStakingBondManager is
             nodeOperatorId,
             cumulativeFeeShares
         );
-        claimableShares = wstETHAmount < claimableShares
-            ? wstETHAmount
-            : claimableShares;
         if (claimableShares == 0) {
             emit WstETHRewardsClaimed(nodeOperatorId, rewardAddress, 0);
             return;
         }
-        wstETHAmount = WSTETH.wrap(_ethByShares(claimableShares));
+        uint256 toClaim = wstETHAmount < claimableShares
+            ? wstETHAmount
+            : claimableShares;
+        wstETHAmount = WSTETH.wrap(_ethByShares(toClaim));
         WSTETH.transferFrom(address(this), rewardAddress, wstETHAmount);
         bondShares[nodeOperatorId] -= wstETHAmount;
         totalBondShares -= wstETHAmount;
@@ -724,12 +565,8 @@ contract CommunityStakingBondManager is
         return ILido(LIDO_LOCATOR.lido());
     }
 
-    function _feeDistributor()
-        internal
-        view
-        returns (ICommunityStakingFeeDistributor)
-    {
-        return ICommunityStakingFeeDistributor(FEE_DISTRIBUTOR);
+    function _feeDistributor() internal view returns (ICSFeeDistributor) {
+        return ICSFeeDistributor(FEE_DISTRIBUTOR);
     }
 
     function _getNodeOperatorActiveKeys(

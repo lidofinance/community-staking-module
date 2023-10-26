@@ -3,7 +3,7 @@
 pragma solidity 0.8.21;
 
 /// @author madlabman
-contract FeeDistributorBase {
+contract CSFeeDistributorBase {
     error ZeroAddress(string field);
 
     error NotBondManager();

@@ -2,8 +2,8 @@
 pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
-import "../src/CommunityStakingModule.sol";
-import "../src/CommunityStakingBondManager.sol";
+import "../src/CSModule.sol";
+import "../src/CSAccounting.sol";
 import "./helpers/Fixtures.sol";
 import "./helpers/mocks/StETHMock.sol";
 import "./helpers/mocks/CommunityStakingFeeDistributorMock.sol";
@@ -17,8 +17,8 @@ contract CSMInitTest is Test, Fixtures {
     LidoMock public stETH;
     Stub public burner;
 
-    CommunityStakingModule public csm;
-    CommunityStakingBondManager public bondManager;
+    CSModule public csm;
+    CSAccounting public accounting;
     CommunityStakingFeeDistributorMock public communityStakingFeeDistributor;
 
     address internal stranger;
@@ -31,15 +31,12 @@ contract CSMInitTest is Test, Fixtures {
 
         (locator, wstETH, stETH, burner) = initLido();
 
-        csm = new CommunityStakingModule(
-            "community-staking-module",
-            address(locator)
-        );
+        csm = new CSModule("community-staking-module", address(locator));
         communityStakingFeeDistributor = new CommunityStakingFeeDistributorMock(
             address(locator),
-            address(bondManager)
+            address(accounting)
         );
-        bondManager = new CommunityStakingBondManager(
+        accounting = new CSAccounting(
             2 ether,
             alice,
             address(locator),
@@ -54,8 +51,8 @@ contract CSMInitTest is Test, Fixtures {
         assertEq(csm.getNodeOperatorsCount(), 0);
     }
 
-    function test_SetBondManager() public {
-        csm.setBondManager(address(bondManager));
-        assertEq(address(csm.bondManager()), address(bondManager));
+    function test_SetAccounting() public {
+        csm.setAccounting(address(accounting));
+        assertEq(address(csm.accounting()), address(accounting));
     }
 }

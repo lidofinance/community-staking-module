@@ -6,7 +6,7 @@ pragma solidity 0.8.21;
 import { IStakingModule } from "./IStakingModule.sol";
 
 /// @title Lido's Community Staking Module interface
-interface ICommunityStakingModule is IStakingModule {
+interface ICSModule is IStakingModule {
     /// @notice Returns the node operator by id
     /// @param _nodeOperatorId Node Operator id
     /// @param _fullInfo If true, name will be returned as well

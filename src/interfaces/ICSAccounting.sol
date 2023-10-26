@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.21;
 
-interface ICommunityStakingBondManager {
+interface ICSAccounting {
     struct PermitInput {
         uint256 value;
         uint256 deadline;
@@ -17,32 +17,6 @@ interface ICommunityStakingBondManager {
     ) external view returns (uint256);
 
     function getBondEth(uint256 nodeOperatorId) external view returns (uint256);
-
-    function depositWstETHWithPermit(
-        uint256 nodeOperatorId,
-        uint256 wstETHAmount,
-        PermitInput calldata permit
-    ) external returns (uint256);
-
-    function depositWstETH(
-        uint256 nodeOperatorId,
-        uint256 wstETHAmount
-    ) external returns (uint256);
-
-    function depositStETHWithPermit(
-        uint256 nodeOperatorId,
-        uint256 stETHAmount,
-        PermitInput calldata permit
-    ) external returns (uint256);
-
-    function depositStETH(
-        uint256 nodeOperatorId,
-        uint256 stETHAmount
-    ) external returns (uint256);
-
-    function depositETH(
-        uint256 nodeOperatorId
-    ) external payable returns (uint256);
 
     function depositWstETHWithPermit(
         address from,

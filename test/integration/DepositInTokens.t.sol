@@ -4,17 +4,19 @@
 pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
-import { CommunityStakingModule } from "../../src/CommunityStakingModule.sol";
-import { IWstETH, ILido, CommunityStakingBondManager } from "../../src/CommunityStakingBondManager.sol";
+import { CSModule } from "../../src/CSModule.sol";
+import { CSAccounting } from "../../src/CSAccounting.sol";
 import { PermitHelper } from "../helpers/Permit.sol";
 import { CommunityStakingModuleMock } from "../helpers/mocks/CommunityStakingModuleMock.sol";
+import { IWstETH } from "../../src/interfaces/IWstETH.sol";
+import { ILido } from "../../src/interfaces/ILido.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 
 contract DepositIntegrationTest is Test, PermitHelper {
     uint256 networkFork;
 
     CommunityStakingModuleMock public csm;
-    CommunityStakingBondManager public bondManager;
+    CSAccounting public accounting;
     ILidoLocator public locator;
     IWstETH public wstETH;
 
@@ -56,7 +58,7 @@ contract DepositIntegrationTest is Test, PermitHelper {
         address[] memory penalizeRoleMembers = new address[](1);
         penalizeRoleMembers[0] = user;
 
-        bondManager = new CommunityStakingBondManager(
+        accounting = new CSAccounting(
             2 ether,
             user,
             address(locator),
@@ -85,22 +87,22 @@ contract DepositIntegrationTest is Test, PermitHelper {
             _referal: address(0)
         });
 
-        ILido(locator.lido()).approve(address(bondManager), type(uint256).max);
-        bondManager.depositStETH(0, 32 ether);
+        ILido(locator.lido()).approve(address(accounting), type(uint256).max);
+        accounting.depositStETH(user, 0, 32 ether);
 
         assertEq(ILido(locator.lido()).balanceOf(user), 0);
-        assertEq(bondManager.getBondShares(0), shares);
-        assertEq(bondManager.totalBondShares(), shares);
+        assertEq(accounting.getBondShares(0), shares);
+        assertEq(accounting.totalBondShares(), shares);
     }
 
     function test_depositETH() public {
         vm.prank(user);
         vm.deal(user, 32 ether);
-        uint256 shares = bondManager.depositETH{ value: 32 ether }(0);
+        uint256 shares = accounting.depositETH{ value: 32 ether }(user, 0);
 
         assertEq(user.balance, 0);
-        assertEq(bondManager.getBondShares(0), shares);
-        assertEq(bondManager.totalBondShares(), shares);
+        assertEq(accounting.getBondShares(0), shares);
+        assertEq(accounting.totalBondShares(), shares);
     }
 
     function test_depositWstETH() public {
@@ -113,18 +115,18 @@ contract DepositIntegrationTest is Test, PermitHelper {
         uint256 wstETHAmount = wstETH.wrap(32 ether);
 
         vm.startPrank(user);
-        wstETH.approve(address(bondManager), type(uint256).max);
-        uint256 shares = bondManager.depositWstETH(0, wstETHAmount);
+        wstETH.approve(address(accounting), type(uint256).max);
+        uint256 shares = accounting.depositWstETH(user, 0, wstETHAmount);
 
         assertEq(wstETH.balanceOf(user), 0);
-        assertEq(bondManager.getBondShares(0), shares);
-        assertEq(bondManager.totalBondShares(), shares);
+        assertEq(accounting.getBondShares(0), shares);
+        assertEq(accounting.totalBondShares(), shares);
     }
 
     function test_depositStETHWithPermit() public {
         bytes32 digest = stETHPermitDigest(
             user,
-            address(bondManager),
+            address(accounting),
             32 ether,
             vm.getNonce(user),
             type(uint256).max,
@@ -140,11 +142,11 @@ contract DepositIntegrationTest is Test, PermitHelper {
         vm.stopPrank();
 
         vm.prank(stranger);
-        bondManager.depositStETHWithPermit(
+        accounting.depositStETHWithPermit(
             user,
             0,
             32 ether,
-            CommunityStakingBondManager.PermitInput({
+            CSAccounting.PermitInput({
                 value: 32 ether,
                 deadline: type(uint256).max,
                 v: v,
@@ -154,14 +156,14 @@ contract DepositIntegrationTest is Test, PermitHelper {
         );
 
         assertEq(ILido(locator.lido()).balanceOf(user), 0);
-        assertEq(bondManager.getBondShares(0), shares);
-        assertEq(bondManager.totalBondShares(), shares);
+        assertEq(accounting.getBondShares(0), shares);
+        assertEq(accounting.totalBondShares(), shares);
     }
 
     function test_depositWstETHWithPermit() public {
         bytes32 digest = wstETHPermitDigest(
             user,
-            address(bondManager),
+            address(accounting),
             32 ether,
             vm.getNonce(user),
             type(uint256).max,
@@ -179,11 +181,11 @@ contract DepositIntegrationTest is Test, PermitHelper {
         vm.stopPrank();
 
         vm.prank(stranger);
-        uint256 shares = bondManager.depositWstETHWithPermit(
+        uint256 shares = accounting.depositWstETHWithPermit(
             user,
             0,
             wstETHAmount,
-            CommunityStakingBondManager.PermitInput({
+            CSAccounting.PermitInput({
                 value: 32 ether,
                 deadline: type(uint256).max,
                 v: v,
@@ -193,7 +195,7 @@ contract DepositIntegrationTest is Test, PermitHelper {
         );
 
         assertEq(wstETH.balanceOf(user), 0);
-        assertEq(bondManager.getBondShares(0), shares);
-        assertEq(bondManager.totalBondShares(), shares);
+        assertEq(accounting.getBondShares(0), shares);
+        assertEq(accounting.totalBondShares(), shares);
     }
 }
