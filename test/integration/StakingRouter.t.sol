@@ -49,15 +49,13 @@ contract StakingRouterIntegrationTest is Test, Utilities {
         vm.label(address(stakingRouter), "stakingRouter");
 
         csm = new CSModule("community-staking-module", address(locator));
-        address[] memory penalizeRoleMembers = new address[](1);
-        penalizeRoleMembers[0] = address(csm);
         CSAccounting accounting = new CSAccounting(
             2 ether,
             address(csm),
             address(locator),
             address(wstETH),
             address(csm),
-            penalizeRoleMembers
+            8 weeks
         );
         csm.setAccounting(address(accounting));
 

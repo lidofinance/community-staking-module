@@ -29,8 +29,6 @@ contract Deploy is Script {
 
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployerAddress = vm.addr(deployerPrivateKey);
-        address[] memory penalizers = new address[](1);
-        penalizers[0] = deployerAddress; // TODO: temporary
 
         vm.startBroadcast(deployerPrivateKey);
         locator = ILidoLocator(LIDO_LOCATOR_ADDRESS);
@@ -45,7 +43,7 @@ contract Deploy is Script {
             lidoLocator: address(locator),
             communityStakingModule: address(csm),
             wstETH: address(wstETH),
-            penalizeRoleMembers: penalizers
+            blockedBondRetentionPeriod: 8 weeks
         });
         CSFeeOracle feeOracle = new CSFeeOracle({
             secondsPerBlock: 12,
@@ -65,6 +63,16 @@ contract Deploy is Script {
             admin: deployerAddress
         });
         accounting.setFeeDistributor(address(feeDistributor));
+        // TODO: temporary
+        accounting.grantRole(accounting.PENALIZE_BOND_ROLE(), deployerAddress);
+        accounting.grantRole(
+            accounting.EL_REWARDS_STEALING_PENALTY_ROLE(),
+            deployerAddress
+        );
+        accounting.grantRole(
+            accounting.EASY_TRACK_MOTION_AGENT_ROLE(),
+            deployerAddress
+        );
         // TODO: csm.setBondManager(address(accounting));
 
         vm.stopBroadcast();

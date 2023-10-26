@@ -49,7 +49,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
             address(locator),
             address(wstETH),
             address(csm),
-            penalizeRoleMembers
+            8 weeks
         );
         csm.setAccounting(address(accounting));
     }

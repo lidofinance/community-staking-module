@@ -42,7 +42,7 @@ contract CSMInitTest is Test, Fixtures {
             address(locator),
             address(wstETH),
             address(csm),
-            penalizeRoleMembers
+            8 weeks
         );
     }
 

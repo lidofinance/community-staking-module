@@ -45,9 +45,6 @@ contract CSAccountingTest is
         user = address(2);
         stranger = address(777);
 
-        address[] memory penalizeRoleMembers = new address[](1);
-        penalizeRoleMembers[0] = admin;
-
         (locator, wstETH, stETH, burner) = initLido();
 
         stakingModule = new CommunityStakingModuleMock();
@@ -57,14 +54,21 @@ contract CSAccountingTest is
             address(locator),
             address(wstETH),
             address(stakingModule),
-            penalizeRoleMembers
+            8 weeks
         );
         feeDistributor = new CommunityStakingFeeDistributorMock(
             address(locator),
             address(accounting)
         );
-        vm.prank(admin);
+        vm.startPrank(admin);
         accounting.setFeeDistributor(address(feeDistributor));
+        accounting.grantRole(accounting.PENALIZE_BOND_ROLE(), admin);
+        accounting.grantRole(
+            accounting.EL_REWARDS_STEALING_PENALTY_ROLE(),
+            admin
+        );
+        accounting.grantRole(accounting.EASY_TRACK_MOTION_AGENT_ROLE(), admin);
+        vm.stopPrank();
     }
 
     function test_totalBondShares() public {
@@ -1048,26 +1052,28 @@ contract CSAccountingTest is
         accounting.depositStETH(user, 0, 32 ether);
         vm.stopPrank();
 
+        uint256 shares = stETH.getSharesByPooledEth(1 ether);
+        uint256 penalized = stETH.getPooledEthByShares(shares);
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondPenalized(0, 1e18, 1e18);
+        emit BondPenalized(0, penalized, penalized);
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(admin);
-        accounting.penalize(0, 1e18);
+        accounting.penalize(0, 1 ether);
 
         assertEq(
             accounting.getBondShares(0),
-            bondSharesBefore - 1e18,
+            bondSharesBefore - shares,
             "bond shares should be decreased by penalty"
         );
         assertEq(
             stETH.sharesOf(address(accounting)),
-            bondSharesBefore - 1e18,
+            bondSharesBefore - shares,
             "bond manager shares should be decreased by penalty"
         );
         assertEq(
             stETH.sharesOf(address(burner)),
-            1e18,
+            shares,
             "burner shares should be equal to penalty"
         );
     }
@@ -1081,12 +1087,16 @@ contract CSAccountingTest is
         vm.stopPrank();
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-
+        uint256 penaltyShares = stETH.getSharesByPooledEth(33 ether);
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondPenalized(0, 32 * 1e18, bondSharesBefore);
+        emit BondPenalized(
+            0,
+            stETH.getPooledEthByShares(penaltyShares),
+            stETH.getPooledEthByShares(bondSharesBefore)
+        );
 
         vm.prank(admin);
-        accounting.penalize(0, 32 * 1e18);
+        accounting.penalize(0, 33 ether);
 
         assertEq(
             accounting.getBondShares(0),
@@ -1114,11 +1124,12 @@ contract CSAccountingTest is
         vm.stopPrank();
 
         uint256 shares = stETH.getSharesByPooledEth(32 ether);
+        uint256 penalized = stETH.getPooledEthByShares(shares);
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondPenalized(0, shares, shares);
+        emit BondPenalized(0, penalized, penalized);
 
         vm.prank(admin);
-        accounting.penalize(0, shares);
+        accounting.penalize(0, 32 ether);
 
         assertEq(
             accounting.getBondShares(0),
