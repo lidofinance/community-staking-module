@@ -75,4 +75,6 @@ interface ICSAccounting {
         uint256 nodeOperatorId,
         uint256 newKeysCount
     ) external view returns (uint256);
+
+    function penalize(uint256 nodeOperatorId, uint256 shares) external;
 }

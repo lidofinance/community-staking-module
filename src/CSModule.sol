@@ -3,10 +3,16 @@
 
 pragma solidity 0.8.21;
 
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+
+import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { IStakingModule } from "./interfaces/IStakingModule.sol";
-import "./interfaces/ICSAccounting.sol";
-import "./interfaces/ILidoLocator.sol";
-import "./interfaces/ILido.sol";
+import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
+import { ILido } from "./interfaces/ILido.sol";
+
+import { QueueLib } from "./lib/QueueLib.sol";
+import { Batch } from "./lib/Batch.sol";
 
 import "./lib/SigningKeys.sol";
 import "./lib/StringToUint256WithZeroMap.sol";
@@ -36,26 +42,48 @@ contract CSModuleBase {
     );
     event NodeOperatorNameSet(uint256 indexed nodeOperatorId, string name);
 
-    event VettedKeysCountChanged(
+    event VettedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 approvedKeysCount
+        uint256 approvedValidatorsCount
     );
-    event DepositedKeysCountChanged(
+    event DepositedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 depositedKeysCount
+        uint256 depositedValidatorsCount
     );
-    event ExitedKeysCountChanged(
+    event ExitedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 exitedKeysCount
+        uint256 exitedValidatorsCount
     );
-    event TotalKeysCountChanged(
+    event TotalSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 totalKeysCount
+        uint256 totalValidatorsCount
     );
+
+    event BatchEnqueued(
+        uint256 indexed nodeOperatorId,
+        uint256 startIndex,
+        uint256 count
+    );
+
+    event StakingModuleTypeSet(bytes32 moduleType);
+    event LocatorContractSet(address locatorAddress);
+    event UnvettingFeeSet(uint256 unvettingFee);
 }
 
 contract CSModule is IStakingModule, CSModuleBase {
     using StringToUint256WithZeroMap for mapping(string => uint256);
+    using QueueLib for QueueLib.Queue;
+
+    uint256 public constant MAX_NODE_OPERATOR_NAME_LENGTH = 255;
+    bytes32 public constant SIGNING_KEYS_POSITION =
+        keccak256("lido.CommunityStakingModule.signingKeysPosition");
+
+    uint256 public unvettingFee;
+    QueueLib.Queue public queue;
+
+    ICSAccounting public accounting;
+    ILidoLocator public lidoLocator;
+
     uint256 private nodeOperatorsCount;
     uint256 private activeNodeOperatorsCount;
     bytes32 private moduleType;
@@ -63,39 +91,55 @@ contract CSModule is IStakingModule, CSModuleBase {
     mapping(uint256 => NodeOperator) private nodeOperators;
     mapping(string => uint256) private nodeOperatorIdsByName;
 
-    bytes32 public constant SIGNING_KEYS_POSITION =
-        keccak256("lido.CommunityStakingModule.signingKeysPosition");
-    uint256 public constant MAX_NODE_OPERATOR_NAME_LENGTH = 255;
+    uint256 private _totalDepositedValidators;
+    uint256 private _totalExitedValidators;
+    uint256 private _totalAddedValidators;
 
-    address public accountingAddress;
-    address public lidoLocator;
+    modifier onlyActiveNodeOperator(uint256 _nodeOperatorId) {
+        require(
+            _nodeOperatorId < nodeOperatorsCount,
+            "node operator does not exist"
+        );
+        require(
+            nodeOperators[_nodeOperatorId].active,
+            "node operator is not active"
+        );
+        _;
+    }
+
+    modifier onlyKeyValidatorOrNodeOperatorManager() {
+        // TODO: check the role
+        _;
+    }
+
+    modifier onlyKeyValidator() {
+        // TODO: check the role
+        _;
+    }
 
     constructor(bytes32 _type, address _locator) {
         moduleType = _type;
+        emit StakingModuleTypeSet(_type);
 
         require(_locator != address(0), "lido locator is zero address");
-        lidoLocator = _locator;
+        lidoLocator = ILidoLocator(_locator);
+        emit LocatorContractSet(_locator);
     }
 
-    function setAccounting(address _accountingAddress) external {
-        // TODO add role check
-        require(
-            address(accountingAddress) == address(0),
-            "already initialized"
-        );
-        accountingAddress = _accountingAddress;
+    function setAccounting(address _accounting) external {
+        // TODO: add role check
+        require(address(accounting) == address(0), "already initialized");
+        accounting = ICSAccounting(_accounting);
     }
 
-    function _accounting() internal view returns (ICSAccounting) {
-        return ICSAccounting(accountingAddress);
-    }
-
-    function _lidoLocator() internal view returns (ILidoLocator) {
-        return ILidoLocator(lidoLocator);
+    function setUnvettingFee(uint256 unvettingFee_) external {
+        // TODO: add role check
+        unvettingFee = unvettingFee_;
+        emit UnvettingFeeSet(unvettingFee_);
     }
 
     function _lido() internal view returns (ILido) {
-        return ILido(_lidoLocator().lido());
+        return ILido(lidoLocator.lido());
     }
 
     function getType() external view returns (bytes32) {
@@ -106,22 +150,15 @@ contract CSModule is IStakingModule, CSModuleBase {
         external
         view
         returns (
-            uint256 totalExitedValidators,
-            uint256 totalDepositedValidators,
-            uint256 depositableValidatorsCount
+            uint256 /* totalExitedValidators */,
+            uint256 /* totalDepositedValidators */,
+            uint256 /* depositableValidatorsCount */
         )
     {
-        for (uint256 i = 0; i < nodeOperatorsCount; i++) {
-            totalExitedValidators += nodeOperators[i].totalExitedKeys;
-            totalDepositedValidators += nodeOperators[i].totalDepositedKeys;
-            depositableValidatorsCount +=
-                nodeOperators[i].totalAddedKeys -
-                nodeOperators[i].totalExitedKeys;
-        }
         return (
-            totalExitedValidators,
-            totalDepositedValidators,
-            depositableValidatorsCount
+            _totalExitedValidators,
+            _totalDepositedValidators,
+            _totalAddedValidators - _totalExitedValidators
         );
     }
 
@@ -136,7 +173,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         _onlyValidNodeOperatorName(_name);
 
         require(
-            msg.value == _accounting().getRequiredBondETHForKeys(_keysCount),
+            msg.value == accounting.getRequiredBondETHForKeys(_keysCount),
             "eth value is not equal to required bond"
         );
 
@@ -149,7 +186,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
 
-        _accounting().depositETH{ value: msg.value }(msg.sender, id);
+        accounting.depositETH{ value: msg.value }(msg.sender, id);
 
         _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
 
@@ -163,7 +200,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         bytes calldata _publicKeys,
         bytes calldata _signatures
     ) external {
-        // TODO sanity checks
+        // TODO: sanity checks
         _onlyValidNodeOperatorName(_name);
 
         uint256 id = nodeOperatorsCount;
@@ -175,10 +212,10 @@ contract CSModule is IStakingModule, CSModuleBase {
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
 
-        _accounting().depositStETH(
+        accounting.depositStETH(
             msg.sender,
             id,
-            _accounting().getRequiredBondStETHForKeys(_keysCount)
+            accounting.getRequiredBondStETHForKeys(_keysCount)
         );
 
         _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
@@ -207,10 +244,10 @@ contract CSModule is IStakingModule, CSModuleBase {
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
 
-        _accounting().depositStETHWithPermit(
+        accounting.depositStETHWithPermit(
             _from,
             id,
-            _accounting().getRequiredBondStETHForKeys(_keysCount),
+            accounting.getRequiredBondStETHForKeys(_keysCount),
             _permit
         );
 
@@ -238,10 +275,10 @@ contract CSModule is IStakingModule, CSModuleBase {
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
 
-        _accounting().depositWstETH(
+        accounting.depositWstETH(
             msg.sender,
             id,
-            _accounting().getRequiredBondWstETHForKeys(_keysCount)
+            accounting.getRequiredBondWstETHForKeys(_keysCount)
         );
 
         _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
@@ -270,10 +307,10 @@ contract CSModule is IStakingModule, CSModuleBase {
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
 
-        _accounting().depositWstETHWithPermit(
+        accounting.depositWstETHWithPermit(
             _from,
             id,
-            _accounting().getRequiredBondWstETHForKeys(_keysCount),
+            accounting.getRequiredBondWstETHForKeys(_keysCount),
             _permit
         );
 
@@ -288,19 +325,15 @@ contract CSModule is IStakingModule, CSModuleBase {
         bytes calldata _publicKeys,
         bytes calldata _signatures
     ) external payable onlyExistingNodeOperator(_nodeOperatorId) {
-        // TODO sanity checks
-        // TODO store keys
+        // TODO: sanity checks
 
         require(
             msg.value ==
-                _accounting().getRequiredBondETH(_nodeOperatorId, _keysCount),
+                accounting.getRequiredBondETH(_nodeOperatorId, _keysCount),
             "eth value is not equal to required bond"
         );
 
-        _accounting().depositETH{ value: msg.value }(
-            msg.sender,
-            _nodeOperatorId
-        );
+        accounting.depositETH{ value: msg.value }(msg.sender, _nodeOperatorId);
 
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
     }
@@ -311,13 +344,12 @@ contract CSModule is IStakingModule, CSModuleBase {
         bytes calldata _publicKeys,
         bytes calldata _signatures
     ) external onlyExistingNodeOperator(_nodeOperatorId) {
-        // TODO sanity checks
-        // TODO store keys
+        // TODO: sanity checks
 
-        _accounting().depositStETH(
+        accounting.depositStETH(
             msg.sender,
             _nodeOperatorId,
-            _accounting().getRequiredBondStETH(_nodeOperatorId, _keysCount)
+            accounting.getRequiredBondStETH(_nodeOperatorId, _keysCount)
         );
 
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
@@ -332,12 +364,11 @@ contract CSModule is IStakingModule, CSModuleBase {
         ICSAccounting.PermitInput calldata _permit
     ) external {
         // TODO sanity checks
-        // TODO store keys
 
-        _accounting().depositStETHWithPermit(
+        accounting.depositStETHWithPermit(
             _from,
             _nodeOperatorId,
-            _accounting().getRequiredBondStETH(_nodeOperatorId, _keysCount),
+            accounting.getRequiredBondStETH(_nodeOperatorId, _keysCount),
             _permit
         );
 
@@ -350,13 +381,12 @@ contract CSModule is IStakingModule, CSModuleBase {
         bytes calldata _publicKeys,
         bytes calldata _signatures
     ) external onlyExistingNodeOperator(_nodeOperatorId) {
-        // TODO sanity checks
-        // TODO store keys
+        // TODO: sanity checks
 
-        _accounting().depositWstETH(
+        accounting.depositWstETH(
             msg.sender,
             _nodeOperatorId,
-            _accounting().getRequiredBondWstETH(_nodeOperatorId, _keysCount)
+            accounting.getRequiredBondWstETH(_nodeOperatorId, _keysCount)
         );
 
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
@@ -371,12 +401,11 @@ contract CSModule is IStakingModule, CSModuleBase {
         ICSAccounting.PermitInput calldata _permit
     ) external {
         // TODO sanity checks
-        // TODO store keys
 
-        _accounting().depositWstETHWithPermit(
+        accounting.depositWstETHWithPermit(
             _from,
             _nodeOperatorId,
-            _accounting().getRequiredBondWstETH(_nodeOperatorId, _keysCount),
+            accounting.getRequiredBondWstETH(_nodeOperatorId, _keysCount),
             _permit
         );
 
@@ -427,7 +456,7 @@ contract CSModule is IStakingModule, CSModuleBase {
             uint256 totalDepositedValidators
         )
     {
-        NodeOperator memory no = nodeOperators[_nodeOperatorId];
+        NodeOperator storage no = nodeOperators[_nodeOperatorId];
         active = no.active;
         name = _fullInfo ? no.name : "";
         rewardAddress = no.rewardAddress;
@@ -500,22 +529,22 @@ contract CSModule is IStakingModule, CSModuleBase {
     }
 
     function onRewardsMinted(uint256 /*_totalShares*/) external {
-        // TODO implement
+        // TODO: implement
     }
 
     function updateStuckValidatorsCount(
         bytes calldata /*_nodeOperatorIds*/,
         bytes calldata /*_stuckValidatorsCounts*/
     ) external {
-        // TODO implement
+        // TODO: implement
     }
 
     function updateExitedValidatorsCount(
         bytes calldata _nodeOperatorIds,
         bytes calldata _exitedValidatorsCounts
     ) external {
-        // TODO implement
-        //        emit ExitedKeysCountChanged(
+        // TODO: implement
+        //        emit ExitedSigningKeysCountChanged(
         //            _nodeOperatorId,
         //            _exitedValidatorsCount
         //        );
@@ -525,7 +554,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         uint256 /*_nodeOperatorId*/,
         uint256 /*_refundedValidatorsCount*/
     ) external {
-        // TODO implement
+        // TODO: implement
     }
 
     function updateTargetValidatorsLimits(
@@ -533,11 +562,11 @@ contract CSModule is IStakingModule, CSModuleBase {
         bool /*_isTargetLimitActive*/,
         uint256 /*_targetLimit*/
     ) external {
-        // TODO implement
+        // TODO: implement
     }
 
     function onExitedAndStuckValidatorsCountsUpdated() external {
-        // TODO implement
+        // TODO: implement
     }
 
     function unsafeUpdateValidatorsCount(
@@ -545,7 +574,60 @@ contract CSModule is IStakingModule, CSModuleBase {
         uint256 /*_exitedValidatorsKeysCount*/,
         uint256 /*_stuckValidatorsKeysCount*/
     ) external {
-        // TODO implement
+        // TODO: implement
+    }
+
+    function vetKeys(
+        uint256 nodeOperatorId,
+        uint64 vettedKeysCount
+    ) external onlyKeyValidator {
+        NodeOperator storage no = nodeOperators[nodeOperatorId];
+
+        require(
+            vettedKeysCount > no.totalVettedKeys,
+            "Wrong vettedKeysCount: less than already vetted"
+        );
+        require(
+            vettedKeysCount <= no.totalAddedKeys,
+            "Wrong vettedKeysCount: more than added"
+        );
+
+        uint64 count = SafeCast.toUint64(vettedKeysCount - no.totalVettedKeys);
+        uint64 start = SafeCast.toUint64(
+            no.totalVettedKeys == 0 ? 0 : no.totalVettedKeys - 1
+        );
+
+        bytes32 pointer = Batch.serialize({
+            nodeOperatorId: SafeCast.toUint128(nodeOperatorId),
+            start: start,
+            count: count
+        });
+
+        no.totalVettedKeys = vettedKeysCount;
+        queue.enqueue(pointer);
+
+        emit BatchEnqueued(nodeOperatorId, start, count);
+        emit VettedSigningKeysCountChanged(nodeOperatorId, vettedKeysCount);
+
+        _incrementNonce();
+    }
+
+    function unvetKeys(
+        uint256 nodeOperatorId
+    ) external onlyKeyValidatorOrNodeOperatorManager {
+        _unvetKeys(nodeOperatorId);
+        accounting.penalize(nodeOperatorId, unvettingFee);
+    }
+
+    function unsafeUnvetKeys(uint256 nodeOperatorId) external onlyKeyValidator {
+        _unvetKeys(nodeOperatorId);
+    }
+
+    function _unvetKeys(uint256 nodeOperatorId) internal {
+        NodeOperator storage no = nodeOperators[nodeOperatorId];
+        no.totalVettedKeys = no.totalDepositedKeys;
+        emit VettedSigningKeysCountChanged(nodeOperatorId, no.totalVettedKeys);
+        _incrementNonce();
     }
 
     function onWithdrawalCredentialsChanged() external {
@@ -570,8 +652,9 @@ contract CSModule is IStakingModule, CSModuleBase {
             _signatures
         );
 
+        _totalAddedValidators += _keysCount;
         nodeOperators[_nodeOperatorId].totalAddedKeys += _keysCount;
-        emit TotalKeysCountChanged(
+        emit TotalSigningKeysCountChanged(
             _nodeOperatorId,
             nodeOperators[_nodeOperatorId].totalAddedKeys
         );
@@ -581,44 +664,190 @@ contract CSModule is IStakingModule, CSModuleBase {
 
     function obtainDepositData(
         uint256 _depositsCount,
-        bytes calldata /*_depositCalldata*/
+        bytes calldata /* _depositCalldata */
     ) external returns (bytes memory publicKeys, bytes memory signatures) {
         (publicKeys, signatures) = SigningKeys.initKeysSigsBuf(_depositsCount);
+        uint256 limit = _depositsCount;
         uint256 loadedKeysCount = 0;
-        for (
-            uint256 nodeOperatorId;
-            nodeOperatorId < nodeOperatorsCount;
-            nodeOperatorId++
-        ) {
-            NodeOperator storage no = nodeOperators[nodeOperatorId];
-            // TODO replace total added to total vetted later
-            uint256 availableKeys = no.totalAddedKeys - no.totalDepositedKeys;
-            if (availableKeys == 0) continue;
 
-            uint256 _startIndex = no.totalDepositedKeys;
-            uint256 _keysCount = _depositsCount > availableKeys
-                ? availableKeys
-                : _depositsCount;
+        for (bytes32 p = queue.peek(); !Batch.isNil(p); ) {
+            (
+                uint256 nodeOperatorId,
+                uint256 startIndex,
+                uint256 depositableKeysCount
+            ) = _depositableKeysInBatch(p);
+
+            uint256 keysCount = Math.min(limit, depositableKeysCount);
+            if (depositableKeysCount == keysCount) {
+                queue.dequeue();
+            }
+
             SigningKeys.loadKeysSigs(
                 SIGNING_KEYS_POSITION,
                 nodeOperatorId,
-                _startIndex,
-                _keysCount,
+                startIndex,
+                keysCount,
                 publicKeys,
                 signatures,
                 loadedKeysCount
             );
-            loadedKeysCount += _keysCount;
-            // TODO maybe depositor bot should initiate this increment
-            no.totalDepositedKeys += _keysCount;
-            emit DepositedKeysCountChanged(
+            loadedKeysCount += keysCount;
+
+            _totalDepositedValidators += keysCount;
+            NodeOperator storage no = nodeOperators[nodeOperatorId];
+            no.totalDepositedKeys += keysCount;
+            require(
+                no.totalDepositedKeys <= no.totalVettedKeys,
+                "too many keys"
+            );
+
+            emit DepositedSigningKeysCountChanged(
                 nodeOperatorId,
                 no.totalDepositedKeys
             );
+
+            limit = limit - keysCount;
+            if (limit == 0) {
+                break;
+            }
+
+            p = queue.peek();
         }
-        if (loadedKeysCount != _depositsCount) {
-            revert("NOT_ENOUGH_KEYS");
+
+        require(loadedKeysCount == _depositsCount, "NOT_ENOUGH_KEYS");
+        _incrementNonce();
+    }
+
+    function _depositableKeysInBatch(
+        bytes32 batch
+    )
+        internal
+        view
+        returns (
+            uint256 nodeOperatorId,
+            uint256 startIndex,
+            uint256 depositableKeysCount
+        )
+    {
+        uint256 start;
+        uint256 count;
+
+        (nodeOperatorId, start, count) = Batch.deserialize(batch);
+
+        NodeOperator storage no = nodeOperators[nodeOperatorId];
+        _assertIsValidBatch(no, start, count);
+
+        startIndex = Math.max(start, no.totalDepositedKeys);
+        depositableKeysCount = start + count - startIndex;
+    }
+
+    function _assertIsValidBatch(
+        NodeOperator storage no,
+        uint256 _start,
+        uint256 _count
+    ) internal view {
+        require(_count != 0, "Empty batch given");
+        require(
+            _unvettedKeysInBatch(no, _start, _count) == false,
+            "Batch contains unvetted keys"
+        );
+        require(
+            _start + _count <= no.totalAddedKeys,
+            "Invalid batch range: not enough keys"
+        );
+        require(
+            _start <= no.totalDepositedKeys,
+            "Invalid batch range: skipped keys"
+        );
+    }
+
+    /// @dev returns the next pointer to start cleanup from
+    function cleanDepositQueue(
+        uint256 maxItems,
+        bytes32 pointer
+    ) external returns (bytes32) {
+        require(maxItems > 0, "Queue walkthrough limit is not set");
+
+        if (Batch.isNil(pointer)) {
+            pointer = queue.front;
         }
+
+        for (uint256 i; i < maxItems; i++) {
+            bytes32 item = queue.at(pointer);
+            if (Batch.isNil(item)) {
+                break;
+            }
+
+            (uint256 nodeOperatorId, uint256 start, uint256 count) = Batch
+                .deserialize(item);
+            NodeOperator storage no = nodeOperators[nodeOperatorId];
+            if (_unvettedKeysInBatch(no, start, count)) {
+                queue.remove(pointer, item);
+            }
+
+            pointer = item;
+        }
+
+        return pointer;
+    }
+
+    function depositQueue(
+        uint256 maxItems,
+        bytes32 pointer
+    )
+        external
+        view
+        returns (
+            bytes32[] memory items,
+            bytes32 /* pointer */,
+            uint256 /* count */
+        )
+    {
+        require(maxItems > 0, "Queue walkthrough limit is not set");
+
+        if (Batch.isNil(pointer)) {
+            pointer = queue.front;
+        }
+
+        return queue.list(pointer, maxItems);
+    }
+
+    /// @dev returns the next pointer to start check from
+    function isQueueHasUnvettedKeys(
+        uint256 maxItems,
+        bytes32 pointer
+    ) external view returns (bool, bytes32) {
+        require(maxItems > 0, "Queue walkthrough limit is not set");
+
+        if (Batch.isNil(pointer)) {
+            pointer = queue.front;
+        }
+
+        for (uint256 i; i < maxItems; i++) {
+            bytes32 item = queue.at(pointer);
+            if (Batch.isNil(item)) {
+                break;
+            }
+
+            (uint256 nodeOperatorId, uint256 start, uint256 count) = Batch
+                .deserialize(item);
+            NodeOperator storage no = nodeOperators[nodeOperatorId];
+            if (_unvettedKeysInBatch(no, start, count)) {
+                return (true, pointer);
+            }
+
+            pointer = item;
+        }
+
+        return (false, pointer);
+    }
+
+    function _unvettedKeysInBatch(
+        NodeOperator storage no,
+        uint256 _start,
+        uint256 _count
+    ) internal view returns (bool) {
+        return _start + _count > no.totalVettedKeys;
     }
 
     function _incrementNonce() internal {
