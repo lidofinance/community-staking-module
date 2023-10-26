@@ -90,7 +90,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalKeysCountChanged(0, 1);
+            emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, "test", nodeOperator);
         }
@@ -111,7 +111,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, true, true, address(wstETH));
             emit Approval(nodeOperator, address(bondManager), wstETHAmount);
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalKeysCountChanged(0, 1);
+            emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, "test", nodeOperator);
         }
@@ -145,7 +145,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalKeysCountChanged(0, 2);
+            emit TotalSigningKeysCountChanged(0, 2);
         }
         csm.addValidatorKeysWstETH(noId, 1, keys, signatures);
     }
@@ -170,7 +170,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, true, true, address(wstETH));
             emit Approval(nodeOperator, address(bondManager), wstETHAmount);
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalKeysCountChanged(0, 2);
+            emit TotalSigningKeysCountChanged(0, 2);
         }
         vm.prank(stranger);
         csm.addValidatorKeysWstETHWithPermit(
@@ -198,7 +198,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalKeysCountChanged(0, 1);
+            emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, "test", nodeOperator);
         }
@@ -218,7 +218,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, true, true, address(stETH));
             emit Approval(nodeOperator, address(bondManager), 2 ether);
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalKeysCountChanged(0, 1);
+            emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, "test", nodeOperator);
         }
@@ -252,7 +252,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         stETH.submit{ value: 2 ether }(address(0));
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalKeysCountChanged(0, 2);
+            emit TotalSigningKeysCountChanged(0, 2);
         }
         csm.addValidatorKeysStETH(noId, 1, keys, signatures);
     }
@@ -274,7 +274,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, true, true, address(stETH));
             emit Approval(nodeOperator, address(bondManager), required);
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalKeysCountChanged(0, 2);
+            emit TotalSigningKeysCountChanged(0, 2);
         }
         vm.prank(stranger);
         csm.addValidatorKeysStETHWithPermit(
@@ -303,7 +303,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalKeysCountChanged(0, 1);
+            emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, "test", nodeOperator);
         }
@@ -328,7 +328,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         vm.prank(nodeOperator);
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalKeysCountChanged(0, 2);
+            emit TotalSigningKeysCountChanged(0, 2);
         }
         csm.addValidatorKeysETH{ value: required }(noId, 1, keys, signatures);
     }
@@ -349,6 +349,12 @@ contract CSMObtainDepositData is CSMCommon {
             keys,
             signatures
         );
+
+        {
+            // Pretend to be a key validation oracle
+            csm.vetKeys(0, 1);
+        }
+
         (bytes memory obtainedKeys, bytes memory obtainedSignatures) = csm
             .obtainDepositData(1, "");
         assertEq(obtainedKeys, keys);
