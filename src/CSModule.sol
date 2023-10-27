@@ -114,45 +114,23 @@ contract CSModule is IStakingModule, CSModuleBase {
 
     ICSAccounting public accounting;
     ILidoLocator public lidoLocator;
-    uint256 private nodeOperatorsCount;
-    uint256 private activeNodeOperatorsCount;
-    bytes32 private moduleType;
-    uint256 private nonce;
-    mapping(uint256 => NodeOperator) private nodeOperators;
+    uint256 private _nodeOperatorsCount;
+    uint256 private _activeNodeOperatorsCount;
+    bytes32 private _moduleType;
+    uint256 private _nonce;
+    mapping(uint256 => NodeOperator) private _nodeOperators;
 
     uint256 private _totalDepositedValidators;
     uint256 private _totalExitedValidators;
     uint256 private _totalAddedValidators;
 
-    modifier onlyActiveNodeOperator(uint256 _nodeOperatorId) {
-        require(
-            _nodeOperatorId < nodeOperatorsCount,
-            "node operator does not exist"
-        );
-        require(
-            nodeOperators[_nodeOperatorId].active,
-            "node operator is not active"
-        );
-        _;
-    }
+    constructor(bytes32 moduleType, address locator) {
+        _moduleType = moduleType;
+        emit StakingModuleTypeSet(moduleType);
 
-    modifier onlyKeyValidatorOrNodeOperatorManager() {
-        // TODO: check the role
-        _;
-    }
-
-    modifier onlyKeyValidator() {
-        // TODO: check the role
-        _;
-    }
-
-    constructor(bytes32 _type, address _locator) {
-        moduleType = _type;
-        emit StakingModuleTypeSet(_type);
-
-        require(_locator != address(0), "lido locator is zero address");
-        lidoLocator = ILidoLocator(_locator);
-        emit LocatorContractSet(_locator);
+        require(locator != address(0), "lido locator is zero address");
+        lidoLocator = ILidoLocator(locator);
+        emit LocatorContractSet(locator);
     }
 
     function setAccounting(address _accounting) external {
@@ -172,7 +150,7 @@ contract CSModule is IStakingModule, CSModuleBase {
     }
 
     function getType() external view returns (bytes32) {
-        return moduleType;
+        return _moduleType;
     }
 
     function getStakingModuleSummary()
@@ -192,236 +170,236 @@ contract CSModule is IStakingModule, CSModuleBase {
     }
 
     function addNodeOperatorETH(
-        uint256 _keysCount,
-        bytes calldata _publicKeys,
-        bytes calldata _signatures
+        uint256 keysCount,
+        bytes calldata publicKeys,
+        bytes calldata signatures
     ) external payable {
         // TODO sanity checks
 
         require(
-            msg.value == accounting.getRequiredBondETHForKeys(_keysCount),
+            msg.value == accounting.getRequiredBondETHForKeys(keysCount),
             "eth value is not equal to required bond"
         );
 
-        uint256 id = nodeOperatorsCount;
-        NodeOperator storage no = nodeOperators[id];
+        uint256 id = _nodeOperatorsCount;
+        NodeOperator storage no = _nodeOperators[id];
 
         no.managerAddress = msg.sender;
         no.rewardAddress = msg.sender;
         no.active = true;
-        nodeOperatorsCount++;
-        activeNodeOperatorsCount++;
+        _nodeOperatorsCount++;
+        _activeNodeOperatorsCount++;
 
         accounting.depositETH{ value: msg.value }(msg.sender, id);
 
-        _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
+        _addSigningKeys(id, keysCount, publicKeys, signatures);
 
         emit NodeOperatorAdded(id, msg.sender);
     }
 
     function addNodeOperatorStETH(
-        uint256 _keysCount,
-        bytes calldata _publicKeys,
-        bytes calldata _signatures
+        uint256 keysCount,
+        bytes calldata publicKeys,
+        bytes calldata signatures
     ) external {
         // TODO: sanity checks
 
-        uint256 id = nodeOperatorsCount;
-        NodeOperator storage no = nodeOperators[id];
+        uint256 id = _nodeOperatorsCount;
+        NodeOperator storage no = _nodeOperators[id];
 
         no.managerAddress = msg.sender;
         no.rewardAddress = msg.sender;
         no.active = true;
-        nodeOperatorsCount++;
-        activeNodeOperatorsCount++;
+        _nodeOperatorsCount++;
+        _activeNodeOperatorsCount++;
 
         accounting.depositStETH(
             msg.sender,
             id,
-            accounting.getRequiredBondStETHForKeys(_keysCount)
+            accounting.getRequiredBondStETHForKeys(keysCount)
         );
 
-        _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
+        _addSigningKeys(id, keysCount, publicKeys, signatures);
 
         emit NodeOperatorAdded(id, msg.sender);
     }
 
     function addNodeOperatorStETHWithPermit(
-        address _from,
-        uint256 _keysCount,
-        bytes calldata _publicKeys,
-        bytes calldata _signatures,
-        ICSAccounting.PermitInput calldata _permit
+        address from,
+        uint256 keysCount,
+        bytes calldata publicKeys,
+        bytes calldata signatures,
+        ICSAccounting.PermitInput calldata permit
     ) external {
         // TODO sanity checks
 
-        uint256 id = nodeOperatorsCount;
-        NodeOperator storage no = nodeOperators[id];
+        uint256 id = _nodeOperatorsCount;
+        NodeOperator storage no = _nodeOperators[id];
         no.rewardAddress = msg.sender;
         no.managerAddress = msg.sender;
         no.active = true;
-        nodeOperatorsCount++;
-        activeNodeOperatorsCount++;
+        _nodeOperatorsCount++;
+        _activeNodeOperatorsCount++;
 
         accounting.depositStETHWithPermit(
-            _from,
+            from,
             id,
-            accounting.getRequiredBondStETHForKeys(_keysCount),
-            _permit
+            accounting.getRequiredBondStETHForKeys(keysCount),
+            permit
         );
 
-        _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
+        _addSigningKeys(id, keysCount, publicKeys, signatures);
 
         emit NodeOperatorAdded(id, msg.sender);
     }
 
     function addNodeOperatorWstETH(
-        uint256 _keysCount,
-        bytes calldata _publicKeys,
-        bytes calldata _signatures
+        uint256 keysCount,
+        bytes calldata publicKeys,
+        bytes calldata signatures
     ) external {
         // TODO sanity checks
 
-        uint256 id = nodeOperatorsCount;
-        NodeOperator storage no = nodeOperators[id];
+        uint256 id = _nodeOperatorsCount;
+        NodeOperator storage no = _nodeOperators[id];
 
         no.managerAddress = msg.sender;
         no.rewardAddress = msg.sender;
         no.active = true;
-        nodeOperatorsCount++;
-        activeNodeOperatorsCount++;
+        _nodeOperatorsCount++;
+        _activeNodeOperatorsCount++;
 
         accounting.depositWstETH(
             msg.sender,
             id,
-            accounting.getRequiredBondWstETHForKeys(_keysCount)
+            accounting.getRequiredBondWstETHForKeys(keysCount)
         );
 
-        _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
+        _addSigningKeys(id, keysCount, publicKeys, signatures);
 
         emit NodeOperatorAdded(id, msg.sender);
     }
 
     function addNodeOperatorWstETHWithPermit(
-        address _from,
-        uint256 _keysCount,
-        bytes calldata _publicKeys,
-        bytes calldata _signatures,
-        ICSAccounting.PermitInput calldata _permit
+        address from,
+        uint256 keysCount,
+        bytes calldata publicKeys,
+        bytes calldata signatures,
+        ICSAccounting.PermitInput calldata permit
     ) external {
         // TODO sanity checks
 
-        uint256 id = nodeOperatorsCount;
-        NodeOperator storage no = nodeOperators[id];
+        uint256 id = _nodeOperatorsCount;
+        NodeOperator storage no = _nodeOperators[id];
         no.rewardAddress = msg.sender;
         no.managerAddress = msg.sender;
         no.active = true;
-        nodeOperatorsCount++;
-        activeNodeOperatorsCount++;
+        _nodeOperatorsCount++;
+        _activeNodeOperatorsCount++;
 
         accounting.depositWstETHWithPermit(
-            _from,
+            from,
             id,
-            accounting.getRequiredBondWstETHForKeys(_keysCount),
-            _permit
+            accounting.getRequiredBondWstETHForKeys(keysCount),
+            permit
         );
 
-        _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
+        _addSigningKeys(id, keysCount, publicKeys, signatures);
 
         emit NodeOperatorAdded(id, msg.sender);
     }
 
     function addValidatorKeysETH(
-        uint256 _nodeOperatorId,
-        uint256 _keysCount,
-        bytes calldata _publicKeys,
-        bytes calldata _signatures
-    ) external payable onlyExistingNodeOperator(_nodeOperatorId) {
+        uint256 nodeOperatorId,
+        uint256 keysCount,
+        bytes calldata publicKeys,
+        bytes calldata signatures
+    ) external payable onlyExistingNodeOperator(nodeOperatorId) {
         // TODO: sanity checks
 
         require(
             msg.value ==
-                accounting.getRequiredBondETH(_nodeOperatorId, _keysCount),
+                accounting.getRequiredBondETH(nodeOperatorId, keysCount),
             "eth value is not equal to required bond"
         );
 
-        accounting.depositETH{ value: msg.value }(msg.sender, _nodeOperatorId);
+        accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
 
-        _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
     }
 
     function addValidatorKeysStETH(
-        uint256 _nodeOperatorId,
-        uint256 _keysCount,
-        bytes calldata _publicKeys,
-        bytes calldata _signatures
-    ) external onlyExistingNodeOperator(_nodeOperatorId) {
+        uint256 nodeOperatorId,
+        uint256 keysCount,
+        bytes calldata publicKeys,
+        bytes calldata signatures
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
         // TODO: sanity checks
 
         accounting.depositStETH(
             msg.sender,
-            _nodeOperatorId,
-            accounting.getRequiredBondStETH(_nodeOperatorId, _keysCount)
+            nodeOperatorId,
+            accounting.getRequiredBondStETH(nodeOperatorId, keysCount)
         );
 
-        _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
     }
 
     function addValidatorKeysStETHWithPermit(
-        address _from,
-        uint256 _nodeOperatorId,
-        uint256 _keysCount,
-        bytes calldata _publicKeys,
-        bytes calldata _signatures,
-        ICSAccounting.PermitInput calldata _permit
+        address from,
+        uint256 nodeOperatorId,
+        uint256 keysCount,
+        bytes calldata publicKeys,
+        bytes calldata signatures,
+        ICSAccounting.PermitInput calldata permit
     ) external {
         // TODO sanity checks
 
         accounting.depositStETHWithPermit(
-            _from,
-            _nodeOperatorId,
-            accounting.getRequiredBondStETH(_nodeOperatorId, _keysCount),
-            _permit
+            from,
+            nodeOperatorId,
+            accounting.getRequiredBondStETH(nodeOperatorId, keysCount),
+            permit
         );
 
-        _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
     }
 
     function addValidatorKeysWstETH(
-        uint256 _nodeOperatorId,
-        uint256 _keysCount,
-        bytes calldata _publicKeys,
-        bytes calldata _signatures
-    ) external onlyExistingNodeOperator(_nodeOperatorId) {
+        uint256 nodeOperatorId,
+        uint256 keysCount,
+        bytes calldata publicKeys,
+        bytes calldata signatures
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
         // TODO: sanity checks
 
         accounting.depositWstETH(
             msg.sender,
-            _nodeOperatorId,
-            accounting.getRequiredBondWstETH(_nodeOperatorId, _keysCount)
+            nodeOperatorId,
+            accounting.getRequiredBondWstETH(nodeOperatorId, keysCount)
         );
 
-        _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
     }
 
     function addValidatorKeysWstETHWithPermit(
-        address _from,
-        uint256 _nodeOperatorId,
-        uint256 _keysCount,
-        bytes calldata _publicKeys,
-        bytes calldata _signatures,
-        ICSAccounting.PermitInput calldata _permit
+        address from,
+        uint256 nodeOperatorId,
+        uint256 keysCount,
+        bytes calldata publicKeys,
+        bytes calldata signatures,
+        ICSAccounting.PermitInput calldata permit
     ) external {
         // TODO sanity checks
 
         accounting.depositWstETHWithPermit(
-            _from,
-            _nodeOperatorId,
-            accounting.getRequiredBondWstETH(_nodeOperatorId, _keysCount),
-            _permit
+            from,
+            nodeOperatorId,
+            accounting.getRequiredBondWstETH(nodeOperatorId, keysCount),
+            permit
         );
 
-        _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
     }
 
     function proposeNodeOperatorManagerAddressChange(
@@ -432,14 +410,14 @@ contract CSModule is IStakingModule, CSModuleBase {
         onlyExistingNodeOperator(nodeOperatorId)
         onlyNodeOperatorManager(nodeOperatorId)
     {
-        if (nodeOperators[nodeOperatorId].managerAddress == proposedAddress)
+        if (_nodeOperators[nodeOperatorId].managerAddress == proposedAddress)
             revert SameAddress();
         if (
-            nodeOperators[nodeOperatorId].proposedManagerAddress ==
+            _nodeOperators[nodeOperatorId].proposedManagerAddress ==
             proposedAddress
         ) revert AlreadyProposed();
 
-        nodeOperators[nodeOperatorId].proposedManagerAddress = proposedAddress;
+        _nodeOperators[nodeOperatorId].proposedManagerAddress = proposedAddress;
         emit NodeOperatorManagerAddressChangeProposed(
             nodeOperatorId,
             proposedAddress
@@ -449,11 +427,11 @@ contract CSModule is IStakingModule, CSModuleBase {
     function confirmNodeOperatorManagerAddressChange(
         uint256 nodeOperatorId
     ) external onlyExistingNodeOperator(nodeOperatorId) {
-        if (nodeOperators[nodeOperatorId].proposedManagerAddress != msg.sender)
+        if (_nodeOperators[nodeOperatorId].proposedManagerAddress != msg.sender)
             revert SenderIsNotProposedAddress();
-        address oldAddress = nodeOperators[nodeOperatorId].managerAddress;
-        nodeOperators[nodeOperatorId].managerAddress = msg.sender;
-        nodeOperators[nodeOperatorId].proposedManagerAddress = address(0);
+        address oldAddress = _nodeOperators[nodeOperatorId].managerAddress;
+        _nodeOperators[nodeOperatorId].managerAddress = msg.sender;
+        _nodeOperators[nodeOperatorId].proposedManagerAddress = address(0);
         emit NodeOperatorManagerAddressChanged(
             nodeOperatorId,
             oldAddress,
@@ -469,14 +447,14 @@ contract CSModule is IStakingModule, CSModuleBase {
         onlyExistingNodeOperator(nodeOperatorId)
         onlyNodeOperatorRewardAddress(nodeOperatorId)
     {
-        if (nodeOperators[nodeOperatorId].rewardAddress == proposedAddress)
+        if (_nodeOperators[nodeOperatorId].rewardAddress == proposedAddress)
             revert SameAddress();
         if (
-            nodeOperators[nodeOperatorId].proposedRewardAddress ==
+            _nodeOperators[nodeOperatorId].proposedRewardAddress ==
             proposedAddress
         ) revert AlreadyProposed();
 
-        nodeOperators[nodeOperatorId].proposedRewardAddress = proposedAddress;
+        _nodeOperators[nodeOperatorId].proposedRewardAddress = proposedAddress;
         emit NodeOperatorRewardAddressChangeProposed(
             nodeOperatorId,
             proposedAddress
@@ -486,11 +464,11 @@ contract CSModule is IStakingModule, CSModuleBase {
     function confirmNodeOperatorRewardAddressChange(
         uint256 nodeOperatorId
     ) external onlyExistingNodeOperator(nodeOperatorId) {
-        if (nodeOperators[nodeOperatorId].proposedRewardAddress != msg.sender)
+        if (_nodeOperators[nodeOperatorId].proposedRewardAddress != msg.sender)
             revert SenderIsNotProposedAddress();
-        address oldAddress = nodeOperators[nodeOperatorId].rewardAddress;
-        nodeOperators[nodeOperatorId].rewardAddress = msg.sender;
-        nodeOperators[nodeOperatorId].proposedRewardAddress = address(0);
+        address oldAddress = _nodeOperators[nodeOperatorId].rewardAddress;
+        _nodeOperators[nodeOperatorId].rewardAddress = msg.sender;
+        _nodeOperators[nodeOperatorId].proposedRewardAddress = address(0);
         emit NodeOperatorRewardAddressChanged(
             nodeOperatorId,
             oldAddress,
@@ -506,23 +484,23 @@ contract CSModule is IStakingModule, CSModuleBase {
         onlyNodeOperatorRewardAddress(nodeOperatorId)
     {
         if (
-            nodeOperators[nodeOperatorId].managerAddress ==
-            nodeOperators[nodeOperatorId].rewardAddress
+            _nodeOperators[nodeOperatorId].managerAddress ==
+            _nodeOperators[nodeOperatorId].rewardAddress
         ) revert SameAddress();
-        address previousManagerAddress = nodeOperators[nodeOperatorId]
+        address previousManagerAddress = _nodeOperators[nodeOperatorId]
             .managerAddress;
-        nodeOperators[nodeOperatorId].managerAddress = msg.sender;
+        _nodeOperators[nodeOperatorId].managerAddress = msg.sender;
         emit NodeOperatorManagerAddressChanged(
             nodeOperatorId,
             previousManagerAddress,
-            nodeOperators[nodeOperatorId].rewardAddress
+            _nodeOperators[nodeOperatorId].rewardAddress
         );
     }
 
     function getNodeOperator(
         uint256 nodeOperatorId
     ) external view returns (NodeOperatorInfo memory) {
-        NodeOperator storage no = nodeOperators[nodeOperatorId];
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
         NodeOperatorInfo memory info;
         info.active = no.active;
         info.managerAddress = no.managerAddress;
@@ -536,7 +514,7 @@ contract CSModule is IStakingModule, CSModuleBase {
     }
 
     function getNodeOperatorSummary(
-        uint256 _nodeOperatorId
+        uint256 nodeOperatorId
     )
         external
         view
@@ -551,7 +529,7 @@ contract CSModule is IStakingModule, CSModuleBase {
             uint256 depositableValidatorsCount
         )
     {
-        NodeOperator storage no = nodeOperators[_nodeOperatorId];
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
         isTargetLimitActive = no.isTargetLimitActive;
         targetValidatorsCount = no.targetLimit;
         stuckValidatorsCount = no.stuckValidatorsCount;
@@ -563,36 +541,35 @@ contract CSModule is IStakingModule, CSModuleBase {
     }
 
     function getNonce() external view returns (uint256) {
-        return nonce;
+        return _nonce;
     }
 
     function getNodeOperatorsCount() public view returns (uint256) {
-        return nodeOperatorsCount;
+        return _nodeOperatorsCount;
     }
 
     function getActiveNodeOperatorsCount() external view returns (uint256) {
-        return activeNodeOperatorsCount;
+        return _activeNodeOperatorsCount;
     }
 
     function getNodeOperatorIsActive(
-        uint256 _nodeOperatorId
+        uint256 nodeOperatorId
     ) external view returns (bool) {
-        return nodeOperators[_nodeOperatorId].active;
+        return _nodeOperators[nodeOperatorId].active;
     }
 
     function getNodeOperatorIds(
-        uint256 _offset,
-        uint256 _limit
+        uint256 offset,
+        uint256 limit
     ) external view returns (uint256[] memory nodeOperatorIds) {
-        uint256 _nodeOperatorsCount = getNodeOperatorsCount();
-        if (_offset >= _nodeOperatorsCount || _limit == 0)
-            return new uint256[](0);
-        uint256 idsCount = _limit < _nodeOperatorsCount - _offset
-            ? _limit
-            : _nodeOperatorsCount - _offset;
+        uint256 nodeOperatorsCount = getNodeOperatorsCount();
+        if (offset >= nodeOperatorsCount || limit == 0) return new uint256[](0);
+        uint256 idsCount = limit < nodeOperatorsCount - offset
+            ? limit
+            : nodeOperatorsCount - offset;
         nodeOperatorIds = new uint256[](idsCount);
         for (uint256 i = 0; i < nodeOperatorIds.length; ++i) {
-            nodeOperatorIds[i] = _offset + i;
+            nodeOperatorIds[i] = offset + i;
         }
     }
 
@@ -608,19 +585,19 @@ contract CSModule is IStakingModule, CSModuleBase {
     }
 
     function updateExitedValidatorsCount(
-        bytes calldata _nodeOperatorIds,
-        bytes calldata _exitedValidatorsCounts
+        bytes calldata nodeOperatorIds,
+        bytes calldata exitedValidatorsCounts
     ) external {
         // TODO: implement
         //        emit ExitedSigningKeysCountChanged(
-        //            _nodeOperatorId,
-        //            _exitedValidatorsCount
+        //            nodeOperatorId,
+        //            exitedValidatorsCount
         //        );
     }
 
     function updateRefundedValidatorsCount(
-        uint256 /*_nodeOperatorId*/,
-        uint256 /*_refundedValidatorsCount*/
+        uint256 /* nodeOperatorId */,
+        uint256 /* refundedValidatorsCount */
     ) external {
         // TODO: implement
     }
@@ -649,7 +626,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         uint256 nodeOperatorId,
         uint64 vettedKeysCount
     ) external onlyKeyValidator {
-        NodeOperator storage no = nodeOperators[nodeOperatorId];
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         require(
             vettedKeysCount > no.totalVettedKeys,
@@ -692,7 +669,7 @@ contract CSModule is IStakingModule, CSModuleBase {
     }
 
     function _unvetKeys(uint256 nodeOperatorId) internal {
-        NodeOperator storage no = nodeOperators[nodeOperatorId];
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
         no.totalVettedKeys = no.totalDepositedKeys;
         emit VettedSigningKeysCountChanged(nodeOperatorId, no.totalVettedKeys);
         _incrementNonce();
@@ -703,39 +680,40 @@ contract CSModule is IStakingModule, CSModuleBase {
     }
 
     function _addSigningKeys(
-        uint256 _nodeOperatorId,
-        uint256 _keysCount,
-        bytes calldata _publicKeys,
-        bytes calldata _signatures
+        uint256 nodeOperatorId,
+        uint256 keysCount,
+        bytes calldata publicKeys,
+        bytes calldata signatures
     ) internal {
         // TODO: sanity checks
-        uint256 _startIndex = nodeOperators[_nodeOperatorId].totalAddedKeys;
+        uint256 startIndex = _nodeOperators[nodeOperatorId].totalAddedKeys;
 
+        // solhint-disable-next-line func-named-parameters
         SigningKeys.saveKeysSigs(
             SIGNING_KEYS_POSITION,
-            _nodeOperatorId,
-            _startIndex,
-            _keysCount,
-            _publicKeys,
-            _signatures
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            publicKeys,
+            signatures
         );
 
-        _totalAddedValidators += _keysCount;
-        nodeOperators[_nodeOperatorId].totalAddedKeys += _keysCount;
+        _totalAddedValidators += keysCount;
+        _nodeOperators[nodeOperatorId].totalAddedKeys += keysCount;
         emit TotalSigningKeysCountChanged(
-            _nodeOperatorId,
-            nodeOperators[_nodeOperatorId].totalAddedKeys
+            nodeOperatorId,
+            _nodeOperators[nodeOperatorId].totalAddedKeys
         );
 
         _incrementNonce();
     }
 
     function obtainDepositData(
-        uint256 _depositsCount,
+        uint256 depositsCount,
         bytes calldata /* _depositCalldata */
     ) external returns (bytes memory publicKeys, bytes memory signatures) {
-        (publicKeys, signatures) = SigningKeys.initKeysSigsBuf(_depositsCount);
-        uint256 limit = _depositsCount;
+        (publicKeys, signatures) = SigningKeys.initKeysSigsBuf(depositsCount);
+        uint256 limit = depositsCount;
         uint256 loadedKeysCount = 0;
 
         for (bytes32 p = queue.peek(); !Batch.isNil(p); ) {
@@ -750,6 +728,7 @@ contract CSModule is IStakingModule, CSModuleBase {
                 queue.dequeue();
             }
 
+            // solhint-disable-next-line func-named-parameters
             SigningKeys.loadKeysSigs(
                 SIGNING_KEYS_POSITION,
                 nodeOperatorId,
@@ -762,7 +741,7 @@ contract CSModule is IStakingModule, CSModuleBase {
             loadedKeysCount += keysCount;
 
             _totalDepositedValidators += keysCount;
-            NodeOperator storage no = nodeOperators[nodeOperatorId];
+            NodeOperator storage no = _nodeOperators[nodeOperatorId];
             no.totalDepositedKeys += keysCount;
             require(
                 no.totalDepositedKeys <= no.totalVettedKeys,
@@ -782,7 +761,7 @@ contract CSModule is IStakingModule, CSModuleBase {
             p = queue.peek();
         }
 
-        require(loadedKeysCount == _depositsCount, "NOT_ENOUGH_KEYS");
+        require(loadedKeysCount == depositsCount, "NOT_ENOUGH_KEYS");
         _incrementNonce();
     }
 
@@ -802,7 +781,7 @@ contract CSModule is IStakingModule, CSModuleBase {
 
         (nodeOperatorId, start, count) = Batch.deserialize(batch);
 
-        NodeOperator storage no = nodeOperators[nodeOperatorId];
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
         _assertIsValidBatch(no, start, count);
 
         startIndex = Math.max(start, no.totalDepositedKeys);
@@ -811,20 +790,20 @@ contract CSModule is IStakingModule, CSModuleBase {
 
     function _assertIsValidBatch(
         NodeOperator storage no,
-        uint256 _start,
-        uint256 _count
+        uint256 start,
+        uint256 count
     ) internal view {
-        require(_count != 0, "Empty batch given");
+        require(count != 0, "Empty batch given");
         require(
-            _unvettedKeysInBatch(no, _start, _count) == false,
+            _unvettedKeysInBatch(no, start, count) == false,
             "Batch contains unvetted keys"
         );
         require(
-            _start + _count <= no.totalAddedKeys,
+            start + count <= no.totalAddedKeys,
             "Invalid batch range: not enough keys"
         );
         require(
-            _start <= no.totalDepositedKeys,
+            start <= no.totalDepositedKeys,
             "Invalid batch range: skipped keys"
         );
     }
@@ -848,7 +827,7 @@ contract CSModule is IStakingModule, CSModuleBase {
 
             (uint256 nodeOperatorId, uint256 start, uint256 count) = Batch
                 .deserialize(item);
-            NodeOperator storage no = nodeOperators[nodeOperatorId];
+            NodeOperator storage no = _nodeOperators[nodeOperatorId];
             if (_unvettedKeysInBatch(no, start, count)) {
                 queue.remove(pointer, item);
             }
@@ -899,7 +878,7 @@ contract CSModule is IStakingModule, CSModuleBase {
 
             (uint256 nodeOperatorId, uint256 start, uint256 count) = Batch
                 .deserialize(item);
-            NodeOperator storage no = nodeOperators[nodeOperatorId];
+            NodeOperator storage no = _nodeOperators[nodeOperatorId];
             if (_unvettedKeysInBatch(no, start, count)) {
                 return (true, pointer);
             }
@@ -912,31 +891,53 @@ contract CSModule is IStakingModule, CSModuleBase {
 
     function _unvettedKeysInBatch(
         NodeOperator storage no,
-        uint256 _start,
-        uint256 _count
+        uint256 start,
+        uint256 count
     ) internal view returns (bool) {
-        return _start + _count > no.totalVettedKeys;
+        return start + count > no.totalVettedKeys;
     }
 
     function _incrementNonce() internal {
-        nonce++;
+        _nonce++;
     }
 
-    modifier onlyExistingNodeOperator(uint256 _nodeOperatorId) {
-        if (_nodeOperatorId >= nodeOperatorsCount)
+    modifier onlyExistingNodeOperator(uint256 nodeOperatorId) {
+        if (nodeOperatorId >= _nodeOperatorsCount)
             revert NodeOperatorDoesNotExist();
         _;
     }
 
     modifier onlyNodeOperatorManager(uint256 nodeOperatorId) {
-        if (nodeOperators[nodeOperatorId].managerAddress != msg.sender)
+        if (_nodeOperators[nodeOperatorId].managerAddress != msg.sender)
             revert SenderIsNotManagerAddress();
         _;
     }
 
     modifier onlyNodeOperatorRewardAddress(uint256 nodeOperatorId) {
-        if (nodeOperators[nodeOperatorId].rewardAddress != msg.sender)
+        if (_nodeOperators[nodeOperatorId].rewardAddress != msg.sender)
             revert SenderIsNotRewardAddress();
+        _;
+    }
+
+    modifier onlyActiveNodeOperator(uint256 nodeOperatorId) {
+        require(
+            nodeOperatorId < _nodeOperatorsCount,
+            "node operator does not exist"
+        );
+        require(
+            _nodeOperators[nodeOperatorId].active,
+            "node operator is not active"
+        );
+        _;
+    }
+
+    modifier onlyKeyValidatorOrNodeOperatorManager() {
+        // TODO: check the role
+        _;
+    }
+
+    modifier onlyKeyValidator() {
+        // TODO: check the role
         _;
     }
 }

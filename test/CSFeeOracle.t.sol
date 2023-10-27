@@ -49,7 +49,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 42,
+            initializationEpoch: 42,
             reportInterval: 2,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN
@@ -86,7 +86,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 8,
+            initializationEpoch: 8,
             reportInterval: 2,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN
@@ -107,7 +107,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 42,
+            initializationEpoch: 42,
             reportInterval: 1,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN
@@ -126,7 +126,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 8,
+            initializationEpoch: 8,
             reportInterval: 2,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN
@@ -146,7 +146,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 0,
+            initializationEpoch: 0,
             reportInterval: 2,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN
@@ -169,7 +169,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 0,
+            initializationEpoch: 0,
             reportInterval: 2,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN
@@ -223,7 +223,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 0,
+            initializationEpoch: 0,
             reportInterval: 2,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN
@@ -289,7 +289,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 0,
+            initializationEpoch: 0,
             reportInterval: 2,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN
@@ -318,7 +318,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 7,
+            initializationEpoch: 7,
             reportInterval: 2,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN
@@ -359,7 +359,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 0,
+            initializationEpoch: 0,
             reportInterval: 2,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN
@@ -383,7 +383,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 0,
+            initializationEpoch: 0,
             reportInterval: 2,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN
@@ -408,7 +408,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 0,
+            initializationEpoch: 0,
             reportInterval: 2,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN
@@ -429,7 +429,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 0,
+            initializationEpoch: 0,
             reportInterval: 2,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN
@@ -461,7 +461,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 0,
+            initializationEpoch: 0,
             reportInterval: 2,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN
@@ -488,7 +488,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 0,
+            initializationEpoch: 0,
             reportInterval: 2,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN
@@ -525,7 +525,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 0,
+            initializationEpoch: 0,
             reportInterval: 2,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN
@@ -562,7 +562,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 0,
+            initializationEpoch: 0,
             reportInterval: 2,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN
@@ -589,7 +589,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 0,
+            initializationEpoch: 0,
             reportInterval: 2,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN
@@ -612,7 +612,7 @@ contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
         });
 
         oracle.initialize({
-            _initializationEpoch: 0,
+            initializationEpoch: 0,
             reportInterval: 2,
             _feeDistributor: FEE_DISTRIBUTOR,
             admin: ORACLE_ADMIN

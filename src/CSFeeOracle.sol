@@ -6,7 +6,6 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
 import { CSFeeOracleBase } from "./CSFeeOracleBase.sol";
-import { IStETH } from "./interfaces/IStETH.sol";
 
 interface IFeeDistributor {
     function receiveFees(uint256 shares) external;
@@ -14,6 +13,13 @@ interface IFeeDistributor {
 
 /// @author madlabman
 contract CSFeeOracle is CSFeeOracleBase, AccessControlEnumerable {
+    bytes32 public constant ORACLE_MEMBER_ROLE =
+        keccak256("ORACLE_MEMBER_ROLE");
+
+    uint64 public immutable SECONDS_PER_BLOCK;
+    uint64 public immutable BLOCKS_PER_EPOCH;
+    uint64 public immutable GENESIS_TIME;
+
     /// @notice Merkle Tree root
     bytes32 public reportRoot;
 
@@ -26,13 +32,6 @@ contract CSFeeOracle is CSFeeOracleBase, AccessControlEnumerable {
     /// @notice Number of reports that must match to consolidate a new report
     /// root (N/M)
     uint64 public quorum;
-
-    uint64 public immutable SECONDS_PER_BLOCK;
-    uint64 public immutable BLOCKS_PER_EPOCH;
-    uint64 public immutable GENESIS_TIME;
-
-    bytes32 public constant ORACLE_MEMBER_ROLE =
-        keccak256("ORACLE_MEMBER_ROLE");
 
     address public feeDistributor;
 
@@ -60,7 +59,7 @@ contract CSFeeOracle is CSFeeOracleBase, AccessControlEnumerable {
 
     /// @notice Initialize the contract
     function initialize(
-        uint64 _initializationEpoch,
+        uint64 initializationEpoch,
         uint64 reportInterval,
         address _feeDistributor,
         address admin
@@ -75,8 +74,8 @@ contract CSFeeOracle is CSFeeOracleBase, AccessControlEnumerable {
         }
         feeDistributor = _feeDistributor;
 
-        prevConsolidatedEpoch = _initializationEpoch;
-        lastConsolidatedEpoch = _initializationEpoch;
+        prevConsolidatedEpoch = initializationEpoch;
+        lastConsolidatedEpoch = initializationEpoch;
 
         _setReportInterval(reportInterval);
 
@@ -117,17 +116,17 @@ contract CSFeeOracle is CSFeeOracleBase, AccessControlEnumerable {
     }
 
     /// @notice Set the report interval
-    /// @param _reportInterval Interval between reports in epochs
+    /// @param reportInterval Interval between reports in epochs
     function setReportInterval(
-        uint64 _reportInterval
+        uint64 reportInterval
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setReportInterval(_reportInterval);
-        emit ReportIntervalSet(_reportInterval);
+        _setReportInterval(reportInterval);
+        emit ReportIntervalSet(reportInterval);
     }
 
-    function _setReportInterval(uint64 _reportInterval) internal {
-        if (_reportInterval == 0) revert ZeroInterval();
-        reportIntervalEpochs = _reportInterval;
+    function _setReportInterval(uint64 reportInterval) internal {
+        if (reportInterval == 0) revert ZeroInterval();
+        reportIntervalEpochs = reportInterval;
     }
 
     /// @notice Submit a report for a new report root
@@ -190,14 +189,14 @@ contract CSFeeOracle is CSFeeOracleBase, AccessControlEnumerable {
     }
 
     /// @notice Get the report hash given the report root and slot
-    /// @param _slot Slot
+    /// @param slot Slot
     /// @param _reportRoot Report Merkle tree root
     function _getReportHash(
-        uint64 _slot,
+        uint64 slot,
         bytes32 _reportRoot,
         string memory _treeCid
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_slot, _reportRoot, _treeCid));
+        return keccak256(abi.encodePacked(slot, _reportRoot, _treeCid));
     }
 
     /// @notice Get a hash of a leaf
@@ -215,28 +214,28 @@ contract CSFeeOracle is CSFeeOracleBase, AccessControlEnumerable {
     }
 
     /// @notice Add a new oracle member
-    /// @param _member Address of the new member
+    /// @param member Address of the new member
     /// @param _quorum New quorum
     function addMember(
-        address _member,
+        address member,
         uint64 _quorum
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         // NOTE: check for the member existence?
-        grantRole(ORACLE_MEMBER_ROLE, _member);
-        emit MemberAdded(_member);
+        grantRole(ORACLE_MEMBER_ROLE, member);
+        emit MemberAdded(member);
         _setQuorum(_quorum);
     }
 
     /// @notice Remove an oracle member
-    /// @param _member Address of the member to remove
+    /// @param member Address of the member to remove
     /// @param _quorum New quorum
     function removeMember(
-        address _member,
+        address member,
         uint64 _quorum
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (!hasRole(ORACLE_MEMBER_ROLE, _member)) revert NotMember(_member);
-        revokeRole(ORACLE_MEMBER_ROLE, _member);
-        emit MemberRemoved(_member);
+        if (!hasRole(ORACLE_MEMBER_ROLE, member)) revert NotMember(member);
+        revokeRole(ORACLE_MEMBER_ROLE, member);
+        emit MemberRemoved(member);
         _setQuorum(_quorum);
     }
 

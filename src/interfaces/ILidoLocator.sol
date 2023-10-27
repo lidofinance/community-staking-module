@@ -46,22 +46,3 @@ interface ILidoLocator {
 
     function withdrawalVault() external view returns (address);
 }
-
-interface LidoLocator {
-    struct Config {
-        address accountingOracle;
-        address depositSecurityModule;
-        address elRewardsVault;
-        address legacyOracle;
-        address lido;
-        address oracleReportSanityChecker;
-        address postTokenRebaseReceiver;
-        address burner;
-        address stakingRouter;
-        address treasury;
-        address validatorsExitBusOracle;
-        address withdrawalQueue;
-        address withdrawalVault;
-        address oracleDaemonConfig;
-    }
-}

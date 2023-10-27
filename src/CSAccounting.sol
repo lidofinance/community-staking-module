@@ -59,67 +59,68 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         bytes32 s;
     }
 
-    error NotOwnerToClaim(address msgSender, address owner);
-
     bytes32 public constant PENALIZE_BOND_ROLE =
         keccak256("PENALIZE_BOND_ROLE");
-    address public FEE_DISTRIBUTOR;
-
-    uint256 public totalBondShares;
-    mapping(uint256 => uint256) private bondShares;
 
     ILidoLocator private immutable LIDO_LOCATOR;
     ICSModule private immutable CSM;
     IWstETH private immutable WSTETH;
     uint256 private immutable COMMON_BOND_SIZE;
 
-    /// @param _commonBondSize common bond size in ETH for all node operators.
-    /// @param _admin admin role member address
-    /// @param _lidoLocator lido locator contract address
-    /// @param _wstETH wstETH contract address
-    /// @param _communityStakingModule community staking module contract address
-    /// @param _penalizeRoleMembers list of addresses with PENALIZE_BOND_ROLE
+    address public FEE_DISTRIBUTOR;
+    uint256 public totalBondShares;
+
+    mapping(uint256 => uint256) private _bondShares;
+
+    error NotOwnerToClaim(address msgSender, address owner);
+
+    /// @param commonBondSize common bond size in ETH for all node operators.
+    /// @param admin admin role member address
+    /// @param lidoLocator lido locator contract address
+    /// @param wstETH wstETH contract address
+    /// @param communityStakingModule community staking module contract address
+    /// @param penalizeRoleMembers list of addresses with PENALIZE_BOND_ROLE
     constructor(
-        uint256 _commonBondSize,
-        address _admin,
-        address _lidoLocator,
-        address _wstETH,
-        address _communityStakingModule,
-        address[] memory _penalizeRoleMembers
+        uint256 commonBondSize,
+        address admin,
+        address lidoLocator,
+        address wstETH,
+        address communityStakingModule,
+        address[] memory penalizeRoleMembers
     ) {
         // check zero addresses
-        require(_admin != address(0), "admin is zero address");
-        require(_lidoLocator != address(0), "lido locator is zero address");
+        require(admin != address(0), "admin is zero address");
+        require(lidoLocator != address(0), "lido locator is zero address");
         require(
-            _communityStakingModule != address(0),
+            communityStakingModule != address(0),
             "community staking module is zero address"
         );
-        require(_wstETH != address(0), "wstETH is zero address");
+        require(wstETH != address(0), "wstETH is zero address");
         require(
-            _penalizeRoleMembers.length > 0,
+            penalizeRoleMembers.length > 0,
             "penalize role members is empty"
         );
 
-        _setupRole(DEFAULT_ADMIN_ROLE, _admin);
-        for (uint256 i; i < _penalizeRoleMembers.length; ++i) {
+        _setupRole(DEFAULT_ADMIN_ROLE, admin);
+        for (uint256 i; i < penalizeRoleMembers.length; ++i) {
             require(
-                _penalizeRoleMembers[i] != address(0),
+                penalizeRoleMembers[i] != address(0),
                 "penalize role member is zero address"
             );
-            _setupRole(PENALIZE_BOND_ROLE, _penalizeRoleMembers[i]);
+            _setupRole(PENALIZE_BOND_ROLE, penalizeRoleMembers[i]);
         }
 
-        LIDO_LOCATOR = ILidoLocator(_lidoLocator);
-        CSM = ICSModule(_communityStakingModule);
-        WSTETH = IWstETH(_wstETH);
+        LIDO_LOCATOR = ILidoLocator(lidoLocator);
+        CSM = ICSModule(communityStakingModule);
+        WSTETH = IWstETH(wstETH);
 
-        COMMON_BOND_SIZE = _commonBondSize;
+        COMMON_BOND_SIZE = commonBondSize;
     }
 
     function setFeeDistributor(
-        address _fdAddress
+        address fdAddress
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        FEE_DISTRIBUTOR = _fdAddress;
+        FEE_DISTRIBUTOR = fdAddress;
     }
 
     /// @notice Returns the bond shares for the given node operator.
@@ -128,7 +129,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     function getBondShares(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
-        return bondShares[nodeOperatorId];
+        return _bondShares[nodeOperatorId];
     }
 
     /// @notice Returns total rewards (bond + fees) in ETH for the given node operator.
@@ -369,7 +370,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
             "node operator does not exist"
         );
         uint256 shares = _lido().submit{ value: msg.value }(address(0));
-        bondShares[nodeOperatorId] += shares;
+        _bondShares[nodeOperatorId] += shares;
         totalBondShares += shares;
         emit ETHBondDeposited(nodeOperatorId, from, msg.value);
         return shares;
@@ -398,6 +399,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         PermitInput calldata permit
     ) external returns (uint256) {
         from = (from == address(0)) ? msg.sender : from;
+        // solhint-disable-next-line func-named-parameters
         _lido().permit(
             from,
             address(this),
@@ -421,7 +423,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         );
         uint256 shares = _sharesByEth(stETHAmount);
         _lido().transferSharesFrom(from, address(this), shares);
-        bondShares[nodeOperatorId] += shares;
+        _bondShares[nodeOperatorId] += shares;
         totalBondShares += shares;
         emit StETHBondDeposited(nodeOperatorId, from, stETHAmount);
         return shares;
@@ -451,6 +453,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 wstETHAmount,
         PermitInput calldata permit
     ) external returns (uint256) {
+        // solhint-disable-next-line func-named-parameters
         WSTETH.permit(
             from,
             address(this),
@@ -475,7 +478,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         WSTETH.transferFrom(from, address(this), wstETHAmount);
         uint256 stETHAmount = WSTETH.unwrap(wstETHAmount);
         uint256 shares = _sharesByEth(stETHAmount);
-        bondShares[nodeOperatorId] += shares;
+        _bondShares[nodeOperatorId] += shares;
         totalBondShares += shares;
         emit WstETHBondDeposited(nodeOperatorId, from, wstETHAmount);
         return shares;
@@ -510,7 +513,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
             ? _sharesByEth(stETHAmount)
             : claimableShares;
         _lido().transferSharesFrom(address(this), rewardAddress, toClaim);
-        bondShares[nodeOperatorId] -= toClaim;
+        _bondShares[nodeOperatorId] -= toClaim;
         totalBondShares -= toClaim;
         emit StETHRewardsClaimed(
             nodeOperatorId,
@@ -549,7 +552,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
             : claimableShares;
         wstETHAmount = WSTETH.wrap(_ethByShares(toClaim));
         WSTETH.transferFrom(address(this), rewardAddress, wstETHAmount);
-        bondShares[nodeOperatorId] -= wstETHAmount;
+        _bondShares[nodeOperatorId] -= wstETHAmount;
         totalBondShares -= wstETHAmount;
         emit WstETHRewardsClaimed(nodeOperatorId, rewardAddress, wstETHAmount);
     }
@@ -585,7 +588,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
             amounts,
             rewardAddress
         );
-        bondShares[nodeOperatorId] -= toClaim;
+        _bondShares[nodeOperatorId] -= toClaim;
         totalBondShares -= toClaim;
         emit ETHRewardsRequested(nodeOperatorId, rewardAddress, amounts[0]);
         return requestIds;
@@ -605,7 +608,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
             LIDO_LOCATOR.burner(),
             coveringShares
         );
-        bondShares[nodeOperatorId] -= coveringShares;
+        _bondShares[nodeOperatorId] -= coveringShares;
         totalBondShares -= coveringShares;
         emit BondPenalized(nodeOperatorId, shares, coveringShares);
     }
@@ -658,7 +661,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
             nodeOperatorId,
             cumulativeFeeShares
         );
-        bondShares[nodeOperatorId] += distributed;
+        _bondShares[nodeOperatorId] += distributed;
         totalBondShares += distributed;
         (uint256 current, uint256 required) = _bondSharesSummary(
             nodeOperatorId

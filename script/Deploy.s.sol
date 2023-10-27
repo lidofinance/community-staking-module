@@ -40,12 +40,12 @@ contract Deploy is Script {
             address(locator)
         );
         CSAccounting accounting = new CSAccounting({
-            _commonBondSize: 2 ether,
-            _admin: deployerAddress,
-            _lidoLocator: address(locator),
-            _communityStakingModule: address(csm),
-            _wstETH: address(wstETH),
-            _penalizeRoleMembers: penalizers
+            commonBondSize: 2 ether,
+            admin: deployerAddress,
+            lidoLocator: address(locator),
+            communityStakingModule: address(csm),
+            wstETH: address(wstETH),
+            penalizeRoleMembers: penalizers
         });
         CSFeeOracle feeOracle = new CSFeeOracle({
             secondsPerBlock: 12,
@@ -54,12 +54,12 @@ contract Deploy is Script {
         });
         CSFeeDistributor feeDistributor = new CSFeeDistributor({
             _CSM: address(csm),
-            _stETH: locator.lido(),
-            _oracle: address(feeOracle),
-            _accounting: address(accounting)
+            stETH: locator.lido(),
+            oracle: address(feeOracle),
+            accounting: address(accounting)
         });
         feeOracle.initialize({
-            _initializationEpoch: uint64(INITIALIZATION_EPOCH),
+            initializationEpoch: uint64(INITIALIZATION_EPOCH),
             reportInterval: 6300, // 28 days
             _feeDistributor: address(feeDistributor),
             admin: deployerAddress

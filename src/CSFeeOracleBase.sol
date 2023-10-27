@@ -6,20 +6,6 @@ import { Pausable } from "@openzeppelin/contracts/security/Pausable.sol";
 
 /// @author madlabman
 contract CSFeeOracleBase is Pausable {
-    error AlreadyMember(address member);
-    error NotMember(address member);
-
-    error InvalidEpoch(uint64 actual, uint64 expected);
-    error ZeroAddress(string field);
-    error GenesisTimeNotReached();
-    error AlreadyInitialized();
-    error NotInitialized();
-    error QuorumTooSmall();
-    error ReportTooEarly();
-    error ReportTooLate();
-    error ZeroInterval();
-    error DoubleVote();
-
     event ReportIntervalSet(uint64 reportInterval);
     event MemberRemoved(address member);
     event MemberAdded(address member);
@@ -41,4 +27,18 @@ contract CSFeeOracleBase is Pausable {
         uint256 distributed,
         string treeCid
     );
+
+    error AlreadyMember(address member);
+    error NotMember(address member);
+
+    error InvalidEpoch(uint64 actual, uint64 expected);
+    error ZeroAddress(string field);
+    error GenesisTimeNotReached();
+    error AlreadyInitialized();
+    error NotInitialized();
+    error QuorumTooSmall();
+    error ReportTooEarly();
+    error ReportTooLate();
+    error ZeroInterval();
+    error DoubleVote();
 }

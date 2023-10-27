@@ -5,6 +5,9 @@ pragma solidity 0.8.21;
 
 /// @title Lido's Staking Module interface
 interface IStakingModule {
+    /// @dev Event to be emitted on StakingModule's nonce change
+    event NonceChanged(uint256 nonce);
+
     /// @notice Returns the type of the staking module
     function getType() external view returns (bytes32);
 
@@ -173,7 +176,4 @@ interface IStakingModule {
     /// @dev IMPORTANT: this method SHOULD revert with empty error data ONLY because of "out of gas".
     ///      Details about error data: https://docs.soliditylang.org/en/v0.8.9/control-structures.html#error-handling-assert-require-revert-and-exceptions
     function onWithdrawalCredentialsChanged() external;
-
-    /// @dev Event to be emitted on StakingModule's nonce change
-    event NonceChanged(uint256 nonce);
 }
