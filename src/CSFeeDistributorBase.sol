@@ -4,6 +4,9 @@ pragma solidity 0.8.21;
 
 /// @author madlabman
 contract CSFeeDistributorBase {
+    /// @dev Emitted when fees are distributed
+    event FeeDistributed(uint64 indexed noIndex, uint64 shares);
+
     error ZeroAddress(string field);
 
     error NotBondManager();
@@ -11,7 +14,4 @@ contract CSFeeDistributorBase {
 
     error InvalidShares();
     error InvalidProof();
-
-    /// @dev Emitted when fees are distributed
-    event FeeDistributed(uint64 indexed noIndex, uint64 shares);
 }

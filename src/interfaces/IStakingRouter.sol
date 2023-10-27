@@ -6,41 +6,6 @@
 pragma solidity 0.8.21;
 
 interface IStakingRouter {
-    error AppAuthLidoFailed();
-    error ArraysLengthMismatch(
-        uint256 firstArrayLength,
-        uint256 secondArrayLength
-    );
-    error DepositContractZeroAddress();
-    error DirectETHTransfer();
-    error EmptyWithdrawalsCredentials();
-    error ExitedValidatorsCountCannotDecrease();
-    error InvalidContractVersionIncrement();
-    error InvalidDepositsValue(uint256 etherValue, uint256 depositsCount);
-    error InvalidPublicKeysBatchLength(uint256 actual, uint256 expected);
-    error InvalidReportData(uint256 code);
-    error InvalidSignaturesBatchLength(uint256 actual, uint256 expected);
-    error NonZeroContractVersionOnInit();
-    error ReportedExitedValidatorsExceedDeposited(
-        uint256 reportedExitedValidatorsCount,
-        uint256 depositedValidatorsCount
-    );
-    error StakingModuleAddressExists();
-    error StakingModuleNotActive();
-    error StakingModuleNotPaused();
-    error StakingModuleStatusTheSame();
-    error StakingModuleUnregistered();
-    error StakingModuleWrongName();
-    error StakingModulesLimitExceeded();
-    error UnexpectedContractVersion(uint256 expected, uint256 received);
-    error UnexpectedCurrentValidatorsCount(
-        uint256 currentModuleExitedValidatorsCount,
-        uint256 currentNodeOpExitedValidatorsCount,
-        uint256 currentNodeOpStuckValidatorsCount
-    );
-    error UnrecoverableModuleError();
-    error ValueOver100Percent(string field);
-    error ZeroAddress(string field);
     event ContractVersionSet(uint256 version);
     event ExitedAndStuckValidatorsCountsUpdateFailed(
         uint256 indexed stakingModuleId,
@@ -103,6 +68,42 @@ interface IStakingRouter {
         uint256 indexed stakingModuleId,
         bytes lowLevelRevertData
     );
+
+    error AppAuthLidoFailed();
+    error ArraysLengthMismatch(
+        uint256 firstArrayLength,
+        uint256 secondArrayLength
+    );
+    error DepositContractZeroAddress();
+    error DirectETHTransfer();
+    error EmptyWithdrawalsCredentials();
+    error ExitedValidatorsCountCannotDecrease();
+    error InvalidContractVersionIncrement();
+    error InvalidDepositsValue(uint256 etherValue, uint256 depositsCount);
+    error InvalidPublicKeysBatchLength(uint256 actual, uint256 expected);
+    error InvalidReportData(uint256 code);
+    error InvalidSignaturesBatchLength(uint256 actual, uint256 expected);
+    error NonZeroContractVersionOnInit();
+    error ReportedExitedValidatorsExceedDeposited(
+        uint256 reportedExitedValidatorsCount,
+        uint256 depositedValidatorsCount
+    );
+    error StakingModuleAddressExists();
+    error StakingModuleNotActive();
+    error StakingModuleNotPaused();
+    error StakingModuleStatusTheSame();
+    error StakingModuleUnregistered();
+    error StakingModuleWrongName();
+    error StakingModulesLimitExceeded();
+    error UnexpectedContractVersion(uint256 expected, uint256 received);
+    error UnexpectedCurrentValidatorsCount(
+        uint256 currentModuleExitedValidatorsCount,
+        uint256 currentNodeOpExitedValidatorsCount,
+        uint256 currentNodeOpStuckValidatorsCount
+    );
+    error UnrecoverableModuleError();
+    error ValueOver100Percent(string field);
+    error ZeroAddress(string field);
 
     struct NodeOperatorSummary {
         bool isTargetLimitActive;

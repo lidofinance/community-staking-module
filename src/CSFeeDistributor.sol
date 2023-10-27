@@ -21,18 +21,18 @@ contract CSFeeDistributor is CSFeeDistributorBase {
 
     constructor(
         address _CSM,
-        address _stETH,
-        address _oracle,
-        address _accounting
+        address stETH,
+        address oracle,
+        address accounting
     ) {
-        if (_accounting == address(0)) revert ZeroAddress("_accounting");
-        if (_oracle == address(0)) revert ZeroAddress("_oracle");
-        if (_stETH == address(0)) revert ZeroAddress("_stETH");
+        if (accounting == address(0)) revert ZeroAddress("accounting");
+        if (oracle == address(0)) revert ZeroAddress("oracle");
+        if (stETH == address(0)) revert ZeroAddress("stETH");
         if (_CSM == address(0)) revert ZeroAddress("_CSM");
 
-        ACCOUNTING = _accounting;
-        ORACLE = _oracle;
-        STETH = _stETH;
+        ACCOUNTING = accounting;
+        ORACLE = oracle;
+        STETH = stETH;
         CSM = _CSM;
     }
 

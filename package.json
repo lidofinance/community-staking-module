@@ -22,6 +22,6 @@
   },
   "lint-staged": {
     "*": "prettier --ignore-unknown --write",
-    "*.sol": "solhint"
+    "src/**/*.sol": "solhint"
   }
 }
