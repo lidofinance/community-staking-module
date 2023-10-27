@@ -13,12 +13,22 @@ import { WstETHMock } from "./helpers/mocks/WstETHMock.sol";
 import { LidoLocatorMock } from "./helpers/mocks/LidoLocatorMock.sol";
 import { CommunityStakingModuleMock } from "./helpers/mocks/CommunityStakingModuleMock.sol";
 import { CommunityStakingFeeDistributorMock } from "./helpers/mocks/CommunityStakingFeeDistributorMock.sol";
+import { WithdrawalQueueMockBase, WithdrawalQueueMock } from "./helpers/mocks/WithdrawalQueueMock.sol";
+
 import { Fixtures } from "./helpers/Fixtures.sol";
 
-contract CSAccountingTest is Test, Fixtures, PermitTokenBase, CSAccountingBase {
+contract CSAccountingTest is
+    Test,
+    Fixtures,
+    PermitTokenBase,
+    CSAccountingBase,
+    WithdrawalQueueMockBase
+{
     LidoLocatorMock internal locator;
     WstETHMock internal wstETH;
     LidoMock internal stETH;
+    WithdrawalQueueMock internal wq;
+
     Stub internal burner;
 
     CSAccounting public accounting;
@@ -909,6 +919,125 @@ contract CSAccountingTest is Test, Fixtures, PermitTokenBase, CSAccountingBase {
         );
         vm.prank(stranger);
         accounting.claimRewardsWstETH(new bytes32[](1), 0, 1, 1 ether);
+    }
+
+    function test_requestRewardsETH() public {
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
+        vm.deal(address(feeDistributor), 0.1 ether);
+        vm.prank(address(feeDistributor));
+        uint256 sharesAsFee = stETH.submit{ value: 0.1 ether }(address(0));
+
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        accounting.depositStETH(user, 0, 32 ether);
+
+        uint256 requestedAsUnstETH = stETH.getPooledEthByShares(sharesAsFee);
+        uint256 requestedAsUnstETHAsShares = stETH.getSharesByPooledEth(
+            requestedAsUnstETH
+        );
+
+        vm.expectEmit(
+            true,
+            true,
+            true,
+            true,
+            address(locator.withdrawalQueue())
+        );
+        emit WithdrawalRequested(
+            1,
+            address(accounting),
+            user,
+            requestedAsUnstETH,
+            requestedAsUnstETHAsShares
+        );
+        vm.expectEmit(true, true, true, true, address(accounting));
+        emit ETHRewardsRequested(
+            0,
+            user,
+            stETH.getPooledEthByShares(sharesAsFee)
+        );
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        uint256[] memory requestIds = accounting.requestRewardsETH(
+            new bytes32[](1),
+            0,
+            sharesAsFee,
+            UINT256_MAX
+        );
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertEq(requestIds.length, 1, "request ids length should be 1");
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore,
+            "bond shares should not change after request"
+        );
+        assertEq(
+            stETH.sharesOf(address(locator.withdrawalQueue())),
+            requestedAsUnstETHAsShares,
+            "shares of withdrawal queue should be equal to requested shares"
+        );
+        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+    }
+
+    function test_requestRewardsETH_WithDesirableValue() public {
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
+        vm.deal(address(feeDistributor), 0.1 ether);
+        vm.prank(address(feeDistributor));
+        uint256 sharesAsFee = stETH.submit{ value: 0.1 ether }(address(0));
+
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        accounting.depositStETH(user, 0, 32 ether);
+
+        uint256 requestedAsShares = stETH.getSharesByPooledEth(0.05 ether);
+        uint256 requestedAsUnstETH = stETH.getPooledEthByShares(
+            requestedAsShares
+        );
+        uint256 requestedAsUnstETHAsShares = stETH.getSharesByPooledEth(
+            requestedAsUnstETH
+        );
+
+        vm.expectEmit(
+            true,
+            true,
+            true,
+            true,
+            address(locator.withdrawalQueue())
+        );
+        emit WithdrawalRequested(
+            1,
+            address(accounting),
+            user,
+            requestedAsUnstETH,
+            requestedAsUnstETHAsShares
+        );
+        vm.expectEmit(true, true, true, true, address(accounting));
+        emit ETHRewardsRequested(0, user, requestedAsUnstETH);
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        uint256[] memory requestIds = accounting.requestRewardsETH(
+            new bytes32[](1),
+            0,
+            sharesAsFee,
+            0.05 ether
+        );
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertEq(requestIds.length, 1, "request ids length should be 1");
+        assertEq(
+            bondSharesAfter,
+            (bondSharesBefore + sharesAsFee) - requestedAsShares,
+            "bond shares after should be equal to before and fee minus requested shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(locator.withdrawalQueue())),
+            requestedAsUnstETHAsShares,
+            "shares of withdrawal queue should be equal to requested shares"
+        );
+        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
     }
 
     function test_penalize_LessThanDeposit() public {

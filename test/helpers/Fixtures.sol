@@ -6,6 +6,7 @@ import { StdCheats } from "forge-std/StdCheats.sol";
 import { LidoMock } from "./mocks/LidoMock.sol";
 import { WstETHMock } from "./mocks/WstETHMock.sol";
 import { LidoLocatorMock } from "./mocks/LidoLocatorMock.sol";
+import { WithdrawalQueueMock } from "./mocks/WithdrawalQueueMock.sol";
 import { Stub } from "./mocks/Stub.sol";
 
 contract Fixtures is StdCheats {
@@ -24,7 +25,12 @@ contract Fixtures is StdCheats {
             _sharesAmount: 7059313073779349112833523
         });
         burner = new Stub();
-        locator = new LidoLocatorMock(address(stETH), address(burner));
+        WithdrawalQueueMock wq = new WithdrawalQueueMock(address(stETH));
+        locator = new LidoLocatorMock(
+            address(stETH),
+            address(burner),
+            address(wq)
+        );
         wstETH = new WstETHMock(address(stETH));
     }
 }
