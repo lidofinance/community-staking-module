@@ -102,13 +102,7 @@ contract StakingRouterIntegrationTest is Test, Utilities {
         address nodeOperator = address(2);
         vm.deal(nodeOperator, 4 ether);
         vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: 4 ether }(
-            "test",
-            nodeOperator,
-            2,
-            keys,
-            signatures
-        );
+        csm.addNodeOperatorETH{ value: 4 ether }(2, keys, signatures);
 
         {
             // Pretend to be a key validation oracle

@@ -15,11 +15,12 @@ import { QueueLib } from "./lib/QueueLib.sol";
 import { Batch } from "./lib/Batch.sol";
 
 import "./lib/SigningKeys.sol";
-import "./lib/StringToUint256WithZeroMap.sol";
 
 struct NodeOperator {
-    string name;
+    address managerAddress;
+    address proposedManagerAddress;
     address rewardAddress;
+    address proposedRewardAddress;
     bool active;
     uint256 targetLimit;
     uint256 targetLimitTimestamp;
@@ -34,13 +35,37 @@ struct NodeOperator {
     bool isTargetLimitActive;
 }
 
+struct NodeOperatorInfo {
+    bool active;
+    address managerAddress;
+    address rewardAddress;
+    uint256 totalVettedValidators;
+    uint256 totalExitedValidators;
+    uint256 totalWithdrawnValidators;
+    uint256 totalAddedValidators;
+    uint256 totalDepositedValidators;
+}
+
 contract CSModuleBase {
-    event NodeOperatorAdded(
+    event NodeOperatorAdded(uint256 indexed nodeOperatorId, address from);
+    event NodeOperatorManagerAddressChangeProposed(
         uint256 indexed nodeOperatorId,
-        string name,
-        address rewardAddress
+        address proposedAddress
     );
-    event NodeOperatorNameSet(uint256 indexed nodeOperatorId, string name);
+    event NodeOperatorRewardAddressChangeProposed(
+        uint256 indexed nodeOperatorId,
+        address proposedAddress
+    );
+    event NodeOperatorRewardAddressChanged(
+        uint256 indexed nodeOperatorId,
+        address oldAddress,
+        address newAddress
+    );
+    event NodeOperatorManagerAddressChanged(
+        uint256 indexed nodeOperatorId,
+        address oldAddress,
+        address newAddress
+    );
 
     event VettedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
@@ -68,10 +93,16 @@ contract CSModuleBase {
     event StakingModuleTypeSet(bytes32 moduleType);
     event LocatorContractSet(address locatorAddress);
     event UnvettingFeeSet(uint256 unvettingFee);
+
+    error NodeOperatorDoesNotExist();
+    error SenderIsNotManagerAddress();
+    error SenderIsNotRewardAddress();
+    error SenderIsNotProposedAddress();
+    error SameAddress();
+    error AlreadyProposed();
 }
 
 contract CSModule is IStakingModule, CSModuleBase {
-    using StringToUint256WithZeroMap for mapping(string => uint256);
     using QueueLib for QueueLib.Queue;
 
     uint256 public constant MAX_NODE_OPERATOR_NAME_LENGTH = 255;
@@ -83,13 +114,11 @@ contract CSModule is IStakingModule, CSModuleBase {
 
     ICSAccounting public accounting;
     ILidoLocator public lidoLocator;
-
     uint256 private nodeOperatorsCount;
     uint256 private activeNodeOperatorsCount;
     bytes32 private moduleType;
     uint256 private nonce;
     mapping(uint256 => NodeOperator) private nodeOperators;
-    mapping(string => uint256) private nodeOperatorIdsByName;
 
     uint256 private _totalDepositedValidators;
     uint256 private _totalExitedValidators;
@@ -163,14 +192,11 @@ contract CSModule is IStakingModule, CSModuleBase {
     }
 
     function addNodeOperatorETH(
-        string calldata _name,
-        address _rewardAddress,
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures
     ) external payable {
         // TODO sanity checks
-        _onlyValidNodeOperatorName(_name);
 
         require(
             msg.value == accounting.getRequiredBondETHForKeys(_keysCount),
@@ -179,9 +205,9 @@ contract CSModule is IStakingModule, CSModuleBase {
 
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
-        nodeOperatorIdsByName.set(_name, id);
-        no.name = _name;
-        no.rewardAddress = _rewardAddress;
+
+        no.managerAddress = msg.sender;
+        no.rewardAddress = msg.sender;
         no.active = true;
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
@@ -190,24 +216,21 @@ contract CSModule is IStakingModule, CSModuleBase {
 
         _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
 
-        emit NodeOperatorAdded(id, _name, _rewardAddress);
+        emit NodeOperatorAdded(id, msg.sender);
     }
 
     function addNodeOperatorStETH(
-        string calldata _name,
-        address _rewardAddress,
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures
     ) external {
         // TODO: sanity checks
-        _onlyValidNodeOperatorName(_name);
 
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
-        nodeOperatorIdsByName.set(_name, id);
-        no.name = _name;
-        no.rewardAddress = _rewardAddress;
+
+        no.managerAddress = msg.sender;
+        no.rewardAddress = msg.sender;
         no.active = true;
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
@@ -220,26 +243,22 @@ contract CSModule is IStakingModule, CSModuleBase {
 
         _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
 
-        emit NodeOperatorAdded(id, _name, _rewardAddress);
+        emit NodeOperatorAdded(id, msg.sender);
     }
 
     function addNodeOperatorStETHWithPermit(
         address _from,
-        string calldata _name,
-        address _rewardAddress,
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures,
         ICSAccounting.PermitInput calldata _permit
     ) external {
         // TODO sanity checks
-        _onlyValidNodeOperatorName(_name);
 
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
-        nodeOperatorIdsByName.set(_name, id);
-        no.name = _name;
-        no.rewardAddress = _rewardAddress;
+        no.rewardAddress = msg.sender;
+        no.managerAddress = msg.sender;
         no.active = true;
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
@@ -253,24 +272,21 @@ contract CSModule is IStakingModule, CSModuleBase {
 
         _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
 
-        emit NodeOperatorAdded(id, _name, _rewardAddress);
+        emit NodeOperatorAdded(id, msg.sender);
     }
 
     function addNodeOperatorWstETH(
-        string calldata _name,
-        address _rewardAddress,
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures
     ) external {
         // TODO sanity checks
-        _onlyValidNodeOperatorName(_name);
 
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
-        nodeOperatorIdsByName.set(_name, id);
-        no.name = _name;
-        no.rewardAddress = _rewardAddress;
+
+        no.managerAddress = msg.sender;
+        no.rewardAddress = msg.sender;
         no.active = true;
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
@@ -283,26 +299,22 @@ contract CSModule is IStakingModule, CSModuleBase {
 
         _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
 
-        emit NodeOperatorAdded(id, _name, _rewardAddress);
+        emit NodeOperatorAdded(id, msg.sender);
     }
 
     function addNodeOperatorWstETHWithPermit(
         address _from,
-        string calldata _name,
-        address _rewardAddress,
         uint256 _keysCount,
         bytes calldata _publicKeys,
         bytes calldata _signatures,
         ICSAccounting.PermitInput calldata _permit
     ) external {
         // TODO sanity checks
-        _onlyValidNodeOperatorName(_name);
 
         uint256 id = nodeOperatorsCount;
         NodeOperator storage no = nodeOperators[id];
-        nodeOperatorIdsByName.set(_name, id);
-        no.name = _name;
-        no.rewardAddress = _rewardAddress;
+        no.rewardAddress = msg.sender;
+        no.managerAddress = msg.sender;
         no.active = true;
         nodeOperatorsCount++;
         activeNodeOperatorsCount++;
@@ -316,7 +328,7 @@ contract CSModule is IStakingModule, CSModuleBase {
 
         _addSigningKeys(id, _keysCount, _publicKeys, _signatures);
 
-        emit NodeOperatorAdded(id, _name, _rewardAddress);
+        emit NodeOperatorAdded(id, msg.sender);
     }
 
     function addValidatorKeysETH(
@@ -412,59 +424,115 @@ contract CSModule is IStakingModule, CSModuleBase {
         _addSigningKeys(_nodeOperatorId, _keysCount, _publicKeys, _signatures);
     }
 
-    function setNodeOperatorName(
-        uint256 _nodeOperatorId,
-        string memory _name
+    function proposeNodeOperatorManagerAddressChange(
+        uint256 nodeOperatorId,
+        address proposedAddress
     )
         external
-        onlyExistingNodeOperator(_nodeOperatorId)
-        onlyNodeOperatorManager(_nodeOperatorId)
+        onlyExistingNodeOperator(nodeOperatorId)
+        onlyNodeOperatorManager(nodeOperatorId)
     {
-        require(
-            keccak256(bytes(_name)) !=
-                keccak256(bytes(nodeOperators[_nodeOperatorId].name)),
-            "SAME_NAME"
-        );
-        _onlyValidNodeOperatorName(_name);
+        if (nodeOperators[nodeOperatorId].managerAddress == proposedAddress)
+            revert SameAddress();
+        if (
+            nodeOperators[nodeOperatorId].proposedManagerAddress ==
+            proposedAddress
+        ) revert AlreadyProposed();
 
-        nodeOperatorIdsByName.remove(nodeOperators[_nodeOperatorId].name);
-        nodeOperators[_nodeOperatorId].name = _name;
-        nodeOperatorIdsByName.set(_name, _nodeOperatorId);
-        emit NodeOperatorNameSet(_nodeOperatorId, _name);
+        nodeOperators[nodeOperatorId].proposedManagerAddress = proposedAddress;
+        emit NodeOperatorManagerAddressChangeProposed(
+            nodeOperatorId,
+            proposedAddress
+        );
     }
 
-    function getNodeOperatorIdByName(
-        string memory _name
-    ) external view returns (uint256) {
-        return nodeOperatorIdsByName.get(_name);
+    function confirmNodeOperatorManagerAddressChange(
+        uint256 nodeOperatorId
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        if (nodeOperators[nodeOperatorId].proposedManagerAddress != msg.sender)
+            revert SenderIsNotProposedAddress();
+        address oldAddress = nodeOperators[nodeOperatorId].managerAddress;
+        nodeOperators[nodeOperatorId].managerAddress = msg.sender;
+        nodeOperators[nodeOperatorId].proposedManagerAddress = address(0);
+        emit NodeOperatorManagerAddressChanged(
+            nodeOperatorId,
+            oldAddress,
+            msg.sender
+        );
+    }
+
+    function proposeNodeOperatorRewardAddressChange(
+        uint256 nodeOperatorId,
+        address proposedAddress
+    )
+        external
+        onlyExistingNodeOperator(nodeOperatorId)
+        onlyNodeOperatorRewardAddress(nodeOperatorId)
+    {
+        if (nodeOperators[nodeOperatorId].rewardAddress == proposedAddress)
+            revert SameAddress();
+        if (
+            nodeOperators[nodeOperatorId].proposedRewardAddress ==
+            proposedAddress
+        ) revert AlreadyProposed();
+
+        nodeOperators[nodeOperatorId].proposedRewardAddress = proposedAddress;
+        emit NodeOperatorRewardAddressChangeProposed(
+            nodeOperatorId,
+            proposedAddress
+        );
+    }
+
+    function confirmNodeOperatorRewardAddressChange(
+        uint256 nodeOperatorId
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        if (nodeOperators[nodeOperatorId].proposedRewardAddress != msg.sender)
+            revert SenderIsNotProposedAddress();
+        address oldAddress = nodeOperators[nodeOperatorId].rewardAddress;
+        nodeOperators[nodeOperatorId].rewardAddress = msg.sender;
+        nodeOperators[nodeOperatorId].proposedRewardAddress = address(0);
+        emit NodeOperatorRewardAddressChanged(
+            nodeOperatorId,
+            oldAddress,
+            msg.sender
+        );
+    }
+
+    function resetNodeOperatorManagerAddress(
+        uint256 nodeOperatorId
+    )
+        external
+        onlyExistingNodeOperator(nodeOperatorId)
+        onlyNodeOperatorRewardAddress(nodeOperatorId)
+    {
+        if (
+            nodeOperators[nodeOperatorId].managerAddress ==
+            nodeOperators[nodeOperatorId].rewardAddress
+        ) revert SameAddress();
+        address previousManagerAddress = nodeOperators[nodeOperatorId]
+            .managerAddress;
+        nodeOperators[nodeOperatorId].managerAddress = msg.sender;
+        emit NodeOperatorManagerAddressChanged(
+            nodeOperatorId,
+            previousManagerAddress,
+            nodeOperators[nodeOperatorId].rewardAddress
+        );
     }
 
     function getNodeOperator(
-        uint256 _nodeOperatorId,
-        bool _fullInfo
-    )
-        external
-        view
-        returns (
-            bool active,
-            string memory name,
-            address rewardAddress,
-            uint256 totalVettedValidators,
-            uint256 totalExitedValidators,
-            uint256 totalWithdrawnValidators,
-            uint256 totalAddedValidators,
-            uint256 totalDepositedValidators
-        )
-    {
-        NodeOperator storage no = nodeOperators[_nodeOperatorId];
-        active = no.active;
-        name = _fullInfo ? no.name : "";
-        rewardAddress = no.rewardAddress;
-        totalExitedValidators = no.totalExitedKeys;
-        totalDepositedValidators = no.totalDepositedKeys;
-        totalAddedValidators = no.totalAddedKeys;
-        totalWithdrawnValidators = no.totalWithdrawnKeys;
-        totalVettedValidators = no.totalVettedKeys;
+        uint256 nodeOperatorId
+    ) external view returns (NodeOperatorInfo memory) {
+        NodeOperator storage no = nodeOperators[nodeOperatorId];
+        NodeOperatorInfo memory info;
+        info.active = no.active;
+        info.managerAddress = no.managerAddress;
+        info.rewardAddress = no.rewardAddress;
+        info.totalVettedValidators = no.totalVettedKeys;
+        info.totalExitedValidators = no.totalExitedKeys;
+        info.totalWithdrawnValidators = no.totalWithdrawnKeys;
+        info.totalAddedValidators = no.totalAddedKeys;
+        info.totalDepositedValidators = no.totalDepositedKeys;
+        return info;
     }
 
     function getNodeOperatorSummary(
@@ -483,7 +551,7 @@ contract CSModule is IStakingModule, CSModuleBase {
             uint256 depositableValidatorsCount
         )
     {
-        NodeOperator memory no = nodeOperators[_nodeOperatorId];
+        NodeOperator storage no = nodeOperators[_nodeOperatorId];
         isTargetLimitActive = no.isTargetLimitActive;
         targetValidatorsCount = no.targetLimit;
         stuckValidatorsCount = no.stuckValidatorsCount;
@@ -854,28 +922,21 @@ contract CSModule is IStakingModule, CSModuleBase {
         nonce++;
     }
 
-    function _onlyValidNodeOperatorName(string memory _name) internal view {
-        require(
-            bytes(_name).length > 0 &&
-                bytes(_name).length <= MAX_NODE_OPERATOR_NAME_LENGTH,
-            "WRONG_NAME_LENGTH"
-        );
-        require(!nodeOperatorIdsByName.exists(_name), "NAME_ALREADY_EXISTS");
-    }
-
     modifier onlyExistingNodeOperator(uint256 _nodeOperatorId) {
-        require(
-            _nodeOperatorId < nodeOperatorsCount,
-            "node operator does not exist"
-        );
+        if (_nodeOperatorId >= nodeOperatorsCount)
+            revert NodeOperatorDoesNotExist();
         _;
     }
 
-    modifier onlyNodeOperatorManager(uint256 _nodeOperatorId) {
-        require(
-            nodeOperators[_nodeOperatorId].rewardAddress == msg.sender,
-            "sender is not eligible to manage node operator"
-        );
+    modifier onlyNodeOperatorManager(uint256 nodeOperatorId) {
+        if (nodeOperators[nodeOperatorId].managerAddress != msg.sender)
+            revert SenderIsNotManagerAddress();
+        _;
+    }
+
+    modifier onlyNodeOperatorRewardAddress(uint256 nodeOperatorId) {
+        if (nodeOperators[nodeOperatorId].rewardAddress != msg.sender)
+            revert SenderIsNotRewardAddress();
         _;
     }
 }

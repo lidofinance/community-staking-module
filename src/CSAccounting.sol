@@ -492,8 +492,11 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 cumulativeFeeShares,
         uint256 stETHAmount
     ) external {
-        address rewardAddress = _getNodeOperatorRewardAddress(nodeOperatorId);
-        _isSenderEligableToClaim(rewardAddress);
+        (
+            address managerAddress,
+            address rewardAddress
+        ) = _getNodeOperatorAddresses(nodeOperatorId);
+        _isSenderEligibleToClaim(managerAddress);
         uint256 claimableShares = _pullFeeRewards(
             rewardsProof,
             nodeOperatorId,
@@ -527,8 +530,11 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 cumulativeFeeShares,
         uint256 wstETHAmount
     ) external {
-        address rewardAddress = _getNodeOperatorRewardAddress(nodeOperatorId);
-        _isSenderEligableToClaim(rewardAddress);
+        (
+            address managerAddress,
+            address rewardAddress
+        ) = _getNodeOperatorAddresses(nodeOperatorId);
+        _isSenderEligibleToClaim(managerAddress);
         uint256 claimableShares = _pullFeeRewards(
             rewardsProof,
             nodeOperatorId,
@@ -616,33 +622,24 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     function _getNodeOperatorActiveKeys(
         uint256 nodeOperatorId
     ) internal view returns (uint256) {
-        (
-            ,
-            ,
-            ,
-            ,
-            ,
-            uint256 totalWithdrawnValidators,
-            uint256 totalAddedValidators,
-
-        ) = CSM.getNodeOperator({
-                _nodeOperatorId: nodeOperatorId,
-                _fullInfo: false
-            });
-        return totalAddedValidators - totalWithdrawnValidators;
+        ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
+            nodeOperatorId
+        );
+        return
+            nodeOperator.totalAddedValidators -
+            nodeOperator.totalWithdrawnValidators;
     }
 
-    function _getNodeOperatorRewardAddress(
+    function _getNodeOperatorAddresses(
         uint256 nodeOperatorId
-    ) internal view returns (address) {
-        (, , address rewardAddress, , , , , ) = CSM.getNodeOperator({
-            _nodeOperatorId: nodeOperatorId,
-            _fullInfo: false
-        });
-        return rewardAddress;
+    ) internal view returns (address, address) {
+        ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
+            nodeOperatorId
+        );
+        return (nodeOperator.managerAddress, nodeOperator.rewardAddress);
     }
 
-    function _isSenderEligableToClaim(address rewardAddress) internal view {
+    function _isSenderEligibleToClaim(address rewardAddress) internal view {
         if (msg.sender != rewardAddress) {
             revert NotOwnerToClaim(msg.sender, rewardAddress);
         }

@@ -70,7 +70,6 @@ contract DepositIntegrationTest is Test, PermitHelper {
         csm.setNodeOperator({
             _nodeOperatorId: 0,
             _active: true,
-            _name: "User",
             _rewardAddress: user,
             _totalVettedValidators: 16,
             _totalExitedValidators: 0,
