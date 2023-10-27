@@ -1023,7 +1023,6 @@ contract CSAccountingTest is Test, Fixtures, PermitTokenBase, CSAccountingBase {
         stakingModule.setNodeOperator({
             _nodeOperatorId: 0,
             _active: true,
-            _name: "User",
             _rewardAddress: user,
             _totalVettedValidators: ongoingVals,
             _totalExitedValidators: 0,

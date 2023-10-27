@@ -55,23 +55,19 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     }
 
     function createNodeOperator() internal returns (uint256) {
-        return createNodeOperator("test");
+        return createNodeOperator(nodeOperator);
     }
 
-    function createNodeOperator(string memory name) internal returns (uint256) {
+    function createNodeOperator(
+        address managerAddress
+    ) internal returns (uint256) {
         uint256 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
-        vm.deal(nodeOperator, 2 ether);
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: 2 ether }(
-            name,
-            nodeOperator,
-            keysCount,
-            keys,
-            signatures
-        );
+        vm.deal(managerAddress, 2 ether);
+        vm.prank(managerAddress);
+        csm.addNodeOperatorETH{ value: 2 ether }(keysCount, keys, signatures);
         return csm.getNodeOperatorsCount() - 1;
     }
 }
@@ -89,10 +85,10 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, "test", nodeOperator);
+            emit NodeOperatorAdded(0, nodeOperator);
         }
 
-        csm.addNodeOperatorWstETH("test", nodeOperator, 1, keys, signatures);
+        csm.addNodeOperatorWstETH(1, keys, signatures);
         assertEq(csm.getNodeOperatorsCount(), 1);
     }
 
@@ -110,13 +106,11 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, "test", nodeOperator);
+            emit NodeOperatorAdded(0, stranger);
         }
 
         vm.prank(stranger);
         csm.addNodeOperatorWstETHWithPermit(
-            nodeOperator,
-            "test",
             nodeOperator,
             1,
             keys,
@@ -155,7 +149,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         vm.startPrank(nodeOperator);
         uint256 toWrap = 2 ether + 1 wei;
         wstETH.wrap(toWrap);
-        csm.addNodeOperatorWstETH("test", nodeOperator, 1, keys, signatures);
+        csm.addNodeOperatorWstETH(1, keys, signatures);
         uint256 noId = csm.getNodeOperatorsCount() - 1;
 
         vm.deal(nodeOperator, toWrap);
@@ -197,11 +191,11 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, "test", nodeOperator);
+            emit NodeOperatorAdded(0, nodeOperator);
         }
 
         vm.prank(nodeOperator);
-        csm.addNodeOperatorStETH("test", nodeOperator, 1, keys, signatures);
+        csm.addNodeOperatorStETH(1, keys, signatures);
         assertEq(csm.getNodeOperatorsCount(), 1);
     }
 
@@ -217,13 +211,11 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, "test", nodeOperator);
+            emit NodeOperatorAdded(0, stranger);
         }
 
         vm.prank(stranger);
         csm.addNodeOperatorStETHWithPermit(
-            nodeOperator,
-            "test",
             nodeOperator,
             1,
             keys,
@@ -260,7 +252,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             keysCount
         );
         vm.prank(nodeOperator);
-        csm.addNodeOperatorStETH("test", nodeOperator, 1, keys, signatures);
+        csm.addNodeOperatorStETH(1, keys, signatures);
         uint256 noId = csm.getNodeOperatorsCount() - 1;
 
         uint256 required = accounting.getRequiredBondStETH(0, 1);
@@ -302,17 +294,11 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, "test", nodeOperator);
+            emit NodeOperatorAdded(0, nodeOperator);
         }
 
         vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: 2 ether }(
-            "test",
-            nodeOperator,
-            1,
-            keys,
-            signatures
-        );
+        csm.addNodeOperatorETH{ value: 2 ether }(1, keys, signatures);
         assertEq(csm.getNodeOperatorsCount(), 1);
     }
 
@@ -339,19 +325,12 @@ contract CSMObtainDepositData is CSMCommon {
         );
         vm.deal(nodeOperator, 2 ether);
         vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: 2 ether }(
-            "test",
-            nodeOperator,
-            1,
-            keys,
-            signatures
-        );
+        csm.addNodeOperatorETH{ value: 2 ether }(1, keys, signatures);
 
         {
             // Pretend to be a key validation oracle
             csm.vetKeys(0, 1);
         }
-
         (bytes memory obtainedKeys, bytes memory obtainedSignatures) = csm
             .obtainDepositData(1, "");
         assertEq(obtainedKeys, keys);
@@ -362,59 +341,247 @@ contract CSMObtainDepositData is CSMCommon {
     }
 }
 
-contract CSMEditNodeOperatorInfo is CSMCommon {
-    function test_setNodeOperatorName() public {
+contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
+    function test_proposeNodeOperatorManagerAddressChange() public {
         uint256 noId = createNodeOperator();
-        vm.prank(nodeOperator);
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.managerAddress, nodeOperator);
+        assertEq(no.rewardAddress, nodeOperator);
+
         vm.expectEmit(true, true, false, true, address(csm));
-        emit NodeOperatorNameSet(noId, "newName");
-        csm.setNodeOperatorName(noId, "newName");
-
-        string memory name;
-        (, name, , , , , , ) = csm.getNodeOperator(noId, true);
-        assertEq(name, "newName");
+        emit NodeOperatorManagerAddressChangeProposed(noId, alice);
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorManagerAddressChange(noId, alice);
+        assertEq(no.managerAddress, nodeOperator);
+        assertEq(no.rewardAddress, nodeOperator);
     }
 
-    function test_setNodeOperatorName_revertIfNotManager() public {
+    function test_proposeNodeOperatorManagerAddressChange_RevertWhenNoNodeOperator()
+        public
+    {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.proposeNodeOperatorManagerAddressChange(0, alice);
+    }
+
+    function test_proposeNodeOperatorManagerAddressChange_RevertWhenNotManager()
+        public
+    {
         uint256 noId = createNodeOperator();
+        vm.expectRevert(SenderIsNotManagerAddress.selector);
+        csm.proposeNodeOperatorManagerAddressChange(noId, alice);
+    }
+
+    function test_proposeNodeOperatorManagerAddressChange_RevertWhenAlreadyProposed()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorManagerAddressChange(noId, alice);
+
+        vm.expectRevert(AlreadyProposed.selector);
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorManagerAddressChange(noId, alice);
+    }
+
+    function test_proposeNodeOperatorManagerAddressChange_RevertWhenSameAddressProposed()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(SameAddress.selector);
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorManagerAddressChange(noId, nodeOperator);
+    }
+}
+
+contract CsmConfirmNodeOperatorManagerAddressChange is CSMCommon {
+    function test_confirmNodeOperatorManagerAddressChange() public {
+        uint256 noId = createNodeOperator();
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.managerAddress, nodeOperator);
+        assertEq(no.rewardAddress, nodeOperator);
+
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorManagerAddressChange(noId, alice);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit NodeOperatorManagerAddressChanged(noId, nodeOperator, alice);
+        vm.prank(alice);
+        csm.confirmNodeOperatorManagerAddressChange(noId);
+
+        no = csm.getNodeOperator(noId);
+        assertEq(no.managerAddress, alice);
+        assertEq(no.rewardAddress, nodeOperator);
+    }
+
+    function test_confirmNodeOperatorManagerAddressChange_RevertWhenNoNodeOperator()
+        public
+    {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.confirmNodeOperatorManagerAddressChange(0);
+    }
+
+    function test_confirmNodeOperatorManagerAddressChange_RevertWhenNotProposed()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(SenderIsNotProposedAddress.selector);
+        vm.prank(alice);
+        csm.confirmNodeOperatorManagerAddressChange(noId);
+    }
+
+    function test_confirmNodeOperatorManagerAddressChange_RevertWhenOtherProposed()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorManagerAddressChange(noId, stranger);
+
+        vm.expectRevert(SenderIsNotProposedAddress.selector);
+        vm.prank(alice);
+        csm.confirmNodeOperatorManagerAddressChange(noId);
+    }
+}
+
+contract CsmProposeNodeOperatorRewardAddressChange is CSMCommon {
+    function test_proposeNodeOperatorRewardAddressChange() public {
+        uint256 noId = createNodeOperator();
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.managerAddress, nodeOperator);
+        assertEq(no.rewardAddress, nodeOperator);
+
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit NodeOperatorRewardAddressChangeProposed(noId, alice);
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorRewardAddressChange(noId, alice);
+        assertEq(no.managerAddress, nodeOperator);
+        assertEq(no.rewardAddress, nodeOperator);
+    }
+
+    function test_proposeNodeOperatorRewardAddressChange_RevertWhenNoNodeOperator()
+        public
+    {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.proposeNodeOperatorRewardAddressChange(0, alice);
+    }
+
+    function test_proposeNodeOperatorRewardAddressChange_RevertWhenNotRewardAddress()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(SenderIsNotRewardAddress.selector);
+        csm.proposeNodeOperatorRewardAddressChange(noId, alice);
+    }
+
+    function test_proposeNodeOperatorRewardAddressChange_RevertWhenAlreadyProposed()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorRewardAddressChange(noId, alice);
+
+        vm.expectRevert(AlreadyProposed.selector);
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorRewardAddressChange(noId, alice);
+    }
+
+    function test_proposeNodeOperatorRewardAddressChange_RevertWhenSameAddressProposed()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(SameAddress.selector);
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorRewardAddressChange(noId, nodeOperator);
+    }
+}
+
+contract CsmConfirmNodeOperatorRewardAddressChange is CSMCommon {
+    function test_confirmNodeOperatorRewardAddressChange() public {
+        uint256 noId = createNodeOperator();
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.managerAddress, nodeOperator);
+        assertEq(no.rewardAddress, nodeOperator);
+
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorRewardAddressChange(noId, alice);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit NodeOperatorRewardAddressChanged(noId, nodeOperator, alice);
+        vm.prank(alice);
+        csm.confirmNodeOperatorRewardAddressChange(noId);
+
+        no = csm.getNodeOperator(noId);
+        assertEq(no.managerAddress, nodeOperator);
+        assertEq(no.rewardAddress, alice);
+    }
+
+    function test_confirmNodeOperatorRewardAddressChange_RevertWhenNoNodeOperator()
+        public
+    {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.confirmNodeOperatorRewardAddressChange(0);
+    }
+
+    function test_confirmNodeOperatorRewardAddressChange_RevertWhenNotProposed()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(SenderIsNotProposedAddress.selector);
+        vm.prank(alice);
+        csm.confirmNodeOperatorRewardAddressChange(noId);
+    }
+
+    function test_confirmNodeOperatorRewardAddressChange_RevertWhenOtherProposed()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorRewardAddressChange(noId, stranger);
+
+        vm.expectRevert(SenderIsNotProposedAddress.selector);
+        vm.prank(alice);
+        csm.confirmNodeOperatorRewardAddressChange(noId);
+    }
+}
+
+contract CsmResetNodeOperatorManagerAddress is CSMCommon {
+    function test_resetNodeOperatorManagerAddress() public {
+        uint256 noId = createNodeOperator();
+
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorRewardAddressChange(noId, alice);
+        vm.prank(alice);
+        csm.confirmNodeOperatorRewardAddressChange(noId);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit NodeOperatorManagerAddressChanged(noId, nodeOperator, alice);
+        vm.prank(alice);
+        csm.resetNodeOperatorManagerAddress(noId);
+
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.managerAddress, alice);
+        assertEq(no.rewardAddress, alice);
+    }
+
+    function test_resetNodeOperatorManagerAddress_RevertWhenNoNodeOperator()
+        public
+    {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.resetNodeOperatorManagerAddress(0);
+    }
+
+    function test_resetNodeOperatorManagerAddress_RevertWhenNotRewardAddress()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(SenderIsNotRewardAddress.selector);
         vm.prank(stranger);
-        vm.expectRevert("sender is not eligible to manage node operator");
-        csm.setNodeOperatorName(noId, "newName");
+        csm.resetNodeOperatorManagerAddress(noId);
     }
 
-    function test_setNodeOperatorName_revertIfInvalidLength() public {
+    function test_resetNodeOperatorManagerAddress_RevertIfSameAddress() public {
         uint256 noId = createNodeOperator();
+        vm.expectRevert(SameAddress.selector);
         vm.prank(nodeOperator);
-        vm.expectRevert("WRONG_NAME_LENGTH");
-        csm.setNodeOperatorName(noId, "");
-
-        string memory tooLongName = new string(
-            csm.MAX_NODE_OPERATOR_NAME_LENGTH() + 1
-        );
-        vm.prank(nodeOperator);
-        vm.expectRevert("WRONG_NAME_LENGTH");
-        csm.setNodeOperatorName(noId, tooLongName);
-    }
-
-    function test_setNodeOperatorName_revertIfSameName() public {
-        uint256 noId = createNodeOperator();
-        vm.prank(nodeOperator);
-        vm.expectRevert("SAME_NAME");
-        csm.setNodeOperatorName(noId, "test");
-    }
-
-    function test_setNodeOperatorName_revertIfNonUniqueName() public {
-        uint256 noId = createNodeOperator("test");
-        createNodeOperator("test2");
-
-        vm.prank(nodeOperator);
-        vm.expectRevert("NAME_ALREADY_EXISTS");
-        csm.setNodeOperatorName(noId, "test2");
-    }
-
-    function test_setNodeOperatorName_revertIfNotExists() public {
-        vm.prank(nodeOperator);
-        vm.expectRevert("node operator does not exist");
-        csm.setNodeOperatorName(0, "test");
+        csm.resetNodeOperatorManagerAddress(noId);
     }
 }
