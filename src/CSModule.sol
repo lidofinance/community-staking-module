@@ -511,9 +511,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         ) revert SameAddress();
         address previousManagerAddress = nodeOperators[nodeOperatorId]
             .managerAddress;
-        nodeOperators[nodeOperatorId].managerAddress = nodeOperators[
-            nodeOperatorId
-        ].rewardAddress;
+        nodeOperators[nodeOperatorId].managerAddress = msg.sender;
         emit NodeOperatorManagerAddressChanged(
             nodeOperatorId,
             previousManagerAddress,

@@ -486,8 +486,11 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 cumulativeFeeShares,
         uint256 stETHAmount
     ) external {
-        address rewardAddress = _getNodeOperatorRewardAddress(nodeOperatorId);
-        _isSenderEligableToClaim(rewardAddress);
+        (
+            address managerAddress,
+            address rewardAddress
+        ) = _getNodeOperatorAddresses(nodeOperatorId);
+        _isSenderEligibleToClaim(managerAddress);
         uint256 claimableShares = _pullFeeRewards(
             rewardsProof,
             nodeOperatorId,
@@ -521,8 +524,11 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 cumulativeFeeShares,
         uint256 wstETHAmount
     ) external {
-        address rewardAddress = _getNodeOperatorRewardAddress(nodeOperatorId);
-        _isSenderEligableToClaim(rewardAddress);
+        (
+            address managerAddress,
+            address rewardAddress
+        ) = _getNodeOperatorAddresses(nodeOperatorId);
+        _isSenderEligibleToClaim(managerAddress);
         uint256 claimableShares = _pullFeeRewards(
             rewardsProof,
             nodeOperatorId,
@@ -580,16 +586,16 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
             nodeOperator.totalWithdrawnValidators;
     }
 
-    function _getNodeOperatorRewardAddress(
+    function _getNodeOperatorAddresses(
         uint256 nodeOperatorId
-    ) internal view returns (address) {
+    ) internal view returns (address, address) {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
         );
-        return nodeOperator.rewardAddress;
+        return (nodeOperator.managerAddress, nodeOperator.rewardAddress);
     }
 
-    function _isSenderEligableToClaim(address rewardAddress) internal view {
+    function _isSenderEligibleToClaim(address rewardAddress) internal view {
         if (msg.sender != rewardAddress) {
             revert NotOwnerToClaim(msg.sender, rewardAddress);
         }
