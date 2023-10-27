@@ -566,8 +566,11 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 cumulativeFeeShares,
         uint256 ETHAmount
     ) external returns (uint256[] memory requestIds) {
-        address rewardAddress = _getNodeOperatorRewardAddress(nodeOperatorId);
-        _isSenderEligableToClaim(rewardAddress);
+        (
+            address managerAddress,
+            address rewardAddress
+        ) = _getNodeOperatorAddresses(nodeOperatorId);
+        _isSenderEligibleToClaim(managerAddress);
         uint256 claimableShares = _pullFeeRewards(
             rewardsProof,
             nodeOperatorId,
