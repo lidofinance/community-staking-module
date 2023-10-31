@@ -11,8 +11,9 @@ import { CSAccounting } from "../../src/CSAccounting.sol";
 import { ILido } from "../../src/interfaces/ILido.sol";
 import { IWstETH } from "../../src/interfaces/IWstETH.sol";
 import "../helpers/Utilities.sol";
+import "../helpers/Fixtures.sol";
 
-contract StakingRouterIntegrationTest is Test, Utilities {
+contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
     uint256 networkFork;
 
     CSModule public csm;
@@ -23,28 +24,16 @@ contract StakingRouterIntegrationTest is Test, Utilities {
 
     address internal agent;
 
-    string RPC_URL;
-    string LIDO_LOCATOR_ADDRESS;
-    string WSTETH_ADDRESS;
-
     function setUp() public {
-        RPC_URL = vm.envOr("RPC_URL", string(""));
-        LIDO_LOCATOR_ADDRESS = vm.envOr("LIDO_LOCATOR_ADDRESS", string(""));
-        WSTETH_ADDRESS = vm.envOr("WSTETH_ADDRESS", string(""));
-        vm.skip(
-            keccak256(abi.encodePacked(RPC_URL)) ==
-                keccak256(abi.encodePacked("")) ||
-                keccak256(abi.encodePacked(LIDO_LOCATOR_ADDRESS)) ==
-                keccak256(abi.encodePacked(""))
-        );
+        Env memory env = envVars();
 
-        networkFork = vm.createFork(RPC_URL);
+        networkFork = vm.createFork(env.RPC_URL);
         vm.selectFork(networkFork);
 
-        locator = ILidoLocator(vm.parseAddress(LIDO_LOCATOR_ADDRESS));
+        locator = ILidoLocator(vm.parseAddress(env.LIDO_LOCATOR_ADDRESS));
         stakingRouter = IStakingRouter(payable(locator.stakingRouter()));
         lido = ILido(locator.lido());
-        wstETH = IWstETH(vm.parseAddress(WSTETH_ADDRESS));
+        wstETH = IWstETH(vm.parseAddress(env.WSTETH_ADDRESS));
         vm.label(address(lido), "lido");
         vm.label(address(stakingRouter), "stakingRouter");
 
@@ -70,10 +59,14 @@ contract StakingRouterIntegrationTest is Test, Utilities {
             stakingRouter.STAKING_MODULE_MANAGE_ROLE(),
             agent
         );
+        stakingRouter.grantRole(
+            stakingRouter.REPORT_REWARDS_MINTED_ROLE(),
+            agent
+        );
         vm.stopPrank();
     }
 
-    function test_connectCSMToRouter() public {
+    function addCsmModule() public returns (uint256) {
         vm.prank(agent);
         stakingRouter.addStakingModule({
             _name: "community-staking-v1",
@@ -83,21 +76,18 @@ contract StakingRouterIntegrationTest is Test, Utilities {
             _treasuryFee: 500
         });
         uint256[] memory ids = stakingRouter.getStakingModuleIds();
+        return ids[ids.length - 1];
+    }
+
+    function test_connectCSMToRouter() public {
+        uint256 moduleId = addCsmModule();
         IStakingRouter.StakingModule memory module = stakingRouter
-            .getStakingModule(ids[ids.length - 1]);
+            .getStakingModule(moduleId);
         assertTrue(module.stakingModuleAddress == address(csm));
     }
 
     function test_RouterDeposit() public {
-        vm.prank(agent);
-        stakingRouter.addStakingModule({
-            _name: "community-staking-v1",
-            _stakingModuleAddress: address(csm),
-            _targetShare: 10000,
-            _stakingModuleFee: 500,
-            _treasuryFee: 500
-        });
-        uint256[] memory ids = stakingRouter.getStakingModuleIds();
+        uint256 moduleId = addCsmModule();
         (bytes memory keys, bytes memory signatures) = keysSignatures(2);
         address nodeOperator = address(2);
         vm.deal(nodeOperator, 4 ether);
@@ -117,9 +107,21 @@ contract StakingRouterIntegrationTest is Test, Utilities {
         lido.submit{ value: 1e5 ether }(address(0));
 
         vm.prank(locator.depositSecurityModule());
-        lido.deposit(1, ids[ids.length - 1], "");
+        lido.deposit(1, moduleId, "");
         (, , , , , , uint256 totalDepositedValidators, ) = csm
             .getNodeOperatorSummary(0);
         assertEq(totalDepositedValidators, 1);
+    }
+
+    function test_routerReportRewardsMinted() public {
+        uint256 moduleId = addCsmModule();
+        uint256[] memory moduleIds = new uint256[](1);
+        uint256[] memory rewards = new uint256[](1);
+
+        moduleIds[0] = moduleId;
+        rewards[0] = 100;
+        vm.prank(agent);
+        vm.expectCall(address(csm), abi.encodeCall(csm.onRewardsMinted, (100)));
+        stakingRouter.reportRewardsMinted(moduleIds, rewards);
     }
 }

@@ -91,7 +91,7 @@ contract CSFeeOracle is CSFeeOracleBase, AccessControlEnumerable {
     }
 
     /// @notice Returns the next epoch to report
-    function nextReportEpoch() public view onlyInitializied returns (uint64) {
+    function nextReportEpoch() public view onlyInitialized returns (uint64) {
         // NOTE: underflow is expected here when lastConsolidatedEpoch in the future
         uint64 epochsElapsed = currentEpoch() - lastConsolidatedEpoch;
         if (epochsElapsed < reportIntervalEpochs) {
@@ -106,7 +106,7 @@ contract CSFeeOracle is CSFeeOracleBase, AccessControlEnumerable {
     function reportFrame()
         external
         view
-        onlyInitializied
+        onlyInitialized
         returns (uint64, uint64)
     {
         return (
@@ -139,7 +139,7 @@ contract CSFeeOracle is CSFeeOracleBase, AccessControlEnumerable {
         bytes32 newRoot,
         uint256 distributed,
         string memory _treeCid
-    ) external onlyInitializied onlyRole(ORACLE_MEMBER_ROLE) whenNotPaused {
+    ) external onlyInitialized onlyRole(ORACLE_MEMBER_ROLE) whenNotPaused {
         uint64 _currentEpoch = currentEpoch();
         if (_currentEpoch < epoch) {
             revert ReportTooEarly();
@@ -266,7 +266,7 @@ contract CSFeeOracle is CSFeeOracleBase, AccessControlEnumerable {
         _pause();
     }
 
-    modifier onlyInitializied() {
+    modifier onlyInitialized() {
         if (!initialized) revert NotInitialized();
         _;
     }
