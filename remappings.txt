@@ -1,5 +1,4 @@
 @openzeppelin/contracts=lib/openzeppelin-contracts/contracts/
-base-oracle=lib/base-oracle/
 ds-test/=lib/forge-std/lib/ds-test/src/
 forge-std/=lib/forge-std/src/
 @openzeppelin/contracts-v4.4=lib/openzeppelin-contracts-v4.4/contracts/
