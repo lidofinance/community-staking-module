@@ -9,6 +9,8 @@ artifacts:
 clean:
 	forge clean
 	rm -rf cache broadcast out
+lint-solhint:
+	yarn lint:solhint
 lint-check:
 	yarn lint:check
 lint-fix:
@@ -48,6 +50,7 @@ endif
 
 # aliases
 a: artifacts
+ls: lint-solhint
 lc: lint-check
 lf: lint-fix
 t: test
