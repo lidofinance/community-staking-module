@@ -11,8 +11,9 @@ import { CommunityStakingModuleMock } from "../helpers/mocks/CommunityStakingMod
 import { IWstETH } from "../../src/interfaces/IWstETH.sol";
 import { ILido } from "../../src/interfaces/ILido.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
+import "../helpers/Fixtures.sol";
 
-contract DepositIntegrationTest is Test, PermitHelper {
+contract DepositIntegrationTest is Test, PermitHelper, IntegrationFixtures {
     uint256 networkFork;
 
     CommunityStakingModuleMock public csm;
@@ -26,30 +27,16 @@ contract DepositIntegrationTest is Test, PermitHelper {
     uint256 internal userPrivateKey;
     uint256 internal strangerPrivateKey;
 
-    string RPC_URL;
-    string LIDO_LOCATOR_ADDRESS;
-    string WSTETH_ADDRESS;
-
     function setUp() public {
-        RPC_URL = vm.envOr("RPC_URL", string(""));
-        LIDO_LOCATOR_ADDRESS = vm.envOr("LIDO_LOCATOR_ADDRESS", string(""));
-        WSTETH_ADDRESS = vm.envOr("WSTETH_ADDRESS", string(""));
-        vm.skip(
-            keccak256(abi.encodePacked(RPC_URL)) ==
-                keccak256(abi.encodePacked("")) ||
-                keccak256(abi.encodePacked(LIDO_LOCATOR_ADDRESS)) ==
-                keccak256(abi.encodePacked("")) ||
-                keccak256(abi.encodePacked(WSTETH_ADDRESS)) ==
-                keccak256(abi.encodePacked(""))
-        );
+        Env memory env = envVars();
 
-        networkFork = vm.createFork(RPC_URL);
+        networkFork = vm.createFork(env.RPC_URL);
         vm.selectFork(networkFork);
 
-        locator = ILidoLocator(vm.parseAddress(LIDO_LOCATOR_ADDRESS));
+        locator = ILidoLocator(vm.parseAddress(env.LIDO_LOCATOR_ADDRESS));
         csm = new CommunityStakingModuleMock();
 
-        wstETH = IWstETH(vm.parseAddress(WSTETH_ADDRESS));
+        wstETH = IWstETH(vm.parseAddress(env.WSTETH_ADDRESS));
 
         userPrivateKey = 0xa11ce;
         user = vm.addr(userPrivateKey);
