@@ -43,7 +43,7 @@ contract CSAccountingBase {
         address to,
         uint256 amount
     );
-    event ELRewardsStealingReported(
+    event ELRewardsStealingPenaltyInitiated(
         uint256 indexed nodeOperatorId,
         uint256 proposedBlockNumber,
         uint256 stolenAmount
@@ -54,6 +54,10 @@ contract CSAccountingBase {
         uint256 retentionUntil
     );
     event BlockedBondCompensated(
+        uint256 indexed nodeOperatorId,
+        uint256 ETHAmount
+    );
+    event BlockedBondReleased(
         uint256 indexed nodeOperatorId,
         uint256 ETHAmount
     );
@@ -94,8 +98,8 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     address public FEE_DISTRIBUTOR;
     uint256 public totalBondShares;
 
-    mapping(uint256 => uint256) private _bondShares;
-    mapping(uint256 => BlockedBondEther) private _blockedBondEther;
+    mapping(uint256 => uint256) internal _bondShares;
+    mapping(uint256 => BlockedBondEther) internal _blockedBondEther;
 
     error NotOwnerToClaim(address msgSender, address owner);
 
@@ -212,6 +216,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 nodeOperatorId
     ) public view returns (uint256) {
         (uint256 current, uint256 required) = _bondETHSummary(nodeOperatorId);
+        required += getBlockedBondETH(nodeOperatorId);
         return current > required ? current - required : 0;
     }
 
@@ -266,7 +271,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 nodeOperatorId
     ) public view returns (uint256) {
         if (
-            _blockedBondEther[nodeOperatorId].retentionUntil > block.timestamp
+            _blockedBondEther[nodeOperatorId].retentionUntil >= block.timestamp
         ) {
             return _blockedBondEther[nodeOperatorId].ETHAmount;
         }
@@ -517,7 +522,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
             nodeOperatorId,
             cumulativeFeeShares
         );
-        if (claimableShares == 0 || getBlockedBondETH(nodeOperatorId) > 0) {
+        if (claimableShares == 0) {
             emit StETHRewardsClaimed(nodeOperatorId, rewardAddress, 0);
             return;
         }
@@ -555,7 +560,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
             nodeOperatorId,
             cumulativeFeeShares
         );
-        if (claimableShares == 0 || getBlockedBondETH(nodeOperatorId) > 0) {
+        if (claimableShares == 0) {
             emit WstETHRewardsClaimed(nodeOperatorId, rewardAddress, 0);
             return;
         }
@@ -595,7 +600,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
             nodeOperatorId,
             cumulativeFeeShares
         );
-        if (claimableShares == 0 || getBlockedBondETH(nodeOperatorId) > 0) {
+        if (claimableShares == 0) {
             emit ETHRewardsRequested(nodeOperatorId, rewardAddress, 0);
             return requestIds;
         }
@@ -628,7 +633,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         onlyExistingNodeOperator(nodeOperatorId)
     {
         require(stolenAmount > 0, "stolen amount should be greater than zero");
-        emit ELRewardsStealingReported(
+        emit ELRewardsStealingPenaltyInitiated(
             nodeOperatorId,
             proposedBlockNumber,
             stolenAmount
@@ -652,7 +657,8 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         onlyRole(EL_REWARDS_STEALING_PENALTY_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
-        _releaseBlockedBondETH(nodeOperatorId, amount);
+        emit BlockedBondReleased(nodeOperatorId, amount);
+        _reduceBlockedBondETH(nodeOperatorId, amount);
     }
 
     /// @notice Compensates blocked bond ETH for the given node operator.
@@ -662,10 +668,11 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     ) external payable onlyExistingNodeOperator(nodeOperatorId) {
         require(msg.value > 0, "value should be greater than zero");
         payable(LIDO_LOCATOR.elRewardsVault()).transfer(msg.value);
-        _releaseBlockedBondETH(nodeOperatorId, msg.value);
+        emit BlockedBondCompensated(nodeOperatorId, msg.value);
+        _reduceBlockedBondETH(nodeOperatorId, msg.value);
     }
 
-    function _releaseBlockedBondETH(
+    function _reduceBlockedBondETH(
         uint256 nodeOperatorId,
         uint256 amount
     ) internal {
@@ -673,7 +680,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         require(blocked > 0, "no blocked bond to release");
         require(
             _blockedBondEther[nodeOperatorId].ETHAmount >= amount,
-            "blocked bond is less than amount to compensate"
+            "blocked bond is less than amount to release"
         );
         _changeBlockedBondState(
             nodeOperatorId,
@@ -705,11 +712,13 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
                 continue;
             }
             uint256 blockedAmount = getBlockedBondETH(nodeOperatorId);
+            uint256 uncovered;
+            if (blockedAmount > 0) {
+                uncovered = penalize(nodeOperatorId, blockedAmount);
+            }
             _changeBlockedBondState({
                 nodeOperatorId: nodeOperatorId,
-                ETHAmount: blockedAmount > 0
-                    ? penalize(nodeOperatorId, blockedAmount)
-                    : 0,
+                ETHAmount: uncovered,
                 retentionUntil: data.retentionUntil
             });
         }
@@ -816,6 +825,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         (uint256 current, uint256 required) = _bondSharesSummary(
             nodeOperatorId
         );
+        required += _sharesByEth(getBlockedBondETH(nodeOperatorId));
         claimableShares = current > required ? current - required : 0;
     }
 
