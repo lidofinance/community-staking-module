@@ -597,6 +597,42 @@ contract CSAccountingTest is
         assertEq(accounting.getUnbondedKeysCount(0), 7);
     }
 
+    function test_getKeysCountByBondETH() public {
+        assertEq(accounting.getKeysCountByBondETH(0), 0);
+        assertEq(accounting.getKeysCountByBondETH(1.99 ether), 0);
+        assertEq(accounting.getKeysCountByBondETH(2 ether), 1);
+        assertEq(accounting.getKeysCountByBondETH(4 ether), 2);
+    }
+
+    function test_getKeysCountByBondStETH() public {
+        assertEq(accounting.getKeysCountByBondStETH(0), 0);
+        assertEq(accounting.getKeysCountByBondStETH(1.99 ether), 0);
+        assertEq(accounting.getKeysCountByBondStETH(2 ether), 1);
+        assertEq(accounting.getKeysCountByBondStETH(4 ether), 2);
+    }
+
+    function test_getKeysCountByBondWstETH() public {
+        assertEq(accounting.getKeysCountByBondWstETH(0), 0);
+        assertEq(
+            accounting.getKeysCountByBondWstETH(
+                wstETH.getWstETHByStETH(1.99 ether)
+            ),
+            0
+        );
+        assertEq(
+            accounting.getKeysCountByBondWstETH(
+                wstETH.getWstETHByStETH(2 ether)
+            ),
+            1
+        );
+        assertEq(
+            accounting.getKeysCountByBondWstETH(
+                wstETH.getWstETHByStETH(4 ether)
+            ),
+            2
+        );
+    }
+
     function test_claimRewardsStETH() public {
         _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(address(feeDistributor), 0.1 ether);
