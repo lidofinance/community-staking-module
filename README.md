@@ -11,9 +11,11 @@ forge install
 ```
 
 - Config environment variables
+
 ```bash
 cp .env.example .env
 ```
+
 Fill vars in the `.env` file with your own values
 
 ### Features
@@ -36,6 +38,12 @@ forge install rari-capital/solmate
 
 ```bash
 make deploy-local
+```
+
+- Deploy to local fork of non-mainnet chain
+
+```bash
+CHAIN=goerli make deploy-local
 ```
 
 ### Notes

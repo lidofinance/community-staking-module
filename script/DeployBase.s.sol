@@ -14,38 +14,60 @@ import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 
-contract Deploy is Script {
+abstract contract DeployBase is Script {
     // TODO: some contracts of the module probably should be deployed behind a proxy
+    uint256 immutable CHAIN_ID;
+    uint256 immutable SECONDS_PER_SLOT;
+    uint256 immutable SLOTS_PER_EPOCH;
+    uint256 immutable CL_GENESIS_TIME;
+    uint256 immutable INITIALIZATION_EPOCH;
+    address immutable LIDO_LOCATOR_ADDRESS;
+    address immutable WSTETH_ADDRESS;
 
-    ILidoLocator public locator;
-    IWstETH public wstETH;
+    ILidoLocator private locator;
+    IWstETH private wstETH;
 
-    address public LIDO_LOCATOR_ADDRESS;
-    address public WSTETH_ADDRESS;
-    uint256 public CL_GENESIS_TIME;
-    uint256 public INITIALIZATION_EPOCH;
+    address private deployer;
+    uint256 private pk;
 
-    address deployer;
-    uint256 pk;
+    error ChainIdMismatch(uint256 actual, uint256 expected);
 
-    constructor() {
-        LIDO_LOCATOR_ADDRESS = vm.envAddress("LIDO_LOCATOR_ADDRESS");
-        WSTETH_ADDRESS = vm.envAddress("WSTETH_ADDRESS");
-        CL_GENESIS_TIME = vm.envUint("CL_GENESIS_TIME");
-        INITIALIZATION_EPOCH = vm.envUint("INITIALIZATION_EPOCH");
-
-        pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        deployer = vm.addr(pk);
+    constructor(
+        uint256 chainId,
+        uint256 secondsPerSlot,
+        uint256 slotsPerEpoch,
+        uint256 clGenesisTime,
+        uint256 initializationEpoch,
+        address lidoLocatorAddress,
+        address wstETHAddress
+    ) {
+        CHAIN_ID = chainId;
+        SECONDS_PER_SLOT = secondsPerSlot;
+        SLOTS_PER_EPOCH = slotsPerEpoch;
+        CL_GENESIS_TIME = clGenesisTime;
+        INITIALIZATION_EPOCH = initializationEpoch;
+        LIDO_LOCATOR_ADDRESS = lidoLocatorAddress;
+        WSTETH_ADDRESS = wstETHAddress;
 
         vm.label(LIDO_LOCATOR_ADDRESS, "LIDO_LOCATOR");
         vm.label(WSTETH_ADDRESS, "WSTETH");
-        vm.label(deployer, "DEPLOYER");
 
         locator = ILidoLocator(LIDO_LOCATOR_ADDRESS);
         wstETH = IWstETH(WSTETH_ADDRESS);
     }
 
     function run() external {
+        if (CHAIN_ID != block.chainid) {
+            revert ChainIdMismatch({
+                actual: block.chainid,
+                expected: CHAIN_ID
+            });
+        }
+
+        pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        deployer = vm.addr(pk);
+        vm.label(deployer, "DEPLOYER");
+
         address[] memory penalizers = new address[](1);
         penalizers[0] = deployer; // FIXME
 
@@ -65,7 +87,7 @@ contract Deploy is Script {
             });
 
             CSFeeOracle oracleImpl = new CSFeeOracle({
-                secondsPerSlot: 12,
+                secondsPerSlot: SECONDS_PER_SLOT,
                 genesisTime: CL_GENESIS_TIME
             });
 
@@ -86,8 +108,8 @@ contract Deploy is Script {
             // TODO: csm.setBondManager(address(accounting));
 
             HashConsensus hashConsensus = new HashConsensus({
-                slotsPerEpoch: 32,
-                secondsPerSlot: 12,
+                slotsPerEpoch: SLOTS_PER_EPOCH,
+                secondsPerSlot: SECONDS_PER_SLOT,
                 genesisTime: CL_GENESIS_TIME,
                 epochsPerFrame: 225 * 28, // 28 days
                 fastLaneLengthSlots: 0,
@@ -126,7 +148,7 @@ contract Deploy is Script {
         revert("Not yet implemented");
     }
 
-    function _refSlotFromEpoch(uint256 epoch) internal pure returns (uint256) {
-        return epoch * 32 - 1;
+    function _refSlotFromEpoch(uint256 epoch) internal view returns (uint256) {
+        return epoch * SLOTS_PER_EPOCH - 1;
     }
 }
