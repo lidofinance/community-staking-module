@@ -216,7 +216,6 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 nodeOperatorId
     ) public view returns (uint256) {
         (uint256 current, uint256 required) = _bondETHSummary(nodeOperatorId);
-        required += getBlockedBondETH(nodeOperatorId);
         return current > required ? current - required : 0;
     }
 
@@ -286,10 +285,21 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 additionalKeysCount
     ) public view returns (uint256) {
         (uint256 current, uint256 required) = _bondETHSummary(nodeOperatorId);
-        required +=
-            getRequiredBondETHForKeys(additionalKeysCount) +
-            getBlockedBondETH(nodeOperatorId);
-        return required > current ? required - current : 0;
+        uint256 requiredForKeys = getRequiredBondETHForKeys(
+            additionalKeysCount
+        );
+
+        uint256 missing = required > current ? required - current : 0;
+        if (missing > 0) {
+            return missing + requiredForKeys;
+        }
+
+        uint256 excess = current - required;
+        if (excess >= requiredForKeys) {
+            return 0;
+        }
+
+        return requiredForKeys - excess;
     }
 
     /// @notice Returns the required bond stETH (inc. missed and excess) for the given node operator to upload new keys.
@@ -825,7 +835,6 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         (uint256 current, uint256 required) = _bondSharesSummary(
             nodeOperatorId
         );
-        required += _sharesByEth(getBlockedBondETH(nodeOperatorId));
         claimableShares = current > required ? current - required : 0;
     }
 
@@ -833,18 +842,22 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 nodeOperatorId
     ) internal view returns (uint256 current, uint256 required) {
         current = _ethByShares(getBondShares(nodeOperatorId));
-        required = getRequiredBondETHForKeys(
-            _getNodeOperatorActiveKeys(nodeOperatorId)
-        );
+        required =
+            getRequiredBondETHForKeys(
+                _getNodeOperatorActiveKeys(nodeOperatorId)
+            ) +
+            getBlockedBondETH(nodeOperatorId);
     }
 
     function _bondSharesSummary(
         uint256 nodeOperatorId
     ) internal view returns (uint256 current, uint256 required) {
         current = getBondShares(nodeOperatorId);
-        required = _getRequiredBondSharesForKeys(
-            _getNodeOperatorActiveKeys(nodeOperatorId)
-        );
+        required =
+            _getRequiredBondSharesForKeys(
+                _getNodeOperatorActiveKeys(nodeOperatorId)
+            ) +
+            _sharesByEth(getBlockedBondETH(nodeOperatorId));
     }
 
     function _sharesByEth(uint256 ethAmount) internal view returns (uint256) {

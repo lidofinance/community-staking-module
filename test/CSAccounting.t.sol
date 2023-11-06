@@ -138,12 +138,12 @@ contract CSAccountingTest is
         _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(user, 64 ether);
         vm.startPrank(user);
-        accounting.depositETH{ value: 64 ether }(user, 0);
+        accounting.depositETH{ value: 63 ether }(user, 0);
         assertApproxEqAbs(
             accounting.getRequiredBondETH(0, 16),
-            0,
+            1 ether,
             1, // max accuracy error
-            "required ETH should be ~0 for the next 16 validators to deposit"
+            "required ETH should be ~1 ether for the next 16 validators to deposit"
         );
     }
 
@@ -152,12 +152,12 @@ contract CSAccountingTest is
         vm.deal(user, 64 ether);
         vm.startPrank(user);
         stETH.submit{ value: 64 ether }({ _referal: address(0) });
-        accounting.depositStETH(user, 0, 64 ether);
+        accounting.depositStETH(user, 0, 63 ether);
         assertApproxEqAbs(
             accounting.getRequiredBondStETH(0, 16),
-            0,
+            1 ether,
             1, // max accuracy error
-            "required stETH should be ~0 for the next 16 validators to deposit"
+            "required stETH should be ~1 ether for the next 16 validators to deposit"
         );
     }
 
@@ -166,13 +166,13 @@ contract CSAccountingTest is
         vm.deal(user, 64 ether);
         vm.startPrank(user);
         stETH.submit{ value: 64 ether }({ _referal: address(0) });
-        uint256 amount = wstETH.wrap(64 ether);
+        uint256 amount = wstETH.wrap(63 ether);
         accounting.depositWstETH(user, 0, amount);
         assertApproxEqAbs(
             accounting.getRequiredBondWstETH(0, 16),
-            0,
-            1, // max accuracy error
-            "required wstETH should be ~0 for the next 16 validators to deposit"
+            stETH.getSharesByPooledEth(1 ether),
+            2, // max accuracy error
+            "required wstETH should be ~1 ether for the next 16 validators to deposit"
         );
     }
 
