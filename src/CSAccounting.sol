@@ -76,7 +76,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         bytes32 r;
         bytes32 s;
     }
-    struct BlockedBondEther {
+    struct BlockedBond {
         uint256 ETHAmount;
         uint256 retentionUntil;
     }
@@ -107,7 +107,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     uint256 public blockedBondManagementPeriod;
 
     mapping(uint256 => uint256) internal _bondShares;
-    mapping(uint256 => BlockedBondEther) internal _blockedBondEther;
+    mapping(uint256 => BlockedBond) internal _blockedBondEther;
 
     error NotOwnerToClaim(address msgSender, address owner);
     error InvalidBlockedBondRetentionPeriod();
@@ -745,12 +745,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 nosCount = CSM.getNodeOperatorsCount();
         for (uint256 i; i < nodeOperatorIds.length; ++i) {
             uint256 nodeOperatorId = nodeOperatorIds[i];
-            if (nodeOperatorId >= nosCount) {
-                continue;
-            }
-            BlockedBondEther storage blockedBond = _blockedBondEther[
-                nodeOperatorId
-            ];
+            BlockedBond storage blockedBond = _blockedBondEther[nodeOperatorId];
             if (
                 block.timestamp +
                     blockedBondRetentionPeriod -
@@ -785,7 +780,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
             emit BlockedBondChanged(nodeOperatorId, 0, 0);
             return;
         }
-        _blockedBondEther[nodeOperatorId] = BlockedBondEther({
+        _blockedBondEther[nodeOperatorId] = BlockedBond({
             ETHAmount: ETHAmount,
             retentionUntil: retentionUntil
         });
@@ -796,18 +791,14 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     function penalize(
         uint256 nodeOperatorId,
         uint256 ETHAmount
-    )
-        public
-        onlyRole(INSTANT_PENALIZE_BOND_ROLE)
-        onlyExistingNodeOperator(nodeOperatorId)
-    {
+    ) public onlyRole(INSTANT_PENALIZE_BOND_ROLE) {
         _penalize(nodeOperatorId, ETHAmount);
     }
 
     function _penalize(
         uint256 nodeOperatorId,
         uint256 ETHAmount
-    ) internal returns (uint256) {
+    ) internal onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
         uint256 penaltyShares = _sharesByEth(ETHAmount);
         uint256 currentShares = getBondShares(nodeOperatorId);
         uint256 sharesToBurn = penaltyShares < currentShares

@@ -47,13 +47,13 @@ contract CSAccounting_revealed is CSAccounting {
 
     function _blockedBondEther_get_value(
         uint256 nodeOperatorId
-    ) public view returns (BlockedBondEther memory) {
+    ) public view returns (BlockedBond memory) {
         return _blockedBondEther[nodeOperatorId];
     }
 
     function _blockedBondEther_set_value(
         uint256 nodeOperatorId,
-        BlockedBondEther memory value
+        BlockedBond memory value
     ) public {
         _blockedBondEther[nodeOperatorId] = value;
     }
@@ -134,7 +134,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBondEther({
+            CSAccounting.BlockedBond({
                 ETHAmount: amount,
                 retentionUntil: retentionUntil
             })
@@ -158,7 +158,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBondEther({
+            CSAccounting.BlockedBond({
                 ETHAmount: amount,
                 retentionUntil: retentionUntil
             })
@@ -186,7 +186,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBondEther({
+            CSAccounting.BlockedBond({
                 ETHAmount: amount,
                 retentionUntil: retentionUntil
             })
@@ -214,7 +214,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBondEther({
+            CSAccounting.BlockedBond({
                 ETHAmount: amount,
                 retentionUntil: retentionUntil
             })
@@ -228,7 +228,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBondEther({
+            CSAccounting.BlockedBond({
                 ETHAmount: 1 ether,
                 retentionUntil: retentionUntil
             })
@@ -256,7 +256,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBondEther({
+            CSAccounting.BlockedBond({
                 ETHAmount: amount,
                 retentionUntil: retentionUntil
             })
@@ -270,7 +270,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBondEther({
+            CSAccounting.BlockedBond({
                 ETHAmount: 1 ether,
                 retentionUntil: retentionUntil
             })
@@ -297,7 +297,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
         accounting._bondShares_set_value(0, 100 ether);
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBondEther({
+            CSAccounting.BlockedBond({
                 ETHAmount: amount,
                 retentionUntil: retentionUntil
             })
@@ -323,7 +323,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
             retentionUntil: retentionUntil
         });
 
-        CSAccounting.BlockedBondEther memory value = accounting
+        CSAccounting.BlockedBond memory value = accounting
             ._blockedBondEther_get_value(noId);
 
         assertEq(value.ETHAmount, amount);
@@ -474,7 +474,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
 
         accounting._blockedBondEther_set_value(
             0,
-            CSAccounting.BlockedBondEther({
+            CSAccounting.BlockedBond({
                 ETHAmount: 1 ether,
                 retentionUntil: retentionUntil
             })
@@ -486,7 +486,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
         vm.prank(admin);
         accounting.settleBlockedBondETH(nosToPenalize);
 
-        CSAccounting.BlockedBondEther memory value = accounting
+        CSAccounting.BlockedBond memory value = accounting
             ._blockedBondEther_get_value(0);
 
         assertEq(value.ETHAmount, 1 ether);
@@ -516,7 +516,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
         // penalty amount is greater than the bond
         accounting._blockedBondEther_set_value(
             0,
-            CSAccounting.BlockedBondEther({
+            CSAccounting.BlockedBond({
                 ETHAmount: 100 ether,
                 retentionUntil: retentionUntil
             })
@@ -544,7 +544,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
         // retention period expired
         accounting._blockedBondEther_set_value(
             0,
-            CSAccounting.BlockedBondEther({
+            CSAccounting.BlockedBond({
                 ETHAmount: 100 ether,
                 retentionUntil: retentionUntil
             })
@@ -569,7 +569,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBondEther({
+            CSAccounting.BlockedBond({
                 ETHAmount: amount,
                 retentionUntil: retentionUntil
             })
@@ -584,7 +584,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
 
         accounting._reduceBlockedBondETH_revealed(noId, toReduce);
 
-        CSAccounting.BlockedBondEther memory value = accounting
+        CSAccounting.BlockedBond memory value = accounting
             ._blockedBondEther_get_value(noId);
 
         assertEq(value.ETHAmount, rest);
@@ -620,7 +620,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBondEther({
+            CSAccounting.BlockedBond({
                 ETHAmount: amount,
                 retentionUntil: retentionUntil
             })
@@ -639,7 +639,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBondEther({
+            CSAccounting.BlockedBond({
                 ETHAmount: amount,
                 retentionUntil: retentionUntil
             })
@@ -682,7 +682,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBondEther({
+            CSAccounting.BlockedBond({
                 ETHAmount: amount,
                 retentionUntil: retentionUntil
             })
