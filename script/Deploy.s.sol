@@ -44,8 +44,8 @@ contract Deploy is Script {
             communityStakingModule: address(csm),
             wstETH: address(wstETH),
             // todo: arguable. should be discussed
-            blockedBondRetentionPeriod: 8 weeks,
-            blockedBondManagementPeriod: 1 weeks
+            _blockedBondRetentionPeriod: 8 weeks,
+            _blockedBondManagementPeriod: 1 weeks
         });
         CSFeeOracle feeOracle = new CSFeeOracle({
             secondsPerBlock: 12,

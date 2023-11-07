@@ -88,6 +88,12 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     bytes32 public constant EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE =
         keccak256("EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE");
 
+    // todo: should be reconsidered
+    uint256 public constant MIN_BLOCKED_BOND_RETENTION_PERIOD = 4 weeks;
+    uint256 public constant MAX_BLOCKED_BOND_RETENTION_PERIOD = 365 days;
+    uint256 public constant MIN_BLOCKED_BOND_MANAGEMENT_PERIOD = 1 days;
+    uint256 public constant MAX_BLOCKED_BOND_MANAGEMENT_PERIOD = 7 days;
+
     uint256 public immutable COMMON_BOND_SIZE;
 
     ILidoLocator private immutable LIDO_LOCATOR;
@@ -97,8 +103,8 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     address public FEE_DISTRIBUTOR;
     uint256 public totalBondShares;
 
-    uint256 public BLOCKED_BOND_RETENTION_PERIOD;
-    uint256 public BLOCKED_BOND_MANAGEMENT_PERIOD;
+    uint256 public blockedBondRetentionPeriod;
+    uint256 public blockedBondManagementPeriod;
 
     mapping(uint256 => uint256) internal _bondShares;
     mapping(uint256 => BlockedBondEther) internal _blockedBondEther;
@@ -112,15 +118,16 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     /// @param lidoLocator lido locator contract address
     /// @param wstETH wstETH contract address
     /// @param communityStakingModule community staking module contract address
-    /// @param blockedBondRetentionPeriod retention period for blocked bond in seconds
+    /// @param _blockedBondRetentionPeriod retention period for blocked bond in seconds
+    /// @param _blockedBondManagementPeriod management period for blocked bond in seconds
     constructor(
         uint256 commonBondSize,
         address admin,
         address lidoLocator,
         address wstETH,
         address communityStakingModule,
-        uint256 blockedBondRetentionPeriod,
-        uint256 blockedBondManagementPeriod
+        uint256 _blockedBondRetentionPeriod,
+        uint256 _blockedBondManagementPeriod
     ) {
         // check zero addresses
         require(admin != address(0), "admin is zero address");
@@ -131,8 +138,8 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         );
         require(wstETH != address(0), "wstETH is zero address");
         _validateBlockedBondPeriods(
-            blockedBondRetentionPeriod,
-            blockedBondManagementPeriod
+            _blockedBondRetentionPeriod,
+            _blockedBondManagementPeriod
         );
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
 
@@ -142,8 +149,8 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
 
         COMMON_BOND_SIZE = commonBondSize;
 
-        BLOCKED_BOND_RETENTION_PERIOD = blockedBondRetentionPeriod;
-        BLOCKED_BOND_MANAGEMENT_PERIOD = blockedBondManagementPeriod;
+        blockedBondRetentionPeriod = _blockedBondRetentionPeriod;
+        blockedBondManagementPeriod = _blockedBondManagementPeriod;
     }
 
     function setFeeDistributor(
@@ -157,8 +164,8 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 management
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _validateBlockedBondPeriods(retention, management);
-        BLOCKED_BOND_RETENTION_PERIOD = retention;
-        BLOCKED_BOND_RETENTION_PERIOD = management;
+        blockedBondRetentionPeriod = retention;
+        blockedBondManagementPeriod = management;
     }
 
     function _validateBlockedBondPeriods(
@@ -166,11 +173,10 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 management
     ) internal pure {
         if (
-            retention == 0 ||
-            retention == type(uint256).max ||
-            management == 0 ||
-            management == type(uint256).max ||
-            retention < management
+            retention < MIN_BLOCKED_BOND_RETENTION_PERIOD ||
+            retention > MAX_BLOCKED_BOND_RETENTION_PERIOD ||
+            management < MIN_BLOCKED_BOND_MANAGEMENT_PERIOD ||
+            management > MAX_BLOCKED_BOND_MANAGEMENT_PERIOD
         ) {
             revert InvalidBlockedBondRetentionPeriod();
         }
@@ -683,7 +689,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         _changeBlockedBondState({
             nodeOperatorId: nodeOperatorId,
             ETHAmount: _blockedBondEther[nodeOperatorId].ETHAmount + amount,
-            retentionUntil: block.timestamp + BLOCKED_BOND_RETENTION_PERIOD
+            retentionUntil: block.timestamp + blockedBondRetentionPeriod
         });
     }
 
@@ -747,9 +753,9 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
             ];
             if (
                 block.timestamp +
-                    BLOCKED_BOND_RETENTION_PERIOD -
+                    blockedBondRetentionPeriod -
                     blockedBond.retentionUntil <
-                BLOCKED_BOND_MANAGEMENT_PERIOD
+                blockedBondManagementPeriod
             ) {
                 // blocked bond in safe frame to manage it by committee or node operator
                 continue;
