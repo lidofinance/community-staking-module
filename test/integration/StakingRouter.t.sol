@@ -4,14 +4,15 @@
 pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
+
 import { CSModule, NodeOperator } from "../../src/CSModule.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";
 import { ILido } from "../../src/interfaces/ILido.sol";
 import { IWstETH } from "../../src/interfaces/IWstETH.sol";
-import "../helpers/Utilities.sol";
-import "../helpers/Fixtures.sol";
+import { Utilities } from "../helpers/Utilities.sol";
+import { IntegrationFixtures } from "../helpers/Fixtures.sol";
 
 contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
     uint256 networkFork;
@@ -29,11 +30,12 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
 
         networkFork = vm.createFork(env.RPC_URL);
         vm.selectFork(networkFork);
+        checkChainId(1);
 
-        locator = ILidoLocator(vm.parseAddress(env.LIDO_LOCATOR_ADDRESS));
+        locator = ILidoLocator(LOCATOR_ADDRESS);
         stakingRouter = IStakingRouter(payable(locator.stakingRouter()));
         lido = ILido(locator.lido());
-        wstETH = IWstETH(vm.parseAddress(env.WSTETH_ADDRESS));
+        wstETH = IWstETH(WSTETH_ADDRESS);
         vm.label(address(lido), "lido");
         vm.label(address(stakingRouter), "stakingRouter");
 

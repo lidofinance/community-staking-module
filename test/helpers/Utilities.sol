@@ -41,4 +41,10 @@ contract Utilities {
         }
         return (keys, signatures);
     }
+
+    function checkChainId(uint256 chainId) public view {
+        if (chainId != block.chainid) {
+            revert("wrong chain id");
+        }
+    }
 }

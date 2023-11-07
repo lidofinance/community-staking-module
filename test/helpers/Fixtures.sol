@@ -39,24 +39,21 @@ contract Fixtures is StdCheats {
 contract IntegrationFixtures is StdCheats, Test {
     struct Env {
         string RPC_URL;
-        string LIDO_LOCATOR_ADDRESS;
-        string WSTETH_ADDRESS;
     }
 
+    address internal immutable LOCATOR_ADDRESS =
+        0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb;
+    address internal immutable WSTETH_ADDRESS =
+        0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
+
     function envVars() public returns (Env memory) {
-        Env memory env = Env(
-            vm.envOr("RPC_URL", string("")),
-            vm.envOr("LIDO_LOCATOR_ADDRESS", string("")),
-            vm.envOr("WSTETH_ADDRESS", string(""))
-        );
-        vm.skip(
-            keccak256(abi.encodePacked(env.RPC_URL)) ==
-                keccak256(abi.encodePacked("")) ||
-                keccak256(abi.encodePacked(env.LIDO_LOCATOR_ADDRESS)) ==
-                keccak256(abi.encodePacked("")) ||
-                keccak256(abi.encodePacked(env.WSTETH_ADDRESS)) ==
-                keccak256(abi.encodePacked(""))
-        );
+        Env memory env = Env(vm.envOr("RPC_URL", string("")));
+        vm.skip(_isEmpty(env.RPC_URL));
         return env;
+    }
+
+    function _isEmpty(string memory s) internal pure returns (bool) {
+        return
+            keccak256(abi.encodePacked(s)) == keccak256(abi.encodePacked(""));
     }
 }
