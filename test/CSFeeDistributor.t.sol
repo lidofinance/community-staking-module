@@ -4,8 +4,7 @@ pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
 
-import { CSFeeDistributorBase } from "../src/CSFeeDistributorBase.sol";
-import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
+import { CSFeeDistributorBase, CSFeeDistributor } from "../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 
 import { ICSFeeOracle } from "../src/interfaces/ICSFeeOracle.sol";
@@ -52,20 +51,20 @@ contract CSFeeDistributorTest is Test, Fixtures, CSFeeDistributorBase {
     }
 
     function test_distributeFeesHappyPath() public {
-        uint64 noIndex = 42;
-        uint64 shares = 100;
-        tree.pushLeaf(noIndex, shares);
+        uint256 nodeOperatorId = 42;
+        uint256 shares = 100;
+        tree.pushLeaf(nodeOperatorId, shares);
         bytes32[] memory proof = tree.getProof(0);
 
         stETH.mintShares(address(feeDistributor), shares);
 
         vm.expectEmit(true, true, false, true, address(feeDistributor));
-        emit FeeDistributed(noIndex, shares);
+        emit FeeDistributed(nodeOperatorId, shares);
 
         vm.prank(address(bondManager));
         feeDistributor.distributeFees({
             proof: proof,
-            noIndex: noIndex,
+            nodeOperatorId: nodeOperatorId,
             shares: shares
         });
 
@@ -77,7 +76,7 @@ contract CSFeeDistributorTest is Test, Fixtures, CSFeeDistributorBase {
 
         feeDistributor.distributeFees({
             proof: new bytes32[](1),
-            noIndex: 0,
+            nodeOperatorId: 0,
             shares: 0
         });
     }
@@ -88,49 +87,49 @@ contract CSFeeDistributorTest is Test, Fixtures, CSFeeDistributorBase {
         vm.prank(address(bondManager));
         feeDistributor.distributeFees({
             proof: new bytes32[](1),
-            noIndex: 0,
+            nodeOperatorId: 0,
             shares: 0
         });
     }
 
     function test_RevertIf_InvalidShares() public {
-        uint64 noIndex = 42;
-        uint64 shares = 100;
-        tree.pushLeaf(noIndex, shares);
+        uint256 nodeOperatorId = 42;
+        uint256 shares = 100;
+        tree.pushLeaf(nodeOperatorId, shares);
         bytes32[] memory proof = tree.getProof(0);
 
         stdstore
             .target(address(feeDistributor))
-            .sig("distributedShares(uint64)")
-            .with_key(noIndex)
+            .sig("distributedShares(uint256)")
+            .with_key(nodeOperatorId)
             .checked_write(shares + 99);
 
         vm.expectRevert(InvalidShares.selector);
         vm.prank(address(bondManager));
         feeDistributor.distributeFees({
             proof: proof,
-            noIndex: noIndex,
+            nodeOperatorId: nodeOperatorId,
             shares: shares
         });
     }
 
     function test_Returns0If_NothingToDistribute() public {
-        uint64 noIndex = 42;
-        uint64 shares = 100;
-        tree.pushLeaf(noIndex, shares);
+        uint256 nodeOperatorId = 42;
+        uint256 shares = 100;
+        tree.pushLeaf(nodeOperatorId, shares);
         bytes32[] memory proof = tree.getProof(0);
 
         stdstore
             .target(address(feeDistributor))
-            .sig("distributedShares(uint64)")
-            .with_key(noIndex)
+            .sig("distributedShares(uint256)")
+            .with_key(nodeOperatorId)
             .checked_write(shares);
 
         vm.recordLogs();
         vm.prank(address(bondManager));
-        uint64 sharesToDistribute = feeDistributor.distributeFees({
+        uint256 sharesToDistribute = feeDistributor.distributeFees({
             proof: proof,
-            noIndex: noIndex,
+            nodeOperatorId: nodeOperatorId,
             shares: shares
         });
         Vm.Log[] memory logs = vm.getRecordedLogs();

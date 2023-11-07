@@ -1,11 +1,16 @@
 include .env
 
-.PHONY: artifacts clean test deploy-prod deploy-local anvil-fork anvil-kill
+.PHONY: build clean test deploy-prod deploy-local anvil-fork anvil-kill
 
-DEPLOY_SCRIPT_PATH := script/Deploy.s.sol:Deploy
+CHAIN ?= mainnet
 
-artifacts:
-	forge compile --force
+DEPLOY_SCRIPT_PATH_mainnet := script/DeployMainnetish.s.sol:DeployMainnetish
+DEPLOY_SCRIPT_PATH_holesky := script/DeployHolesky.s.sol:DeployHolesky
+DEPLOY_SCRIPT_PATH_goerli := script/DeployGoerli.s.sol:DeployGoerli
+DEPLOY_SCRIPT_PATH := ${DEPLOY_SCRIPT_PATH_${CHAIN}}
+
+build:
+	forge build --force
 clean:
 	forge clean
 	rm -rf cache broadcast out
