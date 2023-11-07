@@ -573,8 +573,10 @@ contract CSModule is IStakingModule, CSModuleBase {
         }
     }
 
+    // called when rewards minted for the module
+    // seems to be empty implementation due to oracle using csm balance for distribution
     function onRewardsMinted(uint256 /*_totalShares*/) external {
-        // TODO: implement
+        // TODO: staking router role only
     }
 
     function updateStuckValidatorsCount(

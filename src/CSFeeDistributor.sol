@@ -3,21 +3,37 @@
 pragma solidity 0.8.21;
 
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import { CSFeeDistributorBase } from "./CSFeeDistributorBase.sol";
-
+import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { ICSFeeOracle } from "./interfaces/ICSFeeOracle.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
 
 /// @author madlabman
-contract CSFeeDistributor is CSFeeDistributorBase {
+contract CSFeeDistributorBase {
+    /// @dev Emitted when fees are distributed
+    event FeeDistributed(uint256 indexed nodeOperatorId, uint256 shares);
+
+    error ZeroAddress(string field);
+
+    error NotBondManager();
+    error NotOracle();
+
+    error InvalidShares();
+    error InvalidProof();
+}
+
+/// @author madlabman
+contract CSFeeDistributor is ICSFeeDistributor, CSFeeDistributorBase {
+    using SafeCast for uint256;
+
     address public immutable CSM;
     address public immutable STETH;
     address public immutable ORACLE;
     address public immutable ACCOUNTING;
 
     /// @notice Amount of shares sent to the BondManager in favor of the NO
-    mapping(uint64 => uint64) public distributedShares;
+    mapping(uint256 => uint256) public distributedShares;
 
     constructor(
         address _CSM,
@@ -38,46 +54,50 @@ contract CSFeeDistributor is CSFeeDistributorBase {
 
     /// @notice Returns the amount of shares that can be distributed in favor of the NO
     /// @param proof Merkle proof of the leaf
-    /// @param noIndex Index of the NO
+    /// @param nodeOperatorId ID of the NO
     /// @param shares Total amount of shares earned as fees
     function getFeesToDistribute(
         bytes32[] calldata proof,
-        uint64 noIndex,
-        uint64 shares
-    ) public view returns (uint64) {
+        uint256 nodeOperatorId,
+        uint256 shares
+    ) public view returns (uint256) {
         bool isValid = MerkleProof.verifyCalldata(
             proof,
-            ICSFeeOracle(ORACLE).reportRoot(),
-            ICSFeeOracle(ORACLE).hashLeaf(noIndex, shares)
+            ICSFeeOracle(ORACLE).treeRoot(),
+            ICSFeeOracle(ORACLE).hashLeaf(nodeOperatorId, shares)
         );
         if (!isValid) revert InvalidProof();
 
-        if (distributedShares[noIndex] > shares) {
+        if (distributedShares[nodeOperatorId] > shares) {
             revert InvalidShares();
         }
 
-        return shares - distributedShares[noIndex];
+        return shares - distributedShares[nodeOperatorId];
     }
 
     /// @notice Distribute fees to the BondManager in favor of the NO
     /// @param proof Merkle proof of the leaf
-    /// @param noIndex Index of the NO
+    /// @param nodeOperatorId ID of the NO
     /// @param shares Total amount of shares earned as fees
     function distributeFees(
         bytes32[] calldata proof,
-        uint64 noIndex,
-        uint64 shares
-    ) external returns (uint64) {
+        uint256 nodeOperatorId,
+        uint256 shares
+    ) external returns (uint256) {
         if (msg.sender != ACCOUNTING) revert NotBondManager();
 
-        uint64 sharesToDistribute = getFeesToDistribute(proof, noIndex, shares);
+        uint256 sharesToDistribute = getFeesToDistribute(
+            proof,
+            nodeOperatorId,
+            shares
+        );
         if (sharesToDistribute == 0) {
             // To avoid breaking claim rewards logic
             return 0;
         }
-        distributedShares[noIndex] += sharesToDistribute;
+        distributedShares[nodeOperatorId] += sharesToDistribute;
         IStETH(STETH).transferShares(ACCOUNTING, sharesToDistribute);
-        emit FeeDistributed(noIndex, sharesToDistribute);
+        emit FeeDistributed(nodeOperatorId, sharesToDistribute);
 
         return sharesToDistribute;
     }

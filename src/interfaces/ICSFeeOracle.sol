@@ -4,8 +4,8 @@ pragma solidity 0.8.21;
 
 interface ICSFeeOracle {
     /// @notice Merkle Tree root
-    function reportRoot() external view returns (bytes32);
+    function treeRoot() external view returns (bytes32);
 
     /// @notice Merkle Tree leaf hash
-    function hashLeaf(uint64, uint64) external view returns (bytes32);
+    function hashLeaf(uint256, uint256) external view returns (bytes32);
 }

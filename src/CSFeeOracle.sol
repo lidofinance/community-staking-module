@@ -1,273 +1,187 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
+
 pragma solidity 0.8.21;
 
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { AccessControlEnumerable } from "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
+import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
+import { BaseOracle } from "base-oracle/oracle/BaseOracle.sol";
 
-import { CSFeeOracleBase } from "./CSFeeOracleBase.sol";
+import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
+import { ICSFeeOracle } from "./interfaces/ICSFeeOracle.sol";
 
-interface IFeeDistributor {
-    function receiveFees(uint256 shares) external;
-}
+contract CSFeeOracle is ICSFeeOracle, BaseOracle, PausableUntil {
+    struct ReportData {
+        /// @dev Version of the oracle consensus rules. Current version expected
+        /// by the oracle can be obtained by calling getConsensusVersion().
+        uint256 consensusVersion;
+        /// @dev Reference slot for which the report was calculated. If the slot
+        /// contains a block, the state being reported should include all state
+        /// changes resulting from that block. The epoch containing the slot
+        /// should be finalized prior to calculating the report.
+        uint256 refSlot;
+        /// @notice Merkle Tree root
+        bytes32 treeRoot;
+        /// @notice CID of the published Merkle tree
+        string treeCid;
+        /// @notice Total amount of fees distributed
+        uint256 distributed;
+    }
 
-/// @author madlabman
-contract CSFeeOracle is CSFeeOracleBase, AccessControlEnumerable {
-    bytes32 public constant ORACLE_MEMBER_ROLE =
-        keccak256("ORACLE_MEMBER_ROLE");
+    /// @notice An ACL role granting the permission to submit the data for a committee report.
+    bytes32 public constant MANAGE_FEE_DISTRIBUTOR_CONTRACT_ROLE =
+        keccak256("MANAGE_FEE_DISTRIBUTOR_CONTRACT_ROLE");
 
-    uint64 public immutable SECONDS_PER_BLOCK;
-    uint64 public immutable BLOCKS_PER_EPOCH;
-    uint64 public immutable GENESIS_TIME;
+    /// @notice An ACL role granting the permission to submit the data for a committee report.
+    bytes32 public constant SUBMIT_DATA_ROLE = keccak256("SUBMIT_DATA_ROLE");
+
+    /// @notice An ACL role granting the permission to pause accepting oracle reports
+    bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
+
+    /// @notice An ACL role granting the permission to resume accepting oracle reports
+    bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
+
+    ICSFeeDistributor public feeDistributor;
 
     /// @notice Merkle Tree root
-    bytes32 public reportRoot;
+    bytes32 public treeRoot;
 
     /// @notice CID of the published Merkle tree
     string public treeCid;
 
-    /// @notice Map to track the amount of submissions for the given report hash
-    mapping(bytes32 => address[]) public submissions;
+    /// @dev Emitted when a new fee distributor contract is set
+    event FeeDistributorContractSet(address feeDistributorContract);
 
-    /// @notice Number of reports that must match to consolidate a new report
-    /// root (N/M)
-    uint64 public quorum;
+    /// @dev Emitted when a report is consolidated
+    event ReportConsolidated(
+        uint256 indexed refSlot,
+        uint256 distributed,
+        bytes32 newRoot,
+        string treeCid
+    );
 
-    address public feeDistributor;
-
-    /// @dev Make it possible to traverse report intervals
-    uint64 public prevConsolidatedEpoch;
-    uint64 public lastConsolidatedEpoch;
-    /// @notice Interval between reports
-    uint64 public reportIntervalEpochs;
-
-    bool public initialized;
+    error TreeRootCannotBeZero();
+    error TreeCidCannotBeEmpty();
+    error NothingToDistribute();
+    error AdminCannotBeZero();
+    error SenderNotAllowed();
 
     constructor(
-        uint64 secondsPerBlock,
-        uint64 blocksPerEpoch,
-        uint64 genesisTime
-    ) {
-        if (genesisTime > block.timestamp) {
-            revert GenesisTimeNotReached();
-        }
+        uint256 secondsPerSlot,
+        uint256 genesisTime
+    ) BaseOracle(secondsPerSlot, genesisTime) {}
 
-        SECONDS_PER_BLOCK = secondsPerBlock;
-        BLOCKS_PER_EPOCH = blocksPerEpoch;
-        GENESIS_TIME = genesisTime;
-    }
-
-    /// @notice Initialize the contract
     function initialize(
-        uint64 initializationEpoch,
-        uint64 reportInterval,
-        address _feeDistributor,
-        address admin
+        address admin,
+        address feeDistributorContract,
+        address consensusContract,
+        uint256 consensusVersion,
+        uint256 lastProcessingRefSlot // will be the first ref slot in getConsensusReport()
     ) external {
-        if (initialized) revert AlreadyInitialized();
-
-        if (admin == address(0)) revert ZeroAddress("admin");
+        if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
 
-        if (_feeDistributor == address(0)) {
-            revert ZeroAddress("_feeDistributor");
-        }
-        feeDistributor = _feeDistributor;
-
-        prevConsolidatedEpoch = initializationEpoch;
-        lastConsolidatedEpoch = initializationEpoch;
-
-        _setReportInterval(reportInterval);
-
-        initialized = true;
-    }
-
-    /// @notice Get current epoch
-    function currentEpoch() public view returns (uint64) {
-        return
-            (SafeCast.toUint64(block.timestamp) - GENESIS_TIME) /
-            SECONDS_PER_BLOCK /
-            BLOCKS_PER_EPOCH;
-    }
-
-    /// @notice Returns the next epoch to report
-    function nextReportEpoch() public view onlyInitializied returns (uint64) {
-        // NOTE: underflow is expected here when lastConsolidatedEpoch in the future
-        uint64 epochsElapsed = currentEpoch() - lastConsolidatedEpoch;
-        if (epochsElapsed < reportIntervalEpochs) {
-            return lastConsolidatedEpoch + reportIntervalEpochs;
-        }
-
-        uint64 fullIntervals = epochsElapsed / reportIntervalEpochs;
-        return lastConsolidatedEpoch + reportIntervalEpochs * fullIntervals;
-    }
-
-    /// @notice Get the current report frame slots
-    function reportFrame()
-        external
-        view
-        onlyInitializied
-        returns (uint64, uint64)
-    {
-        return (
-            lastConsolidatedEpoch * BLOCKS_PER_EPOCH + 1,
-            nextReportEpoch() * BLOCKS_PER_EPOCH
+        BaseOracle._initialize(
+            consensusContract,
+            consensusVersion,
+            lastProcessingRefSlot
         );
+        /// @dev _setFeeDistributorContract() reverts if zero address
+        _setFeeDistributorContract(feeDistributorContract);
     }
 
-    /// @notice Set the report interval
-    /// @param reportInterval Interval between reports in epochs
-    function setReportInterval(
-        uint64 reportInterval
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setReportInterval(reportInterval);
-        emit ReportIntervalSet(reportInterval);
+    function setFeeDistributorContract(
+        address feeDistributorContract
+    ) external onlyRole(MANAGE_FEE_DISTRIBUTOR_CONTRACT_ROLE) {
+        _setFeeDistributorContract(feeDistributorContract);
     }
 
-    function _setReportInterval(uint64 reportInterval) internal {
-        if (reportInterval == 0) revert ZeroInterval();
-        reportIntervalEpochs = reportInterval;
+    function submitReportData(
+        ReportData calldata data,
+        uint256 contractVersion
+    ) external whenResumed {
+        _checkMsgSenderIsAllowedToSubmitData();
+        _checkContractVersion(contractVersion);
+        _checkConsensusData(
+            data.refSlot,
+            data.consensusVersion,
+            // it's a waste of gas to copy the whole calldata into mem but seems there's no way around
+            keccak256(abi.encode(data))
+        );
+        _startProcessing();
+        _handleConsensusReportData(data);
     }
 
-    /// @notice Submit a report for a new report root
-    /// If the quorum is reached, consolidate the report root
-    /// @param epoch Epoch number
-    /// @param newRoot Proposed report root
-    /// @param _treeCid CID of the published Merkle tree
-    function submitReport(
-        uint64 epoch,
-        bytes32 newRoot,
-        uint256 distributed,
-        string memory _treeCid
-    ) external onlyInitializied onlyRole(ORACLE_MEMBER_ROLE) whenNotPaused {
-        uint64 _currentEpoch = currentEpoch();
-        if (_currentEpoch < epoch) {
-            revert ReportTooEarly();
-        }
-
-        if (epoch <= lastConsolidatedEpoch) {
-            revert ReportTooLate();
-        }
-
-        if (epoch != nextReportEpoch()) {
-            revert InvalidEpoch(epoch, nextReportEpoch());
-        }
-
-        // Get the current report
-        bytes32 reportHash = _getReportHash(epoch, newRoot, _treeCid);
-
-        // Check for double vote
-        for (uint64 i; i < submissions[reportHash].length; ) {
-            if (msg.sender == submissions[reportHash][i]) {
-                revert DoubleVote();
-            }
-
-            unchecked {
-                i++;
-            }
-        }
-
-        // Emit Submit report before check the quorum
-        emit ReportSubmitted(epoch, msg.sender, newRoot, _treeCid);
-        // Store submitted report with a new added vote
-        submissions[reportHash].push(msg.sender);
-
-        // Check if it reaches the quorum
-        if (submissions[reportHash].length == quorum) {
-            delete submissions[reportHash];
-
-            // Consolidate report
-
-            prevConsolidatedEpoch = lastConsolidatedEpoch;
-            lastConsolidatedEpoch = epoch;
-            reportRoot = newRoot;
-            treeCid = _treeCid;
-
-            IFeeDistributor(feeDistributor).receiveFees(distributed);
-            emit ReportConsolidated(epoch, newRoot, distributed, _treeCid);
-        }
+    function resume() external whenPaused onlyRole(RESUME_ROLE) {
+        _resume();
     }
 
-    /// @notice Get the report hash given the report root and slot
-    /// @param slot Slot
-    /// @param _reportRoot Report Merkle tree root
-    function _getReportHash(
-        uint64 slot,
-        bytes32 _reportRoot,
-        string memory _treeCid
-    ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(slot, _reportRoot, _treeCid));
+    function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
+        _pauseFor(duration);
     }
 
     /// @notice Get a hash of a leaf
-    /// @param noIndex NO index
+    /// @param nodeOperatorId ID of the node operator
     /// @param shares Amount of shares
     /// @dev Double hash the leaf to prevent second preimage attacks
     function hashLeaf(
-        uint64 noIndex,
-        uint64 shares
+        uint256 nodeOperatorId,
+        uint256 shares
     ) public pure returns (bytes32) {
         return
             keccak256(
-                bytes.concat(keccak256(abi.encodePacked(noIndex, shares)))
+                bytes.concat(keccak256(abi.encode(nodeOperatorId, shares)))
             );
     }
 
-    /// @notice Add a new oracle member
-    /// @param member Address of the new member
-    /// @param _quorum New quorum
-    function addMember(
-        address member,
-        uint64 _quorum
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        // NOTE: check for the member existence?
-        grantRole(ORACLE_MEMBER_ROLE, member);
-        emit MemberAdded(member);
-        _setQuorum(_quorum);
+    function pauseUntil(
+        uint256 pauseUntilInclusive
+    ) external onlyRole(PAUSE_ROLE) {
+        _pauseUntil(pauseUntilInclusive);
     }
 
-    /// @notice Remove an oracle member
-    /// @param member Address of the member to remove
-    /// @param _quorum New quorum
-    function removeMember(
-        address member,
-        uint64 _quorum
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (!hasRole(ORACLE_MEMBER_ROLE, member)) revert NotMember(member);
-        revokeRole(ORACLE_MEMBER_ROLE, member);
-        emit MemberRemoved(member);
-        _setQuorum(_quorum);
+    function _setFeeDistributorContract(
+        address feeDistributorContract
+    ) internal {
+        if (feeDistributorContract == address(0)) revert AddressCannotBeZero();
+        feeDistributor = ICSFeeDistributor(feeDistributorContract);
+        emit FeeDistributorContractSet(feeDistributorContract);
     }
 
-    /// @notice Set the quorum
-    /// @param _quorum New quorum
-    function setQuorum(uint64 _quorum) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setQuorum(_quorum);
+    function _handleConsensusReport(
+        ConsensusReport memory /* report */,
+        uint256 /* prevSubmittedRefSlot */,
+        uint256 /* prevProcessingRefSlot */
+    ) internal override {
+        // NOTE: if we implement sending all leafs directly, we probably will need to support the sending in batches,
+        // which means, we'll be ought to check the processing state and revert if not all data was send so far.
+        // For reference look at the ValidatorExitBusOracle.
     }
 
-    /// @notice Set the quorum
-    /// @param _quorum New quorum
-    function _setQuorum(uint64 _quorum) internal {
-        if (_quorum <= getRoleMemberCount(ORACLE_MEMBER_ROLE) / 2) {
-            revert QuorumTooSmall();
+    function _handleConsensusReportData(ReportData calldata data) internal {
+        _reportDataSanityCheck(data);
+
+        feeDistributor.receiveFees(data.distributed);
+        treeRoot = data.treeRoot;
+        treeCid = data.treeCid;
+        emit ReportConsolidated(
+            data.refSlot,
+            data.distributed,
+            data.treeRoot,
+            data.treeCid
+        );
+    }
+
+    function _reportDataSanityCheck(ReportData calldata data) internal pure {
+        if (bytes(data.treeCid).length == 0) revert TreeCidCannotBeEmpty();
+        if (data.treeRoot == bytes32(0)) revert TreeRootCannotBeZero();
+        if (data.distributed == 0) revert NothingToDistribute();
+        // refSlot is checked by HashConsensus
+    }
+
+    function _checkMsgSenderIsAllowedToSubmitData() internal view {
+        address sender = _msgSender();
+        if (!hasRole(SUBMIT_DATA_ROLE, sender) && !_isConsensusMember(sender)) {
+            revert SenderNotAllowed();
         }
-
-        quorum = _quorum;
-        emit QuorumSet(_quorum);
-    }
-
-    /// @notice Unpause the contract
-    function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _unpause();
-    }
-
-    /// @notice Pause the contract
-    function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _pause();
-    }
-
-    modifier onlyInitializied() {
-        if (!initialized) revert NotInitialized();
-        _;
     }
 }

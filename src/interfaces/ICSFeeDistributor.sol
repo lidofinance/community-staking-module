@@ -15,4 +15,6 @@ interface ICSFeeDistributor {
         uint256 noIndex,
         uint256 shares
     ) external returns (uint256);
+
+    function receiveFees(uint256 shares) external;
 }

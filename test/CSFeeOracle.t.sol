@@ -5,647 +5,280 @@ pragma solidity 0.8.21;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import { CSFeeOracleBase } from "../src/CSFeeOracleBase.sol";
-import { CSFeeOracle } from "../src/CSFeeOracle.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
+import { UnstructuredStorage } from "../lib/base-oracle/lib/UnstructuredStorage.sol";
+import { HashConsensus } from "../lib/base-oracle/oracle/HashConsensus.sol";
 import { DistributorMock } from "./helpers/mocks/DistributorMock.sol";
+import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { Utilities } from "./helpers/Utilities.sol";
+import { Stub } from "./helpers/mocks/Stub.sol";
 
-contract FeeOracleTest is Test, Utilities, CSFeeOracleBase {
-    using stdStorage for StdStorage;
+contract CSFeeOracleForTest is CSFeeOracle {
+    using UnstructuredStorage for bytes32;
+
+    constructor(
+        uint256 secondsPerSlot,
+        uint256 genesisTime
+    ) CSFeeOracle(secondsPerSlot, genesisTime) {
+        // Version.sol constructor sets the storage value to uint256.max and effectively
+        // prevents the deployed contract from being initialized. To be able to use the
+        // contract in tests with no proxy above, we need to set the version to 0.
+        CONTRACT_VERSION_POSITION.setStorageUint256(0);
+    }
+}
+
+contract CSFeeOracleTest is Test, Utilities {
+    using Strings for uint256;
+
+    struct ChainConfig {
+        uint256 secondsPerSlot;
+        uint256 slotsPerEpoch;
+        uint256 genesisTime;
+    }
 
     address internal constant ORACLE_ADMIN =
-        address(uint160(uint256(keccak256("oracle admin"))));
+        address(uint160(uint256(keccak256("ORACLE_ADMIN"))));
 
-    uint64 internal constant SECONDS_PER_EPOCH = 32 * 12;
+    uint256 internal constant CONSENSUS_VERSION = 1;
+    uint256 internal constant INITIAL_EPOCH = 17;
 
-    address internal FEE_DISTRIBUTOR;
+    CSFeeOracleForTest public oracle;
+    HashConsensus public consensus;
+    ChainConfig public chainConfig;
+    address[] public members;
+    uint256 public quorum;
 
-    address[] internal members;
-    CSFeeOracle internal oracle;
+    event ReportReceived(
+        uint256 indexed refSlot,
+        address indexed member,
+        bytes32 report
+    );
+
+    event ReportConsolidated(
+        uint256 indexed refSlot,
+        uint256 distributed,
+        bytes32 newRoot,
+        string treeCid
+    );
 
     function setUp() public {
-        FEE_DISTRIBUTOR = address(new DistributorMock());
+        chainConfig = ChainConfig({
+            secondsPerSlot: 12,
+            slotsPerEpoch: 32,
+            genesisTime: 0
+        });
 
-        vm.label(FEE_DISTRIBUTOR, "FEE_DISTRIBUTOR");
         vm.label(ORACLE_ADMIN, "ORACLE_ADMIN");
+        _vmSetEpoch(INITIAL_EPOCH);
     }
 
-    function test_RevertIf_GenesisTimeInFuture() public {
-        vm.expectRevert(GenesisTimeNotReached.selector);
-        vm.warp(1);
-        new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 2 // > block.timestamp
-        });
-    }
+    function test_happyPath() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+            _seedMembers(3);
+        }
 
-    function test_Initialize() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
+        uint256 startSlot;
+        uint256 refSlot;
 
-        oracle.initialize({
-            initializationEpoch: 42,
-            reportInterval: 2,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
-        });
+        (, startSlot, , ) = oracle.getConsensusReport();
+        (refSlot, ) = consensus.getCurrentFrame();
+        // INITIAL_EPOCH is far above the lastProcessingRefSlot's epoch
+        assertNotEq(startSlot, refSlot);
 
-        assertTrue(oracle.initialized(), "not initialized");
-
-        assertEq(oracle.lastConsolidatedEpoch(), 42);
-        assertEq(oracle.prevConsolidatedEpoch(), 42);
-        assertEq(oracle.reportIntervalEpochs(), 2);
-    }
-
-    function test_currentEpoch() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
+        CSFeeOracle.ReportData memory data = CSFeeOracle.ReportData({
+            consensusVersion: oracle.getConsensusVersion(),
+            refSlot: refSlot,
+            treeRoot: keccak256("root"),
+            treeCid: "QmCID0",
+            distributed: 1337
         });
 
-        assertEq(oracle.currentEpoch(), 0);
+        bytes32 reportHash = keccak256(abi.encode(data));
+        _reachConsensus(refSlot, reportHash);
 
-        _vmSetEpoch(10);
-        assertEq(oracle.currentEpoch(), 10);
+        vm.expectEmit(true, true, true, true, address(oracle));
+        emit ReportConsolidated(
+            refSlot,
+            data.distributed,
+            data.treeRoot,
+            data.treeCid
+        );
+        vm.prank(members[0]);
+        oracle.submitReportData({ data: data, contractVersion: 1 });
 
-        _vmSetEpoch(13);
-        assertEq(oracle.currentEpoch(), 13);
-    }
+        assertEq(oracle.treeRoot(), data.treeRoot);
+        assertEq(oracle.treeCid(), data.treeCid);
 
-    function test_nextReportEpoch() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
+        (, startSlot, , ) = oracle.getConsensusReport();
+        (refSlot, ) = consensus.getCurrentFrame();
+        assertEq(startSlot, refSlot);
 
-        oracle.initialize({
-            initializationEpoch: 8,
-            reportInterval: 2,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
-        });
+        // Advance block.timestamp to the middle of the frame
+        _vmSetEpoch(INITIAL_EPOCH + _epochsInDays(14));
+        (, startSlot, , ) = oracle.getConsensusReport();
+        (refSlot, ) = consensus.getCurrentFrame();
+        assertEq(startSlot, refSlot);
 
-        _vmSetEpoch(8);
-        assertEq(oracle.nextReportEpoch(), 10);
-
-        _vmSetEpoch(13);
-        assertEq(oracle.nextReportEpoch(), 12);
-    }
-
-    function test_RevertIf_LastConsolidationEpochInFuture() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
-
-        oracle.initialize({
-            initializationEpoch: 42,
-            reportInterval: 1,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
-        });
-
-        _vmSetEpoch(41);
-        vm.expectRevert(stdError.arithmeticError);
-        oracle.nextReportEpoch();
+        // Advance block.timestamp to the end of the frame
+        _vmSetEpoch(INITIAL_EPOCH + _epochsInDays(28));
+        (, startSlot, , ) = oracle.getConsensusReport();
+        (refSlot, ) = consensus.getCurrentFrame();
+        assertLt(startSlot, refSlot);
     }
 
     function test_reportFrame() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+        }
 
-        oracle.initialize({
-            initializationEpoch: 8,
-            reportInterval: 2,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
-        });
+        uint256 startSlot;
+        uint256 refSlot;
+        uint256 tmp;
 
-        _vmSetEpoch(8);
-        (uint64 start, uint64 end) = oracle.reportFrame();
-        assertEq(start, 257);
-        assertEq(end, 320);
+        // Check the startSlot at the very beginning of the frame
+        (, startSlot, , ) = oracle.getConsensusReport();
+        (refSlot, ) = consensus.getCurrentFrame();
+        assertEq(startSlot, refSlot);
+
+        // Advance block.timestamp to the middle of the frame
+        _vmSetEpoch(INITIAL_EPOCH + _epochsInDays(14));
+        (, startSlot, , ) = oracle.getConsensusReport();
+        (refSlot, ) = consensus.getCurrentFrame();
+        assertEq(startSlot, refSlot);
+
+        // Advance block.timestamp to the end of the frame
+        _vmSetEpoch(INITIAL_EPOCH + _epochsInDays(28));
+        (, startSlot, , ) = oracle.getConsensusReport();
+        (refSlot, ) = consensus.getCurrentFrame();
+        assertGt(refSlot, startSlot);
+
+        tmp = startSlot;
+        // Advance block.timestamp far above the first frame
+        _vmSetEpoch(INITIAL_EPOCH + _epochsInDays(999));
+        (, startSlot, , ) = oracle.getConsensusReport();
+        assertEq(tmp, startSlot, "startSlot must not change");
     }
 
-    function test_setReportInterval() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
+    function _deployFeeOracleAndHashConsensus(
+        uint256 lastProcessingRefSlot
+    ) internal {
+        oracle = new CSFeeOracleForTest({
+            secondsPerSlot: chainConfig.secondsPerSlot,
+            genesisTime: chainConfig.genesisTime
         });
 
-        oracle.initialize({
-            initializationEpoch: 0,
-            reportInterval: 2,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
+        consensus = new HashConsensus({
+            slotsPerEpoch: chainConfig.slotsPerEpoch,
+            secondsPerSlot: chainConfig.secondsPerSlot,
+            genesisTime: chainConfig.genesisTime,
+            epochsPerFrame: _epochsInDays(28),
+            fastLaneLengthSlots: 0,
+            admin: ORACLE_ADMIN,
+            reportProcessor: address(oracle)
         });
 
-        vm.expectEmit(true, false, false, true, address(oracle));
-        emit ReportIntervalSet(2);
-
-        vm.prank(ORACLE_ADMIN);
-        oracle.setReportInterval(2);
-
-        assertEq(oracle.reportIntervalEpochs(), 2);
-    }
-
-    function test_submitReport() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
-
-        oracle.initialize({
-            initializationEpoch: 0,
-            reportInterval: 2,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
-        });
-
-        _seedMembers(3);
-        bytes32 newRoot = keccak256("new root");
-
-        _vmSetEpoch(7);
-
-        // Memeber 0 submits a report
-        vm.expectEmit(true, false, false, true, address(oracle));
-        emit ReportSubmitted(6, members[0], newRoot, "tree");
-
-        vm.prank(members[0]);
-        oracle.submitReport({
-            epoch: 6,
-            newRoot: newRoot,
-            distributed: 42,
-            _treeCid: "tree"
-        });
-
-        // Consensus is not reached yet
-        assertEq(oracle.reportRoot(), bytes32(0));
-
-        // Member 1 submits a report
-        vm.expectEmit(true, false, false, true, address(oracle));
-        emit ReportSubmitted(6, members[1], newRoot, "tree");
-
-        vm.expectEmit(true, false, false, true, address(oracle));
-        emit ReportConsolidated(6, newRoot, 42, "tree");
-
-        vm.prank(members[1]);
-        oracle.submitReport({
-            epoch: 6,
-            newRoot: newRoot,
-            distributed: 42,
-            _treeCid: "tree"
-        });
-
-        // Consensus is reached
-        assertEq(oracle.reportRoot(), newRoot);
-        assertEq(oracle.treeCid(), "tree");
-    }
-
-    function test_submitReport_NoQuorum() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
-
-        oracle.initialize({
-            initializationEpoch: 0,
-            reportInterval: 2,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
-        });
-
-        _seedMembers(3);
-        bytes32 newRoot = keccak256("new root");
-
-        _vmSetEpoch(7);
-
-        // Memeber 0 submits a report
-        vm.expectEmit(true, false, false, true, address(oracle));
-        emit ReportSubmitted(6, members[0], newRoot, "tree");
-
-        vm.prank(members[0]);
-        oracle.submitReport({
-            epoch: 6,
-            newRoot: newRoot,
-            distributed: 42,
-            _treeCid: "tree"
-        });
-
-        // Consensus is not reached yet
-        assertEq(oracle.reportRoot(), bytes32(0));
-        assertEq(oracle.treeCid(), "");
-
-        // Member 1 submits a report
-        vm.expectEmit(true, false, false, true, address(oracle));
-        emit ReportSubmitted(6, members[1], newRoot, "IT DIFFERS");
-
-        vm.prank(members[1]);
-        oracle.submitReport({
-            epoch: 6,
-            newRoot: newRoot,
-            distributed: 42,
-            _treeCid: "IT DIFFERS"
-        });
-
-        // Consensus is not reached
-        assertEq(oracle.reportRoot(), bytes32(0));
-
-        // Member 1 submits a report
-        vm.expectEmit(true, false, false, true, address(oracle));
-        emit ReportSubmitted(6, members[1], keccak256("IT DIFFERS"), "tree");
-
-        vm.prank(members[1]);
-        oracle.submitReport({
-            epoch: 6,
-            newRoot: keccak256("IT DIFFERS"),
-            distributed: 42,
-            _treeCid: "tree"
-        });
-
-        // Consensus is not reached
-        assertEq(oracle.reportRoot(), bytes32(0));
-    }
-
-    function test_RevertIf_TooEarly() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
-
-        oracle.initialize({
-            initializationEpoch: 0,
-            reportInterval: 2,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
-        });
-
-        _seedMembers(3);
-        _vmSetEpoch(7);
-
-        vm.prank(members[0]);
-        vm.expectRevert(ReportTooEarly.selector);
-        oracle.submitReport({
-            epoch: 99,
-            newRoot: bytes32(0),
-            distributed: 42,
-            _treeCid: "tree"
-        });
-    }
-
-    function test_RevertIf_TooLate() public {
-        _vmSetEpoch(8);
-
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
-
-        oracle.initialize({
-            initializationEpoch: 7,
-            reportInterval: 2,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
-        });
-
-        _seedMembers(3);
-
-        vm.prank(members[0]);
-        vm.expectRevert(ReportTooLate.selector);
-        oracle.submitReport({
-            epoch: 7,
-            newRoot: bytes32(0),
-            distributed: 42,
-            _treeCid: "tree"
-        });
-    }
-
-    function test_hashLeaf() public {
-        uint64 noIndex = 42;
-        uint64 shares = 999;
-
-        bytes32 hash = 0x20b6ee98002cfd33f27ed874d1aaebcd4ed99991dc504b273af77a78553c4afe;
-
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
-
-        assertEq(oracle.hashLeaf(noIndex, shares), hash);
-    }
-
-    function test_setQuorum() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
-
-        oracle.initialize({
-            initializationEpoch: 0,
-            reportInterval: 2,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
-        });
-
-        _seedMembers(10);
-
-        vm.expectEmit(true, false, false, true, address(oracle));
-        emit QuorumSet(8);
-
-        vm.prank(ORACLE_ADMIN);
-        oracle.setQuorum(8);
-        assertEq(oracle.quorum(), 8);
-    }
-
-    function test_RevertIf_SetQuorumNotAdmin() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
-
-        oracle.initialize({
-            initializationEpoch: 0,
-            reportInterval: 2,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
-        });
-
-        vm.expectRevert(
-            bytes(
-                "AccessControl: account 0x0000000000000000000000000000000000000001 is missing role 0x0000000000000000000000000000000000000000000000000000000000000000"
-            )
+        oracle.initialize(
+            ORACLE_ADMIN,
+            address(new DistributorMock()),
+            address(consensus),
+            CONSENSUS_VERSION,
+            lastProcessingRefSlot
         );
-        vm.prank(address(1));
-        oracle.setQuorum(2);
-
-        assertEq(oracle.quorum(), 0, "quorum is not 0");
     }
 
-    function test_RevertIf_QuorumTooSmall() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
+    function _grantAllRolesToAdmin() internal {
+        vm.startPrank(ORACLE_ADMIN);
+        /* prettier-ignore */
+        {
+            consensus.grantRole(consensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(), ORACLE_ADMIN);
+            consensus.grantRole(consensus.DISABLE_CONSENSUS_ROLE(), ORACLE_ADMIN);
+            consensus.grantRole(consensus.MANAGE_FRAME_CONFIG_ROLE(), ORACLE_ADMIN);
+            consensus.grantRole(consensus.MANAGE_FAST_LANE_CONFIG_ROLE(), ORACLE_ADMIN);
+            consensus.grantRole(consensus.MANAGE_REPORT_PROCESSOR_ROLE(), ORACLE_ADMIN);
 
-        oracle.initialize({
-            initializationEpoch: 0,
-            reportInterval: 2,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
-        });
-
-        _seedMembers(3);
-
-        vm.expectRevert(QuorumTooSmall.selector);
-        vm.prank(ORACLE_ADMIN);
-        oracle.setQuorum(1);
+            oracle.grantRole(oracle.MANAGE_CONSENSUS_CONTRACT_ROLE(), ORACLE_ADMIN);
+            oracle.grantRole(oracle.MANAGE_CONSENSUS_VERSION_ROLE(), ORACLE_ADMIN);
+            oracle.grantRole(oracle.PAUSE_ROLE(), ORACLE_ADMIN);
+            oracle.grantRole(oracle.RESUME_ROLE(), ORACLE_ADMIN);
+        }
+        vm.stopPrank();
     }
 
-    function test_addMember() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
-
-        oracle.initialize({
-            initializationEpoch: 0,
-            reportInterval: 2,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
-        });
-
-        uint64 quorum = 17;
-        address newMember = nextAddress();
-
-        vm.expectEmit(true, true, false, true, address(oracle));
-        emit MemberAdded(newMember);
-
-        vm.expectEmit(true, false, false, true, address(oracle));
-        emit QuorumSet(quorum);
-
-        vm.prank(ORACLE_ADMIN);
-        oracle.addMember(newMember, quorum);
-
-        bool hasRole = oracle.hasRole(oracle.ORACLE_MEMBER_ROLE(), newMember);
-        assertTrue(hasRole, "new member has no role");
-
-        assertEq(oracle.quorum(), quorum, "quorum mismatch");
-    }
-
-    function test_RevertIf_NotAdmin_AddMember() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
-
-        oracle.initialize({
-            initializationEpoch: 0,
-            reportInterval: 2,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
-        });
-
-        address newMember = nextAddress();
-        vm.expectRevert(
-            bytes(
-                "AccessControl: account 0x0000000000000000000000000000000000000001 is missing role 0x0000000000000000000000000000000000000000000000000000000000000000"
-            )
-        );
-        vm.prank(address(1));
-        oracle.addMember(newMember, 17);
-
-        bool hasRole = oracle.hasRole(oracle.ORACLE_MEMBER_ROLE(), newMember);
-        assertFalse(hasRole);
-    }
-
-    function test_removeMember() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
-
-        oracle.initialize({
-            initializationEpoch: 0,
-            reportInterval: 2,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
-        });
-
-        _seedMembers(2);
-
-        address churnedMember = _popMember();
-        uint64 quorum = 1;
-
-        vm.expectEmit(true, true, false, true, address(oracle));
-        emit MemberRemoved(churnedMember);
-
-        vm.expectEmit(true, false, false, true, address(oracle));
-        emit QuorumSet(quorum);
-
-        vm.prank(ORACLE_ADMIN);
-        oracle.removeMember(churnedMember, quorum);
-
-        bool hasRole = oracle.hasRole(
-            oracle.ORACLE_MEMBER_ROLE(),
-            churnedMember
-        );
-        assertFalse(hasRole, "churned member still has role");
-
-        assertEq(oracle.quorum(), quorum, "quorum mismatch");
-    }
-
-    function test_RevertIF_NotAdmin_RemoveMember() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
-
-        oracle.initialize({
-            initializationEpoch: 0,
-            reportInterval: 2,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
-        });
-
-        _seedMembers(2);
-
-        address churnedMember = _popMember();
-        uint64 oldQ = oracle.quorum();
-        uint64 newQ = oldQ - 1;
-
-        vm.expectRevert(
-            bytes(
-                "AccessControl: account 0x0000000000000000000000000000000000000001 is missing role 0x0000000000000000000000000000000000000000000000000000000000000000"
-            )
-        );
-        vm.prank(address(1));
-        oracle.removeMember(churnedMember, newQ);
-
-        bool hasRole = oracle.hasRole(
-            oracle.ORACLE_MEMBER_ROLE(),
-            churnedMember
-        );
-        assertTrue(hasRole, "churned member has no role");
-
-        assertEq(oracle.quorum(), oldQ, "quorum has been changed");
-    }
-
-    function test_RevertIF_NotExistent_RemoveMember() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
-
-        oracle.initialize({
-            initializationEpoch: 0,
-            reportInterval: 2,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
-        });
-
-        _seedMembers(2);
-
-        address noMember = nextAddress();
-        uint64 oldQ = oracle.quorum();
-        uint64 newQ = oldQ - 1;
-
-        vm.expectRevert(abi.encodeWithSelector(NotMember.selector, noMember));
-        vm.prank(ORACLE_ADMIN);
-        oracle.removeMember(noMember, newQ);
-
-        assertEq(oracle.quorum(), oldQ, "quorum has been changed");
-    }
-
-    function test_pause() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
-
-        oracle.initialize({
-            initializationEpoch: 0,
-            reportInterval: 2,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
-        });
-
-        vm.expectEmit(true, false, false, true, address(oracle));
-        emit Paused(ORACLE_ADMIN);
-
-        vm.prank(ORACLE_ADMIN);
-        oracle.pause();
-
-        assertTrue(oracle.paused(), "not paused");
-    }
-
-    function test_unpause() public {
-        oracle = new CSFeeOracle({
-            secondsPerBlock: 12,
-            blocksPerEpoch: 32,
-            genesisTime: 0
-        });
-
-        oracle.initialize({
-            initializationEpoch: 0,
-            reportInterval: 2,
-            _feeDistributor: FEE_DISTRIBUTOR,
-            admin: ORACLE_ADMIN
-        });
-
-        vm.prank(ORACLE_ADMIN);
-        oracle.pause();
-
-        vm.expectEmit(true, false, false, true, address(oracle));
-        emit Unpaused(ORACLE_ADMIN);
-
-        vm.prank(ORACLE_ADMIN);
-        oracle.unpause();
-
-        assertFalse(oracle.paused(), "still paused");
-    }
-
-    function _popMember() internal returns (address) {
-        address m = members[members.length - 1];
-        members.pop();
-        return m;
-    }
-
-    function _seedMembers(uint64 count) internal {
-        for (uint64 i = 0; i < count; i++) {
-            uint64 q = (i + 1) / 2 + 1; // 50% + 1
-            vm.prank(ORACLE_ADMIN);
-            members.push(nextAddress());
-            oracle.addMember(members[i], q);
+    function _seedMembers(uint256 count) internal {
+        for (uint256 i = 0; i < count; i++) {
+            uint256 q = (members.length + 1) / 2 + 1; // 50% + 1
+            address newMember = nextAddress();
+            vm.label(newMember, string.concat("MEMBER", i.toString()));
+            vm.startPrank(ORACLE_ADMIN);
+            {
+                consensus.addMember(newMember, q);
+                oracle.grantRole(oracle.SUBMIT_DATA_ROLE(), newMember);
+            }
+            vm.stopPrank();
+            members.push(newMember);
+            quorum = q;
         }
     }
 
-    function _vmSetEpoch(uint64 epoch) internal {
-        vm.warp(epoch * SECONDS_PER_EPOCH);
+    function _assertNoReportOnInit() internal {
+        (
+            bytes32 hash, // refSlot
+            ,
+            uint256 processingDeadlineTime,
+            bool processingStarted
+        ) = oracle.getConsensusReport();
+
+        // Skips the check for refSlot, see test_reportFrame
+        assertEq(hash, bytes32(0));
+        assertEq(processingDeadlineTime, 0);
+        assertEq(processingStarted, false);
+    }
+
+    function _setInitialEpoch() internal {
+        vm.prank(ORACLE_ADMIN);
+        consensus.updateInitialEpoch(INITIAL_EPOCH);
+    }
+
+    function _reachConsensus(uint256 refSlot, bytes32 hash) internal {
+        for (uint256 i; i < quorum; i++) {
+            vm.expectEmit(true, true, true, true, address(consensus));
+            emit ReportReceived(refSlot, members[i], hash);
+
+            vm.prank(members[i]);
+            consensus.submitReport(refSlot, hash, CONSENSUS_VERSION);
+        }
+
+        (uint256 _refSlot, bytes32 _hash, ) = consensus.getConsensusState();
+        assertEq(_refSlot, refSlot, "_reachConsensus: refSlot mismatch");
+        assertEq(_hash, hash, "_reachConsensus: hash mismatch");
+    }
+
+    function _epochsInDays(uint256 daysCount) internal view returns (uint256) {
+        return
+            (daysCount * 24 * 60 * 60) /
+            chainConfig.secondsPerSlot /
+            chainConfig.slotsPerEpoch;
+    }
+
+    function _lastSlotOfEpoch(uint256 epoch) internal pure returns (uint256) {
+        require(epoch > 0, "epoch must be greater than 0");
+        return epoch * 32 - 1;
+    }
+
+    function _vmSetEpoch(uint256 epoch) internal {
+        /* prettier-ignore */
+        vm.warp(
+            epoch *
+            chainConfig.secondsPerSlot *
+            chainConfig.slotsPerEpoch
+        );
     }
 }

@@ -30,7 +30,7 @@ contract MerkleTree {
         return proof;
     }
 
-    function pushLeaf(uint64 noIndex, uint64 shares) external {
+    function pushLeaf(uint256 noIndex, uint256 shares) external {
         bytes32 leaf = this.hashLeaf(abi.encodePacked(noIndex, shares));
         leaves.push(leaf);
         _buildTree();
