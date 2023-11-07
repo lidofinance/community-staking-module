@@ -13,7 +13,7 @@ forge install
 - Config environment variables
 
 ```bash
-cp .env.example .env
+cp .env.sample .env
 ```
 
 Fill vars in the `.env` file with your own values
@@ -43,7 +43,7 @@ make deploy-local
 - Deploy to local fork of non-mainnet chain
 
 ```bash
-CHAIN=goerli make deploy-local
+CHAIN=holesky make deploy-local
 ```
 
 ### Notes
