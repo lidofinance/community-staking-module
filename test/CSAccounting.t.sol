@@ -54,7 +54,8 @@ contract CSAccountingTest is
             address(locator),
             address(wstETH),
             address(stakingModule),
-            8 weeks
+            8 weeks,
+            1 days
         );
         feeDistributor = new CommunityStakingFeeDistributorMock(
             address(locator),
@@ -62,12 +63,15 @@ contract CSAccountingTest is
         );
         vm.startPrank(admin);
         accounting.setFeeDistributor(address(feeDistributor));
-        accounting.grantRole(accounting.PENALIZE_BOND_ROLE(), admin);
+        accounting.grantRole(accounting.INSTANT_PENALIZE_BOND_ROLE(), admin);
         accounting.grantRole(
-            accounting.EL_REWARDS_STEALING_PENALTY_ROLE(),
+            accounting.EL_REWARDS_STEALING_PENALTY_INIT_ROLE(),
             admin
         );
-        accounting.grantRole(accounting.EASY_TRACK_MOTION_AGENT_ROLE(), admin);
+        accounting.grantRole(
+            accounting.EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE(),
+            admin
+        );
         vm.stopPrank();
     }
 
@@ -1186,7 +1190,7 @@ contract CSAccountingTest is
 
     function test_penalize_RevertWhenCallerHasNoRole() public {
         vm.expectRevert(
-            "AccessControl: account 0x0000000000000000000000000000000000000309 is missing role 0xf3c54f9b8dbd8c6d8596d09d52b61d4bdce01620000dd9d49c5017dca6e62158"
+            "AccessControl: account 0x0000000000000000000000000000000000000309 is missing role 0x9909cf24c2d3bafa8c229558d86a1b726ba57c3ef6350848dcf434a4181b56c7"
         );
         vm.prank(stranger);
         accounting.penalize(0, 20);

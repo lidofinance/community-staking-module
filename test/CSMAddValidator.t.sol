@@ -49,7 +49,8 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
             address(locator),
             address(wstETH),
             address(csm),
-            8 weeks
+            8 weeks,
+            1 days
         );
         csm.setAccounting(address(accounting));
     }

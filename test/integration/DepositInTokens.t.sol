@@ -62,7 +62,8 @@ contract DepositIntegrationTest is Test, PermitHelper {
             address(locator),
             address(wstETH),
             address(csm),
-            8 weeks
+            8 weeks,
+            1 days
         );
 
         csm.setNodeOperator({

@@ -24,7 +24,8 @@ contract CSAccounting_revealed is CSAccounting {
         address lidoLocator,
         address wstETH,
         address communityStakingModule,
-        uint256 blockedBondRetentionPeriod
+        uint256 blockedBondRetentionPeriod,
+        uint256 blockedBondManagementPeriod
     )
         CSAccounting(
             commonBondSize,
@@ -32,7 +33,8 @@ contract CSAccounting_revealed is CSAccounting {
             lidoLocator,
             wstETH,
             communityStakingModule,
-            blockedBondRetentionPeriod
+            blockedBondRetentionPeriod,
+            blockedBondManagementPeriod
         )
     {}
 
@@ -104,7 +106,8 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
             address(locator),
             address(wstETH),
             address(stakingModule),
-            8 weeks
+            8 weeks,
+            1 days
         );
         feeDistributor = new CommunityStakingFeeDistributorMock(
             address(locator),
@@ -112,12 +115,15 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
         );
         vm.startPrank(admin);
         accounting.setFeeDistributor(address(feeDistributor));
-        accounting.grantRole(accounting.PENALIZE_BOND_ROLE(), admin);
+        accounting.grantRole(accounting.INSTANT_PENALIZE_BOND_ROLE(), admin);
         accounting.grantRole(
-            accounting.EL_REWARDS_STEALING_PENALTY_ROLE(),
+            accounting.EL_REWARDS_STEALING_PENALTY_INIT_ROLE(),
             admin
         );
-        accounting.grantRole(accounting.EASY_TRACK_MOTION_AGENT_ROLE(), admin);
+        accounting.grantRole(
+            accounting.EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE(),
+            admin
+        );
         vm.stopPrank();
     }
 
@@ -361,8 +367,8 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
         vm.prank(admin);
         accounting.initELRewardsStealingPenalty({
             nodeOperatorId: noId,
-            proposedBlockNumber: proposedBlockNumber,
-            stolenAmount: firstStolenAmount
+            blockNumber: proposedBlockNumber,
+            amount: firstStolenAmount
         });
 
         assertEq(
@@ -396,8 +402,8 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
         vm.prank(admin);
         accounting.initELRewardsStealingPenalty({
             nodeOperatorId: noId,
-            proposedBlockNumber: proposedBlockNumber,
-            stolenAmount: secondStolenAmount
+            blockNumber: proposedBlockNumber,
+            amount: secondStolenAmount
         });
 
         assertEq(
@@ -418,21 +424,21 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
         vm.prank(admin);
         accounting.initELRewardsStealingPenalty({
             nodeOperatorId: 0,
-            proposedBlockNumber: 100500,
-            stolenAmount: 100 ether
+            blockNumber: 100500,
+            amount: 100 ether
         });
     }
 
     function test_initELRewardsStealingPenalty_revertWhenZero() public {
         _createNodeOperator({ ongoingVals: 1, withdrawnVals: 0 });
 
-        vm.expectRevert("stolen amount should be greater than zero");
+        vm.expectRevert(0x7edd4cfd);
 
         vm.prank(admin);
         accounting.initELRewardsStealingPenalty({
             nodeOperatorId: 0,
-            proposedBlockNumber: 100500,
-            stolenAmount: 0
+            blockNumber: 100500,
+            amount: 0
         });
     }
 
@@ -440,13 +446,13 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
         _createNodeOperator({ ongoingVals: 1, withdrawnVals: 0 });
 
         vm.expectRevert(
-            "AccessControl: account 0x7fa9385be102ac3eac297483dd6233d62b3e1496 is missing role 0xd5726f791c124091830fa80135a85d3ea48ec1d26b2c06296f2175f326b23db3"
+            "AccessControl: account 0x7fa9385be102ac3eac297483dd6233d62b3e1496 is missing role 0xcc2e7ce7be452f766dd24d55d87a3d42901c31ffa5b600cd1dff475abec91c1f"
         );
 
         accounting.initELRewardsStealingPenalty({
             nodeOperatorId: 0,
-            proposedBlockNumber: 100500,
-            stolenAmount: 100 ether
+            blockNumber: 100500,
+            amount: 100 ether
         });
     }
 
@@ -662,7 +668,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
         _createNodeOperator({ ongoingVals: 1, withdrawnVals: 0 });
 
         vm.expectRevert(
-            "AccessControl: account 0x7fa9385be102ac3eac297483dd6233d62b3e1496 is missing role 0xd5726f791c124091830fa80135a85d3ea48ec1d26b2c06296f2175f326b23db3"
+            "AccessControl: account 0x7fa9385be102ac3eac297483dd6233d62b3e1496 is missing role 0xcc2e7ce7be452f766dd24d55d87a3d42901c31ffa5b600cd1dff475abec91c1f"
         );
         accounting.releaseBlockedBondETH(0, 1 ether);
     }

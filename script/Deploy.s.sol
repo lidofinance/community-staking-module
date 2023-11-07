@@ -43,7 +43,9 @@ contract Deploy is Script {
             lidoLocator: address(locator),
             communityStakingModule: address(csm),
             wstETH: address(wstETH),
-            blockedBondRetentionPeriod: 8 weeks
+            // todo: arguable. should be discussed
+            blockedBondRetentionPeriod: 8 weeks,
+            blockedBondManagementPeriod: 1 weeks
         });
         CSFeeOracle feeOracle = new CSFeeOracle({
             secondsPerBlock: 12,
@@ -64,13 +66,16 @@ contract Deploy is Script {
         });
         accounting.setFeeDistributor(address(feeDistributor));
         // TODO: temporary
-        accounting.grantRole(accounting.PENALIZE_BOND_ROLE(), deployerAddress);
         accounting.grantRole(
-            accounting.EL_REWARDS_STEALING_PENALTY_ROLE(),
+            accounting.INSTANT_PENALIZE_BOND_ROLE(),
             deployerAddress
         );
         accounting.grantRole(
-            accounting.EASY_TRACK_MOTION_AGENT_ROLE(),
+            accounting.EL_REWARDS_STEALING_PENALTY_INIT_ROLE(),
+            deployerAddress
+        );
+        accounting.grantRole(
+            accounting.EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE(),
             deployerAddress
         );
         // TODO: csm.setBondManager(address(accounting));

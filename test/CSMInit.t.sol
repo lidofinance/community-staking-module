@@ -42,7 +42,8 @@ contract CSMInitTest is Test, Fixtures {
             address(locator),
             address(wstETH),
             address(csm),
-            8 weeks
+            8 weeks,
+            1 days
         );
     }
 
