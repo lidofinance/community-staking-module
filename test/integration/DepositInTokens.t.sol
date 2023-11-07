@@ -4,16 +4,23 @@
 pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
+
 import { CSModule } from "../../src/CSModule.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";
-import { PermitHelper } from "../helpers/Permit.sol";
-import { CommunityStakingModuleMock } from "../helpers/mocks/CommunityStakingModuleMock.sol";
 import { IWstETH } from "../../src/interfaces/IWstETH.sol";
 import { ILido } from "../../src/interfaces/ILido.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
-import "../helpers/Fixtures.sol";
+import { Utilities } from "../helpers/Utilities.sol";
+import { PermitHelper } from "../helpers/Permit.sol";
+import { IntegrationFixtures } from "../helpers/Fixtures.sol";
+import { CommunityStakingModuleMock } from "../helpers/mocks/CommunityStakingModuleMock.sol";
 
-contract DepositIntegrationTest is Test, PermitHelper, IntegrationFixtures {
+contract DepositIntegrationTest is
+    Test,
+    Utilities,
+    PermitHelper,
+    IntegrationFixtures
+{
     uint256 networkFork;
 
     CommunityStakingModuleMock public csm;
@@ -32,11 +39,12 @@ contract DepositIntegrationTest is Test, PermitHelper, IntegrationFixtures {
 
         networkFork = vm.createFork(env.RPC_URL);
         vm.selectFork(networkFork);
+        checkChainId(1);
 
-        locator = ILidoLocator(vm.parseAddress(env.LIDO_LOCATOR_ADDRESS));
+        locator = ILidoLocator(LOCATOR_ADDRESS);
         csm = new CommunityStakingModuleMock();
 
-        wstETH = IWstETH(vm.parseAddress(env.WSTETH_ADDRESS));
+        wstETH = IWstETH(WSTETH_ADDRESS);
 
         userPrivateKey = 0xa11ce;
         user = vm.addr(userPrivateKey);
