@@ -26,8 +26,8 @@ contract PermitTokenBase {
     }
 
     function allowance(
-        address owner,
-        address spender
+        address _owner,
+        address _spender
     ) external view returns (uint256) {
         return 0;
     }
