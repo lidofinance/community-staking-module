@@ -26,11 +26,13 @@ contract Fixtures is StdCheats {
             _sharesAmount: 7059313073779349112833523
         });
         burner = new Stub();
+        Stub elVault = new Stub();
         WithdrawalQueueMock wq = new WithdrawalQueueMock(address(stETH));
         locator = new LidoLocatorMock(
             address(stETH),
             address(burner),
-            address(wq)
+            address(wq),
+            address(elVault)
         );
         wstETH = new WstETHMock(address(stETH));
     }

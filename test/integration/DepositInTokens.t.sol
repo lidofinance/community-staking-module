@@ -50,8 +50,6 @@ contract DepositIntegrationTest is
         user = vm.addr(userPrivateKey);
         strangerPrivateKey = 0x517a4637;
         stranger = vm.addr(strangerPrivateKey);
-        address[] memory penalizeRoleMembers = new address[](1);
-        penalizeRoleMembers[0] = user;
 
         accounting = new CSAccounting(
             2 ether,
@@ -59,7 +57,8 @@ contract DepositIntegrationTest is
             address(locator),
             address(wstETH),
             address(csm),
-            penalizeRoleMembers
+            8 weeks,
+            1 days
         );
 
         csm.setNodeOperator({

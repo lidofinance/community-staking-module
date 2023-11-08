@@ -45,9 +45,6 @@ contract CSAccountingTest is
         user = address(2);
         stranger = address(777);
 
-        address[] memory penalizeRoleMembers = new address[](1);
-        penalizeRoleMembers[0] = admin;
-
         (locator, wstETH, stETH, burner) = initLido();
 
         stakingModule = new CommunityStakingModuleMock();
@@ -57,14 +54,25 @@ contract CSAccountingTest is
             address(locator),
             address(wstETH),
             address(stakingModule),
-            penalizeRoleMembers
+            8 weeks,
+            1 days
         );
         feeDistributor = new CommunityStakingFeeDistributorMock(
             address(locator),
             address(accounting)
         );
-        vm.prank(admin);
+        vm.startPrank(admin);
         accounting.setFeeDistributor(address(feeDistributor));
+        accounting.grantRole(accounting.INSTANT_PENALIZE_BOND_ROLE(), admin);
+        accounting.grantRole(
+            accounting.EL_REWARDS_STEALING_PENALTY_INIT_ROLE(),
+            admin
+        );
+        accounting.grantRole(
+            accounting.EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE(),
+            admin
+        );
+        vm.stopPrank();
     }
 
     function test_totalBondShares() public {
@@ -134,12 +142,12 @@ contract CSAccountingTest is
         _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(user, 64 ether);
         vm.startPrank(user);
-        accounting.depositETH{ value: 64 ether }(user, 0);
+        accounting.depositETH{ value: 63 ether }(user, 0);
         assertApproxEqAbs(
             accounting.getRequiredBondETH(0, 16),
-            0,
+            1 ether,
             1, // max accuracy error
-            "required ETH should be ~0 for the next 16 validators to deposit"
+            "required ETH should be ~1 ether for the next 16 validators to deposit"
         );
     }
 
@@ -148,12 +156,12 @@ contract CSAccountingTest is
         vm.deal(user, 64 ether);
         vm.startPrank(user);
         stETH.submit{ value: 64 ether }({ _referal: address(0) });
-        accounting.depositStETH(user, 0, 64 ether);
+        accounting.depositStETH(user, 0, 63 ether);
         assertApproxEqAbs(
             accounting.getRequiredBondStETH(0, 16),
-            0,
+            1 ether,
             1, // max accuracy error
-            "required stETH should be ~0 for the next 16 validators to deposit"
+            "required stETH should be ~1 ether for the next 16 validators to deposit"
         );
     }
 
@@ -162,13 +170,13 @@ contract CSAccountingTest is
         vm.deal(user, 64 ether);
         vm.startPrank(user);
         stETH.submit{ value: 64 ether }({ _referal: address(0) });
-        uint256 amount = wstETH.wrap(64 ether);
+        uint256 amount = wstETH.wrap(63 ether);
         accounting.depositWstETH(user, 0, amount);
         assertApproxEqAbs(
             accounting.getRequiredBondWstETH(0, 16),
-            0,
-            1, // max accuracy error
-            "required wstETH should be ~0 for the next 16 validators to deposit"
+            stETH.getSharesByPooledEth(1 ether),
+            2, // max accuracy error
+            "required wstETH should be ~1 ether for the next 16 validators to deposit"
         );
     }
 
@@ -591,6 +599,42 @@ contract CSAccountingTest is
         accounting.depositETH{ value: 17.57 ether }(user, 0);
 
         assertEq(accounting.getUnbondedKeysCount(0), 7);
+    }
+
+    function test_getKeysCountByBondETH() public {
+        assertEq(accounting.getKeysCountByBondETH(0), 0);
+        assertEq(accounting.getKeysCountByBondETH(1.99 ether), 0);
+        assertEq(accounting.getKeysCountByBondETH(2 ether), 1);
+        assertEq(accounting.getKeysCountByBondETH(4 ether), 2);
+    }
+
+    function test_getKeysCountByBondStETH() public {
+        assertEq(accounting.getKeysCountByBondStETH(0), 0);
+        assertEq(accounting.getKeysCountByBondStETH(1.99 ether), 0);
+        assertEq(accounting.getKeysCountByBondStETH(2 ether), 1);
+        assertEq(accounting.getKeysCountByBondStETH(4 ether), 2);
+    }
+
+    function test_getKeysCountByBondWstETH() public {
+        assertEq(accounting.getKeysCountByBondWstETH(0), 0);
+        assertEq(
+            accounting.getKeysCountByBondWstETH(
+                wstETH.getWstETHByStETH(1.99 ether)
+            ),
+            0
+        );
+        assertEq(
+            accounting.getKeysCountByBondWstETH(
+                wstETH.getWstETHByStETH(2 ether)
+            ),
+            1
+        );
+        assertEq(
+            accounting.getKeysCountByBondWstETH(
+                wstETH.getWstETHByStETH(4 ether)
+            ),
+            2
+        );
     }
 
     function test_claimRewardsStETH() public {
@@ -1048,26 +1092,28 @@ contract CSAccountingTest is
         accounting.depositStETH(user, 0, 32 ether);
         vm.stopPrank();
 
+        uint256 shares = stETH.getSharesByPooledEth(1 ether);
+        uint256 penalized = stETH.getPooledEthByShares(shares);
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondPenalized(0, 1e18, 1e18);
+        emit BondPenalized(0, penalized, penalized);
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(admin);
-        accounting.penalize(0, 1e18);
+        accounting.penalize(0, 1 ether);
 
         assertEq(
             accounting.getBondShares(0),
-            bondSharesBefore - 1e18,
+            bondSharesBefore - shares,
             "bond shares should be decreased by penalty"
         );
         assertEq(
             stETH.sharesOf(address(accounting)),
-            bondSharesBefore - 1e18,
+            bondSharesBefore - shares,
             "bond manager shares should be decreased by penalty"
         );
         assertEq(
             stETH.sharesOf(address(burner)),
-            1e18,
+            shares,
             "burner shares should be equal to penalty"
         );
     }
@@ -1081,12 +1127,16 @@ contract CSAccountingTest is
         vm.stopPrank();
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-
+        uint256 penaltyShares = stETH.getSharesByPooledEth(33 ether);
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondPenalized(0, 32 * 1e18, bondSharesBefore);
+        emit BondPenalized(
+            0,
+            stETH.getPooledEthByShares(penaltyShares),
+            stETH.getPooledEthByShares(bondSharesBefore)
+        );
 
         vm.prank(admin);
-        accounting.penalize(0, 32 * 1e18);
+        accounting.penalize(0, 33 ether);
 
         assertEq(
             accounting.getBondShares(0),
@@ -1114,11 +1164,12 @@ contract CSAccountingTest is
         vm.stopPrank();
 
         uint256 shares = stETH.getSharesByPooledEth(32 ether);
+        uint256 penalized = stETH.getPooledEthByShares(shares);
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondPenalized(0, shares, shares);
+        emit BondPenalized(0, penalized, penalized);
 
         vm.prank(admin);
-        accounting.penalize(0, shares);
+        accounting.penalize(0, 32 ether);
 
         assertEq(
             accounting.getBondShares(0),
@@ -1139,7 +1190,7 @@ contract CSAccountingTest is
 
     function test_penalize_RevertWhenCallerHasNoRole() public {
         vm.expectRevert(
-            "AccessControl: account 0x0000000000000000000000000000000000000309 is missing role 0xf3c54f9b8dbd8c6d8596d09d52b61d4bdce01620000dd9d49c5017dca6e62158"
+            "AccessControl: account 0x0000000000000000000000000000000000000309 is missing role 0x9909cf24c2d3bafa8c229558d86a1b726ba57c3ef6350848dcf434a4181b56c7"
         );
         vm.prank(stranger);
         accounting.penalize(0, 20);

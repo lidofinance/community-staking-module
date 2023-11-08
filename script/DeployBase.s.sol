@@ -68,9 +68,6 @@ abstract contract DeployBase is Script {
         deployer = vm.addr(pk);
         vm.label(deployer, "DEPLOYER");
 
-        address[] memory penalizers = new address[](1);
-        penalizers[0] = deployer; // FIXME
-
         vm.startBroadcast(pk);
         {
             CSModule csm = new CSModule({
@@ -83,7 +80,9 @@ abstract contract DeployBase is Script {
                 lidoLocator: address(locator),
                 communityStakingModule: address(csm),
                 wstETH: address(wstETH),
-                penalizeRoleMembers: penalizers
+                // todo: arguable. should be discussed
+                _blockedBondRetentionPeriod: 8 weeks,
+                _blockedBondManagementPeriod: 1 weeks
             });
 
             CSFeeOracle oracleImpl = new CSFeeOracle({
