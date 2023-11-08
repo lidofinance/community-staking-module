@@ -470,16 +470,18 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         PermitInput calldata permit
     ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
         from = (from == address(0)) ? msg.sender : from;
-        // solhint-disable-next-line func-named-parameters
-        _lido().permit(
-            from,
-            address(this),
-            permit.value,
-            permit.deadline,
-            permit.v,
-            permit.r,
-            permit.s
-        );
+        if (_lido().allowance(from, address(this)) < permit.value) {
+            // solhint-disable-next-line func-named-parameters
+            _lido().permit(
+                from,
+                address(this),
+                permit.value,
+                permit.deadline,
+                permit.v,
+                permit.r,
+                permit.s
+            );
+        }
         return _depositStETH(from, nodeOperatorId, stETHAmount);
     }
 
@@ -520,16 +522,19 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 wstETHAmount,
         PermitInput calldata permit
     ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
-        // solhint-disable-next-line func-named-parameters
-        WSTETH.permit(
-            from,
-            address(this),
-            permit.value,
-            permit.deadline,
-            permit.v,
-            permit.r,
-            permit.s
-        );
+        from = (from == address(0)) ? msg.sender : from;
+        if (WSTETH.allowance(from, address(this)) < permit.value) {
+            // solhint-disable-next-line func-named-parameters
+            WSTETH.permit(
+                from,
+                address(this),
+                permit.value,
+                permit.deadline,
+                permit.v,
+                permit.r,
+                permit.s
+            );
+        }
         return _depositWstETH(from, nodeOperatorId, wstETHAmount);
     }
 

@@ -413,6 +413,49 @@ contract CSAccountingTest is
         );
     }
 
+    function test_depositStETHWithPermit_alreadyPermitted() public {
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+
+        vm.expectEmit(true, true, true, true, address(accounting));
+        emit StETHBondDeposited(0, user, 32 ether);
+
+        vm.mockCall(
+            address(stETH),
+            abi.encodeWithSelector(
+                stETH.permit.selector,
+                user,
+                address(accounting)
+            ),
+            abi.encode(32 ether)
+        );
+
+        vm.recordLogs();
+
+        vm.prank(stranger);
+        accounting.depositStETHWithPermit(
+            user,
+            0,
+            32 ether,
+            CSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            1,
+            "should emit only one event about deposit"
+        );
+    }
+
     function test_depositWstETHWithPermit() public {
         _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(user, 32 ether);
@@ -458,6 +501,51 @@ contract CSAccountingTest is
             accounting.totalBondShares(),
             sharesToDeposit,
             "bond manager shares should be equal to deposited shares"
+        );
+    }
+
+    function test_depositWstETHWithPermit_alreadyPermitted() public {
+        _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        vm.stopPrank();
+
+        vm.expectEmit(true, true, true, true, address(accounting));
+        emit WstETHBondDeposited(0, user, wstETHAmount);
+
+        vm.mockCall(
+            address(wstETH),
+            abi.encodeWithSelector(
+                wstETH.permit.selector,
+                user,
+                address(accounting)
+            ),
+            abi.encode(32 ether)
+        );
+
+        vm.recordLogs();
+
+        vm.prank(stranger);
+        accounting.depositWstETHWithPermit(
+            user,
+            0,
+            wstETHAmount,
+            CSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            1,
+            "should emit only one event about deposit"
         );
     }
 
