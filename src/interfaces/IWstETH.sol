@@ -35,4 +35,9 @@ interface IWstETH {
         bytes32 r,
         bytes32 s
     ) external;
+
+    function allowance(
+        address _owner,
+        address _spender
+    ) external view returns (uint256);
 }
