@@ -425,7 +425,7 @@ contract CSAccountingTest is
         vm.mockCall(
             address(stETH),
             abi.encodeWithSelector(
-                stETH.permit.selector,
+                stETH.allowance.selector,
                 user,
                 address(accounting)
             ),
@@ -518,7 +518,7 @@ contract CSAccountingTest is
         vm.mockCall(
             address(wstETH),
             abi.encodeWithSelector(
-                wstETH.permit.selector,
+                wstETH.allowance.selector,
                 user,
                 address(accounting)
             ),
