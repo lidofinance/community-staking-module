@@ -4,6 +4,7 @@ pragma solidity ^0.8.21;
 import "forge-std/Test.sol";
 import "../src/CSModule.sol";
 import "../src/CSAccounting.sol";
+import "../src/lib/Batch.sol";
 import "./helpers/Fixtures.sol";
 import "./helpers/mocks/StETHMock.sol";
 import "./helpers/mocks/CommunityStakingFeeDistributorMock.sol";
@@ -56,20 +57,42 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     }
 
     function createNodeOperator() internal returns (uint256) {
-        return createNodeOperator(nodeOperator);
+        return createNodeOperator(nodeOperator, 1);
+    }
+
+    function createNodeOperator(uint256 keysCount) internal returns (uint256) {
+        return createNodeOperator(nodeOperator, keysCount);
     }
 
     function createNodeOperator(
-        address managerAddress
+        address managerAddress,
+        uint256 keysCount
     ) internal returns (uint256) {
-        uint256 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
-        vm.deal(managerAddress, 2 ether);
+        vm.deal(managerAddress, keysCount * 2 ether);
         vm.prank(managerAddress);
-        csm.addNodeOperatorETH{ value: 2 ether }(keysCount, keys, signatures);
+        csm.addNodeOperatorETH{ value: keysCount * 2 ether }(
+            keysCount,
+            keys,
+            signatures
+        );
         return csm.getNodeOperatorsCount() - 1;
+    }
+}
+
+contract CsmInitialization is CSMCommon {
+    function test_initContract() public {
+        csm = new CSModule("community-staking-module", address(locator));
+        assertEq(csm.getType(), "community-staking-module");
+        assertEq(csm.getNodeOperatorsCount(), 0);
+    }
+
+    function test_setAccounting() public {
+        csm = new CSModule("community-staking-module", address(locator));
+        csm.setAccounting(address(accounting));
+        assertEq(address(csm.accounting()), address(accounting));
     }
 }
 
@@ -580,5 +603,67 @@ contract CsmResetNodeOperatorManagerAddress is CSMCommon {
         vm.expectRevert(SameAddress.selector);
         vm.prank(nodeOperator);
         csm.resetNodeOperatorManagerAddress(noId);
+    }
+}
+
+contract CsmVetKeys is CSMCommon {
+    function test_vetKeys() public {
+        uint256 noId = createNodeOperator();
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit BatchEnqueued(noId, 0, 1);
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit VettedSigningKeysCountChanged(noId, 1);
+        csm.vetKeys(noId, 1);
+
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalVettedValidators, 1);
+        (bytes32[] memory items, , ) = csm.depositQueue(1, bytes32(0));
+        (uint128 batchNoId, uint64 start, uint64 count) = Batch.deserialize(
+            items[0]
+        );
+        assertEq(batchNoId, uint128(noId));
+        assertEq(start, 0);
+        assertEq(count, 1);
+    }
+
+    function test_vetKeys_totalVettedKeysIsNotZero() public {
+        uint256 noId = createNodeOperator(2);
+        csm.vetKeys(noId, 1);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit BatchEnqueued(noId, 1, 1);
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit VettedSigningKeysCountChanged(noId, 2);
+        csm.vetKeys(noId, 2);
+
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalVettedValidators, 2);
+        (bytes32[] memory items, , ) = csm.depositQueue(2, bytes32(0));
+        (uint128 batchNoId, uint64 start, uint64 count) = Batch.deserialize(
+            items[1]
+        );
+        assertEq(batchNoId, uint128(noId));
+        assertEq(start, 1);
+        assertEq(count, 1);
+    }
+
+    function test_vetKeys_RevertWhenNoNodeOperator() public {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.vetKeys(0, 1);
+    }
+
+    function test_vetKeys_RevertWhenPointerLessThanTotalVetted() public {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+
+        vm.expectRevert(InvalidVetKeysPointer.selector);
+        csm.vetKeys(noId, 1);
+    }
+
+    function test_vetKeys_RevertWhenPointerGreaterThanTotalAdded() public {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(InvalidVetKeysPointer.selector);
+        csm.vetKeys(noId, 2);
     }
 }

@@ -95,17 +95,21 @@ contract CSModuleBase {
     event UnvettingFeeSet(uint256 unvettingFee);
 
     error NodeOperatorDoesNotExist();
+    error MaxNodeOperatorsCountReached();
     error SenderIsNotManagerAddress();
     error SenderIsNotRewardAddress();
     error SenderIsNotProposedAddress();
     error SameAddress();
     error AlreadyProposed();
+    error InvalidVetKeysPointer();
 }
 
 contract CSModule is IStakingModule, CSModuleBase {
     using QueueLib for QueueLib.Queue;
 
-    uint256 public constant MAX_NODE_OPERATOR_NAME_LENGTH = 255;
+    // @dev max number of node operators is limited by uint128 due to Batch serialization in 32 bytes
+    // it seems to be enough
+    uint128 public constant MAX_NODE_OPERATORS_COUNT = type(uint128).max;
     bytes32 public constant SIGNING_KEYS_POSITION =
         keccak256("lido.CommunityStakingModule.signingKeysPosition");
 
@@ -182,6 +186,8 @@ contract CSModule is IStakingModule, CSModuleBase {
         );
 
         uint256 id = _nodeOperatorsCount;
+        if (id == MAX_NODE_OPERATORS_COUNT)
+            revert MaxNodeOperatorsCountReached();
         NodeOperator storage no = _nodeOperators[id];
 
         no.managerAddress = msg.sender;
@@ -205,6 +211,8 @@ contract CSModule is IStakingModule, CSModuleBase {
         // TODO: sanity checks
 
         uint256 id = _nodeOperatorsCount;
+        if (id == MAX_NODE_OPERATORS_COUNT)
+            revert MaxNodeOperatorsCountReached();
         NodeOperator storage no = _nodeOperators[id];
 
         no.managerAddress = msg.sender;
@@ -233,6 +241,8 @@ contract CSModule is IStakingModule, CSModuleBase {
         // TODO sanity checks
 
         uint256 id = _nodeOperatorsCount;
+        if (id == MAX_NODE_OPERATORS_COUNT)
+            revert MaxNodeOperatorsCountReached();
         NodeOperator storage no = _nodeOperators[id];
         no.rewardAddress = msg.sender;
         no.managerAddress = msg.sender;
@@ -260,6 +270,8 @@ contract CSModule is IStakingModule, CSModuleBase {
         // TODO sanity checks
 
         uint256 id = _nodeOperatorsCount;
+        if (id == MAX_NODE_OPERATORS_COUNT)
+            revert MaxNodeOperatorsCountReached();
         NodeOperator storage no = _nodeOperators[id];
 
         no.managerAddress = msg.sender;
@@ -288,6 +300,8 @@ contract CSModule is IStakingModule, CSModuleBase {
         // TODO sanity checks
 
         uint256 id = _nodeOperatorsCount;
+        if (id == MAX_NODE_OPERATORS_COUNT)
+            revert MaxNodeOperatorsCountReached();
         NodeOperator storage no = _nodeOperators[id];
         no.rewardAddress = msg.sender;
         no.managerAddress = msg.sender;
@@ -533,7 +547,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         stuckPenaltyEndTimestamp = no.stuckPenaltyEndTimestamp;
         totalExitedValidators = no.totalExitedKeys;
         totalDepositedValidators = no.totalDepositedKeys;
-        depositableValidatorsCount = no.totalAddedKeys - no.totalExitedKeys;
+        depositableValidatorsCount = no.totalVettedKeys - no.totalExitedKeys;
     }
 
     function getNonce() external view returns (uint256) {
@@ -622,22 +636,17 @@ contract CSModule is IStakingModule, CSModuleBase {
 
     function vetKeys(
         uint256 nodeOperatorId,
-        uint64 vettedKeysCount
-    ) external onlyKeyValidator {
+        uint64 vetKeysPointer
+    ) external onlyExistingNodeOperator(nodeOperatorId) onlyKeyValidator {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
-        require(
-            vettedKeysCount > no.totalVettedKeys,
-            "Wrong vettedKeysCount: less than already vetted"
-        );
-        require(
-            vettedKeysCount <= no.totalAddedKeys,
-            "Wrong vettedKeysCount: more than added"
-        );
+        if (vetKeysPointer <= no.totalVettedKeys)
+            revert InvalidVetKeysPointer();
+        if (vetKeysPointer > no.totalAddedKeys) revert InvalidVetKeysPointer();
 
-        uint64 count = SafeCast.toUint64(vettedKeysCount - no.totalVettedKeys);
+        uint64 count = SafeCast.toUint64(vetKeysPointer - no.totalVettedKeys);
         uint64 start = SafeCast.toUint64(
-            no.totalVettedKeys == 0 ? 0 : no.totalVettedKeys - 1
+            no.totalVettedKeys == 0 ? 0 : no.totalVettedKeys
         );
 
         bytes32 pointer = Batch.serialize({
@@ -646,18 +655,22 @@ contract CSModule is IStakingModule, CSModuleBase {
             count: count
         });
 
-        no.totalVettedKeys = vettedKeysCount;
+        no.totalVettedKeys = vetKeysPointer;
         queue.enqueue(pointer);
 
         emit BatchEnqueued(nodeOperatorId, start, count);
-        emit VettedSigningKeysCountChanged(nodeOperatorId, vettedKeysCount);
+        emit VettedSigningKeysCountChanged(nodeOperatorId, vetKeysPointer);
 
         _incrementNonce();
     }
 
     function unvetKeys(
         uint256 nodeOperatorId
-    ) external onlyKeyValidatorOrNodeOperatorManager {
+    )
+        external
+        onlyExistingNodeOperator(nodeOperatorId)
+        onlyKeyValidatorOrNodeOperatorManager
+    {
         _unvetKeys(nodeOperatorId);
         accounting.penalize(nodeOperatorId, unvettingFee);
     }
