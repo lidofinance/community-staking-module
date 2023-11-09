@@ -473,6 +473,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         PermitInput calldata permit
     ) external returns (uint256) {
         from = _validateDepositSender(from);
+        // preventing revert for already used permit
         if (_lido().allowance(from, address(this)) < permit.value) {
             // solhint-disable-next-line func-named-parameters
             _lido().permit(
@@ -524,6 +525,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         PermitInput calldata permit
     ) external returns (uint256) {
         from = _validateDepositSender(from);
+        // preventing revert for already used permit
         if (WSTETH.allowance(from, address(this)) < permit.value) {
             // solhint-disable-next-line func-named-parameters
             WSTETH.permit(
