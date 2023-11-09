@@ -280,7 +280,6 @@ contract CSModule is IStakingModule, CSModuleBase {
     }
 
     function addNodeOperatorWstETHWithPermit(
-        address from,
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
@@ -297,7 +296,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         _activeNodeOperatorsCount++;
 
         accounting.depositWstETHWithPermit(
-            from,
+            msg.sender,
             id,
             accounting.getRequiredBondWstETHForKeys(keysCount),
             permit
@@ -345,7 +344,6 @@ contract CSModule is IStakingModule, CSModuleBase {
     }
 
     function addValidatorKeysStETHWithPermit(
-        address from,
         uint256 nodeOperatorId,
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -355,7 +353,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         // TODO sanity checks
 
         accounting.depositStETHWithPermit(
-            from,
+            msg.sender,
             nodeOperatorId,
             accounting.getRequiredBondStETH(nodeOperatorId, keysCount),
             permit
@@ -382,7 +380,6 @@ contract CSModule is IStakingModule, CSModuleBase {
     }
 
     function addValidatorKeysWstETHWithPermit(
-        address from,
         uint256 nodeOperatorId,
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -392,7 +389,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         // TODO sanity checks
 
         accounting.depositWstETHWithPermit(
-            from,
+            msg.sender,
             nodeOperatorId,
             accounting.getRequiredBondWstETH(nodeOperatorId, keysCount),
             permit
