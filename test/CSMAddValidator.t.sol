@@ -107,12 +107,11 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, stranger);
+            emit NodeOperatorAdded(0, nodeOperator);
         }
 
-        vm.prank(stranger);
+        vm.prank(nodeOperator);
         csm.addNodeOperatorWstETHWithPermit(
-            nodeOperator,
             1,
             keys,
             signatures,
@@ -164,9 +163,8 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 2);
         }
-        vm.prank(stranger);
+        vm.prank(nodeOperator);
         csm.addValidatorKeysWstETHWithPermit(
-            nodeOperator,
             noId,
             1,
             keys,
@@ -265,9 +263,8 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 2);
         }
-        vm.prank(stranger);
+        vm.prank(nodeOperator);
         csm.addValidatorKeysStETHWithPermit(
-            nodeOperator,
             noId,
             1,
             keys,
