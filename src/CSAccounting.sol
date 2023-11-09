@@ -112,6 +112,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     error NotOwnerToClaim(address msgSender, address owner);
     error InvalidBlockedBondRetentionPeriod();
     error InvalidStolenAmount();
+    error InvalidSender();
 
     /// @param commonBondSize common bond size in ETH for all node operators.
     /// @param admin admin role member address
@@ -428,18 +429,21 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         return wstETHAmount / getRequiredBondWstETHForKeys(1);
     }
 
-    /// @notice Deposits ETH to the bond for the given node operator.
-    /// @param nodeOperatorId id of the node operator to deposit bond for.
+    /// @notice Stake user's ETH to Lido and make deposit in stETH to the bond
+    /// @return stETH shares amount
+    /// @dev if `from` is not the same as `msg.sender`, then `msg.sender` should be CSM
     function depositETH(
         address from,
         uint256 nodeOperatorId
-    )
-        external
-        payable
-        onlyExistingNodeOperator(nodeOperatorId)
-        returns (uint256)
-    {
-        from = (from == address(0)) ? msg.sender : from;
+    ) external payable returns (uint256) {
+        from = _validateDepositSender(from);
+        return _depositETH(from, nodeOperatorId);
+    }
+
+    function _depositETH(
+        address from,
+        uint256 nodeOperatorId
+    ) internal onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
         uint256 shares = _lido().submit{ value: msg.value }(address(0));
         _bondShares[nodeOperatorId] += shares;
         totalBondShares += shares;
@@ -447,29 +451,28 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         return shares;
     }
 
-    /// @notice Deposits stETH to the bond for the given node operator.
-    /// @param nodeOperatorId id of the node operator to deposit bond for.
-    /// @param stETHAmount amount of stETH to deposit.
+    /// @notice Deposit user's stETH to the bond for the given Node Operator
+    /// @return stETH shares amount
+    /// @dev if `from` is not the same as `msg.sender`, then `msg.sender` should be CSM
     function depositStETH(
         address from,
         uint256 nodeOperatorId,
         uint256 stETHAmount
-    ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
-        from = (from == address(0)) ? msg.sender : from;
+    ) external returns (uint256) {
+        from = _validateDepositSender(from);
         return _depositStETH(from, nodeOperatorId, stETHAmount);
     }
 
-    /// @notice Deposits stETH to the bond for the given node operator.
-    /// @param nodeOperatorId id of the node operator to deposit bond for.
-    /// @param stETHAmount amount of stETH to deposit.
-    /// @param permit permit to spend stETH.
+    /// @notice Deposit user's stETH to the bond for the given Node Operator using the proper permit for the contract
+    /// @return stETH shares amount
+    /// @dev if `from` is not the same as `msg.sender`, then `msg.sender` should be CSM
     function depositStETHWithPermit(
         address from,
         uint256 nodeOperatorId,
         uint256 stETHAmount,
         PermitInput calldata permit
-    ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
-        from = (from == address(0)) ? msg.sender : from;
+    ) external returns (uint256) {
+        from = _validateDepositSender(from);
         if (_lido().allowance(from, address(this)) < permit.value) {
             // solhint-disable-next-line func-named-parameters
             _lido().permit(
@@ -489,7 +492,8 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         address from,
         uint256 nodeOperatorId,
         uint256 stETHAmount
-    ) internal returns (uint256) {
+    ) internal onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
+        // todo: should we check that `from` is manager\reward address ???
         uint256 shares = _sharesByEth(stETHAmount);
         _lido().transferSharesFrom(from, address(this), shares);
         _bondShares[nodeOperatorId] += shares;
@@ -498,31 +502,28 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         return shares;
     }
 
-    /// @notice Deposits wstETH to the bond for the given node operator.
-    /// @param from address to deposit wstETH from.
-    /// @param nodeOperatorId id of the node operator to deposit bond for.
-    /// @param wstETHAmount amount of wstETH to deposit.
+    /// @notice Unwrap user's wstETH and make deposit in stETH to the bond for the given Node Operator
+    /// @return stETH shares amount
+    /// @dev if `from` is not the same as `msg.sender`, then `msg.sender` should be CSM
     function depositWstETH(
         address from,
         uint256 nodeOperatorId,
         uint256 wstETHAmount
-    ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
-        from = (from == address(0)) ? msg.sender : from;
+    ) external returns (uint256) {
+        from = _validateDepositSender(from);
         return _depositWstETH(from, nodeOperatorId, wstETHAmount);
     }
 
-    /// @notice Deposits wstETH to the bond for the given node operator.
-    /// @param from address to deposit wstETH from.
-    /// @param nodeOperatorId id of the node operator to deposit bond for.
-    /// @param wstETHAmount amount of wstETH to deposit.
-    /// @param permit permit to spend wstETH.
+    /// @notice Unwrap user's wstETH and make deposit in stETH to the bond for the given Node Operator using the proper permit for the contract
+    /// @return stETH shares amount
+    /// @dev if `from` is not the same as `msg.sender`, then `msg.sender` should be CSM
     function depositWstETHWithPermit(
         address from,
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
         PermitInput calldata permit
-    ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
-        from = (from == address(0)) ? msg.sender : from;
+    ) external returns (uint256) {
+        from = _validateDepositSender(from);
         if (WSTETH.allowance(from, address(this)) < permit.value) {
             // solhint-disable-next-line func-named-parameters
             WSTETH.permit(
@@ -542,7 +543,8 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         address from,
         uint256 nodeOperatorId,
         uint256 wstETHAmount
-    ) internal returns (uint256) {
+    ) internal onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
+        // todo: should we check that `from` is manager\reward address ???
         WSTETH.transferFrom(from, address(this), wstETHAmount);
         uint256 stETHAmount = WSTETH.unwrap(wstETHAmount);
         uint256 shares = _sharesByEth(stETHAmount);
@@ -550,6 +552,16 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         totalBondShares += shares;
         emit WstETHBondDeposited(nodeOperatorId, from, wstETHAmount);
         return shares;
+    }
+
+    /// @dev only CSM can pass `from` != `msg.sender`
+    function _validateDepositSender(
+        address from
+    ) internal view returns (address) {
+        if (from == address(0)) from = msg.sender;
+        if (from != msg.sender && msg.sender != address(CSM))
+            revert InvalidSender();
+        return from;
     }
 
     /// @notice Claims full reward (fee + bond) for the given node operator with desirable value
@@ -747,7 +759,6 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     function settleBlockedBondETH(
         uint256[] memory nodeOperatorIds
     ) external onlyRole(EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE) {
-        uint256 nosCount = CSM.getNodeOperatorsCount();
         for (uint256 i; i < nodeOperatorIds.length; ++i) {
             uint256 nodeOperatorId = nodeOperatorIds[i];
             BlockedBond storage blockedBond = _blockedBondEther[nodeOperatorId];

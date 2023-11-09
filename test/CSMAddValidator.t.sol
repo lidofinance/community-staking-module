@@ -212,12 +212,11 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, stranger);
+            emit NodeOperatorAdded(0, nodeOperator);
         }
 
-        vm.prank(stranger);
+        vm.prank(nodeOperator);
         csm.addNodeOperatorStETHWithPermit(
-            nodeOperator,
             1,
             keys,
             signatures,

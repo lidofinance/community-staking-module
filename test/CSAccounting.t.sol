@@ -381,7 +381,7 @@ contract CSAccountingTest is
         vm.expectEmit(true, true, true, true, address(accounting));
         emit StETHBondDeposited(0, user, 32 ether);
 
-        vm.prank(stranger);
+        vm.prank(user);
         accounting.depositStETHWithPermit(
             user,
             0,
@@ -434,7 +434,7 @@ contract CSAccountingTest is
 
         vm.recordLogs();
 
-        vm.prank(stranger);
+        vm.prank(user);
         accounting.depositStETHWithPermit(
             user,
             0,
@@ -472,7 +472,7 @@ contract CSAccountingTest is
         vm.expectEmit(true, true, true, true, address(accounting));
         emit WstETHBondDeposited(0, user, wstETHAmount);
 
-        vm.prank(stranger);
+        vm.prank(user);
         accounting.depositWstETHWithPermit(
             user,
             0,
@@ -527,7 +527,7 @@ contract CSAccountingTest is
 
         vm.recordLogs();
 
-        vm.prank(stranger);
+        vm.prank(user);
         accounting.depositWstETHWithPermit(
             user,
             0,
@@ -549,9 +549,70 @@ contract CSAccountingTest is
         );
     }
 
-    function test_deposit_RevertIfNotExistedOperator() public {
+    function test_depositETH_RevertIfNotExistedOperator() public {
         vm.expectRevert("node operator does not exist");
+        vm.prank(user);
+        accounting.depositETH{ value: 0 }(user, 0);
+    }
+
+    function test_depositStETH_RevertIfNotExistedOperator() public {
+        vm.expectRevert("node operator does not exist");
+        vm.prank(user);
         accounting.depositStETH(user, 0, 32 ether);
+    }
+
+    function test_depositETH_RevertIfInvalidSender() public {
+        vm.expectRevert(0xddb5de5e);
+        vm.prank(stranger);
+        accounting.depositETH{ value: 0 }(user, 0);
+    }
+
+    function test_depositStETH_RevertIfInvalidSender() public {
+        vm.expectRevert(0xddb5de5e);
+        vm.prank(stranger);
+        accounting.depositStETH(user, 0, 32 ether);
+    }
+
+    function test_depositStETHWithPermit_RevertIfInvalidSender() public {
+        vm.expectRevert(0xddb5de5e);
+        vm.prank(stranger);
+        accounting.depositStETHWithPermit(
+            user,
+            0,
+            32 ether,
+            CSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
+    function test_depositWstETH_RevertIfInvalidSender() public {
+        vm.expectRevert(0xddb5de5e);
+        vm.prank(stranger);
+        accounting.depositWstETH(user, 0, 32 ether);
+    }
+
+    function test_depositWstETHWithPermit_RevertIfInvalidSender() public {
+        vm.expectRevert(0xddb5de5e);
+        vm.prank(stranger);
+        accounting.depositWstETHWithPermit(
+            user,
+            0,
+            32 ether,
+            CSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
     }
 
     function test_getTotalRewardsETH() public {

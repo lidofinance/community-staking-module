@@ -225,7 +225,6 @@ contract CSModule is IStakingModule, CSModuleBase {
     }
 
     function addNodeOperatorStETHWithPermit(
-        address from,
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
@@ -242,7 +241,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         _activeNodeOperatorsCount++;
 
         accounting.depositStETHWithPermit(
-            from,
+            msg.sender,
             id,
             accounting.getRequiredBondStETHForKeys(keysCount),
             permit
