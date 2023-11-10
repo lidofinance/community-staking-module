@@ -562,19 +562,19 @@ contract CSAccountingTest is
     }
 
     function test_depositETH_RevertIfInvalidSender() public {
-        vm.expectRevert(0xddb5de5e);
+        vm.expectRevert(InvalidSender.selector);
         vm.prank(stranger);
         accounting.depositETH{ value: 0 }(user, 0);
     }
 
     function test_depositStETH_RevertIfInvalidSender() public {
-        vm.expectRevert(0xddb5de5e);
+        vm.expectRevert(InvalidSender.selector);
         vm.prank(stranger);
         accounting.depositStETH(user, 0, 32 ether);
     }
 
     function test_depositStETHWithPermit_RevertIfInvalidSender() public {
-        vm.expectRevert(0xddb5de5e);
+        vm.expectRevert(InvalidSender.selector);
         vm.prank(stranger);
         accounting.depositStETHWithPermit(
             user,
@@ -592,13 +592,13 @@ contract CSAccountingTest is
     }
 
     function test_depositWstETH_RevertIfInvalidSender() public {
-        vm.expectRevert(0xddb5de5e);
+        vm.expectRevert(InvalidSender.selector);
         vm.prank(stranger);
         accounting.depositWstETH(user, 0, 32 ether);
     }
 
     function test_depositWstETHWithPermit_RevertIfInvalidSender() public {
-        vm.expectRevert(0xddb5de5e);
+        vm.expectRevert(InvalidSender.selector);
         vm.prank(stranger);
         accounting.depositWstETHWithPermit(
             user,
@@ -993,11 +993,7 @@ contract CSAccountingTest is
         _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                CSAccounting.NotOwnerToClaim.selector,
-                stranger,
-                user
-            )
+            abi.encodeWithSelector(NotOwnerToClaim.selector, stranger, user)
         );
         vm.prank(stranger);
         accounting.claimRewardsStETH(new bytes32[](1), 0, 1, 1 ether);
@@ -1104,11 +1100,7 @@ contract CSAccountingTest is
         _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                CSAccounting.NotOwnerToClaim.selector,
-                stranger,
-                user
-            )
+            abi.encodeWithSelector(NotOwnerToClaim.selector, stranger, user)
         );
         vm.prank(stranger);
         accounting.claimRewardsWstETH(new bytes32[](1), 0, 1, 1 ether);

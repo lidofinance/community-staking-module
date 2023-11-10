@@ -66,6 +66,11 @@ contract CSAccountingBase {
         uint256 penaltyETH,
         uint256 coveringETH
     );
+
+    error NotOwnerToClaim(address msgSender, address owner);
+    error InvalidBlockedBondRetentionPeriod();
+    error InvalidStolenAmount();
+    error InvalidSender();
 }
 
 contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
@@ -108,11 +113,6 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
 
     mapping(uint256 => uint256) internal _bondShares;
     mapping(uint256 => BlockedBond) internal _blockedBondEther;
-
-    error NotOwnerToClaim(address msgSender, address owner);
-    error InvalidBlockedBondRetentionPeriod();
-    error InvalidStolenAmount();
-    error InvalidSender();
 
     /// @param commonBondSize common bond size in ETH for all node operators.
     /// @param admin admin role member address
@@ -459,6 +459,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 nodeOperatorId,
         uint256 stETHAmount
     ) external returns (uint256) {
+        // todo: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
         return _depositStETH(from, nodeOperatorId, stETHAmount);
     }
@@ -472,6 +473,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 stETHAmount,
         PermitInput calldata permit
     ) external returns (uint256) {
+        // todo: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
         // preventing revert for already used permit
         if (_lido().allowance(from, address(this)) < permit.value) {
@@ -511,6 +513,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 nodeOperatorId,
         uint256 wstETHAmount
     ) external returns (uint256) {
+        // todo: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
         return _depositWstETH(from, nodeOperatorId, wstETHAmount);
     }
@@ -524,6 +527,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 wstETHAmount,
         PermitInput calldata permit
     ) external returns (uint256) {
+        // todo: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
         // preventing revert for already used permit
         if (WSTETH.allowance(from, address(this)) < permit.value) {
