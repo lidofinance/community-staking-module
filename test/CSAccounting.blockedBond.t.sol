@@ -432,7 +432,7 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
     function test_initELRewardsStealingPenalty_revertWhenZero() public {
         _createNodeOperator({ ongoingVals: 1, withdrawnVals: 0 });
 
-        vm.expectRevert(0x7edd4cfd);
+        vm.expectRevert(InvalidStolenAmount.selector);
 
         vm.prank(admin);
         accounting.initELRewardsStealingPenalty({

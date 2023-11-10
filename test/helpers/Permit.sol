@@ -24,6 +24,13 @@ contract PermitTokenBase {
     ) external {
         emit Approval(owner, spender, value);
     }
+
+    function allowance(
+        address _owner,
+        address _spender
+    ) external view returns (uint256) {
+        return 0;
+    }
 }
 
 // https://eips.ethereum.org/EIPS/eip-2612

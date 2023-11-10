@@ -134,7 +134,7 @@ contract DepositIntegrationTest is
         });
         vm.stopPrank();
 
-        vm.prank(stranger);
+        vm.prank(user);
         accounting.depositStETHWithPermit(
             user,
             0,
@@ -173,7 +173,7 @@ contract DepositIntegrationTest is
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         vm.stopPrank();
 
-        vm.prank(stranger);
+        vm.prank(user);
         uint256 shares = accounting.depositWstETHWithPermit(
             user,
             0,
