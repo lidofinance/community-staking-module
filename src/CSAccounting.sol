@@ -71,6 +71,7 @@ contract CSAccountingBase {
     error InvalidBlockedBondRetentionPeriod();
     error InvalidStolenAmount();
     error InvalidSender();
+    error InvalidMultiplier();
 }
 
 contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
@@ -92,12 +93,16 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         keccak256("EL_REWARDS_STEALING_PENALTY_INIT_ROLE");
     bytes32 public constant EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE =
         keccak256("EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE");
+    bytes32 public constant SET_BOND_MULTIPLIER_ROLE =
+        keccak256("SET_BOND_MULTIPLIER_ROLE");
 
     // todo: should be reconsidered
     uint256 public constant MIN_BLOCKED_BOND_RETENTION_PERIOD = 4 weeks;
     uint256 public constant MAX_BLOCKED_BOND_RETENTION_PERIOD = 365 days;
     uint256 public constant MIN_BLOCKED_BOND_MANAGEMENT_PERIOD = 1 days;
     uint256 public constant MAX_BLOCKED_BOND_MANAGEMENT_PERIOD = 7 days;
+
+    uint256 public constant TOTAL_BASIS_POINTS = 10000;
 
     uint256 public immutable COMMON_BOND_SIZE;
 
@@ -113,6 +118,9 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
 
     mapping(uint256 => uint256) internal _bondShares;
     mapping(uint256 => BlockedBond) internal _blockedBondEther;
+    /// This mapping contains bond multiplier points (in basis points) for Node Operator's bond.
+    /// By default, all Node Operators have x1 multiplier (10000 basis points).
+    mapping(uint256 => uint256) internal _bondMultiplierBasisPoints;
 
     /// @param commonBondSize common bond size in ETH for all node operators.
     /// @param admin admin role member address
@@ -190,6 +198,23 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 nodeOperatorId
     ) public view returns (uint256) {
         return _bondShares[nodeOperatorId];
+    }
+
+    /// @notice Returns basis points of the bond multiplier for the given node operator.
+    function getBondMultiplier(
+        uint256 nodeOperatorId
+    ) public view returns (uint256) {
+        uint256 basisPoints = _bondMultiplierBasisPoints[nodeOperatorId];
+        return basisPoints > 0 ? basisPoints : TOTAL_BASIS_POINTS;
+    }
+
+    /// @notice Sets basis points of the bond multiplier for the given node operator.
+    function setBondMultiplier(
+        uint256 nodeOperatorId,
+        uint256 basisPoints
+    ) external onlyRole(SET_BOND_MULTIPLIER_ROLE) {
+        if (basisPoints > TOTAL_BASIS_POINTS) revert InvalidMultiplier();
+        _bondMultiplierBasisPoints[nodeOperatorId] = basisPoints;
     }
 
     /// @notice Returns total rewards (bond + fees) in ETH for the given node operator.
@@ -322,9 +347,9 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 additionalKeysCount
     ) public view returns (uint256) {
         (uint256 current, uint256 required) = _bondETHSummary(nodeOperatorId);
-        uint256 requiredForKeys = getRequiredBondETHForKeys(
+        uint256 requiredForKeys = (getRequiredBondETHForKeys(
             additionalKeysCount
-        );
+        ) * getBondMultiplier(nodeOperatorId)) / TOTAL_BASIS_POINTS;
 
         uint256 missing = required > current ? required - current : 0;
         if (missing > 0) {
@@ -900,9 +925,9 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     ) internal view returns (uint256 current, uint256 required) {
         current = _ethByShares(getBondShares(nodeOperatorId));
         required =
-            getRequiredBondETHForKeys(
+            ((getRequiredBondETHForKeys(
                 _getNodeOperatorActiveKeys(nodeOperatorId)
-            ) +
+            ) * getBondMultiplier(nodeOperatorId)) / TOTAL_BASIS_POINTS) +
             getBlockedBondETH(nodeOperatorId);
     }
 
@@ -911,9 +936,9 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     ) internal view returns (uint256 current, uint256 required) {
         current = getBondShares(nodeOperatorId);
         required =
-            _getRequiredBondSharesForKeys(
+            ((_getRequiredBondSharesForKeys(
                 _getNodeOperatorActiveKeys(nodeOperatorId)
-            ) +
+            ) * getBondMultiplier(nodeOperatorId)) / TOTAL_BASIS_POINTS) +
             _sharesByEth(getBlockedBondETH(nodeOperatorId));
     }
 
