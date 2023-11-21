@@ -74,8 +74,11 @@ abstract contract DeployBase is Script {
                 moduleType: "community-staking-module",
                 locator: address(locator)
             });
+            uint256[] memory curve = new uint256[](2);
+            curve[0] = 2 ether;
+            curve[1] = 4 ether;
             CSAccounting accounting = new CSAccounting({
-                commonBondSize: 2 ether,
+                bondCurve: curve,
                 admin: deployer,
                 lidoLocator: address(locator),
                 communityStakingModule: address(csm),

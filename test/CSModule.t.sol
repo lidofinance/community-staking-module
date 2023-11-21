@@ -57,8 +57,11 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
             address(accounting)
         );
         csm = new CSModule("community-staking-module", address(locator));
+        uint256[] memory curve = new uint256[](2);
+        curve[0] = 2 ether;
+        curve[1] = 4 ether;
         accounting = new CSAccounting(
-            2 ether,
+            curve,
             admin,
             address(locator),
             address(wstETH),

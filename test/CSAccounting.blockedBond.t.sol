@@ -19,7 +19,7 @@ import { Fixtures } from "./helpers/Fixtures.sol";
 
 contract CSAccounting_revealed is CSAccounting {
     constructor(
-        uint256 commonBondSize,
+        uint256[] memory bondCurve,
         address admin,
         address lidoLocator,
         address wstETH,
@@ -28,7 +28,7 @@ contract CSAccounting_revealed is CSAccounting {
         uint256 blockedBondManagementPeriod
     )
         CSAccounting(
-            commonBondSize,
+            bondCurve,
             admin,
             lidoLocator,
             wstETH,
@@ -74,7 +74,7 @@ contract CSAccounting_revealed is CSAccounting {
     }
 }
 
-contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
+contract CSAccounting_BlockedBondTest is Test, Fixtures, CSAccountingBase {
     using stdStorage for StdStorage;
 
     LidoLocatorMock internal locator;
@@ -100,8 +100,11 @@ contract CSAccountingTest is Test, Fixtures, CSAccountingBase {
         (locator, wstETH, stETH, burner) = initLido();
 
         stakingModule = new CommunityStakingModuleMock();
+        uint256[] memory curve = new uint256[](2);
+        curve[0] = 2 ether;
+        curve[1] = 4 ether;
         accounting = new CSAccounting_revealed(
-            2 ether,
+            curve,
             admin,
             address(locator),
             address(wstETH),

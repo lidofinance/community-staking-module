@@ -6,6 +6,7 @@ pragma solidity 0.8.21;
 import "forge-std/Test.sol";
 
 import { CSAccountingBase, CSAccounting } from "../src/CSAccounting.sol";
+import { CSBondCurve } from "../src/CSBondCurve.sol";
 import { PermitTokenBase } from "./helpers/Permit.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 import { LidoMock } from "./helpers/mocks/LidoMock.sol";
@@ -16,6 +17,44 @@ import { CommunityStakingFeeDistributorMock } from "./helpers/mocks/CommunitySta
 import { WithdrawalQueueMockBase, WithdrawalQueueMock } from "./helpers/mocks/WithdrawalQueueMock.sol";
 
 import { Fixtures } from "./helpers/Fixtures.sol";
+
+contract CSAccounting_revealed is CSAccounting {
+    constructor(
+        uint256[] memory bondCurve,
+        address admin,
+        address lidoLocator,
+        address wstETH,
+        address communityStakingModule,
+        uint256 blockedBondRetentionPeriod,
+        uint256 blockedBondManagementPeriod
+    )
+        CSAccounting(
+            bondCurve,
+            admin,
+            lidoLocator,
+            wstETH,
+            communityStakingModule,
+            blockedBondRetentionPeriod,
+            blockedBondManagementPeriod
+        )
+    {}
+
+    function setBondCurve() public {
+        uint256[] memory _bondCurve = new uint256[](11);
+        _bondCurve[0] = 2 ether;
+        _bondCurve[1] = 3.90 ether; // 1.9
+        _bondCurve[2] = 5.70 ether; // 1.8
+        _bondCurve[3] = 7.40 ether; // 1.7
+        _bondCurve[4] = 9.00 ether; // 1.6
+        _bondCurve[5] = 10.50 ether; // 1.5
+        _bondCurve[6] = 11.90 ether; // 1.4
+        _bondCurve[7] = 13.10 ether; // 1.3
+        _bondCurve[8] = 14.30 ether; // 1.2
+        _bondCurve[9] = 15.40 ether; // 1.1
+        _bondCurve[10] = 16.40 ether; // 1.0
+        bondCurve = _bondCurve;
+    }
+}
 
 contract CSAccountingTest is
     Test,
@@ -31,7 +70,7 @@ contract CSAccountingTest is
 
     Stub internal burner;
 
-    CSAccounting public accounting;
+    CSAccounting_revealed public accounting;
     CommunityStakingModuleMock public stakingModule;
     CommunityStakingFeeDistributorMock public feeDistributor;
 
@@ -48,8 +87,11 @@ contract CSAccountingTest is
         (locator, wstETH, stETH, burner) = initLido();
 
         stakingModule = new CommunityStakingModuleMock();
-        accounting = new CSAccounting(
-            2 ether,
+        uint256[] memory curve = new uint256[](2);
+        curve[0] = 2 ether;
+        curve[1] = 4 ether;
+        accounting = new CSAccounting_revealed(
+            curve,
             admin,
             address(locator),
             address(wstETH),
@@ -72,7 +114,48 @@ contract CSAccountingTest is
             accounting.EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE(),
             admin
         );
+        accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
+        accounting.grantRole(accounting.SET_BOND_MULTIPLIER_ROLE(), admin);
         vm.stopPrank();
+    }
+
+    function test_setBondCurve() public {
+        uint256[] memory _bondCurve = new uint256[](2);
+        _bondCurve[0] = 2 ether;
+        _bondCurve[1] = 4 ether;
+
+        vm.prank(admin);
+        accounting.setBondCurve(_bondCurve);
+
+        assertEq(accounting.bondCurve(0), 2 ether);
+        assertEq(accounting.bondCurve(1), 4 ether);
+    }
+
+    function test_setBondCurve_RevertWhen_DoesNotHaveRole() public {
+        uint256[] memory _bondCurve = new uint256[](2);
+        _bondCurve[0] = 2 ether;
+        _bondCurve[1] = 4 ether;
+
+        vm.expectRevert(
+            "AccessControl: account 0x7fa9385be102ac3eac297483dd6233d62b3e1496 is missing role 0x645c9e6d2a86805cb5a28b1e4751c0dab493df7cf935070ce405489ba1a7bf72"
+        );
+
+        accounting.setBondCurve(_bondCurve);
+    }
+
+    function test_setBondMultiplier() public {
+        vm.prank(admin);
+        accounting.setBondMultiplier(0, 9500); // 0.95
+
+        assertEq(accounting.getBondMultiplier(0), 9500);
+    }
+
+    function test_setBondMultiplier_RevertWhen_DoesNotHaveRole() public {
+        vm.expectRevert(
+            "AccessControl: account 0x7fa9385be102ac3eac297483dd6233d62b3e1496 is missing role 0x62131145aee19b18b85aa8ead52ba87f0efb6e61e249155edc68a2c24e8f79b5"
+        );
+
+        accounting.setBondMultiplier(0, 9500); // 0.95
     }
 
     function test_totalBondShares() public {
@@ -622,10 +705,9 @@ contract CSAccountingTest is
         uint256 sharesAsFee = stETH.submit{ value: 0.1 ether }(address(0));
         uint256 ETHAsFee = stETH.getPooledEthByShares(sharesAsFee);
         vm.deal(user, 32 ether);
-        vm.startPrank(user);
+        vm.prank(user);
         accounting.depositETH{ value: 32 ether }(user, 0);
 
-        // todo: should we think about simulate rebase?
         uint256 totalRewards = accounting.getTotalRewardsETH(
             new bytes32[](1),
             0,
@@ -633,6 +715,31 @@ contract CSAccountingTest is
         );
 
         assertEq(totalRewards, ETHAsFee);
+
+        // set sophisticated curve
+        accounting.setBondCurve();
+
+        totalRewards = accounting.getTotalRewardsETH(
+            new bytes32[](1),
+            0,
+            sharesAsFee
+        );
+
+        // fee + excess after curve
+        assertEq(totalRewards, ETHAsFee + 10.6 ether);
+
+        // set multiplier
+        vm.prank(admin);
+        accounting.setBondMultiplier(0, 9500); // 0.95
+
+        totalRewards = accounting.getTotalRewardsETH(
+            new bytes32[](1),
+            0,
+            sharesAsFee
+        );
+
+        // fee + excess after curve + multiplier
+        assertEq(totalRewards, ETHAsFee + (32 ether - 21.4 ether * 0.95));
     }
 
     function test_getTotalRewardsStETH() public {
@@ -645,8 +752,8 @@ contract CSAccountingTest is
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
         accounting.depositStETH(user, 0, 32 ether);
+        vm.stopPrank();
 
-        // todo: should we think about simulate rebase?
         uint256 totalRewards = accounting.getTotalRewardsStETH(
             new bytes32[](1),
             0,
@@ -654,6 +761,30 @@ contract CSAccountingTest is
         );
 
         assertEq(totalRewards, stETHAsFee);
+
+        // set sophisticated curve
+        accounting.setBondCurve();
+        totalRewards = accounting.getTotalRewardsStETH(
+            new bytes32[](1),
+            0,
+            sharesAsFee
+        );
+
+        // fee + excess after curve
+        assertEq(totalRewards, stETHAsFee + 10.6 ether);
+
+        // set multiplier
+        vm.prank(admin);
+        accounting.setBondMultiplier(0, 9500); // 0.95
+
+        totalRewards = accounting.getTotalRewardsStETH(
+            new bytes32[](1),
+            0,
+            sharesAsFee
+        );
+
+        // fee + excess after curve + multiplier
+        assertEq(totalRewards, stETHAsFee + (32 ether - 21.4 ether * 0.95));
     }
 
     function test_getTotalRewardsWstETH() public {
@@ -668,39 +799,100 @@ contract CSAccountingTest is
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
         accounting.depositStETH(user, 0, 32 ether);
+        vm.stopPrank();
 
-        // todo: should we think about simulate rebase?
         uint256 totalRewards = accounting.getTotalRewardsWstETH(
             new bytes32[](1),
             0,
             sharesAsFee
         );
 
-        assertEq(totalRewards, wstETHAsFee);
+        assertApproxEqAbs(totalRewards, wstETHAsFee, 1);
+
+        // set sophisticated curve
+        accounting.setBondCurve();
+        totalRewards = accounting.getTotalRewardsWstETH(
+            new bytes32[](1),
+            0,
+            sharesAsFee
+        );
+
+        // fee + excess after curve
+        assertApproxEqAbs(
+            totalRewards,
+            wstETHAsFee + wstETH.getWstETHByStETH(10.6 ether),
+            1
+        );
+
+        // set multiplier
+        vm.prank(admin);
+        accounting.setBondMultiplier(0, 9500); // 0.95
+
+        totalRewards = accounting.getTotalRewardsWstETH(
+            new bytes32[](1),
+            0,
+            sharesAsFee
+        );
+
+        // fee + excess after curve + multiplier
+        assertEq(
+            totalRewards,
+            wstETHAsFee + wstETH.getWstETHByStETH(32 ether - 21.4 ether * 0.95)
+        );
     }
 
     function test_getExcessBondETH() public {
         _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(user, 64 ether);
-        vm.startPrank(user);
+        vm.prank(user);
         accounting.depositETH{ value: 64 ether }(user, 0);
 
         assertApproxEqAbs(accounting.getExcessBondETH(0), 32 ether, 1);
+
+        // set sophisticated curve
+        accounting.setBondCurve();
+
+        assertApproxEqAbs(accounting.getExcessBondETH(0), 42.6 ether, 1);
+
+        // set multiplier
+        vm.prank(admin);
+        accounting.setBondMultiplier(0, 9500); // 0.95
+
+        assertApproxEqAbs(
+            accounting.getExcessBondETH(0),
+            32 ether + (32 ether - 21.4 ether * 0.95),
+            1
+        );
     }
 
     function test_getExcessBondStETH() public {
         _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(user, 64 ether);
-        vm.startPrank(user);
+        vm.prank(user);
         accounting.depositETH{ value: 64 ether }(user, 0);
 
         assertApproxEqAbs(accounting.getExcessBondStETH(0), 32 ether, 1);
+
+        // set sophisticated curve
+        accounting.setBondCurve();
+
+        assertApproxEqAbs(accounting.getExcessBondStETH(0), 42.6 ether, 1);
+
+        // set multiplier
+        vm.prank(admin);
+        accounting.setBondMultiplier(0, 9500); // 0.95
+
+        assertApproxEqAbs(
+            accounting.getExcessBondStETH(0),
+            32 ether + (32 ether - 21.4 ether * 0.95),
+            1
+        );
     }
 
     function test_getExcessBondWstETH() public {
         _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(user, 64 ether);
-        vm.startPrank(user);
+        vm.prank(user);
         accounting.depositETH{ value: 64 ether }(user, 0);
 
         assertApproxEqAbs(
@@ -708,30 +900,79 @@ contract CSAccountingTest is
             wstETH.getWstETHByStETH(32 ether),
             1
         );
+
+        // set sophisticated curve
+        accounting.setBondCurve();
+
+        assertApproxEqAbs(
+            accounting.getExcessBondWstETH(0),
+            wstETH.getWstETHByStETH(42.6 ether),
+            1
+        );
+
+        // set multiplier
+        vm.prank(admin);
+        accounting.setBondMultiplier(0, 9500); // 0.95
+
+        assertApproxEqAbs(
+            accounting.getExcessBondWstETH(0),
+            wstETH.getWstETHByStETH(32 ether + (32 ether - 21.4 ether * 0.95)),
+            1
+        );
     }
 
     function test_getMissingBondETH() public {
         _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(user, 16 ether);
-        vm.startPrank(user);
+        vm.prank(user);
         accounting.depositETH{ value: 16 ether }(user, 0);
 
         assertApproxEqAbs(accounting.getMissingBondETH(0), 16 ether, 1);
+
+        // set sophisticated curve
+        accounting.setBondCurve();
+
+        assertApproxEqAbs(accounting.getMissingBondETH(0), 5.4 ether, 1);
+
+        // set multiplier
+        vm.prank(admin);
+        accounting.setBondMultiplier(0, 9500); // 0.95
+
+        assertApproxEqAbs(
+            accounting.getMissingBondETH(0),
+            16 ether - (32 ether - 21.4 ether * 0.95),
+            1
+        );
     }
 
     function test_getMissingBondStETH() public {
         _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(user, 16 ether);
-        vm.startPrank(user);
+        vm.prank(user);
         accounting.depositETH{ value: 16 ether }(user, 0);
 
         assertApproxEqAbs(accounting.getMissingBondStETH(0), 16 ether, 1);
+
+        // set sophisticated curve
+        accounting.setBondCurve();
+
+        assertApproxEqAbs(accounting.getMissingBondStETH(0), 5.4 ether, 1);
+
+        // set multiplier
+        vm.prank(admin);
+        accounting.setBondMultiplier(0, 9500); // 0.95
+
+        assertApproxEqAbs(
+            accounting.getMissingBondStETH(0),
+            16 ether - (32 ether - 21.4 ether * 0.95),
+            1
+        );
     }
 
     function test_getMissingBondWstETH() public {
         _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
         vm.deal(user, 16 ether);
-        vm.startPrank(user);
+        vm.prank(user);
         accounting.depositETH{ value: 16 ether }(user, 0);
 
         assertApproxEqAbs(
@@ -739,15 +980,50 @@ contract CSAccountingTest is
             wstETH.getWstETHByStETH(16 ether),
             1
         );
+
+        // set sophisticated curve
+        accounting.setBondCurve();
+
+        assertApproxEqAbs(
+            accounting.getMissingBondWstETH(0),
+            wstETH.getWstETHByStETH(5.4 ether),
+            1
+        );
+
+        // set multiplier
+        vm.prank(admin);
+        accounting.setBondMultiplier(0, 9500); // 0.95
+
+        assertApproxEqAbs(
+            accounting.getMissingBondWstETH(0),
+            wstETH.getWstETHByStETH(16 ether - (32 ether - 21.4 ether * 0.95)),
+            1
+        );
     }
 
     function test_getUnbondedKeysCount() public {
         _createNodeOperator({ ongoingVals: 16, withdrawnVals: 0 });
-        vm.deal(user, 17.57 ether);
-        vm.startPrank(user);
-        accounting.depositETH{ value: 17.57 ether }(user, 0);
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        accounting.depositETH{ value: 11.57 ether }(user, 0);
+
+        assertEq(accounting.getUnbondedKeysCount(0), 10);
+
+        vm.prank(user);
+        accounting.depositETH{ value: 2.43 ether }(user, 0);
+
+        assertEq(accounting.getUnbondedKeysCount(0), 9);
+
+        // set sophisticated curve
+        accounting.setBondCurve();
 
         assertEq(accounting.getUnbondedKeysCount(0), 7);
+
+        // set multiplier
+        vm.prank(admin);
+        accounting.setBondMultiplier(0, 9500); // 0.95
+
+        assertEq(accounting.getUnbondedKeysCount(0), 6);
     }
 
     function test_getKeysCountByBondETH() public {
@@ -755,6 +1031,12 @@ contract CSAccountingTest is
         assertEq(accounting.getKeysCountByBondETH(1.99 ether), 0);
         assertEq(accounting.getKeysCountByBondETH(2 ether), 1);
         assertEq(accounting.getKeysCountByBondETH(4 ether), 2);
+        assertEq(accounting.getKeysCountByBondETH(16 ether), 8);
+
+        // set sophisticated curve
+        accounting.setBondCurve();
+
+        assertEq(accounting.getKeysCountByBondETH(16 ether), 10);
     }
 
     function test_getKeysCountByBondStETH() public {
@@ -762,6 +1044,12 @@ contract CSAccountingTest is
         assertEq(accounting.getKeysCountByBondStETH(1.99 ether), 0);
         assertEq(accounting.getKeysCountByBondStETH(2 ether), 1);
         assertEq(accounting.getKeysCountByBondStETH(4 ether), 2);
+        assertEq(accounting.getKeysCountByBondETH(16 ether), 8);
+
+        // set sophisticated curve
+        accounting.setBondCurve();
+
+        assertEq(accounting.getKeysCountByBondStETH(16 ether), 10);
     }
 
     function test_getKeysCountByBondWstETH() public {
@@ -774,15 +1062,31 @@ contract CSAccountingTest is
         );
         assertEq(
             accounting.getKeysCountByBondWstETH(
-                wstETH.getWstETHByStETH(2 ether)
+                wstETH.getWstETHByStETH(2 ether + 1 wei)
             ),
             1
         );
         assertEq(
             accounting.getKeysCountByBondWstETH(
-                wstETH.getWstETHByStETH(4 ether)
+                wstETH.getWstETHByStETH(4 ether + 1 wei)
             ),
             2
+        );
+        assertEq(
+            accounting.getKeysCountByBondWstETH(
+                wstETH.getWstETHByStETH(16 ether + 1 wei)
+            ),
+            8
+        );
+
+        // set sophisticated curve
+        accounting.setBondCurve();
+
+        assertEq(
+            accounting.getKeysCountByBondWstETH(
+                wstETH.getWstETHByStETH(16 ether + 1 wei)
+            ),
+            10
         );
     }
 
@@ -812,6 +1116,7 @@ contract CSAccountingTest is
             UINT256_MAX
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
+        vm.stopPrank();
 
         assertEq(
             stETH.balanceOf(address(user)),
@@ -827,6 +1132,54 @@ contract CSAccountingTest is
             stETH.sharesOf(address(accounting)),
             bondSharesAfter,
             "bond manager after claim should be equal to before"
+        );
+
+        // set sophisticated curve
+        accounting.setBondCurve();
+
+        vm.deal(address(feeDistributor), 0.1 ether);
+        vm.prank(address(feeDistributor));
+        stETH.submit{ value: 0.1 ether }(address(0));
+
+        uint256 balanceBefore = stETH.balanceOf(address(user));
+        vm.prank(user);
+        accounting.claimRewardsStETH(
+            new bytes32[](1),
+            0,
+            sharesAsFee,
+            UINT256_MAX
+        );
+
+        // claimed fee before + fee + excess after curve
+        assertEq(
+            stETH.balanceOf(address(user)),
+            balanceBefore + stETHAsFee + 10.6 ether,
+            "user balance should be equal to fee reward + excess"
+        );
+
+        // set multiplier
+        vm.prank(admin);
+        accounting.setBondMultiplier(0, 9500); // 0.95
+
+        vm.deal(address(feeDistributor), 0.1 ether);
+        vm.prank(address(feeDistributor));
+        stETH.submit{ value: 0.1 ether }(address(0));
+
+        balanceBefore = stETH.balanceOf(address(user));
+        vm.prank(user);
+        accounting.claimRewardsStETH(
+            new bytes32[](1),
+            0,
+            sharesAsFee,
+            UINT256_MAX
+        );
+
+        // claimed fee before x2 + fee + excess after multiplier
+        assertApproxEqAbs(
+            stETH.balanceOf(address(user)),
+            balanceBefore + stETHAsFee + (21.4 ether - 21.4 ether * 0.95),
+            1,
+            "user balance should be equal to fee reward + excess"
         );
     }
 
@@ -1023,6 +1376,7 @@ contract CSAccountingTest is
             UINT256_MAX
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
+        vm.stopPrank();
 
         assertEq(
             wstETH.balanceOf(address(user)),
@@ -1043,6 +1397,64 @@ contract CSAccountingTest is
             stETH.sharesOf(address(accounting)),
             bondSharesBefore + 1 wei,
             "bond manager after claim should contain wrapped fee accuracy error"
+        );
+
+        // set sophisticated curve
+        accounting.setBondCurve();
+
+        vm.deal(address(feeDistributor), 0.1 ether);
+        vm.prank(address(feeDistributor));
+        stETH.submit{ value: 0.1 ether }(address(0));
+
+        uint256 balanceBefore = wstETH.balanceOf(address(user));
+        vm.prank(user);
+        accounting.claimRewardsWstETH(
+            new bytes32[](1),
+            0,
+            sharesAsFee,
+            UINT256_MAX
+        );
+
+        // claimed fee before + fee + excess after curve
+        assertApproxEqAbs(
+            wstETH.balanceOf(address(user)),
+            balanceBefore +
+                wstETH.getWstETHByStETH(
+                    stETH.getPooledEthByShares(sharesAsFee) + 10.6 ether
+                ),
+            1,
+            "user balance should be equal to fee reward + excess"
+        );
+
+        // set multiplier
+        vm.prank(admin);
+        accounting.setBondMultiplier(0, 9500); // 0.95
+
+        vm.deal(address(feeDistributor), 0.1 ether);
+        vm.prank(address(feeDistributor));
+        stETH.submit{ value: 0.1 ether }(address(0));
+
+        balanceBefore = wstETH.balanceOf(address(user));
+        vm.prank(user);
+        accounting.claimRewardsWstETH(
+            new bytes32[](1),
+            0,
+            sharesAsFee,
+            UINT256_MAX
+        );
+
+        // claimed fee before x2 + fee + excess after multiplier
+        assertApproxEqAbs(
+            wstETH.balanceOf(address(user)),
+            balanceBefore +
+                wstETH.getWstETHByStETH(
+                    stETH.getPooledEthByShares(sharesAsFee) +
+                        21.4 ether -
+                        21.4 ether *
+                        0.95
+                ),
+            1,
+            "user balance should be equal to fee reward + excess"
         );
     }
 
@@ -1151,6 +1563,7 @@ contract CSAccountingTest is
             UINT256_MAX
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
+        vm.stopPrank();
 
         assertEq(requestIds.length, 1, "request ids length should be 1");
         assertEq(
@@ -1164,6 +1577,60 @@ contract CSAccountingTest is
             "shares of withdrawal queue should be equal to requested shares"
         );
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+
+        // set sophisticated curve
+        accounting.setBondCurve();
+
+        vm.deal(address(feeDistributor), 0.1 ether);
+        vm.prank(address(feeDistributor));
+        stETH.submit{ value: 0.1 ether }(address(0));
+
+        uint256 balanceBefore = stETH.sharesOf(
+            address(locator.withdrawalQueue())
+        );
+        vm.prank(user);
+        accounting.requestRewardsETH(
+            new bytes32[](1),
+            0,
+            sharesAsFee,
+            UINT256_MAX
+        );
+
+        // requested fee before + fee + excess after curve
+        assertEq(
+            stETH.sharesOf(address(locator.withdrawalQueue())),
+            balanceBefore +
+                requestedAsUnstETHAsShares +
+                stETH.getSharesByPooledEth(10.6 ether),
+            "shares of withdrawal queue should be equal to requested shares + excess"
+        );
+
+        // set multiplier
+        vm.prank(admin);
+        accounting.setBondMultiplier(0, 9500); // 0.95
+
+        vm.deal(address(feeDistributor), 0.1 ether);
+        vm.prank(address(feeDistributor));
+        stETH.submit{ value: 0.1 ether }(address(0));
+
+        balanceBefore = stETH.sharesOf(address(locator.withdrawalQueue()));
+        vm.prank(user);
+        accounting.requestRewardsETH(
+            new bytes32[](1),
+            0,
+            sharesAsFee,
+            UINT256_MAX
+        );
+
+        // claimed fee before x2 + fee + excess after multiplier
+        assertApproxEqAbs(
+            stETH.sharesOf(address(locator.withdrawalQueue())),
+            balanceBefore +
+                requestedAsUnstETHAsShares +
+                stETH.getSharesByPooledEth(21.4 ether - 21.4 ether * 0.95),
+            1,
+            "shares of withdrawal queue should be equal to requested shares + excess"
+        );
     }
 
     function test_requestRewardsETH_WithDesirableValue() public {
