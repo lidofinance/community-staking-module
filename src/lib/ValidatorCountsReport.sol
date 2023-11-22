@@ -1,0 +1,28 @@
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity 0.8.21;
+
+/// @author skhomuti
+library ValidatorCountsReport {
+    error InvalidReportData();
+
+
+    function count(bytes calldata ids) internal pure returns (uint256) {
+        return ids.length / 8;
+    }
+
+    function validate(bytes calldata ids, bytes calldata counts) internal pure {
+        uint256 count = count(ids);
+        if (
+            counts.length / 16 != count ||
+            ids.length % 8 != 0 ||
+            counts.length % 16 != 0) revert InvalidReportData();
+    }
+
+    function next(
+        bytes calldata ids, bytes calldata counts, uint256 offset
+    ) internal returns (uint256 nodeOperatorId, uint256 keysCount) {
+        nodeOperatorId = uint256(bytes32(ids[8 * offset:8 * offset + 8]) >> 192);
+        keysCount = uint256(bytes32(counts[16 * offset:16 * offset + 16]) >> 128);
+    }
+}

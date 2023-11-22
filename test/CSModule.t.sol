@@ -1265,3 +1265,62 @@ contract CsmRemoveKeys is CSMCommon {
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 1 });
     }
 }
+
+contract CsmGetNodeOperatorSummary is CSMCommon {
+    // TODO add more tests here
+
+    function test_depositableValidatorsCount_whenStuckKeys() public {
+        uint256 noId = createNodeOperator(3);
+        csm.vetKeys(noId, 3);
+        csm.obtainDepositData(1, "");
+
+        (, , , , , , , uint256 depositableValidatorsCount) = csm
+            .getNodeOperatorSummary(noId);
+        assertEq(depositableValidatorsCount, 2);
+
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+
+        (, , , , , , , depositableValidatorsCount) = csm.getNodeOperatorSummary(
+            noId
+        );
+        assertEq(depositableValidatorsCount, 0);
+    }
+}
+
+contract CsmUpdateStuckValidatorsCount is CSMCommon {
+    function test_updateStuckValidatorsCount() public {
+        uint256 noId = createNodeOperator(3);
+        csm.vetKeys(noId, 3);
+        csm.obtainDepositData(1, "");
+
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit StuckSigningKeysCountChanged(noId, 1);
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit TargetValidatorsCountChanged(noId, 1);
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+
+        (
+            bool isTargetLimitActive,
+            uint256 targetValidatorsCount,
+            uint256 stuckValidatorsCount,
+            ,
+            ,
+            ,
+            uint256 totalDepositedValidators,
+
+        ) = csm.getNodeOperatorSummary(noId);
+        assertEq(stuckValidatorsCount, 1, "stuckValidatorsCount");
+        assertEq(
+            targetValidatorsCount,
+            totalDepositedValidators,
+            "targetValidatorsCount"
+        );
+        assertTrue(isTargetLimitActive, "isTargetLimitActive");
+    }
+}

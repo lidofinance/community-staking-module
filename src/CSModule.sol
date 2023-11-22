@@ -13,6 +13,7 @@ import { ILido } from "./interfaces/ILido.sol";
 
 import { QueueLib } from "./lib/QueueLib.sol";
 import { Batch } from "./lib/Batch.sol";
+import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
 
 import "./lib/SigningKeys.sol";
 
@@ -23,7 +24,6 @@ struct NodeOperator {
     address proposedRewardAddress;
     bool active;
     uint256 targetLimit;
-    uint256 targetLimitTimestamp;
     uint256 stuckPenaltyEndTimestamp;
     uint256 totalExitedKeys;
     uint256 totalAddedKeys;
@@ -83,6 +83,14 @@ contract CSModuleBase {
     event TotalSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
         uint256 totalValidatorsCount
+    );
+    event StuckSigningKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 stuckValidatorsCount
+    );
+    event TargetValidatorsCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 targetValidatorsCount
     );
 
     event BatchEnqueued(
@@ -559,7 +567,9 @@ contract CSModule is IStakingModule, CSModuleBase {
         stuckPenaltyEndTimestamp = no.stuckPenaltyEndTimestamp;
         totalExitedValidators = no.totalExitedKeys;
         totalDepositedValidators = no.totalDepositedKeys;
-        depositableValidatorsCount = no.totalVettedKeys - no.totalExitedKeys;
+        depositableValidatorsCount = no.isTargetLimitActive
+            ? no.targetLimit - no.totalDepositedKeys
+            : no.totalVettedKeys - no.totalDepositedKeys;
     }
 
     function getNodeOperatorSigningKeys(
@@ -621,10 +631,42 @@ contract CSModule is IStakingModule, CSModuleBase {
     }
 
     function updateStuckValidatorsCount(
-        bytes calldata /*_nodeOperatorIds*/,
-        bytes calldata /*_stuckValidatorsCounts*/
-    ) external {
-        // TODO: implement
+        bytes calldata nodeOperatorIds,
+        bytes calldata stuckValidatorsCounts
+    ) external onlyStakingRouter {
+        ValidatorCountsReport.validate(nodeOperatorIds, stuckValidatorsCounts);
+
+        for (
+            uint256 i = 0;
+            i < ValidatorCountsReport.count(nodeOperatorIds);
+            i++
+        ) {
+            (
+                uint256 nodeOperatorId,
+                uint256 stuckValidatorsCount
+            ) = ValidatorCountsReport.next(
+                    nodeOperatorIds,
+                    stuckValidatorsCounts,
+                    i
+                );
+            NodeOperator storage no = _nodeOperators[nodeOperatorId];
+            no.stuckValidatorsCount = stuckValidatorsCount;
+
+            if (stuckValidatorsCount == 0) {
+                no.isTargetLimitActive = false;
+                no.targetLimit = 0;
+            } else {
+                no.isTargetLimitActive = true;
+                no.targetLimit = no.totalDepositedKeys;
+            }
+
+            emit StuckSigningKeysCountChanged(
+                nodeOperatorId,
+                stuckValidatorsCount
+            );
+            emit TargetValidatorsCountChanged(nodeOperatorId, no.targetLimit);
+        }
+        _incrementNonce();
     }
 
     function updateExitedValidatorsCount(
@@ -1040,6 +1082,11 @@ contract CSModule is IStakingModule, CSModuleBase {
 
     modifier onlyKeyValidator() {
         // TODO: check the role
+        _;
+    }
+
+    modifier onlyStakingRouter() {
+        // TODO check the role
         _;
     }
 }
