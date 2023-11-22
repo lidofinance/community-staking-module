@@ -88,13 +88,13 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     }
 
     bytes32 public constant INSTANT_PENALIZE_BOND_ROLE =
-        keccak256("INSTANT_PENALIZE_BOND_ROLE");
+        keccak256("INSTANT_PENALIZE_BOND_ROLE"); // 0x9909cf24c2d3bafa8c229558d86a1b726ba57c3ef6350848dcf434a4181b56c7
     bytes32 public constant EL_REWARDS_STEALING_PENALTY_INIT_ROLE =
-        keccak256("EL_REWARDS_STEALING_PENALTY_INIT_ROLE");
+        keccak256("EL_REWARDS_STEALING_PENALTY_INIT_ROLE"); // 0xcc2e7ce7be452f766dd24d55d87a3d42901c31ffa5b600cd1dff475abec91c1f
     bytes32 public constant EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE =
-        keccak256("EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE");
+        keccak256("EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE"); // 0xdf6226649a1ca132f86d419e46892001284368a8f7445b5eb0d3fadf91329fe6
     bytes32 public constant SET_BOND_MULTIPLIER_ROLE =
-        keccak256("SET_BOND_MULTIPLIER_ROLE");
+        keccak256("SET_BOND_MULTIPLIER_ROLE"); // 0x62131145aee19b18b85aa8ead52ba87f0efb6e61e249155edc68a2c24e8f79b5
 
     // todo: should be reconsidered
     uint256 public constant MIN_BLOCKED_BOND_RETENTION_PERIOD = 4 weeks;

@@ -13,7 +13,18 @@ import "./helpers/mocks/LidoMock.sol";
 import "./helpers/mocks/WstETHMock.sol";
 import "./helpers/Utilities.sol";
 
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+
 contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
+    using Strings for uint256;
+
+    struct BatchInfo {
+        uint256 nodeOperatorId;
+        uint256 start;
+        uint256 count;
+        uint256 nonce;
+    }
+
     LidoLocatorMock public locator;
     WstETHMock public wstETH;
     LidoMock public stETH;
@@ -22,16 +33,16 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     CSAccounting public accounting;
     CommunityStakingFeeDistributorMock public communityStakingFeeDistributor;
 
+    address internal admin;
     address internal stranger;
-    address internal alice;
     address internal nodeOperator;
 
     function setUp() public {
-        alice = address(1);
-        nodeOperator = address(2);
-        stranger = address(3);
-        address[] memory penalizeRoleMembers = new address[](1);
-        penalizeRoleMembers[0] = alice;
+        vm.label(address(this), "TEST");
+
+        nodeOperator = nextAddress("NODE_OPERATOR");
+        stranger = nextAddress("STRANGER");
+        admin = nextAddress("ADMIN");
 
         (locator, wstETH, stETH, burner) = initLido();
 
@@ -46,7 +57,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         csm = new CSModule("community-staking-module", address(locator));
         accounting = new CSAccounting(
             2 ether,
-            alice,
+            admin,
             address(locator),
             address(wstETH),
             address(csm),
@@ -54,6 +65,13 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
             1 days
         );
         csm.setAccounting(address(accounting));
+
+        vm.startPrank(admin);
+        accounting.grantRole(
+            accounting.INSTANT_PENALIZE_BOND_ROLE(),
+            address(csm)
+        ); // NOTE: required because of `unvetKeys`
+        vm.stopPrank();
     }
 
     function createNodeOperator() internal returns (uint256) {
@@ -79,6 +97,66 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
             signatures
         );
         return csm.getNodeOperatorsCount() - 1;
+    }
+
+    function _assertQueueState(BatchInfo[] memory exp) internal {
+        // (bytes32 pointer,) = csm.queue(); // it works, but how?
+        bytes32 pointer = bytes32(0);
+
+        for (uint256 i = 0; i < exp.length; i++) {
+            BatchInfo memory b = exp[i];
+
+            assertFalse(
+                _isLastElementInQueue(pointer),
+                string.concat("unexpected end of queue at index ", i.toString())
+            );
+
+            pointer = _nextPointer(pointer);
+            (
+                uint256 nodeOperatorId,
+                uint256 start,
+                uint256 count,
+                uint256 nonce
+            ) = Batch.deserialize(pointer);
+
+            assertEq(
+                nodeOperatorId,
+                b.nodeOperatorId,
+                string.concat(
+                    "unexpected `nodeOperatorId` at index ",
+                    i.toString()
+                )
+            );
+            assertEq(
+                start,
+                b.start,
+                string.concat("unexpected `start` at index ", i.toString())
+            );
+            assertEq(
+                count,
+                b.count,
+                string.concat("unexpected `count` at index ", i.toString())
+            );
+            assertEq(
+                nonce,
+                b.nonce,
+                string.concat("unexpected `nonce` at index ", i.toString())
+            );
+        }
+
+        assertTrue(_isLastElementInQueue(pointer), "unexpected tail of queue");
+    }
+
+    function _isLastElementInQueue(
+        bytes32 pointer
+    ) internal view returns (bool) {
+        bytes32 next = _nextPointer(pointer);
+        return next == pointer;
+    }
+
+    function _nextPointer(bytes32 pointer) internal view returns (bytes32) {
+        (, bytes32 next, ) = csm.depositQueue(1, pointer);
+        return next;
     }
 }
 
@@ -369,9 +447,9 @@ contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
         assertEq(no.rewardAddress, nodeOperator);
 
         vm.expectEmit(true, true, false, true, address(csm));
-        emit NodeOperatorManagerAddressChangeProposed(noId, alice);
+        emit NodeOperatorManagerAddressChangeProposed(noId, stranger);
         vm.prank(nodeOperator);
-        csm.proposeNodeOperatorManagerAddressChange(noId, alice);
+        csm.proposeNodeOperatorManagerAddressChange(noId, stranger);
         assertEq(no.managerAddress, nodeOperator);
         assertEq(no.rewardAddress, nodeOperator);
     }
@@ -380,7 +458,7 @@ contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
         public
     {
         vm.expectRevert(NodeOperatorDoesNotExist.selector);
-        csm.proposeNodeOperatorManagerAddressChange(0, alice);
+        csm.proposeNodeOperatorManagerAddressChange(0, stranger);
     }
 
     function test_proposeNodeOperatorManagerAddressChange_RevertWhenNotManager()
@@ -388,7 +466,7 @@ contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
     {
         uint256 noId = createNodeOperator();
         vm.expectRevert(SenderIsNotManagerAddress.selector);
-        csm.proposeNodeOperatorManagerAddressChange(noId, alice);
+        csm.proposeNodeOperatorManagerAddressChange(noId, stranger);
     }
 
     function test_proposeNodeOperatorManagerAddressChange_RevertWhenAlreadyProposed()
@@ -396,11 +474,11 @@ contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
     {
         uint256 noId = createNodeOperator();
         vm.prank(nodeOperator);
-        csm.proposeNodeOperatorManagerAddressChange(noId, alice);
+        csm.proposeNodeOperatorManagerAddressChange(noId, stranger);
 
         vm.expectRevert(AlreadyProposed.selector);
         vm.prank(nodeOperator);
-        csm.proposeNodeOperatorManagerAddressChange(noId, alice);
+        csm.proposeNodeOperatorManagerAddressChange(noId, stranger);
     }
 
     function test_proposeNodeOperatorManagerAddressChange_RevertWhenSameAddressProposed()
@@ -421,15 +499,15 @@ contract CsmConfirmNodeOperatorManagerAddressChange is CSMCommon {
         assertEq(no.rewardAddress, nodeOperator);
 
         vm.prank(nodeOperator);
-        csm.proposeNodeOperatorManagerAddressChange(noId, alice);
+        csm.proposeNodeOperatorManagerAddressChange(noId, stranger);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit NodeOperatorManagerAddressChanged(noId, nodeOperator, alice);
-        vm.prank(alice);
+        emit NodeOperatorManagerAddressChanged(noId, nodeOperator, stranger);
+        vm.prank(stranger);
         csm.confirmNodeOperatorManagerAddressChange(noId);
 
         no = csm.getNodeOperator(noId);
-        assertEq(no.managerAddress, alice);
+        assertEq(no.managerAddress, stranger);
         assertEq(no.rewardAddress, nodeOperator);
     }
 
@@ -445,7 +523,7 @@ contract CsmConfirmNodeOperatorManagerAddressChange is CSMCommon {
     {
         uint256 noId = createNodeOperator();
         vm.expectRevert(SenderIsNotProposedAddress.selector);
-        vm.prank(alice);
+        vm.prank(stranger);
         csm.confirmNodeOperatorManagerAddressChange(noId);
     }
 
@@ -457,7 +535,7 @@ contract CsmConfirmNodeOperatorManagerAddressChange is CSMCommon {
         csm.proposeNodeOperatorManagerAddressChange(noId, stranger);
 
         vm.expectRevert(SenderIsNotProposedAddress.selector);
-        vm.prank(alice);
+        vm.prank(nextAddress());
         csm.confirmNodeOperatorManagerAddressChange(noId);
     }
 }
@@ -470,9 +548,9 @@ contract CsmProposeNodeOperatorRewardAddressChange is CSMCommon {
         assertEq(no.rewardAddress, nodeOperator);
 
         vm.expectEmit(true, true, false, true, address(csm));
-        emit NodeOperatorRewardAddressChangeProposed(noId, alice);
+        emit NodeOperatorRewardAddressChangeProposed(noId, stranger);
         vm.prank(nodeOperator);
-        csm.proposeNodeOperatorRewardAddressChange(noId, alice);
+        csm.proposeNodeOperatorRewardAddressChange(noId, stranger);
         assertEq(no.managerAddress, nodeOperator);
         assertEq(no.rewardAddress, nodeOperator);
     }
@@ -481,7 +559,7 @@ contract CsmProposeNodeOperatorRewardAddressChange is CSMCommon {
         public
     {
         vm.expectRevert(NodeOperatorDoesNotExist.selector);
-        csm.proposeNodeOperatorRewardAddressChange(0, alice);
+        csm.proposeNodeOperatorRewardAddressChange(0, stranger);
     }
 
     function test_proposeNodeOperatorRewardAddressChange_RevertWhenNotRewardAddress()
@@ -489,7 +567,7 @@ contract CsmProposeNodeOperatorRewardAddressChange is CSMCommon {
     {
         uint256 noId = createNodeOperator();
         vm.expectRevert(SenderIsNotRewardAddress.selector);
-        csm.proposeNodeOperatorRewardAddressChange(noId, alice);
+        csm.proposeNodeOperatorRewardAddressChange(noId, stranger);
     }
 
     function test_proposeNodeOperatorRewardAddressChange_RevertWhenAlreadyProposed()
@@ -497,11 +575,11 @@ contract CsmProposeNodeOperatorRewardAddressChange is CSMCommon {
     {
         uint256 noId = createNodeOperator();
         vm.prank(nodeOperator);
-        csm.proposeNodeOperatorRewardAddressChange(noId, alice);
+        csm.proposeNodeOperatorRewardAddressChange(noId, stranger);
 
         vm.expectRevert(AlreadyProposed.selector);
         vm.prank(nodeOperator);
-        csm.proposeNodeOperatorRewardAddressChange(noId, alice);
+        csm.proposeNodeOperatorRewardAddressChange(noId, stranger);
     }
 
     function test_proposeNodeOperatorRewardAddressChange_RevertWhenSameAddressProposed()
@@ -522,16 +600,16 @@ contract CsmConfirmNodeOperatorRewardAddressChange is CSMCommon {
         assertEq(no.rewardAddress, nodeOperator);
 
         vm.prank(nodeOperator);
-        csm.proposeNodeOperatorRewardAddressChange(noId, alice);
+        csm.proposeNodeOperatorRewardAddressChange(noId, stranger);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit NodeOperatorRewardAddressChanged(noId, nodeOperator, alice);
-        vm.prank(alice);
+        emit NodeOperatorRewardAddressChanged(noId, nodeOperator, stranger);
+        vm.prank(stranger);
         csm.confirmNodeOperatorRewardAddressChange(noId);
 
         no = csm.getNodeOperator(noId);
         assertEq(no.managerAddress, nodeOperator);
-        assertEq(no.rewardAddress, alice);
+        assertEq(no.rewardAddress, stranger);
     }
 
     function test_confirmNodeOperatorRewardAddressChange_RevertWhenNoNodeOperator()
@@ -546,7 +624,7 @@ contract CsmConfirmNodeOperatorRewardAddressChange is CSMCommon {
     {
         uint256 noId = createNodeOperator();
         vm.expectRevert(SenderIsNotProposedAddress.selector);
-        vm.prank(alice);
+        vm.prank(stranger);
         csm.confirmNodeOperatorRewardAddressChange(noId);
     }
 
@@ -558,7 +636,7 @@ contract CsmConfirmNodeOperatorRewardAddressChange is CSMCommon {
         csm.proposeNodeOperatorRewardAddressChange(noId, stranger);
 
         vm.expectRevert(SenderIsNotProposedAddress.selector);
-        vm.prank(alice);
+        vm.prank(nextAddress());
         csm.confirmNodeOperatorRewardAddressChange(noId);
     }
 }
@@ -568,18 +646,18 @@ contract CsmResetNodeOperatorManagerAddress is CSMCommon {
         uint256 noId = createNodeOperator();
 
         vm.prank(nodeOperator);
-        csm.proposeNodeOperatorRewardAddressChange(noId, alice);
-        vm.prank(alice);
+        csm.proposeNodeOperatorRewardAddressChange(noId, stranger);
+        vm.prank(stranger);
         csm.confirmNodeOperatorRewardAddressChange(noId);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit NodeOperatorManagerAddressChanged(noId, nodeOperator, alice);
-        vm.prank(alice);
+        emit NodeOperatorManagerAddressChanged(noId, nodeOperator, stranger);
+        vm.prank(stranger);
         csm.resetNodeOperatorManagerAddress(noId);
 
         NodeOperatorInfo memory no = csm.getNodeOperator(noId);
-        assertEq(no.managerAddress, alice);
-        assertEq(no.rewardAddress, alice);
+        assertEq(no.managerAddress, stranger);
+        assertEq(no.rewardAddress, stranger);
     }
 
     function test_resetNodeOperatorManagerAddress_RevertWhenNoNodeOperator()
@@ -618,13 +696,15 @@ contract CsmVetKeys is CSMCommon {
 
         NodeOperatorInfo memory no = csm.getNodeOperator(noId);
         assertEq(no.totalVettedValidators, 1);
-        (bytes32[] memory items, , ) = csm.depositQueue(1, bytes32(0));
-        (uint128 batchNoId, uint64 start, uint64 count) = Batch.deserialize(
-            items[0]
-        );
-        assertEq(batchNoId, uint128(noId));
-        assertEq(start, 0);
-        assertEq(count, 1);
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+        exp[0] = BatchInfo({
+            nodeOperatorId: noId,
+            start: 0,
+            count: 1,
+            nonce: 0
+        });
+        _assertQueueState(exp);
     }
 
     function test_vetKeys_totalVettedKeysIsNotZero() public {
@@ -639,13 +719,21 @@ contract CsmVetKeys is CSMCommon {
 
         NodeOperatorInfo memory no = csm.getNodeOperator(noId);
         assertEq(no.totalVettedValidators, 2);
-        (bytes32[] memory items, , ) = csm.depositQueue(2, bytes32(0));
-        (uint128 batchNoId, uint64 start, uint64 count) = Batch.deserialize(
-            items[1]
-        );
-        assertEq(batchNoId, uint128(noId));
-        assertEq(start, 1);
-        assertEq(count, 1);
+
+        BatchInfo[] memory exp = new BatchInfo[](2);
+        exp[0] = BatchInfo({
+            nodeOperatorId: noId,
+            start: 0,
+            count: 1,
+            nonce: 0
+        });
+        exp[1] = BatchInfo({
+            nodeOperatorId: noId,
+            start: 1,
+            count: 1,
+            nonce: 0
+        });
+        _assertQueueState(exp);
     }
 
     function test_vetKeys_RevertWhenNoNodeOperator() public {
@@ -665,5 +753,71 @@ contract CsmVetKeys is CSMCommon {
         uint256 noId = createNodeOperator();
         vm.expectRevert(InvalidVetKeysPointer.selector);
         csm.vetKeys(noId, 2);
+    }
+}
+
+contract CsmQueueOps is CSMCommon {
+    function test_queueIsCleanByDefault() public {
+        createNodeOperator({ keysCount: 2 });
+        csm.vetKeys(0, 1);
+
+        (bool isDirty /* next */, ) = csm.isQueueDirty(1, bytes32(0));
+        assertFalse(isDirty, "queue should be clean");
+    }
+
+    function test_queueIsDirty_WhenUnvettedKeys() public {
+        createNodeOperator({ keysCount: 2 });
+        csm.vetKeys(0, 1);
+        csm.unvetKeys(0);
+
+        (bool isDirty /* next */, ) = csm.isQueueDirty(1, bytes32(0));
+        assertTrue(isDirty, "queue should be dirty");
+    }
+
+    function test_queueIsClean_AfterCleanup() public {
+        createNodeOperator({ keysCount: 2 });
+        csm.vetKeys(0, 1);
+        csm.unvetKeys(0);
+        csm.cleanDepositQueue(1, bytes32(0));
+
+        (bool isDirty /* next */, ) = csm.isQueueDirty(1, bytes32(0));
+        assertFalse(isDirty, "queue should be clean");
+    }
+
+    function test_queueIsDirty_WhenDanglingBatch() public {
+        createNodeOperator({ keysCount: 2 });
+
+        csm.vetKeys(0, 1);
+        csm.vetKeys(0, 2);
+        csm.unvetKeys(0);
+        csm.vetKeys(0, 2);
+
+        // let's check the state of the queue
+        BatchInfo[] memory exp = new BatchInfo[](3);
+        exp[0] = BatchInfo({ nodeOperatorId: 0, start: 0, count: 1, nonce: 0 });
+        exp[1] = BatchInfo({ nodeOperatorId: 0, start: 1, count: 1, nonce: 0 });
+        exp[2] = BatchInfo({ nodeOperatorId: 0, start: 0, count: 2, nonce: 1 });
+        _assertQueueState(exp);
+
+        (bool isDirty /* next */, ) = csm.isQueueDirty(3, bytes32(0));
+        assertTrue(isDirty, "queue should be dirty");
+    }
+
+    function test_queueIsClean_WhenDanglingBatchCleanedUp() public {
+        createNodeOperator({ keysCount: 2 });
+
+        csm.vetKeys(0, 1);
+        csm.vetKeys(0, 2);
+        csm.unvetKeys(0);
+        csm.vetKeys(0, 2);
+
+        csm.cleanDepositQueue(3, bytes32(0));
+        // let's check the state of the queue
+        BatchInfo[] memory exp = new BatchInfo[](1);
+        exp[0] = BatchInfo({ nodeOperatorId: 0, start: 0, count: 2, nonce: 1 });
+        _assertQueueState(exp);
+
+        (bool isDirty /* next */, ) = csm.isQueueDirty(3, bytes32(0));
+        assertFalse(isDirty, "queue should be clean");
     }
 }

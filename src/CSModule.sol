@@ -33,6 +33,7 @@ struct NodeOperator {
     uint256 stuckValidatorsCount;
     uint256 refundedValidatorsCount;
     bool isTargetLimitActive;
+    uint256 queueNonce;
 }
 
 struct NodeOperatorInfo {
@@ -107,9 +108,9 @@ contract CSModuleBase {
 contract CSModule is IStakingModule, CSModuleBase {
     using QueueLib for QueueLib.Queue;
 
-    // @dev max number of node operators is limited by uint128 due to Batch serialization in 32 bytes
+    // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
     // it seems to be enough
-    uint128 public constant MAX_NODE_OPERATORS_COUNT = type(uint128).max;
+    uint128 public constant MAX_NODE_OPERATORS_COUNT = type(uint64).max;
     bytes32 public constant SIGNING_KEYS_POSITION =
         keccak256("lido.CommunityStakingModule.signingKeysPosition");
 
@@ -645,14 +646,13 @@ contract CSModule is IStakingModule, CSModuleBase {
         if (vetKeysPointer > no.totalAddedKeys) revert InvalidVetKeysPointer();
 
         uint64 count = SafeCast.toUint64(vetKeysPointer - no.totalVettedKeys);
-        uint64 start = SafeCast.toUint64(
-            no.totalVettedKeys == 0 ? 0 : no.totalVettedKeys
-        );
+        uint64 start = SafeCast.toUint64(no.totalVettedKeys);
 
         bytes32 pointer = Batch.serialize({
-            nodeOperatorId: SafeCast.toUint128(nodeOperatorId),
+            nodeOperatorId: SafeCast.toUint64(nodeOperatorId),
             start: start,
-            count: count
+            count: count,
+            nonce: SafeCast.toUint64(no.queueNonce)
         });
 
         no.totalVettedKeys = vetKeysPointer;
@@ -682,6 +682,7 @@ contract CSModule is IStakingModule, CSModuleBase {
     function _unvetKeys(uint256 nodeOperatorId) internal {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         no.totalVettedKeys = no.totalDepositedKeys;
+        no.queueNonce++;
         emit VettedSigningKeysCountChanged(nodeOperatorId, no.totalVettedKeys);
         _incrementNonce();
     }
@@ -754,6 +755,7 @@ contract CSModule is IStakingModule, CSModuleBase {
             _totalDepositedValidators += keysCount;
             NodeOperator storage no = _nodeOperators[nodeOperatorId];
             no.totalDepositedKeys += keysCount;
+            // redundant check, enforced by _assertIsValidBatch
             require(
                 no.totalDepositedKeys <= no.totalVettedKeys,
                 "too many keys"
@@ -789,11 +791,12 @@ contract CSModule is IStakingModule, CSModuleBase {
     {
         uint256 start;
         uint256 count;
+        uint256 nonce;
 
-        (nodeOperatorId, start, count) = Batch.deserialize(batch);
+        (nodeOperatorId, start, count, nonce) = Batch.deserialize(batch);
 
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        _assertIsValidBatch(no, start, count);
+        _assertIsValidBatch(no, start, count, nonce);
 
         startIndex = Math.max(start, no.totalDepositedKeys);
         depositableKeysCount = start + count - startIndex;
@@ -802,9 +805,11 @@ contract CSModule is IStakingModule, CSModuleBase {
     function _assertIsValidBatch(
         NodeOperator storage no,
         uint256 start,
-        uint256 count
+        uint256 count,
+        uint256 nonce
     ) internal view {
         require(count != 0, "Empty batch given");
+        require(nonce == no.queueNonce, "Invalid batch nonce");
         require(
             _unvettedKeysInBatch(no, start, count) == false,
             "Batch contains unvetted keys"
@@ -836,11 +841,18 @@ contract CSModule is IStakingModule, CSModuleBase {
                 break;
             }
 
-            (uint256 nodeOperatorId, uint256 start, uint256 count) = Batch
-                .deserialize(item);
+            (
+                uint256 nodeOperatorId,
+                uint256 start,
+                uint256 count,
+                uint256 nonce
+            ) = Batch.deserialize(item);
             NodeOperator storage no = _nodeOperators[nodeOperatorId];
-            if (_unvettedKeysInBatch(no, start, count)) {
+            if (
+                _unvettedKeysInBatch(no, start, count) || nonce != no.queueNonce
+            ) {
                 queue.remove(pointer, item);
+                continue;
             }
 
             pointer = item;
@@ -871,7 +883,7 @@ contract CSModule is IStakingModule, CSModuleBase {
     }
 
     /// @dev returns the next pointer to start check from
-    function isQueueHasUnvettedKeys(
+    function isQueueDirty(
         uint256 maxItems,
         bytes32 pointer
     ) external view returns (bool, bytes32) {
@@ -887,10 +899,16 @@ contract CSModule is IStakingModule, CSModuleBase {
                 break;
             }
 
-            (uint256 nodeOperatorId, uint256 start, uint256 count) = Batch
-                .deserialize(item);
+            (
+                uint256 nodeOperatorId,
+                uint256 start,
+                uint256 count,
+                uint256 nonce
+            ) = Batch.deserialize(item);
             NodeOperator storage no = _nodeOperators[nodeOperatorId];
-            if (_unvettedKeysInBatch(no, start, count)) {
+            if (
+                _unvettedKeysInBatch(no, start, count) || nonce != no.queueNonce
+            ) {
                 return (true, pointer);
             }
 

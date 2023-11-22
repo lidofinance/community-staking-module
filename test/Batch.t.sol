@@ -11,44 +11,52 @@ contract BatchTest is Test {
         bytes32 b = Batch.serialize({
             nodeOperatorId: 999,
             start: 3,
-            count: 42
+            count: 42,
+            nonce: 7
         });
 
         assertEq(
             b,
-            //            noIndex            |    start      |     count     |
-            0x000000000000000000000000000003e70000000000000003000000000000002a
+            //   noIndex     |    start      |     count     |     nonce
+            0x00000000000003e70000000000000003000000000000002a0000000000000007
         );
     }
 
     function test_deserialize() public {
-        (uint128 nodeOperatorId, uint64 start, uint64 count) = Batch
-            .deserialize(
+        (
+            uint256 nodeOperatorId,
+            uint256 start,
+            uint256 count,
+            uint256 nonce
+        ) = Batch.deserialize(
                 0x0000000000000000000000000000000000000000000000000000000000000000
             );
 
         assertEq(nodeOperatorId, 0, "nodeOperatorId != 0");
         assertEq(start, 0, "start != 0");
         assertEq(count, 0, "count != 0");
+        assertEq(nonce, 0, "nonce != 0");
 
-        (nodeOperatorId, start, count) = Batch.deserialize(
-            0x000000000000000000000000000003e70000000000000003000000000000002a
+        (nodeOperatorId, start, count, nonce) = Batch.deserialize(
+            0x00000000000003e70000000000000003000000000000002a0000000000000007
         );
 
         assertEq(nodeOperatorId, 999, "nodeOperatorId != 999");
         assertEq(start, 3, "start != 3");
         assertEq(count, 42, "count != 42");
+        assertEq(nonce, 7, "nonce != 7");
 
-        (nodeOperatorId, start, count) = Batch.deserialize(
+        (nodeOperatorId, start, count, nonce) = Batch.deserialize(
             0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
         );
 
         assertEq(
             nodeOperatorId,
-            type(uint128).max,
-            "nodeOperatorId != uint128.max"
+            type(uint64).max,
+            "nodeOperatorId != uint64.max"
         );
         assertEq(start, type(uint64).max, "start != uint64.max");
         assertEq(count, type(uint64).max, "count != uint64.max");
+        assertEq(nonce, type(uint64).max, "nonce != uint64.max");
     }
 }
