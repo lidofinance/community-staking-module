@@ -117,7 +117,7 @@ contract CSModule is IStakingModule, CSModuleBase {
 
     // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
     // it seems to be enough
-    uint128 public constant MAX_NODE_OPERATORS_COUNT = type(uint64).max;
+    uint64 public constant MAX_NODE_OPERATORS_COUNT = type(uint64).max;
     bytes32 public constant SIGNING_KEYS_POSITION =
         keccak256("lido.CommunityStakingModule.signingKeysPosition");
 
