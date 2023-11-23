@@ -25,6 +25,8 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         uint256 nonce;
     }
 
+    bytes32 public constant NULL_POINTER = bytes32(0);
+
     LidoLocatorMock public locator;
     WstETHMock public wstETH;
     LidoMock public stETH;
@@ -101,13 +103,10 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
 
     function _assertQueueState(BatchInfo[] memory exp) internal {
         if (exp.length == 0) {
-            vm.expectRevert("Queue: empty");
-            _nextPointer(bytes32(0));
-            return;
+            revert("NOTE: use _assertQueueIsEmpty");
         }
 
-        // (bytes32 pointer,) = csm.queue(); // it works, but how?
-        bytes32 pointer = bytes32(0);
+        (bytes32 pointer, ) = csm.queue(); // queue.front
 
         for (uint256 i = 0; i < exp.length; i++) {
             BatchInfo memory b = exp[i];
@@ -151,6 +150,11 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         }
 
         assertTrue(_isLastElementInQueue(pointer), "unexpected tail of queue");
+    }
+
+    function _assertQueueIsEmpty() internal {
+        (bytes32 front, bytes32 back) = csm.queue();
+        assertEq(front, back, "queue is not empty");
     }
 
     function _isLastElementInQueue(
@@ -763,11 +767,13 @@ contract CsmVetKeys is CSMCommon {
 }
 
 contract CsmQueueOps is CSMCommon {
-    function test_queueIsCleanByDefault() public {
-        createNodeOperator({ keysCount: 2 });
-        csm.vetKeys(0, 1);
+    uint256 internal constant LOOKUP_DEPTH = 150; // derived from maxDepositsPerBlock
 
-        (bool isDirty /* next */, ) = csm.isQueueDirty(1, bytes32(0));
+    function test_emptyQueueIsClean() public {
+        (bool isDirty /* next */, ) = csm.isQueueDirty(
+            LOOKUP_DEPTH,
+            NULL_POINTER
+        );
         assertFalse(isDirty, "queue should be clean");
     }
 
@@ -776,7 +782,10 @@ contract CsmQueueOps is CSMCommon {
         csm.vetKeys(0, 1);
         csm.unvetKeys(0);
 
-        (bool isDirty /* next */, ) = csm.isQueueDirty(1, bytes32(0));
+        (bool isDirty /* next */, ) = csm.isQueueDirty(
+            LOOKUP_DEPTH,
+            NULL_POINTER
+        );
         assertTrue(isDirty, "queue should be dirty");
     }
 
@@ -784,13 +793,16 @@ contract CsmQueueOps is CSMCommon {
         createNodeOperator({ keysCount: 2 });
         csm.vetKeys(0, 1);
         csm.unvetKeys(0);
-        csm.cleanDepositQueue(1, bytes32(0));
+        csm.cleanDepositQueue(LOOKUP_DEPTH, NULL_POINTER);
 
-        (bool isDirty /* next */, ) = csm.isQueueDirty(1, bytes32(0));
+        (bool isDirty /* next */, ) = csm.isQueueDirty(
+            LOOKUP_DEPTH,
+            NULL_POINTER
+        );
         assertFalse(isDirty, "queue should be clean");
     }
 
-    function test_queueIsDirty_WhenDanglingBatch() public {
+    function test_queueIsDirty_WhenDanglingBatches() public {
         createNodeOperator({ keysCount: 2 });
 
         csm.vetKeys(0, 1);
@@ -805,11 +817,14 @@ contract CsmQueueOps is CSMCommon {
         exp[2] = BatchInfo({ nodeOperatorId: 0, start: 0, count: 2, nonce: 1 });
         _assertQueueState(exp);
 
-        (bool isDirty /* next */, ) = csm.isQueueDirty(3, bytes32(0));
+        (bool isDirty /* next */, ) = csm.isQueueDirty(
+            LOOKUP_DEPTH,
+            NULL_POINTER
+        );
         assertTrue(isDirty, "queue should be dirty");
     }
 
-    function test_queueIsClean_WhenDanglingBatchCleanedUp() public {
+    function test_queueIsClean_WhenDanglingBatchesCleanedUp() public {
         createNodeOperator({ keysCount: 2 });
 
         csm.vetKeys(0, 1);
@@ -817,13 +832,83 @@ contract CsmQueueOps is CSMCommon {
         csm.unvetKeys(0);
         csm.vetKeys(0, 2);
 
-        csm.cleanDepositQueue(3, bytes32(0));
+        csm.cleanDepositQueue(LOOKUP_DEPTH, NULL_POINTER);
         // let's check the state of the queue
         BatchInfo[] memory exp = new BatchInfo[](1);
         exp[0] = BatchInfo({ nodeOperatorId: 0, start: 0, count: 2, nonce: 1 });
         _assertQueueState(exp);
 
-        (bool isDirty /* next */, ) = csm.isQueueDirty(3, bytes32(0));
+        (bool isDirty /* next */, ) = csm.isQueueDirty(
+            LOOKUP_DEPTH,
+            NULL_POINTER
+        );
         assertFalse(isDirty, "queue should be clean");
+    }
+
+    function test_cleanup_emptyQueue() public {
+        csm.cleanDepositQueue(LOOKUP_DEPTH, NULL_POINTER);
+        _assertQueueIsEmpty();
+
+        (bool isDirty /* next */, ) = csm.isQueueDirty(
+            LOOKUP_DEPTH,
+            NULL_POINTER
+        );
+        assertFalse(isDirty, "queue should be clean");
+    }
+
+    function test_cleanup_WhenOneInvalidBatchInRow() public {
+        createNodeOperator({ keysCount: 2 });
+
+        csm.vetKeys(0, 1);
+        csm.unvetKeys(0);
+        csm.vetKeys(0, 1);
+
+        csm.cleanDepositQueue(LOOKUP_DEPTH, NULL_POINTER);
+        // let's check the state of the queue
+        BatchInfo[] memory exp = new BatchInfo[](1);
+        exp[0] = BatchInfo({ nodeOperatorId: 0, start: 0, count: 1, nonce: 1 });
+        _assertQueueState(exp);
+
+        (bool isDirty /* next */, ) = csm.isQueueDirty(
+            LOOKUP_DEPTH,
+            NULL_POINTER
+        );
+        assertFalse(isDirty, "queue should be clean");
+    }
+
+    function test_cleanup_WhenMultipleInvalidBatchesInRow() public {
+        createNodeOperator({ keysCount: 3 });
+        createNodeOperator({ keysCount: 2 });
+
+        csm.vetKeys(0, 1); // <-- invalid
+        csm.vetKeys(1, 1);
+        csm.vetKeys(0, 2); // <-- invalid
+        csm.vetKeys(0, 3); // <-- invalid
+        csm.unvetKeys(0);
+        csm.vetKeys(0, 3);
+
+        csm.cleanDepositQueue(LOOKUP_DEPTH, NULL_POINTER);
+        // let's check the state of the queue
+        BatchInfo[] memory exp = new BatchInfo[](2);
+        exp[0] = BatchInfo({ nodeOperatorId: 1, start: 0, count: 1, nonce: 0 });
+        exp[1] = BatchInfo({ nodeOperatorId: 0, start: 0, count: 3, nonce: 1 });
+        _assertQueueState(exp);
+
+        (bool isDirty /* next */, ) = csm.isQueueDirty(
+            LOOKUP_DEPTH,
+            NULL_POINTER
+        );
+        assertFalse(isDirty, "queue should be clean");
+    }
+
+    function test_cleanup_WhenAllBatchesInvalid() public {
+        createNodeOperator({ keysCount: 2 });
+
+        csm.vetKeys(0, 1);
+        csm.vetKeys(0, 2);
+        csm.unvetKeys(0);
+
+        csm.cleanDepositQueue(LOOKUP_DEPTH, NULL_POINTER);
+        _assertQueueIsEmpty();
     }
 }
