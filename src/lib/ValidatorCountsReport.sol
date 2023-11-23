@@ -12,11 +12,13 @@ library ValidatorCountsReport {
     }
 
     function validate(bytes calldata ids, bytes calldata counts) internal pure {
-        uint256 count = count(ids);
         if (
-            counts.length / 16 != count ||
+            counts.length / 16 != count(ids) ||
             ids.length % 8 != 0 ||
-            counts.length % 16 != 0) revert InvalidReportData();
+            counts.length % 16 != 0
+        ) {
+            revert InvalidReportData();
+        }
     }
 
     function next(

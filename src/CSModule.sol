@@ -567,9 +567,16 @@ contract CSModule is IStakingModule, CSModuleBase {
         stuckPenaltyEndTimestamp = no.stuckPenaltyEndTimestamp;
         totalExitedValidators = no.totalExitedKeys;
         totalDepositedValidators = no.totalDepositedKeys;
-        depositableValidatorsCount = no.isTargetLimitActive
-            ? no.targetLimit - no.totalDepositedKeys
-            : no.totalVettedKeys - no.totalDepositedKeys;
+        depositableValidatorsCount =
+            no.totalVettedKeys -
+            totalDepositedValidators;
+        if (no.isTargetLimitActive) {
+            depositableValidatorsCount = targetValidatorsCount <=
+                totalDepositedValidators
+                ? 0
+                : Math.min(targetValidatorsCount, no.totalVettedKeys) -
+                    totalDepositedValidators;
+        }
     }
 
     function getNodeOperatorSigningKeys(
@@ -688,11 +695,16 @@ contract CSModule is IStakingModule, CSModuleBase {
     }
 
     function updateTargetValidatorsLimits(
-        uint256 /*_nodeOperatorId*/,
-        bool /*_isTargetLimitActive*/,
-        uint256 /*_targetLimit*/
-    ) external {
-        // TODO: implement
+        uint256 nodeOperatorId,
+        bool isTargetLimitActive,
+        uint256 targetLimit
+    ) external onlyExistingNodeOperator(nodeOperatorId) onlyStakingRouter {
+        // TODO sanity checks?
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        no.isTargetLimitActive = isTargetLimitActive;
+        no.targetLimit = targetLimit;
+        emit TargetValidatorsCountChanged(nodeOperatorId, targetLimit);
+        _incrementNonce();
     }
 
     function onExitedAndStuckValidatorsCountsUpdated() external {
