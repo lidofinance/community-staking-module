@@ -876,6 +876,8 @@ contract CSModule is IStakingModule, CSModuleBase {
         return queue.list(pointer, maxItems);
     }
 
+    /// @dev it is dirty if it contains a batch with unvetted keys
+    /// or with invalid nonce
     /// @dev returns the next pointer to start check from
     function isQueueDirty(
         uint256 maxItems,
