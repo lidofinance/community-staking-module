@@ -864,15 +864,7 @@ contract CSModule is IStakingModule, CSModuleBase {
     function depositQueue(
         uint256 maxItems,
         bytes32 pointer
-    )
-        external
-        view
-        returns (
-            bytes32[] memory items,
-            bytes32 /* pointer */,
-            uint256 /* count */
-        )
-    {
+    ) external view returns (bytes32[] memory items, uint256 /* count */) {
         require(maxItems > 0, "Queue walkthrough limit is not set");
 
         if (Batch.isNil(pointer)) {

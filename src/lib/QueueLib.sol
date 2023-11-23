@@ -7,6 +7,8 @@ pragma solidity 0.8.21;
 library QueueLib {
     bytes32 public constant NULL_POINTER = bytes32(0);
 
+    // @dev Queue is a linked list of items
+    // @dev front and back are pointers
     struct Queue {
         mapping(bytes32 => bytes32) queue;
         bytes32 front;
@@ -38,11 +40,13 @@ library QueueLib {
         return self.queue[pointer];
     }
 
+    // @dev returns items array of size `limit` and actual count of items
+    // @dev reverts if the queue is empty
     function list(Queue storage self, bytes32 pointer, uint256 limit) internal notEmpty(self) view returns (
         bytes32[] memory items,
-        bytes32 /* pointer */,
         uint256 /* count */
     ) {
+        require(limit > 0, "Queue: limit is not set");
         items = new bytes32[](limit);
 
         uint256 i;
@@ -56,7 +60,8 @@ library QueueLib {
             pointer = item;
         }
 
-        return (items, pointer, i);
+        // TODO: resize items array to actual count
+        return (items, i);
     }
 
     function isEmpty(Queue storage self) internal view returns (bool) {

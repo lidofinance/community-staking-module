@@ -100,6 +100,12 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     }
 
     function _assertQueueState(BatchInfo[] memory exp) internal {
+        if (exp.length == 0) {
+            vm.expectRevert("Queue: empty");
+            _nextPointer(bytes32(0));
+            return;
+        }
+
         // (bytes32 pointer,) = csm.queue(); // it works, but how?
         bytes32 pointer = bytes32(0);
 
@@ -155,8 +161,8 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     }
 
     function _nextPointer(bytes32 pointer) internal view returns (bytes32) {
-        (, bytes32 next, ) = csm.depositQueue(1, pointer);
-        return next;
+        (bytes32[] memory items, uint256 count) = csm.depositQueue(1, pointer);
+        return count == 0 ? pointer : items[0];
     }
 }
 
