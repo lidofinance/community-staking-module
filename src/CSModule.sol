@@ -668,7 +668,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         emit BatchEnqueued(nodeOperatorId, start, count);
         emit VettedSigningKeysCountChanged(nodeOperatorId, vetKeysPointer);
 
-        _incrementNonce();
+        _incrementModuleNonce();
     }
 
     function unvetKeys(
@@ -691,7 +691,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         no.totalVettedKeys = no.totalDepositedKeys;
         no.queueNonce++;
         emit VettedSigningKeysCountChanged(nodeOperatorId, no.totalVettedKeys);
-        _incrementNonce();
+        _incrementModuleNonce();
     }
 
     function onWithdrawalCredentialsChanged() external {
@@ -724,7 +724,7 @@ contract CSModule is IStakingModule, CSModuleBase {
             _nodeOperators[nodeOperatorId].totalAddedKeys
         );
 
-        _incrementNonce();
+        _incrementModuleNonce();
     }
 
     function obtainDepositData(
@@ -782,7 +782,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         }
 
         require(loadedKeysCount == depositsCount, "NOT_ENOUGH_KEYS");
-        _incrementNonce();
+        _incrementModuleNonce();
     }
 
     function _depositableKeysInBatch(
@@ -920,7 +920,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         return start + count > no.totalVettedKeys;
     }
 
-    function _incrementNonce() internal {
+    function _incrementModuleNonce() internal {
         _nonce++;
     }
 
