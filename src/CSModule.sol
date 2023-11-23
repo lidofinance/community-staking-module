@@ -103,6 +103,13 @@ contract CSModuleBase {
     error SameAddress();
     error AlreadyProposed();
     error InvalidVetKeysPointer();
+
+    error QueueLookupNoLimit();
+    error QueueEmptyBatch();
+    error QueueBatchInvalidNonce(bytes32 batch);
+    error QueueBatchInvalidStart(bytes32 batch);
+    error QueueBatchInvalidCount(bytes32 batch);
+    error QueueBatchUnvettedKeys(bytes32 batch);
 }
 
 contract CSModule is IStakingModule, CSModuleBase {
@@ -796,7 +803,8 @@ contract CSModule is IStakingModule, CSModuleBase {
         (nodeOperatorId, start, count, nonce) = Batch.deserialize(batch);
 
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        _assertIsValidBatch(no, start, count, nonce);
+        // solhint-disable-next-line func-named-parameters
+        _assertIsValidBatch(no, batch, start, count, nonce);
 
         startIndex = Math.max(start, no.totalDepositedKeys);
         depositableKeysCount = start + count - startIndex;
@@ -804,24 +812,18 @@ contract CSModule is IStakingModule, CSModuleBase {
 
     function _assertIsValidBatch(
         NodeOperator storage no,
+        bytes32 batch,
         uint256 start,
         uint256 count,
         uint256 nonce
     ) internal view {
-        require(count != 0, "Empty batch given");
-        require(nonce == no.queueNonce, "Invalid batch nonce");
-        require(
-            _unvettedKeysInBatch(no, start, count) == false,
-            "Batch contains unvetted keys"
-        );
-        require(
-            start + count <= no.totalAddedKeys,
-            "Invalid batch range: not enough keys"
-        );
-        require(
-            start <= no.totalDepositedKeys,
-            "Invalid batch range: skipped keys"
-        );
+        if (count == 0) revert QueueEmptyBatch();
+        if (nonce != no.queueNonce) revert QueueBatchInvalidNonce(batch);
+        if (start > no.totalDepositedKeys) revert QueueBatchInvalidStart(batch);
+        if (start + count > no.totalAddedKeys)
+            revert QueueBatchInvalidCount(batch);
+        if (_unvettedKeysInBatch(no, start, count))
+            revert QueueBatchUnvettedKeys(batch);
     }
 
     /// @dev returns the next pointer to start cleanup from
@@ -829,7 +831,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         uint256 maxItems,
         bytes32 pointer
     ) external returns (bytes32) {
-        require(maxItems > 0, "Queue walkthrough limit is not set");
+        if (maxItems == 0) revert QueueLookupNoLimit();
 
         if (Batch.isNil(pointer)) {
             pointer = queue.front;
@@ -865,7 +867,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         uint256 maxItems,
         bytes32 pointer
     ) external view returns (bytes32[] memory items, uint256 /* count */) {
-        require(maxItems > 0, "Queue walkthrough limit is not set");
+        if (maxItems == 0) revert QueueLookupNoLimit();
 
         if (Batch.isNil(pointer)) {
             pointer = queue.front;
@@ -879,7 +881,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         uint256 maxItems,
         bytes32 pointer
     ) external view returns (bool, bytes32) {
-        require(maxItems > 0, "Queue walkthrough limit is not set");
+        if (maxItems == 0) revert QueueLookupNoLimit();
 
         if (Batch.isNil(pointer)) {
             pointer = queue.front;
