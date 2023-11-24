@@ -56,32 +56,24 @@ contract QueueLibTest is Test {
         q.enqueue(p2);
 
         {
-            (bytes32[] memory items, bytes32 pointer, uint256 count) = q.list(
-                q.front,
-                2
-            );
+            (bytes32[] memory items, uint256 count) = q.list(q.front, 2);
             assertEq(count, 2);
-            assertEq(pointer, p1);
             assertEq(items[0], p0);
             assertEq(items[1], p1);
         }
 
         {
-            (bytes32[] memory items, bytes32 pointer, uint256 count) = q.list(
-                p1,
-                999
-            );
+            (bytes32[] memory items, uint256 count) = q.list(p1, 999);
             assertEq(count, 1);
-            assertEq(pointer, p2);
             assertEq(items[0], p2);
         }
 
         q.dequeue();
 
         {
-            (, bytes32 pointer, uint256 count) = q.list(q.front, 0);
-            assertEq(count, 0);
-            assertEq(pointer, q.front);
+            (bytes32[] memory items, uint256 count) = q.list(q.front, 1);
+            assertEq(count, 1);
+            assertEq(items[0], p1);
         }
     }
 
