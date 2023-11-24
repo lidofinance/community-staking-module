@@ -23,7 +23,7 @@ library ValidatorCountsReport {
 
     function next(
         bytes calldata ids, bytes calldata counts, uint256 offset
-    ) internal returns (uint256 nodeOperatorId, uint256 keysCount) {
+    ) internal pure returns (uint256 nodeOperatorId, uint256 keysCount) {
         nodeOperatorId = uint256(bytes32(ids[8 * offset:8 * offset + 8]) >> 192);
         keysCount = uint256(bytes32(counts[16 * offset:16 * offset + 16]) >> 128);
     }

@@ -191,7 +191,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
 
     function getNodeOperatorSummary(
         uint256 noId
-    ) public returns (NodeOperatorSummary memory) {
+    ) public view returns (NodeOperatorSummary memory) {
         (
             bool isTargetLimitActive,
             uint256 targetValidatorsCount,
@@ -810,6 +810,15 @@ contract CsmVetKeys is CSMCommon {
         vm.expectRevert(InvalidVetKeysPointer.selector);
         csm.vetKeys(noId, 2);
     }
+
+    function test_vetKeys_RevertWhenPointerGreaterThanTargetLimit() public {
+        uint256 noId = createNodeOperator(2);
+        csm.vetKeys(noId, 1);
+        csm.updateTargetValidatorsLimits(noId, true, 1);
+
+        vm.expectRevert(InvalidVetKeysPointer.selector);
+        csm.vetKeys(noId, 2);
+    }
 }
 
 contract CsmQueueOps is CSMCommon {
@@ -1389,20 +1398,22 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
         assertTrue(summary.isTargetLimitActive);
         assertEq(summary.targetValidatorsCount, 2);
-        assertEq(summary.depositableValidatorsCount, 2);
+        // should be unvetted
+        assertEq(summary.depositableValidatorsCount, 0);
     }
 
     function test_getNodeOperatorSummary_targetLimitHigherThanVettedKeys()
         public
     {
         uint256 noId = createNodeOperator(3);
-        csm.vetKeys(noId, 3);
+        csm.updateTargetValidatorsLimits(noId, true, 1);
+        csm.vetKeys(noId, 1);
 
-        csm.updateTargetValidatorsLimits(noId, true, 5);
+        csm.updateTargetValidatorsLimits(noId, true, 3);
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
         assertTrue(summary.isTargetLimitActive);
-        assertEq(summary.targetValidatorsCount, 5);
-        assertEq(summary.depositableValidatorsCount, 3);
+        assertEq(summary.targetValidatorsCount, 3);
+        assertEq(summary.depositableValidatorsCount, 1);
     }
 }
 
@@ -1415,11 +1426,70 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, true, 1);
     }
 
+    function test_updateTargetValidatorsLimits_unvetKeys() public {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+
+        csm.updateTargetValidatorsLimits(noId, true, 1);
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalVettedValidators, 0);
+    }
+
+    function test_updateTargetValidatorsLimits_NoUnvetKeysWhenLimitHigher()
+        public
+    {
+        uint256 noId = createNodeOperator(2);
+        csm.updateTargetValidatorsLimits(noId, true, 1);
+
+        csm.vetKeys(noId, 1);
+
+        csm.updateTargetValidatorsLimits(noId, true, 2);
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalVettedValidators, 1);
+    }
+
     function test_updateTargetValidatorsLimits_RevertWhenNoNodeOperator()
         public
     {
         vm.expectRevert(NodeOperatorDoesNotExist.selector);
         csm.updateTargetValidatorsLimits(0, true, 1);
+    }
+
+    function test_updateTargetValidatorsLimits_RevertWhenNotStakingRouter()
+        public
+    {
+        // TODO implement
+        vm.skip(true);
+    }
+
+    function test_updateTargetValidatorsLimits_RevertWhenTargetLimitIsZero()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(InvalidTargetLimit.selector);
+        csm.updateTargetValidatorsLimits(noId, true, 0);
+    }
+
+    function test_updateTargetValidatorsLimits_RevertWhenTargetLimitIsNonZero()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(InvalidTargetLimit.selector);
+        csm.updateTargetValidatorsLimits(noId, false, 10);
+    }
+
+    function test_updateTargetValidatorsLimits_RevertWhenTargetLimitIsGreaterThanDepositedWhenStuck()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+        vm.expectRevert(IncreasingTargetLimitWhenStuckKeys.selector);
+        csm.updateTargetValidatorsLimits(noId, true, 4);
     }
 }
 
@@ -1430,9 +1500,9 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
         csm.obtainDepositData(1, "");
 
         vm.expectEmit(true, true, false, true, address(csm));
-        emit StuckSigningKeysCountChanged(noId, 1);
-        vm.expectEmit(true, true, false, true, address(csm));
         emit TargetValidatorsCountChanged(noId, 1);
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit StuckSigningKeysCountChanged(noId, 1);
         csm.updateStuckValidatorsCount(
             bytes.concat(bytes8(0x0000000000000000)),
             bytes.concat(bytes16(0x00000000000000000000000000000001))
@@ -1450,5 +1520,57 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
             "targetValidatorsCount should be limited to totalDepositedValidators"
         );
         assertTrue(summary.isTargetLimitActive, "isTargetLimitActive is false");
+    }
+
+    function test_updateStuckValidatorsCount_RevertWhenNoNodeOperator() public {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+    }
+
+    function test_updateStuckValidatorsCount_RevertWhenNotStakingRouter()
+        public
+    {
+        // TODO implement
+        vm.skip(true);
+    }
+
+    function test_updateStuckValidatorsCount_RevertWhenCountMoreThanDeposited()
+        public
+    {
+        uint256 noId = createNodeOperator(3);
+        csm.vetKeys(noId, 3);
+        csm.obtainDepositData(1, "");
+
+        vm.expectRevert(StuckKeysHigherThanTotalDeposited.selector);
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000002))
+        );
+    }
+
+    // @dev this is ugly solution to test that events are not emitted when stuckKeysCount is not changed
+    //    we can't do it properly while vm.expectNotEmit is not implemented in forge (or smth like that)
+    function testFail_updateStuckValidatorsCount_NoEventWhenStuckKeysCountSame()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit TargetValidatorsCountChanged(noId, 1);
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit StuckSigningKeysCountChanged(noId, 1);
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
     }
 }

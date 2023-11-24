@@ -113,6 +113,9 @@ contract CSModuleBase {
     error SameAddress();
     error AlreadyProposed();
     error InvalidVetKeysPointer();
+    error InvalidTargetLimit();
+    error IncreasingTargetLimitWhenStuckKeys();
+    error StuckKeysHigherThanTotalDeposited();
 
     error QueueLookupNoLimit();
     error QueueEmptyBatch();
@@ -637,6 +640,11 @@ contract CSModule is IStakingModule, CSModuleBase {
         // TODO: staking router role only
     }
 
+    // @notice update stuck validators count by StakingRouter
+    // Presence of stuck validators leads to setting target limit to total deposited keys
+    // to prevent further deposits and clean batches from the deposit queue.
+    // @param nodeOperatorIds - bytes packed array of node operator ids
+    // @param stuckValidatorsCounts - bytes packed array of stuck validators counts
     function updateStuckValidatorsCount(
         bytes calldata nodeOperatorIds,
         bytes calldata stuckValidatorsCounts
@@ -656,24 +664,27 @@ contract CSModule is IStakingModule, CSModuleBase {
                     stuckValidatorsCounts,
                     i
                 );
+            if (nodeOperatorId >= _nodeOperatorsCount)
+                revert NodeOperatorDoesNotExist();
             NodeOperator storage no = _nodeOperators[nodeOperatorId];
+            if (stuckValidatorsCount > no.totalDepositedKeys)
+                revert StuckKeysHigherThanTotalDeposited();
+            if (stuckValidatorsCount == no.stuckValidatorsCount) continue;
+
             no.stuckValidatorsCount = stuckValidatorsCount;
 
             if (stuckValidatorsCount == 0) {
-                no.isTargetLimitActive = false;
-                no.targetLimit = 0;
+                _setTargetLimit(nodeOperatorId, false, 0);
             } else {
-                no.isTargetLimitActive = true;
-                no.targetLimit = no.totalDepositedKeys;
+                _setTargetLimit(nodeOperatorId, true, no.totalDepositedKeys);
             }
 
             emit StuckSigningKeysCountChanged(
                 nodeOperatorId,
                 stuckValidatorsCount
             );
-            emit TargetValidatorsCountChanged(nodeOperatorId, no.targetLimit);
         }
-        _incrementNonce();
+        _incrementModuleNonce();
     }
 
     function updateExitedValidatorsCount(
@@ -700,11 +711,37 @@ contract CSModule is IStakingModule, CSModuleBase {
         uint256 targetLimit
     ) external onlyExistingNodeOperator(nodeOperatorId) onlyStakingRouter {
         // TODO sanity checks?
+        _setTargetLimit(nodeOperatorId, isTargetLimitActive, targetLimit);
+        _incrementModuleNonce();
+    }
+
+    // @notice update target limits with event emission
+    // target limit decreasing (or appearing) must unvet node operator's keys from the queue
+    // @dev it's not expected (yet) that target limit can be enabled or disabled without or with some value.
+    // only (!isTargetLimitActive && targetLimit == 0) means that target limit is disabled
+    function _setTargetLimit(
+        uint256 nodeOperatorId,
+        bool isTargetLimitActive,
+        uint256 targetLimit
+    ) internal {
+        if (isTargetLimitActive && targetLimit == 0)
+            revert InvalidTargetLimit();
+        if (!isTargetLimitActive && targetLimit != 0)
+            revert InvalidTargetLimit();
+
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        no.isTargetLimitActive = isTargetLimitActive;
+        if (no.stuckValidatorsCount > 0 && targetLimit > no.totalDepositedKeys)
+            revert IncreasingTargetLimitWhenStuckKeys();
+
+        if (no.isTargetLimitActive != isTargetLimitActive) {
+            no.isTargetLimitActive = isTargetLimitActive;
+        }
+        if (no.targetLimit == targetLimit) return;
+        if (targetLimit < no.targetLimit || no.targetLimit == 0)
+            _unvetKeys(nodeOperatorId);
+
         no.targetLimit = targetLimit;
         emit TargetValidatorsCountChanged(nodeOperatorId, targetLimit);
-        _incrementNonce();
     }
 
     function onExitedAndStuckValidatorsCountsUpdated() external {
@@ -728,6 +765,8 @@ contract CSModule is IStakingModule, CSModuleBase {
         if (vetKeysPointer <= no.totalVettedKeys)
             revert InvalidVetKeysPointer();
         if (vetKeysPointer > no.totalAddedKeys) revert InvalidVetKeysPointer();
+        if (no.isTargetLimitActive && vetKeysPointer > no.targetLimit)
+            revert InvalidVetKeysPointer();
 
         uint64 count = SafeCast.toUint64(vetKeysPointer - no.totalVettedKeys);
         uint64 start = SafeCast.toUint64(no.totalVettedKeys);
