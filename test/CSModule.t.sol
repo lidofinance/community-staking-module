@@ -1522,6 +1522,89 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
         assertTrue(summary.isTargetLimitActive, "isTargetLimitActive is false");
     }
 
+    function test_updateStuckValidatorsCount_Unstuck() public {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit TargetValidatorsCountChanged(noId, 0);
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit StuckSigningKeysCountChanged(noId, 0);
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000000))
+        );
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.stuckValidatorsCount,
+            0,
+            "stuckValidatorsCount should be zero"
+        );
+        assertEq(
+            summary.targetValidatorsCount,
+            0,
+            "targetValidatorsCount should be zero"
+        );
+        assertFalse(
+            summary.isTargetLimitActive,
+            "isTargetLimitActive should be false"
+        );
+    }
+
+    function test_updateStuckValidatorsCount_DecreaseLimit() public {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+        csm.updateTargetValidatorsLimits(noId, true, 2);
+
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit TargetValidatorsCountChanged(noId, 1);
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+    }
+
+    function test_updateStuckValidatorsCount_ReturnToPrevLimit() public {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+        csm.updateTargetValidatorsLimits(noId, true, 2);
+
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit TargetValidatorsCountChanged(noId, 2);
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000000))
+        );
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.stuckValidatorsCount,
+            0,
+            "stuckValidatorsCount should be zero"
+        );
+        assertEq(
+            summary.targetValidatorsCount,
+            2,
+            "targetValidatorsCount should return to prev value"
+        );
+        assertTrue(
+            summary.isTargetLimitActive,
+            "isTargetLimitActive should remain true"
+        );
+    }
+
     function test_updateStuckValidatorsCount_RevertWhenNoNodeOperator() public {
         vm.expectRevert(NodeOperatorDoesNotExist.selector);
         csm.updateStuckValidatorsCount(
@@ -1551,9 +1634,7 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
         );
     }
 
-    // @dev this is ugly solution to test that events are not emitted when stuckKeysCount is not changed
-    //    we can't do it properly while vm.expectNotEmit is not implemented in forge (or smth like that)
-    function testFail_updateStuckValidatorsCount_NoEventWhenStuckKeysCountSame()
+    function test_updateStuckValidatorsCount_NoEventWhenStuckKeysCountSame()
         public
     {
         uint256 noId = createNodeOperator();
@@ -1564,13 +1645,28 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
             bytes.concat(bytes16(0x00000000000000000000000000000001))
         );
 
-        vm.expectEmit(true, true, false, true, address(csm));
-        emit TargetValidatorsCountChanged(noId, 1);
-        vm.expectEmit(true, true, false, true, address(csm));
-        emit StuckSigningKeysCountChanged(noId, 1);
+        vm.recordLogs();
         csm.updateStuckValidatorsCount(
             bytes.concat(bytes8(0x0000000000000000)),
             bytes.concat(bytes16(0x00000000000000000000000000000001))
         );
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 0);
+    }
+
+    function test_updateStuckValidatorsCount_NoEventWhenLimitSame() public {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+        csm.updateTargetValidatorsLimits(noId, true, 1);
+
+        vm.recordLogs();
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        // only StuckSigningKeysCountChanged
+        assertEq(logs.length, 1);
     }
 }

@@ -24,6 +24,7 @@ struct NodeOperator {
     address proposedRewardAddress;
     bool active;
     uint256 targetLimit;
+    uint256 prevTargetLimit;
     uint256 stuckPenaltyEndTimestamp;
     uint256 totalExitedKeys;
     uint256 totalAddedKeys;
@@ -673,10 +674,26 @@ contract CSModule is IStakingModule, CSModuleBase {
 
             no.stuckValidatorsCount = stuckValidatorsCount;
 
-            if (stuckValidatorsCount == 0) {
-                _setTargetLimit(nodeOperatorId, false, 0);
+            if (stuckValidatorsCount > 0) {
+                // @dev the oracle can decrease target limit but can't increase it
+                // after unstuck, target limit will be set to previous value
+                if (
+                    !no.isTargetLimitActive ||
+                    no.targetLimit > no.totalDepositedKeys
+                ) {
+                    no.prevTargetLimit = no.targetLimit;
+                    _setTargetLimit(
+                        nodeOperatorId,
+                        true,
+                        no.totalDepositedKeys
+                    );
+                }
             } else {
-                _setTargetLimit(nodeOperatorId, true, no.totalDepositedKeys);
+                _setTargetLimit(
+                    nodeOperatorId,
+                    no.prevTargetLimit > 0,
+                    no.prevTargetLimit
+                );
             }
 
             emit StuckSigningKeysCountChanged(
