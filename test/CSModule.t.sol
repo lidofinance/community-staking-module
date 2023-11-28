@@ -1313,7 +1313,7 @@ contract CsmRemoveKeys is CSMCommon {
 }
 
 contract CsmGetNodeOperatorSummary is CSMCommon {
-    // TODO add more tests here
+    // TODO add more tests here. There might be fuzz tests
 
     function test_getNodeOperatorSummary_defaultValues() public {
         uint256 noId = createNodeOperator();
@@ -1364,7 +1364,7 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         public
     {
         uint256 noId = createNodeOperator(3);
-        csm.vetKeys(noId, 1);
+        csm.vetKeys(noId, 2);
         csm.obtainDepositData(1, "");
 
         csm.updateTargetValidatorsLimits(noId, true, 1);
@@ -1480,12 +1480,12 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
     function test_updateTargetValidatorsLimits_RevertWhenTargetLimitIsGreaterThanDepositedWhenStuck()
         public
     {
-        uint256 noId = createNodeOperator();
-        csm.vetKeys(noId, 1);
-        csm.obtainDepositData(1, "");
+        uint256 noId = createNodeOperator(2);
+        csm.vetKeys(noId, 2);
+        csm.obtainDepositData(2, "");
         csm.updateStuckValidatorsCount(
             bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
+            bytes.concat(bytes16(0x00000000000000000000000000000002))
         );
         vm.expectRevert(IncreasingTargetLimitWhenStuckKeys.selector);
         csm.updateTargetValidatorsLimits(noId, true, 4);

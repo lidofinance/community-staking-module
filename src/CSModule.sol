@@ -577,11 +577,13 @@ contract CSModule is IStakingModule, CSModuleBase {
             no.totalVettedKeys -
             totalDepositedValidators;
         if (no.isTargetLimitActive) {
-            depositableValidatorsCount = targetValidatorsCount <=
-                totalDepositedValidators
+            depositableValidatorsCount = (totalExitedValidators +
+                targetValidatorsCount) <= no.totalVettedKeys
                 ? 0
-                : Math.min(targetValidatorsCount, no.totalVettedKeys) -
-                    totalDepositedValidators;
+                : Math.min(
+                    totalExitedValidators + targetValidatorsCount,
+                    no.totalVettedKeys
+                ) - totalDepositedValidators;
         }
     }
 
@@ -743,6 +745,8 @@ contract CSModule is IStakingModule, CSModuleBase {
     // @notice update target limits with event emission
     // target limit decreasing (or appearing) must unvet node operator's keys from the queue
     // @dev it's not expected (yet) that target limit can be disabled with some value.
+    // in case of stuck keys, the previous limit stored in the targetLimitForUnstuck field
+    // hence, don't have to store non-zero value in the targetLimit field
     function _setTargetLimit(
         uint256 nodeOperatorId,
         bool isTargetLimitActive,
@@ -796,8 +800,10 @@ contract CSModule is IStakingModule, CSModuleBase {
         if (vetKeysPointer <= no.totalVettedKeys)
             revert InvalidVetKeysPointer();
         if (vetKeysPointer > no.totalAddedKeys) revert InvalidVetKeysPointer();
-        if (no.isTargetLimitActive && vetKeysPointer > no.targetLimit)
-            revert InvalidVetKeysPointer();
+        if (
+            no.isTargetLimitActive &&
+            vetKeysPointer > (no.totalExitedKeys + no.targetLimit)
+        ) revert InvalidVetKeysPointer();
 
         uint64 count = SafeCast.toUint64(vetKeysPointer - no.totalVettedKeys);
         uint64 start = SafeCast.toUint64(no.totalVettedKeys);
