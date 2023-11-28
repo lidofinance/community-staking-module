@@ -24,7 +24,9 @@ struct NodeOperator {
     address proposedRewardAddress;
     bool active;
     uint256 targetLimit;
-    uint256 prevTargetLimit;
+    bool isTargetLimitActive;
+    uint256 targetLimitForUnstuck;
+    bool isTargetLimitActiveForUnstuck;
     uint256 stuckPenaltyEndTimestamp;
     uint256 totalExitedKeys;
     uint256 totalAddedKeys;
@@ -33,7 +35,6 @@ struct NodeOperator {
     uint256 totalVettedKeys;
     uint256 stuckValidatorsCount;
     uint256 refundedValidatorsCount;
-    bool isTargetLimitActive;
     uint256 queueNonce;
 }
 
@@ -91,6 +92,7 @@ contract CSModuleBase {
     );
     event TargetValidatorsCountChanged(
         uint256 indexed nodeOperatorId,
+        bool isTargetLimitActive,
         uint256 targetValidatorsCount
     );
 
@@ -677,11 +679,12 @@ contract CSModule is IStakingModule, CSModuleBase {
             if (stuckValidatorsCount > 0) {
                 // @dev the oracle can decrease target limit but can't increase it
                 // after unstuck, target limit will be set to previous value
+                no.isTargetLimitActiveForUnstuck = no.isTargetLimitActive;
+                no.targetLimitForUnstuck = no.targetLimit;
                 if (
                     !no.isTargetLimitActive ||
                     no.targetLimit > no.totalDepositedKeys
                 ) {
-                    no.prevTargetLimit = no.targetLimit;
                     _setTargetLimit(
                         nodeOperatorId,
                         true,
@@ -691,8 +694,8 @@ contract CSModule is IStakingModule, CSModuleBase {
             } else {
                 _setTargetLimit(
                     nodeOperatorId,
-                    no.prevTargetLimit > 0,
-                    no.prevTargetLimit
+                    no.isTargetLimitActiveForUnstuck,
+                    no.targetLimitForUnstuck
                 );
             }
 
@@ -728,21 +731,24 @@ contract CSModule is IStakingModule, CSModuleBase {
         uint256 targetLimit
     ) external onlyExistingNodeOperator(nodeOperatorId) onlyStakingRouter {
         // TODO sanity checks?
+        if (_nodeOperators[nodeOperatorId].stuckValidatorsCount > 0) {
+            _nodeOperators[nodeOperatorId]
+                .isTargetLimitActiveForUnstuck = isTargetLimitActive;
+            _nodeOperators[nodeOperatorId].targetLimitForUnstuck = targetLimit;
+        }
         _setTargetLimit(nodeOperatorId, isTargetLimitActive, targetLimit);
         _incrementModuleNonce();
     }
 
     // @notice update target limits with event emission
     // target limit decreasing (or appearing) must unvet node operator's keys from the queue
-    // @dev it's not expected (yet) that target limit can be enabled or disabled without or with some value.
-    // only (!isTargetLimitActive && targetLimit == 0) means that target limit is disabled
+    // @dev it's not expected (yet) that target limit can be disabled with some value.
     function _setTargetLimit(
         uint256 nodeOperatorId,
         bool isTargetLimitActive,
         uint256 targetLimit
     ) internal {
-        if (isTargetLimitActive && targetLimit == 0)
-            revert InvalidTargetLimit();
+        bool unvet;
         if (!isTargetLimitActive && targetLimit != 0)
             revert InvalidTargetLimit();
 
@@ -750,15 +756,23 @@ contract CSModule is IStakingModule, CSModuleBase {
         if (no.stuckValidatorsCount > 0 && targetLimit > no.totalDepositedKeys)
             revert IncreasingTargetLimitWhenStuckKeys();
 
+        if (
+            no.isTargetLimitActive == isTargetLimitActive &&
+            no.targetLimit == targetLimit
+        ) return;
+
         if (no.isTargetLimitActive != isTargetLimitActive) {
             no.isTargetLimitActive = isTargetLimitActive;
+            unvet = true;
         }
-        if (no.targetLimit == targetLimit) return;
-        if (targetLimit < no.targetLimit || no.targetLimit == 0)
-            _unvetKeys(nodeOperatorId);
+        if (unvet || targetLimit < no.targetLimit) _unvetKeys(nodeOperatorId);
 
         no.targetLimit = targetLimit;
-        emit TargetValidatorsCountChanged(nodeOperatorId, targetLimit);
+        emit TargetValidatorsCountChanged(
+            nodeOperatorId,
+            isTargetLimitActive,
+            targetLimit
+        );
     }
 
     function onExitedAndStuckValidatorsCountsUpdated() external {
