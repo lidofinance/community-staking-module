@@ -4,7 +4,7 @@
 // See contracts/COMPILERS.md
 pragma solidity 0.8.21;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 /// @title Library for manage operator keys in storage
 /// @author KRogLA
@@ -23,7 +23,7 @@ library SigningKeys {
         return uint256(keccak256(abi.encodePacked(position, nodeOperatorId, keyIndex)));
     }
 
-    /// @dev store opeartor keys to storage
+    /// @dev store operator keys to storage
     /// @param position storage slot
     /// @param nodeOperatorId operator id
     /// @param startIndex start index
@@ -78,7 +78,7 @@ library SigningKeys {
         return startIndex;
     }
 
-    /// @dev remove opeartor keys from storage
+    /// @dev remove operator keys from storage
     /// @param position storage slot
     /// @param nodeOperatorId operator id
     /// @param startIndex start index
@@ -105,14 +105,14 @@ library SigningKeys {
         for (uint256 i = startIndex + keysCount; i > startIndex;) {
             curOffset = position.getKeyOffset(nodeOperatorId, i - 1);
             assembly {
-            // read key
+                // read key
                 mstore(add(tmpKey, 0x30), shr(128, sload(add(curOffset, 1)))) // bytes 16..47
                 mstore(add(tmpKey, 0x20), sload(curOffset)) // bytes 0..31
             }
             if (i < totalKeysCount) {
                 lastOffset = position.getKeyOffset(nodeOperatorId, totalKeysCount - 1);
                 // move last key to deleted key index
-                for (j = 0; j < 5;) {
+                for (j = 0; j < 5;) { // load 160 bytes (5 slots) containing key and signature
                     assembly {
                         sstore(add(curOffset, j), sload(add(lastOffset, j)))
                         j := add(j, 1)
@@ -136,7 +136,7 @@ library SigningKeys {
         return totalKeysCount;
     }
 
-    /// @dev laod opeartor keys from storage
+    /// @dev load operator keys and signatures from storage
     /// @param position storage slot
     /// @param nodeOperatorId operator id
     /// @param startIndex start index
@@ -157,15 +157,36 @@ library SigningKeys {
         for (uint256 i; i < keysCount;) {
             curOffset = position.getKeyOffset(nodeOperatorId, startIndex + i);
             assembly {
-            // read key
-                let _ofs := add(add(pubkeys, 0x20), mul(add(bufOffset, i), 48)) //PUBKEY_LENGTH = 48
+                // read key
+                let _ofs := add(add(pubkeys, 0x20), mul(add(bufOffset, i), 48)) // PUBKEY_LENGTH = 48
                 mstore(add(_ofs, 0x10), shr(128, sload(add(curOffset, 1)))) // bytes 16..47
                 mstore(_ofs, sload(curOffset)) // bytes 0..31
-            // store signature
-                _ofs := add(add(signatures, 0x20), mul(add(bufOffset, i), 96)) //SIGNATURE_LENGTH = 96
+                // store signature
+                _ofs := add(add(signatures, 0x20), mul(add(bufOffset, i), 96)) // SIGNATURE_LENGTH = 96
                 mstore(_ofs, sload(add(curOffset, 2)))
                 mstore(add(_ofs, 0x20), sload(add(curOffset, 3)))
                 mstore(add(_ofs, 0x40), sload(add(curOffset, 4)))
+                i := add(i, 1)
+            }
+        }
+    }
+
+    function loadKeys(
+        bytes32 position,
+        uint256 nodeOperatorId,
+        uint256 startIndex,
+        uint256 keysCount
+    ) internal view returns (bytes memory pubkeys) {
+        uint256 curOffset;
+
+        pubkeys = new bytes(keysCount.mul(PUBKEY_LENGTH));
+        for (uint256 i; i < keysCount;) {
+            curOffset = position.getKeyOffset(nodeOperatorId, startIndex + i);
+            assembly {
+                // read key
+                let offset := add(add(pubkeys, 0x20), mul(i, 48)) // PUBKEY_LENGTH = 48
+                mstore(add(offset, 0x10), shr(128, sload(add(curOffset, 1)))) // bytes 16..47
+                mstore(offset, sload(curOffset)) // bytes 0..31
                 i := add(i, 1)
             }
         }

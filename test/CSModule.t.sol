@@ -40,14 +40,13 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     address internal nodeOperator;
 
     function setUp() public {
-        vm.label(address(this), "TEST");
-
         nodeOperator = nextAddress("NODE_OPERATOR");
         stranger = nextAddress("STRANGER");
         admin = nextAddress("ADMIN");
 
         (locator, wstETH, stETH, burner) = initLido();
 
+        // FIXME: move to the corresponding tests
         vm.deal(nodeOperator, 2 ether + 1 wei);
         vm.prank(nodeOperator);
         stETH.submit{ value: 2 ether + 1 wei }(address(0));
@@ -67,6 +66,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
             1 days
         );
         csm.setAccounting(address(accounting));
+        csm.setUnvettingFee(0.05 ether);
 
         vm.startPrank(admin);
         accounting.grantRole(
@@ -91,6 +91,15 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
+        return createNodeOperator(managerAddress, keysCount, keys, signatures);
+    }
+
+    function createNodeOperator(
+        address managerAddress,
+        uint256 keysCount,
+        bytes memory keys,
+        bytes memory signatures
+    ) internal returns (uint256) {
         vm.deal(managerAddress, keysCount * 2 ether);
         vm.prank(managerAddress);
         csm.addNodeOperatorETH{ value: keysCount * 2 ether }(
@@ -910,5 +919,307 @@ contract CsmQueueOps is CSMCommon {
 
         csm.cleanDepositQueue(LOOKUP_DEPTH, NULL_POINTER);
         _assertQueueIsEmpty();
+    }
+}
+
+contract CsmViewKeys is CSMCommon {
+    function test_viewAllKeys() public {
+        bytes memory keys = randomBytes(48 * 3);
+
+        createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 3,
+            keys: keys,
+            signatures: randomBytes(96 * 3)
+        });
+
+        bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
+            nodeOperatorId: 0,
+            startIndex: 0,
+            keysCount: 3
+        });
+
+        assertEq(obtainedKeys, keys, "unexpected keys");
+    }
+
+    function test_viewKeysFromOffset() public {
+        bytes memory wantedKey = randomBytes(48);
+        bytes memory keys = bytes.concat(
+            randomBytes(48),
+            wantedKey,
+            randomBytes(48)
+        );
+
+        createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 3,
+            keys: keys,
+            signatures: randomBytes(96 * 3)
+        });
+
+        bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
+            nodeOperatorId: 0,
+            startIndex: 1,
+            keysCount: 1
+        });
+
+        assertEq(obtainedKeys, wantedKey, "unexpected key at position 1");
+    }
+}
+
+contract CsmRemoveKeys is CSMCommon {
+    event SigningKeyRemoved(uint256 indexed nodeOperatorId, bytes pubkey);
+
+    bytes key0 = randomBytes(48);
+    bytes key1 = randomBytes(48);
+    bytes key2 = randomBytes(48);
+    bytes key3 = randomBytes(48);
+    bytes key4 = randomBytes(48);
+
+    function test_singleKeyRemoval() public {
+        bytes memory keys = bytes.concat(key0, key1, key2, key3, key4);
+
+        createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 5,
+            keys: keys,
+            signatures: randomBytes(96 * 5)
+        });
+
+        // at the beginning
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit SigningKeyRemoved(0, key0);
+
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit TotalSigningKeysCountChanged(0, 4);
+        }
+        csm.removeKeys({ nodeOperatorId: 0, startIndex: 0, keysCount: 1 });
+        /*
+            key4
+            key1
+            key2
+            key3
+        */
+
+        // in between
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit SigningKeyRemoved(0, key1);
+
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit TotalSigningKeysCountChanged(0, 3);
+        }
+        csm.removeKeys({ nodeOperatorId: 0, startIndex: 1, keysCount: 1 });
+        /*
+            key4
+            key3
+            key2
+        */
+
+        // at the end
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit SigningKeyRemoved(0, key2);
+
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit TotalSigningKeysCountChanged(0, 2);
+        }
+        csm.removeKeys({ nodeOperatorId: 0, startIndex: 2, keysCount: 1 });
+        /*
+            key4
+            key3
+        */
+
+        bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
+            nodeOperatorId: 0,
+            startIndex: 0,
+            keysCount: 2
+        });
+        assertEq(obtainedKeys, bytes.concat(key4, key3), "unexpected keys");
+    }
+
+    function test_multipleKeysRemovalFromStart() public {
+        bytes memory keys = bytes.concat(key0, key1, key2, key3, key4);
+
+        createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 5,
+            keys: keys,
+            signatures: randomBytes(96 * 5)
+        });
+
+        {
+            // NOTE: keys are being removed in reverse order to keep an original order of keys at the end of the list
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit SigningKeyRemoved(0, key1);
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit SigningKeyRemoved(0, key0);
+
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit TotalSigningKeysCountChanged(0, 3);
+        }
+
+        csm.removeKeys({ nodeOperatorId: 0, startIndex: 0, keysCount: 2 });
+
+        bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
+            nodeOperatorId: 0,
+            startIndex: 0,
+            keysCount: 3
+        });
+        assertEq(
+            obtainedKeys,
+            bytes.concat(key3, key4, key2),
+            "unexpected keys"
+        );
+    }
+
+    function test_multipleKeysRemovalInBetween() public {
+        bytes memory keys = bytes.concat(key0, key1, key2, key3, key4);
+
+        createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 5,
+            keys: keys,
+            signatures: randomBytes(96 * 5)
+        });
+
+        {
+            // NOTE: keys are being removed in reverse order to keep an original order of keys at the end of the list
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit SigningKeyRemoved(0, key2);
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit SigningKeyRemoved(0, key1);
+
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit TotalSigningKeysCountChanged(0, 3);
+        }
+
+        csm.removeKeys({ nodeOperatorId: 0, startIndex: 1, keysCount: 2 });
+
+        bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
+            nodeOperatorId: 0,
+            startIndex: 0,
+            keysCount: 3
+        });
+        assertEq(
+            obtainedKeys,
+            bytes.concat(key0, key3, key4),
+            "unexpected keys"
+        );
+    }
+
+    function test_multipleKeysRemovalFromEnd() public {
+        bytes memory keys = bytes.concat(key0, key1, key2, key3, key4);
+
+        createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 5,
+            keys: keys,
+            signatures: randomBytes(96 * 5)
+        });
+
+        {
+            // NOTE: keys are being removed in reverse order to keep an original order of keys at the end of the list
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit SigningKeyRemoved(0, key4);
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit SigningKeyRemoved(0, key3);
+
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit TotalSigningKeysCountChanged(0, 3);
+        }
+
+        csm.removeKeys({ nodeOperatorId: 0, startIndex: 3, keysCount: 2 });
+
+        bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
+            nodeOperatorId: 0,
+            startIndex: 0,
+            keysCount: 3
+        });
+        assertEq(
+            obtainedKeys,
+            bytes.concat(key0, key1, key2),
+            "unexpected keys"
+        );
+    }
+
+    function test_removingVettedKeysUnvetsOperator() public {
+        createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 5,
+            keys: randomBytes(48 * 5),
+            signatures: randomBytes(96 * 5)
+        });
+
+        csm.vetKeys(0, 3);
+        csm.obtainDepositData(1, "");
+
+        /*
+            no.totalVettedValidators = 3
+            no.totalDepositedKeys = 1
+            no.totalAddedKeys = 5
+        */
+
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit VettedSigningKeysCountChanged(0, 1);
+        }
+
+        csm.removeKeys({ nodeOperatorId: 0, startIndex: 1, keysCount: 2 });
+        NodeOperatorInfo memory no = csm.getNodeOperator(0);
+        assertEq(no.totalVettedValidators, 1);
+    }
+
+    function test_removingNotVettedKeysDoesntUnvetOperator() public {
+        createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 5,
+            keys: randomBytes(48 * 5),
+            signatures: randomBytes(96 * 5)
+        });
+
+        csm.vetKeys(0, 3);
+        csm.obtainDepositData(1, "");
+
+        /*
+            no.totalVettedValidators = 3
+            no.totalDepositedKeys = 1
+            no.totalAddedKeys = 5
+        */
+
+        csm.removeKeys({ nodeOperatorId: 0, startIndex: 3, keysCount: 2 });
+        NodeOperatorInfo memory no = csm.getNodeOperator(0);
+        assertEq(no.totalVettedValidators, 3);
+    }
+
+    function test_removeKeys_RevertWhenNoNodeOperator() public {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.removeKeys({ nodeOperatorId: 0, startIndex: 0, keysCount: 1 });
+    }
+
+    function test_removeKeys_RevertWhenMoreThanAdded() public {
+        createNodeOperator({ managerAddress: address(this), keysCount: 1 });
+
+        vm.expectRevert(SigningKeysInvalidOffset.selector);
+        csm.removeKeys({ nodeOperatorId: 0, startIndex: 0, keysCount: 2 });
+    }
+
+    function test_removeKeys_RevertWhenLessThanDeposited() public {
+        createNodeOperator({ managerAddress: address(this), keysCount: 2 });
+
+        csm.vetKeys(0, 1);
+        csm.obtainDepositData(1, "");
+
+        vm.expectRevert(SigningKeysInvalidOffset.selector);
+        csm.removeKeys({ nodeOperatorId: 0, startIndex: 0, keysCount: 1 });
+    }
+
+    function test_removeKeys_RevertWhenNotManager() public {
+        createNodeOperator({ managerAddress: address(this), keysCount: 1 });
+
+        vm.prank(stranger);
+        vm.expectRevert(SenderIsNotManagerAddress.selector);
+        csm.removeKeys({ nodeOperatorId: 0, startIndex: 0, keysCount: 1 });
     }
 }

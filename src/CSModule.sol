@@ -95,6 +95,8 @@ contract CSModuleBase {
     event LocatorContractSet(address locatorAddress);
     event UnvettingFeeSet(uint256 unvettingFee);
 
+    event UnvettingFeeApplied(uint256 indexed nodeOperatorId);
+
     error NodeOperatorDoesNotExist();
     error MaxNodeOperatorsCountReached();
     error SenderIsNotManagerAddress();
@@ -110,6 +112,8 @@ contract CSModuleBase {
     error QueueBatchInvalidStart(bytes32 batch);
     error QueueBatchInvalidCount(bytes32 batch);
     error QueueBatchUnvettedKeys(bytes32 batch);
+
+    error SigningKeysInvalidOffset();
 }
 
 contract CSModule is IStakingModule, CSModuleBase {
@@ -151,10 +155,10 @@ contract CSModule is IStakingModule, CSModuleBase {
         accounting = ICSAccounting(_accounting);
     }
 
-    function setUnvettingFee(uint256 unvettingFee_) external {
+    function setUnvettingFee(uint256 _unvettingFee) external {
         // TODO: add role check
-        unvettingFee = unvettingFee_;
-        emit UnvettingFeeSet(unvettingFee_);
+        unvettingFee = _unvettingFee;
+        emit UnvettingFeeSet(_unvettingFee);
     }
 
     function _lido() internal view returns (ILido) {
@@ -558,6 +562,25 @@ contract CSModule is IStakingModule, CSModuleBase {
         depositableValidatorsCount = no.totalVettedKeys - no.totalExitedKeys;
     }
 
+    function getNodeOperatorSigningKeys(
+        uint256 nodeOperatorId,
+        uint256 startIndex,
+        uint256 keysCount
+    )
+        external
+        view
+        onlyExistingNodeOperator(nodeOperatorId)
+        returns (bytes memory)
+    {
+        return
+            SigningKeys.loadKeys(
+                SIGNING_KEYS_POSITION,
+                nodeOperatorId,
+                startIndex,
+                keysCount
+            );
+    }
+
     function getNonce() external view returns (uint256) {
         return _nonce;
     }
@@ -679,19 +702,45 @@ contract CSModule is IStakingModule, CSModuleBase {
         onlyKeyValidatorOrNodeOperatorManager
     {
         _unvetKeys(nodeOperatorId);
-        accounting.penalize(nodeOperatorId, unvettingFee);
+        _applyUnvettingFee(nodeOperatorId);
+        _incrementModuleNonce();
     }
 
     function unsafeUnvetKeys(uint256 nodeOperatorId) external onlyKeyValidator {
         _unvetKeys(nodeOperatorId);
+        _incrementModuleNonce();
     }
 
+    function removeKeys(
+        uint256 nodeOperatorId,
+        uint256 startIndex,
+        uint256 keysCount
+    )
+        external
+        onlyExistingNodeOperator(nodeOperatorId)
+        onlyNodeOperatorManager(nodeOperatorId)
+    {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (no.totalVettedKeys > startIndex) {
+            _unvetKeys(nodeOperatorId);
+            _applyUnvettingFee(nodeOperatorId);
+        }
+
+        _removeSigningKeys(nodeOperatorId, startIndex, keysCount);
+        _incrementModuleNonce();
+    }
+
+    /// @dev NB! doesn't increment module nonce
     function _unvetKeys(uint256 nodeOperatorId) internal {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         no.totalVettedKeys = no.totalDepositedKeys;
         no.queueNonce++;
         emit VettedSigningKeysCountChanged(nodeOperatorId, no.totalVettedKeys);
-        _incrementModuleNonce();
+    }
+
+    function _applyUnvettingFee(uint256 nodeOperatorId) internal {
+        accounting.penalize(nodeOperatorId, unvettingFee);
+        emit UnvettingFeeApplied(nodeOperatorId);
     }
 
     function onWithdrawalCredentialsChanged() external {
@@ -725,6 +774,34 @@ contract CSModule is IStakingModule, CSModuleBase {
         );
 
         _incrementModuleNonce();
+    }
+
+    function _removeSigningKeys(
+        uint256 nodeOperatorId,
+        uint256 startIndex,
+        uint256 keysCount
+    ) internal {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        if (startIndex < no.totalDepositedKeys) {
+            revert SigningKeysInvalidOffset();
+        }
+
+        if (startIndex + keysCount > no.totalAddedKeys) {
+            revert SigningKeysInvalidOffset();
+        }
+
+        // solhint-disable-next-line func-named-parameters
+        uint256 newTotalSigningKeys = SigningKeys.removeKeysSigs(
+            SIGNING_KEYS_POSITION,
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            no.totalAddedKeys
+        );
+
+        no.totalAddedKeys = newTotalSigningKeys;
+        emit TotalSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
     }
 
     function obtainDepositData(
