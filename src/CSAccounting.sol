@@ -176,9 +176,9 @@ contract CSAccounting is
     }
 
     function setBondCurve(
-        uint256[] memory bondCurve_
+        uint256[] memory bondCurve
     ) external onlyRole(SET_BOND_CURVE_ROLE) {
-        _setBondCurve(bondCurve_);
+        _setBondCurve(bondCurve);
     }
 
     /// @notice Sets basis points of the bond multiplier for the given node operator.

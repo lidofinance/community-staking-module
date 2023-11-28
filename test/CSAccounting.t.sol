@@ -16,6 +16,7 @@ import { CommunityStakingModuleMock } from "./helpers/mocks/CommunityStakingModu
 import { CommunityStakingFeeDistributorMock } from "./helpers/mocks/CommunityStakingFeeDistributorMock.sol";
 import { WithdrawalQueueMockBase, WithdrawalQueueMock } from "./helpers/mocks/WithdrawalQueueMock.sol";
 
+import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 
 contract CSAccounting_revealed is CSAccounting {
@@ -39,7 +40,7 @@ contract CSAccounting_revealed is CSAccounting {
         )
     {}
 
-    function setBondCurve() public {
+    function setBondCurveForTests() public {
         uint256[] memory _bondCurve = new uint256[](11);
         _bondCurve[0] = 2 ether;
         _bondCurve[1] = 3.90 ether; // 1.9
@@ -52,13 +53,14 @@ contract CSAccounting_revealed is CSAccounting {
         _bondCurve[8] = 14.30 ether; // 1.2
         _bondCurve[9] = 15.40 ether; // 1.1
         _bondCurve[10] = 16.40 ether; // 1.0
-        bondCurve = _bondCurve;
+        _setBondCurve(_bondCurve);
     }
 }
 
 contract CSAccountingTest is
     Test,
     Fixtures,
+    Utilities,
     PermitTokenBase,
     CSAccountingBase,
     WithdrawalQueueMockBase
@@ -137,9 +139,15 @@ contract CSAccountingTest is
         _bondCurve[1] = 4 ether;
 
         vm.expectRevert(
-            "AccessControl: account 0x7fa9385be102ac3eac297483dd6233d62b3e1496 is missing role 0x645c9e6d2a86805cb5a28b1e4751c0dab493df7cf935070ce405489ba1a7bf72"
+            bytes(
+                Utilities.accessErrorString(
+                    stranger,
+                    accounting.SET_BOND_CURVE_ROLE()
+                )
+            )
         );
 
+        vm.prank(stranger);
         accounting.setBondCurve(_bondCurve);
     }
 
@@ -152,9 +160,15 @@ contract CSAccountingTest is
 
     function test_setBondMultiplier_RevertWhen_DoesNotHaveRole() public {
         vm.expectRevert(
-            "AccessControl: account 0x7fa9385be102ac3eac297483dd6233d62b3e1496 is missing role 0x62131145aee19b18b85aa8ead52ba87f0efb6e61e249155edc68a2c24e8f79b5"
+            bytes(
+                Utilities.accessErrorString(
+                    stranger,
+                    accounting.SET_BOND_MULTIPLIER_ROLE()
+                )
+            )
         );
 
+        vm.prank(stranger);
         accounting.setBondMultiplier(0, 9500); // 0.95
     }
 
@@ -717,7 +731,7 @@ contract CSAccountingTest is
         assertEq(totalRewards, ETHAsFee);
 
         // set sophisticated curve
-        accounting.setBondCurve();
+        accounting.setBondCurveForTests();
 
         totalRewards = accounting.getTotalRewardsETH(
             new bytes32[](1),
@@ -763,7 +777,7 @@ contract CSAccountingTest is
         assertEq(totalRewards, stETHAsFee);
 
         // set sophisticated curve
-        accounting.setBondCurve();
+        accounting.setBondCurveForTests();
         totalRewards = accounting.getTotalRewardsStETH(
             new bytes32[](1),
             0,
@@ -810,7 +824,7 @@ contract CSAccountingTest is
         assertApproxEqAbs(totalRewards, wstETHAsFee, 1);
 
         // set sophisticated curve
-        accounting.setBondCurve();
+        accounting.setBondCurveForTests();
         totalRewards = accounting.getTotalRewardsWstETH(
             new bytes32[](1),
             0,
@@ -850,7 +864,7 @@ contract CSAccountingTest is
         assertApproxEqAbs(accounting.getExcessBondETH(0), 32 ether, 1);
 
         // set sophisticated curve
-        accounting.setBondCurve();
+        accounting.setBondCurveForTests();
 
         assertApproxEqAbs(accounting.getExcessBondETH(0), 42.6 ether, 1);
 
@@ -874,7 +888,7 @@ contract CSAccountingTest is
         assertApproxEqAbs(accounting.getExcessBondStETH(0), 32 ether, 1);
 
         // set sophisticated curve
-        accounting.setBondCurve();
+        accounting.setBondCurveForTests();
 
         assertApproxEqAbs(accounting.getExcessBondStETH(0), 42.6 ether, 1);
 
@@ -902,7 +916,7 @@ contract CSAccountingTest is
         );
 
         // set sophisticated curve
-        accounting.setBondCurve();
+        accounting.setBondCurveForTests();
 
         assertApproxEqAbs(
             accounting.getExcessBondWstETH(0),
@@ -930,7 +944,7 @@ contract CSAccountingTest is
         assertApproxEqAbs(accounting.getMissingBondETH(0), 16 ether, 1);
 
         // set sophisticated curve
-        accounting.setBondCurve();
+        accounting.setBondCurveForTests();
 
         assertApproxEqAbs(accounting.getMissingBondETH(0), 5.4 ether, 1);
 
@@ -954,7 +968,7 @@ contract CSAccountingTest is
         assertApproxEqAbs(accounting.getMissingBondStETH(0), 16 ether, 1);
 
         // set sophisticated curve
-        accounting.setBondCurve();
+        accounting.setBondCurveForTests();
 
         assertApproxEqAbs(accounting.getMissingBondStETH(0), 5.4 ether, 1);
 
@@ -982,7 +996,7 @@ contract CSAccountingTest is
         );
 
         // set sophisticated curve
-        accounting.setBondCurve();
+        accounting.setBondCurveForTests();
 
         assertApproxEqAbs(
             accounting.getMissingBondWstETH(0),
@@ -1015,7 +1029,7 @@ contract CSAccountingTest is
         assertEq(accounting.getUnbondedKeysCount(0), 9);
 
         // set sophisticated curve
-        accounting.setBondCurve();
+        accounting.setBondCurveForTests();
 
         assertEq(accounting.getUnbondedKeysCount(0), 7);
 
@@ -1034,7 +1048,7 @@ contract CSAccountingTest is
         assertEq(accounting.getKeysCountByBondETH(16 ether), 8);
 
         // set sophisticated curve
-        accounting.setBondCurve();
+        accounting.setBondCurveForTests();
 
         assertEq(accounting.getKeysCountByBondETH(16 ether), 10);
     }
@@ -1047,7 +1061,7 @@ contract CSAccountingTest is
         assertEq(accounting.getKeysCountByBondETH(16 ether), 8);
 
         // set sophisticated curve
-        accounting.setBondCurve();
+        accounting.setBondCurveForTests();
 
         assertEq(accounting.getKeysCountByBondStETH(16 ether), 10);
     }
@@ -1080,7 +1094,7 @@ contract CSAccountingTest is
         );
 
         // set sophisticated curve
-        accounting.setBondCurve();
+        accounting.setBondCurveForTests();
 
         assertEq(
             accounting.getKeysCountByBondWstETH(
@@ -1135,7 +1149,7 @@ contract CSAccountingTest is
         );
 
         // set sophisticated curve
-        accounting.setBondCurve();
+        accounting.setBondCurveForTests();
 
         vm.deal(address(feeDistributor), 0.1 ether);
         vm.prank(address(feeDistributor));
@@ -1400,7 +1414,7 @@ contract CSAccountingTest is
         );
 
         // set sophisticated curve
-        accounting.setBondCurve();
+        accounting.setBondCurveForTests();
 
         vm.deal(address(feeDistributor), 0.1 ether);
         vm.prank(address(feeDistributor));
@@ -1579,7 +1593,7 @@ contract CSAccountingTest is
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
 
         // set sophisticated curve
-        accounting.setBondCurve();
+        accounting.setBondCurveForTests();
 
         vm.deal(address(feeDistributor), 0.1 ether);
         vm.prank(address(feeDistributor));
@@ -1798,8 +1812,14 @@ contract CSAccountingTest is
 
     function test_penalize_RevertWhenCallerHasNoRole() public {
         vm.expectRevert(
-            "AccessControl: account 0x0000000000000000000000000000000000000309 is missing role 0x9909cf24c2d3bafa8c229558d86a1b726ba57c3ef6350848dcf434a4181b56c7"
+            bytes(
+                Utilities.accessErrorString(
+                    stranger,
+                    accounting.INSTANT_PENALIZE_BOND_ROLE()
+                )
+            )
         );
+
         vm.prank(stranger);
         accounting.penalize(0, 20);
     }

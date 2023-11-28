@@ -8,11 +8,12 @@ abstract contract CSBondCurve {
     error InvalidMultiplier();
 
     // @dev Keys count to bond amount mapping
-    //      x - keys count
-    //      y - bond amount for x keys
+    //      i            | array index
+    //      i + 1        | keys count for particular bond amount
+    //      bondCurve[i] | bond amount for `i + 1` keys count
     uint256[] public bondCurve;
 
-    uint256 internal constant MIN_CURVE_LENGTH = 2;
+    uint256 internal constant MIN_CURVE_LENGTH = 1;
     // todo: might be redefined in the future
     uint256 internal constant MAX_CURVE_LENGTH = 20;
     uint256 internal constant BASIS_POINTS = 10000;
@@ -23,14 +24,18 @@ abstract contract CSBondCurve {
     /// By default, all Node Operators have x1 multiplier (10000 basis points).
     mapping(uint256 => uint256) internal _bondMultiplierBP;
 
+    uint256 internal _bondCurveTrend;
+
     constructor(uint256[] memory _bondCurve) {
-        _checkCurveLength(_bondCurve);
-        bondCurve = _bondCurve;
+        _setBondCurve(_bondCurve);
     }
 
     function _setBondCurve(uint256[] memory _bondCurve) internal {
         _checkCurveLength(_bondCurve);
         bondCurve = _bondCurve;
+        _bondCurveTrend =
+            _bondCurve[_bondCurve.length - 1] -
+            (_bondCurve.length > 1 ? _bondCurve[_bondCurve.length - 2] : 0);
     }
 
     function _setBondMultiplier(
@@ -74,14 +79,12 @@ abstract contract CSBondCurve {
         uint256 amount
     ) internal view returns (uint256) {
         uint256 mult = getBondMultiplier(nodeOperatorId);
+        if (amount < (bondCurve[0] * mult) / BASIS_POINTS) return 0;
         uint256 last = (bondCurve[bondCurve.length - 1] * mult) / BASIS_POINTS;
         if (amount >= last) {
             return
                 bondCurve.length +
-                ((amount - last) /
-                    (last -
-                        (bondCurve[bondCurve.length - 2] * mult) /
-                        BASIS_POINTS));
+                ((amount - last) / ((_bondCurveTrend * mult) / BASIS_POINTS));
         }
         return _searchKeysByBond(amount, mult);
     }
@@ -94,14 +97,18 @@ abstract contract CSBondCurve {
         uint256 high = bondCurve.length - 1;
         while (low <= high) {
             uint256 mid = (low + high) / 2;
-            if (
-                (bondCurve[mid] * multiplier) / BASIS_POINTS > value && mid != 0
-            ) {
+            uint256 midValue = (bondCurve[mid] * multiplier) / BASIS_POINTS;
+            if (value == midValue) {
+                return mid + 1;
+            }
+            if (value < midValue) {
+                // zero mid is avoided above
                 high = mid - 1;
-            } else if ((bondCurve[mid] * multiplier) / BASIS_POINTS <= value) {
+                continue;
+            }
+            if (value > midValue) {
                 low = mid + 1;
-            } else {
-                return mid;
+                continue;
             }
         }
         return low;
@@ -117,18 +124,15 @@ abstract contract CSBondCurve {
         uint256 nodeOperatorId,
         uint256 keys
     ) internal view returns (uint256) {
-        uint256 mult = getBondMultiplier(nodeOperatorId);
         if (keys == 0) return 0;
+        uint256 mult = getBondMultiplier(nodeOperatorId);
         if (keys <= bondCurve.length) {
             return (bondCurve[keys - 1] * mult) / BASIS_POINTS;
         } else {
-            uint256 last = (bondCurve[bondCurve.length - 1] * mult) /
-                BASIS_POINTS;
             return
-                last +
+                ((bondCurve[bondCurve.length - 1] * mult) / BASIS_POINTS) +
                 (keys - bondCurve.length) *
-                (last -
-                    ((bondCurve[bondCurve.length - 2] * mult) / BASIS_POINTS));
+                ((_bondCurveTrend * mult) / BASIS_POINTS);
         }
     }
 }

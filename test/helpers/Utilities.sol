@@ -55,4 +55,15 @@ contract Utilities is CommonBase {
             revert("wrong chain id");
         }
     }
+
+    function accessErrorString(
+        address account,
+        bytes32 role
+    ) internal pure returns (string memory) {
+        string memory errorString = "AccessControl: account ";
+        errorString = string.concat(errorString, vm.toString(account));
+        errorString = string.concat(errorString, " is missing role ");
+        errorString = string.concat(errorString, vm.toString(role));
+        return errorString;
+    }
 }

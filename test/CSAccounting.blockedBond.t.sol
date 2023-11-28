@@ -15,6 +15,7 @@ import { CommunityStakingModuleMock } from "./helpers/mocks/CommunityStakingModu
 import { CommunityStakingFeeDistributorMock } from "./helpers/mocks/CommunityStakingFeeDistributorMock.sol";
 import { WithdrawalQueueMockBase, WithdrawalQueueMock } from "./helpers/mocks/WithdrawalQueueMock.sol";
 
+import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 
 contract CSAccounting_revealed is CSAccounting {
@@ -74,7 +75,12 @@ contract CSAccounting_revealed is CSAccounting {
     }
 }
 
-contract CSAccounting_BlockedBondTest is Test, Fixtures, CSAccountingBase {
+contract CSAccounting_BlockedBondTest is
+    Test,
+    Fixtures,
+    Utilities,
+    CSAccountingBase
+{
     using stdStorage for StdStorage;
 
     LidoLocatorMock internal locator;
@@ -449,9 +455,15 @@ contract CSAccounting_BlockedBondTest is Test, Fixtures, CSAccountingBase {
         _createNodeOperator({ ongoingVals: 1, withdrawnVals: 0 });
 
         vm.expectRevert(
-            "AccessControl: account 0x7fa9385be102ac3eac297483dd6233d62b3e1496 is missing role 0xcc2e7ce7be452f766dd24d55d87a3d42901c31ffa5b600cd1dff475abec91c1f"
+            bytes(
+                Utilities.accessErrorString(
+                    address(stranger),
+                    accounting.EL_REWARDS_STEALING_PENALTY_INIT_ROLE()
+                )
+            )
         );
 
+        vm.prank(stranger);
         accounting.initELRewardsStealingPenalty({
             nodeOperatorId: 0,
             blockNumber: 100500,
@@ -671,8 +683,15 @@ contract CSAccounting_BlockedBondTest is Test, Fixtures, CSAccountingBase {
         _createNodeOperator({ ongoingVals: 1, withdrawnVals: 0 });
 
         vm.expectRevert(
-            "AccessControl: account 0x7fa9385be102ac3eac297483dd6233d62b3e1496 is missing role 0xcc2e7ce7be452f766dd24d55d87a3d42901c31ffa5b600cd1dff475abec91c1f"
+            bytes(
+                Utilities.accessErrorString(
+                    address(stranger),
+                    accounting.EL_REWARDS_STEALING_PENALTY_INIT_ROLE()
+                )
+            )
         );
+
+        vm.prank(stranger);
         accounting.releaseBlockedBondETH(0, 1 ether);
     }
 

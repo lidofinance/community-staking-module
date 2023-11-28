@@ -68,8 +68,7 @@ contract CSBondCurveTest is Test {
     }
 
     function test_setBondCurve_RevertWhen_LessThanMinBondCurveLength() public {
-        uint256[] memory _bondCurve = new uint256[](1);
-        _bondCurve[0] = 2 ether;
+        uint256[] memory _bondCurve = new uint256[](0);
 
         vm.expectRevert(CSBondCurve.InvalidBondCurveLength.selector);
 
