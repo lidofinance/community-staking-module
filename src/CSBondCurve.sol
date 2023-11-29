@@ -13,12 +13,13 @@ abstract contract CSBondCurve {
     //      bondCurve[i] | bond amount for `i + 1` keys count
     uint256[] public bondCurve;
 
-    uint256 internal constant MIN_CURVE_LENGTH = 1;
     // todo: might be redefined in the future
     uint256 internal constant MAX_CURVE_LENGTH = 20;
+    uint256 internal constant MIN_CURVE_LENGTH = 1;
+
     uint256 internal constant BASIS_POINTS = 10000;
+    uint256 internal constant MAX_BOND_MULTIPLIER = BASIS_POINTS; // x1
     uint256 internal constant MIN_BOND_MULTIPLIER = MAX_BOND_MULTIPLIER / 2; // x0.5
-    uint256 internal constant MAX_BOND_MULTIPLIER = 10000; // x1
 
     /// This mapping contains bond multiplier points (in basis points) for Node Operator's bond.
     /// By default, all Node Operators have x1 multiplier (10000 basis points).
@@ -32,6 +33,7 @@ abstract contract CSBondCurve {
 
     function _setBondCurve(uint256[] memory _bondCurve) internal {
         _checkCurveLength(_bondCurve);
+        // todo: check curve values (not worse than previous and makes sense)
         bondCurve = _bondCurve;
         _bondCurveTrend =
             _bondCurve[_bondCurve.length - 1] -
@@ -43,6 +45,7 @@ abstract contract CSBondCurve {
         uint256 basisPoints
     ) internal {
         _checkMultiplier(basisPoints);
+        // todo: check curve values (not worse than previous)
         _bondMultiplierBP[nodeOperatorId] = basisPoints;
     }
 
@@ -66,69 +69,69 @@ abstract contract CSBondCurve {
         ) revert InvalidMultiplier();
     }
 
-    /// @notice Returns the amount of keys for the given bond amount.
-    function _getKeysCountByCurveValue(
+    /// @notice Returns keys count for the given bond amount.
+    function _getKeysCountByBondAmount(
         uint256 amount
     ) internal view returns (uint256) {
-        return _getKeysCountByCurveValue(type(uint256).max, amount);
+        return _getKeysCountByBondAmount(amount, MAX_BOND_MULTIPLIER);
     }
 
-    /// @notice Returns the amount of keys for the given bond amount for particular node operator.
-    function _getKeysCountByCurveValue(
-        uint256 nodeOperatorId,
-        uint256 amount
+    /// @notice Returns keys count for the given bond amount for particular node operator.
+    function _getKeysCountByBondAmount(
+        uint256 amount,
+        uint256 multiplier
     ) internal view returns (uint256) {
-        uint256 mult = getBondMultiplier(nodeOperatorId);
-        if (amount < (bondCurve[0] * mult) / BASIS_POINTS) return 0;
-        uint256 last = (bondCurve[bondCurve.length - 1] * mult) / BASIS_POINTS;
-        if (amount >= last) {
+        if (amount < (bondCurve[0] * multiplier) / BASIS_POINTS) return 0;
+        uint256 maxCurveAmount = (bondCurve[bondCurve.length - 1] *
+            multiplier) / BASIS_POINTS;
+        if (amount >= maxCurveAmount) {
             return
                 bondCurve.length +
-                ((amount - last) / ((_bondCurveTrend * mult) / BASIS_POINTS));
+                ((amount - maxCurveAmount) /
+                    ((_bondCurveTrend * multiplier) / BASIS_POINTS));
         }
-        return _searchKeysByBond(amount, mult);
+        return _searchKeysCount(amount, multiplier);
     }
 
-    function _searchKeysByBond(
-        uint256 value,
+    function _searchKeysCount(
+        uint256 amount,
         uint256 multiplier
     ) internal view returns (uint256) {
         uint256 low;
         uint256 high = bondCurve.length - 1;
         while (low <= high) {
             uint256 mid = (low + high) / 2;
-            uint256 midValue = (bondCurve[mid] * multiplier) / BASIS_POINTS;
-            if (value == midValue) {
+            uint256 midAmount = (bondCurve[mid] * multiplier) / BASIS_POINTS;
+            if (amount == midAmount) {
                 return mid + 1;
             }
-            if (value < midValue) {
+            if (amount < midAmount) {
                 // zero mid is avoided above
                 high = mid - 1;
-            } else if (value > midValue) {
+            } else if (amount > midAmount) {
                 low = mid + 1;
             }
         }
         return low;
     }
 
-    function _getCurveValueByKeysCount(
+    function _getBondAmountByKeysCount(
         uint256 keys
     ) internal view returns (uint256) {
-        return _getCurveValueByKeysCount(type(uint256).max, keys);
+        return _getBondAmountByKeysCount(keys, MAX_BOND_MULTIPLIER);
     }
 
-    function _getCurveValueByKeysCount(
-        uint256 nodeOperatorId,
-        uint256 keys
+    function _getBondAmountByKeysCount(
+        uint256 keys,
+        uint256 multiplier
     ) internal view returns (uint256) {
         if (keys == 0) return 0;
-        uint256 mult = getBondMultiplier(nodeOperatorId);
         if (keys <= bondCurve.length) {
-            return (bondCurve[keys - 1] * mult) / BASIS_POINTS;
+            return (bondCurve[keys - 1] * multiplier) / BASIS_POINTS;
         }
         return
-            ((bondCurve[bondCurve.length - 1] * mult) / BASIS_POINTS) +
+            ((bondCurve[bondCurve.length - 1] * multiplier) / BASIS_POINTS) +
             (keys - bondCurve.length) *
-            ((_bondCurveTrend * mult) / BASIS_POINTS);
+            ((_bondCurveTrend * multiplier) / BASIS_POINTS);
     }
 }

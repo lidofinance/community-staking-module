@@ -344,10 +344,11 @@ contract CSAccounting is
         // todo: can be optimized. get active keys once
         (uint256 current, uint256 required) = _bondETHSummary(nodeOperatorId);
         uint256 currentKeysCount = _getNodeOperatorActiveKeys(nodeOperatorId);
-        uint256 requiredForNextKeys = _getCurveValueByKeysCount(
-            nodeOperatorId,
-            currentKeysCount + additionalKeysCount
-        ) - _getCurveValueByKeysCount(nodeOperatorId, currentKeysCount);
+        uint256 multiplier = getBondMultiplier(nodeOperatorId);
+        uint256 requiredForNextKeys = _getBondAmountByKeysCount(
+            currentKeysCount + additionalKeysCount,
+            multiplier
+        ) - _getBondAmountByKeysCount(currentKeysCount, multiplier);
 
         uint256 missing = required > current ? required - current : 0;
         if (missing > 0) {
@@ -392,7 +393,7 @@ contract CSAccounting is
     function getRequiredBondETHForKeys(
         uint256 keysCount
     ) public view returns (uint256) {
-        return _getCurveValueByKeysCount(keysCount);
+        return _getBondAmountByKeysCount(keysCount);
     }
 
     /// @notice Returns the required bond stETH for the given number of keys.
@@ -424,14 +425,14 @@ contract CSAccounting is
         uint256 currentBond = _ethByShares(_bondShares[nodeOperatorId]);
         uint256 blockedBond = getBlockedBondETH(nodeOperatorId);
         if (currentBond > blockedBond) {
+            uint256 multiplier = getBondMultiplier(nodeOperatorId);
             currentBond -= blockedBond;
-            uint256 bondedKeys = _getKeysCountByCurveValue(
-                nodeOperatorId,
-                currentBond
+            uint256 bondedKeys = _getKeysCountByBondAmount(
+                currentBond,
+                multiplier
             );
             if (
-                currentBond >
-                _getCurveValueByKeysCount(nodeOperatorId, bondedKeys)
+                currentBond > _getBondAmountByKeysCount(bondedKeys, multiplier)
             ) {
                 bondedKeys += 1;
             }
@@ -444,7 +445,7 @@ contract CSAccounting is
     function getKeysCountByBondETH(
         uint256 ETHAmount
     ) public view returns (uint256) {
-        return _getKeysCountByCurveValue(ETHAmount);
+        return _getKeysCountByBondAmount(ETHAmount);
     }
 
     /// @notice Returns the number of keys by the given bond stETH amount
@@ -932,9 +933,9 @@ contract CSAccounting is
     ) internal view returns (uint256 current, uint256 required) {
         current = _ethByShares(getBondShares(nodeOperatorId));
         required =
-            _getCurveValueByKeysCount(
-                nodeOperatorId,
-                _getNodeOperatorActiveKeys(nodeOperatorId)
+            _getBondAmountByKeysCount(
+                _getNodeOperatorActiveKeys(nodeOperatorId),
+                getBondMultiplier(nodeOperatorId)
             ) +
             getBlockedBondETH(nodeOperatorId);
     }
@@ -945,9 +946,9 @@ contract CSAccounting is
         current = getBondShares(nodeOperatorId);
         required =
             _sharesByEth(
-                _getCurveValueByKeysCount(
-                    nodeOperatorId,
-                    _getNodeOperatorActiveKeys(nodeOperatorId)
+                _getBondAmountByKeysCount(
+                    _getNodeOperatorActiveKeys(nodeOperatorId),
+                    getBondMultiplier(nodeOperatorId)
                 )
             ) +
             _sharesByEth(getBlockedBondETH(nodeOperatorId));

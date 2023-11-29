@@ -21,30 +21,30 @@ contract CSBondCurveTestable is CSBondCurve {
         _setBondMultiplier(nodeOperatorId, basisPoints);
     }
 
-    function getKeysCountByCurveValue(
+    function getKeysCountByBondAmount(
         uint256 amount
     ) external view returns (uint256) {
-        return _getKeysCountByCurveValue(amount);
+        return _getKeysCountByBondAmount(amount);
     }
 
-    function getCurveValueByKeysCount(
+    function getBondAmountByKeysCount(
         uint256 keysCount
     ) external view returns (uint256) {
-        return _getCurveValueByKeysCount(keysCount);
+        return _getBondAmountByKeysCount(keysCount);
     }
 
-    function getKeysCountByCurveValue(
+    function getKeysCountByBondAmount(
         uint256 nodeOperatorId,
         uint256 amount
     ) external view returns (uint256) {
-        return _getKeysCountByCurveValue(nodeOperatorId, amount);
+        return _getKeysCountByBondAmount(nodeOperatorId, amount);
     }
 
-    function getCurveValueByKeysCount(
+    function getBondAmountByKeysCount(
         uint256 nodeOperatorId,
         uint256 keysCount
     ) external view returns (uint256) {
-        return _getCurveValueByKeysCount(nodeOperatorId, keysCount);
+        return _getBondAmountByKeysCount(nodeOperatorId, keysCount);
     }
 }
 
@@ -71,7 +71,6 @@ contract CSBondCurveTest is Test {
         uint256[] memory _bondCurve = new uint256[](0);
 
         vm.expectRevert(CSBondCurve.InvalidBondCurveLength.selector);
-
         bondCurve.setBondCurve(_bondCurve);
     }
 
@@ -99,65 +98,65 @@ contract CSBondCurveTest is Test {
         bondCurve.setBondMultiplier(0, 10001);
     }
 
-    function test_getKeysCountByCurveValue() public {
-        assertEq(bondCurve.getKeysCountByCurveValue(0), 0);
-        assertEq(bondCurve.getKeysCountByCurveValue(2 ether), 1);
-        assertEq(bondCurve.getKeysCountByCurveValue(3 ether), 1);
-        assertEq(bondCurve.getKeysCountByCurveValue(3.90 ether), 2);
-        assertEq(bondCurve.getKeysCountByCurveValue(5.70 ether), 3);
-        assertEq(bondCurve.getKeysCountByCurveValue(7.40 ether), 4);
-        assertEq(bondCurve.getKeysCountByCurveValue(9.00 ether), 5);
-        assertEq(bondCurve.getKeysCountByCurveValue(10.50 ether), 6);
-        assertEq(bondCurve.getKeysCountByCurveValue(11.90 ether), 7);
-        assertEq(bondCurve.getKeysCountByCurveValue(13.10 ether), 8);
-        assertEq(bondCurve.getKeysCountByCurveValue(14.30 ether), 9);
-        assertEq(bondCurve.getKeysCountByCurveValue(15.40 ether), 10);
-        assertEq(bondCurve.getKeysCountByCurveValue(16.40 ether), 11);
-        assertEq(bondCurve.getKeysCountByCurveValue(17.40 ether), 12);
-
-        bondCurve.setBondMultiplier(0, 5000);
-
-        assertEq(bondCurve.getKeysCountByCurveValue(0, 0), 0);
-        assertEq(bondCurve.getKeysCountByCurveValue(0, 2 ether), 2);
-        assertEq(bondCurve.getKeysCountByCurveValue(0, 3 ether), 3);
-        assertEq(bondCurve.getKeysCountByCurveValue(0, 3.90 ether), 4);
-        assertEq(bondCurve.getKeysCountByCurveValue(0, 5.70 ether), 6);
-        assertEq(bondCurve.getKeysCountByCurveValue(0, 7.40 ether), 9);
-        assertEq(bondCurve.getKeysCountByCurveValue(0, 9.00 ether), 12);
-        assertEq(bondCurve.getKeysCountByCurveValue(0, 10.50 ether), 15);
-        assertEq(bondCurve.getKeysCountByCurveValue(0, 11.90 ether), 18);
-        assertEq(bondCurve.getKeysCountByCurveValue(0, 13.10 ether), 20);
+    function test_getKeysCountByBondAmount() public {
+        assertEq(bondCurve.getKeysCountByBondAmount(0), 0);
+        assertEq(bondCurve.getKeysCountByBondAmount(2 ether), 1);
+        assertEq(bondCurve.getKeysCountByBondAmount(3 ether), 1);
+        assertEq(bondCurve.getKeysCountByBondAmount(3.90 ether), 2);
+        assertEq(bondCurve.getKeysCountByBondAmount(5.70 ether), 3);
+        assertEq(bondCurve.getKeysCountByBondAmount(7.40 ether), 4);
+        assertEq(bondCurve.getKeysCountByBondAmount(9.00 ether), 5);
+        assertEq(bondCurve.getKeysCountByBondAmount(10.50 ether), 6);
+        assertEq(bondCurve.getKeysCountByBondAmount(11.90 ether), 7);
+        assertEq(bondCurve.getKeysCountByBondAmount(13.10 ether), 8);
+        assertEq(bondCurve.getKeysCountByBondAmount(14.30 ether), 9);
+        assertEq(bondCurve.getKeysCountByBondAmount(15.40 ether), 10);
+        assertEq(bondCurve.getKeysCountByBondAmount(16.40 ether), 11);
+        assertEq(bondCurve.getKeysCountByBondAmount(17.40 ether), 12);
     }
 
-    function test_getCurveValueByKeysCount() public {
-        assertEq(bondCurve.getCurveValueByKeysCount(0), 0);
-        assertEq(bondCurve.getCurveValueByKeysCount(1), 2 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(2), 3.90 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(3), 5.70 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(4), 7.40 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(5), 9.00 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(6), 10.50 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(7), 11.90 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(8), 13.10 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(9), 14.30 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(10), 15.40 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(11), 16.40 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(12), 17.40 ether);
+    function test_getKeysCountByCurveValue_WithMultiplier() public {
+        assertEq(bondCurve.getKeysCountByBondAmount(0, 5000), 0);
+        assertEq(bondCurve.getKeysCountByBondAmount(2 ether, 5000), 2);
+        assertEq(bondCurve.getKeysCountByBondAmount(3 ether, 5000), 3);
+        assertEq(bondCurve.getKeysCountByBondAmount(3.90 ether, 5000), 4);
+        assertEq(bondCurve.getKeysCountByBondAmount(5.70 ether, 5000), 6);
+        assertEq(bondCurve.getKeysCountByBondAmount(7.40 ether, 5000), 9);
+        assertEq(bondCurve.getKeysCountByBondAmount(9.00 ether, 5000), 12);
+        assertEq(bondCurve.getKeysCountByBondAmount(10.50 ether, 5000), 15);
+        assertEq(bondCurve.getKeysCountByBondAmount(11.90 ether, 5000), 18);
+        assertEq(bondCurve.getKeysCountByBondAmount(13.10 ether, 5000), 20);
+    }
 
-        bondCurve.setBondMultiplier(0, 5000);
+    function test_getBondAmountByKeysCount() public {
+        assertEq(bondCurve.getBondAmountByKeysCount(0), 0);
+        assertEq(bondCurve.getBondAmountByKeysCount(1), 2 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(2), 3.90 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(3), 5.70 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(4), 7.40 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(5), 9.00 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(6), 10.50 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(7), 11.90 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(8), 13.10 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(9), 14.30 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(10), 15.40 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(11), 16.40 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(12), 17.40 ether);
+    }
 
-        assertEq(bondCurve.getCurveValueByKeysCount(0, 0), 0);
-        assertEq(bondCurve.getCurveValueByKeysCount(0, 1), 1 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(0, 2), 1.95 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(0, 3), 2.85 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(0, 4), 3.70 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(0, 5), 4.50 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(0, 6), 5.25 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(0, 7), 5.95 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(0, 8), 6.55 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(0, 9), 7.15 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(0, 10), 7.7 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(0, 11), 8.20 ether);
-        assertEq(bondCurve.getCurveValueByKeysCount(0, 12), 8.70 ether);
+    function test_getBondAmountByKeysCount_WithMultiplier() public {
+        assertEq(bondCurve.getBondAmountByKeysCount(0, 5000), 0);
+        assertEq(bondCurve.getBondAmountByKeysCount(1, 5000), 1 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(2, 5000), 1.95 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(3, 5000), 2.85 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(4, 5000), 3.70 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(5, 5000), 4.50 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(6, 5000), 5.25 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(7, 5000), 5.95 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(8, 5000), 6.55 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(9, 5000), 7.15 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(10, 5000), 7.7 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(11, 5000), 8.20 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(12, 5000), 8.70 ether);
     }
 }
