@@ -93,7 +93,7 @@ abstract contract CSBondCurve {
         uint256 value,
         uint256 multiplier
     ) internal view returns (uint256) {
-        uint256 low = 0;
+        uint256 low;
         uint256 high = bondCurve.length - 1;
         while (low <= high) {
             uint256 mid = (low + high) / 2;
@@ -104,11 +104,8 @@ abstract contract CSBondCurve {
             if (value < midValue) {
                 // zero mid is avoided above
                 high = mid - 1;
-                continue;
-            }
-            if (value > midValue) {
+            } else if (value > midValue) {
                 low = mid + 1;
-                continue;
             }
         }
         return low;
@@ -128,11 +125,10 @@ abstract contract CSBondCurve {
         uint256 mult = getBondMultiplier(nodeOperatorId);
         if (keys <= bondCurve.length) {
             return (bondCurve[keys - 1] * mult) / BASIS_POINTS;
-        } else {
-            return
-                ((bondCurve[bondCurve.length - 1] * mult) / BASIS_POINTS) +
-                (keys - bondCurve.length) *
-                ((_bondCurveTrend * mult) / BASIS_POINTS);
         }
+        return
+            ((bondCurve[bondCurve.length - 1] * mult) / BASIS_POINTS) +
+            (keys - bondCurve.length) *
+            ((_bondCurveTrend * mult) / BASIS_POINTS);
     }
 }
