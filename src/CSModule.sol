@@ -25,8 +25,6 @@ struct NodeOperator {
     bool active;
     uint256 targetLimit;
     bool isTargetLimitActive;
-    uint256 targetLimitForUnstuck;
-    bool isTargetLimitActiveForUnstuck;
     uint256 stuckPenaltyEndTimestamp;
     uint256 totalExitedKeys;
     uint256 totalAddedKeys;
@@ -116,8 +114,9 @@ contract CSModuleBase {
     error SameAddress();
     error AlreadyProposed();
     error InvalidVetKeysPointer();
+    error TargetLimitExceeded();
+    error StuckKeysPresent();
     error InvalidTargetLimit();
-    error IncreasingTargetLimitWhenStuckKeys();
     error StuckKeysHigherThanTotalDeposited();
 
     error QueueLookupNoLimit();
@@ -646,7 +645,7 @@ contract CSModule is IStakingModule, CSModuleBase {
     }
 
     // @notice update stuck validators count by StakingRouter
-    // Presence of stuck validators leads to setting target limit to total deposited keys
+    // Presence of stuck validators leads to stop vetting for the node operator
     // to prevent further deposits and clean batches from the deposit queue.
     // @param nodeOperatorIds - bytes packed array of node operator ids
     // @param stuckValidatorsCounts - bytes packed array of stuck validators counts
@@ -677,30 +676,6 @@ contract CSModule is IStakingModule, CSModuleBase {
             if (stuckValidatorsCount == no.stuckValidatorsCount) continue;
 
             no.stuckValidatorsCount = stuckValidatorsCount;
-
-            if (stuckValidatorsCount > 0) {
-                // @dev the oracle can decrease target limit but can't increase it
-                // after unstuck, target limit will be set to previous value
-                no.isTargetLimitActiveForUnstuck = no.isTargetLimitActive;
-                no.targetLimitForUnstuck = no.targetLimit;
-                if (
-                    !no.isTargetLimitActive ||
-                    no.targetLimit > no.totalDepositedKeys
-                ) {
-                    _setTargetLimit(
-                        nodeOperatorId,
-                        true,
-                        no.totalDepositedKeys
-                    );
-                }
-            } else {
-                _setTargetLimit(
-                    nodeOperatorId,
-                    no.isTargetLimitActiveForUnstuck,
-                    no.targetLimitForUnstuck
-                );
-            }
-
             emit StuckSigningKeysCountChanged(
                 nodeOperatorId,
                 stuckValidatorsCount
@@ -733,11 +708,6 @@ contract CSModule is IStakingModule, CSModuleBase {
         uint256 targetLimit
     ) external onlyExistingNodeOperator(nodeOperatorId) onlyStakingRouter {
         // TODO sanity checks?
-        if (_nodeOperators[nodeOperatorId].stuckValidatorsCount > 0) {
-            _nodeOperators[nodeOperatorId]
-                .isTargetLimitActiveForUnstuck = isTargetLimitActive;
-            _nodeOperators[nodeOperatorId].targetLimitForUnstuck = targetLimit;
-        }
         _setTargetLimit(nodeOperatorId, isTargetLimitActive, targetLimit);
         _incrementModuleNonce();
     }
@@ -745,8 +715,6 @@ contract CSModule is IStakingModule, CSModuleBase {
     // @notice update target limits with event emission
     // target limit decreasing (or appearing) must unvet node operator's keys from the queue
     // @dev it's not expected (yet) that target limit can be disabled with some value.
-    // in case of stuck keys, the previous limit stored in the targetLimitForUnstuck field
-    // hence, don't have to store non-zero value in the targetLimit field
     function _setTargetLimit(
         uint256 nodeOperatorId,
         bool isTargetLimitActive,
@@ -757,8 +725,6 @@ contract CSModule is IStakingModule, CSModuleBase {
             revert InvalidTargetLimit();
 
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (no.stuckValidatorsCount > 0 && targetLimit > no.totalDepositedKeys)
-            revert IncreasingTargetLimitWhenStuckKeys();
 
         if (
             no.isTargetLimitActive == isTargetLimitActive &&
@@ -800,10 +766,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         if (vetKeysPointer <= no.totalVettedKeys)
             revert InvalidVetKeysPointer();
         if (vetKeysPointer > no.totalAddedKeys) revert InvalidVetKeysPointer();
-        if (
-            no.isTargetLimitActive &&
-            vetKeysPointer > (no.totalExitedKeys + no.targetLimit)
-        ) revert InvalidVetKeysPointer();
+        _validateVetKeys(nodeOperatorId, vetKeysPointer);
 
         uint64 count = SafeCast.toUint64(vetKeysPointer - no.totalVettedKeys);
         uint64 start = SafeCast.toUint64(no.totalVettedKeys);
@@ -822,6 +785,19 @@ contract CSModule is IStakingModule, CSModuleBase {
         emit VettedSigningKeysCountChanged(nodeOperatorId, vetKeysPointer);
 
         _incrementModuleNonce();
+    }
+
+    function _validateVetKeys(
+        uint256 nodeOperatorId,
+        uint64 vetKeysPointer
+    ) internal view {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        if (
+            no.isTargetLimitActive &&
+            vetKeysPointer > (no.totalExitedKeys + no.targetLimit)
+        ) revert TargetLimitExceeded();
+        if (no.stuckValidatorsCount > 0) revert StuckKeysPresent();
     }
 
     function unvetKeys(

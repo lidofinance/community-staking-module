@@ -816,7 +816,20 @@ contract CsmVetKeys is CSMCommon {
         csm.vetKeys(noId, 1);
         csm.updateTargetValidatorsLimits(noId, true, 1);
 
-        vm.expectRevert(InvalidVetKeysPointer.selector);
+        vm.expectRevert(TargetLimitExceeded.selector);
+        csm.vetKeys(noId, 2);
+    }
+
+    function test_vetKeys_RevertWhenStuckKeysPresent() public {
+        uint256 noId = createNodeOperator(2);
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+
+        vm.expectRevert(StuckKeysPresent.selector);
         csm.vetKeys(noId, 2);
     }
 }
@@ -1476,20 +1489,6 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         vm.expectRevert(InvalidTargetLimit.selector);
         csm.updateTargetValidatorsLimits(noId, false, 10);
     }
-
-    function test_updateTargetValidatorsLimits_RevertWhenTargetLimitIsGreaterThanDepositedWhenStuck()
-        public
-    {
-        uint256 noId = createNodeOperator(2);
-        csm.vetKeys(noId, 2);
-        csm.obtainDepositData(2, "");
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000002))
-        );
-        vm.expectRevert(IncreasingTargetLimitWhenStuckKeys.selector);
-        csm.updateTargetValidatorsLimits(noId, true, 4);
-    }
 }
 
 contract CsmUpdateStuckValidatorsCount is CSMCommon {
@@ -1498,8 +1497,6 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
         csm.vetKeys(noId, 3);
         csm.obtainDepositData(1, "");
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit TargetValidatorsCountChanged(noId, true, 1);
         vm.expectEmit(true, true, false, true, address(csm));
         emit StuckSigningKeysCountChanged(noId, 1);
         csm.updateStuckValidatorsCount(
@@ -1513,12 +1510,6 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
             1,
             "stuckValidatorsCount not increased"
         );
-        assertEq(
-            summary.targetValidatorsCount,
-            summary.totalDepositedValidators,
-            "targetValidatorsCount should be limited to totalDepositedValidators"
-        );
-        assertTrue(summary.isTargetLimitActive, "isTargetLimitActive is false");
     }
 
     function test_updateStuckValidatorsCount_Unstuck() public {
@@ -1531,8 +1522,6 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
             bytes.concat(bytes16(0x00000000000000000000000000000001))
         );
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit TargetValidatorsCountChanged(noId, false, 0);
         vm.expectEmit(true, true, false, true, address(csm));
         emit StuckSigningKeysCountChanged(noId, 0);
         csm.updateStuckValidatorsCount(
@@ -1544,94 +1533,6 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
             summary.stuckValidatorsCount,
             0,
             "stuckValidatorsCount should be zero"
-        );
-        assertEq(
-            summary.targetValidatorsCount,
-            0,
-            "targetValidatorsCount should be zero"
-        );
-        assertFalse(
-            summary.isTargetLimitActive,
-            "isTargetLimitActive should be false"
-        );
-    }
-
-    function test_updateStuckValidatorsCount_DecreaseLimit() public {
-        uint256 noId = createNodeOperator();
-        csm.vetKeys(noId, 1);
-        csm.obtainDepositData(1, "");
-        csm.updateTargetValidatorsLimits(noId, true, 2);
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit TargetValidatorsCountChanged(noId, true, 1);
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-    }
-
-    function test_updateStuckValidatorsCount_ReturnToPrevLimit() public {
-        uint256 noId = createNodeOperator();
-        csm.vetKeys(noId, 1);
-        csm.obtainDepositData(1, "");
-        csm.updateTargetValidatorsLimits(noId, true, 2);
-
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit TargetValidatorsCountChanged(noId, true, 2);
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000000))
-        );
-        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(
-            summary.stuckValidatorsCount,
-            0,
-            "stuckValidatorsCount should be zero"
-        );
-        assertEq(
-            summary.targetValidatorsCount,
-            2,
-            "targetValidatorsCount should return to prev value"
-        );
-        assertTrue(
-            summary.isTargetLimitActive,
-            "isTargetLimitActive should remain true"
-        );
-    }
-
-    function test_updateStuckValidatorsCount_ReturnToPrevZeroLimit() public {
-        uint256 noId = createNodeOperator();
-        csm.vetKeys(noId, 1);
-        csm.obtainDepositData(1, "");
-        csm.updateTargetValidatorsLimits(noId, true, 0);
-
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-
-        vm.recordLogs();
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000000))
-        );
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        assertEq(logs.length, 1);
-
-        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(
-            summary.targetValidatorsCount,
-            0,
-            "targetValidatorsCount should not change"
-        );
-        assertTrue(
-            summary.isTargetLimitActive,
-            "isTargetLimitActive should remain true"
         );
     }
 
@@ -1682,21 +1583,5 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
         );
         Vm.Log[] memory logs = vm.getRecordedLogs();
         assertEq(logs.length, 0);
-    }
-
-    function test_updateStuckValidatorsCount_NoEventWhenLimitSame() public {
-        uint256 noId = createNodeOperator();
-        csm.vetKeys(noId, 1);
-        csm.obtainDepositData(1, "");
-        csm.updateTargetValidatorsLimits(noId, true, 1);
-
-        vm.recordLogs();
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        // only StuckSigningKeysCountChanged
-        assertEq(logs.length, 1);
     }
 }
