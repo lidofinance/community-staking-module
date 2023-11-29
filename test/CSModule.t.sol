@@ -455,7 +455,7 @@ contract CSMObtainDepositData is CSMCommon {
 contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
     function test_proposeNodeOperatorManagerAddressChange() public {
         uint256 noId = createNodeOperator();
-        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
         assertEq(no.managerAddress, nodeOperator);
         assertEq(no.rewardAddress, nodeOperator);
 
@@ -507,7 +507,7 @@ contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
 contract CsmConfirmNodeOperatorManagerAddressChange is CSMCommon {
     function test_confirmNodeOperatorManagerAddressChange() public {
         uint256 noId = createNodeOperator();
-        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
         assertEq(no.managerAddress, nodeOperator);
         assertEq(no.rewardAddress, nodeOperator);
 
@@ -556,7 +556,7 @@ contract CsmConfirmNodeOperatorManagerAddressChange is CSMCommon {
 contract CsmProposeNodeOperatorRewardAddressChange is CSMCommon {
     function test_proposeNodeOperatorRewardAddressChange() public {
         uint256 noId = createNodeOperator();
-        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
         assertEq(no.managerAddress, nodeOperator);
         assertEq(no.rewardAddress, nodeOperator);
 
@@ -608,7 +608,7 @@ contract CsmProposeNodeOperatorRewardAddressChange is CSMCommon {
 contract CsmConfirmNodeOperatorRewardAddressChange is CSMCommon {
     function test_confirmNodeOperatorRewardAddressChange() public {
         uint256 noId = createNodeOperator();
-        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
         assertEq(no.managerAddress, nodeOperator);
         assertEq(no.rewardAddress, nodeOperator);
 
@@ -668,7 +668,7 @@ contract CsmResetNodeOperatorManagerAddress is CSMCommon {
         vm.prank(stranger);
         csm.resetNodeOperatorManagerAddress(noId);
 
-        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
         assertEq(no.managerAddress, stranger);
         assertEq(no.rewardAddress, stranger);
     }
@@ -707,7 +707,7 @@ contract CsmVetKeys is CSMCommon {
         emit VettedSigningKeysCountChanged(noId, 1);
         csm.vetKeys(noId, 1);
 
-        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
         assertEq(no.totalVettedValidators, 1);
 
         BatchInfo[] memory exp = new BatchInfo[](1);
@@ -730,7 +730,7 @@ contract CsmVetKeys is CSMCommon {
         emit VettedSigningKeysCountChanged(noId, 2);
         csm.vetKeys(noId, 2);
 
-        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
         assertEq(no.totalVettedValidators, 2);
 
         BatchInfo[] memory exp = new BatchInfo[](2);
