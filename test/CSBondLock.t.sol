@@ -6,6 +6,7 @@ pragma solidity 0.8.21;
 import "forge-std/Test.sol";
 
 import { CSAccountingBase, CSAccounting } from "../src/CSAccounting.sol";
+import { CSBondLockBase, CSBondLock } from "../src/CSBondLock.sol";
 import { PermitTokenBase } from "./helpers/Permit.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 import { LidoMock } from "./helpers/mocks/LidoMock.sol";
@@ -48,15 +49,15 @@ contract CSAccounting_revealed is CSAccounting {
 
     function _blockedBondEther_get_value(
         uint256 nodeOperatorId
-    ) public view returns (BlockedBond memory) {
-        return _blockedBondEther[nodeOperatorId];
+    ) public view returns (BondLock memory) {
+        return _bondLock[nodeOperatorId];
     }
 
     function _blockedBondEther_set_value(
         uint256 nodeOperatorId,
-        BlockedBond memory value
+        BondLock memory value
     ) public {
-        _blockedBondEther[nodeOperatorId] = value;
+        _bondLock[nodeOperatorId] = value;
     }
 
     function _changeBlockedBondState_revealed(
@@ -64,14 +65,14 @@ contract CSAccounting_revealed is CSAccounting {
         uint256 ETHAmount,
         uint256 retentionUntil
     ) public {
-        _changeBlockedBondState(nodeOperatorId, ETHAmount, retentionUntil);
+        _changeBondLock(nodeOperatorId, ETHAmount, retentionUntil);
     }
 
     function _reduceBlockedBondETH_revealed(
         uint256 nodeOperatorId,
         uint256 ETHAmount
     ) public {
-        _reduceBlockedBondETH(nodeOperatorId, ETHAmount);
+        _reduceAmount(nodeOperatorId, ETHAmount);
     }
 }
 
@@ -79,6 +80,7 @@ contract CSAccounting_BlockedBondTest is
     Test,
     Fixtures,
     Utilities,
+    CSBondLockBase,
     CSAccountingBase
 {
     using stdStorage for StdStorage;
@@ -143,8 +145,8 @@ contract CSAccounting_BlockedBondTest is
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBond({
-                ETHAmount: amount,
+            CSBondLock.BondLock({
+                amount: amount,
                 retentionUntil: retentionUntil
             })
         );
@@ -167,8 +169,8 @@ contract CSAccounting_BlockedBondTest is
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBond({
-                ETHAmount: amount,
+            CSBondLock.BondLock({
+                amount: amount,
                 retentionUntil: retentionUntil
             })
         );
@@ -195,8 +197,8 @@ contract CSAccounting_BlockedBondTest is
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBond({
-                ETHAmount: amount,
+            CSBondLock.BondLock({
+                amount: amount,
                 retentionUntil: retentionUntil
             })
         );
@@ -223,8 +225,8 @@ contract CSAccounting_BlockedBondTest is
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBond({
-                ETHAmount: amount,
+            CSBondLock.BondLock({
+                amount: amount,
                 retentionUntil: retentionUntil
             })
         );
@@ -237,8 +239,8 @@ contract CSAccounting_BlockedBondTest is
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBond({
-                ETHAmount: 1 ether,
+            CSBondLock.BondLock({
+                amount: 1 ether,
                 retentionUntil: retentionUntil
             })
         );
@@ -265,8 +267,8 @@ contract CSAccounting_BlockedBondTest is
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBond({
-                ETHAmount: amount,
+            CSBondLock.BondLock({
+                amount: amount,
                 retentionUntil: retentionUntil
             })
         );
@@ -279,8 +281,8 @@ contract CSAccounting_BlockedBondTest is
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBond({
-                ETHAmount: 1 ether,
+            CSBondLock.BondLock({
+                amount: 1 ether,
                 retentionUntil: retentionUntil
             })
         );
@@ -306,8 +308,8 @@ contract CSAccounting_BlockedBondTest is
         accounting._bondShares_set_value(0, 100 ether);
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBond({
-                ETHAmount: amount,
+            CSBondLock.BondLock({
+                amount: amount,
                 retentionUntil: retentionUntil
             })
         );
@@ -325,21 +327,21 @@ contract CSAccounting_BlockedBondTest is
         uint256 retentionUntil = block.timestamp + 1 weeks;
 
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BlockedBondChanged(noId, amount, retentionUntil);
+        emit BondLockChanged(noId, amount, retentionUntil);
         accounting._changeBlockedBondState_revealed({
             nodeOperatorId: noId,
             ETHAmount: amount,
             retentionUntil: retentionUntil
         });
 
-        CSAccounting.BlockedBond memory value = accounting
+        CSBondLock.BondLock memory value = accounting
             ._blockedBondEther_get_value(noId);
 
-        assertEq(value.ETHAmount, amount);
+        assertEq(value.amount, amount);
         assertEq(value.retentionUntil, retentionUntil);
 
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BlockedBondChanged(noId, 0, 0);
+        emit BondLockChanged(noId, 0, 0);
 
         accounting._changeBlockedBondState_revealed({
             nodeOperatorId: noId,
@@ -349,7 +351,7 @@ contract CSAccounting_BlockedBondTest is
 
         value = accounting._blockedBondEther_get_value(noId);
 
-        assertEq(value.ETHAmount, 0);
+        assertEq(value.amount, 0);
         assertEq(value.retentionUntil, 0);
     }
 
@@ -367,7 +369,7 @@ contract CSAccounting_BlockedBondTest is
             firstStolenAmount
         );
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BlockedBondChanged(
+        emit BondLockChanged(
             noId,
             firstStolenAmount,
             block.timestamp + 8 weeks
@@ -381,7 +383,7 @@ contract CSAccounting_BlockedBondTest is
         });
 
         assertEq(
-            accounting._blockedBondEther_get_value(noId).ETHAmount,
+            accounting._blockedBondEther_get_value(noId).amount,
             firstStolenAmount
         );
         assertEq(
@@ -402,7 +404,7 @@ contract CSAccounting_BlockedBondTest is
             secondStolenAmount
         );
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BlockedBondChanged(
+        emit BondLockChanged(
             noId,
             firstStolenAmount + secondStolenAmount,
             block.timestamp + 8 weeks
@@ -416,7 +418,7 @@ contract CSAccounting_BlockedBondTest is
         });
 
         assertEq(
-            accounting._blockedBondEther_get_value(noId).ETHAmount,
+            accounting._blockedBondEther_get_value(noId).amount,
             firstStolenAmount + secondStolenAmount
         );
         assertEq(
@@ -441,7 +443,7 @@ contract CSAccounting_BlockedBondTest is
     function test_initELRewardsStealingPenalty_revertWhenZero() public {
         _createNodeOperator({ ongoingVals: 1, withdrawnVals: 0 });
 
-        vm.expectRevert(InvalidStolenAmount.selector);
+        vm.expectRevert(InvalidBondLockAmount.selector);
 
         vm.prank(admin);
         accounting.initELRewardsStealingPenalty({
@@ -489,8 +491,8 @@ contract CSAccounting_BlockedBondTest is
 
         accounting._blockedBondEther_set_value(
             0,
-            CSAccounting.BlockedBond({
-                ETHAmount: 1 ether,
+            CSBondLock.BondLock({
+                amount: 1 ether,
                 retentionUntil: retentionUntil
             })
         );
@@ -501,10 +503,10 @@ contract CSAccounting_BlockedBondTest is
         vm.prank(admin);
         accounting.settleBlockedBondETH(nosToPenalize);
 
-        CSAccounting.BlockedBond memory value = accounting
+        CSBondLock.BondLock memory value = accounting
             ._blockedBondEther_get_value(0);
 
-        assertEq(value.ETHAmount, 1 ether);
+        assertEq(value.amount, 1 ether);
         assertEq(value.retentionUntil, retentionUntil);
 
         // penalty amount is less than the bond
@@ -519,20 +521,20 @@ contract CSAccounting_BlockedBondTest is
         emit BondPenalized(0, penalty, covering);
 
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BlockedBondChanged(0, 0, 0);
+        emit BondLockChanged(0, 0, 0);
 
         vm.prank(admin);
         accounting.settleBlockedBondETH(nosToPenalize);
 
         value = accounting._blockedBondEther_get_value(0);
-        assertEq(value.ETHAmount, 0);
+        assertEq(value.amount, 0);
         assertEq(value.retentionUntil, 0);
 
         // penalty amount is greater than the bond
         accounting._blockedBondEther_set_value(
             0,
-            CSAccounting.BlockedBond({
-                ETHAmount: 100 ether,
+            CSBondLock.BondLock({
+                amount: 100 ether,
                 retentionUntil: retentionUntil
             })
         );
@@ -547,33 +549,33 @@ contract CSAccounting_BlockedBondTest is
         emit BondPenalized(0, penalty, covering);
 
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BlockedBondChanged(0, uncovered, retentionUntil);
+        emit BondLockChanged(0, uncovered, retentionUntil);
 
         vm.prank(admin);
         accounting.settleBlockedBondETH(nosToPenalize);
 
         value = accounting._blockedBondEther_get_value(0);
-        assertEq(value.ETHAmount, uncovered);
+        assertEq(value.amount, uncovered);
         assertEq(value.retentionUntil, retentionUntil);
 
         // retention period expired
         accounting._blockedBondEther_set_value(
             0,
-            CSAccounting.BlockedBond({
-                ETHAmount: 100 ether,
+            CSBondLock.BondLock({
+                amount: 100 ether,
                 retentionUntil: retentionUntil
             })
         );
         vm.warp(retentionUntil + 12);
 
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BlockedBondChanged(0, 0, 0);
+        emit BondLockChanged(0, 0, 0);
 
         vm.prank(admin);
         accounting.settleBlockedBondETH(nosToPenalize);
 
         value = accounting._blockedBondEther_get_value(0);
-        assertEq(value.ETHAmount, 0);
+        assertEq(value.amount, 0);
         assertEq(value.retentionUntil, 0);
     }
 
@@ -584,8 +586,8 @@ contract CSAccounting_BlockedBondTest is
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBond({
-                ETHAmount: amount,
+            CSBondLock.BondLock({
+                amount: amount,
                 retentionUntil: retentionUntil
             })
         );
@@ -595,14 +597,14 @@ contract CSAccounting_BlockedBondTest is
         uint256 rest = amount - toReduce;
 
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BlockedBondChanged(noId, rest, retentionUntil);
+        emit BondLockChanged(noId, rest, retentionUntil);
 
         accounting._reduceBlockedBondETH_revealed(noId, toReduce);
 
-        CSAccounting.BlockedBond memory value = accounting
+        CSBondLock.BondLock memory value = accounting
             ._blockedBondEther_get_value(noId);
 
-        assertEq(value.ETHAmount, rest);
+        assertEq(value.amount, rest);
         assertEq(value.retentionUntil, retentionUntil);
 
         // all blocked bond is released
@@ -611,18 +613,18 @@ contract CSAccounting_BlockedBondTest is
         retentionUntil = 0;
 
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BlockedBondChanged(noId, rest, retentionUntil);
+        emit BondLockChanged(noId, rest, retentionUntil);
 
         accounting._reduceBlockedBondETH_revealed(noId, toReduce);
 
         value = accounting._blockedBondEther_get_value(noId);
 
-        assertEq(value.ETHAmount, rest);
+        assertEq(value.amount, rest);
         assertEq(value.retentionUntil, retentionUntil);
     }
 
     function test_private_reduceBlockedBondETH_revertWhenNoBlocked() public {
-        vm.expectRevert("no blocked bond to release");
+        vm.expectRevert(InvalidBondLockAmount.selector);
         accounting._reduceBlockedBondETH_revealed(0, 1 ether);
     }
 
@@ -635,13 +637,13 @@ contract CSAccounting_BlockedBondTest is
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBond({
-                ETHAmount: amount,
+            CSBondLock.BondLock({
+                amount: amount,
                 retentionUntil: retentionUntil
             })
         );
 
-        vm.expectRevert("blocked bond is less than amount to release");
+        vm.expectRevert(InvalidBondLockAmount.selector);
         accounting._reduceBlockedBondETH_revealed(0, 101 ether);
     }
 
@@ -654,8 +656,8 @@ contract CSAccounting_BlockedBondTest is
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBond({
-                ETHAmount: amount,
+            CSBondLock.BondLock({
+                amount: amount,
                 retentionUntil: retentionUntil
             })
         );
@@ -664,9 +666,9 @@ contract CSAccounting_BlockedBondTest is
         uint256 rest = amount - toRelease;
 
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BlockedBondReleased(noId, toRelease);
+        emit BondLockReleased(noId, toRelease);
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BlockedBondChanged(noId, rest, retentionUntil);
+        emit BondLockChanged(noId, rest, retentionUntil);
 
         vm.prank(admin);
         accounting.releaseBlockedBondETH(noId, toRelease);
@@ -704,8 +706,8 @@ contract CSAccounting_BlockedBondTest is
 
         accounting._blockedBondEther_set_value(
             noId,
-            CSAccounting.BlockedBond({
-                ETHAmount: amount,
+            CSBondLock.BondLock({
+                amount: amount,
                 retentionUntil: retentionUntil
             })
         );
@@ -714,9 +716,9 @@ contract CSAccounting_BlockedBondTest is
         uint256 rest = amount - toCompensate;
 
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BlockedBondCompensated(noId, toCompensate);
+        emit BondLockCompensated(noId, toCompensate);
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BlockedBondChanged(noId, rest, retentionUntil);
+        emit BondLockChanged(noId, rest, retentionUntil);
 
         vm.deal(user, toCompensate);
         vm.prank(user);
@@ -728,7 +730,7 @@ contract CSAccounting_BlockedBondTest is
     function test_compensateBlockedBondETH_revertWhenZero() public {
         _createNodeOperator({ ongoingVals: 1, withdrawnVals: 0 });
 
-        vm.expectRevert("value should be greater than zero");
+        vm.expectRevert(InvalidBondLockAmount.selector);
         accounting.compensateBlockedBondETH{ value: 0 }(0);
     }
 
