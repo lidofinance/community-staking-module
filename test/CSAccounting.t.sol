@@ -22,6 +22,10 @@ import { WithdrawalQueueMockBase, WithdrawalQueueMock } from "./helpers/mocks/Wi
 import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 
+// todo: non-existing node operator tests
+// todo: bond lock permission tests
+// todo: bond lock emit event tests
+
 contract CSAccountingForTests is CSAccounting {
     constructor(
         uint256[] memory bondCurve,

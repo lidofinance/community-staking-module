@@ -28,8 +28,8 @@ abstract contract CSBondLock is CSBondLockBase {
     uint256 public constant MIN_BOND_LOCK_MANAGEMENT_PERIOD = 1 days;
     uint256 public constant MAX_BOND_LOCK_MANAGEMENT_PERIOD = 7 days;
 
-    uint256 public bondLockRetentionPeriod;
-    uint256 public bondLockManagementPeriod;
+    uint256 internal _bondLockRetentionPeriod;
+    uint256 internal _bondLockManagementPeriod;
 
     mapping(uint256 => BondLock) internal _bondLock;
 
@@ -42,8 +42,16 @@ abstract contract CSBondLock is CSBondLockBase {
         uint256 management
     ) internal {
         _validateBondLockPeriods(retention, management);
-        bondLockRetentionPeriod = retention;
-        bondLockManagementPeriod = management;
+        _bondLockRetentionPeriod = retention;
+        _bondLockManagementPeriod = management;
+    }
+
+    function getBondLockPeriods()
+        external
+        view
+        returns (uint256 retention, uint256 management)
+    {
+        return (_bondLockRetentionPeriod, _bondLockManagementPeriod);
     }
 
     function _validateBondLockPeriods(
@@ -78,7 +86,7 @@ abstract contract CSBondLock is CSBondLockBase {
         _changeBondLock({
             nodeOperatorId: nodeOperatorId,
             amount: _bondLock[nodeOperatorId].amount + amount,
-            retentionUntil: block.timestamp + bondLockRetentionPeriod
+            retentionUntil: block.timestamp + _bondLockRetentionPeriod
         });
     }
 
@@ -91,9 +99,9 @@ abstract contract CSBondLock is CSBondLockBase {
             BondLock storage bondLock = _bondLock[nodeOperatorId];
             if (
                 block.timestamp +
-                    bondLockRetentionPeriod -
+                    _bondLockRetentionPeriod -
                     bondLock.retentionUntil <
-                bondLockManagementPeriod
+                _bondLockManagementPeriod
             ) {
                 // blocked bond in safe frame to manage it by committee or node operator
                 continue;
@@ -117,9 +125,6 @@ abstract contract CSBondLock is CSBondLockBase {
     /// @param nodeOperatorId id of the node operator to release blocked bond for.
     /// @param amount amount of ETH to release.
     function _release(uint256 nodeOperatorId, uint256 amount) internal {
-        if (amount == 0) {
-            revert InvalidBondLockAmount();
-        }
         emit BondLockReleased(nodeOperatorId, amount);
         _reduceAmount(nodeOperatorId, amount);
     }
@@ -127,14 +132,11 @@ abstract contract CSBondLock is CSBondLockBase {
     /// @notice Compensates blocked bond ETH for the given node operator.
     /// @param nodeOperatorId id of the node operator to compensate blocked bond for.
     function _compensate(uint256 nodeOperatorId, uint256 amount) internal {
-        if (amount == 0) {
-            revert InvalidBondLockAmount();
-        }
         emit BondLockCompensated(nodeOperatorId, amount);
         _reduceAmount(nodeOperatorId, amount);
     }
 
-    function _reduceAmount(uint256 nodeOperatorId, uint256 amount) internal {
+    function _reduceAmount(uint256 nodeOperatorId, uint256 amount) private {
         uint256 blocked = _get(nodeOperatorId);
         if (amount == 0) {
             revert InvalidBondLockAmount();
@@ -153,7 +155,7 @@ abstract contract CSBondLock is CSBondLockBase {
         uint256 nodeOperatorId,
         uint256 amount,
         uint256 retentionUntil
-    ) internal {
+    ) private {
         if (amount == 0) {
             delete _bondLock[nodeOperatorId];
             emit BondLockChanged(nodeOperatorId, 0, 0);

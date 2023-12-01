@@ -5,7 +5,6 @@ pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
 
-import { CSAccountingBase, CSAccounting } from "../src/CSAccounting.sol";
 import { CSBondLockBase, CSBondLock } from "../src/CSBondLock.sol";
 import { PermitTokenBase } from "./helpers/Permit.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
@@ -19,558 +18,397 @@ import { WithdrawalQueueMockBase, WithdrawalQueueMock } from "./helpers/mocks/Wi
 import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 
-contract CSAccounting_revealed is CSAccounting {
+abstract contract CSBondLockTestableBase {
+    event BondPenalized(
+        uint256 nodeOperatorId,
+        uint256 penaltyEth,
+        uint256 coveringEth
+    );
+}
+
+contract CSBondLockTestable is CSBondLockTestableBase, CSBondLock {
     constructor(
-        uint256[] memory bondCurve,
-        address admin,
-        address lidoLocator,
-        address wstETH,
-        address communityStakingModule,
-        uint256 blockedBondRetentionPeriod,
-        uint256 blockedBondManagementPeriod
-    )
-        CSAccounting(
-            bondCurve,
-            admin,
-            lidoLocator,
-            wstETH,
-            communityStakingModule,
-            blockedBondRetentionPeriod,
-            blockedBondManagementPeriod
-        )
-    {}
+        uint256 retentionPeriod,
+        uint256 managementPeriod
+    ) CSBondLock(retentionPeriod, managementPeriod) {}
 
-    function _bondShares_set_value(
-        uint256 nodeOperatorId,
-        uint256 value
-    ) public {
-        _bondShares[nodeOperatorId] = value;
+    function setBondLockPeriods(
+        uint256 retention,
+        uint256 management
+    ) external {
+        _setBondLockPeriods(retention, management);
     }
 
-    function _blockedBondEther_get_value(
-        uint256 nodeOperatorId
-    ) public view returns (BondLock memory) {
-        return _bondLock[nodeOperatorId];
+    function get(uint256 nodeOperatorId) external view returns (uint256) {
+        return _get(nodeOperatorId);
     }
 
-    function _blockedBondEther_set_value(
-        uint256 nodeOperatorId,
-        BondLock memory value
-    ) public {
-        _bondLock[nodeOperatorId] = value;
+    function lock(uint256 nodeOperatorId, uint256 amount) external {
+        _lock(nodeOperatorId, amount);
     }
 
-    function _changeBlockedBondState_revealed(
-        uint256 nodeOperatorId,
-        uint256 ETHAmount,
-        uint256 retentionUntil
-    ) public {
-        _changeBondLock(nodeOperatorId, ETHAmount, retentionUntil);
+    function settle(uint256[] memory nodeOperatorIds) external {
+        _settle(nodeOperatorIds);
     }
 
-    function _reduceBlockedBondETH_revealed(
+    function release(uint256 nodeOperatorId, uint256 amount) external {
+        _release(nodeOperatorId, amount);
+    }
+
+    function compensate(uint256 nodeOperatorId, uint256 amount) external {
+        _compensate(nodeOperatorId, amount);
+    }
+
+    uint256 internal _mockedBondAmountForPenalize;
+
+    function _penalize(
         uint256 nodeOperatorId,
-        uint256 ETHAmount
-    ) public {
-        _reduceAmount(nodeOperatorId, ETHAmount);
+        uint256 amount
+    ) internal override returns (uint256) {
+        uint256 toPenalize = amount < _mockedBondAmountForPenalize
+            ? amount
+            : _mockedBondAmountForPenalize;
+        emit BondPenalized(nodeOperatorId, amount, toPenalize);
+        return amount - toPenalize;
+    }
+
+    function mock_bondAmount(uint256 amount) external {
+        _mockedBondAmountForPenalize = amount;
     }
 }
 
-contract CSAccounting_BlockedBondTest is
-    Test,
-    Fixtures,
-    Utilities,
-    CSBondLockBase,
-    CSAccountingBase
-{
-    using stdStorage for StdStorage;
-
-    LidoLocatorMock internal locator;
-    WstETHMock internal wstETH;
-    LidoMock internal stETH;
-
-    Stub internal burner;
-
-    CSAccounting_revealed public accounting;
-    CommunityStakingModuleMock public stakingModule;
-    CommunityStakingFeeDistributorMock public feeDistributor;
-
-    address internal admin;
-    address internal user;
-    address internal stranger;
+contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
+    CSBondLockTestable public bondLock;
 
     function setUp() public {
-        admin = address(1);
-
-        user = address(2);
-        stranger = address(777);
-
-        (locator, wstETH, stETH, burner) = initLido();
-
-        stakingModule = new CommunityStakingModuleMock();
-        uint256[] memory curve = new uint256[](2);
-        curve[0] = 2 ether;
-        curve[1] = 4 ether;
-        accounting = new CSAccounting_revealed(
-            curve,
-            admin,
-            address(locator),
-            address(wstETH),
-            address(stakingModule),
-            8 weeks,
-            1 days
-        );
-        feeDistributor = new CommunityStakingFeeDistributorMock(
-            address(locator),
-            address(accounting)
-        );
-        vm.startPrank(admin);
-        accounting.setFeeDistributor(address(feeDistributor));
-        accounting.grantRole(accounting.INSTANT_PENALIZE_BOND_ROLE(), admin);
-        accounting.grantRole(
-            accounting.EL_REWARDS_STEALING_PENALTY_INIT_ROLE(),
-            admin
-        );
-        accounting.grantRole(
-            accounting.EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE(),
-            admin
-        );
-        vm.stopPrank();
+        bondLock = new CSBondLockTestable(8 weeks, 1 days);
     }
 
-    function test_private_changeBlockedBondState() public {
+    function test_setBondLockPeriods() public {
+        uint256 retention = 4 weeks;
+        uint256 management = 2 days;
+
+        bondLock.setBondLockPeriods(retention, management);
+
+        (uint256 _retention, uint256 _management) = bondLock
+            .getBondLockPeriods();
+        assertEq(_retention, retention);
+        assertEq(_management, management);
+    }
+
+    function test_setBondLockPeriods_RevertWhen_RetentionLessThanMin() public {
+        vm.expectRevert(InvalidBondLockRetentionPeriod.selector);
+        bondLock.setBondLockPeriods(3 weeks, 1 days);
+    }
+
+    function test_setBondLockPeriods_RevertWhen_RetentionGreaterThanMax()
+        public
+    {
+        vm.expectRevert(InvalidBondLockRetentionPeriod.selector);
+        bondLock.setBondLockPeriods(366 days, 1 days);
+    }
+
+    function test_setBondLockPeriods_RevertWhen_ManagementLessThanMin() public {
+        vm.expectRevert(InvalidBondLockRetentionPeriod.selector);
+        bondLock.setBondLockPeriods(8 weeks, 23 hours);
+    }
+
+    function test_setBondLockPeriods_RevertWhen_ManagementGreaterThanMax()
+        public
+    {
+        vm.expectRevert(InvalidBondLockRetentionPeriod.selector);
+        bondLock.setBondLockPeriods(8 weeks, 8 days);
+    }
+
+    function test_get() public {
         uint256 noId = 0;
         uint256 amount = 1 ether;
-        uint256 retentionUntil = block.timestamp + 1 weeks;
+        bondLock.lock(noId, amount);
 
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondLockChanged(noId, amount, retentionUntil);
-        accounting._changeBlockedBondState_revealed({
-            nodeOperatorId: noId,
-            ETHAmount: amount,
-            retentionUntil: retentionUntil
-        });
-
-        CSBondLock.BondLock memory value = accounting
-            ._blockedBondEther_get_value(noId);
-
-        assertEq(value.amount, amount);
-        assertEq(value.retentionUntil, retentionUntil);
-
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondLockChanged(noId, 0, 0);
-
-        accounting._changeBlockedBondState_revealed({
-            nodeOperatorId: noId,
-            ETHAmount: 0,
-            retentionUntil: 0
-        });
-
-        value = accounting._blockedBondEther_get_value(noId);
-
-        assertEq(value.amount, 0);
-        assertEq(value.retentionUntil, 0);
+        uint256 value = bondLock.get(noId);
+        assertEq(value, amount);
     }
 
-    function test_initELRewardsStealingPenalty() public {
-        _createNodeOperator({ ongoingVals: 1, withdrawnVals: 0 });
-
+    function test_get_WhenRetentionPeriodIsPassed() public {
         uint256 noId = 0;
-        uint256 proposedBlockNumber = 100500;
-        uint256 firstStolenAmount = 1 ether;
+        uint256 amount = 1 ether;
+        bondLock.lock(noId, amount);
 
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit ELRewardsStealingPenaltyInitiated(
-            noId,
-            proposedBlockNumber,
-            firstStolenAmount
-        );
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondLockChanged(
-            noId,
-            firstStolenAmount,
-            block.timestamp + 8 weeks
-        );
+        vm.warp(block.timestamp + 8 weeks + 1 seconds);
 
-        vm.prank(admin);
-        accounting.initELRewardsStealingPenalty({
-            nodeOperatorId: noId,
-            blockNumber: proposedBlockNumber,
-            amount: firstStolenAmount
-        });
-
-        assertEq(
-            accounting._blockedBondEther_get_value(noId).amount,
-            firstStolenAmount
-        );
-        assertEq(
-            accounting._blockedBondEther_get_value(noId).retentionUntil,
-            block.timestamp + 8 weeks
-        );
-
-        // new block and new stealing
-        vm.warp(block.timestamp + 12 seconds);
-
-        uint256 secondStolenAmount = 2 ether;
-        proposedBlockNumber = 100501;
-
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit ELRewardsStealingPenaltyInitiated(
-            noId,
-            proposedBlockNumber,
-            secondStolenAmount
-        );
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondLockChanged(
-            noId,
-            firstStolenAmount + secondStolenAmount,
-            block.timestamp + 8 weeks
-        );
-
-        vm.prank(admin);
-        accounting.initELRewardsStealingPenalty({
-            nodeOperatorId: noId,
-            blockNumber: proposedBlockNumber,
-            amount: secondStolenAmount
-        });
-
-        assertEq(
-            accounting._blockedBondEther_get_value(noId).amount,
-            firstStolenAmount + secondStolenAmount
-        );
-        assertEq(
-            accounting._blockedBondEther_get_value(noId).retentionUntil,
-            block.timestamp + 8 weeks
-        );
+        uint256 value = bondLock.get(noId);
+        assertEq(value, 0);
     }
 
-    function test_initELRewardsStealingPenalty_revertWhenNonExistingOperator()
-        public
-    {
-        vm.expectRevert("node operator does not exist");
+    function test_lock() public {
+        uint256 noId = 0;
+        uint256 amount = 1 ether;
 
-        vm.prank(admin);
-        accounting.initELRewardsStealingPenalty({
-            nodeOperatorId: 0,
-            blockNumber: 100500,
-            amount: 100 ether
-        });
+        vm.expectEmit(true, true, true, true, address(bondLock));
+        emit BondLockChanged(noId, amount, block.timestamp + 8 weeks);
+
+        bondLock.lock(noId, amount);
+
+        uint256 value = bondLock.get(noId);
+        assertEq(value, amount);
     }
 
-    function test_initELRewardsStealingPenalty_revertWhenZero() public {
-        _createNodeOperator({ ongoingVals: 1, withdrawnVals: 0 });
+    function test_lock_WhenSecondTime() public {
+        uint256 noId = 0;
+        uint256 amount = 1 ether;
+        bondLock.lock(noId, amount);
 
+        uint256 newBlockTimestamp = block.timestamp + 1 seconds;
+        vm.warp(newBlockTimestamp);
+
+        vm.expectEmit(true, true, true, true, address(bondLock));
+        emit BondLockChanged(
+            noId,
+            amount + 1.5 ether,
+            newBlockTimestamp + 8 weeks
+        );
+        bondLock.lock(noId, 1.5 ether);
+
+        uint256 value = bondLock.get(noId);
+        assertEq(value, amount + 1.5 ether);
+    }
+
+    function test_lock_RevertWhen_ZeroAmount() public {
         vm.expectRevert(InvalidBondLockAmount.selector);
-
-        vm.prank(admin);
-        accounting.initELRewardsStealingPenalty({
-            nodeOperatorId: 0,
-            blockNumber: 100500,
-            amount: 0
-        });
+        bondLock.lock(0, 0);
     }
 
-    function test_initELRewardsStealingPenalty_revertWhenNoRole() public {
-        _createNodeOperator({ ongoingVals: 1, withdrawnVals: 0 });
+    function test_settle() public {
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = 0;
+        bondLock.lock(0, 1 ether);
+        bondLock.mock_bondAmount(1 ether);
 
-        vm.expectRevert(
-            bytes(
-                Utilities.accessErrorString(
-                    address(stranger),
-                    accounting.EL_REWARDS_STEALING_PENALTY_INIT_ROLE()
-                )
-            )
-        );
+        // more than 1 day (management period) after penalty init
+        // eligible to settle
+        vm.warp(block.timestamp + 1 days + 1 seconds);
 
-        vm.prank(stranger);
-        accounting.initELRewardsStealingPenalty({
-            nodeOperatorId: 0,
-            blockNumber: 100500,
-            amount: 100 ether
-        });
+        vm.expectEmit(true, true, true, true, address(bondLock));
+        emit BondPenalized(0, 1 ether, 1 ether);
+
+        vm.expectEmit(true, true, true, true, address(bondLock));
+        emit BondLockChanged(0, 0, 0);
+
+        bondLock.settle(idsToSettle);
+
+        uint256 value = bondLock.get(0);
+        assertEq(value, 0 ether);
     }
 
-    function test_settleBlockedBondETH() public {
-        _createNodeOperator({ ongoingVals: 1, withdrawnVals: 0 });
+    function test_settle_WhenLockIsLessThanBond() public {
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = 0;
+        bondLock.lock(0, 0.7 ether);
+        bondLock.mock_bondAmount(1 ether);
 
-        vm.deal(user, 12 ether);
-        vm.startPrank(user);
-        stETH.submit{ value: 12 ether }({ _referal: address(0) });
-        accounting.depositStETH(user, 0, 12 ether);
-        vm.stopPrank();
+        // more than 1 day (management period) after penalty init
+        // eligible to settle
+        vm.warp(block.timestamp + 1 days + 1 seconds);
 
-        uint256[] memory nosToPenalize = new uint256[](2);
-        nosToPenalize[0] = 0;
-        // non-existing node operator should be skipped in the loop
-        nosToPenalize[1] = 100500;
+        vm.expectEmit(true, true, true, true, address(bondLock));
+        emit BondPenalized(0, 0.7 ether, 0.7 ether);
 
-        uint256 retentionUntil = block.timestamp + 8 weeks;
+        vm.expectEmit(true, true, true, true, address(bondLock));
+        emit BondLockChanged(0, 0, 0);
 
-        accounting._blockedBondEther_set_value(
-            0,
-            CSBondLock.BondLock({
-                amount: 1 ether,
-                retentionUntil: retentionUntil
-            })
+        bondLock.settle(idsToSettle);
+
+        uint256 value = bondLock.get(0);
+        assertEq(value, 0);
+    }
+
+    function test_settle_WhenLockIsGreaterThanBond() public {
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = 0;
+        bondLock.lock(0, 1 ether);
+        uint256 retentionPeriodWhenLock = block.timestamp + 8 weeks;
+        bondLock.mock_bondAmount(0.7 ether);
+
+        // more than 1 day (management period) after penalty init
+        // eligible to settle
+        vm.warp(block.timestamp + 1 days + 1 seconds);
+
+        vm.expectEmit(true, true, true, true, address(bondLock));
+        emit BondPenalized(0, 1 ether, 0.7 ether);
+
+        vm.expectEmit(true, true, true, true, address(bondLock));
+        emit BondLockChanged(0, 0.3 ether, retentionPeriodWhenLock);
+
+        bondLock.settle(idsToSettle);
+
+        uint256 value = bondLock.get(0);
+        assertEq(value, 0.3 ether);
+    }
+
+    function test_settle_WhenRetentionPeriodIsExpired() public {
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = 0;
+        bondLock.lock(0, 1 ether);
+
+        // more than 8 weeks (retention period) after penalty init
+        // not eligible already
+        vm.warp(block.timestamp + 8 weeks + 1 seconds);
+
+        vm.recordLogs();
+
+        bondLock.settle(idsToSettle);
+
+        uint256 value = bondLock.get(0);
+        assertEq(value, 0 ether);
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            1,
+            "should not emit BondPenalized event"
         );
+    }
 
-        // less than 1 day after penalty init
+    function test_settle_WhenInManagementPeriod() public {
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = 0;
+        bondLock.lock(0, 1 ether);
+
+        // less than 1 day (management period) after penalty init
+        // not eligible to settle yet
         vm.warp(block.timestamp + 20 hours);
 
-        vm.prank(admin);
-        accounting.settleBlockedBondETH(nosToPenalize);
+        vm.recordLogs();
 
-        CSBondLock.BondLock memory value = accounting
-            ._blockedBondEther_get_value(0);
+        bondLock.settle(idsToSettle);
 
-        assertEq(value.amount, 1 ether);
-        assertEq(value.retentionUntil, retentionUntil);
+        uint256 value = bondLock.get(0);
+        assertEq(value, 1 ether);
 
-        // penalty amount is less than the bond
-        vm.warp(block.timestamp + 2 days);
+        assertEq(vm.getRecordedLogs().length, 0, "should not emit any events");
+    }
 
-        uint256 penalty = stETH.getPooledEthByShares(
-            stETH.getSharesByPooledEth(1 ether)
-        );
-        uint256 covering = penalty;
+    function test_settle_WhenDifferentStates() public {
+        // one eligible, one expired, one in management period
+        uint256[] memory idsToSettle = new uint256[](3);
+        idsToSettle[0] = 0;
+        idsToSettle[1] = 1;
+        idsToSettle[2] = 2;
 
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondPenalized(0, penalty, covering);
+        // more than 8 weeks (retention period) after penalty init
+        // not eligible already
+        bondLock.lock(0, 1 ether);
+        vm.warp(block.timestamp + 8 weeks + 1 seconds);
 
-        vm.expectEmit(true, true, true, true, address(accounting));
+        // more than 1 day (management period) after penalty init
+        // eligible to settle
+        bondLock.lock(1, 1 ether);
+        bondLock.mock_bondAmount(1 ether);
+        vm.warp(block.timestamp + 1 days + 1 seconds);
+
+        // less than 1 day (management period) after penalty init
+        // not eligible to settle yet
+        bondLock.lock(2, 1 ether);
+
+        vm.expectEmit(true, true, true, true, address(bondLock));
         emit BondLockChanged(0, 0, 0);
 
-        vm.prank(admin);
-        accounting.settleBlockedBondETH(nosToPenalize);
+        vm.expectEmit(true, true, true, true, address(bondLock));
+        emit BondPenalized(1, 1 ether, 1 ether);
 
-        value = accounting._blockedBondEther_get_value(0);
-        assertEq(value.amount, 0);
-        assertEq(value.retentionUntil, 0);
+        vm.expectEmit(true, true, true, true, address(bondLock));
+        emit BondLockChanged(1, 0, 0);
 
-        // penalty amount is greater than the bond
-        accounting._blockedBondEther_set_value(
-            0,
-            CSBondLock.BondLock({
-                amount: 100 ether,
-                retentionUntil: retentionUntil
-            })
-        );
+        vm.recordLogs();
 
-        penalty = stETH.getPooledEthByShares(
-            stETH.getSharesByPooledEth(100 ether)
-        );
-        covering = 11 ether;
-        uint256 uncovered = penalty - covering;
+        bondLock.settle(idsToSettle);
 
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondPenalized(0, penalty, covering);
+        uint256 value = bondLock.get(0);
+        assertEq(value, 0 ether);
 
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondLockChanged(0, uncovered, retentionUntil);
+        value = bondLock.get(1);
+        assertEq(value, 0 ether);
 
-        vm.prank(admin);
-        accounting.settleBlockedBondETH(nosToPenalize);
+        value = bondLock.get(2);
+        assertEq(value, 1 ether);
 
-        value = accounting._blockedBondEther_get_value(0);
-        assertEq(value.amount, uncovered);
-        assertEq(value.retentionUntil, retentionUntil);
-
-        // retention period expired
-        accounting._blockedBondEther_set_value(
-            0,
-            CSBondLock.BondLock({
-                amount: 100 ether,
-                retentionUntil: retentionUntil
-            })
-        );
-        vm.warp(retentionUntil + 12);
-
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondLockChanged(0, 0, 0);
-
-        vm.prank(admin);
-        accounting.settleBlockedBondETH(nosToPenalize);
-
-        value = accounting._blockedBondEther_get_value(0);
-        assertEq(value.amount, 0);
-        assertEq(value.retentionUntil, 0);
+        assertEq(vm.getRecordedLogs().length, 3, "should emit 3 events");
     }
 
-    function test_private_reduceBlockedBondETH() public {
+    function test_release() public {
         uint256 noId = 0;
         uint256 amount = 100 ether;
-        uint256 retentionUntil = block.timestamp + 1 weeks;
 
-        accounting._blockedBondEther_set_value(
-            noId,
-            CSBondLock.BondLock({
-                amount: amount,
-                retentionUntil: retentionUntil
-            })
-        );
-
-        // part of blocked bond is released
-        uint256 toReduce = 10 ether;
-        uint256 rest = amount - toReduce;
-
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondLockChanged(noId, rest, retentionUntil);
-
-        accounting._reduceBlockedBondETH_revealed(noId, toReduce);
-
-        CSBondLock.BondLock memory value = accounting
-            ._blockedBondEther_get_value(noId);
-
-        assertEq(value.amount, rest);
-        assertEq(value.retentionUntil, retentionUntil);
-
-        // all blocked bond is released
-        toReduce = rest;
-        rest = 0;
-        retentionUntil = 0;
-
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondLockChanged(noId, rest, retentionUntil);
-
-        accounting._reduceBlockedBondETH_revealed(noId, toReduce);
-
-        value = accounting._blockedBondEther_get_value(noId);
-
-        assertEq(value.amount, rest);
-        assertEq(value.retentionUntil, retentionUntil);
-    }
-
-    function test_private_reduceBlockedBondETH_revertWhenNoBlocked() public {
-        vm.expectRevert(InvalidBondLockAmount.selector);
-        accounting._reduceBlockedBondETH_revealed(0, 1 ether);
-    }
-
-    function test_private_reduceBlockedBondETH_revertWhenAmountGreaterThanBlocked()
-        public
-    {
-        uint256 noId = 0;
-        uint256 amount = 100 ether;
-        uint256 retentionUntil = block.timestamp + 1 weeks;
-
-        accounting._blockedBondEther_set_value(
-            noId,
-            CSBondLock.BondLock({
-                amount: amount,
-                retentionUntil: retentionUntil
-            })
-        );
-
-        vm.expectRevert(InvalidBondLockAmount.selector);
-        accounting._reduceBlockedBondETH_revealed(0, 101 ether);
-    }
-
-    function test_releaseBlockedBondETH() public {
-        _createNodeOperator({ ongoingVals: 1, withdrawnVals: 0 });
-
-        uint256 noId = 0;
-        uint256 amount = 100 ether;
-        uint256 retentionUntil = block.timestamp + 1 weeks;
-
-        accounting._blockedBondEther_set_value(
-            noId,
-            CSBondLock.BondLock({
-                amount: amount,
-                retentionUntil: retentionUntil
-            })
-        );
+        bondLock.lock(noId, amount);
 
         uint256 toRelease = 10 ether;
         uint256 rest = amount - toRelease;
 
-        vm.expectEmit(true, true, true, true, address(accounting));
+        vm.expectEmit(true, true, true, true, address(bondLock));
         emit BondLockReleased(noId, toRelease);
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondLockChanged(noId, rest, retentionUntil);
+        vm.expectEmit(true, true, true, true, address(bondLock));
+        emit BondLockChanged(noId, rest, block.timestamp + 8 weeks);
 
-        vm.prank(admin);
-        accounting.releaseBlockedBondETH(noId, toRelease);
+        bondLock.release(noId, toRelease);
+
+        uint256 value = bondLock.get(noId);
+        assertEq(value, rest);
+
+        vm.warp(block.timestamp + 8 weeks + 1 seconds);
+        value = bondLock.get(noId);
+        assertEq(value, 0);
     }
 
-    function test_releaseBlockedBondETH_revertWhenNonExistingOperator() public {
-        vm.expectRevert("node operator does not exist");
-
-        vm.prank(admin);
-        accounting.releaseBlockedBondETH(0, 1 ether);
+    function test_release_RevertWhen_ZeroAmount() public {
+        vm.expectRevert(InvalidBondLockAmount.selector);
+        bondLock.release(0, 0);
     }
 
-    function test_releaseBlockedBondETH_revertWhenNoRole() public {
-        _createNodeOperator({ ongoingVals: 1, withdrawnVals: 0 });
-
-        vm.expectRevert(
-            bytes(
-                Utilities.accessErrorString(
-                    address(stranger),
-                    accounting.EL_REWARDS_STEALING_PENALTY_INIT_ROLE()
-                )
-            )
-        );
-
-        vm.prank(stranger);
-        accounting.releaseBlockedBondETH(0, 1 ether);
-    }
-
-    function test_compensateBlockedBondETH() public {
-        _createNodeOperator({ ongoingVals: 1, withdrawnVals: 0 });
-
+    function test_release_RevertWhen_GreaterThanLock() public {
         uint256 noId = 0;
         uint256 amount = 100 ether;
-        uint256 retentionUntil = block.timestamp + 1 weeks;
 
-        accounting._blockedBondEther_set_value(
-            noId,
-            CSBondLock.BondLock({
-                amount: amount,
-                retentionUntil: retentionUntil
-            })
-        );
+        bondLock.lock(noId, amount);
+
+        vm.expectRevert(InvalidBondLockAmount.selector);
+        bondLock.release(noId, amount + 1 ether);
+    }
+
+    function test_compensate() public {
+        uint256 noId = 0;
+        uint256 amount = 100 ether;
+
+        bondLock.lock(noId, amount);
 
         uint256 toCompensate = 10 ether;
         uint256 rest = amount - toCompensate;
 
-        vm.expectEmit(true, true, true, true, address(accounting));
+        vm.expectEmit(true, true, true, true, address(bondLock));
         emit BondLockCompensated(noId, toCompensate);
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondLockChanged(noId, rest, retentionUntil);
+        vm.expectEmit(true, true, true, true, address(bondLock));
+        emit BondLockChanged(noId, rest, block.timestamp + 8 weeks);
 
-        vm.deal(user, toCompensate);
-        vm.prank(user);
-        accounting.compensateBlockedBondETH{ value: toCompensate }(noId);
+        bondLock.compensate(noId, toCompensate);
 
-        assertEq(address(locator.elRewardsVault()).balance, toCompensate);
+        uint256 value = bondLock.get(noId);
+        assertEq(value, rest);
+
+        vm.warp(block.timestamp + 8 weeks + 1 seconds);
+        value = bondLock.get(noId);
+        assertEq(value, 0);
     }
 
-    function test_compensateBlockedBondETH_revertWhenZero() public {
-        _createNodeOperator({ ongoingVals: 1, withdrawnVals: 0 });
+    function test_compensate_RevertWhen_ZeroAmount() public {
+        vm.expectRevert(InvalidBondLockAmount.selector);
+        bondLock.compensate(0, 0);
+    }
+
+    function test_compensate_RevertWhen_GreaterThanLock() public {
+        uint256 noId = 0;
+        uint256 amount = 100 ether;
+
+        bondLock.lock(noId, amount);
 
         vm.expectRevert(InvalidBondLockAmount.selector);
-        accounting.compensateBlockedBondETH{ value: 0 }(0);
-    }
-
-    function test_compensateBlockedBondETH_revertWhenNonExistingOperator()
-        public
-    {
-        vm.expectRevert("node operator does not exist");
-        accounting.compensateBlockedBondETH{ value: 1 ether }(0);
-    }
-
-    function _createNodeOperator(
-        uint64 ongoingVals,
-        uint64 withdrawnVals
-    ) internal {
-        stakingModule.setNodeOperator({
-            _nodeOperatorId: 0,
-            _active: true,
-            _rewardAddress: user,
-            _totalVettedValidators: ongoingVals,
-            _totalExitedValidators: 0,
-            _totalWithdrawnValidators: withdrawnVals,
-            _totalAddedValidators: ongoingVals,
-            _totalDepositedValidators: ongoingVals
-        });
+        bondLock.compensate(noId, amount + 1 ether);
     }
 }
