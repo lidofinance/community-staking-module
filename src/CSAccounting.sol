@@ -336,6 +336,8 @@ contract CSAccounting is
     }
 
     /// @notice Returns the required bond ETH for the given number of keys.
+    /// @dev To calculate the amount for the new keys 2 calls are required:
+    ///      getRequiredBondETHForKeys(newTotal) - getRequiredBondETHForKeys(currentTotal)
     /// @param keysCount number of keys to get required bond for.
     /// @return required ETH.
     function getRequiredBondETHForKeys(
@@ -345,6 +347,8 @@ contract CSAccounting is
     }
 
     /// @notice Returns the required bond stETH for the given number of keys.
+    /// @dev To calculate the amount for the new keys 2 calls are required:
+    ///      getRequiredBondStETHForKeys(newTotal) - getRequiredBondStETHForKeys(currentTotal)
     /// @param keysCount number of keys to get required bond for.
     /// @return required stETH.
     function getRequiredBondStETHForKeys(
@@ -354,6 +358,8 @@ contract CSAccounting is
     }
 
     /// @notice Returns the required bond wstETH for the given number of keys.
+    /// @dev To calculate the amount for the new keys 2 calls are required:
+    ///      getRequiredBondWstETHForKeys(newTotal) - getRequiredBondWstETHForKeys(currentTotal)
     /// @param keysCount number of keys to get required bond for.
     /// @return required wstETH.
     function getRequiredBondWstETHForKeys(
@@ -389,7 +395,7 @@ contract CSAccounting is
         return activeKeys;
     }
 
-    /// @notice Returns the number of keys by the given bond stETH amount
+    /// @notice Returns the number of keys by the given bond ETH amount
     function getKeysCountByBondETH(
         uint256 ETHAmount
     ) public view returns (uint256) {
