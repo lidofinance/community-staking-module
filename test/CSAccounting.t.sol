@@ -2074,8 +2074,6 @@ abstract contract CSAccountingClaimRewardsBaseTest is
     function test_WithDesirableValue() public virtual;
 
     function test_RevertWhen_NotOwner() public virtual;
-
-    // todo: check total bond shares
 }
 
 contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
@@ -2107,6 +2105,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             bondSharesAfter,
             "bond manager after claim should be equal to before"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithCurve() public override {
@@ -2139,6 +2138,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             bondSharesAfter,
             "bond manager after claim should be equal to after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithMultiplier() public override {
@@ -2171,6 +2171,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             bondSharesAfter,
             "bond manager after claim should be equal to after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithBlocked() public override {
@@ -2208,6 +2209,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             bondSharesAfter,
             "bond manager after claim should be equal to after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithCurveAndBlocked() public override {
@@ -2253,6 +2255,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             bondSharesAfter,
             "bond manager after claim should be equal to before"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithBond() public override {
@@ -2284,6 +2287,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             bondSharesAfter,
             "bond manager after claim should be equal to after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithBondAndOneWithdrawnValidator() public override {
@@ -2316,6 +2320,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             bondSharesAfter,
             "bond manager after claim should be equal to before"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithExcessBond() public override {
@@ -2348,6 +2353,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             bondSharesAfter,
             "bond manager after claim should be equal to after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithExcessBondAndOneWithdrawnValidator() public override {
@@ -2381,6 +2387,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             bondSharesAfter,
             "bond manager after claim should be equal to after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithMissingBond() public override {
@@ -2412,6 +2419,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             bondSharesAfter,
             "bond manager after claim should be equal to after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithMissingBondAndOneWithdrawnValidator() public override {
@@ -2443,6 +2451,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             bondSharesAfter,
             "bond manager after claim should be equal to after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_EventEmitted() public override {
@@ -2495,6 +2504,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             bondSharesAfter,
             "bond manager after should be equal to before and fee minus claimed shares"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_RevertWhen_NotOwner() public override {
@@ -2549,6 +2559,7 @@ contract CSAccountingClaimWstETHRewardsTest is
             bondSharesAfter,
             "bond manager after claim should be equal to bond shares after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithCurve() public override {
@@ -2587,6 +2598,7 @@ contract CSAccountingClaimWstETHRewardsTest is
             bondSharesAfter,
             "bond manager after claim should be equal to bond shares after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithMultiplier() public override {
@@ -2625,6 +2637,7 @@ contract CSAccountingClaimWstETHRewardsTest is
             bondSharesAfter,
             "bond manager after claim should be equal to bond shares after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithBlocked() public override {
@@ -2668,6 +2681,7 @@ contract CSAccountingClaimWstETHRewardsTest is
             bondSharesAfter,
             "bond manager after claim should be equal to bond shares after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithCurveAndBlocked() public override {
@@ -2719,6 +2733,7 @@ contract CSAccountingClaimWstETHRewardsTest is
             bondSharesAfter,
             "bond manager after claim should be equal to bond shares after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithBond() public override {
@@ -2757,6 +2772,7 @@ contract CSAccountingClaimWstETHRewardsTest is
             bondSharesAfter,
             "bond manager after claim should be equal to bond shares after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithBondAndOneWithdrawnValidator() public override {
@@ -2796,6 +2812,7 @@ contract CSAccountingClaimWstETHRewardsTest is
             bondSharesAfter,
             "bond manager after claim should be equal to bond shares after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithExcessBond() public override {
@@ -2835,6 +2852,7 @@ contract CSAccountingClaimWstETHRewardsTest is
             bondSharesAfter,
             "bond manager after claim should be equal to bond shares after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithExcessBondAndOneWithdrawnValidator() public override {
@@ -2874,6 +2892,7 @@ contract CSAccountingClaimWstETHRewardsTest is
             bondSharesAfter,
             "bond manager after claim should be equal to bond shares after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithMissingBond() public override {
@@ -2910,6 +2929,7 @@ contract CSAccountingClaimWstETHRewardsTest is
             bondSharesAfter,
             "bond manager after claim should be equal to bond shares after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithMissingBondAndOneWithdrawnValidator() public override {
@@ -2946,6 +2966,7 @@ contract CSAccountingClaimWstETHRewardsTest is
             bondSharesAfter,
             "bond manager after claim should be equal to bond shares after"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_EventEmitted() public override {
@@ -3003,6 +3024,7 @@ contract CSAccountingClaimWstETHRewardsTest is
             bondSharesAfter,
             "bond manager after should be equal to before and fee minus claimed shares"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_RevertWhen_NotOwner() public override {
@@ -3047,6 +3069,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
             "shares of withdrawal queue should be equal to requested shares"
         );
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithCurve() public override {
@@ -3077,6 +3100,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
             "shares of withdrawal queue should be equal to requested shares"
         );
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithMultiplier() public override {
@@ -3105,6 +3129,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
             "shares of withdrawal queue should be equal to requested shares and excess"
         );
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithBlocked() public override {
@@ -3140,6 +3165,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
             "shares of withdrawal queue should be equal to requested shares and excess"
         );
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithCurveAndBlocked() public override {
@@ -3184,6 +3210,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
             "shares of withdrawal queue should be equal to requested shares and excess"
         );
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithBond() public override {
@@ -3214,6 +3241,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
             "shares of withdrawal queue should be equal to requested shares"
         );
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithBondAndOneWithdrawnValidator() public override {
@@ -3246,6 +3274,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
             "shares of withdrawal queue should be equal to requested shares and excess"
         );
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithExcessBond() public override {
@@ -3278,6 +3307,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
             "shares of withdrawal queue should be equal to requested shares and excess"
         );
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithExcessBondAndOneWithdrawnValidator() public override {
@@ -3310,6 +3340,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
             "shares of withdrawal queue should be equal to requested shares and excess"
         );
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithMissingBond() public override {
@@ -3340,6 +3371,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
             "shares of withdrawal queue should be equal to requested shares"
         );
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_WithMissingBondAndOneWithdrawnValidator() public override {
@@ -3370,6 +3402,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
             "shares of withdrawal queue should be equal to requested shares"
         );
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_EventEmitted() public override {
@@ -3432,6 +3465,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
             "shares of withdrawal queue should be equal to requested shares"
         );
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_RevertWhen_NotOwner() public override {
@@ -3480,6 +3514,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             sharesToDeposit,
             "bond manager shares should be equal to deposited shares"
         );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
     }
 
     function test_depositStETH() public {
@@ -3510,6 +3545,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             sharesToDeposit,
             "bond manager shares should be equal to deposited shares"
         );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
     }
 
     function test_depositWstETH() public {
@@ -3543,6 +3579,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             sharesToDeposit,
             "bond manager shares should be equal to deposited shares"
         );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
     }
 
     function test_depositStETHWithPermit() public {
@@ -3587,6 +3624,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             sharesToDeposit,
             "bond manager shares should be equal to deposited shares"
         );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
     }
 
     function test_depositStETHWithPermit_AlreadyPermitted() public {
@@ -3676,6 +3714,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             sharesToDeposit,
             "bond manager shares should be equal to deposited shares"
         );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
     }
 
     function test_depositWstETHWithPermit_AlreadyPermitted() public {
@@ -3814,15 +3853,16 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(admin);
         accounting.penalize(0, 1 ether);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
 
         assertEq(
-            accounting.getBondShares(0),
+            bondSharesAfter,
             bondSharesBefore - shares,
             "bond shares should be decreased by penalty"
         );
         assertEq(
             stETH.sharesOf(address(accounting)),
-            bondSharesBefore - shares,
+            bondSharesAfter,
             "bond manager shares should be decreased by penalty"
         );
         assertEq(
@@ -3830,6 +3870,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
             shares,
             "burner shares should be equal to penalty"
         );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
     function test_penalize_MoreThanDeposit() public {
@@ -3860,6 +3901,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
             bondSharesBefore,
             "burner shares should be equal to bond shares"
         );
+        assertEq(accounting.totalBondShares(), 0);
     }
 
     function test_penalize_EqualToDeposit() public {
@@ -3886,6 +3928,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
             shares,
             "burner shares should be equal to penalty"
         );
+        assertEq(accounting.totalBondShares(), 0);
     }
 
     function test_penalize_RevertWhenCallerHasNoRole() public {
