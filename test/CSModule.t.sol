@@ -1446,6 +1446,24 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, true, 0);
     }
 
+    function test_updateTargetValidatorsLimits_enableLimit() public {
+        uint256 noId = createNodeOperator();
+        csm.updateTargetValidatorsLimits(noId, false, 10);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit TargetValidatorsCountChanged(noId, true, 10);
+        csm.updateTargetValidatorsLimits(noId, true, 10);
+    }
+
+    function test_updateTargetValidatorsLimits_disableLimit() public {
+        uint256 noId = createNodeOperator();
+        csm.updateTargetValidatorsLimits(noId, true, 10);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit TargetValidatorsCountChanged(noId, false, 10);
+        csm.updateTargetValidatorsLimits(noId, false, 10);
+    }
+
     function test_updateTargetValidatorsLimits_unvetKeys() public {
         uint256 noId = createNodeOperator();
         csm.vetKeys(noId, 1);
@@ -1480,14 +1498,6 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
     {
         // TODO implement
         vm.skip(true);
-    }
-
-    function test_updateTargetValidatorsLimits_RevertWhenTargetLimitIsNonZero()
-        public
-    {
-        uint256 noId = createNodeOperator();
-        vm.expectRevert(InvalidTargetLimit.selector);
-        csm.updateTargetValidatorsLimits(noId, false, 10);
     }
 }
 

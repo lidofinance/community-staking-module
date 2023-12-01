@@ -702,28 +702,13 @@ contract CSModule is IStakingModule, CSModuleBase {
         // TODO: implement
     }
 
+    // @notice update target limits with event emission
+    // target limit decreasing (or appearing) must unvet node operator's keys from the queue
     function updateTargetValidatorsLimits(
         uint256 nodeOperatorId,
         bool isTargetLimitActive,
         uint256 targetLimit
     ) external onlyExistingNodeOperator(nodeOperatorId) onlyStakingRouter {
-        // TODO sanity checks?
-        _setTargetLimit(nodeOperatorId, isTargetLimitActive, targetLimit);
-        _incrementModuleNonce();
-    }
-
-    // @notice update target limits with event emission
-    // target limit decreasing (or appearing) must unvet node operator's keys from the queue
-    // @dev it's not expected (yet) that target limit can be disabled with some value.
-    function _setTargetLimit(
-        uint256 nodeOperatorId,
-        bool isTargetLimitActive,
-        uint256 targetLimit
-    ) internal {
-        bool unvet;
-        if (!isTargetLimitActive && targetLimit != 0)
-            revert InvalidTargetLimit();
-
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         if (
@@ -731,18 +716,28 @@ contract CSModule is IStakingModule, CSModuleBase {
             no.targetLimit == targetLimit
         ) return;
 
+        if (
+            no.isTargetLimitActive != isTargetLimitActive ||
+            targetLimit < no.targetLimit
+        ) {
+            _unvetKeys(nodeOperatorId);
+        }
+
         if (no.isTargetLimitActive != isTargetLimitActive) {
             no.isTargetLimitActive = isTargetLimitActive;
-            unvet = true;
         }
-        if (unvet || targetLimit < no.targetLimit) _unvetKeys(nodeOperatorId);
 
-        no.targetLimit = targetLimit;
+        if (no.targetLimit != targetLimit) {
+            no.targetLimit = targetLimit;
+        }
+
         emit TargetValidatorsCountChanged(
             nodeOperatorId,
             isTargetLimitActive,
             targetLimit
         );
+
+        _incrementModuleNonce();
     }
 
     function onExitedAndStuckValidatorsCountsUpdated() external {
