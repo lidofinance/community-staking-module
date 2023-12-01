@@ -1486,6 +1486,19 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         assertEq(no.totalVettedValidators, 1);
     }
 
+    function test_updateTargetValidatorsLimits_NoUnvetKeysWhenLimitDisabled()
+        public
+    {
+        uint256 noId = createNodeOperator(2);
+        csm.updateTargetValidatorsLimits(noId, true, 1);
+
+        csm.vetKeys(noId, 1);
+
+        csm.updateTargetValidatorsLimits(noId, false, 1);
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalVettedValidators, 1);
+    }
+
     function test_updateTargetValidatorsLimits_RevertWhenNoNodeOperator()
         public
     {

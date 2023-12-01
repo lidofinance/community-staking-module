@@ -717,7 +717,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         ) return;
 
         if (
-            no.isTargetLimitActive != isTargetLimitActive ||
+            (!no.isTargetLimitActive && isTargetLimitActive) ||
             targetLimit < no.targetLimit
         ) {
             _unvetKeys(nodeOperatorId);
