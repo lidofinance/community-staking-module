@@ -36,17 +36,6 @@ struct NodeOperator {
     uint256 queueNonce;
 }
 
-struct NodeOperatorInfo {
-    bool active;
-    address managerAddress;
-    address rewardAddress;
-    uint256 totalVettedValidators;
-    uint256 totalExitedValidators;
-    uint256 totalWithdrawnValidators;
-    uint256 totalAddedValidators;
-    uint256 totalDepositedValidators;
-}
-
 contract CSModuleBase {
     event NodeOperatorAdded(uint256 indexed nodeOperatorId, address from);
     event NodeOperatorManagerAddressChangeProposed(
