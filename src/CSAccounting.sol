@@ -196,6 +196,16 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         }
     }
 
+    /// @notice Pauses accounting by DAO decision.
+    function pauseAccounting() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        // todo: implement me
+    }
+
+    /// @notice Unpauses accounting by DAO decision.
+    function unpauseAccounting() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        // todo: implement me
+    }
+
     /// @notice Returns the bond shares for the given node operator.
     /// @param nodeOperatorId id of the node operator to get bond for.
     /// @return bond shares.

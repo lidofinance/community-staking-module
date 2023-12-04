@@ -178,6 +178,23 @@ contract CSModule is IStakingModule, CSModuleBase {
         emit UnvettingFeeSet(_unvettingFee);
     }
 
+    /// @notice Pauses module by DAO decision
+    /// @dev Disable NO creation, keys upload
+    function pauseModule() external {
+        // TODO: implement me
+    }
+
+    /// @notice Unpauses module by DAO decision
+    /// @dev Enable NO creation, keys upload
+    function unpauseModule() external {
+        // TODO: implement me
+    }
+
+    /// @notice Remove unvetting fee and disable set again
+    function removeUnvettingFee() external {
+        // todo: implement me
+    }
+
     function _lido() internal view returns (ILido) {
         return ILido(lidoLocator.lido());
     }
@@ -783,6 +800,36 @@ contract CSModule is IStakingModule, CSModuleBase {
         //            nodeOperatorId,
         //            exitedValidatorsCount
         //        );
+    }
+
+    /// @notice Reports withdrawn validator for node operator
+    /// @param withdrawProof Withdraw proof
+    /// @param validatorId ID of the validator
+    /// @param nodeOperatorId ID of the node operator
+    /// @param withdrawnBalance Amount of withdrawn balance
+    function reportWithdrawnValidator(
+        bytes32[] memory withdrawProof,
+        uint256 validatorId,
+        uint256 nodeOperatorId,
+        uint256 withdrawnBalance
+    ) external {
+        // todo: implement me
+    }
+
+    /// @notice Triggers the node operator's unbonded validator to exit
+    function exitUnbondedValidator(
+        uint256 nodeOperatorId,
+        uint256 validatorId
+    ) external {
+        // todo: implement me
+    }
+
+    /// @notice Triggers the node operator's validator to exit by DAO decision
+    function unsafeExitValidator(
+        uint256 nodeOperatorId,
+        uint256 validatorId
+    ) external {
+        // todo: implement me
     }
 
     /// @notice Updates refunded validators count by StakingRouter
