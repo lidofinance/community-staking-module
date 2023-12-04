@@ -9,10 +9,9 @@ contract Utilities is CommonBase {
     bytes32 internal seed = keccak256("seed sEed seEd");
 
     function nextAddress() internal returns (address) {
-        address a = address(
-            uint160(uint256(keccak256(abi.encodePacked(seed))))
-        );
-        seed = keccak256(abi.encodePacked(seed));
+        bytes32 buf = keccak256(abi.encodePacked(seed));
+        address a = address(uint160(uint256(buf)));
+        seed = buf;
         return a;
     }
 
@@ -48,6 +47,23 @@ contract Utilities is CommonBase {
             signatures = bytes.concat(signatures, sign);
         }
         return (keys, signatures);
+    }
+
+    function randomBytes(uint256 length) public returns (bytes memory b) {
+        b = new bytes(length);
+
+        for (;;) {
+            bytes32 buf = keccak256(abi.encodePacked(seed));
+            seed = buf;
+
+            for (uint256 i = 0; i < 32; i++) {
+                if (length == 0) {
+                    return b;
+                }
+                length--;
+                b[length] = buf[i];
+            }
+        }
     }
 
     function checkChainId(uint256 chainId) public view {

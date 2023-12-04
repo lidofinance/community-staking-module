@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.21;
 
 import "forge-std/Test.sol";
@@ -39,15 +40,25 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     address internal stranger;
     address internal nodeOperator;
 
-    function setUp() public {
-        vm.label(address(this), "TEST");
+    struct NodeOperatorSummary {
+        bool isTargetLimitActive;
+        uint256 targetValidatorsCount;
+        uint256 stuckValidatorsCount;
+        uint256 refundedValidatorsCount;
+        uint256 stuckPenaltyEndTimestamp;
+        uint256 totalExitedValidators;
+        uint256 totalDepositedValidators;
+        uint256 depositableValidatorsCount;
+    }
 
+    function setUp() public {
         nodeOperator = nextAddress("NODE_OPERATOR");
         stranger = nextAddress("STRANGER");
         admin = nextAddress("ADMIN");
 
         (locator, wstETH, stETH, burner) = initLido();
 
+        // FIXME: move to the corresponding tests
         vm.deal(nodeOperator, 2 ether + 1 wei);
         vm.prank(nodeOperator);
         stETH.submit{ value: 2 ether + 1 wei }(address(0));
@@ -70,6 +81,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
             1 days
         );
         csm.setAccounting(address(accounting));
+        csm.setUnvettingFee(0.05 ether);
 
         vm.startPrank(admin);
         accounting.grantRole(
@@ -94,6 +106,15 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
+        return createNodeOperator(managerAddress, keysCount, keys, signatures);
+    }
+
+    function createNodeOperator(
+        address managerAddress,
+        uint256 keysCount,
+        bytes memory keys,
+        bytes memory signatures
+    ) internal returns (uint256) {
         vm.deal(managerAddress, keysCount * 2 ether);
         vm.prank(managerAddress);
         csm.addNodeOperatorETH{ value: keysCount * 2 ether }(
@@ -170,6 +191,32 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     function _nextPointer(bytes32 pointer) internal view returns (bytes32) {
         (bytes32[] memory items, uint256 count) = csm.depositQueue(1, pointer);
         return count == 0 ? pointer : items[0];
+    }
+
+    function getNodeOperatorSummary(
+        uint256 noId
+    ) public view returns (NodeOperatorSummary memory) {
+        (
+            bool isTargetLimitActive,
+            uint256 targetValidatorsCount,
+            uint256 stuckValidatorsCount,
+            uint256 refundedValidatorsCount,
+            uint256 stuckPenaltyEndTimestamp,
+            uint256 totalExitedValidators,
+            uint256 totalDepositedValidators,
+            uint256 depositableValidatorsCount
+        ) = csm.getNodeOperatorSummary(noId);
+        return
+            NodeOperatorSummary({
+                isTargetLimitActive: isTargetLimitActive,
+                targetValidatorsCount: targetValidatorsCount,
+                stuckValidatorsCount: stuckValidatorsCount,
+                refundedValidatorsCount: refundedValidatorsCount,
+                stuckPenaltyEndTimestamp: stuckPenaltyEndTimestamp,
+                totalExitedValidators: totalExitedValidators,
+                totalDepositedValidators: totalDepositedValidators,
+                depositableValidatorsCount: depositableValidatorsCount
+            });
     }
 }
 
@@ -767,6 +814,28 @@ contract CsmVetKeys is CSMCommon {
         vm.expectRevert(InvalidVetKeysPointer.selector);
         csm.vetKeys(noId, 2);
     }
+
+    function test_vetKeys_RevertWhenPointerGreaterThanTargetLimit() public {
+        uint256 noId = createNodeOperator(2);
+        csm.vetKeys(noId, 1);
+        csm.updateTargetValidatorsLimits(noId, true, 1);
+
+        vm.expectRevert(TargetLimitExceeded.selector);
+        csm.vetKeys(noId, 2);
+    }
+
+    function test_vetKeys_RevertWhenStuckKeysPresent() public {
+        uint256 noId = createNodeOperator(2);
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+
+        vm.expectRevert(StuckKeysPresent.selector);
+        csm.vetKeys(noId, 2);
+    }
 }
 
 contract CsmQueueOps is CSMCommon {
@@ -913,5 +982,634 @@ contract CsmQueueOps is CSMCommon {
 
         csm.cleanDepositQueue(LOOKUP_DEPTH, NULL_POINTER);
         _assertQueueIsEmpty();
+    }
+}
+
+contract CsmViewKeys is CSMCommon {
+    function test_viewAllKeys() public {
+        bytes memory keys = randomBytes(48 * 3);
+
+        uint256 noId = createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 3,
+            keys: keys,
+            signatures: randomBytes(96 * 3)
+        });
+
+        bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
+            nodeOperatorId: noId,
+            startIndex: 0,
+            keysCount: 3
+        });
+
+        assertEq(obtainedKeys, keys, "unexpected keys");
+    }
+
+    function test_viewKeysFromOffset() public {
+        bytes memory wantedKey = randomBytes(48);
+        bytes memory keys = bytes.concat(
+            randomBytes(48),
+            wantedKey,
+            randomBytes(48)
+        );
+
+        uint256 noId = createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 3,
+            keys: keys,
+            signatures: randomBytes(96 * 3)
+        });
+
+        bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
+            nodeOperatorId: noId,
+            startIndex: 1,
+            keysCount: 1
+        });
+
+        assertEq(obtainedKeys, wantedKey, "unexpected key at position 1");
+    }
+}
+
+contract CsmRemoveKeys is CSMCommon {
+    event SigningKeyRemoved(uint256 indexed nodeOperatorId, bytes pubkey);
+
+    bytes key0 = randomBytes(48);
+    bytes key1 = randomBytes(48);
+    bytes key2 = randomBytes(48);
+    bytes key3 = randomBytes(48);
+    bytes key4 = randomBytes(48);
+
+    function test_singleKeyRemoval() public {
+        bytes memory keys = bytes.concat(key0, key1, key2, key3, key4);
+
+        uint256 noId = createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 5,
+            keys: keys,
+            signatures: randomBytes(96 * 5)
+        });
+
+        // at the beginning
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit SigningKeyRemoved(noId, key0);
+
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit TotalSigningKeysCountChanged(noId, 4);
+        }
+        csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 1 });
+        /*
+            key4
+            key1
+            key2
+            key3
+        */
+
+        // in between
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit SigningKeyRemoved(noId, key1);
+
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit TotalSigningKeysCountChanged(noId, 3);
+        }
+        csm.removeKeys({ nodeOperatorId: noId, startIndex: 1, keysCount: 1 });
+        /*
+            key4
+            key3
+            key2
+        */
+
+        // at the end
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit SigningKeyRemoved(noId, key2);
+
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit TotalSigningKeysCountChanged(noId, 2);
+        }
+        csm.removeKeys({ nodeOperatorId: noId, startIndex: 2, keysCount: 1 });
+        /*
+            key4
+            key3
+        */
+
+        bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
+            nodeOperatorId: noId,
+            startIndex: 0,
+            keysCount: 2
+        });
+        assertEq(obtainedKeys, bytes.concat(key4, key3), "unexpected keys");
+
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalAddedValidators, 2);
+    }
+
+    function test_multipleKeysRemovalFromStart() public {
+        bytes memory keys = bytes.concat(key0, key1, key2, key3, key4);
+
+        uint256 noId = createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 5,
+            keys: keys,
+            signatures: randomBytes(96 * 5)
+        });
+
+        {
+            // NOTE: keys are being removed in reverse order to keep an original order of keys at the end of the list
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit SigningKeyRemoved(noId, key1);
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit SigningKeyRemoved(noId, key0);
+
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit TotalSigningKeysCountChanged(noId, 3);
+        }
+
+        csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 2 });
+
+        bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
+            nodeOperatorId: noId,
+            startIndex: 0,
+            keysCount: 3
+        });
+        assertEq(
+            obtainedKeys,
+            bytes.concat(key3, key4, key2),
+            "unexpected keys"
+        );
+
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalAddedValidators, 3);
+    }
+
+    function test_multipleKeysRemovalInBetween() public {
+        bytes memory keys = bytes.concat(key0, key1, key2, key3, key4);
+
+        uint256 noId = createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 5,
+            keys: keys,
+            signatures: randomBytes(96 * 5)
+        });
+
+        {
+            // NOTE: keys are being removed in reverse order to keep an original order of keys at the end of the list
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit SigningKeyRemoved(noId, key2);
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit SigningKeyRemoved(noId, key1);
+
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit TotalSigningKeysCountChanged(noId, 3);
+        }
+
+        csm.removeKeys({ nodeOperatorId: noId, startIndex: 1, keysCount: 2 });
+
+        bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
+            nodeOperatorId: noId,
+            startIndex: 0,
+            keysCount: 3
+        });
+        assertEq(
+            obtainedKeys,
+            bytes.concat(key0, key3, key4),
+            "unexpected keys"
+        );
+
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalAddedValidators, 3);
+    }
+
+    function test_multipleKeysRemovalFromEnd() public {
+        bytes memory keys = bytes.concat(key0, key1, key2, key3, key4);
+
+        uint256 noId = createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 5,
+            keys: keys,
+            signatures: randomBytes(96 * 5)
+        });
+
+        {
+            // NOTE: keys are being removed in reverse order to keep an original order of keys at the end of the list
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit SigningKeyRemoved(noId, key4);
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit SigningKeyRemoved(noId, key3);
+
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit TotalSigningKeysCountChanged(noId, 3);
+        }
+
+        csm.removeKeys({ nodeOperatorId: noId, startIndex: 3, keysCount: 2 });
+
+        bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
+            nodeOperatorId: noId,
+            startIndex: 0,
+            keysCount: 3
+        });
+        assertEq(
+            obtainedKeys,
+            bytes.concat(key0, key1, key2),
+            "unexpected keys"
+        );
+
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalAddedValidators, 3);
+    }
+
+    function test_removeAllKeys() public {
+        uint256 noId = createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 5,
+            keys: randomBytes(48 * 5),
+            signatures: randomBytes(96 * 5)
+        });
+
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit TotalSigningKeysCountChanged(noId, 0);
+        }
+
+        csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 5 });
+
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalAddedValidators, 0);
+    }
+
+    function test_removingVettedKeysUnvetsOperator() public {
+        uint256 noId = createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 5,
+            keys: randomBytes(48 * 5),
+            signatures: randomBytes(96 * 5)
+        });
+
+        csm.vetKeys(noId, 3);
+        csm.obtainDepositData(1, "");
+
+        /*
+            no.totalVettedValidators = 3
+            no.totalDepositedKeys = 1
+            no.totalAddedKeys = 5
+        */
+
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit VettedSigningKeysCountChanged(noId, 1);
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit UnvettingFeeApplied(noId);
+        }
+
+        csm.removeKeys({ nodeOperatorId: noId, startIndex: 1, keysCount: 2 });
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalVettedValidators, 1);
+    }
+
+    function test_removingNotVettedKeysDoesntUnvetOperator() public {
+        uint256 noId = createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 5,
+            keys: randomBytes(48 * 5),
+            signatures: randomBytes(96 * 5)
+        });
+
+        csm.vetKeys(noId, 3);
+        csm.obtainDepositData(1, "");
+
+        /*
+            no.totalVettedValidators = 3
+            no.totalDepositedKeys = 1
+            no.totalAddedKeys = 5
+        */
+
+        csm.removeKeys({ nodeOperatorId: noId, startIndex: 3, keysCount: 2 });
+        NodeOperatorInfo memory no = csm.getNodeOperator(0);
+        assertEq(no.totalVettedValidators, 3);
+    }
+
+    function test_removeKeys_RevertWhenNoNodeOperator() public {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.removeKeys({ nodeOperatorId: 0, startIndex: 0, keysCount: 1 });
+    }
+
+    function test_removeKeys_RevertWhenMoreThanAdded() public {
+        uint256 noId = createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 1
+        });
+
+        vm.expectRevert(SigningKeysInvalidOffset.selector);
+        csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 2 });
+    }
+
+    function test_removeKeys_RevertWhenLessThanDeposited() public {
+        uint256 noId = createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 2
+        });
+
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+
+        vm.expectRevert(SigningKeysInvalidOffset.selector);
+        csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 1 });
+    }
+
+    function test_removeKeys_RevertWhenNotManager() public {
+        uint256 noId = createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 1
+        });
+
+        vm.prank(stranger);
+        vm.expectRevert(SenderIsNotManagerAddress.selector);
+        csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 1 });
+    }
+}
+
+contract CsmGetNodeOperatorSummary is CSMCommon {
+    // TODO add more tests here. There might be fuzz tests
+
+    function test_getNodeOperatorSummary_defaultValues() public {
+        uint256 noId = createNodeOperator();
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(summary.isTargetLimitActive, false);
+        assertEq(summary.targetValidatorsCount, 0);
+        assertEq(summary.stuckValidatorsCount, 0);
+        assertEq(summary.refundedValidatorsCount, 0);
+        assertEq(summary.stuckPenaltyEndTimestamp, 0);
+        assertEq(summary.totalExitedValidators, 0);
+        assertEq(summary.totalDepositedValidators, 0);
+        assertEq(summary.depositableValidatorsCount, 0);
+    }
+
+    function test_getNodeOperatorSummary_vetKeys() public {
+        uint256 noId = createNodeOperator(2);
+        csm.vetKeys(noId, 1);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(summary.depositableValidatorsCount, 1);
+        assertEq(summary.totalDepositedValidators, 0);
+    }
+
+    function test_getNodeOperatorSummary_depositedKey() public {
+        uint256 noId = createNodeOperator(2);
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(summary.depositableValidatorsCount, 0);
+        assertEq(summary.totalDepositedValidators, 1);
+    }
+
+    function test_getNodeOperatorSummary_targetLimit() public {
+        uint256 noId = createNodeOperator(3);
+
+        csm.updateTargetValidatorsLimits(noId, true, 1);
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+
+        summary = getNodeOperatorSummary(noId);
+        assertEq(summary.targetValidatorsCount, 1);
+        assertTrue(summary.isTargetLimitActive);
+        assertEq(summary.depositableValidatorsCount, 0);
+    }
+
+    function test_getNodeOperatorSummary_targetLimitEqualToDepositedKeys()
+        public
+    {
+        uint256 noId = createNodeOperator(3);
+        csm.vetKeys(noId, 2);
+        csm.obtainDepositData(1, "");
+
+        csm.updateTargetValidatorsLimits(noId, true, 1);
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertTrue(summary.isTargetLimitActive);
+        assertEq(summary.targetValidatorsCount, 1);
+        assertEq(summary.depositableValidatorsCount, 0);
+    }
+
+    function test_getNodeOperatorSummary_targetLimitLowerThanDepositedKeys()
+        public
+    {
+        uint256 noId = createNodeOperator(3);
+        csm.vetKeys(noId, 3);
+        csm.obtainDepositData(2, "");
+
+        csm.updateTargetValidatorsLimits(noId, true, 1);
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertTrue(summary.isTargetLimitActive);
+        assertEq(summary.targetValidatorsCount, 1);
+        assertEq(summary.depositableValidatorsCount, 0);
+    }
+
+    function test_getNodeOperatorSummary_targetLimitLowerThanVettedKeys()
+        public
+    {
+        uint256 noId = createNodeOperator(3);
+        csm.vetKeys(noId, 3);
+
+        csm.updateTargetValidatorsLimits(noId, true, 2);
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertTrue(summary.isTargetLimitActive);
+        assertEq(summary.targetValidatorsCount, 2);
+        // should be unvetted
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalVettedValidators, 0);
+    }
+
+    function test_getNodeOperatorSummary_targetLimitHigherThanVettedKeys()
+        public
+    {
+        uint256 noId = createNodeOperator(3);
+        csm.updateTargetValidatorsLimits(noId, true, 1);
+        csm.vetKeys(noId, 1);
+
+        csm.updateTargetValidatorsLimits(noId, true, 3);
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertTrue(summary.isTargetLimitActive);
+        assertEq(summary.targetValidatorsCount, 3);
+        assertEq(summary.depositableValidatorsCount, 1);
+    }
+}
+
+contract CsmUpdateTargetValidatorsLimits is CSMCommon {
+    function test_updateTargetValidatorsLimits() public {
+        uint256 noId = createNodeOperator();
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit TargetValidatorsCountChanged(noId, true, 1);
+        csm.updateTargetValidatorsLimits(noId, true, 1);
+    }
+
+    function test_updateTargetValidatorsLimits_limitIsZero() public {
+        uint256 noId = createNodeOperator();
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit TargetValidatorsCountChanged(noId, true, 0);
+        csm.updateTargetValidatorsLimits(noId, true, 0);
+    }
+
+    function test_updateTargetValidatorsLimits_enableLimit() public {
+        uint256 noId = createNodeOperator();
+        csm.updateTargetValidatorsLimits(noId, false, 10);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit TargetValidatorsCountChanged(noId, true, 10);
+        csm.updateTargetValidatorsLimits(noId, true, 10);
+    }
+
+    function test_updateTargetValidatorsLimits_disableLimit() public {
+        uint256 noId = createNodeOperator();
+        csm.updateTargetValidatorsLimits(noId, true, 10);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit TargetValidatorsCountChanged(noId, false, 10);
+        csm.updateTargetValidatorsLimits(noId, false, 10);
+    }
+
+    function test_updateTargetValidatorsLimits_unvetKeys() public {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+
+        csm.updateTargetValidatorsLimits(noId, true, 1);
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalVettedValidators, 0);
+    }
+
+    function test_updateTargetValidatorsLimits_NoUnvetKeysWhenLimitHigher()
+        public
+    {
+        uint256 noId = createNodeOperator(2);
+        csm.updateTargetValidatorsLimits(noId, true, 1);
+
+        csm.vetKeys(noId, 1);
+
+        csm.updateTargetValidatorsLimits(noId, true, 2);
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalVettedValidators, 1);
+    }
+
+    function test_updateTargetValidatorsLimits_NoUnvetKeysWhenLimitDisabled()
+        public
+    {
+        uint256 noId = createNodeOperator(2);
+        csm.updateTargetValidatorsLimits(noId, true, 1);
+
+        csm.vetKeys(noId, 1);
+
+        csm.updateTargetValidatorsLimits(noId, false, 1);
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalVettedValidators, 1);
+    }
+
+    function test_updateTargetValidatorsLimits_RevertWhenNoNodeOperator()
+        public
+    {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.updateTargetValidatorsLimits(0, true, 1);
+    }
+
+    function test_updateTargetValidatorsLimits_RevertWhenNotStakingRouter()
+        public
+    {
+        // TODO implement
+        vm.skip(true);
+    }
+}
+
+contract CsmUpdateStuckValidatorsCount is CSMCommon {
+    function test_updateStuckValidatorsCount_NonZero() public {
+        uint256 noId = createNodeOperator(3);
+        csm.vetKeys(noId, 3);
+        csm.obtainDepositData(1, "");
+
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit StuckSigningKeysCountChanged(noId, 1);
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.stuckValidatorsCount,
+            1,
+            "stuckValidatorsCount not increased"
+        );
+    }
+
+    function test_updateStuckValidatorsCount_Unstuck() public {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit StuckSigningKeysCountChanged(noId, 0);
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000000))
+        );
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.stuckValidatorsCount,
+            0,
+            "stuckValidatorsCount should be zero"
+        );
+    }
+
+    function test_updateStuckValidatorsCount_RevertWhenNoNodeOperator() public {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+    }
+
+    function test_updateStuckValidatorsCount_RevertWhenNotStakingRouter()
+        public
+    {
+        // TODO implement
+        vm.skip(true);
+    }
+
+    function test_updateStuckValidatorsCount_RevertWhenCountMoreThanDeposited()
+        public
+    {
+        uint256 noId = createNodeOperator(3);
+        csm.vetKeys(noId, 3);
+        csm.obtainDepositData(1, "");
+
+        vm.expectRevert(StuckKeysHigherThanTotalDeposited.selector);
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000002))
+        );
+    }
+
+    function test_updateStuckValidatorsCount_NoEventWhenStuckKeysCountSame()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+
+        vm.recordLogs();
+        csm.updateStuckValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 0);
     }
 }

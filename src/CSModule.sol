@@ -13,6 +13,7 @@ import { ILido } from "./interfaces/ILido.sol";
 
 import { QueueLib } from "./lib/QueueLib.sol";
 import { Batch } from "./lib/Batch.sol";
+import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
 
 import "./lib/SigningKeys.sol";
 
@@ -23,7 +24,7 @@ struct NodeOperator {
     address proposedRewardAddress;
     bool active;
     uint256 targetLimit;
-    uint256 targetLimitTimestamp;
+    bool isTargetLimitActive;
     uint256 stuckPenaltyEndTimestamp;
     uint256 totalExitedKeys;
     uint256 totalAddedKeys;
@@ -32,7 +33,6 @@ struct NodeOperator {
     uint256 totalVettedKeys;
     uint256 stuckValidatorsCount;
     uint256 refundedValidatorsCount;
-    bool isTargetLimitActive;
     uint256 queueNonce;
 }
 
@@ -84,6 +84,15 @@ contract CSModuleBase {
         uint256 indexed nodeOperatorId,
         uint256 totalValidatorsCount
     );
+    event StuckSigningKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 stuckValidatorsCount
+    );
+    event TargetValidatorsCountChanged(
+        uint256 indexed nodeOperatorId,
+        bool isTargetLimitActive,
+        uint256 targetValidatorsCount
+    );
 
     event BatchEnqueued(
         uint256 indexed nodeOperatorId,
@@ -95,6 +104,8 @@ contract CSModuleBase {
     event LocatorContractSet(address locatorAddress);
     event UnvettingFeeSet(uint256 unvettingFee);
 
+    event UnvettingFeeApplied(uint256 indexed nodeOperatorId);
+
     error NodeOperatorDoesNotExist();
     error MaxNodeOperatorsCountReached();
     error SenderIsNotManagerAddress();
@@ -103,6 +114,10 @@ contract CSModuleBase {
     error SameAddress();
     error AlreadyProposed();
     error InvalidVetKeysPointer();
+    error TargetLimitExceeded();
+    error StuckKeysPresent();
+    error InvalidTargetLimit();
+    error StuckKeysHigherThanTotalDeposited();
 
     error QueueLookupNoLimit();
     error QueueEmptyBatch();
@@ -110,6 +125,8 @@ contract CSModuleBase {
     error QueueBatchInvalidStart(bytes32 batch);
     error QueueBatchInvalidCount(bytes32 batch);
     error QueueBatchUnvettedKeys(bytes32 batch);
+
+    error SigningKeysInvalidOffset();
 }
 
 contract CSModule is ICSModule, CSModuleBase {
@@ -151,10 +168,10 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting = ICSAccounting(_accounting);
     }
 
-    function setUnvettingFee(uint256 unvettingFee_) external {
+    function setUnvettingFee(uint256 _unvettingFee) external {
         // TODO: add role check
-        unvettingFee = unvettingFee_;
-        emit UnvettingFeeSet(unvettingFee_);
+        unvettingFee = _unvettingFee;
+        emit UnvettingFeeSet(_unvettingFee);
     }
 
     function _lido() internal view returns (ILido) {
@@ -555,7 +572,38 @@ contract CSModule is ICSModule, CSModuleBase {
         stuckPenaltyEndTimestamp = no.stuckPenaltyEndTimestamp;
         totalExitedValidators = no.totalExitedKeys;
         totalDepositedValidators = no.totalDepositedKeys;
-        depositableValidatorsCount = no.totalVettedKeys - no.totalExitedKeys;
+        // TODO: it should be more clear and probably revisited later
+        depositableValidatorsCount =
+            no.totalVettedKeys -
+            totalDepositedValidators;
+        if (no.isTargetLimitActive) {
+            depositableValidatorsCount = (totalExitedValidators +
+                targetValidatorsCount) <= no.totalVettedKeys
+                ? 0
+                : Math.min(
+                    totalExitedValidators + targetValidatorsCount,
+                    no.totalVettedKeys
+                ) - totalDepositedValidators;
+        }
+    }
+
+    function getNodeOperatorSigningKeys(
+        uint256 nodeOperatorId,
+        uint256 startIndex,
+        uint256 keysCount
+    )
+        external
+        view
+        onlyExistingNodeOperator(nodeOperatorId)
+        returns (bytes memory)
+    {
+        return
+            SigningKeys.loadKeys(
+                SIGNING_KEYS_POSITION,
+                nodeOperatorId,
+                startIndex,
+                keysCount
+            );
     }
 
     function getNonce() external view returns (uint256) {
@@ -597,11 +645,44 @@ contract CSModule is ICSModule, CSModuleBase {
         // TODO: staking router role only
     }
 
+    // @notice update stuck validators count by StakingRouter
+    // Presence of stuck validators leads to stop vetting for the node operator
+    // to prevent further deposits and clean batches from the deposit queue.
+    // @param nodeOperatorIds - bytes packed array of node operator ids
+    // @param stuckValidatorsCounts - bytes packed array of stuck validators counts
     function updateStuckValidatorsCount(
-        bytes calldata /*_nodeOperatorIds*/,
-        bytes calldata /*_stuckValidatorsCounts*/
-    ) external {
-        // TODO: implement
+        bytes calldata nodeOperatorIds,
+        bytes calldata stuckValidatorsCounts
+    ) external onlyStakingRouter {
+        ValidatorCountsReport.validate(nodeOperatorIds, stuckValidatorsCounts);
+
+        for (
+            uint256 i = 0;
+            i < ValidatorCountsReport.count(nodeOperatorIds);
+            i++
+        ) {
+            (
+                uint256 nodeOperatorId,
+                uint256 stuckValidatorsCount
+            ) = ValidatorCountsReport.next(
+                    nodeOperatorIds,
+                    stuckValidatorsCounts,
+                    i
+                );
+            if (nodeOperatorId >= _nodeOperatorsCount)
+                revert NodeOperatorDoesNotExist();
+            NodeOperator storage no = _nodeOperators[nodeOperatorId];
+            if (stuckValidatorsCount > no.totalDepositedKeys)
+                revert StuckKeysHigherThanTotalDeposited();
+            if (stuckValidatorsCount == no.stuckValidatorsCount) continue;
+
+            no.stuckValidatorsCount = stuckValidatorsCount;
+            emit StuckSigningKeysCountChanged(
+                nodeOperatorId,
+                stuckValidatorsCount
+            );
+        }
+        _incrementModuleNonce();
     }
 
     function updateExitedValidatorsCount(
@@ -622,12 +703,42 @@ contract CSModule is ICSModule, CSModuleBase {
         // TODO: implement
     }
 
+    // @notice update target limits with event emission
+    // target limit decreasing (or appearing) must unvet node operator's keys from the queue
     function updateTargetValidatorsLimits(
-        uint256 /*_nodeOperatorId*/,
-        bool /*_isTargetLimitActive*/,
-        uint256 /*_targetLimit*/
-    ) external {
-        // TODO: implement
+        uint256 nodeOperatorId,
+        bool isTargetLimitActive,
+        uint256 targetLimit
+    ) external onlyExistingNodeOperator(nodeOperatorId) onlyStakingRouter {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        if (
+            no.isTargetLimitActive == isTargetLimitActive &&
+            no.targetLimit == targetLimit
+        ) return;
+
+        if (
+            (!no.isTargetLimitActive && isTargetLimitActive) ||
+            targetLimit < no.targetLimit
+        ) {
+            _unvetKeys(nodeOperatorId);
+        }
+
+        if (no.isTargetLimitActive != isTargetLimitActive) {
+            no.isTargetLimitActive = isTargetLimitActive;
+        }
+
+        if (no.targetLimit != targetLimit) {
+            no.targetLimit = targetLimit;
+        }
+
+        emit TargetValidatorsCountChanged(
+            nodeOperatorId,
+            isTargetLimitActive,
+            targetLimit
+        );
+
+        _incrementModuleNonce();
     }
 
     function onExitedAndStuckValidatorsCountsUpdated() external {
@@ -651,6 +762,7 @@ contract CSModule is ICSModule, CSModuleBase {
         if (vetKeysPointer <= no.totalVettedKeys)
             revert InvalidVetKeysPointer();
         if (vetKeysPointer > no.totalAddedKeys) revert InvalidVetKeysPointer();
+        _validateVetKeys(nodeOperatorId, vetKeysPointer);
 
         uint64 count = SafeCast.toUint64(vetKeysPointer - no.totalVettedKeys);
         uint64 start = SafeCast.toUint64(no.totalVettedKeys);
@@ -671,6 +783,19 @@ contract CSModule is ICSModule, CSModuleBase {
         _incrementModuleNonce();
     }
 
+    function _validateVetKeys(
+        uint256 nodeOperatorId,
+        uint64 vetKeysPointer
+    ) internal view {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        if (
+            no.isTargetLimitActive &&
+            vetKeysPointer > (no.totalExitedKeys + no.targetLimit)
+        ) revert TargetLimitExceeded();
+        if (no.stuckValidatorsCount > 0) revert StuckKeysPresent();
+    }
+
     function unvetKeys(
         uint256 nodeOperatorId
     )
@@ -679,19 +804,45 @@ contract CSModule is ICSModule, CSModuleBase {
         onlyKeyValidatorOrNodeOperatorManager
     {
         _unvetKeys(nodeOperatorId);
-        accounting.penalize(nodeOperatorId, unvettingFee);
+        _applyUnvettingFee(nodeOperatorId);
+        _incrementModuleNonce();
     }
 
     function unsafeUnvetKeys(uint256 nodeOperatorId) external onlyKeyValidator {
         _unvetKeys(nodeOperatorId);
+        _incrementModuleNonce();
     }
 
+    function removeKeys(
+        uint256 nodeOperatorId,
+        uint256 startIndex,
+        uint256 keysCount
+    )
+        external
+        onlyExistingNodeOperator(nodeOperatorId)
+        onlyNodeOperatorManager(nodeOperatorId)
+    {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (no.totalVettedKeys > startIndex) {
+            _unvetKeys(nodeOperatorId);
+            _applyUnvettingFee(nodeOperatorId);
+        }
+
+        _removeSigningKeys(nodeOperatorId, startIndex, keysCount);
+        _incrementModuleNonce();
+    }
+
+    /// @dev NB! doesn't increment module nonce
     function _unvetKeys(uint256 nodeOperatorId) internal {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         no.totalVettedKeys = no.totalDepositedKeys;
         no.queueNonce++;
         emit VettedSigningKeysCountChanged(nodeOperatorId, no.totalVettedKeys);
-        _incrementModuleNonce();
+    }
+
+    function _applyUnvettingFee(uint256 nodeOperatorId) internal {
+        accounting.penalize(nodeOperatorId, unvettingFee);
+        emit UnvettingFeeApplied(nodeOperatorId);
     }
 
     function onWithdrawalCredentialsChanged() external {
@@ -725,6 +876,34 @@ contract CSModule is ICSModule, CSModuleBase {
         );
 
         _incrementModuleNonce();
+    }
+
+    function _removeSigningKeys(
+        uint256 nodeOperatorId,
+        uint256 startIndex,
+        uint256 keysCount
+    ) internal {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        if (startIndex < no.totalDepositedKeys) {
+            revert SigningKeysInvalidOffset();
+        }
+
+        if (startIndex + keysCount > no.totalAddedKeys) {
+            revert SigningKeysInvalidOffset();
+        }
+
+        // solhint-disable-next-line func-named-parameters
+        uint256 newTotalSigningKeys = SigningKeys.removeKeysSigs(
+            SIGNING_KEYS_POSITION,
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            no.totalAddedKeys
+        );
+
+        no.totalAddedKeys = newTotalSigningKeys;
+        emit TotalSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
     }
 
     function obtainDepositData(
@@ -963,6 +1142,11 @@ contract CSModule is ICSModule, CSModuleBase {
 
     modifier onlyKeyValidator() {
         // TODO: check the role
+        _;
+    }
+
+    modifier onlyStakingRouter() {
+        // TODO check the role
         _;
     }
 }
