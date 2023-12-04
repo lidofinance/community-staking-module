@@ -162,12 +162,16 @@ contract CSModule is IStakingModule, CSModuleBase {
         emit LocatorContractSet(locator);
     }
 
+    /// @notice Sets the accounting contract
+    /// @param _accounting Address of the accounting contract
     function setAccounting(address _accounting) external {
         // TODO: add role check
         require(address(accounting) == address(0), "already initialized");
         accounting = ICSAccounting(_accounting);
     }
 
+    /// @notice Sets the unvetting fee
+    /// @param _unvettingFee Amount of wei to be charged for unvetting in some cases
     function setUnvettingFee(uint256 _unvettingFee) external {
         // TODO: add role check
         unvettingFee = _unvettingFee;
@@ -178,10 +182,13 @@ contract CSModule is IStakingModule, CSModuleBase {
         return ILido(lidoLocator.lido());
     }
 
+    /// @notice Gets the module type
+    /// @return Module type
     function getType() external view returns (bytes32) {
         return _moduleType;
     }
 
+    /// @notice Gets staking summary of the module
     function getStakingModuleSummary()
         external
         view
@@ -198,6 +205,10 @@ contract CSModule is IStakingModule, CSModuleBase {
         );
     }
 
+    /// @notice Adds a new node operator with ETH bond
+    /// @param keysCount Count of signing keys
+    /// @param publicKeys Public keys to submit
+    /// @param signatures Signatures of public keys
     function addNodeOperatorETH(
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -228,6 +239,10 @@ contract CSModule is IStakingModule, CSModuleBase {
         emit NodeOperatorAdded(id, msg.sender);
     }
 
+    /// @notice Adds a new node operator with stETH bond
+    /// @param keysCount Count of signing keys
+    /// @param publicKeys Public keys to submit
+    /// @param signatures Signatures of public keys
     function addNodeOperatorStETH(
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -257,6 +272,11 @@ contract CSModule is IStakingModule, CSModuleBase {
         emit NodeOperatorAdded(id, msg.sender);
     }
 
+    /// @notice Adds a new node operator with permit to use stETH as bond
+    /// @param keysCount Count of signing keys
+    /// @param publicKeys Public keys to submit
+    /// @param signatures Signatures of public keys
+    /// @param permit Permit to use stETH as bond
     function addNodeOperatorStETHWithPermit(
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -287,6 +307,10 @@ contract CSModule is IStakingModule, CSModuleBase {
         emit NodeOperatorAdded(id, msg.sender);
     }
 
+    /// @notice Adds a new node operator with wstETH bond
+    /// @param keysCount Count of signing keys
+    /// @param publicKeys Public keys to submit
+    /// @param signatures Signatures of public keys
     function addNodeOperatorWstETH(
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -316,6 +340,11 @@ contract CSModule is IStakingModule, CSModuleBase {
         emit NodeOperatorAdded(id, msg.sender);
     }
 
+    /// @notice Adds a new node operator with permit to use wstETH as bond
+    /// @param keysCount Count of signing keys
+    /// @param publicKeys Public keys to submit
+    /// @param signatures Signatures of public keys
+    /// @param permit Permit to use wstETH as bond
     function addNodeOperatorWstETHWithPermit(
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -346,6 +375,11 @@ contract CSModule is IStakingModule, CSModuleBase {
         emit NodeOperatorAdded(id, msg.sender);
     }
 
+    /// @notice Adds a new keys to the node operator with ETH bond
+    /// @param nodeOperatorId ID of the node operator
+    /// @param keysCount Count of signing keys
+    /// @param publicKeys Public keys to submit
+    /// @param signatures Signatures of public keys
     function addValidatorKeysETH(
         uint256 nodeOperatorId,
         uint256 keysCount,
@@ -365,6 +399,11 @@ contract CSModule is IStakingModule, CSModuleBase {
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
     }
 
+    /// @notice Adds a new keys to the node operator with stETH bond
+    /// @param nodeOperatorId ID of the node operator
+    /// @param keysCount Count of signing keys
+    /// @param publicKeys Public keys to submit
+    /// @param signatures Signatures of public keys
     function addValidatorKeysStETH(
         uint256 nodeOperatorId,
         uint256 keysCount,
@@ -382,6 +421,12 @@ contract CSModule is IStakingModule, CSModuleBase {
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
     }
 
+    /// @notice Adds a new keys to the node operator with permit to use stETH as bond
+    /// @param nodeOperatorId ID of the node operator
+    /// @param keysCount Count of signing keys
+    /// @param publicKeys Public keys to submit
+    /// @param signatures Signatures of public keys
+    /// @param permit Permit to use stETH as bond
     function addValidatorKeysStETHWithPermit(
         uint256 nodeOperatorId,
         uint256 keysCount,
@@ -401,6 +446,11 @@ contract CSModule is IStakingModule, CSModuleBase {
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
     }
 
+    /// @notice Adds a new keys to the node operator with wstETH bond
+    /// @param nodeOperatorId ID of the node operator
+    /// @param keysCount Count of signing keys
+    /// @param publicKeys Public keys to submit
+    /// @param signatures Signatures of public keys
     function addValidatorKeysWstETH(
         uint256 nodeOperatorId,
         uint256 keysCount,
@@ -418,6 +468,12 @@ contract CSModule is IStakingModule, CSModuleBase {
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
     }
 
+    /// @notice Adds a new keys to the node operator with permit to use wstETH as bond
+    /// @param nodeOperatorId ID of the node operator
+    /// @param keysCount Count of signing keys
+    /// @param publicKeys Public keys to submit
+    /// @param signatures Signatures of public keys
+    /// @param permit Permit to use wstETH as bond
     function addValidatorKeysWstETHWithPermit(
         uint256 nodeOperatorId,
         uint256 keysCount,
@@ -437,6 +493,9 @@ contract CSModule is IStakingModule, CSModuleBase {
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
     }
 
+    /// @notice Proposes a new manager address for the node operator
+    /// @param nodeOperatorId ID of the node operator
+    /// @param proposedAddress Proposed manager address
     function proposeNodeOperatorManagerAddressChange(
         uint256 nodeOperatorId,
         address proposedAddress
@@ -459,6 +518,8 @@ contract CSModule is IStakingModule, CSModuleBase {
         );
     }
 
+    /// @notice Confirms a new manager address for the node operator
+    /// @param nodeOperatorId ID of the node operator
     function confirmNodeOperatorManagerAddressChange(
         uint256 nodeOperatorId
     ) external onlyExistingNodeOperator(nodeOperatorId) {
@@ -474,6 +535,9 @@ contract CSModule is IStakingModule, CSModuleBase {
         );
     }
 
+    /// @notice Proposes a new reward address for the node operator
+    /// @param nodeOperatorId ID of the node operator
+    /// @param proposedAddress Proposed reward address
     function proposeNodeOperatorRewardAddressChange(
         uint256 nodeOperatorId,
         address proposedAddress
@@ -496,6 +560,8 @@ contract CSModule is IStakingModule, CSModuleBase {
         );
     }
 
+    /// @notice Confirms a new reward address for the node operator
+    /// @param nodeOperatorId ID of the node operator
     function confirmNodeOperatorRewardAddressChange(
         uint256 nodeOperatorId
     ) external onlyExistingNodeOperator(nodeOperatorId) {
@@ -511,6 +577,8 @@ contract CSModule is IStakingModule, CSModuleBase {
         );
     }
 
+    /// @notice Resets the manager address to the reward address
+    /// @param nodeOperatorId ID of the node operator
     function resetNodeOperatorManagerAddress(
         uint256 nodeOperatorId
     )
@@ -532,6 +600,9 @@ contract CSModule is IStakingModule, CSModuleBase {
         );
     }
 
+    /// @notice Gets node operator info
+    /// @param nodeOperatorId ID of the node operator
+    /// @return Node operator info
     function getNodeOperator(
         uint256 nodeOperatorId
     ) external view returns (NodeOperatorInfo memory) {
@@ -548,6 +619,8 @@ contract CSModule is IStakingModule, CSModuleBase {
         return info;
     }
 
+    /// @notice Gets node operator summary
+    /// @param nodeOperatorId ID of the node operator
     function getNodeOperatorSummary(
         uint256 nodeOperatorId
     )
@@ -587,6 +660,11 @@ contract CSModule is IStakingModule, CSModuleBase {
         }
     }
 
+    /// @notice Gets node operator signing keys
+    /// @param nodeOperatorId ID of the node operator
+    /// @param startIndex Index of the first key
+    /// @param keysCount Count of keys to get
+    /// @return Signing keys
     function getNodeOperatorSigningKeys(
         uint256 nodeOperatorId,
         uint256 startIndex,
@@ -606,24 +684,32 @@ contract CSModule is IStakingModule, CSModuleBase {
             );
     }
 
+    /// @notice Gets nonce of the module.
     function getNonce() external view returns (uint256) {
         return _nonce;
     }
 
+    /// @notice Gets the total number of node operators
     function getNodeOperatorsCount() public view returns (uint256) {
         return _nodeOperatorsCount;
     }
 
+    /// @notice Gets the total number of active node operators
     function getActiveNodeOperatorsCount() external view returns (uint256) {
         return _activeNodeOperatorsCount;
     }
 
+    /// @notice Sets node operator active status
+    /// @param nodeOperatorId ID of the node operator
     function getNodeOperatorIsActive(
         uint256 nodeOperatorId
     ) external view returns (bool) {
         return _nodeOperators[nodeOperatorId].active;
     }
 
+    /// @notice Gets IDs of node operators
+    /// @param offset Offset of the first node operator
+    /// @param limit Count of node operators to get
     function getNodeOperatorIds(
         uint256 offset,
         uint256 limit
@@ -639,17 +725,17 @@ contract CSModule is IStakingModule, CSModuleBase {
         }
     }
 
-    // called when rewards minted for the module
-    // seems to be empty implementation due to oracle using csm balance for distribution
+    /// @notice Called when rewards minted for the module
+    /// @dev Empty due to oracle using CSM balance for distribution
     function onRewardsMinted(uint256 /*_totalShares*/) external {
         // TODO: staking router role only
     }
 
-    // @notice update stuck validators count by StakingRouter
-    // Presence of stuck validators leads to stop vetting for the node operator
-    // to prevent further deposits and clean batches from the deposit queue.
-    // @param nodeOperatorIds - bytes packed array of node operator ids
-    // @param stuckValidatorsCounts - bytes packed array of stuck validators counts
+    /// @notice Updates stuck validators count for node operators by StakingRouter
+    /// @dev Presence of stuck validators leads to stop vetting for the node operator
+    ///      to prevent further deposits and clean batches from the deposit queue.
+    /// @param nodeOperatorIds bytes packed array of node operator ids
+    /// @param stuckValidatorsCounts bytes packed array of stuck validators counts
     function updateStuckValidatorsCount(
         bytes calldata nodeOperatorIds,
         bytes calldata stuckValidatorsCounts
@@ -685,6 +771,9 @@ contract CSModule is IStakingModule, CSModuleBase {
         _incrementModuleNonce();
     }
 
+    /// @notice Updates exited validators count for node operators by StakingRouter
+    /// @param nodeOperatorIds bytes packed array of node operator ids
+    /// @param exitedValidatorsCounts bytes packed array of exited validators counts
     function updateExitedValidatorsCount(
         bytes calldata nodeOperatorIds,
         bytes calldata exitedValidatorsCounts
@@ -696,15 +785,21 @@ contract CSModule is IStakingModule, CSModuleBase {
         //        );
     }
 
+    /// @notice Updates refunded validators count by StakingRouter
+    /// @param nodeOperatorId ID of the node operator
+    /// @param refundedValidatorsCount Count of refunded validators
     function updateRefundedValidatorsCount(
-        uint256 /* nodeOperatorId */,
-        uint256 /* refundedValidatorsCount */
+        uint256 nodeOperatorId,
+        uint256 refundedValidatorsCount
     ) external {
         // TODO: implement
     }
 
-    // @notice update target limits with event emission
-    // target limit decreasing (or appearing) must unvet node operator's keys from the queue
+    /// @notice Updates target limits for node operator by StakingRouter
+    /// @dev Target limit decreasing (or appearing) must unvet node operator's keys from the queue
+    /// @param nodeOperatorId ID of the node operator
+    /// @param isTargetLimitActive Is target limit active for the node operator
+    /// @param targetLimit Target limit of validators
     function updateTargetValidatorsLimits(
         uint256 nodeOperatorId,
         bool isTargetLimitActive,
@@ -741,18 +836,26 @@ contract CSModule is IStakingModule, CSModuleBase {
         _incrementModuleNonce();
     }
 
+    /// @notice Called when exited and stuck validators counts updated by StakingRouter
     function onExitedAndStuckValidatorsCountsUpdated() external {
         // TODO: implement
     }
 
+    /// @notice Unsafe updates of validators count for node operators by DAO
+    /// @param nodeOperatorId ID of the node operator
+    /// @param exitedValidatorsKeysCount Count of exited validators
+    /// @param stuckValidatorsKeysCount Count of stuck validators
     function unsafeUpdateValidatorsCount(
-        uint256 /*_nodeOperatorId*/,
-        uint256 /*_exitedValidatorsKeysCount*/,
-        uint256 /*_stuckValidatorsKeysCount*/
+        uint256 nodeOperatorId,
+        uint256 exitedValidatorsKeysCount,
+        uint256 stuckValidatorsKeysCount
     ) external {
         // TODO: implement
     }
 
+    /// @notice Vet keys. Called when key validator oracle checks the queue
+    /// @param nodeOperatorId ID of the node operator
+    /// @param vetKeysPointer Pointer to the first unvetted key
     function vetKeys(
         uint256 nodeOperatorId,
         uint64 vetKeysPointer
@@ -796,6 +899,8 @@ contract CSModule is IStakingModule, CSModuleBase {
         if (no.stuckValidatorsCount > 0) revert StuckKeysPresent();
     }
 
+    /// @notice Unvets keys. Called when key validator oracle checks the queue or manually by node operator manager
+    /// @param nodeOperatorId ID of the node operator
     function unvetKeys(
         uint256 nodeOperatorId
     )
@@ -808,11 +913,16 @@ contract CSModule is IStakingModule, CSModuleBase {
         _incrementModuleNonce();
     }
 
+    /// @notice Unsafe unvetting of keys by DAO
+    /// @param nodeOperatorId ID of the node operator
     function unsafeUnvetKeys(uint256 nodeOperatorId) external onlyKeyValidator {
         _unvetKeys(nodeOperatorId);
         _incrementModuleNonce();
     }
 
+    /// @notice Removes keys from the node operator
+    /// @param nodeOperatorId ID of the node operator
+    /// @param startIndex Index of the first key
     function removeKeys(
         uint256 nodeOperatorId,
         uint256 startIndex,
@@ -845,6 +955,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         emit UnvettingFeeApplied(nodeOperatorId);
     }
 
+    /// @notice Called when withdrawal credentials changed by DAO
     function onWithdrawalCredentialsChanged() external {
         revert("NOT_IMPLEMENTED");
     }
@@ -906,6 +1017,10 @@ contract CSModule is IStakingModule, CSModuleBase {
         emit TotalSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
     }
 
+    /// @notice Gets the depositable keys with signatures from the queue
+    /// @param depositsCount Count of deposits to get
+    /// @return publicKeys Public keys
+    /// @return signatures Signatures
     function obtainDepositData(
         uint256 depositsCount,
         bytes calldata /* _depositCalldata */
@@ -1005,7 +1120,10 @@ contract CSModule is IStakingModule, CSModuleBase {
             revert QueueBatchUnvettedKeys(batch);
     }
 
-    /// @dev returns the next pointer to start cleanup from
+    /// @notice Cleans the deposit queue from invalid batches
+    /// @param maxItems Max count of items to clean
+    /// @param pointer Pointer to the first item to clean
+    /// @return pointer Pointer when cleaning is finished
     function cleanDepositQueue(
         uint256 maxItems,
         bytes32 pointer
@@ -1042,6 +1160,11 @@ contract CSModule is IStakingModule, CSModuleBase {
         return pointer;
     }
 
+    /// @notice Gets the deposit queue
+    /// @param maxItems Max count of items to get
+    /// @param pointer Pointer to the first item to get
+    /// @return items Items in the queue
+    /// @return count Count of items in the queue
     function depositQueue(
         uint256 maxItems,
         bytes32 pointer
@@ -1055,9 +1178,11 @@ contract CSModule is IStakingModule, CSModuleBase {
         return queue.list(pointer, maxItems);
     }
 
+    /// @notice Checks if the deposit queue is dirty
     /// @dev it is dirty if it contains a batch with unvetted keys
-    /// or with invalid nonce
-    /// @dev returns the next pointer to start check from
+    ///      or with invalid nonce
+    /// @return bool is queue dirty
+    /// @return bytes32 next pointer to start check from
     function isQueueDirty(
         uint256 maxItems,
         bytes32 pointer
