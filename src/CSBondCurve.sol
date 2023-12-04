@@ -4,9 +4,6 @@
 pragma solidity 0.8.21;
 
 abstract contract CSBondCurve {
-    error InvalidBondCurveLength();
-    error InvalidMultiplier();
-
     /// @dev Array of bond amounts for particular keys count.
     ///
     /// For example:
@@ -44,7 +41,7 @@ abstract contract CSBondCurve {
     /// By default, all Node Operators have x1 multiplier (10000 basis points).
     ///
     /// For example:
-    ///   Some Node Operator's bond multiplier is x0.90 (9500 basis points).
+    ///   Some Node Operator's bond multiplier is x0.90 (9000 basis points).
     ///   Bond Curve for this Node Operator will be:
     ///
     ///   Bond Amount (ETH)
@@ -84,7 +81,7 @@ abstract contract CSBondCurve {
 
     function _setBondCurve(uint256[] memory _bondCurve) internal {
         _checkCurveLength(_bondCurve);
-        // todo: check curve values (not worse than previous and makes sense)
+        _checkCurveValues(_bondCurve);
         bondCurve = _bondCurve;
         _bondCurveTrend =
             _bondCurve[_bondCurve.length - 1] -
@@ -113,6 +110,14 @@ abstract contract CSBondCurve {
     function _checkCurveLength(uint256[] memory xy) internal pure {
         if (xy.length < MIN_CURVE_LENGTH || xy.length > MAX_CURVE_LENGTH)
             revert InvalidBondCurveLength();
+    }
+
+    function _checkCurveValues(uint256[] memory xy) internal pure {
+        // todo: check curve values (not worse than previous and makes sense)
+        if (xy[0] == 0) revert InvalidBondCurveValues();
+        for (uint256 i = 1; i < xy.length; i++) {
+            if (xy[i] <= xy[i - 1]) revert InvalidBondCurveValues();
+        }
     }
 
     function _checkMultiplier(uint256 multiplier) internal pure {
@@ -186,4 +191,8 @@ abstract contract CSBondCurve {
             (keys - bondCurve.length) *
             ((_bondCurveTrend * multiplier) / BASIS_POINTS);
     }
+
+    error InvalidBondCurveLength();
+    error InvalidBondCurveValues();
+    error InvalidMultiplier();
 }

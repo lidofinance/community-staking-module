@@ -254,6 +254,9 @@ contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
         // not eligible already
         vm.warp(block.timestamp + 8 weeks + 1 seconds);
 
+        vm.expectEmit(true, true, true, true, address(bondLock));
+        emit BondLockChanged(0, 0, 0);
+
         vm.recordLogs();
 
         bondLock.settle(idsToSettle);
@@ -264,7 +267,7 @@ contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
         assertEq(
             vm.getRecordedLogs().length,
             1,
-            "should not emit BondPenalized event"
+            "should NOT emit BondPenalized event"
         );
     }
 

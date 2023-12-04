@@ -68,7 +68,7 @@ contract CSBondCurveTest is Test {
     }
 
     function test_setBondCurve() public {
-        uint256[] memory _bondCurve = new uint256[](11);
+        uint256[] memory _bondCurve = new uint256[](2);
         _bondCurve[0] = 16 ether;
         _bondCurve[1] = 32 ether;
 
@@ -79,20 +79,20 @@ contract CSBondCurveTest is Test {
     }
 
     function test_setBondCurve_RevertWhen_LessThanMinBondCurveLength() public {
-        uint256[] memory _bondCurve = new uint256[](0);
-
         vm.expectRevert(CSBondCurve.InvalidBondCurveLength.selector);
-        bondCurve.setBondCurve(_bondCurve);
+        bondCurve.setBondCurve(new uint256[](0));
     }
 
     function test_setBondCurve_RevertWhen_MoreThanMaxBondCurveLength() public {
-        uint256[] memory _bondCurve = new uint256[](21);
-        _bondCurve = new uint256[](21);
-        for (uint256 i = 0; i < 21; i++) {
-            _bondCurve[i] = i;
-        }
-
         vm.expectRevert(CSBondCurve.InvalidBondCurveLength.selector);
+        bondCurve.setBondCurve(new uint256[](21));
+    }
+
+    function test_setBondCurve_RevertWhen_ZeroValue() public {
+        vm.expectRevert(CSBondCurve.InvalidBondCurveValues.selector);
+
+        uint256[] memory _bondCurve = new uint256[](1);
+        _bondCurve[0] = 0 ether;
 
         bondCurve.setBondCurve(_bondCurve);
     }

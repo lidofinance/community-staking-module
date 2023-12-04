@@ -2396,12 +2396,12 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
         assertEq(
             stETH.sharesOf(address(accounting)),
-            bondSharesAfter,
+            bondSharesBefore,
             "bond manager after claim should be equal to before"
         );
         assertEq(
             accounting.totalBondShares(),
-            bondSharesAfter,
+            bondSharesBefore,
             "total bond shares after claim should be equal to before"
         );
     }
