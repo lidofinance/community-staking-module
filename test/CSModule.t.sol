@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.21;
 
 import "forge-std/Test.sol";
@@ -1412,7 +1413,8 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         assertTrue(summary.isTargetLimitActive);
         assertEq(summary.targetValidatorsCount, 2);
         // should be unvetted
-        assertEq(summary.depositableValidatorsCount, 0);
+        NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalVettedValidators, 0);
     }
 
     function test_getNodeOperatorSummary_targetLimitHigherThanVettedKeys()
@@ -1515,7 +1517,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
 }
 
 contract CsmUpdateStuckValidatorsCount is CSMCommon {
-    function test_updateStuckValidatorsCount() public {
+    function test_updateStuckValidatorsCount_NonZero() public {
         uint256 noId = createNodeOperator(3);
         csm.vetKeys(noId, 3);
         csm.obtainDepositData(1, "");

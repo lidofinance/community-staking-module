@@ -572,6 +572,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         stuckPenaltyEndTimestamp = no.stuckPenaltyEndTimestamp;
         totalExitedValidators = no.totalExitedKeys;
         totalDepositedValidators = no.totalDepositedKeys;
+        // TODO: it should be more clear and probably revisited later
         depositableValidatorsCount =
             no.totalVettedKeys -
             totalDepositedValidators;
