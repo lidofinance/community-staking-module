@@ -176,8 +176,8 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     }
 
     /// @notice Sets blocked bond periods.
-    /// @param retention retention period for blocked bond in seconds.
-    /// @param management management period for blocked bond in seconds.
+    /// @param retention period in seconds to retain bond lock
+    /// @param management period in seconds to manage bond lock by node operator
     function setBlockedBondPeriods(
         uint256 retention,
         uint256 management
