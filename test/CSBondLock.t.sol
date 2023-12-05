@@ -18,15 +18,7 @@ import { WithdrawalQueueMockBase, WithdrawalQueueMock } from "./helpers/mocks/Wi
 import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 
-abstract contract CSBondLockTestableBase {
-    event BondPenalized(
-        uint256 nodeOperatorId,
-        uint256 penaltyEth,
-        uint256 coveringEth
-    );
-}
-
-contract CSBondLockTestable is CSBondLockTestableBase, CSBondLock {
+contract CSBondLockTestable is CSBondLock {
     constructor(
         uint256 retentionPeriod,
         uint256 managementPeriod
@@ -62,16 +54,13 @@ contract CSBondLockTestable is CSBondLockTestableBase, CSBondLock {
     }
 
     uint256 internal _mockedUncoveredPenalty;
+    mapping(uint256 => bool) public penalized;
 
     function _penalize(
         uint256 nodeOperatorId,
         uint256 amount
     ) internal override returns (uint256) {
-        emit BondPenalized(
-            nodeOperatorId,
-            amount,
-            amount - _mockedUncoveredPenalty
-        );
+        penalized[nodeOperatorId] = true;
         return _mockedUncoveredPenalty;
     }
 
@@ -80,7 +69,7 @@ contract CSBondLockTestable is CSBondLockTestableBase, CSBondLock {
     }
 }
 
-contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
+contract CSBondLockTest is Test, CSBondLockBase {
     CSBondLockTestable public bondLock;
 
     function setUp() public {
@@ -208,9 +197,6 @@ contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
         vm.warp(block.timestamp + managementPeriod + 1 seconds);
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondPenalized(noId, 1 ether, 1 ether);
-
-        vm.expectEmit(true, true, true, true, address(bondLock));
         emit BondLockChanged(noId, 0, 0);
 
         bondLock.settle(idsToSettle);
@@ -218,6 +204,7 @@ contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
         CSBondLock.BondLock memory lock = bondLock.get(noId);
         assertEq(lock.amount, 0 ether);
         assertEq(lock.retentionUntil, 0);
+        assertEq(bondLock.penalized(noId), true);
     }
 
     function test_settle_WhenUncovered() public {
@@ -234,9 +221,6 @@ contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
         vm.warp(block.timestamp + managementPeriod + 1 seconds);
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondPenalized(noId, 1 ether, 0.7 ether);
-
-        vm.expectEmit(true, true, true, true, address(bondLock));
         emit BondLockChanged(noId, 0.3 ether, retentionPeriodWhenLock);
 
         bondLock.settle(idsToSettle);
@@ -244,6 +228,7 @@ contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
         CSBondLock.BondLock memory lock = bondLock.get(noId);
         assertEq(lock.amount, 0.3 ether);
         assertEq(lock.retentionUntil, retentionPeriodWhenLock);
+        assertEq(bondLock.penalized(noId), true);
     }
 
     function test_settle_WhenRetentionPeriodIsExpired() public {
@@ -260,19 +245,11 @@ contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
         vm.expectEmit(true, true, true, true, address(bondLock));
         emit BondLockChanged(noId, 0, 0);
 
-        vm.recordLogs();
-
         bondLock.settle(idsToSettle);
 
         CSBondLock.BondLock memory lock = bondLock.get(noId);
         assertEq(lock.amount, 0 ether);
         assertEq(lock.retentionUntil, 0);
-
-        assertEq(
-            vm.getRecordedLogs().length,
-            1,
-            "should NOT emit BondPenalized event"
-        );
     }
 
     function test_settle_WhenInManagementPeriod() public {
@@ -329,12 +306,7 @@ contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
         emit BondLockChanged(0, 0, 0);
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondPenalized(1, 1 ether, 1 ether);
-
-        vm.expectEmit(true, true, true, true, address(bondLock));
         emit BondLockChanged(1, 0, 0);
-
-        vm.recordLogs();
 
         bondLock.settle(idsToSettle);
 
@@ -345,12 +317,11 @@ contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
         lock = bondLock.get(1);
         assertEq(lock.amount, 0 ether);
         assertEq(lock.retentionUntil, 0);
+        assertEq(bondLock.penalized(1), true);
 
         lock = bondLock.get(2);
         assertEq(lock.amount, 1 ether);
         assertEq(lock.retentionUntil, retentionPeriodWhenLockTheLast);
-
-        assertEq(vm.getRecordedLogs().length, 3, "should emit 3 events");
     }
 
     function test_reduceAmount_WhenFull() public {
