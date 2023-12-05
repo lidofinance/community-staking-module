@@ -716,7 +716,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         return _activeNodeOperatorsCount;
     }
 
-    /// @notice Sets node operator active status
+    /// @notice Gets node operator active status
     /// @param nodeOperatorId ID of the node operator
     function getNodeOperatorIsActive(
         uint256 nodeOperatorId
@@ -902,7 +902,7 @@ contract CSModule is IStakingModule, CSModuleBase {
 
     /// @notice Vet keys. Called when key validator oracle checks the queue
     /// @param nodeOperatorId ID of the node operator
-    /// @param vetKeysPointer Pointer to the first unvetted key
+    /// @param vetKeysPointer Pointer to keys to vet
     function vetKeys(
         uint256 nodeOperatorId,
         uint64 vetKeysPointer
@@ -946,7 +946,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         if (no.stuckValidatorsCount > 0) revert StuckKeysPresent();
     }
 
-    /// @notice Unvets keys. Called when key validator oracle checks the queue or manually by node operator manager
+    /// @notice Unvets keys and charges fee. Called when key validator oracle checks the queue or manually by node operator manager
     /// @param nodeOperatorId ID of the node operator
     function unvetKeys(
         uint256 nodeOperatorId
@@ -967,7 +967,7 @@ contract CSModule is IStakingModule, CSModuleBase {
         _incrementModuleNonce();
     }
 
-    /// @notice Removes keys from the node operator
+    /// @notice Removes keys from the node operator and charges fee if there are vetted keys among them
     /// @param nodeOperatorId ID of the node operator
     /// @param startIndex Index of the first key
     function removeKeys(
@@ -1066,11 +1066,12 @@ contract CSModule is IStakingModule, CSModuleBase {
 
     /// @notice Gets the depositable keys with signatures from the queue
     /// @param depositsCount Count of deposits to get
+    /// @param /* depositCalldata */ (unused) Deposit calldata
     /// @return publicKeys Public keys
     /// @return signatures Signatures
     function obtainDepositData(
         uint256 depositsCount,
-        bytes calldata /* _depositCalldata */
+        bytes calldata /* depositCalldata */
     ) external returns (bytes memory publicKeys, bytes memory signatures) {
         (publicKeys, signatures) = SigningKeys.initKeysSigsBuf(depositsCount);
         uint256 limit = depositsCount;

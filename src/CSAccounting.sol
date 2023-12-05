@@ -87,6 +87,11 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 retentionUntil;
     }
 
+    bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
+    bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
+
+    bytes32 public constant SEAL_ROLE = keccak256("SEAL_ROLE"); // 0x5561eed4f05defaf62a493aaa0919339d3f352fbf2261adb133a0c3655488b4f
+
     bytes32 public constant INSTANT_PENALIZE_BOND_ROLE =
         keccak256("INSTANT_PENALIZE_BOND_ROLE"); // 0x9909cf24c2d3bafa8c229558d86a1b726ba57c3ef6350848dcf434a4181b56c7
     bytes32 public constant EL_REWARDS_STEALING_PENALTY_INIT_ROLE =
@@ -197,12 +202,12 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     }
 
     /// @notice Pauses accounting by DAO decision.
-    function pauseAccounting() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function pauseAccounting() external onlyRole(PAUSE_ROLE) {
         // todo: implement me
     }
 
     /// @notice Unpauses accounting by DAO decision.
-    function unpauseAccounting() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function resumeAccounting() external onlyRole(RESUME_ROLE) {
         // todo: implement me
     }
 
@@ -235,6 +240,8 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         if (basisPoints > TOTAL_BASIS_POINTS) revert InvalidMultiplier();
         _bondMultiplierBasisPoints[nodeOperatorId] = basisPoints;
     }
+
+    // todo: describe `rewardsProof`
 
     /// @notice Returns total rewards (bond + fees) in ETH for the given node operator.
     /// @param rewardsProof merkle proof of the rewards.
@@ -920,7 +927,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
 
     /// @notice Burn all bond and request exits for all node operators' validators.
     /// @dev Called only by DAO. Have lifetime. Once expired can never be called.
-    function sealAccounting() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function sealAccounting() external onlyRole(SEAL_ROLE) {
         // todo: implement me
     }
 
