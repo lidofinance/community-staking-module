@@ -89,12 +89,17 @@ contract CSFeeOracle is ICSFeeOracle, BaseOracle, PausableUntil {
         _setFeeDistributorContract(feeDistributorContract);
     }
 
+    /// @notice Sets a new fee distributor contract
+    /// @param feeDistributorContract Address of the new fee distributor contract
     function setFeeDistributorContract(
         address feeDistributorContract
     ) external onlyRole(MANAGE_FEE_DISTRIBUTOR_CONTRACT_ROLE) {
         _setFeeDistributorContract(feeDistributorContract);
     }
 
+    /// @notice Submits the data for a committee report
+    /// @param data Data for a committee report
+    /// @param contractVersion Version of the oracle consensus rules
     function submitReportData(
         ReportData calldata data,
         uint256 contractVersion
@@ -111,10 +116,13 @@ contract CSFeeOracle is ICSFeeOracle, BaseOracle, PausableUntil {
         _handleConsensusReportData(data);
     }
 
+    /// @notice Resume accepting oracle reports
     function resume() external whenPaused onlyRole(RESUME_ROLE) {
         _resume();
     }
 
+    /// @notice Pause accepting oracle reports for a duration
+    /// @param duration Duration of the pause
     function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
         _pauseFor(duration);
     }
@@ -133,6 +141,8 @@ contract CSFeeOracle is ICSFeeOracle, BaseOracle, PausableUntil {
             );
     }
 
+    /// @notice Pause accepting oracle reports until a timestamp
+    /// @param pauseUntilInclusive Timestamp until which the oracle reports are paused
     function pauseUntil(
         uint256 pauseUntilInclusive
     ) external onlyRole(PAUSE_ROLE) {

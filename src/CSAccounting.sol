@@ -87,6 +87,11 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 retentionUntil;
     }
 
+    bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
+    bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
+
+    bytes32 public constant SEAL_ROLE = keccak256("SEAL_ROLE"); // 0x5561eed4f05defaf62a493aaa0919339d3f352fbf2261adb133a0c3655488b4f
+
     bytes32 public constant INSTANT_PENALIZE_BOND_ROLE =
         keccak256("INSTANT_PENALIZE_BOND_ROLE"); // 0x9909cf24c2d3bafa8c229558d86a1b726ba57c3ef6350848dcf434a4181b56c7
     bytes32 public constant EL_REWARDS_STEALING_PENALTY_INIT_ROLE =
@@ -162,12 +167,17 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         blockedBondManagementPeriod = _blockedBondManagementPeriod;
     }
 
+    /// @notice Sets fee distributor contract address.
+    /// @param fdAddress fee distributor contract address.
     function setFeeDistributor(
         address fdAddress
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         FEE_DISTRIBUTOR = fdAddress;
     }
 
+    /// @notice Sets blocked bond periods.
+    /// @param retention period in seconds to retain bond lock
+    /// @param management period in seconds to manage bond lock by node operator
     function setBlockedBondPeriods(
         uint256 retention,
         uint256 management
@@ -191,6 +201,16 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         }
     }
 
+    /// @notice Pauses accounting by DAO decision.
+    function pauseAccounting() external onlyRole(PAUSE_ROLE) {
+        // todo: implement me
+    }
+
+    /// @notice Unpauses accounting by DAO decision.
+    function resumeAccounting() external onlyRole(RESUME_ROLE) {
+        // todo: implement me
+    }
+
     /// @notice Returns the bond shares for the given node operator.
     /// @param nodeOperatorId id of the node operator to get bond for.
     /// @return bond shares.
@@ -201,6 +221,8 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     }
 
     /// @notice Returns basis points of the bond multiplier for the given node operator.
+    /// @param nodeOperatorId id of the node operator to get bond multiplier for.
+    /// @return bond multiplier basis points.
     function getBondMultiplier(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
@@ -209,6 +231,8 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     }
 
     /// @notice Sets basis points of the bond multiplier for the given node operator.
+    /// @param nodeOperatorId id of the node operator to set bond multiplier for.
+    /// @param basisPoints bond multiplier basis points.
     function setBondMultiplier(
         uint256 nodeOperatorId,
         uint256 basisPoints
@@ -217,8 +241,12 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         _bondMultiplierBasisPoints[nodeOperatorId] = basisPoints;
     }
 
+    // todo: describe `rewardsProof`
+
     /// @notice Returns total rewards (bond + fees) in ETH for the given node operator.
+    /// @param rewardsProof merkle proof of the rewards.
     /// @param nodeOperatorId id of the node operator to get rewards for.
+    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
     /// @return total rewards in ETH
     function getTotalRewardsETH(
         bytes32[] memory rewardsProof,
@@ -238,7 +266,9 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     }
 
     /// @notice Returns total rewards (bond + fees) in stETH for the given node operator.
+    /// @param rewardsProof merkle proof of the rewards.
     /// @param nodeOperatorId id of the node operator to get rewards for.
+    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
     /// @return total rewards in stETH
     function getTotalRewardsStETH(
         bytes32[] memory rewardsProof,
@@ -254,7 +284,9 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     }
 
     /// @notice Returns total rewards (bond + fees) in wstETH for the given node operator.
+    /// @param rewardsProof merkle proof of the rewards.
     /// @param nodeOperatorId id of the node operator to get rewards for.
+    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
     /// @return total rewards in wstETH
     function getTotalRewardsWstETH(
         bytes32[] memory rewardsProof,
@@ -271,9 +303,9 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
             );
     }
 
-    /// @notice Returns excess bond ETH for the given node operator.
+    /// @notice Returns excess bond in ETH for the given node operator.
     /// @param nodeOperatorId id of the node operator to get excess bond for.
-    /// @return excess bond ETH.
+    /// @return excess bond in ETH.
     function getExcessBondETH(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
@@ -281,27 +313,27 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         return current > required ? current - required : 0;
     }
 
-    /// @notice Returns excess bond stETH for the given node operator.
+    /// @notice Returns excess bond in stETH for the given node operator.
     /// @param nodeOperatorId id of the node operator to get excess bond for.
-    /// @return excess bond stETH.
+    /// @return excess bond in stETH.
     function getExcessBondStETH(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
         return getExcessBondETH(nodeOperatorId);
     }
 
-    /// @notice Returns excess bond wstETH for the given node operator.
+    /// @notice Returns excess bond in wstETH for the given node operator.
     /// @param nodeOperatorId id of the node operator to get excess bond for.
-    /// @return excess bond wstETH.
+    /// @return excess bond in wstETH.
     function getExcessBondWstETH(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
         return WSTETH.getWstETHByStETH(getExcessBondStETH(nodeOperatorId));
     }
 
-    /// @notice Returns the missing bond ETH for the given node operator.
+    /// @notice Returns the missing bond in ETH for the given node operator.
     /// @param nodeOperatorId id of the node operator to get missing bond for.
-    /// @return missing bond ETH.
+    /// @return missing bond in ETH.
     function getMissingBondETH(
         uint256 nodeOperatorId
     ) public view onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
@@ -309,18 +341,18 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         return required > current ? required - current : 0;
     }
 
-    /// @notice Returns the missing bond stETH for the given node operator.
+    /// @notice Returns the missing bond in stETH for the given node operator.
     /// @param nodeOperatorId id of the node operator to get missing bond for.
-    /// @return missing bond stETH.
+    /// @return missing bond in stETH.
     function getMissingBondStETH(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
         return getMissingBondETH(nodeOperatorId);
     }
 
-    /// @notice Returns the missing bond wstETH for the given node operator.
+    /// @notice Returns the missing bond in wstETH for the given node operator.
     /// @param nodeOperatorId id of the node operator to get missing bond for.
-    /// @return missing bond wstETH.
+    /// @return missing bond in wstETH.
     function getMissingBondWstETH(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
@@ -328,6 +360,8 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     }
 
     /// @notice Returns the amount of ETH blocked by the given node operator.
+    /// @param nodeOperatorId id of the node operator to get blocked bond for.
+    /// @return blocked bond in ETH.
     function getBlockedBondETH(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
@@ -339,9 +373,10 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         return 0;
     }
 
-    /// @notice Returns the required bond ETH (inc. missed and excess) for the given node operator to upload new keys.
+    /// @notice Returns the required bond in ETH (inc. missed and excess) for the given node operator to upload new keys.
     /// @param nodeOperatorId id of the node operator to get required bond for.
-    /// @return required bond ETH.
+    /// @param additionalKeysCount number of new keys to add.
+    /// @return required bond in ETH.
     function getRequiredBondETH(
         uint256 nodeOperatorId,
         uint256 additionalKeysCount
@@ -364,9 +399,9 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         return requiredForKeys - excess;
     }
 
-    /// @notice Returns the required bond stETH (inc. missed and excess) for the given node operator to upload new keys.
+    /// @notice Returns the required bond in stETH (inc. missed and excess) for the given node operator to upload new keys.
     /// @param nodeOperatorId id of the node operator to get required bond for.
-    /// @return required bond stETH.
+    /// @return required bond in stETH.
     function getRequiredBondStETH(
         uint256 nodeOperatorId,
         uint256 additionalKeysCount
@@ -374,10 +409,10 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         return getRequiredBondETH(nodeOperatorId, additionalKeysCount);
     }
 
-    /// @notice Returns the required bond wstETH (inc. missed and excess) for the given node operator to upload new keys.
+    /// @notice Returns the required bond in wstETH (inc. missed and excess) for the given node operator to upload new keys.
     /// @param nodeOperatorId id of the node operator to get required bond for.
     /// @param additionalKeysCount number of new keys to add.
-    /// @return required bond wstETH.
+    /// @return required bond in wstETH.
     function getRequiredBondWstETH(
         uint256 nodeOperatorId,
         uint256 additionalKeysCount
@@ -388,27 +423,27 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
             );
     }
 
-    /// @notice Returns the required bond ETH for the given number of keys.
+    /// @notice Returns the required bond in ETH for the given number of keys.
     /// @param keysCount number of keys to get required bond for.
-    /// @return required ETH.
+    /// @return required in ETH.
     function getRequiredBondETHForKeys(
         uint256 keysCount
     ) public view returns (uint256) {
         return keysCount * COMMON_BOND_SIZE;
     }
 
-    /// @notice Returns the required bond stETH for the given number of keys.
+    /// @notice Returns the required bond in stETH for the given number of keys.
     /// @param keysCount number of keys to get required bond for.
-    /// @return required stETH.
+    /// @return required in stETH.
     function getRequiredBondStETHForKeys(
         uint256 keysCount
     ) public view returns (uint256) {
         return getRequiredBondETHForKeys(keysCount);
     }
 
-    /// @notice Returns the required bond wstETH for the given number of keys.
+    /// @notice Returns the required bond in wstETH for the given number of keys.
     /// @param keysCount number of keys to get required bond for.
-    /// @return required wstETH.
+    /// @return required in wstETH.
     function getRequiredBondWstETHForKeys(
         uint256 keysCount
     ) public view returns (uint256) {
@@ -434,6 +469,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     }
 
     /// @notice Returns the number of keys by the given bond ETH amount
+    /// @param ETHAmount bond in ETH
     function getKeysCountByBondETH(
         uint256 ETHAmount
     ) public view returns (uint256) {
@@ -441,6 +477,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     }
 
     /// @notice Returns the number of keys by the given bond stETH amount
+    /// @param stETHAmount bond in stETH
     function getKeysCountByBondStETH(
         uint256 stETHAmount
     ) public view returns (uint256) {
@@ -448,6 +485,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     }
 
     /// @notice Returns the number of keys by the given bond wstETH amount
+    /// @param wstETHAmount bond in wstETH
     function getKeysCountByBondWstETH(
         uint256 wstETHAmount
     ) public view returns (uint256) {
@@ -455,8 +493,10 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     }
 
     /// @notice Stake user's ETH to Lido and make deposit in stETH to the bond
-    /// @return stETH shares amount
     /// @dev if `from` is not the same as `msg.sender`, then `msg.sender` should be CSM
+    /// @param from address to stake ETH and deposit stETH from
+    /// @param nodeOperatorId id of the node operator to stake ETH and deposit stETH for
+    /// @return stETH shares amount
     function depositETH(
         address from,
         uint256 nodeOperatorId
@@ -477,8 +517,11 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     }
 
     /// @notice Deposit user's stETH to the bond for the given Node Operator
-    /// @return stETH shares amount
     /// @dev if `from` is not the same as `msg.sender`, then `msg.sender` should be CSM
+    /// @param from address to deposit stETH from
+    /// @param nodeOperatorId id of the node operator to deposit stETH for
+    /// @param stETHAmount amount of stETH to deposit
+    /// @return stETH shares amount
     function depositStETH(
         address from,
         uint256 nodeOperatorId,
@@ -490,8 +533,12 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     }
 
     /// @notice Deposit user's stETH to the bond for the given Node Operator using the proper permit for the contract
-    /// @return stETH shares amount
     /// @dev if `from` is not the same as `msg.sender`, then `msg.sender` should be CSM
+    /// @param from address to deposit stETH from
+    /// @param nodeOperatorId id of the node operator to deposit stETH for
+    /// @param stETHAmount amount of stETH to deposit
+    /// @param permit stETH permit for the contract
+    /// @return stETH shares amount
     function depositStETHWithPermit(
         address from,
         uint256 nodeOperatorId,
@@ -531,8 +578,11 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     }
 
     /// @notice Unwrap user's wstETH and make deposit in stETH to the bond for the given Node Operator
-    /// @return stETH shares amount
     /// @dev if `from` is not the same as `msg.sender`, then `msg.sender` should be CSM
+    /// @param from address to unwrap wstETH from
+    /// @param nodeOperatorId id of the node operator to deposit stETH for
+    /// @param wstETHAmount amount of wstETH to deposit
+    /// @return stETH shares amount
     function depositWstETH(
         address from,
         uint256 nodeOperatorId,
@@ -544,8 +594,12 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     }
 
     /// @notice Unwrap user's wstETH and make deposit in stETH to the bond for the given Node Operator using the proper permit for the contract
-    /// @return stETH shares amount
     /// @dev if `from` is not the same as `msg.sender`, then `msg.sender` should be CSM
+    /// @param from address to unwrap wstETH from
+    /// @param nodeOperatorId id of the node operator to deposit stETH for
+    /// @param wstETHAmount amount of wstETH to deposit
+    /// @param permit wstETH permit for the contract
+    /// @return stETH shares amount
     function depositWstETHWithPermit(
         address from,
         uint256 nodeOperatorId,
@@ -595,7 +649,43 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         return from;
     }
 
-    /// @notice Claims full reward (fee + bond) for the given node operator with desirable value
+    /// @notice Claims excess bond in ETH for the given node operator with desirable value
+    /// @param nodeOperatorId id of the node operator to claim excess bond for.
+    /// @param stETHAmount amount of stETH to claim.
+    function claimExcessBondStETH(
+        uint256 nodeOperatorId,
+        uint256 stETHAmount
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        // todo: implement me
+    }
+
+    /// @notice Claims excess bond in wstETH for the given node operator with desirable value
+    /// @param nodeOperatorId id of the node operator to claim excess bond for.
+    /// @param wstETHAmount amount of wstETH to claim.
+    function claimExcessBondWstETH(
+        uint256 nodeOperatorId,
+        uint256 wstETHAmount
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        // todo: implement me
+    }
+
+    /// @notice Request excess bond in Withdrawal NFT (unstETH) for the given node operator available for this moment.
+    /// @dev reverts if amount isn't between MIN_STETH_WITHDRAWAL_AMOUNT and MAX_STETH_WITHDRAWAL_AMOUNT
+    /// @param nodeOperatorId id of the node operator to request rewards for.
+    /// @param ETHAmount amount of ETH to request.
+    /// @return requestIds an array of the created withdrawal request ids
+    function requestExcessBondETH(
+        uint256 nodeOperatorId,
+        uint256 ETHAmount
+    )
+        external
+        onlyExistingNodeOperator(nodeOperatorId)
+        returns (uint256[] memory requestIds)
+    {
+        // todo: implement me
+    }
+
+    /// @notice Claims full reward (fee + bond) in stETH for the given node operator with desirable value
     /// @param rewardsProof merkle proof of the rewards.
     /// @param nodeOperatorId id of the node operator to claim rewards for.
     /// @param cumulativeFeeShares cumulative fee shares for the node operator.
@@ -633,7 +723,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         );
     }
 
-    /// @notice Claims full reward (fee + bond) for the given node operator available for this moment
+    /// @notice Claims full reward (fee + bond) in wstETH for the given node operator available for this moment
     /// @param rewardsProof merkle proof of the rewards.
     /// @param nodeOperatorId id of the node operator to claim rewards for.
     /// @param cumulativeFeeShares cumulative fee shares for the node operator.
@@ -673,6 +763,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     /// @param rewardsProof merkle proof of the rewards.
     /// @param nodeOperatorId id of the node operator to request rewards for.
     /// @param cumulativeFeeShares cummulative fee shares for the node operator.
+    /// @param ETHAmount amount of ETH to request.
     /// @return requestIds an array of the created withdrawal request ids
     function requestRewardsETH(
         bytes32[] memory rewardsProof,
@@ -716,7 +807,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     /// @notice Reports EL rewards stealing for the given node operator.
     /// @param nodeOperatorId id of the node operator to report EL rewards stealing for.
     /// @param blockNumber consensus layer block number of the proposed block with EL rewards stealing.
-    /// @param amount amount of stolen EL rewards.
+    /// @param amount amount of stolen EL rewards in ETH.
     function initELRewardsStealingPenalty(
         uint256 nodeOperatorId,
         uint256 blockNumber,
@@ -741,7 +832,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         });
     }
 
-    /// @notice Releases blocked bond ETH for the given node operator.
+    /// @notice Releases blocked bond in ETH for the given node operator.
     /// @param nodeOperatorId id of the node operator to release blocked bond for.
     /// @param amount amount of ETH to release.
     function releaseBlockedBondETH(
@@ -784,8 +875,8 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         );
     }
 
-    /// @dev Should be called by the committee. Doesn't settle blocked bond if it is in the safe frame (1 day)
     /// @notice Settles blocked bond for the given node operators.
+    /// @dev Should be called by the committee. Doesn't settle blocked bond if it is in the safe frame (1 day)
     /// @param nodeOperatorIds ids of the node operators to settle blocked bond for.
     function settleBlockedBondETH(
         uint256[] memory nodeOperatorIds
@@ -834,7 +925,25 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         emit BlockedBondChanged(nodeOperatorId, ETHAmount, retentionUntil);
     }
 
+    /// @notice Burn all bond and request exits for all node operators' validators.
+    /// @dev Called only by DAO. Have lifetime. Once expired can never be called.
+    function sealAccounting() external onlyRole(SEAL_ROLE) {
+        // todo: implement me
+    }
+
+    /// @notice Settles initial slashing penalty for the given node operator.
+    /// @param slashingProof merkle proof of the slashing.
+    /// @param nodeOperatorId id of the node operator to settle initial slashing penalty for.
+    function settleInitialSlashingPenalty(
+        bytes32[] memory slashingProof,
+        uint256 nodeOperatorId
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        // todo: implement me
+    }
+
     /// @notice Penalize bond by burning shares of the given node operator.
+    /// @param nodeOperatorId id of the node operator to penalize bond for.
+    /// @param ETHAmount amount of ETH to penalize.
     function penalize(
         uint256 nodeOperatorId,
         uint256 ETHAmount
