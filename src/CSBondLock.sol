@@ -9,10 +9,12 @@ abstract contract CSBondLockBase {
         uint256 newAmount,
         uint256 retentionUntil
     );
-    event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
-    event BondLockReleased(uint256 indexed nodeOperatorId, uint256 amount);
+    event BondLockPeriodsChanged(
+        uint256 retentionPeriod,
+        uint256 managementPeriod
+    );
 
-    error InvalidBondLockRetentionPeriod();
+    error InvalidBondLockPeriods();
     error InvalidBondLockAmount();
 }
 
@@ -44,6 +46,7 @@ abstract contract CSBondLock is CSBondLockBase {
         _validateBondLockPeriods(retention, management);
         _bondLockRetentionPeriod = retention;
         _bondLockManagementPeriod = management;
+        emit BondLockPeriodsChanged(retention, management);
     }
 
     function getBondLockPeriods()
@@ -64,12 +67,21 @@ abstract contract CSBondLock is CSBondLockBase {
             management < MIN_BOND_LOCK_MANAGEMENT_PERIOD ||
             management > MAX_BOND_LOCK_MANAGEMENT_PERIOD
         ) {
-            revert InvalidBondLockRetentionPeriod();
+            revert InvalidBondLockPeriods();
         }
     }
 
+    /// @notice Returns the amount and retention time of locked bond by the given node operator.
+    function _get(
+        uint256 nodeOperatorId
+    ) internal view returns (BondLock memory) {
+        return _bondLock[nodeOperatorId];
+    }
+
     /// @notice Returns the amount of locked bond by the given node operator.
-    function _get(uint256 nodeOperatorId) internal view returns (uint256) {
+    function _getActualAmount(
+        uint256 nodeOperatorId
+    ) internal view returns (uint256) {
         if (_bondLock[nodeOperatorId].retentionUntil >= block.timestamp) {
             return _bondLock[nodeOperatorId].amount;
         }
@@ -121,23 +133,8 @@ abstract contract CSBondLock is CSBondLockBase {
         }
     }
 
-    /// @notice Releases blocked bond ETH for the given node operator.
-    /// @param nodeOperatorId id of the node operator to release blocked bond for.
-    /// @param amount amount of ETH to release.
-    function _release(uint256 nodeOperatorId, uint256 amount) internal {
-        emit BondLockReleased(nodeOperatorId, amount);
-        _reduceAmount(nodeOperatorId, amount);
-    }
-
-    /// @notice Compensates blocked bond ETH for the given node operator.
-    /// @param nodeOperatorId id of the node operator to compensate blocked bond for.
-    function _compensate(uint256 nodeOperatorId, uint256 amount) internal {
-        emit BondLockCompensated(nodeOperatorId, amount);
-        _reduceAmount(nodeOperatorId, amount);
-    }
-
-    function _reduceAmount(uint256 nodeOperatorId, uint256 amount) private {
-        uint256 blocked = _get(nodeOperatorId);
+    function _reduceAmount(uint256 nodeOperatorId, uint256 amount) internal {
+        uint256 blocked = _getActualAmount(nodeOperatorId);
         if (amount == 0) {
             revert InvalidBondLockAmount();
         }

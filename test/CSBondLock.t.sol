@@ -39,8 +39,14 @@ contract CSBondLockTestable is CSBondLockTestableBase, CSBondLock {
         _setBondLockPeriods(retention, management);
     }
 
-    function get(uint256 nodeOperatorId) external view returns (uint256) {
+    function get(
+        uint256 nodeOperatorId
+    ) external view returns (CSBondLock.BondLock memory) {
         return _get(nodeOperatorId);
+    }
+
+    function getActualAmount(uint256 amount) external view returns (uint256) {
+        return _getActualAmount(amount);
     }
 
     function lock(uint256 nodeOperatorId, uint256 amount) external {
@@ -51,29 +57,26 @@ contract CSBondLockTestable is CSBondLockTestableBase, CSBondLock {
         _settle(nodeOperatorIds);
     }
 
-    function release(uint256 nodeOperatorId, uint256 amount) external {
-        _release(nodeOperatorId, amount);
+    function reduceAmount(uint256 nodeOperatorId, uint256 amount) external {
+        _reduceAmount(nodeOperatorId, amount);
     }
 
-    function compensate(uint256 nodeOperatorId, uint256 amount) external {
-        _compensate(nodeOperatorId, amount);
-    }
-
-    uint256 internal _mockedBondAmountForPenalize;
+    uint256 internal _mockedUncoveredPenalty;
 
     function _penalize(
         uint256 nodeOperatorId,
         uint256 amount
     ) internal override returns (uint256) {
-        uint256 toPenalize = amount < _mockedBondAmountForPenalize
-            ? amount
-            : _mockedBondAmountForPenalize;
-        emit BondPenalized(nodeOperatorId, amount, toPenalize);
-        return amount - toPenalize;
+        emit BondPenalized(
+            nodeOperatorId,
+            amount,
+            amount - _mockedUncoveredPenalty
+        );
+        return _mockedUncoveredPenalty;
     }
 
-    function mock_bondAmount(uint256 amount) external {
-        _mockedBondAmountForPenalize = amount;
+    function mock_uncoveredPenalty(uint256 amount) external {
+        _mockedUncoveredPenalty = amount;
     }
 }
 
@@ -88,6 +91,9 @@ contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
         uint256 retention = 4 weeks;
         uint256 management = 2 days;
 
+        vm.expectEmit(true, true, true, true, address(bondLock));
+        emit BondLockPeriodsChanged(retention, management);
+
         bondLock.setBondLockPeriods(retention, management);
 
         (uint256 _retention, uint256 _management) = bondLock
@@ -97,60 +103,62 @@ contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
     }
 
     function test_setBondLockPeriods_RevertWhen_RetentionLessThanMin() public {
-        vm.expectRevert(InvalidBondLockRetentionPeriod.selector);
+        vm.expectRevert(InvalidBondLockPeriods.selector);
         bondLock.setBondLockPeriods(3 weeks, 1 days);
     }
 
     function test_setBondLockPeriods_RevertWhen_RetentionGreaterThanMax()
         public
     {
-        vm.expectRevert(InvalidBondLockRetentionPeriod.selector);
+        vm.expectRevert(InvalidBondLockPeriods.selector);
         bondLock.setBondLockPeriods(366 days, 1 days);
     }
 
     function test_setBondLockPeriods_RevertWhen_ManagementLessThanMin() public {
-        vm.expectRevert(InvalidBondLockRetentionPeriod.selector);
+        vm.expectRevert(InvalidBondLockPeriods.selector);
         bondLock.setBondLockPeriods(8 weeks, 23 hours);
     }
 
     function test_setBondLockPeriods_RevertWhen_ManagementGreaterThanMax()
         public
     {
-        vm.expectRevert(InvalidBondLockRetentionPeriod.selector);
+        vm.expectRevert(InvalidBondLockPeriods.selector);
         bondLock.setBondLockPeriods(8 weeks, 8 days);
     }
 
-    function test_get() public {
+    function test_getActualAmount() public {
         uint256 noId = 0;
         uint256 amount = 1 ether;
         bondLock.lock(noId, amount);
 
-        uint256 value = bondLock.get(noId);
+        uint256 value = bondLock.getActualAmount(noId);
         assertEq(value, amount);
     }
 
-    function test_get_WhenRetentionPeriodIsPassed() public {
+    function test_getActualAmount_WhenRetentionPeriodIsPassed() public {
         uint256 noId = 0;
         uint256 amount = 1 ether;
         bondLock.lock(noId, amount);
 
         vm.warp(block.timestamp + 8 weeks + 1 seconds);
 
-        uint256 value = bondLock.get(noId);
+        uint256 value = bondLock.getActualAmount(noId);
         assertEq(value, 0);
     }
 
     function test_lock() public {
         uint256 noId = 0;
         uint256 amount = 1 ether;
+        uint256 retentionUntil = block.timestamp + 8 weeks;
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondLockChanged(noId, amount, block.timestamp + 8 weeks);
+        emit BondLockChanged(noId, amount, retentionUntil);
 
         bondLock.lock(noId, amount);
 
-        uint256 value = bondLock.get(noId);
-        assertEq(value, amount);
+        CSBondLock.BondLock memory lock = bondLock.get(noId);
+        assertEq(lock.amount, amount);
+        assertEq(lock.retentionUntil, retentionUntil);
     }
 
     function test_lock_WhenSecondTime() public {
@@ -169,8 +177,9 @@ contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
         );
         bondLock.lock(noId, 1.5 ether);
 
-        uint256 value = bondLock.get(noId);
-        assertEq(value, amount + 1.5 ether);
+        CSBondLock.BondLock memory lock = bondLock.get(noId);
+        assertEq(lock.amount, amount + 1.5 ether);
+        assertEq(lock.retentionUntil, newBlockTimestamp + 8 weeks);
     }
 
     function test_lock_RevertWhen_ZeroAmount() public {
@@ -179,73 +188,56 @@ contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
     }
 
     function test_settle() public {
+        uint256 noId = 0;
         uint256[] memory idsToSettle = new uint256[](1);
-        idsToSettle[0] = 0;
+        idsToSettle[0] = noId;
         bondLock.lock(0, 1 ether);
-        bondLock.mock_bondAmount(1 ether);
+        bondLock.mock_uncoveredPenalty(0 ether);
 
         // more than 1 day (management period) after penalty init
         // eligible to settle
         vm.warp(block.timestamp + 1 days + 1 seconds);
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondPenalized(0, 1 ether, 1 ether);
+        emit BondPenalized(noId, 1 ether, 1 ether);
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondLockChanged(0, 0, 0);
+        emit BondLockChanged(noId, 0, 0);
 
         bondLock.settle(idsToSettle);
 
-        uint256 value = bondLock.get(0);
-        assertEq(value, 0 ether);
+        CSBondLock.BondLock memory lock = bondLock.get(noId);
+        assertEq(lock.amount, 0 ether);
+        assertEq(lock.retentionUntil, 0);
     }
 
-    function test_settle_WhenLockIsLessThanBond() public {
-        uint256[] memory idsToSettle = new uint256[](1);
-        idsToSettle[0] = 0;
-        bondLock.lock(0, 0.7 ether);
-        bondLock.mock_bondAmount(1 ether);
-
-        // more than 1 day (management period) after penalty init
-        // eligible to settle
-        vm.warp(block.timestamp + 1 days + 1 seconds);
-
-        vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondPenalized(0, 0.7 ether, 0.7 ether);
-
-        vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondLockChanged(0, 0, 0);
-
-        bondLock.settle(idsToSettle);
-
-        uint256 value = bondLock.get(0);
-        assertEq(value, 0);
-    }
-
-    function test_settle_WhenLockIsGreaterThanBond() public {
+    function test_settle_WhenUncovered() public {
+        uint256 noId = 0;
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = 0;
         bondLock.lock(0, 1 ether);
         uint256 retentionPeriodWhenLock = block.timestamp + 8 weeks;
-        bondLock.mock_bondAmount(0.7 ether);
+        bondLock.mock_uncoveredPenalty(0.3 ether);
 
         // more than 1 day (management period) after penalty init
         // eligible to settle
         vm.warp(block.timestamp + 1 days + 1 seconds);
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondPenalized(0, 1 ether, 0.7 ether);
+        emit BondPenalized(noId, 1 ether, 0.7 ether);
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondLockChanged(0, 0.3 ether, retentionPeriodWhenLock);
+        emit BondLockChanged(noId, 0.3 ether, retentionPeriodWhenLock);
 
         bondLock.settle(idsToSettle);
 
-        uint256 value = bondLock.get(0);
-        assertEq(value, 0.3 ether);
+        CSBondLock.BondLock memory lock = bondLock.get(noId);
+        assertEq(lock.amount, 0.3 ether);
+        assertEq(lock.retentionUntil, retentionPeriodWhenLock);
     }
 
     function test_settle_WhenRetentionPeriodIsExpired() public {
+        uint256 noId = 0;
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = 0;
         bondLock.lock(0, 1 ether);
@@ -255,14 +247,15 @@ contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
         vm.warp(block.timestamp + 8 weeks + 1 seconds);
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondLockChanged(0, 0, 0);
+        emit BondLockChanged(noId, 0, 0);
 
         vm.recordLogs();
 
         bondLock.settle(idsToSettle);
 
-        uint256 value = bondLock.get(0);
-        assertEq(value, 0 ether);
+        CSBondLock.BondLock memory lock = bondLock.get(noId);
+        assertEq(lock.amount, 0 ether);
+        assertEq(lock.retentionUntil, 0);
 
         assertEq(
             vm.getRecordedLogs().length,
@@ -272,9 +265,11 @@ contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
     }
 
     function test_settle_WhenInManagementPeriod() public {
+        uint256 noId = 0;
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = 0;
         bondLock.lock(0, 1 ether);
+        uint256 retentionPeriodWhenLock = block.timestamp + 8 weeks;
 
         // less than 1 day (management period) after penalty init
         // not eligible to settle yet
@@ -284,8 +279,9 @@ contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
 
         bondLock.settle(idsToSettle);
 
-        uint256 value = bondLock.get(0);
-        assertEq(value, 1 ether);
+        CSBondLock.BondLock memory lock = bondLock.get(noId);
+        assertEq(lock.amount, 1 ether);
+        assertEq(lock.retentionUntil, retentionPeriodWhenLock);
 
         assertEq(vm.getRecordedLogs().length, 0, "should not emit any events");
     }
@@ -305,12 +301,13 @@ contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
         // more than 1 day (management period) after penalty init
         // eligible to settle
         bondLock.lock(1, 1 ether);
-        bondLock.mock_bondAmount(1 ether);
+        bondLock.mock_uncoveredPenalty(0 ether);
         vm.warp(block.timestamp + 1 days + 1 seconds);
 
         // less than 1 day (management period) after penalty init
         // not eligible to settle yet
         bondLock.lock(2, 1 ether);
+        uint256 retentionPeriodWhenLockTheLast = block.timestamp + 8 weeks;
 
         vm.expectEmit(true, true, true, true, address(bondLock));
         emit BondLockChanged(0, 0, 0);
@@ -325,93 +322,69 @@ contract CSBondLockTest is Test, CSBondLockBase, CSBondLockTestableBase {
 
         bondLock.settle(idsToSettle);
 
-        uint256 value = bondLock.get(0);
-        assertEq(value, 0 ether);
+        CSBondLock.BondLock memory lock = bondLock.get(0);
+        assertEq(lock.amount, 0 ether);
+        assertEq(lock.retentionUntil, 0);
 
-        value = bondLock.get(1);
-        assertEq(value, 0 ether);
+        lock = bondLock.get(1);
+        assertEq(lock.amount, 0 ether);
+        assertEq(lock.retentionUntil, 0);
 
-        value = bondLock.get(2);
-        assertEq(value, 1 ether);
+        lock = bondLock.get(2);
+        assertEq(lock.amount, 1 ether);
+        assertEq(lock.retentionUntil, retentionPeriodWhenLockTheLast);
 
         assertEq(vm.getRecordedLogs().length, 3, "should emit 3 events");
     }
 
-    function test_release() public {
+    function test_reduceAmount_WhenFull() public {
         uint256 noId = 0;
         uint256 amount = 100 ether;
 
         bondLock.lock(noId, amount);
+
+        vm.expectEmit(true, true, true, true, address(bondLock));
+        emit BondLockChanged(noId, 0, 0);
+
+        bondLock.reduceAmount(noId, amount);
+
+        CSBondLock.BondLock memory lock = bondLock.get(0);
+        assertEq(lock.amount, 0);
+        assertEq(lock.retentionUntil, 0);
+    }
+
+    function test_reduceAmount_WhenPartial() public {
+        uint256 noId = 0;
+        uint256 amount = 100 ether;
+
+        bondLock.lock(noId, amount);
+        uint256 retentionPeriodWhenLock = block.timestamp + 8 weeks;
 
         uint256 toRelease = 10 ether;
         uint256 rest = amount - toRelease;
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondLockReleased(noId, toRelease);
-        vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondLockChanged(noId, rest, block.timestamp + 8 weeks);
+        emit BondLockChanged(noId, rest, retentionPeriodWhenLock);
 
-        bondLock.release(noId, toRelease);
+        bondLock.reduceAmount(noId, toRelease);
 
-        uint256 value = bondLock.get(noId);
-        assertEq(value, rest);
-
-        vm.warp(block.timestamp + 8 weeks + 1 seconds);
-        value = bondLock.get(noId);
-        assertEq(value, 0);
+        CSBondLock.BondLock memory lock = bondLock.get(0);
+        assertEq(lock.amount, rest);
+        assertEq(lock.retentionUntil, retentionPeriodWhenLock);
     }
 
-    function test_release_RevertWhen_ZeroAmount() public {
+    function test_reduceAmount_RevertWhen_ZeroAmount() public {
         vm.expectRevert(InvalidBondLockAmount.selector);
-        bondLock.release(0, 0);
+        bondLock.reduceAmount(0, 0);
     }
 
-    function test_release_RevertWhen_GreaterThanLock() public {
+    function test_reduceAmount_RevertWhen_GreaterThanLock() public {
         uint256 noId = 0;
         uint256 amount = 100 ether;
 
         bondLock.lock(noId, amount);
 
         vm.expectRevert(InvalidBondLockAmount.selector);
-        bondLock.release(noId, amount + 1 ether);
-    }
-
-    function test_compensate() public {
-        uint256 noId = 0;
-        uint256 amount = 100 ether;
-
-        bondLock.lock(noId, amount);
-
-        uint256 toCompensate = 10 ether;
-        uint256 rest = amount - toCompensate;
-
-        vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondLockCompensated(noId, toCompensate);
-        vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondLockChanged(noId, rest, block.timestamp + 8 weeks);
-
-        bondLock.compensate(noId, toCompensate);
-
-        uint256 value = bondLock.get(noId);
-        assertEq(value, rest);
-
-        vm.warp(block.timestamp + 8 weeks + 1 seconds);
-        value = bondLock.get(noId);
-        assertEq(value, 0);
-    }
-
-    function test_compensate_RevertWhen_ZeroAmount() public {
-        vm.expectRevert(InvalidBondLockAmount.selector);
-        bondLock.compensate(0, 0);
-    }
-
-    function test_compensate_RevertWhen_GreaterThanLock() public {
-        uint256 noId = 0;
-        uint256 amount = 100 ether;
-
-        bondLock.lock(noId, amount);
-
-        vm.expectRevert(InvalidBondLockAmount.selector);
-        bondLock.compensate(noId, amount + 1 ether);
+        bondLock.reduceAmount(noId, amount + 1 ether);
     }
 }
