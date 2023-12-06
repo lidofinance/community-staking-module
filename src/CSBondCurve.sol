@@ -3,7 +3,15 @@
 
 pragma solidity 0.8.21;
 
-abstract contract CSBondCurve {
+abstract contract CSBondCurveBase {
+    event BondCurveChanged(uint256[] bondCurve);
+    event BondMultiplierChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 basisPoints
+    );
+}
+
+abstract contract CSBondCurve is CSBondCurveBase {
     /// @dev Array of bond amounts for particular keys count.
     ///
     /// For example:
@@ -41,8 +49,9 @@ abstract contract CSBondCurve {
     /// By default, all Node Operators have x1 multiplier (10000 basis points).
     ///
     /// For example:
-    ///   Some Node Operator's bond multiplier is x0.90 (9000 basis points).
-    ///   Bond Curve for this Node Operator will be:
+    ///   There is a bond curve as above ^
+    ///   Some Node Operator has x0.90 bond multiplier (9000 basis points)
+    ///   Bond Curve with multiplier for this Node Operator will be:
     ///
     ///   Bond Amount (ETH)
     ///       ^
@@ -80,22 +89,35 @@ abstract contract CSBondCurve {
     }
 
     function _setBondCurve(uint256[] memory _bondCurve) internal {
-        _checkCurveLength(_bondCurve);
-        _checkCurveValues(_bondCurve);
+        if (
+            _bondCurve.length < MIN_CURVE_LENGTH ||
+            _bondCurve.length > MAX_CURVE_LENGTH
+        ) revert InvalidBondCurveLength();
+        // todo: check curve values (not worse than previous and makes sense)
+        if (_bondCurve[0] == 0) revert InvalidBondCurveValues();
+        for (uint256 i = 1; i < _bondCurve.length; i++) {
+            if (_bondCurve[i] <= _bondCurve[i - 1])
+                revert InvalidBondCurveValues();
+        }
         bondCurve = _bondCurve;
         _bondCurveTrend =
             _bondCurve[_bondCurve.length - 1] -
-            // if curve length is 1, then to calculate trend we use 0 as previous value
+            // if the curve length is 1, then 0 is used as the previous value to calculate the trend
             (_bondCurve.length > 1 ? _bondCurve[_bondCurve.length - 2] : 0);
+        emit BondCurveChanged(_bondCurve);
     }
 
     function _setBondMultiplier(
         uint256 nodeOperatorId,
         uint256 basisPoints
     ) internal {
-        _checkMultiplier(basisPoints);
+        if (
+            basisPoints < MIN_BOND_MULTIPLIER ||
+            basisPoints > MAX_BOND_MULTIPLIER
+        ) revert InvalidMultiplier();
         // todo: check curve values (not worse than previous)
         bondMultiplierBP[nodeOperatorId] = basisPoints;
+        emit BondMultiplierChanged(nodeOperatorId, basisPoints);
     }
 
     /// @notice Returns basis points of the bond multiplier for the given node operator.
@@ -105,25 +127,6 @@ abstract contract CSBondCurve {
     ) public view returns (uint256) {
         uint256 basisPoints = bondMultiplierBP[nodeOperatorId];
         return basisPoints > 0 ? basisPoints : MAX_BOND_MULTIPLIER;
-    }
-
-    function _checkCurveLength(uint256[] memory xy) internal pure {
-        if (xy.length < MIN_CURVE_LENGTH || xy.length > MAX_CURVE_LENGTH)
-            revert InvalidBondCurveLength();
-    }
-
-    function _checkCurveValues(uint256[] memory xy) internal pure {
-        // todo: check curve values (not worse than previous and makes sense)
-        if (xy[0] == 0) revert InvalidBondCurveValues();
-        for (uint256 i = 1; i < xy.length; i++) {
-            if (xy[i] <= xy[i - 1]) revert InvalidBondCurveValues();
-        }
-    }
-
-    function _checkMultiplier(uint256 multiplier) internal pure {
-        if (
-            multiplier < MIN_BOND_MULTIPLIER || multiplier > MAX_BOND_MULTIPLIER
-        ) revert InvalidMultiplier();
     }
 
     /// @notice Returns keys count for the given bond amount.

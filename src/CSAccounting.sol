@@ -143,6 +143,7 @@ contract CSAccounting is
         uint256 retention,
         uint256 management
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        // todo: is it admin role?
         _setBondLockPeriods(retention, management);
     }
 
