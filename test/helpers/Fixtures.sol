@@ -6,7 +6,6 @@ import { StdCheats } from "forge-std/StdCheats.sol";
 import { LidoMock } from "./mocks/LidoMock.sol";
 import { WstETHMock } from "./mocks/WstETHMock.sol";
 import { LidoLocatorMock } from "./mocks/LidoLocatorMock.sol";
-import { WithdrawalQueueMock } from "./mocks/WithdrawalQueueMock.sol";
 import { Stub } from "./mocks/Stub.sol";
 import "forge-std/Test.sol";
 
@@ -27,7 +26,7 @@ contract Fixtures is StdCheats {
         });
         burner = new Stub();
         Stub elVault = new Stub();
-        WithdrawalQueueMock wq = new WithdrawalQueueMock(address(stETH));
+        Stub wq = new Stub();
         locator = new LidoLocatorMock(
             address(stETH),
             address(burner),
