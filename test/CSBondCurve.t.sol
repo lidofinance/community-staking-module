@@ -161,30 +161,12 @@ contract CSBondCurveWithMultiplierTest is Test, CSBondCurveBase {
     }
 
     function test_getBondAmountByKeysCount() public {
-        assertEq(
-            bondCurve.getBondAmountByKeysCount({ keys: 0, multiplier: 5000 }),
-            0
-        );
-        assertEq(
-            bondCurve.getBondAmountByKeysCount({ keys: 1, multiplier: 5000 }),
-            1 ether
-        );
-        assertEq(
-            bondCurve.getBondAmountByKeysCount({ keys: 2, multiplier: 5000 }),
-            2 ether
-        );
+        assertEq(bondCurve.getBondAmountByKeysCount(0, 5000), 0);
+        assertEq(bondCurve.getBondAmountByKeysCount(1, 5000), 1 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(2, 5000), 2 ether);
 
-        assertEq(
-            bondCurve.getBondAmountByKeysCount({ keys: 0, multiplier: 9000 }),
-            0
-        );
-        assertEq(
-            bondCurve.getBondAmountByKeysCount({ keys: 1, multiplier: 9000 }),
-            1.8 ether
-        );
-        assertEq(
-            bondCurve.getBondAmountByKeysCount({ keys: 2, multiplier: 9000 }),
-            3.6 ether
-        );
+        assertEq(bondCurve.getBondAmountByKeysCount(0, 9000), 0);
+        assertEq(bondCurve.getBondAmountByKeysCount(1, 9000), 1.8 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(2, 9000), 3.6 ether);
     }
 }
