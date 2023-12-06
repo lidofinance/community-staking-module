@@ -5,6 +5,9 @@ pragma solidity 0.8.21;
 
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
+import { CSBondCurve } from "./CSBondCurve.sol";
+import { CSBondLock } from "./CSBondLock.sol";
+
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ILido } from "./interfaces/ILido.sol";
@@ -43,48 +46,35 @@ contract CSAccountingBase {
         address to,
         uint256 amount
     );
-    event ELRewardsStealingPenaltyInitiated(
-        uint256 indexed nodeOperatorId,
-        uint256 proposedBlockNumber,
-        uint256 stolenAmount
-    );
-    event BlockedBondChanged(
-        uint256 indexed nodeOperatorId,
-        uint256 newAmountETH,
-        uint256 retentionUntil
-    );
-    event BlockedBondCompensated(
-        uint256 indexed nodeOperatorId,
-        uint256 amountETH
-    );
-    event BlockedBondReleased(
-        uint256 indexed nodeOperatorId,
-        uint256 amountETH
-    );
     event BondPenalized(
         uint256 indexed nodeOperatorId,
         uint256 penaltyETH,
         uint256 coveringETH
     );
+    event ELRewardsStealingPenaltyInitiated(
+        uint256 indexed nodeOperatorId,
+        uint256 proposedBlockNumber,
+        uint256 stolenAmount
+    );
+    event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
+    event BondLockReleased(uint256 indexed nodeOperatorId, uint256 amount);
 
     error NotOwnerToClaim(address msgSender, address owner);
-    error InvalidBlockedBondRetentionPeriod();
-    error InvalidStolenAmount();
     error InvalidSender();
-    error InvalidMultiplier();
 }
 
-contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
+contract CSAccounting is
+    CSAccountingBase,
+    CSBondCurve,
+    CSBondLock,
+    AccessControlEnumerable
+{
     struct PermitInput {
         uint256 value;
         uint256 deadline;
         uint8 v;
         bytes32 r;
         bytes32 s;
-    }
-    struct BlockedBond {
-        uint256 ETHAmount;
-        uint256 retentionUntil;
     }
 
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
@@ -96,20 +86,14 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         keccak256("INSTANT_PENALIZE_BOND_ROLE"); // 0x9909cf24c2d3bafa8c229558d86a1b726ba57c3ef6350848dcf434a4181b56c7
     bytes32 public constant EL_REWARDS_STEALING_PENALTY_INIT_ROLE =
         keccak256("EL_REWARDS_STEALING_PENALTY_INIT_ROLE"); // 0xcc2e7ce7be452f766dd24d55d87a3d42901c31ffa5b600cd1dff475abec91c1f
+    bytes32 public constant EL_REWARDS_STEALING_PENALTY_RELEASE_ROLE =
+        keccak256("EL_REWARDS_STEALING_PENALTY_RELEASE_ROLE"); // 0x8d78671045c549f09e0cf6e7e9856c36698f72f93962abf8e1955dc595a592ee
     bytes32 public constant EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE =
         keccak256("EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE"); // 0xdf6226649a1ca132f86d419e46892001284368a8f7445b5eb0d3fadf91329fe6
+    bytes32 public constant SET_BOND_CURVE_ROLE =
+        keccak256("SET_BOND_CURVE_ROLE"); // 0x645c9e6d2a86805cb5a28b1e4751c0dab493df7cf935070ce405489ba1a7bf72
     bytes32 public constant SET_BOND_MULTIPLIER_ROLE =
         keccak256("SET_BOND_MULTIPLIER_ROLE"); // 0x62131145aee19b18b85aa8ead52ba87f0efb6e61e249155edc68a2c24e8f79b5
-
-    // todo: should be reconsidered
-    uint256 public constant MIN_BLOCKED_BOND_RETENTION_PERIOD = 4 weeks;
-    uint256 public constant MAX_BLOCKED_BOND_RETENTION_PERIOD = 365 days;
-    uint256 public constant MIN_BLOCKED_BOND_MANAGEMENT_PERIOD = 1 days;
-    uint256 public constant MAX_BLOCKED_BOND_MANAGEMENT_PERIOD = 7 days;
-
-    uint256 public constant TOTAL_BASIS_POINTS = 10000;
-
-    uint256 public immutable COMMON_BOND_SIZE;
 
     ILidoLocator private immutable LIDO_LOCATOR;
     ICSModule private immutable CSM;
@@ -118,31 +102,27 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     address public FEE_DISTRIBUTOR;
     uint256 public totalBondShares;
 
-    uint256 public blockedBondRetentionPeriod;
-    uint256 public blockedBondManagementPeriod;
-
     mapping(uint256 => uint256) internal _bondShares;
-    mapping(uint256 => BlockedBond) internal _blockedBondEther;
-    /// This mapping contains bond multiplier points (in basis points) for Node Operator's bond.
-    /// By default, all Node Operators have x1 multiplier (10000 basis points).
-    mapping(uint256 => uint256) internal _bondMultiplierBasisPoints;
 
-    /// @param commonBondSize common bond size in ETH for all node operators.
+    /// @param bondCurve initial bond curve
     /// @param admin admin role member address
     /// @param lidoLocator lido locator contract address
     /// @param wstETH wstETH contract address
     /// @param communityStakingModule community staking module contract address
-    /// @param _blockedBondRetentionPeriod retention period for blocked bond in seconds
-    /// @param _blockedBondManagementPeriod management period for blocked bond in seconds
+    /// @param bondLockRetentionPeriod retention period for locked bond in seconds
+    /// @param bondLockManagementPeriod management period for locked bond in seconds
     constructor(
-        uint256 commonBondSize,
+        uint256[] memory bondCurve,
         address admin,
         address lidoLocator,
         address wstETH,
         address communityStakingModule,
-        uint256 _blockedBondRetentionPeriod,
-        uint256 _blockedBondManagementPeriod
-    ) {
+        uint256 bondLockRetentionPeriod,
+        uint256 bondLockManagementPeriod
+    )
+        CSBondCurve(bondCurve)
+        CSBondLock(bondLockRetentionPeriod, bondLockManagementPeriod)
+    {
         // check zero addresses
         require(admin != address(0), "admin is zero address");
         require(lidoLocator != address(0), "lido locator is zero address");
@@ -151,20 +131,11 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
             "community staking module is zero address"
         );
         require(wstETH != address(0), "wstETH is zero address");
-        _validateBlockedBondPeriods(
-            _blockedBondRetentionPeriod,
-            _blockedBondManagementPeriod
-        );
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
 
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
         CSM = ICSModule(communityStakingModule);
         WSTETH = IWstETH(wstETH);
-
-        COMMON_BOND_SIZE = commonBondSize;
-
-        blockedBondRetentionPeriod = _blockedBondRetentionPeriod;
-        blockedBondManagementPeriod = _blockedBondManagementPeriod;
     }
 
     /// @notice Sets fee distributor contract address.
@@ -175,30 +146,33 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         FEE_DISTRIBUTOR = fdAddress;
     }
 
-    /// @notice Sets blocked bond periods.
+    /// @notice Sets bond lock periods.
     /// @param retention period in seconds to retain bond lock
     /// @param management period in seconds to manage bond lock by node operator
-    function setBlockedBondPeriods(
+    function setLockedBondPeriods(
         uint256 retention,
         uint256 management
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _validateBlockedBondPeriods(retention, management);
-        blockedBondRetentionPeriod = retention;
-        blockedBondManagementPeriod = management;
+        // todo: is it admin role?
+        _setBondLockPeriods(retention, management);
     }
 
-    function _validateBlockedBondPeriods(
-        uint256 retention,
-        uint256 management
-    ) internal pure {
-        if (
-            retention < MIN_BLOCKED_BOND_RETENTION_PERIOD ||
-            retention > MAX_BLOCKED_BOND_RETENTION_PERIOD ||
-            management < MIN_BLOCKED_BOND_MANAGEMENT_PERIOD ||
-            management > MAX_BLOCKED_BOND_MANAGEMENT_PERIOD
-        ) {
-            revert InvalidBlockedBondRetentionPeriod();
-        }
+    /// @notice Sets bond curve.
+    /// @param bondCurve bond curve to set.
+    function setBondCurve(
+        uint256[] memory bondCurve
+    ) external onlyRole(SET_BOND_CURVE_ROLE) {
+        _setBondCurve(bondCurve);
+    }
+
+    /// @notice Sets basis points of the bond multiplier for the given node operator.
+    /// @param nodeOperatorId id of the node operator to set bond multiplier for.
+    /// @param basisPoints basis points of the bond multiplier.
+    function setBondMultiplier(
+        uint256 nodeOperatorId,
+        uint256 basisPoints
+    ) external onlyRole(SET_BOND_MULTIPLIER_ROLE) {
+        _setBondMultiplier(nodeOperatorId, basisPoints);
     }
 
     /// @notice Pauses accounting by DAO decision.
@@ -220,27 +194,6 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         return _bondShares[nodeOperatorId];
     }
 
-    /// @notice Returns basis points of the bond multiplier for the given node operator.
-    /// @param nodeOperatorId id of the node operator to get bond multiplier for.
-    /// @return bond multiplier basis points.
-    function getBondMultiplier(
-        uint256 nodeOperatorId
-    ) public view returns (uint256) {
-        uint256 basisPoints = _bondMultiplierBasisPoints[nodeOperatorId];
-        return basisPoints > 0 ? basisPoints : TOTAL_BASIS_POINTS;
-    }
-
-    /// @notice Sets basis points of the bond multiplier for the given node operator.
-    /// @param nodeOperatorId id of the node operator to set bond multiplier for.
-    /// @param basisPoints bond multiplier basis points.
-    function setBondMultiplier(
-        uint256 nodeOperatorId,
-        uint256 basisPoints
-    ) external onlyRole(SET_BOND_MULTIPLIER_ROLE) {
-        if (basisPoints > TOTAL_BASIS_POINTS) revert InvalidMultiplier();
-        _bondMultiplierBasisPoints[nodeOperatorId] = basisPoints;
-    }
-
     // todo: describe `rewardsProof`
 
     /// @notice Returns total rewards (bond + fees) in ETH for the given node operator.
@@ -254,7 +207,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 cumulativeFeeShares
     ) public view returns (uint256) {
         (uint256 current, uint256 required) = _bondSharesSummary(
-            _getNodeOperatorActiveKeys(nodeOperatorId)
+            nodeOperatorId
         );
         current += _feeDistributor().getFeesToDistribute(
             rewardsProof,
@@ -359,18 +312,22 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         return WSTETH.getWstETHByStETH(getMissingBondStETH(nodeOperatorId));
     }
 
-    /// @notice Returns the amount of ETH blocked by the given node operator.
-    /// @param nodeOperatorId id of the node operator to get blocked bond for.
-    /// @return blocked bond in ETH.
-    function getBlockedBondETH(
+    /// @notice Returns information about the locked bond for the given node operator.
+    /// @param nodeOperatorId id of the node operator to get locked bond info for.
+    /// @return locked bond info.
+    function getLockedBondInfo(
+        uint256 nodeOperatorId
+    ) public view returns (CSBondLock.BondLock memory) {
+        return CSBondLock._get(nodeOperatorId);
+    }
+
+    /// @notice Returns the amount of locked bond in ETH by the given node operator.
+    /// @param nodeOperatorId id of the node operator to get locked bond amount.
+    /// @return amount of locked bond in ETH.
+    function getActualLockedBondETH(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
-        if (
-            _blockedBondEther[nodeOperatorId].retentionUntil >= block.timestamp
-        ) {
-            return _blockedBondEther[nodeOperatorId].ETHAmount;
-        }
-        return 0;
+        return CSBondLock._getActualAmount(nodeOperatorId);
     }
 
     /// @notice Returns the required bond in ETH (inc. missed and excess) for the given node operator to upload new keys.
@@ -381,22 +338,26 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         uint256 nodeOperatorId,
         uint256 additionalKeysCount
     ) public view returns (uint256) {
+        // todo: can be optimized. get active keys once
         (uint256 current, uint256 required) = _bondETHSummary(nodeOperatorId);
-        uint256 requiredForKeys = (getRequiredBondETHForKeys(
-            additionalKeysCount
-        ) * getBondMultiplier(nodeOperatorId)) / TOTAL_BASIS_POINTS;
+        uint256 currentKeysCount = _getNodeOperatorActiveKeys(nodeOperatorId);
+        uint256 multiplier = getBondMultiplier(nodeOperatorId);
+        uint256 requiredForNextKeys = _getBondAmountByKeysCount(
+            currentKeysCount + additionalKeysCount,
+            multiplier
+        ) - _getBondAmountByKeysCount(currentKeysCount, multiplier);
 
         uint256 missing = required > current ? required - current : 0;
         if (missing > 0) {
-            return missing + requiredForKeys;
+            return missing + requiredForNextKeys;
         }
 
         uint256 excess = current - required;
-        if (excess >= requiredForKeys) {
+        if (excess >= requiredForNextKeys) {
             return 0;
         }
 
-        return requiredForKeys - excess;
+        return requiredForNextKeys - excess;
     }
 
     /// @notice Returns the required bond in stETH (inc. missed and excess) for the given node operator to upload new keys.
@@ -424,15 +385,19 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     }
 
     /// @notice Returns the required bond in ETH for the given number of keys.
+    /// @dev To calculate the amount for the new keys 2 calls are required:
+    ///      getRequiredBondETHForKeys(newTotal) - getRequiredBondETHForKeys(currentTotal)
     /// @param keysCount number of keys to get required bond for.
     /// @return required in ETH.
     function getRequiredBondETHForKeys(
         uint256 keysCount
     ) public view returns (uint256) {
-        return keysCount * COMMON_BOND_SIZE;
+        return _getBondAmountByKeysCount(keysCount);
     }
 
     /// @notice Returns the required bond in stETH for the given number of keys.
+    /// @dev To calculate the amount for the new keys 2 calls are required:
+    ///      getRequiredBondStETHForKeys(newTotal) - getRequiredBondStETHForKeys(currentTotal)
     /// @param keysCount number of keys to get required bond for.
     /// @return required in stETH.
     function getRequiredBondStETHForKeys(
@@ -442,18 +407,14 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     }
 
     /// @notice Returns the required bond in wstETH for the given number of keys.
+    /// @dev To calculate the amount for the new keys 2 calls are required:
+    ///      getRequiredBondWstETHForKeys(newTotal) - getRequiredBondWstETHForKeys(currentTotal)
     /// @param keysCount number of keys to get required bond for.
     /// @return required in wstETH.
     function getRequiredBondWstETHForKeys(
         uint256 keysCount
     ) public view returns (uint256) {
-        return _getRequiredBondSharesForKeys(keysCount);
-    }
-
-    function _getRequiredBondSharesForKeys(
-        uint256 keysCount
-    ) internal view returns (uint256) {
-        return _sharesByEth(getRequiredBondETHForKeys(keysCount));
+        return WSTETH.getWstETHByStETH(getRequiredBondStETHForKeys(keysCount));
     }
 
     /// @dev unbonded meaning amount of keys with no bond at all
@@ -463,9 +424,24 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     function getUnbondedKeysCount(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
-        return
-            getRequiredBondETH(nodeOperatorId, 0) /
-            getRequiredBondETHForKeys(1);
+        uint256 activeKeys = _getNodeOperatorActiveKeys(nodeOperatorId);
+        uint256 currentBond = _ethByShares(_bondShares[nodeOperatorId]);
+        uint256 lockedBond = getActualLockedBondETH(nodeOperatorId);
+        if (currentBond > lockedBond) {
+            uint256 multiplier = getBondMultiplier(nodeOperatorId);
+            currentBond -= lockedBond;
+            uint256 bondedKeys = _getKeysCountByBondAmount(
+                currentBond,
+                multiplier
+            );
+            if (
+                currentBond > _getBondAmountByKeysCount(bondedKeys, multiplier)
+            ) {
+                bondedKeys += 1;
+            }
+            return activeKeys > bondedKeys ? activeKeys - bondedKeys : 0;
+        }
+        return activeKeys;
     }
 
     /// @notice Returns the number of keys by the given bond ETH amount
@@ -473,7 +449,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     function getKeysCountByBondETH(
         uint256 ETHAmount
     ) public view returns (uint256) {
-        return ETHAmount / getRequiredBondETHForKeys(1);
+        return _getKeysCountByBondAmount(ETHAmount);
     }
 
     /// @notice Returns the number of keys by the given bond stETH amount
@@ -481,7 +457,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     function getKeysCountByBondStETH(
         uint256 stETHAmount
     ) public view returns (uint256) {
-        return stETHAmount / getRequiredBondStETHForKeys(1);
+        return getKeysCountByBondETH(stETHAmount);
     }
 
     /// @notice Returns the number of keys by the given bond wstETH amount
@@ -489,7 +465,7 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     function getKeysCountByBondWstETH(
         uint256 wstETHAmount
     ) public view returns (uint256) {
-        return wstETHAmount / getRequiredBondWstETHForKeys(1);
+        return getKeysCountByBondETH(WSTETH.getStETHByWstETH(wstETHAmount));
     }
 
     /// @notice Stake user's ETH to Lido and make deposit in stETH to the bond
@@ -817,112 +793,46 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
         onlyRole(EL_REWARDS_STEALING_PENALTY_INIT_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
-        if (amount == 0) {
-            revert InvalidStolenAmount();
-        }
         emit ELRewardsStealingPenaltyInitiated(
             nodeOperatorId,
             blockNumber,
             amount
         );
-        _changeBlockedBondState({
-            nodeOperatorId: nodeOperatorId,
-            ETHAmount: _blockedBondEther[nodeOperatorId].ETHAmount + amount,
-            retentionUntil: block.timestamp + blockedBondRetentionPeriod
-        });
+        CSBondLock._lock(nodeOperatorId, amount);
     }
 
-    /// @notice Releases blocked bond in ETH for the given node operator.
-    /// @param nodeOperatorId id of the node operator to release blocked bond for.
+    /// @notice Releases locked bond in ETH for the given node operator.
+    /// @param nodeOperatorId id of the node operator to release locked bond for.
     /// @param amount amount of ETH to release.
-    function releaseBlockedBondETH(
+    function releaseLockedBondETH(
         uint256 nodeOperatorId,
         uint256 amount
     )
         external
-        onlyRole(EL_REWARDS_STEALING_PENALTY_INIT_ROLE)
+        onlyRole(EL_REWARDS_STEALING_PENALTY_RELEASE_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
-        emit BlockedBondReleased(nodeOperatorId, amount);
-        _reduceBlockedBondETH(nodeOperatorId, amount);
+        CSBondLock._reduceAmount(nodeOperatorId, amount);
+        emit BondLockReleased(nodeOperatorId, amount);
     }
 
-    /// @notice Compensates blocked bond ETH for the given node operator.
-    /// @param nodeOperatorId id of the node operator to compensate blocked bond for.
-    function compensateBlockedBondETH(
+    /// @notice Compensates locked bond ETH for the given node operator.
+    /// @param nodeOperatorId id of the node operator to compensate locked bond for.
+    function compensateLockedBondETH(
         uint256 nodeOperatorId
     ) external payable onlyExistingNodeOperator(nodeOperatorId) {
-        require(msg.value > 0, "value should be greater than zero");
         payable(LIDO_LOCATOR.elRewardsVault()).transfer(msg.value);
-        emit BlockedBondCompensated(nodeOperatorId, msg.value);
-        _reduceBlockedBondETH(nodeOperatorId, msg.value);
+        CSBondLock._reduceAmount(nodeOperatorId, msg.value);
+        emit BondLockCompensated(nodeOperatorId, msg.value);
     }
 
-    function _reduceBlockedBondETH(
-        uint256 nodeOperatorId,
-        uint256 amount
-    ) internal {
-        uint256 blocked = getBlockedBondETH(nodeOperatorId);
-        require(blocked > 0, "no blocked bond to release");
-        require(
-            _blockedBondEther[nodeOperatorId].ETHAmount >= amount,
-            "blocked bond is less than amount to release"
-        );
-        _changeBlockedBondState(
-            nodeOperatorId,
-            _blockedBondEther[nodeOperatorId].ETHAmount - amount,
-            _blockedBondEther[nodeOperatorId].retentionUntil
-        );
-    }
-
-    /// @notice Settles blocked bond for the given node operators.
-    /// @dev Should be called by the committee. Doesn't settle blocked bond if it is in the safe frame (1 day)
-    /// @param nodeOperatorIds ids of the node operators to settle blocked bond for.
-    function settleBlockedBondETH(
+    /// @dev Should be called by the committee. Doesn't settle locked bond if it is in the safe frame (1 day)
+    /// @notice Settles locked bond for the given node operators.
+    /// @param nodeOperatorIds ids of the node operators to settle locked bond for.
+    function settleLockedBondETH(
         uint256[] memory nodeOperatorIds
     ) external onlyRole(EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE) {
-        for (uint256 i; i < nodeOperatorIds.length; ++i) {
-            uint256 nodeOperatorId = nodeOperatorIds[i];
-            BlockedBond storage blockedBond = _blockedBondEther[nodeOperatorId];
-            if (
-                block.timestamp +
-                    blockedBondRetentionPeriod -
-                    blockedBond.retentionUntil <
-                blockedBondManagementPeriod
-            ) {
-                // blocked bond in safe frame to manage it by committee or node operator
-                continue;
-            }
-            uint256 uncovered;
-            if (
-                blockedBond.ETHAmount > 0 &&
-                blockedBond.retentionUntil >= block.timestamp
-            ) {
-                uncovered = _penalize(nodeOperatorId, blockedBond.ETHAmount);
-            }
-            _changeBlockedBondState({
-                nodeOperatorId: nodeOperatorId,
-                ETHAmount: uncovered,
-                retentionUntil: blockedBond.retentionUntil
-            });
-        }
-    }
-
-    function _changeBlockedBondState(
-        uint256 nodeOperatorId,
-        uint256 ETHAmount,
-        uint256 retentionUntil
-    ) internal {
-        if (ETHAmount == 0) {
-            delete _blockedBondEther[nodeOperatorId];
-            emit BlockedBondChanged(nodeOperatorId, 0, 0);
-            return;
-        }
-        _blockedBondEther[nodeOperatorId] = BlockedBond({
-            ETHAmount: ETHAmount,
-            retentionUntil: retentionUntil
-        });
-        emit BlockedBondChanged(nodeOperatorId, ETHAmount, retentionUntil);
+        CSBondLock._settle(nodeOperatorIds);
     }
 
     /// @notice Burn all bond and request exits for all node operators' validators.
@@ -953,9 +863,14 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
 
     function _penalize(
         uint256 nodeOperatorId,
-        uint256 ETHAmount
-    ) internal onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
-        uint256 penaltyShares = _sharesByEth(ETHAmount);
+        uint256 amount
+    )
+        internal
+        override
+        onlyExistingNodeOperator(nodeOperatorId)
+        returns (uint256)
+    {
+        uint256 penaltyShares = _sharesByEth(amount);
         uint256 currentShares = getBondShares(nodeOperatorId);
         uint256 sharesToBurn = penaltyShares < currentShares
             ? penaltyShares
@@ -1034,10 +949,11 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     ) internal view returns (uint256 current, uint256 required) {
         current = _ethByShares(getBondShares(nodeOperatorId));
         required =
-            ((getRequiredBondETHForKeys(
-                _getNodeOperatorActiveKeys(nodeOperatorId)
-            ) * getBondMultiplier(nodeOperatorId)) / TOTAL_BASIS_POINTS) +
-            getBlockedBondETH(nodeOperatorId);
+            _getBondAmountByKeysCount(
+                _getNodeOperatorActiveKeys(nodeOperatorId),
+                getBondMultiplier(nodeOperatorId)
+            ) +
+            getActualLockedBondETH(nodeOperatorId);
     }
 
     function _bondSharesSummary(
@@ -1045,10 +961,13 @@ contract CSAccounting is CSAccountingBase, AccessControlEnumerable {
     ) internal view returns (uint256 current, uint256 required) {
         current = getBondShares(nodeOperatorId);
         required =
-            ((_getRequiredBondSharesForKeys(
-                _getNodeOperatorActiveKeys(nodeOperatorId)
-            ) * getBondMultiplier(nodeOperatorId)) / TOTAL_BASIS_POINTS) +
-            _sharesByEth(getBlockedBondETH(nodeOperatorId));
+            _sharesByEth(
+                _getBondAmountByKeysCount(
+                    _getNodeOperatorActiveKeys(nodeOperatorId),
+                    getBondMultiplier(nodeOperatorId)
+                )
+            ) +
+            _sharesByEth(getActualLockedBondETH(nodeOperatorId));
     }
 
     function _sharesByEth(uint256 ethAmount) internal view returns (uint256) {

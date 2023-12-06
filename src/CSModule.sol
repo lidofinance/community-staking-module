@@ -7,7 +7,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
-import { IStakingModule } from "./interfaces/IStakingModule.sol";
+import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { ILido } from "./interfaces/ILido.sol";
 
@@ -34,17 +34,6 @@ struct NodeOperator {
     uint256 stuckValidatorsCount;
     uint256 refundedValidatorsCount;
     uint256 queueNonce;
-}
-
-struct NodeOperatorInfo {
-    bool active;
-    address managerAddress;
-    address rewardAddress;
-    uint256 totalVettedValidators;
-    uint256 totalExitedValidators;
-    uint256 totalWithdrawnValidators;
-    uint256 totalAddedValidators;
-    uint256 totalDepositedValidators;
 }
 
 contract CSModuleBase {
@@ -129,7 +118,7 @@ contract CSModuleBase {
     error SigningKeysInvalidOffset();
 }
 
-contract CSModule is IStakingModule, CSModuleBase {
+contract CSModule is ICSModule, CSModuleBase {
     using QueueLib for QueueLib.Queue;
 
     // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes

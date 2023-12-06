@@ -51,8 +51,11 @@ contract DepositIntegrationTest is
         strangerPrivateKey = 0x517a4637;
         stranger = vm.addr(strangerPrivateKey);
 
+        uint256[] memory curve = new uint256[](2);
+        curve[0] = 2 ether;
+        curve[1] = 4 ether;
         accounting = new CSAccounting(
-            2 ether,
+            curve,
             user,
             address(locator),
             address(wstETH),
