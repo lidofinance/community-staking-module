@@ -56,6 +56,7 @@ contract CSFeeDistributor is ICSFeeDistributor, CSFeeDistributorBase {
     /// @param proof Merkle proof of the leaf
     /// @param nodeOperatorId ID of the NO
     /// @param shares Total amount of shares earned as fees
+    /// @return Amount of shares that can be distributed
     function getFeesToDistribute(
         bytes32[] calldata proof,
         uint256 nodeOperatorId,
@@ -79,6 +80,7 @@ contract CSFeeDistributor is ICSFeeDistributor, CSFeeDistributorBase {
     /// @param proof Merkle proof of the leaf
     /// @param nodeOperatorId ID of the NO
     /// @param shares Total amount of shares earned as fees
+    /// @return Amount of shares distributed
     function distributeFees(
         bytes32[] calldata proof,
         uint256 nodeOperatorId,
