@@ -31,12 +31,27 @@ contract CSAccountingBase {
         address from,
         uint256 amount
     );
+    event StETHExcessBondClaimed(
+        uint256 indexed nodeOperatorId,
+        address to,
+        uint256 amount
+    );
     event StETHRewardsClaimed(
         uint256 indexed nodeOperatorId,
         address to,
         uint256 amount
     );
+    event WstETHExcessBondClaimed(
+        uint256 indexed nodeOperatorId,
+        address to,
+        uint256 amount
+    );
     event WstETHRewardsClaimed(
+        uint256 indexed nodeOperatorId,
+        address to,
+        uint256 amount
+    );
+    event ETHExcessBondRequested(
         uint256 indexed nodeOperatorId,
         address to,
         uint256 amount
@@ -632,33 +647,25 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 stETHAmount
     ) external onlyExistingNodeOperator(nodeOperatorId) {
-        // todo: implement me
-    }
-
-    /// @notice Claims excess bond in wstETH for the given node operator with desirable value
-    /// @param nodeOperatorId id of the node operator to claim excess bond for.
-    /// @param wstETHAmount amount of wstETH to claim.
-    function claimExcessBondWstETH(
-        uint256 nodeOperatorId,
-        uint256 wstETHAmount
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
-        // todo: implement me
-    }
-
-    /// @notice Request excess bond in Withdrawal NFT (unstETH) for the given node operator available for this moment.
-    /// @dev reverts if amount isn't between MIN_STETH_WITHDRAWAL_AMOUNT and MAX_STETH_WITHDRAWAL_AMOUNT
-    /// @param nodeOperatorId id of the node operator to request rewards for.
-    /// @param ETHAmount amount of ETH to request.
-    /// @return requestIds an array of the created withdrawal request ids
-    function requestExcessBondETH(
-        uint256 nodeOperatorId,
-        uint256 ETHAmount
-    )
-        external
-        onlyExistingNodeOperator(nodeOperatorId)
-        returns (uint256[] memory requestIds)
-    {
-        // todo: implement me
+        (
+            address managerAddress,
+            address rewardAddress
+        ) = _getNodeOperatorAddresses(nodeOperatorId);
+        _isSenderEligibleToClaim(managerAddress);
+        (uint256 current, uint256 required) = _bondSharesSummary(
+            nodeOperatorId
+        );
+        uint256 claimedStETH = _claimStETH(
+            nodeOperatorId,
+            current > required ? current - required : 0,
+            stETHAmount,
+            rewardAddress
+        );
+        emit StETHExcessBondClaimed(
+            nodeOperatorId,
+            rewardAddress,
+            claimedStETH
+        );
     }
 
     /// @notice Claims full reward (fee + bond) in stETH for the given node operator with desirable value
@@ -682,20 +689,58 @@ contract CSAccounting is
             nodeOperatorId,
             cumulativeFeeShares
         );
+        uint256 claimedStETH = _claimStETH(
+            nodeOperatorId,
+            claimableShares,
+            stETHAmount,
+            rewardAddress
+        );
+        emit StETHRewardsClaimed(nodeOperatorId, rewardAddress, claimedStETH);
+    }
+
+    function _claimStETH(
+        uint256 nodeOperatorId,
+        uint256 claimableShares,
+        uint256 stETHAmount,
+        address rewardAddress
+    ) internal returns (uint256) {
         if (claimableShares == 0) {
-            emit StETHRewardsClaimed(nodeOperatorId, rewardAddress, 0);
-            return;
+            return 0;
         }
-        uint256 toClaim = stETHAmount < _ethByShares(claimableShares)
+        uint256 sharesToClaim = stETHAmount < _ethByShares(claimableShares)
             ? _sharesByEth(stETHAmount)
             : claimableShares;
-        _lido().transferSharesFrom(address(this), rewardAddress, toClaim);
-        _bondShares[nodeOperatorId] -= toClaim;
-        totalBondShares -= toClaim;
-        emit StETHRewardsClaimed(
+        _lido().transferSharesFrom(address(this), rewardAddress, sharesToClaim);
+        _bondShares[nodeOperatorId] -= sharesToClaim;
+        totalBondShares -= sharesToClaim;
+        return _ethByShares(sharesToClaim);
+    }
+
+    /// @notice Claims excess bond in wstETH for the given node operator with desirable value
+    /// @param nodeOperatorId id of the node operator to claim excess bond for.
+    /// @param wstETHAmount amount of wstETH to claim.
+    function claimExcessBondWstETH(
+        uint256 nodeOperatorId,
+        uint256 wstETHAmount
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        (
+            address managerAddress,
+            address rewardAddress
+        ) = _getNodeOperatorAddresses(nodeOperatorId);
+        _isSenderEligibleToClaim(managerAddress);
+        (uint256 current, uint256 required) = _bondSharesSummary(
+            nodeOperatorId
+        );
+        uint256 claimedWsETH = _claimWsETH(
+            nodeOperatorId,
+            current > required ? current - required : 0,
+            wstETHAmount,
+            rewardAddress
+        );
+        emit WstETHExcessBondClaimed(
             nodeOperatorId,
             rewardAddress,
-            _ethByShares(toClaim)
+            claimedWsETH
         );
     }
 
@@ -720,18 +765,63 @@ contract CSAccounting is
             nodeOperatorId,
             cumulativeFeeShares
         );
+        uint256 claimedWstETH = _claimWsETH(
+            nodeOperatorId,
+            claimableShares,
+            wstETHAmount,
+            rewardAddress
+        );
+        emit WstETHRewardsClaimed(nodeOperatorId, rewardAddress, claimedWstETH);
+    }
+
+    function _claimWsETH(
+        uint256 nodeOperatorId,
+        uint256 claimableShares,
+        uint256 wstETHAmount,
+        address rewardAddress
+    ) internal returns (uint256) {
         if (claimableShares == 0) {
-            emit WstETHRewardsClaimed(nodeOperatorId, rewardAddress, 0);
-            return;
+            return 0;
         }
-        uint256 toClaim = wstETHAmount < claimableShares
+        uint256 sharesToClaim = wstETHAmount < claimableShares
             ? wstETHAmount
             : claimableShares;
-        wstETHAmount = WSTETH.wrap(_ethByShares(toClaim));
+        wstETHAmount = WSTETH.wrap(_ethByShares(sharesToClaim));
         WSTETH.transferFrom(address(this), rewardAddress, wstETHAmount);
         _bondShares[nodeOperatorId] -= wstETHAmount;
         totalBondShares -= wstETHAmount;
-        emit WstETHRewardsClaimed(nodeOperatorId, rewardAddress, wstETHAmount);
+        return wstETHAmount;
+    }
+
+    /// @notice Request excess bond in Withdrawal NFT (unstETH) for the given node operator available for this moment.
+    /// @dev reverts if amount isn't between MIN_STETH_WITHDRAWAL_AMOUNT and MAX_STETH_WITHDRAWAL_AMOUNT
+    /// @param nodeOperatorId id of the node operator to request rewards for.
+    /// @param ETHAmount amount of ETH to request.
+    /// @return requestId id of the withdrawal request.
+    function requestExcessBondETH(
+        uint256 nodeOperatorId,
+        uint256 ETHAmount
+    ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
+        (
+            address managerAddress,
+            address rewardAddress
+        ) = _getNodeOperatorAddresses(nodeOperatorId);
+        _isSenderEligibleToClaim(managerAddress);
+        (uint256 current, uint256 required) = _bondSharesSummary(
+            nodeOperatorId
+        );
+        (uint256 requestId, uint256 requestedETH) = _requestETH(
+            nodeOperatorId,
+            current > required ? current - required : 0,
+            ETHAmount,
+            rewardAddress
+        );
+        emit ETHExcessBondRequested(
+            nodeOperatorId,
+            rewardAddress,
+            requestedETH
+        );
+        return requestId;
     }
 
     /// @notice Request full reward (fee + bond) in Withdrawal NFT (unstETH) for the given node operator available for this moment.
@@ -740,17 +830,13 @@ contract CSAccounting is
     /// @param nodeOperatorId id of the node operator to request rewards for.
     /// @param cumulativeFeeShares cummulative fee shares for the node operator.
     /// @param ETHAmount amount of ETH to request.
-    /// @return requestIds an array of the created withdrawal request ids
+    /// @return requestId id of the withdrawal request.
     function requestRewardsETH(
         bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
         uint256 ETHAmount
-    )
-        external
-        onlyExistingNodeOperator(nodeOperatorId)
-        returns (uint256[] memory requestIds)
-    {
+    ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
         (
             address managerAddress,
             address rewardAddress
@@ -761,23 +847,37 @@ contract CSAccounting is
             nodeOperatorId,
             cumulativeFeeShares
         );
+        (uint256 requestId, uint256 requestedETH) = _requestETH(
+            nodeOperatorId,
+            claimableShares,
+            ETHAmount,
+            rewardAddress
+        );
+        emit ETHRewardsRequested(nodeOperatorId, rewardAddress, requestedETH);
+        return requestId;
+    }
+
+    function _requestETH(
+        uint256 nodeOperatorId,
+        uint256 claimableShares,
+        uint256 ETHAmount,
+        address rewardAddress
+    ) internal returns (uint256 requestId, uint256 requestedETH) {
         if (claimableShares == 0) {
-            emit ETHRewardsRequested(nodeOperatorId, rewardAddress, 0);
-            return requestIds;
+            return (0, 0);
         }
-        uint256 toClaim = ETHAmount < _ethByShares(claimableShares)
+        uint256 sharesToClaim = ETHAmount < _ethByShares(claimableShares)
             ? _sharesByEth(ETHAmount)
             : claimableShares;
         uint256[] memory amounts = new uint256[](1);
-        amounts[0] = _lido().getPooledEthByShares(toClaim);
-        requestIds = _withdrawalQueue().requestWithdrawals(
+        amounts[0] = _lido().getPooledEthByShares(sharesToClaim);
+        uint256[] memory requestIds = _withdrawalQueue().requestWithdrawals(
             amounts,
             rewardAddress
         );
-        _bondShares[nodeOperatorId] -= toClaim;
-        totalBondShares -= toClaim;
-        emit ETHRewardsRequested(nodeOperatorId, rewardAddress, amounts[0]);
-        return requestIds;
+        _bondShares[nodeOperatorId] -= sharesToClaim;
+        totalBondShares -= sharesToClaim;
+        return (requestIds[0], amounts[0]);
     }
 
     /// @notice Reports EL rewards stealing for the given node operator.
