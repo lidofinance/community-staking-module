@@ -652,12 +652,8 @@ contract CSAccounting is
             address rewardAddress
         ) = _getNodeOperatorAddresses(nodeOperatorId);
         _isSenderEligibleToClaim(managerAddress);
-        (uint256 current, uint256 required) = _bondSharesSummary(
-            nodeOperatorId
-        );
         uint256 claimedStETH = _claimStETH(
             nodeOperatorId,
-            current > required ? current - required : 0,
             stETHAmount,
             rewardAddress
         );
@@ -684,14 +680,9 @@ contract CSAccounting is
             address rewardAddress
         ) = _getNodeOperatorAddresses(nodeOperatorId);
         _isSenderEligibleToClaim(managerAddress);
-        uint256 claimableShares = _pullFeeRewards(
-            rewardsProof,
-            nodeOperatorId,
-            cumulativeFeeShares
-        );
+        _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
         uint256 claimedStETH = _claimStETH(
             nodeOperatorId,
-            claimableShares,
             stETHAmount,
             rewardAddress
         );
@@ -700,10 +691,10 @@ contract CSAccounting is
 
     function _claimStETH(
         uint256 nodeOperatorId,
-        uint256 claimableShares,
         uint256 stETHAmount,
         address rewardAddress
     ) internal returns (uint256) {
+        uint256 claimableShares = _getExcessBondShares(nodeOperatorId);
         if (claimableShares == 0) {
             return 0;
         }
@@ -728,12 +719,8 @@ contract CSAccounting is
             address rewardAddress
         ) = _getNodeOperatorAddresses(nodeOperatorId);
         _isSenderEligibleToClaim(managerAddress);
-        (uint256 current, uint256 required) = _bondSharesSummary(
-            nodeOperatorId
-        );
         uint256 claimedWsETH = _claimWsETH(
             nodeOperatorId,
-            current > required ? current - required : 0,
             wstETHAmount,
             rewardAddress
         );
@@ -760,14 +747,9 @@ contract CSAccounting is
             address rewardAddress
         ) = _getNodeOperatorAddresses(nodeOperatorId);
         _isSenderEligibleToClaim(managerAddress);
-        uint256 claimableShares = _pullFeeRewards(
-            rewardsProof,
-            nodeOperatorId,
-            cumulativeFeeShares
-        );
+        _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
         uint256 claimedWstETH = _claimWsETH(
             nodeOperatorId,
-            claimableShares,
             wstETHAmount,
             rewardAddress
         );
@@ -776,10 +758,10 @@ contract CSAccounting is
 
     function _claimWsETH(
         uint256 nodeOperatorId,
-        uint256 claimableShares,
         uint256 wstETHAmount,
         address rewardAddress
     ) internal returns (uint256) {
+        uint256 claimableShares = _getExcessBondShares(nodeOperatorId);
         if (claimableShares == 0) {
             return 0;
         }
@@ -807,12 +789,8 @@ contract CSAccounting is
             address rewardAddress
         ) = _getNodeOperatorAddresses(nodeOperatorId);
         _isSenderEligibleToClaim(managerAddress);
-        (uint256 current, uint256 required) = _bondSharesSummary(
-            nodeOperatorId
-        );
         (uint256 requestId, uint256 requestedETH) = _requestETH(
             nodeOperatorId,
-            current > required ? current - required : 0,
             ETHAmount,
             rewardAddress
         );
@@ -842,14 +820,9 @@ contract CSAccounting is
             address rewardAddress
         ) = _getNodeOperatorAddresses(nodeOperatorId);
         _isSenderEligibleToClaim(managerAddress);
-        uint256 claimableShares = _pullFeeRewards(
-            rewardsProof,
-            nodeOperatorId,
-            cumulativeFeeShares
-        );
+        _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
         (uint256 requestId, uint256 requestedETH) = _requestETH(
             nodeOperatorId,
-            claimableShares,
             ETHAmount,
             rewardAddress
         );
@@ -859,10 +832,10 @@ contract CSAccounting is
 
     function _requestETH(
         uint256 nodeOperatorId,
-        uint256 claimableShares,
         uint256 ETHAmount,
         address rewardAddress
     ) internal returns (uint256 requestId, uint256 requestedETH) {
+        uint256 claimableShares = _getExcessBondShares(nodeOperatorId);
         if (claimableShares == 0) {
             return (0, 0);
         }
@@ -1030,7 +1003,7 @@ contract CSAccounting is
         bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares
-    ) internal returns (uint256 claimableShares) {
+    ) internal {
         uint256 distributed = _feeDistributor().distributeFees(
             rewardsProof,
             nodeOperatorId,
@@ -1038,10 +1011,6 @@ contract CSAccounting is
         );
         _bondShares[nodeOperatorId] += distributed;
         totalBondShares += distributed;
-        (uint256 current, uint256 required) = _bondSharesSummary(
-            nodeOperatorId
-        );
-        claimableShares = current > required ? current - required : 0;
     }
 
     function _bondETHSummary(
@@ -1066,6 +1035,15 @@ contract CSAccounting is
                 getBondMultiplier(nodeOperatorId)
             ) + getActualLockedBondETH(nodeOperatorId)
         );
+    }
+
+    function _getExcessBondShares(
+        uint256 nodeOperatorId
+    ) internal view returns (uint256) {
+        (uint256 current, uint256 required) = _bondSharesSummary(
+            nodeOperatorId
+        );
+        return current > required ? current - required : 0;
     }
 
     function _sharesByEth(uint256 ethAmount) internal view returns (uint256) {
