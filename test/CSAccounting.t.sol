@@ -2448,9 +2448,562 @@ abstract contract CSAccountingClaimRewardsBaseTest is
     function test_RevertWhen_NotOwner() public virtual;
 }
 
-abstract contract CSAccountingClaimStETHExcessBondTest is
+contract CSAccountingClaimStETHExcessBondTest is
     CSAccountingClaimRewardsBaseTest
-{}
+{
+    function test_default() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            stETH.balanceOf(address(user)),
+            1 ether,
+            1 wei,
+            "user balance should be equal to excess bond"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(1 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithCurve() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _curve(defaultCurve);
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            stETH.balanceOf(address(user)),
+            16 ether,
+            1 wei,
+            "user balance should be equal to excess bond"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(16 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithMultiplier() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _multiplier({ id: 0, multiplier: 9000 });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            stETH.balanceOf(address(user)),
+            4.2 ether,
+            1 wei,
+            "user balance should be equal to excess bond"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(4.2 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _lock({ id: 0, amount: 1 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertEq(
+            stETH.balanceOf(address(user)),
+            0,
+            "user balance should be equal to zero"
+        );
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore,
+            "bond shares after claim should be equal to before"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesBefore,
+            "bond manager after claim should be equal to before"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesBefore,
+            "total bond shares after claim should be equal to before"
+        );
+    }
+
+    function test_WithCurveAndMultiplier() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _curve(defaultCurve);
+        _multiplier({ id: 0, multiplier: 9000 });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            stETH.balanceOf(address(user)),
+            17.7 ether,
+            1 wei,
+            "user balance should be equal to excess bond"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(17.7 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithCurveAndLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _curve(defaultCurve);
+        _lock({ id: 0, amount: 1 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            stETH.balanceOf(address(user)),
+            15 ether,
+            1 wei,
+            "user balance should be equal to excess bond"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(15 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithMultiplierAndLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _multiplier({ id: 0, multiplier: 9000 });
+        _lock({ id: 0, amount: 1 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            stETH.balanceOf(address(user)),
+            3.2 ether,
+            1 wei,
+            "user balance should be equal to excess bond"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(3.2 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithCurveAndMultiplierAndLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _curve(defaultCurve);
+        _multiplier({ id: 0, multiplier: 9000 });
+        _lock({ id: 0, amount: 1 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            stETH.balanceOf(address(user)),
+            16.7 ether,
+            1 wei,
+            "user balance should be equal to excess bond"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(16.7 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 32 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            stETH.balanceOf(address(user)),
+            2 ether,
+            1 wei,
+            "user balance should be equal to excess bond"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(2 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertEq(
+            stETH.balanceOf(address(user)),
+            0,
+            "user balance should be equal to zero"
+        );
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore,
+            "bond shares after claim should be equal to before"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesBefore,
+            "bond manager after claim should be equal to before"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesBefore,
+            "total bond shares after claim should be equal to before"
+        );
+    }
+
+    function test_WithBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 32 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            stETH.balanceOf(address(user)),
+            2 ether,
+            1 wei,
+            "user balance should be equal to excess bond"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(2 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithExcessBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 64 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            stETH.balanceOf(address(user)),
+            32 ether,
+            1 wei,
+            "user balance should be equal to excess bond"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(32 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithExcessBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 64 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            stETH.balanceOf(address(user)),
+            34 ether,
+            1 wei,
+            "user balance should be equal to excess bond"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(34 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithMissingBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 16 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertEq(
+            stETH.balanceOf(address(user)),
+            0,
+            "user balance should be equal to zero"
+        );
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore,
+            "bond shares after claim should be equal to before"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesBefore,
+            "bond manager after claim should be equal to before"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesBefore,
+            "total bond shares after claim should be equal to before"
+        );
+    }
+
+    function test_WithMissingBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 16 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertEq(
+            stETH.balanceOf(address(user)),
+            0,
+            "user balance should be equal to zero"
+        );
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore,
+            "bond shares after claim should be equal to before"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesBefore,
+            "bond manager after claim should be equal to before"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesBefore,
+            "total bond shares after claim should be equal to before"
+        );
+    }
+
+    function test_EventEmitted() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+
+        vm.expectEmit(true, true, true, true, address(accounting));
+        emit StETHExcessBondClaimed(0, user, 1 ether);
+
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+    }
+
+    function test_WithDesirableValue() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, 0.5 ether);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            stETH.balanceOf(address(user)),
+            0.5 ether,
+            1 wei,
+            "user balance should be equal to claimed"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(0.5 ether),
+            1 wei,
+            "bond shares after should be equal to before and fee minus claimed shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_RevertWhen_NotOwner() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+
+        vm.expectRevert(
+            abi.encodeWithSelector(NotOwnerToClaim.selector, stranger, user)
+        );
+        vm.prank(stranger);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+    }
+}
 
 contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
     function test_default() public override {
@@ -3109,9 +3662,646 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
     }
 }
 
-abstract contract CSAccountingClaimWstETHExcessBondTest is
+contract CSAccountingClaimWstETHExcessBondTest is
     CSAccountingClaimRewardsBaseTest
-{}
+{
+    function test_default() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondWstETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            wstETH.balanceOf(address(user)),
+            stETH.getSharesByPooledEth(1 ether),
+            1 wei,
+            "user balance should be equal to fee reward"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(1 ether),
+            1 wei,
+            "bond shares after claim should be equal to before"
+        );
+        assertEq(
+            wstETH.balanceOf(address(accounting)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithCurve() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _curve(defaultCurve);
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondWstETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            wstETH.balanceOf(address(user)),
+            stETH.getSharesByPooledEth(16 ether),
+            1 wei,
+            "user balance should be equal to excess bond"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(16 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            wstETH.balanceOf(address(accounting)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithMultiplier() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _multiplier({ id: 0, multiplier: 9000 });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondWstETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            wstETH.balanceOf(address(user)),
+            stETH.getSharesByPooledEth(4.2 ether),
+            1 wei,
+            "user balance should be equal to excess bond"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(4.2 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            wstETH.balanceOf(address(accounting)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _lock({ id: 0, amount: 1 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondWstETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertEq(
+            wstETH.balanceOf(address(user)),
+            0,
+            "user balance should be equal to zero"
+        );
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore,
+            "bond shares after claim should be equal to before"
+        );
+        assertEq(
+            wstETH.balanceOf(address(accounting)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesBefore,
+            "bond manager after claim should be equal to before"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesBefore,
+            "total bond shares after claim should be equal to before"
+        );
+    }
+
+    function test_WithCurveAndMultiplier() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _curve(defaultCurve);
+        _multiplier({ id: 0, multiplier: 9000 });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondWstETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            wstETH.balanceOf(address(user)),
+            stETH.getSharesByPooledEth(17.7 ether),
+            1 wei,
+            "user balance should be equal to excess bond"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(17.7 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            wstETH.balanceOf(address(accounting)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithCurveAndLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _curve(defaultCurve);
+        _lock({ id: 0, amount: 1 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondWstETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            wstETH.balanceOf(address(user)),
+            stETH.getSharesByPooledEth(15 ether),
+            1 wei,
+            "user balance should be equal to excess bond"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(15 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            wstETH.balanceOf(address(accounting)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithMultiplierAndLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _multiplier({ id: 0, multiplier: 9000 });
+        _lock({ id: 0, amount: 1 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondWstETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            wstETH.balanceOf(address(user)),
+            stETH.getSharesByPooledEth(3.2 ether),
+            1 wei,
+            "user balance should be equal to excess bond"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(3.2 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            wstETH.balanceOf(address(accounting)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithCurveAndMultiplierAndLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _curve(defaultCurve);
+        _multiplier({ id: 0, multiplier: 9000 });
+        _lock({ id: 0, amount: 1 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondWstETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            wstETH.balanceOf(address(user)),
+            stETH.getSharesByPooledEth(16.7 ether),
+            1 wei,
+            "user balance should be equal to excess bond"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(16.7 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            wstETH.balanceOf(address(accounting)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 32 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondWstETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            wstETH.balanceOf(address(user)),
+            stETH.getSharesByPooledEth(2 ether),
+            1 wei,
+            "user balance should be equal to excess bond after one validator withdrawn"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(2 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond after one validator withdrawn"
+        );
+        assertEq(
+            wstETH.balanceOf(address(accounting)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondWstETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertEq(
+            wstETH.balanceOf(address(user)),
+            0,
+            "user balance should be equal to zero"
+        );
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore,
+            "bond shares after claim should be equal to before"
+        );
+        assertEq(
+            wstETH.balanceOf(address(accounting)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesBefore,
+            "bond manager after claim should be equal to before"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesBefore,
+            "total bond shares after claim should be equal to before"
+        );
+    }
+
+    function test_WithBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 32 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondWstETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            wstETH.balanceOf(address(user)),
+            stETH.getSharesByPooledEth(2 ether),
+            1 wei,
+            "user balance should be equal to excess bond after one validator withdrawn"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(2 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond after one validator withdrawn"
+        );
+        assertEq(
+            wstETH.balanceOf(address(accounting)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithExcessBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 64 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondWstETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertEq(
+            wstETH.balanceOf(address(user)),
+            stETH.getSharesByPooledEth(32 ether),
+            "user balance should be equal to excess bond"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(32 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            wstETH.balanceOf(address(accounting)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithExcessBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 64 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondWstETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            wstETH.balanceOf(address(user)),
+            stETH.getSharesByPooledEth(34 ether),
+            1 wei,
+            "user balance should be equal to excess bond after one validator withdrawn"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(34 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond after one validator withdrawn"
+        );
+        assertEq(
+            wstETH.balanceOf(address(accounting)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after claim should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithMissingBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 16 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertEq(
+            wstETH.balanceOf(address(user)),
+            0,
+            "user balance should be equal to zero"
+        );
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore,
+            "bond shares after claim should be equal to before"
+        );
+        assertEq(
+            wstETH.balanceOf(address(accounting)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesBefore,
+            "bond manager after claim should be equal to before"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesBefore,
+            "total bond shares after claim should be equal to before"
+        );
+    }
+
+    function test_WithMissingBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 16 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        accounting.claimExcessBondStETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertEq(
+            wstETH.balanceOf(address(user)),
+            0,
+            "user balance should be equal to zero"
+        );
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore,
+            "bond shares after claim should be equal to before"
+        );
+        assertEq(
+            wstETH.balanceOf(address(accounting)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesBefore,
+            "bond manager after claim should be equal to before"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesBefore,
+            "total bond shares after claim should be equal to before"
+        );
+    }
+
+    function test_EventEmitted() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+
+        vm.expectEmit(true, true, true, true, address(accounting));
+        emit WstETHExcessBondClaimed(
+            leaf.nodeOperatorId,
+            user,
+            stETH.getSharesByPooledEth(1 ether)
+        );
+
+        vm.prank(user);
+        accounting.claimExcessBondWstETH(0, UINT256_MAX);
+    }
+
+    function test_WithDesirableValue() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        uint256 toClaim = stETH.getSharesByPooledEth(0.5 ether);
+        vm.prank(user);
+        accounting.claimExcessBondWstETH(0, toClaim);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertApproxEqAbs(
+            wstETH.balanceOf(address(user)),
+            toClaim,
+            1 wei,
+            "user balance should be equal to claimed"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - toClaim,
+            1 wei,
+            "bond shares after should be equal to before and fee minus claimed shares"
+        );
+        assertEq(
+            wstETH.balanceOf(address(accounting)),
+            0,
+            "bond manager wstETH balance should be 0"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager after should be equal to after"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_RevertWhen_NotOwner() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+
+        vm.expectRevert(
+            abi.encodeWithSelector(NotOwnerToClaim.selector, stranger, user)
+        );
+        vm.prank(stranger);
+        accounting.claimExcessBondWstETH(0, UINT256_MAX);
+    }
+}
 
 contract CSAccountingClaimWstETHRewardsTest is
     CSAccountingClaimRewardsBaseTest
@@ -3130,7 +4320,6 @@ contract CSAccountingClaimWstETHRewardsTest is
             UINT256_MAX
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
-        vm.stopPrank();
 
         assertEq(
             wstETH.balanceOf(address(user)),
@@ -3175,7 +4364,6 @@ contract CSAccountingClaimWstETHRewardsTest is
             UINT256_MAX
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
-        vm.stopPrank();
 
         assertEq(
             wstETH.balanceOf(address(user)),
@@ -3220,7 +4408,6 @@ contract CSAccountingClaimWstETHRewardsTest is
             UINT256_MAX
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
-        vm.stopPrank();
 
         assertEq(
             wstETH.balanceOf(address(user)),
@@ -3265,7 +4452,6 @@ contract CSAccountingClaimWstETHRewardsTest is
             UINT256_MAX
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
-        vm.stopPrank();
 
         assertEq(
             wstETH.balanceOf(address(user)),
@@ -3311,7 +4497,6 @@ contract CSAccountingClaimWstETHRewardsTest is
             UINT256_MAX
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
-        vm.stopPrank();
 
         assertEq(
             wstETH.balanceOf(address(user)),
@@ -3357,7 +4542,6 @@ contract CSAccountingClaimWstETHRewardsTest is
             UINT256_MAX
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
-        vm.stopPrank();
 
         assertApproxEqAbs(
             wstETH.balanceOf(address(user)),
@@ -3404,7 +4588,6 @@ contract CSAccountingClaimWstETHRewardsTest is
             UINT256_MAX
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
-        vm.stopPrank();
 
         assertApproxEqAbs(
             wstETH.balanceOf(address(user)),
@@ -3452,7 +4635,6 @@ contract CSAccountingClaimWstETHRewardsTest is
             UINT256_MAX
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
-        vm.stopPrank();
 
         assertApproxEqAbs(
             wstETH.balanceOf(address(user)),
@@ -3497,7 +4679,6 @@ contract CSAccountingClaimWstETHRewardsTest is
             UINT256_MAX
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
-        vm.stopPrank();
 
         assertApproxEqAbs(
             wstETH.balanceOf(address(user)),
@@ -3542,7 +4723,6 @@ contract CSAccountingClaimWstETHRewardsTest is
             UINT256_MAX
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
-        vm.stopPrank();
 
         assertEq(
             wstETH.balanceOf(address(user)),
@@ -3586,7 +4766,6 @@ contract CSAccountingClaimWstETHRewardsTest is
             UINT256_MAX
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
-        vm.stopPrank();
 
         assertApproxEqAbs(
             wstETH.balanceOf(address(user)),
@@ -3631,7 +4810,6 @@ contract CSAccountingClaimWstETHRewardsTest is
             UINT256_MAX
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
-        vm.stopPrank();
 
         assertApproxEqAbs(
             wstETH.balanceOf(address(user)),
@@ -3676,7 +4854,6 @@ contract CSAccountingClaimWstETHRewardsTest is
             UINT256_MAX
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
-        vm.stopPrank();
 
         assertApproxEqAbs(
             wstETH.balanceOf(address(user)),
@@ -3827,7 +5004,6 @@ contract CSAccountingClaimWstETHRewardsTest is
             sharesToClaim
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
-        vm.stopPrank();
 
         assertEq(
             wstETH.balanceOf(address(user)),
@@ -3873,9 +5049,457 @@ contract CSAccountingClaimWstETHRewardsTest is
     }
 }
 
-abstract contract CSAccountingRequestRewardsETHExcessBondTest is
+contract CSAccountingRequestRewardsETHExcessBondTest is
     CSAccountingClaimRewardsBaseTest
-{}
+{
+    uint256[] public mockedRequestIds = [1];
+
+    function setUp() public override {
+        super.setUp();
+        mock_requestWithdrawals(mockedRequestIds);
+    }
+
+    function test_default() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertTrue(requestId != 0, "request id should exist");
+        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(1 ether),
+            1 wei,
+            "bond shares should not change after request"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares should not change"
+        );
+    }
+
+    function test_WithCurve() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _curve(defaultCurve);
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertTrue(requestId != 0, "request id should exist");
+        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(16 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithMultiplier() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _multiplier({ id: 0, multiplier: 9000 });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertTrue(requestId != 0, "request id should exist");
+        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(4.2 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _lock({ id: 0, amount: 1 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertTrue(requestId == 0, "request id should not exist");
+        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore,
+            "bond shares after claim should be equal to before"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesBefore,
+            "total bond shares after claim should be equal to before"
+        );
+    }
+
+    function test_WithCurveAndMultiplier() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _curve(defaultCurve);
+        _multiplier({ id: 0, multiplier: 9000 });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertTrue(requestId != 0, "request id should exist");
+        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(17.7 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithCurveAndLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _curve(defaultCurve);
+        _lock({ id: 0, amount: 1 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertTrue(requestId != 0, "request id should exist");
+        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(15 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithMultiplierAndLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _multiplier({ id: 0, multiplier: 9000 });
+        _lock({ id: 0, amount: 1 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertTrue(requestId != 0, "request id should exist");
+        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(3.2 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithCurveAndMultiplierAndLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _curve(defaultCurve);
+        _multiplier({ id: 0, multiplier: 9000 });
+        _lock({ id: 0, amount: 1 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertTrue(requestId != 0, "request id should exist");
+        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(16.7 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 32 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertTrue(requestId != 0, "request id should exist");
+        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(2 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertTrue(requestId == 0, "request id should not exist");
+        assertEq(
+            stETH.balanceOf(address(user)),
+            0,
+            "user balance should be equal to zero"
+        );
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore,
+            "bond shares after claim should be equal to before"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesBefore,
+            "total bond shares after claim should be equal to before"
+        );
+    }
+
+    function test_WithBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 32 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertTrue(requestId != 0, "request id should exist");
+        assertEq(
+            stETH.balanceOf(address(user)),
+            0,
+            "user balance should be equal to zero"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(2 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithExcessBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 64 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertTrue(requestId != 0, "request id should exist");
+        assertEq(
+            stETH.balanceOf(address(user)),
+            0,
+            "user balance should be equal to zero"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(32 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithExcessBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 64 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertTrue(requestId != 0, "request id should exist");
+        assertEq(
+            stETH.balanceOf(address(user)),
+            0,
+            "user balance should be equal to zero"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(34 ether),
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_WithMissingBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 16 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertTrue(requestId == 0, "request id should not exist");
+        assertEq(
+            stETH.balanceOf(address(user)),
+            0,
+            "user balance should be equal to zero"
+        );
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore,
+            "bond shares after claim should be equal to before"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesBefore,
+            "total bond shares after claim should be equal to before"
+        );
+    }
+
+    function test_WithMissingBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 16 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertTrue(requestId == 0, "request id should not exist");
+        assertEq(
+            stETH.balanceOf(address(user)),
+            0,
+            "user balance should be equal to zero"
+        );
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore,
+            "bond shares after claim should be equal to before"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesBefore,
+            "total bond shares after claim should be equal to before"
+        );
+    }
+
+    function test_EventEmitted() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+
+        vm.expectEmit(true, true, true, true, address(accounting));
+        emit ETHExcessBondRequested(0, user, 1 ether);
+
+        vm.prank(user);
+        accounting.requestExcessBondETH(0, UINT256_MAX);
+    }
+
+    function test_WithDesirableValue() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(user);
+        uint256 requestId = accounting.requestExcessBondETH(0, 0.5 ether);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertTrue(requestId != 0, "request id should exist");
+        assertEq(
+            stETH.balanceOf(address(user)),
+            0,
+            "user balance should be equal to zero"
+        );
+        assertApproxEqAbs(
+            bondSharesAfter,
+            bondSharesBefore - stETH.getSharesByPooledEth(0.5 ether),
+            1 wei,
+            "bond shares after should be equal to before and fee minus claimed shares"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            bondSharesAfter,
+            "total bond shares after claim should be equal to after"
+        );
+    }
+
+    function test_RevertWhen_NotOwner() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+
+        vm.expectRevert(
+            abi.encodeWithSelector(NotOwnerToClaim.selector, stranger, user)
+        );
+        vm.prank(stranger);
+        accounting.requestExcessBondETH(0, UINT256_MAX);
+    }
+}
 
 contract CSAccountingRequestRewardsETHRewardsTest is
     CSAccountingClaimRewardsBaseTest
