@@ -1060,14 +1060,12 @@ contract CSAccounting is
         uint256 nodeOperatorId
     ) internal view returns (uint256 current, uint256 required) {
         current = getBondShares(nodeOperatorId);
-        required =
-            _sharesByEth(
-                _getBondAmountByKeysCount(
-                    _getNodeOperatorActiveKeys(nodeOperatorId),
-                    getBondMultiplier(nodeOperatorId)
-                )
-            ) +
-            _sharesByEth(getActualLockedBondETH(nodeOperatorId));
+        required = _sharesByEth(
+            _getBondAmountByKeysCount(
+                _getNodeOperatorActiveKeys(nodeOperatorId),
+                getBondMultiplier(nodeOperatorId)
+            ) + getActualLockedBondETH(nodeOperatorId)
+        );
     }
 
     function _sharesByEth(uint256 ethAmount) internal view returns (uint256) {
