@@ -2955,7 +2955,7 @@ contract CSAccountingClaimStETHExcessBondTest is
         _deposit({ bond: 33 ether });
 
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit StETHExcessBondClaimed(0, user, 1 ether);
+        emit StETHClaimed(0, user, 1 ether);
 
         vm.prank(user);
         accounting.claimExcessBondStETH(0, UINT256_MAX);
@@ -3595,7 +3595,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit StETHRewardsClaimed(
+        emit StETHClaimed(
             leaf.nodeOperatorId,
             user,
             stETH.getPooledEthByShares(sharesAsFee)
@@ -4243,7 +4243,7 @@ contract CSAccountingClaimWstETHExcessBondTest is
         _deposit({ bond: 33 ether });
 
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit WstETHExcessBondClaimed(
+        emit WstETHClaimed(
             leaf.nodeOperatorId,
             user,
             stETH.getSharesByPooledEth(1 ether)
@@ -4974,7 +4974,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit WstETHRewardsClaimed(0, user, wstETHAsFee);
+        emit WstETHClaimed(0, user, wstETHAsFee);
 
         vm.prank(user);
         accounting.claimRewardsWstETH(
@@ -5456,7 +5456,7 @@ contract CSAccountingRequestRewardsETHExcessBondTest is
         _deposit({ bond: 33 ether });
 
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit ETHExcessBondRequested(0, user, 1 ether);
+        emit ETHRequested(0, user, 1 ether);
 
         vm.prank(user);
         accounting.requestExcessBondETH(0, UINT256_MAX);
@@ -5987,7 +5987,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit ETHRewardsRequested(0, user, unstETHAsFee);
+        emit ETHRequested(0, user, unstETHAsFee);
 
         vm.prank(user);
         accounting.requestRewardsETH(

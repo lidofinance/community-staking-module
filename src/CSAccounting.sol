@@ -31,32 +31,17 @@ contract CSAccountingBase {
         address from,
         uint256 amount
     );
-    event StETHExcessBondClaimed(
+    event StETHClaimed(
         uint256 indexed nodeOperatorId,
         address to,
         uint256 amount
     );
-    event StETHRewardsClaimed(
+    event WstETHClaimed(
         uint256 indexed nodeOperatorId,
         address to,
         uint256 amount
     );
-    event WstETHExcessBondClaimed(
-        uint256 indexed nodeOperatorId,
-        address to,
-        uint256 amount
-    );
-    event WstETHRewardsClaimed(
-        uint256 indexed nodeOperatorId,
-        address to,
-        uint256 amount
-    );
-    event ETHExcessBondRequested(
-        uint256 indexed nodeOperatorId,
-        address to,
-        uint256 amount
-    );
-    event ETHRewardsRequested(
+    event ETHRequested(
         uint256 indexed nodeOperatorId,
         address to,
         uint256 amount
@@ -657,11 +642,7 @@ contract CSAccounting is
             stETHAmount,
             rewardAddress
         );
-        emit StETHExcessBondClaimed(
-            nodeOperatorId,
-            rewardAddress,
-            claimedStETH
-        );
+        emit StETHClaimed(nodeOperatorId, rewardAddress, claimedStETH);
     }
 
     /// @notice Claims full reward (fee + bond) in stETH for the given node operator with desirable value
@@ -686,7 +667,7 @@ contract CSAccounting is
             stETHAmount,
             rewardAddress
         );
-        emit StETHRewardsClaimed(nodeOperatorId, rewardAddress, claimedStETH);
+        emit StETHClaimed(nodeOperatorId, rewardAddress, claimedStETH);
     }
 
     function _claimStETH(
@@ -724,11 +705,7 @@ contract CSAccounting is
             wstETHAmount,
             rewardAddress
         );
-        emit WstETHExcessBondClaimed(
-            nodeOperatorId,
-            rewardAddress,
-            claimedWsETH
-        );
+        emit WstETHClaimed(nodeOperatorId, rewardAddress, claimedWsETH);
     }
 
     /// @notice Claims full reward (fee + bond) in wstETH for the given node operator available for this moment
@@ -753,7 +730,7 @@ contract CSAccounting is
             wstETHAmount,
             rewardAddress
         );
-        emit WstETHRewardsClaimed(nodeOperatorId, rewardAddress, claimedWstETH);
+        emit WstETHClaimed(nodeOperatorId, rewardAddress, claimedWstETH);
     }
 
     function _claimWsETH(
@@ -794,11 +771,7 @@ contract CSAccounting is
             ETHAmount,
             rewardAddress
         );
-        emit ETHExcessBondRequested(
-            nodeOperatorId,
-            rewardAddress,
-            requestedETH
-        );
+        emit ETHRequested(nodeOperatorId, rewardAddress, requestedETH);
         return requestId;
     }
 
@@ -826,7 +799,7 @@ contract CSAccounting is
             ETHAmount,
             rewardAddress
         );
-        emit ETHRewardsRequested(nodeOperatorId, rewardAddress, requestedETH);
+        emit ETHRequested(nodeOperatorId, rewardAddress, requestedETH);
         return requestId;
     }
 
