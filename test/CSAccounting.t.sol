@@ -6537,6 +6537,46 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         assertEq(accounting.getActualLockedBondETH(0), 1 ether);
     }
 
+    function test_lockBondETH_secondLock() public {
+        mock_getNodeOperatorsCount();
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        accounting.depositETH{ value: 32 ether }(user, 0);
+        vm.prank(admin);
+        accounting.lockBondETH(0, 1 ether);
+        CSBondLock.BondLock memory bondLockBefore = accounting
+            .getLockedBondInfo(0);
+        vm.warp(block.timestamp + 1 hours);
+
+        vm.prank(admin);
+        accounting.lockBondETH(0, 1 ether);
+        CSBondLock.BondLock memory bondLock = accounting.getLockedBondInfo(0);
+        assertEq(bondLock.amount, 2 ether);
+        assertEq(
+            bondLock.retentionUntil,
+            bondLockBefore.retentionUntil + 1 hours
+        );
+    }
+
+    function test_lockBondETH_secondLockAfterFirstExpired() public {
+        mock_getNodeOperatorsCount();
+        (uint256 retentionPeriod, ) = accounting.getBondLockPeriods();
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        accounting.depositETH{ value: 32 ether }(user, 0);
+        vm.prank(admin);
+        accounting.lockBondETH(0, 1 ether);
+        CSBondLock.BondLock memory bondLockBefore = accounting
+            .getLockedBondInfo(0);
+        vm.warp(bondLockBefore.retentionUntil + 1 hours);
+
+        vm.prank(admin);
+        accounting.lockBondETH(0, 1 ether);
+        CSBondLock.BondLock memory bondLock = accounting.getLockedBondInfo(0);
+        assertEq(bondLock.amount, 1 ether);
+        assertEq(bondLock.retentionUntil, block.timestamp + retentionPeriod);
+    }
+
     function test_lockBondETH_RevertWhen_DoesNotHaveRole() public {
         mock_getNodeOperatorsCount();
 
