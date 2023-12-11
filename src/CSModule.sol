@@ -1027,7 +1027,7 @@ contract CSModule is ICSModule, CSModuleBase {
         );
     }
 
-    /// @dev Should be called by the committee. Doesn't settle blocked bond if it is in the management period
+    /// @dev Should be called by the committee.
     /// @notice Settles blocked bond for the given node operators.
     /// @param nodeOperatorIds ids of the node operators to settle blocked bond for.
     function settleELRewardsStealingPenalty(
@@ -1037,16 +1037,7 @@ contract CSModule is ICSModule, CSModuleBase {
             uint256 nodeOperatorId = nodeOperatorIds[i];
             ICSAccounting.BondLock memory bondLock = accounting
                 .getLockedBondInfo(nodeOperatorId);
-            (uint256 retentionPeriod, uint256 managementPeriod) = accounting
-                .getBondLockPeriods();
-            if (
-                block.timestamp + retentionPeriod - bondLock.retentionUntil <
-                managementPeriod
-            ) {
-                // blocked bond in safe frame to manage it by committee or node operator
-                // revert here?
-                continue;
-            }
+            uint256 retentionPeriod = accounting.getBondLockRetentionPeriod();
             if (
                 bondLock.amount > 0 &&
                 bondLock.retentionUntil >= block.timestamp

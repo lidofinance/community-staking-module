@@ -16,16 +16,10 @@ import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 
 contract CSBondLockTestable is CSBondLock {
-    constructor(
-        uint256 retentionPeriod,
-        uint256 managementPeriod
-    ) CSBondLock(retentionPeriod, managementPeriod) {}
+    constructor(uint256 retentionPeriod) CSBondLock(retentionPeriod) {}
 
-    function setBondLockPeriods(
-        uint256 retention,
-        uint256 management
-    ) external {
-        _setBondLockPeriods(retention, management);
+    function setBondLockRetentionPeriod(uint256 retention) external {
+        _setBondLockRetentionPeriod(retention);
     }
 
     function get(
@@ -51,54 +45,35 @@ contract CSBondLockTest is Test, CSBondLockBase {
     CSBondLockTestable public bondLock;
 
     function setUp() public {
-        bondLock = new CSBondLockTestable(8 weeks, 1 days);
+        bondLock = new CSBondLockTestable(8 weeks);
     }
 
-    function test_setBondLockPeriods() public {
+    function test_setBondLockRetentionPeriod() public {
         uint256 retention = 4 weeks;
-        uint256 management = 2 days;
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondLockPeriodsChanged(retention, management);
+        emit BondLockRetentionPeriodChanged(retention);
 
-        bondLock.setBondLockPeriods(retention, management);
+        bondLock.setBondLockRetentionPeriod(retention);
 
-        (uint256 _retention, uint256 _management) = bondLock
-            .getBondLockPeriods();
+        uint256 _retention = bondLock.getBondLockRetentionPeriod();
         assertEq(_retention, retention);
-        assertEq(_management, management);
     }
 
-    function test_setBondLockPeriods_RevertWhen_RetentionLessThanMin() public {
+    function test_setBondLockRetentionPeriod_RevertWhen_RetentionLessThanMin()
+        public
+    {
         uint256 minRetention = bondLock.MIN_BOND_LOCK_RETENTION_PERIOD();
-        uint256 minManagement = bondLock.MIN_BOND_LOCK_MANAGEMENT_PERIOD();
-        vm.expectRevert(InvalidBondLockPeriods.selector);
-        bondLock.setBondLockPeriods(minRetention - 1 seconds, minManagement);
+        vm.expectRevert(InvalidBondLockRetentionPeriod.selector);
+        bondLock.setBondLockRetentionPeriod(minRetention - 1 seconds);
     }
 
-    function test_setBondLockPeriods_RevertWhen_RetentionGreaterThanMax()
+    function test_setBondLockRetentionPeriod_RevertWhen_RetentionGreaterThanMax()
         public
     {
         uint256 maxRetention = bondLock.MAX_BOND_LOCK_RETENTION_PERIOD();
-        uint256 minManagement = bondLock.MIN_BOND_LOCK_MANAGEMENT_PERIOD();
-        vm.expectRevert(InvalidBondLockPeriods.selector);
-        bondLock.setBondLockPeriods(maxRetention + 1 seconds, minManagement);
-    }
-
-    function test_setBondLockPeriods_RevertWhen_ManagementLessThanMin() public {
-        uint256 minRetention = bondLock.MIN_BOND_LOCK_RETENTION_PERIOD();
-        uint256 minManagement = bondLock.MIN_BOND_LOCK_MANAGEMENT_PERIOD();
-        vm.expectRevert(InvalidBondLockPeriods.selector);
-        bondLock.setBondLockPeriods(minRetention, minManagement - 1 seconds);
-    }
-
-    function test_setBondLockPeriods_RevertWhen_ManagementGreaterThanMax()
-        public
-    {
-        uint256 minRetention = bondLock.MIN_BOND_LOCK_RETENTION_PERIOD();
-        uint256 maxManagement = bondLock.MAX_BOND_LOCK_MANAGEMENT_PERIOD();
-        vm.expectRevert(InvalidBondLockPeriods.selector);
-        bondLock.setBondLockPeriods(minRetention, maxManagement + 1 seconds);
+        vm.expectRevert(InvalidBondLockRetentionPeriod.selector);
+        bondLock.setBondLockRetentionPeriod(maxRetention + 1 seconds);
     }
 
     function test_getActualAmount() public {
@@ -111,7 +86,7 @@ contract CSBondLockTest is Test, CSBondLockBase {
     }
 
     function test_getActualAmount_WhenRetentionPeriodIsPassed() public {
-        (uint256 retentionPeriod, ) = bondLock.getBondLockPeriods();
+        uint256 retentionPeriod = bondLock.getBondLockRetentionPeriod();
         uint256 noId = 0;
         uint256 amount = 1 ether;
         bondLock.lock(noId, amount);
@@ -123,7 +98,7 @@ contract CSBondLockTest is Test, CSBondLockBase {
     }
 
     function test_lock() public {
-        (uint256 retentionPeriod, ) = bondLock.getBondLockPeriods();
+        uint256 retentionPeriod = bondLock.getBondLockRetentionPeriod();
         uint256 noId = 0;
         uint256 amount = 1 ether;
         uint256 retentionUntil = block.timestamp + retentionPeriod;
@@ -139,7 +114,7 @@ contract CSBondLockTest is Test, CSBondLockBase {
     }
 
     function test_lock_WhenSecondTime() public {
-        (uint256 retentionPeriod, ) = bondLock.getBondLockPeriods();
+        uint256 retentionPeriod = bondLock.getBondLockRetentionPeriod();
         uint256 noId = 0;
         uint256 amount = 1 ether;
         bondLock.lock(noId, amount);
@@ -179,7 +154,7 @@ contract CSBondLockTest is Test, CSBondLockBase {
     }
 
     function test_reduceAmount_WhenPartial() public {
-        (uint256 retentionPeriod, ) = bondLock.getBondLockPeriods();
+        uint256 retentionPeriod = bondLock.getBondLockRetentionPeriod();
         uint256 noId = 0;
         uint256 amount = 100 ether;
 

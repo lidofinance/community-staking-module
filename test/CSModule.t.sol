@@ -73,8 +73,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
             address(locator),
             address(wstETH),
             address(csm),
-            8 weeks,
-            1 days
+            8 weeks
         );
         csm.setAccounting(address(accounting));
         csm.setUnvettingFee(0.05 ether);
@@ -1676,13 +1675,10 @@ contract CsmInitELRewardsStealingPenalty is CSMCommon {
 contract CsmSettle is CSMCommon {
     function test_settleELRewardsStealingPenalty() public {
         uint256 noId = createNodeOperator();
-        (, uint256 managementPeriod) = accounting.getBondLockPeriods();
         uint256 amount = 1 ether;
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
         csm.initELRewardsStealingPenalty(noId, block.number, amount);
-
-        vm.warp(block.timestamp + managementPeriod + 1 seconds);
 
         vm.expectCall(
             address(accounting),
@@ -1707,7 +1703,7 @@ contract CsmSettle is CSMCommon {
         public
     {
         uint256 noId = createNodeOperator();
-        (uint256 retentionPeriod, ) = accounting.getBondLockPeriods();
+        uint256 retentionPeriod = accounting.getBondLockRetentionPeriod();
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
         uint256 amount = 1 ether;

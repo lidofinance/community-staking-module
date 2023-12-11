@@ -102,19 +102,14 @@ contract CSAccounting is
     /// @param wstETH wstETH contract address
     /// @param communityStakingModule community staking module contract address
     /// @param bondLockRetentionPeriod retention period for locked bond in seconds
-    /// @param bondLockManagementPeriod management period for locked bond in seconds
     constructor(
         uint256[] memory bondCurve,
         address admin,
         address lidoLocator,
         address wstETH,
         address communityStakingModule,
-        uint256 bondLockRetentionPeriod,
-        uint256 bondLockManagementPeriod
-    )
-        CSBondCurve(bondCurve)
-        CSBondLock(bondLockRetentionPeriod, bondLockManagementPeriod)
-    {
+        uint256 bondLockRetentionPeriod
+    ) CSBondCurve(bondCurve) CSBondLock(bondLockRetentionPeriod) {
         // check zero addresses
         require(admin != address(0), "admin is zero address");
         require(lidoLocator != address(0), "lido locator is zero address");
@@ -138,15 +133,13 @@ contract CSAccounting is
         FEE_DISTRIBUTOR = fdAddress;
     }
 
-    /// @notice Sets bond lock periods.
+    /// @notice Sets bond lock retention period.
     /// @param retention period in seconds to retain bond lock
-    /// @param management period in seconds to manage bond lock by node operator
-    function setLockedBondPeriods(
-        uint256 retention,
-        uint256 management
+    function setLockedBondRetentionPeriod(
+        uint256 retention
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         // todo: is it admin role?
-        _setBondLockPeriods(retention, management);
+        _setBondLockRetentionPeriod(retention);
     }
 
     /// @notice Sets bond curve.

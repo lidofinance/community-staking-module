@@ -33,8 +33,7 @@ contract CSAccountingForTests is CSAccounting {
         address lidoLocator,
         address wstETH,
         address communityStakingModule,
-        uint256 lockedBondRetentionPeriod,
-        uint256 lockedBondManagementPeriod
+        uint256 lockedBondRetentionPeriod
     )
         CSAccounting(
             bondCurve,
@@ -42,8 +41,7 @@ contract CSAccountingForTests is CSAccounting {
             lidoLocator,
             wstETH,
             communityStakingModule,
-            lockedBondRetentionPeriod,
-            lockedBondManagementPeriod
+            lockedBondRetentionPeriod
         )
     {}
 
@@ -100,8 +98,7 @@ contract CSAccountingBaseTest is
             address(locator),
             address(wstETH),
             address(stakingModule),
-            8 weeks,
-            1 days
+            8 weeks
         );
 
         vm.startPrank(admin);
@@ -6560,7 +6557,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
 
     function test_lockBondETH_secondLockAfterFirstExpired() public {
         mock_getNodeOperatorsCount();
-        (uint256 retentionPeriod, ) = accounting.getBondLockPeriods();
+        uint256 retentionPeriod = accounting.getBondLockRetentionPeriod();
         vm.deal(user, 32 ether);
         vm.prank(user);
         accounting.depositETH{ value: 32 ether }(user, 0);

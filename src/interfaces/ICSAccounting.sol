@@ -89,10 +89,10 @@ interface ICSAccounting {
         uint256 nodeOperatorId
     ) external view returns (BondLock memory);
 
-    function getBondLockPeriods()
+    function getBondLockRetentionPeriod()
         external
         view
-        returns (uint256 retention, uint256 management);
+        returns (uint256 retention);
 
     function releaseLockedBondETH(
         uint256 nodeOperatorId,
