@@ -8,7 +8,6 @@ import "../src/CSAccounting.sol";
 import "../src/lib/Batch.sol";
 import "./helpers/Fixtures.sol";
 import "./helpers/mocks/StETHMock.sol";
-import "./helpers/mocks/CommunityStakingFeeDistributorMock.sol";
 import "./helpers/mocks/LidoLocatorMock.sol";
 import "./helpers/mocks/LidoMock.sol";
 import "./helpers/mocks/WstETHMock.sol";
@@ -34,7 +33,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     Stub public burner;
     CSModule public csm;
     CSAccounting public accounting;
-    CommunityStakingFeeDistributorMock public communityStakingFeeDistributor;
+    Stub public communityStakingFeeDistributor;
 
     address internal admin;
     address internal stranger;
@@ -63,10 +62,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         vm.prank(nodeOperator);
         stETH.submit{ value: 2 ether + 1 wei }(address(0));
 
-        communityStakingFeeDistributor = new CommunityStakingFeeDistributorMock(
-            address(locator),
-            address(accounting)
-        );
+        communityStakingFeeDistributor = new Stub();
         csm = new CSModule("community-staking-module", address(locator));
         uint256[] memory curve = new uint256[](2);
         curve[0] = 2 ether;
