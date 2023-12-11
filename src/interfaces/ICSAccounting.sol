@@ -12,6 +12,11 @@ interface ICSAccounting {
         bytes32 s;
     }
 
+    struct BondLock {
+        uint256 amount;
+        uint256 retentionUntil;
+    }
+
     function getBondShares(
         uint256 nodeOperatorId
     ) external view returns (uint256);
@@ -75,6 +80,26 @@ interface ICSAccounting {
         uint256 nodeOperatorId,
         uint256 newKeysCount
     ) external view returns (uint256);
+
+    function getUnbondedKeysCount(
+        uint256 nodeOperatorId
+    ) external view returns (uint256);
+
+    function getLockedBondInfo(
+        uint256 nodeOperatorId
+    ) external view returns (BondLock memory);
+
+    function getBondLockPeriods()
+        external
+        view
+        returns (uint256 retention, uint256 management);
+
+    function releaseLockedBondETH(
+        uint256 nodeOperatorId,
+        uint256 amount
+    ) external;
+
+    function lockBondETH(uint256 nodeOperatorId, uint256 amount) external;
 
     function penalize(uint256 nodeOperatorId, uint256 shares) external;
 }

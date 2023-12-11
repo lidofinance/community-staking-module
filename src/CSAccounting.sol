@@ -51,11 +51,6 @@ contract CSAccountingBase {
         uint256 penaltyETH,
         uint256 coveringETH
     );
-    event ELRewardsStealingPenaltyInitiated(
-        uint256 indexed nodeOperatorId,
-        uint256 proposedBlockNumber,
-        uint256 stolenAmount
-    );
     event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
     event BondLockReleased(uint256 indexed nodeOperatorId, uint256 amount);
 
@@ -84,12 +79,9 @@ contract CSAccounting is
 
     bytes32 public constant INSTANT_PENALIZE_BOND_ROLE =
         keccak256("INSTANT_PENALIZE_BOND_ROLE"); // 0x9909cf24c2d3bafa8c229558d86a1b726ba57c3ef6350848dcf434a4181b56c7
-    bytes32 public constant EL_REWARDS_STEALING_PENALTY_INIT_ROLE =
-        keccak256("EL_REWARDS_STEALING_PENALTY_INIT_ROLE"); // 0xcc2e7ce7be452f766dd24d55d87a3d42901c31ffa5b600cd1dff475abec91c1f
-    bytes32 public constant EL_REWARDS_STEALING_PENALTY_RELEASE_ROLE =
-        keccak256("EL_REWARDS_STEALING_PENALTY_RELEASE_ROLE"); // 0x8d78671045c549f09e0cf6e7e9856c36698f72f93962abf8e1955dc595a592ee
-    bytes32 public constant EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE =
-        keccak256("EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE"); // 0xdf6226649a1ca132f86d419e46892001284368a8f7445b5eb0d3fadf91329fe6
+    bytes32 public constant LOCK_BOND_ROLE_ROLE =
+        keccak256("LOCK_BOND_ROLE_ROLE"); // 0x36ff2e3971b3c54917aa7f53b6db795a06950983343e75040614a29e789e7bae
+    bytes32 public constant RELEASE_BOND_ROLE = keccak256("RELEASE_BOND_ROLE"); // 0xc2978b4baa6c8ed096f1f65a0b92abc3771cb669afce20daa9a5f3fbcd13dea1
     bytes32 public constant SET_BOND_CURVE_ROLE =
         keccak256("SET_BOND_CURVE_ROLE"); // 0x645c9e6d2a86805cb5a28b1e4751c0dab493df7cf935070ce405489ba1a7bf72
     bytes32 public constant SET_BOND_MULTIPLIER_ROLE =
@@ -812,24 +804,14 @@ contract CSAccounting is
         return (requestIds[0], amounts[0]);
     }
 
-    /// @notice Reports EL rewards stealing for the given node operator.
-    /// @param nodeOperatorId id of the node operator to report EL rewards stealing for.
-    /// @param blockNumber consensus layer block number of the proposed block with EL rewards stealing.
-    /// @param amount amount of stolen EL rewards in ETH.
-    function initELRewardsStealingPenalty(
+    function lockBondETH(
         uint256 nodeOperatorId,
-        uint256 blockNumber,
         uint256 amount
     )
         external
-        onlyRole(EL_REWARDS_STEALING_PENALTY_INIT_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
+        onlyRole(LOCK_BOND_ROLE_ROLE)
     {
-        emit ELRewardsStealingPenaltyInitiated(
-            nodeOperatorId,
-            blockNumber,
-            amount
-        );
         CSBondLock._lock(nodeOperatorId, amount);
     }
 
@@ -841,7 +823,7 @@ contract CSAccounting is
         uint256 amount
     )
         external
-        onlyRole(EL_REWARDS_STEALING_PENALTY_RELEASE_ROLE)
+        onlyRole(RELEASE_BOND_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
         CSBondLock._reduceAmount(nodeOperatorId, amount);
@@ -856,15 +838,6 @@ contract CSAccounting is
         payable(LIDO_LOCATOR.elRewardsVault()).transfer(msg.value);
         CSBondLock._reduceAmount(nodeOperatorId, msg.value);
         emit BondLockCompensated(nodeOperatorId, msg.value);
-    }
-
-    /// @dev Should be called by the committee. Doesn't settle locked bond if it is in the safe frame (1 day)
-    /// @notice Settles locked bond for the given node operators.
-    /// @param nodeOperatorIds ids of the node operators to settle locked bond for.
-    function settleLockedBondETH(
-        uint256[] memory nodeOperatorIds
-    ) external onlyRole(EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE) {
-        CSBondLock._settle(nodeOperatorIds);
     }
 
     /// @notice Burn all bond and request exits for all node operators' validators.
@@ -885,22 +858,14 @@ contract CSAccounting is
 
     /// @notice Penalize bond by burning shares of the given node operator.
     /// @param nodeOperatorId id of the node operator to penalize bond for.
-    /// @param ETHAmount amount of ETH to penalize.
+    /// @param amount amount of ETH to penalize.
     function penalize(
-        uint256 nodeOperatorId,
-        uint256 ETHAmount
-    ) public onlyRole(INSTANT_PENALIZE_BOND_ROLE) {
-        _penalize(nodeOperatorId, ETHAmount);
-    }
-
-    function _penalize(
         uint256 nodeOperatorId,
         uint256 amount
     )
-        internal
-        override
+        public
+        onlyRole(INSTANT_PENALIZE_BOND_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
-        returns (uint256)
     {
         uint256 penaltyShares = _sharesByEth(amount);
         uint256 currentShares = getBondShares(nodeOperatorId);
@@ -917,7 +882,6 @@ contract CSAccounting is
         uint256 penaltyEth = _ethByShares(penaltyShares);
         uint256 coveringEth = _ethByShares(sharesToBurn);
         emit BondPenalized(nodeOperatorId, penaltyEth, coveringEth);
-        return penaltyEth - coveringEth;
     }
 
     function _lido() internal view returns (ILido) {

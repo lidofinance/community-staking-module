@@ -107,14 +107,8 @@ contract CSAccountingBaseTest is
         vm.startPrank(admin);
         accounting.setFeeDistributor(address(feeDistributor));
         accounting.grantRole(accounting.INSTANT_PENALIZE_BOND_ROLE(), admin);
-        accounting.grantRole(
-            accounting.EL_REWARDS_STEALING_PENALTY_INIT_ROLE(),
-            admin
-        );
-        accounting.grantRole(
-            accounting.EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE(),
-            admin
-        );
+        accounting.grantRole(accounting.LOCK_BOND_ROLE_ROLE(), admin);
+        accounting.grantRole(accounting.RELEASE_BOND_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_MULTIPLIER_ROLE(), admin);
         vm.stopPrank();
@@ -6528,6 +6522,34 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
 
         vm.prank(stranger);
         accounting.penalize(0, 20);
+    }
+}
+
+contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
+    function test_lockBondETH() public {
+        mock_getNodeOperatorsCount();
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        accounting.depositETH{ value: 32 ether }(user, 0);
+
+        vm.prank(admin);
+        accounting.lockBondETH(0, 1 ether);
+        assertEq(accounting.getActualLockedBondETH(0), 1 ether);
+    }
+
+    function test_lockBondETH_RevertWhen_DoesNotHaveRole() public {
+        mock_getNodeOperatorsCount();
+
+        vm.expectRevert(
+            bytes(
+                Utilities.accessErrorString(
+                    stranger,
+                    accounting.LOCK_BOND_ROLE_ROLE()
+                )
+            )
+        );
+        vm.prank(stranger);
+        accounting.lockBondETH(0, 1 ether);
     }
 }
 

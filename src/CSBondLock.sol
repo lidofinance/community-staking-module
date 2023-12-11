@@ -102,42 +102,11 @@ abstract contract CSBondLock is CSBondLockBase {
         });
     }
 
-    /// @dev Should be called by the committee. Doesn't settle blocked bond if it is in the safe frame (1 day)
-    /// @notice Settles blocked bond for the given node operators.
-    /// @param nodeOperatorIds ids of the node operators to settle blocked bond for.
-    function _settle(uint256[] memory nodeOperatorIds) internal {
-        for (uint256 i; i < nodeOperatorIds.length; ++i) {
-            uint256 nodeOperatorId = nodeOperatorIds[i];
-            BondLock storage bondLock = _bondLock[nodeOperatorId];
-            if (
-                block.timestamp +
-                    _bondLockRetentionPeriod -
-                    bondLock.retentionUntil <
-                _bondLockManagementPeriod
-            ) {
-                // blocked bond in safe frame to manage it by committee or node operator
-                continue;
-            }
-            uint256 uncovered;
-            if (
-                bondLock.amount > 0 &&
-                bondLock.retentionUntil >= block.timestamp
-            ) {
-                uncovered = _penalize(nodeOperatorId, bondLock.amount);
-            }
-            _changeBondLock({
-                nodeOperatorId: nodeOperatorId,
-                amount: uncovered,
-                retentionUntil: bondLock.retentionUntil
-            });
-        }
-    }
-
     function _reduceAmount(uint256 nodeOperatorId, uint256 amount) internal {
-        uint256 blocked = _getActualAmount(nodeOperatorId);
         if (amount == 0) {
             revert InvalidBondLockAmount();
         }
+        uint256 blocked = _bondLock[nodeOperatorId].amount;
         if (blocked < amount) {
             revert InvalidBondLockAmount();
         }
@@ -164,9 +133,4 @@ abstract contract CSBondLock is CSBondLockBase {
         });
         emit BondLockChanged(nodeOperatorId, amount, retentionUntil);
     }
-
-    function _penalize(
-        uint256 nodeOperatorId,
-        uint256 amount
-    ) internal virtual returns (uint256);
 }

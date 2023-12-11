@@ -94,6 +94,11 @@ contract CSModuleBase {
     event UnvettingFeeSet(uint256 unvettingFee);
 
     event UnvettingFeeApplied(uint256 indexed nodeOperatorId);
+    event ELRewardsStealingPenaltyInitiated(
+        uint256 indexed nodeOperatorId,
+        uint256 proposedBlockNumber,
+        uint256 stolenAmount
+    );
 
     error NodeOperatorDoesNotExist();
     error MaxNodeOperatorsCountReached();
@@ -105,6 +110,7 @@ contract CSModuleBase {
     error InvalidVetKeysPointer();
     error TargetLimitExceeded();
     error StuckKeysPresent();
+    error UnbondedKeysPresent();
     error InvalidTargetLimit();
     error StuckKeysHigherThanTotalDeposited();
 
@@ -933,6 +939,8 @@ contract CSModule is ICSModule, CSModuleBase {
             vetKeysPointer > (no.totalExitedKeys + no.targetLimit)
         ) revert TargetLimitExceeded();
         if (no.stuckValidatorsCount > 0) revert StuckKeysPresent();
+        if (accounting.getUnbondedKeysCount(nodeOperatorId) > 0)
+            revert UnbondedKeysPresent();
     }
 
     /// @notice Unvets keys and charges fee. Called when key validator oracle checks the queue or manually by node operator manager
@@ -986,9 +994,79 @@ contract CSModule is ICSModule, CSModuleBase {
         emit VettedSigningKeysCountChanged(nodeOperatorId, no.totalVettedKeys);
     }
 
+    function _unvetIfUnbonded(uint256 nodeOperatorId) internal {
+        uint256 unbondedKeys = accounting.getUnbondedKeysCount(nodeOperatorId);
+        if (unbondedKeys > 0) {
+            _unvetKeys(nodeOperatorId);
+        }
+    }
+
     function _applyUnvettingFee(uint256 nodeOperatorId) internal {
         accounting.penalize(nodeOperatorId, unvettingFee);
         emit UnvettingFeeApplied(nodeOperatorId);
+    }
+
+    /// @notice Reports EL rewards stealing for the given node operator.
+    /// @param nodeOperatorId id of the node operator to report EL rewards stealing for.
+    /// @param blockNumber consensus layer block number of the proposed block with EL rewards stealing.
+    /// @param amount amount of stolen EL rewards in ETH.
+    function initELRewardsStealingPenalty(
+        uint256 nodeOperatorId,
+        uint256 blockNumber,
+        uint256 amount
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        // TODO check role
+        accounting.lockBondETH(nodeOperatorId, amount);
+
+        _unvetIfUnbonded(nodeOperatorId);
+
+        emit ELRewardsStealingPenaltyInitiated(
+            nodeOperatorId,
+            blockNumber,
+            amount
+        );
+    }
+
+    /// @dev Should be called by the committee. Doesn't settle blocked bond if it is in the management period
+    /// @notice Settles blocked bond for the given node operators.
+    /// @param nodeOperatorIds ids of the node operators to settle blocked bond for.
+    function settleELRewardsStealingPenalty(
+        uint256[] memory nodeOperatorIds
+    ) public {
+        for (uint256 i; i < nodeOperatorIds.length; ++i) {
+            uint256 nodeOperatorId = nodeOperatorIds[i];
+            ICSAccounting.BondLock memory bondLock = accounting
+                .getLockedBondInfo(nodeOperatorId);
+            (uint256 retentionPeriod, uint256 managementPeriod) = accounting
+                .getBondLockPeriods();
+            if (
+                block.timestamp + retentionPeriod - bondLock.retentionUntil <
+                managementPeriod
+            ) {
+                // blocked bond in safe frame to manage it by committee or node operator
+                // revert here?
+                continue;
+            }
+            if (
+                bondLock.amount > 0 &&
+                bondLock.retentionUntil >= block.timestamp
+            ) {
+                accounting.penalize(nodeOperatorId, bondLock.amount);
+            }
+            accounting.releaseLockedBondETH(nodeOperatorId, bondLock.amount);
+        }
+    }
+
+    /// @notice Penalize bond by burning shares of the given node operator.
+    /// @param nodeOperatorId id of the node operator to penalize bond for.
+    /// @param amount amount of ETH to penalize.
+    function penalize(
+        uint256 nodeOperatorId,
+        uint256 amount
+    ) public onlyExistingNodeOperator(nodeOperatorId) {
+        // TODO check role
+        accounting.penalize(nodeOperatorId, amount);
+        _unvetIfUnbonded(nodeOperatorId);
     }
 
     /// @notice Called when withdrawal credentials changed by DAO

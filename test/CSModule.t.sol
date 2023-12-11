@@ -26,6 +26,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     }
 
     bytes32 public constant NULL_POINTER = bytes32(0);
+    uint256 public constant BOND_SIZE = 2 ether;
 
     LidoLocatorMock public locator;
     WstETHMock public wstETH;
@@ -58,15 +59,14 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         (locator, wstETH, stETH, burner) = initLido();
 
         // FIXME: move to the corresponding tests
-        vm.deal(nodeOperator, 2 ether + 1 wei);
+        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
         vm.prank(nodeOperator);
-        stETH.submit{ value: 2 ether + 1 wei }(address(0));
+        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
 
         communityStakingFeeDistributor = new Stub();
         csm = new CSModule("community-staking-module", address(locator));
-        uint256[] memory curve = new uint256[](2);
-        curve[0] = 2 ether;
-        curve[1] = 4 ether;
+        uint256[] memory curve = new uint256[](1);
+        curve[0] = BOND_SIZE;
         accounting = new CSAccounting(
             curve,
             admin,
@@ -83,7 +83,9 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         accounting.grantRole(
             accounting.INSTANT_PENALIZE_BOND_ROLE(),
             address(csm)
-        ); // NOTE: required because of `unvetKeys`
+        );
+        accounting.grantRole(accounting.LOCK_BOND_ROLE_ROLE(), address(csm));
+        accounting.grantRole(accounting.RELEASE_BOND_ROLE(), address(csm));
         vm.stopPrank();
     }
 
@@ -111,9 +113,9 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         bytes memory keys,
         bytes memory signatures
     ) internal returns (uint256) {
-        vm.deal(managerAddress, keysCount * 2 ether);
+        vm.deal(managerAddress, keysCount * BOND_SIZE);
         vm.prank(managerAddress);
-        csm.addNodeOperatorETH{ value: keysCount * 2 ether }(
+        csm.addNodeOperatorETH{ value: keysCount * BOND_SIZE }(
             keysCount,
             keys,
             signatures
@@ -237,7 +239,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             keysCount
         );
         vm.startPrank(nodeOperator);
-        wstETH.wrap(2 ether + 1 wei);
+        wstETH.wrap(BOND_SIZE + 1 wei);
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
@@ -256,7 +258,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             keysCount
         );
         vm.prank(nodeOperator);
-        uint256 wstETHAmount = wstETH.wrap(2 ether);
+        uint256 wstETHAmount = wstETH.wrap(BOND_SIZE);
 
         {
             vm.expectEmit(true, true, true, true, address(wstETH));
@@ -286,7 +288,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
     function test_AddValidatorKeysWstETH() public {
         uint256 noId = createNodeOperator();
-        uint256 toWrap = 2 ether + 1 wei;
+        uint256 toWrap = BOND_SIZE + 1 wei;
         vm.deal(nodeOperator, toWrap);
         stETH.submit{ value: toWrap }(address(0));
         wstETH.wrap(toWrap);
@@ -304,7 +306,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             keysCount
         );
         vm.startPrank(nodeOperator);
-        uint256 toWrap = 2 ether + 1 wei;
+        uint256 toWrap = BOND_SIZE + 1 wei;
         wstETH.wrap(toWrap);
         csm.addNodeOperatorWstETH(1, keys, signatures);
         uint256 noId = csm.getNodeOperatorsCount() - 1;
@@ -363,7 +365,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, true, true, address(stETH));
-            emit Approval(nodeOperator, address(accounting), 2 ether);
+            emit Approval(nodeOperator, address(accounting), BOND_SIZE);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, false, true, address(csm));
@@ -376,7 +378,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             keys,
             signatures,
             ICSAccounting.PermitInput({
-                value: 2 ether,
+                value: BOND_SIZE,
                 deadline: type(uint256).max,
                 // mock permit signature
                 v: 0,
@@ -391,9 +393,9 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         uint256 noId = createNodeOperator();
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
 
-        vm.deal(nodeOperator, 2 ether);
+        vm.deal(nodeOperator, BOND_SIZE);
         vm.startPrank(nodeOperator);
-        stETH.submit{ value: 2 ether }(address(0));
+        stETH.submit{ value: BOND_SIZE }(address(0));
         {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 2);
@@ -442,7 +444,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
-        vm.deal(nodeOperator, 2 ether);
+        vm.deal(nodeOperator, BOND_SIZE);
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
@@ -452,7 +454,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         }
 
         vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: 2 ether }(1, keys, signatures);
+        csm.addNodeOperatorETH{ value: BOND_SIZE }(1, keys, signatures);
         assertEq(csm.getNodeOperatorsCount(), 1);
     }
 
@@ -477,9 +479,9 @@ contract CSMObtainDepositData is CSMCommon {
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
-        vm.deal(nodeOperator, 2 ether);
+        vm.deal(nodeOperator, BOND_SIZE);
         vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: 2 ether }(1, keys, signatures);
+        csm.addNodeOperatorETH{ value: BOND_SIZE }(1, keys, signatures);
 
         {
             // Pretend to be a key validation oracle
@@ -1607,5 +1609,127 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
         );
         Vm.Log[] memory logs = vm.getRecordedLogs();
         assertEq(logs.length, 0);
+    }
+}
+
+contract CsmPenalize is CSMCommon {
+    function test_penalize_NoUnvet() public {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.penalize.selector, noId, 1 ether)
+        );
+        csm.penalize(noId, 1 ether);
+
+        CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalVettedValidators, 1);
+    }
+
+    function test_penalize_UnvetIfUnbonded() public {
+        uint256 noId = createNodeOperator(2);
+        csm.vetKeys(noId, 2);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit VettedSigningKeysCountChanged(noId, 0);
+        csm.penalize(noId, BOND_SIZE);
+
+        CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalVettedValidators, 0);
+    }
+}
+
+contract CsmInitELRewardsStealingPenalty is CSMCommon {
+    function test_initELRewardsStealingPenalty_NoUnvet() public {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit ELRewardsStealingPenaltyInitiated(noId, 100, BOND_SIZE / 2);
+        csm.initELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+
+        uint256 lockedBond = accounting.getActualLockedBondETH(noId);
+        assertEq(lockedBond, BOND_SIZE / 2);
+
+        CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalVettedValidators, 1);
+    }
+
+    function test_initELRewardsStealingPenalty_UnvetIfUnbonded() public {
+        uint256 noId = createNodeOperator(2);
+        csm.vetKeys(noId, 2);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit VettedSigningKeysCountChanged(noId, 0);
+        csm.initELRewardsStealingPenalty(noId, 100, BOND_SIZE);
+    }
+
+    function test_initELRewardsStealingPenalty_RevertWhenNoNodeOperator()
+        public
+    {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.initELRewardsStealingPenalty(0, 100, 1 ether);
+    }
+}
+
+contract CsmSettle is CSMCommon {
+    function test_settleELRewardsStealingPenalty() public {
+        uint256 noId = createNodeOperator();
+        (, uint256 managementPeriod) = accounting.getBondLockPeriods();
+        uint256 amount = 1 ether;
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+        csm.initELRewardsStealingPenalty(noId, block.number, amount);
+
+        vm.warp(block.timestamp + managementPeriod + 1 seconds);
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.penalize.selector, noId, amount)
+        );
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.releaseLockedBondETH.selector,
+                noId,
+                amount
+            )
+        );
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
+        assertEq(lock.amount, 0 ether);
+        assertEq(lock.retentionUntil, 0);
+    }
+
+    function test_settleELRewardsStealingPenalty_WhenRetentionPeriodIsExpired()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        (uint256 retentionPeriod, ) = accounting.getBondLockPeriods();
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+        uint256 amount = 1 ether;
+        uint256 bondSharesBefore = accounting.getBondShares(noId);
+
+        csm.initELRewardsStealingPenalty(noId, block.number, amount);
+
+        vm.warp(block.timestamp + retentionPeriod + 1 seconds);
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.releaseLockedBondETH.selector,
+                noId,
+                amount
+            )
+        );
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
+        assertEq(lock.amount, 0 ether);
+        assertEq(lock.retentionUntil, 0);
+        assertEq(accounting.getBondShares(noId), bondSharesBefore);
     }
 }
