@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.21;
 
-abstract contract CSBondLockBase {
+contract CSBondLockBase {
     event BondLockChanged(
         uint256 indexed nodeOperatorId,
         uint256 newAmount,
@@ -71,17 +71,21 @@ abstract contract CSBondLock is CSBondLockBase {
         }
     }
 
-    /// @notice Returns the amount and retention time of locked bond by the given node operator.
-    function _get(
+    /// @notice Returns information about the locked bond for the given node operator.
+    /// @param nodeOperatorId id of the node operator to get locked bond info for.
+    /// @return locked bond info.
+    function getLockedBondInfo(
         uint256 nodeOperatorId
-    ) internal view returns (BondLock memory) {
+    ) public view returns (BondLock memory) {
         return _bondLock[nodeOperatorId];
     }
 
-    /// @notice Returns the amount of locked bond by the given node operator.
-    function _getActualAmount(
+    /// @notice Returns the amount of locked bond in ETH by the given node operator.
+    /// @param nodeOperatorId id of the node operator to get locked bond amount.
+    /// @return amount of locked bond in ETH.
+    function getActualLockedBond(
         uint256 nodeOperatorId
-    ) internal view returns (uint256) {
+    ) public view returns (uint256) {
         if (_bondLock[nodeOperatorId].retentionUntil >= block.timestamp) {
             return _bondLock[nodeOperatorId].amount;
         }
@@ -134,7 +138,7 @@ abstract contract CSBondLock is CSBondLockBase {
     }
 
     function _reduceAmount(uint256 nodeOperatorId, uint256 amount) internal {
-        uint256 blocked = _getActualAmount(nodeOperatorId);
+        uint256 blocked = getActualLockedBond(nodeOperatorId);
         if (amount == 0) {
             revert InvalidBondLockAmount();
         }

@@ -223,7 +223,7 @@ contract CSModule is ICSModule, CSModuleBase {
         // TODO sanity checks
 
         require(
-            msg.value == accounting.getRequiredBondETHForKeys(keysCount),
+            msg.value == accounting.getBondAmountByKeysCount(keysCount),
             "eth value is not equal to required bond"
         );
 
@@ -270,7 +270,7 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting.depositStETH(
             msg.sender,
             id,
-            accounting.getRequiredBondStETHForKeys(keysCount)
+            accounting.getBondAmountByKeysCount(keysCount)
         );
 
         _addSigningKeys(id, keysCount, publicKeys, signatures);
@@ -304,7 +304,7 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting.depositStETHWithPermit(
             msg.sender,
             id,
-            accounting.getRequiredBondStETHForKeys(keysCount),
+            accounting.getBondAmountByKeysCount(keysCount),
             permit
         );
 
@@ -338,7 +338,7 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting.depositWstETH(
             msg.sender,
             id,
-            accounting.getRequiredBondWstETHForKeys(keysCount)
+            accounting.getBondAmountByKeysCountWstETH(keysCount)
         );
 
         _addSigningKeys(id, keysCount, publicKeys, signatures);
@@ -372,7 +372,7 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting.depositWstETHWithPermit(
             msg.sender,
             id,
-            accounting.getRequiredBondWstETHForKeys(keysCount),
+            accounting.getBondAmountByKeysCountWstETH(keysCount),
             permit
         );
 
@@ -396,7 +396,10 @@ contract CSModule is ICSModule, CSModuleBase {
 
         require(
             msg.value ==
-                accounting.getRequiredBondETH(nodeOperatorId, keysCount),
+                accounting.getRequiredBondForNextKeys(
+                    nodeOperatorId,
+                    keysCount
+                ),
             "eth value is not equal to required bond"
         );
 
@@ -421,7 +424,7 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting.depositStETH(
             msg.sender,
             nodeOperatorId,
-            accounting.getRequiredBondStETH(nodeOperatorId, keysCount)
+            accounting.getRequiredBondForNextKeys(nodeOperatorId, keysCount)
         );
 
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
@@ -445,7 +448,7 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting.depositStETHWithPermit(
             msg.sender,
             nodeOperatorId,
-            accounting.getRequiredBondStETH(nodeOperatorId, keysCount),
+            accounting.getRequiredBondForNextKeys(nodeOperatorId, keysCount),
             permit
         );
 
@@ -468,7 +471,10 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting.depositWstETH(
             msg.sender,
             nodeOperatorId,
-            accounting.getRequiredBondWstETH(nodeOperatorId, keysCount)
+            accounting.getRequiredBondForNextKeysWstETH(
+                nodeOperatorId,
+                keysCount
+            )
         );
 
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
@@ -492,7 +498,10 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting.depositWstETHWithPermit(
             msg.sender,
             nodeOperatorId,
-            accounting.getRequiredBondWstETH(nodeOperatorId, keysCount),
+            accounting.getRequiredBondForNextKeysWstETH(
+                nodeOperatorId,
+                keysCount
+            ),
             permit
         );
 

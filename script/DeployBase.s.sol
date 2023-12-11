@@ -8,11 +8,12 @@ import "forge-std/Script.sol";
 import { HashConsensus } from "../lib/base-oracle/oracle/HashConsensus.sol";
 import { OssifiableProxy } from "../lib/proxy/OssifiableProxy.sol";
 import { CSModule } from "../src/CSModule.sol";
-import { CSAccounting, IWstETH } from "../src/CSAccounting.sol";
+import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
+import { IWstETH } from "../src/interfaces/IWstETH.sol";
 
 abstract contract DeployBase is Script {
     // TODO: some contracts of the module probably should be deployed behind a proxy

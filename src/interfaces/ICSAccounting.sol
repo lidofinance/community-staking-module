@@ -16,7 +16,7 @@ interface ICSAccounting {
         uint256 nodeOperatorId
     ) external view returns (uint256);
 
-    function getBondEth(uint256 nodeOperatorId) external view returns (uint256);
+    function getBond(uint256 nodeOperatorId) external view returns (uint256);
 
     function depositWstETHWithPermit(
         address from,
@@ -49,29 +49,20 @@ interface ICSAccounting {
         uint256 nodeOperatorId
     ) external payable returns (uint256);
 
-    function getRequiredBondETHForKeys(
+    function getBondAmountByKeysCount(
+        uint256 keys
+    ) external view returns (uint256);
+
+    function getBondAmountByKeysCountWstETH(
         uint256 keysCount
     ) external view returns (uint256);
 
-    function getRequiredBondStETHForKeys(
-        uint256 keysCount
-    ) external view returns (uint256);
-
-    function getRequiredBondWstETHForKeys(
-        uint256 keysCount
-    ) external view returns (uint256);
-
-    function getRequiredBondETH(
+    function getRequiredBondForNextKeys(
         uint256 nodeOperatorId,
         uint256 newKeysCount
     ) external view returns (uint256);
 
-    function getRequiredBondStETH(
-        uint256 nodeOperatorId,
-        uint256 newKeysCount
-    ) external view returns (uint256);
-
-    function getRequiredBondWstETH(
+    function getRequiredBondForNextKeysWstETH(
         uint256 nodeOperatorId,
         uint256 newKeysCount
     ) external view returns (uint256);

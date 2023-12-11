@@ -410,7 +410,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         csm.addNodeOperatorStETH(1, keys, signatures);
         uint256 noId = csm.getNodeOperatorsCount() - 1;
 
-        uint256 required = accounting.getRequiredBondStETH(0, 1);
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
         vm.deal(nodeOperator, required);
         vm.prank(nodeOperator);
         stETH.submit{ value: required }(address(0));
@@ -460,7 +460,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         uint256 noId = createNodeOperator();
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
 
-        uint256 required = accounting.getRequiredBondETH(0, 1);
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
         vm.deal(nodeOperator, required);
         vm.prank(nodeOperator);
         {
