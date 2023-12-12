@@ -85,6 +85,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         );
         accounting.grantRole(accounting.LOCK_BOND_ROLE_ROLE(), address(csm));
         accounting.grantRole(accounting.RELEASE_BOND_ROLE(), address(csm));
+        accounting.grantRole(accounting.RESET_BENEFITS_ROLE(), address(csm));
         vm.stopPrank();
     }
 
@@ -980,6 +981,25 @@ contract CsmQueueOps is CSMCommon {
         csm.cleanDepositQueue(LOOKUP_DEPTH, NULL_POINTER);
         _assertQueueIsEmpty();
     }
+
+    function test_unvetKeys_feeApplied() public {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit UnvettingFeeApplied(noId);
+        csm.unvetKeys(noId);
+    }
+
+    function test_unvetKeys_feeEqualsToBond() public {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+        csm.setUnvettingFee(BOND_SIZE);
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.resetBenefits.selector, noId)
+        );
+        csm.unvetKeys(noId);
+    }
 }
 
 contract CsmViewKeys is CSMCommon {
@@ -1637,6 +1657,15 @@ contract CsmPenalize is CSMCommon {
         CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
         assertEq(no.totalVettedValidators, 0);
     }
+
+    function test_penalize_ResetBenefitsIfNoBond() public {
+        uint256 noId = createNodeOperator();
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.resetBenefits.selector, noId)
+        );
+        csm.penalize(noId, BOND_SIZE);
+    }
 }
 
 contract CsmInitELRewardsStealingPenalty is CSMCommon {
@@ -1697,6 +1726,20 @@ contract CsmSettle is CSMCommon {
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(lock.amount, 0 ether);
         assertEq(lock.retentionUntil, 0);
+    }
+
+    function test_settleELRewardsStealingPenalty_penalizeEntireBond() public {
+        uint256 noId = createNodeOperator();
+        uint256 amount = BOND_SIZE;
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+        csm.initELRewardsStealingPenalty(noId, block.number, amount);
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.resetBenefits.selector, noId)
+        );
+        csm.settleELRewardsStealingPenalty(idsToSettle);
     }
 
     function test_settleELRewardsStealingPenalty_WhenRetentionPeriodIsExpired()

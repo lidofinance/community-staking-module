@@ -994,16 +994,27 @@ contract CSModule is ICSModule, CSModuleBase {
         emit VettedSigningKeysCountChanged(nodeOperatorId, no.totalVettedKeys);
     }
 
-    function _unvetIfUnbonded(uint256 nodeOperatorId) internal {
+    function _checkForUnbondedKeys(uint256 nodeOperatorId) internal {
         uint256 unbondedKeys = accounting.getUnbondedKeysCount(nodeOperatorId);
         if (unbondedKeys > 0) {
             _unvetKeys(nodeOperatorId);
         }
     }
 
+    /// @notice any penalty might cause bond out, so we need to clear any benefits
+    /// @param nodeOperatorId ID of the node operator
+    function _checkForBondOut(uint256 nodeOperatorId) internal {
+        uint256 shares = accounting.getBondShares(nodeOperatorId);
+        if (shares == 0) {
+            accounting.resetBenefits(nodeOperatorId);
+        }
+    }
+
     function _applyUnvettingFee(uint256 nodeOperatorId) internal {
         accounting.penalize(nodeOperatorId, unvettingFee);
         emit UnvettingFeeApplied(nodeOperatorId);
+
+        _checkForBondOut(nodeOperatorId);
     }
 
     /// @notice Reports EL rewards stealing for the given node operator.
@@ -1018,7 +1029,7 @@ contract CSModule is ICSModule, CSModuleBase {
         // TODO check role
         accounting.lockBondETH(nodeOperatorId, amount);
 
-        _unvetIfUnbonded(nodeOperatorId);
+        _checkForUnbondedKeys(nodeOperatorId);
 
         emit ELRewardsStealingPenaltyInitiated(
             nodeOperatorId,
@@ -1043,6 +1054,7 @@ contract CSModule is ICSModule, CSModuleBase {
                 bondLock.retentionUntil >= block.timestamp
             ) {
                 accounting.penalize(nodeOperatorId, bondLock.amount);
+                _checkForBondOut(nodeOperatorId);
             }
             accounting.releaseLockedBondETH(nodeOperatorId, bondLock.amount);
         }
@@ -1057,7 +1069,8 @@ contract CSModule is ICSModule, CSModuleBase {
     ) public onlyExistingNodeOperator(nodeOperatorId) {
         // TODO check role
         accounting.penalize(nodeOperatorId, amount);
-        _unvetIfUnbonded(nodeOperatorId);
+        _checkForUnbondedKeys(nodeOperatorId);
+        _checkForBondOut(nodeOperatorId);
     }
 
     /// @notice Called when withdrawal credentials changed by DAO

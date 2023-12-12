@@ -102,4 +102,6 @@ interface ICSAccounting {
     function lockBondETH(uint256 nodeOperatorId, uint256 amount) external;
 
     function penalize(uint256 nodeOperatorId, uint256 shares) external;
+
+    function resetBenefits(uint256 nodeOperatorId) external;
 }

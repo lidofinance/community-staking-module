@@ -108,6 +108,7 @@ contract CSAccountingBaseTest is
         accounting.grantRole(accounting.RELEASE_BOND_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_MULTIPLIER_ROLE(), admin);
+        accounting.grantRole(accounting.RESET_BENEFITS_ROLE(), admin);
         vm.stopPrank();
     }
 
@@ -6524,7 +6525,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
 
 contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
     function test_lockBondETH() public {
-        mock_getNodeOperatorsCount();
+        mock_getNodeOperatorsCount(1);
         vm.deal(user, 32 ether);
         vm.prank(user);
         accounting.depositETH{ value: 32 ether }(user, 0);
@@ -6535,7 +6536,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
     }
 
     function test_lockBondETH_secondLock() public {
-        mock_getNodeOperatorsCount();
+        mock_getNodeOperatorsCount(1);
         vm.deal(user, 32 ether);
         vm.prank(user);
         accounting.depositETH{ value: 32 ether }(user, 0);
@@ -6556,7 +6557,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
     }
 
     function test_lockBondETH_secondLockAfterFirstExpired() public {
-        mock_getNodeOperatorsCount();
+        mock_getNodeOperatorsCount(1);
         uint256 retentionPeriod = accounting.getBondLockRetentionPeriod();
         vm.deal(user, 32 ether);
         vm.prank(user);
@@ -6575,7 +6576,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
     }
 
     function test_lockBondETH_RevertWhen_DoesNotHaveRole() public {
-        mock_getNodeOperatorsCount();
+        mock_getNodeOperatorsCount(1);
 
         vm.expectRevert(
             bytes(
@@ -6587,6 +6588,40 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         );
         vm.prank(stranger);
         accounting.lockBondETH(0, 1 ether);
+    }
+}
+
+contract CSAccountingResetBenefitsTest is CSAccountingBaseTest {
+    function test_resetBenefits() public {
+        mock_getNodeOperatorsCount(1);
+
+        vm.prank(admin);
+        vm.expectEmit(true, true, true, true, address(accounting));
+        emit BenefitsReset(0);
+        accounting.resetBenefits(0);
+    }
+
+    function test_resetBenefits_revertWhenDoesNotHaveRole() public {
+        mock_getNodeOperatorsCount(1);
+
+        vm.expectRevert(
+            bytes(
+                Utilities.accessErrorString(
+                    stranger,
+                    accounting.RESET_BENEFITS_ROLE()
+                )
+            )
+        );
+        vm.prank(stranger);
+        accounting.resetBenefits(0);
+    }
+
+    function test_resetBenefits_revertWhenNotExistedOperator() public {
+        mock_getNodeOperatorsCount(1);
+
+        vm.prank(admin);
+        vm.expectRevert("node operator does not exist");
+        accounting.resetBenefits(1);
     }
 }
 

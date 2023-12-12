@@ -53,6 +53,7 @@ contract CSAccountingBase {
     );
     event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
     event BondLockReleased(uint256 indexed nodeOperatorId, uint256 amount);
+    event BenefitsReset(uint256 indexed nodeOperatorId);
 
     error NotOwnerToClaim(address msgSender, address owner);
     error InvalidSender();
@@ -86,6 +87,8 @@ contract CSAccounting is
         keccak256("SET_BOND_CURVE_ROLE"); // 0x645c9e6d2a86805cb5a28b1e4751c0dab493df7cf935070ce405489ba1a7bf72
     bytes32 public constant SET_BOND_MULTIPLIER_ROLE =
         keccak256("SET_BOND_MULTIPLIER_ROLE"); // 0x62131145aee19b18b85aa8ead52ba87f0efb6e61e249155edc68a2c24e8f79b5
+    bytes32 public constant RESET_BENEFITS_ROLE =
+        keccak256("RESET_BENEFITS_ROLE");
 
     ILidoLocator private immutable LIDO_LOCATOR;
     ICSModule private immutable CSM;
@@ -158,6 +161,19 @@ contract CSAccounting is
         uint256 basisPoints
     ) external onlyRole(SET_BOND_MULTIPLIER_ROLE) {
         _setBondMultiplier(nodeOperatorId, basisPoints);
+    }
+
+    /// @notice Resets all individual benefits for the given node operator.
+    /// @param nodeOperatorId id of the node operator to reset benefits for.
+    function resetBenefits(
+        uint256 nodeOperatorId
+    )
+        external
+        onlyExistingNodeOperator(nodeOperatorId)
+        onlyRole(RESET_BENEFITS_ROLE)
+    {
+        _resetBondMultiplier(nodeOperatorId);
+        emit BenefitsReset(nodeOperatorId);
     }
 
     /// @notice Pauses accounting by DAO decision.
