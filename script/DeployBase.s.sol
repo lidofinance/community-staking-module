@@ -136,7 +136,7 @@ abstract contract DeployBase is Script {
             deployJson.set("CSFeeOracle", address(oracle));
             deployJson.set("CSFeeDistributor", address(feeDistributor));
             deployJson.set("HashConsensus", address(hashConsensus));
-            vm.writeJson(deployJson.str, "./out/deploy.json");
+            vm.writeJson(deployJson.str, _deployJsonFilename());
         }
 
         vm.stopBroadcast();
@@ -162,5 +162,26 @@ abstract contract DeployBase is Script {
 
     function _refSlotFromEpoch(uint256 epoch) internal view returns (uint256) {
         return epoch * SLOTS_PER_EPOCH - 1;
+    }
+
+    function _deployJsonFilename() internal returns (string memory) {
+        return
+            string(
+                abi.encodePacked(
+                    "./out/",
+                    "deploy-",
+                    _deployJsonSuffix(),
+                    ".json"
+                )
+            );
+    }
+
+    function _deployJsonSuffix() internal returns (string memory) {
+        // prettier-ignore
+        return
+            block.chainid == 17000 ? "holesky" :
+            block.chainid == 1 ? "mainnet" :
+            block.chainid == 5 ? "goerli" :
+            /* default: */ "unknown";
     }
 }
