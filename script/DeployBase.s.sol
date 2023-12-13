@@ -14,6 +14,8 @@ import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 
+import { JsonObj, Json } from "./utils/Json.sol";
+
 abstract contract DeployBase is Script {
     // TODO: some contracts of the module probably should be deployed behind a proxy
     uint256 immutable CHAIN_ID;
@@ -127,6 +129,14 @@ abstract contract DeployBase is Script {
                 consensusVersion: 1,
                 lastProcessingRefSlot: _refSlotFromEpoch(INITIALIZATION_EPOCH)
             });
+
+            JsonObj memory deployJson = Json.newObj();
+            deployJson.set("CSModule", address(csm));
+            deployJson.set("CSAccounting", address(accounting));
+            deployJson.set("CSFeeOracle", address(oracle));
+            deployJson.set("CSFeeDistributor", address(feeDistributor));
+            deployJson.set("HashConsensus", address(hashConsensus));
+            vm.writeJson(deployJson.str, "./out/deploy.json");
         }
 
         vm.stopBroadcast();

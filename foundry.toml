@@ -6,6 +6,7 @@ cache_path  = "cache"
 optimizer = true
 optimizer_runs = 1_000
 block_gas_limit = 30_000_000
+fs_permissions = [{ access = "write", path = "./out" }]
 
 [fmt]
 line_length = 80
