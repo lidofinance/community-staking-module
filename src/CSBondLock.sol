@@ -76,13 +76,12 @@ abstract contract CSBondLock is CSBondLockBase {
         if (amount == 0) {
             revert InvalidBondLockAmount();
         }
-        bool prevLockExpired = _bondLock[nodeOperatorId].retentionUntil <
-            block.timestamp;
+        if (block.timestamp < _bondLock[nodeOperatorId].retentionUntil) {
+            amount += _bondLock[nodeOperatorId].amount;
+        }
         _changeBondLock({
             nodeOperatorId: nodeOperatorId,
-            amount: prevLockExpired
-                ? amount
-                : _bondLock[nodeOperatorId].amount + amount,
+            amount: amount,
             retentionUntil: block.timestamp + _bondLockRetentionPeriod
         });
     }

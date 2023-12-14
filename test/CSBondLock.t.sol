@@ -113,23 +113,31 @@ contract CSBondLockTest is Test, CSBondLockBase {
         assertEq(lock.retentionUntil, retentionUntil);
     }
 
-    function test_lock_WhenSecondTime() public {
-        uint256 retentionPeriod = bondLock.getBondLockRetentionPeriod();
+    function test_lock_secondLock() public {
         uint256 noId = 0;
-        uint256 amount = 1 ether;
-        bondLock.lock(noId, amount);
 
-        uint256 newBlockTimestamp = block.timestamp + 1 seconds;
-        vm.warp(newBlockTimestamp);
-        uint256 newRetentionUntil = newBlockTimestamp + retentionPeriod;
+        bondLock.lock(noId, 1 ether);
+        CSBondLock.BondLock memory lockBefore = bondLock.get(noId);
+        vm.warp(block.timestamp + 1 hours);
 
-        vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondLockChanged(noId, amount + 1.5 ether, newRetentionUntil);
-        bondLock.lock(noId, 1.5 ether);
-
+        bondLock.lock(noId, 1 ether);
         CSBondLock.BondLock memory lock = bondLock.get(noId);
-        assertEq(lock.amount, amount + 1.5 ether);
-        assertEq(lock.retentionUntil, newRetentionUntil);
+        assertEq(lock.amount, 2 ether);
+        assertEq(lock.retentionUntil, lockBefore.retentionUntil + 1 hours);
+    }
+
+    function test_lock_secondLockAfterFirstExpired() public {
+        uint256 noId = 0;
+        uint256 retentionPeriod = bondLock.getBondLockRetentionPeriod();
+
+        bondLock.lock(noId, 1 ether);
+        CSBondLock.BondLock memory lockBefore = bondLock.get(noId);
+        vm.warp(lockBefore.retentionUntil + 1 hours);
+
+        bondLock.lock(noId, 1 ether);
+        CSBondLock.BondLock memory lock = bondLock.get(noId);
+        assertEq(lock.amount, 1 ether);
+        assertEq(lock.retentionUntil, block.timestamp + retentionPeriod);
     }
 
     function test_lock_RevertWhen_ZeroAmount() public {

@@ -995,18 +995,17 @@ contract CSModule is ICSModule, CSModuleBase {
     }
 
     function _checkForUnbondedKeys(uint256 nodeOperatorId) internal {
-        uint256 unbondedKeys = accounting.getUnbondedKeysCount(nodeOperatorId);
-        if (unbondedKeys > 0) {
+        if (accounting.getUnbondedKeysCount(nodeOperatorId) > 0) {
             _unvetKeys(nodeOperatorId);
         }
     }
 
-    /// @notice any penalty might cause bond out, so we need to clear any benefits
+    /// @notice any penalty might cause bond out, so we need to clear any benefits from the node operator
     /// @param nodeOperatorId ID of the node operator
-    function _checkForBondOut(uint256 nodeOperatorId) internal {
+    function _checkForOutOfBond(uint256 nodeOperatorId) internal {
         uint256 shares = accounting.getBondShares(nodeOperatorId);
         if (shares == 0) {
-            accounting.resetBenefits(nodeOperatorId);
+            accounting.resetBondMultiplier(nodeOperatorId);
         }
     }
 
@@ -1014,10 +1013,11 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting.penalize(nodeOperatorId, unvettingFee);
         emit UnvettingFeeApplied(nodeOperatorId);
 
-        _checkForBondOut(nodeOperatorId);
+        _checkForOutOfBond(nodeOperatorId);
     }
 
     /// @notice Reports EL rewards stealing for the given node operator.
+    /// @dev The funds will be locked, so if there any unbonded keys after that, they will be unvetted.
     /// @param nodeOperatorId id of the node operator to report EL rewards stealing for.
     /// @param blockNumber consensus layer block number of the proposed block with EL rewards stealing.
     /// @param amount amount of stolen EL rewards in ETH.
@@ -1046,17 +1046,10 @@ contract CSModule is ICSModule, CSModuleBase {
     ) public {
         for (uint256 i; i < nodeOperatorIds.length; ++i) {
             uint256 nodeOperatorId = nodeOperatorIds[i];
-            ICSAccounting.BondLock memory bondLock = accounting
-                .getLockedBondInfo(nodeOperatorId);
-            uint256 retentionPeriod = accounting.getBondLockRetentionPeriod();
-            if (
-                bondLock.amount > 0 &&
-                bondLock.retentionUntil >= block.timestamp
-            ) {
-                accounting.penalize(nodeOperatorId, bondLock.amount);
-                _checkForBondOut(nodeOperatorId);
-            }
-            accounting.releaseLockedBondETH(nodeOperatorId, bondLock.amount);
+            if (nodeOperatorId >= _nodeOperatorsCount)
+                revert NodeOperatorDoesNotExist();
+            accounting.settleLockedBondETH(nodeOperatorId);
+            _checkForOutOfBond(nodeOperatorId);
         }
     }
 
@@ -1070,7 +1063,7 @@ contract CSModule is ICSModule, CSModuleBase {
         // TODO check role
         accounting.penalize(nodeOperatorId, amount);
         _checkForUnbondedKeys(nodeOperatorId);
-        _checkForBondOut(nodeOperatorId);
+        _checkForOutOfBond(nodeOperatorId);
     }
 
     /// @notice Called when withdrawal credentials changed by DAO

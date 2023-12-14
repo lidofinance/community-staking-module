@@ -53,7 +53,6 @@ contract CSAccountingBase {
     );
     event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
     event BondLockReleased(uint256 indexed nodeOperatorId, uint256 amount);
-    event BenefitsReset(uint256 indexed nodeOperatorId);
 
     error NotOwnerToClaim(address msgSender, address owner);
     error InvalidSender();
@@ -83,12 +82,11 @@ contract CSAccounting is
     bytes32 public constant LOCK_BOND_ROLE_ROLE =
         keccak256("LOCK_BOND_ROLE_ROLE"); // 0x36ff2e3971b3c54917aa7f53b6db795a06950983343e75040614a29e789e7bae
     bytes32 public constant RELEASE_BOND_ROLE = keccak256("RELEASE_BOND_ROLE"); // 0xc2978b4baa6c8ed096f1f65a0b92abc3771cb669afce20daa9a5f3fbcd13dea1
+    bytes32 public constant SETTLE_BOND_ROLE = keccak256("SETTLE_BOND_ROLE");
     bytes32 public constant SET_BOND_CURVE_ROLE =
         keccak256("SET_BOND_CURVE_ROLE"); // 0x645c9e6d2a86805cb5a28b1e4751c0dab493df7cf935070ce405489ba1a7bf72
     bytes32 public constant SET_BOND_MULTIPLIER_ROLE =
         keccak256("SET_BOND_MULTIPLIER_ROLE"); // 0x62131145aee19b18b85aa8ead52ba87f0efb6e61e249155edc68a2c24e8f79b5
-    bytes32 public constant RESET_BENEFITS_ROLE =
-        keccak256("RESET_BENEFITS_ROLE");
 
     ILidoLocator private immutable LIDO_LOCATOR;
     ICSModule private immutable CSM;
@@ -163,17 +161,12 @@ contract CSAccounting is
         _setBondMultiplier(nodeOperatorId, basisPoints);
     }
 
-    /// @notice Resets all individual benefits for the given node operator.
-    /// @param nodeOperatorId id of the node operator to reset benefits for.
-    function resetBenefits(
+    /// @notice Resets bond multiplier to the default value for the given node operator.
+    /// @param nodeOperatorId id of the node operator.
+    function resetBondMultiplier(
         uint256 nodeOperatorId
-    )
-        external
-        onlyExistingNodeOperator(nodeOperatorId)
-        onlyRole(RESET_BENEFITS_ROLE)
-    {
+    ) external onlyRole(SET_BOND_MULTIPLIER_ROLE) {
         _resetBondMultiplier(nodeOperatorId);
-        emit BenefitsReset(nodeOperatorId);
     }
 
     /// @notice Pauses accounting by DAO decision.
@@ -849,6 +842,19 @@ contract CSAccounting is
         emit BondLockCompensated(nodeOperatorId, msg.value);
     }
 
+    /// @notice Settles locked bond ETH for the given node operator.
+    /// @param nodeOperatorId id of the node operator to settle locked bond for.
+    function settleLockedBondETH(
+        uint256 nodeOperatorId
+    ) external onlyRole(SETTLE_BOND_ROLE) {
+        BondLock memory lockInfo = CSBondLock._get(nodeOperatorId);
+        uint256 lockedAmount = getActualLockedBondETH(nodeOperatorId);
+        if (lockedAmount > 0) {
+            _penalize(nodeOperatorId, lockedAmount);
+        }
+        CSBondLock._reduceAmount(nodeOperatorId, lockInfo.amount);
+    }
+
     /// @notice Burn all bond and request exits for all node operators' validators.
     /// @dev Called only by DAO. Have lifetime. Once expired can never be called.
     function sealAccounting() external onlyRole(SEAL_ROLE) {
@@ -871,11 +877,11 @@ contract CSAccounting is
     function penalize(
         uint256 nodeOperatorId,
         uint256 amount
-    )
-        public
-        onlyRole(INSTANT_PENALIZE_BOND_ROLE)
-        onlyExistingNodeOperator(nodeOperatorId)
-    {
+    ) public onlyRole(INSTANT_PENALIZE_BOND_ROLE) {
+        _penalize(nodeOperatorId, amount);
+    }
+
+    function _penalize(uint256 nodeOperatorId, uint256 amount) internal {
         uint256 penaltyShares = _sharesByEth(amount);
         uint256 currentShares = getBondShares(nodeOperatorId);
         uint256 sharesToBurn = penaltyShares < currentShares
