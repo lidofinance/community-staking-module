@@ -52,7 +52,7 @@ contract CSBondCurveTest is Test, CSBondCurveBase {
 
         uint256 addedId = bondCurve.addBondCurve(_bondCurve);
 
-        CSBondCurve.BondCurve memory added = bondCurve.getOne(addedId);
+        CSBondCurve.BondCurve memory added = bondCurve.getCurveInfo(addedId);
 
         assertEq(added.id, 2);
         assertEq(added.points.length, 2);
@@ -83,7 +83,7 @@ contract CSBondCurveTest is Test, CSBondCurveBase {
         uint256[] memory curvePoints = new uint256[](1);
         curvePoints[0] = 16 ether;
         uint256 addedId = bondCurve.addBondCurve(curvePoints);
-        CSBondCurve.BondCurve memory added = bondCurve.getOne(addedId);
+        CSBondCurve.BondCurve memory added = bondCurve.getCurveInfo(addedId);
 
         vm.expectEmit(true, true, true, true, address(bondCurve));
         emit DefaultBondCurveChanged(added.id);
@@ -118,7 +118,7 @@ contract CSBondCurveTest is Test, CSBondCurveBase {
         curvePoints[0] = 16 ether;
         uint256 addedId = bondCurve.addBondCurve(curvePoints);
 
-        CSBondCurve.BondCurve memory added = bondCurve.getOne(addedId);
+        CSBondCurve.BondCurve memory added = bondCurve.getCurveInfo(addedId);
         bondCurve.setBondCurve(noId, added.id);
         CSBondCurve.BondCurve memory set = bondCurve.getBondCurve(noId);
 
@@ -135,7 +135,7 @@ contract CSBondCurveTest is Test, CSBondCurveBase {
         uint256[] memory curvePoints = new uint256[](1);
         curvePoints[0] = 16 ether;
         uint256 addedId = bondCurve.addBondCurve(curvePoints);
-        CSBondCurve.BondCurve memory added = bondCurve.getOne(addedId);
+        CSBondCurve.BondCurve memory added = bondCurve.getCurveInfo(addedId);
         bondCurve.setBondCurve(noId, added.id);
 
         vm.expectEmit(true, true, true, true, address(bondCurve));

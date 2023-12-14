@@ -115,7 +115,9 @@ abstract contract CSBondCurve is CSBondCurveBase {
 
     /// @notice Returns bond curve for the given curve id.
     /// @param curveId curve id to get bond curve for.
-    function getOne(uint256 curveId) public view returns (BondCurve memory) {
+    function getCurveInfo(
+        uint256 curveId
+    ) public view returns (BondCurve memory) {
         return bondCurves[curveId - 1];
     }
 

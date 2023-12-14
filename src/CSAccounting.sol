@@ -120,7 +120,7 @@ contract CSAccounting is
     /// @param bondCurve bond curve to add.
     function addBondCurve(
         uint256[] memory bondCurve
-    ) external onlyRole(SET_BOND_CURVE_ROLE) {
+    ) external onlyRole(ADD_BOND_CURVE_ROLE) {
         CSBondCurve._addBondCurve(bondCurve);
     }
 
@@ -305,6 +305,16 @@ contract CSAccounting is
         return
             WSTETH.getWstETHByStETH(
                 CSBondCurve.getBondAmountByKeysCount(keysCount)
+            );
+    }
+
+    function getBondAmountByKeysCountWstETH(
+        uint256 keysCount,
+        BondCurve memory curve
+    ) public view returns (uint256) {
+        return
+            WSTETH.getWstETHByStETH(
+                CSBondCurve.getBondAmountByKeysCount(keysCount, curve)
             );
     }
 
