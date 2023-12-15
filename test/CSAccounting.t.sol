@@ -104,7 +104,7 @@ contract CSAccountingBaseTest is
         vm.startPrank(admin);
         accounting.setFeeDistributor(address(feeDistributor));
         accounting.grantRole(accounting.INSTANT_PENALIZE_BOND_ROLE(), admin);
-        accounting.grantRole(accounting.LOCK_BOND_ROLE_ROLE(), admin);
+        accounting.grantRole(accounting.SET_BOND_LOCK_ROLE(), admin);
         accounting.grantRole(accounting.RELEASE_BOND_LOCK_ROLE(), admin);
         accounting.grantRole(accounting.SETTLE_BOND_LOCK_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
@@ -6539,7 +6539,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
             bytes(
                 Utilities.accessErrorString(
                     stranger,
-                    accounting.LOCK_BOND_ROLE_ROLE()
+                    accounting.SET_BOND_LOCK_ROLE()
                 )
             )
         );

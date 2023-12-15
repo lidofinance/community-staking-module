@@ -83,7 +83,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
             accounting.INSTANT_PENALIZE_BOND_ROLE(),
             address(csm)
         );
-        accounting.grantRole(accounting.LOCK_BOND_ROLE_ROLE(), address(csm));
+        accounting.grantRole(accounting.SET_BOND_LOCK_ROLE(), address(csm));
         accounting.grantRole(accounting.RELEASE_BOND_LOCK_ROLE(), address(csm));
         accounting.grantRole(accounting.SETTLE_BOND_LOCK_ROLE(), address(csm));
         accounting.grantRole(
