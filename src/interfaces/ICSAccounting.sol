@@ -109,5 +109,5 @@ interface ICSAccounting {
 
     function resetBondMultiplier(uint256 nodeOperatorId) external;
 
-    function penalize(uint256 nodeOperatorId, uint256 shares) external;
+    function penalize(uint256 nodeOperatorId, uint256 amount) external;
 }

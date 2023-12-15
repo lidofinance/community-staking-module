@@ -1003,8 +1003,7 @@ contract CSModule is ICSModule, CSModuleBase {
     /// @notice any penalty might cause bond out, so we need to clear any benefits from the node operator
     /// @param nodeOperatorId ID of the node operator
     function _checkForOutOfBond(uint256 nodeOperatorId) internal {
-        uint256 shares = accounting.getBondShares(nodeOperatorId);
-        if (shares == 0) {
+        if (accounting.getBondShares(nodeOperatorId) == 0) {
             accounting.resetBondMultiplier(nodeOperatorId);
         }
     }
@@ -1021,7 +1020,7 @@ contract CSModule is ICSModule, CSModuleBase {
     /// @param nodeOperatorId id of the node operator to report EL rewards stealing for.
     /// @param blockNumber consensus layer block number of the proposed block with EL rewards stealing.
     /// @param amount amount of stolen EL rewards in ETH.
-    function initELRewardsStealingPenalty(
+    function reportELRewardsStealingPenalty(
         uint256 nodeOperatorId,
         uint256 blockNumber,
         uint256 amount

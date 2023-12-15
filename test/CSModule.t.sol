@@ -84,8 +84,8 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
             address(csm)
         );
         accounting.grantRole(accounting.LOCK_BOND_ROLE_ROLE(), address(csm));
-        accounting.grantRole(accounting.RELEASE_BOND_ROLE(), address(csm));
-        accounting.grantRole(accounting.SETTLE_BOND_ROLE(), address(csm));
+        accounting.grantRole(accounting.RELEASE_BOND_LOCK_ROLE(), address(csm));
+        accounting.grantRole(accounting.SETTLE_BOND_LOCK_ROLE(), address(csm));
         accounting.grantRole(
             accounting.SET_BOND_MULTIPLIER_ROLE(),
             address(csm)
@@ -1678,14 +1678,14 @@ contract CsmPenalize is CSMCommon {
     }
 }
 
-contract CsmInitELRewardsStealingPenalty is CSMCommon {
-    function test_initELRewardsStealingPenalty_NoUnvet() public {
+contract CsmReportELRewardsStealingPenalty is CSMCommon {
+    function test_reportELRewardsStealingPenalty_NoUnvet() public {
         uint256 noId = createNodeOperator();
         csm.vetKeys(noId, 1);
 
         vm.expectEmit(true, true, true, true, address(csm));
         emit ELRewardsStealingPenaltyInitiated(noId, 100, BOND_SIZE / 2);
-        csm.initELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
 
         uint256 lockedBond = accounting.getActualLockedBondETH(noId);
         assertEq(lockedBond, BOND_SIZE / 2);
@@ -1694,20 +1694,20 @@ contract CsmInitELRewardsStealingPenalty is CSMCommon {
         assertEq(no.totalVettedValidators, 1);
     }
 
-    function test_initELRewardsStealingPenalty_UnvetIfUnbonded() public {
+    function test_reportELRewardsStealingPenalty_UnvetIfUnbonded() public {
         uint256 noId = createNodeOperator(2);
         csm.vetKeys(noId, 2);
 
         vm.expectEmit(true, true, true, true, address(csm));
         emit VettedSigningKeysCountChanged(noId, 0);
-        csm.initELRewardsStealingPenalty(noId, 100, BOND_SIZE);
+        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE);
     }
 
-    function test_initELRewardsStealingPenalty_RevertWhenNoNodeOperator()
+    function test_reportELRewardsStealingPenalty_RevertWhenNoNodeOperator()
         public
     {
         vm.expectRevert(NodeOperatorDoesNotExist.selector);
-        csm.initELRewardsStealingPenalty(0, 100, 1 ether);
+        csm.reportELRewardsStealingPenalty(0, 100, 1 ether);
     }
 }
 
@@ -1717,24 +1717,42 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         uint256 amount = 1 ether;
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
-        csm.initELRewardsStealingPenalty(noId, block.number, amount);
+        csm.reportELRewardsStealingPenalty(noId, block.number, amount);
 
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.resetBondMultiplier.selector,
+                noId
+            ),
+            0 // no called at all
+        );
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(lock.amount, 0 ether);
         assertEq(lock.retentionUntil, 0);
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs() public {
+        uint256 retentionPeriod = accounting.getBondLockRetentionPeriod();
         uint256 firstNoId = createNodeOperator();
         uint256 secondNoId = createNodeOperator();
         uint256[] memory idsToSettle = new uint256[](2);
         idsToSettle[0] = firstNoId;
         idsToSettle[1] = secondNoId;
-        csm.initELRewardsStealingPenalty(firstNoId, block.number, 1 ether);
-        csm.initELRewardsStealingPenalty(secondNoId, block.number, 2 ether);
+        csm.reportELRewardsStealingPenalty(firstNoId, block.number, 1 ether);
+        vm.warp(block.timestamp + retentionPeriod + 1 seconds);
+        csm.reportELRewardsStealingPenalty(secondNoId, block.number, BOND_SIZE);
 
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.resetBondMultiplier.selector,
+                secondNoId
+            ),
+            1 // called once for secondNoId
+        );
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(
@@ -1753,7 +1771,7 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         uint256 amount = BOND_SIZE;
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
-        csm.initELRewardsStealingPenalty(noId, block.number, amount);
+        csm.reportELRewardsStealingPenalty(noId, block.number, amount);
 
         vm.expectCall(
             address(accounting),
@@ -1773,17 +1791,23 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
         uint256 amount = 1 ether;
-        uint256 bondSharesBefore = accounting.getBondShares(noId);
 
-        csm.initELRewardsStealingPenalty(noId, block.number, amount);
+        csm.reportELRewardsStealingPenalty(noId, block.number, amount);
 
         vm.warp(block.timestamp + retentionPeriod + 1 seconds);
 
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.resetBondMultiplier.selector,
+                noId
+            ),
+            0 // no called at all
+        );
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(lock.amount, 0 ether);
         assertEq(lock.retentionUntil, 0);
-        assertEq(accounting.getBondShares(noId), bondSharesBefore);
     }
 }

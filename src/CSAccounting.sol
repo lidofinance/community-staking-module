@@ -81,8 +81,10 @@ contract CSAccounting is
         keccak256("INSTANT_PENALIZE_BOND_ROLE"); // 0x9909cf24c2d3bafa8c229558d86a1b726ba57c3ef6350848dcf434a4181b56c7
     bytes32 public constant LOCK_BOND_ROLE_ROLE =
         keccak256("LOCK_BOND_ROLE_ROLE"); // 0x36ff2e3971b3c54917aa7f53b6db795a06950983343e75040614a29e789e7bae
-    bytes32 public constant RELEASE_BOND_ROLE = keccak256("RELEASE_BOND_ROLE"); // 0xc2978b4baa6c8ed096f1f65a0b92abc3771cb669afce20daa9a5f3fbcd13dea1
-    bytes32 public constant SETTLE_BOND_ROLE = keccak256("SETTLE_BOND_ROLE");
+    bytes32 public constant RELEASE_BOND_LOCK_ROLE =
+        keccak256("RELEASE_BOND_LOCK_ROLE"); // 0xc2978b4baa6c8ed096f1f65a0b92abc3771cb669afce20daa9a5f3fbcd13dea1
+    bytes32 public constant SETTLE_BOND_LOCK_ROLE =
+        keccak256("SETTLE_BOND_LOCK_ROLE");
     bytes32 public constant SET_BOND_CURVE_ROLE =
         keccak256("SET_BOND_CURVE_ROLE"); // 0x645c9e6d2a86805cb5a28b1e4751c0dab493df7cf935070ce405489ba1a7bf72
     bytes32 public constant SET_BOND_MULTIPLIER_ROLE =
@@ -825,7 +827,7 @@ contract CSAccounting is
         uint256 amount
     )
         external
-        onlyRole(RELEASE_BOND_ROLE)
+        onlyRole(RELEASE_BOND_LOCK_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
         CSBondLock._reduceAmount(nodeOperatorId, amount);
@@ -846,7 +848,7 @@ contract CSAccounting is
     /// @param nodeOperatorId id of the node operator to settle locked bond for.
     function settleLockedBondETH(
         uint256 nodeOperatorId
-    ) external onlyRole(SETTLE_BOND_ROLE) {
+    ) external onlyRole(SETTLE_BOND_LOCK_ROLE) {
         BondLock memory lockInfo = CSBondLock._get(nodeOperatorId);
         uint256 lockedAmount = getActualLockedBondETH(nodeOperatorId);
         if (lockedAmount > 0) {

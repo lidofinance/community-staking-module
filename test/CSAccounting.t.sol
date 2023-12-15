@@ -105,8 +105,8 @@ contract CSAccountingBaseTest is
         accounting.setFeeDistributor(address(feeDistributor));
         accounting.grantRole(accounting.INSTANT_PENALIZE_BOND_ROLE(), admin);
         accounting.grantRole(accounting.LOCK_BOND_ROLE_ROLE(), admin);
-        accounting.grantRole(accounting.RELEASE_BOND_ROLE(), admin);
-        accounting.grantRole(accounting.SETTLE_BOND_ROLE(), admin);
+        accounting.grantRole(accounting.RELEASE_BOND_LOCK_ROLE(), admin);
+        accounting.grantRole(accounting.SETTLE_BOND_LOCK_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_MULTIPLIER_ROLE(), admin);
         vm.stopPrank();
