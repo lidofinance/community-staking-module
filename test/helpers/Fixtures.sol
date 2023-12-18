@@ -9,7 +9,7 @@ import { LidoLocatorMock } from "./mocks/LidoLocatorMock.sol";
 import { Stub } from "./mocks/Stub.sol";
 import "forge-std/Test.sol";
 
-contract Fixtures is StdCheats {
+contract Fixtures is StdCheats, Test {
     function initLido()
         public
         returns (
@@ -34,6 +34,12 @@ contract Fixtures is StdCheats {
             address(elVault)
         );
         wstETH = new WstETHMock(address(stETH));
+        vm.label(address(stETH), "lido");
+        vm.label(address(wstETH), "wstETH");
+        vm.label(address(locator), "locator");
+        vm.label(address(burner), "burner");
+        vm.label(address(wq), "wq");
+        vm.label(address(elVault), "elVault");
     }
 }
 

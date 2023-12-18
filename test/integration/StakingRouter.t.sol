@@ -49,8 +49,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
             address(locator),
             address(wstETH),
             address(csm),
-            8 weeks,
-            1 days
+            8 weeks
         );
         csm.setAccounting(address(accounting));
 

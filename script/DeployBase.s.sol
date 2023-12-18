@@ -86,8 +86,7 @@ abstract contract DeployBase is Script {
                 communityStakingModule: address(csm),
                 wstETH: address(wstETH),
                 // todo: arguable. should be discussed
-                bondLockRetentionPeriod: 8 weeks,
-                bondLockManagementPeriod: 1 weeks
+                bondLockRetentionPeriod: 8 weeks
             });
 
             CSFeeOracle oracleImpl = new CSFeeOracle({

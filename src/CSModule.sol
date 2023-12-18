@@ -94,6 +94,11 @@ contract CSModuleBase {
     event UnvettingFeeSet(uint256 unvettingFee);
 
     event UnvettingFeeApplied(uint256 indexed nodeOperatorId);
+    event ELRewardsStealingPenaltyInitiated(
+        uint256 indexed nodeOperatorId,
+        uint256 proposedBlockNumber,
+        uint256 stolenAmount
+    );
 
     error NodeOperatorDoesNotExist();
     error MaxNodeOperatorsCountReached();
@@ -105,6 +110,7 @@ contract CSModuleBase {
     error InvalidVetKeysPointer();
     error TargetLimitExceeded();
     error StuckKeysPresent();
+    error UnbondedKeysPresent();
     error InvalidTargetLimit();
     error StuckKeysHigherThanTotalDeposited();
 
@@ -181,7 +187,7 @@ contract CSModule is ICSModule, CSModuleBase {
 
     /// @notice Remove unvetting fee and disable set again
     function removeUnvettingFee() external {
-        // todo: implement me
+        // TODO: implement me
     }
 
     function _lido() internal view returns (ILido) {
@@ -220,7 +226,7 @@ contract CSModule is ICSModule, CSModuleBase {
         bytes calldata publicKeys,
         bytes calldata signatures
     ) external payable {
-        // TODO sanity checks
+        // TODO: sanity checks
 
         require(
             msg.value == accounting.getRequiredBondETHForKeys(keysCount),
@@ -289,7 +295,7 @@ contract CSModule is ICSModule, CSModuleBase {
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
     ) external {
-        // TODO sanity checks
+        // TODO: sanity checks
 
         uint256 id = _nodeOperatorsCount;
         if (id == MAX_NODE_OPERATORS_COUNT)
@@ -322,7 +328,7 @@ contract CSModule is ICSModule, CSModuleBase {
         bytes calldata publicKeys,
         bytes calldata signatures
     ) external {
-        // TODO sanity checks
+        // TODO: sanity checks
 
         uint256 id = _nodeOperatorsCount;
         if (id == MAX_NODE_OPERATORS_COUNT)
@@ -357,7 +363,7 @@ contract CSModule is ICSModule, CSModuleBase {
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
     ) external {
-        // TODO sanity checks
+        // TODO: sanity checks
 
         uint256 id = _nodeOperatorsCount;
         if (id == MAX_NODE_OPERATORS_COUNT)
@@ -440,7 +446,7 @@ contract CSModule is ICSModule, CSModuleBase {
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
     ) external {
-        // TODO sanity checks
+        // TODO: sanity checks
 
         accounting.depositStETHWithPermit(
             msg.sender,
@@ -487,7 +493,7 @@ contract CSModule is ICSModule, CSModuleBase {
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
     ) external {
-        // TODO sanity checks
+        // TODO: sanity checks
 
         accounting.depositWstETHWithPermit(
             msg.sender,
@@ -802,7 +808,7 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 nodeOperatorId,
         uint256 withdrawnBalance
     ) external {
-        // todo: implement me
+        // TODO: implement me
     }
 
     /// @notice Triggers the node operator's unbonded validator to exit
@@ -810,7 +816,7 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 nodeOperatorId,
         uint256 validatorId
     ) external {
-        // todo: implement me
+        // TODO: implement me
     }
 
     /// @notice Triggers the node operator's validator to exit by DAO decision
@@ -818,7 +824,7 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 nodeOperatorId,
         uint256 validatorId
     ) external {
-        // todo: implement me
+        // TODO: implement me
     }
 
     /// @notice Updates refunded validators count by StakingRouter
@@ -933,6 +939,8 @@ contract CSModule is ICSModule, CSModuleBase {
             vetKeysPointer > (no.totalExitedKeys + no.targetLimit)
         ) revert TargetLimitExceeded();
         if (no.stuckValidatorsCount > 0) revert StuckKeysPresent();
+        if (accounting.getUnbondedKeysCount(nodeOperatorId) > 0)
+            revert UnbondedKeysPresent();
     }
 
     /// @notice Unvets keys and charges fee. Called when key validator oracle checks the queue or manually by node operator manager
@@ -986,9 +994,76 @@ contract CSModule is ICSModule, CSModuleBase {
         emit VettedSigningKeysCountChanged(nodeOperatorId, no.totalVettedKeys);
     }
 
+    function _checkForUnbondedKeys(uint256 nodeOperatorId) internal {
+        if (accounting.getUnbondedKeysCount(nodeOperatorId) > 0) {
+            _unvetKeys(nodeOperatorId);
+        }
+    }
+
+    /// @notice any penalty might cause bond out, so we need to clear any benefits from the node operator
+    /// @param nodeOperatorId ID of the node operator
+    function _checkForOutOfBond(uint256 nodeOperatorId) internal {
+        // TODO: Should be done manually or automatically? Any penalty should reset bond multiplier or not?
+        if (accounting.getBondShares(nodeOperatorId) == 0) {
+            accounting.resetBondMultiplier(nodeOperatorId);
+        }
+    }
+
     function _applyUnvettingFee(uint256 nodeOperatorId) internal {
         accounting.penalize(nodeOperatorId, unvettingFee);
         emit UnvettingFeeApplied(nodeOperatorId);
+
+        _checkForOutOfBond(nodeOperatorId);
+    }
+
+    /// @notice Reports EL rewards stealing for the given node operator.
+    /// @dev The funds will be locked, so if there any unbonded keys after that, they will be unvetted.
+    /// @param nodeOperatorId id of the node operator to report EL rewards stealing for.
+    /// @param blockNumber consensus layer block number of the proposed block with EL rewards stealing.
+    /// @param amount amount of stolen EL rewards in ETH.
+    function reportELRewardsStealingPenalty(
+        uint256 nodeOperatorId,
+        uint256 blockNumber,
+        uint256 amount
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        // TODO: check role
+        accounting.lockBondETH(nodeOperatorId, amount);
+
+        _checkForUnbondedKeys(nodeOperatorId);
+
+        emit ELRewardsStealingPenaltyInitiated(
+            nodeOperatorId,
+            blockNumber,
+            amount
+        );
+    }
+
+    /// @dev Should be called by the committee.
+    /// @notice Settles blocked bond for the given node operators.
+    /// @param nodeOperatorIds ids of the node operators to settle blocked bond for.
+    function settleELRewardsStealingPenalty(
+        uint256[] memory nodeOperatorIds
+    ) public {
+        for (uint256 i; i < nodeOperatorIds.length; ++i) {
+            uint256 nodeOperatorId = nodeOperatorIds[i];
+            if (nodeOperatorId >= _nodeOperatorsCount)
+                revert NodeOperatorDoesNotExist();
+            accounting.settleLockedBondETH(nodeOperatorId);
+            _checkForOutOfBond(nodeOperatorId);
+        }
+    }
+
+    /// @notice Penalize bond by burning shares of the given node operator.
+    /// @param nodeOperatorId id of the node operator to penalize bond for.
+    /// @param amount amount of ETH to penalize.
+    function penalize(
+        uint256 nodeOperatorId,
+        uint256 amount
+    ) public onlyExistingNodeOperator(nodeOperatorId) {
+        // TODO: check role
+        accounting.penalize(nodeOperatorId, amount);
+        _checkForUnbondedKeys(nodeOperatorId);
+        _checkForOutOfBond(nodeOperatorId);
     }
 
     /// @notice Called when withdrawal credentials changed by DAO
@@ -1308,7 +1383,7 @@ contract CSModule is ICSModule, CSModuleBase {
     }
 
     modifier onlyStakingRouter() {
-        // TODO check the role
+        // TODO: check the role
         _;
     }
 }

@@ -25,6 +25,10 @@ contract CSBondCurveTestable is CSBondCurve {
         _setBondMultiplier(nodeOperatorId, basisPoints);
     }
 
+    function resetBondMultiplier(uint256 nodeOperatorId) external {
+        _resetBondMultiplier(nodeOperatorId);
+    }
+
     function getKeysCountByBondAmount(
         uint256 amount
     ) external view returns (uint256) {
@@ -148,6 +152,15 @@ contract CSBondCurveWithMultiplierTest is Test, CSBondCurveBase {
     function test_setBondMultiplier_RevertWhen_MoreThanMax() public {
         vm.expectRevert(CSBondCurve.InvalidMultiplier.selector);
         bondCurve.setBondMultiplier(0, 10001);
+    }
+
+    function test_resetBondMultiplier() public {
+        bondCurve.setBondMultiplier(0, 5000);
+
+        vm.expectEmit(true, true, true, true, address(bondCurve));
+        emit BondMultiplierChanged(0, 10000);
+        bondCurve.resetBondMultiplier(0);
+        assertEq(bondCurve.getBondMultiplier(0), 10000);
     }
 
     function test_getKeysCountByCurveValue() public {

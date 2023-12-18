@@ -81,6 +81,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
     uint256 internal constant BASIS_POINTS = 10000;
     uint256 internal constant MAX_BOND_MULTIPLIER = BASIS_POINTS; // x1
     uint256 internal constant MIN_BOND_MULTIPLIER = MAX_BOND_MULTIPLIER / 2; // x0.5
+    uint256 internal constant DEFAULT_BOND_MULTIPLIER = MAX_BOND_MULTIPLIER;
 
     uint256 internal _bondCurveTrend;
 
@@ -120,13 +121,18 @@ abstract contract CSBondCurve is CSBondCurveBase {
         emit BondMultiplierChanged(nodeOperatorId, basisPoints);
     }
 
+    function _resetBondMultiplier(uint256 nodeOperatorId) internal {
+        delete bondMultiplierBP[nodeOperatorId];
+        emit BondMultiplierChanged(nodeOperatorId, DEFAULT_BOND_MULTIPLIER);
+    }
+
     /// @notice Returns basis points of the bond multiplier for the given node operator.
-    ///         if it isn't set, the multiplier is x1 (MAX_BOND_MULTIPLIER)
+    ///         if it isn't set, the multiplier is x1 (DEFAULT_BOND_MULTIPLIER)
     function getBondMultiplier(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
         uint256 basisPoints = bondMultiplierBP[nodeOperatorId];
-        return basisPoints > 0 ? basisPoints : MAX_BOND_MULTIPLIER;
+        return basisPoints > 0 ? basisPoints : DEFAULT_BOND_MULTIPLIER;
     }
 
     /// @notice Returns keys count for the given bond amount.

@@ -33,8 +33,7 @@ contract CSAccountingForTests is CSAccounting {
         address lidoLocator,
         address wstETH,
         address communityStakingModule,
-        uint256 lockedBondRetentionPeriod,
-        uint256 lockedBondManagementPeriod
+        uint256 lockedBondRetentionPeriod
     )
         CSAccounting(
             bondCurve,
@@ -42,8 +41,7 @@ contract CSAccountingForTests is CSAccounting {
             lidoLocator,
             wstETH,
             communityStakingModule,
-            lockedBondRetentionPeriod,
-            lockedBondManagementPeriod
+            lockedBondRetentionPeriod
         )
     {}
 
@@ -100,21 +98,15 @@ contract CSAccountingBaseTest is
             address(locator),
             address(wstETH),
             address(stakingModule),
-            8 weeks,
-            1 days
+            8 weeks
         );
 
         vm.startPrank(admin);
         accounting.setFeeDistributor(address(feeDistributor));
         accounting.grantRole(accounting.INSTANT_PENALIZE_BOND_ROLE(), admin);
-        accounting.grantRole(
-            accounting.EL_REWARDS_STEALING_PENALTY_INIT_ROLE(),
-            admin
-        );
-        accounting.grantRole(
-            accounting.EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE(),
-            admin
-        );
+        accounting.grantRole(accounting.SET_BOND_LOCK_ROLE(), admin);
+        accounting.grantRole(accounting.RELEASE_BOND_LOCK_ROLE(), admin);
+        accounting.grantRole(accounting.SETTLE_BOND_LOCK_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_MULTIPLIER_ROLE(), admin);
         vm.stopPrank();
@@ -6531,6 +6523,31 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
     }
 }
 
+contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
+    function test_lockBondETH() public {
+        mock_getNodeOperatorsCount(1);
+
+        vm.prank(admin);
+        accounting.lockBondETH(0, 1 ether);
+        assertEq(accounting.getActualLockedBondETH(0), 1 ether);
+    }
+
+    function test_lockBondETH_RevertWhen_DoesNotHaveRole() public {
+        mock_getNodeOperatorsCount(1);
+
+        vm.expectRevert(
+            bytes(
+                Utilities.accessErrorString(
+                    stranger,
+                    accounting.SET_BOND_LOCK_ROLE()
+                )
+            )
+        );
+        vm.prank(stranger);
+        accounting.lockBondETH(0, 1 ether);
+    }
+}
+
 contract CSAccountingMiscTest is CSAccountingBaseTest {
     function test_totalBondShares() public {
         mock_getNodeOperatorsCount(2);
@@ -6613,5 +6630,30 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
 
         vm.prank(stranger);
         accounting.setBondMultiplier(0, 9500);
+    }
+
+    function test_resetBondMultiplier() public {
+        vm.prank(admin);
+        accounting.setBondMultiplier(0, 9500);
+
+        vm.prank(admin);
+        accounting.resetBondMultiplier(0);
+        assertEq(accounting.getBondMultiplier(0), 10000);
+    }
+
+    function test_resetBondMultiplier_RevertWhen_DoesNotHaveRole() public {
+        vm.prank(admin);
+        accounting.setBondMultiplier(0, 9500);
+
+        vm.expectRevert(
+            bytes(
+                Utilities.accessErrorString(
+                    stranger,
+                    accounting.SET_BOND_MULTIPLIER_ROLE()
+                )
+            )
+        );
+        vm.prank(stranger);
+        accounting.resetBondMultiplier(0);
     }
 }
