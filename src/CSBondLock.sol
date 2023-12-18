@@ -9,12 +9,9 @@ contract CSBondLockBase {
         uint256 newAmount,
         uint256 retentionUntil
     );
-    event BondLockPeriodsChanged(
-        uint256 retentionPeriod,
-        uint256 managementPeriod
-    );
+    event BondLockRetentionPeriodChanged(uint256 retentionPeriod);
 
-    error InvalidBondLockPeriods();
+    error InvalidBondLockRetentionPeriod();
     error InvalidBondLockAmount();
 }
 
@@ -27,48 +24,32 @@ abstract contract CSBondLock is CSBondLockBase {
     // todo: should be reconsidered
     uint256 public constant MIN_BOND_LOCK_RETENTION_PERIOD = 4 weeks;
     uint256 public constant MAX_BOND_LOCK_RETENTION_PERIOD = 365 days;
-    uint256 public constant MIN_BOND_LOCK_MANAGEMENT_PERIOD = 1 days;
-    uint256 public constant MAX_BOND_LOCK_MANAGEMENT_PERIOD = 7 days;
 
     uint256 internal _bondLockRetentionPeriod;
-    uint256 internal _bondLockManagementPeriod;
 
     mapping(uint256 => BondLock) internal _bondLock;
 
-    constructor(uint256 retentionPeriod, uint256 managementPeriod) {
-        _setBondLockPeriods(retentionPeriod, managementPeriod);
+    constructor(uint256 retentionPeriod) {
+        _setBondLockRetentionPeriod(retentionPeriod);
     }
 
-    function _setBondLockPeriods(
-        uint256 retention,
-        uint256 management
-    ) internal {
-        _validateBondLockPeriods(retention, management);
-        _bondLockRetentionPeriod = retention;
-        _bondLockManagementPeriod = management;
-        emit BondLockPeriodsChanged(retention, management);
+    function _setBondLockRetentionPeriod(uint256 retentionPeriod) internal {
+        if (
+            retentionPeriod < MIN_BOND_LOCK_RETENTION_PERIOD ||
+            retentionPeriod > MAX_BOND_LOCK_RETENTION_PERIOD
+        ) {
+            revert InvalidBondLockRetentionPeriod();
+        }
+        _bondLockRetentionPeriod = retentionPeriod;
+        emit BondLockRetentionPeriodChanged(retentionPeriod);
     }
 
-    function getBondLockPeriods()
+    function getBondLockRetentionPeriod()
         external
         view
-        returns (uint256 retention, uint256 management)
+        returns (uint256 retention)
     {
-        return (_bondLockRetentionPeriod, _bondLockManagementPeriod);
-    }
-
-    function _validateBondLockPeriods(
-        uint256 retention,
-        uint256 management
-    ) internal pure {
-        if (
-            retention < MIN_BOND_LOCK_RETENTION_PERIOD ||
-            retention > MAX_BOND_LOCK_RETENTION_PERIOD ||
-            management < MIN_BOND_LOCK_MANAGEMENT_PERIOD ||
-            management > MAX_BOND_LOCK_MANAGEMENT_PERIOD
-        ) {
-            revert InvalidBondLockPeriods();
-        }
+        return _bondLockRetentionPeriod;
     }
 
     /// @notice Returns information about the locked bond for the given node operator.
@@ -99,42 +80,14 @@ abstract contract CSBondLock is CSBondLockBase {
         if (amount == 0) {
             revert InvalidBondLockAmount();
         }
+        if (block.timestamp < _bondLock[nodeOperatorId].retentionUntil) {
+            amount += _bondLock[nodeOperatorId].amount;
+        }
         _changeBondLock({
             nodeOperatorId: nodeOperatorId,
-            amount: _bondLock[nodeOperatorId].amount + amount,
+            amount: amount,
             retentionUntil: block.timestamp + _bondLockRetentionPeriod
         });
-    }
-
-    /// @dev Should be called by the committee. Doesn't settle blocked bond if it is in the safe frame (1 day)
-    /// @notice Settles blocked bond for the given node operators.
-    /// @param nodeOperatorIds ids of the node operators to settle blocked bond for.
-    function _settle(uint256[] memory nodeOperatorIds) internal {
-        for (uint256 i; i < nodeOperatorIds.length; ++i) {
-            uint256 nodeOperatorId = nodeOperatorIds[i];
-            BondLock storage bondLock = _bondLock[nodeOperatorId];
-            if (
-                block.timestamp +
-                    _bondLockRetentionPeriod -
-                    bondLock.retentionUntil <
-                _bondLockManagementPeriod
-            ) {
-                // blocked bond in safe frame to manage it by committee or node operator
-                continue;
-            }
-            uint256 uncovered;
-            if (
-                bondLock.amount > 0 &&
-                bondLock.retentionUntil >= block.timestamp
-            ) {
-                uncovered = _penalize(nodeOperatorId, bondLock.amount);
-            }
-            _changeBondLock({
-                nodeOperatorId: nodeOperatorId,
-                amount: uncovered,
-                retentionUntil: bondLock.retentionUntil
-            });
-        }
     }
 
     function _reduceAmount(uint256 nodeOperatorId, uint256 amount) internal {
@@ -168,9 +121,4 @@ abstract contract CSBondLock is CSBondLockBase {
         });
         emit BondLockChanged(nodeOperatorId, amount, retentionUntil);
     }
-
-    function _penalize(
-        uint256 nodeOperatorId,
-        uint256 amount
-    ) internal virtual returns (uint256);
 }

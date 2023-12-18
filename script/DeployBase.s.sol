@@ -15,6 +15,8 @@ import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { IWstETH } from "../src/interfaces/IWstETH.sol";
 
+import { JsonObj, Json } from "./utils/Json.sol";
+
 abstract contract DeployBase is Script {
     // TODO: some contracts of the module probably should be deployed behind a proxy
     uint256 immutable CHAIN_ID;
@@ -85,8 +87,7 @@ abstract contract DeployBase is Script {
                 communityStakingModule: address(csm),
                 wstETH: address(wstETH),
                 // todo: arguable. should be discussed
-                bondLockRetentionPeriod: 8 weeks,
-                bondLockManagementPeriod: 1 weeks
+                bondLockRetentionPeriod: 8 weeks
             });
 
             CSFeeOracle oracleImpl = new CSFeeOracle({
@@ -128,6 +129,14 @@ abstract contract DeployBase is Script {
                 consensusVersion: 1,
                 lastProcessingRefSlot: _refSlotFromEpoch(INITIALIZATION_EPOCH)
             });
+
+            JsonObj memory deployJson = Json.newObj();
+            deployJson.set("CSModule", address(csm));
+            deployJson.set("CSAccounting", address(accounting));
+            deployJson.set("CSFeeOracle", address(oracle));
+            deployJson.set("CSFeeDistributor", address(feeDistributor));
+            deployJson.set("HashConsensus", address(hashConsensus));
+            vm.writeJson(deployJson.str, _deployJsonFilename());
         }
 
         vm.stopBroadcast();
@@ -153,5 +162,26 @@ abstract contract DeployBase is Script {
 
     function _refSlotFromEpoch(uint256 epoch) internal view returns (uint256) {
         return epoch * SLOTS_PER_EPOCH - 1;
+    }
+
+    function _deployJsonFilename() internal returns (string memory) {
+        return
+            string(
+                abi.encodePacked(
+                    "./out/",
+                    "deploy-",
+                    _deployJsonSuffix(),
+                    ".json"
+                )
+            );
+    }
+
+    function _deployJsonSuffix() internal returns (string memory) {
+        // prettier-ignore
+        return
+            block.chainid == 17000 ? "holesky" :
+            block.chainid == 1 ? "mainnet" :
+            block.chainid == 5 ? "goerli" :
+            /* default: */ "unknown";
     }
 }

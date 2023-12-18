@@ -33,8 +33,7 @@ contract CSAccountingForTests is CSAccounting {
         address lidoLocator,
         address wstETH,
         address communityStakingModule,
-        uint256 lockedBondRetentionPeriod,
-        uint256 lockedBondManagementPeriod
+        uint256 lockedBondRetentionPeriod
     )
         CSAccounting(
             bondCurve,
@@ -42,8 +41,7 @@ contract CSAccountingForTests is CSAccounting {
             lidoLocator,
             wstETH,
             communityStakingModule,
-            lockedBondRetentionPeriod,
-            lockedBondManagementPeriod
+            lockedBondRetentionPeriod
         )
     {}
 
@@ -97,21 +95,15 @@ contract CSAccountingBaseTest is
             address(locator),
             address(wstETH),
             address(stakingModule),
-            8 weeks,
-            1 days
+            8 weeks
         );
 
         vm.startPrank(admin);
         accounting.setFeeDistributor(address(feeDistributor));
         accounting.grantRole(accounting.INSTANT_PENALIZE_BOND_ROLE(), admin);
-        accounting.grantRole(
-            accounting.EL_REWARDS_STEALING_PENALTY_INIT_ROLE(),
-            admin
-        );
-        accounting.grantRole(
-            accounting.EL_REWARDS_STEALING_PENALTY_SETTLE_ROLE(),
-            admin
-        );
+        accounting.grantRole(accounting.SET_BOND_LOCK_ROLE(), admin);
+        accounting.grantRole(accounting.RELEASE_BOND_LOCK_ROLE(), admin);
+        accounting.grantRole(accounting.SETTLE_BOND_LOCK_ROLE(), admin);
         accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_DEFAULT_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
@@ -4036,6 +4028,31 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
 
         vm.prank(stranger);
         accounting.penalize(0, 20);
+    }
+}
+
+contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
+    function test_lockBondETH() public {
+        mock_getNodeOperatorsCount(1);
+
+        vm.prank(admin);
+        accounting.lockBondETH(0, 1 ether);
+        assertEq(accounting.getActualLockedBondETH(0), 1 ether);
+    }
+
+    function test_lockBondETH_RevertWhen_DoesNotHaveRole() public {
+        mock_getNodeOperatorsCount(1);
+
+        vm.expectRevert(
+            bytes(
+                Utilities.accessErrorString(
+                    stranger,
+                    accounting.SET_BOND_LOCK_ROLE()
+                )
+            )
+        );
+        vm.prank(stranger);
+        accounting.lockBondETH(0, 1 ether);
     }
 }
 
