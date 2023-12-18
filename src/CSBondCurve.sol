@@ -7,6 +7,10 @@ abstract contract CSBondCurveBase {
     event BondCurveAdded(uint256[] bondCurve);
     event DefaultBondCurveChanged(uint256 curveId);
     event BondCurveChanged(uint256 indexed nodeOperatorId, uint256 curveId);
+
+    error InvalidBondCurveLength();
+    error InvalidBondCurveValues();
+    error InvalidBondCurveId();
 }
 
 abstract contract CSBondCurve is CSBondCurveBase {
@@ -209,8 +213,4 @@ abstract contract CSBondCurve is CSBondCurveBase {
         }
         return low;
     }
-
-    error InvalidBondCurveLength();
-    error InvalidBondCurveValues();
-    error InvalidBondCurveId();
 }

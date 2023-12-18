@@ -29,6 +29,10 @@ contract CSBondLockTestable is CSBondLock {
     function reduceAmount(uint256 nodeOperatorId, uint256 amount) external {
         _reduceAmount(nodeOperatorId, amount);
     }
+
+    function remove(uint256 nodeOperatorId) external {
+        _remove(nodeOperatorId);
+    }
 }
 
 contract CSBondLockTest is Test, CSBondLockBase {
@@ -107,11 +111,13 @@ contract CSBondLockTest is Test, CSBondLockBase {
         uint256 noId = 0;
 
         bondLock.lock(noId, 1 ether);
-        CSBondLock.BondLock memory lockBefore = bondLock.get(noId);
+        CSBondLock.BondLock memory lockBefore = bondLock.getLockedBondInfo(
+            noId
+        );
         vm.warp(block.timestamp + 1 hours);
 
         bondLock.lock(noId, 1 ether);
-        CSBondLock.BondLock memory lock = bondLock.get(noId);
+        CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
         assertEq(lock.amount, 2 ether);
         assertEq(lock.retentionUntil, lockBefore.retentionUntil + 1 hours);
     }
@@ -121,7 +127,9 @@ contract CSBondLockTest is Test, CSBondLockBase {
         uint256 retentionPeriod = bondLock.getBondLockRetentionPeriod();
 
         bondLock.lock(noId, 1 ether);
-        CSBondLock.BondLock memory lockBefore = bondLock.get(noId);
+        CSBondLock.BondLock memory lockBefore = bondLock.getLockedBondInfo(
+            noId
+        );
         vm.warp(lockBefore.retentionUntil + 1 hours);
 
         bondLock.lock(noId, 1 ether);
@@ -187,5 +195,21 @@ contract CSBondLockTest is Test, CSBondLockBase {
 
         vm.expectRevert(InvalidBondLockAmount.selector);
         bondLock.reduceAmount(noId, amount + 1 ether);
+    }
+
+    function test_remove() public {
+        uint256 noId = 0;
+        uint256 amount = 100 ether;
+
+        bondLock.lock(noId, amount);
+
+        vm.expectEmit(true, true, true, true, address(bondLock));
+        emit BondLockChanged(noId, 0, 0);
+
+        bondLock.remove(noId);
+
+        CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(0);
+        assertEq(lock.amount, 0);
+        assertEq(lock.retentionUntil, 0);
     }
 }

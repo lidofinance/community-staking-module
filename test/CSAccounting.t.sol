@@ -4037,7 +4037,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
 
         vm.prank(admin);
         accounting.lockBondETH(0, 1 ether);
-        assertEq(accounting.getActualLockedBondETH(0), 1 ether);
+        assertEq(accounting.getActualLockedBond(0), 1 ether);
     }
 
     function test_lockBondETH_RevertWhen_DoesNotHaveRole() public {

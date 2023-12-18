@@ -178,6 +178,24 @@ abstract contract CSBondCore is CSBondCoreBase {
         emit BondClaimedWstETH(nodeOperatorId, to, amount);
     }
 
+    function _penalize(uint256 nodeOperatorId, uint256 amount) internal {
+        uint256 penaltyShares = _sharesByEth(amount);
+        uint256 currentShares = getBondShares(nodeOperatorId);
+        uint256 sharesToBurn = penaltyShares < currentShares
+            ? penaltyShares
+            : currentShares;
+        LIDO.transferSharesFrom(
+            address(this),
+            LIDO_LOCATOR.burner(),
+            sharesToBurn
+        );
+        _bondShares[nodeOperatorId] -= sharesToBurn;
+        totalBondShares -= sharesToBurn;
+        uint256 penaltyEth = _ethByShares(penaltyShares);
+        uint256 coveringEth = _ethByShares(sharesToBurn);
+        emit BondPenalized(nodeOperatorId, penaltyEth, coveringEth);
+    }
+
     function _sharesByEth(uint256 ethAmount) internal view returns (uint256) {
         return LIDO.getSharesByPooledEth(ethAmount);
     }

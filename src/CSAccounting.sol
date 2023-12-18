@@ -12,6 +12,7 @@ import { CSBondLock } from "./CSBondLock.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 
+// TODO: CSBondCoreBase should be removed here after CSBondCore tests are implemented
 abstract contract CSAccountingBase is CSBondCoreBase {
     event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
     event BondLockReleased(uint256 indexed nodeOperatorId, uint256 amount);
@@ -38,8 +39,6 @@ contract CSAccounting is
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
 
-    bytes32 public constant SEAL_ROLE = keccak256("SEAL_ROLE"); // 0x5561eed4f05defaf62a493aaa0919339d3f352fbf2261adb133a0c3655488b4f
-
     bytes32 public constant INSTANT_PENALIZE_BOND_ROLE =
         keccak256("INSTANT_PENALIZE_BOND_ROLE"); // 0x9909cf24c2d3bafa8c229558d86a1b726ba57c3ef6350848dcf434a4181b56c7
     bytes32 public constant SET_BOND_LOCK_ROLE =
@@ -56,6 +55,7 @@ contract CSAccounting is
         keccak256("SET_BOND_CURVE_ROLE");
     bytes32 public constant RESET_BOND_CURVE_ROLE =
         keccak256("RESET_BOND_CURVE_ROLE");
+    bytes32 public constant BOND_BURNER_ROLE = keccak256("BOND_BURNER_ROLE");
 
     ICSModule private immutable CSM;
 
@@ -151,7 +151,6 @@ contract CSAccounting is
         // todo: implement me
     }
 
-    /// @dev can be overridden in child contracts
     /// @notice Returns current and required bond amount in ETH (stETH) for the given node operator.
     /// @param nodeOperatorId id of the node operator to get bond for.
     /// @return current bond amount.
@@ -166,7 +165,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 activeKeys
     ) internal view returns (uint256 current, uint256 required) {
-        current = getBond(nodeOperatorId);
+        current = CSBondCore.getBond(nodeOperatorId);
         required =
             CSBondCurve.getBondAmountByKeysCount(
                 activeKeys,
@@ -175,7 +174,6 @@ contract CSAccounting is
             CSBondLock.getActualLockedBond(nodeOperatorId);
     }
 
-    /// @dev can be overridden in child contracts
     /// @notice Returns current and required bond amount in stETH shares for the given node operator.
     /// @param nodeOperatorId id of the node operator to get bond for.
     /// @return current bond amount.
@@ -194,7 +192,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 activeKeys
     ) internal view returns (uint256 current, uint256 required) {
-        current = getBondShares(nodeOperatorId);
+        current = CSBondCore.getBondShares(nodeOperatorId);
         required = _sharesByEth(
             CSBondCurve.getBondAmountByKeysCount(
                 activeKeys,
@@ -223,7 +221,6 @@ contract CSAccounting is
         return current < required ? required - current : 0;
     }
 
-    /// @dev can be overridden in child contracts
     /// @notice Returns the number of unbonded keys
     /// @dev unbonded meaning amount of keys with no bond at all
     /// @param nodeOperatorId id of the node operator to get keys count for.
@@ -235,6 +232,7 @@ contract CSAccounting is
         uint256 currentBond = CSBondCore._ethByShares(
             _bondShares[nodeOperatorId]
         );
+        // TODO: should the lock be included in the calculation to eject validators?
         uint256 lockedBond = CSBondLock.getActualLockedBond(nodeOperatorId);
         if (currentBond > lockedBond) {
             currentBond -= lockedBond;
@@ -458,10 +456,7 @@ contract CSAccounting is
         _isSenderEligibleToClaim(nodeOperator.managerAddress);
         CSBondCore._claimStETH(
             nodeOperatorId,
-            _getExcessBondSummaryShares(
-                nodeOperatorId,
-                _calcActiveKeys(nodeOperator)
-            ),
+            _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
             stETHAmount,
             nodeOperator.rewardAddress
         );
@@ -478,7 +473,7 @@ contract CSAccounting is
         uint256 cumulativeFeeShares,
         uint256 stETHAmount
     ) external onlyExistingNodeOperator(nodeOperatorId) {
-        // todo: reorder ops to use only one func ???
+        // todo: reorder ops to use only one func (first is pull) ???
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
         );
@@ -486,10 +481,7 @@ contract CSAccounting is
         _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
         CSBondCore._claimStETH(
             nodeOperatorId,
-            _getExcessBondSummaryShares(
-                nodeOperatorId,
-                _calcActiveKeys(nodeOperator)
-            ),
+            _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
             stETHAmount,
             nodeOperator.rewardAddress
         );
@@ -508,10 +500,7 @@ contract CSAccounting is
         _isSenderEligibleToClaim(nodeOperator.managerAddress);
         CSBondCore._claimWstETH(
             nodeOperatorId,
-            _getExcessBondSummaryShares(
-                nodeOperatorId,
-                _calcActiveKeys(nodeOperator)
-            ),
+            _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
             wstETHAmount,
             nodeOperator.rewardAddress
         );
@@ -535,10 +524,7 @@ contract CSAccounting is
         _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
         CSBondCore._claimWstETH(
             nodeOperatorId,
-            _getExcessBondSummaryShares(
-                nodeOperatorId,
-                _calcActiveKeys(nodeOperator)
-            ),
+            _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
             wstETHAmount,
             nodeOperator.rewardAddress
         );
@@ -559,10 +545,7 @@ contract CSAccounting is
         _isSenderEligibleToClaim(nodeOperator.managerAddress);
         (uint256 requestId, , ) = CSBondCore._requestETH(
             nodeOperatorId,
-            _getExcessBondSummaryShares(
-                nodeOperatorId,
-                _calcActiveKeys(nodeOperator)
-            ),
+            _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
             ETHAmount,
             nodeOperator.rewardAddress
         );
@@ -589,19 +572,15 @@ contract CSAccounting is
         _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
         (uint256 requestId, , ) = CSBondCore._requestETH(
             nodeOperatorId,
-            _getExcessBondSummaryShares(
-                nodeOperatorId,
-                _calcActiveKeys(nodeOperator)
-            ),
+            _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
             ETHAmount,
             nodeOperator.rewardAddress
         );
         return requestId;
     }
 
-    function _getExcessBondSummaryShares(
+    function _getExcessBondShares(
         uint256 nodeOperatorId,
-        uint256 ETHAmount,
         uint256 activeKeys
     ) internal view returns (uint256) {
         (uint256 current, uint256 required) = _getBondSummaryShares(
@@ -611,6 +590,9 @@ contract CSAccounting is
         return current > required ? current - required : 0;
     }
 
+    /// @notice Locks bond in ETH for the given node operator.
+    /// @param nodeOperatorId id of the node operator to lock bond for.
+    /// @param amount amount of ETH to lock.
     function lockBondETH(
         uint256 nodeOperatorId,
         uint256 amount
@@ -619,6 +601,7 @@ contract CSAccounting is
         onlyExistingNodeOperator(nodeOperatorId)
         onlyRole(SET_BOND_LOCK_ROLE)
     {
+        // todo: should it be CSModule only?
         CSBondLock._lock(nodeOperatorId, amount);
     }
 
@@ -652,28 +635,20 @@ contract CSAccounting is
     function settleLockedBondETH(
         uint256 nodeOperatorId
     ) external onlyRole(SETTLE_BOND_LOCK_ROLE) {
-        BondLock memory lockInfo = CSBondLock._get(nodeOperatorId);
-        uint256 lockedAmount = getActualLockedBondETH(nodeOperatorId);
+        uint256 lockedAmount = CSBondLock.getActualLockedBond(nodeOperatorId);
         if (lockedAmount > 0) {
             _penalize(nodeOperatorId, lockedAmount);
         }
-        CSBondLock._reduceAmount(nodeOperatorId, lockInfo.amount);
+        // reduce all locked bond even if bond isn't covered lock fully
+        CSBondLock._remove(nodeOperatorId);
     }
 
-    /// @notice Burn all bond and request exits for all node operators' validators.
+    /// @notice Burn all bond for node operators' validators.
     /// @dev Called only by DAO. Have lifetime. Once expired can never be called.
-    function sealAccounting() external onlyRole(SEAL_ROLE) {
-        // todo: implement me
-    }
-
-    /// @notice Settles initial slashing penalty for the given node operator.
-    /// @param slashingProof merkle proof of the slashing.
-    /// @param nodeOperatorId id of the node operator to settle initial slashing penalty for.
-    function settleInitialSlashingPenalty(
-        bytes32[] memory slashingProof,
+    function burnBond(
         uint256 nodeOperatorId
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
-        // todo: implement me
+    ) external onlyRole(BOND_BURNER_ROLE) {
+        // TODO: implement me and request exits for all validators from CSModule
     }
 
     /// @notice Penalize bond by burning shares of the given node operator.
@@ -684,28 +659,6 @@ contract CSAccounting is
         uint256 amount
     ) public onlyRole(INSTANT_PENALIZE_BOND_ROLE) {
         _penalize(nodeOperatorId, amount);
-    }
-
-    function _penalize(
-        uint256 nodeOperatorId,
-        uint256 amount
-    ) internal onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
-        uint256 penaltyShares = _sharesByEth(amount);
-        uint256 currentShares = getBondShares(nodeOperatorId);
-        uint256 sharesToBurn = penaltyShares < currentShares
-            ? penaltyShares
-            : currentShares;
-        LIDO.transferSharesFrom(
-            address(this),
-            LIDO_LOCATOR.burner(),
-            sharesToBurn
-        );
-        _bondShares[nodeOperatorId] -= sharesToBurn;
-        totalBondShares -= sharesToBurn;
-        uint256 penaltyEth = _ethByShares(penaltyShares);
-        uint256 coveringEth = _ethByShares(sharesToBurn);
-        emit BondPenalized(nodeOperatorId, penaltyEth, coveringEth);
-        return penaltyEth - coveringEth;
     }
 
     function _feeDistributor() internal view returns (ICSFeeDistributor) {

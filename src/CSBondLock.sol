@@ -105,14 +105,18 @@ abstract contract CSBondLock is CSBondLockBase {
         );
     }
 
+    function _remove(uint256 nodeOperatorId) internal {
+        delete _bondLock[nodeOperatorId];
+        emit BondLockChanged(nodeOperatorId, 0, 0);
+    }
+
     function _changeBondLock(
         uint256 nodeOperatorId,
         uint256 amount,
         uint256 retentionUntil
-    ) private {
+    ) internal {
         if (amount == 0) {
-            delete _bondLock[nodeOperatorId];
-            emit BondLockChanged(nodeOperatorId, 0, 0);
+            _remove(nodeOperatorId);
             return;
         }
         _bondLock[nodeOperatorId] = BondLock({

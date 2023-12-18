@@ -62,12 +62,12 @@ contract CSBondCurveTest is Test, CSBondCurveBase {
     }
 
     function test_addBondCurve_RevertWhen_LessThanMinBondCurveLength() public {
-        vm.expectRevert(CSBondCurve.InvalidBondCurveLength.selector);
+        vm.expectRevert(InvalidBondCurveLength.selector);
         bondCurve.addBondCurve(new uint256[](0));
     }
 
     function test_addBondCurve_RevertWhen_MoreThanMaxBondCurveLength() public {
-        vm.expectRevert(CSBondCurve.InvalidBondCurveLength.selector);
+        vm.expectRevert(InvalidBondCurveLength.selector);
         bondCurve.addBondCurve(new uint256[](21));
     }
 
@@ -75,7 +75,7 @@ contract CSBondCurveTest is Test, CSBondCurveBase {
         uint256[] memory curvePoints = new uint256[](1);
         curvePoints[0] = 0 ether;
 
-        vm.expectRevert(CSBondCurve.InvalidBondCurveValues.selector);
+        vm.expectRevert(InvalidBondCurveValues.selector);
         bondCurve.addBondCurve(curvePoints);
     }
 
@@ -97,18 +97,18 @@ contract CSBondCurveTest is Test, CSBondCurveBase {
     }
 
     function test_setDefaultBondCurve_RevertWhen_CurveIdIsZero() public {
-        vm.expectRevert(CSBondCurve.InvalidBondCurveId.selector);
+        vm.expectRevert(InvalidBondCurveId.selector);
         bondCurve.setDefaultBondCurve(0);
     }
 
     function test_setDefaultBondCurve_RevertWhen_NoExistingCurveId() public {
-        vm.expectRevert(CSBondCurve.InvalidBondCurveId.selector);
+        vm.expectRevert(InvalidBondCurveId.selector);
         bondCurve.setDefaultBondCurve(100500);
     }
 
     function test_setDefaultBondCurve_RevertWhen_CurveIdIsTheSame() public {
         uint256 id = bondCurve.defaultBondCurveId();
-        vm.expectRevert(CSBondCurve.InvalidBondCurveId.selector);
+        vm.expectRevert(InvalidBondCurveId.selector);
         bondCurve.setDefaultBondCurve(id);
     }
 
