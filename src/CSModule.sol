@@ -187,7 +187,7 @@ contract CSModule is ICSModule, CSModuleBase {
 
     /// @notice Remove unvetting fee and disable set again
     function removeUnvettingFee() external {
-        // todo: implement me
+        // TODO: implement me
     }
 
     function _lido() internal view returns (ILido) {
@@ -226,7 +226,7 @@ contract CSModule is ICSModule, CSModuleBase {
         bytes calldata publicKeys,
         bytes calldata signatures
     ) external payable {
-        // TODO sanity checks
+        // TODO: sanity checks
 
         require(
             msg.value == accounting.getRequiredBondETHForKeys(keysCount),
@@ -295,7 +295,7 @@ contract CSModule is ICSModule, CSModuleBase {
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
     ) external {
-        // TODO sanity checks
+        // TODO: sanity checks
 
         uint256 id = _nodeOperatorsCount;
         if (id == MAX_NODE_OPERATORS_COUNT)
@@ -328,7 +328,7 @@ contract CSModule is ICSModule, CSModuleBase {
         bytes calldata publicKeys,
         bytes calldata signatures
     ) external {
-        // TODO sanity checks
+        // TODO: sanity checks
 
         uint256 id = _nodeOperatorsCount;
         if (id == MAX_NODE_OPERATORS_COUNT)
@@ -363,7 +363,7 @@ contract CSModule is ICSModule, CSModuleBase {
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
     ) external {
-        // TODO sanity checks
+        // TODO: sanity checks
 
         uint256 id = _nodeOperatorsCount;
         if (id == MAX_NODE_OPERATORS_COUNT)
@@ -446,7 +446,7 @@ contract CSModule is ICSModule, CSModuleBase {
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
     ) external {
-        // TODO sanity checks
+        // TODO: sanity checks
 
         accounting.depositStETHWithPermit(
             msg.sender,
@@ -493,7 +493,7 @@ contract CSModule is ICSModule, CSModuleBase {
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
     ) external {
-        // TODO sanity checks
+        // TODO: sanity checks
 
         accounting.depositWstETHWithPermit(
             msg.sender,
@@ -808,7 +808,7 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 nodeOperatorId,
         uint256 withdrawnBalance
     ) external {
-        // todo: implement me
+        // TODO: implement me
     }
 
     /// @notice Triggers the node operator's unbonded validator to exit
@@ -816,7 +816,7 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 nodeOperatorId,
         uint256 validatorId
     ) external {
-        // todo: implement me
+        // TODO: implement me
     }
 
     /// @notice Triggers the node operator's validator to exit by DAO decision
@@ -824,7 +824,7 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 nodeOperatorId,
         uint256 validatorId
     ) external {
-        // todo: implement me
+        // TODO: implement me
     }
 
     /// @notice Updates refunded validators count by StakingRouter
@@ -1003,6 +1003,7 @@ contract CSModule is ICSModule, CSModuleBase {
     /// @notice any penalty might cause bond out, so we need to clear any benefits from the node operator
     /// @param nodeOperatorId ID of the node operator
     function _checkForOutOfBond(uint256 nodeOperatorId) internal {
+        // TODO: Should be done manually or automatically? Any penalty should reset bond multiplier or not?
         if (accounting.getBondShares(nodeOperatorId) == 0) {
             accounting.resetBondMultiplier(nodeOperatorId);
         }
@@ -1025,7 +1026,7 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 blockNumber,
         uint256 amount
     ) external onlyExistingNodeOperator(nodeOperatorId) {
-        // TODO check role
+        // TODO: check role
         accounting.lockBondETH(nodeOperatorId, amount);
 
         _checkForUnbondedKeys(nodeOperatorId);
@@ -1059,7 +1060,7 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 nodeOperatorId,
         uint256 amount
     ) public onlyExistingNodeOperator(nodeOperatorId) {
-        // TODO check role
+        // TODO: check role
         accounting.penalize(nodeOperatorId, amount);
         _checkForUnbondedKeys(nodeOperatorId);
         _checkForOutOfBond(nodeOperatorId);
@@ -1382,7 +1383,7 @@ contract CSModule is ICSModule, CSModuleBase {
     }
 
     modifier onlyStakingRouter() {
-        // TODO check the role
+        // TODO: check the role
         _;
     }
 }
