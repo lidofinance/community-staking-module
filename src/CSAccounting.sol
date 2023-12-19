@@ -21,6 +21,7 @@ abstract contract CSAccountingBase is CSBondCoreBase {
     error InvalidSender();
 }
 
+/// @author vgorkavenko
 contract CSAccounting is
     CSBondCore,
     CSBondCurve,

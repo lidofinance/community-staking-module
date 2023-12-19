@@ -13,16 +13,32 @@ abstract contract CSBondCurveBase {
     error InvalidBondCurveId();
 }
 
+/// @dev Bond curve mechanics abstract contract
+///
+/// It gives ability to build bond curve for bond math.
+/// There is default bond curve for all node operators, witch can be 'overridden' by particular node operator.
+///
+/// It contains:
+///  - add bond curve
+///  - get bond curve info
+///  - set default bond curve
+///  - set bond curve for the given node operator
+///  - get bond curve for the given node operator
+///  - get required bond amount for the given keys count
+///  - get keys count for the given bond amount
+///
+/// Should be inherited by Module contract, or Module-related contract.
+/// Internal non-view methods should be used in Module contract with additional requirements (if required).
+///
+/// @author vgorkavenko
 abstract contract CSBondCurve is CSBondCurveBase {
-    struct BondCurve {
-        uint256 id;
-        uint256[] points;
-        uint256 trend;
-    }
-
-    /// @dev Array with bond curves, where curve is array of points (bond amounts for particular keys count).
+    /// @dev Bond curve structure.
+    /// It contains:
+    ///  - id     |> identifier to set default curve for the module or particular node operator
+    ///  - points |> bond amount for particular keys count
+    ///  - trend  |> value for the next keys after described points
     ///
-    /// For example:
+    /// For example how the curve points looks like:
     ///   Points Array Index  |>       0          1          2          i
     ///   Bond Amount         |>   [ 2 ETH ] [ 3.9 ETH ] [ 5.7 ETH ] [ ... ]
     ///   Keys Count          |>       1          2          3        i + 1
@@ -51,6 +67,12 @@ abstract contract CSBondCurve is CSBondCurveBase {
     ///       |----------|----------|----------|----------|----> Keys Count
     ///       |          1          2          3          i
     ///
+    struct BondCurve {
+        uint256 id;
+        uint256[] points;
+        uint256 trend;
+    }
+
     // todo: should we strictly define max curves array length?
     BondCurve[] public bondCurves;
     /// @dev Default bond curve id for node operator if no special curve is set
@@ -67,6 +89,8 @@ abstract contract CSBondCurve is CSBondCurveBase {
         _setDefaultBondCurve(bondCurves.length);
     }
 
+    /// @dev Adds new bond curve to the array.
+    ///      After that returned ID can be used to set default curve or curve for the particular node operator.
     function _addBondCurve(
         uint256[] memory curvePoints
     ) internal returns (uint256) {
@@ -94,6 +118,8 @@ abstract contract CSBondCurve is CSBondCurveBase {
         return bondCurves.length;
     }
 
+    /// @dev Sets default bond curve for the module.
+    ///      It will be used for the node operators without special curve.
     function _setDefaultBondCurve(uint256 curveId) internal {
         // todo: should we check that new curve is not worse than the old one?
         if (
@@ -105,6 +131,8 @@ abstract contract CSBondCurve is CSBondCurveBase {
         emit DefaultBondCurveChanged(curveId);
     }
 
+    /// @dev Sets bond curve for the given node operator.
+    ///      It will be used for the node operator instead of default curve.
     function _setBondCurve(uint256 nodeOperatorId, uint256 curveId) internal {
         if (curveId == 0 || curveId > bondCurves.length)
             revert InvalidBondCurveId();
@@ -112,6 +140,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
         emit BondCurveChanged(nodeOperatorId, curveId);
     }
 
+    /// @dev Resets bond curve for the given node operator to default (for example, because of breaking the rules by node operator)
     function _resetBondCurve(uint256 nodeOperatorId) internal {
         delete bondCurveId[nodeOperatorId];
         emit BondCurveChanged(nodeOperatorId, defaultBondCurveId);
@@ -119,6 +148,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
 
     /// @notice Returns bond curve for the given curve id.
     /// @param curveId curve id to get bond curve for.
+    /// @return bond curve.
     function getCurveInfo(
         uint256 curveId
     ) public view returns (BondCurve memory) {
@@ -126,6 +156,8 @@ abstract contract CSBondCurve is CSBondCurveBase {
     }
 
     /// @notice Returns bond curve for the given node operator.
+    /// @param nodeOperatorId id of the node operator to get bond curve for.
+    /// @return bond curve.
     function getBondCurve(
         uint256 nodeOperatorId
     ) public view returns (BondCurve memory) {
@@ -140,7 +172,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
     /// @dev To calculate the amount for the new keys 2 calls are required:
     ///      getRequiredBondETHForKeys(newTotal) - getRequiredBondETHForKeys(currentTotal)
     /// @param keys number of keys to get required bond for.
-    /// @return required in ETH.
+    /// @return required amount for particular keys count.
     function getBondAmountByKeysCount(
         uint256 keys
     ) public view returns (uint256) {
@@ -148,11 +180,12 @@ abstract contract CSBondCurve is CSBondCurveBase {
             getBondAmountByKeysCount(keys, bondCurves[defaultBondCurveId - 1]);
     }
 
-    /// @notice Returns the required bond in ETH for the given number of keys.
+    /// @notice Returns the required bond in ETH for the given number of keys for particular bond curve.
     /// @dev To calculate the amount for the new keys 2 calls are required:
-    ///      getRequiredBondETHForKeys(newTotal) - getRequiredBondETHForKeys(currentTotal)
+    ///      getRequiredBondETHForKeys(newTotal, curve) - getRequiredBondETHForKeys(currentTotal, curve)
     /// @param keys number of keys to get required bond for.
-    /// @return required in ETH.
+    /// @param curve bond curve to get required bond for.
+    /// @return required in amount for particular keys count.
     function getBondAmountByKeysCount(
         uint256 keys,
         BondCurve memory curve
@@ -168,6 +201,8 @@ abstract contract CSBondCurve is CSBondCurveBase {
     }
 
     /// @notice Returns keys count for the given bond amount with default bond curve.
+    /// @param amount bond amount to get keys count for.
+    /// @return keys count.
     function getKeysCountByBondAmount(
         uint256 amount
     ) public view returns (uint256) {
@@ -178,7 +213,10 @@ abstract contract CSBondCurve is CSBondCurveBase {
             );
     }
 
-    /// @notice Returns keys count for the given bond amount for particular node operator.
+    /// @notice Returns keys count for the given bond amount for particular bond curve.
+    /// @param amount bond amount to get keys count for.
+    /// @param curve bond curve to get keys count for.
+    /// @return keys count.
     function getKeysCountByBondAmount(
         uint256 amount,
         BondCurve memory curve
@@ -195,7 +233,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
     function _searchKeysCount(
         uint256 amount,
         uint256[] memory curvePoints
-    ) internal pure returns (uint256) {
+    ) private pure returns (uint256) {
         uint256 low;
         uint256 high = curvePoints.length - 1;
         while (low <= high) {
