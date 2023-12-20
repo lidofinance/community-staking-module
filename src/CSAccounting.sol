@@ -153,6 +153,8 @@ contract CSAccounting is
     }
 
     /// @notice Returns current and required bond amount in ETH (stETH) for the given node operator.
+    /// @dev To calculate excess bond amount subtract `required` from `current` value.
+    ///      To calculate missed bond amount subtract `current` from `required` value.
     /// @param nodeOperatorId id of the node operator to get bond for.
     /// @return current bond amount.
     /// @return required bond amount.
@@ -176,6 +178,8 @@ contract CSAccounting is
     }
 
     /// @notice Returns current and required bond amount in stETH shares for the given node operator.
+    /// @dev To calculate excess bond amount subtract `required` from `current` value.
+    ///      To calculate missed bond amount subtract `current` from `required` value.
     /// @param nodeOperatorId id of the node operator to get bond for.
     /// @return current bond amount.
     /// @return required bond amount.
@@ -202,26 +206,6 @@ contract CSAccounting is
         );
     }
 
-    /// @notice Returns the excess bond amount in ETH (stETH) for the given node operator.
-    /// @param nodeOperatorId id of the node operator to get excess bond for.
-    /// @return excess bond amount.
-    function getExcessBond(
-        uint256 nodeOperatorId
-    ) public view returns (uint256) {
-        (uint256 current, uint256 required) = getBondSummary(nodeOperatorId);
-        return current > required ? current - required : 0;
-    }
-
-    /// @notice Returns the missing bond amount in ETH (stETH) for the given node operator.
-    /// @param nodeOperatorId id of the node operator to get missing bond for.
-    /// @return missing bond amount.
-    function getMissingBond(
-        uint256 nodeOperatorId
-    ) public view returns (uint256) {
-        (uint256 current, uint256 required) = getBondSummary(nodeOperatorId);
-        return current < required ? required - current : 0;
-    }
-
     /// @notice Returns the number of unbonded keys
     /// @dev unbonded meaning amount of keys with no bond at all
     /// @param nodeOperatorId id of the node operator to get keys count for.
@@ -229,6 +213,7 @@ contract CSAccounting is
     function getUnbondedKeysCount(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
+        // TODO: rework with threshold ???
         uint256 activeKeys = _getActiveKeys(nodeOperatorId);
         uint256 currentBond = CSBondCore._ethByShares(
             _bondShares[nodeOperatorId]
@@ -662,10 +647,6 @@ contract CSAccounting is
         _penalize(nodeOperatorId, amount);
     }
 
-    function _feeDistributor() internal view returns (ICSFeeDistributor) {
-        return ICSFeeDistributor(FEE_DISTRIBUTOR);
-    }
-
     function _getActiveKeys(
         uint256 nodeOperatorId
     ) internal view returns (uint256) {
@@ -691,7 +672,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares
     ) internal {
-        uint256 distributed = _feeDistributor().distributeFees(
+        uint256 distributed = ICSFeeDistributor(FEE_DISTRIBUTOR).distributeFees(
             rewardsProof,
             nodeOperatorId,
             cumulativeFeeShares
