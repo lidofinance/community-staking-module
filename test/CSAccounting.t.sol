@@ -329,6 +329,127 @@ contract CSAccountingGetBondSummaryTest is CSAccountingBondStateBaseTest {
     }
 }
 
+contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
+    function test_default() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            0
+        );
+        assertEq(current, 0 ether);
+        assertEq(required, stETH.getSharesByPooledEth(32 ether));
+    }
+
+    function test_WithCurve() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _curve(defaultCurve);
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            0
+        );
+        assertEq(current, 0 ether);
+        assertEq(required, stETH.getSharesByPooledEth(17 ether));
+    }
+
+    function test_WithLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _lock({ id: 0, amount: 1 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            0
+        );
+        assertEq(current, 0 ether);
+        assertEq(required, stETH.getSharesByPooledEth(33 ether));
+    }
+
+    function test_WithLocked_MoreThanBond() public {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _lock({ id: 0, amount: 100500 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            0
+        );
+        assertEq(current, 0 ether);
+        assertEq(required, stETH.getSharesByPooledEth(100532 ether));
+    }
+
+    function test_WithCurveAndLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _curve(defaultCurve);
+        _lock({ id: 0, amount: 1 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            0
+        );
+        assertEq(current, 0 ether);
+        assertEq(required, stETH.getSharesByPooledEth(18 ether));
+    }
+
+    function test_WithOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            0
+        );
+        assertEq(current, 0 ether);
+        assertEq(required, stETH.getSharesByPooledEth(30 ether));
+    }
+
+    function test_WithBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            0
+        );
+        assertApproxEqAbs(current, 32 ether, 1 wei);
+        assertApproxEqAbs(required, 32 ether, 1 wei);
+    }
+
+    function test_WithBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 32 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            0
+        );
+        assertApproxEqAbs(current, 32 ether, 1 wei);
+        assertApproxEqAbs(required, 30 ether, 1 wei);
+    }
+
+    function test_WithExcessBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            0
+        );
+        assertApproxEqAbs(current, 33 ether, 1 wei);
+        assertApproxEqAbs(required, 32 ether, 1 wei);
+    }
+
+    function test_WithExcessBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 33 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            0
+        );
+        assertApproxEqAbs(current, 33 ether, 1 wei);
+        assertApproxEqAbs(required, 30 ether, 1 wei);
+    }
+
+    function test_WithMissingBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 29 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            0
+        );
+        assertApproxEqAbs(current, 29 ether, 1 wei);
+        assertApproxEqAbs(required, 32 ether, 1 wei);
+    }
+
+    function test_WithMissingBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 29 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            0
+        );
+        assertApproxEqAbs(current, 29 ether, 1 wei);
+        assertApproxEqAbs(required, 30 ether, 1 wei);
+    }
+}
+
 contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
     function test_default() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
@@ -3947,41 +4068,55 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         vm.prank(stranger);
         accounting.lockBondETH(0, 1 ether);
     }
-}
 
-contract CSAccountingMiscTest is CSAccountingBaseTest {
-    function test_totalBondShares() public {
-        mock_getNodeOperatorsCount(2);
-        vm.deal(user, 64 ether);
-        vm.startPrank(user);
-        accounting.depositETH{ value: 32 ether }(user, 0);
-        accounting.depositETH{ value: 32 ether }(user, 1);
+    function test_releaseLockedBondETH() public {
+        mock_getNodeOperatorsCount(1);
+
+        vm.startPrank(admin);
+        accounting.lockBondETH(0, 1 ether);
+
+        vm.expectEmit(true, true, true, true, address(accounting));
+        emit BondLockReleased(0, 0.4 ether);
+
+        accounting.releaseLockedBondETH(0, 0.4 ether);
         vm.stopPrank();
-        uint256 totalDepositedShares = stETH.getSharesByPooledEth(32 ether) +
-            stETH.getSharesByPooledEth(32 ether);
-        assertEq(accounting.totalBondShares(), totalDepositedShares);
+
+        assertEq(accounting.getActualLockedBond(0), 0.6 ether);
     }
 
-    function test_setFeeDistributor() public {
-        vm.prank(admin);
-        accounting.setFeeDistributor(address(1337));
-        assertEq(accounting.FEE_DISTRIBUTOR(), address(1337));
-    }
+    function test_releaseLockedBondETH_RevertWhen_DoesNotHaveRole() public {
+        mock_getNodeOperatorsCount(1);
 
-    function test_setFeeDistributor_RevertWhen_DoesNotHaveRole() public {
         vm.expectRevert(
             bytes(
                 Utilities.accessErrorString(
                     stranger,
-                    accounting.DEFAULT_ADMIN_ROLE()
+                    accounting.RELEASE_BOND_LOCK_ROLE()
                 )
             )
         );
-
         vm.prank(stranger);
-        accounting.setFeeDistributor(address(1337));
+        accounting.releaseLockedBondETH(0, 1 ether);
     }
 
+    function test_compensateLockedBondETH() public {
+        mock_getNodeOperatorsCount(1);
+
+        vm.prank(admin);
+        accounting.lockBondETH(0, 1 ether);
+
+        vm.expectEmit(true, true, true, true, address(accounting));
+        emit BondLockCompensated(0, 0.4 ether);
+
+        vm.deal(user, 0.4 ether);
+        vm.prank(user);
+        accounting.compensateLockedBondETH{ value: 0.4 ether }(0);
+
+        assertEq(accounting.getActualLockedBond(0), 0.6 ether);
+    }
+}
+
+contract CSAccountingBondCurveTest is CSAccountingBaseTest {
     function test_addBondCurve() public {
         uint256[] memory curvePoints = new uint256[](2);
         curvePoints[0] = 2 ether;
@@ -4099,5 +4234,39 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
 
         vm.prank(stranger);
         accounting.resetBondCurve({ nodeOperatorId: 0 });
+    }
+}
+
+contract CSAccountingMiscTest is CSAccountingBaseTest {
+    function test_totalBondShares() public {
+        mock_getNodeOperatorsCount(2);
+        vm.deal(user, 64 ether);
+        vm.startPrank(user);
+        accounting.depositETH{ value: 32 ether }(user, 0);
+        accounting.depositETH{ value: 32 ether }(user, 1);
+        vm.stopPrank();
+        uint256 totalDepositedShares = stETH.getSharesByPooledEth(32 ether) +
+            stETH.getSharesByPooledEth(32 ether);
+        assertEq(accounting.totalBondShares(), totalDepositedShares);
+    }
+
+    function test_setFeeDistributor() public {
+        vm.prank(admin);
+        accounting.setFeeDistributor(address(1337));
+        assertEq(accounting.FEE_DISTRIBUTOR(), address(1337));
+    }
+
+    function test_setFeeDistributor_RevertWhen_DoesNotHaveRole() public {
+        vm.expectRevert(
+            bytes(
+                Utilities.accessErrorString(
+                    stranger,
+                    accounting.DEFAULT_ADMIN_ROLE()
+                )
+            )
+        );
+
+        vm.prank(stranger);
+        accounting.setFeeDistributor(address(1337));
     }
 }
