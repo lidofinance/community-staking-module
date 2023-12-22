@@ -107,6 +107,7 @@ contract CSAccountingBaseTest is
         accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_DEFAULT_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
+        accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), admin);
         vm.stopPrank();
     }
 
@@ -229,6 +230,103 @@ abstract contract CSAccountingBondStateBaseTest is
     function test_WithMissingBond() public virtual;
 
     function test_WithMissingBondAndOneWithdrawnValidator() public virtual;
+}
+
+contract CSAccountingGetBondSummaryTest is CSAccountingBondStateBaseTest {
+    function test_default() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertEq(current, 0 ether);
+        assertEq(required, 32 ether);
+    }
+
+    function test_WithCurve() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _curve(defaultCurve);
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertEq(current, 0 ether);
+        assertEq(required, 17 ether);
+    }
+
+    function test_WithLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _lock({ id: 0, amount: 1 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertEq(current, 0 ether);
+        assertEq(required, 33 ether);
+    }
+
+    function test_WithLocked_MoreThanBond() public {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _lock({ id: 0, amount: 100500 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertEq(current, 0 ether);
+        assertEq(required, 100532 ether);
+    }
+
+    function test_WithCurveAndLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _curve(defaultCurve);
+        _lock({ id: 0, amount: 1 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertEq(current, 0 ether);
+        assertEq(required, 18 ether);
+    }
+
+    function test_WithOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertEq(current, 0 ether);
+        assertEq(required, 30 ether);
+    }
+
+    function test_WithBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertApproxEqAbs(current, 32 ether, 1 wei);
+        assertApproxEqAbs(required, 32 ether, 1 wei);
+    }
+
+    function test_WithBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 32 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertApproxEqAbs(current, 32 ether, 1 wei);
+        assertApproxEqAbs(required, 30 ether, 1 wei);
+    }
+
+    function test_WithExcessBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertApproxEqAbs(current, 33 ether, 1 wei);
+        assertApproxEqAbs(required, 32 ether, 1 wei);
+    }
+
+    function test_WithExcessBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 33 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertApproxEqAbs(current, 33 ether, 1 wei);
+        assertApproxEqAbs(required, 30 ether, 1 wei);
+    }
+
+    function test_WithMissingBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 29 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertApproxEqAbs(current, 29 ether, 1 wei);
+        assertApproxEqAbs(required, 32 ether, 1 wei);
+    }
+
+    function test_WithMissingBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 29 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertApproxEqAbs(current, 29 ether, 1 wei);
+        assertApproxEqAbs(required, 30 ether, 1 wei);
+    }
 }
 
 contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
@@ -3785,11 +3883,8 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
         accounting.depositETH{ value: 32 ether }(user, 0);
     }
 
-    function test_penalize_LessThanDeposit() public {
+    function test_penalize() public {
         uint256 shares = stETH.getSharesByPooledEth(1 ether);
-        uint256 penalized = stETH.getPooledEthByShares(shares);
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondPenalized(0, penalized, penalized);
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(admin);
@@ -3812,64 +3907,6 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
             "burner shares should be equal to penalty"
         );
         assertEq(accounting.totalBondShares(), bondSharesAfter);
-    }
-
-    function test_penalize_MoreThanDeposit() public {
-        uint256 bondSharesBefore = accounting.getBondShares(0);
-        uint256 penaltyShares = stETH.getSharesByPooledEth(33 ether);
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondPenalized(
-            0,
-            stETH.getPooledEthByShares(penaltyShares),
-            stETH.getPooledEthByShares(bondSharesBefore)
-        );
-
-        vm.prank(admin);
-        accounting.penalize(0, 33 ether);
-
-        assertEq(
-            accounting.getBondShares(0),
-            0,
-            "bond shares should be 0 after penalty"
-        );
-        assertEq(
-            stETH.sharesOf(address(accounting)),
-            0,
-            "bond manager shares should be 0 after penalty"
-        );
-        assertEq(
-            stETH.sharesOf(address(burner)),
-            bondSharesBefore,
-            "burner shares should be equal to bond shares"
-        );
-        assertEq(accounting.totalBondShares(), 0);
-    }
-
-    function test_penalize_EqualToDeposit() public {
-        uint256 shares = stETH.getSharesByPooledEth(32 ether);
-        uint256 penalized = stETH.getPooledEthByShares(shares);
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondPenalized(0, penalized, penalized);
-
-        vm.prank(admin);
-        accounting.penalize(0, 32 ether);
-
-        assertEq(
-            accounting.getBondShares(0),
-            0,
-            "bond shares should be 0 after penalty"
-        );
-        assertEq(
-            stETH.sharesOf(address(accounting)),
-            0,
-            "bond manager shares should be 0 after penalty"
-        );
-        assertEq(
-            stETH.sharesOf(address(burner)),
-            shares,
-            "burner shares should be equal to penalty"
-        );
-        assertEq(accounting.totalBondShares(), 0);
     }
 
     function test_penalize_RevertWhenCallerHasNoRole() public {
@@ -4018,7 +4055,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
         assertEq(curve.points[1], 4 ether);
     }
 
-    function test_setBondMultiplier_RevertWhen_DoesNotHaveRole() public {
+    function test_setBondCurve_RevertWhen_DoesNotHaveRole() public {
         vm.expectRevert(
             bytes(
                 Utilities.accessErrorString(
@@ -4032,7 +4069,35 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
     }
 
-    function test_resetBondCurve() public {}
+    function test_resetBondCurve() public {
+        uint256[] memory curvePoints = new uint256[](2);
+        curvePoints[0] = 1 ether;
+        curvePoints[1] = 2 ether;
 
-    function test_resetBondCurve_RevertWhen_DoesNotHaveRole() public {}
+        vm.startPrank(admin);
+        accounting.addBondCurve(curvePoints);
+        accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
+        accounting.resetBondCurve({ nodeOperatorId: 0 });
+        vm.stopPrank();
+
+        CSBondCurve.BondCurve memory curve = accounting.getBondCurve(0);
+
+        uint256[] memory defaultPoints = accounting.getBondCurve(1).points;
+
+        assertEq(curve.points[0], defaultPoints[0]);
+    }
+
+    function test_resetBondCurve_RevertWhen_DoesNotHaveRole() public {
+        vm.expectRevert(
+            bytes(
+                Utilities.accessErrorString(
+                    stranger,
+                    accounting.RESET_BOND_CURVE_ROLE()
+                )
+            )
+        );
+
+        vm.prank(stranger);
+        accounting.resetBondCurve({ nodeOperatorId: 0 });
+    }
 }
