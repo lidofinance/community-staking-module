@@ -1631,6 +1631,100 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
     }
 }
 
+contract CsmUpdateExitedValidatorsCount is CSMCommon {
+    function test_updateExitedValidatorsCount_NonZero() public {
+        uint256 noId = createNodeOperator(1);
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit ExitedSigningKeysCountChanged(noId, 1);
+        csm.updateExitedValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+
+        NodeOperatorSummary memory noSummary = getNodeOperatorSummary(noId);
+        assertEq(
+            noSummary.totalExitedValidators,
+            1,
+            "totalExitedValidators not increased"
+        );
+
+        (uint256 totalExitedValidators, , ) = csm.getStakingModuleSummary();
+        assertEq(
+            totalExitedValidators,
+            1,
+            "totalExitedValidators not increased"
+        );
+    }
+
+    function test_updateExitedValidatorsCount_RevertIfNoNodeOperator() public {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.updateExitedValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+    }
+
+    function test_updateExitedValidatorsCount_RevertIfNotStakingRouter()
+        public
+    {
+        // TODO implement
+        vm.skip(true);
+    }
+
+    function test_updateExitedValidatorsCount_RevertIfCountMoreThanDeposited()
+        public
+    {
+        uint256 noId = createNodeOperator(1);
+
+        vm.expectRevert(ExitedKeysHigherThanTotalDeposited.selector);
+        csm.updateExitedValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+    }
+
+    function test_updateExitedValidatorsCount_RevertIfExitedKeysDecrease()
+        public
+    {
+        uint256 noId = createNodeOperator(1);
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+
+        csm.updateExitedValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+
+        vm.expectRevert(ExitedKeysDecrease.selector);
+        csm.updateExitedValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000000))
+        );
+    }
+
+    function test_updateExitedValidatorsCount_NoEventIfSameValue() public {
+        uint256 noId = createNodeOperator(1);
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+
+        csm.updateExitedValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+
+        vm.recordLogs();
+        csm.updateExitedValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 0);
+    }
+}
+
 contract CsmPenalize is CSMCommon {
     function test_penalize_NoUnvet() public {
         uint256 noId = createNodeOperator();

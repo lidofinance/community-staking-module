@@ -113,6 +113,8 @@ contract CSModuleBase {
     error UnbondedKeysPresent();
     error InvalidTargetLimit();
     error StuckKeysHigherThanTotalDeposited();
+    error ExitedKeysHigherThanTotalDeposited();
+    error ExitedKeysDecrease();
 
     error QueueLookupNoLimit();
     error QueueEmptyBatch();
@@ -800,12 +802,41 @@ contract CSModule is ICSModule, CSModuleBase {
     function updateExitedValidatorsCount(
         bytes calldata nodeOperatorIds,
         bytes calldata exitedValidatorsCounts
-    ) external {
-        // TODO: implement
-        //        emit ExitedSigningKeysCountChanged(
-        //            nodeOperatorId,
-        //            exitedValidatorsCount
-        //        );
+    ) external onlyStakingRouter {
+        ValidatorCountsReport.validate(nodeOperatorIds, exitedValidatorsCounts);
+
+        for (
+            uint256 i = 0;
+            i < ValidatorCountsReport.count(nodeOperatorIds);
+            i++
+        ) {
+            (
+                uint256 nodeOperatorId,
+                uint256 exitedValidatorsCount
+            ) = ValidatorCountsReport.next(
+                    nodeOperatorIds,
+                    exitedValidatorsCounts,
+                    i
+                );
+            if (nodeOperatorId >= _nodeOperatorsCount)
+                revert NodeOperatorDoesNotExist();
+
+            NodeOperator storage no = _nodeOperators[nodeOperatorId];
+            if (exitedValidatorsCount > no.totalDepositedKeys)
+                revert ExitedKeysHigherThanTotalDeposited();
+            if (exitedValidatorsCount < no.totalExitedKeys)
+                revert ExitedKeysDecrease();
+            if (exitedValidatorsCount == no.totalExitedKeys) continue;
+
+            _totalExitedValidators +=
+                exitedValidatorsCount -
+                no.totalExitedKeys;
+            no.totalExitedKeys = exitedValidatorsCount;
+            emit ExitedSigningKeysCountChanged(
+                nodeOperatorId,
+                exitedValidatorsCount
+            );
+        }
     }
 
     /// @notice Reports withdrawn validator for node operator
