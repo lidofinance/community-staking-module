@@ -623,7 +623,7 @@ contract CSAccounting is
     ) external onlyRole(SETTLE_BOND_LOCK_ROLE) {
         uint256 lockedAmount = CSBondLock.getActualLockedBond(nodeOperatorId);
         if (lockedAmount > 0) {
-            _penalize(nodeOperatorId, lockedAmount);
+            CSBondCore._burn(nodeOperatorId, lockedAmount);
         }
         // reduce all locked bond even if bond isn't covered lock fully
         CSBondLock._remove(nodeOperatorId);
@@ -644,7 +644,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 amount
     ) public onlyRole(INSTANT_PENALIZE_BOND_ROLE) {
-        _penalize(nodeOperatorId, amount);
+        CSBondCore._burn(nodeOperatorId, amount);
     }
 
     function _getActiveKeys(

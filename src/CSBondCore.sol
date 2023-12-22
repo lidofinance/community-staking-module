@@ -29,11 +29,13 @@ abstract contract CSBondCoreBase {
         address to,
         uint256 amount
     );
-    event BondPenalized(
+    event BondBurned(
         uint256 indexed nodeOperatorId,
-        uint256 penaltyETH,
-        uint256 coveringETH
+        uint256 toBurnAmount,
+        uint256 burnedAmount
     );
+
+    error InvalidClaimableShares();
 }
 
 /// @dev Bond core mechanics abstract contract
@@ -45,7 +47,7 @@ abstract contract CSBondCoreBase {
 ///  - get bond shares and bond amount
 ///  - deposit ETH/stETH/wstETH
 ///  - claim ETH/stETH/wstETH
-///  - penalize
+///  - burn
 ///
 /// Should be inherited by Module contract, or Module-related contract.
 /// Internal non-view methods should be used in Module contract with additional requirements (if required).
@@ -140,7 +142,10 @@ abstract contract CSBondCore is CSBondCoreBase {
             uint256 sharesToClaim
         )
     {
-        if (claimableShares == 0) {
+        if (claimableShares > _bondShares[nodeOperatorId]) {
+            revert InvalidClaimableShares();
+        }
+        if (claimableShares == 0 || amountToClaim == 0) {
             emit BondClaimed(nodeOperatorId, to, 0);
             return (0, 0, 0);
         }
@@ -165,7 +170,10 @@ abstract contract CSBondCore is CSBondCoreBase {
         uint256 amountToClaim,
         address to
     ) internal returns (uint256 sharesToClaim, uint256 amount) {
-        if (claimableShares == 0) {
+        if (claimableShares > _bondShares[nodeOperatorId]) {
+            revert InvalidClaimableShares();
+        }
+        if (claimableShares == 0 || amountToClaim == 0) {
             emit BondClaimed(nodeOperatorId, to, 0);
             return (0, 0);
         }
@@ -186,7 +194,10 @@ abstract contract CSBondCore is CSBondCoreBase {
         uint256 amountToClaim,
         address to
     ) internal returns (uint256 amount) {
-        if (claimableShares == 0) {
+        if (claimableShares > _bondShares[nodeOperatorId]) {
+            revert InvalidClaimableShares();
+        }
+        if (claimableShares == 0 || amountToClaim == 0) {
             emit BondClaimedWstETH(nodeOperatorId, to, 0);
             return 0;
         }
@@ -200,23 +211,30 @@ abstract contract CSBondCore is CSBondCoreBase {
         emit BondClaimedWstETH(nodeOperatorId, to, amount);
     }
 
-    /// @dev Penalizes Node Operator's bond by burning bond shares. Shares will be burned on the next stETH rebase.
-    function _penalize(uint256 nodeOperatorId, uint256 amount) internal {
-        uint256 penaltyShares = _sharesByEth(amount);
+    /// @dev Burn Node Operator's bond shares. Shares will be burned on the next stETH rebase.
+    function _burn(uint256 nodeOperatorId, uint256 amount) internal {
+        uint256 toBurnShares = _sharesByEth(amount);
         uint256 currentShares = getBondShares(nodeOperatorId);
-        uint256 sharesToBurn = penaltyShares < currentShares
-            ? penaltyShares
+        uint256 burnedShares = toBurnShares < currentShares
+            ? toBurnShares
             : currentShares;
         LIDO.transferSharesFrom(
             address(this),
             LIDO_LOCATOR.burner(),
-            sharesToBurn
+            burnedShares
         );
-        _bondShares[nodeOperatorId] -= sharesToBurn;
-        totalBondShares -= sharesToBurn;
-        uint256 penaltyEth = _ethByShares(penaltyShares);
-        uint256 coveringEth = _ethByShares(sharesToBurn);
-        emit BondPenalized(nodeOperatorId, penaltyEth, coveringEth);
+        _bondShares[nodeOperatorId] -= burnedShares;
+        totalBondShares -= burnedShares;
+        emit BondBurned(
+            nodeOperatorId,
+            _ethByShares(toBurnShares),
+            _ethByShares(burnedShares)
+        );
+    }
+
+    /// @dev Transfer Node Operator's bond shares to Lido treasury to pay some fee.
+    function _chargeFee(uint256 nodeOperatorId, uint256 amount) internal {
+        // TODO: implement me
     }
 
     /// @dev Shortcut for Lido's getSharesByPooledEth
