@@ -79,6 +79,15 @@ contract CSBondCurveTest is Test, CSBondCurveBase {
         bondCurve.addBondCurve(curvePoints);
     }
 
+    function test_addBondCurve_RevertWhen_NextValueIsLessThanPrevious() public {
+        uint256[] memory curvePoints = new uint256[](2);
+        curvePoints[0] = 16 ether;
+        curvePoints[1] = 8 ether;
+
+        vm.expectRevert(InvalidBondCurveValues.selector);
+        bondCurve.addBondCurve(curvePoints);
+    }
+
     function test_setDefaultBondCurve() public {
         uint256[] memory curvePoints = new uint256[](1);
         curvePoints[0] = 16 ether;
@@ -123,6 +132,16 @@ contract CSBondCurveTest is Test, CSBondCurveBase {
         CSBondCurve.BondCurve memory set = bondCurve.getBondCurve(noId);
 
         assertEq(set.id, added.id);
+    }
+
+    function test_setBondCurve_RevertWhen_ZeroCurveId() public {
+        vm.expectRevert(InvalidBondCurveId.selector);
+        bondCurve.setBondCurve(0, 0);
+    }
+
+    function test_setBondCurve_RevertWhen_NoExistingCurveId() public {
+        vm.expectRevert(InvalidBondCurveId.selector);
+        bondCurve.setBondCurve(0, 100500);
     }
 
     function test_getBondCurve_default() public {
@@ -198,6 +217,7 @@ contract CSBondCurveTest is Test, CSBondCurveBase {
         assertEq(bondCurve.getBondAmountByKeysCount(0, curve), 0);
         assertEq(bondCurve.getBondAmountByKeysCount(1, curve), 1 ether);
         assertEq(bondCurve.getBondAmountByKeysCount(2, curve), 2 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(3, curve), 3 ether);
 
         points[0] = 1.8 ether;
         points[1] = 3.6 ether;
@@ -207,5 +227,6 @@ contract CSBondCurveTest is Test, CSBondCurveBase {
         assertEq(bondCurve.getBondAmountByKeysCount(0, curve), 0);
         assertEq(bondCurve.getBondAmountByKeysCount(1, curve), 1.8 ether);
         assertEq(bondCurve.getBondAmountByKeysCount(2, curve), 3.6 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(3, curve), 5.4 ether);
     }
 }
