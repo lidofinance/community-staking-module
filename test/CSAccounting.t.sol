@@ -203,7 +203,10 @@ abstract contract CSAccountingBondStateBaseTest is
     function _deposit(uint256 bond) internal virtual {
         vm.deal(user, bond);
         vm.prank(user);
-        accounting.depositETH{ value: bond }(user, 0);
+        accounting.depositETH{ value: bond }({
+            from: address(0),
+            nodeOperatorId: 0
+        });
     }
 
     uint256[] public defaultCurve = [2 ether, 3 ether];
@@ -395,8 +398,12 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             0
         );
-        assertApproxEqAbs(current, 32 ether, 1 wei);
-        assertApproxEqAbs(required, 32 ether, 1 wei);
+        assertApproxEqAbs(current, stETH.getSharesByPooledEth(32 ether), 1 wei);
+        assertApproxEqAbs(
+            required,
+            stETH.getSharesByPooledEth(32 ether),
+            1 wei
+        );
     }
 
     function test_WithBondAndOneWithdrawnValidator() public override {
@@ -405,8 +412,12 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             0
         );
-        assertApproxEqAbs(current, 32 ether, 1 wei);
-        assertApproxEqAbs(required, 30 ether, 1 wei);
+        assertApproxEqAbs(current, stETH.getSharesByPooledEth(32 ether), 1 wei);
+        assertApproxEqAbs(
+            required,
+            stETH.getSharesByPooledEth(30 ether),
+            1 wei
+        );
     }
 
     function test_WithExcessBond() public override {
@@ -415,8 +426,12 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             0
         );
-        assertApproxEqAbs(current, 33 ether, 1 wei);
-        assertApproxEqAbs(required, 32 ether, 1 wei);
+        assertApproxEqAbs(current, stETH.getSharesByPooledEth(33 ether), 1 wei);
+        assertApproxEqAbs(
+            required,
+            stETH.getSharesByPooledEth(32 ether),
+            1 wei
+        );
     }
 
     function test_WithExcessBondAndOneWithdrawnValidator() public override {
@@ -425,8 +440,12 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             0
         );
-        assertApproxEqAbs(current, 33 ether, 1 wei);
-        assertApproxEqAbs(required, 30 ether, 1 wei);
+        assertApproxEqAbs(current, stETH.getSharesByPooledEth(33 ether), 1 wei);
+        assertApproxEqAbs(
+            required,
+            stETH.getSharesByPooledEth(30 ether),
+            1 wei
+        );
     }
 
     function test_WithMissingBond() public override {
@@ -435,8 +454,12 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             0
         );
-        assertApproxEqAbs(current, 29 ether, 1 wei);
-        assertApproxEqAbs(required, 32 ether, 1 wei);
+        assertApproxEqAbs(current, stETH.getSharesByPooledEth(29 ether), 1 wei);
+        assertApproxEqAbs(
+            required,
+            stETH.getSharesByPooledEth(32 ether),
+            1 wei
+        );
     }
 
     function test_WithMissingBondAndOneWithdrawnValidator() public override {
@@ -445,8 +468,12 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             0
         );
-        assertApproxEqAbs(current, 29 ether, 1 wei);
-        assertApproxEqAbs(required, 30 ether, 1 wei);
+        assertApproxEqAbs(current, stETH.getSharesByPooledEth(29 ether), 1 wei);
+        assertApproxEqAbs(
+            required,
+            stETH.getSharesByPooledEth(30 ether),
+            1 wei
+        );
     }
 }
 
@@ -891,8 +918,6 @@ abstract contract CSAccountingRewardsBaseTest is CSAccountingBondStateBaseTest {
 abstract contract CSAccountingClaimRewardsBaseTest is
     CSAccountingRewardsBaseTest
 {
-    function test_EventEmitted() public virtual;
-
     function test_WithDesirableValue() public virtual;
 
     function test_RevertWhen_NotOwner() public virtual;
@@ -1258,17 +1283,6 @@ contract CSAccountingClaimStETHExcessBondTest is
             bondSharesBefore,
             "total bond shares after claim should be equal to before"
         );
-    }
-
-    function test_EventEmitted() public override {
-        _operator({ ongoing: 16, withdrawn: 0 });
-        _deposit({ bond: 33 ether });
-
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondClaimed(0, user, 1 ether);
-
-        vm.prank(user);
-        accounting.claimExcessBondStETH(0, UINT256_MAX);
     }
 
     function test_WithDesirableValue() public override {
@@ -1734,27 +1748,6 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             accounting.totalBondShares(),
             bondSharesAfter,
             "total bond shares after claim should be equal to after"
-        );
-    }
-
-    function test_EventEmitted() public override {
-        _operator({ ongoing: 16, withdrawn: 0 });
-        _deposit({ bond: 32 ether });
-        _rewards({ fee: 0.1 ether });
-
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondClaimed(
-            leaf.nodeOperatorId,
-            user,
-            stETH.getPooledEthByShares(sharesAsFee)
-        );
-
-        vm.prank(user);
-        accounting.claimRewardsStETH(
-            leaf.proof,
-            leaf.nodeOperatorId,
-            leaf.shares,
-            UINT256_MAX
         );
     }
 
@@ -2224,21 +2217,6 @@ contract CSAccountingClaimWstETHExcessBondTest is
             bondSharesBefore,
             "total bond shares after claim should be equal to before"
         );
-    }
-
-    function test_EventEmitted() public override {
-        _operator({ ongoing: 16, withdrawn: 0 });
-        _deposit({ bond: 33 ether });
-
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondClaimedWstETH(
-            leaf.nodeOperatorId,
-            user,
-            stETH.getSharesByPooledEth(1 ether)
-        );
-
-        vm.prank(user);
-        accounting.claimExcessBondWstETH(0, UINT256_MAX);
     }
 
     function test_WithDesirableValue() public override {
@@ -2774,23 +2752,6 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
     }
 
-    function test_EventEmitted() public override {
-        _operator({ ongoing: 16, withdrawn: 0 });
-        _deposit({ bond: 32 ether });
-        _rewards({ fee: 0.1 ether });
-
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondClaimedWstETH(0, user, wstETHAsFee);
-
-        vm.prank(user);
-        accounting.claimRewardsWstETH(
-            leaf.proof,
-            leaf.nodeOperatorId,
-            leaf.shares,
-            UINT256_MAX
-        );
-    }
-
     function test_WithDesirableValue() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
@@ -3151,17 +3112,6 @@ contract CSAccountingRequestRewardsETHExcessBondTest is
             bondSharesBefore,
             "total bond shares after claim should be equal to before"
         );
-    }
-
-    function test_EventEmitted() public override {
-        _operator({ ongoing: 16, withdrawn: 0 });
-        _deposit({ bond: 33 ether });
-
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondClaimed(0, user, 1 ether);
-
-        vm.prank(user);
-        accounting.requestExcessBondETH(0, UINT256_MAX);
     }
 
     function test_WithDesirableValue() public override {
@@ -3556,23 +3506,6 @@ contract CSAccountingRequestRewardsETHRewardsTest is
         );
     }
 
-    function test_EventEmitted() public override {
-        _operator({ ongoing: 16, withdrawn: 0 });
-        _deposit({ bond: 32 ether });
-        _rewards({ fee: 0.1 ether });
-
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondClaimed(0, user, unstETHAsFee);
-
-        vm.prank(user);
-        accounting.requestRewardsETH(
-            leaf.proof,
-            leaf.nodeOperatorId,
-            leaf.shares,
-            UINT256_MAX
-        );
-    }
-
     function test_WithDesirableValue() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
@@ -3644,9 +3577,6 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         vm.deal(user, 32 ether);
         uint256 sharesToDeposit = stETH.getSharesByPooledEth(32 ether);
 
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondDeposited(0, user, 32 ether);
-
         vm.prank(user);
         accounting.depositETH{ value: 32 ether }(user, 0);
 
@@ -3674,9 +3604,6 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
             _referal: address(0)
         });
-
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondDeposited(0, user, 32 ether);
 
         vm.prank(user);
         accounting.depositStETH(user, 0, 32 ether);
@@ -3709,9 +3636,6 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         );
         vm.stopPrank();
 
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondDepositedWstETH(0, user, wstETHAmount);
-
         vm.prank(user);
         accounting.depositWstETH(user, 0, wstETHAmount);
 
@@ -3742,8 +3666,6 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
 
         vm.expectEmit(true, true, true, true, address(stETH));
         emit Approval(user, address(accounting), 32 ether);
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondDeposited(0, user, 32 ether);
 
         vm.prank(user);
         accounting.depositStETHWithPermit(
@@ -3778,13 +3700,91 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), sharesToDeposit);
     }
 
-    function test_depositStETHWithPermit_AlreadyPermitted() public {
+    function test_depositStETHWithPermit_AlreadyPermittedWithLess() public {
         vm.deal(user, 32 ether);
         vm.prank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
 
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondDeposited(0, user, 32 ether);
+        vm.mockCall(
+            address(stETH),
+            abi.encodeWithSelector(
+                stETH.allowance.selector,
+                user,
+                address(accounting)
+            ),
+            abi.encode(1 ether)
+        );
+
+        vm.expectEmit(true, true, true, true, address(stETH));
+        emit Approval(user, address(accounting), 32 ether);
+
+        vm.recordLogs();
+
+        vm.prank(user);
+        accounting.depositStETHWithPermit(
+            user,
+            0,
+            32 ether,
+            CSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            2,
+            "should emit only one event about approve and deposit"
+        );
+    }
+
+    function test_depositStETHWithPermit_AlreadyPermittedWithInf() public {
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+
+        vm.mockCall(
+            address(stETH),
+            abi.encodeWithSelector(
+                stETH.allowance.selector,
+                user,
+                address(accounting)
+            ),
+            abi.encode(UINT256_MAX)
+        );
+
+        vm.recordLogs();
+
+        vm.prank(user);
+        accounting.depositStETHWithPermit(
+            user,
+            0,
+            32 ether,
+            CSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            1,
+            "should emit only one event about deposit"
+        );
+    }
+
+    function test_depositStETHWithPermit_AlreadyPermittedWithTheSame() public {
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
 
         vm.mockCall(
             address(stETH),
@@ -3832,8 +3832,6 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
 
         vm.expectEmit(true, true, true, true, address(wstETH));
         emit Approval(user, address(accounting), 32 ether);
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondDepositedWstETH(0, user, wstETHAmount);
 
         vm.prank(user);
         accounting.depositWstETHWithPermit(
@@ -3868,15 +3866,100 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), sharesToDeposit);
     }
 
-    function test_depositWstETHWithPermit_AlreadyPermitted() public {
+    function test_depositWstETHWithPermit_AlreadyPermittedWithLess() public {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        uint256 sharesToDeposit = stETH.getSharesByPooledEth(
+            wstETH.getStETHByWstETH(wstETHAmount)
+        );
+        vm.stopPrank();
+
+        vm.mockCall(
+            address(wstETH),
+            abi.encodeWithSelector(
+                wstETH.allowance.selector,
+                user,
+                address(accounting)
+            ),
+            abi.encode(1 ether)
+        );
+
+        vm.expectEmit(true, true, true, true, address(wstETH));
+        emit Approval(user, address(accounting), 32 ether);
+
+        vm.recordLogs();
+
+        vm.prank(user);
+        accounting.depositWstETHWithPermit(
+            user,
+            0,
+            wstETHAmount,
+            CSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            2,
+            "should emit only one event about approve and deposit"
+        );
+    }
+
+    function test_depositWstETHWithPermit_AlreadyPermittedWithInf() public {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         vm.stopPrank();
 
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondDepositedWstETH(0, user, wstETHAmount);
+        vm.mockCall(
+            address(wstETH),
+            abi.encodeWithSelector(
+                wstETH.allowance.selector,
+                user,
+                address(accounting)
+            ),
+            abi.encode(UINT256_MAX)
+        );
+
+        vm.recordLogs();
+
+        vm.prank(user);
+        accounting.depositWstETHWithPermit(
+            user,
+            0,
+            wstETHAmount,
+            CSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            1,
+            "should emit only one event about deposit"
+        );
+    }
+
+    function test_depositWstETHWithPermit_AlreadyPermittedWithTheSame() public {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        vm.stopPrank();
 
         vm.mockCall(
             address(wstETH),
@@ -4046,6 +4129,26 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
 }
 
 contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
+    function setLockedBondRetentionPeriod() public {
+        vm.prank(admin);
+        accounting.setLockedBondRetentionPeriod(200 days);
+        assertEq(accounting.getBondLockRetentionPeriod(), 200 days);
+    }
+
+    function setLockedBondRetentionPeriod_RevertWhen_DoesNotHaveRole() public {
+        vm.expectRevert(
+            bytes(
+                Utilities.accessErrorString(
+                    stranger,
+                    accounting.DEFAULT_ADMIN_ROLE()
+                )
+            )
+        );
+
+        vm.prank(stranger);
+        accounting.setLockedBondRetentionPeriod(200 days);
+    }
+
     function test_lockBondETH() public {
         mock_getNodeOperatorsCount(1);
 

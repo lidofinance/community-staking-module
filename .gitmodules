@@ -7,7 +7,3 @@
 [submodule "lib/openzeppelin-contracts-v4.4"]
 	path = lib/openzeppelin-contracts-v4.4
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
-[submodule "lib/multicall"]
-	path = lib/multicall
-	url = https://github.com/mds1/multicall
-	branch = main

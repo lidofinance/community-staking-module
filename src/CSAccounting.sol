@@ -5,15 +5,14 @@ pragma solidity 0.8.21;
 
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
-import { CSBondCoreBase, CSBondCore } from "./CSBondCore.sol";
+import { CSBondCore } from "./CSBondCore.sol";
 import { CSBondCurve } from "./CSBondCurve.sol";
 import { CSBondLock } from "./CSBondLock.sol";
 
 import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 
-// TODO: CSBondCoreBase should be removed here after CSBondCore tests are implemented
-abstract contract CSAccountingBase is CSBondCoreBase {
+abstract contract CSAccountingBase {
     event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
     event BondLockReleased(uint256 indexed nodeOperatorId, uint256 amount);
 
