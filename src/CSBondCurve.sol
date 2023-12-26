@@ -74,19 +74,18 @@ abstract contract CSBondCurve is CSBondCurveBase {
     }
 
     // todo: should we strictly define max curves array length?
-    BondCurve[] public bondCurves;
+    BondCurve[] internal _bondCurves;
     /// @dev Default bond curve id for node operator if no special curve is set
     uint256 public defaultBondCurveId;
     /// @dev Mapping of node operator id to bond curve id
-    mapping(uint256 => uint256) public bondCurveId;
+    mapping(uint256 => uint256) public operatorBondCurveId;
 
     // todo: might be redefined in the future
     uint256 internal constant MAX_CURVE_LENGTH = 20;
     uint256 internal constant MIN_CURVE_LENGTH = 1;
 
     constructor(uint256[] memory defaultBondCurvePoints) {
-        _addBondCurve(defaultBondCurvePoints);
-        _setDefaultBondCurve(bondCurves.length);
+        _setDefaultBondCurve(_addBondCurve(defaultBondCurvePoints));
     }
 
     /// @dev Adds new bond curve to the array.
@@ -107,15 +106,15 @@ abstract contract CSBondCurve is CSBondCurveBase {
         uint256 curveTrend = curvePoints[curvePoints.length - 1] -
             // if the curve length is 1, then 0 is used as the previous value to calculate the trend
             (curvePoints.length > 1 ? curvePoints[curvePoints.length - 2] : 0);
-        bondCurves.push(
+        _bondCurves.push(
             BondCurve({
-                id: bondCurves.length + 1, // to avoid zero id in arrays
+                id: _bondCurves.length + 1, // to avoid zero id in arrays
                 points: curvePoints,
                 trend: curveTrend
             })
         );
         emit BondCurveAdded(curvePoints);
-        return bondCurves.length;
+        return _bondCurves.length;
     }
 
     /// @dev Sets default bond curve for the module.
@@ -124,7 +123,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
         // todo: should we check that new curve is not worse than the old one?
         if (
             curveId == 0 ||
-            curveId > bondCurves.length ||
+            curveId > _bondCurves.length ||
             curveId == defaultBondCurveId
         ) revert InvalidBondCurveId();
         defaultBondCurveId = curveId;
@@ -134,15 +133,15 @@ abstract contract CSBondCurve is CSBondCurveBase {
     /// @dev Sets bond curve for the given node operator.
     ///      It will be used for the node operator instead of default curve.
     function _setBondCurve(uint256 nodeOperatorId, uint256 curveId) internal {
-        if (curveId == 0 || curveId > bondCurves.length)
+        if (curveId == 0 || curveId > _bondCurves.length)
             revert InvalidBondCurveId();
-        bondCurveId[nodeOperatorId] = curveId;
+        operatorBondCurveId[nodeOperatorId] = curveId;
         emit BondCurveChanged(nodeOperatorId, curveId);
     }
 
     /// @dev Resets bond curve for the given node operator to default (for example, because of breaking the rules by node operator)
     function _resetBondCurve(uint256 nodeOperatorId) internal {
-        delete bondCurveId[nodeOperatorId];
+        delete operatorBondCurveId[nodeOperatorId];
         emit BondCurveChanged(nodeOperatorId, defaultBondCurveId);
     }
 
@@ -152,7 +151,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
     function getCurveInfo(
         uint256 curveId
     ) public view returns (BondCurve memory) {
-        return bondCurves[curveId - 1];
+        return _bondCurves[curveId - 1];
     }
 
     /// @notice Returns bond curve for the given node operator.
@@ -161,11 +160,11 @@ abstract contract CSBondCurve is CSBondCurveBase {
     function getBondCurve(
         uint256 nodeOperatorId
     ) public view returns (BondCurve memory) {
-        uint256 curveId = bondCurveId[nodeOperatorId];
+        uint256 curveId = operatorBondCurveId[nodeOperatorId];
         return
             curveId == 0
-                ? bondCurves[defaultBondCurveId - 1]
-                : bondCurves[curveId - 1];
+                ? _bondCurves[defaultBondCurveId - 1]
+                : _bondCurves[curveId - 1];
     }
 
     /// @notice Returns the required bond in ETH for the given number of keys for default bond curve.
@@ -177,7 +176,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
         uint256 keys
     ) public view returns (uint256) {
         return
-            getBondAmountByKeysCount(keys, bondCurves[defaultBondCurveId - 1]);
+            getBondAmountByKeysCount(keys, _bondCurves[defaultBondCurveId - 1]);
     }
 
     /// @notice Returns the required bond in ETH for the given number of keys for particular bond curve.
@@ -209,7 +208,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
         return
             getKeysCountByBondAmount(
                 amount,
-                bondCurves[defaultBondCurveId - 1]
+                _bondCurves[defaultBondCurveId - 1]
             );
     }
 

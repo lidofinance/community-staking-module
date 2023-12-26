@@ -46,8 +46,7 @@ contract CSAccountingForTests is CSAccounting {
     {}
 
     function setBondCurve_ForTest(uint256 id, uint256[] memory curve) public {
-        _addBondCurve(curve);
-        _setBondCurve(id, bondCurves.length);
+        _setBondCurve(id, _addBondCurve(curve));
     }
 
     function setBondLock_ForTest(uint256 id, uint256 amount) public {
