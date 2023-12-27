@@ -26,13 +26,13 @@ struct NodeOperator {
     uint256 targetLimit;
     bool isTargetLimitActive;
     uint256 stuckPenaltyEndTimestamp;
-    uint256 totalExitedKeys;
-    uint256 totalAddedKeys;
-    uint256 totalWithdrawnKeys;
-    uint256 totalDepositedKeys;
-    uint256 totalVettedKeys;
-    uint256 stuckValidatorsCount;
-    uint256 refundedValidatorsCount;
+    uint256 totalExitedKeys; // @dev only increased
+    uint256 totalAddedKeys; // @dev only increased
+    uint256 totalWithdrawnKeys; // @dev only increased
+    uint256 totalDepositedKeys; // @dev only increased
+    uint256 totalVettedKeys; // @dev both increased and decreased
+    uint256 stuckValidatorsCount; // @dev both increased and decreased
+    uint256 refundedValidatorsCount; // @dev only increased
     uint256 queueNonce;
 }
 
@@ -82,6 +82,7 @@ contract CSModuleBase {
         bool isTargetLimitActive,
         uint256 targetValidatorsCount
     );
+    event WithdrawalSubmitted(uint256 indexed validatorId, uint256 exitBalance);
 
     event BatchEnqueued(
         uint256 indexed nodeOperatorId,
@@ -132,6 +133,7 @@ contract CSModule is ICSModule, CSModuleBase {
     // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
     // it seems to be enough
     uint64 public constant MAX_NODE_OPERATORS_COUNT = type(uint64).max;
+    uint256 public constant DEPOSIT_SIZE = 32 ether;
     bytes32 public constant SIGNING_KEYS_POSITION =
         keccak256("lido.CommunityStakingModule.signingKeysPosition");
 
@@ -214,6 +216,7 @@ contract CSModule is ICSModule, CSModuleBase {
             uint256 /* depositableValidatorsCount */
         )
     {
+        // TODO: need to be implemented properly
         return (
             _totalExitedValidators,
             _totalDepositedValidators,
@@ -675,13 +678,14 @@ contract CSModule is ICSModule, CSModuleBase {
             no.totalVettedKeys -
             totalDepositedValidators;
         if (no.isTargetLimitActive) {
-            depositableValidatorsCount = (totalExitedValidators +
-                targetValidatorsCount) <= no.totalVettedKeys
-                ? 0
-                : Math.min(
-                    totalExitedValidators + targetValidatorsCount,
-                    no.totalVettedKeys
-                ) - totalDepositedValidators;
+            uint256 activeValidatorsCount = no.totalDepositedKeys -
+                no.totalExitedKeys;
+            depositableValidatorsCount = Math.min(
+                targetValidatorsCount > activeValidatorsCount
+                    ? targetValidatorsCount - activeValidatorsCount
+                    : 0,
+                depositableValidatorsCount
+            );
         }
     }
 
@@ -839,25 +843,6 @@ contract CSModule is ICSModule, CSModuleBase {
         }
     }
 
-    /// @notice Reports withdrawn validator for node operator
-    /// @param withdrawProof Withdraw proof
-    /// @param validatorId ID of the validator
-    /// @param nodeOperatorId ID of the node operator
-    /// @param withdrawnBalance Amount of withdrawn balance
-    function reportWithdrawnValidator(
-        bytes32[] memory withdrawProof,
-        uint256 validatorId,
-        uint256 nodeOperatorId,
-        uint256 withdrawnBalance
-    ) external {
-        // TODO: implement me
-    }
-
-    /// @notice Triggers the node operator's unbonded validators to exit
-    function exitUnbondedValidators(uint256 nodeOperatorId) external {
-        // TODO: implement me
-    }
-
     /// @notice Triggers the node operator's validator to exit by DAO decision
     function unsafeExitValidator(
         uint256 nodeOperatorId,
@@ -975,6 +960,7 @@ contract CSModule is ICSModule, CSModuleBase {
 
         if (
             no.isTargetLimitActive &&
+            // TODO: totalExited or totalWithdrawn?
             vetKeysPointer > (no.totalExitedKeys + no.targetLimit)
         ) revert TargetLimitExceeded();
         if (no.stuckValidatorsCount > 0) revert StuckKeysPresent();
@@ -1117,6 +1103,26 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting.penalize(nodeOperatorId, amount);
         _checkForUnbondedKeys(nodeOperatorId);
         _checkForOutOfBond(nodeOperatorId);
+    }
+
+    function submitWithdrawal(
+        bytes32 /*withdrawalProof*/,
+        uint256 nodeOperatorId,
+        uint256 validatorId,
+        uint256 exitBalance
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        // TODO: check for withdrawal proof
+        // TODO: consider asserting that withdrawn keys count is not higher than exited keys count
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        no.totalWithdrawnKeys += 1;
+
+        if (exitBalance < DEPOSIT_SIZE) {
+            accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - exitBalance);
+            _checkForOutOfBond(nodeOperatorId);
+        }
+
+        emit WithdrawalSubmitted(validatorId, exitBalance);
     }
 
     /// @notice Called when withdrawal credentials changed by DAO

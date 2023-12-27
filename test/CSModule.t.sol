@@ -1886,3 +1886,38 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         assertEq(lock.retentionUntil, 0);
     }
 }
+
+contract CsmSubmitWithdrawal is CSMCommon {
+    function test_submitWithdrawal() public {
+        uint256 validatorId = 1;
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit WithdrawalSubmitted(validatorId, csm.DEPOSIT_SIZE());
+        csm.submitWithdrawal("", noId, validatorId, csm.DEPOSIT_SIZE());
+
+        CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnValidators, 1);
+    }
+
+    function test_submitWithdrawal_lowExitBalance() public {
+        uint256 validatorId = 1;
+        uint256 noId = createNodeOperator();
+        uint256 depositSize = csm.DEPOSIT_SIZE();
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.penalize.selector, noId, 1 ether)
+        );
+        csm.submitWithdrawal("", noId, validatorId, depositSize - 1 ether);
+    }
+
+    function test_submitWithdrawal_RevertWhenNoNodeOperator() public {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.submitWithdrawal("", 0, 0, 0);
+    }
+}
