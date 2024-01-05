@@ -1,0 +1,57 @@
+// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-License-Identifier: GPL-3.0
+
+pragma solidity 0.8.21;
+
+import { IForkSelector } from "./interfaces/IForkSelector.sol";
+import { ForkVersion, Slot } from "./lib/Types.sol";
+
+contract ForkSelector is IForkSelector {
+    ForkVersion[] public supportedVersions;
+    Slot[] public versionsLookup;
+    Slot public terminalSlot = Slot.wrap(type(uint64).max);
+
+    error NoSuitableForkVersion(Slot slot);
+    error UnexpectedOrder();
+
+    /// @dev If any fork introduces a changed generalized index, we need to add it here.
+    /// @dev The list of `versionsLookup` is expected to be sorted in ascending order.
+    function addForkAtSlot(ForkVersion fork, Slot slot) external onlyDao {
+        if (
+            versionsLookup.length > 0 &&
+            Slot.unwrap(versionsLookup[versionsLookup.length - 1]) >=
+            Slot.unwrap(slot)
+        ) {
+            revert UnexpectedOrder();
+        }
+
+        supportedVersions.push(fork);
+        versionsLookup.push(slot);
+    }
+
+    // TODO: Make it on-shot operation of leave it as is?
+    function ossifyAtSlot(Slot slot) external onlyDao {
+        terminalSlot = slot;
+    }
+
+    /// @dev returns the fork version suitable for the given slot number given the requirements to generalized indices.
+    function findFork(Slot slot) external view returns (ForkVersion) {
+        if (Slot.unwrap(slot) > Slot.unwrap(terminalSlot)) {
+            revert NoSuitableForkVersion(slot);
+        }
+
+        for (uint256 i = versionsLookup.length; i > 0; i--) {
+            if (Slot.unwrap(slot) > Slot.unwrap(versionsLookup[i - 1])) {
+                return supportedVersions[i - 1];
+            }
+        }
+
+        // Basically, too old slot provided.
+        revert NoSuitableForkVersion(slot);
+    }
+
+    modifier onlyDao() {
+        // FIXME: implement.
+        _;
+    }
+}
