@@ -94,7 +94,7 @@ contract CSModuleBase {
     event UnvettingFeeSet(uint256 unvettingFee);
 
     event UnvettingFeeApplied(uint256 indexed nodeOperatorId);
-    event ELRewardsStealingPenaltyInitiated(
+    event ELRewardsStealingPenaltyReported(
         uint256 indexed nodeOperatorId,
         uint256 proposedBlockNumber,
         uint256 stolenAmount
@@ -132,6 +132,8 @@ contract CSModule is ICSModule, CSModuleBase {
     uint64 public constant MAX_NODE_OPERATORS_COUNT = type(uint64).max;
     bytes32 public constant SIGNING_KEYS_POSITION =
         keccak256("lido.CommunityStakingModule.signingKeysPosition");
+
+    uint256 public constant EL_REWARDS_STEALING_PENALTY = 0.1 ether;
 
     uint256 public unvettingFee;
     QueueLib.Queue public queue;
@@ -1034,11 +1036,12 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 amount
     ) external onlyExistingNodeOperator(nodeOperatorId) {
         // TODO: check role
+        amount += EL_REWARDS_STEALING_PENALTY;
         accounting.lockBondETH(nodeOperatorId, amount);
 
         _checkForUnbondedKeys(nodeOperatorId);
 
-        emit ELRewardsStealingPenaltyInitiated(
+        emit ELRewardsStealingPenaltyReported(
             nodeOperatorId,
             blockNumber,
             amount
