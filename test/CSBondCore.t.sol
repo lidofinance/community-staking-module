@@ -72,6 +72,10 @@ contract CSBondCoreTestable is CSBondCore {
     function burn(uint256 nodeOperatorId, uint256 amount) external {
         _burn(nodeOperatorId, amount);
     }
+
+    function charge(uint256 nodeOperatorId, uint256 amount) external {
+        _charge(nodeOperatorId, amount);
+    }
 }
 
 abstract contract CSBondCoreTestBase is Test, Fixtures, CSBondCoreBase {
@@ -613,6 +617,98 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
             stETH.sharesOf(address(burner)),
             shares,
             "burner shares should be equal to burned"
+        );
+        assertEq(bondCore.totalBondShares(), 0);
+    }
+}
+
+contract CSBondCoreChargeTest is CSBondCoreTestBase {
+    function test_charge_LessThanDeposit() public {
+        _deposit(32 ether);
+
+        uint256 shares = stETH.getSharesByPooledEth(1 ether);
+        uint256 charged = stETH.getPooledEthByShares(shares);
+        vm.expectEmit(true, true, true, true, address(bondCore));
+        emit BondCharged(0, charged, charged);
+
+        uint256 bondSharesBefore = bondCore.getBondShares(0);
+        bondCore.charge(0, 1 ether);
+        uint256 bondSharesAfter = bondCore.getBondShares(0);
+
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore - shares,
+            "bond shares should be decreased by burning"
+        );
+        assertEq(
+            stETH.sharesOf(address(bondCore)),
+            bondSharesAfter,
+            "bond manager shares should be decreased by burning"
+        );
+        assertEq(
+            stETH.sharesOf(address(locator.treasury())),
+            shares,
+            "treasury shares should be equal to charged"
+        );
+        assertEq(bondCore.totalBondShares(), bondSharesAfter);
+    }
+
+    function test_charge_MoreThanDeposit() public {
+        _deposit(32 ether);
+
+        uint256 bondSharesBefore = bondCore.getBondShares(0);
+        uint256 chargeShares = stETH.getSharesByPooledEth(33 ether);
+        vm.expectEmit(true, true, true, true, address(bondCore));
+        emit BondCharged(
+            0,
+            stETH.getPooledEthByShares(chargeShares),
+            stETH.getPooledEthByShares(bondSharesBefore)
+        );
+
+        bondCore.charge(0, 33 ether);
+
+        assertEq(
+            bondCore.getBondShares(0),
+            0,
+            "bond shares should be 0 after burning"
+        );
+        assertEq(
+            stETH.sharesOf(address(bondCore)),
+            0,
+            "bond manager shares should be 0 after burning"
+        );
+        assertEq(
+            stETH.sharesOf(address(locator.treasury())),
+            bondSharesBefore,
+            "treasury shares should be equal to bond shares"
+        );
+        assertEq(bondCore.totalBondShares(), 0);
+    }
+
+    function test_charge_EqualToDeposit() public {
+        _deposit(32 ether);
+
+        uint256 shares = stETH.getSharesByPooledEth(32 ether);
+        uint256 charged = stETH.getPooledEthByShares(shares);
+        vm.expectEmit(true, true, true, true, address(bondCore));
+        emit BondCharged(0, charged, charged);
+
+        bondCore.charge(0, 32 ether);
+
+        assertEq(
+            bondCore.getBondShares(0),
+            0,
+            "bond shares should be 0 after burning"
+        );
+        assertEq(
+            stETH.sharesOf(address(bondCore)),
+            0,
+            "bond manager shares should be 0 after burning"
+        );
+        assertEq(
+            stETH.sharesOf(address(locator.treasury())),
+            shares,
+            "treasury shares should be equal to burned"
         );
         assertEq(bondCore.totalBondShares(), 0);
     }

@@ -39,6 +39,8 @@ contract CSAccounting is
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
 
+    bytes32 public constant INSTANT_CHARGE_BOND_ROLE =
+        keccak256("INSTANT_CHARGE_BOND_ROLE");
     bytes32 public constant INSTANT_PENALIZE_BOND_ROLE =
         keccak256("INSTANT_PENALIZE_BOND_ROLE"); // 0x9909cf24c2d3bafa8c229558d86a1b726ba57c3ef6350848dcf434a4181b56c7
     bytes32 public constant SET_BOND_LOCK_ROLE =
@@ -644,6 +646,16 @@ contract CSAccounting is
         uint256 amount
     ) public onlyRole(INSTANT_PENALIZE_BOND_ROLE) {
         CSBondCore._burn(nodeOperatorId, amount);
+    }
+
+    /// @notice Charge bond by transferring shares of the given node operator to the protocol fee address.
+    /// @param nodeOperatorId id of the node operator to charge bond for.
+    /// @param amount amount of ETH to charge.
+    function charge(
+        uint256 nodeOperatorId,
+        uint256 amount
+    ) public onlyRole(INSTANT_CHARGE_BOND_ROLE) {
+        CSBondCore._charge(nodeOperatorId, amount);
     }
 
     function _getActiveKeys(

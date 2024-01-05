@@ -77,4 +77,6 @@ interface ICSAccounting is ICSBondCore, ICSBondCurve, ICSBondLock {
     function resetBondCurve(uint256 nodeOperatorId) external;
 
     function penalize(uint256 nodeOperatorId, uint256 amount) external;
+
+    function charge(uint256 nodeOperatorId, uint256 amount) external;
 }

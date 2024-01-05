@@ -34,6 +34,11 @@ abstract contract CSBondCoreBase {
         uint256 toBurnAmount,
         uint256 burnedAmount
     );
+    event BondCharged(
+        uint256 indexed nodeOperatorId,
+        uint256 toChargeAmount,
+        uint256 chargedAmount
+    );
 
     error InvalidClaimableShares();
 }
@@ -213,28 +218,39 @@ abstract contract CSBondCore is CSBondCoreBase {
 
     /// @dev Burn Node Operator's bond shares. Shares will be burned on the next stETH rebase.
     function _burn(uint256 nodeOperatorId, uint256 amount) internal {
-        uint256 toBurnShares = _sharesByEth(amount);
-        uint256 currentShares = getBondShares(nodeOperatorId);
-        uint256 burnedShares = toBurnShares < currentShares
-            ? toBurnShares
-            : currentShares;
-        LIDO.transferSharesFrom(
-            address(this),
-            LIDO_LOCATOR.burner(),
-            burnedShares
-        );
-        _bondShares[nodeOperatorId] -= burnedShares;
-        totalBondShares -= burnedShares;
-        emit BondBurned(
+        (uint256 toBurn, uint256 burned) = _transferBond(
             nodeOperatorId,
-            _ethByShares(toBurnShares),
-            _ethByShares(burnedShares)
+            amount,
+            LIDO_LOCATOR.burner()
         );
+        emit BondBurned(nodeOperatorId, toBurn, burned);
     }
 
     /// @dev Transfer Node Operator's bond shares to Lido treasury to pay some fee.
-    function _chargeFee(uint256 nodeOperatorId, uint256 amount) internal {
-        // TODO: implement me
+    function _charge(uint256 nodeOperatorId, uint256 amount) internal {
+        (uint256 toCharge, uint256 charged) = _transferBond(
+            nodeOperatorId,
+            amount,
+            LIDO_LOCATOR.treasury()
+        );
+        emit BondCharged(nodeOperatorId, toCharge, charged);
+    }
+
+    function _transferBond(
+        uint256 nodeOperatorId,
+        uint256 amount,
+        address to
+    ) internal returns (uint256 toTransfer, uint256 transferred) {
+        uint256 toTransferShares = _sharesByEth(amount);
+        uint256 currentShares = getBondShares(nodeOperatorId);
+        uint256 transferredShares = toTransferShares < currentShares
+            ? toTransferShares
+            : currentShares;
+        LIDO.transferSharesFrom(address(this), to, transferredShares);
+        _bondShares[nodeOperatorId] -= transferredShares;
+        totalBondShares -= transferredShares;
+        toTransfer = _ethByShares(toTransferShares);
+        transferred = _ethByShares(transferredShares);
     }
 
     /// @dev Shortcut for Lido's getSharesByPooledEth

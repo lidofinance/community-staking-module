@@ -99,6 +99,7 @@ contract CSAccountingBaseTest is
 
         vm.startPrank(admin);
         accounting.setFeeDistributor(address(feeDistributor));
+        accounting.grantRole(accounting.INSTANT_CHARGE_BOND_ROLE(), admin);
         accounting.grantRole(accounting.INSTANT_PENALIZE_BOND_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_LOCK_ROLE(), admin);
         accounting.grantRole(accounting.RELEASE_BOND_LOCK_ROLE(), admin);
@@ -4124,6 +4125,66 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
 
         vm.prank(stranger);
         accounting.penalize(0, 20);
+    }
+}
+
+contract CSAccountingChargeTest is CSAccountingBaseTest {
+    function setUp() public override {
+        super.setUp();
+        ICSModule.NodeOperatorInfo memory n;
+        n.active = true;
+        n.managerAddress = address(user);
+        n.rewardAddress = address(user);
+        n.totalVettedValidators = 0;
+        n.totalExitedValidators = 0;
+        n.totalWithdrawnValidators = 0;
+        n.totalAddedValidators = 0;
+        n.totalDepositedValidators = 0;
+        mock_getNodeOperator(n);
+        mock_getNodeOperatorsCount(1);
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        accounting.depositETH{ value: 32 ether }(user, 0);
+    }
+
+    function test_charge() public {
+        uint256 shares = stETH.getSharesByPooledEth(1 ether);
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.prank(admin);
+        accounting.charge(0, 1 ether);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore - shares,
+            "bond shares should be decreased by penalty"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            bondSharesAfter,
+            "bond manager shares should be decreased by penalty"
+        );
+        assertEq(
+            stETH.sharesOf(locator.treasury()),
+            shares,
+            "treasury shares should be equal to charged"
+        );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
+    }
+
+    function test_charge_RevertWhenCallerHasNoRole() public {
+        vm.expectRevert(
+            bytes(
+                Utilities.accessErrorString(
+                    stranger,
+                    accounting.INSTANT_CHARGE_BOND_ROLE()
+                )
+            )
+        );
+
+        vm.prank(stranger);
+        accounting.charge(0, 20);
     }
 }
 

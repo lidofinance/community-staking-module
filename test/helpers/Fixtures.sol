@@ -27,11 +27,13 @@ contract Fixtures is StdCheats, Test {
         burner = new Stub();
         Stub elVault = new Stub();
         Stub wq = new Stub();
+        Stub treasury = new Stub();
         locator = new LidoLocatorMock(
             address(stETH),
             address(burner),
             address(wq),
-            address(elVault)
+            address(elVault),
+            address(treasury)
         );
         wstETH = new WstETHMock(address(stETH));
         vm.label(address(stETH), "lido");
@@ -40,6 +42,7 @@ contract Fixtures is StdCheats, Test {
         vm.label(address(burner), "burner");
         vm.label(address(wq), "wq");
         vm.label(address(elVault), "elVault");
+        vm.label(address(treasury), "treasury");
     }
 }
 
