@@ -31,7 +31,6 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     LidoLocatorMock public locator;
     WstETHMock public wstETH;
     LidoMock public stETH;
-    Stub public burner;
     CSModule public csm;
     CSAccounting public accounting;
     Stub public communityStakingFeeDistributor;
@@ -56,7 +55,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         stranger = nextAddress("STRANGER");
         admin = nextAddress("ADMIN");
 
-        (locator, wstETH, stETH, burner) = initLido();
+        (locator, wstETH, stETH, ) = initLido();
 
         // FIXME: move to the corresponding tests
         vm.deal(nodeOperator, BOND_SIZE + 1 wei);
@@ -79,6 +78,10 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         csm.setUnvettingFee(0.05 ether);
 
         vm.startPrank(admin);
+        accounting.grantRole(
+            accounting.INSTANT_CHARGE_BOND_ROLE(),
+            address(csm)
+        );
         accounting.grantRole(
             accounting.INSTANT_PENALIZE_BOND_ROLE(),
             address(csm)
@@ -1675,11 +1678,15 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         csm.vetKeys(noId, 1);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit ELRewardsStealingPenaltyInitiated(noId, 100, BOND_SIZE / 2);
+        emit ELRewardsStealingPenaltyReported(
+            noId,
+            100,
+            BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_PENALTY()
+        );
         csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
 
         uint256 lockedBond = accounting.getActualLockedBond(noId);
-        assertEq(lockedBond, BOND_SIZE / 2);
+        assertEq(lockedBond, BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_PENALTY());
 
         CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
         assertEq(no.totalVettedValidators, 1);
