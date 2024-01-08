@@ -462,9 +462,15 @@ contract CSAccounting is
         );
         _isSenderEligibleToClaim(nodeOperator.managerAddress);
         _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
+        if (stETHAmount == 0) return;
+        uint256 claimableShares = _getExcessBondShares(
+            nodeOperatorId,
+            _calcActiveKeys(nodeOperator)
+        );
+        if (claimableShares == 0) return;
         CSBondCore._claimStETH(
             nodeOperatorId,
-            _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
+            claimableShares,
             stETHAmount,
             nodeOperator.rewardAddress
         );
@@ -481,9 +487,15 @@ contract CSAccounting is
             nodeOperatorId
         );
         _isSenderEligibleToClaim(nodeOperator.managerAddress);
+        if (wstETHAmount == 0) return;
+        uint256 claimableShares = _getExcessBondShares(
+            nodeOperatorId,
+            _calcActiveKeys(nodeOperator)
+        );
+        if (claimableShares == 0) return;
         CSBondCore._claimWstETH(
             nodeOperatorId,
-            _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
+            claimableShares,
             wstETHAmount,
             nodeOperator.rewardAddress
         );
@@ -550,9 +562,15 @@ contract CSAccounting is
         );
         _isSenderEligibleToClaim(nodeOperator.managerAddress);
         _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
+        if (ETHAmount == 0) return;
+        uint256 claimableShares = _getExcessBondShares(
+            nodeOperatorId,
+            _calcActiveKeys(nodeOperator)
+        );
+        if (claimableShares == 0) return;
         CSBondCore._requestETH(
             nodeOperatorId,
-            _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
+            claimableShares,
             ETHAmount,
             nodeOperator.rewardAddress
         );

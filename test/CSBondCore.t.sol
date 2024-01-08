@@ -165,9 +165,6 @@ contract CSBondCoreETHTest is CSBondCoreTestBase {
         mock_requestWithdrawals(mockedRequestIds);
         _deposit(1 ether);
 
-        vm.expectEmit(true, true, true, true, address(bondCore));
-        emit BondClaimed(0, user, 0);
-
         uint256 bondSharesBefore = bondCore.getBondShares(0);
         bondCore.requestETH(0, 0, 0, user);
 
@@ -178,9 +175,6 @@ contract CSBondCoreETHTest is CSBondCoreTestBase {
     function test_requestETH_WhenToClaimIsZero() public {
         mock_requestWithdrawals(mockedRequestIds);
         _deposit(2 ether);
-
-        vm.expectEmit(true, true, true, true, address(bondCore));
-        emit BondClaimed(0, user, 0);
 
         uint256 bondSharesBefore = bondCore.getBondShares(0);
         bondCore.requestETH(0, 1 ether, 0, user);
@@ -298,9 +292,6 @@ contract CSBondCoreStETHTest is CSBondCoreTestBase {
     function test_claimStETH_WhenClaimableIsZero() public {
         _deposit(1 ether);
 
-        vm.expectEmit(true, true, true, true, address(bondCore));
-        emit BondClaimed(0, user, 0);
-
         uint256 bondSharesBefore = bondCore.getBondShares(0);
         bondCore.claimStETH(0, 0, 0, user);
 
@@ -311,9 +302,6 @@ contract CSBondCoreStETHTest is CSBondCoreTestBase {
 
     function test_claimStETH_WhenToClaimIsZero() public {
         _deposit(2 ether);
-
-        vm.expectEmit(true, true, true, true, address(bondCore));
-        emit BondClaimed(0, user, 0);
 
         uint256 bondSharesBefore = bondCore.getBondShares(0);
         bondCore.claimStETH(0, 1 ether, 0, user);
@@ -435,9 +423,6 @@ contract CSBondCoreWstETHTest is CSBondCoreTestBase {
     function test_claimWstETH_WhenClaimableIsZero() public {
         _deposit(1 ether);
 
-        vm.expectEmit(true, true, true, true, address(bondCore));
-        emit BondClaimedWstETH(0, user, 0);
-
         uint256 bondSharesBefore = bondCore.getBondShares(0);
         bondCore.claimWstETH(0, 0, 0, user);
 
@@ -448,9 +433,6 @@ contract CSBondCoreWstETHTest is CSBondCoreTestBase {
 
     function test_claimWstETH_WhenToClaimIsZero() public {
         _deposit(2 ether);
-
-        vm.expectEmit(true, true, true, true, address(bondCore));
-        emit BondClaimedWstETH(0, user, 0);
 
         uint256 bondSharesBefore = bondCore.getBondShares(0);
         bondCore.claimWstETH(0, 1 ether, 0, user);

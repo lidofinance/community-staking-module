@@ -146,15 +146,11 @@ abstract contract CSBondCore is CSBondCoreBase {
         uint256 sharesToClaim = amountToClaim < _ethByShares(claimableShares)
             ? _sharesByEth(amountToClaim)
             : claimableShares;
-        if (
-            sharesToClaim < WITHDRAWAL_QUEUE.MIN_STETH_WITHDRAWAL_AMOUNT() ||
-            sharesToClaim > WITHDRAWAL_QUEUE.MAX_STETH_WITHDRAWAL_AMOUNT()
-        ) {
-            emit BondClaimed(nodeOperatorId, to, 0);
+        if (sharesToClaim < WITHDRAWAL_QUEUE.MIN_STETH_WITHDRAWAL_AMOUNT())
             return;
-        }
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = _ethByShares(sharesToClaim);
+        // Reverts if `sharesToClaim` is greater than `MIN_STETH_WITHDRAWAL_AMOUNT`
         WITHDRAWAL_QUEUE.requestWithdrawals(amounts, to);
         _bondShares[nodeOperatorId] -= sharesToClaim;
         totalBondShares -= sharesToClaim;
@@ -171,13 +167,10 @@ abstract contract CSBondCore is CSBondCoreBase {
         if (claimableShares > _bondShares[nodeOperatorId]) {
             revert InvalidClaimableShares();
         }
-        if (claimableShares == 0 || amountToClaim == 0) {
-            emit BondClaimed(nodeOperatorId, to, 0);
-            return;
-        }
         uint256 sharesToClaim = amountToClaim < _ethByShares(claimableShares)
             ? _sharesByEth(amountToClaim)
             : claimableShares;
+        if (sharesToClaim == 0) return;
         LIDO.transferSharesFrom(address(this), to, sharesToClaim);
         _bondShares[nodeOperatorId] -= sharesToClaim;
         totalBondShares -= sharesToClaim;
@@ -194,13 +187,10 @@ abstract contract CSBondCore is CSBondCoreBase {
         if (claimableShares > _bondShares[nodeOperatorId]) {
             revert InvalidClaimableShares();
         }
-        if (claimableShares == 0 || amountToClaim == 0) {
-            emit BondClaimedWstETH(nodeOperatorId, to, 0);
-            return;
-        }
         uint256 sharesToClaim = amountToClaim < claimableShares
             ? amountToClaim
             : claimableShares;
+        if (sharesToClaim == 0) return;
         uint256 amount = WSTETH.wrap(_ethByShares(sharesToClaim));
         WSTETH.transferFrom(address(this), to, amount);
         _bondShares[nodeOperatorId] -= amount;
