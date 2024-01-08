@@ -219,24 +219,22 @@ contract CSAccounting is
         );
         // TODO: should the lock be included in the calculation to eject validators?
         uint256 lockedBond = CSBondLock.getActualLockedBond(nodeOperatorId);
-        if (currentBond > lockedBond) {
-            currentBond -= lockedBond;
-            CSBondCurve.BondCurve memory bondCurve = CSBondCurve.getBondCurve(
-                nodeOperatorId
-            );
-            uint256 bondedKeys = CSBondCurve.getKeysCountByBondAmount(
-                currentBond,
-                bondCurve
-            );
-            if (
-                currentBond >
-                CSBondCurve.getBondAmountByKeysCount(bondedKeys, bondCurve)
-            ) {
-                bondedKeys += 1;
-            }
-            return activeKeys > bondedKeys ? activeKeys - bondedKeys : 0;
+        if (currentBond <= lockedBond) return activeKeys;
+        currentBond -= lockedBond;
+        CSBondCurve.BondCurve memory bondCurve = CSBondCurve.getBondCurve(
+            nodeOperatorId
+        );
+        uint256 bondedKeys = CSBondCurve.getKeysCountByBondAmount(
+            currentBond,
+            bondCurve
+        );
+        if (
+            currentBond >
+            CSBondCurve.getBondAmountByKeysCount(bondedKeys, bondCurve)
+        ) {
+            bondedKeys += 1;
         }
-        return activeKeys;
+        return activeKeys > bondedKeys ? activeKeys - bondedKeys : 0;
     }
 
     /// @notice Returns the required bond in ETH (inc. missed and excess) for the given node operator to upload new keys.
@@ -519,22 +517,20 @@ contract CSAccounting is
     /// @dev reverts if amount isn't between MIN_STETH_WITHDRAWAL_AMOUNT and MAX_STETH_WITHDRAWAL_AMOUNT
     /// @param nodeOperatorId id of the node operator to request rewards for.
     /// @param ETHAmount amount of ETH to request.
-    /// @return requestId id of the withdrawal request.
     function requestExcessBondETH(
         uint256 nodeOperatorId,
         uint256 ETHAmount
-    ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
         );
         _isSenderEligibleToClaim(nodeOperator.managerAddress);
-        (uint256 requestId, , ) = CSBondCore._requestETH(
+        CSBondCore._requestETH(
             nodeOperatorId,
             _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
             ETHAmount,
             nodeOperator.rewardAddress
         );
-        return requestId;
     }
 
     /// @notice Request full reward (fee + bond) in Withdrawal NFT (unstETH) for the given node operator available for this moment.
@@ -543,25 +539,23 @@ contract CSAccounting is
     /// @param nodeOperatorId id of the node operator to request rewards for.
     /// @param cumulativeFeeShares cummulative fee shares for the node operator.
     /// @param ETHAmount amount of ETH to request.
-    /// @return requestId id of the withdrawal request.
     function requestRewardsETH(
         bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
         uint256 ETHAmount
-    ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
         );
         _isSenderEligibleToClaim(nodeOperator.managerAddress);
         _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
-        (uint256 requestId, , ) = CSBondCore._requestETH(
+        CSBondCore._requestETH(
             nodeOperatorId,
             _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
             ETHAmount,
             nodeOperator.rewardAddress
         );
-        return requestId;
     }
 
     function _getExcessBondShares(

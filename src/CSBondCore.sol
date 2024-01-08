@@ -58,6 +58,7 @@ abstract contract CSBondCore is CSBondCoreBase {
     ILidoLocator internal immutable LIDO_LOCATOR;
     ILido internal immutable LIDO;
     IBurner internal immutable BURNER;
+    IWithdrawalQueue internal immutable WITHDRAWAL_QUEUE;
     IWstETH internal immutable WSTETH;
 
     mapping(uint256 => uint256) internal _bondShares;
@@ -70,6 +71,7 @@ abstract contract CSBondCore is CSBondCoreBase {
         LIDO = ILido(LIDO_LOCATOR.lido());
         WSTETH = IWstETH(wstETH);
         BURNER = IBurner(LIDO_LOCATOR.burner());
+        WITHDRAWAL_QUEUE = IWithdrawalQueue(LIDO_LOCATOR.withdrawalQueue());
     }
 
     /// @notice Returns the bond shares for the given node operator.
@@ -132,40 +134,31 @@ abstract contract CSBondCore is CSBondCoreBase {
 
     /// @dev Claims Node Operator's excess bond shares in ETH by requesting withdrawal from the protocol
     ///      As usual request to withdrawal, this claim might be processed on the next stETH rebase
-    /// @dev Reverts if `amountToClaim` isn't between
-    ///      `WithdrawalQueue.MIN_STETH_WITHDRAWAL_AMOUNT` and `WithdrawalQueue.MAX_STETH_WITHDRAWAL_AMOUNT`
     function _requestETH(
         uint256 nodeOperatorId,
         uint256 claimableShares,
         uint256 amountToClaim,
         address to
-    )
-        internal
-        returns (
-            uint256 /* requestId */,
-            uint256 /* requestedETH */,
-            uint256 sharesToClaim
-        )
-    {
+    ) internal {
         if (claimableShares > _bondShares[nodeOperatorId]) {
             revert InvalidClaimableShares();
         }
-        if (claimableShares == 0 || amountToClaim == 0) {
-            emit BondClaimed(nodeOperatorId, to, 0);
-            return (0, 0, 0);
-        }
-        sharesToClaim = amountToClaim < _ethByShares(claimableShares)
+        uint256 sharesToClaim = amountToClaim < _ethByShares(claimableShares)
             ? _sharesByEth(amountToClaim)
             : claimableShares;
+        if (
+            sharesToClaim < WITHDRAWAL_QUEUE.MIN_STETH_WITHDRAWAL_AMOUNT() ||
+            sharesToClaim > WITHDRAWAL_QUEUE.MAX_STETH_WITHDRAWAL_AMOUNT()
+        ) {
+            emit BondClaimed(nodeOperatorId, to, 0);
+            return;
+        }
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = _ethByShares(sharesToClaim);
-        uint256[] memory requestIds = IWithdrawalQueue(
-            LIDO_LOCATOR.withdrawalQueue()
-        ).requestWithdrawals(amounts, to);
+        WITHDRAWAL_QUEUE.requestWithdrawals(amounts, to);
         _bondShares[nodeOperatorId] -= sharesToClaim;
         totalBondShares -= sharesToClaim;
         emit BondClaimed(nodeOperatorId, to, amounts[0]);
-        return (requestIds[0], amounts[0], sharesToClaim);
     }
 
     /// @dev Claims Node Operator's excess bond shares in stETH by transferring shares from the contract
@@ -174,22 +167,21 @@ abstract contract CSBondCore is CSBondCoreBase {
         uint256 claimableShares,
         uint256 amountToClaim,
         address to
-    ) internal returns (uint256 sharesToClaim, uint256 amount) {
+    ) internal {
         if (claimableShares > _bondShares[nodeOperatorId]) {
             revert InvalidClaimableShares();
         }
         if (claimableShares == 0 || amountToClaim == 0) {
             emit BondClaimed(nodeOperatorId, to, 0);
-            return (0, 0);
+            return;
         }
-        sharesToClaim = amountToClaim < _ethByShares(claimableShares)
+        uint256 sharesToClaim = amountToClaim < _ethByShares(claimableShares)
             ? _sharesByEth(amountToClaim)
             : claimableShares;
         LIDO.transferSharesFrom(address(this), to, sharesToClaim);
         _bondShares[nodeOperatorId] -= sharesToClaim;
         totalBondShares -= sharesToClaim;
-        amount = _ethByShares(sharesToClaim);
-        emit BondClaimed(nodeOperatorId, to, amount);
+        emit BondClaimed(nodeOperatorId, to, _ethByShares(sharesToClaim));
     }
 
     /// @dev Claims Node Operator's excess bond shares in wstETH by wrapping stETH from the contract and transferring wstETH
@@ -198,18 +190,18 @@ abstract contract CSBondCore is CSBondCoreBase {
         uint256 claimableShares,
         uint256 amountToClaim,
         address to
-    ) internal returns (uint256 amount) {
+    ) internal {
         if (claimableShares > _bondShares[nodeOperatorId]) {
             revert InvalidClaimableShares();
         }
         if (claimableShares == 0 || amountToClaim == 0) {
             emit BondClaimedWstETH(nodeOperatorId, to, 0);
-            return 0;
+            return;
         }
         uint256 sharesToClaim = amountToClaim < claimableShares
             ? amountToClaim
             : claimableShares;
-        amount = WSTETH.wrap(_ethByShares(sharesToClaim));
+        uint256 amount = WSTETH.wrap(_ethByShares(sharesToClaim));
         WSTETH.transferFrom(address(this), to, amount);
         _bondShares[nodeOperatorId] -= amount;
         totalBondShares -= amount;

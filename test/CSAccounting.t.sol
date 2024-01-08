@@ -2830,10 +2830,9 @@ contract CSAccountingRequestRewardsETHExcessBondTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(user);
-        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        accounting.requestExcessBondETH(0, UINT256_MAX);
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId != 0, "request id should exist");
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
         assertApproxEqAbs(
             bondSharesAfter,
@@ -2855,10 +2854,9 @@ contract CSAccountingRequestRewardsETHExcessBondTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(user);
-        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        accounting.requestExcessBondETH(0, UINT256_MAX);
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId != 0, "request id should exist");
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
         assertApproxEqAbs(
             bondSharesAfter,
@@ -2880,10 +2878,9 @@ contract CSAccountingRequestRewardsETHExcessBondTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(user);
-        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        accounting.requestExcessBondETH(0, UINT256_MAX);
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId == 0, "request id should not exist");
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
         assertEq(
             bondSharesAfter,
@@ -2905,10 +2902,9 @@ contract CSAccountingRequestRewardsETHExcessBondTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(user);
-        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        accounting.requestExcessBondETH(0, UINT256_MAX);
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId != 0, "request id should exist");
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
         assertApproxEqAbs(
             bondSharesAfter,
@@ -2929,10 +2925,9 @@ contract CSAccountingRequestRewardsETHExcessBondTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(user);
-        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        accounting.requestExcessBondETH(0, UINT256_MAX);
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId != 0, "request id should exist");
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
         assertApproxEqAbs(
             bondSharesAfter,
@@ -2953,10 +2948,9 @@ contract CSAccountingRequestRewardsETHExcessBondTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(user);
-        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        accounting.requestExcessBondETH(0, UINT256_MAX);
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId == 0, "request id should not exist");
         assertEq(
             stETH.balanceOf(address(user)),
             0,
@@ -2980,10 +2974,9 @@ contract CSAccountingRequestRewardsETHExcessBondTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(user);
-        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        accounting.requestExcessBondETH(0, UINT256_MAX);
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId != 0, "request id should exist");
         assertEq(
             stETH.balanceOf(address(user)),
             0,
@@ -3008,10 +3001,9 @@ contract CSAccountingRequestRewardsETHExcessBondTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(user);
-        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        accounting.requestExcessBondETH(0, UINT256_MAX);
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId != 0, "request id should exist");
         assertEq(
             stETH.balanceOf(address(user)),
             0,
@@ -3036,10 +3028,9 @@ contract CSAccountingRequestRewardsETHExcessBondTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(user);
-        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        accounting.requestExcessBondETH(0, UINT256_MAX);
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId != 0, "request id should exist");
         assertEq(
             stETH.balanceOf(address(user)),
             0,
@@ -3064,10 +3055,9 @@ contract CSAccountingRequestRewardsETHExcessBondTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(user);
-        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        accounting.requestExcessBondETH(0, UINT256_MAX);
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId == 0, "request id should not exist");
         assertEq(
             stETH.balanceOf(address(user)),
             0,
@@ -3091,10 +3081,9 @@ contract CSAccountingRequestRewardsETHExcessBondTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(user);
-        uint256 requestId = accounting.requestExcessBondETH(0, UINT256_MAX);
+        accounting.requestExcessBondETH(0, UINT256_MAX);
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId == 0, "request id should not exist");
         assertEq(
             stETH.balanceOf(address(user)),
             0,
@@ -3118,10 +3107,9 @@ contract CSAccountingRequestRewardsETHExcessBondTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(user);
-        uint256 requestId = accounting.requestExcessBondETH(0, 0.5 ether);
+        accounting.requestExcessBondETH(0, 0.5 ether);
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId != 0, "request id should exist");
         assertEq(
             stETH.balanceOf(address(user)),
             0,
@@ -3168,7 +3156,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(user);
-        uint256 requestId = accounting.requestRewardsETH(
+        accounting.requestRewardsETH(
             leaf.proof,
             leaf.nodeOperatorId,
             leaf.shares,
@@ -3176,7 +3164,6 @@ contract CSAccountingRequestRewardsETHRewardsTest is
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId != 0, "request id should exist");
         assertEq(
             bondSharesAfter,
             bondSharesBefore,
@@ -3198,7 +3185,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(user);
-        uint256 requestId = accounting.requestRewardsETH(
+        accounting.requestRewardsETH(
             leaf.proof,
             leaf.nodeOperatorId,
             leaf.shares,
@@ -3206,7 +3193,6 @@ contract CSAccountingRequestRewardsETHRewardsTest is
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId != 0, "request id should exist");
         assertApproxEqAbs(
             bondSharesAfter,
             bondSharesBefore - stETH.getSharesByPooledEth(15 ether),
@@ -3229,7 +3215,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(user);
-        uint256 requestId = accounting.requestRewardsETH(
+        accounting.requestRewardsETH(
             leaf.proof,
             leaf.nodeOperatorId,
             leaf.shares,
@@ -3237,7 +3223,6 @@ contract CSAccountingRequestRewardsETHRewardsTest is
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId == 0, "request id should not exist");
         assertEq(
             bondSharesAfter,
             bondSharesBefore + sharesAsFee,
@@ -3260,7 +3245,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(user);
-        uint256 requestId = accounting.requestRewardsETH(
+        accounting.requestRewardsETH(
             leaf.proof,
             leaf.nodeOperatorId,
             leaf.shares,
@@ -3268,7 +3253,6 @@ contract CSAccountingRequestRewardsETHRewardsTest is
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId != 0, "request id should exist");
         assertApproxEqAbs(
             bondSharesAfter,
             bondSharesBefore - stETH.getSharesByPooledEth(14 ether),
@@ -3291,7 +3275,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
         vm.prank(user);
-        uint256 requestId = accounting.requestRewardsETH(
+        accounting.requestRewardsETH(
             leaf.proof,
             leaf.nodeOperatorId,
             leaf.shares,
@@ -3300,7 +3284,6 @@ contract CSAccountingRequestRewardsETHRewardsTest is
 
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId != 0, "request id should exist");
         assertApproxEqAbs(
             bondSharesAfter,
             bondSharesBefore - stETH.getSharesByPooledEth(2 ether),
@@ -3323,7 +3306,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
         vm.prank(user);
-        uint256 requestId = accounting.requestRewardsETH(
+        accounting.requestRewardsETH(
             leaf.proof,
             leaf.nodeOperatorId,
             leaf.shares,
@@ -3332,7 +3315,6 @@ contract CSAccountingRequestRewardsETHRewardsTest is
 
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId != 0, "request id should exist");
         assertEq(
             bondSharesAfter,
             bondSharesBefore,
@@ -3354,7 +3336,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
         vm.prank(user);
-        uint256 requestId = accounting.requestRewardsETH(
+        accounting.requestRewardsETH(
             leaf.proof,
             leaf.nodeOperatorId,
             leaf.shares,
@@ -3363,7 +3345,6 @@ contract CSAccountingRequestRewardsETHRewardsTest is
 
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId != 0, "request id should exist");
         assertApproxEqAbs(
             bondSharesAfter,
             bondSharesBefore - stETH.getSharesByPooledEth(2 ether),
@@ -3386,7 +3367,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
         vm.prank(user);
-        uint256 requestId = accounting.requestRewardsETH(
+        accounting.requestRewardsETH(
             leaf.proof,
             leaf.nodeOperatorId,
             leaf.shares,
@@ -3395,7 +3376,6 @@ contract CSAccountingRequestRewardsETHRewardsTest is
 
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId != 0, "request id should exist");
         assertApproxEqAbs(
             bondSharesAfter,
             bondSharesBefore - stETH.getSharesByPooledEth(1 ether),
@@ -3418,7 +3398,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
         vm.prank(user);
-        uint256 requestId = accounting.requestRewardsETH(
+        accounting.requestRewardsETH(
             leaf.proof,
             leaf.nodeOperatorId,
             leaf.shares,
@@ -3427,7 +3407,6 @@ contract CSAccountingRequestRewardsETHRewardsTest is
 
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId != 0, "request id should exist");
         assertApproxEqAbs(
             bondSharesAfter,
             bondSharesBefore - stETH.getSharesByPooledEth(3 ether),
@@ -3450,7 +3429,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
         vm.prank(user);
-        uint256 requestId = accounting.requestRewardsETH(
+        accounting.requestRewardsETH(
             leaf.proof,
             leaf.nodeOperatorId,
             leaf.shares,
@@ -3459,7 +3438,6 @@ contract CSAccountingRequestRewardsETHRewardsTest is
 
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId == 0, "request id should not exist");
         assertEq(
             bondSharesAfter,
             bondSharesBefore + sharesAsFee,
@@ -3481,7 +3459,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
         vm.prank(user);
-        uint256 requestId = accounting.requestRewardsETH(
+        accounting.requestRewardsETH(
             leaf.proof,
             leaf.nodeOperatorId,
             leaf.shares,
@@ -3490,7 +3468,6 @@ contract CSAccountingRequestRewardsETHRewardsTest is
 
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId == 0, "request id should not exist");
         assertEq(
             bondSharesAfter,
             bondSharesBefore + sharesAsFee,
@@ -3517,7 +3494,7 @@ contract CSAccountingRequestRewardsETHRewardsTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(user);
-        uint256 requestId = accounting.requestRewardsETH(
+        accounting.requestRewardsETH(
             leaf.proof,
             leaf.nodeOperatorId,
             leaf.shares,
@@ -3525,7 +3502,6 @@ contract CSAccountingRequestRewardsETHRewardsTest is
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertTrue(requestId != 0, "request id should exist");
         assertEq(
             bondSharesAfter,
             bondSharesBefore + sharesAsFee - sharesToRequest,
