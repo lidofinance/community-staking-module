@@ -6,6 +6,7 @@ import { StdCheats } from "forge-std/StdCheats.sol";
 import { LidoMock } from "./mocks/LidoMock.sol";
 import { WstETHMock } from "./mocks/WstETHMock.sol";
 import { LidoLocatorMock } from "./mocks/LidoLocatorMock.sol";
+import { BurnerMock } from "./mocks/BurnerMock.sol";
 import { Stub } from "./mocks/Stub.sol";
 import "forge-std/Test.sol";
 
@@ -16,7 +17,7 @@ contract Fixtures is StdCheats, Test {
             LidoLocatorMock locator,
             WstETHMock wstETH,
             LidoMock stETH,
-            Stub burner
+            BurnerMock burner
         )
     {
         stETH = new LidoMock({ _totalPooledEther: 8013386371917025835991984 });
@@ -24,7 +25,7 @@ contract Fixtures is StdCheats, Test {
             _account: address(stETH),
             _sharesAmount: 7059313073779349112833523
         });
-        burner = new Stub();
+        burner = new BurnerMock();
         Stub elVault = new Stub();
         Stub wq = new Stub();
         locator = new LidoLocatorMock(

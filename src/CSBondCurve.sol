@@ -145,13 +145,17 @@ abstract contract CSBondCurve is CSBondCurveBase {
         emit BondCurveChanged(nodeOperatorId, defaultBondCurveId);
     }
 
+    /// @dev returns default bond curve info if `curveId` is `0` or invalid
     /// @notice Returns bond curve for the given curve id.
     /// @param curveId curve id to get bond curve for.
     /// @return bond curve.
     function getCurveInfo(
         uint256 curveId
     ) public view returns (BondCurve memory) {
-        return _bondCurves[curveId - 1];
+        return
+            (curveId == 0 || curveId > _bondCurves.length)
+                ? _bondCurves[defaultBondCurveId - 1]
+                : _bondCurves[curveId - 1];
     }
 
     /// @notice Returns bond curve for the given node operator.
@@ -160,11 +164,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
     function getBondCurve(
         uint256 nodeOperatorId
     ) public view returns (BondCurve memory) {
-        uint256 curveId = operatorBondCurveId[nodeOperatorId];
-        return
-            curveId == 0
-                ? _bondCurves[defaultBondCurveId - 1]
-                : _bondCurves[curveId - 1];
+        return getCurveInfo(operatorBondCurveId[nodeOperatorId]);
     }
 
     /// @notice Returns the required bond in ETH for the given number of keys for default bond curve.
@@ -175,8 +175,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
     function getBondAmountByKeysCount(
         uint256 keys
     ) public view returns (uint256) {
-        return
-            getBondAmountByKeysCount(keys, _bondCurves[defaultBondCurveId - 1]);
+        return getBondAmountByKeysCount(keys, getCurveInfo(defaultBondCurveId));
     }
 
     /// @notice Returns the required bond in ETH for the given number of keys for particular bond curve.
@@ -206,10 +205,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
         uint256 amount
     ) public view returns (uint256) {
         return
-            getKeysCountByBondAmount(
-                amount,
-                _bondCurves[defaultBondCurveId - 1]
-            );
+            getKeysCountByBondAmount(amount, getCurveInfo(defaultBondCurveId));
     }
 
     /// @notice Returns keys count for the given bond amount for particular bond curve.

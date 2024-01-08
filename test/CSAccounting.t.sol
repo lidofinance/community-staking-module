@@ -5,6 +5,7 @@ pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
 
+import { IBurner } from "../src/interfaces/IBurner.sol";
 import { ICSModule } from "../src/interfaces/ICSModule.sol";
 import { IStakingModule } from "../src/interfaces/IStakingModule.sol";
 import { ICSFeeDistributor } from "../src/interfaces/ICSFeeDistributor.sol";
@@ -65,8 +66,6 @@ contract CSAccountingBaseTest is
     WstETHMock internal wstETH;
     LidoMock internal stETH;
 
-    Stub internal burner;
-
     CSAccountingForTests public accounting;
     Stub public stakingModule;
     Stub public feeDistributor;
@@ -81,7 +80,7 @@ contract CSAccountingBaseTest is
         user = address(2);
         stranger = address(777);
 
-        (locator, wstETH, stETH, burner) = initLido();
+        (locator, wstETH, stETH, ) = initLido();
 
         stakingModule = new Stub();
         feeDistributor = new Stub();
@@ -4088,8 +4087,17 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
 
     function test_penalize() public {
         uint256 shares = stETH.getSharesByPooledEth(1 ether);
-
         uint256 bondSharesBefore = accounting.getBondShares(0);
+
+        vm.expectCall(
+            locator.burner(),
+            abi.encodeWithSelector(
+                IBurner.requestBurnShares.selector,
+                address(accounting),
+                shares
+            )
+        );
+
         vm.prank(admin);
         accounting.penalize(0, 1 ether);
         uint256 bondSharesAfter = accounting.getBondShares(0);
@@ -4098,16 +4106,6 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
             bondSharesAfter,
             bondSharesBefore - shares,
             "bond shares should be decreased by penalty"
-        );
-        assertEq(
-            stETH.sharesOf(address(accounting)),
-            bondSharesAfter,
-            "bond manager shares should be decreased by penalty"
-        );
-        assertEq(
-            stETH.sharesOf(address(burner)),
-            shares,
-            "burner shares should be equal to penalty"
         );
         assertEq(accounting.totalBondShares(), bondSharesAfter);
     }

@@ -5,6 +5,7 @@ pragma solidity 0.8.21;
 
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { ILido } from "./interfaces/ILido.sol";
+import { IBurner } from "./interfaces/IBurner.sol";
 import { IWstETH } from "./interfaces/IWstETH.sol";
 import { IWithdrawalQueue } from "./interfaces/IWithdrawalQueue.sol";
 
@@ -56,6 +57,7 @@ abstract contract CSBondCoreBase {
 abstract contract CSBondCore is CSBondCoreBase {
     ILidoLocator internal immutable LIDO_LOCATOR;
     ILido internal immutable LIDO;
+    IBurner internal immutable BURNER;
     IWstETH internal immutable WSTETH;
 
     mapping(uint256 => uint256) internal _bondShares;
@@ -67,6 +69,7 @@ abstract contract CSBondCore is CSBondCoreBase {
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
         LIDO = ILido(LIDO_LOCATOR.lido());
         WSTETH = IWstETH(wstETH);
+        BURNER = IBurner(LIDO_LOCATOR.burner());
     }
 
     /// @notice Returns the bond shares for the given node operator.
@@ -129,6 +132,8 @@ abstract contract CSBondCore is CSBondCoreBase {
 
     /// @dev Claims Node Operator's excess bond shares in ETH by requesting withdrawal from the protocol
     ///      As usual request to withdrawal, this claim might be processed on the next stETH rebase
+    /// @dev Reverts if `amountToClaim` isn't between
+    ///      `WithdrawalQueue.MIN_STETH_WITHDRAWAL_AMOUNT` and `WithdrawalQueue.MAX_STETH_WITHDRAWAL_AMOUNT`
     function _requestETH(
         uint256 nodeOperatorId,
         uint256 claimableShares,
@@ -212,17 +217,15 @@ abstract contract CSBondCore is CSBondCoreBase {
     }
 
     /// @dev Burn Node Operator's bond shares. Shares will be burned on the next stETH rebase.
+    /// @dev The method sender should be granted as `Burner.REQUEST_BURN_SHARES_ROLE` and makes stETH allowance for `Burner`
+    /// @param amount amount to burn in ETH.
     function _burn(uint256 nodeOperatorId, uint256 amount) internal {
         uint256 toBurnShares = _sharesByEth(amount);
         uint256 currentShares = getBondShares(nodeOperatorId);
         uint256 burnedShares = toBurnShares < currentShares
             ? toBurnShares
             : currentShares;
-        LIDO.transferSharesFrom(
-            address(this),
-            LIDO_LOCATOR.burner(),
-            burnedShares
-        );
+        BURNER.requestBurnShares(address(this), burnedShares);
         _bondShares[nodeOperatorId] -= burnedShares;
         totalBondShares -= burnedShares;
         emit BondBurned(

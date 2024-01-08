@@ -31,7 +31,6 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     LidoLocatorMock public locator;
     WstETHMock public wstETH;
     LidoMock public stETH;
-    Stub public burner;
     CSModule public csm;
     CSAccounting public accounting;
     Stub public communityStakingFeeDistributor;
@@ -56,7 +55,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         stranger = nextAddress("STRANGER");
         admin = nextAddress("ADMIN");
 
-        (locator, wstETH, stETH, burner) = initLido();
+        (locator, wstETH, stETH, ) = initLido();
 
         // FIXME: move to the corresponding tests
         vm.deal(nodeOperator, BOND_SIZE + 1 wei);

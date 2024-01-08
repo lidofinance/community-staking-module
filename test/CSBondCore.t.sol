@@ -11,7 +11,9 @@ import { Stub } from "./helpers/mocks/Stub.sol";
 import { LidoMock } from "./helpers/mocks/LidoMock.sol";
 import { WstETHMock } from "./helpers/mocks/WstETHMock.sol";
 import { LidoLocatorMock } from "./helpers/mocks/LidoLocatorMock.sol";
+import { BurnerMock } from "./helpers/mocks/BurnerMock.sol";
 
+import { IBurner } from "../src/interfaces/IBurner.sol";
 import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
 
 import { Fixtures } from "./helpers/Fixtures.sol";
@@ -79,7 +81,7 @@ abstract contract CSBondCoreTestBase is Test, Fixtures, CSBondCoreBase {
     WstETHMock internal wstETH;
     LidoMock internal stETH;
 
-    Stub internal burner;
+    BurnerMock internal burner;
 
     CSBondCoreTestable public bondCore;
 
@@ -536,6 +538,14 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
         emit BondBurned(0, burned, burned);
 
         uint256 bondSharesBefore = bondCore.getBondShares(0);
+        vm.expectCall(
+            locator.burner(),
+            abi.encodeWithSelector(
+                IBurner.requestBurnShares.selector,
+                address(bondCore),
+                shares
+            )
+        );
         bondCore.burn(0, 1 ether);
         uint256 bondSharesAfter = bondCore.getBondShares(0);
 
@@ -543,16 +553,6 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
             bondSharesAfter,
             bondSharesBefore - shares,
             "bond shares should be decreased by burning"
-        );
-        assertEq(
-            stETH.sharesOf(address(bondCore)),
-            bondSharesAfter,
-            "bond manager shares should be decreased by burning"
-        );
-        assertEq(
-            stETH.sharesOf(address(burner)),
-            shares,
-            "burner shares should be equal to burned"
         );
         assertEq(bondCore.totalBondShares(), bondSharesAfter);
     }
@@ -569,22 +569,21 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
             stETH.getPooledEthByShares(bondSharesBefore)
         );
 
+        vm.expectCall(
+            locator.burner(),
+            abi.encodeWithSelector(
+                IBurner.requestBurnShares.selector,
+                address(bondCore),
+                stETH.getSharesByPooledEth(32 ether)
+            )
+        );
+
         bondCore.burn(0, 33 ether);
 
         assertEq(
             bondCore.getBondShares(0),
             0,
             "bond shares should be 0 after burning"
-        );
-        assertEq(
-            stETH.sharesOf(address(bondCore)),
-            0,
-            "bond manager shares should be 0 after burning"
-        );
-        assertEq(
-            stETH.sharesOf(address(burner)),
-            bondSharesBefore,
-            "burner shares should be equal to bond shares"
         );
         assertEq(bondCore.totalBondShares(), 0);
     }
@@ -597,22 +596,21 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
         vm.expectEmit(true, true, true, true, address(bondCore));
         emit BondBurned(0, burned, burned);
 
+        vm.expectCall(
+            locator.burner(),
+            abi.encodeWithSelector(
+                IBurner.requestBurnShares.selector,
+                address(bondCore),
+                shares
+            )
+        );
+
         bondCore.burn(0, 32 ether);
 
         assertEq(
             bondCore.getBondShares(0),
             0,
             "bond shares should be 0 after burning"
-        );
-        assertEq(
-            stETH.sharesOf(address(bondCore)),
-            0,
-            "bond manager shares should be 0 after burning"
-        );
-        assertEq(
-            stETH.sharesOf(address(burner)),
-            shares,
-            "burner shares should be equal to burned"
         );
         assertEq(bondCore.totalBondShares(), 0);
     }
