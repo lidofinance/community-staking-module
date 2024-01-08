@@ -44,7 +44,7 @@ abstract contract CSBondLock is CSBondLockBase {
         uint256 retentionUntil;
     }
 
-    // todo: should be reconsidered
+    // TODO: should be reconsidered
     uint256 public constant MIN_BOND_LOCK_RETENTION_PERIOD = 4 weeks;
     uint256 public constant MAX_BOND_LOCK_RETENTION_PERIOD = 365 days;
 

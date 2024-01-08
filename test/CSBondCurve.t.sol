@@ -30,7 +30,7 @@ contract CSBondCurveTestable is CSBondCurve {
 }
 
 contract CSBondCurveTest is Test, CSBondCurveBase {
-    // todo: add gas-cost test for _searchKeysCount
+    // TODO: add gas-cost test for _searchKeysCount
 
     CSBondCurveTestable public bondCurve;
 

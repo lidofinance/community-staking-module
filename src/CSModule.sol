@@ -1067,7 +1067,7 @@ contract CSModule is ICSModule, CSModuleBase {
         bytes32[] memory slashingProof,
         uint256 nodeOperatorId
     ) external onlyExistingNodeOperator(nodeOperatorId) {
-        // todo: implement me
+        // TODO: implement me
     }
 
     /// @notice Penalize bond by burning shares of the given node operator.

@@ -73,14 +73,14 @@ abstract contract CSBondCurve is CSBondCurveBase {
         uint256 trend;
     }
 
-    // todo: should we strictly define max curves array length?
+    // TODO: should we strictly define max curves array length?
     BondCurve[] internal _bondCurves;
     /// @dev Default bond curve id for node operator if no special curve is set
     uint256 public defaultBondCurveId;
     /// @dev Mapping of node operator id to bond curve id
     mapping(uint256 => uint256) public operatorBondCurveId;
 
-    // todo: might be redefined in the future
+    // TODO: might be redefined in the future
     uint256 internal constant MAX_CURVE_LENGTH = 20;
     uint256 internal constant MIN_CURVE_LENGTH = 1;
 
@@ -97,7 +97,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
             curvePoints.length < MIN_CURVE_LENGTH ||
             curvePoints.length > MAX_CURVE_LENGTH
         ) revert InvalidBondCurveLength();
-        // todo: check curve values (that makes sense)
+        // TODO: check curve values (that makes sense)
         if (curvePoints[0] == 0) revert InvalidBondCurveValues();
         for (uint256 i = 1; i < curvePoints.length; i++) {
             if (curvePoints[i] <= curvePoints[i - 1])
@@ -120,7 +120,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
     /// @dev Sets default bond curve for the module.
     ///      It will be used for the node operators without special curve.
     function _setDefaultBondCurve(uint256 curveId) internal {
-        // todo: should we check that new curve is not worse than the old one?
+        // TODO: should we check that new curve is not worse than the old one?
         if (
             curveId == 0 ||
             curveId > _bondCurves.length ||

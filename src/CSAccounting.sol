@@ -103,7 +103,7 @@ contract CSAccounting is
     function setLockedBondRetentionPeriod(
         uint256 retention
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        // todo: is it admin role?
+        // TODO: is it admin role?
         CSBondLock._setBondLockRetentionPeriod(retention);
     }
 
@@ -143,12 +143,12 @@ contract CSAccounting is
 
     /// @notice Pauses accounting by DAO decision.
     function pauseAccounting() external onlyRole(PAUSE_ROLE) {
-        // todo: implement me
+        // TODO: implement me
     }
 
     /// @notice Unpauses accounting by DAO decision.
     function resumeAccounting() external onlyRole(RESUME_ROLE) {
-        // todo: implement me
+        // TODO: implement me
     }
 
     /// @notice Returns current and required bond amount in ETH (stETH) for the given node operator.
@@ -333,7 +333,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 stETHAmount
     ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
-        // todo: can it be two functions rather than one with `from` param and condition?
+        // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
         return CSBondCore._depositStETH(from, nodeOperatorId, stETHAmount);
     }
@@ -351,7 +351,7 @@ contract CSAccounting is
         uint256 stETHAmount,
         PermitInput calldata permit
     ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
-        // todo: can it be two functions rather than one with `from` param and condition?
+        // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
         // preventing revert for already used permit
         if (LIDO.allowance(from, address(this)) < permit.value) {
@@ -380,7 +380,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 wstETHAmount
     ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
-        // todo: can it be two functions rather than one with `from` param and condition?
+        // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
         return CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
     }
@@ -398,7 +398,7 @@ contract CSAccounting is
         uint256 wstETHAmount,
         PermitInput calldata permit
     ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
-        // todo: can it be two functions rather than one with `from` param and condition?
+        // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
         // preventing revert for already used permit
         if (WSTETH.allowance(from, address(this)) < permit.value) {
@@ -456,7 +456,7 @@ contract CSAccounting is
         uint256 cumulativeFeeShares,
         uint256 stETHAmount
     ) external onlyExistingNodeOperator(nodeOperatorId) {
-        // todo: reorder ops to use only one func (first is pull) ???
+        // TODO: reorder ops to use only one func (first is pull) ???
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
         );
@@ -580,7 +580,7 @@ contract CSAccounting is
         onlyExistingNodeOperator(nodeOperatorId)
         onlyRole(SET_BOND_LOCK_ROLE)
     {
-        // todo: should it be CSModule only?
+        // TODO: should it be CSModule only?
         CSBondLock._lock(nodeOperatorId, amount);
     }
 
