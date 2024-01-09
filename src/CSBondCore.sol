@@ -150,7 +150,7 @@ abstract contract CSBondCore is CSBondCoreBase {
             return;
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = _ethByShares(sharesToClaim);
-        // Reverts if `sharesToClaim` is greater than `MIN_STETH_WITHDRAWAL_AMOUNT`
+        // Reverts if `sharesToClaim` is greater than `WITHDRAWAL_QUEUE.MAX_STETH_WITHDRAWAL_AMOUNT`
         WITHDRAWAL_QUEUE.requestWithdrawals(amounts, to);
         _bondShares[nodeOperatorId] -= sharesToClaim;
         totalBondShares -= sharesToClaim;
