@@ -22,22 +22,16 @@ contract CSBondLockTestable is CSBondLock {
         _setBondLockRetentionPeriod(retention);
     }
 
-    function get(
-        uint256 nodeOperatorId
-    ) external view returns (CSBondLock.BondLock memory) {
-        return _get(nodeOperatorId);
-    }
-
-    function getActualAmount(uint256 amount) external view returns (uint256) {
-        return _getActualAmount(amount);
-    }
-
     function lock(uint256 nodeOperatorId, uint256 amount) external {
         _lock(nodeOperatorId, amount);
     }
 
     function reduceAmount(uint256 nodeOperatorId, uint256 amount) external {
         _reduceAmount(nodeOperatorId, amount);
+    }
+
+    function remove(uint256 nodeOperatorId) external {
+        _remove(nodeOperatorId);
     }
 }
 
@@ -76,16 +70,16 @@ contract CSBondLockTest is Test, CSBondLockBase {
         bondLock.setBondLockRetentionPeriod(maxRetention + 1 seconds);
     }
 
-    function test_getActualAmount() public {
+    function test_getActualLockedBond() public {
         uint256 noId = 0;
         uint256 amount = 1 ether;
         bondLock.lock(noId, amount);
 
-        uint256 value = bondLock.getActualAmount(noId);
+        uint256 value = bondLock.getActualLockedBond(noId);
         assertEq(value, amount);
     }
 
-    function test_getActualAmount_WhenRetentionPeriodIsPassed() public {
+    function test_getActualLockedBond_WhenRetentionPeriodIsPassed() public {
         uint256 retentionPeriod = bondLock.getBondLockRetentionPeriod();
         uint256 noId = 0;
         uint256 amount = 1 ether;
@@ -93,7 +87,7 @@ contract CSBondLockTest is Test, CSBondLockBase {
 
         vm.warp(block.timestamp + retentionPeriod + 1 seconds);
 
-        uint256 value = bondLock.getActualAmount(noId);
+        uint256 value = bondLock.getActualLockedBond(noId);
         assertEq(value, 0);
     }
 
@@ -108,7 +102,7 @@ contract CSBondLockTest is Test, CSBondLockBase {
 
         bondLock.lock(noId, amount);
 
-        CSBondLock.BondLock memory lock = bondLock.get(noId);
+        CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
         assertEq(lock.amount, amount);
         assertEq(lock.retentionUntil, retentionUntil);
     }
@@ -117,11 +111,13 @@ contract CSBondLockTest is Test, CSBondLockBase {
         uint256 noId = 0;
 
         bondLock.lock(noId, 1 ether);
-        CSBondLock.BondLock memory lockBefore = bondLock.get(noId);
+        CSBondLock.BondLock memory lockBefore = bondLock.getLockedBondInfo(
+            noId
+        );
         vm.warp(block.timestamp + 1 hours);
 
         bondLock.lock(noId, 1 ether);
-        CSBondLock.BondLock memory lock = bondLock.get(noId);
+        CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
         assertEq(lock.amount, 2 ether);
         assertEq(lock.retentionUntil, lockBefore.retentionUntil + 1 hours);
     }
@@ -131,11 +127,13 @@ contract CSBondLockTest is Test, CSBondLockBase {
         uint256 retentionPeriod = bondLock.getBondLockRetentionPeriod();
 
         bondLock.lock(noId, 1 ether);
-        CSBondLock.BondLock memory lockBefore = bondLock.get(noId);
+        CSBondLock.BondLock memory lockBefore = bondLock.getLockedBondInfo(
+            noId
+        );
         vm.warp(lockBefore.retentionUntil + 1 hours);
 
         bondLock.lock(noId, 1 ether);
-        CSBondLock.BondLock memory lock = bondLock.get(noId);
+        CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
         assertEq(lock.amount, 1 ether);
         assertEq(lock.retentionUntil, block.timestamp + retentionPeriod);
     }
@@ -156,7 +154,7 @@ contract CSBondLockTest is Test, CSBondLockBase {
 
         bondLock.reduceAmount(noId, amount);
 
-        CSBondLock.BondLock memory lock = bondLock.get(0);
+        CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(0);
         assertEq(lock.amount, 0);
         assertEq(lock.retentionUntil, 0);
     }
@@ -179,7 +177,7 @@ contract CSBondLockTest is Test, CSBondLockBase {
 
         bondLock.reduceAmount(noId, toRelease);
 
-        CSBondLock.BondLock memory lock = bondLock.get(0);
+        CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(0);
         assertEq(lock.amount, rest);
         assertEq(lock.retentionUntil, retentionPeriodWhenLock);
     }
@@ -197,5 +195,21 @@ contract CSBondLockTest is Test, CSBondLockBase {
 
         vm.expectRevert(InvalidBondLockAmount.selector);
         bondLock.reduceAmount(noId, amount + 1 ether);
+    }
+
+    function test_remove() public {
+        uint256 noId = 0;
+        uint256 amount = 100 ether;
+
+        bondLock.lock(noId, amount);
+
+        vm.expectEmit(true, true, true, true, address(bondLock));
+        emit BondLockChanged(noId, 0, 0);
+
+        bondLock.remove(noId);
+
+        CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(0);
+        assertEq(lock.amount, 0);
+        assertEq(lock.retentionUntil, 0);
     }
 }

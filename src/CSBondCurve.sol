@@ -4,20 +4,44 @@
 pragma solidity 0.8.21;
 
 abstract contract CSBondCurveBase {
-    event BondCurveChanged(uint256[] bondCurve);
-    event BondMultiplierChanged(
-        uint256 indexed nodeOperatorId,
-        uint256 basisPoints
-    );
+    event BondCurveAdded(uint256[] bondCurve);
+    event DefaultBondCurveChanged(uint256 curveId);
+    event BondCurveChanged(uint256 indexed nodeOperatorId, uint256 curveId);
+
+    error InvalidBondCurveLength();
+    error InvalidBondCurveValues();
+    error InvalidBondCurveId();
 }
 
+/// @dev Bond curve mechanics abstract contract
+///
+/// It gives ability to build bond curve for bond math.
+/// There is default bond curve for all node operators, witch can be 'overridden' by particular node operator.
+///
+/// It contains:
+///  - add bond curve
+///  - get bond curve info
+///  - set default bond curve
+///  - set bond curve for the given node operator
+///  - get bond curve for the given node operator
+///  - get required bond amount for the given keys count
+///  - get keys count for the given bond amount
+///
+/// Should be inherited by Module contract, or Module-related contract.
+/// Internal non-view methods should be used in Module contract with additional requirements (if required).
+///
+/// @author vgorkavenko
 abstract contract CSBondCurve is CSBondCurveBase {
-    /// @dev Array of bond amounts for particular keys count.
+    /// @dev Bond curve structure.
+    /// It contains:
+    ///  - id     |> identifier to set default curve for the module or particular node operator
+    ///  - points |> bond amount for particular keys count
+    ///  - trend  |> value for the next keys after described points
     ///
-    /// For example:
-    ///   Array Index  |>       0          1          2          i
-    ///   Bond Amount  |>   [ 2 ETH ] [ 3.9 ETH ] [ 5.7 ETH ] [ ... ]
-    ///    Keys Count  |>       1          2          3        i + 1
+    /// For example how the curve points looks like:
+    ///   Points Array Index  |>       0          1          2          i
+    ///   Bond Amount         |>   [ 2 ETH ] [ 3.9 ETH ] [ 5.7 ETH ] [ ... ]
+    ///   Keys Count          |>       1          2          3        i + 1
     ///
     ///   Bond Amount (ETH)
     ///       ^
@@ -43,131 +67,173 @@ abstract contract CSBondCurve is CSBondCurveBase {
     ///       |----------|----------|----------|----------|----> Keys Count
     ///       |          1          2          3          i
     ///
-    uint256[] public bondCurve;
+    struct BondCurve {
+        uint256 id;
+        uint256[] points;
+        uint256 trend;
+    }
 
-    /// @dev This mapping contains bond multiplier points (in basis points) for Node Operator's bond.
-    /// By default, all Node Operators have x1 multiplier (10000 basis points).
-    ///
-    /// For example:
-    ///   There is a bond curve as above ^
-    ///   Some Node Operator has x0.90 bond multiplier (9000 basis points)
-    ///   Bond Curve with multiplier for this Node Operator will be:
-    ///
-    ///   Bond Amount (ETH)
-    ///       ^
-    ///       |
-    ///     4 -
-    ///       | ------------------- 3.6 ETH -->.
-    ///   3.5 -                            ..  ^
-    ///       |                          ..    |
-    ///     3 -                        ..      |
-    ///       | -------- 2.7 ETH -->...        |
-    ///   2.5 -                  .. |          |
-    ///       |               ..    |          |
-    ///     2 -             ..      |          |
-    ///       | 1.8 ETH->...        |          |
-    ///   1.5 -          ^          |          |
-    ///       |          |          |          |
-    ///     1 -          |          |          |
-    ///       |----------|----------|----------|----------|----> Keys Count
-    ///       |          1          2          3          i
-    ///
-    mapping(uint256 => uint256) public bondMultiplierBP;
+    // TODO: should we strictly define max curves array length?
+    BondCurve[] internal _bondCurves;
+    /// @dev Default bond curve id for node operator if no special curve is set
+    uint256 public defaultBondCurveId;
+    /// @dev Mapping of node operator id to bond curve id
+    mapping(uint256 => uint256) public operatorBondCurveId;
 
-    // todo: might be redefined in the future
+    // TODO: might be redefined in the future
     uint256 internal constant MAX_CURVE_LENGTH = 20;
     uint256 internal constant MIN_CURVE_LENGTH = 1;
 
-    uint256 internal constant BASIS_POINTS = 10000;
-    uint256 internal constant MAX_BOND_MULTIPLIER = BASIS_POINTS; // x1
-    uint256 internal constant MIN_BOND_MULTIPLIER = MAX_BOND_MULTIPLIER / 2; // x0.5
-    uint256 internal constant DEFAULT_BOND_MULTIPLIER = MAX_BOND_MULTIPLIER;
-
-    uint256 internal _bondCurveTrend;
-
-    constructor(uint256[] memory _bondCurve) {
-        _setBondCurve(_bondCurve);
+    constructor(uint256[] memory defaultBondCurvePoints) {
+        _setDefaultBondCurve(_addBondCurve(defaultBondCurvePoints));
     }
 
-    function _setBondCurve(uint256[] memory _bondCurve) internal {
+    /// @dev Adds new bond curve to the array.
+    ///      After that returned ID can be used to set default curve or curve for the particular node operator.
+    function _addBondCurve(
+        uint256[] memory curvePoints
+    ) internal returns (uint256) {
         if (
-            _bondCurve.length < MIN_CURVE_LENGTH ||
-            _bondCurve.length > MAX_CURVE_LENGTH
+            curvePoints.length < MIN_CURVE_LENGTH ||
+            curvePoints.length > MAX_CURVE_LENGTH
         ) revert InvalidBondCurveLength();
-        // todo: check curve values (not worse than previous and makes sense)
-        if (_bondCurve[0] == 0) revert InvalidBondCurveValues();
-        for (uint256 i = 1; i < _bondCurve.length; i++) {
-            if (_bondCurve[i] <= _bondCurve[i - 1])
+        // TODO: check curve values (that makes sense)
+        if (curvePoints[0] == 0) revert InvalidBondCurveValues();
+        for (uint256 i = 1; i < curvePoints.length; i++) {
+            if (curvePoints[i] <= curvePoints[i - 1])
                 revert InvalidBondCurveValues();
         }
-        bondCurve = _bondCurve;
-        _bondCurveTrend =
-            _bondCurve[_bondCurve.length - 1] -
+        uint256 curveTrend = curvePoints[curvePoints.length - 1] -
             // if the curve length is 1, then 0 is used as the previous value to calculate the trend
-            (_bondCurve.length > 1 ? _bondCurve[_bondCurve.length - 2] : 0);
-        emit BondCurveChanged(_bondCurve);
+            (curvePoints.length > 1 ? curvePoints[curvePoints.length - 2] : 0);
+        _bondCurves.push(
+            BondCurve({
+                id: _bondCurves.length + 1, // to avoid zero id in arrays
+                points: curvePoints,
+                trend: curveTrend
+            })
+        );
+        emit BondCurveAdded(curvePoints);
+        return _bondCurves.length;
     }
 
-    function _setBondMultiplier(
-        uint256 nodeOperatorId,
-        uint256 basisPoints
-    ) internal {
+    /// @dev Sets default bond curve for the module.
+    ///      It will be used for the node operators without special curve.
+    function _setDefaultBondCurve(uint256 curveId) internal {
+        // TODO: should we check that new curve is not worse than the old one?
         if (
-            basisPoints < MIN_BOND_MULTIPLIER ||
-            basisPoints > MAX_BOND_MULTIPLIER
-        ) revert InvalidMultiplier();
-        // todo: check curve values (not worse than previous)
-        bondMultiplierBP[nodeOperatorId] = basisPoints;
-        emit BondMultiplierChanged(nodeOperatorId, basisPoints);
+            curveId == 0 ||
+            curveId > _bondCurves.length ||
+            curveId == defaultBondCurveId
+        ) revert InvalidBondCurveId();
+        defaultBondCurveId = curveId;
+        emit DefaultBondCurveChanged(curveId);
     }
 
-    function _resetBondMultiplier(uint256 nodeOperatorId) internal {
-        delete bondMultiplierBP[nodeOperatorId];
-        emit BondMultiplierChanged(nodeOperatorId, DEFAULT_BOND_MULTIPLIER);
+    /// @dev Sets bond curve for the given node operator.
+    ///      It will be used for the node operator instead of default curve.
+    function _setBondCurve(uint256 nodeOperatorId, uint256 curveId) internal {
+        if (curveId == 0 || curveId > _bondCurves.length)
+            revert InvalidBondCurveId();
+        operatorBondCurveId[nodeOperatorId] = curveId;
+        emit BondCurveChanged(nodeOperatorId, curveId);
     }
 
-    /// @notice Returns basis points of the bond multiplier for the given node operator.
-    ///         if it isn't set, the multiplier is x1 (DEFAULT_BOND_MULTIPLIER)
-    function getBondMultiplier(
+    /// @dev Resets bond curve for the given node operator to default (for example, because of breaking the rules by node operator)
+    function _resetBondCurve(uint256 nodeOperatorId) internal {
+        delete operatorBondCurveId[nodeOperatorId];
+        emit BondCurveChanged(nodeOperatorId, defaultBondCurveId);
+    }
+
+    /// @dev returns default bond curve info if `curveId` is `0` or invalid
+    /// @notice Returns bond curve for the given curve id.
+    /// @param curveId curve id to get bond curve for.
+    /// @return bond curve.
+    function getCurveInfo(
+        uint256 curveId
+    ) public view returns (BondCurve memory) {
+        return
+            (curveId == 0 || curveId > _bondCurves.length)
+                ? _bondCurves[defaultBondCurveId - 1]
+                : _bondCurves[curveId - 1];
+    }
+
+    /// @notice Returns bond curve for the given node operator.
+    /// @param nodeOperatorId id of the node operator to get bond curve for.
+    /// @return bond curve.
+    function getBondCurve(
         uint256 nodeOperatorId
+    ) public view returns (BondCurve memory) {
+        return getCurveInfo(operatorBondCurveId[nodeOperatorId]);
+    }
+
+    /// @notice Returns the required bond in ETH for the given number of keys for default bond curve.
+    /// @dev To calculate the amount for the new keys 2 calls are required:
+    ///      getRequiredBondETHForKeys(newTotal) - getRequiredBondETHForKeys(currentTotal)
+    /// @param keys number of keys to get required bond for.
+    /// @return required amount for particular keys count.
+    function getBondAmountByKeysCount(
+        uint256 keys
     ) public view returns (uint256) {
-        uint256 basisPoints = bondMultiplierBP[nodeOperatorId];
-        return basisPoints > 0 ? basisPoints : DEFAULT_BOND_MULTIPLIER;
+        return getBondAmountByKeysCount(keys, getCurveInfo(defaultBondCurveId));
     }
 
-    /// @notice Returns keys count for the given bond amount.
-    function _getKeysCountByBondAmount(
+    /// @notice Returns the required bond in ETH for the given number of keys for particular bond curve.
+    /// @dev To calculate the amount for the new keys 2 calls are required:
+    ///      getRequiredBondETHForKeys(newTotal, curve) - getRequiredBondETHForKeys(currentTotal, curve)
+    /// @param keys number of keys to get required bond for.
+    /// @param curve bond curve to get required bond for.
+    /// @return required in amount for particular keys count.
+    function getBondAmountByKeysCount(
+        uint256 keys,
+        BondCurve memory curve
+    ) public pure returns (uint256) {
+        if (keys == 0) return 0;
+        if (keys <= curve.points.length) {
+            return curve.points[keys - 1];
+        }
+        return
+            curve.points[curve.points.length - 1] +
+            (keys - curve.points.length) *
+            curve.trend;
+    }
+
+    /// @notice Returns keys count for the given bond amount with default bond curve.
+    /// @param amount bond amount to get keys count for.
+    /// @return keys count.
+    function getKeysCountByBondAmount(
         uint256 amount
-    ) internal view returns (uint256) {
-        return _getKeysCountByBondAmount(amount, MAX_BOND_MULTIPLIER);
+    ) public view returns (uint256) {
+        return
+            getKeysCountByBondAmount(amount, getCurveInfo(defaultBondCurveId));
     }
 
-    /// @notice Returns keys count for the given bond amount for particular node operator.
-    function _getKeysCountByBondAmount(
+    /// @notice Returns keys count for the given bond amount for particular bond curve.
+    /// @param amount bond amount to get keys count for.
+    /// @param curve bond curve to get keys count for.
+    /// @return keys count.
+    function getKeysCountByBondAmount(
         uint256 amount,
-        uint256 multiplier
-    ) internal view returns (uint256) {
-        if (amount < (bondCurve[0] * multiplier) / BASIS_POINTS) return 0;
-        uint256 maxCurveAmount = (bondCurve[bondCurve.length - 1] *
-            multiplier) / BASIS_POINTS;
+        BondCurve memory curve
+    ) public pure returns (uint256) {
+        if (amount < curve.points[0]) return 0;
+        uint256 maxCurveAmount = curve.points[curve.points.length - 1];
         if (amount >= maxCurveAmount) {
             return
-                bondCurve.length +
-                ((amount - maxCurveAmount) /
-                    ((_bondCurveTrend * multiplier) / BASIS_POINTS));
+                curve.points.length + (amount - maxCurveAmount) / curve.trend;
         }
-        return _searchKeysCount(amount, multiplier);
+        return _searchKeysCount(amount, curve.points);
     }
 
     function _searchKeysCount(
         uint256 amount,
-        uint256 multiplier
-    ) internal view returns (uint256) {
+        uint256[] memory curvePoints
+    ) private pure returns (uint256) {
         uint256 low;
-        uint256 high = bondCurve.length - 1;
+        uint256 high = curvePoints.length - 1;
         while (low <= high) {
             uint256 mid = (low + high) / 2;
-            uint256 midAmount = (bondCurve[mid] * multiplier) / BASIS_POINTS;
+            uint256 midAmount = curvePoints[mid];
             if (amount == midAmount) {
                 return mid + 1;
             }
@@ -180,28 +246,4 @@ abstract contract CSBondCurve is CSBondCurveBase {
         }
         return low;
     }
-
-    function _getBondAmountByKeysCount(
-        uint256 keys
-    ) internal view returns (uint256) {
-        return _getBondAmountByKeysCount(keys, MAX_BOND_MULTIPLIER);
-    }
-
-    function _getBondAmountByKeysCount(
-        uint256 keys,
-        uint256 multiplier
-    ) internal view returns (uint256) {
-        if (keys == 0) return 0;
-        if (keys <= bondCurve.length) {
-            return (bondCurve[keys - 1] * multiplier) / BASIS_POINTS;
-        }
-        return
-            ((bondCurve[bondCurve.length - 1] * multiplier) / BASIS_POINTS) +
-            (keys - bondCurve.length) *
-            ((_bondCurveTrend * multiplier) / BASIS_POINTS);
-    }
-
-    error InvalidBondCurveLength();
-    error InvalidBondCurveValues();
-    error InvalidMultiplier();
 }

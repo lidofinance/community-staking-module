@@ -229,7 +229,7 @@ contract CSModule is ICSModule, CSModuleBase {
         // TODO: sanity checks
 
         require(
-            msg.value == accounting.getRequiredBondETHForKeys(keysCount),
+            msg.value == accounting.getBondAmountByKeysCount(keysCount),
             "eth value is not equal to required bond"
         );
 
@@ -276,7 +276,7 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting.depositStETH(
             msg.sender,
             id,
-            accounting.getRequiredBondStETHForKeys(keysCount)
+            accounting.getBondAmountByKeysCount(keysCount)
         );
 
         _addSigningKeys(id, keysCount, publicKeys, signatures);
@@ -310,7 +310,7 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting.depositStETHWithPermit(
             msg.sender,
             id,
-            accounting.getRequiredBondStETHForKeys(keysCount),
+            accounting.getBondAmountByKeysCount(keysCount),
             permit
         );
 
@@ -344,7 +344,7 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting.depositWstETH(
             msg.sender,
             id,
-            accounting.getRequiredBondWstETHForKeys(keysCount)
+            accounting.getBondAmountByKeysCountWstETH(keysCount)
         );
 
         _addSigningKeys(id, keysCount, publicKeys, signatures);
@@ -378,7 +378,7 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting.depositWstETHWithPermit(
             msg.sender,
             id,
-            accounting.getRequiredBondWstETHForKeys(keysCount),
+            accounting.getBondAmountByKeysCountWstETH(keysCount),
             permit
         );
 
@@ -402,7 +402,10 @@ contract CSModule is ICSModule, CSModuleBase {
 
         require(
             msg.value ==
-                accounting.getRequiredBondETH(nodeOperatorId, keysCount),
+                accounting.getRequiredBondForNextKeys(
+                    nodeOperatorId,
+                    keysCount
+                ),
             "eth value is not equal to required bond"
         );
 
@@ -427,7 +430,7 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting.depositStETH(
             msg.sender,
             nodeOperatorId,
-            accounting.getRequiredBondStETH(nodeOperatorId, keysCount)
+            accounting.getRequiredBondForNextKeys(nodeOperatorId, keysCount)
         );
 
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
@@ -451,7 +454,7 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting.depositStETHWithPermit(
             msg.sender,
             nodeOperatorId,
-            accounting.getRequiredBondStETH(nodeOperatorId, keysCount),
+            accounting.getRequiredBondForNextKeys(nodeOperatorId, keysCount),
             permit
         );
 
@@ -474,7 +477,10 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting.depositWstETH(
             msg.sender,
             nodeOperatorId,
-            accounting.getRequiredBondWstETH(nodeOperatorId, keysCount)
+            accounting.getRequiredBondForNextKeysWstETH(
+                nodeOperatorId,
+                keysCount
+            )
         );
 
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
@@ -498,7 +504,10 @@ contract CSModule is ICSModule, CSModuleBase {
         accounting.depositWstETHWithPermit(
             msg.sender,
             nodeOperatorId,
-            accounting.getRequiredBondWstETH(nodeOperatorId, keysCount),
+            accounting.getRequiredBondForNextKeysWstETH(
+                nodeOperatorId,
+                keysCount
+            ),
             permit
         );
 
@@ -811,11 +820,8 @@ contract CSModule is ICSModule, CSModuleBase {
         // TODO: implement me
     }
 
-    /// @notice Triggers the node operator's unbonded validator to exit
-    function exitUnbondedValidator(
-        uint256 nodeOperatorId,
-        uint256 validatorId
-    ) external {
+    /// @notice Triggers the node operator's unbonded validators to exit
+    function exitUnbondedValidators(uint256 nodeOperatorId) external {
         // TODO: implement me
     }
 
@@ -958,6 +964,7 @@ contract CSModule is ICSModule, CSModuleBase {
     }
 
     /// @notice Unsafe unvetting of keys by DAO
+    /// @dev Doesn't charge fee
     /// @param nodeOperatorId ID of the node operator
     function unsafeUnvetKeys(uint256 nodeOperatorId) external onlyKeyValidator {
         _unvetKeys(nodeOperatorId);
@@ -1003,9 +1010,9 @@ contract CSModule is ICSModule, CSModuleBase {
     /// @notice any penalty might cause bond out, so we need to clear any benefits from the node operator
     /// @param nodeOperatorId ID of the node operator
     function _checkForOutOfBond(uint256 nodeOperatorId) internal {
-        // TODO: Should be done manually or automatically? Any penalty should reset bond multiplier or not?
+        // TODO: Should be done manually or automatically? Any penalty should reset bond curve or not?
         if (accounting.getBondShares(nodeOperatorId) == 0) {
-            accounting.resetBondMultiplier(nodeOperatorId);
+            accounting.resetBondCurve(nodeOperatorId);
         }
     }
 
@@ -1051,6 +1058,16 @@ contract CSModule is ICSModule, CSModuleBase {
             accounting.settleLockedBondETH(nodeOperatorId);
             _checkForOutOfBond(nodeOperatorId);
         }
+    }
+
+    /// @notice Applies initial slashing penalty for the given node operator.
+    /// @param slashingProof merkle proof of the slashing.
+    /// @param nodeOperatorId id of the node operator to settle initial slashing penalty for.
+    function applyInitialSlashingPenalty(
+        bytes32[] memory slashingProof,
+        uint256 nodeOperatorId
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        // TODO: implement me
     }
 
     /// @notice Penalize bond by burning shares of the given node operator.

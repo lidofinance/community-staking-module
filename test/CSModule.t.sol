@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.21;
+pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
 import "../src/CSModule.sol";
@@ -31,7 +31,6 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     LidoLocatorMock public locator;
     WstETHMock public wstETH;
     LidoMock public stETH;
-    Stub public burner;
     CSModule public csm;
     CSAccounting public accounting;
     Stub public communityStakingFeeDistributor;
@@ -56,7 +55,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         stranger = nextAddress("STRANGER");
         admin = nextAddress("ADMIN");
 
-        (locator, wstETH, stETH, burner) = initLido();
+        (locator, wstETH, stETH, ) = initLido();
 
         // FIXME: move to the corresponding tests
         vm.deal(nodeOperator, BOND_SIZE + 1 wei);
@@ -84,12 +83,9 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
             address(csm)
         );
         accounting.grantRole(accounting.SET_BOND_LOCK_ROLE(), address(csm));
+        accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm));
         accounting.grantRole(accounting.RELEASE_BOND_LOCK_ROLE(), address(csm));
         accounting.grantRole(accounting.SETTLE_BOND_LOCK_ROLE(), address(csm));
-        accounting.grantRole(
-            accounting.SET_BOND_MULTIPLIER_ROLE(),
-            address(csm)
-        );
         vm.stopPrank();
     }
 
@@ -416,7 +412,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         csm.addNodeOperatorStETH(1, keys, signatures);
         uint256 noId = csm.getNodeOperatorsCount() - 1;
 
-        uint256 required = accounting.getRequiredBondStETH(0, 1);
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
         vm.deal(nodeOperator, required);
         vm.prank(nodeOperator);
         stETH.submit{ value: required }(address(0));
@@ -466,7 +462,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         uint256 noId = createNodeOperator();
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
 
-        uint256 required = accounting.getRequiredBondETH(0, 1);
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
         vm.deal(nodeOperator, required);
         vm.prank(nodeOperator);
         {
@@ -1000,10 +996,7 @@ contract CsmQueueOps is CSMCommon {
         csm.setUnvettingFee(BOND_SIZE);
         vm.expectCall(
             address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondMultiplier.selector,
-                noId
-            )
+            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
         );
         csm.unvetKeys(noId);
     }
@@ -1669,10 +1662,7 @@ contract CsmPenalize is CSMCommon {
         uint256 noId = createNodeOperator();
         vm.expectCall(
             address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondMultiplier.selector,
-                noId
-            )
+            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
         );
         csm.penalize(noId, BOND_SIZE);
     }
@@ -1687,7 +1677,7 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         emit ELRewardsStealingPenaltyInitiated(noId, 100, BOND_SIZE / 2);
         csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
 
-        uint256 lockedBond = accounting.getActualLockedBondETH(noId);
+        uint256 lockedBond = accounting.getActualLockedBond(noId);
         assertEq(lockedBond, BOND_SIZE / 2);
 
         CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
@@ -1723,10 +1713,7 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
 
         vm.expectCall(
             address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondMultiplier.selector,
-                noId
-            ),
+            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId),
             0 // no called at all
         );
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
@@ -1748,7 +1735,7 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
-                accounting.resetBondMultiplier.selector,
+                accounting.resetBondCurve.selector,
                 secondNoId
             ),
             1 // called once for secondNoId
@@ -1775,10 +1762,7 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
 
         vm.expectCall(
             address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondMultiplier.selector,
-                noId
-            )
+            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
         );
         csm.settleELRewardsStealingPenalty(idsToSettle);
     }
@@ -1798,10 +1782,7 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
 
         vm.expectCall(
             address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondMultiplier.selector,
-                noId
-            ),
+            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId),
             0 // no called at all
         );
         csm.settleELRewardsStealingPenalty(idsToSettle);

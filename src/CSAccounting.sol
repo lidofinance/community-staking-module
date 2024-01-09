@@ -5,52 +5,14 @@ pragma solidity 0.8.21;
 
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
+import { CSBondCore } from "./CSBondCore.sol";
 import { CSBondCurve } from "./CSBondCurve.sol";
 import { CSBondLock } from "./CSBondLock.sol";
 
-import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
-import { ILido } from "./interfaces/ILido.sol";
-import { IWstETH } from "./interfaces/IWstETH.sol";
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
-import { IWithdrawalQueue } from "./interfaces/IWithdrawalQueue.sol";
 
-contract CSAccountingBase {
-    event ETHBondDeposited(
-        uint256 indexed nodeOperatorId,
-        address from,
-        uint256 amount
-    );
-    event StETHBondDeposited(
-        uint256 indexed nodeOperatorId,
-        address from,
-        uint256 amount
-    );
-    event WstETHBondDeposited(
-        uint256 indexed nodeOperatorId,
-        address from,
-        uint256 amount
-    );
-    event StETHClaimed(
-        uint256 indexed nodeOperatorId,
-        address to,
-        uint256 amount
-    );
-    event WstETHClaimed(
-        uint256 indexed nodeOperatorId,
-        address to,
-        uint256 amount
-    );
-    event ETHRequested(
-        uint256 indexed nodeOperatorId,
-        address to,
-        uint256 amount
-    );
-    event BondPenalized(
-        uint256 indexed nodeOperatorId,
-        uint256 penaltyETH,
-        uint256 coveringETH
-    );
+abstract contract CSAccountingBase {
     event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
     event BondLockReleased(uint256 indexed nodeOperatorId, uint256 amount);
 
@@ -58,10 +20,12 @@ contract CSAccountingBase {
     error InvalidSender();
 }
 
+/// @author vgorkavenko
 contract CSAccounting is
-    CSAccountingBase,
+    CSBondCore,
     CSBondCurve,
     CSBondLock,
+    CSAccountingBase,
     AccessControlEnumerable
 {
     struct PermitInput {
@@ -75,8 +39,6 @@ contract CSAccounting is
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
 
-    bytes32 public constant SEAL_ROLE = keccak256("SEAL_ROLE"); // 0x5561eed4f05defaf62a493aaa0919339d3f352fbf2261adb133a0c3655488b4f
-
     bytes32 public constant INSTANT_PENALIZE_BOND_ROLE =
         keccak256("INSTANT_PENALIZE_BOND_ROLE"); // 0x9909cf24c2d3bafa8c229558d86a1b726ba57c3ef6350848dcf434a4181b56c7
     bytes32 public constant SET_BOND_LOCK_ROLE =
@@ -85,19 +47,19 @@ contract CSAccounting is
         keccak256("RELEASE_BOND_LOCK_ROLE"); // 0xc2978b4baa6c8ed096f1f65a0b92abc3771cb669afce20daa9a5f3fbcd13dea1
     bytes32 public constant SETTLE_BOND_LOCK_ROLE =
         keccak256("SETTLE_BOND_LOCK_ROLE");
+    bytes32 public constant ADD_BOND_CURVE_ROLE =
+        keccak256("ADD_BOND_CURVE_ROLE");
+    bytes32 public constant SET_DEFAULT_BOND_CURVE_ROLE =
+        keccak256("SET_DEFAULT_BOND_CURVE_ROLE");
     bytes32 public constant SET_BOND_CURVE_ROLE =
-        keccak256("SET_BOND_CURVE_ROLE"); // 0x645c9e6d2a86805cb5a28b1e4751c0dab493df7cf935070ce405489ba1a7bf72
-    bytes32 public constant SET_BOND_MULTIPLIER_ROLE =
-        keccak256("SET_BOND_MULTIPLIER_ROLE"); // 0x62131145aee19b18b85aa8ead52ba87f0efb6e61e249155edc68a2c24e8f79b5
+        keccak256("SET_BOND_CURVE_ROLE");
+    bytes32 public constant RESET_BOND_CURVE_ROLE =
+        keccak256("RESET_BOND_CURVE_ROLE");
+    bytes32 public constant BOND_BURNER_ROLE = keccak256("BOND_BURNER_ROLE");
 
-    ILidoLocator private immutable LIDO_LOCATOR;
     ICSModule private immutable CSM;
-    IWstETH private immutable WSTETH;
 
     address public FEE_DISTRIBUTOR;
-    uint256 public totalBondShares;
-
-    mapping(uint256 => uint256) internal _bondShares;
 
     /// @param bondCurve initial bond curve
     /// @param admin admin role member address
@@ -112,20 +74,20 @@ contract CSAccounting is
         address wstETH,
         address communityStakingModule,
         uint256 bondLockRetentionPeriod
-    ) CSBondCurve(bondCurve) CSBondLock(bondLockRetentionPeriod) {
+    )
+        CSBondCore(lidoLocator, wstETH)
+        CSBondCurve(bondCurve)
+        CSBondLock(bondLockRetentionPeriod)
+    {
         // check zero addresses
         require(admin != address(0), "admin is zero address");
-        require(lidoLocator != address(0), "lido locator is zero address");
         require(
             communityStakingModule != address(0),
             "community staking module is zero address"
         );
-        require(wstETH != address(0), "wstETH is zero address");
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
 
-        LIDO_LOCATOR = ILidoLocator(lidoLocator);
         CSM = ICSModule(communityStakingModule);
-        WSTETH = IWstETH(wstETH);
     }
 
     /// @notice Sets fee distributor contract address.
@@ -141,207 +103,160 @@ contract CSAccounting is
     function setLockedBondRetentionPeriod(
         uint256 retention
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        // todo: is it admin role?
-        _setBondLockRetentionPeriod(retention);
+        // TODO: is it admin role?
+        CSBondLock._setBondLockRetentionPeriod(retention);
     }
 
-    /// @notice Sets bond curve.
-    /// @param bondCurve bond curve to set.
-    function setBondCurve(
+    /// @notice Add new bond curve.
+    /// @param bondCurve bond curve to add.
+    function addBondCurve(
         uint256[] memory bondCurve
-    ) external onlyRole(SET_BOND_CURVE_ROLE) {
-        _setBondCurve(bondCurve);
+    ) external onlyRole(ADD_BOND_CURVE_ROLE) {
+        CSBondCurve._addBondCurve(bondCurve);
+    }
+
+    /// @notice Sets default bond curve.
+    /// @param curveId id of the bond curve to set as default.
+    function setDefaultBondCurve(
+        uint256 curveId
+    ) external onlyRole(SET_DEFAULT_BOND_CURVE_ROLE) {
+        CSBondCurve._setDefaultBondCurve(curveId);
     }
 
     /// @notice Sets basis points of the bond multiplier for the given node operator.
     /// @param nodeOperatorId id of the node operator to set bond multiplier for.
-    /// @param basisPoints basis points of the bond multiplier.
-    function setBondMultiplier(
+    /// @param curveId id of the bond curve to set
+    function setBondCurve(
         uint256 nodeOperatorId,
-        uint256 basisPoints
-    ) external onlyRole(SET_BOND_MULTIPLIER_ROLE) {
-        _setBondMultiplier(nodeOperatorId, basisPoints);
+        uint256 curveId
+    ) external onlyRole(SET_BOND_CURVE_ROLE) {
+        CSBondCurve._setBondCurve(nodeOperatorId, curveId);
     }
 
-    /// @notice Resets bond multiplier to the default value for the given node operator.
-    /// @param nodeOperatorId id of the node operator.
-    function resetBondMultiplier(
+    /// @notice Resets bond curve for the given node operator.
+    /// @param nodeOperatorId id of the node operator to reset bond curve for.
+    function resetBondCurve(
         uint256 nodeOperatorId
-    ) external onlyRole(SET_BOND_MULTIPLIER_ROLE) {
-        _resetBondMultiplier(nodeOperatorId);
+    ) external onlyRole(RESET_BOND_CURVE_ROLE) {
+        CSBondCurve._resetBondCurve(nodeOperatorId);
     }
 
     /// @notice Pauses accounting by DAO decision.
     function pauseAccounting() external onlyRole(PAUSE_ROLE) {
-        // todo: implement me
+        // TODO: implement me
     }
 
     /// @notice Unpauses accounting by DAO decision.
     function resumeAccounting() external onlyRole(RESUME_ROLE) {
-        // todo: implement me
+        // TODO: implement me
     }
 
-    /// @notice Returns the bond shares for the given node operator.
+    /// @notice Returns current and required bond amount in ETH (stETH) for the given node operator.
+    /// @dev To calculate excess bond amount subtract `required` from `current` value.
+    ///      To calculate missed bond amount subtract `current` from `required` value.
     /// @param nodeOperatorId id of the node operator to get bond for.
-    /// @return bond shares.
-    function getBondShares(
+    /// @return current bond amount.
+    /// @return required bond amount.
+    function getBondSummary(
+        uint256 nodeOperatorId
+    ) public view returns (uint256 current, uint256 required) {
+        return _getBondSummary(nodeOperatorId, _getActiveKeys(nodeOperatorId));
+    }
+
+    function _getBondSummary(
+        uint256 nodeOperatorId,
+        uint256 activeKeys
+    ) internal view returns (uint256 current, uint256 required) {
+        current = CSBondCore.getBond(nodeOperatorId);
+        required =
+            CSBondCurve.getBondAmountByKeysCount(
+                activeKeys,
+                CSBondCurve.getBondCurve(nodeOperatorId)
+            ) +
+            CSBondLock.getActualLockedBond(nodeOperatorId);
+    }
+
+    /// @notice Returns current and required bond amount in stETH shares for the given node operator.
+    /// @dev To calculate excess bond amount subtract `required` from `current` value.
+    ///      To calculate missed bond amount subtract `current` from `required` value.
+    /// @param nodeOperatorId id of the node operator to get bond for.
+    /// @return current bond amount.
+    /// @return required bond amount.
+    function getBondSummaryShares(
+        uint256 nodeOperatorId
+    ) public view returns (uint256 current, uint256 required) {
+        return
+            _getBondSummaryShares(
+                nodeOperatorId,
+                _getActiveKeys(nodeOperatorId)
+            );
+    }
+
+    function _getBondSummaryShares(
+        uint256 nodeOperatorId,
+        uint256 activeKeys
+    ) internal view returns (uint256 current, uint256 required) {
+        current = CSBondCore.getBondShares(nodeOperatorId);
+        required = _sharesByEth(
+            CSBondCurve.getBondAmountByKeysCount(
+                activeKeys,
+                CSBondCurve.getBondCurve(nodeOperatorId)
+            ) + CSBondLock.getActualLockedBond(nodeOperatorId)
+        );
+    }
+
+    /// @notice Returns the number of unbonded keys
+    /// @dev unbonded meaning amount of keys with no bond at all
+    /// @param nodeOperatorId id of the node operator to get keys count for.
+    /// @return unbonded keys count.
+    function getUnbondedKeysCount(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
-        return _bondShares[nodeOperatorId];
-    }
-
-    // todo: describe `rewardsProof`
-
-    /// @notice Returns total rewards (bond + fees) in ETH for the given node operator.
-    /// @param rewardsProof merkle proof of the rewards.
-    /// @param nodeOperatorId id of the node operator to get rewards for.
-    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
-    /// @return total rewards in ETH
-    function getTotalRewardsETH(
-        bytes32[] memory rewardsProof,
-        uint256 nodeOperatorId,
-        uint256 cumulativeFeeShares
-    ) public view returns (uint256) {
-        (uint256 current, uint256 required) = _bondSharesSummary(
+        // TODO: rework with threshold ???
+        uint256 activeKeys = _getActiveKeys(nodeOperatorId);
+        uint256 currentBond = CSBondCore._ethByShares(
+            _bondShares[nodeOperatorId]
+        );
+        // TODO: should the lock be included in the calculation to eject validators?
+        uint256 lockedBond = CSBondLock.getActualLockedBond(nodeOperatorId);
+        if (currentBond <= lockedBond) return activeKeys;
+        currentBond -= lockedBond;
+        CSBondCurve.BondCurve memory bondCurve = CSBondCurve.getBondCurve(
             nodeOperatorId
         );
-        current += _feeDistributor().getFeesToDistribute(
-            rewardsProof,
-            nodeOperatorId,
-            cumulativeFeeShares
+        uint256 bondedKeys = CSBondCurve.getKeysCountByBondAmount(
+            currentBond,
+            bondCurve
         );
-        uint256 excess = current > required ? current - required : 0;
-        return excess > 0 ? _ethByShares(excess) : 0;
-    }
-
-    /// @notice Returns total rewards (bond + fees) in stETH for the given node operator.
-    /// @param rewardsProof merkle proof of the rewards.
-    /// @param nodeOperatorId id of the node operator to get rewards for.
-    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
-    /// @return total rewards in stETH
-    function getTotalRewardsStETH(
-        bytes32[] memory rewardsProof,
-        uint256 nodeOperatorId,
-        uint256 cumulativeFeeShares
-    ) public view returns (uint256) {
-        return
-            getTotalRewardsETH(
-                rewardsProof,
-                nodeOperatorId,
-                cumulativeFeeShares
-            );
-    }
-
-    /// @notice Returns total rewards (bond + fees) in wstETH for the given node operator.
-    /// @param rewardsProof merkle proof of the rewards.
-    /// @param nodeOperatorId id of the node operator to get rewards for.
-    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
-    /// @return total rewards in wstETH
-    function getTotalRewardsWstETH(
-        bytes32[] memory rewardsProof,
-        uint256 nodeOperatorId,
-        uint256 cumulativeFeeShares
-    ) public view returns (uint256) {
-        return
-            WSTETH.getWstETHByStETH(
-                getTotalRewardsStETH(
-                    rewardsProof,
-                    nodeOperatorId,
-                    cumulativeFeeShares
-                )
-            );
-    }
-
-    /// @notice Returns excess bond in ETH for the given node operator.
-    /// @param nodeOperatorId id of the node operator to get excess bond for.
-    /// @return excess bond in ETH.
-    function getExcessBondETH(
-        uint256 nodeOperatorId
-    ) public view returns (uint256) {
-        (uint256 current, uint256 required) = _bondETHSummary(nodeOperatorId);
-        return current > required ? current - required : 0;
-    }
-
-    /// @notice Returns excess bond in stETH for the given node operator.
-    /// @param nodeOperatorId id of the node operator to get excess bond for.
-    /// @return excess bond in stETH.
-    function getExcessBondStETH(
-        uint256 nodeOperatorId
-    ) public view returns (uint256) {
-        return getExcessBondETH(nodeOperatorId);
-    }
-
-    /// @notice Returns excess bond in wstETH for the given node operator.
-    /// @param nodeOperatorId id of the node operator to get excess bond for.
-    /// @return excess bond in wstETH.
-    function getExcessBondWstETH(
-        uint256 nodeOperatorId
-    ) public view returns (uint256) {
-        return WSTETH.getWstETHByStETH(getExcessBondStETH(nodeOperatorId));
-    }
-
-    /// @notice Returns the missing bond in ETH for the given node operator.
-    /// @param nodeOperatorId id of the node operator to get missing bond for.
-    /// @return missing bond in ETH.
-    function getMissingBondETH(
-        uint256 nodeOperatorId
-    ) public view onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
-        (uint256 current, uint256 required) = _bondETHSummary(nodeOperatorId);
-        return required > current ? required - current : 0;
-    }
-
-    /// @notice Returns the missing bond in stETH for the given node operator.
-    /// @param nodeOperatorId id of the node operator to get missing bond for.
-    /// @return missing bond in stETH.
-    function getMissingBondStETH(
-        uint256 nodeOperatorId
-    ) public view returns (uint256) {
-        return getMissingBondETH(nodeOperatorId);
-    }
-
-    /// @notice Returns the missing bond in wstETH for the given node operator.
-    /// @param nodeOperatorId id of the node operator to get missing bond for.
-    /// @return missing bond in wstETH.
-    function getMissingBondWstETH(
-        uint256 nodeOperatorId
-    ) public view returns (uint256) {
-        return WSTETH.getWstETHByStETH(getMissingBondStETH(nodeOperatorId));
-    }
-
-    /// @notice Returns information about the locked bond for the given node operator.
-    /// @param nodeOperatorId id of the node operator to get locked bond info for.
-    /// @return locked bond info.
-    function getLockedBondInfo(
-        uint256 nodeOperatorId
-    ) public view returns (CSBondLock.BondLock memory) {
-        return CSBondLock._get(nodeOperatorId);
-    }
-
-    /// @notice Returns the amount of locked bond in ETH by the given node operator.
-    /// @param nodeOperatorId id of the node operator to get locked bond amount.
-    /// @return amount of locked bond in ETH.
-    function getActualLockedBondETH(
-        uint256 nodeOperatorId
-    ) public view returns (uint256) {
-        return CSBondLock._getActualAmount(nodeOperatorId);
+        if (
+            currentBond >
+            CSBondCurve.getBondAmountByKeysCount(bondedKeys, bondCurve)
+        ) {
+            bondedKeys += 1;
+        }
+        return activeKeys > bondedKeys ? activeKeys - bondedKeys : 0;
     }
 
     /// @notice Returns the required bond in ETH (inc. missed and excess) for the given node operator to upload new keys.
     /// @param nodeOperatorId id of the node operator to get required bond for.
-    /// @param additionalKeysCount number of new keys to add.
+    /// @param additionalKeys number of new keys to add.
     /// @return required bond in ETH.
-    function getRequiredBondETH(
+    function getRequiredBondForNextKeys(
         uint256 nodeOperatorId,
-        uint256 additionalKeysCount
+        uint256 additionalKeys
     ) public view returns (uint256) {
-        // todo: can be optimized. get active keys once
-        (uint256 current, uint256 required) = _bondETHSummary(nodeOperatorId);
-        uint256 currentKeysCount = _getNodeOperatorActiveKeys(nodeOperatorId);
-        uint256 multiplier = getBondMultiplier(nodeOperatorId);
-        uint256 requiredForNextKeys = _getBondAmountByKeysCount(
-            currentKeysCount + additionalKeysCount,
-            multiplier
-        ) - _getBondAmountByKeysCount(currentKeysCount, multiplier);
+        uint256 activeKeys = _getActiveKeys(nodeOperatorId);
+        (uint256 current, uint256 required) = _getBondSummary(
+            nodeOperatorId,
+            activeKeys
+        );
+        CSBondCurve.BondCurve memory bondCurve = CSBondCurve.getBondCurve(
+            nodeOperatorId
+        );
+        uint256 requiredForNextKeys = CSBondCurve.getBondAmountByKeysCount(
+            activeKeys + additionalKeys,
+            bondCurve
+        ) - CSBondCurve.getBondAmountByKeysCount(activeKeys, bondCurve);
 
         uint256 missing = required > current ? required - current : 0;
         if (missing > 0) {
@@ -356,112 +271,37 @@ contract CSAccounting is
         return requiredForNextKeys - excess;
     }
 
-    /// @notice Returns the required bond in stETH (inc. missed and excess) for the given node operator to upload new keys.
-    /// @param nodeOperatorId id of the node operator to get required bond for.
-    /// @return required bond in stETH.
-    function getRequiredBondStETH(
-        uint256 nodeOperatorId,
-        uint256 additionalKeysCount
+    function getBondAmountByKeysCountWstETH(
+        uint256 keysCount
     ) public view returns (uint256) {
-        return getRequiredBondETH(nodeOperatorId, additionalKeysCount);
+        return
+            WSTETH.getWstETHByStETH(
+                CSBondCurve.getBondAmountByKeysCount(keysCount)
+            );
+    }
+
+    function getBondAmountByKeysCountWstETH(
+        uint256 keysCount,
+        BondCurve memory curve
+    ) public view returns (uint256) {
+        return
+            WSTETH.getWstETHByStETH(
+                CSBondCurve.getBondAmountByKeysCount(keysCount, curve)
+            );
     }
 
     /// @notice Returns the required bond in wstETH (inc. missed and excess) for the given node operator to upload new keys.
     /// @param nodeOperatorId id of the node operator to get required bond for.
-    /// @param additionalKeysCount number of new keys to add.
+    /// @param additionalKeys number of new keys to add.
     /// @return required bond in wstETH.
-    function getRequiredBondWstETH(
+    function getRequiredBondForNextKeysWstETH(
         uint256 nodeOperatorId,
-        uint256 additionalKeysCount
+        uint256 additionalKeys
     ) public view returns (uint256) {
         return
             WSTETH.getWstETHByStETH(
-                getRequiredBondStETH(nodeOperatorId, additionalKeysCount)
+                getRequiredBondForNextKeys(nodeOperatorId, additionalKeys)
             );
-    }
-
-    /// @notice Returns the required bond in ETH for the given number of keys.
-    /// @dev To calculate the amount for the new keys 2 calls are required:
-    ///      getRequiredBondETHForKeys(newTotal) - getRequiredBondETHForKeys(currentTotal)
-    /// @param keysCount number of keys to get required bond for.
-    /// @return required in ETH.
-    function getRequiredBondETHForKeys(
-        uint256 keysCount
-    ) public view returns (uint256) {
-        return _getBondAmountByKeysCount(keysCount);
-    }
-
-    /// @notice Returns the required bond in stETH for the given number of keys.
-    /// @dev To calculate the amount for the new keys 2 calls are required:
-    ///      getRequiredBondStETHForKeys(newTotal) - getRequiredBondStETHForKeys(currentTotal)
-    /// @param keysCount number of keys to get required bond for.
-    /// @return required in stETH.
-    function getRequiredBondStETHForKeys(
-        uint256 keysCount
-    ) public view returns (uint256) {
-        return getRequiredBondETHForKeys(keysCount);
-    }
-
-    /// @notice Returns the required bond in wstETH for the given number of keys.
-    /// @dev To calculate the amount for the new keys 2 calls are required:
-    ///      getRequiredBondWstETHForKeys(newTotal) - getRequiredBondWstETHForKeys(currentTotal)
-    /// @param keysCount number of keys to get required bond for.
-    /// @return required in wstETH.
-    function getRequiredBondWstETHForKeys(
-        uint256 keysCount
-    ) public view returns (uint256) {
-        return WSTETH.getWstETHByStETH(getRequiredBondStETHForKeys(keysCount));
-    }
-
-    /// @dev unbonded meaning amount of keys with no bond at all
-    /// @notice Returns the number of unbonded keys
-    /// @param nodeOperatorId id of the node operator to get keys count for.
-    /// @return unbonded keys count.
-    function getUnbondedKeysCount(
-        uint256 nodeOperatorId
-    ) public view returns (uint256) {
-        uint256 activeKeys = _getNodeOperatorActiveKeys(nodeOperatorId);
-        uint256 currentBond = _ethByShares(_bondShares[nodeOperatorId]);
-        uint256 lockedBond = getActualLockedBondETH(nodeOperatorId);
-        if (currentBond > lockedBond) {
-            uint256 multiplier = getBondMultiplier(nodeOperatorId);
-            currentBond -= lockedBond;
-            uint256 bondedKeys = _getKeysCountByBondAmount(
-                currentBond,
-                multiplier
-            );
-            if (
-                currentBond > _getBondAmountByKeysCount(bondedKeys, multiplier)
-            ) {
-                bondedKeys += 1;
-            }
-            return activeKeys > bondedKeys ? activeKeys - bondedKeys : 0;
-        }
-        return activeKeys;
-    }
-
-    /// @notice Returns the number of keys by the given bond ETH amount
-    /// @param ETHAmount bond in ETH
-    function getKeysCountByBondETH(
-        uint256 ETHAmount
-    ) public view returns (uint256) {
-        return _getKeysCountByBondAmount(ETHAmount);
-    }
-
-    /// @notice Returns the number of keys by the given bond stETH amount
-    /// @param stETHAmount bond in stETH
-    function getKeysCountByBondStETH(
-        uint256 stETHAmount
-    ) public view returns (uint256) {
-        return getKeysCountByBondETH(stETHAmount);
-    }
-
-    /// @notice Returns the number of keys by the given bond wstETH amount
-    /// @param wstETHAmount bond in wstETH
-    function getKeysCountByBondWstETH(
-        uint256 wstETHAmount
-    ) public view returns (uint256) {
-        return getKeysCountByBondETH(WSTETH.getStETHByWstETH(wstETHAmount));
     }
 
     /// @notice Stake user's ETH to Lido and make deposit in stETH to the bond
@@ -472,20 +312,14 @@ contract CSAccounting is
     function depositETH(
         address from,
         uint256 nodeOperatorId
-    ) external payable returns (uint256) {
+    )
+        external
+        payable
+        onlyExistingNodeOperator(nodeOperatorId)
+        returns (uint256)
+    {
         from = _validateDepositSender(from);
-        return _depositETH(from, nodeOperatorId);
-    }
-
-    function _depositETH(
-        address from,
-        uint256 nodeOperatorId
-    ) internal onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
-        uint256 shares = _lido().submit{ value: msg.value }(address(0));
-        _bondShares[nodeOperatorId] += shares;
-        totalBondShares += shares;
-        emit ETHBondDeposited(nodeOperatorId, from, msg.value);
-        return shares;
+        return CSBondCore._depositETH(from, nodeOperatorId);
     }
 
     /// @notice Deposit user's stETH to the bond for the given Node Operator
@@ -498,10 +332,10 @@ contract CSAccounting is
         address from,
         uint256 nodeOperatorId,
         uint256 stETHAmount
-    ) external returns (uint256) {
-        // todo: can it be two functions rather than one with `from` param and condition?
+    ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
+        // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
-        return _depositStETH(from, nodeOperatorId, stETHAmount);
+        return CSBondCore._depositStETH(from, nodeOperatorId, stETHAmount);
     }
 
     /// @notice Deposit user's stETH to the bond for the given Node Operator using the proper permit for the contract
@@ -516,13 +350,13 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 stETHAmount,
         PermitInput calldata permit
-    ) external returns (uint256) {
-        // todo: can it be two functions rather than one with `from` param and condition?
+    ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
+        // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
         // preventing revert for already used permit
-        if (_lido().allowance(from, address(this)) < permit.value) {
+        if (LIDO.allowance(from, address(this)) < permit.value) {
             // solhint-disable-next-line func-named-parameters
-            _lido().permit(
+            LIDO.permit(
                 from,
                 address(this),
                 permit.value,
@@ -532,21 +366,7 @@ contract CSAccounting is
                 permit.s
             );
         }
-        return _depositStETH(from, nodeOperatorId, stETHAmount);
-    }
-
-    function _depositStETH(
-        address from,
-        uint256 nodeOperatorId,
-        uint256 stETHAmount
-    ) internal onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
-        // todo: should we check that `from` is manager\reward address ???
-        uint256 shares = _sharesByEth(stETHAmount);
-        _lido().transferSharesFrom(from, address(this), shares);
-        _bondShares[nodeOperatorId] += shares;
-        totalBondShares += shares;
-        emit StETHBondDeposited(nodeOperatorId, from, stETHAmount);
-        return shares;
+        return CSBondCore._depositStETH(from, nodeOperatorId, stETHAmount);
     }
 
     /// @notice Unwrap user's wstETH and make deposit in stETH to the bond for the given Node Operator
@@ -559,10 +379,10 @@ contract CSAccounting is
         address from,
         uint256 nodeOperatorId,
         uint256 wstETHAmount
-    ) external returns (uint256) {
-        // todo: can it be two functions rather than one with `from` param and condition?
+    ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
+        // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
-        return _depositWstETH(from, nodeOperatorId, wstETHAmount);
+        return CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
     }
 
     /// @notice Unwrap user's wstETH and make deposit in stETH to the bond for the given Node Operator using the proper permit for the contract
@@ -577,8 +397,8 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
         PermitInput calldata permit
-    ) external returns (uint256) {
-        // todo: can it be two functions rather than one with `from` param and condition?
+    ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
+        // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
         // preventing revert for already used permit
         if (WSTETH.allowance(from, address(this)) < permit.value) {
@@ -593,22 +413,7 @@ contract CSAccounting is
                 permit.s
             );
         }
-        return _depositWstETH(from, nodeOperatorId, wstETHAmount);
-    }
-
-    function _depositWstETH(
-        address from,
-        uint256 nodeOperatorId,
-        uint256 wstETHAmount
-    ) internal onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
-        // todo: should we check that `from` is manager\reward address ???
-        WSTETH.transferFrom(from, address(this), wstETHAmount);
-        uint256 stETHAmount = WSTETH.unwrap(wstETHAmount);
-        uint256 shares = _sharesByEth(stETHAmount);
-        _bondShares[nodeOperatorId] += shares;
-        totalBondShares += shares;
-        emit WstETHBondDeposited(nodeOperatorId, from, wstETHAmount);
-        return shares;
+        return CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
     }
 
     /// @dev only CSM can pass `from` != `msg.sender`
@@ -628,12 +433,16 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 stETHAmount
     ) external onlyExistingNodeOperator(nodeOperatorId) {
-        (
-            address managerAddress,
-            address rewardAddress
-        ) = _getNodeOperatorAddresses(nodeOperatorId);
-        _isSenderEligibleToClaim(managerAddress);
-        _claimStETH(nodeOperatorId, stETHAmount, rewardAddress);
+        ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
+            nodeOperatorId
+        );
+        _isSenderEligibleToClaim(nodeOperator.managerAddress);
+        CSBondCore._claimStETH(
+            nodeOperatorId,
+            _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
+            stETHAmount,
+            nodeOperator.rewardAddress
+        );
     }
 
     /// @notice Claims full reward (fee + bond) in stETH for the given node operator with desirable value
@@ -647,35 +456,23 @@ contract CSAccounting is
         uint256 cumulativeFeeShares,
         uint256 stETHAmount
     ) external onlyExistingNodeOperator(nodeOperatorId) {
-        (
-            address managerAddress,
-            address rewardAddress
-        ) = _getNodeOperatorAddresses(nodeOperatorId);
-        _isSenderEligibleToClaim(managerAddress);
+        // TODO: reorder ops to use only one func (first is pull) ???
+        ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
+            nodeOperatorId
+        );
+        _isSenderEligibleToClaim(nodeOperator.managerAddress);
         _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
-        _claimStETH(nodeOperatorId, stETHAmount, rewardAddress);
-    }
-
-    function _claimStETH(
-        uint256 nodeOperatorId,
-        uint256 stETHAmount,
-        address rewardAddress
-    ) internal {
-        uint256 claimableShares = _getExcessBondShares(nodeOperatorId);
-        if (claimableShares == 0) {
-            emit StETHClaimed(nodeOperatorId, rewardAddress, 0);
-            return;
-        }
-        uint256 sharesToClaim = stETHAmount < _ethByShares(claimableShares)
-            ? _sharesByEth(stETHAmount)
-            : claimableShares;
-        _lido().transferSharesFrom(address(this), rewardAddress, sharesToClaim);
-        _bondShares[nodeOperatorId] -= sharesToClaim;
-        totalBondShares -= sharesToClaim;
-        emit StETHClaimed(
+        if (stETHAmount == 0) return;
+        uint256 claimableShares = _getExcessBondShares(
             nodeOperatorId,
-            rewardAddress,
-            _ethByShares(sharesToClaim)
+            _calcActiveKeys(nodeOperator)
+        );
+        if (claimableShares == 0) return;
+        CSBondCore._claimStETH(
+            nodeOperatorId,
+            claimableShares,
+            stETHAmount,
+            nodeOperator.rewardAddress
         );
     }
 
@@ -686,12 +483,22 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 wstETHAmount
     ) external onlyExistingNodeOperator(nodeOperatorId) {
-        (
-            address managerAddress,
-            address rewardAddress
-        ) = _getNodeOperatorAddresses(nodeOperatorId);
-        _isSenderEligibleToClaim(managerAddress);
-        _claimWsETH(nodeOperatorId, wstETHAmount, rewardAddress);
+        ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
+            nodeOperatorId
+        );
+        _isSenderEligibleToClaim(nodeOperator.managerAddress);
+        if (wstETHAmount == 0) return;
+        uint256 claimableShares = _getExcessBondShares(
+            nodeOperatorId,
+            _calcActiveKeys(nodeOperator)
+        );
+        if (claimableShares == 0) return;
+        CSBondCore._claimWstETH(
+            nodeOperatorId,
+            claimableShares,
+            wstETHAmount,
+            nodeOperator.rewardAddress
+        );
     }
 
     /// @notice Claims full reward (fee + bond) in wstETH for the given node operator available for this moment
@@ -705,55 +512,37 @@ contract CSAccounting is
         uint256 cumulativeFeeShares,
         uint256 wstETHAmount
     ) external onlyExistingNodeOperator(nodeOperatorId) {
-        (
-            address managerAddress,
-            address rewardAddress
-        ) = _getNodeOperatorAddresses(nodeOperatorId);
-        _isSenderEligibleToClaim(managerAddress);
+        ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
+            nodeOperatorId
+        );
+        _isSenderEligibleToClaim(nodeOperator.managerAddress);
         _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
-        _claimWsETH(nodeOperatorId, wstETHAmount, rewardAddress);
-    }
-
-    function _claimWsETH(
-        uint256 nodeOperatorId,
-        uint256 wstETHAmount,
-        address rewardAddress
-    ) internal {
-        uint256 claimableShares = _getExcessBondShares(nodeOperatorId);
-        if (claimableShares == 0) {
-            emit WstETHClaimed(nodeOperatorId, rewardAddress, 0);
-            return;
-        }
-        uint256 sharesToClaim = wstETHAmount < claimableShares
-            ? wstETHAmount
-            : claimableShares;
-        wstETHAmount = WSTETH.wrap(_ethByShares(sharesToClaim));
-        WSTETH.transferFrom(address(this), rewardAddress, wstETHAmount);
-        _bondShares[nodeOperatorId] -= wstETHAmount;
-        totalBondShares -= wstETHAmount;
-        emit WstETHClaimed(nodeOperatorId, rewardAddress, wstETHAmount);
+        CSBondCore._claimWstETH(
+            nodeOperatorId,
+            _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
+            wstETHAmount,
+            nodeOperator.rewardAddress
+        );
     }
 
     /// @notice Request excess bond in Withdrawal NFT (unstETH) for the given node operator available for this moment.
     /// @dev reverts if amount isn't between MIN_STETH_WITHDRAWAL_AMOUNT and MAX_STETH_WITHDRAWAL_AMOUNT
     /// @param nodeOperatorId id of the node operator to request rewards for.
     /// @param ETHAmount amount of ETH to request.
-    /// @return requestId id of the withdrawal request.
     function requestExcessBondETH(
         uint256 nodeOperatorId,
         uint256 ETHAmount
-    ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
-        (
-            address managerAddress,
-            address rewardAddress
-        ) = _getNodeOperatorAddresses(nodeOperatorId);
-        _isSenderEligibleToClaim(managerAddress);
-        (uint256 requestId, uint256 requestedETH) = _requestETH(
-            nodeOperatorId,
-            ETHAmount,
-            rewardAddress
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
+            nodeOperatorId
         );
-        return requestId;
+        _isSenderEligibleToClaim(nodeOperator.managerAddress);
+        CSBondCore._requestETH(
+            nodeOperatorId,
+            _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
+            ETHAmount,
+            nodeOperator.rewardAddress
+        );
     }
 
     /// @notice Request full reward (fee + bond) in Withdrawal NFT (unstETH) for the given node operator available for this moment.
@@ -762,52 +551,45 @@ contract CSAccounting is
     /// @param nodeOperatorId id of the node operator to request rewards for.
     /// @param cumulativeFeeShares cummulative fee shares for the node operator.
     /// @param ETHAmount amount of ETH to request.
-    /// @return requestId id of the withdrawal request.
     function requestRewardsETH(
         bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
         uint256 ETHAmount
-    ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
-        (
-            address managerAddress,
-            address rewardAddress
-        ) = _getNodeOperatorAddresses(nodeOperatorId);
-        _isSenderEligibleToClaim(managerAddress);
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
+            nodeOperatorId
+        );
+        _isSenderEligibleToClaim(nodeOperator.managerAddress);
         _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
-        (uint256 requestId, ) = _requestETH(
+        if (ETHAmount == 0) return;
+        uint256 claimableShares = _getExcessBondShares(
             nodeOperatorId,
+            _calcActiveKeys(nodeOperator)
+        );
+        if (claimableShares == 0) return;
+        CSBondCore._requestETH(
+            nodeOperatorId,
+            claimableShares,
             ETHAmount,
-            rewardAddress
+            nodeOperator.rewardAddress
         );
-        return requestId;
     }
 
-    function _requestETH(
+    function _getExcessBondShares(
         uint256 nodeOperatorId,
-        uint256 ETHAmount,
-        address rewardAddress
-    ) internal returns (uint256 requestId, uint256 requestedETH) {
-        uint256 claimableShares = _getExcessBondShares(nodeOperatorId);
-        if (claimableShares == 0) {
-            emit ETHRequested(nodeOperatorId, rewardAddress, 0);
-            return (0, 0);
-        }
-        uint256 sharesToClaim = ETHAmount < _ethByShares(claimableShares)
-            ? _sharesByEth(ETHAmount)
-            : claimableShares;
-        uint256[] memory amounts = new uint256[](1);
-        amounts[0] = _lido().getPooledEthByShares(sharesToClaim);
-        uint256[] memory requestIds = _withdrawalQueue().requestWithdrawals(
-            amounts,
-            rewardAddress
+        uint256 activeKeys
+    ) internal view returns (uint256) {
+        (uint256 current, uint256 required) = _getBondSummaryShares(
+            nodeOperatorId,
+            activeKeys
         );
-        _bondShares[nodeOperatorId] -= sharesToClaim;
-        totalBondShares -= sharesToClaim;
-        emit ETHRequested(nodeOperatorId, rewardAddress, amounts[0]);
-        return (requestIds[0], amounts[0]);
+        return current > required ? current - required : 0;
     }
 
+    /// @notice Locks bond in ETH for the given node operator.
+    /// @param nodeOperatorId id of the node operator to lock bond for.
+    /// @param amount amount of ETH to lock.
     function lockBondETH(
         uint256 nodeOperatorId,
         uint256 amount
@@ -816,6 +598,7 @@ contract CSAccounting is
         onlyExistingNodeOperator(nodeOperatorId)
         onlyRole(SET_BOND_LOCK_ROLE)
     {
+        // TODO: should it be CSModule only?
         CSBondLock._lock(nodeOperatorId, amount);
     }
 
@@ -849,28 +632,20 @@ contract CSAccounting is
     function settleLockedBondETH(
         uint256 nodeOperatorId
     ) external onlyRole(SETTLE_BOND_LOCK_ROLE) {
-        BondLock memory lockInfo = CSBondLock._get(nodeOperatorId);
-        uint256 lockedAmount = getActualLockedBondETH(nodeOperatorId);
+        uint256 lockedAmount = CSBondLock.getActualLockedBond(nodeOperatorId);
         if (lockedAmount > 0) {
-            _penalize(nodeOperatorId, lockedAmount);
+            CSBondCore._burn(nodeOperatorId, lockedAmount);
         }
-        CSBondLock._reduceAmount(nodeOperatorId, lockInfo.amount);
+        // reduce all locked bond even if bond isn't covered lock fully
+        CSBondLock._remove(nodeOperatorId);
     }
 
-    /// @notice Burn all bond and request exits for all node operators' validators.
+    /// @notice Burn all bond for node operators' validators.
     /// @dev Called only by DAO. Have lifetime. Once expired can never be called.
-    function sealAccounting() external onlyRole(SEAL_ROLE) {
-        // todo: implement me
-    }
-
-    /// @notice Settles initial slashing penalty for the given node operator.
-    /// @param slashingProof merkle proof of the slashing.
-    /// @param nodeOperatorId id of the node operator to settle initial slashing penalty for.
-    function settleInitialSlashingPenalty(
-        bytes32[] memory slashingProof,
+    function burnBond(
         uint256 nodeOperatorId
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
-        // todo: implement me
+    ) external onlyRole(BOND_BURNER_ROLE) {
+        // TODO: implement me and request exits for all validators from CSModule
     }
 
     /// @notice Penalize bond by burning shares of the given node operator.
@@ -880,57 +655,21 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 amount
     ) public onlyRole(INSTANT_PENALIZE_BOND_ROLE) {
-        _penalize(nodeOperatorId, amount);
+        CSBondCore._burn(nodeOperatorId, amount);
     }
 
-    function _penalize(uint256 nodeOperatorId, uint256 amount) internal {
-        uint256 penaltyShares = _sharesByEth(amount);
-        uint256 currentShares = getBondShares(nodeOperatorId);
-        uint256 sharesToBurn = penaltyShares < currentShares
-            ? penaltyShares
-            : currentShares;
-        _lido().transferSharesFrom(
-            address(this),
-            LIDO_LOCATOR.burner(),
-            sharesToBurn
-        );
-        _bondShares[nodeOperatorId] -= sharesToBurn;
-        totalBondShares -= sharesToBurn;
-        uint256 penaltyEth = _ethByShares(penaltyShares);
-        uint256 coveringEth = _ethByShares(sharesToBurn);
-        emit BondPenalized(nodeOperatorId, penaltyEth, coveringEth);
-    }
-
-    function _lido() internal view returns (ILido) {
-        return ILido(LIDO_LOCATOR.lido());
-    }
-
-    function _feeDistributor() internal view returns (ICSFeeDistributor) {
-        return ICSFeeDistributor(FEE_DISTRIBUTOR);
-    }
-
-    function _withdrawalQueue() internal view returns (IWithdrawalQueue) {
-        return IWithdrawalQueue(LIDO_LOCATOR.withdrawalQueue());
-    }
-
-    function _getNodeOperatorActiveKeys(
+    function _getActiveKeys(
         uint256 nodeOperatorId
     ) internal view returns (uint256) {
-        ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
-            nodeOperatorId
-        );
+        return _calcActiveKeys(CSM.getNodeOperator(nodeOperatorId));
+    }
+
+    function _calcActiveKeys(
+        ICSModule.NodeOperatorInfo memory nodeOperator
+    ) private pure returns (uint256) {
         return
             nodeOperator.totalAddedValidators -
             nodeOperator.totalWithdrawnValidators;
-    }
-
-    function _getNodeOperatorAddresses(
-        uint256 nodeOperatorId
-    ) internal view returns (address, address) {
-        ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
-            nodeOperatorId
-        );
-        return (nodeOperator.managerAddress, nodeOperator.rewardAddress);
     }
 
     function _isSenderEligibleToClaim(address rewardAddress) internal view {
@@ -944,54 +683,13 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares
     ) internal {
-        uint256 distributed = _feeDistributor().distributeFees(
+        uint256 distributed = ICSFeeDistributor(FEE_DISTRIBUTOR).distributeFees(
             rewardsProof,
             nodeOperatorId,
             cumulativeFeeShares
         );
         _bondShares[nodeOperatorId] += distributed;
         totalBondShares += distributed;
-    }
-
-    function _bondETHSummary(
-        uint256 nodeOperatorId
-    ) internal view returns (uint256 current, uint256 required) {
-        current = _ethByShares(getBondShares(nodeOperatorId));
-        required =
-            _getBondAmountByKeysCount(
-                _getNodeOperatorActiveKeys(nodeOperatorId),
-                getBondMultiplier(nodeOperatorId)
-            ) +
-            getActualLockedBondETH(nodeOperatorId);
-    }
-
-    function _bondSharesSummary(
-        uint256 nodeOperatorId
-    ) internal view returns (uint256 current, uint256 required) {
-        current = getBondShares(nodeOperatorId);
-        required = _sharesByEth(
-            _getBondAmountByKeysCount(
-                _getNodeOperatorActiveKeys(nodeOperatorId),
-                getBondMultiplier(nodeOperatorId)
-            ) + getActualLockedBondETH(nodeOperatorId)
-        );
-    }
-
-    function _getExcessBondShares(
-        uint256 nodeOperatorId
-    ) internal view returns (uint256) {
-        (uint256 current, uint256 required) = _bondSharesSummary(
-            nodeOperatorId
-        );
-        return current > required ? current - required : 0;
-    }
-
-    function _sharesByEth(uint256 ethAmount) internal view returns (uint256) {
-        return _lido().getSharesByPooledEth(ethAmount);
-    }
-
-    function _ethByShares(uint256 shares) internal view returns (uint256) {
-        return _lido().getPooledEthByShares(shares);
     }
 
     modifier onlyExistingNodeOperator(uint256 nodeOperatorId) {
