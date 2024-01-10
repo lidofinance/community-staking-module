@@ -133,7 +133,7 @@ contract CSModule is ICSModule, CSModuleBase {
     bytes32 public constant SIGNING_KEYS_POSITION =
         keccak256("lido.CommunityStakingModule.signingKeysPosition");
 
-    uint256 public constant EL_REWARDS_STEALING_PENALTY = 0.1 ether;
+    uint256 public constant EL_REWARDS_STEALING_FINE = 0.1 ether;
 
     uint256 public unvettingFee;
     QueueLib.Queue public queue;
@@ -1036,16 +1036,18 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 amount
     ) external onlyExistingNodeOperator(nodeOperatorId) {
         // TODO: check role
-        amount += EL_REWARDS_STEALING_PENALTY;
-        accounting.lockBondETH(nodeOperatorId, amount);
-
-        _checkForUnbondedKeys(nodeOperatorId);
-
         emit ELRewardsStealingPenaltyReported(
             nodeOperatorId,
             blockNumber,
             amount
         );
+
+        accounting.lockBondETH(
+            nodeOperatorId,
+            amount + EL_REWARDS_STEALING_FINE
+        );
+
+        _checkForUnbondedKeys(nodeOperatorId);
     }
 
     /// @dev Should be called by the committee.

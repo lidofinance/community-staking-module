@@ -1674,15 +1674,11 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         csm.vetKeys(noId, 1);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit ELRewardsStealingPenaltyReported(
-            noId,
-            100,
-            BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_PENALTY()
-        );
+        emit ELRewardsStealingPenaltyReported(noId, 100, BOND_SIZE / 2);
         csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
 
         uint256 lockedBond = accounting.getActualLockedBond(noId);
-        assertEq(lockedBond, BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_PENALTY());
+        assertEq(lockedBond, BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_FINE());
 
         CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
         assertEq(no.totalVettedValidators, 1);
