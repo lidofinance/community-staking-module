@@ -1916,8 +1916,109 @@ contract CsmSubmitWithdrawal is CSMCommon {
         csm.submitWithdrawal(noId, keyIndex, depositSize - 1 ether);
     }
 
+    function test_submitWithdrawal_alreadySlashed() public {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+
+        csm.submitInitialSlashing(noId, 0);
+
+        uint256 expectedPenaltyAmount = csm.DEPOSIT_SIZE() -
+            csm.INITIAL_SLASHING_PENALTY();
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                0.05 ether
+            )
+        );
+        csm.submitWithdrawal(
+            noId,
+            keyIndex,
+            expectedPenaltyAmount - 0.05 ether
+        );
+    }
+
     function test_submitWithdrawal_RevertWhenNoNodeOperator() public {
         vm.expectRevert(NodeOperatorDoesNotExist.selector);
         csm.submitWithdrawal(0, 0, 0);
+    }
+
+    function test_submitWithdrawal_RevertWhenInvalidKeyIndexOffset() public {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(SigningKeysInvalidOffset.selector);
+        csm.submitWithdrawal(noId, 0, 0);
+    }
+
+    function test_submitWithdrawal_RevertWhenAlreadySubmitted() public {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+        uint256 depositSize = csm.DEPOSIT_SIZE();
+
+        csm.submitWithdrawal(noId, 0, depositSize);
+        vm.expectRevert(AlreadySubmitted.selector);
+        csm.submitWithdrawal(noId, 0, depositSize);
+    }
+}
+
+contract CsmSubmitInitialSlashing is CSMCommon {
+    function test_submitInitialSlashing() public {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+        uint256 penaltyAmount = csm.INITIAL_SLASHING_PENALTY();
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit InitialSlashingSubmitted(noId, 0);
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                penaltyAmount
+            )
+        );
+        csm.submitInitialSlashing(noId, 0);
+    }
+
+    function test_submitInitialSlashing_differentKeys() public {
+        uint256 noId = createNodeOperator(2);
+        csm.vetKeys(noId, 2);
+        csm.obtainDepositData(2, "");
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit InitialSlashingSubmitted(noId, 0);
+        csm.submitInitialSlashing(noId, 0);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit InitialSlashingSubmitted(noId, 1);
+        csm.submitInitialSlashing(noId, 1);
+    }
+
+    function test_submitInitialSlashing_RevertWhenNoNodeOperator() public {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.submitInitialSlashing(0, 0);
+    }
+
+    function test_submitInitialSlashing_RevertWhenInvalidKeyIndexOffset()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(SigningKeysInvalidOffset.selector);
+        csm.submitInitialSlashing(noId, 0);
+    }
+
+    function test_submitInitialSlashing_RevertWhenAlreadySubmitted() public {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+
+        csm.submitInitialSlashing(noId, 0);
+        vm.expectRevert(AlreadySubmitted.selector);
+        csm.submitInitialSlashing(noId, 0);
     }
 }
