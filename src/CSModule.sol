@@ -82,7 +82,10 @@ contract CSModuleBase {
         bool isTargetLimitActive,
         uint256 targetValidatorsCount
     );
-    event WithdrawalSubmitted(uint256 indexed validatorId, uint256 exitBalance);
+    event WithdrawalSubmitted(
+        uint256 indexed validatorId,
+        uint256 withdrawalBalance
+    );
 
     event BatchEnqueued(
         uint256 indexed nodeOperatorId,
@@ -960,7 +963,6 @@ contract CSModule is ICSModule, CSModuleBase {
 
         if (
             no.isTargetLimitActive &&
-            // TODO: totalExited or totalWithdrawn?
             vetKeysPointer > (no.totalExitedKeys + no.targetLimit)
         ) revert TargetLimitExceeded();
         if (no.stuckValidatorsCount > 0) revert StuckKeysPresent();
@@ -1109,7 +1111,7 @@ contract CSModule is ICSModule, CSModuleBase {
         bytes32 /*withdrawalProof*/,
         uint256 nodeOperatorId,
         uint256 validatorId,
-        uint256 exitBalance
+        uint256 withdrawalBalance
     ) external onlyExistingNodeOperator(nodeOperatorId) {
         // TODO: check for withdrawal proof
         // TODO: consider asserting that withdrawn keys count is not higher than exited keys count
@@ -1117,12 +1119,15 @@ contract CSModule is ICSModule, CSModuleBase {
 
         no.totalWithdrawnKeys += 1;
 
-        if (exitBalance < DEPOSIT_SIZE) {
-            accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - exitBalance);
+        if (withdrawalBalance < DEPOSIT_SIZE) {
+            accounting.penalize(
+                nodeOperatorId,
+                DEPOSIT_SIZE - withdrawalBalance
+            );
             _checkForOutOfBond(nodeOperatorId);
         }
 
-        emit WithdrawalSubmitted(validatorId, exitBalance);
+        emit WithdrawalSubmitted(validatorId, withdrawalBalance);
     }
 
     /// @notice Called when withdrawal credentials changed by DAO
