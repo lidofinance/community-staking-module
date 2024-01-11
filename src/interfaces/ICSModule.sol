@@ -23,4 +23,25 @@ interface ICSModule is IStakingModule {
     function getNodeOperator(
         uint256 nodeOperatorId
     ) external view returns (NodeOperatorInfo memory);
+
+    /// @notice Gets node operator signing keys
+    /// @param nodeOperatorId ID of the node operator
+    /// @param startIndex Index of the first key
+    /// @param keysCount Count of keys to get
+    /// @return Signing keys
+    function getNodeOperatorSigningKeys(
+        uint256 nodeOperatorId,
+        uint256 startIndex,
+        uint256 keysCount
+    ) external view returns (bytes memory);
+
+    /// @notice Report node operator's key as withdrawn and settle withdrawn amount.
+    /// @param nodeOperatorId Operator ID in the module.
+    /// @param keyIndex Index of the withdrawn key in the node operator's keys.
+    /// @param amount Amount of withdrawn ETH in wei.
+    function submitWithdrawal(
+        uint256 nodeOperatorId,
+        uint256 keyIndex,
+        uint256 amount
+    ) external;
 }

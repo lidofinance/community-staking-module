@@ -83,8 +83,9 @@ contract CSModuleBase {
         uint256 targetValidatorsCount
     );
     event WithdrawalSubmitted(
-        uint256 indexed validatorId,
-        uint256 withdrawalBalance
+        uint256 indexed nodeOperatorId,
+        uint256 keyIndex,
+        uint256 amount
     );
 
     event BatchEnqueued(
@@ -128,6 +129,8 @@ contract CSModuleBase {
     error QueueBatchUnvettedKeys(bytes32 batch);
 
     error SigningKeysInvalidOffset();
+
+    error WithdrawalAlreadySubmitted();
 }
 
 contract CSModule is ICSModule, CSModuleBase {
@@ -152,6 +155,7 @@ contract CSModule is ICSModule, CSModuleBase {
     bytes32 private _moduleType;
     uint256 private _nonce;
     mapping(uint256 => NodeOperator) private _nodeOperators;
+    mapping(uint256 noIdWithKeyIndex => bool) private _isValidatorWithdrawn;
 
     uint256 private _totalDepositedValidators;
     uint256 private _totalExitedValidators;
@@ -1107,27 +1111,35 @@ contract CSModule is ICSModule, CSModuleBase {
         _checkForOutOfBond(nodeOperatorId);
     }
 
+    /// @notice Report node operator's key as withdrawn and settle withdrawn amount.
+    /// @param nodeOperatorId Operator ID in the module.
+    /// @param keyIndex Index of the withdrawn key in the node operator's keys.
+    /// @param amount Amount of withdrawn ETH in wei.
     function submitWithdrawal(
-        bytes32 /*withdrawalProof*/,
         uint256 nodeOperatorId,
-        uint256 validatorId,
-        uint256 withdrawalBalance
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
-        // TODO: check for withdrawal proof
-        // TODO: consider asserting that withdrawn keys count is not higher than exited keys count
+        uint256 keyIndex,
+        uint256 amount
+    ) external onlyExistingNodeOperator(nodeOperatorId) onlyWithdrawalReporter {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (keyIndex >= no.totalDepositedKeys) {
+            revert SigningKeysInvalidOffset();
+        }
 
-        no.totalWithdrawnKeys += 1;
+        // NOTE: both nodeOperatorId and keyIndex are limited to uint64 by the contract.
+        uint256 pointer = (nodeOperatorId << 128) | keyIndex;
+        if (_isValidatorWithdrawn[pointer]) {
+            revert WithdrawalAlreadySubmitted();
+        }
 
-        if (withdrawalBalance < DEPOSIT_SIZE) {
-            accounting.penalize(
-                nodeOperatorId,
-                DEPOSIT_SIZE - withdrawalBalance
-            );
+        _isValidatorWithdrawn[pointer] = true;
+        no.totalWithdrawnKeys++;
+
+        if (amount < DEPOSIT_SIZE) {
+            accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - amount);
             _checkForOutOfBond(nodeOperatorId);
         }
 
-        emit WithdrawalSubmitted(validatorId, withdrawalBalance);
+        emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount);
     }
 
     /// @notice Called when withdrawal credentials changed by DAO
@@ -1447,6 +1459,12 @@ contract CSModule is ICSModule, CSModuleBase {
     }
 
     modifier onlyStakingRouter() {
+        // TODO: check the role
+        _;
+    }
+
+    modifier onlyWithdrawalReporter() {
+        // Here should be a role granted to the CSVerifier contract and/or to the DAO/Oracle.
         // TODO: check the role
         _;
     }
