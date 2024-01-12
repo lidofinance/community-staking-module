@@ -225,7 +225,7 @@ contract CSAccounting is
     /// @notice Returns the number of unbonded keys to eject from validator set
     /// @param nodeOperatorId id of the node operator to get keys count for.
     /// @return unbonded keys count.
-    function getUnboundedKeysCountToEject(
+    function getUnbondedKeysCountToEject(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
         return
