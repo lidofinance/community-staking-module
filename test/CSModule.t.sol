@@ -1924,7 +1924,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
 
         csm.submitInitialSlashing(noId, 0);
 
-        uint256 expectedPenaltyAmount = csm.DEPOSIT_SIZE() -
+        uint256 exitBalance = csm.DEPOSIT_SIZE() -
             csm.INITIAL_SLASHING_PENALTY();
 
         vm.expectCall(
@@ -1935,11 +1935,31 @@ contract CsmSubmitWithdrawal is CSMCommon {
                 0.05 ether
             )
         );
-        csm.submitWithdrawal(
-            noId,
-            keyIndex,
-            expectedPenaltyAmount - 0.05 ether
+        csm.submitWithdrawal(noId, keyIndex, exitBalance - 0.05 ether);
+    }
+
+    function test_submitWithdrawal_unbondedKeys() public {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator(2);
+        csm.vetKeys(noId, 2);
+        csm.obtainDepositData(1, "");
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit VettedSigningKeysCountChanged(noId, 1);
+        csm.submitWithdrawal(noId, keyIndex, 1 ether);
+    }
+
+    function test_submitWithdrawal_outOfBond() public {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
         );
+        csm.submitWithdrawal(noId, keyIndex, 0 ether);
     }
 
     function test_submitWithdrawal_RevertWhenNoNodeOperator() public {
@@ -1997,6 +2017,35 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         vm.expectEmit(true, true, true, true, address(csm));
         emit InitialSlashingSubmitted(noId, 1);
         csm.submitInitialSlashing(noId, 1);
+    }
+
+    function test_submitInitialSlashing_unbondedKeys() public {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator(2);
+        csm.vetKeys(noId, 2);
+        csm.obtainDepositData(1, "");
+
+        uint256 bondThreshold = (accounting.BONDED_KEY_THRESHOLD_PERCENT_BP() *
+            csm.DEPOSIT_SIZE()) / accounting.TOTAL_BASIS_POINTS();
+        csm.penalize(noId, bondThreshold - 0.1 ether);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit VettedSigningKeysCountChanged(noId, 1);
+        csm.submitInitialSlashing(noId, keyIndex);
+    }
+
+    function test_submitInitialSlashing_outOfBond() public {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+        csm.obtainDepositData(1, "");
+
+        csm.penalize(noId, csm.DEPOSIT_SIZE() - csm.INITIAL_SLASHING_PENALTY());
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
+        );
+        csm.submitInitialSlashing(noId, keyIndex);
     }
 
     function test_submitInitialSlashing_RevertWhenNoNodeOperator() public {
