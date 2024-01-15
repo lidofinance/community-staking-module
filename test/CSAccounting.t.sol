@@ -559,8 +559,8 @@ contract CSAccountingGetUnbondedKeysCountToEjectTest is
 {
     function test_default() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
-        _deposit({ bond: 11.5 ether });
-        assertEq(accounting.getUnbondedKeysCountToEject(0), 10);
+        _deposit({ bond: 30 ether });
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 1);
     }
 
     function test_WithCurve() public override {
