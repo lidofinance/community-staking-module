@@ -169,7 +169,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
 
     /// @notice Returns the required bond in ETH for the given number of keys for default bond curve.
     /// @dev To calculate the amount for the new keys 2 calls are required:
-    ///      getRequiredBondETHForKeys(newTotal) - getRequiredBondETHForKeys(currentTotal)
+    ///      getBondAmountByKeysCount(newTotal) - getBondAmountByKeysCount(currentTotal)
     /// @param keys number of keys to get required bond for.
     /// @return required amount for particular keys count.
     function getBondAmountByKeysCount(
@@ -180,7 +180,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
 
     /// @notice Returns the required bond in ETH for the given number of keys for particular bond curve.
     /// @dev To calculate the amount for the new keys 2 calls are required:
-    ///      getRequiredBondETHForKeys(newTotal, curve) - getRequiredBondETHForKeys(currentTotal, curve)
+    ///      getBondAmountByKeysCount(newTotal, curve) - getBondAmountByKeysCount(currentTotal, curve)
     /// @param keys number of keys to get required bond for.
     /// @param curve bond curve to get required bond for.
     /// @return required in amount for particular keys count.
