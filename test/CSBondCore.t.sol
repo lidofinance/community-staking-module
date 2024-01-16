@@ -13,6 +13,7 @@ import { WstETHMock } from "./helpers/mocks/WstETHMock.sol";
 import { LidoLocatorMock } from "./helpers/mocks/LidoLocatorMock.sol";
 import { BurnerMock } from "./helpers/mocks/BurnerMock.sol";
 
+import { IStETH } from "../src/interfaces/IStETH.sol";
 import { IBurner } from "../src/interfaces/IBurner.sol";
 import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
 
@@ -73,6 +74,10 @@ contract CSBondCoreTestable is CSBondCore {
 
     function burn(uint256 nodeOperatorId, uint256 amount) external {
         _burn(nodeOperatorId, amount);
+    }
+
+    function charge(uint256 nodeOperatorId, uint256 amount) external {
+        _charge(nodeOperatorId, amount);
     }
 }
 
@@ -593,6 +598,96 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
             bondCore.getBondShares(0),
             0,
             "bond shares should be 0 after burning"
+        );
+        assertEq(bondCore.totalBondShares(), 0);
+    }
+}
+
+contract CSBondCoreChargeTest is CSBondCoreTestBase {
+    function test_charge_LessThanDeposit() public {
+        _deposit(32 ether);
+
+        uint256 shares = stETH.getSharesByPooledEth(1 ether);
+        uint256 charged = stETH.getPooledEthByShares(shares);
+        vm.expectEmit(true, true, true, true, address(bondCore));
+        emit BondCharged(0, charged, charged);
+
+        uint256 bondSharesBefore = bondCore.getBondShares(0);
+        vm.expectCall(
+            locator.lido(),
+            abi.encodeWithSelector(
+                IStETH.transferSharesFrom.selector,
+                address(bondCore),
+                locator.treasury(),
+                shares
+            )
+        );
+        bondCore.charge(0, 1 ether);
+        uint256 bondSharesAfter = bondCore.getBondShares(0);
+
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore - shares,
+            "bond shares should be decreased by charging"
+        );
+        assertEq(bondCore.totalBondShares(), bondSharesAfter);
+    }
+
+    function test_charge_MoreThanDeposit() public {
+        _deposit(32 ether);
+
+        uint256 bondSharesBefore = bondCore.getBondShares(0);
+        uint256 chargeShares = stETH.getSharesByPooledEth(33 ether);
+        vm.expectEmit(true, true, true, true, address(bondCore));
+        emit BondCharged(
+            0,
+            stETH.getPooledEthByShares(chargeShares),
+            stETH.getPooledEthByShares(bondSharesBefore)
+        );
+
+        vm.expectCall(
+            locator.lido(),
+            abi.encodeWithSelector(
+                IStETH.transferSharesFrom.selector,
+                address(bondCore),
+                locator.treasury(),
+                stETH.getSharesByPooledEth(32 ether)
+            )
+        );
+        bondCore.charge(0, 33 ether);
+
+        assertEq(
+            bondCore.getBondShares(0),
+            0,
+            "bond shares should be 0 after charging"
+        );
+        assertEq(bondCore.totalBondShares(), 0);
+    }
+
+    function test_charge_EqualToDeposit() public {
+        _deposit(32 ether);
+
+        uint256 shares = stETH.getSharesByPooledEth(32 ether);
+        uint256 charged = stETH.getPooledEthByShares(shares);
+        vm.expectEmit(true, true, true, true, address(bondCore));
+        emit BondCharged(0, charged, charged);
+
+        vm.expectCall(
+            locator.lido(),
+            abi.encodeWithSelector(
+                IStETH.transferSharesFrom.selector,
+                address(bondCore),
+                locator.treasury(),
+                shares
+            )
+        );
+
+        bondCore.charge(0, 32 ether);
+
+        assertEq(
+            bondCore.getBondShares(0),
+            0,
+            "bond shares should be 0 after charging"
         );
         assertEq(bondCore.totalBondShares(), 0);
     }

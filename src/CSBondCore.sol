@@ -35,6 +35,11 @@ abstract contract CSBondCoreBase {
         uint256 toBurnAmount,
         uint256 burnedAmount
     );
+    event BondCharged(
+        uint256 indexed nodeOperatorId,
+        uint256 toChargeAmount,
+        uint256 chargedAmount
+    );
 
     error InvalidClaimableShares();
 }
@@ -98,8 +103,7 @@ abstract contract CSBondCore is CSBondCoreBase {
         uint256 shares = LIDO.submit{ value: msg.value }({
             _referal: address(0)
         });
-        _bondShares[nodeOperatorId] += shares;
-        totalBondShares += shares;
+        _increaseBond(nodeOperatorId, shares);
         emit BondDeposited(nodeOperatorId, from, msg.value);
         return shares;
     }
@@ -112,8 +116,7 @@ abstract contract CSBondCore is CSBondCoreBase {
     ) internal returns (uint256 shares) {
         shares = _sharesByEth(amount);
         LIDO.transferSharesFrom(from, address(this), shares);
-        _bondShares[nodeOperatorId] += shares;
-        totalBondShares += shares;
+        _increaseBond(nodeOperatorId, shares);
         emit BondDeposited(nodeOperatorId, from, amount);
     }
 
@@ -126,10 +129,14 @@ abstract contract CSBondCore is CSBondCoreBase {
         WSTETH.transferFrom(from, address(this), amount);
         uint256 stETHAmount = WSTETH.unwrap(amount);
         uint256 shares = _sharesByEth(stETHAmount);
-        _bondShares[nodeOperatorId] += shares;
-        totalBondShares += shares;
+        _increaseBond(nodeOperatorId, shares);
         emit BondDepositedWstETH(nodeOperatorId, from, amount);
         return shares;
+    }
+
+    function _increaseBond(uint256 nodeOperatorId, uint256 shares) private {
+        _bondShares[nodeOperatorId] += shares;
+        totalBondShares += shares;
     }
 
     /// @dev Claims Node Operator's excess bond shares in ETH by requesting withdrawal from the protocol
@@ -146,14 +153,15 @@ abstract contract CSBondCore is CSBondCoreBase {
         uint256 sharesToClaim = amountToClaim < _ethByShares(claimableShares)
             ? _sharesByEth(amountToClaim)
             : claimableShares;
+        if (sharesToClaim == 0) return;
+        _reduceBond(nodeOperatorId, sharesToClaim);
+
         if (sharesToClaim < WITHDRAWAL_QUEUE.MIN_STETH_WITHDRAWAL_AMOUNT())
             return;
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = _ethByShares(sharesToClaim);
         // Reverts if `sharesToClaim` is greater than `WITHDRAWAL_QUEUE.MAX_STETH_WITHDRAWAL_AMOUNT`
         WITHDRAWAL_QUEUE.requestWithdrawals(amounts, to);
-        _bondShares[nodeOperatorId] -= sharesToClaim;
-        totalBondShares -= sharesToClaim;
         emit BondClaimed(nodeOperatorId, to, amounts[0]);
     }
 
@@ -171,9 +179,9 @@ abstract contract CSBondCore is CSBondCoreBase {
             ? _sharesByEth(amountToClaim)
             : claimableShares;
         if (sharesToClaim == 0) return;
+        _reduceBond(nodeOperatorId, sharesToClaim);
+
         LIDO.transferSharesFrom(address(this), to, sharesToClaim);
-        _bondShares[nodeOperatorId] -= sharesToClaim;
-        totalBondShares -= sharesToClaim;
         emit BondClaimed(nodeOperatorId, to, _ethByShares(sharesToClaim));
     }
 
@@ -192,9 +200,9 @@ abstract contract CSBondCore is CSBondCoreBase {
             : claimableShares;
         if (sharesToClaim == 0) return;
         uint256 amount = WSTETH.wrap(_ethByShares(sharesToClaim));
+        _reduceBond(nodeOperatorId, amount);
+
         WSTETH.transferFrom(address(this), to, amount);
-        _bondShares[nodeOperatorId] -= amount;
-        totalBondShares -= amount;
         emit BondClaimedWstETH(nodeOperatorId, to, amount);
     }
 
@@ -202,14 +210,11 @@ abstract contract CSBondCore is CSBondCoreBase {
     /// @dev The method sender should be granted as `Burner.REQUEST_BURN_SHARES_ROLE` and makes stETH allowance for `Burner`
     /// @param amount amount to burn in ETH.
     function _burn(uint256 nodeOperatorId, uint256 amount) internal {
-        uint256 toBurnShares = _sharesByEth(amount);
-        uint256 currentShares = getBondShares(nodeOperatorId);
-        uint256 burnedShares = toBurnShares < currentShares
-            ? toBurnShares
-            : currentShares;
+        (uint256 toBurnShares, uint256 burnedShares) = _safeReduceBond(
+            nodeOperatorId,
+            _sharesByEth(amount)
+        );
         BURNER.requestBurnShares(address(this), burnedShares);
-        _bondShares[nodeOperatorId] -= burnedShares;
-        totalBondShares -= burnedShares;
         emit BondBurned(
             nodeOperatorId,
             _ethByShares(toBurnShares),
@@ -218,8 +223,39 @@ abstract contract CSBondCore is CSBondCoreBase {
     }
 
     /// @dev Transfer Node Operator's bond shares to Lido treasury to pay some fee.
-    function _chargeFee(uint256 nodeOperatorId, uint256 amount) internal {
-        // TODO: implement me
+    /// @param amount amount to charge in ETH.
+    function _charge(uint256 nodeOperatorId, uint256 amount) internal {
+        (uint256 toChargeShares, uint256 chargedShares) = _safeReduceBond(
+            nodeOperatorId,
+            _sharesByEth(amount)
+        );
+        LIDO.transferSharesFrom(
+            address(this),
+            LIDO_LOCATOR.treasury(),
+            chargedShares
+        );
+        emit BondCharged(
+            nodeOperatorId,
+            _ethByShares(toChargeShares),
+            _ethByShares(chargedShares)
+        );
+    }
+
+    /// @dev Unsafe reduce bond shares (possible underflow). Safety checks should be done outside.
+    function _reduceBond(uint256 nodeOperatorId, uint256 shares) private {
+        _bondShares[nodeOperatorId] -= shares;
+        totalBondShares -= shares;
+    }
+
+    /// @dev Safe reduce bond shares. The maximum shares to reduce is the current bond shares.
+    function _safeReduceBond(
+        uint256 nodeOperatorId,
+        uint256 shares
+    ) private returns (uint256 /* shares */, uint256 reducedShares) {
+        uint256 currentShares = getBondShares(nodeOperatorId);
+        reducedShares = shares < currentShares ? shares : currentShares;
+        _reduceBond(nodeOperatorId, reducedShares);
+        return (shares, reducedShares);
     }
 
     /// @dev Shortcut for Lido's getSharesByPooledEth
