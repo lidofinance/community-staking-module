@@ -1042,7 +1042,7 @@ contract CSModule is ICSModule, CSModuleBase {
     }
 
     function _applyUnvettingFee(uint256 nodeOperatorId) internal {
-        accounting.penalize(nodeOperatorId, unvettingFee);
+        accounting.chargeFee(nodeOperatorId, unvettingFee);
         emit UnvettingFeeApplied(nodeOperatorId);
 
         _checkForOutOfBond(nodeOperatorId);
