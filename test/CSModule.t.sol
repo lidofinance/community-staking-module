@@ -13,8 +13,6 @@ import "./helpers/mocks/LidoMock.sol";
 import "./helpers/mocks/WstETHMock.sol";
 import "./helpers/Utilities.sol";
 
-import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
-
 contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     using Strings for uint256;
 

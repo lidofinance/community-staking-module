@@ -75,10 +75,10 @@ contract CSAccountingBaseTest is
     address internal stranger;
 
     function setUp() public virtual {
-        admin = address(1);
+        admin = Utilities.nextAddress("ADMIN");
 
-        user = address(2);
-        stranger = address(777);
+        user = Utilities.nextAddress("USER");
+        stranger = Utilities.nextAddress("STRANGER");
 
         (locator, wstETH, stETH, ) = initLido();
 
