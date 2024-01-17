@@ -991,6 +991,14 @@ contract CsmQueueOps is CSMCommon {
         csm.vetKeys(noId, 1);
         vm.expectEmit(true, true, true, true, address(csm));
         emit UnvettingFeeApplied(noId);
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                csm.unvettingFee()
+            )
+        );
         csm.unvetKeys(noId);
     }
 
@@ -1281,6 +1289,14 @@ contract CsmRemoveKeys is CSMCommon {
             emit VettedSigningKeysCountChanged(noId, 1);
             vm.expectEmit(true, true, true, true, address(csm));
             emit UnvettingFeeApplied(noId);
+            vm.expectCall(
+                address(accounting),
+                abi.encodeWithSelector(
+                    accounting.chargeFee.selector,
+                    noId,
+                    csm.unvettingFee()
+                )
+            );
         }
 
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 1, keysCount: 2 });

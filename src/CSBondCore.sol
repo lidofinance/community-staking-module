@@ -154,7 +154,7 @@ abstract contract CSBondCore is CSBondCoreBase {
             ? _sharesByEth(amountToClaim)
             : claimableShares;
         if (sharesToClaim == 0) return;
-        _reduceBond(nodeOperatorId, sharesToClaim);
+        _unsafeReduceBond(nodeOperatorId, sharesToClaim);
 
         if (sharesToClaim < WITHDRAWAL_QUEUE.MIN_STETH_WITHDRAWAL_AMOUNT())
             return;
@@ -179,7 +179,7 @@ abstract contract CSBondCore is CSBondCoreBase {
             ? _sharesByEth(amountToClaim)
             : claimableShares;
         if (sharesToClaim == 0) return;
-        _reduceBond(nodeOperatorId, sharesToClaim);
+        _unsafeReduceBond(nodeOperatorId, sharesToClaim);
 
         LIDO.transferSharesFrom(address(this), to, sharesToClaim);
         emit BondClaimed(nodeOperatorId, to, _ethByShares(sharesToClaim));
@@ -200,7 +200,7 @@ abstract contract CSBondCore is CSBondCoreBase {
             : claimableShares;
         if (sharesToClaim == 0) return;
         uint256 amount = WSTETH.wrap(_ethByShares(sharesToClaim));
-        _reduceBond(nodeOperatorId, amount);
+        _unsafeReduceBond(nodeOperatorId, amount);
 
         WSTETH.transferFrom(address(this), to, amount);
         emit BondClaimedWstETH(nodeOperatorId, to, amount);
@@ -210,7 +210,7 @@ abstract contract CSBondCore is CSBondCoreBase {
     /// @dev The method sender should be granted as `Burner.REQUEST_BURN_SHARES_ROLE` and makes stETH allowance for `Burner`
     /// @param amount amount to burn in ETH.
     function _burn(uint256 nodeOperatorId, uint256 amount) internal {
-        (uint256 toBurnShares, uint256 burnedShares) = _safeReduceBond(
+        (uint256 toBurnShares, uint256 burnedShares) = _reduceBond(
             nodeOperatorId,
             _sharesByEth(amount)
         );
@@ -225,7 +225,7 @@ abstract contract CSBondCore is CSBondCoreBase {
     /// @dev Transfer Node Operator's bond shares to Lido treasury to pay some fee.
     /// @param amount amount to charge in ETH.
     function _charge(uint256 nodeOperatorId, uint256 amount) internal {
-        (uint256 toChargeShares, uint256 chargedShares) = _safeReduceBond(
+        (uint256 toChargeShares, uint256 chargedShares) = _reduceBond(
             nodeOperatorId,
             _sharesByEth(amount)
         );
@@ -242,19 +242,19 @@ abstract contract CSBondCore is CSBondCoreBase {
     }
 
     /// @dev Unsafe reduce bond shares (possible underflow). Safety checks should be done outside.
-    function _reduceBond(uint256 nodeOperatorId, uint256 shares) private {
+    function _unsafeReduceBond(uint256 nodeOperatorId, uint256 shares) private {
         _bondShares[nodeOperatorId] -= shares;
         totalBondShares -= shares;
     }
 
     /// @dev Safe reduce bond shares. The maximum shares to reduce is the current bond shares.
-    function _safeReduceBond(
+    function _reduceBond(
         uint256 nodeOperatorId,
         uint256 shares
     ) private returns (uint256 /* shares */, uint256 reducedShares) {
         uint256 currentShares = getBondShares(nodeOperatorId);
         reducedShares = shares < currentShares ? shares : currentShares;
-        _reduceBond(nodeOperatorId, reducedShares);
+        _unsafeReduceBond(nodeOperatorId, reducedShares);
         return (shares, reducedShares);
     }
 
