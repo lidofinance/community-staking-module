@@ -1760,6 +1760,13 @@ contract CsmPenalize is CSMCommon {
         );
         csm.penalize(noId, BOND_SIZE);
     }
+
+    function test_revert_when_expired() public {
+        uint256 noId = createNodeOperator();
+        vm.warp(block.timestamp + 60 * 60 * 24 * 365 + 1);
+        vm.expectRevert(Expired.selector);
+        csm.penalize(noId, 1 ether);
+    }
 }
 
 contract CsmReportELRewardsStealingPenalty is CSMCommon {

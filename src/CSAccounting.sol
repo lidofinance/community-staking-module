@@ -55,7 +55,6 @@ contract CSAccounting is
         keccak256("SET_BOND_CURVE_ROLE");
     bytes32 public constant RESET_BOND_CURVE_ROLE =
         keccak256("RESET_BOND_CURVE_ROLE");
-    bytes32 public constant BOND_BURNER_ROLE = keccak256("BOND_BURNER_ROLE");
 
     uint256 public constant TOTAL_BASIS_POINTS = 10_000; // 100%
     // TODO: should be reconsidered. is it should be absolute value or percent?
@@ -673,14 +672,6 @@ contract CSAccounting is
         }
         // reduce all locked bond even if bond isn't covered lock fully
         CSBondLock._remove(nodeOperatorId);
-    }
-
-    /// @notice Burn all bond for node operators' validators.
-    /// @dev Called only by DAO. Have lifetime. Once expired can never be called.
-    function burnBond(
-        uint256 nodeOperatorId
-    ) external onlyRole(BOND_BURNER_ROLE) {
-        // TODO: implement me and request exits for all validators from CSModule
     }
 
     /// @notice Penalize bond by burning shares of the given node operator.

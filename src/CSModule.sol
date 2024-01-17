@@ -135,6 +135,8 @@ contract CSModuleBase {
     error SigningKeysInvalidOffset();
 
     error AlreadySubmitted();
+
+    error Expired();
 }
 
 contract CSModule is ICSModule, CSModuleBase {
@@ -152,6 +154,10 @@ contract CSModule is ICSModule, CSModuleBase {
         keccak256("lido.CommunityStakingModule.signingKeysPosition");
 
     uint256 public constant EL_REWARDS_STEALING_FINE = 0.1 ether;
+
+    uint256 private constant ONE_YEAR = 60 * 60 * 24 * 365;
+
+    uint256 private immutable _deployTime;
 
     uint256 public unvettingFee;
     QueueLib.Queue public queue;
@@ -171,6 +177,7 @@ contract CSModule is ICSModule, CSModuleBase {
     uint256 private _totalAddedValidators;
 
     constructor(bytes32 moduleType, address locator) {
+        _deployTime = block.timestamp;
         _moduleType = moduleType;
         emit StakingModuleTypeSet(moduleType);
 
@@ -1098,12 +1105,18 @@ contract CSModule is ICSModule, CSModuleBase {
     }
 
     /// @notice Penalize bond by burning shares of the given node operator.
+    /// @dev Have a limited lifetime. Reverts when expired
     /// @param nodeOperatorId id of the node operator to penalize bond for.
     /// @param amount amount of ETH to penalize.
     function penalize(
         uint256 nodeOperatorId,
         uint256 amount
-    ) public onlyExistingNodeOperator(nodeOperatorId) {
+    )
+        public
+        onlyExistingNodeOperator(nodeOperatorId)
+        onlyPenalizer
+        whenNotExpired
+    {
         // TODO: check role
         accounting.penalize(nodeOperatorId, amount);
         _checkForUnbondedKeys(nodeOperatorId);
@@ -1497,6 +1510,19 @@ contract CSModule is ICSModule, CSModuleBase {
     modifier onlyWithdrawalReporter() {
         // Here should be a role granted to the CSVerifier contract and/or to the DAO/Oracle.
         // TODO: check the role
+        _;
+    }
+
+    modifier onlyPenalizer() {
+        // Should be assigned to Aragon Agent
+        // TODO: check the role
+        _;
+    }
+
+    modifier whenNotExpired() {
+        if (block.timestamp > _deployTime + ONE_YEAR) {
+            revert Expired();
+        }
         _;
     }
 }
