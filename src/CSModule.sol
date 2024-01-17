@@ -866,15 +866,6 @@ contract CSModule is ICSModule, CSModuleBase {
         _incrementModuleNonce();
     }
 
-    /// @notice Triggers the node operator's validator to exit by DAO decision
-    function unsafeExitValidator(
-        uint256 nodeOperatorId,
-        uint256 validatorId
-    ) external {
-        // TODO: implement me
-        _incrementModuleNonce();
-    }
-
     /// @notice Updates refunded validators count by StakingRouter
     /// @param nodeOperatorId ID of the node operator
     /// @param refundedValidatorsCount Count of refunded validators
