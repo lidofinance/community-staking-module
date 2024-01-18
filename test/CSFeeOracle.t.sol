@@ -215,7 +215,7 @@ contract CSFeeOracleTest is Test, Utilities {
     function _seedMembers(uint256 count) internal {
         for (uint256 i = 0; i < count; i++) {
             uint256 q = (members.length + 1) / 2 + 1; // 50% + 1
-            address newMember = nextAddress();
+            address newMember = Utilities.nextAddress();
             vm.label(newMember, string.concat("MEMBER", i.toString()));
             vm.startPrank(ORACLE_ADMIN);
             {

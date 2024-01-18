@@ -49,9 +49,9 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     }
 
     function setUp() public {
-        nodeOperator = nextAddress("NODE_OPERATOR");
-        stranger = nextAddress("STRANGER");
-        admin = nextAddress("ADMIN");
+        nodeOperator = Utilities.nextAddress("NODE_OPERATOR");
+        stranger = Utilities.nextAddress("STRANGER");
+        admin = Utilities.nextAddress("ADMIN");
 
         (locator, wstETH, stETH, ) = initLido();
 
@@ -99,7 +99,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         address managerAddress,
         uint256 keysCount
     ) internal returns (uint256) {
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
+        (bytes memory keys, bytes memory signatures) = Utilities.keysSignatures(
             keysCount
         );
         return createNodeOperator(managerAddress, keysCount, keys, signatures);
@@ -233,7 +233,7 @@ contract CsmInitialization is CSMCommon {
 contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
     function test_AddNodeOperatorWstETH() public {
         uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
+        (bytes memory keys, bytes memory signatures) = Utilities.keysSignatures(
             keysCount
         );
         vm.startPrank(nodeOperator);
@@ -252,7 +252,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
     function test_AddNodeOperatorWstETHWithPermit() public {
         uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
+        (bytes memory keys, bytes memory signatures) = Utilities.keysSignatures(
             keysCount
         );
         vm.prank(nodeOperator);
@@ -290,7 +290,10 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         vm.deal(nodeOperator, toWrap);
         stETH.submit{ value: toWrap }(address(0));
         wstETH.wrap(toWrap);
-        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+        (bytes memory keys, bytes memory signatures) = Utilities.keysSignatures(
+            1,
+            1
+        );
         {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 2);
@@ -300,7 +303,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
     function test_AddValidatorKeysWstETHWithPermit() public {
         uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
+        (bytes memory keys, bytes memory signatures) = Utilities.keysSignatures(
             keysCount
         );
         vm.startPrank(nodeOperator);
@@ -313,7 +316,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         stETH.submit{ value: toWrap }(address(0));
         uint256 wstETHAmount = wstETH.wrap(toWrap);
         vm.stopPrank();
-        (keys, signatures) = keysSignatures(keysCount, 1);
+        (keys, signatures) = Utilities.keysSignatures(keysCount, 1);
         {
             vm.expectEmit(true, true, true, true, address(wstETH));
             emit Approval(nodeOperator, address(accounting), wstETHAmount);
@@ -339,7 +342,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
     function test_AddNodeOperatorStETH() public {
         uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
+        (bytes memory keys, bytes memory signatures) = Utilities.keysSignatures(
             keysCount
         );
 
@@ -357,7 +360,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
     function test_AddNodeOperatorStETHWithPermit() public {
         uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
+        (bytes memory keys, bytes memory signatures) = Utilities.keysSignatures(
             keysCount
         );
 
@@ -389,7 +392,10 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
     function test_AddValidatorKeysStETH() public {
         uint256 noId = createNodeOperator();
-        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+        (bytes memory keys, bytes memory signatures) = Utilities.keysSignatures(
+            1,
+            1
+        );
 
         vm.deal(nodeOperator, BOND_SIZE);
         vm.startPrank(nodeOperator);
@@ -403,7 +409,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
     function test_AddValidatorKeysStETHWithPermit() public {
         uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
+        (bytes memory keys, bytes memory signatures) = Utilities.keysSignatures(
             keysCount
         );
         vm.prank(nodeOperator);
@@ -439,7 +445,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
     function test_AddNodeOperatorETH() public {
         uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
+        (bytes memory keys, bytes memory signatures) = Utilities.keysSignatures(
             keysCount
         );
         vm.deal(nodeOperator, BOND_SIZE);
@@ -458,7 +464,10 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
     function test_AddValidatorKeysETH() public {
         uint256 noId = createNodeOperator();
-        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+        (bytes memory keys, bytes memory signatures) = Utilities.keysSignatures(
+            1,
+            1
+        );
 
         uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
         vm.deal(nodeOperator, required);
@@ -474,7 +483,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 contract CSMObtainDepositData is CSMCommon {
     function test_obtainDepositData_RevertWhenNoMoreKeys() public {
         uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
+        (bytes memory keys, bytes memory signatures) = Utilities.keysSignatures(
             keysCount
         );
         vm.deal(nodeOperator, BOND_SIZE);
@@ -591,7 +600,7 @@ contract CsmConfirmNodeOperatorManagerAddressChange is CSMCommon {
         csm.proposeNodeOperatorManagerAddressChange(noId, stranger);
 
         vm.expectRevert(SenderIsNotProposedAddress.selector);
-        vm.prank(nextAddress());
+        vm.prank(Utilities.nextAddress());
         csm.confirmNodeOperatorManagerAddressChange(noId);
     }
 }
@@ -692,7 +701,7 @@ contract CsmConfirmNodeOperatorRewardAddressChange is CSMCommon {
         csm.proposeNodeOperatorRewardAddressChange(noId, stranger);
 
         vm.expectRevert(SenderIsNotProposedAddress.selector);
-        vm.prank(nextAddress());
+        vm.prank(Utilities.nextAddress());
         csm.confirmNodeOperatorRewardAddressChange(noId);
     }
 }
@@ -1002,13 +1011,13 @@ contract CsmQueueOps is CSMCommon {
 
 contract CsmViewKeys is CSMCommon {
     function test_viewAllKeys() public {
-        bytes memory keys = randomBytes(48 * 3);
+        bytes memory keys = Utilities.randomBytes(48 * 3);
 
         uint256 noId = createNodeOperator({
             managerAddress: address(this),
             keysCount: 3,
             keys: keys,
-            signatures: randomBytes(96 * 3)
+            signatures: Utilities.randomBytes(96 * 3)
         });
 
         bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
@@ -1021,18 +1030,18 @@ contract CsmViewKeys is CSMCommon {
     }
 
     function test_viewKeysFromOffset() public {
-        bytes memory wantedKey = randomBytes(48);
+        bytes memory wantedKey = Utilities.randomBytes(48);
         bytes memory keys = bytes.concat(
-            randomBytes(48),
+            Utilities.randomBytes(48),
             wantedKey,
-            randomBytes(48)
+            Utilities.randomBytes(48)
         );
 
         uint256 noId = createNodeOperator({
             managerAddress: address(this),
             keysCount: 3,
             keys: keys,
-            signatures: randomBytes(96 * 3)
+            signatures: Utilities.randomBytes(96 * 3)
         });
 
         bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
@@ -1048,11 +1057,11 @@ contract CsmViewKeys is CSMCommon {
 contract CsmRemoveKeys is CSMCommon {
     event SigningKeyRemoved(uint256 indexed nodeOperatorId, bytes pubkey);
 
-    bytes key0 = randomBytes(48);
-    bytes key1 = randomBytes(48);
-    bytes key2 = randomBytes(48);
-    bytes key3 = randomBytes(48);
-    bytes key4 = randomBytes(48);
+    bytes key0 = Utilities.randomBytes(48);
+    bytes key1 = Utilities.randomBytes(48);
+    bytes key2 = Utilities.randomBytes(48);
+    bytes key3 = Utilities.randomBytes(48);
+    bytes key4 = Utilities.randomBytes(48);
 
     function test_singleKeyRemoval() public {
         bytes memory keys = bytes.concat(key0, key1, key2, key3, key4);
@@ -1061,7 +1070,7 @@ contract CsmRemoveKeys is CSMCommon {
             managerAddress: address(this),
             keysCount: 5,
             keys: keys,
-            signatures: randomBytes(96 * 5)
+            signatures: Utilities.randomBytes(96 * 5)
         });
 
         // at the beginning
@@ -1127,7 +1136,7 @@ contract CsmRemoveKeys is CSMCommon {
             managerAddress: address(this),
             keysCount: 5,
             keys: keys,
-            signatures: randomBytes(96 * 5)
+            signatures: Utilities.randomBytes(96 * 5)
         });
 
         {
@@ -1165,7 +1174,7 @@ contract CsmRemoveKeys is CSMCommon {
             managerAddress: address(this),
             keysCount: 5,
             keys: keys,
-            signatures: randomBytes(96 * 5)
+            signatures: Utilities.randomBytes(96 * 5)
         });
 
         {
@@ -1203,7 +1212,7 @@ contract CsmRemoveKeys is CSMCommon {
             managerAddress: address(this),
             keysCount: 5,
             keys: keys,
-            signatures: randomBytes(96 * 5)
+            signatures: Utilities.randomBytes(96 * 5)
         });
 
         {
@@ -1238,8 +1247,8 @@ contract CsmRemoveKeys is CSMCommon {
         uint256 noId = createNodeOperator({
             managerAddress: address(this),
             keysCount: 5,
-            keys: randomBytes(48 * 5),
-            signatures: randomBytes(96 * 5)
+            keys: Utilities.randomBytes(48 * 5),
+            signatures: Utilities.randomBytes(96 * 5)
         });
 
         {
@@ -1257,8 +1266,8 @@ contract CsmRemoveKeys is CSMCommon {
         uint256 noId = createNodeOperator({
             managerAddress: address(this),
             keysCount: 5,
-            keys: randomBytes(48 * 5),
-            signatures: randomBytes(96 * 5)
+            keys: Utilities.randomBytes(48 * 5),
+            signatures: Utilities.randomBytes(96 * 5)
         });
 
         csm.vetKeys(noId, 3);
@@ -1286,8 +1295,8 @@ contract CsmRemoveKeys is CSMCommon {
         uint256 noId = createNodeOperator({
             managerAddress: address(this),
             keysCount: 5,
-            keys: randomBytes(48 * 5),
-            signatures: randomBytes(96 * 5)
+            keys: Utilities.randomBytes(48 * 5),
+            signatures: Utilities.randomBytes(96 * 5)
         });
 
         csm.vetKeys(noId, 3);

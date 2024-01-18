@@ -39,7 +39,7 @@ contract DepositIntegrationTest is
 
         networkFork = vm.createFork(env.RPC_URL);
         vm.selectFork(networkFork);
-        checkChainId(1);
+        Utilities.checkChainId(1);
 
         locator = ILidoLocator(LOCATOR_ADDRESS);
         csm = new CommunityStakingModuleMock();
