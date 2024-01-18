@@ -82,4 +82,8 @@ contract Utilities is CommonBase {
         errorString = string.concat(errorString, vm.toString(role));
         return errorString;
     }
+
+    function expectNoCall(address where, bytes memory data) internal {
+        vm.expectCall(where, data, 0);
+    }
 }

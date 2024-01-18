@@ -665,6 +665,12 @@ contract CSModule is ICSModule, CSModuleBase {
 
     /// @notice Gets node operator summary
     /// @param nodeOperatorId ID of the node operator
+    /// @dev depositableValidatorsCount depends on:
+    ///      - totalVettedKeys
+    ///      - totalDepositedKeys
+    ///      - totalExitedKeys
+    ///      - isTargetLimitActive
+    ///      - targetValidatorsCount
     function getNodeOperatorSummary(
         uint256 nodeOperatorId
     )
@@ -857,14 +863,7 @@ contract CSModule is ICSModule, CSModuleBase {
                 exitedValidatorsCount
             );
         }
-    }
-
-    /// @notice Triggers the node operator's validator to exit by DAO decision
-    function unsafeExitValidator(
-        uint256 nodeOperatorId,
-        uint256 validatorId
-    ) external {
-        // TODO: implement me
+        _incrementModuleNonce();
     }
 
     /// @notice Updates refunded validators count by StakingRouter
@@ -875,6 +874,7 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 refundedValidatorsCount
     ) external {
         // TODO: implement
+        _incrementModuleNonce();
     }
 
     /// @notice Updates target limits for node operator by StakingRouter
@@ -933,6 +933,7 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 stuckValidatorsKeysCount
     ) external {
         // TODO: implement
+        _incrementModuleNonce();
     }
 
     /// @notice Vet keys. Called when key validator oracle checks the queue
@@ -1024,7 +1025,6 @@ contract CSModule is ICSModule, CSModuleBase {
         }
 
         _removeSigningKeys(nodeOperatorId, startIndex, keysCount);
-        _incrementModuleNonce();
     }
 
     /// @dev NB! doesn't increment module nonce
@@ -1038,6 +1038,7 @@ contract CSModule is ICSModule, CSModuleBase {
     function _checkForUnbondedKeys(uint256 nodeOperatorId) internal {
         if (accounting.getUnbondedKeysCount(nodeOperatorId) > 0) {
             _unvetKeys(nodeOperatorId);
+            _incrementModuleNonce();
         }
     }
 
@@ -1233,6 +1234,8 @@ contract CSModule is ICSModule, CSModuleBase {
 
         no.totalAddedKeys = newTotalSigningKeys;
         emit TotalSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
+
+        _incrementModuleNonce();
     }
 
     /// @notice Gets the depositable keys with signatures from the queue
