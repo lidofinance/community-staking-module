@@ -75,10 +75,10 @@ contract CSAccountingBaseTest is
     address internal stranger;
 
     function setUp() public virtual {
-        admin = address(1);
+        admin = nextAddress("ADMIN");
 
-        user = address(2);
-        stranger = address(777);
+        user = nextAddress("USER");
+        stranger = nextAddress("STRANGER");
 
         (locator, wstETH, stETH, ) = initLido();
 
@@ -4170,7 +4170,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
     function test_penalize_RevertWhenCallerHasNoRole() public {
         vm.expectRevert(
             bytes(
-                Utilities.accessErrorString(
+                accessErrorString(
                     stranger,
                     accounting.INSTANT_PENALIZE_BOND_ROLE()
                 )
@@ -4191,12 +4191,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
 
     function setLockedBondRetentionPeriod_RevertWhen_DoesNotHaveRole() public {
         vm.expectRevert(
-            bytes(
-                Utilities.accessErrorString(
-                    stranger,
-                    accounting.DEFAULT_ADMIN_ROLE()
-                )
-            )
+            bytes(accessErrorString(stranger, accounting.DEFAULT_ADMIN_ROLE()))
         );
 
         vm.prank(stranger);
@@ -4215,12 +4210,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         mock_getNodeOperatorsCount(1);
 
         vm.expectRevert(
-            bytes(
-                Utilities.accessErrorString(
-                    stranger,
-                    accounting.SET_BOND_LOCK_ROLE()
-                )
-            )
+            bytes(accessErrorString(stranger, accounting.SET_BOND_LOCK_ROLE()))
         );
         vm.prank(stranger);
         accounting.lockBondETH(0, 1 ether);
@@ -4246,10 +4236,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
 
         vm.expectRevert(
             bytes(
-                Utilities.accessErrorString(
-                    stranger,
-                    accounting.RELEASE_BOND_LOCK_ROLE()
-                )
+                accessErrorString(stranger, accounting.RELEASE_BOND_LOCK_ROLE())
             )
         );
         vm.prank(stranger);
@@ -4292,12 +4279,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
 
     function test_addBondCurve_RevertWhen_DoesNotHaveRole() public {
         vm.expectRevert(
-            bytes(
-                Utilities.accessErrorString(
-                    stranger,
-                    accounting.ADD_BOND_CURVE_ROLE()
-                )
-            )
+            bytes(accessErrorString(stranger, accounting.ADD_BOND_CURVE_ROLE()))
         );
 
         vm.prank(stranger);
@@ -4320,7 +4302,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
     function test_setDefaultBondCurve_RevertWhen_DoesNotHaveRole() public {
         vm.expectRevert(
             bytes(
-                Utilities.accessErrorString(
+                accessErrorString(
                     stranger,
                     accounting.SET_DEFAULT_BOND_CURVE_ROLE()
                 )
@@ -4349,12 +4331,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
 
     function test_setBondCurve_RevertWhen_DoesNotHaveRole() public {
         vm.expectRevert(
-            bytes(
-                Utilities.accessErrorString(
-                    stranger,
-                    accounting.SET_BOND_CURVE_ROLE()
-                )
-            )
+            bytes(accessErrorString(stranger, accounting.SET_BOND_CURVE_ROLE()))
         );
 
         vm.prank(stranger);
@@ -4382,10 +4359,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
     function test_resetBondCurve_RevertWhen_DoesNotHaveRole() public {
         vm.expectRevert(
             bytes(
-                Utilities.accessErrorString(
-                    stranger,
-                    accounting.RESET_BOND_CURVE_ROLE()
-                )
+                accessErrorString(stranger, accounting.RESET_BOND_CURVE_ROLE())
             )
         );
 
@@ -4415,12 +4389,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
 
     function test_setFeeDistributor_RevertWhen_DoesNotHaveRole() public {
         vm.expectRevert(
-            bytes(
-                Utilities.accessErrorString(
-                    stranger,
-                    accounting.DEFAULT_ADMIN_ROLE()
-                )
-            )
+            bytes(accessErrorString(stranger, accounting.DEFAULT_ADMIN_ROLE()))
         );
 
         vm.prank(stranger);

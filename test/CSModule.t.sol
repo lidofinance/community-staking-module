@@ -13,8 +13,6 @@ import "./helpers/mocks/LidoMock.sol";
 import "./helpers/mocks/WstETHMock.sol";
 import "./helpers/Utilities.sol";
 
-import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
-
 contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     using Strings for uint256;
 
@@ -298,7 +296,6 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         wstETH.wrap(toWrap);
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
         uint256 nonce = csm.getNonce();
-
         {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 2);
@@ -324,7 +321,6 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         vm.stopPrank();
         (keys, signatures) = keysSignatures(keysCount, 1);
         uint256 nonce = csm.getNonce();
-
         {
             vm.expectEmit(true, true, true, true, address(wstETH));
             emit Approval(nodeOperator, address(accounting), wstETHAmount);
