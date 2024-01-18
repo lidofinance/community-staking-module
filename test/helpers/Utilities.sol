@@ -3,7 +3,7 @@
 pragma solidity 0.8.21;
 
 import { CommonBase } from "forge-std/Base.sol";
-import "@openzeppelin/contracts-v4.4/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 /// @author madlabman
 contract Utilities is CommonBase {
