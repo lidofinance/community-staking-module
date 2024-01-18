@@ -157,7 +157,7 @@ contract CSModule is ICSModule, CSModuleBase {
 
     uint256 private constant ONE_YEAR = 60 * 60 * 24 * 365;
 
-    uint256 private immutable _deployTime;
+    uint256 private immutable _tempMethodsExpireTime;
 
     uint256 public unvettingFee;
     QueueLib.Queue public queue;
@@ -177,7 +177,7 @@ contract CSModule is ICSModule, CSModuleBase {
     uint256 private _totalAddedValidators;
 
     constructor(bytes32 moduleType, address locator) {
-        _deployTime = block.timestamp;
+        _tempMethodsExpireTime = block.timestamp + ONE_YEAR;
         _moduleType = moduleType;
         emit StakingModuleTypeSet(moduleType);
 
@@ -1520,7 +1520,7 @@ contract CSModule is ICSModule, CSModuleBase {
     }
 
     modifier whenNotExpired() {
-        if (block.timestamp > _deployTime + ONE_YEAR) {
+        if (block.timestamp > _tempMethodsExpireTime) {
             revert Expired();
         }
         _;
