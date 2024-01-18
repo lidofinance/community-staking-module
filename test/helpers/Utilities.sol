@@ -90,4 +90,8 @@ contract Utilities is CommonBase {
                 )
             );
     }
+
+    function expectNoCall(address where, bytes memory data) internal {
+        vm.expectCall(where, data, 0);
+    }
 }
