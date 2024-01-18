@@ -30,7 +30,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
 
         networkFork = vm.createFork(env.RPC_URL);
         vm.selectFork(networkFork);
-        Utilities.checkChainId(1);
+        checkChainId(1);
 
         locator = ILidoLocator(LOCATOR_ADDRESS);
         stakingRouter = IStakingRouter(payable(locator.stakingRouter()));
@@ -91,9 +91,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
 
     function test_RouterDeposit() public {
         uint256 moduleId = addCsmModule();
-        (bytes memory keys, bytes memory signatures) = Utilities.keysSignatures(
-            2
-        );
+        (bytes memory keys, bytes memory signatures) = keysSignatures(2);
         address nodeOperator = address(2);
         vm.deal(nodeOperator, 4 ether);
         vm.prank(nodeOperator);
@@ -106,7 +104,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
 
         // It's impossible to process deposits if withdrawal requests amount is more than the buffered ether,
         // so we need to make sure that the buffered ether is enough by submitting this tremendous amount.
-        address whale = Utilities.nextAddress();
+        address whale = nextAddress();
         vm.prank(whale);
         vm.deal(whale, 1e5 ether);
         lido.submit{ value: 1e5 ether }(address(0));
