@@ -75,10 +75,10 @@ contract CSAccountingBaseTest is
     address internal stranger;
 
     function setUp() public virtual {
-        admin = address(1);
+        admin = nextAddress("ADMIN");
 
-        user = address(2);
-        stranger = address(777);
+        user = nextAddress("USER");
+        stranger = nextAddress("STRANGER");
 
         (locator, wstETH, stETH, ) = initLido();
 
@@ -555,6 +555,87 @@ contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 5.75 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 12);
+    }
+}
+
+contract CSAccountingGetUnbondedKeysCountToEjectTest is
+    CSAccountingBondStateBaseTest
+{
+    function test_default() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 30 ether });
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 1);
+    }
+
+    function test_WithCurve() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 11.5 ether });
+        _curve(defaultCurve);
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 5);
+    }
+
+    function test_WithLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 30 ether });
+        _lock({ id: 0, amount: 2 ether });
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 1);
+    }
+
+    function test_WithLocked_MoreThanBond() public {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 30 ether });
+        _lock({ id: 0, amount: 100500 ether });
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 1);
+    }
+
+    function test_WithCurveAndLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 11.5 ether });
+        _curve(defaultCurve);
+        _lock({ id: 0, amount: 1 ether });
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 5);
+    }
+
+    function test_WithOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 11.5 ether });
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 9);
+    }
+
+    function test_WithBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 11.5 ether });
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 10);
+    }
+
+    function test_WithBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 11.5 ether });
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 9);
+    }
+
+    function test_WithExcessBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 0);
+    }
+
+    function test_WithExcessBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 33 ether });
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 0);
+    }
+
+    function test_WithMissingBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 5.75 ether });
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 13);
+    }
+
+    function test_WithMissingBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 5.75 ether });
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 12);
     }
 }
 
@@ -4093,7 +4174,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
     function test_penalize_RevertWhenCallerHasNoRole() public {
         vm.expectRevert(
             bytes(
-                Utilities.accessErrorString(
+                accessErrorString(
                     stranger,
                     accounting.INSTANT_PENALIZE_BOND_ROLE()
                 )
@@ -4164,12 +4245,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
 
     function setLockedBondRetentionPeriod_RevertWhen_DoesNotHaveRole() public {
         vm.expectRevert(
-            bytes(
-                Utilities.accessErrorString(
-                    stranger,
-                    accounting.DEFAULT_ADMIN_ROLE()
-                )
-            )
+            bytes(accessErrorString(stranger, accounting.DEFAULT_ADMIN_ROLE()))
         );
 
         vm.prank(stranger);
@@ -4188,12 +4264,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         mock_getNodeOperatorsCount(1);
 
         vm.expectRevert(
-            bytes(
-                Utilities.accessErrorString(
-                    stranger,
-                    accounting.SET_BOND_LOCK_ROLE()
-                )
-            )
+            bytes(accessErrorString(stranger, accounting.SET_BOND_LOCK_ROLE()))
         );
         vm.prank(stranger);
         accounting.lockBondETH(0, 1 ether);
@@ -4219,10 +4290,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
 
         vm.expectRevert(
             bytes(
-                Utilities.accessErrorString(
-                    stranger,
-                    accounting.RELEASE_BOND_LOCK_ROLE()
-                )
+                accessErrorString(stranger, accounting.RELEASE_BOND_LOCK_ROLE())
             )
         );
         vm.prank(stranger);
@@ -4265,12 +4333,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
 
     function test_addBondCurve_RevertWhen_DoesNotHaveRole() public {
         vm.expectRevert(
-            bytes(
-                Utilities.accessErrorString(
-                    stranger,
-                    accounting.ADD_BOND_CURVE_ROLE()
-                )
-            )
+            bytes(accessErrorString(stranger, accounting.ADD_BOND_CURVE_ROLE()))
         );
 
         vm.prank(stranger);
@@ -4293,7 +4356,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
     function test_setDefaultBondCurve_RevertWhen_DoesNotHaveRole() public {
         vm.expectRevert(
             bytes(
-                Utilities.accessErrorString(
+                accessErrorString(
                     stranger,
                     accounting.SET_DEFAULT_BOND_CURVE_ROLE()
                 )
@@ -4322,12 +4385,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
 
     function test_setBondCurve_RevertWhen_DoesNotHaveRole() public {
         vm.expectRevert(
-            bytes(
-                Utilities.accessErrorString(
-                    stranger,
-                    accounting.SET_BOND_CURVE_ROLE()
-                )
-            )
+            bytes(accessErrorString(stranger, accounting.SET_BOND_CURVE_ROLE()))
         );
 
         vm.prank(stranger);
@@ -4355,10 +4413,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
     function test_resetBondCurve_RevertWhen_DoesNotHaveRole() public {
         vm.expectRevert(
             bytes(
-                Utilities.accessErrorString(
-                    stranger,
-                    accounting.RESET_BOND_CURVE_ROLE()
-                )
+                accessErrorString(stranger, accounting.RESET_BOND_CURVE_ROLE())
             )
         );
 
@@ -4388,12 +4443,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
 
     function test_setFeeDistributor_RevertWhen_DoesNotHaveRole() public {
         vm.expectRevert(
-            bytes(
-                Utilities.accessErrorString(
-                    stranger,
-                    accounting.DEFAULT_ADMIN_ROLE()
-                )
-            )
+            bytes(accessErrorString(stranger, accounting.DEFAULT_ADMIN_ROLE()))
         );
 
         vm.prank(stranger);

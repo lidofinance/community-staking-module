@@ -3,9 +3,12 @@
 pragma solidity 0.8.21;
 
 import { CommonBase } from "forge-std/Base.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 /// @author madlabman
 contract Utilities is CommonBase {
+    using Strings for uint256;
+
     bytes32 internal seed = keccak256("seed sEed seEd");
 
     function nextAddress() internal returns (address) {
@@ -72,14 +75,23 @@ contract Utilities is CommonBase {
         }
     }
 
+    /// @dev from OpenZeppelin Contracts v4.4.1 (access/AccessControl.sol)
     function accessErrorString(
         address account,
         bytes32 role
     ) internal pure returns (string memory) {
-        string memory errorString = "AccessControl: account ";
-        errorString = string.concat(errorString, vm.toString(account));
-        errorString = string.concat(errorString, " is missing role ");
-        errorString = string.concat(errorString, vm.toString(role));
-        return errorString;
+        return
+            string(
+                abi.encodePacked(
+                    "AccessControl: account ",
+                    Strings.toHexString(uint160(account), 20),
+                    " is missing role ",
+                    Strings.toHexString(uint256(role), 32)
+                )
+            );
+    }
+
+    function expectNoCall(address where, bytes memory data) internal {
+        vm.expectCall(where, data, 0);
     }
 }

@@ -87,6 +87,10 @@ contract CSModuleBase {
         uint256 keyIndex,
         uint256 amount
     );
+    event InitialSlashingSubmitted(
+        uint256 indexed nodeOperatorId,
+        uint256 keyIndex
+    );
 
     event BatchEnqueued(
         uint256 indexed nodeOperatorId,
@@ -130,7 +134,9 @@ contract CSModuleBase {
 
     error SigningKeysInvalidOffset();
 
-    error WithdrawalAlreadySubmitted();
+    error AlreadySubmitted();
+
+    error Expired();
 }
 
 contract CSModule is ICSModule, CSModuleBase {
@@ -139,11 +145,19 @@ contract CSModule is ICSModule, CSModuleBase {
     // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
     // it seems to be enough
     uint64 public constant MAX_NODE_OPERATORS_COUNT = type(uint64).max;
+    // might be received dynamically in case of increasing possible deposit size
     uint256 public constant DEPOSIT_SIZE = 32 ether;
+    uint256 public constant MIN_SLASHING_PENALTY_QUOTIENT = 32;
+    uint256 public constant INITIAL_SLASHING_PENALTY =
+        DEPOSIT_SIZE / MIN_SLASHING_PENALTY_QUOTIENT;
     bytes32 public constant SIGNING_KEYS_POSITION =
         keccak256("lido.CommunityStakingModule.signingKeysPosition");
 
     uint256 public constant EL_REWARDS_STEALING_FINE = 0.1 ether;
+
+    uint256 private constant ONE_YEAR = 60 * 60 * 24 * 365;
+
+    uint256 private immutable _tempMethodsExpireTime;
 
     uint256 public unvettingFee;
     QueueLib.Queue public queue;
@@ -156,12 +170,14 @@ contract CSModule is ICSModule, CSModuleBase {
     uint256 private _nonce;
     mapping(uint256 => NodeOperator) private _nodeOperators;
     mapping(uint256 noIdWithKeyIndex => bool) private _isValidatorWithdrawn;
+    mapping(uint256 noIdWithKeyIndex => bool) private _isValidatorSlashed;
 
     uint256 private _totalDepositedValidators;
     uint256 private _totalExitedValidators;
     uint256 private _totalAddedValidators;
 
     constructor(bytes32 moduleType, address locator) {
+        _tempMethodsExpireTime = block.timestamp + ONE_YEAR;
         _moduleType = moduleType;
         emit StakingModuleTypeSet(moduleType);
 
@@ -656,6 +672,12 @@ contract CSModule is ICSModule, CSModuleBase {
 
     /// @notice Gets node operator summary
     /// @param nodeOperatorId ID of the node operator
+    /// @dev depositableValidatorsCount depends on:
+    ///      - totalVettedKeys
+    ///      - totalDepositedKeys
+    ///      - totalExitedKeys
+    ///      - isTargetLimitActive
+    ///      - targetValidatorsCount
     function getNodeOperatorSummary(
         uint256 nodeOperatorId
     )
@@ -848,14 +870,7 @@ contract CSModule is ICSModule, CSModuleBase {
                 exitedValidatorsCount
             );
         }
-    }
-
-    /// @notice Triggers the node operator's validator to exit by DAO decision
-    function unsafeExitValidator(
-        uint256 nodeOperatorId,
-        uint256 validatorId
-    ) external {
-        // TODO: implement me
+        _incrementModuleNonce();
     }
 
     /// @notice Updates refunded validators count by StakingRouter
@@ -866,6 +881,7 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 refundedValidatorsCount
     ) external {
         // TODO: implement
+        _incrementModuleNonce();
     }
 
     /// @notice Updates target limits for node operator by StakingRouter
@@ -924,6 +940,7 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 stuckValidatorsKeysCount
     ) external {
         // TODO: implement
+        _incrementModuleNonce();
     }
 
     /// @notice Vet keys. Called when key validator oracle checks the queue
@@ -1015,7 +1032,6 @@ contract CSModule is ICSModule, CSModuleBase {
         }
 
         _removeSigningKeys(nodeOperatorId, startIndex, keysCount);
-        _incrementModuleNonce();
     }
 
     /// @dev NB! doesn't increment module nonce
@@ -1029,6 +1045,7 @@ contract CSModule is ICSModule, CSModuleBase {
     function _checkForUnbondedKeys(uint256 nodeOperatorId) internal {
         if (accounting.getUnbondedKeysCount(nodeOperatorId) > 0) {
             _unvetKeys(nodeOperatorId);
+            _incrementModuleNonce();
         }
     }
 
@@ -1088,23 +1105,19 @@ contract CSModule is ICSModule, CSModuleBase {
         }
     }
 
-    /// @notice Applies initial slashing penalty for the given node operator.
-    /// @param slashingProof merkle proof of the slashing.
-    /// @param nodeOperatorId id of the node operator to settle initial slashing penalty for.
-    function applyInitialSlashingPenalty(
-        bytes32[] memory slashingProof,
-        uint256 nodeOperatorId
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
-        // TODO: implement me
-    }
-
     /// @notice Penalize bond by burning shares of the given node operator.
+    /// @dev Have a limited lifetime. Reverts when expired
     /// @param nodeOperatorId id of the node operator to penalize bond for.
     /// @param amount amount of ETH to penalize.
     function penalize(
         uint256 nodeOperatorId,
         uint256 amount
-    ) public onlyExistingNodeOperator(nodeOperatorId) {
+    )
+        public
+        onlyExistingNodeOperator(nodeOperatorId)
+        onlyPenalizer
+        whenNotExpired
+    {
         // TODO: check role
         accounting.penalize(nodeOperatorId, amount);
         _checkForUnbondedKeys(nodeOperatorId);
@@ -1125,21 +1138,53 @@ contract CSModule is ICSModule, CSModuleBase {
             revert SigningKeysInvalidOffset();
         }
 
-        // NOTE: both nodeOperatorId and keyIndex are limited to uint64 by the contract.
-        uint256 pointer = (nodeOperatorId << 128) | keyIndex;
+        uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
         if (_isValidatorWithdrawn[pointer]) {
-            revert WithdrawalAlreadySubmitted();
+            revert AlreadySubmitted();
         }
 
         _isValidatorWithdrawn[pointer] = true;
         no.totalWithdrawnKeys++;
 
+        emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount);
+
+        if (_isValidatorSlashed[pointer]) amount += INITIAL_SLASHING_PENALTY;
         if (amount < DEPOSIT_SIZE) {
             accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - amount);
+            _checkForUnbondedKeys(nodeOperatorId);
             _checkForOutOfBond(nodeOperatorId);
         }
+    }
 
-        emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount);
+    function submitInitialSlashing(
+        uint256 nodeOperatorId,
+        uint256 keyIndex
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        // TODO: check for slashing proof or role
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (keyIndex >= no.totalDepositedKeys) {
+            revert SigningKeysInvalidOffset();
+        }
+
+        uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
+
+        if (_isValidatorSlashed[pointer]) {
+            revert AlreadySubmitted();
+        }
+        _isValidatorSlashed[pointer] = true;
+
+        accounting.penalize(nodeOperatorId, INITIAL_SLASHING_PENALTY);
+        _checkForUnbondedKeys(nodeOperatorId);
+        _checkForOutOfBond(nodeOperatorId);
+        emit InitialSlashingSubmitted(nodeOperatorId, keyIndex);
+    }
+
+    /// @dev both nodeOperatorId and keyIndex are limited to uint64 by the contract.
+    function _keyPointer(
+        uint256 nodeOperatorId,
+        uint256 keyIndex
+    ) internal pure returns (uint256) {
+        return (nodeOperatorId << 128) | keyIndex;
     }
 
     /// @notice Called when withdrawal credentials changed by DAO
@@ -1202,6 +1247,8 @@ contract CSModule is ICSModule, CSModuleBase {
 
         no.totalAddedKeys = newTotalSigningKeys;
         emit TotalSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
+
+        _incrementModuleNonce();
     }
 
     /// @notice Gets the depositable keys with signatures from the queue
@@ -1466,6 +1513,19 @@ contract CSModule is ICSModule, CSModuleBase {
     modifier onlyWithdrawalReporter() {
         // Here should be a role granted to the CSVerifier contract and/or to the DAO/Oracle.
         // TODO: check the role
+        _;
+    }
+
+    modifier onlyPenalizer() {
+        // Should be assigned to Aragon Agent
+        // TODO: check the role
+        _;
+    }
+
+    modifier whenNotExpired() {
+        if (block.timestamp > _tempMethodsExpireTime) {
+            revert Expired();
+        }
         _;
     }
 }

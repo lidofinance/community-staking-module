@@ -57,7 +57,10 @@ contract CSAccounting is
         keccak256("SET_BOND_CURVE_ROLE");
     bytes32 public constant RESET_BOND_CURVE_ROLE =
         keccak256("RESET_BOND_CURVE_ROLE");
-    bytes32 public constant BOND_BURNER_ROLE = keccak256("BOND_BURNER_ROLE");
+
+    uint256 public constant TOTAL_BASIS_POINTS = 10_000; // 100%
+    // TODO: should be reconsidered. is it should be absolute value or percent?
+    uint256 public constant BONDED_KEY_THRESHOLD_PERCENT_BP = 2000; // 20%
 
     ICSModule private immutable CSM;
 
@@ -208,21 +211,45 @@ contract CSAccounting is
     }
 
     /// @notice Returns the number of unbonded keys
-    /// @dev unbonded meaning amount of keys with no bond at all
     /// @param nodeOperatorId id of the node operator to get keys count for.
     /// @return unbonded keys count.
     function getUnbondedKeysCount(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
-        // TODO: rework with threshold ???
+        return
+            _getUnbondedKeysCount({
+                nodeOperatorId: nodeOperatorId,
+                accountLockedBond: true
+            });
+    }
+
+    /// @notice Returns the number of unbonded keys to eject from validator set
+    /// @param nodeOperatorId id of the node operator to get keys count for.
+    /// @return unbonded keys count.
+    function getUnbondedKeysCountToEject(
+        uint256 nodeOperatorId
+    ) public view returns (uint256) {
+        return
+            _getUnbondedKeysCount({
+                nodeOperatorId: nodeOperatorId,
+                accountLockedBond: false
+            });
+    }
+
+    /// @dev unbonded meaning amount of keys with bond less than threshold
+    function _getUnbondedKeysCount(
+        uint256 nodeOperatorId,
+        bool accountLockedBond
+    ) internal view returns (uint256) {
         uint256 activeKeys = _getActiveKeys(nodeOperatorId);
         uint256 currentBond = CSBondCore._ethByShares(
             _bondShares[nodeOperatorId]
         );
-        // TODO: should the lock be included in the calculation to eject validators?
-        uint256 lockedBond = CSBondLock.getActualLockedBond(nodeOperatorId);
-        if (currentBond <= lockedBond) return activeKeys;
-        currentBond -= lockedBond;
+        if (accountLockedBond) {
+            uint256 lockedBond = CSBondLock.getActualLockedBond(nodeOperatorId);
+            if (currentBond <= lockedBond) return activeKeys;
+            currentBond -= lockedBond;
+        }
         CSBondCurve.BondCurve memory bondCurve = CSBondCurve.getBondCurve(
             nodeOperatorId
         );
@@ -230,13 +257,20 @@ contract CSAccounting is
             currentBond,
             bondCurve
         );
-        if (
-            currentBond >
-            CSBondCurve.getBondAmountByKeysCount(bondedKeys, bondCurve)
-        ) {
-            bondedKeys += 1;
-        }
-        return activeKeys > bondedKeys ? activeKeys - bondedKeys : 0;
+        if (bondedKeys >= activeKeys) return 0;
+        uint256 amountForBondedKeys = CSBondCurve.getBondAmountByKeysCount(
+            bondedKeys,
+            bondCurve
+        );
+        uint256 bondForNextKey = CSBondCurve.getBondAmountByKeysCount(
+            bondedKeys + 1,
+            bondCurve
+        ) - amountForBondedKeys;
+        uint256 keyBondPercent = ((TOTAL_BASIS_POINTS *
+            (currentBond - amountForBondedKeys)) / bondForNextKey);
+        if (keyBondPercent < BONDED_KEY_THRESHOLD_PERCENT_BP)
+            return activeKeys - bondedKeys;
+        return activeKeys - bondedKeys - 1;
     }
 
     /// @notice Returns the required bond in ETH (inc. missed and excess) for the given node operator to upload new keys.
@@ -640,14 +674,6 @@ contract CSAccounting is
         }
         // reduce all locked bond even if bond isn't covered lock fully
         CSBondLock._remove(nodeOperatorId);
-    }
-
-    /// @notice Burn all bond for node operators' validators.
-    /// @dev Called only by DAO. Have lifetime. Once expired can never be called.
-    function totalBurn(
-        uint256 nodeOperatorId
-    ) external onlyRole(BOND_BURNER_ROLE) {
-        // TODO: implement me and request exits for all validators from CSModule
     }
 
     /// @notice Penalize bond by burning shares of the given node operator.
