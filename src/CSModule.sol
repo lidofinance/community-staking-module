@@ -1197,6 +1197,7 @@ contract CSModule is ICSModule, CSModuleBase {
 
     /// @notice Called when withdrawal credentials changed by DAO
     function onWithdrawalCredentialsChanged() external {
+        // solhint-disable-next-line custom-errors
         revert("NOT_IMPLEMENTED");
     }
 
