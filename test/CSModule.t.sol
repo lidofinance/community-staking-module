@@ -514,7 +514,7 @@ contract CSMObtainDepositData is CSMCommon {
         assertEq(obtainedKeys, keys);
         assertEq(obtainedSignatures, signatures);
 
-        vm.expectRevert(bytes("NOT_ENOUGH_KEYS"));
+        vm.expectRevert(NotEnoughKeys.selector);
         csm.obtainDepositData(1, "");
     }
 

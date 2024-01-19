@@ -19,6 +19,10 @@ library SigningKeys {
     event SigningKeyAdded(uint256 indexed nodeOperatorId, bytes pubkey);
     event SigningKeyRemoved(uint256 indexed nodeOperatorId, bytes pubkey);
 
+    error InvalidKeysCount();
+    error InvalidLength();
+    error EmptyKey();
+
     function getKeyOffset(bytes32 position, uint256 nodeOperatorId, uint256 keyIndex) internal pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(position, nodeOperatorId, keyIndex)));
     }
@@ -39,11 +43,15 @@ library SigningKeys {
         bytes memory pubkeys,
         bytes memory signatures
     ) internal returns (uint256) {
-        require(keysCount > 0 && startIndex.add(keysCount) <= UINT64_MAX, "INVALID_KEYS_COUNT");
-        require(
-            pubkeys.length == keysCount.mul(PUBKEY_LENGTH) && signatures.length == keysCount.mul(SIGNATURE_LENGTH),
-            "LENGTH_MISMATCH"
-        );
+        if (keysCount == 0 || startIndex.add(keysCount) > UINT64_MAX) {
+            revert InvalidKeysCount();
+        }
+        if (
+            pubkeys.length != keysCount.mul(PUBKEY_LENGTH) ||
+            signatures.length != keysCount.mul(SIGNATURE_LENGTH)
+        ) {
+            revert InvalidLength();
+        }
 
         uint256 curOffset;
         bool isEmpty;
@@ -60,7 +68,10 @@ library SigningKeys {
                 mstore(add(tmpKey, 0x20), _part1) // store 1st part with overwrite bytes 16-31
             }
 
-            require(!isEmpty, "EMPTY_KEY");
+            if (isEmpty) {
+                revert EmptyKey();
+            }
+
             assembly {
             // store key
                 sstore(curOffset, mload(add(tmpKey, 0x20))) // store bytes 0..31
@@ -92,10 +103,13 @@ library SigningKeys {
         uint256 keysCount,
         uint256 totalKeysCount
     ) internal returns (uint256) {
-        require(
-            keysCount > 0 && startIndex.add(keysCount) <= totalKeysCount && totalKeysCount <= UINT64_MAX,
-            "INVALID_KEYS_COUNT"
-        );
+        if (
+            keysCount == 0 ||
+            startIndex.add(keysCount) > totalKeysCount ||
+            totalKeysCount > UINT64_MAX
+        ) {
+            revert InvalidKeysCount();
+        }
 
         uint256 curOffset;
         uint256 lastOffset;

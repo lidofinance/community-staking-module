@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
+// solhint-disable-next-line one-contract-per-file
 pragma solidity 0.8.21;
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -15,7 +16,7 @@ import { QueueLib } from "./lib/QueueLib.sol";
 import { Batch } from "./lib/Batch.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
 
-import "./lib/SigningKeys.sol";
+import { SigningKeys } from "./lib/SigningKeys.sol";
 
 struct NodeOperator {
     address managerAddress;
@@ -110,11 +111,13 @@ contract CSModuleBase {
     );
 
     error NodeOperatorDoesNotExist();
+    error NodeOperatorInactive();
     error MaxNodeOperatorsCountReached();
     error SenderIsNotManagerAddress();
     error SenderIsNotRewardAddress();
     error SenderIsNotProposedAddress();
     error SameAddress();
+    error ZeroAddress(string field);
     error AlreadyProposed();
     error InvalidVetKeysPointer();
     error TargetLimitExceeded();
@@ -131,12 +134,16 @@ contract CSModuleBase {
     error QueueBatchInvalidStart(bytes32 batch);
     error QueueBatchInvalidCount(bytes32 batch);
     error QueueBatchUnvettedKeys(bytes32 batch);
+    error TooManyKeys();
+    error NotEnoughKeys();
 
     error SigningKeysInvalidOffset();
 
     error AlreadySubmitted();
 
     error Expired();
+    error AlreadyInitialized();
+    error InvalidAmount();
 }
 
 contract CSModule is ICSModule, CSModuleBase {
@@ -157,7 +164,7 @@ contract CSModule is ICSModule, CSModuleBase {
 
     uint256 private constant ONE_YEAR = 60 * 60 * 24 * 365;
 
-    uint256 private immutable _tempMethodsExpireTime;
+    uint256 private immutable TEMP_METHODS_EXPIRE_TIME;
 
     uint256 public unvettingFee;
     QueueLib.Queue public queue;
@@ -177,11 +184,13 @@ contract CSModule is ICSModule, CSModuleBase {
     uint256 private _totalAddedValidators;
 
     constructor(bytes32 moduleType, address locator) {
-        _tempMethodsExpireTime = block.timestamp + ONE_YEAR;
+        TEMP_METHODS_EXPIRE_TIME = block.timestamp + ONE_YEAR;
         _moduleType = moduleType;
         emit StakingModuleTypeSet(moduleType);
 
-        require(locator != address(0), "lido locator is zero address");
+        if (locator == address(0)) {
+            revert ZeroAddress("locator");
+        }
         lidoLocator = ILidoLocator(locator);
         emit LocatorContractSet(locator);
     }
@@ -190,7 +199,9 @@ contract CSModule is ICSModule, CSModuleBase {
     /// @param _accounting Address of the accounting contract
     function setAccounting(address _accounting) external {
         // TODO: add role check
-        require(address(accounting) == address(0), "already initialized");
+        if (address(accounting) != address(0)) {
+            revert AlreadyInitialized();
+        }
         accounting = ICSAccounting(_accounting);
     }
 
@@ -258,10 +269,9 @@ contract CSModule is ICSModule, CSModuleBase {
     ) external payable {
         // TODO: sanity checks
 
-        require(
-            msg.value == accounting.getBondAmountByKeysCount(keysCount),
-            "eth value is not equal to required bond"
-        );
+        if (msg.value != accounting.getBondAmountByKeysCount(keysCount)) {
+            revert InvalidAmount();
+        }
 
         uint256 id = _nodeOperatorsCount;
         if (id == MAX_NODE_OPERATORS_COUNT)
@@ -430,14 +440,12 @@ contract CSModule is ICSModule, CSModuleBase {
     ) external payable onlyExistingNodeOperator(nodeOperatorId) {
         // TODO: sanity checks
 
-        require(
-            msg.value ==
-                accounting.getRequiredBondForNextKeys(
-                    nodeOperatorId,
-                    keysCount
-                ),
-            "eth value is not equal to required bond"
-        );
+        if (
+            msg.value !=
+            accounting.getRequiredBondForNextKeys(nodeOperatorId, keysCount)
+        ) {
+            revert InvalidAmount();
+        }
 
         accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
 
@@ -1292,10 +1300,9 @@ contract CSModule is ICSModule, CSModuleBase {
             NodeOperator storage no = _nodeOperators[nodeOperatorId];
             no.totalDepositedKeys += keysCount;
             // redundant check, enforced by _assertIsValidBatch
-            require(
-                no.totalDepositedKeys <= no.totalVettedKeys,
-                "too many keys"
-            );
+            if (no.totalDepositedKeys > no.totalVettedKeys) {
+                revert TooManyKeys();
+            }
 
             emit DepositedSigningKeysCountChanged(
                 nodeOperatorId,
@@ -1309,8 +1316,9 @@ contract CSModule is ICSModule, CSModuleBase {
 
             p = queue.peek();
         }
-
-        require(loadedKeysCount == depositsCount, "NOT_ENOUGH_KEYS");
+        if (loadedKeysCount != depositsCount) {
+            revert NotEnoughKeys();
+        }
         _incrementModuleNonce();
     }
 
@@ -1484,14 +1492,12 @@ contract CSModule is ICSModule, CSModuleBase {
     }
 
     modifier onlyActiveNodeOperator(uint256 nodeOperatorId) {
-        require(
-            nodeOperatorId < _nodeOperatorsCount,
-            "node operator does not exist"
-        );
-        require(
-            _nodeOperators[nodeOperatorId].active,
-            "node operator is not active"
-        );
+        if (nodeOperatorId >= _nodeOperatorsCount) {
+            revert NodeOperatorDoesNotExist();
+        }
+        if (!_nodeOperators[nodeOperatorId].active) {
+            revert NodeOperatorInactive();
+        }
         _;
     }
 
@@ -1523,7 +1529,7 @@ contract CSModule is ICSModule, CSModuleBase {
     }
 
     modifier whenNotExpired() {
-        if (block.timestamp > _tempMethodsExpireTime) {
+        if (block.timestamp > TEMP_METHODS_EXPIRE_TIME) {
             revert Expired();
         }
         _;

@@ -1,5 +1,7 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
+
+// solhint-disable-next-line one-contract-per-file
 pragma solidity 0.8.21;
 
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
@@ -36,7 +38,7 @@ contract CSFeeDistributor is ICSFeeDistributor, CSFeeDistributorBase {
     mapping(uint256 => uint256) public distributedShares;
 
     constructor(
-        address _CSM,
+        address csm,
         address stETH,
         address oracle,
         address accounting
@@ -44,12 +46,12 @@ contract CSFeeDistributor is ICSFeeDistributor, CSFeeDistributorBase {
         if (accounting == address(0)) revert ZeroAddress("accounting");
         if (oracle == address(0)) revert ZeroAddress("oracle");
         if (stETH == address(0)) revert ZeroAddress("stETH");
-        if (_CSM == address(0)) revert ZeroAddress("_CSM");
+        if (csm == address(0)) revert ZeroAddress("_CSM");
 
         ACCOUNTING = accounting;
         ORACLE = oracle;
         STETH = stETH;
-        CSM = _CSM;
+        CSM = csm;
     }
 
     /// @notice Returns the amount of shares that can be distributed in favor of the NO

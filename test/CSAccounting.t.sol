@@ -4051,19 +4051,19 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
     }
 
     function test_depositETH_RevertIfNotExistedOperator() public {
-        vm.expectRevert("node operator does not exist");
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
         vm.prank(user);
         accounting.depositETH{ value: 0 }(user, 1);
     }
 
     function test_depositStETH_RevertIfNotExistedOperator() public {
-        vm.expectRevert("node operator does not exist");
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
         vm.prank(user);
         accounting.depositStETH(user, 1, 0 ether);
     }
 
     function test_depositWstETH_RevertIfNotExistedOperator() public {
-        vm.expectRevert("node operator does not exist");
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
         vm.prank(user);
         accounting.depositWstETH(user, 1, 0 ether);
     }
@@ -4384,7 +4384,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
     function test_setFeeDistributor() public {
         vm.prank(admin);
         accounting.setFeeDistributor(address(1337));
-        assertEq(accounting.FEE_DISTRIBUTOR(), address(1337));
+        assertEq(accounting.feeDistributor(), address(1337));
     }
 
     function test_setFeeDistributor_RevertWhen_DoesNotHaveRole() public {

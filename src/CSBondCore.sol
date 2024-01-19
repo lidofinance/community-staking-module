@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
+// solhint-disable-next-line one-contract-per-file
 pragma solidity 0.8.21;
 
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
@@ -37,6 +38,7 @@ abstract contract CSBondCoreBase {
     );
 
     error InvalidClaimableShares();
+    error ZeroAddress(string field);
 }
 
 /// @dev Bond core mechanics abstract contract
@@ -65,8 +67,12 @@ abstract contract CSBondCore is CSBondCoreBase {
     uint256 public totalBondShares;
 
     constructor(address lidoLocator, address wstETH) {
-        require(lidoLocator != address(0), "lido locator is zero address");
-        require(wstETH != address(0), "wstETH is zero address");
+        if (lidoLocator == address(0)) {
+            revert ZeroAddress("lidoLocator");
+        }
+        if (wstETH == address(0)) {
+            revert ZeroAddress("wstETH");
+        }
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
         LIDO = ILido(LIDO_LOCATOR.lido());
         WSTETH = IWstETH(wstETH);
