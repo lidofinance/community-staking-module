@@ -41,6 +41,8 @@ contract CSAccounting is
 
     bytes32 public constant INSTANT_PENALIZE_BOND_ROLE =
         keccak256("INSTANT_PENALIZE_BOND_ROLE"); // 0x9909cf24c2d3bafa8c229558d86a1b726ba57c3ef6350848dcf434a4181b56c7
+    bytes32 public constant INSTANT_CHARGE_FEE_FROM_BOND_ROLE =
+        keccak256("INSTANT_CHARGE_FEE_FROM_BOND_ROLE");
     bytes32 public constant SET_BOND_LOCK_ROLE =
         keccak256("SET_BOND_LOCK_ROLE"); // 0x36ff2e3971b3c54917aa7f53b6db795a06950983343e75040614a29e789e7bae
     bytes32 public constant RELEASE_BOND_LOCK_ROLE =
@@ -682,6 +684,16 @@ contract CSAccounting is
         uint256 amount
     ) public onlyRole(INSTANT_PENALIZE_BOND_ROLE) {
         CSBondCore._burn(nodeOperatorId, amount);
+    }
+
+    /// @notice Charge fee from bond by transferring shares of the given node operator to the treasury.
+    /// @param nodeOperatorId id of the node operator to penalize bond for.
+    /// @param amount amount of ETH to charge.
+    function chargeFee(
+        uint256 nodeOperatorId,
+        uint256 amount
+    ) external onlyRole(INSTANT_CHARGE_FEE_FROM_BOND_ROLE) {
+        CSBondCore._charge(nodeOperatorId, amount);
     }
 
     function _getActiveKeys(

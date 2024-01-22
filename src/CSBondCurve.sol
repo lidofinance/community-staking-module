@@ -141,6 +141,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
 
     /// @dev Resets bond curve for the given node operator to default (for example, because of breaking the rules by node operator)
     function _resetBondCurve(uint256 nodeOperatorId) internal {
+        // TODO: check existing
         delete operatorBondCurveId[nodeOperatorId];
         emit BondCurveChanged(nodeOperatorId, defaultBondCurveId);
     }

@@ -84,6 +84,10 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm));
         accounting.grantRole(accounting.RELEASE_BOND_LOCK_ROLE(), address(csm));
         accounting.grantRole(accounting.SETTLE_BOND_LOCK_ROLE(), address(csm));
+        accounting.grantRole(
+            accounting.INSTANT_CHARGE_FEE_FROM_BOND_ROLE(),
+            address(csm)
+        );
         vm.stopPrank();
     }
 
@@ -1023,6 +1027,14 @@ contract CsmQueueOps is CSMCommon {
 
         vm.expectEmit(true, true, true, true, address(csm));
         emit UnvettingFeeApplied(noId);
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                csm.unvettingFee()
+            )
+        );
         csm.unvetKeys(noId);
         assertEq(csm.getNonce(), nonce + 1);
     }
@@ -1327,6 +1339,14 @@ contract CsmRemoveKeys is CSMCommon {
             emit VettedSigningKeysCountChanged(noId, 1);
             vm.expectEmit(true, true, true, true, address(csm));
             emit UnvettingFeeApplied(noId);
+            vm.expectCall(
+                address(accounting),
+                abi.encodeWithSelector(
+                    accounting.chargeFee.selector,
+                    noId,
+                    csm.unvettingFee()
+                )
+            );
         }
 
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 1, keysCount: 2 });
