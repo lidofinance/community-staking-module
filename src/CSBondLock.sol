@@ -135,6 +135,7 @@ abstract contract CSBondLock is CSBondLockBase {
 
     /// @dev Removes bond lock for the given node operator.
     function _remove(uint256 nodeOperatorId) internal {
+        // TODO: check existing lock
         delete _bondLock[nodeOperatorId];
         emit BondLockChanged(nodeOperatorId, 0, 0);
     }
