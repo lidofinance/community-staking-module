@@ -48,6 +48,12 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         uint256 depositableValidatorsCount;
     }
 
+    struct StakingModuleSummary {
+        uint256 totalExitedValidators;
+        uint256 totalDepositedValidators;
+        uint256 depositableValidatorsCount;
+    }
+
     function setUp() public {
         nodeOperator = nextAddress("NODE_OPERATOR");
         stranger = nextAddress("STRANGER");
@@ -213,6 +219,24 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
                 stuckValidatorsCount: stuckValidatorsCount,
                 refundedValidatorsCount: refundedValidatorsCount,
                 stuckPenaltyEndTimestamp: stuckPenaltyEndTimestamp,
+                totalExitedValidators: totalExitedValidators,
+                totalDepositedValidators: totalDepositedValidators,
+                depositableValidatorsCount: depositableValidatorsCount
+            });
+    }
+
+    function getStakingModuleSummary()
+        public
+        view
+        returns (StakingModuleSummary memory)
+    {
+        (
+            uint256 totalExitedValidators,
+            uint256 totalDepositedValidators,
+            uint256 depositableValidatorsCount
+        ) = csm.getStakingModuleSummary();
+        return
+            StakingModuleSummary({
                 totalExitedValidators: totalExitedValidators,
                 totalDepositedValidators: totalDepositedValidators,
                 depositableValidatorsCount: depositableValidatorsCount
@@ -499,8 +523,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 }
 
 contract CSMObtainDepositData is CSMCommon {
-    // TODO: more tests here
-    function test_obtainDepositData_RevertWhenNoMoreKeys() public {
+    function test_obtainDepositData() public {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -509,15 +532,28 @@ contract CSMObtainDepositData is CSMCommon {
         vm.prank(nodeOperator);
         csm.addNodeOperatorETH{ value: BOND_SIZE }(1, keys, signatures);
 
-        {
-            // Pretend to be a key validation oracle
-            csm.vetKeys(0, 1);
-        }
+        csm.vetKeys(0, 1);
         (bytes memory obtainedKeys, bytes memory obtainedSignatures) = csm
             .obtainDepositData(1, "");
         assertEq(obtainedKeys, keys);
         assertEq(obtainedSignatures, signatures);
+    }
 
+    function test_obtainDepositData_counters() public {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
+
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit DepositedSigningKeysCountChanged(noId, 1);
+        csm.obtainDepositData(1, "");
+
+        CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(0);
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(0);
+        assertEq(no.totalDepositedValidators, 1);
+        assertEq(summary.depositableValidatorsCount, 0);
+    }
+
+    function test_obtainDepositData_RevertWhenNoMoreKeys() public {
         vm.expectRevert(NotEnoughKeys.selector);
         csm.obtainDepositData(1, "");
     }
@@ -780,17 +816,12 @@ contract CsmResetNodeOperatorManagerAddress is CSMCommon {
 contract CsmVetKeys is CSMCommon {
     function test_vetKeys() public {
         uint256 noId = createNodeOperator();
-        uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
         emit BatchEnqueued(noId, 0, 1);
         vm.expectEmit(true, true, false, true, address(csm));
         emit VettedSigningKeysCountChanged(noId, 1);
         csm.vetKeys(noId, 1);
-
-        CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
-        assertEq(no.totalVettedValidators, 1);
-        assertEq(csm.getNonce(), nonce + 1);
 
         BatchInfo[] memory exp = new BatchInfo[](1);
         exp[0] = BatchInfo({
@@ -800,6 +831,19 @@ contract CsmVetKeys is CSMCommon {
             nonce: 0
         });
         _assertQueueState(exp);
+    }
+
+    function test_vetKeys_counters() public {
+        uint256 noId = createNodeOperator();
+        uint256 nonce = csm.getNonce();
+
+        csm.vetKeys(noId, 1);
+
+        CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(no.totalVettedValidators, 1);
+        assertEq(summary.depositableValidatorsCount, 1);
+        assertEq(csm.getNonce(), nonce + 1);
     }
 
     function test_vetKeys_totalVettedKeysIsNotZero() public {
@@ -1018,12 +1062,30 @@ contract CsmQueueOps is CSMCommon {
         csm.cleanDepositQueue(LOOKUP_DEPTH, NULL_POINTER);
         _assertQueueIsEmpty();
     }
+}
 
+contract CsmUnvetKeys is CSMCommon {
     // TODO: more tests for unvetKeys and unsafeUnvetKeys
-    function test_unvetKeys_feeApplied() public {
+
+    function test_unvetKeys_counters() public {
         uint256 noId = createNodeOperator();
         csm.vetKeys(noId, 1);
         uint256 nonce = csm.getNonce();
+
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit VettedSigningKeysCountChanged(noId, 0);
+        csm.unvetKeys(noId);
+
+        CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(csm.getNonce(), nonce + 1);
+        assertEq(no.totalVettedValidators, 0);
+        assertEq(summary.depositableValidatorsCount, 0);
+    }
+
+    function test_unvetKeys_feeApplied() public {
+        uint256 noId = createNodeOperator();
+        csm.vetKeys(noId, 1);
 
         vm.expectEmit(true, true, true, true, address(csm));
         emit UnvettingFeeApplied(noId);
@@ -1036,7 +1098,6 @@ contract CsmQueueOps is CSMCommon {
             )
         );
         csm.unvetKeys(noId);
-        assertEq(csm.getNonce(), nonce + 1);
     }
 
     function test_unvetKeys_feeEqualsToBond() public {
@@ -1741,12 +1802,6 @@ contract CsmUpdateExitedValidatorsCount is CSMCommon {
             "totalExitedValidators not increased"
         );
 
-        (uint256 totalExitedValidators, , ) = csm.getStakingModuleSummary();
-        assertEq(
-            totalExitedValidators,
-            1,
-            "totalExitedValidators not increased"
-        );
         assertEq(csm.getNonce(), nonce + 1);
     }
 
@@ -2173,5 +2228,76 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         csm.submitInitialSlashing(noId, 0);
         vm.expectRevert(AlreadySubmitted.selector);
         csm.submitInitialSlashing(noId, 0);
+    }
+}
+
+contract CsmGetStakingModuleSummary is CSMCommon {
+    function test_getStakingModuleSummary_depositableValidators() public {
+        uint256 first = createNodeOperator(2);
+        uint256 second = createNodeOperator(2);
+        StakingModuleSummary memory summary = getStakingModuleSummary();
+        assertEq(summary.depositableValidatorsCount, 0);
+
+        csm.vetKeys(first, 1);
+        csm.vetKeys(second, 2);
+
+        summary = getStakingModuleSummary();
+        NodeOperatorSummary memory firstSummary = getNodeOperatorSummary(first);
+        NodeOperatorSummary memory secondSummary = getNodeOperatorSummary(
+            second
+        );
+        assertEq(firstSummary.depositableValidatorsCount, 1);
+        assertEq(secondSummary.depositableValidatorsCount, 2);
+        assertEq(summary.depositableValidatorsCount, 3);
+    }
+
+    function test_getStakingModuleSummary_depositedValidators() public {
+        uint256 first = createNodeOperator(2);
+        uint256 second = createNodeOperator(2);
+        csm.vetKeys(first, 1);
+        csm.vetKeys(second, 2);
+        StakingModuleSummary memory summary = getStakingModuleSummary();
+        assertEq(summary.totalDepositedValidators, 0);
+
+        csm.obtainDepositData(3, "");
+
+        summary = getStakingModuleSummary();
+        NodeOperatorSummary memory firstSummary = getNodeOperatorSummary(first);
+        NodeOperatorSummary memory secondSummary = getNodeOperatorSummary(
+            second
+        );
+        assertEq(firstSummary.totalDepositedValidators, 1);
+        assertEq(secondSummary.totalDepositedValidators, 2);
+        assertEq(summary.totalDepositedValidators, 3);
+    }
+
+    function test_getStakingModuleSummary_exitedValidators() public {
+        uint256 first = createNodeOperator(2);
+        uint256 second = createNodeOperator(2);
+        csm.vetKeys(first, 2);
+        csm.vetKeys(second, 2);
+        csm.obtainDepositData(4, "");
+        StakingModuleSummary memory summary = getStakingModuleSummary();
+        assertEq(summary.totalExitedValidators, 0);
+
+        csm.updateExitedValidatorsCount(
+            bytes.concat(
+                bytes8(0x0000000000000000),
+                bytes8(0x0000000000000001)
+            ),
+            bytes.concat(
+                bytes16(0x00000000000000000000000000000001),
+                bytes16(0x00000000000000000000000000000002)
+            )
+        );
+
+        summary = getStakingModuleSummary();
+        NodeOperatorSummary memory firstSummary = getNodeOperatorSummary(first);
+        NodeOperatorSummary memory secondSummary = getNodeOperatorSummary(
+            second
+        );
+        assertEq(firstSummary.totalExitedValidators, 1);
+        assertEq(secondSummary.totalExitedValidators, 2);
+        assertEq(summary.totalExitedValidators, 3);
     }
 }
