@@ -133,7 +133,6 @@ contract CSModuleBase {
     error QueueBatchInvalidNonce(bytes32 batch);
     error QueueBatchInvalidStart(bytes32 batch);
     error QueueBatchInvalidCount(bytes32 batch);
-    error QueueBatchUnvettedKeys(bytes32 batch);
     error TooManyKeys();
     error NotEnoughKeys();
 
@@ -1360,8 +1359,6 @@ contract CSModule is ICSModule, CSModuleBase {
         if (start > no.totalDepositedKeys) revert QueueBatchInvalidStart(batch);
         if (start + count > no.totalAddedKeys)
             revert QueueBatchInvalidCount(batch);
-        if (_unvettedKeysInBatch(no, start, count))
-            revert QueueBatchUnvettedKeys(batch);
     }
 
     /// @notice Cleans the deposit queue from invalid batches
@@ -1391,9 +1388,7 @@ contract CSModule is ICSModule, CSModuleBase {
                 uint256 nonce
             ) = Batch.deserialize(item);
             NodeOperator storage no = _nodeOperators[nodeOperatorId];
-            if (
-                _unvettedKeysInBatch(no, start, count) || nonce != no.queueNonce
-            ) {
+            if (nonce != no.queueNonce) {
                 queue.remove(pointer, item);
                 continue;
             }
@@ -1443,16 +1438,11 @@ contract CSModule is ICSModule, CSModuleBase {
                 break;
             }
 
-            (
-                uint256 nodeOperatorId,
-                uint256 start,
-                uint256 count,
-                uint256 nonce
-            ) = Batch.deserialize(item);
+            (uint256 nodeOperatorId, , , uint256 nonce) = Batch.deserialize(
+                item
+            );
             NodeOperator storage no = _nodeOperators[nodeOperatorId];
-            if (
-                _unvettedKeysInBatch(no, start, count) || nonce != no.queueNonce
-            ) {
+            if (nonce != no.queueNonce) {
                 return (true, pointer);
             }
 
@@ -1460,14 +1450,6 @@ contract CSModule is ICSModule, CSModuleBase {
         }
 
         return (false, pointer);
-    }
-
-    function _unvettedKeysInBatch(
-        NodeOperator storage no,
-        uint256 start,
-        uint256 count
-    ) internal view returns (bool) {
-        return start + count > no.totalVettedKeys;
     }
 
     function _incrementModuleNonce() internal {
