@@ -710,7 +710,6 @@ contract CSModule is ICSModule, CSModuleBase {
         stuckPenaltyEndTimestamp = no.stuckPenaltyEndTimestamp;
         totalExitedValidators = no.totalExitedKeys;
         totalDepositedValidators = no.totalDepositedKeys;
-        // TODO: it should be more clear and probably revisited later
         depositableValidatorsCount = no.depositableValidatorsCount;
     }
 
@@ -785,29 +784,23 @@ contract CSModule is ICSModule, CSModuleBase {
         // TODO: staking router role only
     }
 
-    function _calculateDepositableValidatorsCount(
-        uint256 nodeOperatorId
-    ) private {
+    function _updateDepositableValidatorsCount(uint256 nodeOperatorId) private {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
-        uint256 depositableValidatorsCount = no.totalVettedKeys -
-            no.totalDepositedKeys;
+        uint256 newCount = no.totalVettedKeys - no.totalDepositedKeys;
         if (no.isTargetLimitActive) {
-            uint256 activeValidatorsCount = no.totalDepositedKeys -
-                no.totalExitedKeys;
-            depositableValidatorsCount = Math.min(
-                no.targetLimit > activeValidatorsCount
-                    ? no.targetLimit - activeValidatorsCount
-                    : 0,
-                depositableValidatorsCount
+            uint256 activeKeys = no.totalDepositedKeys - no.totalExitedKeys;
+            newCount = Math.min(
+                no.targetLimit > activeKeys ? no.targetLimit - activeKeys : 0,
+                newCount
             );
         }
-        if (no.depositableValidatorsCount != depositableValidatorsCount) {
+        if (no.depositableValidatorsCount != newCount) {
             _depositableValidatorsCount =
                 _depositableValidatorsCount -
                 no.depositableValidatorsCount +
-                depositableValidatorsCount;
-            no.depositableValidatorsCount = depositableValidatorsCount;
+                newCount;
+            no.depositableValidatorsCount = newCount;
         }
     }
 
@@ -888,7 +881,7 @@ contract CSModule is ICSModule, CSModuleBase {
                 exitedValidatorsCount -
                 no.totalExitedKeys;
             no.totalExitedKeys = exitedValidatorsCount;
-            _calculateDepositableValidatorsCount(nodeOperatorId);
+            _updateDepositableValidatorsCount(nodeOperatorId);
 
             emit ExitedSigningKeysCountChanged(
                 nodeOperatorId,
@@ -965,7 +958,7 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 stuckValidatorsKeysCount
     ) external {
         // TODO: implement
-        _calculateDepositableValidatorsCount(nodeOperatorId);
+        _updateDepositableValidatorsCount(nodeOperatorId);
         _incrementModuleNonce();
     }
 
@@ -994,7 +987,7 @@ contract CSModule is ICSModule, CSModuleBase {
         });
 
         no.totalVettedKeys = vetKeysPointer;
-        _calculateDepositableValidatorsCount(nodeOperatorId);
+        _updateDepositableValidatorsCount(nodeOperatorId);
         queue.enqueue(pointer);
 
         emit BatchEnqueued(nodeOperatorId, start, count);
@@ -1066,7 +1059,7 @@ contract CSModule is ICSModule, CSModuleBase {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         no.totalVettedKeys = no.totalDepositedKeys;
         no.queueNonce++;
-        _calculateDepositableValidatorsCount(nodeOperatorId);
+        _updateDepositableValidatorsCount(nodeOperatorId);
         emit VettedSigningKeysCountChanged(nodeOperatorId, no.totalVettedKeys);
     }
 
@@ -1320,7 +1313,7 @@ contract CSModule is ICSModule, CSModuleBase {
             _totalDepositedValidators += keysCount;
             NodeOperator storage no = _nodeOperators[nodeOperatorId];
             no.totalDepositedKeys += keysCount;
-            _calculateDepositableValidatorsCount(nodeOperatorId);
+            _updateDepositableValidatorsCount(nodeOperatorId);
             // redundant check, enforced by _assertIsValidBatch
             if (no.totalDepositedKeys > no.totalVettedKeys) {
                 revert TooManyKeys();
