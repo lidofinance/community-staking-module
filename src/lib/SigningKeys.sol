@@ -4,12 +4,9 @@
 // See contracts/COMPILERS.md
 pragma solidity 0.8.21;
 
-import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-
 /// @title Library for manage operator keys in storage
 /// @author KRogLA
 library SigningKeys {
-    using SafeMath for uint256;
     using SigningKeys for bytes32;
 
     uint64 internal constant PUBKEY_LENGTH = 48;
@@ -50,12 +47,12 @@ library SigningKeys {
         bytes memory pubkeys,
         bytes memory signatures
     ) internal returns (uint256) {
-        if (keysCount == 0 || startIndex.add(keysCount) > UINT64_MAX) {
+        if (keysCount == 0 || startIndex + keysCount > UINT64_MAX) {
             revert InvalidKeysCount();
         }
         if (
-            pubkeys.length != keysCount.mul(PUBKEY_LENGTH) ||
-            signatures.length != keysCount.mul(SIGNATURE_LENGTH)
+            pubkeys.length != keysCount * PUBKEY_LENGTH ||
+            signatures.length != keysCount * SIGNATURE_LENGTH
         ) {
             revert InvalidLength();
         }
@@ -112,7 +109,7 @@ library SigningKeys {
     ) internal returns (uint256) {
         if (
             keysCount == 0 ||
-            startIndex.add(keysCount) > totalKeysCount ||
+            startIndex + keysCount > totalKeysCount ||
             totalKeysCount > UINT64_MAX
         ) {
             revert InvalidKeysCount();
@@ -204,7 +201,7 @@ library SigningKeys {
     ) internal view returns (bytes memory pubkeys) {
         uint256 curOffset;
 
-        pubkeys = new bytes(keysCount.mul(PUBKEY_LENGTH));
+        pubkeys = new bytes(keysCount * PUBKEY_LENGTH);
         for (uint256 i; i < keysCount; ) {
             curOffset = position.getKeyOffset(nodeOperatorId, startIndex + i);
             assembly {
@@ -221,8 +218,8 @@ library SigningKeys {
         uint256 count
     ) internal pure returns (bytes memory, bytes memory) {
         return (
-            new bytes(count.mul(PUBKEY_LENGTH)),
-            new bytes(count.mul(SIGNATURE_LENGTH))
+            new bytes(count * PUBKEY_LENGTH),
+            new bytes(count * SIGNATURE_LENGTH)
         );
     }
 }
