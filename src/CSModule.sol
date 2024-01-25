@@ -34,6 +34,7 @@ struct NodeOperator {
     uint256 totalVettedKeys; // @dev both increased and decreased
     uint256 stuckValidatorsCount; // @dev both increased and decreased
     uint256 refundedValidatorsCount; // @dev only increased
+    uint256 depositableValidatorsCount; // @dev any value
     uint256 queueNonce;
 }
 
@@ -181,6 +182,7 @@ contract CSModule is ICSModule, CSModuleBase {
     uint256 private _totalDepositedValidators;
     uint256 private _totalExitedValidators;
     uint256 private _totalAddedValidators;
+    uint256 private _depositableValidatorsCount;
 
     constructor(bytes32 moduleType, address locator) {
         TEMP_METHODS_EXPIRE_TIME = block.timestamp + ONE_YEAR;
@@ -249,11 +251,10 @@ contract CSModule is ICSModule, CSModuleBase {
             uint256 /* depositableValidatorsCount */
         )
     {
-        // TODO: need to be implemented properly
         return (
             _totalExitedValidators,
             _totalDepositedValidators,
-            _totalAddedValidators - _totalExitedValidators
+            _depositableValidatorsCount
         );
     }
 
@@ -709,20 +710,7 @@ contract CSModule is ICSModule, CSModuleBase {
         stuckPenaltyEndTimestamp = no.stuckPenaltyEndTimestamp;
         totalExitedValidators = no.totalExitedKeys;
         totalDepositedValidators = no.totalDepositedKeys;
-        // TODO: it should be more clear and probably revisited later
-        depositableValidatorsCount =
-            no.totalVettedKeys -
-            totalDepositedValidators;
-        if (no.isTargetLimitActive) {
-            uint256 activeValidatorsCount = no.totalDepositedKeys -
-                no.totalExitedKeys;
-            depositableValidatorsCount = Math.min(
-                targetValidatorsCount > activeValidatorsCount
-                    ? targetValidatorsCount - activeValidatorsCount
-                    : 0,
-                depositableValidatorsCount
-            );
-        }
+        depositableValidatorsCount = no.depositableValidatorsCount;
     }
 
     /// @notice Gets node operator signing keys
@@ -796,9 +784,30 @@ contract CSModule is ICSModule, CSModuleBase {
         // TODO: staking router role only
     }
 
+    function _updateDepositableValidatorsCount(uint256 nodeOperatorId) private {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        uint256 newCount = no.totalVettedKeys - no.totalDepositedKeys;
+        if (no.isTargetLimitActive) {
+            uint256 activeKeys = no.totalDepositedKeys - no.totalExitedKeys;
+            newCount = Math.min(
+                no.targetLimit > activeKeys ? no.targetLimit - activeKeys : 0,
+                newCount
+            );
+        }
+        if (no.depositableValidatorsCount != newCount) {
+            _depositableValidatorsCount =
+                _depositableValidatorsCount -
+                no.depositableValidatorsCount +
+                newCount;
+            no.depositableValidatorsCount = newCount;
+        }
+    }
+
     /// @notice Updates stuck validators count for node operators by StakingRouter
     /// @dev Presence of stuck validators leads to stop vetting for the node operator
     ///      to prevent further deposits and clean batches from the deposit queue.
+    /// @dev stuck keys doesn't affect depositable keys count, so no need to recalculate it here
     /// @param nodeOperatorIds bytes packed array of node operator ids
     /// @param stuckValidatorsCounts bytes packed array of stuck validators counts
     function updateStuckValidatorsCount(
@@ -872,6 +881,8 @@ contract CSModule is ICSModule, CSModuleBase {
                 exitedValidatorsCount -
                 no.totalExitedKeys;
             no.totalExitedKeys = exitedValidatorsCount;
+            _updateDepositableValidatorsCount(nodeOperatorId);
+
             emit ExitedSigningKeysCountChanged(
                 nodeOperatorId,
                 exitedValidatorsCount
@@ -947,6 +958,7 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 stuckValidatorsKeysCount
     ) external {
         // TODO: implement
+        _updateDepositableValidatorsCount(nodeOperatorId);
         _incrementModuleNonce();
     }
 
@@ -975,6 +987,7 @@ contract CSModule is ICSModule, CSModuleBase {
         });
 
         no.totalVettedKeys = vetKeysPointer;
+        _updateDepositableValidatorsCount(nodeOperatorId);
         queue.enqueue(pointer);
 
         emit BatchEnqueued(nodeOperatorId, start, count);
@@ -1046,6 +1059,7 @@ contract CSModule is ICSModule, CSModuleBase {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         no.totalVettedKeys = no.totalDepositedKeys;
         no.queueNonce++;
+        _updateDepositableValidatorsCount(nodeOperatorId);
         emit VettedSigningKeysCountChanged(nodeOperatorId, no.totalVettedKeys);
     }
 
@@ -1269,7 +1283,7 @@ contract CSModule is ICSModule, CSModuleBase {
         bytes calldata /* depositCalldata */
     ) external returns (bytes memory publicKeys, bytes memory signatures) {
         (publicKeys, signatures) = SigningKeys.initKeysSigsBuf(depositsCount);
-        uint256 limit = depositsCount;
+        uint256 depositsLeft = depositsCount;
         uint256 loadedKeysCount = 0;
 
         for (bytes32 p = queue.peek(); !Batch.isNil(p); ) {
@@ -1279,7 +1293,7 @@ contract CSModule is ICSModule, CSModuleBase {
                 uint256 depositableKeysCount
             ) = _depositableKeysInBatch(p);
 
-            uint256 keysCount = Math.min(limit, depositableKeysCount);
+            uint256 keysCount = Math.min(depositsLeft, depositableKeysCount);
             if (depositableKeysCount == keysCount) {
                 queue.dequeue();
             }
@@ -1299,6 +1313,7 @@ contract CSModule is ICSModule, CSModuleBase {
             _totalDepositedValidators += keysCount;
             NodeOperator storage no = _nodeOperators[nodeOperatorId];
             no.totalDepositedKeys += keysCount;
+            _updateDepositableValidatorsCount(nodeOperatorId);
             // redundant check, enforced by _assertIsValidBatch
             if (no.totalDepositedKeys > no.totalVettedKeys) {
                 revert TooManyKeys();
@@ -1309,8 +1324,8 @@ contract CSModule is ICSModule, CSModuleBase {
                 no.totalDepositedKeys
             );
 
-            limit = limit - keysCount;
-            if (limit == 0) {
+            depositsLeft = depositsLeft - keysCount;
+            if (depositsLeft == 0) {
                 break;
             }
 
