@@ -728,6 +728,11 @@ contract CSModule is ICSModule, CSModuleBase {
         onlyExistingNodeOperator(nodeOperatorId)
         returns (bytes memory)
     {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (startIndex + keysCount > no.totalAddedKeys) {
+            revert SigningKeysInvalidOffset();
+        }
+
         return
             SigningKeys.loadKeys(
                 SIGNING_KEYS_POSITION,

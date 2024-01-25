@@ -1145,6 +1145,24 @@ contract CsmViewKeys is CSMCommon {
         assertEq(obtainedKeys, keys, "unexpected keys");
     }
 
+    function test_viewNonExistingKeys() public {
+        bytes memory keys = randomBytes(48);
+
+        uint256 noId = createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 1,
+            keys: keys,
+            signatures: randomBytes(96)
+        });
+
+        vm.expectRevert(SigningKeysInvalidOffset.selector);
+        csm.getNodeOperatorSigningKeys({
+            nodeOperatorId: noId,
+            startIndex: 0,
+            keysCount: 3
+        });
+    }
+
     function test_viewKeysFromOffset() public {
         bytes memory wantedKey = randomBytes(48);
         bytes memory keys = bytes.concat(
