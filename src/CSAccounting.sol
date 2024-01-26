@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
+// solhint-disable-next-line one-contract-per-file
 pragma solidity 0.8.21;
 
 import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
@@ -19,6 +20,7 @@ abstract contract CSAccountingBase {
 
     error NotOwnerToClaim(address msgSender, address owner);
     error InvalidSender();
+    error NodeOperatorDoesNotExist();
 }
 
 /// @author vgorkavenko
@@ -43,6 +45,8 @@ contract CSAccounting is
 
     bytes32 public constant INSTANT_PENALIZE_BOND_ROLE =
         keccak256("INSTANT_PENALIZE_BOND_ROLE"); // 0x9909cf24c2d3bafa8c229558d86a1b726ba57c3ef6350848dcf434a4181b56c7
+    bytes32 public constant INSTANT_CHARGE_FEE_FROM_BOND_ROLE =
+        keccak256("INSTANT_CHARGE_FEE_FROM_BOND_ROLE");
     bytes32 public constant SET_BOND_LOCK_ROLE =
         keccak256("SET_BOND_LOCK_ROLE"); // 0x36ff2e3971b3c54917aa7f53b6db795a06950983343e75040614a29e789e7bae
     bytes32 public constant RELEASE_BOND_LOCK_ROLE =
@@ -64,7 +68,7 @@ contract CSAccounting is
 
     ICSModule private immutable CSM;
 
-    address public FEE_DISTRIBUTOR;
+    address public feeDistributor;
 
     /// @param bondCurve initial bond curve
     /// @param admin admin role member address
@@ -85,11 +89,13 @@ contract CSAccounting is
         CSBondLock(bondLockRetentionPeriod)
     {
         // check zero addresses
-        require(admin != address(0), "admin is zero address");
-        require(
-            communityStakingModule != address(0),
-            "community staking module is zero address"
-        );
+        if (admin == address(0)) {
+            revert ZeroAddress("admin");
+        }
+        if (communityStakingModule == address(0)) {
+            revert ZeroAddress("communityStakingModule");
+        }
+
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
 
         CSM = ICSModule(communityStakingModule);
@@ -111,7 +117,7 @@ contract CSAccounting is
     function setFeeDistributor(
         address fdAddress
     ) external whenResumed onlyRole(DEFAULT_ADMIN_ROLE) {
-        FEE_DISTRIBUTOR = fdAddress;
+        feeDistributor = fdAddress;
     }
 
     /// @notice Sets bond lock retention period.
@@ -586,10 +592,10 @@ contract CSAccounting is
     /// @notice Request excess bond in Withdrawal NFT (unstETH) for the given node operator available for this moment.
     /// @dev reverts if amount isn't between MIN_STETH_WITHDRAWAL_AMOUNT and MAX_STETH_WITHDRAWAL_AMOUNT
     /// @param nodeOperatorId id of the node operator to request rewards for.
-    /// @param ETHAmount amount of ETH to request.
+    /// @param ethAmount amount of ETH to request.
     function requestExcessBondETH(
         uint256 nodeOperatorId,
-        uint256 ETHAmount
+        uint256 ethAmount
     ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
@@ -598,7 +604,7 @@ contract CSAccounting is
         CSBondCore._requestETH(
             nodeOperatorId,
             _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
-            ETHAmount,
+            ethAmount,
             nodeOperator.rewardAddress
         );
     }
@@ -608,19 +614,19 @@ contract CSAccounting is
     /// @param rewardsProof merkle proof of the rewards.
     /// @param nodeOperatorId id of the node operator to request rewards for.
     /// @param cumulativeFeeShares cummulative fee shares for the node operator.
-    /// @param ETHAmount amount of ETH to request.
+    /// @param ethAmount amount of ETH to request.
     function requestRewardsETH(
         bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
-        uint256 ETHAmount
+        uint256 ethAmount
     ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
         );
         _isSenderEligibleToClaim(nodeOperator.managerAddress);
         _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
-        if (ETHAmount == 0) return;
+        if (ethAmount == 0) return;
         uint256 claimableShares = _getExcessBondShares(
             nodeOperatorId,
             _calcActiveKeys(nodeOperator)
@@ -629,7 +635,7 @@ contract CSAccounting is
         CSBondCore._requestETH(
             nodeOperatorId,
             claimableShares,
-            ETHAmount,
+            ethAmount,
             nodeOperator.rewardAddress
         );
     }
@@ -710,6 +716,16 @@ contract CSAccounting is
         CSBondCore._burn(nodeOperatorId, amount);
     }
 
+    /// @notice Charge fee from bond by transferring shares of the given node operator to the treasury.
+    /// @param nodeOperatorId id of the node operator to penalize bond for.
+    /// @param amount amount of ETH to charge.
+    function chargeFee(
+        uint256 nodeOperatorId,
+        uint256 amount
+    ) external onlyRole(INSTANT_CHARGE_FEE_FROM_BOND_ROLE) {
+        CSBondCore._charge(nodeOperatorId, amount);
+    }
+
     function _getActiveKeys(
         uint256 nodeOperatorId
     ) internal view returns (uint256) {
@@ -735,7 +751,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares
     ) internal {
-        uint256 distributed = ICSFeeDistributor(FEE_DISTRIBUTOR).distributeFees(
+        uint256 distributed = ICSFeeDistributor(feeDistributor).distributeFees(
             rewardsProof,
             nodeOperatorId,
             cumulativeFeeShares
@@ -745,10 +761,9 @@ contract CSAccounting is
     }
 
     modifier onlyExistingNodeOperator(uint256 nodeOperatorId) {
-        require(
-            nodeOperatorId < CSM.getNodeOperatorsCount(),
-            "node operator does not exist"
-        );
+        if (nodeOperatorId >= CSM.getNodeOperatorsCount()) {
+            revert NodeOperatorDoesNotExist();
+        }
         _;
     }
 }

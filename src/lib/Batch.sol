@@ -17,7 +17,16 @@ library Batch {
     /// @notice Deserialize node operator id, batch start and count of keys from a single bytes32 value
     function deserialize(
         bytes32 b
-    ) internal pure returns (uint64 nodeOperatorId, uint64 start, uint64 count, uint64 nonce) {
+    )
+        internal
+        pure
+        returns (
+            uint64 nodeOperatorId,
+            uint64 start,
+            uint64 count,
+            uint64 nonce
+        )
+    {
         assembly {
             nodeOperatorId := shr(192, b)
             start := shr(128, b)

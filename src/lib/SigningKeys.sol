@@ -19,8 +19,19 @@ library SigningKeys {
     event SigningKeyAdded(uint256 indexed nodeOperatorId, bytes pubkey);
     event SigningKeyRemoved(uint256 indexed nodeOperatorId, bytes pubkey);
 
-    function getKeyOffset(bytes32 position, uint256 nodeOperatorId, uint256 keyIndex) internal pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(position, nodeOperatorId, keyIndex)));
+    error InvalidKeysCount();
+    error InvalidLength();
+    error EmptyKey();
+
+    function getKeyOffset(
+        bytes32 position,
+        uint256 nodeOperatorId,
+        uint256 keyIndex
+    ) internal pure returns (uint256) {
+        return
+            uint256(
+                keccak256(abi.encodePacked(position, nodeOperatorId, keyIndex))
+            );
     }
 
     /// @dev store operator keys to storage
@@ -39,17 +50,21 @@ library SigningKeys {
         bytes memory pubkeys,
         bytes memory signatures
     ) internal returns (uint256) {
-        require(keysCount > 0 && startIndex.add(keysCount) <= UINT64_MAX, "INVALID_KEYS_COUNT");
-        require(
-            pubkeys.length == keysCount.mul(PUBKEY_LENGTH) && signatures.length == keysCount.mul(SIGNATURE_LENGTH),
-            "LENGTH_MISMATCH"
-        );
+        if (keysCount == 0 || startIndex.add(keysCount) > UINT64_MAX) {
+            revert InvalidKeysCount();
+        }
+        if (
+            pubkeys.length != keysCount.mul(PUBKEY_LENGTH) ||
+            signatures.length != keysCount.mul(SIGNATURE_LENGTH)
+        ) {
+            revert InvalidLength();
+        }
 
         uint256 curOffset;
         bool isEmpty;
         bytes memory tmpKey = new bytes(48);
 
-        for (uint256 i; i < keysCount;) {
+        for (uint256 i; i < keysCount; ) {
             curOffset = position.getKeyOffset(nodeOperatorId, startIndex);
             assembly {
                 let _ofs := add(add(pubkeys, 0x20), mul(i, 48)) //PUBKEY_LENGTH = 48
@@ -60,12 +75,15 @@ library SigningKeys {
                 mstore(add(tmpKey, 0x20), _part1) // store 1st part with overwrite bytes 16-31
             }
 
-            require(!isEmpty, "EMPTY_KEY");
+            if (isEmpty) {
+                revert EmptyKey();
+            }
+
             assembly {
-            // store key
+                // store key
                 sstore(curOffset, mload(add(tmpKey, 0x20))) // store bytes 0..31
                 sstore(add(curOffset, 1), shl(128, mload(add(tmpKey, 0x30)))) // store bytes 32..47
-            // store signature
+                // store signature
                 let _ofs := add(add(signatures, 0x20), mul(i, 96)) //SIGNATURE_LENGTH = 96
                 sstore(add(curOffset, 2), mload(_ofs))
                 sstore(add(curOffset, 3), mload(add(_ofs, 0x20)))
@@ -92,17 +110,20 @@ library SigningKeys {
         uint256 keysCount,
         uint256 totalKeysCount
     ) internal returns (uint256) {
-        require(
-            keysCount > 0 && startIndex.add(keysCount) <= totalKeysCount && totalKeysCount <= UINT64_MAX,
-            "INVALID_KEYS_COUNT"
-        );
+        if (
+            keysCount == 0 ||
+            startIndex.add(keysCount) > totalKeysCount ||
+            totalKeysCount > UINT64_MAX
+        ) {
+            revert InvalidKeysCount();
+        }
 
         uint256 curOffset;
         uint256 lastOffset;
         uint256 j;
         bytes memory tmpKey = new bytes(48);
         // removing from the last index
-        for (uint256 i = startIndex + keysCount; i > startIndex;) {
+        for (uint256 i = startIndex + keysCount; i > startIndex; ) {
             curOffset = position.getKeyOffset(nodeOperatorId, i - 1);
             assembly {
                 // read key
@@ -110,9 +131,13 @@ library SigningKeys {
                 mstore(add(tmpKey, 0x20), sload(curOffset)) // bytes 0..31
             }
             if (i < totalKeysCount) {
-                lastOffset = position.getKeyOffset(nodeOperatorId, totalKeysCount - 1);
+                lastOffset = position.getKeyOffset(
+                    nodeOperatorId,
+                    totalKeysCount - 1
+                );
                 // move last key to deleted key index
-                for (j = 0; j < 5;) { // load 160 bytes (5 slots) containing key and signature
+                for (j = 0; j < 5; ) {
+                    // load 160 bytes (5 slots) containing key and signature
                     assembly {
                         sstore(add(curOffset, j), sload(add(lastOffset, j)))
                         j := add(j, 1)
@@ -121,7 +146,7 @@ library SigningKeys {
                 curOffset = lastOffset;
             }
             // clear storage
-            for (j = 0; j < 5;) {
+            for (j = 0; j < 5; ) {
                 assembly {
                     sstore(add(curOffset, j), 0)
                     j := add(j, 1)
@@ -154,7 +179,7 @@ library SigningKeys {
         uint256 bufOffset
     ) internal view {
         uint256 curOffset;
-        for (uint256 i; i < keysCount;) {
+        for (uint256 i; i < keysCount; ) {
             curOffset = position.getKeyOffset(nodeOperatorId, startIndex + i);
             assembly {
                 // read key
@@ -180,7 +205,7 @@ library SigningKeys {
         uint256 curOffset;
 
         pubkeys = new bytes(keysCount.mul(PUBKEY_LENGTH));
-        for (uint256 i; i < keysCount;) {
+        for (uint256 i; i < keysCount; ) {
             curOffset = position.getKeyOffset(nodeOperatorId, startIndex + i);
             assembly {
                 // read key
@@ -192,7 +217,12 @@ library SigningKeys {
         }
     }
 
-    function initKeysSigsBuf(uint256 count) internal pure returns (bytes memory, bytes memory) {
-        return (new bytes(count.mul(PUBKEY_LENGTH)), new bytes(count.mul(SIGNATURE_LENGTH)));
+    function initKeysSigsBuf(
+        uint256 count
+    ) internal pure returns (bytes memory, bytes memory) {
+        return (
+            new bytes(count.mul(PUBKEY_LENGTH)),
+            new bytes(count.mul(SIGNATURE_LENGTH))
+        );
     }
 }

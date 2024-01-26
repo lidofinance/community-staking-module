@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
+// solhint-disable-next-line one-contract-per-file
 pragma solidity 0.8.21;
 
 abstract contract CSBondCurveBase {
@@ -141,6 +142,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
 
     /// @dev Resets bond curve for the given node operator to default (for example, because of breaking the rules by node operator)
     function _resetBondCurve(uint256 nodeOperatorId) internal {
+        // TODO: check existing
         delete operatorBondCurveId[nodeOperatorId];
         emit BondCurveChanged(nodeOperatorId, defaultBondCurveId);
     }

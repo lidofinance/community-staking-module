@@ -1,4 +1,7 @@
-# Lido Community Staking Module
+<p align="center">
+  <img src="logo.png" width="120" alt="CSM Logo"/>
+</p>
+<h1 align="center"> Lido Community Staking Module </h1>
 
 ### Getting Started
 

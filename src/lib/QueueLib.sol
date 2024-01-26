@@ -2,9 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.21;
 
-
 /// @author madlabman
 library QueueLib {
+    error NullItem();
+    error AlreadyEnqueued();
+    error LimitNotSet();
+    error WrongPointer();
+    error QueueIsEmpty();
+
     bytes32 public constant NULL_POINTER = bytes32(0);
 
     // @dev Queue is a linked list of items
@@ -16,8 +21,12 @@ library QueueLib {
     }
 
     function enqueue(Queue storage self, bytes32 item) internal {
-        require(item != NULL_POINTER, "Queue: item is zero");
-        require(self.queue[item] == NULL_POINTER, "Queue: item already enqueued");
+        if (item == NULL_POINTER) {
+            revert NullItem();
+        }
+        if (self.queue[item] != NULL_POINTER) {
+            revert AlreadyEnqueued();
+        }
 
         if (self.front == self.queue[self.front]) {
             self.queue[self.front] = item;
@@ -27,7 +36,9 @@ library QueueLib {
         self.back = item;
     }
 
-    function dequeue(Queue storage self) internal notEmpty(self) returns (bytes32 item) {
+    function dequeue(
+        Queue storage self
+    ) internal notEmpty(self) returns (bytes32 item) {
         item = self.queue[self.front];
         self.front = item;
     }
@@ -36,17 +47,28 @@ library QueueLib {
         return self.queue[self.front];
     }
 
-    function at(Queue storage self, bytes32 pointer) internal view returns (bytes32) {
+    function at(
+        Queue storage self,
+        bytes32 pointer
+    ) internal view returns (bytes32) {
         return self.queue[pointer];
     }
 
     // @dev returns items array of size `limit` and actual count of items
     // @dev reverts if the queue is empty
-    function list(Queue storage self, bytes32 pointer, uint256 limit) internal notEmpty(self) view returns (
-        bytes32[] memory items,
-        uint256 /* count */
-    ) {
-        require(limit > 0, "Queue: limit is not set");
+    function list(
+        Queue storage self,
+        bytes32 pointer,
+        uint256 limit
+    )
+        internal
+        view
+        notEmpty(self)
+        returns (bytes32[] memory items, uint256 /* count */)
+    {
+        if (limit == 0) {
+            revert LimitNotSet();
+        }
         items = new bytes32[](limit);
 
         uint256 i;
@@ -55,7 +77,7 @@ library QueueLib {
             if (item == NULL_POINTER) {
                 break;
             }
-            
+
             items[i] = item;
             pointer = item;
         }
@@ -68,8 +90,14 @@ library QueueLib {
         return self.front == self.back;
     }
 
-    function remove(Queue storage self, bytes32 pointerToItem, bytes32 item) internal {
-        require(self.queue[pointerToItem] == item, "Queue: wrong pointer given");
+    function remove(
+        Queue storage self,
+        bytes32 pointerToItem,
+        bytes32 item
+    ) internal {
+        if (self.queue[pointerToItem] != item) {
+            revert WrongPointer();
+        }
 
         self.queue[pointerToItem] = self.queue[item];
         self.queue[item] = NULL_POINTER;
@@ -80,7 +108,9 @@ library QueueLib {
     }
 
     modifier notEmpty(Queue storage self) {
-        require(!isEmpty(self), "Queue: empty");
+        if (isEmpty(self)) {
+            revert QueueIsEmpty();
+        }
         _;
     }
 }

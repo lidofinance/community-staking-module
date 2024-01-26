@@ -110,6 +110,10 @@ contract CSAccountingBaseTest is
         accounting.grantRole(accounting.SET_DEFAULT_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), admin);
+        accounting.grantRole(
+            accounting.INSTANT_CHARGE_FEE_FROM_BOND_ROLE(),
+            admin
+        );
         vm.stopPrank();
     }
 
@@ -4249,19 +4253,19 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
     }
 
     function test_depositETH_RevertIfNotExistedOperator() public {
-        vm.expectRevert("node operator does not exist");
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
         vm.prank(user);
         accounting.depositETH{ value: 0 }(user, 1);
     }
 
     function test_depositStETH_RevertIfNotExistedOperator() public {
-        vm.expectRevert("node operator does not exist");
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
         vm.prank(user);
         accounting.depositStETH(user, 1, 0 ether);
     }
 
     function test_depositWstETH_RevertIfNotExistedOperator() public {
-        vm.expectRevert("node operator does not exist");
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
         vm.prank(user);
         accounting.depositWstETH(user, 1, 0 ether);
     }
@@ -4377,6 +4381,56 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
 
         vm.prank(stranger);
         accounting.penalize(0, 20);
+    }
+}
+
+contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
+    function setUp() public override {
+        super.setUp();
+        ICSModule.NodeOperatorInfo memory n;
+        n.active = true;
+        n.managerAddress = address(user);
+        n.rewardAddress = address(user);
+        n.totalVettedValidators = 0;
+        n.totalExitedValidators = 0;
+        n.totalWithdrawnValidators = 0;
+        n.totalAddedValidators = 0;
+        n.totalDepositedValidators = 0;
+        mock_getNodeOperator(n);
+        mock_getNodeOperatorsCount(1);
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        accounting.depositETH{ value: 32 ether }(user, 0);
+    }
+
+    function test_chargeFee() public {
+        uint256 shares = stETH.getSharesByPooledEth(1 ether);
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+
+        vm.prank(admin);
+        accounting.chargeFee(0, 1 ether);
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore - shares,
+            "bond shares should be decreased by penalty"
+        );
+        assertEq(accounting.totalBondShares(), bondSharesAfter);
+    }
+
+    function test_chargeFee_RevertWhenCallerHasNoRole() public {
+        vm.expectRevert(
+            bytes(
+                Utilities.accessErrorString(
+                    stranger,
+                    accounting.INSTANT_CHARGE_FEE_FROM_BOND_ROLE()
+                )
+            )
+        );
+
+        vm.prank(stranger);
+        accounting.chargeFee(0, 20);
     }
 }
 
@@ -4582,7 +4636,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
     function test_setFeeDistributor() public {
         vm.prank(admin);
         accounting.setFeeDistributor(address(1337));
-        assertEq(accounting.FEE_DISTRIBUTOR(), address(1337));
+        assertEq(accounting.feeDistributor(), address(1337));
     }
 
     function test_setFeeDistributor_RevertWhen_DoesNotHaveRole() public {

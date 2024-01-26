@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
+// solhint-disable-next-line one-contract-per-file
 pragma solidity 0.8.21;
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -15,7 +16,7 @@ import { QueueLib } from "./lib/QueueLib.sol";
 import { Batch } from "./lib/Batch.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
 
-import "./lib/SigningKeys.sol";
+import { SigningKeys } from "./lib/SigningKeys.sol";
 
 struct NodeOperator {
     address managerAddress;
@@ -33,6 +34,7 @@ struct NodeOperator {
     uint256 totalVettedKeys; // @dev both increased and decreased
     uint256 stuckValidatorsCount; // @dev both increased and decreased
     uint256 refundedValidatorsCount; // @dev only increased
+    uint256 depositableValidatorsCount; // @dev any value
     uint256 queueNonce;
 }
 
@@ -110,11 +112,13 @@ contract CSModuleBase {
     );
 
     error NodeOperatorDoesNotExist();
+    error NodeOperatorInactive();
     error MaxNodeOperatorsCountReached();
     error SenderIsNotManagerAddress();
     error SenderIsNotRewardAddress();
     error SenderIsNotProposedAddress();
     error SameAddress();
+    error ZeroAddress(string field);
     error AlreadyProposed();
     error InvalidVetKeysPointer();
     error TargetLimitExceeded();
@@ -130,13 +134,16 @@ contract CSModuleBase {
     error QueueBatchInvalidNonce(bytes32 batch);
     error QueueBatchInvalidStart(bytes32 batch);
     error QueueBatchInvalidCount(bytes32 batch);
-    error QueueBatchUnvettedKeys(bytes32 batch);
+    error TooManyKeys();
+    error NotEnoughKeys();
 
     error SigningKeysInvalidOffset();
 
     error AlreadySubmitted();
 
     error Expired();
+    error AlreadyInitialized();
+    error InvalidAmount();
 }
 
 contract CSModule is ICSModule, CSModuleBase {
@@ -157,7 +164,7 @@ contract CSModule is ICSModule, CSModuleBase {
 
     uint256 private constant ONE_YEAR = 60 * 60 * 24 * 365;
 
-    uint256 private immutable _tempMethodsExpireTime;
+    uint256 private immutable TEMP_METHODS_EXPIRE_TIME;
 
     uint256 public unvettingFee;
     QueueLib.Queue public queue;
@@ -175,13 +182,16 @@ contract CSModule is ICSModule, CSModuleBase {
     uint256 private _totalDepositedValidators;
     uint256 private _totalExitedValidators;
     uint256 private _totalAddedValidators;
+    uint256 private _depositableValidatorsCount;
 
     constructor(bytes32 moduleType, address locator) {
-        _tempMethodsExpireTime = block.timestamp + ONE_YEAR;
+        TEMP_METHODS_EXPIRE_TIME = block.timestamp + ONE_YEAR;
         _moduleType = moduleType;
         emit StakingModuleTypeSet(moduleType);
 
-        require(locator != address(0), "lido locator is zero address");
+        if (locator == address(0)) {
+            revert ZeroAddress("locator");
+        }
         lidoLocator = ILidoLocator(locator);
         emit LocatorContractSet(locator);
     }
@@ -190,7 +200,9 @@ contract CSModule is ICSModule, CSModuleBase {
     /// @param _accounting Address of the accounting contract
     function setAccounting(address _accounting) external {
         // TODO: add role check
-        require(address(accounting) == address(0), "already initialized");
+        if (address(accounting) != address(0)) {
+            revert AlreadyInitialized();
+        }
         accounting = ICSAccounting(_accounting);
     }
 
@@ -239,11 +251,10 @@ contract CSModule is ICSModule, CSModuleBase {
             uint256 /* depositableValidatorsCount */
         )
     {
-        // TODO: need to be implemented properly
         return (
             _totalExitedValidators,
             _totalDepositedValidators,
-            _totalAddedValidators - _totalExitedValidators
+            _depositableValidatorsCount
         );
     }
 
@@ -258,10 +269,9 @@ contract CSModule is ICSModule, CSModuleBase {
     ) external payable {
         // TODO: sanity checks
 
-        require(
-            msg.value == accounting.getBondAmountByKeysCount(keysCount),
-            "eth value is not equal to required bond"
-        );
+        if (msg.value != accounting.getBondAmountByKeysCount(keysCount)) {
+            revert InvalidAmount();
+        }
 
         uint256 id = _nodeOperatorsCount;
         if (id == MAX_NODE_OPERATORS_COUNT)
@@ -430,14 +440,12 @@ contract CSModule is ICSModule, CSModuleBase {
     ) external payable onlyExistingNodeOperator(nodeOperatorId) {
         // TODO: sanity checks
 
-        require(
-            msg.value ==
-                accounting.getRequiredBondForNextKeys(
-                    nodeOperatorId,
-                    keysCount
-                ),
-            "eth value is not equal to required bond"
-        );
+        if (
+            msg.value !=
+            accounting.getRequiredBondForNextKeys(nodeOperatorId, keysCount)
+        ) {
+            revert InvalidAmount();
+        }
 
         accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
 
@@ -702,20 +710,7 @@ contract CSModule is ICSModule, CSModuleBase {
         stuckPenaltyEndTimestamp = no.stuckPenaltyEndTimestamp;
         totalExitedValidators = no.totalExitedKeys;
         totalDepositedValidators = no.totalDepositedKeys;
-        // TODO: it should be more clear and probably revisited later
-        depositableValidatorsCount =
-            no.totalVettedKeys -
-            totalDepositedValidators;
-        if (no.isTargetLimitActive) {
-            uint256 activeValidatorsCount = no.totalDepositedKeys -
-                no.totalExitedKeys;
-            depositableValidatorsCount = Math.min(
-                targetValidatorsCount > activeValidatorsCount
-                    ? targetValidatorsCount - activeValidatorsCount
-                    : 0,
-                depositableValidatorsCount
-            );
-        }
+        depositableValidatorsCount = no.depositableValidatorsCount;
     }
 
     /// @notice Gets node operator signing keys
@@ -733,6 +728,11 @@ contract CSModule is ICSModule, CSModuleBase {
         onlyExistingNodeOperator(nodeOperatorId)
         returns (bytes memory)
     {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (startIndex + keysCount > no.totalAddedKeys) {
+            revert SigningKeysInvalidOffset();
+        }
+
         return
             SigningKeys.loadKeys(
                 SIGNING_KEYS_POSITION,
@@ -789,9 +789,30 @@ contract CSModule is ICSModule, CSModuleBase {
         // TODO: staking router role only
     }
 
+    function _updateDepositableValidatorsCount(uint256 nodeOperatorId) private {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        uint256 newCount = no.totalVettedKeys - no.totalDepositedKeys;
+        if (no.isTargetLimitActive) {
+            uint256 activeKeys = no.totalDepositedKeys - no.totalExitedKeys;
+            newCount = Math.min(
+                no.targetLimit > activeKeys ? no.targetLimit - activeKeys : 0,
+                newCount
+            );
+        }
+        if (no.depositableValidatorsCount != newCount) {
+            _depositableValidatorsCount =
+                _depositableValidatorsCount -
+                no.depositableValidatorsCount +
+                newCount;
+            no.depositableValidatorsCount = newCount;
+        }
+    }
+
     /// @notice Updates stuck validators count for node operators by StakingRouter
     /// @dev Presence of stuck validators leads to stop vetting for the node operator
     ///      to prevent further deposits and clean batches from the deposit queue.
+    /// @dev stuck keys doesn't affect depositable keys count, so no need to recalculate it here
     /// @param nodeOperatorIds bytes packed array of node operator ids
     /// @param stuckValidatorsCounts bytes packed array of stuck validators counts
     function updateStuckValidatorsCount(
@@ -865,6 +886,8 @@ contract CSModule is ICSModule, CSModuleBase {
                 exitedValidatorsCount -
                 no.totalExitedKeys;
             no.totalExitedKeys = exitedValidatorsCount;
+            _updateDepositableValidatorsCount(nodeOperatorId);
+
             emit ExitedSigningKeysCountChanged(
                 nodeOperatorId,
                 exitedValidatorsCount
@@ -940,6 +963,7 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 stuckValidatorsKeysCount
     ) external {
         // TODO: implement
+        _updateDepositableValidatorsCount(nodeOperatorId);
         _incrementModuleNonce();
     }
 
@@ -968,6 +992,7 @@ contract CSModule is ICSModule, CSModuleBase {
         });
 
         no.totalVettedKeys = vetKeysPointer;
+        _updateDepositableValidatorsCount(nodeOperatorId);
         queue.enqueue(pointer);
 
         emit BatchEnqueued(nodeOperatorId, start, count);
@@ -1039,6 +1064,7 @@ contract CSModule is ICSModule, CSModuleBase {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         no.totalVettedKeys = no.totalDepositedKeys;
         no.queueNonce++;
+        _updateDepositableValidatorsCount(nodeOperatorId);
         emit VettedSigningKeysCountChanged(nodeOperatorId, no.totalVettedKeys);
     }
 
@@ -1059,7 +1085,7 @@ contract CSModule is ICSModule, CSModuleBase {
     }
 
     function _applyUnvettingFee(uint256 nodeOperatorId) internal {
-        accounting.penalize(nodeOperatorId, unvettingFee);
+        accounting.chargeFee(nodeOperatorId, unvettingFee);
         emit UnvettingFeeApplied(nodeOperatorId);
 
         _checkForOutOfBond(nodeOperatorId);
@@ -1189,6 +1215,7 @@ contract CSModule is ICSModule, CSModuleBase {
 
     /// @notice Called when withdrawal credentials changed by DAO
     function onWithdrawalCredentialsChanged() external {
+        // solhint-disable-next-line custom-errors
         revert("NOT_IMPLEMENTED");
     }
 
@@ -1261,7 +1288,7 @@ contract CSModule is ICSModule, CSModuleBase {
         bytes calldata /* depositCalldata */
     ) external returns (bytes memory publicKeys, bytes memory signatures) {
         (publicKeys, signatures) = SigningKeys.initKeysSigsBuf(depositsCount);
-        uint256 limit = depositsCount;
+        uint256 depositsLeft = depositsCount;
         uint256 loadedKeysCount = 0;
 
         for (bytes32 p = queue.peek(); !Batch.isNil(p); ) {
@@ -1271,7 +1298,7 @@ contract CSModule is ICSModule, CSModuleBase {
                 uint256 depositableKeysCount
             ) = _depositableKeysInBatch(p);
 
-            uint256 keysCount = Math.min(limit, depositableKeysCount);
+            uint256 keysCount = Math.min(depositsLeft, depositableKeysCount);
             if (depositableKeysCount == keysCount) {
                 queue.dequeue();
             }
@@ -1291,26 +1318,27 @@ contract CSModule is ICSModule, CSModuleBase {
             _totalDepositedValidators += keysCount;
             NodeOperator storage no = _nodeOperators[nodeOperatorId];
             no.totalDepositedKeys += keysCount;
+            _updateDepositableValidatorsCount(nodeOperatorId);
             // redundant check, enforced by _assertIsValidBatch
-            require(
-                no.totalDepositedKeys <= no.totalVettedKeys,
-                "too many keys"
-            );
+            if (no.totalDepositedKeys > no.totalVettedKeys) {
+                revert TooManyKeys();
+            }
 
             emit DepositedSigningKeysCountChanged(
                 nodeOperatorId,
                 no.totalDepositedKeys
             );
 
-            limit = limit - keysCount;
-            if (limit == 0) {
+            depositsLeft = depositsLeft - keysCount;
+            if (depositsLeft == 0) {
                 break;
             }
 
             p = queue.peek();
         }
-
-        require(loadedKeysCount == depositsCount, "NOT_ENOUGH_KEYS");
+        if (loadedKeysCount != depositsCount) {
+            revert NotEnoughKeys();
+        }
         _incrementModuleNonce();
     }
 
@@ -1351,8 +1379,6 @@ contract CSModule is ICSModule, CSModuleBase {
         if (start > no.totalDepositedKeys) revert QueueBatchInvalidStart(batch);
         if (start + count > no.totalAddedKeys)
             revert QueueBatchInvalidCount(batch);
-        if (_unvettedKeysInBatch(no, start, count))
-            revert QueueBatchUnvettedKeys(batch);
     }
 
     /// @notice Cleans the deposit queue from invalid batches
@@ -1382,9 +1408,7 @@ contract CSModule is ICSModule, CSModuleBase {
                 uint256 nonce
             ) = Batch.deserialize(item);
             NodeOperator storage no = _nodeOperators[nodeOperatorId];
-            if (
-                _unvettedKeysInBatch(no, start, count) || nonce != no.queueNonce
-            ) {
+            if (nonce != no.queueNonce) {
                 queue.remove(pointer, item);
                 continue;
             }
@@ -1434,16 +1458,11 @@ contract CSModule is ICSModule, CSModuleBase {
                 break;
             }
 
-            (
-                uint256 nodeOperatorId,
-                uint256 start,
-                uint256 count,
-                uint256 nonce
-            ) = Batch.deserialize(item);
+            (uint256 nodeOperatorId, , , uint256 nonce) = Batch.deserialize(
+                item
+            );
             NodeOperator storage no = _nodeOperators[nodeOperatorId];
-            if (
-                _unvettedKeysInBatch(no, start, count) || nonce != no.queueNonce
-            ) {
+            if (nonce != no.queueNonce) {
                 return (true, pointer);
             }
 
@@ -1451,14 +1470,6 @@ contract CSModule is ICSModule, CSModuleBase {
         }
 
         return (false, pointer);
-    }
-
-    function _unvettedKeysInBatch(
-        NodeOperator storage no,
-        uint256 start,
-        uint256 count
-    ) internal view returns (bool) {
-        return start + count > no.totalVettedKeys;
     }
 
     function _incrementModuleNonce() internal {
@@ -1484,14 +1495,12 @@ contract CSModule is ICSModule, CSModuleBase {
     }
 
     modifier onlyActiveNodeOperator(uint256 nodeOperatorId) {
-        require(
-            nodeOperatorId < _nodeOperatorsCount,
-            "node operator does not exist"
-        );
-        require(
-            _nodeOperators[nodeOperatorId].active,
-            "node operator is not active"
-        );
+        if (nodeOperatorId >= _nodeOperatorsCount) {
+            revert NodeOperatorDoesNotExist();
+        }
+        if (!_nodeOperators[nodeOperatorId].active) {
+            revert NodeOperatorInactive();
+        }
         _;
     }
 
@@ -1523,7 +1532,7 @@ contract CSModule is ICSModule, CSModuleBase {
     }
 
     modifier whenNotExpired() {
-        if (block.timestamp > _tempMethodsExpireTime) {
+        if (block.timestamp > TEMP_METHODS_EXPIRE_TIME) {
             revert Expired();
         }
         _;
