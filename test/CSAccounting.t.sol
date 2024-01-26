@@ -195,9 +195,7 @@ contract CSAccountingPauseTest is CSAccountingBaseTest {
     }
 
     function test_pause_RevertWhen_notAdmin() public {
-        vm.expectRevert(
-            bytes(accessErrorString(stranger, accounting.PAUSE_ROLE()))
-        );
+        expectRoleRevert(stranger, accounting.PAUSE_ROLE());
         vm.prank(stranger);
         accounting.pauseFor(1 days);
     }
@@ -206,9 +204,7 @@ contract CSAccountingPauseTest is CSAccountingBaseTest {
         vm.prank(admin);
         accounting.pauseFor(1 days);
 
-        vm.expectRevert(
-            bytes(accessErrorString(stranger, accounting.RESUME_ROLE()))
-        );
+        expectRoleRevert(stranger, accounting.RESUME_ROLE());
         vm.prank(stranger);
         accounting.resume();
     }
@@ -4370,14 +4366,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
     }
 
     function test_penalize_RevertWhenCallerHasNoRole() public {
-        vm.expectRevert(
-            bytes(
-                accessErrorString(
-                    stranger,
-                    accounting.INSTANT_PENALIZE_BOND_ROLE()
-                )
-            )
-        );
+        expectRoleRevert(stranger, accounting.INSTANT_PENALIZE_BOND_ROLE());
 
         vm.prank(stranger);
         accounting.penalize(0, 20);
@@ -4420,15 +4409,10 @@ contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
     }
 
     function test_chargeFee_RevertWhenCallerHasNoRole() public {
-        vm.expectRevert(
-            bytes(
-                Utilities.accessErrorString(
-                    stranger,
-                    accounting.INSTANT_CHARGE_FEE_FROM_BOND_ROLE()
-                )
-            )
+        expectRoleRevert(
+            stranger,
+            accounting.INSTANT_CHARGE_FEE_FROM_BOND_ROLE()
         );
-
         vm.prank(stranger);
         accounting.chargeFee(0, 20);
     }
@@ -4442,10 +4426,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
     }
 
     function setLockedBondRetentionPeriod_RevertWhen_DoesNotHaveRole() public {
-        vm.expectRevert(
-            bytes(accessErrorString(stranger, accounting.DEFAULT_ADMIN_ROLE()))
-        );
-
+        expectRoleRevert(stranger, accounting.DEFAULT_ADMIN_ROLE());
         vm.prank(stranger);
         accounting.setLockedBondRetentionPeriod(200 days);
     }
@@ -4461,9 +4442,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
     function test_lockBondETH_RevertWhen_DoesNotHaveRole() public {
         mock_getNodeOperatorsCount(1);
 
-        vm.expectRevert(
-            bytes(accessErrorString(stranger, accounting.SET_BOND_LOCK_ROLE()))
-        );
+        expectRoleRevert(stranger, accounting.SET_BOND_LOCK_ROLE());
         vm.prank(stranger);
         accounting.lockBondETH(0, 1 ether);
     }
@@ -4486,11 +4465,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
     function test_releaseLockedBondETH_RevertWhen_DoesNotHaveRole() public {
         mock_getNodeOperatorsCount(1);
 
-        vm.expectRevert(
-            bytes(
-                accessErrorString(stranger, accounting.RELEASE_BOND_LOCK_ROLE())
-            )
-        );
+        expectRoleRevert(stranger, accounting.RELEASE_BOND_LOCK_ROLE());
         vm.prank(stranger);
         accounting.releaseLockedBondETH(0, 1 ether);
     }
@@ -4530,10 +4505,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
     }
 
     function test_addBondCurve_RevertWhen_DoesNotHaveRole() public {
-        vm.expectRevert(
-            bytes(accessErrorString(stranger, accounting.ADD_BOND_CURVE_ROLE()))
-        );
-
+        expectRoleRevert(stranger, accounting.ADD_BOND_CURVE_ROLE());
         vm.prank(stranger);
         accounting.addBondCurve(new uint256[](0));
     }
@@ -4552,15 +4524,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
     }
 
     function test_setDefaultBondCurve_RevertWhen_DoesNotHaveRole() public {
-        vm.expectRevert(
-            bytes(
-                accessErrorString(
-                    stranger,
-                    accounting.SET_DEFAULT_BOND_CURVE_ROLE()
-                )
-            )
-        );
-
+        expectRoleRevert(stranger, accounting.SET_DEFAULT_BOND_CURVE_ROLE());
         vm.prank(stranger);
         accounting.setDefaultBondCurve(2);
     }
@@ -4582,10 +4546,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
     }
 
     function test_setBondCurve_RevertWhen_DoesNotHaveRole() public {
-        vm.expectRevert(
-            bytes(accessErrorString(stranger, accounting.SET_BOND_CURVE_ROLE()))
-        );
-
+        expectRoleRevert(stranger, accounting.SET_BOND_CURVE_ROLE());
         vm.prank(stranger);
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
     }
@@ -4609,12 +4570,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
     }
 
     function test_resetBondCurve_RevertWhen_DoesNotHaveRole() public {
-        vm.expectRevert(
-            bytes(
-                accessErrorString(stranger, accounting.RESET_BOND_CURVE_ROLE())
-            )
-        );
-
+        expectRoleRevert(stranger, accounting.RESET_BOND_CURVE_ROLE());
         vm.prank(stranger);
         accounting.resetBondCurve({ nodeOperatorId: 0 });
     }
@@ -4640,9 +4596,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
     }
 
     function test_setFeeDistributor_RevertWhen_DoesNotHaveRole() public {
-        vm.expectRevert(
-            bytes(accessErrorString(stranger, accounting.DEFAULT_ADMIN_ROLE()))
-        );
+        expectRoleRevert(stranger, accounting.DEFAULT_ADMIN_ROLE());
 
         vm.prank(stranger);
         accounting.setFeeDistributor(address(1337));

@@ -4,6 +4,7 @@ pragma solidity 0.8.21;
 
 import { CommonBase } from "forge-std/Base.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 /// @author madlabman
 contract Utilities is CommonBase {
@@ -75,23 +76,18 @@ contract Utilities is CommonBase {
         }
     }
 
-    /// @dev from OpenZeppelin Contracts v4.4.1 (access/AccessControl.sol)
-    function accessErrorString(
-        address account,
-        bytes32 role
-    ) internal pure returns (string memory) {
-        return
-            string(
-                abi.encodePacked(
-                    "AccessControl: account ",
-                    Strings.toHexString(uint160(account), 20),
-                    " is missing role ",
-                    Strings.toHexString(uint256(role), 32)
-                )
-            );
-    }
-
     function expectNoCall(address where, bytes memory data) internal {
         vm.expectCall(where, data, 0);
+    }
+
+    function expectRoleRevert(address account, bytes32 neededRole) internal {
+        // TODO: improve error message if possible
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                account,
+                neededRole
+            )
+        );
     }
 }

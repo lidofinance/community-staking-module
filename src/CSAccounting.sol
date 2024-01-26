@@ -5,7 +5,7 @@
 pragma solidity 0.8.21;
 
 import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
-import { AccessControlEnumerable } from "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
+import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 
 import { CSBondCore } from "./CSBondCore.sol";
 import { CSBondCurve } from "./CSBondCurve.sol";
@@ -96,7 +96,7 @@ contract CSAccounting is
             revert ZeroAddress("communityStakingModule");
         }
 
-        _setupRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
         CSM = ICSModule(communityStakingModule);
     }
