@@ -5,6 +5,8 @@ pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
 
+import { PausableUntil } from "../lib/base-oracle/utils/PausableUntil.sol";
+
 import { IBurner } from "../src/interfaces/IBurner.sol";
 import { ICSModule } from "../src/interfaces/ICSModule.sol";
 import { IStakingModule } from "../src/interfaces/IStakingModule.sol";
@@ -98,6 +100,8 @@ contract CSAccountingBaseTest is
 
         vm.startPrank(admin);
         accounting.setFeeDistributor(address(feeDistributor));
+        accounting.grantRole(accounting.PAUSE_ROLE(), admin);
+        accounting.grantRole(accounting.RESUME_ROLE(), admin);
         accounting.grantRole(accounting.INSTANT_PENALIZE_BOND_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_LOCK_ROLE(), admin);
         accounting.grantRole(accounting.RELEASE_BOND_LOCK_ROLE(), admin);
@@ -159,6 +163,200 @@ contract CSAccountingBaseTest is
             abi.encodeWithSelector(ICSFeeDistributor.distributeFees.selector),
             abi.encode(returnValue)
         );
+    }
+}
+
+contract CSAccountingPauseTest is CSAccountingBaseTest {
+    function test_notPausedByDefault() public {
+        assertFalse(accounting.isPaused());
+    }
+
+    function test_pauseFor() public {
+        vm.prank(admin);
+        accounting.pauseFor(1 days);
+        assertTrue(accounting.isPaused());
+    }
+
+    function test_resume() public {
+        vm.prank(admin);
+        accounting.pauseFor(1 days);
+
+        vm.prank(admin);
+        accounting.resume();
+        assertFalse(accounting.isPaused());
+    }
+
+    function test_auto_resume() public {
+        vm.prank(admin);
+        accounting.pauseFor(1 days);
+        assertTrue(accounting.isPaused());
+        vm.warp(block.timestamp + 1 days + 1 seconds);
+        assertFalse(accounting.isPaused());
+    }
+
+    function test_pause_RevertWhen_notAdmin() public {
+        vm.expectRevert(
+            bytes(accessErrorString(stranger, accounting.PAUSE_ROLE()))
+        );
+        vm.prank(stranger);
+        accounting.pauseFor(1 days);
+    }
+
+    function test_resume_RevertWhen_notAdmin() public {
+        vm.prank(admin);
+        accounting.pauseFor(1 days);
+
+        vm.expectRevert(
+            bytes(accessErrorString(stranger, accounting.RESUME_ROLE()))
+        );
+        vm.prank(stranger);
+        accounting.resume();
+    }
+}
+
+contract CSAccountingPauseAffectingTest is CSAccountingBaseTest {
+    function setUp() public override {
+        super.setUp();
+        vm.prank(admin);
+        accounting.pauseFor(1 days);
+    }
+
+    function test_setFeeDistributor_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        vm.prank(admin);
+        accounting.setFeeDistributor(address(1));
+    }
+
+    function test_setLockedBondRetentionPeriod_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        vm.prank(admin);
+        accounting.setLockedBondRetentionPeriod(1 days);
+    }
+
+    function test_addBondCurve_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        vm.prank(admin);
+        accounting.addBondCurve(new uint256[](1));
+    }
+
+    function test_setDefaultBondCurve_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        vm.prank(admin);
+        accounting.setDefaultBondCurve(1);
+    }
+
+    function test_setBondCurve_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        vm.prank(admin);
+        accounting.setBondCurve(0, 1);
+    }
+
+    function test_resetBondCurve_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        vm.prank(admin);
+        accounting.resetBondCurve(0);
+    }
+
+    function test_depositETH_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        accounting.depositETH{ value: 1 ether }(address(user), 0);
+    }
+
+    function test_depositStETH_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        accounting.depositStETH(address(user), 0, 1 ether);
+    }
+
+    function test_depositStETHWithPermit_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        accounting.depositStETHWithPermit(
+            address(user),
+            0,
+            1 ether,
+            CSAccounting.PermitInput({
+                value: 1 ether,
+                deadline: type(uint256).max,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
+    function test_depositWstETH_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        accounting.depositWstETH(address(user), 0, 1 ether);
+    }
+
+    function test_depositWstETHWithPermit_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        accounting.depositWstETHWithPermit(
+            address(user),
+            0,
+            1 ether,
+            CSAccounting.PermitInput({
+                value: 1 ether,
+                deadline: type(uint256).max,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
+    function test_claimExcessBondStETH_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        accounting.claimExcessBondStETH(0, 1 ether);
+    }
+
+    function test_claimRewardsStETH_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        accounting.claimRewardsStETH(new bytes32[](1), 0, 1 ether, 1 ether);
+    }
+
+    function test_claimExcessBondWstETH_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        accounting.claimExcessBondWstETH(0, 1 ether);
+    }
+
+    function test_claimRewardsWstETH_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        accounting.claimRewardsWstETH(new bytes32[](1), 0, 1 ether, 1 ether);
+    }
+
+    function test_requestExcessBondETH_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        accounting.requestExcessBondETH(0, 1 ether);
+    }
+
+    function test_requestRewardsETH_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        accounting.requestRewardsETH(new bytes32[](1), 0, 1 ether, 1 ether);
+    }
+
+    function test_lockBondETH_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        accounting.lockBondETH(0, 1 ether);
+    }
+
+    function test_releaseLockedBondETH_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        accounting.releaseLockedBondETH(0, 1 ether);
+    }
+
+    function test_compensateLockedBondETH_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        accounting.compensateLockedBondETH{ value: 1 ether }(0);
+    }
+
+    function test_settleLockedBondETH_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        accounting.settleLockedBondETH(0);
+    }
+
+    function test_penalize_RevertWhen_Paused() public {
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        accounting.penalize(0, 1 ether);
     }
 }
 

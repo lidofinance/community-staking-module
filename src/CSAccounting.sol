@@ -4,6 +4,7 @@
 // solhint-disable-next-line one-contract-per-file
 pragma solidity 0.8.21;
 
+import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
 import { CSBondCore } from "./CSBondCore.sol";
@@ -28,6 +29,7 @@ contract CSAccounting is
     CSBondCurve,
     CSBondLock,
     CSAccountingBase,
+    PausableUntil,
     AccessControlEnumerable
 {
     struct PermitInput {
@@ -99,11 +101,22 @@ contract CSAccounting is
         CSM = ICSModule(communityStakingModule);
     }
 
+    /// @notice Resume accounting
+    function resume() external whenPaused onlyRole(RESUME_ROLE) {
+        _resume();
+    }
+
+    /// @notice Pause accounting
+    /// @param duration Duration of the pause
+    function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
+        _pauseFor(duration);
+    }
+
     /// @notice Sets fee distributor contract address.
     /// @param fdAddress fee distributor contract address.
     function setFeeDistributor(
         address fdAddress
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external whenResumed onlyRole(DEFAULT_ADMIN_ROLE) {
         feeDistributor = fdAddress;
     }
 
@@ -111,7 +124,7 @@ contract CSAccounting is
     /// @param retention period in seconds to retain bond lock
     function setLockedBondRetentionPeriod(
         uint256 retention
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external whenResumed onlyRole(DEFAULT_ADMIN_ROLE) {
         // TODO: is it admin role?
         CSBondLock._setBondLockRetentionPeriod(retention);
     }
@@ -120,7 +133,7 @@ contract CSAccounting is
     /// @param bondCurve bond curve to add.
     function addBondCurve(
         uint256[] memory bondCurve
-    ) external onlyRole(ADD_BOND_CURVE_ROLE) {
+    ) external whenResumed onlyRole(ADD_BOND_CURVE_ROLE) {
         CSBondCurve._addBondCurve(bondCurve);
     }
 
@@ -128,7 +141,7 @@ contract CSAccounting is
     /// @param curveId id of the bond curve to set as default.
     function setDefaultBondCurve(
         uint256 curveId
-    ) external onlyRole(SET_DEFAULT_BOND_CURVE_ROLE) {
+    ) external whenResumed onlyRole(SET_DEFAULT_BOND_CURVE_ROLE) {
         CSBondCurve._setDefaultBondCurve(curveId);
     }
 
@@ -138,7 +151,7 @@ contract CSAccounting is
     function setBondCurve(
         uint256 nodeOperatorId,
         uint256 curveId
-    ) external onlyRole(SET_BOND_CURVE_ROLE) {
+    ) external whenResumed onlyRole(SET_BOND_CURVE_ROLE) {
         CSBondCurve._setBondCurve(nodeOperatorId, curveId);
     }
 
@@ -146,18 +159,8 @@ contract CSAccounting is
     /// @param nodeOperatorId id of the node operator to reset bond curve for.
     function resetBondCurve(
         uint256 nodeOperatorId
-    ) external onlyRole(RESET_BOND_CURVE_ROLE) {
+    ) external whenResumed onlyRole(RESET_BOND_CURVE_ROLE) {
         CSBondCurve._resetBondCurve(nodeOperatorId);
-    }
-
-    /// @notice Pauses accounting by DAO decision.
-    function pauseAccounting() external onlyRole(PAUSE_ROLE) {
-        // TODO: implement me
-    }
-
-    /// @notice Unpauses accounting by DAO decision.
-    function resumeAccounting() external onlyRole(RESUME_ROLE) {
-        // TODO: implement me
     }
 
     /// @notice Returns current and required bond amount in ETH (stETH) for the given node operator.
@@ -355,6 +358,7 @@ contract CSAccounting is
     )
         external
         payable
+        whenResumed
         onlyExistingNodeOperator(nodeOperatorId)
         returns (uint256)
     {
@@ -372,7 +376,12 @@ contract CSAccounting is
         address from,
         uint256 nodeOperatorId,
         uint256 stETHAmount
-    ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
+    )
+        external
+        whenResumed
+        onlyExistingNodeOperator(nodeOperatorId)
+        returns (uint256)
+    {
         // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
         return CSBondCore._depositStETH(from, nodeOperatorId, stETHAmount);
@@ -390,7 +399,12 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 stETHAmount,
         PermitInput calldata permit
-    ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
+    )
+        external
+        whenResumed
+        onlyExistingNodeOperator(nodeOperatorId)
+        returns (uint256)
+    {
         // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
         // preventing revert for already used permit
@@ -419,7 +433,12 @@ contract CSAccounting is
         address from,
         uint256 nodeOperatorId,
         uint256 wstETHAmount
-    ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
+    )
+        external
+        whenResumed
+        onlyExistingNodeOperator(nodeOperatorId)
+        returns (uint256)
+    {
         // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
         return CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
@@ -437,7 +456,12 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
         PermitInput calldata permit
-    ) external onlyExistingNodeOperator(nodeOperatorId) returns (uint256) {
+    )
+        external
+        whenResumed
+        onlyExistingNodeOperator(nodeOperatorId)
+        returns (uint256)
+    {
         // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
         // preventing revert for already used permit
@@ -472,7 +496,7 @@ contract CSAccounting is
     function claimExcessBondStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
+    ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
         );
@@ -495,7 +519,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
         uint256 stETHAmount
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
+    ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
         // TODO: reorder ops to use only one func (first is pull) ???
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
@@ -522,7 +546,7 @@ contract CSAccounting is
     function claimExcessBondWstETH(
         uint256 nodeOperatorId,
         uint256 wstETHAmount
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
+    ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
         );
@@ -551,7 +575,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
         uint256 wstETHAmount
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
+    ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
         );
@@ -572,7 +596,7 @@ contract CSAccounting is
     function requestExcessBondETH(
         uint256 nodeOperatorId,
         uint256 ethAmount
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
+    ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
         );
@@ -596,7 +620,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
         uint256 ethAmount
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
+    ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
         );
@@ -635,6 +659,7 @@ contract CSAccounting is
         uint256 amount
     )
         external
+        whenResumed
         onlyExistingNodeOperator(nodeOperatorId)
         onlyRole(SET_BOND_LOCK_ROLE)
     {
@@ -650,6 +675,7 @@ contract CSAccounting is
         uint256 amount
     )
         external
+        whenResumed
         onlyRole(RELEASE_BOND_LOCK_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
@@ -661,7 +687,7 @@ contract CSAccounting is
     /// @param nodeOperatorId id of the node operator to compensate locked bond for.
     function compensateLockedBondETH(
         uint256 nodeOperatorId
-    ) external payable onlyExistingNodeOperator(nodeOperatorId) {
+    ) external payable whenResumed onlyExistingNodeOperator(nodeOperatorId) {
         payable(LIDO_LOCATOR.elRewardsVault()).transfer(msg.value);
         CSBondLock._reduceAmount(nodeOperatorId, msg.value);
         emit BondLockCompensated(nodeOperatorId, msg.value);
@@ -671,7 +697,7 @@ contract CSAccounting is
     /// @param nodeOperatorId id of the node operator to settle locked bond for.
     function settleLockedBondETH(
         uint256 nodeOperatorId
-    ) external onlyRole(SETTLE_BOND_LOCK_ROLE) {
+    ) external whenResumed onlyRole(SETTLE_BOND_LOCK_ROLE) {
         uint256 lockedAmount = CSBondLock.getActualLockedBond(nodeOperatorId);
         if (lockedAmount > 0) {
             CSBondCore._burn(nodeOperatorId, lockedAmount);
@@ -686,7 +712,7 @@ contract CSAccounting is
     function penalize(
         uint256 nodeOperatorId,
         uint256 amount
-    ) public onlyRole(INSTANT_PENALIZE_BOND_ROLE) {
+    ) public whenResumed onlyRole(INSTANT_PENALIZE_BOND_ROLE) {
         CSBondCore._burn(nodeOperatorId, amount);
     }
 
