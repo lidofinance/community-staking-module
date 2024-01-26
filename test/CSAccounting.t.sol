@@ -195,9 +195,7 @@ contract CSAccountingPauseTest is CSAccountingBaseTest {
     }
 
     function test_pause_RevertWhen_notAdmin() public {
-        vm.expectRevert(
-            bytes(accessErrorString(stranger, accounting.PAUSE_ROLE()))
-        );
+        expectRoleRevert(stranger, accounting.PAUSE_ROLE());
         vm.prank(stranger);
         accounting.pauseFor(1 days);
     }
@@ -206,9 +204,7 @@ contract CSAccountingPauseTest is CSAccountingBaseTest {
         vm.prank(admin);
         accounting.pauseFor(1 days);
 
-        vm.expectRevert(
-            bytes(accessErrorString(stranger, accounting.RESUME_ROLE()))
-        );
+        expectRoleRevert(stranger, accounting.RESUME_ROLE());
         vm.prank(stranger);
         accounting.resume();
     }
