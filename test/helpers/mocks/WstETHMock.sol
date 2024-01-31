@@ -12,6 +12,8 @@ contract WstETHMock is PermitTokenBase {
     mapping(address => uint256) public _balance;
     uint256 public _totalSupply;
 
+    error NotEnoughBalance(uint256 balance);
+
     /**
      * @param _stETH address of the StETH token to wrap
      */
@@ -44,6 +46,9 @@ contract WstETHMock is PermitTokenBase {
         address recipient,
         uint256 amount
     ) public {
+        if (_balance[sender] < amount) {
+            revert NotEnoughBalance(_balance[sender]);
+        }
         _balance[sender] -= amount;
         _balance[recipient] += amount;
     }

@@ -13,7 +13,7 @@ import "./helpers/mocks/LidoMock.sol";
 import "./helpers/mocks/WstETHMock.sol";
 import "./helpers/Utilities.sol";
 
-contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
+abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
     using Strings for uint256;
 
     struct BatchInfo {
@@ -54,48 +54,7 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
         uint256 depositableValidatorsCount;
     }
 
-    function setUp() public {
-        nodeOperator = nextAddress("NODE_OPERATOR");
-        stranger = nextAddress("STRANGER");
-        admin = nextAddress("ADMIN");
-
-        (locator, wstETH, stETH, ) = initLido();
-
-        // FIXME: move to the corresponding tests
-        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
-        vm.prank(nodeOperator);
-        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
-
-        communityStakingFeeDistributor = new Stub();
-        csm = new CSModule("community-staking-module", address(locator));
-        uint256[] memory curve = new uint256[](1);
-        curve[0] = BOND_SIZE;
-        accounting = new CSAccounting(
-            curve,
-            admin,
-            address(locator),
-            address(wstETH),
-            address(csm),
-            8 weeks
-        );
-        csm.setAccounting(address(accounting));
-        csm.setUnvettingFee(0.05 ether);
-
-        vm.startPrank(admin);
-        accounting.grantRole(
-            accounting.INSTANT_PENALIZE_BOND_ROLE(),
-            address(csm)
-        );
-        accounting.grantRole(accounting.SET_BOND_LOCK_ROLE(), address(csm));
-        accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm));
-        accounting.grantRole(accounting.RELEASE_BOND_LOCK_ROLE(), address(csm));
-        accounting.grantRole(accounting.SETTLE_BOND_LOCK_ROLE(), address(csm));
-        accounting.grantRole(
-            accounting.INSTANT_CHARGE_FEE_FROM_BOND_ROLE(),
-            address(csm)
-        );
-        vm.stopPrank();
-    }
+    function setUp() public virtual {}
 
     function createNodeOperator() internal returns (uint256) {
         return createNodeOperator(nodeOperator, 1);
@@ -244,6 +203,104 @@ contract CSMCommon is Test, Fixtures, Utilities, CSModuleBase {
     }
 }
 
+contract CSMCommon is CSMFixtures {
+    function setUp() public override {
+        nodeOperator = nextAddress("NODE_OPERATOR");
+        stranger = nextAddress("STRANGER");
+        admin = nextAddress("ADMIN");
+
+        (locator, wstETH, stETH, ) = initLido();
+
+        communityStakingFeeDistributor = new Stub();
+        csm = new CSModule("community-staking-module", address(locator));
+        csm.grantRole(csm.SET_ACCOUNTING_ROLE(), address(this));
+        csm.grantRole(csm.MANAGE_UNVETTING_FEE_ROLE(), address(this));
+        csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(this));
+        csm.grantRole(csm.KEY_VALIDATOR_ROLE(), address(this));
+        csm.grantRole(
+            csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE(),
+            address(this)
+        );
+        csm.grantRole(
+            csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(),
+            address(this)
+        );
+        csm.grantRole(csm.PENALIZE_ROLE(), address(this));
+        csm.grantRole(csm.UNSAFE_UPDATE_VALIDATORS_COUNT_ROLE(), address(this));
+        csm.grantRole(csm.WITHDRAWAL_SUBMITTER_ROLE(), address(this));
+
+        uint256[] memory curve = new uint256[](1);
+        curve[0] = BOND_SIZE;
+        accounting = new CSAccounting(
+            curve,
+            admin,
+            address(locator),
+            address(wstETH),
+            address(csm),
+            8 weeks
+        );
+        csm.setAccounting(address(accounting));
+        csm.setUnvettingFee(0.05 ether);
+
+        vm.startPrank(admin);
+        accounting.grantRole(
+            accounting.INSTANT_PENALIZE_BOND_ROLE(),
+            address(csm)
+        );
+        accounting.grantRole(accounting.SET_BOND_LOCK_ROLE(), address(csm));
+        accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm));
+        accounting.grantRole(accounting.RELEASE_BOND_LOCK_ROLE(), address(csm));
+        accounting.grantRole(accounting.SETTLE_BOND_LOCK_ROLE(), address(csm));
+        accounting.grantRole(
+            accounting.INSTANT_CHARGE_FEE_FROM_BOND_ROLE(),
+            address(csm)
+        );
+        vm.stopPrank();
+    }
+}
+
+contract CSMCommonNoRoles is CSMFixtures {
+    function setUp() public override {
+        nodeOperator = nextAddress("NODE_OPERATOR");
+        stranger = nextAddress("STRANGER");
+        admin = nextAddress("ADMIN");
+
+        (locator, wstETH, stETH, ) = initLido();
+
+        communityStakingFeeDistributor = new Stub();
+        csm = new CSModule("community-staking-module", address(locator));
+        csm.grantRole(csm.SET_ACCOUNTING_ROLE(), address(this));
+
+        uint256[] memory curve = new uint256[](1);
+        curve[0] = BOND_SIZE;
+        accounting = new CSAccounting(
+            curve,
+            admin,
+            address(locator),
+            address(wstETH),
+            address(csm),
+            8 weeks
+        );
+        csm.setAccounting(address(accounting));
+        csm.setUnvettingFee(0.05 ether);
+
+        vm.startPrank(admin);
+        accounting.grantRole(
+            accounting.INSTANT_PENALIZE_BOND_ROLE(),
+            address(csm)
+        );
+        accounting.grantRole(accounting.SET_BOND_LOCK_ROLE(), address(csm));
+        accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm));
+        accounting.grantRole(accounting.RELEASE_BOND_LOCK_ROLE(), address(csm));
+        accounting.grantRole(accounting.SETTLE_BOND_LOCK_ROLE(), address(csm));
+        accounting.grantRole(
+            accounting.INSTANT_CHARGE_FEE_FROM_BOND_ROLE(),
+            address(csm)
+        );
+        vm.stopPrank();
+    }
+}
+
 contract CsmInitialization is CSMCommon {
     function test_initContract() public {
         csm = new CSModule("community-staking-module", address(locator));
@@ -253,6 +310,7 @@ contract CsmInitialization is CSMCommon {
 
     function test_setAccounting() public {
         csm = new CSModule("community-staking-module", address(locator));
+        csm.grantRole(csm.SET_ACCOUNTING_ROLE(), address(this));
         csm.setAccounting(address(accounting));
         assertEq(address(csm.accounting()), address(accounting));
     }
@@ -264,7 +322,9 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
+        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
         vm.startPrank(nodeOperator);
+        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
         wstETH.wrap(BOND_SIZE + 1 wei);
         uint256 nonce = csm.getNonce();
 
@@ -285,7 +345,9 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
-        vm.prank(nodeOperator);
+        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
         uint256 wstETHAmount = wstETH.wrap(BOND_SIZE);
         uint256 nonce = csm.getNonce();
 
@@ -298,7 +360,6 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             emit NodeOperatorAdded(0, nodeOperator);
         }
 
-        vm.prank(nodeOperator);
         csm.addNodeOperatorWstETHWithPermit(
             1,
             keys,
@@ -333,21 +394,14 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
     }
 
     function test_AddValidatorKeysWstETHWithPermit() public {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.startPrank(nodeOperator);
+        uint256 noId = createNodeOperator();
         uint256 toWrap = BOND_SIZE + 1 wei;
-        wstETH.wrap(toWrap);
-        csm.addNodeOperatorWstETH(1, keys, signatures);
-        uint256 noId = csm.getNodeOperatorsCount() - 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
 
         vm.deal(nodeOperator, toWrap);
+        vm.startPrank(nodeOperator);
         stETH.submit{ value: toWrap }(address(0));
         uint256 wstETHAmount = wstETH.wrap(toWrap);
-        vm.stopPrank();
-        (keys, signatures) = keysSignatures(keysCount, 1);
         uint256 nonce = csm.getNonce();
         {
             vm.expectEmit(true, true, true, true, address(wstETH));
@@ -355,7 +409,6 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 2);
         }
-        vm.prank(nodeOperator);
         csm.addValidatorKeysWstETHWithPermit(
             noId,
             1,
@@ -378,6 +431,10 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
+        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
+        vm.prank(nodeOperator);
+        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+
         uint256 nonce = csm.getNonce();
 
         {
@@ -398,6 +455,10 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
+        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
+        vm.prank(nodeOperator);
+        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+
         uint256 nonce = csm.getNonce();
 
         {
@@ -431,9 +492,9 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         uint256 noId = createNodeOperator();
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
 
-        vm.deal(nodeOperator, BOND_SIZE);
+        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
         vm.startPrank(nodeOperator);
-        stETH.submit{ value: BOND_SIZE }(address(0));
+        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
         uint256 nonce = csm.getNonce();
 
         {
@@ -445,13 +506,8 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
     }
 
     function test_AddValidatorKeysStETHWithPermit() public {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorStETH(1, keys, signatures);
-        uint256 noId = csm.getNodeOperatorsCount() - 1;
+        uint256 noId = createNodeOperator();
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
 
         uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
         vm.deal(nodeOperator, required);
