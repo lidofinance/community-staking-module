@@ -6,6 +6,7 @@ pragma solidity 0.8.21;
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
@@ -117,6 +118,7 @@ contract CSModuleBase {
     error SenderIsNotManagerAddress();
     error SenderIsNotRewardAddress();
     error SenderIsNotProposedAddress();
+    error SenderIsNotManagerOrKeyValidator();
     error SameAddress();
     error ZeroAddress(string field);
     error AlreadyProposed();
@@ -146,8 +148,26 @@ contract CSModuleBase {
     error InvalidAmount();
 }
 
-contract CSModule is ICSModule, CSModuleBase {
+contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
     using QueueLib for QueueLib.Queue;
+
+    bytes32 public constant SET_ACCOUNTING_ROLE =
+        keccak256("SET_ACCOUNTING_ROLE");
+    bytes32 public constant MANAGE_UNVETTING_FEE_ROLE =
+        keccak256("MANAGE_UNVETTING_FEE");
+    bytes32 public constant STAKING_ROUTER_ROLE =
+        keccak256("STAKING_ROUTER_ROLE");
+    bytes32 public constant KEY_VALIDATOR_ROLE =
+        keccak256("KEY_VALIDATOR_ROLE");
+    bytes32 public constant UNSAFE_UPDATE_VALIDATORS_COUNT_ROLE =
+        keccak256("UNSAFE_UPDATE_VALIDATORS_COUNT_ROLE");
+    bytes32 public constant REPORT_EL_REWARDS_STEALING_PENALTY_ROLE =
+        keccak256("REPORT_EL_REWARDS_STEALING_PENALTY_ROLE");
+    bytes32 public constant SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE =
+        keccak256("SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE");
+    bytes32 public constant WITHDRAWAL_SUBMITTER_ROLE =
+        keccak256("WITHDRAWAL_SUBMITTER_ROLE");
+    bytes32 public constant PENALIZE_ROLE = keccak256("PENALIZE_ROLE");
 
     // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
     // it seems to be enough
@@ -194,12 +214,15 @@ contract CSModule is ICSModule, CSModuleBase {
         }
         lidoLocator = ILidoLocator(locator);
         emit LocatorContractSet(locator);
+
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     /// @notice Sets the accounting contract
     /// @param _accounting Address of the accounting contract
-    function setAccounting(address _accounting) external {
-        // TODO: add role check
+    function setAccounting(
+        address _accounting
+    ) external onlyRole(SET_ACCOUNTING_ROLE) {
         if (address(accounting) != address(0)) {
             revert AlreadyInitialized();
         }
@@ -208,7 +231,9 @@ contract CSModule is ICSModule, CSModuleBase {
 
     /// @notice Sets the unvetting fee
     /// @param _unvettingFee Amount of wei to be charged for unvetting in some cases
-    function setUnvettingFee(uint256 _unvettingFee) external {
+    function setUnvettingFee(
+        uint256 _unvettingFee
+    ) external onlyRole(MANAGE_UNVETTING_FEE_ROLE) {
         // TODO: add role check
         unvettingFee = _unvettingFee;
         emit UnvettingFeeSet(_unvettingFee);
@@ -780,7 +805,9 @@ contract CSModule is ICSModule, CSModuleBase {
 
     /// @notice Called when rewards minted for the module
     /// @dev Empty due to oracle using CSM balance for distribution
-    function onRewardsMinted(uint256 /*_totalShares*/) external {
+    function onRewardsMinted(
+        uint256 /*_totalShares*/
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
         // TODO: staking router role only
     }
 
@@ -813,7 +840,7 @@ contract CSModule is ICSModule, CSModuleBase {
     function updateStuckValidatorsCount(
         bytes calldata nodeOperatorIds,
         bytes calldata stuckValidatorsCounts
-    ) external onlyStakingRouter {
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
         ValidatorCountsReport.validate(nodeOperatorIds, stuckValidatorsCounts);
 
         for (
@@ -851,7 +878,7 @@ contract CSModule is ICSModule, CSModuleBase {
     function updateExitedValidatorsCount(
         bytes calldata nodeOperatorIds,
         bytes calldata exitedValidatorsCounts
-    ) external onlyStakingRouter {
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
         ValidatorCountsReport.validate(nodeOperatorIds, exitedValidatorsCounts);
 
         for (
@@ -897,7 +924,7 @@ contract CSModule is ICSModule, CSModuleBase {
     function updateRefundedValidatorsCount(
         uint256 nodeOperatorId,
         uint256 refundedValidatorsCount
-    ) external {
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
         // TODO: implement
         _incrementModuleNonce();
     }
@@ -911,7 +938,11 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 nodeOperatorId,
         bool isTargetLimitActive,
         uint256 targetLimit
-    ) external onlyExistingNodeOperator(nodeOperatorId) onlyStakingRouter {
+    )
+        external
+        onlyExistingNodeOperator(nodeOperatorId)
+        onlyRole(STAKING_ROUTER_ROLE)
+    {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         if (
@@ -944,7 +975,10 @@ contract CSModule is ICSModule, CSModuleBase {
     }
 
     /// @notice Called when exited and stuck validators counts updated by StakingRouter
-    function onExitedAndStuckValidatorsCountsUpdated() external {
+    function onExitedAndStuckValidatorsCountsUpdated()
+        external
+        onlyRole(STAKING_ROUTER_ROLE)
+    {
         // TODO: implement
     }
 
@@ -956,7 +990,7 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 nodeOperatorId,
         uint256 exitedValidatorsKeysCount,
         uint256 stuckValidatorsKeysCount
-    ) external {
+    ) external onlyRole(UNSAFE_UPDATE_VALIDATORS_COUNT_ROLE) {
         // TODO: implement
         _updateDepositableValidatorsCount(nodeOperatorId);
         _incrementModuleNonce();
@@ -968,7 +1002,11 @@ contract CSModule is ICSModule, CSModuleBase {
     function vetKeys(
         uint256 nodeOperatorId,
         uint64 vetKeysPointer
-    ) external onlyExistingNodeOperator(nodeOperatorId) onlyKeyValidator {
+    )
+        external
+        onlyExistingNodeOperator(nodeOperatorId)
+        onlyRole(KEY_VALIDATOR_ROLE)
+    {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         if (vetKeysPointer <= no.totalVettedKeys)
@@ -1018,7 +1056,7 @@ contract CSModule is ICSModule, CSModuleBase {
     )
         external
         onlyExistingNodeOperator(nodeOperatorId)
-        onlyKeyValidatorOrNodeOperatorManager
+        onlyKeyValidatorOrNodeOperatorManager(nodeOperatorId)
     {
         _unvetKeys(nodeOperatorId);
         _applyUnvettingFee(nodeOperatorId);
@@ -1028,7 +1066,9 @@ contract CSModule is ICSModule, CSModuleBase {
     /// @notice Unsafe unvetting of keys by DAO
     /// @dev Doesn't charge fee
     /// @param nodeOperatorId ID of the node operator
-    function unsafeUnvetKeys(uint256 nodeOperatorId) external onlyKeyValidator {
+    function unsafeUnvetKeys(
+        uint256 nodeOperatorId
+    ) external onlyRole(KEY_VALIDATOR_ROLE) {
         _unvetKeys(nodeOperatorId);
         _incrementModuleNonce();
     }
@@ -1095,7 +1135,11 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 nodeOperatorId,
         uint256 blockNumber,
         uint256 amount
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
+    )
+        external
+        onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE)
+        onlyExistingNodeOperator(nodeOperatorId)
+    {
         // TODO: check role
         emit ELRewardsStealingPenaltyReported(
             nodeOperatorId,
@@ -1116,7 +1160,7 @@ contract CSModule is ICSModule, CSModuleBase {
     /// @param nodeOperatorIds ids of the node operators to settle blocked bond for.
     function settleELRewardsStealingPenalty(
         uint256[] memory nodeOperatorIds
-    ) public {
+    ) external onlyRole(SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE) {
         for (uint256 i; i < nodeOperatorIds.length; ++i) {
             uint256 nodeOperatorId = nodeOperatorIds[i];
             if (nodeOperatorId >= _nodeOperatorsCount)
@@ -1136,7 +1180,7 @@ contract CSModule is ICSModule, CSModuleBase {
     )
         public
         onlyExistingNodeOperator(nodeOperatorId)
-        onlyPenalizer
+        onlyRole(PENALIZE_ROLE)
         whenNotExpired
     {
         // TODO: check role
@@ -1153,7 +1197,11 @@ contract CSModule is ICSModule, CSModuleBase {
         uint256 nodeOperatorId,
         uint256 keyIndex,
         uint256 amount
-    ) external onlyExistingNodeOperator(nodeOperatorId) onlyWithdrawalReporter {
+    )
+        external
+        onlyExistingNodeOperator(nodeOperatorId)
+        onlyRole(WITHDRAWAL_SUBMITTER_ROLE)
+    {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (keyIndex >= no.totalDepositedKeys) {
             revert SigningKeysInvalidOffset();
@@ -1209,7 +1257,10 @@ contract CSModule is ICSModule, CSModuleBase {
     }
 
     /// @notice Called when withdrawal credentials changed by DAO
-    function onWithdrawalCredentialsChanged() external {
+    function onWithdrawalCredentialsChanged()
+        external
+        onlyRole(STAKING_ROUTER_ROLE)
+    {
         // solhint-disable-next-line custom-errors
         revert("NOT_IMPLEMENTED");
     }
@@ -1281,7 +1332,11 @@ contract CSModule is ICSModule, CSModuleBase {
     function obtainDepositData(
         uint256 depositsCount,
         bytes calldata /* depositCalldata */
-    ) external returns (bytes memory publicKeys, bytes memory signatures) {
+    )
+        external
+        onlyRole(STAKING_ROUTER_ROLE)
+        returns (bytes memory publicKeys, bytes memory signatures)
+    {
         (publicKeys, signatures) = SigningKeys.initKeysSigsBuf(depositsCount);
         uint256 depositsLeft = depositsCount;
         uint256 loadedKeysCount = 0;
@@ -1489,40 +1544,13 @@ contract CSModule is ICSModule, CSModuleBase {
         _;
     }
 
-    modifier onlyActiveNodeOperator(uint256 nodeOperatorId) {
-        if (nodeOperatorId >= _nodeOperatorsCount) {
-            revert NodeOperatorDoesNotExist();
+    modifier onlyKeyValidatorOrNodeOperatorManager(uint256 nodeOperatorId) {
+        if (
+            !hasRole(KEY_VALIDATOR_ROLE, msg.sender) &&
+            _nodeOperators[nodeOperatorId].managerAddress != msg.sender
+        ) {
+            revert SenderIsNotManagerOrKeyValidator();
         }
-        if (!_nodeOperators[nodeOperatorId].active) {
-            revert NodeOperatorInactive();
-        }
-        _;
-    }
-
-    modifier onlyKeyValidatorOrNodeOperatorManager() {
-        // TODO: check the role
-        _;
-    }
-
-    modifier onlyKeyValidator() {
-        // TODO: check the role
-        _;
-    }
-
-    modifier onlyStakingRouter() {
-        // TODO: check the role
-        _;
-    }
-
-    modifier onlyWithdrawalReporter() {
-        // Here should be a role granted to the CSVerifier contract and/or to the DAO/Oracle.
-        // TODO: check the role
-        _;
-    }
-
-    modifier onlyPenalizer() {
-        // Should be assigned to Aragon Agent
-        // TODO: check the role
         _;
     }
 
