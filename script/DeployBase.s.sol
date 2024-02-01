@@ -75,7 +75,8 @@ abstract contract DeployBase is Script {
         {
             CSModule csm = new CSModule({
                 moduleType: "community-staking-module",
-                locator: address(locator)
+                locator: address(locator),
+                admin: address(deployer)
             });
             uint256[] memory curve = new uint256[](2);
             curve[0] = 2 ether;

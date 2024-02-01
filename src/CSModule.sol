@@ -204,7 +204,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
     uint256 private _totalAddedValidators;
     uint256 private _depositableValidatorsCount;
 
-    constructor(bytes32 moduleType, address locator) {
+    constructor(bytes32 moduleType, address locator, address admin) {
         TEMP_METHODS_EXPIRE_TIME = block.timestamp + ONE_YEAR;
         _moduleType = moduleType;
         emit StakingModuleTypeSet(moduleType);
@@ -215,7 +215,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         lidoLocator = ILidoLocator(locator);
         emit LocatorContractSet(locator);
 
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
     /// @notice Sets the accounting contract
@@ -1261,8 +1261,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         external
         onlyRole(STAKING_ROUTER_ROLE)
     {
-        // solhint-disable-next-line custom-errors
-        revert("NOT_IMPLEMENTED");
+        // TODO: implement it
     }
 
     function _addSigningKeys(

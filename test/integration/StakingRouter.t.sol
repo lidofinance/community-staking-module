@@ -39,7 +39,11 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
         vm.label(address(lido), "lido");
         vm.label(address(stakingRouter), "stakingRouter");
 
-        csm = new CSModule("community-staking-module", address(locator));
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            address(this)
+        );
         uint256[] memory curve = new uint256[](2);
         curve[0] = 2 ether;
         curve[1] = 4 ether;
