@@ -1060,8 +1060,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         uint256 nodeOperatorId
     )
         external
-        onlyExistingNodeOperator(nodeOperatorId)
         onlyKeyValidatorOrNodeOperatorManager(nodeOperatorId)
+        onlyExistingNodeOperator(nodeOperatorId)
     {
         _unvetKeys(nodeOperatorId);
         _applyUnvettingFee(nodeOperatorId);

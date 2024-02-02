@@ -2635,6 +2635,25 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.vetKeys(noId, 1);
     }
 
+    function test_keyValidatorRole_unvetKeys() public {
+        uint256 noId = createNodeOperator();
+        bytes32 role = csm.KEY_VALIDATOR_ROLE();
+        vm.prank(admin);
+        csm.grantRole(role, actor);
+
+        vm.prank(actor);
+        csm.unvetKeys(noId);
+    }
+
+    function test_keyValidatorRole_unvetKeys_revert() public {
+        uint256 noId = createNodeOperator();
+        bytes32 role = csm.KEY_VALIDATOR_ROLE();
+
+        vm.prank(stranger);
+        vm.expectRevert(SenderIsNotManagerOrKeyValidator.selector);
+        csm.unvetKeys(noId);
+    }
+
     function test_keyValidatorRole_unsafeUnvetKeys() public {
         uint256 noId = createNodeOperator();
         bytes32 role = csm.KEY_VALIDATOR_ROLE();
