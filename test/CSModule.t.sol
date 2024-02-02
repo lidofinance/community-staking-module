@@ -1757,13 +1757,6 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         vm.expectRevert(NodeOperatorDoesNotExist.selector);
         csm.updateTargetValidatorsLimits(0, true, 1);
     }
-
-    function test_updateTargetValidatorsLimits_RevertWhenNotStakingRouter()
-        public
-    {
-        // TODO implement
-        vm.skip(true);
-    }
 }
 
 contract CsmUpdateStuckValidatorsCount is CSMCommon {
@@ -1819,13 +1812,6 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
             bytes.concat(bytes8(0x0000000000000000)),
             bytes.concat(bytes16(0x00000000000000000000000000000001))
         );
-    }
-
-    function test_updateStuckValidatorsCount_RevertWhenNotStakingRouter()
-        public
-    {
-        // TODO implement
-        vm.skip(true);
     }
 
     function test_updateStuckValidatorsCount_RevertWhenCountMoreThanDeposited()

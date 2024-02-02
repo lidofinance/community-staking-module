@@ -234,7 +234,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
     function setUnvettingFee(
         uint256 _unvettingFee
     ) external onlyRole(MANAGE_UNVETTING_FEE_ROLE) {
-        // TODO: add role check
         unvettingFee = _unvettingFee;
         emit UnvettingFeeSet(_unvettingFee);
     }
@@ -807,9 +806,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
     /// @dev Empty due to oracle using CSM balance for distribution
     function onRewardsMinted(
         uint256 /*_totalShares*/
-    ) external onlyRole(STAKING_ROUTER_ROLE) {
-        // TODO: staking router role only
-    }
+    ) external onlyRole(STAKING_ROUTER_ROLE) {}
 
     function _updateDepositableValidatorsCount(uint256 nodeOperatorId) private {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
@@ -924,7 +921,11 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
     function updateRefundedValidatorsCount(
         uint256 nodeOperatorId,
         uint256 refundedValidatorsCount
-    ) external onlyRole(STAKING_ROUTER_ROLE) {
+    )
+        external
+        onlyRole(STAKING_ROUTER_ROLE)
+        onlyExistingNodeOperator(nodeOperatorId)
+    {
         // TODO: implement
         _incrementModuleNonce();
     }
@@ -940,8 +941,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         uint256 targetLimit
     )
         external
-        onlyExistingNodeOperator(nodeOperatorId)
         onlyRole(STAKING_ROUTER_ROLE)
+        onlyExistingNodeOperator(nodeOperatorId)
     {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
@@ -990,7 +991,11 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         uint256 nodeOperatorId,
         uint256 exitedValidatorsKeysCount,
         uint256 stuckValidatorsKeysCount
-    ) external onlyRole(UNSAFE_UPDATE_VALIDATORS_COUNT_ROLE) {
+    )
+        external
+        onlyRole(UNSAFE_UPDATE_VALIDATORS_COUNT_ROLE)
+        onlyExistingNodeOperator(nodeOperatorId)
+    {
         // TODO: implement
         _updateDepositableValidatorsCount(nodeOperatorId);
         _incrementModuleNonce();
@@ -1004,8 +1009,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         uint64 vetKeysPointer
     )
         external
-        onlyExistingNodeOperator(nodeOperatorId)
         onlyRole(KEY_VALIDATOR_ROLE)
+        onlyExistingNodeOperator(nodeOperatorId)
     {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
@@ -1068,7 +1073,11 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
     /// @param nodeOperatorId ID of the node operator
     function unsafeUnvetKeys(
         uint256 nodeOperatorId
-    ) external onlyRole(KEY_VALIDATOR_ROLE) {
+    )
+        external
+        onlyRole(KEY_VALIDATOR_ROLE)
+        onlyExistingNodeOperator(nodeOperatorId)
+    {
         _unvetKeys(nodeOperatorId);
         _incrementModuleNonce();
     }
@@ -1140,7 +1149,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
-        // TODO: check role
         emit ELRewardsStealingPenaltyReported(
             nodeOperatorId,
             blockNumber,
@@ -1179,11 +1187,10 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         uint256 amount
     )
         public
-        onlyExistingNodeOperator(nodeOperatorId)
         onlyRole(PENALIZE_ROLE)
+        onlyExistingNodeOperator(nodeOperatorId)
         whenNotExpired
     {
-        // TODO: check role
         accounting.penalize(nodeOperatorId, amount);
         _checkForUnbondedKeys(nodeOperatorId);
         _checkForOutOfBond(nodeOperatorId);
@@ -1199,8 +1206,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         uint256 amount
     )
         external
-        onlyExistingNodeOperator(nodeOperatorId)
         onlyRole(WITHDRAWAL_SUBMITTER_ROLE)
+        onlyExistingNodeOperator(nodeOperatorId)
     {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (keyIndex >= no.totalDepositedKeys) {
