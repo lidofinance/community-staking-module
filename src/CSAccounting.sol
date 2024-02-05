@@ -46,21 +46,21 @@ contract CSAccounting is
     bytes32 public constant INSTANT_PENALIZE_BOND_ROLE =
         keccak256("INSTANT_PENALIZE_BOND_ROLE"); // 0x9909cf24c2d3bafa8c229558d86a1b726ba57c3ef6350848dcf434a4181b56c7
     bytes32 public constant INSTANT_CHARGE_FEE_FROM_BOND_ROLE =
-        keccak256("INSTANT_CHARGE_FEE_FROM_BOND_ROLE");
+        keccak256("INSTANT_CHARGE_FEE_FROM_BOND_ROLE"); // 0xece8f3cb3949e8f4e053c19292a7161edae57f79e667a08f84772d8198d54df8
     bytes32 public constant SET_BOND_LOCK_ROLE =
-        keccak256("SET_BOND_LOCK_ROLE"); // 0x36ff2e3971b3c54917aa7f53b6db795a06950983343e75040614a29e789e7bae
+        keccak256("SET_BOND_LOCK_ROLE"); // 0xfa9b78af36a26ccc115afbacb6e455d79c0807d9f93c38a35be31099eb4de46d
     bytes32 public constant RELEASE_BOND_LOCK_ROLE =
-        keccak256("RELEASE_BOND_LOCK_ROLE"); // 0xc2978b4baa6c8ed096f1f65a0b92abc3771cb669afce20daa9a5f3fbcd13dea1
+        keccak256("RELEASE_BOND_LOCK_ROLE"); // 0xf723fcf26e445713fa93db3104d7d11a854bcce37a6d136271a134eb64a0d891
     bytes32 public constant SETTLE_BOND_LOCK_ROLE =
-        keccak256("SETTLE_BOND_LOCK_ROLE");
+        keccak256("SETTLE_BOND_LOCK_ROLE"); // 0x78adbaa1613943d4466440a0e16d915b19f2dfe4ca31c631f92bdbac2de388d7
     bytes32 public constant ADD_BOND_CURVE_ROLE =
-        keccak256("ADD_BOND_CURVE_ROLE");
+        keccak256("ADD_BOND_CURVE_ROLE"); // 0xd2becf7ae0eafe4edadee8d89582631d5922eccd2ac7b3fdf4afbef7595f4512
     bytes32 public constant SET_DEFAULT_BOND_CURVE_ROLE =
-        keccak256("SET_DEFAULT_BOND_CURVE_ROLE");
+        keccak256("SET_DEFAULT_BOND_CURVE_ROLE"); // 0xb96689e168af25a79300d9b242da3d0653f6030e5c7a93192007dbd3f520875b
     bytes32 public constant SET_BOND_CURVE_ROLE =
-        keccak256("SET_BOND_CURVE_ROLE");
+        keccak256("SET_BOND_CURVE_ROLE"); // 0x645c9e6d2a86805cb5a28b1e4751c0dab493df7cf935070ce405489ba1a7bf72
     bytes32 public constant RESET_BOND_CURVE_ROLE =
-        keccak256("RESET_BOND_CURVE_ROLE");
+        keccak256("RESET_BOND_CURVE_ROLE"); // 0xb5dffea014b759c493d63b1edaceb942631d6468998125e1b4fe427c99082134
 
     uint256 public constant TOTAL_BASIS_POINTS = 10_000; // 100%
     // TODO: should be reconsidered. is it should be absolute value or percent?

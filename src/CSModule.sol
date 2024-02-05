@@ -152,22 +152,24 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
     using QueueLib for QueueLib.Queue;
 
     bytes32 public constant SET_ACCOUNTING_ROLE =
-        keccak256("SET_ACCOUNTING_ROLE");
+        keccak256("SET_ACCOUNTING_ROLE"); // 0xbad3cb5f7add8fade9c376f76021c1c4106ee82e38abc73f6e8d234042d33f7d
     bytes32 public constant MANAGE_UNVETTING_FEE_ROLE =
-        keccak256("MANAGE_UNVETTING_FEE");
+        keccak256("MANAGE_UNVETTING_FEE"); // 0x8f560c23d2fe724ab145d060dd3eb4896afa23cdb7e88ddab876e9428dc29e07
     bytes32 public constant STAKING_ROUTER_ROLE =
-        keccak256("STAKING_ROUTER_ROLE");
+        keccak256("STAKING_ROUTER_ROLE"); // 0xbb75b874360e0bfd87f964eadd8276d8efb7c942134fc329b513032d0803e0c6
     bytes32 public constant KEY_VALIDATOR_ROLE =
-        keccak256("KEY_VALIDATOR_ROLE");
+        keccak256("KEY_VALIDATOR_ROLE"); // 0xa0824e7cf56ba8c79484f0a6a59c3f90d48851a099bbbbf4d2472b7bf6220f27
+    bytes32 public constant UNSAFE_UNVET_KEYS_ROLE =
+        keccak256("UNSAFE_UNVET_KEYS_ROLE"); //
     bytes32 public constant UNSAFE_UPDATE_VALIDATORS_COUNT_ROLE =
-        keccak256("UNSAFE_UPDATE_VALIDATORS_COUNT_ROLE");
+        keccak256("UNSAFE_UPDATE_VALIDATORS_COUNT_ROLE"); // 0x41da661d6c42a290aa4371c07795cd836bfec9fd2ce2ef613d0f170d0944187c
     bytes32 public constant REPORT_EL_REWARDS_STEALING_PENALTY_ROLE =
-        keccak256("REPORT_EL_REWARDS_STEALING_PENALTY_ROLE");
+        keccak256("REPORT_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0x59911a6aa08a72fe3824aec4500dc42335c6d0702b6d5c5c72ceb265a0de9302
     bytes32 public constant SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE =
-        keccak256("SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE");
+        keccak256("SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0xe85fdec10fe0f93d0792364051df7c3d73e37c17b3a954bffe593960e3cd3012
     bytes32 public constant WITHDRAWAL_SUBMITTER_ROLE =
-        keccak256("WITHDRAWAL_SUBMITTER_ROLE");
-    bytes32 public constant PENALIZE_ROLE = keccak256("PENALIZE_ROLE");
+        keccak256("WITHDRAWAL_SUBMITTER_ROLE"); // 0x2938d532d58b8c4c6a0b79de9ab9d63ffc286cbbc262cbd6cbebe54dd3431dec
+    bytes32 public constant PENALIZE_ROLE = keccak256("PENALIZE_ROLE"); // 0x014ffee5f075680f5690d491d67de8e1aba5c4a88326c3be77d991796b44f86b
 
     // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
     // it seems to be enough
@@ -1075,7 +1077,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         uint256 nodeOperatorId
     )
         external
-        onlyRole(KEY_VALIDATOR_ROLE)
+        onlyRole(UNSAFE_UNVET_KEYS_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
         _unvetKeys(nodeOperatorId);

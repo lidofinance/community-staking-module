@@ -229,6 +229,7 @@ contract CSMCommon is CSMFixtures {
         csm.grantRole(csm.MANAGE_UNVETTING_FEE_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(this));
         csm.grantRole(csm.KEY_VALIDATOR_ROLE(), address(this));
+        csm.grantRole(csm.UNSAFE_UNVET_KEYS_ROLE(), address(this));
         csm.grantRole(
             csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE(),
             address(this)
@@ -2654,9 +2655,9 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.unvetKeys(noId);
     }
 
-    function test_keyValidatorRole_unsafeUnvetKeys() public {
+    function test_unsafeUnvetKeysRole() public {
         uint256 noId = createNodeOperator();
-        bytes32 role = csm.KEY_VALIDATOR_ROLE();
+        bytes32 role = csm.UNSAFE_UNVET_KEYS_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
 
@@ -2664,9 +2665,9 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.unsafeUnvetKeys(noId);
     }
 
-    function test_keyValidatorRole_unsafeUnvetKeys_revert() public {
+    function test_unsafeUnvetKeysRole_revert() public {
         uint256 noId = createNodeOperator();
-        bytes32 role = csm.KEY_VALIDATOR_ROLE();
+        bytes32 role = csm.UNSAFE_UNVET_KEYS_ROLE();
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
@@ -2749,13 +2750,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
     function test_withdrawalSubmitterRole_revert() public {
         uint256 noId = createNodeOperator();
         bytes32 role = csm.WITHDRAWAL_SUBMITTER_ROLE();
-
-        vm.startPrank(admin);
-        csm.grantRole(csm.KEY_VALIDATOR_ROLE(), admin);
-        csm.grantRole(csm.STAKING_ROUTER_ROLE(), admin);
-        csm.vetKeys(noId, 1);
-        csm.obtainDepositData(1, "");
-        vm.stopPrank();
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
