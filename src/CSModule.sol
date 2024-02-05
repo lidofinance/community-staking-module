@@ -160,7 +160,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
     bytes32 public constant KEY_VALIDATOR_ROLE =
         keccak256("KEY_VALIDATOR_ROLE"); // 0xa0824e7cf56ba8c79484f0a6a59c3f90d48851a099bbbbf4d2472b7bf6220f27
     bytes32 public constant UNSAFE_UNVET_KEYS_ROLE =
-        keccak256("UNSAFE_UNVET_KEYS_ROLE"); //
+        keccak256("UNSAFE_UNVET_KEYS_ROLE"); // 0x9351ec2dcbecbf4a29dae7d2da52f70fb20633b665ba0769a976ea50f6266c3e
     bytes32 public constant REPORT_EL_REWARDS_STEALING_PENALTY_ROLE =
         keccak256("REPORT_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0x59911a6aa08a72fe3824aec4500dc42335c6d0702b6d5c5c72ceb265a0de9302
     bytes32 public constant SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE =
