@@ -226,11 +226,6 @@ contract CSModule is ICSModule, CSModuleBase {
         // TODO: implement me
     }
 
-    /// @notice Remove unvetting fee and disable set again
-    function removeUnvettingFee() external {
-        // TODO: implement me
-    }
-
     function _lido() internal view returns (ILido) {
         return ILido(lidoLocator.lido());
     }
