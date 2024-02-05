@@ -239,7 +239,6 @@ contract CSMCommon is CSMFixtures {
             address(this)
         );
         csm.grantRole(csm.PENALIZE_ROLE(), address(this));
-        csm.grantRole(csm.UNSAFE_UPDATE_VALIDATORS_COUNT_ROLE(), address(this));
         csm.grantRole(csm.WITHDRAWAL_SUBMITTER_ROLE(), address(this));
         vm.stopPrank();
 
@@ -2598,9 +2597,9 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.obtainDepositData(0, "");
     }
 
-    function test_unsafeUpdateValidatorsCountRole() public {
+    function test_stakingRouterRole_unsafeUpdateValidatorsCountRole() public {
         uint256 noId = createNodeOperator();
-        bytes32 role = csm.UNSAFE_UPDATE_VALIDATORS_COUNT_ROLE();
+        bytes32 role = csm.STAKING_ROUTER_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
 
@@ -2608,9 +2607,11 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.unsafeUpdateValidatorsCount(noId, 0, 0);
     }
 
-    function test_unsafeUpdateValidatorsCountRole_revert() public {
+    function test_stakingRouterRole_unsafeUpdateValidatorsCountRole_revert()
+        public
+    {
         uint256 noId = createNodeOperator();
-        bytes32 role = csm.UNSAFE_UPDATE_VALIDATORS_COUNT_ROLE();
+        bytes32 role = csm.STAKING_ROUTER_ROLE();
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);

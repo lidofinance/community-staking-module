@@ -161,8 +161,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         keccak256("KEY_VALIDATOR_ROLE"); // 0xa0824e7cf56ba8c79484f0a6a59c3f90d48851a099bbbbf4d2472b7bf6220f27
     bytes32 public constant UNSAFE_UNVET_KEYS_ROLE =
         keccak256("UNSAFE_UNVET_KEYS_ROLE"); //
-    bytes32 public constant UNSAFE_UPDATE_VALIDATORS_COUNT_ROLE =
-        keccak256("UNSAFE_UPDATE_VALIDATORS_COUNT_ROLE"); // 0x41da661d6c42a290aa4371c07795cd836bfec9fd2ce2ef613d0f170d0944187c
     bytes32 public constant REPORT_EL_REWARDS_STEALING_PENALTY_ROLE =
         keccak256("REPORT_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0x59911a6aa08a72fe3824aec4500dc42335c6d0702b6d5c5c72ceb265a0de9302
     bytes32 public constant SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE =
@@ -995,7 +993,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         uint256 stuckValidatorsKeysCount
     )
         external
-        onlyRole(UNSAFE_UPDATE_VALIDATORS_COUNT_ROLE)
+        onlyRole(STAKING_ROUTER_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
         // TODO: implement
