@@ -52,7 +52,8 @@ contract CSAccounting is
         keccak256("SET_DEFAULT_BOND_CURVE_ROLE"); // 0xb96689e168af25a79300d9b242da3d0653f6030e5c7a93192007dbd3f520875b
     bytes32 public constant SET_BOND_CURVE_ROLE =
         keccak256("SET_BOND_CURVE_ROLE"); // 0x645c9e6d2a86805cb5a28b1e4751c0dab493df7cf935070ce405489ba1a7bf72
-
+    bytes32 public constant RESET_BOND_CURVE_ROLE =
+        keccak256("RESET_BOND_CURVE_ROLE"); // 0xb5dffea014b759c493d63b1edaceb942631d6468998125e1b4fe427c99082134
     uint256 public constant TOTAL_BASIS_POINTS = 10_000; // 100%
     // TODO: should be reconsidered. is it should be absolute value or percent?
     uint256 public constant BONDED_KEY_THRESHOLD_PERCENT_BP = 2000; // 20%
@@ -150,7 +151,7 @@ contract CSAccounting is
     /// @param nodeOperatorId id of the node operator to reset bond curve for.
     function resetBondCurve(
         uint256 nodeOperatorId
-    ) external whenResumed onlyCSM {
+    ) external whenResumed onlyCSMOrRole(RESET_BOND_CURVE_ROLE) {
         CSBondCurve._resetBondCurve(nodeOperatorId);
     }
 
@@ -748,6 +749,13 @@ contract CSAccounting is
     modifier onlyCSM() {
         if (msg.sender != address(CSM)) {
             revert SenderIsNotCSM();
+        }
+        _;
+    }
+
+    modifier onlyCSMOrRole(bytes32 role) {
+        if (msg.sender != address(CSM) && !hasRole(role, msg.sender)) {
+            revert InvalidSender();
         }
         _;
     }

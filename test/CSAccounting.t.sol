@@ -4560,8 +4560,8 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         assertEq(curve.points[0], defaultPoints[0]);
     }
 
-    function test_resetBondCurve_RevertWhen_SenderIsNotCSM() public {
-        vm.expectRevert(SenderIsNotCSM.selector);
+    function test_resetBondCurve_RevertWhen_SenderIsNotCSMOrRole() public {
+        vm.expectRevert(InvalidSender.selector);
         vm.prank(stranger);
         accounting.resetBondCurve({ nodeOperatorId: 0 });
     }

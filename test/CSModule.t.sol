@@ -2393,10 +2393,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.setUnvettingFee(0.1 ether);
     }
 
-    function test_dummy() public {
-        console.logBytes32(csm.SET_UNVETTING_FEE_ROLE());
-    }
-
     function test_setUnvettingFeeRole_revert() public {
         bytes32 role = csm.SET_UNVETTING_FEE_ROLE();
 
