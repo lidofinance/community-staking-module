@@ -153,8 +153,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
 
     bytes32 public constant SET_ACCOUNTING_ROLE =
         keccak256("SET_ACCOUNTING_ROLE"); // 0xbad3cb5f7add8fade9c376f76021c1c4106ee82e38abc73f6e8d234042d33f7d
-    bytes32 public constant MANAGE_UNVETTING_FEE_ROLE =
-        keccak256("MANAGE_UNVETTING_FEE"); // 0x8f560c23d2fe724ab145d060dd3eb4896afa23cdb7e88ddab876e9428dc29e07
+    bytes32 public constant SET_UNVETTING_FEE_ROLE =
+        keccak256("SET_UNVETTING_FEE"); // 0x19583bfff685c0ba70886aba1270ef3f5606d5ed3b3d0b6b804dba345609a0e1
     bytes32 public constant STAKING_ROUTER_ROLE =
         keccak256("STAKING_ROUTER_ROLE"); // 0xbb75b874360e0bfd87f964eadd8276d8efb7c942134fc329b513032d0803e0c6
     bytes32 public constant KEY_VALIDATOR_ROLE =
@@ -233,7 +233,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
     /// @param _unvettingFee Amount of wei to be charged for unvetting in some cases
     function setUnvettingFee(
         uint256 _unvettingFee
-    ) external onlyRole(MANAGE_UNVETTING_FEE_ROLE) {
+    ) external onlyRole(SET_UNVETTING_FEE_ROLE) {
         unvettingFee = _unvettingFee;
         emit UnvettingFeeSet(_unvettingFee);
     }
