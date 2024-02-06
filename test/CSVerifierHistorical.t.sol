@@ -5,7 +5,7 @@ pragma solidity 0.8.21;
 import "forge-std/Test.sol";
 import { stdJson } from "forge-std/StdJson.sol";
 
-import { IGIProvider } from "../src/interfaces/IGIProvider.sol";
+import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { ICSModule } from "../src/interfaces/ICSModule.sol";
 
@@ -21,6 +21,7 @@ contract CSVerifierHistoricalTest is Test {
     struct HistoricalWithdrawalFixture {
         bytes32 _blockRoot;
         bytes _pubkey;
+        address _withdrawalAddress;
         ICSVerifier.ProvableHistoricalBlockHeader beaconBlock;
         ICSVerifier.WithdrawalProofContext ctx;
     }
@@ -28,6 +29,7 @@ contract CSVerifierHistoricalTest is Test {
     CSVerifier public verifier;
     ForkSelectorMock public forkSelector;
     GIProviderMock public gIprovider;
+    Stub public locator;
     Stub public module;
 
     HistoricalWithdrawalFixture public fixture;
@@ -50,15 +52,17 @@ contract CSVerifierHistoricalTest is Test {
 
         forkSelector = new ForkSelectorMock();
         gIprovider = new GIProviderMock();
+        locator = new Stub();
         module = new Stub();
 
         forkSelector.usePrater();
         gIprovider.usePreset();
 
         verifier.initialize(
-            address(module),
+            address(forkSelector),
             address(gIprovider),
-            address(forkSelector)
+            address(locator),
+            address(module)
         );
     }
 
@@ -77,6 +81,12 @@ contract CSVerifierHistoricalTest is Test {
                 0
             ),
             abi.encode(fixture._pubkey)
+        );
+
+        vm.mockCall(
+            address(locator),
+            abi.encodeWithSelector(ILidoLocator.withdrawalVault.selector),
+            abi.encode(fixture._withdrawalAddress)
         );
 
         vm.mockCall(

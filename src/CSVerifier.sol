@@ -4,6 +4,7 @@
 pragma solidity 0.8.21;
 
 import { IForkSelector } from "./interfaces/IForkSelector.sol";
+import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { ICSVerifier } from "./interfaces/ICSVerifier.sol";
 import { IGIProvider } from "./interfaces/IGIProvider.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
@@ -26,6 +27,7 @@ contract CSVerifier is ICSVerifier {
 
     IForkSelector public forkSelector;
     IGIProvider public gIprovider;
+    ILidoLocator public locator;
     ICSModule public module;
 
     error RootNotFound();
@@ -35,6 +37,7 @@ contract CSVerifier is ICSVerifier {
     error InvalidChainConfig();
     error ProofTypeNotSupported();
     error ValidatorNotWithdrawn();
+    error InvalidWithdrawalAddress();
 
     constructor(
         uint64 slotsPerEpoch,
@@ -50,11 +53,13 @@ contract CSVerifier is ICSVerifier {
     }
 
     function initialize(
-        address _module,
+        address _forkSelector,
         address _gIprovider,
-        address _forkSelector
+        address _locator,
+        address _module
     ) external {
         module = ICSModule(_module);
+        locator = ILidoLocator(_locator);
         gIprovider = IGIProvider(_gIprovider);
         forkSelector = IForkSelector(_forkSelector);
     }
@@ -212,6 +217,11 @@ contract CSVerifier is ICSVerifier {
         ForkVersion fork,
         bytes memory pubkey
     ) internal view returns (Withdrawal memory withdrawal) {
+        address withdrawalAddress = _wcToAddress(ctx.withdrawalCredentials);
+        if (withdrawalAddress != locator.withdrawalVault()) {
+            revert InvalidWithdrawalAddress();
+        }
+
         if (_getEpoch() < ctx.withdrawableEpoch) {
             revert ValidatorNotWithdrawn();
         }
@@ -237,7 +247,7 @@ contract CSVerifier is ICSVerifier {
         withdrawal = Withdrawal({
             index: ctx.withdrawalIndex,
             validatorIndex: ctx.validatorIndex,
-            withdrawalAddress: _credentialsToAddress(ctx.withdrawalCredentials),
+            withdrawalAddress: withdrawalAddress,
             amount: ctx.amount
         });
 
@@ -253,10 +263,8 @@ contract CSVerifier is ICSVerifier {
         return _computeEpochAtTimestamp(_getTime());
     }
 
-    function _credentialsToAddress(
-        bytes32 credentials
-    ) internal pure returns (address) {
-        return address(uint160(uint256(credentials)));
+    function _wcToAddress(bytes32 value) internal pure returns (address) {
+        return address(uint160(uint256(value)));
     }
 
     function _getValidatorGI(

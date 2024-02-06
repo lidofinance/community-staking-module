@@ -1,6 +1,7 @@
 {
   "_blockRoot": "0x56514f3a7ad209227526f6aba22f1e5e72289261cf8cf63e6b7159963c415297",
   "_pubkey": "0x805ca7091bde2f34b93d17ea0c95b9e3f349768abf452c064b81bdbd43d8aaabb59ba9c0b8786a35a4fe1163583788d1",
+  "_withdrawalAddress": "0x0000000000000000000000003202b5b0602274197ccb22b8c02cec9539990c7c",
   "beaconBlock": {
     "anchorBlock": {
       "blockHeader": {
