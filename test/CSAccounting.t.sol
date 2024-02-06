@@ -102,18 +102,10 @@ contract CSAccountingBaseTest is
         accounting.setFeeDistributor(address(feeDistributor));
         accounting.grantRole(accounting.PAUSE_ROLE(), admin);
         accounting.grantRole(accounting.RESUME_ROLE(), admin);
-        accounting.grantRole(accounting.INSTANT_PENALIZE_BOND_ROLE(), admin);
-        accounting.grantRole(accounting.SET_BOND_LOCK_ROLE(), admin);
         accounting.grantRole(accounting.RELEASE_BOND_LOCK_ROLE(), admin);
-        accounting.grantRole(accounting.SETTLE_BOND_LOCK_ROLE(), admin);
         accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_DEFAULT_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
-        accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), admin);
-        accounting.grantRole(
-            accounting.INSTANT_CHARGE_FEE_FROM_BOND_ROLE(),
-            admin
-        );
         vm.stopPrank();
     }
 
@@ -4353,7 +4345,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
             )
         );
 
-        vm.prank(admin);
+        vm.prank(address(stakingModule));
         accounting.penalize(0, 1 ether);
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -4365,9 +4357,8 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
-    function test_penalize_RevertWhenCallerHasNoRole() public {
-        expectRoleRevert(stranger, accounting.INSTANT_PENALIZE_BOND_ROLE());
-
+    function test_penalize_RevertWhenSenderIsNotCSM() public {
+        vm.expectRevert(SenderIsNotCSM.selector);
         vm.prank(stranger);
         accounting.penalize(0, 20);
     }
@@ -4396,7 +4387,7 @@ contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
         uint256 shares = stETH.getSharesByPooledEth(1 ether);
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
-        vm.prank(admin);
+        vm.prank(address(stakingModule));
         accounting.chargeFee(0, 1 ether);
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -4408,11 +4399,8 @@ contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
-    function test_chargeFee_RevertWhenCallerHasNoRole() public {
-        expectRoleRevert(
-            stranger,
-            accounting.INSTANT_CHARGE_FEE_FROM_BOND_ROLE()
-        );
+    function test_chargeFee_RevertWhenSenderIsNotCSM() public {
+        vm.expectRevert(SenderIsNotCSM.selector);
         vm.prank(stranger);
         accounting.chargeFee(0, 20);
     }
@@ -4434,15 +4422,15 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
     function test_lockBondETH() public {
         mock_getNodeOperatorsCount(1);
 
-        vm.prank(admin);
+        vm.prank(address(stakingModule));
         accounting.lockBondETH(0, 1 ether);
         assertEq(accounting.getActualLockedBond(0), 1 ether);
     }
 
-    function test_lockBondETH_RevertWhen_DoesNotHaveRole() public {
+    function test_lockBondETH_RevertWhen_SenderIsNotCSM() public {
         mock_getNodeOperatorsCount(1);
 
-        expectRoleRevert(stranger, accounting.SET_BOND_LOCK_ROLE());
+        vm.expectRevert(SenderIsNotCSM.selector);
         vm.prank(stranger);
         accounting.lockBondETH(0, 1 ether);
     }
@@ -4450,14 +4438,14 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
     function test_releaseLockedBondETH() public {
         mock_getNodeOperatorsCount(1);
 
-        vm.startPrank(admin);
+        vm.prank(address(stakingModule));
         accounting.lockBondETH(0, 1 ether);
 
         vm.expectEmit(true, true, true, true, address(accounting));
         emit BondLockReleased(0, 0.4 ether);
 
+        vm.prank(admin);
         accounting.releaseLockedBondETH(0, 0.4 ether);
-        vm.stopPrank();
 
         assertEq(accounting.getActualLockedBond(0), 0.6 ether);
     }
@@ -4473,7 +4461,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
     function test_compensateLockedBondETH() public {
         mock_getNodeOperatorsCount(1);
 
-        vm.prank(admin);
+        vm.prank(address(stakingModule));
         accounting.lockBondETH(0, 1 ether);
 
         vm.expectEmit(true, true, true, true, address(accounting));
@@ -4485,6 +4473,8 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
 
         assertEq(accounting.getActualLockedBond(0), 0.6 ether);
     }
+
+    // TODO: tests for settleLockedBondETH
 }
 
 contract CSAccountingBondCurveTest is CSAccountingBaseTest {
@@ -4559,8 +4549,9 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         vm.startPrank(admin);
         accounting.addBondCurve(curvePoints);
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
-        accounting.resetBondCurve({ nodeOperatorId: 0 });
         vm.stopPrank();
+        vm.prank(address(stakingModule));
+        accounting.resetBondCurve({ nodeOperatorId: 0 });
 
         CSBondCurve.BondCurve memory curve = accounting.getBondCurve(0);
 
@@ -4569,8 +4560,8 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         assertEq(curve.points[0], defaultPoints[0]);
     }
 
-    function test_resetBondCurve_RevertWhen_DoesNotHaveRole() public {
-        expectRoleRevert(stranger, accounting.RESET_BOND_CURVE_ROLE());
+    function test_resetBondCurve_RevertWhen_SenderIsNotCSM() public {
+        vm.expectRevert(SenderIsNotCSM.selector);
         vm.prank(stranger);
         accounting.resetBondCurve({ nodeOperatorId: 0 });
     }

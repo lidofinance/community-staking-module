@@ -243,21 +243,6 @@ contract CSMCommon is CSMFixtures {
         vm.stopPrank();
 
         csm.setAccounting(address(accounting));
-
-        vm.startPrank(admin);
-        accounting.grantRole(
-            accounting.INSTANT_PENALIZE_BOND_ROLE(),
-            address(csm)
-        );
-        accounting.grantRole(accounting.SET_BOND_LOCK_ROLE(), address(csm));
-        accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm));
-        accounting.grantRole(accounting.RELEASE_BOND_LOCK_ROLE(), address(csm));
-        accounting.grantRole(accounting.SETTLE_BOND_LOCK_ROLE(), address(csm));
-        accounting.grantRole(
-            accounting.INSTANT_CHARGE_FEE_FROM_BOND_ROLE(),
-            address(csm)
-        );
-        vm.stopPrank();
         csm.setUnvettingFee(0.05 ether);
     }
 }
@@ -291,18 +276,6 @@ contract CSMCommonNoRoles is CSMFixtures {
         );
 
         csm.setAccounting(address(accounting));
-        accounting.grantRole(
-            accounting.INSTANT_PENALIZE_BOND_ROLE(),
-            address(csm)
-        );
-        accounting.grantRole(accounting.SET_BOND_LOCK_ROLE(), address(csm));
-        accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm));
-        accounting.grantRole(accounting.RELEASE_BOND_LOCK_ROLE(), address(csm));
-        accounting.grantRole(accounting.SETTLE_BOND_LOCK_ROLE(), address(csm));
-        accounting.grantRole(
-            accounting.INSTANT_CHARGE_FEE_FROM_BOND_ROLE(),
-            address(csm)
-        );
         vm.stopPrank();
     }
 }
