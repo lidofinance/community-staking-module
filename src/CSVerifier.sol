@@ -18,6 +18,7 @@ contract CSVerifier is ICSVerifier {
     using SSZ for Withdrawal;
     using SSZ for Validator;
 
+    // See `BEACON_ROOTS_ADDRESS` constant in the EIP-4788.
     address public constant BEACON_ROOTS =
         0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02;
 
@@ -70,7 +71,6 @@ contract CSVerifier is ICSVerifier {
         uint256 nodeOperatorId,
         uint256 keyIndex
     ) external {
-        // NOTE: Make as a modifier?
         {
             bytes32 trustedHeaderRoot = _getParentBlockRoot(
                 beaconBlock.rootsTimestamp
@@ -81,7 +81,6 @@ contract CSVerifier is ICSVerifier {
             }
         }
 
-        bytes32 stateRoot = beaconBlock.blockHeader.stateRoot;
         ForkVersion fork = forkSelector.findFork(
             Slot.wrap(beaconBlock.blockHeader.slot)
         );
@@ -94,7 +93,7 @@ contract CSVerifier is ICSVerifier {
 
         Withdrawal memory withdrawal = _processWithdrawalProof(
             ctx,
-            stateRoot,
+            beaconBlock.blockHeader.stateRoot,
             fork,
             pubkey
         );
@@ -171,10 +170,10 @@ contract CSVerifier is ICSVerifier {
     }
 
     function _getParentBlockRoot(
-        uint64 ts
+        uint64 blockTimestamp
     ) internal view returns (bytes32 root) {
         (bool success, bytes memory data) = BEACON_ROOTS.staticcall(
-            abi.encode(ts)
+            abi.encode(blockTimestamp)
         );
 
         if (!success || data.length == 0) {
@@ -210,7 +209,7 @@ contract CSVerifier is ICSVerifier {
         );
     }
 
-    // @dev state_root is already validated
+    // @dev `stateRoot` is already validated.
     function _processWithdrawalProof(
         WithdrawalProofContext calldata ctx,
         bytes32 stateRoot,
