@@ -39,7 +39,11 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
         vm.label(address(lido), "lido");
         vm.label(address(stakingRouter), "stakingRouter");
 
-        csm = new CSModule("community-staking-module", address(locator));
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            address(this)
+        );
         uint256[] memory curve = new uint256[](2);
         curve[0] = 2 ether;
         curve[1] = 4 ether;
@@ -51,6 +55,10 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
             address(csm),
             8 weeks
         );
+        csm.grantRole(csm.SET_ACCOUNTING_ROLE(), address(this));
+        csm.grantRole(csm.KEY_VALIDATOR_ROLE(), address(this));
+        csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(stakingRouter));
+
         csm.setAccounting(address(accounting));
 
         agent = stakingRouter.getRoleMember(

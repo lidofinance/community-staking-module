@@ -9,6 +9,7 @@ contract StETHMock is PermitTokenBase {
     uint256 public totalPooledEther;
     uint256 public totalShares;
     mapping(address => uint256) public shares;
+    error NotEnoughShares(uint256 balance);
 
     constructor(uint256 _totalPooledEther) {
         totalPooledEther = _totalPooledEther;
@@ -103,7 +104,9 @@ contract StETHMock is PermitTokenBase {
         address _recipient,
         uint256 _sharesAmount
     ) public returns (uint256) {
-        require(shares[_sender] >= _sharesAmount, "not enough shares");
+        if (shares[_sender] < _sharesAmount) {
+            revert NotEnoughShares(shares[_sender]);
+        }
         shares[_sender] -= _sharesAmount;
         shares[_recipient] += _sharesAmount;
         return _sharesAmount;
