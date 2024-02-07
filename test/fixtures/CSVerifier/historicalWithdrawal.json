@@ -3,18 +3,25 @@
   "_pubkey": "0x805ca7091bde2f34b93d17ea0c95b9e3f349768abf452c064b81bdbd43d8aaabb59ba9c0b8786a35a4fe1163583788d1",
   "_withdrawalAddress": "0x0000000000000000000000003202b5b0602274197ccb22b8c02cec9539990c7c",
   "beaconBlock": {
-    "anchorBlock": {
-      "blockHeader": {
-        "00__slot": 7471926,
-        "01__proposerIndex": 634821,
-        "02__parentRoot": "0x4aba763e7f625caa4592007d8f18b553ef39d191bf9d52289dbb91ea3cf914d5",
-        "03__stateRoot": "0xa960cc6db4089149664d7b845da32572a5d5e39d973c4a41f1e2c4668877fabc",
-        "04__bodyRoot": "0x10a1761482c4d4b4c3af4cb93884f6c2058f47428ba66389801a96bd6fbb224a"
-      },
-      "rootsTimestamp": 1706545128
+    "blockHeader": {
+      "00__slot": 7471926,
+      "01__proposerIndex": 634821,
+      "02__parentRoot": "0x4aba763e7f625caa4592007d8f18b553ef39d191bf9d52289dbb91ea3cf914d5",
+      "03__stateRoot": "0xa960cc6db4089149664d7b845da32572a5d5e39d973c4a41f1e2c4668877fabc",
+      "04__bodyRoot": "0x10a1761482c4d4b4c3af4cb93884f6c2058f47428ba66389801a96bd6fbb224a"
     },
-    "blockRootGIndex": "0x000000000000000000000000000000000000000000000000001d800022ccc60d",
-    "blockRootProof": [
+    "rootsTimestamp": 1706545128
+  },
+  "oldBlock": {
+    "00__header": {
+      "00__slot": 6335686,
+      "01__proposerIndex": 448343,
+      "02__parentRoot": "0xdcb51158e03ac1e1e8ce3030ff54f04ad976ebcffce3eed50646e355bf4326b7",
+      "03__stateRoot": "0xecf6a4ec29520fc514f11e6ff0293308f2a691523d9a4fb11dd323011885ebf8",
+      "04__bodyRoot": "0x667bd898e759ed03f37b72bc5bfe65b9144d2b7538196422e5b55cdff204499f"
+    },
+    "01__rootGIndex": "0x000000000000000000000000000000000000000000000000001d800022ccc60d",
+    "02__proof": [
       "0xe91cdf41a18b44827288f1fc40cc35d134be79852d19ec5cf04280f5a4baf188",
       "0x53c2a057b9557708cd0ecce6e96df808fe7d0a3d3c00e829923734d45d507a5c",
       "0x6abd5bd537919fde81226112f1ceac9372c1e9c36189be0a3653c60bbbfa9e91",
@@ -59,16 +66,9 @@
       "0xdb56114e00fdd4c1f85c892bf35ac9a89289aaecb1ebd0a96cde606a748b5d71",
       "0x7dd0465d42d6ce81c2024ff4e14a9fd02fb66f927c32e2bfa599659edb6bd44d",
       "0x8f72e0711a34cf0414209efb21b328c09096173582f1cb54c8dcca35d44e050e"
-    ],
-    "historicalBlock": {
-      "00__slot": 6335686,
-      "01__proposerIndex": 448343,
-      "02__parentRoot": "0xdcb51158e03ac1e1e8ce3030ff54f04ad976ebcffce3eed50646e355bf4326b7",
-      "03__stateRoot": "0xecf6a4ec29520fc514f11e6ff0293308f2a691523d9a4fb11dd323011885ebf8",
-      "04__bodyRoot": "0x667bd898e759ed03f37b72bc5bfe65b9144d2b7538196422e5b55cdff204499f"
-    }
+    ]
   },
-  "ctx": {
+  "witness": {
     "00__withdrawalOffset": 0,
     "01__withdrawalIndex": 14286084,
     "02__validatorIndex": 494828,

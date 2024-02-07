@@ -22,8 +22,9 @@ contract CSVerifierHistoricalTest is Test {
         bytes32 _blockRoot;
         bytes _pubkey;
         address _withdrawalAddress;
-        ICSVerifier.ProvableHistoricalBlockHeader beaconBlock;
-        ICSVerifier.WithdrawalProofContext ctx;
+        ICSVerifier.ProvableBeaconBlockHeader beaconBlock;
+        ICSVerifier.HistoricalHeaderWitness oldBlock;
+        ICSVerifier.WithdrawalWitness witness;
     }
 
     CSVerifier public verifier;
@@ -69,7 +70,7 @@ contract CSVerifierHistoricalTest is Test {
     function test_processWithdrawalProof() public {
         vm.mockCall(
             verifier.BEACON_ROOTS(),
-            abi.encode(fixture.beaconBlock.anchorBlock.rootsTimestamp),
+            abi.encode(fixture.beaconBlock.rootsTimestamp),
             abi.encode(fixture._blockRoot)
         );
 
@@ -95,11 +96,13 @@ contract CSVerifierHistoricalTest is Test {
             ""
         );
 
-        vm.warp(fixture.beaconBlock.historicalBlock.slot * 12);
+        vm.warp(fixture.oldBlock.header.slot * 12);
 
+        // solhint-disable-next-line func-named-parameters
         verifier.processHistoricalWithdrawalProof(
             fixture.beaconBlock,
-            fixture.ctx,
+            fixture.oldBlock,
+            fixture.witness,
             0,
             0
         );

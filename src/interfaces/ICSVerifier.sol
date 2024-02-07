@@ -7,7 +7,12 @@ import { BeaconBlockHeader } from "../lib/Types.sol";
 import { GIndex } from "../lib/GIndex.sol";
 
 interface ICSVerifier {
-    struct WithdrawalProofContext {
+    struct ProvableBeaconBlockHeader {
+        BeaconBlockHeader header; // Header of a block which root is a root at rootsTimestamp.
+        uint64 rootsTimestamp; // To be passed to the EIP-4788 block roots contract.
+    }
+
+    struct WithdrawalWitness {
         // ── Withdrawal fields ─────────────────────────────────────────────────
         uint8 withdrawalOffset; // In the withdrawals list.
         uint64 withdrawalIndex; // Network-wise.
@@ -22,33 +27,31 @@ interface ICSVerifier {
         uint64 exitEpoch;
         uint64 withdrawableEpoch;
         // ── Proofs ────────────────────────────────────────────────────────────
-        // All proofs are relative to the block header state root.
         bytes32[] withdrawalProof;
         bytes32[] validatorProof;
     }
 
-    struct ProvableBeaconBlockHeader {
-        BeaconBlockHeader blockHeader; // Header of a block which root is a root at rootsTimestamp.
-        uint64 rootsTimestamp; // To be passed to the EIP-4788 block roots contract.
+    // A witness for a block header which root is accessible via `historical_summaries` field.
+    struct HistoricalHeaderWitness {
+        BeaconBlockHeader header;
+        GIndex rootGIndex;
+        bytes32[] proof;
     }
 
-    struct ProvableHistoricalBlockHeader {
-        ProvableBeaconBlockHeader anchorBlock;
-        GIndex blockRootGIndex;
-        bytes32[] blockRootProof;
-        BeaconBlockHeader historicalBlock;
-    }
-
+    /// @notice `witness` is a withdrawal witness against the `beaconBlock`'s state root.
     function processWithdrawalProof(
         ProvableBeaconBlockHeader calldata beaconBlock,
-        WithdrawalProofContext calldata ctx,
+        WithdrawalWitness calldata witness,
         uint256 nodeOperatorId,
         uint256 keyIndex
     ) external;
 
+    /// @notice `oldHeader` is a beacon block header witness against the `beaconBlock`'s state root.
+    /// @notice `witness` is a withdrawal witness against the `oldHeader`'s state root.
     function processHistoricalWithdrawalProof(
-        ProvableHistoricalBlockHeader calldata beaconBlock,
-        WithdrawalProofContext calldata ctx,
+        ProvableBeaconBlockHeader calldata beaconBlock,
+        HistoricalHeaderWitness calldata oldBlock,
+        WithdrawalWitness calldata witness,
         uint256 nodeOperatorId,
         uint256 keyIndex
     ) external;

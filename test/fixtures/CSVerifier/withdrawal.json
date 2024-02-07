@@ -12,7 +12,7 @@
     },
     "rootsTimestamp": 1706545128
   },
-  "ctx": {
+  "witness": {
     "00__withdrawalOffset": 1,
     "01__withdrawalIndex": 28346378,
     "02__validatorIndex": 673610,

@@ -67,7 +67,7 @@ contract CSVerifier is ICSVerifier {
 
     function processWithdrawalProof(
         ProvableBeaconBlockHeader calldata beaconBlock,
-        WithdrawalProofContext calldata ctx,
+        WithdrawalWitness calldata witness,
         uint256 nodeOperatorId,
         uint256 keyIndex
     ) external {
@@ -75,14 +75,14 @@ contract CSVerifier is ICSVerifier {
             bytes32 trustedHeaderRoot = _getParentBlockRoot(
                 beaconBlock.rootsTimestamp
             );
-            bytes32 headerRoot = beaconBlock.blockHeader.hashTreeRoot();
+            bytes32 headerRoot = beaconBlock.header.hashTreeRoot();
             if (trustedHeaderRoot != headerRoot) {
                 revert InvalidBlockHeader();
             }
         }
 
         ForkVersion fork = forkSelector.findFork(
-            Slot.wrap(beaconBlock.blockHeader.slot)
+            Slot.wrap(beaconBlock.header.slot)
         );
 
         bytes memory pubkey = module.getNodeOperatorSigningKeys(
@@ -92,8 +92,8 @@ contract CSVerifier is ICSVerifier {
         );
 
         Withdrawal memory withdrawal = _processWithdrawalProof(
-            ctx,
-            beaconBlock.blockHeader.stateRoot,
+            witness,
+            beaconBlock.header.stateRoot,
             fork,
             pubkey
         );
@@ -106,19 +106,17 @@ contract CSVerifier is ICSVerifier {
     }
 
     function processHistoricalWithdrawalProof(
-        ProvableHistoricalBlockHeader calldata beaconBlock,
-        WithdrawalProofContext calldata ctx,
+        ProvableBeaconBlockHeader calldata beaconBlock,
+        HistoricalHeaderWitness calldata oldBlock,
+        WithdrawalWitness calldata witness,
         uint256 nodeOperatorId,
         uint256 keyIndex
     ) external {
         {
             bytes32 trustedHeaderRoot = _getParentBlockRoot(
-                beaconBlock.anchorBlock.rootsTimestamp
+                beaconBlock.rootsTimestamp
             );
-            bytes32 headerRoot = beaconBlock
-                .anchorBlock
-                .blockHeader
-                .hashTreeRoot();
+            bytes32 headerRoot = beaconBlock.header.hashTreeRoot();
             if (trustedHeaderRoot != headerRoot) {
                 revert InvalidBlockHeader();
             }
@@ -126,27 +124,24 @@ contract CSVerifier is ICSVerifier {
 
         {
             // Check the validity of the historical block root against the anchor block header (accessible from EIP-4788).
-            bytes32 anchorStateRoot = beaconBlock
-                .anchorBlock
-                .blockHeader
-                .stateRoot;
+            bytes32 anchorStateRoot = beaconBlock.header.stateRoot;
             ForkVersion anchorFork = forkSelector.findFork(
-                Slot.wrap(beaconBlock.anchorBlock.blockHeader.slot)
+                Slot.wrap(beaconBlock.header.slot)
             );
             // solhint-disable-next-line func-named-parameters
             _verifyBlockRootProof(
                 anchorFork,
                 anchorStateRoot,
-                beaconBlock.historicalBlock.hashTreeRoot(),
-                beaconBlock.blockRootGIndex,
-                beaconBlock.blockRootProof
+                oldBlock.header.hashTreeRoot(),
+                oldBlock.rootGIndex,
+                oldBlock.proof
             );
         }
 
         // Fork may get a new value depends on the historical state root.
-        bytes32 stateRoot = beaconBlock.historicalBlock.stateRoot;
+        bytes32 stateRoot = oldBlock.header.stateRoot;
         ForkVersion fork = forkSelector.findFork(
-            Slot.wrap(beaconBlock.historicalBlock.slot)
+            Slot.wrap(oldBlock.header.slot)
         );
 
         bytes memory pubkey = module.getNodeOperatorSigningKeys(
@@ -156,7 +151,7 @@ contract CSVerifier is ICSVerifier {
         );
 
         Withdrawal memory withdrawal = _processWithdrawalProof(
-            ctx,
+            witness,
             stateRoot,
             fork,
             pubkey
@@ -211,50 +206,50 @@ contract CSVerifier is ICSVerifier {
 
     // @dev `stateRoot` is already validated.
     function _processWithdrawalProof(
-        WithdrawalProofContext calldata ctx,
+        WithdrawalWitness calldata witness,
         bytes32 stateRoot,
         ForkVersion fork,
         bytes memory pubkey
     ) internal view returns (Withdrawal memory withdrawal) {
-        address withdrawalAddress = _wcToAddress(ctx.withdrawalCredentials);
+        address withdrawalAddress = _wcToAddress(witness.withdrawalCredentials);
         if (withdrawalAddress != locator.withdrawalVault()) {
             revert InvalidWithdrawalAddress();
         }
 
-        if (_getEpoch() < ctx.withdrawableEpoch) {
+        if (_getEpoch() < witness.withdrawableEpoch) {
             revert ValidatorNotWithdrawn();
         }
 
         Validator memory validator = Validator({
             pubkey: pubkey,
-            withdrawalCredentials: ctx.withdrawalCredentials,
-            effectiveBalance: ctx.effectiveBalance, // TODO: Should we accept zero effective balance only?
-            slashed: ctx.slashed,
-            activationEligibilityEpoch: ctx.activationEligibilityEpoch,
-            activationEpoch: ctx.activationEpoch,
-            exitEpoch: ctx.exitEpoch,
-            withdrawableEpoch: ctx.withdrawableEpoch
+            withdrawalCredentials: witness.withdrawalCredentials,
+            effectiveBalance: witness.effectiveBalance, // TODO: Should we accept zero effective balance only?
+            slashed: witness.slashed,
+            activationEligibilityEpoch: witness.activationEligibilityEpoch,
+            activationEpoch: witness.activationEpoch,
+            exitEpoch: witness.exitEpoch,
+            withdrawableEpoch: witness.withdrawableEpoch
         });
 
         SSZ.verifyProof(
-            ctx.validatorProof,
+            witness.validatorProof,
             stateRoot,
             validator.hashTreeRoot(),
-            _getValidatorGI(fork, ctx.validatorIndex)
+            _getValidatorGI(fork, witness.validatorIndex)
         );
 
         withdrawal = Withdrawal({
-            index: ctx.withdrawalIndex,
-            validatorIndex: ctx.validatorIndex,
+            index: witness.withdrawalIndex,
+            validatorIndex: witness.validatorIndex,
             withdrawalAddress: withdrawalAddress,
-            amount: ctx.amount
+            amount: witness.amount
         });
 
         SSZ.verifyProof(
-            ctx.withdrawalProof,
+            witness.withdrawalProof,
             stateRoot,
             withdrawal.hashTreeRoot(),
-            _getWithdrawalGI(fork, ctx.withdrawalOffset)
+            _getWithdrawalGI(fork, witness.withdrawalOffset)
         );
     }
 

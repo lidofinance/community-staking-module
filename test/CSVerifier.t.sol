@@ -23,7 +23,7 @@ contract CSVerifierTest is Test {
         bytes _pubkey;
         address _withdrawalAddress;
         ICSVerifier.ProvableBeaconBlockHeader beaconBlock;
-        ICSVerifier.WithdrawalProofContext ctx;
+        ICSVerifier.WithdrawalWitness witness;
     }
 
     CSVerifier public verifier;
@@ -95,8 +95,13 @@ contract CSVerifierTest is Test {
             ""
         );
 
-        vm.warp(fixture.beaconBlock.blockHeader.slot * 12);
+        vm.warp(fixture.beaconBlock.header.slot * 12);
 
-        verifier.processWithdrawalProof(fixture.beaconBlock, fixture.ctx, 0, 0);
+        verifier.processWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
     }
 }
