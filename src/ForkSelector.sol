@@ -11,12 +11,30 @@ contract ForkSelector is IForkSelector {
     Slot[] public versionsLookup;
     Slot public terminalSlot = Slot.wrap(type(uint64).max);
 
+    address internal _admin;
+
     error NoSuitableForkVersion(Slot slot);
     error UnexpectedOrder();
+    error Unauthorized(address sender);
+    error ZeroAddress();
+    error Ossified();
+
+    function initialize(address admin) external {
+        if (admin == address(0)) {
+            revert ZeroAddress();
+        }
+
+        _admin = admin;
+    }
 
     /// @dev If any fork introduces a changed generalized index, we need to add it here.
     /// @dev The list of `versionsLookup` is expected to be sorted in ascending order.
-    function addForkAtSlot(ForkVersion fork, Slot slot) external onlyDao {
+    function addForkAtSlot(ForkVersion fork, Slot slot) external onlyAdmin {
+        // Allow adding forks at slots before the terminal slot.
+        if (Slot.unwrap(slot) > Slot.unwrap(terminalSlot)) {
+            revert Ossified();
+        }
+
         if (
             versionsLookup.length > 0 &&
             Slot.unwrap(versionsLookup[versionsLookup.length - 1]) >=
@@ -29,8 +47,7 @@ contract ForkSelector is IForkSelector {
         versionsLookup.push(slot);
     }
 
-    // TODO: Make it on-shot operation of leave it as is?
-    function ossifyAtSlot(Slot slot) external onlyDao {
+    function ossifyAtSlot(Slot slot) external onlyAdmin notOssified {
         terminalSlot = slot;
     }
 
@@ -50,8 +67,17 @@ contract ForkSelector is IForkSelector {
         revert NoSuitableForkVersion(slot);
     }
 
-    modifier onlyDao() {
-        // FIXME: implement.
+    modifier onlyAdmin() {
+        if (msg.sender != _admin) {
+            revert Unauthorized(msg.sender);
+        }
+        _;
+    }
+
+    modifier notOssified() {
+        if (Slot.unwrap(terminalSlot) != type(uint64).max) {
+            revert Ossified();
+        }
         _;
     }
 }

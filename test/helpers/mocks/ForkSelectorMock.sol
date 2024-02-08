@@ -6,8 +6,16 @@ import { ForkVersion, Slot } from "../../../src/lib/Types.sol";
 import { ForkSelector } from "../../../src/ForkSelector.sol";
 
 contract ForkSelectorMock is ForkSelector {
-    function usePrater() external {
+    function usePrater() external prankAdmin {
         this.addForkAtSlot(ForkVersion.wrap(0x03001020), Slot.wrap(5193728));
         this.addForkAtSlot(ForkVersion.wrap(0x04001020), Slot.wrap(7413760));
+    }
+
+    // Used to bypass ACL while making external calls.
+    modifier prankAdmin() {
+        address oldAdmin = _admin;
+        _admin = address(this);
+        _;
+        _admin = oldAdmin;
     }
 }
