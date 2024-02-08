@@ -83,7 +83,7 @@ library SSZ {
         }
     }
 
-    // Inspired by https://github.com/succinctlabs/telepathy-contracts/blob/main/src/libraries/SimpleSerialize.sol#L59
+    // Inspired by https://github.com/succinctlabs/telepathy-contracts/blob/5aa4bb7/src/libraries/SimpleSerialize.sol#L59
     function hashTreeRoot(
         Withdrawal memory withdrawal
     ) internal pure returns (bytes32) {
@@ -202,6 +202,7 @@ library SSZ {
         }
     }
 
+    // See https://github.com/succinctlabs/telepathy-contracts/blob/5aa4bb7/src/libraries/SimpleSerialize.sol#L17-L28
     function toLittleEndian(uint256 v) internal pure returns (bytes32) {
         v =
             ((v &
@@ -239,7 +240,7 @@ library SSZ {
         return bytes32(v ? 1 << 248 : 0);
     }
 
-    /// @notice Modified version of `verify` from `MerkleProofLib` to support generalized indices and sha256 precompile.
+    /// @notice Modified version of `verify` from Solady `MerkleProofLib` to support generalized indices and sha256 precompile.
     /// @dev Reverts if `leaf` doesn't exist in the Merkle tree with `root`, given `proof`.
     function verifyProof(
         bytes32[] calldata proof,

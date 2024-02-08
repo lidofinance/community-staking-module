@@ -13,7 +13,13 @@ import { BeaconBlockHeader, ForkVersion, Slot, Validator, Withdrawal } from "./l
 import { GIndex } from "./lib/GIndex.sol";
 import { SSZ } from "./lib/SSZ.sol";
 
+function amountWei(Withdrawal memory withdrawal) pure returns (uint256) {
+    return uint256(withdrawal.amount) * 1 gwei;
+}
+
 contract CSVerifier is ICSVerifier {
+    using { amountWei } for Withdrawal;
+
     using SSZ for BeaconBlockHeader;
     using SSZ for Withdrawal;
     using SSZ for Validator;
@@ -138,7 +144,7 @@ contract CSVerifier is ICSVerifier {
             );
         }
 
-        // Fork may get a new value depends on the historical state root.
+        // Fork may get a new value depending on the historical state root.
         bytes32 stateRoot = oldBlock.header.stateRoot;
         ForkVersion fork = forkSelector.findFork(
             Slot.wrap(oldBlock.header.slot)
@@ -204,7 +210,7 @@ contract CSVerifier is ICSVerifier {
         );
     }
 
-    // @dev `stateRoot` is already validated.
+    // @dev `stateRoot` is supposed to be trusted at this point.
     function _processWithdrawalProof(
         WithdrawalWitness calldata witness,
         bytes32 stateRoot,
@@ -303,9 +309,3 @@ contract CSVerifier is ICSVerifier {
         return block.timestamp; // solhint-disable-line not-rely-on-time
     }
 }
-
-function amountWei(Withdrawal memory withdrawal) pure returns (uint256) {
-    return uint256(withdrawal.amount) * 1 gwei;
-}
-
-using { amountWei } for Withdrawal;

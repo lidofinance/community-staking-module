@@ -24,7 +24,7 @@ contract GIProvider is IGIProvider {
         // Set admin.
     }
 
-    /// @notice Simply put add all the required values for the given fork. As many times as needed.
+    /// @notice For a given `fork` add 'key -> gindex' values this provider supposed to serve.
     function patchFork(ForkVersion fork, KV[] memory map) external onlyDao {
         for (uint256 i = 0; i < map.length; ) {
             bytes32 position = _getStorageSlot(fork, map[i].key);
