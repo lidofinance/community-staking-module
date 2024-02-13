@@ -90,6 +90,7 @@ abstract contract DeployBase is Script {
                 // todo: arguable. should be discussed
                 bondLockRetentionPeriod: 8 weeks
             });
+            csm.setAccounting(address(accounting));
 
             CSFeeOracle oracleImpl = new CSFeeOracle({
                 secondsPerSlot: SECONDS_PER_SLOT,
@@ -110,7 +111,6 @@ abstract contract DeployBase is Script {
                 accounting: address(accounting)
             });
             accounting.setFeeDistributor(address(feeDistributor));
-            // TODO: csm.setBondManager(address(accounting));
 
             HashConsensus hashConsensus = new HashConsensus({
                 slotsPerEpoch: SLOTS_PER_EPOCH,
