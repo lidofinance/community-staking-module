@@ -3,7 +3,6 @@
 pragma solidity 0.8.21;
 
 import "forge-std/Test.sol";
-import "forge-std/console.sol";
 
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
