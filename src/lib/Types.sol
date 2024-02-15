@@ -6,8 +6,11 @@ pragma solidity 0.8.21;
 // As defined in phase0/beacon-chain.md:159
 type Slot is uint64;
 
-// As defined in phase0/beacon-chain.md:166
-type ForkVersion is uint32;
+function unwrap(Slot slot) pure returns (uint64) {
+    return Slot.unwrap(slot);
+}
+
+using { unwrap } for Slot global;
 
 // As defined in capella/beacon-chain.md:99
 struct Withdrawal {
