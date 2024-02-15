@@ -14,7 +14,11 @@ import { GIndex } from "./lib/GIndex.sol";
 import { SSZ } from "./lib/SSZ.sol";
 
 function amountWei(Withdrawal memory withdrawal) pure returns (uint256) {
-    return uint256(withdrawal.amount) * 1 gwei;
+    return gweiToWei(withdrawal.amount);
+}
+
+function gweiToWei(uint64 amount) pure returns (uint256) {
+    return uint256(amount) * 1 gwei;
 }
 
 contract CSVerifier is ICSVerifier {
@@ -43,6 +47,7 @@ contract CSVerifier is ICSVerifier {
     error InvalidBlockHeader();
     error InvalidChainConfig();
     error ProofTypeNotSupported();
+    error PartialWitdrawal();
     error ValidatorNotWithdrawn();
     error InvalidWithdrawalAddress();
 
@@ -97,8 +102,10 @@ contract CSVerifier is ICSVerifier {
             1
         );
 
+        // solhint-disable-next-line func-named-parameters
         Withdrawal memory withdrawal = _processWithdrawalProof(
             witness,
+            _computeEpochAtSlot(beaconBlock.header.slot),
             beaconBlock.header.stateRoot,
             fork,
             pubkey
@@ -156,8 +163,10 @@ contract CSVerifier is ICSVerifier {
             1
         );
 
+        // solhint-disable-next-line func-named-parameters
         Withdrawal memory withdrawal = _processWithdrawalProof(
             witness,
+            _computeEpochAtSlot(oldBlock.header.slot),
             stateRoot,
             fork,
             pubkey
@@ -213,6 +222,7 @@ contract CSVerifier is ICSVerifier {
     // @dev `stateRoot` is supposed to be trusted at this point.
     function _processWithdrawalProof(
         WithdrawalWitness calldata witness,
+        uint256 stateEpoch,
         bytes32 stateRoot,
         ForkVersion fork,
         bytes memory pubkey
@@ -222,14 +232,19 @@ contract CSVerifier is ICSVerifier {
             revert InvalidWithdrawalAddress();
         }
 
-        if (_getEpoch() < witness.withdrawableEpoch) {
+        if (stateEpoch < witness.withdrawableEpoch) {
             revert ValidatorNotWithdrawn();
+        }
+
+        // See https://hackmd.io/1wM8vqeNTjqt4pC3XoCUKQ
+        if (!witness.slashed && gweiToWei(witness.amount) < 8 ether) {
+            revert PartialWitdrawal();
         }
 
         Validator memory validator = Validator({
             pubkey: pubkey,
             withdrawalCredentials: witness.withdrawalCredentials,
-            effectiveBalance: witness.effectiveBalance, // TODO: Should we accept zero effective balance only?
+            effectiveBalance: witness.effectiveBalance,
             slashed: witness.slashed,
             activationEligibilityEpoch: witness.activationEligibilityEpoch,
             activationEpoch: witness.activationEpoch,
@@ -259,10 +274,6 @@ contract CSVerifier is ICSVerifier {
         );
     }
 
-    function _getEpoch() internal view returns (uint256) {
-        return _computeEpochAtTimestamp(_getTime());
-    }
-
     function _wcToAddress(bytes32 value) internal pure returns (address) {
         return address(uint160(uint256(value)));
     }
@@ -284,28 +295,9 @@ contract CSVerifier is ICSVerifier {
         return gI.shr(offset);
     }
 
-    // ┌─────────────────────────────────────────────────────────┐
-    // │ Methods below were copied from HashConsensus contract.  │
-    // └─────────────────────────────────────────────────────────┘
-
-    function _computeSlotAtTimestamp(
-        uint256 timestamp
-    ) internal view returns (Slot) {
-        return Slot.wrap(uint64((timestamp - GENESIS_TIME) / SECONDS_PER_SLOT));
-    }
-
-    function _computeEpochAtSlot(Slot slot) internal view returns (uint256) {
+    // From HashConsensus contract.
+    function _computeEpochAtSlot(uint256 slot) internal view returns (uint256) {
         // See: github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#compute_epoch_at_slot
-        return Slot.unwrap(slot) / SLOTS_PER_EPOCH;
-    }
-
-    function _computeEpochAtTimestamp(
-        uint256 timestamp
-    ) internal view returns (uint256) {
-        return _computeEpochAtSlot(_computeSlotAtTimestamp(timestamp));
-    }
-
-    function _getTime() internal view virtual returns (uint256) {
-        return block.timestamp; // solhint-disable-line not-rely-on-time
+        return slot / SLOTS_PER_EPOCH;
     }
 }
