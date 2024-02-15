@@ -3,13 +3,11 @@
 
 pragma solidity 0.8.21;
 
-import { IForkSelector } from "./interfaces/IForkSelector.sol";
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { ICSVerifier } from "./interfaces/ICSVerifier.sol";
-import { IGIProvider } from "./interfaces/IGIProvider.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
 
-import { BeaconBlockHeader, ForkVersion, Slot, Validator, Withdrawal } from "./lib/Types.sol";
+import { BeaconBlockHeader, Slot, Validator, Withdrawal } from "./lib/Types.sol";
 import { GIndex } from "./lib/GIndex.sol";
 import { SSZ } from "./lib/SSZ.sol";
 
@@ -34,37 +32,44 @@ contract CSVerifier is ICSVerifier {
 
     uint64 public immutable SLOTS_PER_EPOCH;
 
-    IForkSelector public forkSelector;
-    IGIProvider public gIprovider;
+    GIndex public immutable GI_HISTORICAL_SUMMARIES;
+    GIndex public immutable GI_FIRST_WITHDRAWAL;
+    GIndex public immutable GI_FIRST_VALIDATOR;
+
+    Slot public immutable FIRST_SUPPORTED_SLOT;
+
     ILidoLocator public locator;
     ICSModule public module;
 
     error RootNotFound();
-    error InvalidOffset();
     error InvalidGIndex();
     error InvalidBlockHeader();
     error InvalidChainConfig();
-    error ProofTypeNotSupported();
     error PartialWitdrawal();
     error ValidatorNotWithdrawn();
     error InvalidWithdrawalAddress();
 
-    constructor(uint64 slotsPerEpoch) {
+    constructor(
+        uint64 slotsPerEpoch,
+        GIndex gIHistoricalSummaries,
+        GIndex gIFirstWithdrawal,
+        GIndex gIFirstValidator,
+        Slot firstSupportedSlot
+    ) {
         if (slotsPerEpoch == 0) revert InvalidChainConfig();
 
         SLOTS_PER_EPOCH = slotsPerEpoch;
+
+        GI_HISTORICAL_SUMMARIES = gIHistoricalSummaries;
+        GI_FIRST_WITHDRAWAL = gIFirstWithdrawal;
+        GI_FIRST_VALIDATOR = gIFirstValidator;
+
+        FIRST_SUPPORTED_SLOT = firstSupportedSlot;
     }
 
-    function initialize(
-        address _forkSelector,
-        address _gIprovider,
-        address _locator,
-        address _module
-    ) external {
+    function initialize(address _locator, address _module) external {
         module = ICSModule(_module);
         locator = ILidoLocator(_locator);
-        gIprovider = IGIProvider(_gIprovider);
-        forkSelector = IForkSelector(_forkSelector);
     }
 
     function processWithdrawalProof(
@@ -73,6 +78,10 @@ contract CSVerifier is ICSVerifier {
         uint256 nodeOperatorId,
         uint256 keyIndex
     ) external {
+        if (beaconBlock.header.slot < FIRST_SUPPORTED_SLOT.unwrap()) {
+            revert InvalidBlockHeader();
+        }
+
         {
             bytes32 trustedHeaderRoot = _getParentBlockRoot(
                 beaconBlock.rootsTimestamp
@@ -82,10 +91,6 @@ contract CSVerifier is ICSVerifier {
                 revert InvalidBlockHeader();
             }
         }
-
-        ForkVersion fork = forkSelector.findFork(
-            Slot.wrap(beaconBlock.header.slot)
-        );
 
         bytes memory pubkey = module.getNodeOperatorSigningKeys(
             nodeOperatorId,
@@ -98,7 +103,6 @@ contract CSVerifier is ICSVerifier {
             witness,
             _computeEpochAtSlot(beaconBlock.header.slot),
             beaconBlock.header.stateRoot,
-            fork,
             pubkey
         );
 
@@ -129,12 +133,8 @@ contract CSVerifier is ICSVerifier {
         {
             // Check the validity of the historical block root against the anchor block header (accessible from EIP-4788).
             bytes32 anchorStateRoot = beaconBlock.header.stateRoot;
-            ForkVersion anchorFork = forkSelector.findFork(
-                Slot.wrap(beaconBlock.header.slot)
-            );
             // solhint-disable-next-line func-named-parameters
             _verifyBlockRootProof(
-                anchorFork,
                 anchorStateRoot,
                 oldBlock.header.hashTreeRoot(),
                 oldBlock.rootGIndex,
@@ -142,11 +142,7 @@ contract CSVerifier is ICSVerifier {
             );
         }
 
-        // Fork may get a new value depending on the historical state root.
         bytes32 stateRoot = oldBlock.header.stateRoot;
-        ForkVersion fork = forkSelector.findFork(
-            Slot.wrap(oldBlock.header.slot)
-        );
 
         bytes memory pubkey = module.getNodeOperatorSigningKeys(
             nodeOperatorId,
@@ -159,7 +155,6 @@ contract CSVerifier is ICSVerifier {
             witness,
             _computeEpochAtSlot(oldBlock.header.slot),
             stateRoot,
-            fork,
             pubkey
         );
 
@@ -186,19 +181,13 @@ contract CSVerifier is ICSVerifier {
 
     /// @dev It's up to a user to provide a valid generalized index of a historical block root in a summaries list.
     function _verifyBlockRootProof(
-        ForkVersion fork,
         bytes32 stateRoot,
         bytes32 historicalBlockRoot,
         GIndex historicalBlockRootGIndex,
         bytes32[] calldata blockRootProof
     ) internal view {
-        GIndex anchor = gIprovider.getIndex(
-            fork,
-            "BeaconState.historical_summaries"
-        );
-
         // Ensuring the provided generalized index is for a node somewhere below the historical_summaries root.
-        if (!anchor.isParentOf(historicalBlockRootGIndex)) {
+        if (!GI_HISTORICAL_SUMMARIES.isParentOf(historicalBlockRootGIndex)) {
             revert InvalidGIndex();
         }
 
@@ -215,7 +204,6 @@ contract CSVerifier is ICSVerifier {
         WithdrawalWitness calldata witness,
         uint256 stateEpoch,
         bytes32 stateRoot,
-        ForkVersion fork,
         bytes memory pubkey
     ) internal view returns (Withdrawal memory withdrawal) {
         address withdrawalAddress = _wcToAddress(witness.withdrawalCredentials);
@@ -247,7 +235,7 @@ contract CSVerifier is ICSVerifier {
             witness.validatorProof,
             stateRoot,
             validator.hashTreeRoot(),
-            _getValidatorGI(fork, witness.validatorIndex)
+            _getValidatorGI(witness.validatorIndex)
         );
 
         withdrawal = Withdrawal({
@@ -261,7 +249,7 @@ contract CSVerifier is ICSVerifier {
             witness.withdrawalProof,
             stateRoot,
             withdrawal.hashTreeRoot(),
-            _getWithdrawalGI(fork, witness.withdrawalOffset)
+            _getWithdrawalGI(witness.withdrawalOffset)
         );
     }
 
@@ -269,19 +257,13 @@ contract CSVerifier is ICSVerifier {
         return address(uint160(uint256(value)));
     }
 
-    function _getValidatorGI(
-        ForkVersion fork,
-        uint256 offset
-    ) internal view returns (GIndex) {
-        GIndex gI = gIprovider.getIndex(fork, "BeaconState.validators[0]");
+    function _getValidatorGI(uint256 offset) internal view returns (GIndex) {
+        GIndex gI = GI_FIRST_VALIDATOR;
         return gI.shr(offset);
     }
 
-    function _getWithdrawalGI(
-        ForkVersion fork,
-        uint256 offset
-    ) internal view returns (GIndex) {
-        GIndex gI = gIprovider.getIndex(fork, "BeaconState.withdrawals[0]");
+    function _getWithdrawalGI(uint256 offset) internal view returns (GIndex) {
+        GIndex gI = GI_FIRST_WITHDRAWAL;
         if (offset == 0) return gI;
         return gI.shr(offset);
     }

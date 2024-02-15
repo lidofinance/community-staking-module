@@ -10,9 +10,9 @@ import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { ICSModule } from "../src/interfaces/ICSModule.sol";
 
 import { CSVerifier } from "../src/CSVerifier.sol";
+import { pack } from "../src/lib/GIndex.sol";
+import { Slot } from "../src/lib/Types.sol";
 
-import { ForkSelectorMock } from "./helpers/mocks/ForkSelectorMock.sol";
-import { GIProviderMock } from "./helpers/mocks/GIProviderMock.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 
 contract CSVerifierTest is Test {
@@ -27,8 +27,6 @@ contract CSVerifierTest is Test {
     }
 
     CSVerifier public verifier;
-    ForkSelectorMock public forkSelector;
-    GIProviderMock public gIprovider;
     Stub public locator;
     Stub public module;
 
@@ -44,22 +42,18 @@ contract CSVerifierTest is Test {
         bytes memory data = json.parseRaw("$");
         fixture = abi.decode(data, (WithdrawalFixture));
 
-        verifier = new CSVerifier({ slotsPerEpoch: 32 });
+        verifier = new CSVerifier({
+            slotsPerEpoch: 32,
+            gIHistoricalSummaries: pack(0x3b, 5),
+            gIFirstWithdrawal: pack(0xe1c0, 4),
+            gIFirstValidator: pack(0x560000000000, 40),
+            firstSupportedSlot: Slot.wrap(7413760)
+        });
 
-        forkSelector = new ForkSelectorMock();
-        gIprovider = new GIProviderMock();
         locator = new Stub();
         module = new Stub();
 
-        forkSelector.usePrater();
-        gIprovider.usePreset();
-
-        verifier.initialize(
-            address(forkSelector),
-            address(gIprovider),
-            address(locator),
-            address(module)
-        );
+        verifier.initialize(address(locator), address(module));
     }
 
     function test_processWithdrawalProof() public {
