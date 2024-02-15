@@ -45,11 +45,7 @@ contract CSVerifierHistoricalTest is Test {
         bytes memory data = json.parseRaw("$");
         fixture = abi.decode(data, (HistoricalWithdrawalFixture));
 
-        verifier = new CSVerifier({
-            slotsPerEpoch: 32,
-            secondsPerSlot: 12,
-            genesisTime: 0
-        });
+        verifier = new CSVerifier({ slotsPerEpoch: 32 });
 
         forkSelector = new ForkSelectorMock();
         gIprovider = new GIProviderMock();

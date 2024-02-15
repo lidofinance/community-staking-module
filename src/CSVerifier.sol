@@ -33,8 +33,6 @@ contract CSVerifier is ICSVerifier {
         0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02;
 
     uint64 public immutable SLOTS_PER_EPOCH;
-    uint64 public immutable SECONDS_PER_SLOT;
-    uint64 public immutable GENESIS_TIME;
 
     IForkSelector public forkSelector;
     IGIProvider public gIprovider;
@@ -51,17 +49,10 @@ contract CSVerifier is ICSVerifier {
     error ValidatorNotWithdrawn();
     error InvalidWithdrawalAddress();
 
-    constructor(
-        uint64 slotsPerEpoch,
-        uint64 secondsPerSlot,
-        uint64 genesisTime
-    ) {
-        if (secondsPerSlot == 0) revert InvalidChainConfig();
+    constructor(uint64 slotsPerEpoch) {
         if (slotsPerEpoch == 0) revert InvalidChainConfig();
 
-        SECONDS_PER_SLOT = secondsPerSlot;
         SLOTS_PER_EPOCH = slotsPerEpoch;
-        GENESIS_TIME = genesisTime;
     }
 
     function initialize(
