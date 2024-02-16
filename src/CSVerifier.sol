@@ -48,6 +48,7 @@ contract CSVerifier is ICSVerifier {
     error PartialWitdrawal();
     error ValidatorNotWithdrawn();
     error InvalidWithdrawalAddress();
+    error UnsupportedSlot(uint256 slot);
 
     constructor(
         uint64 slotsPerEpoch,
@@ -79,7 +80,7 @@ contract CSVerifier is ICSVerifier {
         uint256 keyIndex
     ) external {
         if (beaconBlock.header.slot < FIRST_SUPPORTED_SLOT.unwrap()) {
-            revert InvalidBlockHeader();
+            revert UnsupportedSlot(beaconBlock.header.slot);
         }
 
         {
@@ -120,6 +121,14 @@ contract CSVerifier is ICSVerifier {
         uint256 nodeOperatorId,
         uint256 keyIndex
     ) external {
+        if (beaconBlock.header.slot < FIRST_SUPPORTED_SLOT.unwrap()) {
+            revert UnsupportedSlot(beaconBlock.header.slot);
+        }
+
+        if (oldBlock.header.slot < FIRST_SUPPORTED_SLOT.unwrap()) {
+            revert UnsupportedSlot(oldBlock.header.slot);
+        }
+
         {
             bytes32 trustedHeaderRoot = _getParentBlockRoot(
                 beaconBlock.rootsTimestamp
