@@ -32,6 +32,8 @@ abstract contract DeployBase is Script {
 
     address private deployer;
     uint256 private pk;
+    CSModule public csm;
+    CSAccounting public accounting;
 
     error ChainIdMismatch(uint256 actual, uint256 expected);
 
@@ -73,7 +75,7 @@ abstract contract DeployBase is Script {
 
         vm.startBroadcast(pk);
         {
-            CSModule csm = new CSModule({
+            csm = new CSModule({
                 moduleType: "community-staking-module",
                 locator: address(locator),
                 admin: address(deployer)
@@ -81,7 +83,7 @@ abstract contract DeployBase is Script {
             uint256[] memory curve = new uint256[](2);
             curve[0] = 2 ether;
             curve[1] = 4 ether;
-            CSAccounting accounting = new CSAccounting({
+            accounting = new CSAccounting({
                 bondCurve: curve,
                 admin: deployer,
                 lidoLocator: address(locator),
@@ -90,6 +92,7 @@ abstract contract DeployBase is Script {
                 // todo: arguable. should be discussed
                 bondLockRetentionPeriod: 8 weeks
             });
+            csm.grantRole(csm.SET_ACCOUNTING_ROLE(), deployer);
             csm.setAccounting(address(accounting));
 
             CSFeeOracle oracleImpl = new CSFeeOracle({
