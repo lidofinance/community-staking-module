@@ -34,9 +34,4 @@ library Math {
                 0x0009010a0d15021d0b0e10121619031e080c141c0f111807131b17061a05041f))
         }
     }
-
-    // See http://www.graphics.stanford.edu/~seander/bithacks.html#DetermineIfPowerOf2.
-    function isPowerOfTwo(uint256 x) internal pure returns (bool) {
-        return x != 0 && (x & (x - 1)) == 0;
-    }
 }
