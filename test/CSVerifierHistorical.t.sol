@@ -27,6 +27,9 @@ contract CSVerifierHistoricalTest is Test {
         ICSVerifier.WithdrawalWitness witness;
     }
 
+    // On **prater**, see https://github.com/eth-clients/goerli/blob/main/prater/config.yaml.
+    uint64 public constant DENEB_FORK_EPOCH = 231680;
+
     CSVerifier public verifier;
     Stub public locator;
     Stub public module;
@@ -48,7 +51,7 @@ contract CSVerifierHistoricalTest is Test {
             gIHistoricalSummaries: pack(0x3b, 5),
             gIFirstWithdrawal: pack(0xe1c0, 4),
             gIFirstValidator: pack(0x560000000000, 40),
-            firstSupportedSlot: Slot.wrap(7413760)
+            firstSupportedSlot: Slot.wrap(DENEB_FORK_EPOCH * 32)
         });
 
         locator = new Stub();
@@ -58,9 +61,6 @@ contract CSVerifierHistoricalTest is Test {
     }
 
     function test_processWithdrawalProof() public {
-        // FIXME: fixture was build against capella which is not supported.
-        vm.skip(true);
-
         vm.mockCall(
             verifier.BEACON_ROOTS(),
             abi.encode(fixture.beaconBlock.rootsTimestamp),
@@ -88,8 +88,6 @@ contract CSVerifierHistoricalTest is Test {
             abi.encodeWithSelector(ICSModule.submitWithdrawal.selector),
             ""
         );
-
-        vm.warp(fixture.oldBlock.header.slot * 12);
 
         // solhint-disable-next-line func-named-parameters
         verifier.processHistoricalWithdrawalProof(

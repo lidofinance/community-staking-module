@@ -27,6 +27,7 @@ interface ICSVerifier {
         uint64 exitEpoch;
         uint64 withdrawableEpoch;
         // ── Proofs ────────────────────────────────────────────────────────────
+        // We accept the `withdrawalProof` against a state root, because it saves a few hops.
         bytes32[] withdrawalProof;
         bytes32[] validatorProof;
     }

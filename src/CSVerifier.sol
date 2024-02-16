@@ -93,8 +93,7 @@ contract CSVerifier is ICSVerifier {
             bytes32 trustedHeaderRoot = _getParentBlockRoot(
                 beaconBlock.rootsTimestamp
             );
-            bytes32 headerRoot = beaconBlock.header.hashTreeRoot();
-            if (trustedHeaderRoot != headerRoot) {
+            if (trustedHeaderRoot != beaconBlock.header.hashTreeRoot()) {
                 revert InvalidBlockHeader();
             }
         }
@@ -105,13 +104,12 @@ contract CSVerifier is ICSVerifier {
             1
         );
 
-        // solhint-disable-next-line func-named-parameters
-        Withdrawal memory withdrawal = _processWithdrawalProof(
-            witness,
-            _computeEpochAtSlot(beaconBlock.header.slot),
-            beaconBlock.header.stateRoot,
-            pubkey
-        );
+        Withdrawal memory withdrawal = _processWithdrawalProof({
+            witness: witness,
+            stateEpoch: _computeEpochAtSlot(beaconBlock.header.slot),
+            stateRoot: beaconBlock.header.stateRoot,
+            pubkey: pubkey
+        });
 
         module.submitWithdrawal(
             nodeOperatorId,
@@ -145,19 +143,14 @@ contract CSVerifier is ICSVerifier {
             }
         }
 
-        {
-            // Check the validity of the historical block root against the anchor block header (accessible from EIP-4788).
-            bytes32 anchorStateRoot = beaconBlock.header.stateRoot;
-            // solhint-disable-next-line func-named-parameters
-            _verifyBlockRootProof(
-                anchorStateRoot,
-                oldBlock.header.hashTreeRoot(),
-                oldBlock.rootGIndex,
-                oldBlock.proof
-            );
-        }
-
-        bytes32 stateRoot = oldBlock.header.stateRoot;
+        // It's up to a user to provide a valid generalized index of a historical block root in a summaries list.
+        _checkRootGIndex(oldBlock.rootGIndex);
+        SSZ.verifyProof({
+            proof: oldBlock.proof,
+            root: beaconBlock.header.stateRoot,
+            leaf: oldBlock.header.hashTreeRoot(),
+            gI: oldBlock.rootGIndex
+        });
 
         bytes memory pubkey = module.getNodeOperatorSigningKeys(
             nodeOperatorId,
@@ -165,13 +158,12 @@ contract CSVerifier is ICSVerifier {
             1
         );
 
-        // solhint-disable-next-line func-named-parameters
-        Withdrawal memory withdrawal = _processWithdrawalProof(
-            witness,
-            _computeEpochAtSlot(oldBlock.header.slot),
-            stateRoot,
-            pubkey
-        );
+        Withdrawal memory withdrawal = _processWithdrawalProof({
+            witness: witness,
+            stateEpoch: _computeEpochAtSlot(oldBlock.header.slot),
+            stateRoot: oldBlock.header.stateRoot,
+            pubkey: pubkey
+        });
 
         module.submitWithdrawal(
             nodeOperatorId,
@@ -194,24 +186,11 @@ contract CSVerifier is ICSVerifier {
         root = abi.decode(data, (bytes32));
     }
 
-    /// @dev It's up to a user to provide a valid generalized index of a historical block root in a summaries list.
-    function _verifyBlockRootProof(
-        bytes32 stateRoot,
-        bytes32 historicalBlockRoot,
-        GIndex historicalBlockRootGIndex,
-        bytes32[] calldata blockRootProof
-    ) internal view {
+    function _checkRootGIndex(GIndex gI) internal view {
         // Ensuring the provided generalized index is for a node somewhere below the historical_summaries root.
-        if (!GI_HISTORICAL_SUMMARIES.isParentOf(historicalBlockRootGIndex)) {
+        if (!GI_HISTORICAL_SUMMARIES.isParentOf(gI)) {
             revert InvalidGIndex();
         }
-
-        SSZ.verifyProof(
-            blockRootProof,
-            stateRoot,
-            historicalBlockRoot,
-            historicalBlockRootGIndex
-        );
     }
 
     // @dev `stateRoot` is supposed to be trusted at this point.
@@ -246,12 +225,12 @@ contract CSVerifier is ICSVerifier {
             withdrawableEpoch: witness.withdrawableEpoch
         });
 
-        SSZ.verifyProof(
-            witness.validatorProof,
-            stateRoot,
-            validator.hashTreeRoot(),
-            _getValidatorGI(witness.validatorIndex)
-        );
+        SSZ.verifyProof({
+            proof: witness.validatorProof,
+            root: stateRoot,
+            leaf: validator.hashTreeRoot(),
+            gI: _getValidatorGI(witness.validatorIndex)
+        });
 
         withdrawal = Withdrawal({
             index: witness.withdrawalIndex,
@@ -260,12 +239,12 @@ contract CSVerifier is ICSVerifier {
             amount: witness.amount
         });
 
-        SSZ.verifyProof(
-            witness.withdrawalProof,
-            stateRoot,
-            withdrawal.hashTreeRoot(),
-            _getWithdrawalGI(witness.withdrawalOffset)
-        );
+        SSZ.verifyProof({
+            proof: witness.withdrawalProof,
+            root: stateRoot,
+            leaf: withdrawal.hashTreeRoot(),
+            gI: _getWithdrawalGI(witness.withdrawalOffset)
+        });
     }
 
     function _wcToAddress(bytes32 value) internal pure returns (address) {

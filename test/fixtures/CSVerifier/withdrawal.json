@@ -10,7 +10,7 @@
       "03__stateRoot": "0xa960cc6db4089149664d7b845da32572a5d5e39d973c4a41f1e2c4668877fabc",
       "04__bodyRoot": "0x10a1761482c4d4b4c3af4cb93884f6c2058f47428ba66389801a96bd6fbb224a"
     },
-    "rootsTimestamp": 1706545128
+    "rootsTimestamp": 42
   },
   "witness": {
     "00__withdrawalOffset": 1,
