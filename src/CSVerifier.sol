@@ -32,10 +32,16 @@ contract CSVerifier is ICSVerifier {
 
     uint64 public immutable SLOTS_PER_EPOCH;
 
+    /// @dev This index is relative to a state like: `BeaconState.historical_summaries`.
     GIndex public immutable GI_HISTORICAL_SUMMARIES;
+
+    /// @dev This index is relative to a block like: `BeaconBlock.body.execution_payload.withdrawals[0]`.
     GIndex public immutable GI_FIRST_WITHDRAWAL;
+
+    /// @dev This index is relative to a state like: `BeaconState.validators[0]`.
     GIndex public immutable GI_FIRST_VALIDATOR;
 
+    /// @dev The very first slot the verifier is supposed to accept proofs for.
     Slot public immutable FIRST_SUPPORTED_SLOT;
 
     ILidoLocator public locator;
