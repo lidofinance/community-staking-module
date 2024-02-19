@@ -980,7 +980,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         external
         onlyRole(STAKING_ROUTER_ROLE)
     {
-        // TODO: implement
+        // Nothing to do, rewards are distributed by a performance oracle.
     }
 
     /// @notice Unsafe updates of validators count for node operators by DAO
