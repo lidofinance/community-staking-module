@@ -10,6 +10,7 @@ import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensio
 
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
+import { ICSEarlyAccess } from "./interfaces/ICSEarlyAccess.sol";
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { ILido } from "./interfaces/ILido.sol";
 
@@ -103,6 +104,7 @@ contract CSModuleBase {
 
     event StakingModuleTypeSet(bytes32 moduleType);
     event LocatorContractSet(address locatorAddress);
+    event EarlyAccessContractSet(address earlyAccessAddress);
     event UnvettingFeeSet(uint256 unvettingFee);
 
     event UnvettingFeeApplied(uint256 indexed nodeOperatorId);
@@ -146,6 +148,7 @@ contract CSModuleBase {
     error Expired();
     error AlreadyInitialized();
     error InvalidAmount();
+    error EarlyAccessDenied();
 }
 
 contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
@@ -182,14 +185,14 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
 
     uint256 public constant EL_REWARDS_STEALING_FINE = 0.1 ether;
 
-    uint256 private constant ONE_YEAR = 60 * 60 * 24 * 365;
-
     uint256 private immutable TEMP_METHODS_EXPIRE_TIME;
+    uint256 private immutable EARLY_ACCESS_EXPIRE_TIME;
 
     uint256 public unvettingFee;
     QueueLib.Queue public queue;
 
     ICSAccounting public accounting;
+    ICSEarlyAccess public earlyAccess;
     ILidoLocator public lidoLocator;
     uint256 private _nodeOperatorsCount;
     uint256 private _activeNodeOperatorsCount;
@@ -204,14 +207,25 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
     uint256 private _totalAddedValidators;
     uint256 private _depositableValidatorsCount;
 
-    constructor(bytes32 moduleType, address locator, address admin) {
-        TEMP_METHODS_EXPIRE_TIME = block.timestamp + ONE_YEAR;
+    constructor(
+        bytes32 moduleType,
+        address locator,
+        address earlyAccessAddress,
+        address admin
+    ) {
+        TEMP_METHODS_EXPIRE_TIME = block.timestamp + 365 days;
+        EARLY_ACCESS_EXPIRE_TIME = block.timestamp + 90 days;
         _moduleType = moduleType;
         emit StakingModuleTypeSet(moduleType);
 
         if (locator == address(0)) {
             revert ZeroAddress("locator");
         }
+        if (earlyAccessAddress == address(0)) {
+            revert ZeroAddress("earlyAccess");
+        }
+        earlyAccess = ICSEarlyAccess(earlyAccessAddress);
+        emit EarlyAccessContractSet(earlyAccessAddress);
         lidoLocator = ILidoLocator(locator);
         emit LocatorContractSet(locator);
 
@@ -288,26 +302,15 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
     ) external payable {
         // TODO: sanity checks
 
-        if (msg.value != accounting.getBondAmountByKeysCount(keysCount)) {
+        uint256 id = _createNodeOperator();
+        _processEarlyAccess(id);
+
+        if (msg.value != accounting.getBondAmountByKeysCount(keysCount, accounting.getBondCurve(id))) {
             revert InvalidAmount();
         }
 
-        uint256 id = _nodeOperatorsCount;
-        if (id == MAX_NODE_OPERATORS_COUNT)
-            revert MaxNodeOperatorsCountReached();
-        NodeOperator storage no = _nodeOperators[id];
-
-        no.managerAddress = msg.sender;
-        no.rewardAddress = msg.sender;
-        no.active = true;
-        _nodeOperatorsCount++;
-        _activeNodeOperatorsCount++;
-
         accounting.depositETH{ value: msg.value }(msg.sender, id);
-
         _addSigningKeys(id, keysCount, publicKeys, signatures);
-
-        emit NodeOperatorAdded(id, msg.sender);
     }
 
     /// @notice Adds a new node operator with stETH bond
@@ -321,26 +324,16 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
     ) external {
         // TODO: sanity checks
 
-        uint256 id = _nodeOperatorsCount;
-        if (id == MAX_NODE_OPERATORS_COUNT)
-            revert MaxNodeOperatorsCountReached();
-        NodeOperator storage no = _nodeOperators[id];
-
-        no.managerAddress = msg.sender;
-        no.rewardAddress = msg.sender;
-        no.active = true;
-        _nodeOperatorsCount++;
-        _activeNodeOperatorsCount++;
+        uint256 id = _createNodeOperator();
+        _processEarlyAccess(id);
 
         accounting.depositStETH(
             msg.sender,
             id,
-            accounting.getBondAmountByKeysCount(keysCount)
+            accounting.getBondAmountByKeysCount(keysCount, accounting.getBondCurve(id))
         );
 
         _addSigningKeys(id, keysCount, publicKeys, signatures);
-
-        emit NodeOperatorAdded(id, msg.sender);
     }
 
     /// @notice Adds a new node operator with permit to use stETH as bond
@@ -356,26 +349,17 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
     ) external {
         // TODO: sanity checks
 
-        uint256 id = _nodeOperatorsCount;
-        if (id == MAX_NODE_OPERATORS_COUNT)
-            revert MaxNodeOperatorsCountReached();
-        NodeOperator storage no = _nodeOperators[id];
-        no.rewardAddress = msg.sender;
-        no.managerAddress = msg.sender;
-        no.active = true;
-        _nodeOperatorsCount++;
-        _activeNodeOperatorsCount++;
+        uint256 id = _createNodeOperator();
+        _processEarlyAccess(id);
 
         accounting.depositStETHWithPermit(
             msg.sender,
             id,
-            accounting.getBondAmountByKeysCount(keysCount),
+            accounting.getBondAmountByKeysCount(keysCount, accounting.getBondCurve(id)),
             permit
         );
 
         _addSigningKeys(id, keysCount, publicKeys, signatures);
-
-        emit NodeOperatorAdded(id, msg.sender);
     }
 
     /// @notice Adds a new node operator with wstETH bond
@@ -389,26 +373,16 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
     ) external {
         // TODO: sanity checks
 
-        uint256 id = _nodeOperatorsCount;
-        if (id == MAX_NODE_OPERATORS_COUNT)
-            revert MaxNodeOperatorsCountReached();
-        NodeOperator storage no = _nodeOperators[id];
-
-        no.managerAddress = msg.sender;
-        no.rewardAddress = msg.sender;
-        no.active = true;
-        _nodeOperatorsCount++;
-        _activeNodeOperatorsCount++;
+        uint256 id = _createNodeOperator();
+        _processEarlyAccess(id);
 
         accounting.depositWstETH(
             msg.sender,
             id,
-            accounting.getBondAmountByKeysCountWstETH(keysCount)
+            accounting.getBondAmountByKeysCountWstETH(keysCount, accounting.getBondCurve(id))
         );
 
         _addSigningKeys(id, keysCount, publicKeys, signatures);
-
-        emit NodeOperatorAdded(id, msg.sender);
     }
 
     /// @notice Adds a new node operator with permit to use wstETH as bond
@@ -424,26 +398,17 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
     ) external {
         // TODO: sanity checks
 
-        uint256 id = _nodeOperatorsCount;
-        if (id == MAX_NODE_OPERATORS_COUNT)
-            revert MaxNodeOperatorsCountReached();
-        NodeOperator storage no = _nodeOperators[id];
-        no.rewardAddress = msg.sender;
-        no.managerAddress = msg.sender;
-        no.active = true;
-        _nodeOperatorsCount++;
-        _activeNodeOperatorsCount++;
+        uint256 id = _createNodeOperator();
+        _processEarlyAccess(id);
 
         accounting.depositWstETHWithPermit(
             msg.sender,
             id,
-            accounting.getBondAmountByKeysCountWstETH(keysCount),
+            accounting.getBondAmountByKeysCountWstETH(keysCount, accounting.getBondCurve(id)),
             permit
         );
 
         _addSigningKeys(id, keysCount, publicKeys, signatures);
-
-        emit NodeOperatorAdded(id, msg.sender);
     }
 
     /// @notice Adds a new keys to the node operator with ETH bond
@@ -1530,6 +1495,32 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
 
     function _incrementModuleNonce() internal {
         _nonce++;
+    }
+
+    function _createNodeOperator() internal returns (uint256) {
+        uint256 id = _nodeOperatorsCount;
+        if (id == MAX_NODE_OPERATORS_COUNT)
+            revert MaxNodeOperatorsCountReached();
+        NodeOperator storage no = _nodeOperators[id];
+
+        no.managerAddress = msg.sender;
+        no.rewardAddress = msg.sender;
+        no.active = true;
+        _nodeOperatorsCount++;
+        _activeNodeOperatorsCount++;
+
+        emit NodeOperatorAdded(id, msg.sender);
+        return id;
+    }
+
+    function _processEarlyAccess(uint256 nodeOperatorId) internal {
+        if (block.timestamp < EARLY_ACCESS_EXPIRE_TIME) {
+            if (!earlyAccess.isEligible(msg.sender)) {
+                revert EarlyAccessDenied();
+            }
+            earlyAccess.consume(msg.sender);
+            accounting.setBondCurve(nodeOperatorId, earlyAccess.getCurve());
+        }
     }
 
     modifier onlyExistingNodeOperator(uint256 nodeOperatorId) {
