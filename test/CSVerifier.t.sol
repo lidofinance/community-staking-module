@@ -26,6 +26,13 @@ contract CSVerifierTest is Test {
         ICSVerifier.WithdrawalWitness witness;
     }
 
+    struct SlashingFixture {
+        bytes32 _blockRoot;
+        bytes _pubkey;
+        ICSVerifier.ProvableBeaconBlockHeader beaconBlock;
+        ICSVerifier.SlashingWitness witness;
+    }
+
     // On **prater**, see https://github.com/eth-clients/goerli/blob/main/prater/config.yaml.
     uint64 public constant DENEB_FORK_EPOCH = 231680;
 
@@ -33,18 +40,14 @@ contract CSVerifierTest is Test {
     Stub public locator;
     Stub public module;
 
-    WithdrawalFixture public fixture;
+    string internal fixturesPath;
+
+    constructor() {
+        string memory root = vm.projectRoot();
+        fixturesPath = string.concat(root, "/test/fixtures/CSVerifier/");
+    }
 
     function setUp() public {
-        string memory root = vm.projectRoot();
-        string memory path = string.concat(
-            root,
-            "/test/fixtures/CSVerifier/withdrawal.json"
-        );
-        string memory json = vm.readFile(path);
-        bytes memory data = json.parseRaw("$");
-        fixture = abi.decode(data, (WithdrawalFixture));
-
         verifier = new CSVerifier({
             slotsPerEpoch: 32,
             gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
@@ -59,7 +62,48 @@ contract CSVerifierTest is Test {
         verifier.initialize(address(locator), address(module));
     }
 
+    function test_processSlashingProof() public {
+        SlashingFixture memory fixture = abi.decode(
+            _readFixture("slashing.json"),
+            (SlashingFixture)
+        );
+
+        vm.mockCall(
+            verifier.BEACON_ROOTS(),
+            abi.encode(fixture.beaconBlock.rootsTimestamp),
+            abi.encode(fixture._blockRoot)
+        );
+
+        vm.mockCall(
+            address(module),
+            abi.encodeWithSelector(
+                ICSModule.getNodeOperatorSigningKeys.selector,
+                0,
+                0
+            ),
+            abi.encode(fixture._pubkey)
+        );
+
+        vm.mockCall(
+            address(module),
+            abi.encodeWithSelector(ICSModule.submitInitialSlashing.selector),
+            ""
+        );
+
+        verifier.processSlashingProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
     function test_processWithdrawalProof() public {
+        WithdrawalFixture memory fixture = abi.decode(
+            _readFixture("withdrawal.json"),
+            (WithdrawalFixture)
+        );
+
         vm.mockCall(
             verifier.BEACON_ROOTS(),
             abi.encode(fixture.beaconBlock.rootsTimestamp),
@@ -94,5 +138,13 @@ contract CSVerifierTest is Test {
             0,
             0
         );
+    }
+
+    function _readFixture(
+        string memory filename
+    ) internal returns (bytes memory data) {
+        string memory path = string.concat(fixturesPath, filename);
+        string memory json = vm.readFile(path);
+        data = json.parseRaw("$");
     }
 }
