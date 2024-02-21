@@ -123,10 +123,11 @@ contract CSAccounting is
 
     /// @notice Add new bond curve.
     /// @param bondCurve bond curve to add.
+    /// @return id of the added bond curve.
     function addBondCurve(
         uint256[] memory bondCurve
-    ) external whenResumed onlyRole(ADD_BOND_CURVE_ROLE) {
-        CSBondCurve._addBondCurve(bondCurve);
+    ) external whenResumed onlyRole(ADD_BOND_CURVE_ROLE) returns (uint256) {
+        return CSBondCurve._addBondCurve(bondCurve);
     }
 
     /// @notice Sets default bond curve.
@@ -292,7 +293,6 @@ contract CSAccounting is
             activeKeys + additionalKeys,
             bondCurve
         ) - CSBondCurve.getBondAmountByKeysCount(activeKeys, bondCurve);
-
         uint256 missing = required > current ? required - current : 0;
         if (missing > 0) {
             return missing + requiredForNextKeys;

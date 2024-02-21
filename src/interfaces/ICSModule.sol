@@ -4,6 +4,7 @@
 pragma solidity 0.8.21;
 
 import { IStakingModule } from "./IStakingModule.sol";
+import "./ICSAccounting.sol";
 
 /// @title Lido's Community Staking Module interface
 interface ICSModule is IStakingModule {
@@ -17,6 +18,45 @@ interface ICSModule is IStakingModule {
         uint256 totalAddedValidators;
         uint256 totalDepositedValidators;
     }
+
+    function createNodeOperator() external returns (uint256);
+
+    function addValidatorKeysETH(
+        uint256 nodeOperatorId,
+        uint256 keysCount,
+        bytes calldata publicKeys,
+        bytes calldata signatures
+    ) external payable;
+
+    function addValidatorKeysStETH(
+        uint256 nodeOperatorId,
+        uint256 keysCount,
+        bytes calldata publicKeys,
+        bytes calldata signatures
+    ) external;
+
+    function addValidatorKeysStETHWithPermit(
+        uint256 nodeOperatorId,
+        uint256 keysCount,
+        bytes calldata publicKeys,
+        bytes calldata signatures,
+        ICSAccounting.PermitInput calldata permit
+    ) external;
+
+    function addValidatorKeysWstETH(
+        uint256 nodeOperatorId,
+        uint256 keysCount,
+        bytes calldata publicKeys,
+        bytes calldata signatures
+    ) external;
+
+    function addValidatorKeysWstETHWithPermit(
+        uint256 nodeOperatorId,
+        uint256 keysCount,
+        bytes calldata publicKeys,
+        bytes calldata signatures,
+        ICSAccounting.PermitInput calldata permit
+    ) external;
 
     /// @notice Returns the node operator by id
     /// @param nodeOperatorId Node Operator id

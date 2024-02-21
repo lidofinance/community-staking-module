@@ -12,6 +12,7 @@ import "./helpers/mocks/LidoLocatorMock.sol";
 import "./helpers/mocks/LidoMock.sol";
 import "./helpers/mocks/WstETHMock.sol";
 import "./helpers/Utilities.sol";
+import "../src/CSEarlyAccess.sol";
 
 abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
     using Strings for uint256;
@@ -31,6 +32,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
     LidoMock public stETH;
     CSModule public csm;
     CSAccounting public accounting;
+    CSEarlyAccess public earlyAccess;
     Stub public communityStakingFeeDistributor;
 
     address internal admin;
@@ -212,7 +214,13 @@ contract CSMCommon is CSMFixtures {
         (locator, wstETH, stETH, ) = initLido();
 
         communityStakingFeeDistributor = new Stub();
-        csm = new CSModule("community-staking-module", address(locator), admin);
+
+        earlyAccess = new CSEarlyAccess(address(csm), address(accounting));
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            admin
+        );
         uint256[] memory curve = new uint256[](1);
         curve[0] = BOND_SIZE;
         accounting = new CSAccounting(
@@ -242,8 +250,14 @@ contract CSMCommon is CSMFixtures {
         csm.grantRole(csm.WITHDRAWAL_SUBMITTER_ROLE(), address(this));
         vm.stopPrank();
 
+        earlyAccess = new CSEarlyAccess(address(csm), address(accounting));
+        csm.setEarlyAccess(address(earlyAccess));
         csm.setAccounting(address(accounting));
         csm.setUnvettingFee(0.05 ether);
+        vm.startPrank(admin);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(earlyAccess));
+        accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), address(earlyAccess));
+        vm.stopPrank();
     }
 }
 
@@ -259,7 +273,11 @@ contract CSMCommonNoRoles is CSMFixtures {
         (locator, wstETH, stETH, ) = initLido();
 
         communityStakingFeeDistributor = new Stub();
-        csm = new CSModule("community-staking-module", address(locator), admin);
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            admin
+        );
 
         vm.startPrank(admin);
         csm.grantRole(csm.SET_ACCOUNTING_ROLE(), admin);
@@ -275,20 +293,31 @@ contract CSMCommonNoRoles is CSMFixtures {
             8 weeks
         );
 
+        earlyAccess = new CSEarlyAccess(address(csm), address(accounting));
+        csm.setEarlyAccess(address(earlyAccess));
         csm.setAccounting(address(accounting));
         vm.stopPrank();
+        vm.warp(91 days);
     }
 }
 
 contract CsmInitialization is CSMCommon {
     function test_initContract() public {
-        csm = new CSModule("community-staking-module", address(locator), admin);
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            admin
+        );
         assertEq(csm.getType(), "community-staking-module");
         assertEq(csm.getNodeOperatorsCount(), 0);
     }
 
     function test_setAccounting() public {
-        csm = new CSModule("community-staking-module", address(locator), admin);
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            admin
+        );
         vm.startPrank(admin);
         csm.grantRole(csm.SET_ACCOUNTING_ROLE(), address(admin));
         csm.setAccounting(address(accounting));
@@ -311,9 +340,9 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalSigningKeysCountChanged(0, 1);
-            vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, nodeOperator);
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalSigningKeysCountChanged(0, 1);
         }
 
         csm.addNodeOperatorWstETH(1, keys, signatures);
@@ -333,12 +362,12 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         uint256 nonce = csm.getNonce();
 
         {
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit NodeOperatorAdded(0, nodeOperator);
             vm.expectEmit(true, true, true, true, address(wstETH));
             emit Approval(nodeOperator, address(accounting), wstETHAmount);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
-            vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, nodeOperator);
         }
 
         csm.addNodeOperatorWstETHWithPermit(
@@ -420,9 +449,9 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalSigningKeysCountChanged(0, 1);
-            vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, nodeOperator);
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalSigningKeysCountChanged(0, 1);
         }
 
         vm.prank(nodeOperator);
@@ -443,12 +472,12 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         uint256 nonce = csm.getNonce();
 
         {
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit NodeOperatorAdded(0, nodeOperator);
             vm.expectEmit(true, true, true, true, address(stETH));
             emit Approval(nodeOperator, address(accounting), BOND_SIZE);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
-            vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, nodeOperator);
         }
 
         vm.prank(nodeOperator);
@@ -530,9 +559,9 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalSigningKeysCountChanged(0, 1);
-            vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, nodeOperator);
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalSigningKeysCountChanged(0, 1);
         }
 
         vm.prank(nodeOperator);
@@ -2345,7 +2374,11 @@ contract CsmGetStakingModuleSummary is CSMCommon {
 
 contract CSMAccessControl is CSMCommonNoRoles {
     function test_adminRole() public {
-        CSModule csm = new CSModule("csm", address(accounting), actor);
+        CSModule csm = new CSModule(
+            "csm",
+            address(accounting),
+            actor
+        );
         bytes32 role = csm.SET_ACCOUNTING_ROLE();
         vm.prank(actor);
         csm.grantRole(role, stranger);
@@ -2357,7 +2390,11 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_adminRole_revert() public {
-        CSModule csm = new CSModule("csm", address(accounting), actor);
+        CSModule csm = new CSModule(
+            "csm",
+            address(accounting),
+            actor
+        );
         bytes32 role = csm.SET_ACCOUNTING_ROLE();
         bytes32 adminRole = csm.DEFAULT_ADMIN_ROLE();
 
@@ -2367,7 +2404,11 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_setAccountingRole() public {
-        CSModule csm = new CSModule("csm", address(accounting), admin);
+        CSModule csm = new CSModule(
+            "csm",
+            address(accounting),
+            admin
+        );
         bytes32 role = csm.SET_ACCOUNTING_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
@@ -2711,5 +2752,30 @@ contract CSMAccessControl is CSMCommonNoRoles {
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
         csm.submitWithdrawal(noId, 0, 1 ether);
+    }
+}
+
+contract CSMEarlyAccess is CSMCommon {
+    function test_dummy() public {
+        uint256[] memory curve = new uint256[](1);
+        curve[0] = BOND_SIZE / 2;
+        vm.startPrank(admin);
+        accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), admin);
+        uint256 curveId = accounting.addBondCurve(curve);
+        vm.stopPrank();
+        earlyAccess.setCurve(curveId);
+
+        uint256 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        earlyAccess.addNodeOperatorETH{ value: keysCount * BOND_SIZE / 2 }(
+            keysCount,
+            keys,
+            signatures
+        );
+
+//        createNodeOperator();
+//        assertFalse(earlyAccess.isEligible(nodeOperator));
     }
 }

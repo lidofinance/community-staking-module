@@ -207,7 +207,11 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
     uint256 private _totalAddedValidators;
     uint256 private _depositableValidatorsCount;
 
-    constructor(bytes32 moduleType, address locator, address admin) {
+    constructor(
+        bytes32 moduleType,
+        address locator,
+        address admin
+    ) {
         TEMP_METHODS_EXPIRE_TIME = block.timestamp + 365 days;
         EARLY_ACCESS_EXPIRE_TIME = block.timestamp + 90 days;
         _moduleType = moduleType;
