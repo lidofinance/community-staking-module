@@ -1242,7 +1242,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         uint256 keyIndex
     )
         external
-        onlyRole(WITHDRAWAL_SUBMITTER_ROLE)
+        onlyRole(SLASHING_SUBMITTER_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
