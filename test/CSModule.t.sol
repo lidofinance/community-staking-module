@@ -240,6 +240,7 @@ contract CSMCommon is CSMFixtures {
         );
         csm.grantRole(csm.PENALIZE_ROLE(), address(this));
         csm.grantRole(csm.WITHDRAWAL_SUBMITTER_ROLE(), address(this));
+        csm.grantRole(csm.SLASHING_SUBMITTER_ROLE(), address(this));
         vm.stopPrank();
 
         csm.setAccounting(address(accounting));

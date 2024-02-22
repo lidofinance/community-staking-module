@@ -167,6 +167,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         keccak256("SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0xe85fdec10fe0f93d0792364051df7c3d73e37c17b3a954bffe593960e3cd3012
     bytes32 public constant WITHDRAWAL_SUBMITTER_ROLE =
         keccak256("WITHDRAWAL_SUBMITTER_ROLE"); // 0x2938d532d58b8c4c6a0b79de9ab9d63ffc286cbbc262cbd6cbebe54dd3431dec
+    bytes32 public constant SLASHING_SUBMITTER_ROLE =
+        keccak256("SLASHING_SUBMITTER_ROLE"); // 0x1490d8fc0656a30996bd2e7374c51790f74c101556ce56c87b64719da11a23dd
     bytes32 public constant PENALIZE_ROLE = keccak256("PENALIZE_ROLE"); // 0x014ffee5f075680f5690d491d67de8e1aba5c4a88326c3be77d991796b44f86b
 
     // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
@@ -1232,11 +1234,17 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         }
     }
 
+    /// @notice Report node operator's key as slashed and apply initial slashing penalty.
+    /// @param nodeOperatorId Operator ID in the module.
+    /// @param keyIndex Index of the slashed key in the node operator's keys.
     function submitInitialSlashing(
         uint256 nodeOperatorId,
         uint256 keyIndex
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
-        // TODO: check for slashing proof or role
+    )
+        external
+        onlyRole(SLASHING_SUBMITTER_ROLE)
+        onlyExistingNodeOperator(nodeOperatorId)
+    {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (keyIndex >= no.totalDepositedKeys) {
             revert SigningKeysInvalidOffset();

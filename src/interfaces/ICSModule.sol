@@ -35,6 +35,14 @@ interface ICSModule is IStakingModule {
         uint256 keysCount
     ) external view returns (bytes memory);
 
+    /// @notice Report node operator's key as slashed and apply initial slashing penalty.
+    /// @param nodeOperatorId Operator ID in the module.
+    /// @param keyIndex Index of the slashed key in the node operator's keys.
+    function submitInitialSlashing(
+        uint256 nodeOperatorId,
+        uint256 keyIndex
+    ) external;
+
     /// @notice Report node operator's key as withdrawn and settle withdrawn amount.
     /// @param nodeOperatorId Operator ID in the module.
     /// @param keyIndex Index of the withdrawn key in the node operator's keys.

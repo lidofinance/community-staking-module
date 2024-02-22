@@ -12,6 +12,17 @@ interface ICSVerifier {
         uint64 rootsTimestamp; // To be passed to the EIP-4788 block roots contract.
     }
 
+    struct SlashingWitness {
+        uint64 validatorIndex;
+        bytes32 withdrawalCredentials;
+        uint64 effectiveBalance;
+        uint64 activationEligibilityEpoch;
+        uint64 activationEpoch;
+        uint64 exitEpoch;
+        uint64 withdrawableEpoch;
+        bytes32[] validatorProof;
+    }
+
     struct WithdrawalWitness {
         // ── Withdrawal fields ─────────────────────────────────────────────────
         uint8 withdrawalOffset; // In the withdrawals list.
@@ -38,6 +49,14 @@ interface ICSVerifier {
         GIndex rootGIndex;
         bytes32[] proof;
     }
+
+    /// @notice `witness` is a slashing witness against the `beaconBlock`'s state root.
+    function processSlashingProof(
+        ProvableBeaconBlockHeader calldata beaconBlock,
+        SlashingWitness calldata witness,
+        uint256 nodeOperatorId,
+        uint256 keyIndex
+    ) external;
 
     /// @notice `witness` is a withdrawal witness against the `beaconBlock`'s state root.
     function processWithdrawalProof(
