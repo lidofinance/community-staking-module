@@ -3,6 +3,8 @@
 
 pragma solidity 0.8.21;
 
+error Log2Undefined();
+
 library Math {
     /// @dev From solady FixedPointMath.
     /// @dev Returns the log2 of `x`.

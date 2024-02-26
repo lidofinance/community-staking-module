@@ -7,7 +7,16 @@ import { Math } from "./Math.sol";
 
 type GIndex is bytes32;
 
-using { isRoot, isParentOf, index, shr, shl, concat, unwrap } for GIndex global;
+using {
+    isRoot,
+    isParentOf,
+    index,
+    width,
+    shr,
+    shl,
+    concat,
+    unwrap
+} for GIndex global;
 
 error IndexOutOfRange();
 
@@ -15,7 +24,7 @@ error IndexOutOfRange();
 /// @param p Is a power of a tree level the node belongs to.
 /// @return GIndex
 function pack(uint256 gI, uint8 p) pure returns (GIndex) {
-    if (gI >= type(uint248).max) {
+    if (gI > type(uint248).max) {
         revert IndexOutOfRange();
     }
 
@@ -60,7 +69,7 @@ function shl(GIndex self, uint256 n) pure returns (GIndex) {
     uint256 i = index(self);
     uint256 w = width(self);
 
-    if (i % w > n) {
+    if (i % w < n) {
         revert IndexOutOfRange();
     }
 
@@ -69,10 +78,17 @@ function shl(GIndex self, uint256 n) pure returns (GIndex) {
 
 // See https://github.com/protolambda/remerkleable/blob/91ed092d08ef0ba5ab076f0a34b0b371623db728/remerkleable/tree.py#L46
 function concat(GIndex lhs, GIndex rhs) pure returns (GIndex) {
-    uint256 stepBitLen = Math.log2(index(rhs));
+    uint256 lhsBitLen = Math.log2(index(lhs));
+    uint256 rhsBitLen = Math.log2(index(rhs));
+
+    // TODO: Shift operations have no overflow check. Does solidity multiplication have such a check?
+    if (lhsBitLen + rhsBitLen > 248) {
+        revert IndexOutOfRange();
+    }
+
     return
         pack(
-            (index(lhs) << stepBitLen) | (index(rhs) ^ (1 << stepBitLen)),
+            (index(lhs) << rhsBitLen) | (index(rhs) ^ (1 << rhsBitLen)),
             pow(rhs)
         );
 }
@@ -85,7 +101,7 @@ function isParentOf(GIndex self, GIndex other) pure returns (bool) {
         return false;
     }
 
-    while (gI > 1) {
+    while (gI > 0) {
         if (gI == anchor) {
             return true;
         }
