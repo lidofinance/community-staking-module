@@ -55,6 +55,16 @@ jobs:
           forge --version
           forge build --sizes
 
+      - name: Install node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          cache: yarn
+          cache-dependency-path: "**/yarn.lock"
+
+      - name: Install Node dependencies
+        run: yarn install --immutable
+
       - name: Run Forge tests
         run: |
           forge test -vvv
