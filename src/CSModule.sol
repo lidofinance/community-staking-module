@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 // solhint-disable-next-line one-contract-per-file
-pragma solidity 0.8.21;
+pragma solidity 0.8.24;
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity 0.8.21;
+pragma solidity 0.8.24;
 
 // As defined in phase0/beacon-chain.md:159
 type Slot is uint64;

@@ -1,4 +1,6 @@
 [profile.default]
+solc = "0.8.24"
+evm_version = "cancun"
 src = "src"
 out = "out"
 libs = ["lib", "node_modules"]

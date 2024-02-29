@@ -3,7 +3,7 @@
 
 // See contracts/COMPILERS.md
 // solhint-disable-next-line
-pragma solidity 0.8.21;
+pragma solidity 0.8.24;
 
 interface IStakingRouter {
     event ContractVersionSet(uint256 version);

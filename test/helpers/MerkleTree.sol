@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.21;
+pragma solidity 0.8.24;
 
 /// @dev See https://github.com/succinctlabs/telepathy-contracts/blob/main/src/libraries/MerkleProof.sol
 contract MerkleTree {
