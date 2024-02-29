@@ -1,0 +1,35 @@
+---
+name: Install required tooling
+
+on:
+  workflow_call:
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+
+      - name: Install node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          cache: yarn
+          cache-dependency-path: "**/yarn.lock"
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install just
+        run: sudo snap install --edge --classic just
+
+      - name: Versions
+        run: |
+          forge --version
+          just --version
+          yarn --version

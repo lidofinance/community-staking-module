@@ -18,45 +18,23 @@ jobs:
     name: Linters
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          persist-credentials: false
-
-      - name: Install node
-        uses: actions/setup-node@v3
-        with:
-          node-version-file: ".nvmrc"
-          cache: yarn
-          cache-dependency-path: "**/yarn.lock"
-
-      - name: Install Node dependencies
-        run: yarn install --immutable
+      - name: Bootstrap
+        uses: ./.github/workflows/bootstrap.yml
 
       - name: Linters check
-        run: yarn lint:check
+        run: just lint
 
   foundry:
     name: Foundry project
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          persist-credentials: false
+      - name: Bootstrap
+        uses: ./.github/workflows/bootstrap.yml
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
+      - name: Build
+        run: just build --sizes
 
-      - name: Run Forge build
-        run: |
-          forge --version
-          forge build --sizes
-
-      - name: Run Forge tests
-        run: |
-          forge test -vvv
+      - name: Run tests
+        run: just test
         env:
           RPC_URL: ${{ secrets.RPC_URL }}
