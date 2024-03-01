@@ -229,12 +229,12 @@ contract CSModule is
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
-    /// @notice Resume accounting
+    /// @notice Resume module
     function resume() external whenPaused onlyRole(RESUME_ROLE) {
         _resume();
     }
 
-    /// @notice Pause accounting
+    /// @notice Pause module
     /// @param duration Duration of the pause in seconds
     function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
         _pauseFor(duration);
