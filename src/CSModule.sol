@@ -4,6 +4,7 @@
 // solhint-disable-next-line one-contract-per-file
 pragma solidity 0.8.21;
 
+import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
@@ -148,8 +149,16 @@ contract CSModuleBase {
     error InvalidAmount();
 }
 
-contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
+contract CSModule is
+    ICSModule,
+    CSModuleBase,
+    AccessControlEnumerable,
+    PausableUntil
+{
     using QueueLib for QueueLib.Queue;
+
+    bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
+    bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
 
     bytes32 public constant SET_ACCOUNTING_ROLE =
         keccak256("SET_ACCOUNTING_ROLE"); // 0xbad3cb5f7add8fade9c376f76021c1c4106ee82e38abc73f6e8d234042d33f7d
@@ -220,6 +229,17 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
+    /// @notice Resume accounting
+    function resume() external whenPaused onlyRole(RESUME_ROLE) {
+        _resume();
+    }
+
+    /// @notice Pause accounting
+    /// @param duration Duration of the pause in seconds
+    function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
+        _pauseFor(duration);
+    }
+
     /// @notice Sets the accounting contract
     /// @param _accounting Address of the accounting contract
     function setAccounting(
@@ -238,18 +258,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
     ) external onlyRole(SET_UNVETTING_FEE_ROLE) {
         unvettingFee = _unvettingFee;
         emit UnvettingFeeSet(_unvettingFee);
-    }
-
-    /// @notice Pauses module by DAO decision
-    /// @dev Disable NO creation, keys upload
-    function pauseModule() external {
-        // TODO: implement me
-    }
-
-    /// @notice Unpauses module by DAO decision
-    /// @dev Enable NO creation, keys upload
-    function unpauseModule() external {
-        // TODO: implement me
     }
 
     function _lido() internal view returns (ILido) {
@@ -287,7 +295,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures
-    ) external payable {
+    ) external payable whenResumed {
         // TODO: sanity checks
 
         if (msg.value != accounting.getBondAmountByKeysCount(keysCount)) {
@@ -320,7 +328,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures
-    ) external {
+    ) external whenResumed {
         // TODO: sanity checks
 
         uint256 id = _nodeOperatorsCount;
@@ -355,7 +363,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         bytes calldata publicKeys,
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
-    ) external {
+    ) external whenResumed {
         // TODO: sanity checks
 
         uint256 id = _nodeOperatorsCount;
@@ -388,7 +396,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures
-    ) external {
+    ) external whenResumed {
         // TODO: sanity checks
 
         uint256 id = _nodeOperatorsCount;
@@ -423,7 +431,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         bytes calldata publicKeys,
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
-    ) external {
+    ) external whenResumed {
         // TODO: sanity checks
 
         uint256 id = _nodeOperatorsCount;
@@ -458,7 +466,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures
-    ) external payable onlyExistingNodeOperator(nodeOperatorId) {
+    ) external payable whenResumed {
         // TODO: sanity checks
 
         if (
@@ -483,7 +491,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
+    ) external whenResumed {
         // TODO: sanity checks
 
         accounting.depositStETH(
@@ -507,7 +515,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         bytes calldata publicKeys,
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
-    ) external {
+    ) external whenResumed {
         // TODO: sanity checks
 
         accounting.depositStETHWithPermit(
@@ -530,7 +538,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
+    ) external whenResumed {
         // TODO: sanity checks
 
         accounting.depositWstETH(
@@ -557,7 +565,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControlEnumerable {
         bytes calldata publicKeys,
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
-    ) external {
+    ) external whenResumed {
         // TODO: sanity checks
 
         accounting.depositWstETHWithPermit(

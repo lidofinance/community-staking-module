@@ -225,6 +225,8 @@ contract CSMCommon is CSMFixtures {
         );
 
         vm.startPrank(admin);
+        csm.grantRole(accounting.PAUSE_ROLE(), address(this));
+        csm.grantRole(accounting.RESUME_ROLE(), address(this));
         csm.grantRole(csm.SET_ACCOUNTING_ROLE(), address(this));
         csm.grantRole(csm.SET_UNVETTING_FEE_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(this));
@@ -295,6 +297,197 @@ contract CsmInitialization is CSMCommon {
         csm.setAccounting(address(accounting));
         vm.stopPrank();
         assertEq(address(csm.accounting()), address(accounting));
+    }
+}
+
+contract CSMPauseTest is CSMCommon {
+    function test_notPausedByDefault() public {
+        assertFalse(csm.isPaused());
+    }
+
+    function test_pauseFor() public {
+        csm.pauseFor(1 days);
+        assertTrue(csm.isPaused());
+    }
+
+    function test_resume() public {
+        csm.pauseFor(1 days);
+        csm.resume();
+        assertFalse(csm.isPaused());
+    }
+
+    function test_auto_resume() public {
+        csm.pauseFor(1 days);
+        assertTrue(csm.isPaused());
+        vm.warp(block.timestamp + 1 days + 1 seconds);
+        assertFalse(csm.isPaused());
+    }
+
+    function test_pause_RevertWhen_notAdmin() public {
+        expectRoleRevert(stranger, csm.PAUSE_ROLE());
+        vm.prank(stranger);
+        csm.pauseFor(1 days);
+    }
+
+    function test_resume_RevertWhen_notAdmin() public {
+        csm.pauseFor(1 days);
+
+        expectRoleRevert(stranger, csm.RESUME_ROLE());
+        vm.prank(stranger);
+        csm.resume();
+    }
+}
+
+contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
+    function test_addNodeOperatorETH_RevertWhen_Paused() public {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+
+        csm.pauseFor(1 days);
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        csm.addNodeOperatorETH(keysCount, keys, signatures);
+    }
+
+    function test_addNodeOperatorStETH_RevertWhen_Paused() public {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+
+        csm.pauseFor(1 days);
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        csm.addNodeOperatorStETH(keysCount, keys, signatures);
+    }
+
+    function test_addNodeOperatorWstETH_RevertWhen_Paused() public {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+
+        csm.pauseFor(1 days);
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        csm.addNodeOperatorWstETH(keysCount, keys, signatures);
+    }
+
+    function test_addNodeOperatorStETHWithPermit_RevertWhen_Paused() public {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+
+        csm.pauseFor(1 days);
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        csm.addNodeOperatorStETHWithPermit(
+            keysCount,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
+    function test_addNodeOperatorWstETHWithPermit_RevertWhen_Paused() public {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+
+        csm.pauseFor(1 days);
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        csm.addNodeOperatorWstETHWithPermit(
+            keysCount,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
+    function test_addValidatorKeysETH_RevertWhen_Paused() public {
+        uint256 noId = createNodeOperator();
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        csm.pauseFor(1 days);
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        csm.addValidatorKeysETH(noId, keysCount, keys, signatures);
+    }
+
+    function test_addValidatorKeysStETH_RevertWhen_Paused() public {
+        uint256 noId = createNodeOperator();
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        csm.pauseFor(1 days);
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        csm.addValidatorKeysStETH(noId, keysCount, keys, signatures);
+    }
+
+    function test_addValidatorKeysWstETH_RevertWhen_Paused() public {
+        uint256 noId = createNodeOperator();
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        csm.pauseFor(1 days);
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        csm.addValidatorKeysWstETH(noId, keysCount, keys, signatures);
+    }
+
+    function test_addValidatorKeysStETHWithPermit_RevertWhen_Paused() public {
+        uint256 noId = createNodeOperator();
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        csm.pauseFor(1 days);
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        csm.addValidatorKeysStETHWithPermit(
+            noId,
+            keysCount,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
+    function test_addValidatorKeysWstETHWithPermit_RevertWhen_Paused() public {
+        uint256 noId = createNodeOperator();
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        csm.pauseFor(1 days);
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        csm.addValidatorKeysWstETHWithPermit(
+            noId,
+            keysCount,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
     }
 }
 
