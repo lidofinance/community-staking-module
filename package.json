@@ -13,6 +13,10 @@
     "postinstall": "husky install"
   },
   "devDependencies": {
+    "@openzeppelin/contracts": "5.0.1",
+    "@openzeppelin/contracts-v4.4": "npm:@openzeppelin/contracts@4.4.1",
+    "ds-test": "https://github.com/dapphub/ds-test",
+    "forge-std": "https://github.com/foundry-rs/forge-std.git#v1.7.6",
     "husky": "^8.0.3",
     "lint-staged": "^14.0.1",
     "prettier": "^3.0.3",

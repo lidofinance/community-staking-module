@@ -14,23 +14,26 @@ deploy_script_path := if chain == "mainnet" {
 anvil_host := env_var_or_default("ANVIL_IP_ADDR", "127.0.0.1")
 anvil_port := "8545"
 
-default: clean build test-all
+default: clean deps build test-all
 
-build:
-	forge build --force
+build *args:
+	forge build --force {{args}}
 
 clean:
 	forge clean
-	rm -rf cache broadcast out
+	rm -rf cache broadcast out node_modules
+
+deps:
+	yarn install --immutable
 
 lint-solhint:
 	yarn lint:solhint
 
-lint-check:
-	yarn lint:check
-
 lint-fix:
 	yarn lint:fix
+
+lint:
+	yarn lint:check
 
 test-all:
 	just test-unit &

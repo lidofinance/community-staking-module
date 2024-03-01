@@ -7,10 +7,12 @@
 
 - Install [Foundry tools](https://book.getfoundry.sh/getting-started/installation)
 
+- Install [Just](https://github.com/casey/just)
+
 - Install project dependencies
 
 ```bash
-forge install
+just deps
 ```
 
 - Config environment variables
@@ -21,35 +23,44 @@ cp .env.sample .env
 
 Fill vars in the `.env` file with your own values
 
+- Build and test contracts
+
+```bash
+just
+```
+
 ### Features
 
 - Run tests
 
 ```bash
-make test # run all tests
-make test-unit
-make test-inegration
+just test # run all tests
+# or run specific tests
+just test-unit
+just test-inegration
 ```
 
-- Install libraries
+- Install dependencies
+
+Dependencies are managed using yarn. To install new dependencies, run:
 
 ```bash
-forge install rari-capital/solmate
+yarn add <package-name>
 ```
 
 - Deploy to local fork
 
 ```bash
-make deploy-local
+just deploy-local
 ```
 
 - Deploy to local fork of non-mainnet chain
 
 ```bash
-CHAIN=holesky make deploy-local
+CHAIN=holesky just deploy-local
 ```
 
 ### Notes
 
-Whenever you install new libraries using Foundry, make sure to update your
-`remappings.txt` file by running `forge remappings > remappings.txt`
+Whenever you install new libraries using yarn, make sure to update your
+`remappings.txt`.
