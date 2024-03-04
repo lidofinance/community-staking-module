@@ -94,7 +94,7 @@ contract CSAccounting is
     }
 
     /// @notice Resume accounting
-    function resume() external whenPaused onlyRole(RESUME_ROLE) {
+    function resume() external onlyRole(RESUME_ROLE) {
         _resume();
     }
 
