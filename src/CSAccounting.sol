@@ -98,6 +98,7 @@ contract CSAccounting is
         _resume();
     }
 
+    /// @dev Must be called together with `CSModule.pauseFor`
     /// @notice Pause accounting
     /// @param duration Duration of the pause
     function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
