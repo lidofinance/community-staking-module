@@ -94,10 +94,11 @@ contract CSAccounting is
     }
 
     /// @notice Resume accounting
-    function resume() external whenPaused onlyRole(RESUME_ROLE) {
+    function resume() external onlyRole(RESUME_ROLE) {
         _resume();
     }
 
+    /// @dev Must be called together with `CSModule.pauseFor`
     /// @notice Pause accounting
     /// @param duration Duration of the pause
     function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
@@ -108,7 +109,7 @@ contract CSAccounting is
     /// @param fdAddress fee distributor contract address.
     function setFeeDistributor(
         address fdAddress
-    ) external whenResumed onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         feeDistributor = fdAddress;
     }
 
@@ -116,7 +117,7 @@ contract CSAccounting is
     /// @param retention period in seconds to retain bond lock
     function setLockedBondRetentionPeriod(
         uint256 retention
-    ) external whenResumed onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         // TODO: is it admin role?
         CSBondLock._setBondLockRetentionPeriod(retention);
     }
@@ -125,7 +126,7 @@ contract CSAccounting is
     /// @param bondCurve bond curve to add.
     function addBondCurve(
         uint256[] memory bondCurve
-    ) external whenResumed onlyRole(ADD_BOND_CURVE_ROLE) {
+    ) external onlyRole(ADD_BOND_CURVE_ROLE) {
         CSBondCurve._addBondCurve(bondCurve);
     }
 
@@ -133,17 +134,17 @@ contract CSAccounting is
     /// @param curveId id of the bond curve to set as default.
     function setDefaultBondCurve(
         uint256 curveId
-    ) external whenResumed onlyRole(SET_DEFAULT_BOND_CURVE_ROLE) {
+    ) external onlyRole(SET_DEFAULT_BOND_CURVE_ROLE) {
         CSBondCurve._setDefaultBondCurve(curveId);
     }
 
-    /// @notice Sets basis points of the bond multiplier for the given node operator.
+    /// @notice Sets the bond curve for the given node operator.
     /// @param nodeOperatorId id of the node operator to set bond multiplier for.
     /// @param curveId id of the bond curve to set
     function setBondCurve(
         uint256 nodeOperatorId,
         uint256 curveId
-    ) external whenResumed onlyRole(SET_BOND_CURVE_ROLE) {
+    ) external onlyRole(SET_BOND_CURVE_ROLE) {
         CSBondCurve._setBondCurve(nodeOperatorId, curveId);
     }
 
@@ -151,7 +152,7 @@ contract CSAccounting is
     /// @param nodeOperatorId id of the node operator to reset bond curve for.
     function resetBondCurve(
         uint256 nodeOperatorId
-    ) external whenResumed onlyCSMOrRole(RESET_BOND_CURVE_ROLE) {
+    ) external onlyCSMOrRole(RESET_BOND_CURVE_ROLE) {
         CSBondCurve._resetBondCurve(nodeOperatorId);
     }
 
@@ -649,7 +650,7 @@ contract CSAccounting is
     function lockBondETH(
         uint256 nodeOperatorId,
         uint256 amount
-    ) external whenResumed onlyCSM onlyExistingNodeOperator(nodeOperatorId) {
+    ) external onlyCSM onlyExistingNodeOperator(nodeOperatorId) {
         CSBondLock._lock(nodeOperatorId, amount);
     }
 
@@ -661,7 +662,6 @@ contract CSAccounting is
         uint256 amount
     )
         external
-        whenResumed
         onlyRole(RELEASE_BOND_LOCK_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
@@ -673,7 +673,7 @@ contract CSAccounting is
     /// @param nodeOperatorId id of the node operator to compensate locked bond for.
     function compensateLockedBondETH(
         uint256 nodeOperatorId
-    ) external payable whenResumed onlyExistingNodeOperator(nodeOperatorId) {
+    ) external payable onlyExistingNodeOperator(nodeOperatorId) {
         payable(LIDO_LOCATOR.elRewardsVault()).transfer(msg.value);
         CSBondLock._reduceAmount(nodeOperatorId, msg.value);
         emit BondLockCompensated(nodeOperatorId, msg.value);
@@ -681,9 +681,7 @@ contract CSAccounting is
 
     /// @notice Settles locked bond ETH for the given node operator.
     /// @param nodeOperatorId id of the node operator to settle locked bond for.
-    function settleLockedBondETH(
-        uint256 nodeOperatorId
-    ) external whenResumed onlyCSM {
+    function settleLockedBondETH(uint256 nodeOperatorId) external onlyCSM {
         uint256 lockedAmount = CSBondLock.getActualLockedBond(nodeOperatorId);
         if (lockedAmount > 0) {
             CSBondCore._burn(nodeOperatorId, lockedAmount);
@@ -695,10 +693,7 @@ contract CSAccounting is
     /// @notice Penalize bond by burning shares of the given node operator.
     /// @param nodeOperatorId id of the node operator to penalize bond for.
     /// @param amount amount of ETH to penalize.
-    function penalize(
-        uint256 nodeOperatorId,
-        uint256 amount
-    ) public whenResumed onlyCSM {
+    function penalize(uint256 nodeOperatorId, uint256 amount) public onlyCSM {
         CSBondCore._burn(nodeOperatorId, amount);
     }
 

@@ -209,42 +209,6 @@ contract CSAccountingPauseAffectingTest is CSAccountingBaseTest {
         accounting.pauseFor(1 days);
     }
 
-    function test_setFeeDistributor_RevertWhen_Paused() public {
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        vm.prank(admin);
-        accounting.setFeeDistributor(address(1));
-    }
-
-    function test_setLockedBondRetentionPeriod_RevertWhen_Paused() public {
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        vm.prank(admin);
-        accounting.setLockedBondRetentionPeriod(1 days);
-    }
-
-    function test_addBondCurve_RevertWhen_Paused() public {
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        vm.prank(admin);
-        accounting.addBondCurve(new uint256[](1));
-    }
-
-    function test_setDefaultBondCurve_RevertWhen_Paused() public {
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        vm.prank(admin);
-        accounting.setDefaultBondCurve(1);
-    }
-
-    function test_setBondCurve_RevertWhen_Paused() public {
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        vm.prank(admin);
-        accounting.setBondCurve(0, 1);
-    }
-
-    function test_resetBondCurve_RevertWhen_Paused() public {
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        vm.prank(admin);
-        accounting.resetBondCurve(0);
-    }
-
     function test_depositETH_RevertWhen_Paused() public {
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
         accounting.depositETH{ value: 1 ether }(address(user), 0);
@@ -320,31 +284,6 @@ contract CSAccountingPauseAffectingTest is CSAccountingBaseTest {
     function test_requestRewardsETH_RevertWhen_Paused() public {
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
         accounting.requestRewardsETH(new bytes32[](1), 0, 1 ether, 1 ether);
-    }
-
-    function test_lockBondETH_RevertWhen_Paused() public {
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        accounting.lockBondETH(0, 1 ether);
-    }
-
-    function test_releaseLockedBondETH_RevertWhen_Paused() public {
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        accounting.releaseLockedBondETH(0, 1 ether);
-    }
-
-    function test_compensateLockedBondETH_RevertWhen_Paused() public {
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        accounting.compensateLockedBondETH{ value: 1 ether }(0);
-    }
-
-    function test_settleLockedBondETH_RevertWhen_Paused() public {
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        accounting.settleLockedBondETH(0);
-    }
-
-    function test_penalize_RevertWhen_Paused() public {
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        accounting.penalize(0, 1 ether);
     }
 }
 
