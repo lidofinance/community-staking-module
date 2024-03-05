@@ -42,6 +42,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
         csm = new CSModule(
             "community-staking-module",
             address(locator),
+            0,
             address(this)
         );
         uint256[] memory curve = new uint256[](2);
@@ -103,7 +104,12 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
         address nodeOperator = address(2);
         vm.deal(nodeOperator, 4 ether);
         vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: 4 ether }(2, keys, signatures);
+        csm.addNodeOperatorETH{ value: 4 ether }(
+            2,
+            keys,
+            signatures,
+            new bytes32[](0)
+        );
 
         {
             // Pretend to be a key validation oracle

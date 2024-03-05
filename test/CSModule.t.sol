@@ -12,6 +12,7 @@ import "./helpers/mocks/LidoLocatorMock.sol";
 import "./helpers/mocks/LidoMock.sol";
 import "./helpers/mocks/WstETHMock.sol";
 import "./helpers/Utilities.sol";
+import "../src/CSEarlyAdoption.sol";
 
 abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
     using Strings for uint256;
@@ -85,7 +86,8 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
         csm.addNodeOperatorETH{ value: keysCount * BOND_SIZE }(
             keysCount,
             keys,
-            signatures
+            signatures,
+            new bytes32[](0)
         );
         return csm.getNodeOperatorsCount() - 1;
     }
@@ -212,7 +214,13 @@ contract CSMCommon is CSMFixtures {
         (locator, wstETH, stETH, ) = initLido();
 
         communityStakingFeeDistributor = new Stub();
-        csm = new CSModule("community-staking-module", address(locator), admin);
+
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            0,
+            admin
+        );
         uint256[] memory curve = new uint256[](1);
         curve[0] = BOND_SIZE;
         accounting = new CSAccounting(
@@ -262,7 +270,12 @@ contract CSMCommonNoRoles is CSMFixtures {
         (locator, wstETH, stETH, ) = initLido();
 
         communityStakingFeeDistributor = new Stub();
-        csm = new CSModule("community-staking-module", address(locator), admin);
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            0,
+            admin
+        );
 
         vm.startPrank(admin);
         csm.grantRole(csm.SET_ACCOUNTING_ROLE(), admin);
@@ -285,13 +298,23 @@ contract CSMCommonNoRoles is CSMFixtures {
 
 contract CsmInitialization is CSMCommon {
     function test_initContract() public {
-        csm = new CSModule("community-staking-module", address(locator), admin);
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            0,
+            admin
+        );
         assertEq(csm.getType(), "community-staking-module");
         assertEq(csm.getNodeOperatorsCount(), 0);
     }
 
     function test_setAccounting() public {
-        csm = new CSModule("community-staking-module", address(locator), admin);
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            0,
+            admin
+        );
         vm.startPrank(admin);
         csm.grantRole(csm.SET_ACCOUNTING_ROLE(), address(admin));
         csm.setAccounting(address(accounting));
@@ -505,12 +528,12 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalSigningKeysCountChanged(0, 1);
-            vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, nodeOperator);
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalSigningKeysCountChanged(0, 1);
         }
 
-        csm.addNodeOperatorWstETH(1, keys, signatures);
+        csm.addNodeOperatorWstETH(1, keys, signatures, new bytes32[](0));
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
     }
@@ -527,18 +550,19 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         uint256 nonce = csm.getNonce();
 
         {
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit NodeOperatorAdded(0, nodeOperator);
             vm.expectEmit(true, true, true, true, address(wstETH));
             emit Approval(nodeOperator, address(accounting), wstETHAmount);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
-            vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, nodeOperator);
         }
 
         csm.addNodeOperatorWstETHWithPermit(
             1,
             keys,
             signatures,
+            new bytes32[](0),
             ICSAccounting.PermitInput({
                 value: wstETHAmount,
                 deadline: type(uint256).max,
@@ -614,13 +638,13 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalSigningKeysCountChanged(0, 1);
-            vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, nodeOperator);
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalSigningKeysCountChanged(0, 1);
         }
 
         vm.prank(nodeOperator);
-        csm.addNodeOperatorStETH(1, keys, signatures);
+        csm.addNodeOperatorStETH(1, keys, signatures, new bytes32[](0));
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
     }
@@ -637,12 +661,12 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         uint256 nonce = csm.getNonce();
 
         {
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit NodeOperatorAdded(0, nodeOperator);
             vm.expectEmit(true, true, true, true, address(stETH));
             emit Approval(nodeOperator, address(accounting), BOND_SIZE);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
-            vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, nodeOperator);
         }
 
         vm.prank(nodeOperator);
@@ -650,6 +674,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             1,
             keys,
             signatures,
+            new bytes32[](0),
             ICSAccounting.PermitInput({
                 value: BOND_SIZE,
                 deadline: type(uint256).max,
@@ -724,13 +749,18 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalSigningKeysCountChanged(0, 1);
-            vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, nodeOperator);
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalSigningKeysCountChanged(0, 1);
         }
 
         vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: BOND_SIZE }(1, keys, signatures);
+        csm.addNodeOperatorETH{ value: BOND_SIZE }(
+            1,
+            keys,
+            signatures,
+            new bytes32[](0)
+        );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
     }
@@ -761,7 +791,12 @@ contract CSMObtainDepositData is CSMCommon {
         );
         vm.deal(nodeOperator, BOND_SIZE);
         vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: BOND_SIZE }(1, keys, signatures);
+        csm.addNodeOperatorETH{ value: BOND_SIZE }(
+            1,
+            keys,
+            signatures,
+            new bytes32[](0)
+        );
 
         csm.vetKeys(0, 1);
         (bytes memory obtainedKeys, bytes memory obtainedSignatures) = csm
@@ -2539,7 +2574,7 @@ contract CsmGetStakingModuleSummary is CSMCommon {
 
 contract CSMAccessControl is CSMCommonNoRoles {
     function test_adminRole() public {
-        CSModule csm = new CSModule("csm", address(accounting), actor);
+        CSModule csm = new CSModule("csm", address(accounting), 0, actor);
         bytes32 role = csm.SET_ACCOUNTING_ROLE();
         vm.prank(actor);
         csm.grantRole(role, stranger);
@@ -2551,7 +2586,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_adminRole_revert() public {
-        CSModule csm = new CSModule("csm", address(accounting), actor);
+        CSModule csm = new CSModule("csm", address(accounting), 0, actor);
         bytes32 role = csm.SET_ACCOUNTING_ROLE();
         bytes32 adminRole = csm.DEFAULT_ADMIN_ROLE();
 
@@ -2561,7 +2596,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_setAccountingRole() public {
-        CSModule csm = new CSModule("csm", address(accounting), admin);
+        CSModule csm = new CSModule("csm", address(accounting), 0, admin);
         bytes32 role = csm.SET_ACCOUNTING_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);

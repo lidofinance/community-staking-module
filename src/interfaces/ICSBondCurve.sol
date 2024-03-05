@@ -24,7 +24,7 @@ interface ICSBondCurve {
 
     function getBondAmountByKeysCount(
         uint256 keys,
-        uint256 curveId
+        BondCurve memory curve
     ) external view returns (uint256);
 
     function getKeysCountByBondAmount(
