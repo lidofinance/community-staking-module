@@ -154,7 +154,6 @@ abstract contract CSBondCurve is CSBondCurveBase {
     function getCurveInfo(
         uint256 curveId
     ) public view returns (BondCurve memory) {
-        if (curveId > _bondCurves.length) revert InvalidBondCurveId();
         return
             (curveId == 0)
                 ? _bondCurves[defaultBondCurveId - 1]

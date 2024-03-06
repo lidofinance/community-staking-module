@@ -215,12 +215,7 @@ contract CSMCommon is CSMFixtures {
 
         communityStakingFeeDistributor = new Stub();
 
-        csm = new CSModule(
-            "community-staking-module",
-            address(locator),
-            0,
-            admin
-        );
+        csm = new CSModule("community-staking-module", address(locator), admin);
         uint256[] memory curve = new uint256[](1);
         curve[0] = BOND_SIZE;
         accounting = new CSAccounting(
@@ -270,12 +265,7 @@ contract CSMCommonNoRoles is CSMFixtures {
         (locator, wstETH, stETH, ) = initLido();
 
         communityStakingFeeDistributor = new Stub();
-        csm = new CSModule(
-            "community-staking-module",
-            address(locator),
-            0,
-            admin
-        );
+        csm = new CSModule("community-staking-module", address(locator), admin);
 
         vm.startPrank(admin);
         csm.grantRole(csm.SET_ACCOUNTING_ROLE(), admin);
@@ -298,23 +288,13 @@ contract CSMCommonNoRoles is CSMFixtures {
 
 contract CsmInitialization is CSMCommon {
     function test_initContract() public {
-        csm = new CSModule(
-            "community-staking-module",
-            address(locator),
-            0,
-            admin
-        );
+        csm = new CSModule("community-staking-module", address(locator), admin);
         assertEq(csm.getType(), "community-staking-module");
         assertEq(csm.getNodeOperatorsCount(), 0);
     }
 
     function test_setAccounting() public {
-        csm = new CSModule(
-            "community-staking-module",
-            address(locator),
-            0,
-            admin
-        );
+        csm = new CSModule("community-staking-module", address(locator), admin);
         vm.startPrank(admin);
         csm.grantRole(csm.SET_ACCOUNTING_ROLE(), address(admin));
         csm.setAccounting(address(accounting));
@@ -370,7 +350,7 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
 
         csm.pauseFor(1 days);
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        csm.addNodeOperatorETH(keysCount, keys, signatures);
+        csm.addNodeOperatorETH(keysCount, keys, signatures, new bytes32[](0));
     }
 
     function test_addNodeOperatorStETH_RevertWhen_Paused() public {
@@ -381,7 +361,7 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
 
         csm.pauseFor(1 days);
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        csm.addNodeOperatorStETH(keysCount, keys, signatures);
+        csm.addNodeOperatorStETH(keysCount, keys, signatures, new bytes32[](0));
     }
 
     function test_addNodeOperatorWstETH_RevertWhen_Paused() public {
@@ -392,7 +372,12 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
 
         csm.pauseFor(1 days);
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        csm.addNodeOperatorWstETH(keysCount, keys, signatures);
+        csm.addNodeOperatorWstETH(
+            keysCount,
+            keys,
+            signatures,
+            new bytes32[](0)
+        );
     }
 
     function test_addNodeOperatorStETHWithPermit_RevertWhen_Paused() public {
@@ -407,6 +392,7 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
             keysCount,
             keys,
             signatures,
+            new bytes32[](0),
             ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
@@ -429,6 +415,7 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
             keysCount,
             keys,
             signatures,
+            new bytes32[](0),
             ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
@@ -2574,7 +2561,7 @@ contract CsmGetStakingModuleSummary is CSMCommon {
 
 contract CSMAccessControl is CSMCommonNoRoles {
     function test_adminRole() public {
-        CSModule csm = new CSModule("csm", address(accounting), 0, actor);
+        CSModule csm = new CSModule("csm", address(accounting), actor);
         bytes32 role = csm.SET_ACCOUNTING_ROLE();
         vm.prank(actor);
         csm.grantRole(role, stranger);
@@ -2586,7 +2573,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_adminRole_revert() public {
-        CSModule csm = new CSModule("csm", address(accounting), 0, actor);
+        CSModule csm = new CSModule("csm", address(accounting), actor);
         bytes32 role = csm.SET_ACCOUNTING_ROLE();
         bytes32 adminRole = csm.DEFAULT_ADMIN_ROLE();
 
@@ -2596,7 +2583,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_setAccountingRole() public {
-        CSModule csm = new CSModule("csm", address(accounting), 0, admin);
+        CSModule csm = new CSModule("csm", address(accounting), admin);
         bytes32 role = csm.SET_ACCOUNTING_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);

@@ -10,6 +10,7 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
+import { ICSEarlyAdoption } from "./interfaces/ICSEarlyAdoption.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { ILido } from "./interfaces/ILido.sol";
@@ -19,7 +20,6 @@ import { Batch } from "./lib/Batch.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
 
 import { SigningKeys } from "./lib/SigningKeys.sol";
-import { CSEarlyAdoption } from "./CSEarlyAdoption.sol";
 
 struct NodeOperator {
     address managerAddress;
@@ -105,6 +105,7 @@ contract CSModuleBase {
 
     event StakingModuleTypeSet(bytes32 moduleType);
     event LocatorContractSet(address locatorAddress);
+    event PublicReleaseTimestampSet(uint256 timestamp);
     event UnvettingFeeSet(uint256 unvettingFee);
 
     event UnvettingFeeApplied(uint256 indexed nodeOperatorId);
@@ -148,13 +149,12 @@ contract CSModuleBase {
     error Expired();
     error AlreadyInitialized();
     error InvalidAmount();
-    error EarlyAdoptionDenied();
+    error NotAllowedToJoinYet();
 }
 
 contract CSModule is
     ICSModule,
     CSModuleBase,
-    CSEarlyAdoption,
     AccessControlEnumerable,
     PausableUntil
 {
@@ -165,8 +165,10 @@ contract CSModule is
 
     bytes32 public constant SET_ACCOUNTING_ROLE =
         keccak256("SET_ACCOUNTING_ROLE"); // 0xbad3cb5f7add8fade9c376f76021c1c4106ee82e38abc73f6e8d234042d33f7d
-    bytes32 public constant INITIALIZE_EARLY_ADOPTION_ROLE =
-        keccak256("INITIALIZE_EARLY_ADOPTION_ROLE"); //
+    bytes32 public constant SET_EARLY_ADOPTION_ROLE =
+        keccak256("SET_EARLY_ADOPTION_ROLE"); //
+    bytes32 public constant SET_PUBLIC_RELEASE_TIMESTAMP_ROLE =
+        keccak256("SET_PUBLIC_RELEASE_TIMESTAMP_ROLE"); //
     bytes32 public constant SET_UNVETTING_FEE_ROLE =
         keccak256("SET_UNVETTING_FEE"); // 0x19583bfff685c0ba70886aba1270ef3f5606d5ed3b3d0b6b804dba345609a0e1
     bytes32 public constant STAKING_ROUTER_ROLE =
@@ -199,13 +201,14 @@ contract CSModule is
     uint256 public constant EL_REWARDS_STEALING_FINE = 0.1 ether;
 
     uint256 private immutable TEMP_METHODS_EXPIRE_TIME;
-    uint256 private immutable EARLY_ADOPTION_EXPIRE_TIME;
 
+    uint256 public publicReleaseTimestamp;
     uint256 public unvettingFee;
     QueueLib.Queue public queue;
 
     ICSAccounting public accounting;
     ILidoLocator public lidoLocator;
+    ICSEarlyAdoption public earlyAdoption;
     uint256 private _nodeOperatorsCount;
     uint256 private _activeNodeOperatorsCount;
     bytes32 private _moduleType;
@@ -219,14 +222,8 @@ contract CSModule is
     uint256 private _totalAddedValidators;
     uint256 private _depositableValidatorsCount;
 
-    constructor(
-        bytes32 moduleType,
-        address locator,
-        uint256 earlyAdoptionDuration,
-        address admin
-    ) {
+    constructor(bytes32 moduleType, address locator, address admin) {
         TEMP_METHODS_EXPIRE_TIME = block.timestamp + 365 days;
-        EARLY_ADOPTION_EXPIRE_TIME = block.timestamp + earlyAdoptionDuration;
         _moduleType = moduleType;
         emit StakingModuleTypeSet(moduleType);
 
@@ -261,6 +258,24 @@ contract CSModule is
         accounting = ICSAccounting(_accounting);
     }
 
+    /// @notice Sets the early adoption contract
+    /// @param _earlyAdoption Address of the early adoption contract
+    function setEarlyAdoption(
+        address _earlyAdoption
+    ) external onlyRole(SET_EARLY_ADOPTION_ROLE) {
+        if (address(earlyAdoption) != address(0)) {
+            revert AlreadyInitialized();
+        }
+        earlyAdoption = ICSEarlyAdoption(_earlyAdoption);
+    }
+
+    function setPublicReleaseTimestamp(
+        uint256 timestamp
+    ) external onlyRole(SET_PUBLIC_RELEASE_TIMESTAMP_ROLE) {
+        publicReleaseTimestamp = timestamp;
+        emit PublicReleaseTimestampSet(timestamp);
+    }
+
     /// @notice Sets the unvetting fee
     /// @param _unvettingFee Amount of wei to be charged for unvetting in some cases
     function setUnvettingFee(
@@ -268,16 +283,6 @@ contract CSModule is
     ) external onlyRole(SET_UNVETTING_FEE_ROLE) {
         unvettingFee = _unvettingFee;
         emit UnvettingFeeSet(_unvettingFee);
-    }
-
-    function initializeEarlyAdoption(
-        uint256 curveId,
-        bytes32 treeRoot
-    ) external onlyRole(INITIALIZE_EARLY_ADOPTION_ROLE) {
-        // check for existence
-        accounting.getCurveInfo(curveId);
-        CSEarlyAdoption.setCurve(curveId);
-        CSEarlyAdoption.setTreeRoot(treeRoot);
     }
 
     function _lido() internal view returns (ILido) {
@@ -315,12 +320,12 @@ contract CSModule is
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
-        bytes32[] calldata proof
+        bytes32[] calldata eaProof
     ) external payable whenResumed {
         // TODO: sanity checks
 
         uint256 id = _createNodeOperator();
-        _processEarlyAdoption(id, proof);
+        _processEarlyAdoption(id, eaProof);
 
         if (
             msg.value !=
@@ -344,12 +349,12 @@ contract CSModule is
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
-        bytes32[] calldata proof
+        bytes32[] calldata eaProof
     ) external whenResumed {
         // TODO: sanity checks
 
         uint256 id = _createNodeOperator();
-        _processEarlyAdoption(id, proof);
+        _processEarlyAdoption(id, eaProof);
 
         accounting.depositStETH(
             msg.sender,
@@ -372,13 +377,13 @@ contract CSModule is
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
-        bytes32[] calldata proof,
+        bytes32[] calldata eaProof,
         ICSAccounting.PermitInput calldata permit
     ) external whenResumed {
         // TODO: sanity checks
 
         uint256 id = _createNodeOperator();
-        _processEarlyAdoption(id, proof);
+        _processEarlyAdoption(id, eaProof);
 
         accounting.depositStETHWithPermit(
             msg.sender,
@@ -401,12 +406,12 @@ contract CSModule is
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
-        bytes32[] calldata proof
+        bytes32[] calldata eaProof
     ) external whenResumed {
         // TODO: sanity checks
 
         uint256 id = _createNodeOperator();
-        _processEarlyAdoption(id, proof);
+        _processEarlyAdoption(id, eaProof);
 
         accounting.depositWstETH(
             msg.sender,
@@ -429,13 +434,13 @@ contract CSModule is
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
-        bytes32[] calldata proof,
+        bytes32[] calldata eaProof,
         ICSAccounting.PermitInput calldata permit
     ) external whenResumed {
         // TODO: sanity checks
 
         uint256 id = _createNodeOperator();
-        _processEarlyAdoption(id, proof);
+        _processEarlyAdoption(id, eaProof);
 
         accounting.depositWstETHWithPermit(
             msg.sender,
@@ -1562,13 +1567,13 @@ contract CSModule is
         uint256 nodeOperatorId,
         bytes32[] calldata proof
     ) internal {
-        if (block.timestamp < EARLY_ADOPTION_EXPIRE_TIME && proof.length == 0) {
-            revert EarlyAdoptionDenied();
+        if (block.timestamp < publicReleaseTimestamp && proof.length == 0) {
+            revert NotAllowedToJoinYet();
         }
         if (proof.length == 0) return;
 
-        CSEarlyAdoption.consume(msg.sender, proof);
-        accounting.setBondCurve(nodeOperatorId, CSEarlyAdoption.getCurve());
+        earlyAdoption.consume(msg.sender, proof);
+        accounting.setBondCurve(nodeOperatorId, earlyAdoption.curveId());
     }
 
     modifier onlyExistingNodeOperator(uint256 nodeOperatorId) {

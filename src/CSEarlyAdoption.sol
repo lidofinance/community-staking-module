@@ -7,16 +7,28 @@ import "./interfaces/ICSModule.sol";
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "./interfaces/ICSEarlyAdoption.sol";
 
-abstract contract CSEarlyAdoption is ICSEarlyAdoption {
+contract CSEarlyAdoption is ICSEarlyAdoption {
     mapping(address => bool) internal _consumedAddresses;
-    uint256 private _curveId;
-    bytes32 private _treeRoot;
+    uint256 public curveId;
+    bytes32 public treeRoot;
+    address public module;
 
     event Consumed(address indexed sender);
+
     error InvalidProof();
     error AlreadyConsumed();
-    error InvalidTreeRoot();
-    error InvalidCurveId();
+    error InvalidValue();
+    error OnlyModule();
+
+    constructor(bytes32 _treeRoot, uint256 _curveId, address _module) {
+        if (_treeRoot == bytes32(0)) revert InvalidValue();
+        if (_curveId == 0) revert InvalidValue();
+        if (_module == address(0)) revert InvalidValue();
+
+        treeRoot = _treeRoot;
+        curveId = _curveId;
+        module = _module;
+    }
 
     function isEligible(
         address sender,
@@ -24,34 +36,17 @@ abstract contract CSEarlyAdoption is ICSEarlyAdoption {
     ) public view returns (bool isValid) {
         isValid = MerkleProof.verifyCalldata(
             proof,
-            _treeRoot,
+            treeRoot,
             keccak256(bytes.concat(keccak256(abi.encode(sender))))
         );
     }
 
-    function consume(address sender, bytes32[] calldata proof) internal {
+    function consume(address sender, bytes32[] calldata proof) external {
+        if (msg.sender != module) revert OnlyModule();
         if (_consumedAddresses[sender]) revert AlreadyConsumed();
 
         if (!isEligible(sender, proof)) revert InvalidProof();
         _consumedAddresses[sender] = true;
         emit Consumed(sender);
-    }
-
-    function setCurve(uint256 curveId) internal {
-        if (curveId != 0) {
-            revert InvalidCurveId();
-        }
-        _curveId = curveId;
-    }
-
-    function setTreeRoot(bytes32 treeRoot) internal {
-        if (treeRoot != bytes32(0)) {
-            revert InvalidTreeRoot();
-        }
-        _treeRoot = treeRoot;
-    }
-
-    function getCurve() public view returns (uint256) {
-        return _curveId;
     }
 }
