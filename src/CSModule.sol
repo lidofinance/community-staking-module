@@ -166,9 +166,9 @@ contract CSModule is
     bytes32 public constant SET_ACCOUNTING_ROLE =
         keccak256("SET_ACCOUNTING_ROLE"); // 0xbad3cb5f7add8fade9c376f76021c1c4106ee82e38abc73f6e8d234042d33f7d
     bytes32 public constant SET_EARLY_ADOPTION_ROLE =
-        keccak256("SET_EARLY_ADOPTION_ROLE"); //
+        keccak256("SET_EARLY_ADOPTION_ROLE"); // 0xe0d27b865f229f5162f7b9ae24065c2d5cdae1ed1eaabf46a5f7809b1edf2ec1
     bytes32 public constant SET_PUBLIC_RELEASE_TIMESTAMP_ROLE =
-        keccak256("SET_PUBLIC_RELEASE_TIMESTAMP_ROLE"); //
+        keccak256("SET_PUBLIC_RELEASE_TIMESTAMP_ROLE"); // 0x66d6616db95aac3b33b9261e42ab01ad71f311cff562503c33c742c54f22bbcd
     bytes32 public constant SET_UNVETTING_FEE_ROLE =
         keccak256("SET_UNVETTING_FEE"); // 0x19583bfff685c0ba70886aba1270ef3f5606d5ed3b3d0b6b804dba345609a0e1
     bytes32 public constant STAKING_ROUTER_ROLE =

@@ -126,8 +126,8 @@ contract CSAccounting is
     /// @param bondCurve bond curve to add.
     function addBondCurve(
         uint256[] memory bondCurve
-    ) external onlyRole(ADD_BOND_CURVE_ROLE) {
-        CSBondCurve._addBondCurve(bondCurve);
+    ) external onlyRole(ADD_BOND_CURVE_ROLE) returns (uint256) {
+        return CSBondCurve._addBondCurve(bondCurve);
     }
 
     /// @notice Sets default bond curve.
@@ -144,7 +144,7 @@ contract CSAccounting is
     function setBondCurve(
         uint256 nodeOperatorId,
         uint256 curveId
-    ) external onlyRole(SET_BOND_CURVE_ROLE) {
+    ) external onlyCSMOrRole(SET_BOND_CURVE_ROLE) {
         CSBondCurve._setBondCurve(nodeOperatorId, curveId);
     }
 
