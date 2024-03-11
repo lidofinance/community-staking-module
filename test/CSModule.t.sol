@@ -3022,9 +3022,8 @@ contract CSMEarlyAdoptionTest is CSMCommon {
         merkleTree = new MerkleTree();
         merkleTree.pushLeaf(abi.encode(nodeOperator));
 
-        uint256[] memory curve = new uint256[](2);
+        uint256[] memory curve = new uint256[](1);
         curve[0] = BOND_SIZE / 2;
-        curve[1] = BOND_SIZE / 2 + BOND_SIZE;
 
         uint256 curveId = accounting.addBondCurve(curve);
         earlyAdoption = new CSEarlyAdoption(
@@ -3067,7 +3066,7 @@ contract CSMEarlyAdoptionTest is CSMCommon {
         vm.prank(nodeOperator);
         vm.expectEmit(true, true, true, true, address(csm));
         emit NodeOperatorAdded(0, nodeOperator);
-        csm.addNodeOperatorETH{ value: (keysCount * BOND_SIZE) / 2 }(
+        csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
             keysCount,
             keys,
             signatures,
@@ -3075,5 +3074,62 @@ contract CSMEarlyAdoptionTest is CSMCommon {
         );
         CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
         assertEq(curve.points[0], BOND_SIZE / 2);
+    }
+
+    function test_addNodeOperator_WhenPublicReleaseWithProof() public {
+        (
+            MerkleTree merkleTree,
+            CSEarlyAdoption earlyAdoption
+        ) = initEarlyAdoption();
+        csm.setEarlyAdoption(address(earlyAdoption));
+
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        uint256 timestamp = block.timestamp + 30 days;
+        csm.setPublicReleaseTimestamp(timestamp);
+        vm.warp(timestamp + 1);
+
+        bytes32[] memory proof = merkleTree.getProof(0);
+        vm.deal(nodeOperator, BOND_SIZE / 2);
+        vm.prank(nodeOperator);
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit NodeOperatorAdded(0, nodeOperator);
+        csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
+            keysCount,
+            keys,
+            signatures,
+            proof
+        );
+        CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
+        assertEq(curve.points[0], BOND_SIZE / 2);
+    }
+
+    function test_addNodeOperator_RevertWhenMoreThanMaxSigningKeysLimit()
+        public
+    {
+        (
+            MerkleTree merkleTree,
+            CSEarlyAdoption earlyAdoption
+        ) = initEarlyAdoption();
+        csm.setEarlyAdoption(address(earlyAdoption));
+        csm.setPublicReleaseTimestamp(block.timestamp + 30 days);
+        bytes32[] memory proof = merkleTree.getProof(0);
+
+        uint16 keysCount = csm.MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE() + 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+
+        vm.deal(nodeOperator, (BOND_SIZE / 2) * keysCount);
+        vm.prank(nodeOperator);
+        vm.expectRevert(MaxSigningKeysCountReached.selector);
+        csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
+            keysCount,
+            keys,
+            signatures,
+            proof
+        );
     }
 }

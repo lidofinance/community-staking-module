@@ -150,6 +150,7 @@ contract CSModuleBase {
     error AlreadyInitialized();
     error InvalidAmount();
     error NotAllowedToJoinYet();
+    error MaxSigningKeysCountReached();
 }
 
 contract CSModule is
@@ -190,6 +191,7 @@ contract CSModule is
     // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
     // it seems to be enough
     uint64 public constant MAX_NODE_OPERATORS_COUNT = type(uint64).max;
+    uint8 public constant MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE = 10;
     // might be received dynamically in case of increasing possible deposit size
     uint256 public constant DEPOSIT_SIZE = 32 ether;
     uint256 public constant MIN_SLASHING_PENALTY_QUOTIENT = 32;
@@ -1294,6 +1296,12 @@ contract CSModule is
     ) internal {
         // TODO: sanity checks
         uint256 startIndex = _nodeOperators[nodeOperatorId].totalAddedKeys;
+        if (
+            block.timestamp < publicReleaseTimestamp &&
+            startIndex + keysCount > MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE
+        ) {
+            revert MaxSigningKeysCountReached();
+        }
 
         // solhint-disable-next-line func-named-parameters
         SigningKeys.saveKeysSigs(

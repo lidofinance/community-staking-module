@@ -72,12 +72,22 @@ contract CSEarlyAdoptionTest is Test, Utilities {
         earlyAdoption.consume(nodeOperator, proof);
     }
 
-    function test_consume_revert_invalidProof() public {
+    function test_consume_revert_invalidAddress() public {
         earlyAdoption = new CSEarlyAdoption(merkleTree.root(), curveId, csm);
         bytes32[] memory proof = merkleTree.getProof(0);
 
         vm.prank(csm);
         vm.expectRevert(CSEarlyAdoption.InvalidProof.selector);
         earlyAdoption.consume(stranger, proof);
+    }
+
+    function test_consume_revert_invalidProof() public {
+        earlyAdoption = new CSEarlyAdoption(merkleTree.root(), curveId, csm);
+        bytes32[] memory proof = merkleTree.getProof(0);
+        proof[0] = bytes32(randomBytes(32));
+
+        vm.prank(csm);
+        vm.expectRevert(CSEarlyAdoption.InvalidProof.selector);
+        earlyAdoption.consume(nodeOperator, proof);
     }
 }
