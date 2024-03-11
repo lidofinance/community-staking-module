@@ -14,4 +14,6 @@ interface ICSEarlyAdoption {
     ) external view returns (bool);
 
     function consume(address sender, bytes32[] calldata proof) external;
+
+    function consumed(address sender) external view returns (bool);
 }

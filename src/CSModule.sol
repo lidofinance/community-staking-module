@@ -150,7 +150,7 @@ contract CSModuleBase {
     error AlreadyInitialized();
     error InvalidAmount();
     error NotAllowedToJoinYet();
-    error MaxSigningKeysCountReached();
+    error MaxSigningKeysCountExceeded();
 }
 
 contract CSModule is
@@ -1307,7 +1307,7 @@ contract CSModule is
             block.timestamp < publicReleaseTimestamp &&
             startIndex + keysCount > MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE
         ) {
-            revert MaxSigningKeysCountReached();
+            revert MaxSigningKeysCountExceeded();
         }
 
         // solhint-disable-next-line func-named-parameters
@@ -1578,6 +1578,7 @@ contract CSModule is
         return id;
     }
 
+    /// @notice it's possible to join with proof even after public release
     function _processEarlyAdoption(
         uint256 nodeOperatorId,
         bytes32[] calldata proof

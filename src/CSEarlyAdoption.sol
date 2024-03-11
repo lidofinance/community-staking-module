@@ -49,4 +49,8 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
         _consumedAddresses[sender] = true;
         emit Consumed(sender);
     }
+
+    function consumed(address sender) external view returns (bool) {
+        return _consumedAddresses[sender];
+    }
 }

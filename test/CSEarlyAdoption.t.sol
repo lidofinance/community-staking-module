@@ -52,6 +52,16 @@ contract CSEarlyAdoptionTest is Test, Utilities {
         earlyAdoption.consume(nodeOperator, proof);
     }
 
+    function test_consumed() public {
+        earlyAdoption = new CSEarlyAdoption(merkleTree.root(), curveId, csm);
+
+        bytes32[] memory proof = merkleTree.getProof(0);
+
+        vm.prank(csm);
+        earlyAdoption.consume(nodeOperator, proof);
+        assertTrue(earlyAdoption.consumed(nodeOperator));
+    }
+
     function test_consume_revert_onlyModule() public {
         earlyAdoption = new CSEarlyAdoption(merkleTree.root(), curveId, csm);
         bytes32[] memory proof = merkleTree.getProof(0);

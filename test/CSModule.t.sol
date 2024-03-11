@@ -3144,7 +3144,7 @@ contract CSMEarlyAdoptionTest is CSMCommon {
 
         vm.deal(nodeOperator, (BOND_SIZE / 2) * keysCount);
         vm.prank(nodeOperator);
-        vm.expectRevert(MaxSigningKeysCountReached.selector);
+        vm.expectRevert(MaxSigningKeysCountExceeded.selector);
         csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
             keysCount,
             keys,
