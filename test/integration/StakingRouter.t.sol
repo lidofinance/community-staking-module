@@ -42,6 +42,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
         csm = new CSModule(
             "community-staking-module",
             address(locator),
+            0,
             address(this)
         );
         uint256[] memory curve = new uint256[](2);

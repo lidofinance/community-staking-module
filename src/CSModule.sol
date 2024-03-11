@@ -224,7 +224,12 @@ contract CSModule is
     uint256 private _totalAddedValidators;
     uint256 private _depositableValidatorsCount;
 
-    constructor(bytes32 moduleType, address locator, address admin) {
+    constructor(
+        bytes32 moduleType,
+        address locator,
+        uint256 _publicReleaseTimestamp,
+        address admin
+    ) {
         TEMP_METHODS_EXPIRE_TIME = block.timestamp + 365 days;
         _moduleType = moduleType;
         emit StakingModuleTypeSet(moduleType);
@@ -234,6 +239,8 @@ contract CSModule is
         }
         lidoLocator = ILidoLocator(locator);
         emit LocatorContractSet(locator);
+        publicReleaseTimestamp = _publicReleaseTimestamp;
+        emit PublicReleaseTimestampSet(_publicReleaseTimestamp);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
