@@ -3,9 +3,8 @@
 
 pragma solidity 0.8.24;
 
-import "./interfaces/ICSModule.sol";
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "./interfaces/ICSEarlyAdoption.sol";
+import { ICSEarlyAdoption } from "./interfaces/ICSEarlyAdoption.sol";
 
 contract CSEarlyAdoption is ICSEarlyAdoption {
     mapping(address => bool) internal _consumedAddresses;
@@ -33,12 +32,13 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
     function isEligible(
         address sender,
         bytes32[] calldata proof
-    ) public view returns (bool isValid) {
-        isValid = MerkleProof.verifyCalldata(
-            proof,
-            treeRoot,
-            keccak256(bytes.concat(keccak256(abi.encode(sender))))
-        );
+    ) public view returns (bool) {
+        return
+            MerkleProof.verifyCalldata(
+                proof,
+                treeRoot,
+                keccak256(bytes.concat(keccak256(abi.encode(sender))))
+            );
     }
 
     function consume(address sender, bytes32[] calldata proof) external {
