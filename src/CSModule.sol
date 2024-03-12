@@ -201,6 +201,7 @@ contract CSModule is
         keccak256("lido.CommunityStakingModule.signingKeysPosition");
 
     uint256 public constant EL_REWARDS_STEALING_FINE = 0.1 ether;
+    uint256 private constant ONE_YEAR = 365 days;
 
     uint256 private immutable TEMP_METHODS_EXPIRE_TIME;
 
@@ -230,7 +231,7 @@ contract CSModule is
         uint256 _publicReleaseTimestamp,
         address admin
     ) {
-        TEMP_METHODS_EXPIRE_TIME = block.timestamp + 365 days;
+        TEMP_METHODS_EXPIRE_TIME = block.timestamp + ONE_YEAR;
         _moduleType = moduleType;
         emit StakingModuleTypeSet(moduleType);
 

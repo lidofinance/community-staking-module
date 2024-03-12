@@ -26,6 +26,7 @@ abstract contract DeployBase is Script {
     uint256 immutable INITIALIZATION_EPOCH;
     address immutable LIDO_LOCATOR_ADDRESS;
     address immutable WSTETH_ADDRESS;
+    uint256 constant PUBLIC_RELEASE_TIMESHIFT = 180 days;
 
     ILidoLocator private locator;
     IWstETH private wstETH;
@@ -78,7 +79,8 @@ abstract contract DeployBase is Script {
             csm = new CSModule({
                 moduleType: "community-staking-module",
                 locator: address(locator),
-                _publicReleaseTimestamp: 0, // TODO reconsider this
+                _publicReleaseTimestamp: block.timestamp +
+                    PUBLIC_RELEASE_TIMESHIFT,
                 admin: address(deployer)
             });
             uint256[] memory curve = new uint256[](2);
