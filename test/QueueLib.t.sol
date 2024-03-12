@@ -5,106 +5,145 @@ pragma solidity 0.8.24;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import { QueueLib } from "../src/lib/QueueLib.sol";
+import { Batch, pack, QueueLib } from "../src/lib/QueueLib.sol";
+
+// Wrap the library internal methods to make an actual call to them.
+// Supposed to be used with `expectRevert` cheatcode and to pass
+// calldata arguments.
+contract Library {
+    using QueueLib for QueueLib.Queue;
+
+    QueueLib.Queue internal q;
+
+    function length() public view returns (uint128) {
+        return q.length;
+    }
+
+    function head() public view returns (uint128) {
+        return q.head;
+    }
+
+    function enqueue(Batch item) public returns (Batch) {
+        return q.enqueue(item);
+    }
+
+    function dequeue() public returns (Batch) {
+        return q.dequeue();
+    }
+
+    function remove(
+        uint64 indexOfPrev,
+        Batch prev,
+        Batch item
+    ) public returns (Batch) {
+        return q.remove(indexOfPrev, prev, item);
+    }
+
+    function peek() public view returns (Batch) {
+        return q.peek();
+    }
+
+    function at(uint128 index) public view returns (Batch) {
+        return q.at(index);
+    }
+}
+
+function eq(Batch lhs, Batch rhs) pure returns (bool) {
+    return lhs.unwrap() == rhs.unwrap();
+}
 
 contract QueueLibTest is Test {
-    bytes32 p0 = keccak256("0x00"); // 0x27489e20a0060b723a1748bdff5e44570ee9fae64141728105692eac6031e8a4
-    bytes32 p1 = keccak256("0x01"); // 0xe127292c8f7eb20e1ae830ed6055b6eb36e261836100610d12677231d0791f7f
-    bytes32 p2 = keccak256("0x02"); // 0xd3974deccfd8aa6b77f0fcc2c0014e6e0574d32e56c1d75717d2667b529cd073
+    using { eq } for Batch;
 
-    bytes32 nil = bytes32(0);
-    bytes32 buf;
+    Library q;
+    Batch buf;
 
-    using QueueLib for QueueLib.Queue;
-    QueueLib.Queue q;
-
-    function test_enqueue() public {
-        assertEq(q.peek(), nil);
-
-        q.enqueue(p0);
-        q.enqueue(p1);
-
-        assertEq(q.peek(), p0);
-        assertEq(q.at(p0), p1);
+    function setUp() public {
+        q = new Library();
     }
 
-    function test_dequeue() public {
-        assertTrue(q.isEmpty());
+    function test_pack() public {
+        assertEq(
+            pack(0x27489e20a0060b72, 0x3a1748bdff5e4457).unwrap(),
+            0x27489e20a0060b723a1748bdff5e445700000000000000000000000000000000
+        );
+    }
 
-        q.enqueue(p0);
-        q.enqueue(p1);
-        q.enqueue(p2);
+    function testFuzz_enqueue(uint64 a, uint64 b, uint64 c, uint64 d) public {
+        assertTrue(q.peek().isNil());
 
-        assertFalse(q.isEmpty());
+        Batch p0 = q.enqueue(pack(a, b));
+        Batch p1 = q.enqueue(pack(c, d));
+
+        assertTrue(q.peek().eq(p0));
+        assertTrue(q.at(1).eq(p1));
+
+        assertEq(p0.noId(), a);
+        assertEq(p0.keys(), b);
+        assertEq(p1.noId(), c);
+        assertEq(p1.keys(), d);
+    }
+
+    function testFuzz_dequeue(
+        uint64 a,
+        uint64 b,
+        uint64 c,
+        uint64 d,
+        uint64 e,
+        uint64 f
+    ) public {
+        assertTrue(q.peek().isNil());
+
+        Batch p0 = q.enqueue(pack(a, b));
+        Batch p1 = q.enqueue(pack(c, d));
+        Batch p2 = q.enqueue(pack(e, f));
+
+        assertFalse(q.peek().isNil());
 
         buf = q.dequeue();
-        assertEq(buf, p0);
-        assertEq(q.peek(), p1);
+        assertTrue(buf.eq(p0));
+        assertTrue(q.peek().eq(p1));
 
         buf = q.dequeue();
-        assertEq(buf, p1);
-        assertEq(q.peek(), p2);
+        assertTrue(buf.eq(p1));
+        assertTrue(q.peek().eq(p2));
 
         q.dequeue();
-        assertEq(q.peek(), nil);
-        assertTrue(q.isEmpty());
+        assertTrue(q.peek().isNil());
     }
 
-    function test_list() public {
-        q.enqueue(p0);
-        q.enqueue(p1);
-        q.enqueue(p2);
+    function testFuzz_remove(
+        uint64 a,
+        uint64 b,
+        uint64 c,
+        uint64 d,
+        uint64 e,
+        uint64 f
+    ) public {
+        Batch p0 = q.enqueue(pack(a, b));
+        Batch p1 = q.enqueue(pack(c, d));
+        Batch p2 = q.enqueue(pack(e, f));
 
-        {
-            (bytes32[] memory items, uint256 count) = q.list(q.front, 2);
-            assertEq(count, 2);
-            assertEq(items[0], p0);
-            assertEq(items[1], p1);
-        }
-
-        {
-            (bytes32[] memory items, uint256 count) = q.list(p1, 999);
-            assertEq(count, 1);
-            assertEq(items[0], p2);
-        }
-
-        q.dequeue();
-
-        {
-            (bytes32[] memory items, uint256 count) = q.list(q.front, 1);
-            assertEq(count, 1);
-            assertEq(items[0], p1);
-        }
-    }
-
-    function test_remove() public {
-        q.enqueue(p0);
-        q.enqueue(p1);
-        q.enqueue(p2);
-        // [+*p0, p1, p2]
-
-        q.remove(p0, p1);
-        // [+*p0, p2]
-
-        q.dequeue();
-        // [+p0, *p2]
+        // [p0, p1, p2]
+        q.remove(0, p0, p1);
+        // [p0', p2]
         buf = q.dequeue();
-        // [p0, +*p2]
-        assertEq(buf, p2);
-
+        // [p2]
+        assertEq(p0.noId(), buf.noId());
+        assertEq(p0.keys(), buf.keys());
+        // [p2]
+        buf = q.dequeue();
+        // []
+        assertEq(p2.noId(), buf.noId());
+        assertEq(p2.keys(), buf.keys());
+        // []
         q.enqueue(p1);
-        // [p0, +p2, *p1]
-        assertEq(q.peek(), p1);
-
-        q.remove(p2, p1);
-        // [p0, +*p2]
-        assertEq(q.peek(), nil);
-        assertTrue(q.isEmpty());
-
-        q.remove(p0, p2);
-        // [+*p0]
-        assertEq(q.peek(), nil);
+        // [p1']
+        buf = q.peek();
+        assertEq(p1.noId(), buf.noId());
+        assertEq(p1.keys(), buf.keys());
+        // [p1']
+        q.dequeue();
+        assertTrue(q.peek().isNil());
     }
-
-    // TODO: test with revert on library call
 }

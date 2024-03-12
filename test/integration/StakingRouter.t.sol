@@ -106,11 +106,6 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
             new bytes32[](0)
         );
 
-        {
-            // Pretend to be a key validation oracle
-            csm.vetKeys(0, 2);
-        }
-
         // It's impossible to process deposits if withdrawal requests amount is more than the buffered ether,
         // so we need to make sure that the buffered ether is enough by submitting this tremendous amount.
         address whale = nextAddress();

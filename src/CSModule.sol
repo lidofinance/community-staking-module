@@ -5,7 +5,6 @@
 pragma solidity 0.8.24;
 
 import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 
@@ -13,8 +12,7 @@ import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSEarlyAdoption } from "./interfaces/ICSEarlyAdoption.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
 
-import { QueueLib } from "./lib/QueueLib.sol";
-import { Batch } from "./lib/Batch.sol";
+import { QueueLib, Batch, pack as createBatch } from "./lib/QueueLib.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
 
 import { SigningKeys } from "./lib/SigningKeys.sol";
@@ -36,7 +34,7 @@ struct NodeOperator {
     uint256 stuckValidatorsCount; // @dev both increased and decreased
     uint256 refundedValidatorsCount; // @dev only increased
     uint256 depositableValidatorsCount; // @dev any value
-    uint256 queueNonce;
+    uint256 enqueuedCount; // Tracks how much places are dedicated to the node operator in the queue.
 }
 
 contract CSModuleBase {
@@ -95,11 +93,7 @@ contract CSModuleBase {
         uint256 keyIndex
     );
 
-    event BatchEnqueued(
-        uint256 indexed nodeOperatorId,
-        uint256 startIndex,
-        uint256 count
-    );
+    event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
 
     event StakingModuleTypeSet(bytes32 moduleType);
     event PublicReleaseTimestampSet(uint256 timestamp);
@@ -806,6 +800,16 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
                 newCount
             );
         }
+
+        // NOTE: Probably this check can be extracted to a separate function to reduce gas costs for the methods
+        // requiring only it.
+        uint256 unbondedKeys = accounting.getUnbondedKeysCount(nodeOperatorId);
+        if (unbondedKeys > newCount) {
+            newCount = 0;
+        } else {
+            newCount -= unbondedKeys;
+        }
+
         if (no.depositableValidatorsCount != newCount) {
             _depositableValidatorsCount =
                 _depositableValidatorsCount -
@@ -904,10 +908,9 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
 
     /// @notice Updates refunded validators count by StakingRouter
     /// @param nodeOperatorId ID of the node operator
-    /// @param refundedValidatorsCount Count of refunded validators
     function updateRefundedValidatorsCount(
         uint256 nodeOperatorId,
-        uint256 refundedValidatorsCount
+        uint256 /* refundedValidatorsCount */
     )
         external
         onlyRole(STAKING_ROUTER_ROLE)
@@ -938,13 +941,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             no.targetLimit == targetLimit
         ) return;
 
-        if (
-            (!no.isTargetLimitActive && isTargetLimitActive) ||
-            targetLimit < no.targetLimit
-        ) {
-            _unvetKeys(nodeOperatorId);
-        }
-
         if (no.isTargetLimitActive != isTargetLimitActive) {
             no.isTargetLimitActive = isTargetLimitActive;
         }
@@ -959,6 +955,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             targetLimit
         );
 
+        _updateDepositableValidatorsCount(nodeOperatorId);
         _incrementModuleNonce();
     }
 
@@ -988,81 +985,28 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         _incrementModuleNonce();
     }
 
-    /// @notice Vet keys. Called when key validator oracle checks the queue
-    /// @param nodeOperatorId ID of the node operator
-    /// @param vetKeysPointer Pointer to keys to vet
-    function vetKeys(
-        uint256 nodeOperatorId,
-        uint64 vetKeysPointer
-    )
-        external
-        onlyRole(KEY_VALIDATOR_ROLE)
-        onlyExistingNodeOperator(nodeOperatorId)
-    {
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+    function decreaseOperatorVettedKeys(
+        uint256[] calldata nodeOperatorIds,
+        uint256[] calldata vettedKeysByOperator
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        // INFO: It seems it does not  make sense to implement any sanity checks.
+        for (uint256 i; i < nodeOperatorIds.length; ++i) {
+            uint256 nodeOperatorId = nodeOperatorIds[i];
+            if (nodeOperatorId >= _nodeOperatorsCount) {
+                revert NodeOperatorDoesNotExist();
+            }
 
-        if (vetKeysPointer <= no.totalVettedKeys)
-            revert InvalidVetKeysPointer();
-        if (vetKeysPointer > no.totalAddedKeys) revert InvalidVetKeysPointer();
-        _validateVetKeys(nodeOperatorId, vetKeysPointer);
+            // There's no `unvettingFee` applied, only a fee in `removeKeys`.
+            NodeOperator storage no = _nodeOperators[nodeOperatorId];
+            no.totalVettedKeys = vettedKeysByOperator[i];
+            emit VettedSigningKeysCountChanged(
+                nodeOperatorId,
+                vettedKeysByOperator[i]
+            );
 
-        uint64 count = SafeCast.toUint64(vetKeysPointer - no.totalVettedKeys);
-        uint64 start = SafeCast.toUint64(no.totalVettedKeys);
+            _updateDepositableValidatorsCount(nodeOperatorId);
+        }
 
-        bytes32 pointer = Batch.serialize({
-            nodeOperatorId: SafeCast.toUint64(nodeOperatorId),
-            start: start,
-            count: count,
-            nonce: SafeCast.toUint64(no.queueNonce)
-        });
-
-        no.totalVettedKeys = vetKeysPointer;
-        _updateDepositableValidatorsCount(nodeOperatorId);
-        queue.enqueue(pointer);
-
-        emit BatchEnqueued(nodeOperatorId, start, count);
-        emit VettedSigningKeysCountChanged(nodeOperatorId, vetKeysPointer);
-
-        _incrementModuleNonce();
-    }
-
-    function _validateVetKeys(
-        uint256 nodeOperatorId,
-        uint64 vetKeysPointer
-    ) internal view {
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-
-        if (
-            no.isTargetLimitActive &&
-            vetKeysPointer > (no.totalExitedKeys + no.targetLimit)
-        ) revert TargetLimitExceeded();
-        if (no.stuckValidatorsCount > 0) revert StuckKeysPresent();
-        if (accounting.getUnbondedKeysCount(nodeOperatorId) > 0)
-            revert UnbondedKeysPresent();
-    }
-
-    /// @notice Unvets keys and charges fee. Called when key validator oracle checks the queue or manually by node operator manager
-    /// @param nodeOperatorId ID of the node operator
-    function unvetKeys(
-        uint256 nodeOperatorId
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
-        onlyKeyValidatorOrNodeOperatorManager(nodeOperatorId);
-        _unvetKeys(nodeOperatorId);
-        _applyUnvettingFee(nodeOperatorId);
-        _incrementModuleNonce();
-    }
-
-    /// @notice Unsafe unvetting of keys by DAO
-    /// @dev Doesn't charge fee
-    /// @param nodeOperatorId ID of the node operator
-    function unsafeUnvetKeys(
-        uint256 nodeOperatorId
-    )
-        external
-        onlyRole(UNSAFE_UNVET_KEYS_ROLE)
-        onlyExistingNodeOperator(nodeOperatorId)
-    {
-        _unvetKeys(nodeOperatorId);
         _incrementModuleNonce();
     }
 
@@ -1075,12 +1019,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         uint256 keysCount
     ) external onlyExistingNodeOperator(nodeOperatorId) {
         onlyNodeOperatorManager(nodeOperatorId);
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (no.totalVettedKeys > startIndex) {
-            _unvetKeys(nodeOperatorId);
-            _applyUnvettingFee(nodeOperatorId);
-        }
-
         _removeSigningKeys(nodeOperatorId, startIndex, keysCount);
     }
 
@@ -1092,24 +1030,37 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         uint256 keysCount
     ) external onlyExistingNodeOperator(nodeOperatorId) {
         onlyNodeOperatorManager(nodeOperatorId);
-        /// TODO: implement
-        /// Mark validators for priority ejection
-        /// Confiscate ejection fee from the bond
+        // TODO: implement
+        // Mark validators for priority ejection
+        // Confiscate ejection fee from the bond
     }
 
-    /// @dev NB! doesn't increment module nonce
-    function _unvetKeys(uint256 nodeOperatorId) internal {
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        no.totalVettedKeys = no.totalDepositedKeys;
-        no.queueNonce++;
+    function normalizeQueue(
+        uint256 nodeOperatorId
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        onlyNodeOperatorManager(nodeOperatorId);
+        _normalizeQueue(nodeOperatorId);
+    }
+
+    // TODO: Fix that bad naming.
+    function _normalizeQueue(uint256 nodeOperatorId) internal {
         _updateDepositableValidatorsCount(nodeOperatorId);
-        emit VettedSigningKeysCountChanged(nodeOperatorId, no.totalVettedKeys);
-    }
 
-    function _checkForUnbondedKeys(uint256 nodeOperatorId) internal {
-        if (accounting.getUnbondedKeysCount(nodeOperatorId) > 0) {
-            _unvetKeys(nodeOperatorId);
-            _incrementModuleNonce();
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        uint256 depositable = no.depositableValidatorsCount;
+        uint256 enqueued = no.enqueuedCount;
+
+        if (enqueued < depositable) {
+            unchecked {
+                uint256 count = depositable - enqueued;
+                Batch item = createBatch(nodeOperatorId, count);
+                // Refactor to a function?
+                {
+                    no.enqueuedCount += count;
+                    queue.enqueue(item);
+                }
+                emit BatchEnqueued(nodeOperatorId, count);
+            }
         }
     }
 
@@ -1154,7 +1105,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             amount + EL_REWARDS_STEALING_FINE
         );
 
-        _checkForUnbondedKeys(nodeOperatorId);
+        _updateDepositableValidatorsCount(nodeOperatorId);
     }
 
     /// @dev Should be called by the committee.
@@ -1184,7 +1135,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             revert Expired();
         }
         accounting.penalize(nodeOperatorId, amount);
-        _checkForUnbondedKeys(nodeOperatorId);
+        _updateDepositableValidatorsCount(nodeOperatorId);
         _checkForOutOfBond(nodeOperatorId);
     }
 
@@ -1229,9 +1180,11 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         if (_isValidatorSlashed[pointer]) amount += INITIAL_SLASHING_PENALTY;
         if (amount < DEPOSIT_SIZE) {
             accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - amount);
-            _checkForUnbondedKeys(nodeOperatorId);
+            _updateDepositableValidatorsCount(nodeOperatorId); // FIXME: normalizeQueue?
             _checkForOutOfBond(nodeOperatorId);
         }
+
+        _incrementModuleNonce();
     }
 
     /// @notice Checks if the given node operators's key is proved as slashed.
@@ -1266,11 +1219,12 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             revert AlreadySubmitted();
         }
         _isValidatorSlashed[pointer] = true;
+        emit InitialSlashingSubmitted(nodeOperatorId, keyIndex);
 
         accounting.penalize(nodeOperatorId, INITIAL_SLASHING_PENALTY);
-        _checkForUnbondedKeys(nodeOperatorId);
+        _updateDepositableValidatorsCount(nodeOperatorId);
         _checkForOutOfBond(nodeOperatorId);
-        emit InitialSlashingSubmitted(nodeOperatorId, keyIndex);
+        _incrementModuleNonce();
     }
 
     /// @dev both nodeOperatorId and keyIndex are limited to uint64 by the contract.
@@ -1295,8 +1249,9 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         bytes calldata publicKeys,
         bytes calldata signatures
     ) internal {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
         // TODO: sanity checks
-        uint256 startIndex = _nodeOperators[nodeOperatorId].totalAddedKeys;
+        uint256 startIndex = no.totalAddedKeys;
         if (
             block.timestamp < publicReleaseTimestamp &&
             startIndex + keysCount > MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE
@@ -1315,12 +1270,20 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         );
 
         _totalAddedValidators += keysCount;
-        _nodeOperators[nodeOperatorId].totalAddedKeys += keysCount;
-        emit TotalSigningKeysCountChanged(
-            nodeOperatorId,
-            _nodeOperators[nodeOperatorId].totalAddedKeys
-        );
 
+        // Optimistic vetting takes place.
+        if (no.totalAddedKeys == no.totalVettedKeys) {
+            no.totalVettedKeys += keysCount;
+            emit VettedSigningKeysCountChanged(
+                nodeOperatorId,
+                no.totalVettedKeys
+            );
+        }
+
+        no.totalAddedKeys += keysCount;
+        emit TotalSigningKeysCountChanged(nodeOperatorId, no.totalAddedKeys);
+
+        _normalizeQueue(nodeOperatorId);
         _incrementModuleNonce();
     }
 
@@ -1351,7 +1314,13 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         no.totalAddedKeys = newTotalSigningKeys;
         emit TotalSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
 
+        no.totalVettedKeys = newTotalSigningKeys;
+        emit VettedSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
+
+        _normalizeQueue(nodeOperatorId);
         _incrementModuleNonce();
+
+        // FIXME: Make deletion fee instead of unvettingFee.
     }
 
     /// @notice Gets the depositable keys with signatures from the queue
@@ -1371,50 +1340,64 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         uint256 depositsLeft = depositsCount;
         uint256 loadedKeysCount = 0;
 
-        for (bytes32 p = queue.peek(); !Batch.isNil(p); ) {
-            (
-                uint256 nodeOperatorId,
-                uint256 startIndex,
-                uint256 depositableKeysCount
-            ) = _depositableKeysInBatch(p);
+        for (Batch item = queue.peek(); !item.isNil(); item = queue.peek()) {
+            // NOTE: see the `enqueuedCount` note below.
+            unchecked {
+                // TODO: To keep it easy to refactor or to keep it cheap? Maybe both works?
+                uint256 noId = item.noId();
+                uint256 keysInBatch = item.keys();
+                NodeOperator storage no = _nodeOperators[noId];
 
-            uint256 keysCount = Math.min(depositsLeft, depositableKeysCount);
-            if (depositableKeysCount == keysCount) {
-                queue.dequeue();
+                uint256 keysCount = Math.min(
+                    Math.min(no.depositableValidatorsCount, keysInBatch),
+                    depositsLeft
+                );
+                // `depositsLeft` is non-zero at this point all the time, so the check `depositsLeft > keysCount`
+                // covers the case when no depositable keys on the node operator have been left.
+                if (depositsLeft > keysCount || keysCount == keysInBatch) {
+                    // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
+                    no.enqueuedCount -= keysInBatch;
+                    queue.dequeue();
+                } else {
+                    no.enqueuedCount -= keysCount;
+                    // NOTE: `keysInBatch` can't be less than `keysCount` at this point.
+                    item = item.setKeys(keysInBatch - keysCount);
+                    queue.queue[queue.head] = item;
+                }
+
+                if (keysCount == 0) {
+                    continue;
+                }
+
+                // solhint-disable-next-line func-named-parameters
+                SigningKeys.loadKeysSigs(
+                    SIGNING_KEYS_POSITION,
+                    noId,
+                    no.totalDepositedKeys,
+                    keysCount,
+                    publicKeys,
+                    signatures,
+                    loadedKeysCount
+                );
+
+                // It's impossible in practice to reach the limit of these variables.
+                loadedKeysCount += keysCount;
+                _totalDepositedValidators += keysCount;
+                no.totalDepositedKeys += keysCount;
+
+                emit DepositedSigningKeysCountChanged(
+                    noId,
+                    no.totalDepositedKeys
+                );
+
+                // No need for `_updateDepositableValidatorsCount` call, we can update the number directly.
+                // `keysCount` is min of `depositableValidatorsCount` and `depositsLeft`.
+                no.depositableValidatorsCount -= keysCount;
+                depositsLeft -= keysCount;
+                if (depositsLeft == 0) {
+                    break;
+                }
             }
-
-            // solhint-disable-next-line func-named-parameters
-            SigningKeys.loadKeysSigs(
-                SIGNING_KEYS_POSITION,
-                nodeOperatorId,
-                startIndex,
-                keysCount,
-                publicKeys,
-                signatures,
-                loadedKeysCount
-            );
-            loadedKeysCount += keysCount;
-
-            _totalDepositedValidators += keysCount;
-            NodeOperator storage no = _nodeOperators[nodeOperatorId];
-            no.totalDepositedKeys += keysCount;
-            _updateDepositableValidatorsCount(nodeOperatorId);
-            // redundant check, enforced by _assertIsValidBatch
-            if (no.totalDepositedKeys > no.totalVettedKeys) {
-                revert TooManyKeys();
-            }
-
-            emit DepositedSigningKeysCountChanged(
-                nodeOperatorId,
-                no.totalDepositedKeys
-            );
-
-            depositsLeft = depositsLeft - keysCount;
-            if (depositsLeft == 0) {
-                break;
-            }
-
-            p = queue.peek();
         }
         if (loadedKeysCount != depositsCount) {
             revert NotEnoughKeys();
@@ -1422,134 +1405,74 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         _incrementModuleNonce();
     }
 
-    function _depositableKeysInBatch(
-        bytes32 batch
-    )
-        internal
-        view
-        returns (
-            uint256 nodeOperatorId,
-            uint256 startIndex,
-            uint256 depositableKeysCount
-        )
-    {
-        uint256 start;
-        uint256 count;
-        uint256 nonce;
-
-        (nodeOperatorId, start, count, nonce) = Batch.deserialize(batch);
-
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        // solhint-disable-next-line func-named-parameters
-        _assertIsValidBatch(no, batch, start, count, nonce);
-
-        startIndex = Math.max(start, no.totalDepositedKeys);
-        depositableKeysCount = start + count - startIndex;
-    }
-
-    function _assertIsValidBatch(
-        NodeOperator storage no,
-        bytes32 batch,
-        uint256 start,
-        uint256 count,
-        uint256 nonce
-    ) internal view {
-        if (count == 0) revert QueueEmptyBatch();
-        if (nonce != no.queueNonce) revert QueueBatchInvalidNonce(batch);
-        if (start > no.totalDepositedKeys) revert QueueBatchInvalidStart(batch);
-        if (start + count > no.totalAddedKeys)
-            revert QueueBatchInvalidCount(batch);
-    }
-
-    /// @notice Cleans the deposit queue from invalid batches
-    /// @param maxItems Max count of items to clean
-    /// @param pointer Pointer to the first item to clean
-    /// @return pointer Pointer when cleaning is finished
-    function cleanDepositQueue(
-        uint256 maxItems,
-        bytes32 pointer
-    ) external returns (bytes32) {
+    /// @notice Cleans the deposit queue from batches of non-depositable node operators.
+    function cleanDepositQueue(uint256 maxItems) external {
         if (maxItems == 0) revert QueueLookupNoLimit();
 
-        if (Batch.isNil(pointer)) {
-            pointer = queue.front;
-        }
+        Batch prev;
+        uint128 indexOfPrev;
 
-        for (uint256 i; i < maxItems; i++) {
-            bytes32 item = queue.at(pointer);
-            if (Batch.isNil(item)) {
-                break;
+        uint128 head = queue.head;
+        uint128 curr = head;
+
+        for (uint256 i; i < maxItems; ++i) {
+            Batch item = queue.queue[curr];
+            if (item.isNil()) {
+                return;
             }
 
-            (
-                uint256 nodeOperatorId,
-                uint256 start,
-                uint256 count,
-                uint256 nonce
-            ) = Batch.deserialize(item);
-            NodeOperator storage no = _nodeOperators[nodeOperatorId];
-            if (nonce != no.queueNonce) {
-                queue.remove(pointer, item);
-                continue;
+            uint256 noId = item.noId();
+            NodeOperator storage no = _nodeOperators[noId];
+            if (no.depositableValidatorsCount == 0) {
+                if (curr == head) {
+                    queue.dequeue();
+                    head = queue.head;
+                } else {
+                    // There's no `prev` item while we call `dequeue`, and removing an item will keep the `prev` intact
+                    // other than changing its `next` field.
+                    prev = queue.remove(indexOfPrev, prev, item);
+                }
+
+                uint256 keysInBatch = item.keys();
+                no.enqueuedCount -= keysInBatch;
+            } else {
+                indexOfPrev = curr;
+                prev = item;
             }
 
-            pointer = item;
+            curr = item.next();
         }
-
-        return pointer;
     }
 
-    /// @notice Gets the deposit queue
-    /// @param maxItems Max count of items to get
-    /// @param pointer Pointer to the first item to get
-    /// @return items Items in the queue
-    /// @return count Count of items in the queue
-    function depositQueue(
-        uint256 maxItems,
-        bytes32 pointer
-    ) external view returns (bytes32[] memory items, uint256 /* count */) {
-        if (maxItems == 0) revert QueueLookupNoLimit();
-
-        if (Batch.isNil(pointer)) {
-            pointer = queue.front;
-        }
-
-        return queue.list(pointer, maxItems);
+    /// @notice Gets the deposit queue item by an index.
+    /// @param index Index of a queue item.
+    function depositQueueItem(uint256 index) public view returns (Batch item) {
+        return queue.at(index);
     }
 
-    /// @notice Checks if the deposit queue is dirty
-    /// @dev it is dirty if it contains a batch with unvetted keys
-    ///      or with invalid nonce
+    /// @notice Checks if the deposit queue is dirty (a dumb way).
+    /// @dev It is dirty if it contains a batch of a node operator with no keys to deposit.
+    /// @param maxItems is how deep starting the queue's head to lookup.
     /// @return bool is queue dirty
-    /// @return bytes32 next pointer to start check from
-    function isQueueDirty(
-        uint256 maxItems,
-        bytes32 pointer
-    ) external view returns (bool, bytes32) {
+    function isQueueDirty(uint256 maxItems) external view returns (bool) {
         if (maxItems == 0) revert QueueLookupNoLimit();
 
-        if (Batch.isNil(pointer)) {
-            pointer = queue.front;
-        }
-
-        for (uint256 i; i < maxItems; i++) {
-            bytes32 item = queue.at(pointer);
-            if (Batch.isNil(item)) {
-                break;
+        uint128 index = queue.head;
+        for (uint256 i; i < maxItems; ++i) {
+            Batch item = queue.queue[index];
+            if (item.isNil()) {
+                return false;
             }
 
-            (uint256 nodeOperatorId, , , uint256 nonce) = Batch.deserialize(
-                item
-            );
-            NodeOperator storage no = _nodeOperators[nodeOperatorId];
-            if (nonce != no.queueNonce) {
-                return (true, pointer);
+            uint256 noId = item.noId();
+            if (_nodeOperators[noId].depositableValidatorsCount == 0) {
+                return true;
             }
 
-            pointer = item;
+            index = item.next();
         }
 
-        return (false, pointer);
+        return false;
     }
 
     function _incrementModuleNonce() internal {
