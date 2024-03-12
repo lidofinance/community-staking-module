@@ -8,8 +8,16 @@ import { BaseOracle } from "base-oracle/oracle/BaseOracle.sol";
 
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { ICSFeeOracle } from "./interfaces/ICSFeeOracle.sol";
+import { AssetRecoverer } from "./AssetRecoverer.sol";
 
-contract CSFeeOracle is ICSFeeOracle, BaseOracle, PausableUntil {
+contract CSFeeOracle is
+    ICSFeeOracle,
+    BaseOracle,
+    PausableUntil,
+    AssetRecoverer
+{
+    /// @notice There are no any assets to store in the contract
+
     struct ReportData {
         /// @dev Version of the oracle consensus rules. Current version expected
         /// by the oracle can be obtained by calling getConsensusVersion().
@@ -39,6 +47,9 @@ contract CSFeeOracle is ICSFeeOracle, BaseOracle, PausableUntil {
 
     /// @notice An ACL role granting the permission to resume accepting oracle reports
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
+
+    /// @notice An ACL role granting the permission to recover assets
+    bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
     ICSFeeDistributor public feeDistributor;
 
@@ -194,5 +205,9 @@ contract CSFeeOracle is ICSFeeOracle, BaseOracle, PausableUntil {
         if (!hasRole(SUBMIT_DATA_ROLE, sender) && !_isConsensusMember(sender)) {
             revert SenderNotAllowed();
         }
+    }
+
+    function checkRecovererRole() internal override {
+        _checkRole(RECOVERER_ROLE, msg.sender);
     }
 }

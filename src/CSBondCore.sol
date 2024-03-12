@@ -140,7 +140,7 @@ abstract contract CSBondCore is CSBondCoreBase {
         return shares;
     }
 
-    function _increaseBond(uint256 nodeOperatorId, uint256 shares) private {
+    function _increaseBond(uint256 nodeOperatorId, uint256 shares) internal {
         _bondShares[nodeOperatorId] += shares;
         totalBondShares += shares;
     }

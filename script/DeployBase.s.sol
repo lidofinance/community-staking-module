@@ -84,6 +84,7 @@ abstract contract DeployBase is Script {
         {
             csm = new CSModule({
                 moduleType: "community-staking-module",
+                _lidoLocator: LIDO_LOCATOR_ADDRESS,
                 _publicReleaseTimestamp: block.timestamp +
                     PUBLIC_RELEASE_TIMESHIFT,
                 admin: address(deployer)
@@ -121,7 +122,8 @@ abstract contract DeployBase is Script {
                 csm: address(csm),
                 stETH: locator.lido(),
                 oracle: address(oracle),
-                accounting: address(accounting)
+                accounting: address(accounting),
+                admin: deployer
             });
             accounting.setFeeDistributor(address(feeDistributor));
 
