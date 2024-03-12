@@ -326,6 +326,7 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
+    /// TODO consider splitting into methods with proof and without
     function addNodeOperatorETH(
         uint256 keysCount,
         bytes calldata publicKeys,
