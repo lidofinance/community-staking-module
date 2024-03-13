@@ -10,6 +10,7 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
+import { ICSEarlyAdoption } from "./interfaces/ICSEarlyAdoption.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { ILido } from "./interfaces/ILido.sol";
@@ -30,7 +31,7 @@ struct NodeOperator {
     bool isTargetLimitActive;
     uint256 stuckPenaltyEndTimestamp;
     uint256 totalExitedKeys; // @dev only increased
-    uint256 totalAddedKeys; // @dev only increased
+    uint256 totalAddedKeys; // @dev increased and decreased when removed
     uint256 totalWithdrawnKeys; // @dev only increased
     uint256 totalDepositedKeys; // @dev only increased
     uint256 totalVettedKeys; // @dev both increased and decreased
@@ -104,6 +105,7 @@ contract CSModuleBase {
 
     event StakingModuleTypeSet(bytes32 moduleType);
     event LocatorContractSet(address locatorAddress);
+    event PublicReleaseTimestampSet(uint256 timestamp);
     event UnvettingFeeSet(uint256 unvettingFee);
 
     event UnvettingFeeApplied(uint256 indexed nodeOperatorId);
@@ -147,6 +149,8 @@ contract CSModuleBase {
     error Expired();
     error AlreadyInitialized();
     error InvalidAmount();
+    error NotAllowedToJoinYet();
+    error MaxSigningKeysCountExceeded();
 }
 
 contract CSModule is
@@ -162,6 +166,10 @@ contract CSModule is
 
     bytes32 public constant SET_ACCOUNTING_ROLE =
         keccak256("SET_ACCOUNTING_ROLE"); // 0xbad3cb5f7add8fade9c376f76021c1c4106ee82e38abc73f6e8d234042d33f7d
+    bytes32 public constant SET_EARLY_ADOPTION_ROLE =
+        keccak256("SET_EARLY_ADOPTION_ROLE"); // 0xe0d27b865f229f5162f7b9ae24065c2d5cdae1ed1eaabf46a5f7809b1edf2ec1
+    bytes32 public constant SET_PUBLIC_RELEASE_TIMESTAMP_ROLE =
+        keccak256("SET_PUBLIC_RELEASE_TIMESTAMP_ROLE"); // 0x66d6616db95aac3b33b9261e42ab01ad71f311cff562503c33c742c54f22bbcd
     bytes32 public constant SET_UNVETTING_FEE_ROLE =
         keccak256("SET_UNVETTING_FEE"); // 0x19583bfff685c0ba70886aba1270ef3f5606d5ed3b3d0b6b804dba345609a0e1
     bytes32 public constant STAKING_ROUTER_ROLE =
@@ -183,6 +191,7 @@ contract CSModule is
     // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
     // it seems to be enough
     uint64 public constant MAX_NODE_OPERATORS_COUNT = type(uint64).max;
+    uint8 public constant MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE = 10;
     // might be received dynamically in case of increasing possible deposit size
     uint256 public constant DEPOSIT_SIZE = 32 ether;
     uint256 public constant MIN_SLASHING_PENALTY_QUOTIENT = 32;
@@ -192,16 +201,17 @@ contract CSModule is
         keccak256("lido.CommunityStakingModule.signingKeysPosition");
 
     uint256 public constant EL_REWARDS_STEALING_FINE = 0.1 ether;
-
-    uint256 private constant ONE_YEAR = 60 * 60 * 24 * 365;
+    uint256 private constant ONE_YEAR = 365 days;
 
     uint256 private immutable TEMP_METHODS_EXPIRE_TIME;
 
+    uint256 public publicReleaseTimestamp;
     uint256 public unvettingFee;
     QueueLib.Queue public queue;
 
     ICSAccounting public accounting;
     ILidoLocator public lidoLocator;
+    ICSEarlyAdoption public earlyAdoption;
     uint256 private _nodeOperatorsCount;
     uint256 private _activeNodeOperatorsCount;
     bytes32 private _moduleType;
@@ -215,7 +225,12 @@ contract CSModule is
     uint256 private _totalAddedValidators;
     uint256 private _depositableValidatorsCount;
 
-    constructor(bytes32 moduleType, address locator, address admin) {
+    constructor(
+        bytes32 moduleType,
+        address locator,
+        uint256 _publicReleaseTimestamp,
+        address admin
+    ) {
         TEMP_METHODS_EXPIRE_TIME = block.timestamp + ONE_YEAR;
         _moduleType = moduleType;
         emit StakingModuleTypeSet(moduleType);
@@ -225,6 +240,8 @@ contract CSModule is
         }
         lidoLocator = ILidoLocator(locator);
         emit LocatorContractSet(locator);
+        publicReleaseTimestamp = _publicReleaseTimestamp;
+        emit PublicReleaseTimestampSet(_publicReleaseTimestamp);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
@@ -249,6 +266,24 @@ contract CSModule is
             revert AlreadyInitialized();
         }
         accounting = ICSAccounting(_accounting);
+    }
+
+    /// @notice Sets the early adoption contract
+    /// @param _earlyAdoption Address of the early adoption contract
+    function setEarlyAdoption(
+        address _earlyAdoption
+    ) external onlyRole(SET_EARLY_ADOPTION_ROLE) {
+        if (address(earlyAdoption) != address(0)) {
+            revert AlreadyInitialized();
+        }
+        earlyAdoption = ICSEarlyAdoption(_earlyAdoption);
+    }
+
+    function setPublicReleaseTimestamp(
+        uint256 timestamp
+    ) external onlyRole(SET_PUBLIC_RELEASE_TIMESTAMP_ROLE) {
+        publicReleaseTimestamp = timestamp;
+        emit PublicReleaseTimestampSet(timestamp);
     }
 
     /// @notice Sets the unvetting fee
@@ -291,33 +326,30 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
+    /// TODO consider splitting into methods with proof and without
     function addNodeOperatorETH(
         uint256 keysCount,
         bytes calldata publicKeys,
-        bytes calldata signatures
+        bytes calldata signatures,
+        bytes32[] calldata eaProof
     ) external payable whenResumed {
         // TODO: sanity checks
 
-        if (msg.value != accounting.getBondAmountByKeysCount(keysCount)) {
+        uint256 id = _createNodeOperator();
+        _processEarlyAdoption(id, eaProof);
+
+        if (
+            msg.value !=
+            accounting.getBondAmountByKeysCount(
+                keysCount,
+                accounting.getBondCurve(id)
+            )
+        ) {
             revert InvalidAmount();
         }
 
-        uint256 id = _nodeOperatorsCount;
-        if (id == MAX_NODE_OPERATORS_COUNT)
-            revert MaxNodeOperatorsCountReached();
-        NodeOperator storage no = _nodeOperators[id];
-
-        no.managerAddress = msg.sender;
-        no.rewardAddress = msg.sender;
-        no.active = true;
-        _nodeOperatorsCount++;
-        _activeNodeOperatorsCount++;
-
         accounting.depositETH{ value: msg.value }(msg.sender, id);
-
         _addSigningKeys(id, keysCount, publicKeys, signatures);
-
-        emit NodeOperatorAdded(id, msg.sender);
     }
 
     /// @notice Adds a new node operator with stETH bond
@@ -327,30 +359,24 @@ contract CSModule is
     function addNodeOperatorStETH(
         uint256 keysCount,
         bytes calldata publicKeys,
-        bytes calldata signatures
+        bytes calldata signatures,
+        bytes32[] calldata eaProof
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 id = _nodeOperatorsCount;
-        if (id == MAX_NODE_OPERATORS_COUNT)
-            revert MaxNodeOperatorsCountReached();
-        NodeOperator storage no = _nodeOperators[id];
-
-        no.managerAddress = msg.sender;
-        no.rewardAddress = msg.sender;
-        no.active = true;
-        _nodeOperatorsCount++;
-        _activeNodeOperatorsCount++;
+        uint256 id = _createNodeOperator();
+        _processEarlyAdoption(id, eaProof);
 
         accounting.depositStETH(
             msg.sender,
             id,
-            accounting.getBondAmountByKeysCount(keysCount)
+            accounting.getBondAmountByKeysCount(
+                keysCount,
+                accounting.getBondCurve(id)
+            )
         );
 
         _addSigningKeys(id, keysCount, publicKeys, signatures);
-
-        emit NodeOperatorAdded(id, msg.sender);
     }
 
     /// @notice Adds a new node operator with permit to use stETH as bond
@@ -362,30 +388,25 @@ contract CSModule is
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
+        bytes32[] calldata eaProof,
         ICSAccounting.PermitInput calldata permit
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 id = _nodeOperatorsCount;
-        if (id == MAX_NODE_OPERATORS_COUNT)
-            revert MaxNodeOperatorsCountReached();
-        NodeOperator storage no = _nodeOperators[id];
-        no.rewardAddress = msg.sender;
-        no.managerAddress = msg.sender;
-        no.active = true;
-        _nodeOperatorsCount++;
-        _activeNodeOperatorsCount++;
+        uint256 id = _createNodeOperator();
+        _processEarlyAdoption(id, eaProof);
 
         accounting.depositStETHWithPermit(
             msg.sender,
             id,
-            accounting.getBondAmountByKeysCount(keysCount),
+            accounting.getBondAmountByKeysCount(
+                keysCount,
+                accounting.getBondCurve(id)
+            ),
             permit
         );
 
         _addSigningKeys(id, keysCount, publicKeys, signatures);
-
-        emit NodeOperatorAdded(id, msg.sender);
     }
 
     /// @notice Adds a new node operator with wstETH bond
@@ -395,30 +416,24 @@ contract CSModule is
     function addNodeOperatorWstETH(
         uint256 keysCount,
         bytes calldata publicKeys,
-        bytes calldata signatures
+        bytes calldata signatures,
+        bytes32[] calldata eaProof
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 id = _nodeOperatorsCount;
-        if (id == MAX_NODE_OPERATORS_COUNT)
-            revert MaxNodeOperatorsCountReached();
-        NodeOperator storage no = _nodeOperators[id];
-
-        no.managerAddress = msg.sender;
-        no.rewardAddress = msg.sender;
-        no.active = true;
-        _nodeOperatorsCount++;
-        _activeNodeOperatorsCount++;
+        uint256 id = _createNodeOperator();
+        _processEarlyAdoption(id, eaProof);
 
         accounting.depositWstETH(
             msg.sender,
             id,
-            accounting.getBondAmountByKeysCountWstETH(keysCount)
+            accounting.getBondAmountByKeysCountWstETH(
+                keysCount,
+                accounting.getBondCurve(id)
+            )
         );
 
         _addSigningKeys(id, keysCount, publicKeys, signatures);
-
-        emit NodeOperatorAdded(id, msg.sender);
     }
 
     /// @notice Adds a new node operator with permit to use wstETH as bond
@@ -430,30 +445,25 @@ contract CSModule is
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
+        bytes32[] calldata eaProof,
         ICSAccounting.PermitInput calldata permit
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 id = _nodeOperatorsCount;
-        if (id == MAX_NODE_OPERATORS_COUNT)
-            revert MaxNodeOperatorsCountReached();
-        NodeOperator storage no = _nodeOperators[id];
-        no.rewardAddress = msg.sender;
-        no.managerAddress = msg.sender;
-        no.active = true;
-        _nodeOperatorsCount++;
-        _activeNodeOperatorsCount++;
+        uint256 id = _createNodeOperator();
+        _processEarlyAdoption(id, eaProof);
 
         accounting.depositWstETHWithPermit(
             msg.sender,
             id,
-            accounting.getBondAmountByKeysCountWstETH(keysCount),
+            accounting.getBondAmountByKeysCountWstETH(
+                keysCount,
+                accounting.getBondCurve(id)
+            ),
             permit
         );
 
         _addSigningKeys(id, keysCount, publicKeys, signatures);
-
-        emit NodeOperatorAdded(id, msg.sender);
     }
 
     /// @notice Adds a new keys to the node operator with ETH bond
@@ -1295,6 +1305,12 @@ contract CSModule is
     ) internal {
         // TODO: sanity checks
         uint256 startIndex = _nodeOperators[nodeOperatorId].totalAddedKeys;
+        if (
+            block.timestamp < publicReleaseTimestamp &&
+            startIndex + keysCount > MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE
+        ) {
+            revert MaxSigningKeysCountExceeded();
+        }
 
         // solhint-disable-next-line func-named-parameters
         SigningKeys.saveKeysSigs(
@@ -1546,6 +1562,36 @@ contract CSModule is
 
     function _incrementModuleNonce() internal {
         _nonce++;
+    }
+
+    function _createNodeOperator() internal returns (uint256) {
+        uint256 id = _nodeOperatorsCount;
+        if (id == MAX_NODE_OPERATORS_COUNT)
+            revert MaxNodeOperatorsCountReached();
+        NodeOperator storage no = _nodeOperators[id];
+
+        no.managerAddress = msg.sender;
+        no.rewardAddress = msg.sender;
+        no.active = true;
+        _nodeOperatorsCount++;
+        _activeNodeOperatorsCount++;
+
+        emit NodeOperatorAdded(id, msg.sender);
+        return id;
+    }
+
+    /// @notice it's possible to join with proof even after public release
+    function _processEarlyAdoption(
+        uint256 nodeOperatorId,
+        bytes32[] calldata proof
+    ) internal {
+        if (block.timestamp < publicReleaseTimestamp && proof.length == 0) {
+            revert NotAllowedToJoinYet();
+        }
+        if (proof.length == 0) return;
+
+        earlyAdoption.consume(msg.sender, proof);
+        accounting.setBondCurve(nodeOperatorId, earlyAdoption.curveId());
     }
 
     modifier onlyExistingNodeOperator(uint256 nodeOperatorId) {

@@ -155,7 +155,7 @@ abstract contract CSBondCurve is CSBondCurveBase {
         uint256 curveId
     ) public view returns (BondCurve memory) {
         return
-            (curveId == 0 || curveId > _bondCurves.length)
+            (curveId == 0)
                 ? _bondCurves[defaultBondCurveId - 1]
                 : _bondCurves[curveId - 1];
     }

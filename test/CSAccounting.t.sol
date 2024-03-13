@@ -4475,7 +4475,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
     }
 
     function test_setBondCurve_RevertWhen_DoesNotHaveRole() public {
-        expectRoleRevert(stranger, accounting.SET_BOND_CURVE_ROLE());
+        vm.expectRevert(InvalidSender.selector);
         vm.prank(stranger);
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
     }

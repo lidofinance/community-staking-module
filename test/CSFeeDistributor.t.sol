@@ -53,7 +53,7 @@ contract CSFeeDistributorTest is Test, Fixtures, CSFeeDistributorBase {
     function test_distributeFeesHappyPath() public {
         uint256 nodeOperatorId = 42;
         uint256 shares = 100;
-        tree.pushLeaf(nodeOperatorId, shares);
+        tree.pushLeaf(abi.encode(nodeOperatorId, shares));
         bytes32[] memory proof = tree.getProof(0);
 
         stETH.mintShares(address(feeDistributor), shares);
@@ -95,7 +95,7 @@ contract CSFeeDistributorTest is Test, Fixtures, CSFeeDistributorBase {
     function test_RevertIf_InvalidShares() public {
         uint256 nodeOperatorId = 42;
         uint256 shares = 100;
-        tree.pushLeaf(nodeOperatorId, shares);
+        tree.pushLeaf(abi.encode(nodeOperatorId, shares));
         bytes32[] memory proof = tree.getProof(0);
 
         stdstore
@@ -116,7 +116,7 @@ contract CSFeeDistributorTest is Test, Fixtures, CSFeeDistributorBase {
     function test_Returns0If_NothingToDistribute() public {
         uint256 nodeOperatorId = 42;
         uint256 shares = 100;
-        tree.pushLeaf(nodeOperatorId, shares);
+        tree.pushLeaf(abi.encode(nodeOperatorId, shares));
         bytes32[] memory proof = tree.getProof(0);
 
         stdstore

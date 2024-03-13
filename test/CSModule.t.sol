@@ -12,6 +12,8 @@ import "./helpers/mocks/LidoLocatorMock.sol";
 import "./helpers/mocks/LidoMock.sol";
 import "./helpers/mocks/WstETHMock.sol";
 import "./helpers/Utilities.sol";
+import "../src/CSEarlyAdoption.sol";
+import "./helpers/MerkleTree.sol";
 
 abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
     using Strings for uint256;
@@ -85,7 +87,8 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
         csm.addNodeOperatorETH{ value: keysCount * BOND_SIZE }(
             keysCount,
             keys,
-            signatures
+            signatures,
+            new bytes32[](0)
         );
         return csm.getNodeOperatorsCount() - 1;
     }
@@ -212,7 +215,13 @@ contract CSMCommon is CSMFixtures {
         (locator, wstETH, stETH, ) = initLido();
 
         communityStakingFeeDistributor = new Stub();
-        csm = new CSModule("community-staking-module", address(locator), admin);
+
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            0,
+            admin
+        );
         uint256[] memory curve = new uint256[](1);
         curve[0] = BOND_SIZE;
         accounting = new CSAccounting(
@@ -225,9 +234,11 @@ contract CSMCommon is CSMFixtures {
         );
 
         vm.startPrank(admin);
-        csm.grantRole(accounting.PAUSE_ROLE(), address(this));
-        csm.grantRole(accounting.RESUME_ROLE(), address(this));
+        csm.grantRole(csm.PAUSE_ROLE(), address(this));
+        csm.grantRole(csm.RESUME_ROLE(), address(this));
         csm.grantRole(csm.SET_ACCOUNTING_ROLE(), address(this));
+        csm.grantRole(csm.SET_EARLY_ADOPTION_ROLE(), address(this));
+        csm.grantRole(csm.SET_PUBLIC_RELEASE_TIMESTAMP_ROLE(), address(this));
         csm.grantRole(csm.SET_UNVETTING_FEE_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(this));
         csm.grantRole(csm.KEY_VALIDATOR_ROLE(), address(this));
@@ -243,6 +254,7 @@ contract CSMCommon is CSMFixtures {
         csm.grantRole(csm.PENALIZE_ROLE(), address(this));
         csm.grantRole(csm.WITHDRAWAL_SUBMITTER_ROLE(), address(this));
         csm.grantRole(csm.SLASHING_SUBMITTER_ROLE(), address(this));
+        accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), address(this));
         vm.stopPrank();
 
         csm.setAccounting(address(accounting));
@@ -262,7 +274,12 @@ contract CSMCommonNoRoles is CSMFixtures {
         (locator, wstETH, stETH, ) = initLido();
 
         communityStakingFeeDistributor = new Stub();
-        csm = new CSModule("community-staking-module", address(locator), admin);
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            0,
+            admin
+        );
 
         vm.startPrank(admin);
         csm.grantRole(csm.SET_ACCOUNTING_ROLE(), admin);
@@ -285,13 +302,23 @@ contract CSMCommonNoRoles is CSMFixtures {
 
 contract CsmInitialization is CSMCommon {
     function test_initContract() public {
-        csm = new CSModule("community-staking-module", address(locator), admin);
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            0,
+            admin
+        );
         assertEq(csm.getType(), "community-staking-module");
         assertEq(csm.getNodeOperatorsCount(), 0);
     }
 
     function test_setAccounting() public {
-        csm = new CSModule("community-staking-module", address(locator), admin);
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            0,
+            admin
+        );
         vm.startPrank(admin);
         csm.grantRole(csm.SET_ACCOUNTING_ROLE(), address(admin));
         csm.setAccounting(address(accounting));
@@ -347,7 +374,7 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
 
         csm.pauseFor(1 days);
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        csm.addNodeOperatorETH(keysCount, keys, signatures);
+        csm.addNodeOperatorETH(keysCount, keys, signatures, new bytes32[](0));
     }
 
     function test_addNodeOperatorStETH_RevertWhen_Paused() public {
@@ -358,7 +385,7 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
 
         csm.pauseFor(1 days);
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        csm.addNodeOperatorStETH(keysCount, keys, signatures);
+        csm.addNodeOperatorStETH(keysCount, keys, signatures, new bytes32[](0));
     }
 
     function test_addNodeOperatorWstETH_RevertWhen_Paused() public {
@@ -369,7 +396,12 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
 
         csm.pauseFor(1 days);
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        csm.addNodeOperatorWstETH(keysCount, keys, signatures);
+        csm.addNodeOperatorWstETH(
+            keysCount,
+            keys,
+            signatures,
+            new bytes32[](0)
+        );
     }
 
     function test_addNodeOperatorStETHWithPermit_RevertWhen_Paused() public {
@@ -384,6 +416,7 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
             keysCount,
             keys,
             signatures,
+            new bytes32[](0),
             ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
@@ -406,6 +439,7 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
             keysCount,
             keys,
             signatures,
+            new bytes32[](0),
             ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
@@ -505,12 +539,12 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalSigningKeysCountChanged(0, 1);
-            vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, nodeOperator);
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalSigningKeysCountChanged(0, 1);
         }
 
-        csm.addNodeOperatorWstETH(1, keys, signatures);
+        csm.addNodeOperatorWstETH(1, keys, signatures, new bytes32[](0));
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
     }
@@ -527,18 +561,19 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         uint256 nonce = csm.getNonce();
 
         {
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit NodeOperatorAdded(0, nodeOperator);
             vm.expectEmit(true, true, true, true, address(wstETH));
             emit Approval(nodeOperator, address(accounting), wstETHAmount);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
-            vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, nodeOperator);
         }
 
         csm.addNodeOperatorWstETHWithPermit(
             1,
             keys,
             signatures,
+            new bytes32[](0),
             ICSAccounting.PermitInput({
                 value: wstETHAmount,
                 deadline: type(uint256).max,
@@ -614,13 +649,13 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalSigningKeysCountChanged(0, 1);
-            vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, nodeOperator);
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalSigningKeysCountChanged(0, 1);
         }
 
         vm.prank(nodeOperator);
-        csm.addNodeOperatorStETH(1, keys, signatures);
+        csm.addNodeOperatorStETH(1, keys, signatures, new bytes32[](0));
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
     }
@@ -637,12 +672,12 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         uint256 nonce = csm.getNonce();
 
         {
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit NodeOperatorAdded(0, nodeOperator);
             vm.expectEmit(true, true, true, true, address(stETH));
             emit Approval(nodeOperator, address(accounting), BOND_SIZE);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
-            vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, nodeOperator);
         }
 
         vm.prank(nodeOperator);
@@ -650,6 +685,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             1,
             keys,
             signatures,
+            new bytes32[](0),
             ICSAccounting.PermitInput({
                 value: BOND_SIZE,
                 deadline: type(uint256).max,
@@ -724,13 +760,18 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalSigningKeysCountChanged(0, 1);
-            vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, nodeOperator);
+            vm.expectEmit(true, true, false, true, address(csm));
+            emit TotalSigningKeysCountChanged(0, 1);
         }
 
         vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: BOND_SIZE }(1, keys, signatures);
+        csm.addNodeOperatorETH{ value: BOND_SIZE }(
+            1,
+            keys,
+            signatures,
+            new bytes32[](0)
+        );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
     }
@@ -761,7 +802,12 @@ contract CSMObtainDepositData is CSMCommon {
         );
         vm.deal(nodeOperator, BOND_SIZE);
         vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: BOND_SIZE }(1, keys, signatures);
+        csm.addNodeOperatorETH{ value: BOND_SIZE }(
+            1,
+            keys,
+            signatures,
+            new bytes32[](0)
+        );
 
         csm.vetKeys(0, 1);
         (bytes memory obtainedKeys, bytes memory obtainedSignatures) = csm
@@ -2539,7 +2585,7 @@ contract CsmGetStakingModuleSummary is CSMCommon {
 
 contract CSMAccessControl is CSMCommonNoRoles {
     function test_adminRole() public {
-        CSModule csm = new CSModule("csm", address(accounting), actor);
+        CSModule csm = new CSModule("csm", address(accounting), 0, actor);
         bytes32 role = csm.SET_ACCOUNTING_ROLE();
         vm.prank(actor);
         csm.grantRole(role, stranger);
@@ -2551,7 +2597,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_adminRole_revert() public {
-        CSModule csm = new CSModule("csm", address(accounting), actor);
+        CSModule csm = new CSModule("csm", address(accounting), 0, actor);
         bytes32 role = csm.SET_ACCOUNTING_ROLE();
         bytes32 adminRole = csm.DEFAULT_ADMIN_ROLE();
 
@@ -2561,7 +2607,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_setAccountingRole() public {
-        CSModule csm = new CSModule("csm", address(accounting), admin);
+        CSModule csm = new CSModule("csm", address(accounting), 0, admin);
         bytes32 role = csm.SET_ACCOUNTING_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
@@ -2905,5 +2951,205 @@ contract CSMAccessControl is CSMCommonNoRoles {
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
         csm.submitWithdrawal(noId, 0, 1 ether);
+    }
+
+    function test_setPublicReleaseTimestampRole() public {
+        bytes32 role = csm.SET_PUBLIC_RELEASE_TIMESTAMP_ROLE();
+        vm.prank(admin);
+        csm.grantRole(role, actor);
+
+        vm.prank(actor);
+        csm.setPublicReleaseTimestamp(0);
+    }
+
+    function test_setPublicReleaseTimestampRole_revert() public {
+        bytes32 role = csm.SET_PUBLIC_RELEASE_TIMESTAMP_ROLE();
+
+        vm.prank(stranger);
+        expectRoleRevert(stranger, role);
+        csm.setPublicReleaseTimestamp(0);
+    }
+
+    function test_setEarlyAdoptionRole() public {
+        bytes32 role = csm.SET_EARLY_ADOPTION_ROLE();
+        vm.prank(admin);
+        csm.grantRole(role, actor);
+
+        vm.prank(actor);
+        csm.setEarlyAdoption(address(0));
+    }
+
+    function test_setEarlyAdoptionRole_revert() public {
+        bytes32 role = csm.SET_EARLY_ADOPTION_ROLE();
+
+        vm.prank(stranger);
+        expectRoleRevert(stranger, role);
+        csm.setEarlyAdoption(address(0));
+    }
+}
+
+contract CSMPublicReleaseTimestamp is CSMCommon {
+    function test_setPublicReleaseTimestamp() public {
+        uint256 timestamp = block.timestamp + 30 days;
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit PublicReleaseTimestampSet(timestamp);
+        csm.setPublicReleaseTimestamp(timestamp);
+
+        assertEq(csm.publicReleaseTimestamp(), timestamp);
+    }
+
+    function test_addNodeOperatorETH_RevertWhenNoPublicReleaseYet() public {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        uint256 timestamp = block.timestamp + 30 days;
+        csm.setPublicReleaseTimestamp(timestamp);
+
+        vm.expectRevert(NotAllowedToJoinYet.selector);
+        csm.addNodeOperatorETH{ value: keysCount * BOND_SIZE }(
+            keysCount,
+            keys,
+            signatures,
+            new bytes32[](0)
+        );
+    }
+
+    function test_addNodeOperatorETH_WhenPublicRelease() public {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        uint256 timestamp = block.timestamp + 30 days;
+        csm.setPublicReleaseTimestamp(timestamp);
+
+        vm.warp(timestamp + 1);
+        csm.addNodeOperatorETH{ value: keysCount * BOND_SIZE }(
+            keysCount,
+            keys,
+            signatures,
+            new bytes32[](0)
+        );
+    }
+}
+
+contract CSMEarlyAdoptionTest is CSMCommon {
+    function initEarlyAdoption()
+        private
+        returns (MerkleTree merkleTree, CSEarlyAdoption earlyAdoption)
+    {
+        merkleTree = new MerkleTree();
+        merkleTree.pushLeaf(abi.encode(nodeOperator));
+
+        uint256[] memory curve = new uint256[](1);
+        curve[0] = BOND_SIZE / 2;
+
+        uint256 curveId = accounting.addBondCurve(curve);
+        earlyAdoption = new CSEarlyAdoption(
+            merkleTree.root(),
+            curveId,
+            address(csm)
+        );
+    }
+
+    function test_setEarlyAdoption() public {
+        (, CSEarlyAdoption earlyAdoption) = initEarlyAdoption();
+        csm.setEarlyAdoption(address(earlyAdoption));
+        assertEq(address(csm.earlyAdoption()), address(earlyAdoption));
+    }
+
+    function test_setEarlyAdoption_revertIfAlreadySet() public {
+        (, CSEarlyAdoption earlyAdoption) = initEarlyAdoption();
+        csm.setEarlyAdoption(address(earlyAdoption));
+        address newEarlyAdoption = nextAddress();
+
+        vm.expectRevert(AlreadyInitialized.selector);
+        csm.setEarlyAdoption(newEarlyAdoption);
+    }
+
+    function test_addNodeOperator_earlyAdoptionProof() public {
+        (
+            MerkleTree merkleTree,
+            CSEarlyAdoption earlyAdoption
+        ) = initEarlyAdoption();
+        csm.setEarlyAdoption(address(earlyAdoption));
+        csm.setPublicReleaseTimestamp(block.timestamp + 30 days);
+        bytes32[] memory proof = merkleTree.getProof(0);
+
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+
+        vm.deal(nodeOperator, BOND_SIZE / 2);
+        vm.prank(nodeOperator);
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit NodeOperatorAdded(0, nodeOperator);
+        csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
+            keysCount,
+            keys,
+            signatures,
+            proof
+        );
+        CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
+        assertEq(curve.points[0], BOND_SIZE / 2);
+    }
+
+    function test_addNodeOperator_WhenPublicReleaseWithProof() public {
+        (
+            MerkleTree merkleTree,
+            CSEarlyAdoption earlyAdoption
+        ) = initEarlyAdoption();
+        csm.setEarlyAdoption(address(earlyAdoption));
+
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        uint256 timestamp = block.timestamp + 30 days;
+        csm.setPublicReleaseTimestamp(timestamp);
+        vm.warp(timestamp + 1);
+
+        bytes32[] memory proof = merkleTree.getProof(0);
+        vm.deal(nodeOperator, BOND_SIZE / 2);
+        vm.prank(nodeOperator);
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit NodeOperatorAdded(0, nodeOperator);
+        csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
+            keysCount,
+            keys,
+            signatures,
+            proof
+        );
+        CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
+        assertEq(curve.points[0], BOND_SIZE / 2);
+    }
+
+    function test_addNodeOperator_RevertWhenMoreThanMaxSigningKeysLimit()
+        public
+    {
+        (
+            MerkleTree merkleTree,
+            CSEarlyAdoption earlyAdoption
+        ) = initEarlyAdoption();
+        csm.setEarlyAdoption(address(earlyAdoption));
+        csm.setPublicReleaseTimestamp(block.timestamp + 30 days);
+        bytes32[] memory proof = merkleTree.getProof(0);
+
+        uint16 keysCount = csm.MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE() + 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+
+        vm.deal(nodeOperator, (BOND_SIZE / 2) * keysCount);
+        vm.prank(nodeOperator);
+        vm.expectRevert(MaxSigningKeysCountExceeded.selector);
+        csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
+            keysCount,
+            keys,
+            signatures,
+            proof
+        );
     }
 }
