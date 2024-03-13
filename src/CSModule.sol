@@ -7,13 +7,11 @@ pragma solidity 0.8.24;
 import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
+import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSEarlyAdoption } from "./interfaces/ICSEarlyAdoption.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
-import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
-import { ILido } from "./interfaces/ILido.sol";
 
 import { QueueLib } from "./lib/QueueLib.sol";
 import { Batch } from "./lib/Batch.sol";
@@ -104,7 +102,6 @@ contract CSModuleBase {
     );
 
     event StakingModuleTypeSet(bytes32 moduleType);
-    event LocatorContractSet(address locatorAddress);
     event PublicReleaseTimestampSet(uint256 timestamp);
     event UnvettingFeeSet(uint256 unvettingFee);
 
@@ -116,20 +113,16 @@ contract CSModuleBase {
     );
 
     error NodeOperatorDoesNotExist();
-    error NodeOperatorInactive();
-    error MaxNodeOperatorsCountReached();
     error SenderIsNotManagerAddress();
     error SenderIsNotRewardAddress();
     error SenderIsNotProposedAddress();
     error SenderIsNotManagerOrKeyValidator();
     error SameAddress();
-    error ZeroAddress(string field);
     error AlreadyProposed();
     error InvalidVetKeysPointer();
     error TargetLimitExceeded();
     error StuckKeysPresent();
     error UnbondedKeysPresent();
-    error InvalidTargetLimit();
     error StuckKeysHigherThanTotalDeposited();
     error ExitedKeysHigherThanTotalDeposited();
     error ExitedKeysDecrease();
@@ -153,12 +146,7 @@ contract CSModuleBase {
     error MaxSigningKeysCountExceeded();
 }
 
-contract CSModule is
-    ICSModule,
-    CSModuleBase,
-    AccessControlEnumerable,
-    PausableUntil
-{
+contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     using QueueLib for QueueLib.Queue;
 
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
@@ -188,16 +176,13 @@ contract CSModule is
         keccak256("SLASHING_SUBMITTER_ROLE"); // 0x1490d8fc0656a30996bd2e7374c51790f74c101556ce56c87b64719da11a23dd
     bytes32 public constant PENALIZE_ROLE = keccak256("PENALIZE_ROLE"); // 0x014ffee5f075680f5690d491d67de8e1aba5c4a88326c3be77d991796b44f86b
 
-    // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
-    // it seems to be enough
-    uint64 public constant MAX_NODE_OPERATORS_COUNT = type(uint64).max;
     uint8 public constant MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE = 10;
     // might be received dynamically in case of increasing possible deposit size
     uint256 public constant DEPOSIT_SIZE = 32 ether;
-    uint256 public constant MIN_SLASHING_PENALTY_QUOTIENT = 32;
+    uint256 private constant MIN_SLASHING_PENALTY_QUOTIENT = 32;
     uint256 public constant INITIAL_SLASHING_PENALTY =
         DEPOSIT_SIZE / MIN_SLASHING_PENALTY_QUOTIENT;
-    bytes32 public constant SIGNING_KEYS_POSITION =
+    bytes32 private constant SIGNING_KEYS_POSITION =
         keccak256("lido.CommunityStakingModule.signingKeysPosition");
 
     uint256 public constant EL_REWARDS_STEALING_FINE = 0.1 ether;
@@ -210,8 +195,9 @@ contract CSModule is
     QueueLib.Queue public queue;
 
     ICSAccounting public accounting;
-    ILidoLocator public lidoLocator;
     ICSEarlyAdoption public earlyAdoption;
+    // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
+    // it seems to be enough
     uint256 private _nodeOperatorsCount;
     uint256 private _activeNodeOperatorsCount;
     bytes32 private _moduleType;
@@ -227,7 +213,6 @@ contract CSModule is
 
     constructor(
         bytes32 moduleType,
-        address locator,
         uint256 _publicReleaseTimestamp,
         address admin
     ) {
@@ -235,11 +220,6 @@ contract CSModule is
         _moduleType = moduleType;
         emit StakingModuleTypeSet(moduleType);
 
-        if (locator == address(0)) {
-            revert ZeroAddress("locator");
-        }
-        lidoLocator = ILidoLocator(locator);
-        emit LocatorContractSet(locator);
         publicReleaseTimestamp = _publicReleaseTimestamp;
         emit PublicReleaseTimestampSet(_publicReleaseTimestamp);
 
@@ -293,10 +273,6 @@ contract CSModule is
     ) external onlyRole(SET_UNVETTING_FEE_ROLE) {
         unvettingFee = _unvettingFee;
         emit UnvettingFeeSet(_unvettingFee);
-    }
-
-    function _lido() internal view returns (ILido) {
-        return ILido(lidoLocator.lido());
     }
 
     /// @notice Gets the module type
@@ -597,11 +573,8 @@ contract CSModule is
     function proposeNodeOperatorManagerAddressChange(
         uint256 nodeOperatorId,
         address proposedAddress
-    )
-        external
-        onlyExistingNodeOperator(nodeOperatorId)
-        onlyNodeOperatorManager(nodeOperatorId)
-    {
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        onlyNodeOperatorManager(nodeOperatorId);
         if (_nodeOperators[nodeOperatorId].managerAddress == proposedAddress)
             revert SameAddress();
         if (
@@ -639,11 +612,8 @@ contract CSModule is
     function proposeNodeOperatorRewardAddressChange(
         uint256 nodeOperatorId,
         address proposedAddress
-    )
-        external
-        onlyExistingNodeOperator(nodeOperatorId)
-        onlyNodeOperatorRewardAddress(nodeOperatorId)
-    {
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        onlyNodeOperatorRewardAddress(nodeOperatorId);
         if (_nodeOperators[nodeOperatorId].rewardAddress == proposedAddress)
             revert SameAddress();
         if (
@@ -679,11 +649,8 @@ contract CSModule is
     /// @param nodeOperatorId ID of the node operator
     function resetNodeOperatorManagerAddress(
         uint256 nodeOperatorId
-    )
-        external
-        onlyExistingNodeOperator(nodeOperatorId)
-        onlyNodeOperatorRewardAddress(nodeOperatorId)
-    {
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        onlyNodeOperatorRewardAddress(nodeOperatorId);
         if (
             _nodeOperators[nodeOperatorId].managerAddress ==
             _nodeOperators[nodeOperatorId].rewardAddress
@@ -787,7 +754,7 @@ contract CSModule is
     }
 
     /// @notice Gets the total number of node operators
-    function getNodeOperatorsCount() public view returns (uint256) {
+    function getNodeOperatorsCount() external view returns (uint256) {
         return _nodeOperatorsCount;
     }
 
@@ -811,7 +778,7 @@ contract CSModule is
         uint256 offset,
         uint256 limit
     ) external view returns (uint256[] memory nodeOperatorIds) {
-        uint256 nodeOperatorsCount = getNodeOperatorsCount();
+        uint256 nodeOperatorsCount = _nodeOperatorsCount;
         if (offset >= nodeOperatorsCount || limit == 0) return new uint256[](0);
         uint256 idsCount = limit < nodeOperatorsCount - offset
             ? limit
@@ -1078,11 +1045,8 @@ contract CSModule is
     /// @param nodeOperatorId ID of the node operator
     function unvetKeys(
         uint256 nodeOperatorId
-    )
-        external
-        onlyKeyValidatorOrNodeOperatorManager(nodeOperatorId)
-        onlyExistingNodeOperator(nodeOperatorId)
-    {
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        onlyKeyValidatorOrNodeOperatorManager(nodeOperatorId);
         _unvetKeys(nodeOperatorId);
         _applyUnvettingFee(nodeOperatorId);
         _incrementModuleNonce();
@@ -1109,11 +1073,8 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint256 startIndex,
         uint256 keysCount
-    )
-        external
-        onlyExistingNodeOperator(nodeOperatorId)
-        onlyNodeOperatorManager(nodeOperatorId)
-    {
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        onlyNodeOperatorManager(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (no.totalVettedKeys > startIndex) {
             _unvetKeys(nodeOperatorId);
@@ -1205,12 +1166,10 @@ contract CSModule is
     function penalize(
         uint256 nodeOperatorId,
         uint256 amount
-    )
-        public
-        onlyRole(PENALIZE_ROLE)
-        onlyExistingNodeOperator(nodeOperatorId)
-        whenNotExpired
-    {
+    ) public onlyRole(PENALIZE_ROLE) onlyExistingNodeOperator(nodeOperatorId) {
+        if (block.timestamp > TEMP_METHODS_EXPIRE_TIME) {
+            revert Expired();
+        }
         accounting.penalize(nodeOperatorId, amount);
         _checkForUnbondedKeys(nodeOperatorId);
         _checkForOutOfBond(nodeOperatorId);
@@ -1566,8 +1525,6 @@ contract CSModule is
 
     function _createNodeOperator() internal returns (uint256) {
         uint256 id = _nodeOperatorsCount;
-        if (id == MAX_NODE_OPERATORS_COUNT)
-            revert MaxNodeOperatorsCountReached();
         NodeOperator storage no = _nodeOperators[id];
 
         no.managerAddress = msg.sender;
@@ -1594,38 +1551,30 @@ contract CSModule is
         accounting.setBondCurve(nodeOperatorId, earlyAdoption.curveId());
     }
 
-    modifier onlyExistingNodeOperator(uint256 nodeOperatorId) {
-        if (nodeOperatorId >= _nodeOperatorsCount)
-            revert NodeOperatorDoesNotExist();
-        _;
-    }
-
-    modifier onlyNodeOperatorManager(uint256 nodeOperatorId) {
+    function onlyNodeOperatorManager(uint256 nodeOperatorId) internal {
         if (_nodeOperators[nodeOperatorId].managerAddress != msg.sender)
             revert SenderIsNotManagerAddress();
-        _;
     }
 
-    modifier onlyNodeOperatorRewardAddress(uint256 nodeOperatorId) {
+    function onlyNodeOperatorRewardAddress(uint256 nodeOperatorId) internal {
         if (_nodeOperators[nodeOperatorId].rewardAddress != msg.sender)
             revert SenderIsNotRewardAddress();
-        _;
     }
 
-    modifier onlyKeyValidatorOrNodeOperatorManager(uint256 nodeOperatorId) {
+    function onlyKeyValidatorOrNodeOperatorManager(
+        uint256 nodeOperatorId
+    ) internal {
         if (
             !hasRole(KEY_VALIDATOR_ROLE, msg.sender) &&
             _nodeOperators[nodeOperatorId].managerAddress != msg.sender
         ) {
             revert SenderIsNotManagerOrKeyValidator();
         }
-        _;
     }
 
-    modifier whenNotExpired() {
-        if (block.timestamp > TEMP_METHODS_EXPIRE_TIME) {
-            revert Expired();
-        }
+    modifier onlyExistingNodeOperator(uint256 nodeOperatorId) {
+        if (nodeOperatorId >= _nodeOperatorsCount)
+            revert NodeOperatorDoesNotExist();
         _;
     }
 }

@@ -78,7 +78,6 @@ abstract contract DeployBase is Script {
         {
             csm = new CSModule({
                 moduleType: "community-staking-module",
-                locator: address(locator),
                 _publicReleaseTimestamp: block.timestamp +
                     PUBLIC_RELEASE_TIMESHIFT,
                 admin: address(deployer)
