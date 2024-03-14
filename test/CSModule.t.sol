@@ -229,10 +229,8 @@ contract CSMCommon is CSMFixtures {
         csm.grantRole(csm.SET_ACCOUNTING_ROLE(), address(this));
         csm.grantRole(csm.SET_EARLY_ADOPTION_ROLE(), address(this));
         csm.grantRole(csm.SET_PUBLIC_RELEASE_TIMESTAMP_ROLE(), address(this));
-        csm.grantRole(csm.SET_UNVETTING_FEE_ROLE(), address(this));
+        csm.grantRole(csm.SET_REMOVAL_FEE_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(this));
-        csm.grantRole(csm.KEY_VALIDATOR_ROLE(), address(this));
-        csm.grantRole(csm.UNSAFE_UNVET_KEYS_ROLE(), address(this));
         csm.grantRole(
             csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE(),
             address(this)
@@ -248,7 +246,7 @@ contract CSMCommon is CSMFixtures {
         vm.stopPrank();
 
         csm.setAccounting(address(accounting));
-        csm.setUnvettingFee(0.05 ether);
+        csm.setRemovalCharge(0.05 ether);
     }
 }
 
@@ -1524,6 +1522,31 @@ contract CsmRemoveKeys is CSMCommon {
         vm.expectRevert(SenderIsNotManagerAddress.selector);
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 1 });
     }
+
+    function testRemoveKeys_NoCharge() public {
+        uint256 noId = createNodeOperator(1);
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.chargeFee.selector),
+            0
+        );
+        vm.prank(nodeOperator);
+        csm.removeKeys(noId, 0, 1);
+    }
+
+    function testRemoveKeys_ChargeIfUnvetted() public {
+        uint256 noId = createNodeOperator(2);
+        unvetKeys({ noId: noId, to: 1 });
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.chargeFee.selector),
+            1
+        );
+        vm.prank(nodeOperator);
+        csm.removeKeys(noId, 0, 1);
+    }
 }
 
 contract CsmGetNodeOperatorSummary is CSMCommon {
@@ -2263,21 +2286,21 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.setAccounting(nextAddress());
     }
 
-    function test_setUnvettingFeeRole() public {
-        bytes32 role = csm.SET_UNVETTING_FEE_ROLE();
+    function test_setRemovalChargeRole() public {
+        bytes32 role = csm.SET_REMOVAL_FEE_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
 
         vm.prank(actor);
-        csm.setUnvettingFee(0.1 ether);
+        csm.setRemovalCharge(0.1 ether);
     }
 
-    function test_setUnvettingFeeRole_revert() public {
-        bytes32 role = csm.SET_UNVETTING_FEE_ROLE();
+    function test_setRemovalChargeRole_revert() public {
+        bytes32 role = csm.SET_REMOVAL_FEE_ROLE();
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
-        csm.setUnvettingFee(0.1 ether);
+        csm.setRemovalCharge(0.1 ether);
     }
 
     function test_stakingRouterRole_onRewardsMinted() public {
@@ -2535,7 +2558,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
 
         vm.startPrank(admin);
         csm.grantRole(role, actor);
-        csm.grantRole(csm.KEY_VALIDATOR_ROLE(), admin);
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), admin);
         csm.obtainDepositData(1, "");
         vm.stopPrank();

@@ -97,9 +97,9 @@ contract CSModuleBase {
 
     event StakingModuleTypeSet(bytes32 moduleType);
     event PublicReleaseTimestampSet(uint256 timestamp);
-    event UnvettingFeeSet(uint256 unvettingFee);
+    event RemovalChargeSet(uint256 fine);
 
-    event UnvettingFeeApplied(uint256 indexed nodeOperatorId);
+    event RemovalChargeApplied(uint256 indexed nodeOperatorId);
     event ELRewardsStealingPenaltyReported(
         uint256 indexed nodeOperatorId,
         uint256 proposedBlockNumber,
@@ -152,14 +152,10 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         keccak256("SET_EARLY_ADOPTION_ROLE"); // 0xe0d27b865f229f5162f7b9ae24065c2d5cdae1ed1eaabf46a5f7809b1edf2ec1
     bytes32 public constant SET_PUBLIC_RELEASE_TIMESTAMP_ROLE =
         keccak256("SET_PUBLIC_RELEASE_TIMESTAMP_ROLE"); // 0x66d6616db95aac3b33b9261e42ab01ad71f311cff562503c33c742c54f22bbcd
-    bytes32 public constant SET_UNVETTING_FEE_ROLE =
-        keccak256("SET_UNVETTING_FEE"); // 0x19583bfff685c0ba70886aba1270ef3f5606d5ed3b3d0b6b804dba345609a0e1
+    bytes32 public constant SET_REMOVAL_FEE_ROLE =
+        keccak256("SET_REMOVAL_FEE_ROLE"); // 0xcf57c796bfb0ce278554fc47df40401e8d8d159a675181af9a8a18589f412df2
     bytes32 public constant STAKING_ROUTER_ROLE =
         keccak256("STAKING_ROUTER_ROLE"); // 0xbb75b874360e0bfd87f964eadd8276d8efb7c942134fc329b513032d0803e0c6
-    bytes32 public constant KEY_VALIDATOR_ROLE =
-        keccak256("KEY_VALIDATOR_ROLE"); // 0xa0824e7cf56ba8c79484f0a6a59c3f90d48851a099bbbbf4d2472b7bf6220f27
-    bytes32 public constant UNSAFE_UNVET_KEYS_ROLE =
-        keccak256("UNSAFE_UNVET_KEYS_ROLE"); // 0x9351ec2dcbecbf4a29dae7d2da52f70fb20633b665ba0769a976ea50f6266c3e
     bytes32 public constant REPORT_EL_REWARDS_STEALING_PENALTY_ROLE =
         keccak256("REPORT_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0x59911a6aa08a72fe3824aec4500dc42335c6d0702b6d5c5c72ceb265a0de9302
     bytes32 public constant SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE =
@@ -185,7 +181,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     uint256 private immutable TEMP_METHODS_EXPIRE_TIME;
 
     uint256 public publicReleaseTimestamp;
-    uint256 public unvettingFee;
+    uint256 public removalCharge;
     QueueLib.Queue public queue;
 
     ICSAccounting public accounting;
@@ -260,13 +256,13 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         emit PublicReleaseTimestampSet(timestamp);
     }
 
-    /// @notice Sets the unvetting fee
-    /// @param _unvettingFee Amount of wei to be charged for unvetting in some cases
-    function setUnvettingFee(
-        uint256 _unvettingFee
-    ) external onlyRole(SET_UNVETTING_FEE_ROLE) {
-        unvettingFee = _unvettingFee;
-        emit UnvettingFeeSet(_unvettingFee);
+    /// @notice Sets the key deletion fine
+    /// @param amount Amount of wei to be charged for removing a key in some cases
+    function setRemovalCharge(
+        uint256 amount
+    ) external onlyRole(SET_REMOVAL_FEE_ROLE) {
+        removalCharge = amount;
+        emit RemovalChargeSet(amount);
     }
 
     /// @notice Gets the module type
@@ -1060,9 +1056,9 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         }
     }
 
-    function _applyUnvettingFee(uint256 nodeOperatorId) internal {
-        accounting.chargeFee(nodeOperatorId, unvettingFee);
-        emit UnvettingFeeApplied(nodeOperatorId);
+    function _applyRemovalCharge(uint256 nodeOperatorId) internal {
+        accounting.chargeFee(nodeOperatorId, removalCharge);
+        emit RemovalChargeApplied(nodeOperatorId);
 
         _checkForOutOfBond(nodeOperatorId);
     }
@@ -1278,6 +1274,11 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             no.totalAddedKeys
         );
 
+        // If the operator was unvetted, it does make sense to apply the key removal fine.
+        if (no.totalAddedKeys != no.totalVettedKeys) {
+            _applyRemovalCharge(nodeOperatorId);
+        }
+
         no.totalAddedKeys = newTotalSigningKeys;
         emit TotalSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
 
@@ -1286,8 +1287,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
 
         _normalizeQueue(nodeOperatorId);
         _incrementModuleNonce();
-
-        // FIXME: Make deletion fee instead of unvettingFee.
     }
 
     /// @notice Gets the depositable keys with signatures from the queue
@@ -1482,17 +1481,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     function onlyNodeOperatorRewardAddress(uint256 nodeOperatorId) internal {
         if (_nodeOperators[nodeOperatorId].rewardAddress != msg.sender)
             revert SenderIsNotRewardAddress();
-    }
-
-    function onlyKeyValidatorOrNodeOperatorManager(
-        uint256 nodeOperatorId
-    ) internal {
-        if (
-            !hasRole(KEY_VALIDATOR_ROLE, msg.sender) &&
-            _nodeOperators[nodeOperatorId].managerAddress != msg.sender
-        ) {
-            revert SenderIsNotManagerOrKeyValidator();
-        }
     }
 
     modifier onlyExistingNodeOperator(uint256 nodeOperatorId) {
