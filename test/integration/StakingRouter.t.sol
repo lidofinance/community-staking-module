@@ -52,7 +52,6 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
             8 weeks
         );
         csm.grantRole(csm.SET_ACCOUNTING_ROLE(), address(this));
-        csm.grantRole(csm.KEY_VALIDATOR_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(stakingRouter));
 
         csm.setAccounting(address(accounting));
