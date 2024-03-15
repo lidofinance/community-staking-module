@@ -368,22 +368,6 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
         csm.addNodeOperatorStETH(keysCount, keys, signatures, new bytes32[](0));
     }
 
-    function test_addNodeOperatorWstETH_RevertWhen_Paused() public {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-
-        csm.pauseFor(1 days);
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        csm.addNodeOperatorWstETH(
-            keysCount,
-            keys,
-            signatures,
-            new bytes32[](0)
-        );
-    }
-
     function test_addNodeOperatorStETHWithPermit_RevertWhen_Paused() public {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
@@ -393,29 +377,6 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
         csm.pauseFor(1 days);
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
         csm.addNodeOperatorStETHWithPermit(
-            keysCount,
-            keys,
-            signatures,
-            new bytes32[](0),
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-    }
-
-    function test_addNodeOperatorWstETHWithPermit_RevertWhen_Paused() public {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-
-        csm.pauseFor(1 days);
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        csm.addNodeOperatorWstETHWithPermit(
             keysCount,
             keys,
             signatures,
@@ -450,16 +411,6 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
         csm.addValidatorKeysStETH(noId, keysCount, keys, signatures);
     }
 
-    function test_addValidatorKeysWstETH_RevertWhen_Paused() public {
-        uint256 noId = createNodeOperator();
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
-
-        csm.pauseFor(1 days);
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        csm.addValidatorKeysWstETH(noId, keysCount, keys, signatures);
-    }
-
     function test_addValidatorKeysStETHWithPermit_RevertWhen_Paused() public {
         uint256 noId = createNodeOperator();
         uint16 keysCount = 1;
@@ -481,141 +432,9 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
             })
         );
     }
-
-    function test_addValidatorKeysWstETHWithPermit_RevertWhen_Paused() public {
-        uint256 noId = createNodeOperator();
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
-
-        csm.pauseFor(1 days);
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        csm.addValidatorKeysWstETHWithPermit(
-            noId,
-            keysCount,
-            keys,
-            signatures,
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-    }
 }
 
 contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
-    function test_AddNodeOperatorWstETH() public {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
-        wstETH.wrap(BOND_SIZE + 1 wei);
-        uint256 nonce = csm.getNonce();
-
-        {
-            vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, nodeOperator);
-            vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalSigningKeysCountChanged(0, 1);
-        }
-
-        csm.addNodeOperatorWstETH(1, keys, signatures, new bytes32[](0));
-        assertEq(csm.getNodeOperatorsCount(), 1);
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_AddNodeOperatorWstETHWithPermit() public {
-        uint16 keysCount = 1;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
-        uint256 wstETHAmount = wstETH.wrap(BOND_SIZE);
-        uint256 nonce = csm.getNonce();
-
-        {
-            vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, nodeOperator);
-            vm.expectEmit(true, true, true, true, address(wstETH));
-            emit Approval(nodeOperator, address(accounting), wstETHAmount);
-            vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalSigningKeysCountChanged(0, 1);
-        }
-
-        csm.addNodeOperatorWstETHWithPermit(
-            1,
-            keys,
-            signatures,
-            new bytes32[](0),
-            ICSAccounting.PermitInput({
-                value: wstETHAmount,
-                deadline: type(uint256).max,
-                // mock permit signature
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-        assertEq(csm.getNodeOperatorsCount(), 1);
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_AddValidatorKeysWstETH() public {
-        uint256 noId = createNodeOperator();
-        uint256 toWrap = BOND_SIZE + 1 wei;
-        vm.deal(nodeOperator, toWrap);
-        stETH.submit{ value: toWrap }(address(0));
-        wstETH.wrap(toWrap);
-        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
-        uint256 nonce = csm.getNonce();
-        {
-            vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalSigningKeysCountChanged(0, 2);
-        }
-        csm.addValidatorKeysWstETH(noId, 1, keys, signatures);
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_AddValidatorKeysWstETHWithPermit() public {
-        uint256 noId = createNodeOperator();
-        uint256 toWrap = BOND_SIZE + 1 wei;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
-
-        vm.deal(nodeOperator, toWrap);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: toWrap }(address(0));
-        uint256 wstETHAmount = wstETH.wrap(toWrap);
-        uint256 nonce = csm.getNonce();
-        {
-            vm.expectEmit(true, true, true, true, address(wstETH));
-            emit Approval(nodeOperator, address(accounting), wstETHAmount);
-            vm.expectEmit(true, true, false, true, address(csm));
-            emit TotalSigningKeysCountChanged(0, 2);
-        }
-        csm.addValidatorKeysWstETHWithPermit(
-            noId,
-            1,
-            keys,
-            signatures,
-            ICSAccounting.PermitInput({
-                value: wstETHAmount,
-                deadline: type(uint256).max,
-                // mock permit signature
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
     function test_AddNodeOperatorStETH() public {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(

@@ -235,27 +235,6 @@ contract CSAccountingPauseAffectingTest is CSAccountingBaseTest {
         );
     }
 
-    function test_depositWstETH_RevertWhen_Paused() public {
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        accounting.depositWstETH(address(user), 0, 1 ether);
-    }
-
-    function test_depositWstETHWithPermit_RevertWhen_Paused() public {
-        vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        accounting.depositWstETHWithPermit(
-            address(user),
-            0,
-            1 ether,
-            CSAccounting.PermitInput({
-                value: 1 ether,
-                deadline: type(uint256).max,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-    }
-
     function test_claimExcessBondStETH_RevertWhen_Paused() public {
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
         accounting.claimExcessBondStETH(0, 1 ether);
@@ -897,144 +876,6 @@ contract CSAccountingGetRequiredETHBondTest is
     }
 }
 
-contract CSAccountingGetRequiredWstETHBondTest is
-    CSAccountingGetRequiredBondBaseTest
-{
-    function test_default() public override {
-        _operator({ ongoing: 16, withdrawn: 0 });
-        assertEq(
-            accounting.getRequiredBondForNextKeysWstETH(0, 0),
-            stETH.getSharesByPooledEth(32 ether)
-        );
-    }
-
-    function test_WithCurve() public override {
-        _operator({ ongoing: 16, withdrawn: 0 });
-        _curve(defaultCurve);
-        assertEq(
-            accounting.getRequiredBondForNextKeysWstETH(0, 0),
-            stETH.getSharesByPooledEth(17 ether)
-        );
-    }
-
-    function test_WithLocked() public override {
-        _operator({ ongoing: 16, withdrawn: 0 });
-        _lock({ id: 0, amount: 1 ether });
-        assertEq(
-            accounting.getRequiredBondForNextKeysWstETH(0, 0),
-            stETH.getSharesByPooledEth(33 ether)
-        );
-    }
-
-    function test_WithCurveAndLocked() public override {
-        _operator({ ongoing: 16, withdrawn: 0 });
-        _curve(defaultCurve);
-        _lock({ id: 0, amount: 1 ether });
-        assertEq(
-            accounting.getRequiredBondForNextKeysWstETH(0, 0),
-            stETH.getSharesByPooledEth(18 ether)
-        );
-    }
-
-    function test_WithOneWithdrawnValidator() public override {
-        _operator({ ongoing: 16, withdrawn: 1 });
-        assertEq(
-            accounting.getRequiredBondForNextKeysWstETH(0, 0),
-            stETH.getSharesByPooledEth(30 ether)
-        );
-    }
-
-    function test_OneWithdrawnOneAddedValidator() public override {
-        _operator({ ongoing: 16, withdrawn: 1 });
-        assertEq(
-            accounting.getRequiredBondForNextKeysWstETH(0, 1),
-            stETH.getSharesByPooledEth(32 ether)
-        );
-    }
-
-    function test_WithBond() public override {
-        _operator({ ongoing: 16, withdrawn: 0 });
-        _deposit({ bond: 32 ether });
-        assertApproxEqAbs(
-            accounting.getRequiredBondForNextKeysWstETH(0, 0),
-            0,
-            1 wei
-        );
-    }
-
-    function test_WithBondAndOneWithdrawnValidator() public override {
-        _operator({ ongoing: 16, withdrawn: 1 });
-        _deposit({ bond: 32 ether });
-        assertEq(accounting.getRequiredBondForNextKeysWstETH(0, 0), 0);
-    }
-
-    function test_WithBondAndOneWithdrawnAndOneAddedValidator()
-        public
-        override
-    {
-        _operator({ ongoing: 16, withdrawn: 1 });
-        _deposit({ bond: 32 ether });
-        assertApproxEqAbs(
-            accounting.getRequiredBondForNextKeysWstETH(0, 1),
-            0,
-            1
-        );
-    }
-
-    function test_WithExcessBond() public override {
-        _operator({ ongoing: 16, withdrawn: 0 });
-        _deposit({ bond: 33 ether });
-        assertEq(accounting.getRequiredBondForNextKeysWstETH(0, 0), 0);
-    }
-
-    function test_WithExcessBondAndOneWithdrawnValidator() public override {
-        _operator({ ongoing: 16, withdrawn: 1 });
-        _deposit({ bond: 33 ether });
-        assertEq(accounting.getRequiredBondForNextKeysWstETH(0, 0), 0);
-    }
-
-    function test_WithExcessBondAndOneWithdrawnAndOneAddedValidator()
-        public
-        override
-    {
-        _operator({ ongoing: 16, withdrawn: 1 });
-        _deposit({ bond: 33 ether });
-        assertEq(accounting.getRequiredBondForNextKeysWstETH(0, 1), 0);
-    }
-
-    function test_WithMissingBond() public override {
-        _operator({ ongoing: 16, withdrawn: 0 });
-        _deposit({ bond: 16 ether });
-        assertApproxEqAbs(
-            accounting.getRequiredBondForNextKeysWstETH(0, 0),
-            stETH.getSharesByPooledEth(16 ether),
-            1 wei
-        );
-    }
-
-    function test_WithMissingBondAndOneWithdrawnValidator() public override {
-        _operator({ ongoing: 16, withdrawn: 1 });
-        _deposit({ bond: 16 ether });
-        assertEq(
-            accounting.getRequiredBondForNextKeysWstETH(0, 0),
-            stETH.getSharesByPooledEth(14 ether)
-        );
-    }
-
-    function test_WithMissingBondAndOneWithdrawnAndOneAddedValidator()
-        public
-        override
-    {
-        _operator({ ongoing: 16, withdrawn: 1 });
-        _deposit({ bond: 16 ether });
-        assertApproxEqAbs(
-            accounting.getRequiredBondForNextKeysWstETH(0, 1),
-            stETH.getSharesByPooledEth(16 ether),
-            1 wei
-        );
-    }
-}
-
 abstract contract CSAccountingGetRequiredBondForKeysBaseTest is
     CSAccountingBaseTest
 {
@@ -1047,47 +888,6 @@ abstract contract CSAccountingGetRequiredBondForKeysBaseTest is
     function test_default() public virtual;
 
     function test_WithCurve() public virtual;
-}
-
-contract CSAccountingGetBondAmountByKeysCountWstETHTest is
-    CSAccountingGetRequiredBondForKeysBaseTest
-{
-    function test_default() public override {
-        assertEq(accounting.getBondAmountByKeysCountWstETH(0), 0);
-        assertEq(
-            accounting.getBondAmountByKeysCountWstETH(1),
-            wstETH.getWstETHByStETH(2 ether)
-        );
-        assertEq(
-            accounting.getBondAmountByKeysCountWstETH(2),
-            wstETH.getWstETHByStETH(4 ether)
-        );
-        assertEq(
-            accounting.getBondAmountByKeysCountWstETH(8),
-            wstETH.getWstETHByStETH(16 ether)
-        );
-    }
-
-    function test_WithCurve() public override {
-        CSBondCurve.BondCurve memory curve = CSBondCurve.BondCurve({
-            id: 0,
-            points: defaultCurve,
-            trend: 1 ether
-        });
-        assertEq(accounting.getBondAmountByKeysCountWstETH(0, curve), 0);
-        assertEq(
-            accounting.getBondAmountByKeysCountWstETH(1, curve),
-            wstETH.getWstETHByStETH(2 ether)
-        );
-        assertEq(
-            accounting.getBondAmountByKeysCountWstETH(2, curve),
-            wstETH.getWstETHByStETH(3 ether)
-        );
-        assertEq(
-            accounting.getBondAmountByKeysCountWstETH(15, curve),
-            wstETH.getWstETHByStETH(16 ether)
-        );
-    }
 }
 
 abstract contract CSAccountingRewardsBaseTest is CSAccountingBondStateBaseTest {
@@ -3810,37 +3610,6 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), sharesToDeposit);
     }
 
-    function test_depositWstETH() public {
-        vm.deal(user, 32 ether);
-        vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
-        uint256 wstETHAmount = wstETH.wrap(32 ether);
-        uint256 sharesToDeposit = stETH.getSharesByPooledEth(
-            wstETH.getStETHByWstETH(wstETHAmount)
-        );
-        vm.stopPrank();
-
-        vm.prank(user);
-        accounting.depositWstETH(user, 0, wstETHAmount);
-
-        assertEq(
-            wstETH.balanceOf(user),
-            0,
-            "user balance should be 0 after deposit"
-        );
-        assertEq(
-            accounting.getBondShares(0),
-            sharesToDeposit,
-            "bond shares should be equal to deposited shares"
-        );
-        assertEq(
-            stETH.sharesOf(address(accounting)),
-            sharesToDeposit,
-            "bond manager shares should be equal to deposited shares"
-        );
-        assertEq(accounting.totalBondShares(), sharesToDeposit);
-    }
-
     function test_depositStETHWithPermit() public {
         vm.deal(user, 32 ether);
         vm.prank(user);
@@ -4004,181 +3773,6 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         );
     }
 
-    function test_depositWstETHWithPermit() public {
-        vm.deal(user, 32 ether);
-        vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
-        uint256 wstETHAmount = wstETH.wrap(32 ether);
-        uint256 sharesToDeposit = stETH.getSharesByPooledEth(
-            wstETH.getStETHByWstETH(wstETHAmount)
-        );
-        vm.stopPrank();
-
-        vm.expectEmit(true, true, true, true, address(wstETH));
-        emit Approval(user, address(accounting), 32 ether);
-
-        vm.prank(user);
-        accounting.depositWstETHWithPermit(
-            user,
-            0,
-            wstETHAmount,
-            CSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: type(uint256).max,
-                // mock permit signature
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(
-            wstETH.balanceOf(user),
-            0,
-            "user balance should be 0 after deposit"
-        );
-        assertEq(
-            accounting.getBondShares(0),
-            sharesToDeposit,
-            "bond shares should be equal to deposited shares"
-        );
-        assertEq(
-            accounting.totalBondShares(),
-            sharesToDeposit,
-            "bond manager shares should be equal to deposited shares"
-        );
-        assertEq(accounting.totalBondShares(), sharesToDeposit);
-    }
-
-    function test_depositWstETHWithPermit_AlreadyPermittedWithLess() public {
-        vm.deal(user, 32 ether);
-        vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
-        uint256 wstETHAmount = wstETH.wrap(32 ether);
-        uint256 sharesToDeposit = stETH.getSharesByPooledEth(
-            wstETH.getStETHByWstETH(wstETHAmount)
-        );
-        vm.stopPrank();
-
-        vm.mockCall(
-            address(wstETH),
-            abi.encodeWithSelector(
-                wstETH.allowance.selector,
-                user,
-                address(accounting)
-            ),
-            abi.encode(1 ether)
-        );
-
-        vm.expectEmit(true, true, true, true, address(wstETH));
-        emit Approval(user, address(accounting), 32 ether);
-
-        vm.recordLogs();
-
-        vm.prank(user);
-        accounting.depositWstETHWithPermit(
-            user,
-            0,
-            wstETHAmount,
-            CSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: type(uint256).max,
-                // mock permit signature
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(
-            vm.getRecordedLogs().length,
-            2,
-            "should emit only one event about approve and deposit"
-        );
-    }
-
-    function test_depositWstETHWithPermit_AlreadyPermittedWithInf() public {
-        vm.deal(user, 32 ether);
-        vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
-        uint256 wstETHAmount = wstETH.wrap(32 ether);
-        vm.stopPrank();
-
-        vm.mockCall(
-            address(wstETH),
-            abi.encodeWithSelector(
-                wstETH.allowance.selector,
-                user,
-                address(accounting)
-            ),
-            abi.encode(UINT256_MAX)
-        );
-
-        vm.recordLogs();
-
-        vm.prank(user);
-        accounting.depositWstETHWithPermit(
-            user,
-            0,
-            wstETHAmount,
-            CSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: type(uint256).max,
-                // mock permit signature
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(
-            vm.getRecordedLogs().length,
-            1,
-            "should emit only one event about deposit"
-        );
-    }
-
-    function test_depositWstETHWithPermit_AlreadyPermittedWithTheSame() public {
-        vm.deal(user, 32 ether);
-        vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
-        uint256 wstETHAmount = wstETH.wrap(32 ether);
-        vm.stopPrank();
-
-        vm.mockCall(
-            address(wstETH),
-            abi.encodeWithSelector(
-                wstETH.allowance.selector,
-                user,
-                address(accounting)
-            ),
-            abi.encode(32 ether)
-        );
-
-        vm.recordLogs();
-
-        vm.prank(user);
-        accounting.depositWstETHWithPermit(
-            user,
-            0,
-            wstETHAmount,
-            CSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: type(uint256).max,
-                // mock permit signature
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(
-            vm.getRecordedLogs().length,
-            1,
-            "should emit only one event about deposit"
-        );
-    }
-
     function test_depositETH_RevertIfNotExistedOperator() public {
         vm.expectRevert(NodeOperatorDoesNotExist.selector);
         vm.prank(user);
@@ -4189,12 +3783,6 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         vm.expectRevert(NodeOperatorDoesNotExist.selector);
         vm.prank(user);
         accounting.depositStETH(user, 1, 0 ether);
-    }
-
-    function test_depositWstETH_RevertIfNotExistedOperator() public {
-        vm.expectRevert(NodeOperatorDoesNotExist.selector);
-        vm.prank(user);
-        accounting.depositWstETH(user, 1, 0 ether);
     }
 
     function test_depositETH_RevertIfInvalidSender() public {
@@ -4213,30 +3801,6 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         vm.expectRevert(InvalidSender.selector);
         vm.prank(stranger);
         accounting.depositStETHWithPermit(
-            user,
-            0,
-            32 ether,
-            CSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: type(uint256).max,
-                // mock permit signature
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-    }
-
-    function test_depositWstETH_RevertIfInvalidSender() public {
-        vm.expectRevert(InvalidSender.selector);
-        vm.prank(stranger);
-        accounting.depositWstETH(user, 0, 32 ether);
-    }
-
-    function test_depositWstETHWithPermit_RevertIfInvalidSender() public {
-        vm.expectRevert(InvalidSender.selector);
-        vm.prank(stranger);
-        accounting.depositWstETHWithPermit(
             user,
             0,
             32 ether,

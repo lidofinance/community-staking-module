@@ -100,24 +100,6 @@ contract DepositIntegrationTest is
         assertEq(accounting.totalBondShares(), shares);
     }
 
-    function test_depositWstETH() public {
-        vm.startPrank(user);
-        vm.deal(user, 32 ether);
-        ILido(locator.lido()).submit{ value: 32 ether }({
-            _referal: address(0)
-        });
-        ILido(locator.lido()).approve(address(wstETH), type(uint256).max);
-        uint256 wstETHAmount = wstETH.wrap(32 ether);
-
-        vm.startPrank(user);
-        wstETH.approve(address(accounting), type(uint256).max);
-        uint256 shares = accounting.depositWstETH(user, 0, wstETHAmount);
-
-        assertEq(wstETH.balanceOf(user), 0);
-        assertEq(accounting.getBondShares(0), shares);
-        assertEq(accounting.totalBondShares(), shares);
-    }
-
     function test_depositStETHWithPermit() public {
         bytes32 digest = stETHPermitDigest(
             user,
@@ -151,45 +133,6 @@ contract DepositIntegrationTest is
         );
 
         assertEq(ILido(locator.lido()).balanceOf(user), 0);
-        assertEq(accounting.getBondShares(0), shares);
-        assertEq(accounting.totalBondShares(), shares);
-    }
-
-    function test_depositWstETHWithPermit() public {
-        bytes32 digest = wstETHPermitDigest(
-            user,
-            address(accounting),
-            32 ether,
-            vm.getNonce(user),
-            type(uint256).max,
-            address(wstETH)
-        );
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, digest);
-
-        vm.deal(user, 32 ether);
-        vm.startPrank(user);
-        ILido(locator.lido()).submit{ value: 32 ether }({
-            _referal: address(0)
-        });
-        ILido(locator.lido()).approve(address(wstETH), type(uint256).max);
-        uint256 wstETHAmount = wstETH.wrap(32 ether);
-        vm.stopPrank();
-
-        vm.prank(user);
-        uint256 shares = accounting.depositWstETHWithPermit(
-            user,
-            0,
-            wstETHAmount,
-            CSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: type(uint256).max,
-                v: v,
-                r: r,
-                s: s
-            })
-        );
-
-        assertEq(wstETH.balanceOf(user), 0);
         assertEq(accounting.getBondShares(0), shares);
         assertEq(accounting.totalBondShares(), shares);
     }

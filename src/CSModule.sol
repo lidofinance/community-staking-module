@@ -385,63 +385,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         _addSigningKeys(id, keysCount, publicKeys, signatures);
     }
 
-    /// @notice Adds a new node operator with wstETH bond
-    /// @param keysCount Count of signing keys
-    /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of public keys
-    function addNodeOperatorWstETH(
-        uint256 keysCount,
-        bytes calldata publicKeys,
-        bytes calldata signatures,
-        bytes32[] calldata eaProof
-    ) external whenResumed {
-        // TODO: sanity checks
-
-        uint256 id = _createNodeOperator();
-        _processEarlyAdoption(id, eaProof);
-
-        accounting.depositWstETH(
-            msg.sender,
-            id,
-            accounting.getBondAmountByKeysCountWstETH(
-                keysCount,
-                accounting.getBondCurve(id)
-            )
-        );
-
-        _addSigningKeys(id, keysCount, publicKeys, signatures);
-    }
-
-    /// @notice Adds a new node operator with permit to use wstETH as bond
-    /// @param keysCount Count of signing keys
-    /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of public keys
-    /// @param permit Permit to use wstETH as bond
-    function addNodeOperatorWstETHWithPermit(
-        uint256 keysCount,
-        bytes calldata publicKeys,
-        bytes calldata signatures,
-        bytes32[] calldata eaProof,
-        ICSAccounting.PermitInput calldata permit
-    ) external whenResumed {
-        // TODO: sanity checks
-
-        uint256 id = _createNodeOperator();
-        _processEarlyAdoption(id, eaProof);
-
-        accounting.depositWstETHWithPermit(
-            msg.sender,
-            id,
-            accounting.getBondAmountByKeysCountWstETH(
-                keysCount,
-                accounting.getBondCurve(id)
-            ),
-            permit
-        );
-
-        _addSigningKeys(id, keysCount, publicKeys, signatures);
-    }
-
     /// @notice Adds a new keys to the node operator with ETH bond
     /// @param nodeOperatorId ID of the node operator
     /// @param keysCount Count of signing keys
@@ -508,59 +451,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             msg.sender,
             nodeOperatorId,
             accounting.getRequiredBondForNextKeys(nodeOperatorId, keysCount),
-            permit
-        );
-
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-    }
-
-    /// @notice Adds a new keys to the node operator with wstETH bond
-    /// @param nodeOperatorId ID of the node operator
-    /// @param keysCount Count of signing keys
-    /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of public keys
-    function addValidatorKeysWstETH(
-        uint256 nodeOperatorId,
-        uint256 keysCount,
-        bytes calldata publicKeys,
-        bytes calldata signatures
-    ) external whenResumed {
-        // TODO: sanity checks
-
-        accounting.depositWstETH(
-            msg.sender,
-            nodeOperatorId,
-            accounting.getRequiredBondForNextKeysWstETH(
-                nodeOperatorId,
-                keysCount
-            )
-        );
-
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-    }
-
-    /// @notice Adds a new keys to the node operator with permit to use wstETH as bond
-    /// @param nodeOperatorId ID of the node operator
-    /// @param keysCount Count of signing keys
-    /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of public keys
-    /// @param permit Permit to use wstETH as bond
-    function addValidatorKeysWstETHWithPermit(
-        uint256 nodeOperatorId,
-        uint256 keysCount,
-        bytes calldata publicKeys,
-        bytes calldata signatures,
-        ICSAccounting.PermitInput calldata permit
-    ) external whenResumed {
-        // TODO: sanity checks
-
-        accounting.depositWstETHWithPermit(
-            msg.sender,
-            nodeOperatorId,
-            accounting.getRequiredBondForNextKeysWstETH(
-                nodeOperatorId,
-                keysCount
-            ),
             permit
         );
 

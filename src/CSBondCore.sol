@@ -21,11 +21,6 @@ abstract contract CSBondCoreBase {
         address to,
         uint256 amount
     );
-    event BondDepositedWstETH(
-        uint256 indexed nodeOperatorId,
-        address from,
-        uint256 amount
-    );
     event BondClaimedWstETH(
         uint256 indexed nodeOperatorId,
         address to,
@@ -53,7 +48,7 @@ abstract contract CSBondCoreBase {
 /// It contains:
 ///  - store bond shares
 ///  - get bond shares and bond amount
-///  - deposit ETH/stETH/wstETH
+///  - deposit ETH/stETH
 ///  - claim ETH/stETH/wstETH
 ///  - burn
 ///
@@ -124,20 +119,6 @@ abstract contract CSBondCore is CSBondCoreBase {
         LIDO.transferSharesFrom(from, address(this), shares);
         _increaseBond(nodeOperatorId, shares);
         emit BondDeposited(nodeOperatorId, from, amount);
-    }
-
-    /// @dev Transfers user's wstETH to the contract, unwrap and stores stETH shares as Node Operator's bond shares.
-    function _depositWstETH(
-        address from,
-        uint256 nodeOperatorId,
-        uint256 amount
-    ) internal returns (uint256) {
-        WSTETH.transferFrom(from, address(this), amount);
-        uint256 stETHAmount = WSTETH.unwrap(amount);
-        uint256 shares = _sharesByEth(stETHAmount);
-        _increaseBond(nodeOperatorId, shares);
-        emit BondDepositedWstETH(nodeOperatorId, from, amount);
-        return shares;
     }
 
     function _increaseBond(uint256 nodeOperatorId, uint256 shares) private {

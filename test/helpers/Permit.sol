@@ -40,9 +40,6 @@ contract PermitHelper {
     string internal STETH_NAME = "Liquid staked Ether 2.0";
     string internal STETH_VERSION = "2";
 
-    string internal WSTETH_NAME = "Wrapped liquid staked Ether 2.0";
-    string internal WSTETH_VERSION = "1";
-
     function stETHPermitDigest(
         address owner,
         address spender,
@@ -61,27 +58,6 @@ contract PermitHelper {
                 token,
                 STETH_NAME,
                 STETH_VERSION
-            );
-    }
-
-    function wstETHPermitDigest(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 nonce,
-        uint256 deadline,
-        address token
-    ) public view returns (bytes32) {
-        return
-            _preparePermitDigest(
-                owner,
-                spender,
-                value,
-                nonce,
-                deadline,
-                token,
-                WSTETH_NAME,
-                WSTETH_VERSION
             );
     }
 

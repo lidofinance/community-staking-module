@@ -37,14 +37,6 @@ contract CSBondCoreTestable is CSBondCore {
         _depositStETH(from, nodeOperatorId, amount);
     }
 
-    function depositWstETH(
-        address from,
-        uint256 nodeOperatorId,
-        uint256 amount
-    ) external {
-        _depositWstETH(from, nodeOperatorId, amount);
-    }
-
     function requestETH(
         uint256 nodeOperatorId,
         uint256 claimableShares,
@@ -385,27 +377,6 @@ contract CSBondCoreStETHTest is CSBondCoreTestBase {
 }
 
 contract CSBondCoreWstETHTest is CSBondCoreTestBase {
-    function test_depositWstETH() public {
-        vm.deal(user, 1 ether);
-        vm.startPrank(user);
-        stETH.submit{ value: 1 ether }(address(0));
-        uint256 wstETHAmount = wstETH.wrap(1 ether);
-        vm.stopPrank();
-
-        vm.expectEmit(true, true, true, true, address(bondCore));
-        emit BondDepositedWstETH(0, user, wstETHAmount);
-
-        bondCore.depositWstETH(user, 0, wstETHAmount);
-
-        assertApproxEqAbs(bondCore.getBondShares(0), wstETHAmount, 1 wei);
-        assertApproxEqAbs(bondCore.totalBondShares(), wstETHAmount, 1 wei);
-        assertApproxEqAbs(
-            stETH.sharesOf(address(bondCore)),
-            wstETHAmount,
-            1 wei
-        );
-    }
-
     function test_claimWstETH() public {
         _deposit(1 ether);
 

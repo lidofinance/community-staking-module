@@ -307,39 +307,6 @@ contract CSAccounting is
         return requiredForNextKeys - excess;
     }
 
-    function getBondAmountByKeysCountWstETH(
-        uint256 keysCount
-    ) public view returns (uint256) {
-        return
-            WSTETH.getWstETHByStETH(
-                CSBondCurve.getBondAmountByKeysCount(keysCount)
-            );
-    }
-
-    function getBondAmountByKeysCountWstETH(
-        uint256 keysCount,
-        BondCurve memory curve
-    ) public view returns (uint256) {
-        return
-            WSTETH.getWstETHByStETH(
-                CSBondCurve.getBondAmountByKeysCount(keysCount, curve)
-            );
-    }
-
-    /// @notice Returns the required bond in wstETH (inc. missed and excess) for the given node operator to upload new keys.
-    /// @param nodeOperatorId id of the node operator to get required bond for.
-    /// @param additionalKeys number of new keys to add.
-    /// @return required bond in wstETH.
-    function getRequiredBondForNextKeysWstETH(
-        uint256 nodeOperatorId,
-        uint256 additionalKeys
-    ) public view returns (uint256) {
-        return
-            WSTETH.getWstETHByStETH(
-                getRequiredBondForNextKeys(nodeOperatorId, additionalKeys)
-            );
-    }
-
     /// @notice Stake user's ETH to Lido and make deposit in stETH to the bond
     /// @dev if `from` is not the same as `msg.sender`, then `msg.sender` should be CSM
     /// @param from address to stake ETH and deposit stETH from
@@ -414,63 +381,6 @@ contract CSAccounting is
             );
         }
         return CSBondCore._depositStETH(from, nodeOperatorId, stETHAmount);
-    }
-
-    /// @notice Unwrap user's wstETH and make deposit in stETH to the bond for the given Node Operator
-    /// @dev if `from` is not the same as `msg.sender`, then `msg.sender` should be CSM
-    /// @param from address to unwrap wstETH from
-    /// @param nodeOperatorId id of the node operator to deposit stETH for
-    /// @param wstETHAmount amount of wstETH to deposit
-    /// @return stETH shares amount
-    function depositWstETH(
-        address from,
-        uint256 nodeOperatorId,
-        uint256 wstETHAmount
-    )
-        external
-        whenResumed
-        onlyExistingNodeOperator(nodeOperatorId)
-        returns (uint256)
-    {
-        // TODO: can it be two functions rather than one with `from` param and condition?
-        from = _validateDepositSender(from);
-        return CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
-    }
-
-    /// @notice Unwrap user's wstETH and make deposit in stETH to the bond for the given Node Operator using the proper permit for the contract
-    /// @dev if `from` is not the same as `msg.sender`, then `msg.sender` should be CSM
-    /// @param from address to unwrap wstETH from
-    /// @param nodeOperatorId id of the node operator to deposit stETH for
-    /// @param wstETHAmount amount of wstETH to deposit
-    /// @param permit wstETH permit for the contract
-    /// @return stETH shares amount
-    function depositWstETHWithPermit(
-        address from,
-        uint256 nodeOperatorId,
-        uint256 wstETHAmount,
-        PermitInput calldata permit
-    )
-        external
-        whenResumed
-        onlyExistingNodeOperator(nodeOperatorId)
-        returns (uint256)
-    {
-        // TODO: can it be two functions rather than one with `from` param and condition?
-        from = _validateDepositSender(from);
-        // preventing revert for already used permit
-        if (WSTETH.allowance(from, address(this)) < permit.value) {
-            // solhint-disable-next-line func-named-parameters
-            WSTETH.permit(
-                from,
-                address(this),
-                permit.value,
-                permit.deadline,
-                permit.v,
-                permit.r,
-                permit.s
-            );
-        }
-        return CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
     }
 
     /// @dev only CSM can pass `from` != `msg.sender`
