@@ -12,7 +12,7 @@ import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSEarlyAdoption } from "./interfaces/ICSEarlyAdoption.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
 
-import { QueueLib, Batch, pack as createBatch } from "./lib/QueueLib.sol";
+import { QueueLib, Batch, createBatch } from "./lib/QueueLib.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
 
 import { SigningKeys } from "./lib/SigningKeys.sol";
@@ -34,7 +34,7 @@ struct NodeOperator {
     uint256 stuckValidatorsCount; // @dev both increased and decreased
     uint256 refundedValidatorsCount; // @dev only increased
     uint256 depositableValidatorsCount; // @dev any value
-    uint256 enqueuedCount; // Tracks how much places are dedicated to the node operator in the queue.
+    uint256 enqueuedCount; // Tracks how many places are occupied by the node operator's keys in the queue.
 }
 
 contract CSModuleBase {
@@ -99,7 +99,7 @@ contract CSModuleBase {
     event PublicReleaseTimestampSet(uint256 timestamp);
     event RemovalChargeSet(uint256 fine);
 
-    event RemovalChargeApplied(uint256 indexed nodeOperatorId);
+    event RemovalChargeApplied(uint256 indexed nodeOperatorId, uint256 amount);
     event ELRewardsStealingPenaltyReported(
         uint256 indexed nodeOperatorId,
         uint256 proposedBlockNumber,
@@ -152,8 +152,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         keccak256("SET_EARLY_ADOPTION_ROLE"); // 0xe0d27b865f229f5162f7b9ae24065c2d5cdae1ed1eaabf46a5f7809b1edf2ec1
     bytes32 public constant SET_PUBLIC_RELEASE_TIMESTAMP_ROLE =
         keccak256("SET_PUBLIC_RELEASE_TIMESTAMP_ROLE"); // 0x66d6616db95aac3b33b9261e42ab01ad71f311cff562503c33c742c54f22bbcd
-    bytes32 public constant SET_REMOVAL_FEE_ROLE =
-        keccak256("SET_REMOVAL_FEE_ROLE"); // 0xcf57c796bfb0ce278554fc47df40401e8d8d159a675181af9a8a18589f412df2
+    bytes32 public constant SET_REMOVAL_CHARGE_ROLE =
+        keccak256("SET_REMOVAL_CHARGE_ROLE"); // 0xec192e8f5533ece8d0718d6180775a3e45c9499f95d7b1b0d2858b2c536b4d40
     bytes32 public constant STAKING_ROUTER_ROLE =
         keccak256("STAKING_ROUTER_ROLE"); // 0xbb75b874360e0bfd87f964eadd8276d8efb7c942134fc329b513032d0803e0c6
     bytes32 public constant REPORT_EL_REWARDS_STEALING_PENALTY_ROLE =
@@ -257,10 +257,10 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     }
 
     /// @notice Sets the key deletion fine
-    /// @param amount Amount of wei to be charged for removing a key in some cases
+    /// @param amount Amount of wei to be charged for removing a single key.
     function setRemovalCharge(
         uint256 amount
-    ) external onlyRole(SET_REMOVAL_FEE_ROLE) {
+    ) external onlyRole(SET_REMOVAL_CHARGE_ROLE) {
         removalCharge = amount;
         emit RemovalChargeSet(amount);
     }
@@ -964,13 +964,10 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     }
 
     /// @notice Unsafe updates of validators count for node operators by DAO
-    /// @param nodeOperatorId ID of the node operator
-    /// @param exitedValidatorsKeysCount Count of exited validators
-    /// @param stuckValidatorsKeysCount Count of stuck validators
     function unsafeUpdateValidatorsCount(
         uint256 nodeOperatorId,
-        uint256 exitedValidatorsKeysCount,
-        uint256 stuckValidatorsKeysCount
+        uint256 /* exitedValidatorsKeysCount */,
+        uint256 /* stuckValidatorsKeysCount */
     )
         external
         onlyRole(STAKING_ROUTER_ROLE)
@@ -1038,10 +1035,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         _normalizeQueue(nodeOperatorId);
     }
 
-    // TODO: Fix that bad naming.
     function _normalizeQueue(uint256 nodeOperatorId) internal {
-        _updateDepositableValidatorsCount(nodeOperatorId);
-
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         uint256 depositable = no.depositableValidatorsCount;
         uint256 enqueued = no.enqueuedCount;
@@ -1050,11 +1044,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             unchecked {
                 uint256 count = depositable - enqueued;
                 Batch item = createBatch(nodeOperatorId, count);
-                // Refactor to a function?
-                {
-                    no.enqueuedCount += count;
-                    queue.enqueue(item);
-                }
+                no.enqueuedCount += count;
+                queue.enqueue(item);
                 emit BatchEnqueued(nodeOperatorId, count);
             }
         }
@@ -1065,11 +1056,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     function _resetBenefits(uint256 nodeOperatorId) internal {
         accounting.resetBondCurve(nodeOperatorId);
         _updateDepositableValidatorsCount(nodeOperatorId);
-    }
-
-    function _applyRemovalCharge(uint256 nodeOperatorId) internal {
-        accounting.chargeFee(nodeOperatorId, removalCharge);
-        emit RemovalChargeApplied(nodeOperatorId);
     }
 
     /// @notice Reports EL rewards stealing for the given node operator.
@@ -1171,7 +1157,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         if (_isValidatorSlashed[pointer]) amount += INITIAL_SLASHING_PENALTY;
         if (amount < DEPOSIT_SIZE) {
             accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - amount);
-            _updateDepositableValidatorsCount(nodeOperatorId); // FIXME: normalizeQueue?
+            _updateDepositableValidatorsCount(nodeOperatorId);
         }
 
         _incrementModuleNonce();
@@ -1272,6 +1258,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         no.totalAddedKeys += keysCount;
         emit TotalSigningKeysCountChanged(nodeOperatorId, no.totalAddedKeys);
 
+        _updateDepositableValidatorsCount(nodeOperatorId);
         _normalizeQueue(nodeOperatorId);
         _incrementModuleNonce();
     }
@@ -1300,10 +1287,12 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             no.totalAddedKeys
         );
 
-        // If the operator was unvetted, it does make sense to apply the key removal fine.
-        if (no.totalAddedKeys != no.totalVettedKeys) {
-            _applyRemovalCharge(nodeOperatorId);
-        }
+        // We charge the node operator for the every removed key. It's motivated by the fact that the DAO should cleanup
+        // the queue from the empty batches of the node operator. It's possible to have multiple batches with only one
+        // key in it, so it means the DAO should have remove as much batches as keys removed in this case.
+        uint256 amountToCharge = removalCharge * keysCount;
+        accounting.chargeFee(nodeOperatorId, amountToCharge);
+        emit RemovalChargeApplied(nodeOperatorId, amountToCharge);
 
         no.totalAddedKeys = newTotalSigningKeys;
         emit TotalSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
@@ -1397,7 +1386,9 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         _incrementModuleNonce();
     }
 
-    /// @notice Cleans the deposit queue from batches of non-depositable node operators.
+    /// @notice Cleans the deposit queue from batches of fully non-depositable node operators
+    /// (depositableValidators == 0).
+    /// @param maxItems how many queue items to review.
     function cleanDepositQueue(uint256 maxItems) external {
         if (maxItems == 0) revert QueueLookupNoLimit();
 
@@ -1444,7 +1435,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
 
     /// @notice Checks if the deposit queue is dirty (a dumb way).
     /// @dev It is dirty if it contains a batch of a node operator with no keys to deposit.
-    /// @param maxItems is how deep starting the queue's head to lookup.
+    /// @param maxItems how many queue items to review.
     /// @return bool is queue dirty
     function isQueueDirty(uint256 maxItems) external view returns (bool) {
         if (maxItems == 0) revert QueueLookupNoLimit();
@@ -1452,6 +1443,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         uint128 index = queue.head;
         for (uint256 i; i < maxItems; ++i) {
             Batch item = queue.queue[index];
+            // Check for empty queue.
             if (item.isNil()) {
                 return false;
             }
