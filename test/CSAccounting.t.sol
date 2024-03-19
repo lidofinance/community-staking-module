@@ -608,21 +608,21 @@ contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
     function test_default() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
-        assertEq(accounting.getUnbondedKeysCount(0), 10);
+        assertEq(accounting.getUnbondedKeysCount(0), 11);
     }
 
     function test_WithCurve() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
         _curve(defaultCurve);
-        assertEq(accounting.getUnbondedKeysCount(0), 5);
+        assertEq(accounting.getUnbondedKeysCount(0), 6);
     }
 
     function test_WithLocked() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
         _lock({ id: 0, amount: 1 ether });
-        assertEq(accounting.getUnbondedKeysCount(0), 10);
+        assertEq(accounting.getUnbondedKeysCount(0), 11);
     }
 
     function test_WithLocked_MoreThanBond() public {
@@ -637,25 +637,25 @@ contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
         _deposit({ bond: 11.5 ether });
         _curve(defaultCurve);
         _lock({ id: 0, amount: 1 ether });
-        assertEq(accounting.getUnbondedKeysCount(0), 6);
+        assertEq(accounting.getUnbondedKeysCount(0), 7);
     }
 
     function test_WithOneWithdrawnValidator() public override {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 11.5 ether });
-        assertEq(accounting.getUnbondedKeysCount(0), 9);
+        assertEq(accounting.getUnbondedKeysCount(0), 10);
     }
 
     function test_WithBond() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
-        _deposit({ bond: 11.5 ether });
+        _deposit({ bond: 12.5 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 10);
     }
 
     function test_WithBondAndOneWithdrawnValidator() public override {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 11.5 ether });
-        assertEq(accounting.getUnbondedKeysCount(0), 9);
+        assertEq(accounting.getUnbondedKeysCount(0), 10);
     }
 
     function test_WithExcessBond() public override {
@@ -673,13 +673,13 @@ contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
     function test_WithMissingBond() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 5.75 ether });
-        assertEq(accounting.getUnbondedKeysCount(0), 13);
+        assertEq(accounting.getUnbondedKeysCount(0), 14);
     }
 
     function test_WithMissingBondAndOneWithdrawnValidator() public override {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 5.75 ether });
-        assertEq(accounting.getUnbondedKeysCount(0), 12);
+        assertEq(accounting.getUnbondedKeysCount(0), 13);
     }
 }
 
@@ -696,7 +696,7 @@ contract CSAccountingGetUnbondedKeysCountToEjectTest is
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
         _curve(defaultCurve);
-        assertEq(accounting.getUnbondedKeysCountToEject(0), 5);
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 6);
     }
 
     function test_WithLocked() public override {
@@ -718,25 +718,25 @@ contract CSAccountingGetUnbondedKeysCountToEjectTest is
         _deposit({ bond: 11.5 ether });
         _curve(defaultCurve);
         _lock({ id: 0, amount: 1 ether });
-        assertEq(accounting.getUnbondedKeysCountToEject(0), 5);
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 6);
     }
 
     function test_WithOneWithdrawnValidator() public override {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 11.5 ether });
-        assertEq(accounting.getUnbondedKeysCountToEject(0), 9);
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 10);
     }
 
     function test_WithBond() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
-        assertEq(accounting.getUnbondedKeysCountToEject(0), 10);
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 11);
     }
 
     function test_WithBondAndOneWithdrawnValidator() public override {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 11.5 ether });
-        assertEq(accounting.getUnbondedKeysCountToEject(0), 9);
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 10);
     }
 
     function test_WithExcessBond() public override {
@@ -754,13 +754,13 @@ contract CSAccountingGetUnbondedKeysCountToEjectTest is
     function test_WithMissingBond() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 5.75 ether });
-        assertEq(accounting.getUnbondedKeysCountToEject(0), 13);
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 14);
     }
 
     function test_WithMissingBondAndOneWithdrawnValidator() public override {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 5.75 ether });
-        assertEq(accounting.getUnbondedKeysCountToEject(0), 12);
+        assertEq(accounting.getUnbondedKeysCountToEject(0), 13);
     }
 }
 

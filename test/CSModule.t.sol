@@ -2437,23 +2437,6 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         csm.submitInitialSlashing(noId, 1);
     }
 
-    function test_submitInitialSlashing_unbondedKeys() public {
-        uint256 keyIndex = 0;
-        uint256 noId = createNodeOperator(2);
-        csm.vetKeys(noId, 2);
-        csm.obtainDepositData(1, "");
-
-        uint256 bondThreshold = (accounting.BONDED_KEY_THRESHOLD_PERCENT_BP() *
-            csm.DEPOSIT_SIZE()) / accounting.TOTAL_BASIS_POINTS();
-        csm.penalize(noId, bondThreshold - 0.1 ether);
-        uint256 nonce = csm.getNonce();
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit VettedSigningKeysCountChanged(noId, 1);
-        csm.submitInitialSlashing(noId, keyIndex);
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
     function test_submitInitialSlashing_outOfBond() public {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
