@@ -52,7 +52,6 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
             8 weeks
         );
         csm.grantRole(csm.SET_ACCOUNTING_ROLE(), address(this));
-        csm.grantRole(csm.KEY_VALIDATOR_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(stakingRouter));
 
         csm.setAccounting(address(accounting));
@@ -105,11 +104,6 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
             signatures,
             new bytes32[](0)
         );
-
-        {
-            // Pretend to be a key validation oracle
-            csm.vetKeys(0, 2);
-        }
 
         // It's impossible to process deposits if withdrawal requests amount is more than the buffered ether,
         // so we need to make sure that the buffered ether is enough by submitting this tremendous amount.
