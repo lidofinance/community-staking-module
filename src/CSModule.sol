@@ -1083,8 +1083,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             nodeOperatorId,
             amount + EL_REWARDS_STEALING_FINE
         );
-
-        _updateDepositableValidatorsCount(nodeOperatorId);
     }
 
     /// @dev Should be called by the committee.
