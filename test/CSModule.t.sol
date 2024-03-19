@@ -537,10 +537,10 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         {
             vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, nodeOperator);
-            vm.expectEmit(true, true, true, true, address(wstETH));
-            emit Approval(nodeOperator, address(accounting), wstETHAmount);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
+            vm.expectEmit(true, true, true, true, address(wstETH));
+            emit Approval(nodeOperator, address(accounting), wstETHAmount);
         }
 
         csm.addNodeOperatorWstETHWithPermit(
@@ -588,10 +588,10 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         uint256 wstETHAmount = wstETH.wrap(toWrap);
         uint256 nonce = csm.getNonce();
         {
-            vm.expectEmit(true, true, true, true, address(wstETH));
-            emit Approval(nodeOperator, address(accounting), wstETHAmount);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 2);
+            vm.expectEmit(true, true, true, true, address(wstETH));
+            emit Approval(nodeOperator, address(accounting), wstETHAmount);
         }
         csm.addValidatorKeysWstETHWithPermit(
             noId,
@@ -648,10 +648,10 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         {
             vm.expectEmit(true, true, false, true, address(csm));
             emit NodeOperatorAdded(0, nodeOperator);
-            vm.expectEmit(true, true, true, true, address(stETH));
-            emit Approval(nodeOperator, address(accounting), BOND_SIZE);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
+            vm.expectEmit(true, true, true, true, address(stETH));
+            emit Approval(nodeOperator, address(accounting), BOND_SIZE);
         }
 
         vm.prank(nodeOperator);
@@ -701,10 +701,10 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         uint256 nonce = csm.getNonce();
 
         {
-            vm.expectEmit(true, true, true, true, address(stETH));
-            emit Approval(nodeOperator, address(accounting), required);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 2);
+            vm.expectEmit(true, true, true, true, address(stETH));
+            emit Approval(nodeOperator, address(accounting), required);
         }
         vm.prank(nodeOperator);
         csm.addValidatorKeysStETHWithPermit(

@@ -107,6 +107,13 @@ contract CSAccountingBaseTest is
         accounting.grantRole(accounting.SET_DEFAULT_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
         vm.stopPrank();
+
+        // HACK: To avoid changing the Stub to a mock so far.
+        vm.mockCall(
+            address(stakingModule),
+            abi.encodeWithSelector(ICSModule.onBondChanged.selector),
+            ""
+        );
     }
 
     function mock_getNodeOperatorsCount(uint256 returnValue) internal {

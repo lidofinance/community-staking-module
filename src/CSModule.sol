@@ -301,21 +301,21 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     ) external payable whenResumed {
         // TODO: sanity checks
 
-        uint256 id = _createNodeOperator();
-        _processEarlyAdoption(id, eaProof);
+        uint256 nodeOperatorId = _createNodeOperator();
+        _processEarlyAdoption(nodeOperatorId, eaProof);
 
         if (
             msg.value !=
             accounting.getBondAmountByKeysCount(
                 keysCount,
-                accounting.getBondCurve(id)
+                accounting.getBondCurve(nodeOperatorId)
             )
         ) {
             revert InvalidAmount();
         }
 
-        accounting.depositETH{ value: msg.value }(msg.sender, id);
-        _addSigningKeys(id, keysCount, publicKeys, signatures);
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
+        accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
     }
 
     /// @notice Adds a new node operator with stETH bond
@@ -330,19 +330,18 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 id = _createNodeOperator();
-        _processEarlyAdoption(id, eaProof);
+        uint256 nodeOperatorId = _createNodeOperator();
+        _processEarlyAdoption(nodeOperatorId, eaProof);
 
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
         accounting.depositStETH(
             msg.sender,
-            id,
+            nodeOperatorId,
             accounting.getBondAmountByKeysCount(
                 keysCount,
-                accounting.getBondCurve(id)
+                accounting.getBondCurve(nodeOperatorId)
             )
         );
-
-        _addSigningKeys(id, keysCount, publicKeys, signatures);
     }
 
     /// @notice Adds a new node operator with permit to use stETH as bond
@@ -359,20 +358,19 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 id = _createNodeOperator();
-        _processEarlyAdoption(id, eaProof);
+        uint256 nodeOperatorId = _createNodeOperator();
+        _processEarlyAdoption(nodeOperatorId, eaProof);
 
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
         accounting.depositStETHWithPermit(
             msg.sender,
-            id,
+            nodeOperatorId,
             accounting.getBondAmountByKeysCount(
                 keysCount,
-                accounting.getBondCurve(id)
+                accounting.getBondCurve(nodeOperatorId)
             ),
             permit
         );
-
-        _addSigningKeys(id, keysCount, publicKeys, signatures);
     }
 
     /// @notice Adds a new node operator with wstETH bond
@@ -387,19 +385,18 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 id = _createNodeOperator();
-        _processEarlyAdoption(id, eaProof);
+        uint256 nodeOperatorId = _createNodeOperator();
+        _processEarlyAdoption(nodeOperatorId, eaProof);
 
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
         accounting.depositWstETH(
             msg.sender,
-            id,
+            nodeOperatorId,
             accounting.getBondAmountByKeysCountWstETH(
                 keysCount,
-                accounting.getBondCurve(id)
+                accounting.getBondCurve(nodeOperatorId)
             )
         );
-
-        _addSigningKeys(id, keysCount, publicKeys, signatures);
     }
 
     /// @notice Adds a new node operator with permit to use wstETH as bond
@@ -416,20 +413,19 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 id = _createNodeOperator();
-        _processEarlyAdoption(id, eaProof);
+        uint256 nodeOperatorId = _createNodeOperator();
+        _processEarlyAdoption(nodeOperatorId, eaProof);
 
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
         accounting.depositWstETHWithPermit(
             msg.sender,
-            id,
+            nodeOperatorId,
             accounting.getBondAmountByKeysCountWstETH(
                 keysCount,
-                accounting.getBondCurve(id)
+                accounting.getBondCurve(nodeOperatorId)
             ),
             permit
         );
-
-        _addSigningKeys(id, keysCount, publicKeys, signatures);
     }
 
     /// @notice Adds a new keys to the node operator with ETH bond
@@ -452,9 +448,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             revert InvalidAmount();
         }
 
-        accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
-
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
+        accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
     }
 
     /// @notice Adds a new keys to the node operator with stETH bond
@@ -470,13 +465,12 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     ) external whenResumed {
         // TODO: sanity checks
 
-        accounting.depositStETH(
-            msg.sender,
+        uint256 amount = accounting.getRequiredBondForNextKeys(
             nodeOperatorId,
-            accounting.getRequiredBondForNextKeys(nodeOperatorId, keysCount)
+            keysCount
         );
-
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
+        accounting.depositStETH(msg.sender, nodeOperatorId, amount);
     }
 
     /// @notice Adds a new keys to the node operator with permit to use stETH as bond
@@ -494,14 +488,17 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     ) external whenResumed {
         // TODO: sanity checks
 
+        uint256 amount = accounting.getRequiredBondForNextKeys(
+            nodeOperatorId,
+            keysCount
+        );
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
         accounting.depositStETHWithPermit(
             msg.sender,
             nodeOperatorId,
-            accounting.getRequiredBondForNextKeys(nodeOperatorId, keysCount),
+            amount,
             permit
         );
-
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
     }
 
     /// @notice Adds a new keys to the node operator with wstETH bond
@@ -517,16 +514,12 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     ) external whenResumed {
         // TODO: sanity checks
 
-        accounting.depositWstETH(
-            msg.sender,
+        uint256 amount = accounting.getRequiredBondForNextKeysWstETH(
             nodeOperatorId,
-            accounting.getRequiredBondForNextKeysWstETH(
-                nodeOperatorId,
-                keysCount
-            )
+            keysCount
         );
-
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
+        accounting.depositWstETH(msg.sender, nodeOperatorId, amount);
     }
 
     /// @notice Adds a new keys to the node operator with permit to use wstETH as bond
@@ -544,17 +537,23 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     ) external whenResumed {
         // TODO: sanity checks
 
+        uint256 amount = accounting.getRequiredBondForNextKeysWstETH(
+            nodeOperatorId,
+            keysCount
+        );
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
         accounting.depositWstETHWithPermit(
             msg.sender,
             nodeOperatorId,
-            accounting.getRequiredBondForNextKeysWstETH(
-                nodeOperatorId,
-                keysCount
-            ),
+            amount,
             permit
         );
+    }
 
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
+    /// @notice Notify the module about the opetor's bond change. The hook call is optional.
+    function onBondChanged(uint256 nodeOperatorId) external {
+        _updateDepositableValidatorsCount(nodeOperatorId);
+        _normalizeQueue(nodeOperatorId);
     }
 
     /// @notice Proposes a new manager address for the node operator
@@ -807,6 +806,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         }
 
         if (no.depositableValidatorsCount != newCount) {
+            // Updating the global counter.
             _depositableValidatorsCount =
                 _depositableValidatorsCount -
                 no.depositableValidatorsCount +
@@ -1225,8 +1225,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         no.totalAddedKeys += keysCount;
         emit TotalSigningKeysCountChanged(nodeOperatorId, no.totalAddedKeys);
 
-        _updateDepositableValidatorsCount(nodeOperatorId);
-        _normalizeQueue(nodeOperatorId);
         _incrementModuleNonce();
     }
 
