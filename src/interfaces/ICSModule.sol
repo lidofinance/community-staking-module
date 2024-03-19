@@ -52,4 +52,7 @@ interface ICSModule is IStakingModule {
         uint256 keyIndex,
         uint256 amount
     ) external;
+
+    /// @notice Notify the module about the operator's bond change. The hook call is optional.
+    function onBondChanged(uint256 nodeOperatorId) external;
 }

@@ -79,4 +79,8 @@ contract CommunityStakingModuleMock {
     function getNodeOperatorsCount() external view returns (uint256) {
         return totalNodeOperatorsCount;
     }
+
+    function onBondChanged(uint256 nodeOperatorId) external {
+        // do nothing
+    }
 }

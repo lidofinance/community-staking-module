@@ -241,7 +241,7 @@ contract CSAccounting is
         uint256 activeKeys = _getActiveKeys(nodeOperatorId);
         /// 10 wei added to account for possible stETH rounding errors
         /// https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205
-        /// Should be suficient fot ~ 40 years
+        /// Should be sufficient for ~ 40 years
         uint256 currentBond = CSBondCore._ethByShares(
             _bondShares[nodeOperatorId]
         ) + 10 wei;
@@ -332,7 +332,7 @@ contract CSAccounting is
     /// @dev if `from` is not the same as `msg.sender`, then `msg.sender` should be CSM
     /// @param from address to stake ETH and deposit stETH from
     /// @param nodeOperatorId id of the node operator to stake ETH and deposit stETH for
-    /// @return stETH shares amount
+    /// @return shares stETH shares amount
     function depositETH(
         address from,
         uint256 nodeOperatorId
@@ -341,10 +341,11 @@ contract CSAccounting is
         payable
         whenResumed
         onlyExistingNodeOperator(nodeOperatorId)
-        returns (uint256)
+        returns (uint256 shares)
     {
         from = _validateDepositSender(from);
-        return CSBondCore._depositETH(from, nodeOperatorId);
+        shares = CSBondCore._depositETH(from, nodeOperatorId);
+        CSM.onBondChanged(nodeOperatorId);
     }
 
     /// @notice Deposit user's stETH to the bond for the given Node Operator
@@ -352,7 +353,7 @@ contract CSAccounting is
     /// @param from address to deposit stETH from
     /// @param nodeOperatorId id of the node operator to deposit stETH for
     /// @param stETHAmount amount of stETH to deposit
-    /// @return stETH shares amount
+    /// @return shares stETH shares amount
     function depositStETH(
         address from,
         uint256 nodeOperatorId,
@@ -361,11 +362,12 @@ contract CSAccounting is
         external
         whenResumed
         onlyExistingNodeOperator(nodeOperatorId)
-        returns (uint256)
+        returns (uint256 shares)
     {
         // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
-        return CSBondCore._depositStETH(from, nodeOperatorId, stETHAmount);
+        shares = CSBondCore._depositStETH(from, nodeOperatorId, stETHAmount);
+        CSM.onBondChanged(nodeOperatorId);
     }
 
     /// @notice Deposit user's stETH to the bond for the given Node Operator using the proper permit for the contract
@@ -374,7 +376,7 @@ contract CSAccounting is
     /// @param nodeOperatorId id of the node operator to deposit stETH for
     /// @param stETHAmount amount of stETH to deposit
     /// @param permit stETH permit for the contract
-    /// @return stETH shares amount
+    /// @return shares stETH shares amount
     function depositStETHWithPermit(
         address from,
         uint256 nodeOperatorId,
@@ -384,7 +386,7 @@ contract CSAccounting is
         external
         whenResumed
         onlyExistingNodeOperator(nodeOperatorId)
-        returns (uint256)
+        returns (uint256 shares)
     {
         // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
@@ -401,7 +403,8 @@ contract CSAccounting is
                 permit.s
             );
         }
-        return CSBondCore._depositStETH(from, nodeOperatorId, stETHAmount);
+        shares = CSBondCore._depositStETH(from, nodeOperatorId, stETHAmount);
+        CSM.onBondChanged(nodeOperatorId);
     }
 
     /// @notice Unwrap user's wstETH and make deposit in stETH to the bond for the given Node Operator
@@ -409,7 +412,7 @@ contract CSAccounting is
     /// @param from address to unwrap wstETH from
     /// @param nodeOperatorId id of the node operator to deposit stETH for
     /// @param wstETHAmount amount of wstETH to deposit
-    /// @return stETH shares amount
+    /// @return shares stETH shares amount
     function depositWstETH(
         address from,
         uint256 nodeOperatorId,
@@ -418,11 +421,12 @@ contract CSAccounting is
         external
         whenResumed
         onlyExistingNodeOperator(nodeOperatorId)
-        returns (uint256)
+        returns (uint256 shares)
     {
         // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
-        return CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
+        shares = CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
+        CSM.onBondChanged(nodeOperatorId);
     }
 
     /// @notice Unwrap user's wstETH and make deposit in stETH to the bond for the given Node Operator using the proper permit for the contract
@@ -431,7 +435,7 @@ contract CSAccounting is
     /// @param nodeOperatorId id of the node operator to deposit stETH for
     /// @param wstETHAmount amount of wstETH to deposit
     /// @param permit wstETH permit for the contract
-    /// @return stETH shares amount
+    /// @return shares stETH shares amount
     function depositWstETHWithPermit(
         address from,
         uint256 nodeOperatorId,
@@ -441,7 +445,7 @@ contract CSAccounting is
         external
         whenResumed
         onlyExistingNodeOperator(nodeOperatorId)
-        returns (uint256)
+        returns (uint256 shares)
     {
         // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
@@ -458,7 +462,8 @@ contract CSAccounting is
                 permit.s
             );
         }
-        return CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
+        shares = CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
+        CSM.onBondChanged(nodeOperatorId);
     }
 
     /// @dev only CSM can pass `from` != `msg.sender`
@@ -594,7 +599,7 @@ contract CSAccounting is
     /// @dev reverts if amount isn't between MIN_STETH_WITHDRAWAL_AMOUNT and MAX_STETH_WITHDRAWAL_AMOUNT
     /// @param rewardsProof merkle proof of the rewards.
     /// @param nodeOperatorId id of the node operator to request rewards for.
-    /// @param cumulativeFeeShares cummulative fee shares for the node operator.
+    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
     /// @param ethAmount amount of ETH to request.
     function requestRewardsETH(
         bytes32[] memory rewardsProof,
@@ -655,6 +660,7 @@ contract CSAccounting is
     {
         CSBondLock._reduceAmount(nodeOperatorId, amount);
         emit BondLockReleased(nodeOperatorId, amount);
+        CSM.onBondChanged(nodeOperatorId);
     }
 
     /// @notice Compensates locked bond ETH for the given node operator.
@@ -665,6 +671,7 @@ contract CSAccounting is
         payable(LIDO_LOCATOR.elRewardsVault()).transfer(msg.value);
         CSBondLock._reduceAmount(nodeOperatorId, msg.value);
         emit BondLockCompensated(nodeOperatorId, msg.value);
+        CSM.onBondChanged(nodeOperatorId);
     }
 
     /// @notice Settles locked bond ETH for the given node operator.
@@ -730,6 +737,7 @@ contract CSAccounting is
         );
         _bondShares[nodeOperatorId] += distributed;
         totalBondShares += distributed;
+        CSM.onBondChanged(nodeOperatorId);
     }
 
     modifier onlyCSM() {
