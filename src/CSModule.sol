@@ -1060,20 +1060,16 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         }
     }
 
-    /// @notice any penalty might cause bond out, so we need to clear any benefits from the node operator
+    /// @notice reset benefits for the Node Operator
     /// @param nodeOperatorId ID of the node operator
-    function _checkForOutOfBond(uint256 nodeOperatorId) internal {
-        // TODO: Should be done manually or automatically? Any penalty should reset bond curve or not?
-        if (accounting.getBondShares(nodeOperatorId) == 0) {
-            accounting.resetBondCurve(nodeOperatorId);
-        }
+    function _resetBenefits(uint256 nodeOperatorId) internal {
+        accounting.resetBondCurve(nodeOperatorId);
+        _updateDepositableValidatorsCount(nodeOperatorId);
     }
 
     function _applyRemovalCharge(uint256 nodeOperatorId) internal {
         accounting.chargeFee(nodeOperatorId, removalCharge);
         emit RemovalChargeApplied(nodeOperatorId);
-
-        _checkForOutOfBond(nodeOperatorId);
     }
 
     /// @notice Reports EL rewards stealing for the given node operator.
@@ -1114,8 +1110,10 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             uint256 nodeOperatorId = nodeOperatorIds[i];
             if (nodeOperatorId >= _nodeOperatorsCount)
                 revert NodeOperatorDoesNotExist();
-            accounting.settleLockedBondETH(nodeOperatorId);
-            _checkForOutOfBond(nodeOperatorId);
+            uint256 settled = accounting.settleLockedBondETH(nodeOperatorId);
+            if (settled > 0) {
+                _resetBenefits(nodeOperatorId);
+            }
         }
     }
 
@@ -1131,8 +1129,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             revert Expired();
         }
         accounting.penalize(nodeOperatorId, amount);
-        _updateDepositableValidatorsCount(nodeOperatorId);
-        _checkForOutOfBond(nodeOperatorId);
+        _resetBenefits(nodeOperatorId);
     }
 
     /// @notice Checks if the given node operators's key is proved as withdrawn.
@@ -1177,7 +1174,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         if (amount < DEPOSIT_SIZE) {
             accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - amount);
             _updateDepositableValidatorsCount(nodeOperatorId); // FIXME: normalizeQueue?
-            _checkForOutOfBond(nodeOperatorId);
         }
 
         _incrementModuleNonce();
@@ -1218,8 +1214,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         emit InitialSlashingSubmitted(nodeOperatorId, keyIndex);
 
         accounting.penalize(nodeOperatorId, INITIAL_SLASHING_PENALTY);
-        _updateDepositableValidatorsCount(nodeOperatorId);
-        _checkForOutOfBond(nodeOperatorId);
+        _resetBenefits(nodeOperatorId);
         _incrementModuleNonce();
     }
 
