@@ -233,7 +233,7 @@ contract CSAccounting is
             });
     }
 
-    /// @dev unbonded meaning amount of keys with bond less than threshold
+    /// @dev unbonded meaning amount of keys with bond less than required
     function _getUnbondedKeysCount(
         uint256 nodeOperatorId,
         bool accountLockedBond
