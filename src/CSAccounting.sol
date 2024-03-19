@@ -54,9 +54,6 @@ contract CSAccounting is
         keccak256("SET_BOND_CURVE_ROLE"); // 0x645c9e6d2a86805cb5a28b1e4751c0dab493df7cf935070ce405489ba1a7bf72
     bytes32 public constant RESET_BOND_CURVE_ROLE =
         keccak256("RESET_BOND_CURVE_ROLE"); // 0xb5dffea014b759c493d63b1edaceb942631d6468998125e1b4fe427c99082134
-    uint256 public constant TOTAL_BASIS_POINTS = 10_000; // 100%
-    // TODO: should be reconsidered. is it should be absolute value or percent?
-    uint256 public constant BONDED_KEY_THRESHOLD_PERCENT_BP = 2000; // 20%
 
     ICSModule private immutable CSM;
 
@@ -236,15 +233,18 @@ contract CSAccounting is
             });
     }
 
-    /// @dev unbonded meaning amount of keys with bond less than threshold
+    /// @dev unbonded meaning amount of keys with bond less than required
     function _getUnbondedKeysCount(
         uint256 nodeOperatorId,
         bool accountLockedBond
     ) internal view returns (uint256) {
         uint256 activeKeys = _getActiveKeys(nodeOperatorId);
+        /// 10 wei added to account for possible stETH rounding errors
+        /// https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205
+        /// Should be suficient fot ~ 40 years
         uint256 currentBond = CSBondCore._ethByShares(
             _bondShares[nodeOperatorId]
-        );
+        ) + 10 wei;
         if (accountLockedBond) {
             uint256 lockedBond = CSBondLock.getActualLockedBond(nodeOperatorId);
             if (currentBond <= lockedBond) return activeKeys;
@@ -258,19 +258,7 @@ contract CSAccounting is
             bondCurve
         );
         if (bondedKeys >= activeKeys) return 0;
-        uint256 amountForBondedKeys = CSBondCurve.getBondAmountByKeysCount(
-            bondedKeys,
-            bondCurve
-        );
-        uint256 bondForNextKey = CSBondCurve.getBondAmountByKeysCount(
-            bondedKeys + 1,
-            bondCurve
-        ) - amountForBondedKeys;
-        uint256 keyBondPercent = ((TOTAL_BASIS_POINTS *
-            (currentBond - amountForBondedKeys)) / bondForNextKey);
-        if (keyBondPercent < BONDED_KEY_THRESHOLD_PERCENT_BP)
-            return activeKeys - bondedKeys;
-        return activeKeys - bondedKeys - 1;
+        return activeKeys - bondedKeys;
     }
 
     /// @notice Returns the required bond in ETH (inc. missed and excess) for the given node operator to upload new keys.
