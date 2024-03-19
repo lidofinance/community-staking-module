@@ -108,6 +108,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
         csm.decreaseOperatorVettedKeys(UintArr(noId), UintArr(to));
     }
 
+    // Checks that the queue is in the expected state starting from its head.
     function _assertQueueState(BatchInfo[] memory exp) internal {
         (uint128 curr, ) = csm.queue(); // queue.head
 
@@ -229,7 +230,7 @@ contract CSMCommon is CSMFixtures {
         csm.grantRole(csm.SET_ACCOUNTING_ROLE(), address(this));
         csm.grantRole(csm.SET_EARLY_ADOPTION_ROLE(), address(this));
         csm.grantRole(csm.SET_PUBLIC_RELEASE_TIMESTAMP_ROLE(), address(this));
-        csm.grantRole(csm.SET_REMOVAL_FEE_ROLE(), address(this));
+        csm.grantRole(csm.SET_REMOVAL_CHARGE_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(this));
         csm.grantRole(
             csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE(),
@@ -1523,29 +1524,20 @@ contract CsmRemoveKeys is CSMCommon {
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 1 });
     }
 
-    function testRemoveKeys_NoCharge() public {
-        uint256 noId = createNodeOperator(1);
+    function testRemoveKeys_Charge() public {
+        uint256 noId = createNodeOperator(3);
 
         vm.expectCall(
             address(accounting),
-            abi.encodeWithSelector(accounting.chargeFee.selector),
-            0
-        );
-        vm.prank(nodeOperator);
-        csm.removeKeys(noId, 0, 1);
-    }
-
-    function testRemoveKeys_ChargeIfUnvetted() public {
-        uint256 noId = createNodeOperator(2);
-        unvetKeys({ noId: noId, to: 1 });
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.chargeFee.selector),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                csm.removalCharge() * 2
+            ),
             1
         );
         vm.prank(nodeOperator);
-        csm.removeKeys(noId, 0, 1);
+        csm.removeKeys(noId, 1, 2);
     }
 }
 
@@ -2254,7 +2246,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_setRemovalChargeRole() public {
-        bytes32 role = csm.SET_REMOVAL_FEE_ROLE();
+        bytes32 role = csm.SET_REMOVAL_CHARGE_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
 
@@ -2263,7 +2255,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_setRemovalChargeRole_revert() public {
-        bytes32 role = csm.SET_REMOVAL_FEE_ROLE();
+        bytes32 role = csm.SET_REMOVAL_CHARGE_ROLE();
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);

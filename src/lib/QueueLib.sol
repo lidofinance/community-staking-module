@@ -34,7 +34,7 @@ function keys(Batch self) pure returns (uint64 n) {
 
 function next(Batch self) pure returns (uint128 n) {
     assembly {
-        n := self
+        n := self // uint128(self)
     }
 }
 
@@ -54,7 +54,7 @@ function setKeys(Batch self, uint256 keysCount) pure returns (Batch) {
 
 /// @dev Instantiate a new Batch to be added to the queue. The `next` field will be determined upon the enqueue.
 /// @dev Parameters are uint256 to make usage easier.
-function pack(
+function createBatch(
     uint256 nodeOperatorId,
     uint256 keysCount
 ) pure returns (Batch item) {
@@ -139,11 +139,6 @@ library QueueLib {
         Batch prev,
         Batch item
     ) internal returns (Batch) {
-        // TODO: To check or to leave as an implicit contract?
-        if (indexOfPrev < self.head) {
-            revert InvalidIndex();
-        }
-
         assembly {
             prev := or(
                 and(

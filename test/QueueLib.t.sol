@@ -5,7 +5,7 @@ pragma solidity 0.8.24;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import { Batch, pack, QueueLib } from "../src/lib/QueueLib.sol";
+import { Batch, createBatch, QueueLib } from "../src/lib/QueueLib.sol";
 
 // Wrap the library internal methods to make an actual call to them.
 // Supposed to be used with `expectRevert` cheatcode and to pass
@@ -62,9 +62,9 @@ contract QueueLibTest is Test {
         q = new Library();
     }
 
-    function test_pack() public {
+    function test_createBatch() public {
         assertEq(
-            pack(0x27489e20a0060b72, 0x3a1748bdff5e4457).unwrap(),
+            createBatch(0x27489e20a0060b72, 0x3a1748bdff5e4457).unwrap(),
             0x27489e20a0060b723a1748bdff5e445700000000000000000000000000000000
         );
     }
@@ -72,8 +72,8 @@ contract QueueLibTest is Test {
     function testFuzz_enqueue(uint64 a, uint64 b, uint64 c, uint64 d) public {
         assertTrue(q.peek().isNil());
 
-        Batch p0 = q.enqueue(pack(a, b));
-        Batch p1 = q.enqueue(pack(c, d));
+        Batch p0 = q.enqueue(createBatch(a, b));
+        Batch p1 = q.enqueue(createBatch(c, d));
 
         assertTrue(q.peek().eq(p0));
         assertTrue(q.at(1).eq(p1));
@@ -94,9 +94,9 @@ contract QueueLibTest is Test {
     ) public {
         assertTrue(q.peek().isNil());
 
-        Batch p0 = q.enqueue(pack(a, b));
-        Batch p1 = q.enqueue(pack(c, d));
-        Batch p2 = q.enqueue(pack(e, f));
+        Batch p0 = q.enqueue(createBatch(a, b));
+        Batch p1 = q.enqueue(createBatch(c, d));
+        Batch p2 = q.enqueue(createBatch(e, f));
 
         assertFalse(q.peek().isNil());
 
@@ -120,9 +120,9 @@ contract QueueLibTest is Test {
         uint64 e,
         uint64 f
     ) public {
-        Batch p0 = q.enqueue(pack(a, b));
-        Batch p1 = q.enqueue(pack(c, d));
-        Batch p2 = q.enqueue(pack(e, f));
+        Batch p0 = q.enqueue(createBatch(a, b));
+        Batch p1 = q.enqueue(createBatch(c, d));
+        Batch p2 = q.enqueue(createBatch(e, f));
 
         // [p0, p1, p2]
         q.remove(0, p0, p1);
