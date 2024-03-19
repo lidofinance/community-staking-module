@@ -54,7 +54,6 @@ contract CSAccounting is
         keccak256("SET_BOND_CURVE_ROLE"); // 0x645c9e6d2a86805cb5a28b1e4751c0dab493df7cf935070ce405489ba1a7bf72
     bytes32 public constant RESET_BOND_CURVE_ROLE =
         keccak256("RESET_BOND_CURVE_ROLE"); // 0xb5dffea014b759c493d63b1edaceb942631d6468998125e1b4fe427c99082134
-    uint256 public constant TOTAL_BASIS_POINTS = 10_000; // 100%
 
     ICSModule private immutable CSM;
 
