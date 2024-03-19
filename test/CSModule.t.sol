@@ -1928,6 +1928,22 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         idsToSettle[0] = noId;
         csm.reportELRewardsStealingPenalty(noId, block.number, amount);
 
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
+        );
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
+        assertEq(lock.amount, 0 ether);
+        assertEq(lock.retentionUntil, 0);
+    }
+
+    function test_settleELRewardsStealingPenalty_noLocked() public {
+        uint256 noId = createNodeOperator();
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+
         expectNoCall(
             address(accounting),
             abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
@@ -1969,20 +1985,6 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         lock = accounting.getLockedBondInfo(secondNoId);
         assertEq(lock.amount, 0 ether);
         assertEq(lock.retentionUntil, 0);
-    }
-
-    function test_settleELRewardsStealingPenalty_penalizeEntireBond() public {
-        uint256 noId = createNodeOperator();
-        uint256 amount = BOND_SIZE;
-        uint256[] memory idsToSettle = new uint256[](1);
-        idsToSettle[0] = noId;
-        csm.reportELRewardsStealingPenalty(noId, block.number, amount);
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
-        csm.settleELRewardsStealingPenalty(idsToSettle);
     }
 
     function test_settleELRewardsStealingPenalty_WhenRetentionPeriodIsExpired()
@@ -2068,18 +2070,6 @@ contract CsmSubmitWithdrawal is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_submitWithdrawal_outOfBond() public {
-        uint256 keyIndex = 0;
-        uint256 noId = createNodeOperator();
-        csm.obtainDepositData(1, "");
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
-        csm.submitWithdrawal(noId, keyIndex, 0 ether);
-    }
-
     function test_submitWithdrawal_RevertWhenNoNodeOperator() public {
         vm.expectRevert(NodeOperatorDoesNotExist.selector);
         csm.submitWithdrawal(0, 0, 0);
@@ -2118,6 +2108,10 @@ contract CsmSubmitInitialSlashing is CSMCommon {
                 penaltyAmount
             )
         );
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
+        );
         csm.submitInitialSlashing(noId, 0);
     }
 
@@ -2132,19 +2126,6 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         vm.expectEmit(true, true, true, true, address(csm));
         emit InitialSlashingSubmitted(noId, 1);
         csm.submitInitialSlashing(noId, 1);
-    }
-
-    function test_submitInitialSlashing_outOfBond() public {
-        uint256 keyIndex = 0;
-        uint256 noId = createNodeOperator();
-        csm.obtainDepositData(1, "");
-
-        csm.penalize(noId, csm.DEPOSIT_SIZE() - csm.INITIAL_SLASHING_PENALTY());
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
-        csm.submitInitialSlashing(noId, keyIndex);
     }
 
     function test_submitInitialSlashing_RevertWhenNoNodeOperator() public {
