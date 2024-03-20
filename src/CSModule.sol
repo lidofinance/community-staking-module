@@ -805,6 +805,10 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             newCount -= unbondedKeys;
         }
 
+        if (no.stuckValidatorsCount != 0) {
+            newCount = 0;
+        }
+
         if (no.depositableValidatorsCount != newCount) {
             // Updating the global counter.
             _depositableValidatorsCount =
@@ -852,6 +856,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
                 nodeOperatorId,
                 stuckValidatorsCount
             );
+
+            _updateDepositableValidatorsCount(nodeOperatorId);
         }
         _incrementModuleNonce();
     }
@@ -892,12 +898,12 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
                 exitedValidatorsCount -
                 no.totalExitedKeys;
             no.totalExitedKeys = exitedValidatorsCount;
-            _updateDepositableValidatorsCount(nodeOperatorId);
-
             emit ExitedSigningKeysCountChanged(
                 nodeOperatorId,
                 exitedValidatorsCount
             );
+
+            _updateDepositableValidatorsCount(nodeOperatorId);
         }
         _incrementModuleNonce();
     }
