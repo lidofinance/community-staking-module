@@ -100,11 +100,19 @@ contract Utilities is CommonBase {
         return new uint256[](0);
     }
 
-    /// @dev It's super annoying to make a memory array all the time without an array literal, so the function pretends
-    /// to provide the familiar syntax. By overloading the function, we can have a different number of arguments.
     function UintArr(uint256 e0) public pure returns (uint256[] memory) {
         uint256[] memory arr = new uint256[](1);
         arr[0] = e0;
+        return arr;
+    }
+
+    function UintArr(
+        uint256 e0,
+        uint256 e1
+    ) public pure returns (uint256[] memory) {
+        uint256[] memory arr = new uint256[](2);
+        arr[0] = e0;
+        arr[1] = e1;
         return arr;
     }
 
