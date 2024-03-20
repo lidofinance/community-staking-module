@@ -42,10 +42,8 @@ library SSZ {
 
                 // prettier-ignore
                 for { } 1 { } {
-                    // TODO: Can be replaced with `mcopy` once it's available, see EIP-5656.
                     // Read next two hashes to hash
-                    mstore(0x00, mload(source))
-                    mstore(0x20, mload(add(source, 0x20)))
+                    mcopy(0x00, source, 0x40)
 
                     // Call sha256 precompile
                     let result := staticcall(
@@ -161,10 +159,8 @@ library SSZ {
 
                 // prettier-ignore
                 for { } 1 { } {
-                    // TODO: Can be replaced with `mcopy` once it's available, see EIP-5656.
                     // Read next two hashes to hash
-                    mstore(0x00, mload(source))
-                    mstore(0x20, mload(add(source, 0x20)))
+                    mcopy(0x00, source, 0x40)
 
                     // Call sha256 precompile
                     let result := staticcall(
