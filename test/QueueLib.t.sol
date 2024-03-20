@@ -48,10 +48,6 @@ contract Library {
     }
 }
 
-function eq(Batch lhs, Batch rhs) pure returns (bool) {
-    return lhs.unwrap() == rhs.unwrap();
-}
-
 contract QueueLibTest is Test {
     using { eq } for Batch;
 
@@ -67,6 +63,12 @@ contract QueueLibTest is Test {
             createBatch(0x27489e20a0060b72, 0x3a1748bdff5e4457).unwrap(),
             0x27489e20a0060b723a1748bdff5e445700000000000000000000000000000000
         );
+    }
+
+    function testFuzz_setKeys(uint64 a, uint64 b, uint64 c) public {
+        Batch p = createBatch(a, b);
+        p = p.setKeys(c);
+        assertEq(p.keys(), c);
     }
 
     function testFuzz_enqueue(uint64 a, uint64 b, uint64 c, uint64 d) public {
@@ -146,4 +148,8 @@ contract QueueLibTest is Test {
         q.dequeue();
         assertTrue(q.peek().isNil());
     }
+}
+
+function eq(Batch lhs, Batch rhs) pure returns (bool) {
+    return lhs.unwrap() == rhs.unwrap();
 }

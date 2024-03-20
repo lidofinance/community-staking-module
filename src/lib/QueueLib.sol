@@ -43,9 +43,9 @@ function setKeys(Batch self, uint256 keysCount) pure returns (Batch) {
         self := or(
             and(
                 self,
-                0xfffffffffffffff0000000000000000fffffffffffffffffffffffffffffffff
+                0xffffffffffffffff0000000000000000ffffffffffffffffffffffffffffffff
             ),
-            shl(128, and(keysCount, 0xfffffffffffffff))
+            shl(128, and(keysCount, 0xffffffffffffffff))
         ) // self.keys = keysCount
     }
 
