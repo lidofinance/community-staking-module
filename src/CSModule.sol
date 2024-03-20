@@ -670,6 +670,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         info.totalWithdrawnValidators = no.totalWithdrawnKeys;
         info.totalAddedValidators = no.totalAddedKeys;
         info.totalDepositedValidators = no.totalDepositedKeys;
+        info.enqueuedCount = no.enqueuedCount;
         return info;
     }
 

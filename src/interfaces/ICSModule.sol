@@ -16,6 +16,7 @@ interface ICSModule is IStakingModule {
         uint256 totalWithdrawnValidators;
         uint256 totalAddedValidators;
         uint256 totalDepositedValidators;
+        uint256 enqueuedCount;
     }
 
     /// @notice Returns the node operator by id
