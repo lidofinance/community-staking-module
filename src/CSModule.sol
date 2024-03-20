@@ -1163,9 +1163,9 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         if (_isValidatorSlashed[pointer]) amount += INITIAL_SLASHING_PENALTY;
         if (amount < DEPOSIT_SIZE) {
             accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - amount);
-            _updateDepositableValidatorsCount(nodeOperatorId);
         }
 
+        _updateDepositableValidatorsCount(nodeOperatorId);
         _incrementModuleNonce();
     }
 
