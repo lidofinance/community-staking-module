@@ -108,6 +108,13 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
         csm.decreaseOperatorVettedKeys(UintArr(noId), UintArr(to));
     }
 
+    function setExited(uint256 noId, uint256 to) internal {
+        csm.updateExitedValidatorsCount(
+            bytes.concat(bytes8(uint64(noId))),
+            bytes.concat(bytes16(uint128(to)))
+        );
+    }
+
     function setStuck(uint256 noId, uint256 to) internal {
         csm.updateStuckValidatorsCount(
             bytes.concat(bytes8(uint64(noId))),
@@ -251,6 +258,10 @@ contract CSMCommon is CSMFixtures {
         csm.grantRole(csm.WITHDRAWAL_SUBMITTER_ROLE(), address(this));
         csm.grantRole(csm.SLASHING_SUBMITTER_ROLE(), address(this));
         accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), address(this));
+        accounting.grantRole(
+            accounting.RELEASE_BOND_LOCK_ROLE(),
+            address(this)
+        );
         vm.stopPrank();
 
         csm.setAccounting(address(accounting));
@@ -1247,6 +1258,21 @@ contract CsmQueueOps is CSMCommon {
 
         vm.prank(nodeOperator);
         csm.normalizeQueue(noId);
+    }
+
+    function test_queueNormalized_WhenExitedChangesDepositable() public {
+        uint256 noId = createNodeOperator(7);
+        csm.updateTargetValidatorsLimits({
+            nodeOperatorId: noId,
+            isTargetLimitActive: true,
+            targetLimit: 2
+        });
+        csm.obtainDepositData(2, "");
+        csm.cleanDepositQueue(1);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit BatchEnqueued(noId, 2);
+        setExited(noId, 2);
     }
 }
 
@@ -2843,64 +2869,102 @@ contract CSMEarlyAdoptionTest is CSMCommon {
     }
 }
 
-contract CSMUpdateDepositableValidatorsCount is Test {
-    // FIXME: Add a bunch of tests for `_updateDepositableValidatorsCount` method.
-    // function test_penalize_UnvetIfUnbonded() public {
-    //     uint256 noId = createNodeOperator(2);
-    //     csm.vetKeys(noId, 2);
-    //     uint256 nonce = csm.getNonce();
-    //
-    //     vm.expectEmit(true, true, true, true, address(csm));
-    //     emit VettedSigningKeysCountChanged(noId, 0);
-    //     csm.penalize(noId, BOND_SIZE);
-    //
-    //     CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
-    //     assertEq(no.totalVettedValidators, 0);
-    //     assertEq(csm.getNonce(), nonce + 1);
-    // }
-    // function test_reportELRewardsStealingPenalty_UnvetIfUnbonded() public {
-    //     uint256 noId = createNodeOperator(2);
-    //     csm.vetKeys(noId, 2);
-    //     uint256 nonce = csm.getNonce();
-    //
-    //     vm.expectEmit(true, true, true, true, address(csm));
-    //     emit VettedSigningKeysCountChanged(noId, 0);
-    //     csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE);
-    //     assertEq(csm.getNonce(), nonce + 1);
-    // }
-    // function test_updateTargetValidatorsLimits_unvetKeys() public {
-    //     uint256 noId = createNodeOperator();
-    //
-    //     csm.updateTargetValidatorsLimits(noId, true, 1);
-    //     CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
-    //     assertEq(no.totalVettedValidators, 0);
-    // }
-    // function test_submitWithdrawal_unbondedKeys() public {
-    //     uint256 keyIndex = 0;
-    //     uint256 noId = createNodeOperator(2);
-    //     csm.vetKeys(noId, 2);
-    //     csm.obtainDepositData(1, "");
-    //     uint256 nonce = csm.getNonce();
-    //
-    //     vm.expectEmit(true, true, true, true, address(csm));
-    //     emit VettedSigningKeysCountChanged(noId, 1);
-    //     csm.submitWithdrawal(noId, keyIndex, 1 ether);
-    //     assertEq(csm.getNonce(), nonce + 1);
-    // }
-    // function test_submitInitialSlashing_unbondedKeys() public {
-    //     uint256 keyIndex = 0;
-    //     uint256 noId = createNodeOperator(2);
-    //     csm.vetKeys(noId, 2);
-    //     csm.obtainDepositData(1, "");
-    //
-    //     uint256 bondThreshold = (accounting.BONDED_KEY_THRESHOLD_PERCENT_BP() *
-    //         csm.DEPOSIT_SIZE()) / accounting.TOTAL_BASIS_POINTS();
-    //     csm.penalize(noId, bondThreshold - 0.1 ether);
-    //     uint256 nonce = csm.getNonce();
-    //
-    //     vm.expectEmit(true, true, true, true, address(csm));
-    //     emit VettedSigningKeysCountChanged(noId, 1);
-    //     csm.submitInitialSlashing(noId, keyIndex);
-    //     assertEq(csm.getNonce(), nonce + 1);
-    // }
+contract CSMDepositableValidatorsCount is CSMCommon {
+    function test_depositableValidatorsCountChanges_OnDeposit() public {
+        uint256 noId = createNodeOperator(7);
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 7);
+        csm.obtainDepositData(3, "");
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 4);
+    }
+
+    function test_depositableValidatorsCountChanges_OnExited() public {
+        // NOTE: Only possible case if there's an active target limit.
+        uint256 noId = createNodeOperator(7);
+        csm.obtainDepositData(4, "");
+        csm.updateTargetValidatorsLimits({
+            nodeOperatorId: noId,
+            isTargetLimitActive: true,
+            targetLimit: 3
+        });
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 0);
+        setExited(noId, 4);
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3);
+    }
+
+    function test_depositableValidatorsCountChanges_OnUnsafeUpdateValidators()
+        public
+    {
+        // XXX: Underlying method is not implemented yet.
+        vm.skip(true);
+    }
+
+    function test_depositableValidatorsCountChanges_OnUnvetKeys() public {
+        uint256 noId = createNodeOperator(7);
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 7);
+        csm.decreaseOperatorVettedKeys(UintArr(noId), UintArr(3));
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3);
+    }
+
+    function test_depositableValidatorsCountChanges_OnInitialSlashing() public {
+        // 1 key becomes unbonded till withdrawal.
+        uint256 noId = createNodeOperator(2);
+        csm.obtainDepositData(1, "");
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 1);
+        csm.submitInitialSlashing(noId, 0); // The first key was slashed.
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 0);
+    }
+
+    function test_depositableValidatorsCountChanges_OnPenalize() public {
+        // Even small penalty will make a key unbonded (keep in mind 10 wei leeway).
+        uint256 noId = createNodeOperator(7);
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 7);
+        csm.penalize(noId, BOND_SIZE * 3); // Penalty to unbond 3 validators.
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 4);
+    }
+
+    function test_depositableValidatorsCountChanges_OnWithdrawal() public {
+        uint256 noId = createNodeOperator(7);
+        csm.obtainDepositData(4, "");
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3);
+        csm.penalize(noId, BOND_SIZE * 3); // Penalty to unbond 3 validators.
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 0);
+        csm.submitWithdrawal(noId, 0, csm.DEPOSIT_SIZE());
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 1);
+        csm.submitWithdrawal(noId, 1, csm.DEPOSIT_SIZE());
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 2);
+        csm.submitWithdrawal(noId, 2, csm.DEPOSIT_SIZE() - BOND_SIZE); // Large CL balance drop, that doesn't change the unbonded count.
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 2);
+    }
+
+    function test_depositableValidatorsCountChanges_OnReportStealing() public {
+        uint256 noId = createNodeOperator(7);
+        csm.obtainDepositData(4, "");
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3);
+        csm.reportELRewardsStealingPenalty(noId, 0, (BOND_SIZE * 3) / 2); // Lock bond to unbond 2 validators.
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 1);
+    }
+
+    function test_depositableValidatorsCountChanges_OnReleaseStealingPenalty()
+        public
+    {
+        uint256 noId = createNodeOperator(7);
+        csm.obtainDepositData(4, "");
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3);
+        csm.reportELRewardsStealingPenalty(noId, 0, BOND_SIZE); // Lock bond to unbond 2 validators (there's stealing fine).
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 1);
+        accounting.releaseLockedBondETH(
+            noId,
+            accounting.getLockedBondInfo(noId).amount
+        );
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3); // Stealing fine is applied so
+    }
+
+    function test_depositableValidatorsCountChanges_OnRemoveUnvetted() public {
+        uint256 noId = createNodeOperator(7);
+        csm.decreaseOperatorVettedKeys(UintArr(noId), UintArr(3));
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3);
+        vm.prank(nodeOperator);
+        csm.removeKeys(noId, 3, 1); // Removal charge is applied, hence one key is unbonded.
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 6);
+    }
 }
