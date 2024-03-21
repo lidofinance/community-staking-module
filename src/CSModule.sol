@@ -904,7 +904,12 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
                 exitedValidatorsCount
             );
 
-            _updateDepositableValidatorsCount(nodeOperatorId);
+            // NOTE: `exited` is not a final status for a node operator, and the counter is used to determine the amount
+            // of active keys for target limit calculation.
+            if (no.isTargetLimitActive) {
+                _updateDepositableValidatorsCount(nodeOperatorId);
+                _normalizeQueue(nodeOperatorId);
+            }
         }
         _incrementModuleNonce();
     }
@@ -1076,6 +1081,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             nodeOperatorId,
             amount + EL_REWARDS_STEALING_FINE
         );
+
+        _updateDepositableValidatorsCount(nodeOperatorId);
     }
 
     /// @dev Should be called by the committee.
@@ -1272,6 +1279,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         no.totalVettedKeys = newTotalSigningKeys;
         emit VettedSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
 
+        _updateDepositableValidatorsCount(nodeOperatorId);
         _normalizeQueue(nodeOperatorId);
         _incrementModuleNonce();
     }
