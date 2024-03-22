@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 // solhint-disable-next-line one-contract-per-file
@@ -14,6 +14,7 @@ import { ICSModule } from "./interfaces/ICSModule.sol";
 
 import { QueueLib, Batch, createBatch } from "./lib/QueueLib.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
+import { TransientUintUintMap } from "./lib/TransientUintUintMapLib.sol";
 
 import { SigningKeys } from "./lib/SigningKeys.sol";
 
@@ -200,6 +201,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     uint256 private _totalExitedValidators;
     uint256 private _totalAddedValidators;
     uint256 private _depositableValidatorsCount;
+
+    TransientUintUintMap private _queueLookup;
 
     constructor(
         bytes32 moduleType,
@@ -1366,8 +1369,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         _incrementModuleNonce();
     }
 
-    /// @notice Cleans the deposit queue from batches of fully non-depositable node operators
-    /// (depositableValidators == 0).
+    /// @notice Cleans the deposit queue from batches with no depositable keys.
     /// @param maxItems how many queue items to review.
     function cleanDepositQueue(uint256 maxItems) external {
         if (maxItems == 0) revert QueueLookupNoLimit();
@@ -1378,6 +1380,9 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         uint128 head = queue.head;
         uint128 curr = head;
 
+        // Make sure we don't have any leftovers from the previous call.
+        _queueLookup.clear();
+
         for (uint256 i; i < maxItems; ++i) {
             Batch item = queue.queue[curr];
             if (item.isNil()) {
@@ -1386,7 +1391,10 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
 
             uint256 noId = item.noId();
             NodeOperator storage no = _nodeOperators[noId];
-            if (no.depositableValidatorsCount == 0) {
+            uint256 enqueuedSoFar = _queueLookup.get(noId);
+            if (enqueuedSoFar >= no.depositableValidatorsCount) {
+                // NOTE: Since we reached that point there's no way for a node operator to have a depositable batch
+                // later in the queue, and hence we don't update _queueLookup for the node operator.
                 if (curr == head) {
                     queue.dequeue();
                     head = queue.head;
@@ -1399,6 +1407,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
                 uint256 keysInBatch = item.keys();
                 no.enqueuedCount -= keysInBatch;
             } else {
+                _queueLookup.add(noId, item.keys());
                 indexOfPrev = curr;
                 prev = item;
             }
@@ -1413,12 +1422,16 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         return queue.at(index);
     }
 
-    /// @notice Checks if the deposit queue is dirty (a dumb way).
-    /// @dev It is dirty if it contains a batch of a node operator with no keys to deposit.
+    /// @notice Checks if the deposit queue is dirty (a smart way).
+    /// @dev It is dirty if it contains a batch of a node operator with no depositable keys.
+    /// @dev Since the function is using transient storage, it's not a view function, consider using static call.
     /// @param maxItems how many queue items to review.
     /// @return bool is queue dirty
-    function isQueueDirty(uint256 maxItems) external view returns (bool) {
+    function isQueueDirty(uint256 maxItems) external returns (bool) {
         if (maxItems == 0) revert QueueLookupNoLimit();
+
+        // Make sure we don't have any leftovers from the previous call.
+        _queueLookup.clear();
 
         uint128 index = queue.head;
         for (uint256 i; i < maxItems; ++i) {
@@ -1429,10 +1442,16 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             }
 
             uint256 noId = item.noId();
-            if (_nodeOperators[noId].depositableValidatorsCount == 0) {
+            uint256 enqueuedSoFar = _queueLookup.get(noId);
+
+            // We report the queue as dirty as we find non-depositable batch.
+            if (
+                enqueuedSoFar >= _nodeOperators[noId].depositableValidatorsCount
+            ) {
                 return true;
             }
 
+            _queueLookup.add(noId, item.keys());
             index = item.next();
         }
 
