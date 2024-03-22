@@ -1175,6 +1175,16 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         _checkForOutOfBond(nodeOperatorId);
     }
 
+    /// @notice Checks if the given node operators's key is proved as withdrawn.
+    /// @param nodeOperatorId id of the node operator to check.
+    /// @param keyIndex index of the key to check.
+    function isValidatorWithdrawn(
+        uint256 nodeOperatorId,
+        uint256 keyIndex
+    ) external view returns (bool) {
+        return _isValidatorWithdrawn[_keyPointer(nodeOperatorId, keyIndex)];
+    }
+
     /// @notice Report node operator's key as withdrawn and settle withdrawn amount.
     /// @param nodeOperatorId Operator ID in the module.
     /// @param keyIndex Index of the withdrawn key in the node operator's keys.
@@ -1209,6 +1219,16 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             _checkForUnbondedKeys(nodeOperatorId);
             _checkForOutOfBond(nodeOperatorId);
         }
+    }
+
+    /// @notice Checks if the given node operators's key is proved as slashed.
+    /// @param nodeOperatorId id of the node operator to check.
+    /// @param keyIndex index of the key to check.
+    function isValidatorSlashed(
+        uint256 nodeOperatorId,
+        uint256 keyIndex
+    ) external view returns (bool) {
+        return _isValidatorSlashed[_keyPointer(nodeOperatorId, keyIndex)];
     }
 
     /// @notice Report node operator's key as slashed and apply initial slashing penalty.
