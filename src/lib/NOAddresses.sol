@@ -119,6 +119,8 @@ library NOAddresses {
         address previousManagerAddress = nodeOperators[nodeOperatorId]
             .managerAddress;
         nodeOperators[nodeOperatorId].managerAddress = msg.sender;
+        if (nodeOperators[nodeOperatorId].proposedManagerAddress != address(0))
+            nodeOperators[nodeOperatorId].proposedManagerAddress = address(0);
         emit NodeOperatorManagerAddressChanged(
             nodeOperatorId,
             previousManagerAddress,

@@ -1064,6 +1064,27 @@ contract CsmResetNodeOperatorManagerAddress is CSMCommon {
         assertEq(no.rewardAddress, stranger);
     }
 
+    function test_resetNodeOperatorManagerAddress_proposedManagerAddressIsReset()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        address manager = nextAddress("MANAGER");
+
+        vm.startPrank(nodeOperator);
+        csm.proposeNodeOperatorManagerAddressChange(noId, manager);
+        csm.proposeNodeOperatorRewardAddressChange(noId, stranger);
+        vm.stopPrank();
+
+        vm.startPrank(stranger);
+        csm.confirmNodeOperatorRewardAddressChange(noId);
+        csm.resetNodeOperatorManagerAddress(noId);
+        vm.stopPrank();
+
+        vm.expectRevert(NOAddresses.SenderIsNotProposedAddress.selector);
+        vm.prank(manager);
+        csm.confirmNodeOperatorManagerAddressChange(noId);
+    }
+
     function test_resetNodeOperatorManagerAddress_RevertWhenNoNodeOperator()
         public
     {
