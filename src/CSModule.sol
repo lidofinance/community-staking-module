@@ -1370,8 +1370,12 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     }
 
     /// @notice Cleans the deposit queue from batches with no depositable keys.
-    /// @param maxItems how many queue items to review.
-    function cleanDepositQueue(uint256 maxItems) external {
+    /// @dev Use **eth_call** to check how many items will be removed.
+    /// @param maxItems How many queue items to review.
+    /// @return toRemove How many items were removed from the queue.
+    function cleanDepositQueue(
+        uint256 maxItems
+    ) external returns (uint256 toRemove) {
         if (maxItems == 0) revert QueueLookupNoLimit();
 
         Batch prev;
@@ -1386,7 +1390,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         for (uint256 i; i < maxItems; ++i) {
             Batch item = queue.queue[curr];
             if (item.isNil()) {
-                return;
+                return toRemove;
             }
 
             uint256 noId = item.noId();
@@ -1404,8 +1408,12 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
                     prev = queue.remove(indexOfPrev, prev, item);
                 }
 
-                uint256 keysInBatch = item.keys();
-                no.enqueuedCount -= keysInBatch;
+                unchecked {
+                    // We assume that the invariant `enqueuedCount` >= `keys` is kept.
+                    uint256 keysInBatch = item.keys();
+                    no.enqueuedCount -= keysInBatch;
+                    ++toRemove;
+                }
             } else {
                 _queueLookup.add(noId, item.keys());
                 indexOfPrev = curr;
@@ -1420,42 +1428,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     /// @param index Index of a queue item.
     function depositQueueItem(uint256 index) public view returns (Batch item) {
         return queue.at(index);
-    }
-
-    /// @notice Checks if the deposit queue is dirty (a smart way).
-    /// @dev It is dirty if it contains a batch of a node operator with no depositable keys.
-    /// @dev Since the function is using transient storage, it's not a view function, consider using static call.
-    /// @param maxItems how many queue items to review.
-    /// @return bool is queue dirty
-    function isQueueDirty(uint256 maxItems) external returns (bool) {
-        if (maxItems == 0) revert QueueLookupNoLimit();
-
-        // Make sure we don't have any leftovers from the previous call.
-        _queueLookup.clear();
-
-        uint128 index = queue.head;
-        for (uint256 i; i < maxItems; ++i) {
-            Batch item = queue.queue[index];
-            // Check for empty queue.
-            if (item.isNil()) {
-                return false;
-            }
-
-            uint256 noId = item.noId();
-            uint256 enqueuedSoFar = _queueLookup.get(noId);
-
-            // We report the queue as dirty as we find non-depositable batch.
-            if (
-                enqueuedSoFar >= _nodeOperators[noId].depositableValidatorsCount
-            ) {
-                return true;
-            }
-
-            _queueLookup.add(noId, item.keys());
-            index = item.next();
-        }
-
-        return false;
     }
 
     function _incrementModuleNonce() internal {
