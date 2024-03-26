@@ -37,16 +37,13 @@ library NOAddresses {
         uint256 nodeOperatorId,
         address proposedAddress
     ) external {
-        if (nodeOperators[nodeOperatorId].managerAddress != msg.sender)
-            revert SenderIsNotManagerAddress();
-        if (nodeOperators[nodeOperatorId].managerAddress == proposedAddress)
-            revert SameAddress();
-        if (
-            nodeOperators[nodeOperatorId].proposedManagerAddress ==
-            proposedAddress
-        ) revert AlreadyProposed();
+        NodeOperator storage no = nodeOperators[nodeOperatorId];
+        if (no.managerAddress != msg.sender) revert SenderIsNotManagerAddress();
+        if (no.managerAddress == proposedAddress) revert SameAddress();
+        if (no.proposedManagerAddress == proposedAddress)
+            revert AlreadyProposed();
 
-        nodeOperators[nodeOperatorId].proposedManagerAddress = proposedAddress;
+        no.proposedManagerAddress = proposedAddress;
         emit NodeOperatorManagerAddressChangeProposed(
             nodeOperatorId,
             proposedAddress
@@ -57,11 +54,13 @@ library NOAddresses {
         mapping(uint256 => NodeOperator) storage nodeOperators,
         uint256 nodeOperatorId
     ) external {
-        if (nodeOperators[nodeOperatorId].proposedManagerAddress != msg.sender)
+        NodeOperator storage no = nodeOperators[nodeOperatorId];
+        if (no.proposedManagerAddress != msg.sender)
             revert SenderIsNotProposedAddress();
-        address oldAddress = nodeOperators[nodeOperatorId].managerAddress;
-        nodeOperators[nodeOperatorId].managerAddress = msg.sender;
-        nodeOperators[nodeOperatorId].proposedManagerAddress = address(0);
+        address oldAddress = no.managerAddress;
+        no.managerAddress = msg.sender;
+        delete no.proposedManagerAddress;
+
         emit NodeOperatorManagerAddressChanged(
             nodeOperatorId,
             oldAddress,
@@ -74,16 +73,13 @@ library NOAddresses {
         uint256 nodeOperatorId,
         address proposedAddress
     ) external {
-        if (nodeOperators[nodeOperatorId].rewardAddress != msg.sender)
-            revert SenderIsNotRewardAddress();
-        if (nodeOperators[nodeOperatorId].rewardAddress == proposedAddress)
-            revert SameAddress();
-        if (
-            nodeOperators[nodeOperatorId].proposedRewardAddress ==
-            proposedAddress
-        ) revert AlreadyProposed();
+        NodeOperator storage no = nodeOperators[nodeOperatorId];
+        if (no.rewardAddress != msg.sender) revert SenderIsNotRewardAddress();
+        if (no.rewardAddress == proposedAddress) revert SameAddress();
+        if (no.proposedRewardAddress == proposedAddress)
+            revert AlreadyProposed();
 
-        nodeOperators[nodeOperatorId].proposedRewardAddress = proposedAddress;
+        no.proposedRewardAddress = proposedAddress;
         emit NodeOperatorRewardAddressChangeProposed(
             nodeOperatorId,
             proposedAddress
@@ -94,11 +90,13 @@ library NOAddresses {
         mapping(uint256 => NodeOperator) storage nodeOperators,
         uint256 nodeOperatorId
     ) external {
-        if (nodeOperators[nodeOperatorId].proposedRewardAddress != msg.sender)
+        NodeOperator storage no = nodeOperators[nodeOperatorId];
+        if (no.proposedRewardAddress != msg.sender)
             revert SenderIsNotProposedAddress();
-        address oldAddress = nodeOperators[nodeOperatorId].rewardAddress;
-        nodeOperators[nodeOperatorId].rewardAddress = msg.sender;
-        nodeOperators[nodeOperatorId].proposedRewardAddress = address(0);
+        address oldAddress = no.rewardAddress;
+        no.rewardAddress = msg.sender;
+        delete no.proposedRewardAddress;
+
         emit NodeOperatorRewardAddressChanged(
             nodeOperatorId,
             oldAddress,
@@ -110,21 +108,18 @@ library NOAddresses {
         mapping(uint256 => NodeOperator) storage nodeOperators,
         uint256 nodeOperatorId
     ) external {
-        if (nodeOperators[nodeOperatorId].rewardAddress != msg.sender)
-            revert SenderIsNotRewardAddress();
-        if (
-            nodeOperators[nodeOperatorId].managerAddress ==
-            nodeOperators[nodeOperatorId].rewardAddress
-        ) revert SameAddress();
-        address previousManagerAddress = nodeOperators[nodeOperatorId]
-            .managerAddress;
-        nodeOperators[nodeOperatorId].managerAddress = msg.sender;
-        if (nodeOperators[nodeOperatorId].proposedManagerAddress != address(0))
-            nodeOperators[nodeOperatorId].proposedManagerAddress = address(0);
+        NodeOperator storage no = nodeOperators[nodeOperatorId];
+        if (no.rewardAddress != msg.sender) revert SenderIsNotRewardAddress();
+        if (no.managerAddress == no.rewardAddress) revert SameAddress();
+        address previousManagerAddress = no.managerAddress;
+
+        no.managerAddress = msg.sender;
+        if (no.proposedManagerAddress != address(0))
+            delete no.proposedManagerAddress;
         emit NodeOperatorManagerAddressChanged(
             nodeOperatorId,
             previousManagerAddress,
-            nodeOperators[nodeOperatorId].rewardAddress
+            no.rewardAddress
         );
     }
 }
