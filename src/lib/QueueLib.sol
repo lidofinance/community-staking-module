@@ -120,12 +120,11 @@ library QueueLib {
         return self.queue[self.head];
     }
 
-    /// @dev Index is uint256 to make usage easier.
     function at(
         Queue storage self,
-        uint256 index
+        uint128 index
     ) internal view returns (Batch item) {
-        return self.queue[uint128(index)];
+        return self.queue[index];
     }
 
     /// @dev Returns the updated item.

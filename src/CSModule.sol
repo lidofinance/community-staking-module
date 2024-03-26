@@ -1470,7 +1470,9 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
 
     /// @notice Gets the deposit queue item by an index.
     /// @param index Index of a queue item.
-    function depositQueueItem(uint256 index) public view returns (Batch item) {
+    function depositQueueItem(
+        uint128 index
+    ) external view returns (Batch item) {
         return queue.at(index);
     }
 
