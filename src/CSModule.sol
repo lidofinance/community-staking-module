@@ -1084,6 +1084,19 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         _removeSigningKeys(nodeOperatorId, startIndex, keysCount);
     }
 
+    /// @notice Node Operator should be able to voluntary eject own validators
+    /// @notice Validator private key might be lost
+    function voluntaryEjectValidator(
+        uint256 nodeOperatorId,
+        uint256 startIndex,
+        uint256 keysCount
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        onlyNodeOperatorManager(nodeOperatorId);
+        /// TODO: implement
+        /// Mark validators for priority ejection
+        /// Confiscate ejection fee from the bond
+    }
+
     /// @dev NB! doesn't increment module nonce
     function _unvetKeys(uint256 nodeOperatorId) internal {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
