@@ -1012,8 +1012,12 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
                 revert NodeOperatorDoesNotExist();
             }
 
-            // There's no `unvettingFee` applied, only a fee in `removeKeys`.
             NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+            if (vettedKeysByOperator[i] > no.totalVettedKeys) {
+                revert InvalidVetKeysPointer();
+            }
+
             no.totalVettedKeys = vettedKeysByOperator[i];
             emit VettedSigningKeysCountChanged(
                 nodeOperatorId,
