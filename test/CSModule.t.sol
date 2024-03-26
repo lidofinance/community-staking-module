@@ -1290,7 +1290,7 @@ contract CsmQueueOps is CSMCommon {
         csm.normalizeQueue(noId);
     }
 
-    function test_queueNormalized_WhenExitedChangesDepositable() public {
+    function test_queueNormalized_WhenWithdrawalChangesDepositable() public {
         uint256 noId = createNodeOperator(7);
         csm.updateTargetValidatorsLimits({
             nodeOperatorId: noId,
@@ -1301,8 +1301,8 @@ contract CsmQueueOps is CSMCommon {
         csm.cleanDepositQueue(1);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit BatchEnqueued(noId, 2);
-        setExited(noId, 2);
+        emit BatchEnqueued(noId, 1);
+        csm.submitWithdrawal(noId, 0, csm.DEPOSIT_SIZE());
     }
 }
 
@@ -2907,22 +2907,6 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         csm.obtainDepositData(3, "");
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 4);
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 4);
-    }
-
-    function test_depositableValidatorsCountChanges_OnExited() public {
-        // NOTE: Only possible case if there's an active target limit.
-        uint256 noId = createNodeOperator(7);
-        csm.obtainDepositData(4, "");
-        csm.updateTargetValidatorsLimits({
-            nodeOperatorId: noId,
-            isTargetLimitActive: true,
-            targetLimit: 3
-        });
-        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 0);
-        assertEq(getStakingModuleSummary().depositableValidatorsCount, 0);
-        setExited(noId, 4);
-        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3);
-        assertEq(getStakingModuleSummary().depositableValidatorsCount, 3);
     }
 
     function test_depositableValidatorsCountChanges_OnStuck() public {

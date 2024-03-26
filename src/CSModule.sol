@@ -793,7 +793,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
 
         uint256 newCount = no.totalVettedKeys - no.totalDepositedKeys;
         if (no.isTargetLimitActive) {
-            uint256 activeKeys = no.totalDepositedKeys - no.totalExitedKeys;
+            uint256 activeKeys = no.totalDepositedKeys - no.totalWithdrawnKeys;
             newCount = Math.min(
                 no.targetLimit > activeKeys ? no.targetLimit - activeKeys : 0,
                 newCount
@@ -914,13 +914,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
                 nodeOperatorId,
                 exitedValidatorsCount
             );
-
-            // NOTE: `exited` is not a final status for a node operator, and the counter is used to determine the amount
-            // of active keys for target limit calculation.
-            if (no.isTargetLimitActive) {
-                _updateDepositableValidatorsCount(nodeOperatorId);
-                _normalizeQueue(nodeOperatorId);
-            }
         }
         _incrementModuleNonce();
     }
@@ -1189,6 +1182,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         }
 
         _updateDepositableValidatorsCount(nodeOperatorId);
+        _normalizeQueue(nodeOperatorId);
         _incrementModuleNonce();
     }
 
