@@ -2925,6 +2925,18 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 3);
     }
 
+    function test_depositableValidatorsCountChanges_OnStuck() public {
+        uint256 noId = createNodeOperator(7);
+        createNodeOperator(2);
+        csm.obtainDepositData(4, "");
+        setStuck(noId, 2);
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 0);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 2);
+        setStuck(noId, 0);
+        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
+    }
+
     function test_depositableValidatorsCountChanges_OnUnsafeUpdateValidators()
         public
     {

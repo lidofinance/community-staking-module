@@ -861,7 +861,15 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
                 stuckValidatorsCount
             );
 
-            _updateDepositableValidatorsCount(nodeOperatorId);
+            if (stuckValidatorsCount > 0) {
+                // INFO: The only consequence of stuck keys is suspending deposits to the node operator. To do that, we
+                // set the depositableValidatorsCount to 0 for this node operator. Hence we can omit the call to the
+                // _updateDepositableValidatorsCount function here to save gas.
+                _depositableValidatorsCount -= no.depositableValidatorsCount;
+                no.depositableValidatorsCount = 0;
+            } else {
+                _updateDepositableValidatorsCount(nodeOperatorId);
+            }
         }
         _incrementModuleNonce();
     }
