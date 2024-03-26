@@ -16,6 +16,8 @@ contract DeployMainnetish is DeployBase {
             32,
             // clGenesisTime
             1606824023,
+            // Verifier supported epoch. Deneb fork epoch so far
+            269568,
             // initializationEpoch
             239853,
             // lidoLocatorAddress

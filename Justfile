@@ -55,8 +55,8 @@ coverage:
 coverage-lcov:
 	forge coverage --report lcov
 
-make-fork:
-	@if pgrep -x "anvil" > /dev/null; then just _warn "anvil process is already running in the background. Make sure it's connected to the right network and in the right state."; else anvil -f ${RPC_URL} --host {{anvil_host}} --port {{anvil_port}}; fi
+make-fork *args:
+	@if pgrep -x "anvil" > /dev/null; then just _warn "anvil process is already running in the background. Make sure it's connected to the right network and in the right state."; else anvil -f ${RPC_URL} --host {{anvil_host}} --port {{anvil_port}} {{args}}; fi
 
 kill-fork:
 	@-pkill anvil && just _warn "anvil process is killed"

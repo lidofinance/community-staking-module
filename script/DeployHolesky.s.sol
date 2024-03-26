@@ -16,6 +16,8 @@ contract DeployHolesky is DeployBase {
             32,
             // clGenesisTime
             1695902100,
+            // Verifier supported epoch. Deneb fork epoch so far
+            29696,
             // initializationEpoch
             8888,
             // lidoLocatorAddress

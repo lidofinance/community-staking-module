@@ -11,11 +11,14 @@ import { CSModule } from "../src/CSModule.sol";
 import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
+import { CSVerifier } from "../src/CSVerifier.sol";
 
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { IWstETH } from "../src/interfaces/IWstETH.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
+import { pack } from "../src/lib/GIndex.sol";
+import { Slot } from "../src/lib/Types.sol";
 
 abstract contract DeployBase is Script {
     // TODO: some contracts of the module probably should be deployed behind a proxy
@@ -23,6 +26,7 @@ abstract contract DeployBase is Script {
     uint256 immutable SECONDS_PER_SLOT;
     uint256 immutable SLOTS_PER_EPOCH;
     uint256 immutable CL_GENESIS_TIME;
+    uint256 immutable VERIFIER_SUPPORTED_EPOCH;
     uint256 immutable INITIALIZATION_EPOCH;
     address immutable LIDO_LOCATOR_ADDRESS;
     address immutable WSTETH_ADDRESS;
@@ -43,6 +47,7 @@ abstract contract DeployBase is Script {
         uint256 secondsPerSlot,
         uint256 slotsPerEpoch,
         uint256 clGenesisTime,
+        uint256 verifierSupportedEpoch,
         uint256 initializationEpoch,
         address lidoLocatorAddress,
         address wstETHAddress
@@ -51,6 +56,7 @@ abstract contract DeployBase is Script {
         SECONDS_PER_SLOT = secondsPerSlot;
         SLOTS_PER_EPOCH = slotsPerEpoch;
         CL_GENESIS_TIME = clGenesisTime;
+        VERIFIER_SUPPORTED_EPOCH = verifierSupportedEpoch;
         INITIALIZATION_EPOCH = initializationEpoch;
         LIDO_LOCATOR_ADDRESS = lidoLocatorAddress;
         WSTETH_ADDRESS = wstETHAddress;
@@ -91,7 +97,7 @@ abstract contract DeployBase is Script {
                 lidoLocator: address(locator),
                 communityStakingModule: address(csm),
                 wstETH: address(wstETH),
-                // todo: arguable. should be discussed
+                // TODO: arguable. should be discussed
                 bondLockRetentionPeriod: 8 weeks
             });
             csm.grantRole(csm.SET_ACCOUNTING_ROLE(), deployer);
@@ -136,12 +142,25 @@ abstract contract DeployBase is Script {
                 lastProcessingRefSlot: _refSlotFromEpoch(INITIALIZATION_EPOCH)
             });
 
+            CSVerifier verifier = new CSVerifier({
+                slotsPerEpoch: uint64(SLOTS_PER_EPOCH),
+                // NOTE: Deneb fork gIndexes. Should be updated according to `VERIFIER_SUPPORTED_EPOCH` fork epoch if needed
+                gIHistoricalSummaries: pack(0x3b, 5),
+                gIFirstWithdrawal: pack(0xe1c0, 4),
+                gIFirstValidator: pack(0x560000000000, 40),
+                firstSupportedSlot: Slot.wrap(
+                    uint64(VERIFIER_SUPPORTED_EPOCH * SLOTS_PER_EPOCH)
+                )
+            });
+            verifier.initialize(address(locator), address(csm));
+
             JsonObj memory deployJson = Json.newObj();
             deployJson.set("CSModule", address(csm));
             deployJson.set("CSAccounting", address(accounting));
             deployJson.set("CSFeeOracle", address(oracle));
             deployJson.set("CSFeeDistributor", address(feeDistributor));
             deployJson.set("HashConsensus", address(hashConsensus));
+            deployJson.set("CSVerifier", address(verifier));
             vm.writeJson(deployJson.str, _deployJsonFilename());
         }
 
