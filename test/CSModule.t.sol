@@ -1157,8 +1157,16 @@ contract CsmVetKeys is CSMCommon {
 contract CsmQueueOps is CSMCommon {
     uint256 internal constant LOOKUP_DEPTH = 150; // derived from maxDepositsPerBlock
 
+    function _isQueueDirty(uint256 maxItems) internal returns (bool) {
+        // XXX: Mimic a **eth_call** to avoid state changes.
+        uint256 snapshot = vm.snapshot();
+        uint256 toRemove = csm.cleanDepositQueue(maxItems);
+        vm.revertTo(snapshot);
+        return toRemove > 0;
+    }
+
     function test_emptyQueueIsClean() public {
-        bool isDirty = csm.isQueueDirty(LOOKUP_DEPTH);
+        bool isDirty = _isQueueDirty(LOOKUP_DEPTH);
         assertFalse(isDirty, "queue should be clean");
     }
 
@@ -1166,51 +1174,73 @@ contract CsmQueueOps is CSMCommon {
         uint256 noId = createNodeOperator({ keysCount: 2 });
         unvetKeys({ noId: noId, to: 0 }); // One of the ways to set `depositableValidatorsCount` to 0.
 
-        bool isDirty = csm.isQueueDirty(LOOKUP_DEPTH);
+        bool isDirty = _isQueueDirty(LOOKUP_DEPTH);
+        assertTrue(isDirty, "queue should be dirty");
+    }
+
+    function test_queueIsDirty_WhenHasBatchWithNoDepositableKeys() public {
+        uint256 noId = createNodeOperator({ keysCount: 2 });
+        uploadMoreKeys(noId, 1);
+        unvetKeys({ noId: noId, to: 2 });
+        bool isDirty = _isQueueDirty(LOOKUP_DEPTH);
         assertTrue(isDirty, "queue should be dirty");
     }
 
     function test_queueIsClean_AfterCleanup() public {
         uint256 noId = createNodeOperator({ keysCount: 2 });
-        unvetKeys({ noId: noId, to: 0 }); // One of the ways to set `depositableValidatorsCount` to 0.
+        uploadMoreKeys(noId, 1);
+        unvetKeys({ noId: noId, to: 2 });
 
-        csm.cleanDepositQueue(LOOKUP_DEPTH);
+        uint256 toRemove = csm.cleanDepositQueue(LOOKUP_DEPTH);
+        assertEq(toRemove, 1, "should remove 1 batch");
 
-        bool isDirty = csm.isQueueDirty(LOOKUP_DEPTH);
+        bool isDirty = _isQueueDirty(LOOKUP_DEPTH);
         assertFalse(isDirty, "queue should be clean");
     }
 
     function test_cleanup_emptyQueue() public {
-        csm.cleanDepositQueue(LOOKUP_DEPTH);
         _assertQueueIsEmpty();
 
-        bool isDirty = csm.isQueueDirty(LOOKUP_DEPTH);
-        assertFalse(isDirty, "queue should be clean");
+        uint256 toRemove = csm.cleanDepositQueue(LOOKUP_DEPTH);
+        assertEq(toRemove, 0, "queue should be clean");
     }
 
     function test_cleanup_WhenMultipleInvalidBatchesInRow() public {
         createNodeOperator({ keysCount: 3 });
-        createNodeOperator({ keysCount: 2 });
+        createNodeOperator({ keysCount: 5 });
         createNodeOperator({ keysCount: 1 });
 
-        unvetKeys({ noId: 1, to: 0 });
+        uploadMoreKeys(1, 2);
+
+        unvetKeys({ noId: 1, to: 2 });
         unvetKeys({ noId: 2, to: 0 });
 
-        csm.cleanDepositQueue(LOOKUP_DEPTH);
+        uint256 toRemove;
+
+        // Operator noId=1 has 1 dangling batch after unvetting.
+        // Operator noId=2 is unvetted.
+        toRemove = csm.cleanDepositQueue(LOOKUP_DEPTH);
+        assertEq(toRemove, 2, "should remove 2 batch");
+
         // let's check the state of the queue
-        BatchInfo[] memory exp = new BatchInfo[](1);
+        BatchInfo[] memory exp = new BatchInfo[](2);
         exp[0] = BatchInfo({ nodeOperatorId: 0, count: 3 });
+        exp[1] = BatchInfo({ nodeOperatorId: 1, count: 5 });
         _assertQueueState(exp);
 
-        bool isDirty = csm.isQueueDirty(LOOKUP_DEPTH);
-        assertFalse(isDirty, "queue should be clean");
+        toRemove = csm.cleanDepositQueue(LOOKUP_DEPTH);
+        assertEq(toRemove, 0, "queue should be clean");
     }
 
     function test_cleanup_WhenAllBatchesInvalid() public {
         createNodeOperator({ keysCount: 2 });
+        createNodeOperator({ keysCount: 2 });
         unvetKeys({ noId: 0, to: 0 });
+        unvetKeys({ noId: 1, to: 0 });
 
-        csm.cleanDepositQueue(LOOKUP_DEPTH);
+        uint256 toRemove = csm.cleanDepositQueue(LOOKUP_DEPTH);
+        assertEq(toRemove, 2, "should remove all batches");
+
         _assertQueueIsEmpty();
     }
 

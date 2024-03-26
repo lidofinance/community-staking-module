@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 // solhint-disable-next-line one-contract-per-file
@@ -14,6 +14,7 @@ import { ICSModule } from "./interfaces/ICSModule.sol";
 
 import { QueueLib, Batch, createBatch } from "./lib/QueueLib.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
+import { TransientUintUintMap } from "./lib/TransientUintUintMapLib.sol";
 
 import { SigningKeys } from "./lib/SigningKeys.sol";
 
@@ -200,6 +201,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     uint256 private _totalExitedValidators;
     uint256 private _totalAddedValidators;
     uint256 private _depositableValidatorsCount;
+
+    TransientUintUintMap private _queueLookup;
 
     constructor(
         bytes32 moduleType,
@@ -1399,10 +1402,13 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         _incrementModuleNonce();
     }
 
-    /// @notice Cleans the deposit queue from batches of fully non-depositable node operators
-    /// (depositableValidators == 0).
-    /// @param maxItems how many queue items to review.
-    function cleanDepositQueue(uint256 maxItems) external {
+    /// @notice Cleans the deposit queue from batches with no depositable keys.
+    /// @dev Use **eth_call** to check how many items will be removed.
+    /// @param maxItems How many queue items to review.
+    /// @return toRemove How many items were removed from the queue.
+    function cleanDepositQueue(
+        uint256 maxItems
+    ) external returns (uint256 toRemove) {
         if (maxItems == 0) revert QueueLookupNoLimit();
 
         Batch prev;
@@ -1411,15 +1417,21 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         uint128 head = queue.head;
         uint128 curr = head;
 
+        // Make sure we don't have any leftovers from the previous call.
+        _queueLookup.clear();
+
         for (uint256 i; i < maxItems; ++i) {
             Batch item = queue.queue[curr];
             if (item.isNil()) {
-                return;
+                return toRemove;
             }
 
             uint256 noId = item.noId();
             NodeOperator storage no = _nodeOperators[noId];
-            if (no.depositableValidatorsCount == 0) {
+            uint256 enqueuedSoFar = _queueLookup.get(noId);
+            if (enqueuedSoFar >= no.depositableValidatorsCount) {
+                // NOTE: Since we reached that point there's no way for a node operator to have a depositable batch
+                // later in the queue, and hence we don't update _queueLookup for the node operator.
                 if (curr == head) {
                     queue.dequeue();
                     head = queue.head;
@@ -1429,9 +1441,14 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
                     prev = queue.remove(indexOfPrev, prev, item);
                 }
 
-                uint256 keysInBatch = item.keys();
-                no.enqueuedCount -= keysInBatch;
+                unchecked {
+                    // We assume that the invariant `enqueuedCount` >= `keys` is kept.
+                    uint256 keysInBatch = item.keys();
+                    no.enqueuedCount -= keysInBatch;
+                    ++toRemove;
+                }
             } else {
+                _queueLookup.add(noId, item.keys());
                 indexOfPrev = curr;
                 prev = item;
             }
@@ -1444,32 +1461,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     /// @param index Index of a queue item.
     function depositQueueItem(uint256 index) public view returns (Batch item) {
         return queue.at(index);
-    }
-
-    /// @notice Checks if the deposit queue is dirty (a dumb way).
-    /// @dev It is dirty if it contains a batch of a node operator with no keys to deposit.
-    /// @param maxItems how many queue items to review.
-    /// @return bool is queue dirty
-    function isQueueDirty(uint256 maxItems) external view returns (bool) {
-        if (maxItems == 0) revert QueueLookupNoLimit();
-
-        uint128 index = queue.head;
-        for (uint256 i; i < maxItems; ++i) {
-            Batch item = queue.queue[index];
-            // Check for empty queue.
-            if (item.isNil()) {
-                return false;
-            }
-
-            uint256 noId = item.noId();
-            if (_nodeOperators[noId].depositableValidatorsCount == 0) {
-                return true;
-            }
-
-            index = item.next();
-        }
-
-        return false;
     }
 
     function _incrementModuleNonce() internal {
