@@ -16,6 +16,8 @@ contract DeployGoerli is DeployBase {
             32,
             // clGenesisTime
             1614588812,
+            // Verifier supported epoch. Deneb fork epoch so far
+            231680,
             // initializationEpoch
             215502,
             // lidoLocatorAddress
