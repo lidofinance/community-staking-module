@@ -2903,8 +2903,10 @@ contract CSMDepositableValidatorsCount is CSMCommon {
     function test_depositableValidatorsCountChanges_OnDeposit() public {
         uint256 noId = createNodeOperator(7);
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 7);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 7);
         csm.obtainDepositData(3, "");
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 4);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 4);
     }
 
     function test_depositableValidatorsCountChanges_OnExited() public {
@@ -2917,8 +2919,10 @@ contract CSMDepositableValidatorsCount is CSMCommon {
             targetLimit: 3
         });
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 0);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 0);
         setExited(noId, 4);
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 3);
     }
 
     function test_depositableValidatorsCountChanges_OnUnsafeUpdateValidators()
@@ -2933,6 +2937,7 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 7);
         csm.decreaseOperatorVettedKeys(UintArr(noId), UintArr(3));
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 3);
     }
 
     function test_depositableValidatorsCountChanges_OnInitialSlashing() public {
@@ -2942,6 +2947,7 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 1);
         csm.submitInitialSlashing(noId, 0); // The first key was slashed.
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 0);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 0);
     }
 
     function test_depositableValidatorsCountChanges_OnPenalize() public {
@@ -2950,6 +2956,7 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 7);
         csm.penalize(noId, BOND_SIZE * 3); // Penalty to unbond 3 validators.
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 4);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 4);
     }
 
     function test_depositableValidatorsCountChanges_OnWithdrawal() public {
@@ -2964,6 +2971,7 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 2);
         csm.submitWithdrawal(noId, 2, csm.DEPOSIT_SIZE() - BOND_SIZE); // Large CL balance drop, that doesn't change the unbonded count.
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 2);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 2);
     }
 
     function test_depositableValidatorsCountChanges_OnReportStealing() public {
@@ -2972,6 +2980,7 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3);
         csm.reportELRewardsStealingPenalty(noId, 0, (BOND_SIZE * 3) / 2); // Lock bond to unbond 2 validators.
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 1);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 1);
     }
 
     function test_depositableValidatorsCountChanges_OnReleaseStealingPenalty()
@@ -2987,6 +2996,7 @@ contract CSMDepositableValidatorsCount is CSMCommon {
             accounting.getLockedBondInfo(noId).amount
         );
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3); // Stealing fine is applied so
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 3);
     }
 
     function test_depositableValidatorsCountChanges_OnRemoveUnvetted() public {
@@ -2996,5 +3006,6 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         vm.prank(nodeOperator);
         csm.removeKeys(noId, 3, 1); // Removal charge is applied, hence one key is unbonded.
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 6);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 6);
     }
 }

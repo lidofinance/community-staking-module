@@ -1379,7 +1379,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
 
                 // It's impossible in practice to reach the limit of these variables.
                 loadedKeysCount += keysCount;
-                _totalDepositedValidators += keysCount;
                 no.totalDepositedKeys += keysCount;
 
                 emit DepositedSigningKeysCountChanged(
@@ -1399,6 +1398,12 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         if (loadedKeysCount != depositsCount) {
             revert NotEnoughKeys();
         }
+
+        unchecked {
+            _depositableValidatorsCount -= depositsCount;
+            _totalDepositedValidators += depositsCount;
+        }
+
         _incrementModuleNonce();
     }
 
