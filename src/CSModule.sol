@@ -98,7 +98,7 @@ contract CSModuleBase {
 
     event StakingModuleTypeSet(bytes32 moduleType);
     event PublicReleaseTimestampSet(uint256 timestamp);
-    event RemovalChargeSet(uint256 fine);
+    event RemovalChargeSet(uint256 amount);
 
     event RemovalChargeApplied(uint256 indexed nodeOperatorId, uint256 amount);
     event ELRewardsStealingPenaltyReported(
@@ -553,7 +553,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         );
     }
 
-    /// @notice Notify the module about the opetor's bond change. The hook call is optional.
+    /// @notice Notify the module about the operator's bond change.
     function onBondChanged(uint256 nodeOperatorId) external {
         _updateDepositableValidatorsCount(nodeOperatorId);
         _normalizeQueue(nodeOperatorId);
