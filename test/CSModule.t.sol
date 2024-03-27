@@ -2273,7 +2273,6 @@ contract CsmSubmitInitialSlashing is CSMCommon {
     function test_submitInitialSlashing_outOfBond() public {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
-        csm.vetKeys(noId, 1);
         csm.obtainDepositData(1, "");
 
         csm.penalize(noId, csm.DEPOSIT_SIZE() - csm.INITIAL_SLASHING_PENALTY());
