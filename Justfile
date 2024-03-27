@@ -42,11 +42,11 @@ test-all:
 test *args:
 	forge test {{args}}
 
-test-unit:
-	forge test --no-match-path '*test/integration*' -vvv
+test-unit *args:
+	forge test --no-match-path '*test/integration*' -vvv {{args}}
 
-test-integration:
-	forge test --match-path '*test/integration*' -vvv
+test-integration *args:
+	forge test --match-path '*test/integration*' -vvv {{args}}
 
 coverage:
 	forge coverage

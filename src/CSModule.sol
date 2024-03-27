@@ -16,6 +16,7 @@ import { ICSModule } from "./interfaces/ICSModule.sol";
 import { QueueLib } from "./lib/QueueLib.sol";
 import { Batch } from "./lib/Batch.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
+import { NOAddresses } from "./lib/NOAddresses.sol";
 
 import { SigningKeys } from "./lib/SigningKeys.sol";
 
@@ -41,25 +42,6 @@ struct NodeOperator {
 
 contract CSModuleBase {
     event NodeOperatorAdded(uint256 indexed nodeOperatorId, address from);
-    event NodeOperatorManagerAddressChangeProposed(
-        uint256 indexed nodeOperatorId,
-        address proposedAddress
-    );
-    event NodeOperatorRewardAddressChangeProposed(
-        uint256 indexed nodeOperatorId,
-        address proposedAddress
-    );
-    event NodeOperatorRewardAddressChanged(
-        uint256 indexed nodeOperatorId,
-        address oldAddress,
-        address newAddress
-    );
-    event NodeOperatorManagerAddressChanged(
-        uint256 indexed nodeOperatorId,
-        address oldAddress,
-        address newAddress
-    );
-
     event VettedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
         uint256 approvedValidatorsCount
@@ -114,11 +96,7 @@ contract CSModuleBase {
 
     error NodeOperatorDoesNotExist();
     error SenderIsNotManagerAddress();
-    error SenderIsNotRewardAddress();
-    error SenderIsNotProposedAddress();
     error SenderIsNotManagerOrKeyValidator();
-    error SameAddress();
-    error AlreadyProposed();
     error InvalidVetKeysPointer();
     error TargetLimitExceeded();
     error StuckKeysPresent();
@@ -574,16 +552,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         uint256 nodeOperatorId,
         address proposedAddress
     ) external onlyExistingNodeOperator(nodeOperatorId) {
-        onlyNodeOperatorManager(nodeOperatorId);
-        if (_nodeOperators[nodeOperatorId].managerAddress == proposedAddress)
-            revert SameAddress();
-        if (
-            _nodeOperators[nodeOperatorId].proposedManagerAddress ==
-            proposedAddress
-        ) revert AlreadyProposed();
-
-        _nodeOperators[nodeOperatorId].proposedManagerAddress = proposedAddress;
-        emit NodeOperatorManagerAddressChangeProposed(
+        NOAddresses.proposeNodeOperatorManagerAddressChange(
+            _nodeOperators,
             nodeOperatorId,
             proposedAddress
         );
@@ -594,15 +564,9 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     function confirmNodeOperatorManagerAddressChange(
         uint256 nodeOperatorId
     ) external onlyExistingNodeOperator(nodeOperatorId) {
-        if (_nodeOperators[nodeOperatorId].proposedManagerAddress != msg.sender)
-            revert SenderIsNotProposedAddress();
-        address oldAddress = _nodeOperators[nodeOperatorId].managerAddress;
-        _nodeOperators[nodeOperatorId].managerAddress = msg.sender;
-        _nodeOperators[nodeOperatorId].proposedManagerAddress = address(0);
-        emit NodeOperatorManagerAddressChanged(
-            nodeOperatorId,
-            oldAddress,
-            msg.sender
+        NOAddresses.confirmNodeOperatorManagerAddressChange(
+            _nodeOperators,
+            nodeOperatorId
         );
     }
 
@@ -613,16 +577,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         uint256 nodeOperatorId,
         address proposedAddress
     ) external onlyExistingNodeOperator(nodeOperatorId) {
-        onlyNodeOperatorRewardAddress(nodeOperatorId);
-        if (_nodeOperators[nodeOperatorId].rewardAddress == proposedAddress)
-            revert SameAddress();
-        if (
-            _nodeOperators[nodeOperatorId].proposedRewardAddress ==
-            proposedAddress
-        ) revert AlreadyProposed();
-
-        _nodeOperators[nodeOperatorId].proposedRewardAddress = proposedAddress;
-        emit NodeOperatorRewardAddressChangeProposed(
+        NOAddresses.proposeNodeOperatorRewardAddressChange(
+            _nodeOperators,
             nodeOperatorId,
             proposedAddress
         );
@@ -633,15 +589,9 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     function confirmNodeOperatorRewardAddressChange(
         uint256 nodeOperatorId
     ) external onlyExistingNodeOperator(nodeOperatorId) {
-        if (_nodeOperators[nodeOperatorId].proposedRewardAddress != msg.sender)
-            revert SenderIsNotProposedAddress();
-        address oldAddress = _nodeOperators[nodeOperatorId].rewardAddress;
-        _nodeOperators[nodeOperatorId].rewardAddress = msg.sender;
-        _nodeOperators[nodeOperatorId].proposedRewardAddress = address(0);
-        emit NodeOperatorRewardAddressChanged(
-            nodeOperatorId,
-            oldAddress,
-            msg.sender
+        NOAddresses.confirmNodeOperatorRewardAddressChange(
+            _nodeOperators,
+            nodeOperatorId
         );
     }
 
@@ -650,18 +600,9 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     function resetNodeOperatorManagerAddress(
         uint256 nodeOperatorId
     ) external onlyExistingNodeOperator(nodeOperatorId) {
-        onlyNodeOperatorRewardAddress(nodeOperatorId);
-        if (
-            _nodeOperators[nodeOperatorId].managerAddress ==
-            _nodeOperators[nodeOperatorId].rewardAddress
-        ) revert SameAddress();
-        address previousManagerAddress = _nodeOperators[nodeOperatorId]
-            .managerAddress;
-        _nodeOperators[nodeOperatorId].managerAddress = msg.sender;
-        emit NodeOperatorManagerAddressChanged(
-            nodeOperatorId,
-            previousManagerAddress,
-            _nodeOperators[nodeOperatorId].rewardAddress
+        NOAddresses.resetNodeOperatorManagerAddress(
+            _nodeOperators,
+            nodeOperatorId
         );
     }
 
@@ -1587,11 +1528,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     function onlyNodeOperatorManager(uint256 nodeOperatorId) internal {
         if (_nodeOperators[nodeOperatorId].managerAddress != msg.sender)
             revert SenderIsNotManagerAddress();
-    }
-
-    function onlyNodeOperatorRewardAddress(uint256 nodeOperatorId) internal {
-        if (_nodeOperators[nodeOperatorId].rewardAddress != msg.sender)
-            revert SenderIsNotRewardAddress();
     }
 
     function onlyKeyValidatorOrNodeOperatorManager(
