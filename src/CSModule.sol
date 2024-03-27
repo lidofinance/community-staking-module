@@ -1,11 +1,10 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 // solhint-disable-next-line one-contract-per-file
 pragma solidity 0.8.24;
 
 import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 
@@ -13,9 +12,9 @@ import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSEarlyAdoption } from "./interfaces/ICSEarlyAdoption.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
 
-import { QueueLib } from "./lib/QueueLib.sol";
-import { Batch } from "./lib/Batch.sol";
+import { QueueLib, Batch, createBatch } from "./lib/QueueLib.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
+import { TransientUintUintMap } from "./lib/TransientUintUintMapLib.sol";
 import { NOAddresses } from "./lib/NOAddresses.sol";
 
 import { SigningKeys } from "./lib/SigningKeys.sol";
@@ -37,7 +36,7 @@ struct NodeOperator {
     uint256 stuckValidatorsCount; // @dev both increased and decreased
     uint256 refundedValidatorsCount; // @dev only increased
     uint256 depositableValidatorsCount; // @dev any value
-    uint256 queueNonce;
+    uint256 enqueuedCount; // Tracks how many places are occupied by the node operator's keys in the queue.
 }
 
 contract CSModuleBase {
@@ -77,17 +76,13 @@ contract CSModuleBase {
         uint256 keyIndex
     );
 
-    event BatchEnqueued(
-        uint256 indexed nodeOperatorId,
-        uint256 startIndex,
-        uint256 count
-    );
+    event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
 
     event StakingModuleTypeSet(bytes32 moduleType);
     event PublicReleaseTimestampSet(uint256 timestamp);
-    event UnvettingFeeSet(uint256 unvettingFee);
+    event RemovalChargeSet(uint256 amount);
 
-    event UnvettingFeeApplied(uint256 indexed nodeOperatorId);
+    event RemovalChargeApplied(uint256 indexed nodeOperatorId, uint256 amount);
     event ELRewardsStealingPenaltyReported(
         uint256 indexed nodeOperatorId,
         uint256 proposedBlockNumber,
@@ -136,14 +131,10 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         keccak256("SET_EARLY_ADOPTION_ROLE"); // 0xe0d27b865f229f5162f7b9ae24065c2d5cdae1ed1eaabf46a5f7809b1edf2ec1
     bytes32 public constant SET_PUBLIC_RELEASE_TIMESTAMP_ROLE =
         keccak256("SET_PUBLIC_RELEASE_TIMESTAMP_ROLE"); // 0x66d6616db95aac3b33b9261e42ab01ad71f311cff562503c33c742c54f22bbcd
-    bytes32 public constant SET_UNVETTING_FEE_ROLE =
-        keccak256("SET_UNVETTING_FEE"); // 0x19583bfff685c0ba70886aba1270ef3f5606d5ed3b3d0b6b804dba345609a0e1
+    bytes32 public constant SET_REMOVAL_CHARGE_ROLE =
+        keccak256("SET_REMOVAL_CHARGE_ROLE"); // 0xec192e8f5533ece8d0718d6180775a3e45c9499f95d7b1b0d2858b2c536b4d40
     bytes32 public constant STAKING_ROUTER_ROLE =
         keccak256("STAKING_ROUTER_ROLE"); // 0xbb75b874360e0bfd87f964eadd8276d8efb7c942134fc329b513032d0803e0c6
-    bytes32 public constant KEY_VALIDATOR_ROLE =
-        keccak256("KEY_VALIDATOR_ROLE"); // 0xa0824e7cf56ba8c79484f0a6a59c3f90d48851a099bbbbf4d2472b7bf6220f27
-    bytes32 public constant UNSAFE_UNVET_KEYS_ROLE =
-        keccak256("UNSAFE_UNVET_KEYS_ROLE"); // 0x9351ec2dcbecbf4a29dae7d2da52f70fb20633b665ba0769a976ea50f6266c3e
     bytes32 public constant REPORT_EL_REWARDS_STEALING_PENALTY_ROLE =
         keccak256("REPORT_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0x59911a6aa08a72fe3824aec4500dc42335c6d0702b6d5c5c72ceb265a0de9302
     bytes32 public constant SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE =
@@ -169,7 +160,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     uint256 private immutable TEMP_METHODS_EXPIRE_TIME;
 
     uint256 public publicReleaseTimestamp;
-    uint256 public unvettingFee;
+    uint256 public removalCharge;
     QueueLib.Queue public queue;
 
     ICSAccounting public accounting;
@@ -188,6 +179,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     uint256 private _totalExitedValidators;
     uint256 private _totalAddedValidators;
     uint256 private _depositableValidatorsCount;
+
+    TransientUintUintMap private _queueLookup;
 
     constructor(
         bytes32 moduleType,
@@ -244,13 +237,13 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         emit PublicReleaseTimestampSet(timestamp);
     }
 
-    /// @notice Sets the unvetting fee
-    /// @param _unvettingFee Amount of wei to be charged for unvetting in some cases
-    function setUnvettingFee(
-        uint256 _unvettingFee
-    ) external onlyRole(SET_UNVETTING_FEE_ROLE) {
-        unvettingFee = _unvettingFee;
-        emit UnvettingFeeSet(_unvettingFee);
+    /// @notice Sets the key deletion fine
+    /// @param amount Amount of wei to be charged for removing a single key.
+    function setRemovalCharge(
+        uint256 amount
+    ) external onlyRole(SET_REMOVAL_CHARGE_ROLE) {
+        removalCharge = amount;
+        emit RemovalChargeSet(amount);
     }
 
     /// @notice Gets the module type
@@ -289,21 +282,21 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     ) external payable whenResumed {
         // TODO: sanity checks
 
-        uint256 id = _createNodeOperator();
-        _processEarlyAdoption(id, eaProof);
+        uint256 nodeOperatorId = _createNodeOperator();
+        _processEarlyAdoption(nodeOperatorId, eaProof);
 
         if (
             msg.value !=
             accounting.getBondAmountByKeysCount(
                 keysCount,
-                accounting.getBondCurve(id)
+                accounting.getBondCurve(nodeOperatorId)
             )
         ) {
             revert InvalidAmount();
         }
 
-        accounting.depositETH{ value: msg.value }(msg.sender, id);
-        _addSigningKeys(id, keysCount, publicKeys, signatures);
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
+        accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
     }
 
     /// @notice Adds a new node operator with stETH bond
@@ -318,19 +311,18 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 id = _createNodeOperator();
-        _processEarlyAdoption(id, eaProof);
+        uint256 nodeOperatorId = _createNodeOperator();
+        _processEarlyAdoption(nodeOperatorId, eaProof);
 
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
         accounting.depositStETH(
             msg.sender,
-            id,
+            nodeOperatorId,
             accounting.getBondAmountByKeysCount(
                 keysCount,
-                accounting.getBondCurve(id)
+                accounting.getBondCurve(nodeOperatorId)
             )
         );
-
-        _addSigningKeys(id, keysCount, publicKeys, signatures);
     }
 
     /// @notice Adds a new node operator with permit to use stETH as bond
@@ -347,20 +339,19 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 id = _createNodeOperator();
-        _processEarlyAdoption(id, eaProof);
+        uint256 nodeOperatorId = _createNodeOperator();
+        _processEarlyAdoption(nodeOperatorId, eaProof);
 
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
         accounting.depositStETHWithPermit(
             msg.sender,
-            id,
+            nodeOperatorId,
             accounting.getBondAmountByKeysCount(
                 keysCount,
-                accounting.getBondCurve(id)
+                accounting.getBondCurve(nodeOperatorId)
             ),
             permit
         );
-
-        _addSigningKeys(id, keysCount, publicKeys, signatures);
     }
 
     /// @notice Adds a new node operator with wstETH bond
@@ -375,19 +366,18 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 id = _createNodeOperator();
-        _processEarlyAdoption(id, eaProof);
+        uint256 nodeOperatorId = _createNodeOperator();
+        _processEarlyAdoption(nodeOperatorId, eaProof);
 
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
         accounting.depositWstETH(
             msg.sender,
-            id,
+            nodeOperatorId,
             accounting.getBondAmountByKeysCountWstETH(
                 keysCount,
-                accounting.getBondCurve(id)
+                accounting.getBondCurve(nodeOperatorId)
             )
         );
-
-        _addSigningKeys(id, keysCount, publicKeys, signatures);
     }
 
     /// @notice Adds a new node operator with permit to use wstETH as bond
@@ -404,20 +394,19 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 id = _createNodeOperator();
-        _processEarlyAdoption(id, eaProof);
+        uint256 nodeOperatorId = _createNodeOperator();
+        _processEarlyAdoption(nodeOperatorId, eaProof);
 
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
         accounting.depositWstETHWithPermit(
             msg.sender,
-            id,
+            nodeOperatorId,
             accounting.getBondAmountByKeysCountWstETH(
                 keysCount,
-                accounting.getBondCurve(id)
+                accounting.getBondCurve(nodeOperatorId)
             ),
             permit
         );
-
-        _addSigningKeys(id, keysCount, publicKeys, signatures);
     }
 
     /// @notice Adds a new keys to the node operator with ETH bond
@@ -440,9 +429,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             revert InvalidAmount();
         }
 
-        accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
-
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
+        accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
     }
 
     /// @notice Adds a new keys to the node operator with stETH bond
@@ -458,13 +446,12 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     ) external whenResumed {
         // TODO: sanity checks
 
-        accounting.depositStETH(
-            msg.sender,
+        uint256 amount = accounting.getRequiredBondForNextKeys(
             nodeOperatorId,
-            accounting.getRequiredBondForNextKeys(nodeOperatorId, keysCount)
+            keysCount
         );
-
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
+        accounting.depositStETH(msg.sender, nodeOperatorId, amount);
     }
 
     /// @notice Adds a new keys to the node operator with permit to use stETH as bond
@@ -482,14 +469,17 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     ) external whenResumed {
         // TODO: sanity checks
 
+        uint256 amount = accounting.getRequiredBondForNextKeys(
+            nodeOperatorId,
+            keysCount
+        );
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
         accounting.depositStETHWithPermit(
             msg.sender,
             nodeOperatorId,
-            accounting.getRequiredBondForNextKeys(nodeOperatorId, keysCount),
+            amount,
             permit
         );
-
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
     }
 
     /// @notice Adds a new keys to the node operator with wstETH bond
@@ -505,16 +495,12 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     ) external whenResumed {
         // TODO: sanity checks
 
-        accounting.depositWstETH(
-            msg.sender,
+        uint256 amount = accounting.getRequiredBondForNextKeysWstETH(
             nodeOperatorId,
-            accounting.getRequiredBondForNextKeysWstETH(
-                nodeOperatorId,
-                keysCount
-            )
+            keysCount
         );
-
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
+        accounting.depositWstETH(msg.sender, nodeOperatorId, amount);
     }
 
     /// @notice Adds a new keys to the node operator with permit to use wstETH as bond
@@ -532,17 +518,23 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     ) external whenResumed {
         // TODO: sanity checks
 
+        uint256 amount = accounting.getRequiredBondForNextKeysWstETH(
+            nodeOperatorId,
+            keysCount
+        );
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
         accounting.depositWstETHWithPermit(
             msg.sender,
             nodeOperatorId,
-            accounting.getRequiredBondForNextKeysWstETH(
-                nodeOperatorId,
-                keysCount
-            ),
+            amount,
             permit
         );
+    }
 
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
+    /// @notice Notify the module about the operator's bond change.
+    function onBondChanged(uint256 nodeOperatorId) external {
+        _updateDepositableValidatorsCount(nodeOperatorId);
+        _normalizeQueue(nodeOperatorId);
     }
 
     /// @notice Proposes a new manager address for the node operator
@@ -622,6 +614,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         info.totalWithdrawnValidators = no.totalWithdrawnKeys;
         info.totalAddedValidators = no.totalAddedKeys;
         info.totalDepositedValidators = no.totalDepositedKeys;
+        info.enqueuedCount = no.enqueuedCount;
         return info;
     }
 
@@ -741,13 +734,28 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
 
         uint256 newCount = no.totalVettedKeys - no.totalDepositedKeys;
         if (no.isTargetLimitActive) {
-            uint256 activeKeys = no.totalDepositedKeys - no.totalExitedKeys;
+            uint256 activeKeys = no.totalDepositedKeys - no.totalWithdrawnKeys;
             newCount = Math.min(
                 no.targetLimit > activeKeys ? no.targetLimit - activeKeys : 0,
                 newCount
             );
         }
+
+        // NOTE: Probably this check can be extracted to a separate function to reduce gas costs for the methods
+        // requiring only it.
+        uint256 unbondedKeys = accounting.getUnbondedKeysCount(nodeOperatorId);
+        if (unbondedKeys > newCount) {
+            newCount = 0;
+        } else {
+            newCount -= unbondedKeys;
+        }
+
+        if (no.stuckValidatorsCount != 0) {
+            newCount = 0;
+        }
+
         if (no.depositableValidatorsCount != newCount) {
+            // Updating the global counter.
             _depositableValidatorsCount =
                 _depositableValidatorsCount -
                 no.depositableValidatorsCount +
@@ -793,6 +801,16 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
                 nodeOperatorId,
                 stuckValidatorsCount
             );
+
+            if (stuckValidatorsCount > 0 && no.depositableValidatorsCount > 0) {
+                // INFO: The only consequence of stuck keys from the on-chain perspective is suspending deposits to the
+                // node operator. To do that, we set the depositableValidatorsCount to 0 for this node operator. Hence
+                // we can omit the call to the _updateDepositableValidatorsCount function here to save gas.
+                _depositableValidatorsCount -= no.depositableValidatorsCount;
+                no.depositableValidatorsCount = 0;
+            } else {
+                _updateDepositableValidatorsCount(nodeOperatorId);
+            }
         }
         _incrementModuleNonce();
     }
@@ -833,8 +851,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
                 exitedValidatorsCount -
                 no.totalExitedKeys;
             no.totalExitedKeys = exitedValidatorsCount;
-            _updateDepositableValidatorsCount(nodeOperatorId);
-
             emit ExitedSigningKeysCountChanged(
                 nodeOperatorId,
                 exitedValidatorsCount
@@ -845,10 +861,9 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
 
     /// @notice Updates refunded validators count by StakingRouter
     /// @param nodeOperatorId ID of the node operator
-    /// @param refundedValidatorsCount Count of refunded validators
     function updateRefundedValidatorsCount(
         uint256 nodeOperatorId,
-        uint256 refundedValidatorsCount
+        uint256 /* refundedValidatorsCount */
     )
         external
         onlyRole(STAKING_ROUTER_ROLE)
@@ -879,13 +894,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             no.targetLimit == targetLimit
         ) return;
 
-        if (
-            (!no.isTargetLimitActive && isTargetLimitActive) ||
-            targetLimit < no.targetLimit
-        ) {
-            _unvetKeys(nodeOperatorId);
-        }
-
         if (no.isTargetLimitActive != isTargetLimitActive) {
             no.isTargetLimitActive = isTargetLimitActive;
         }
@@ -900,6 +908,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             targetLimit
         );
 
+        _updateDepositableValidatorsCount(nodeOperatorId);
+        _normalizeQueue(nodeOperatorId);
         _incrementModuleNonce();
     }
 
@@ -912,13 +922,10 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     }
 
     /// @notice Unsafe updates of validators count for node operators by DAO
-    /// @param nodeOperatorId ID of the node operator
-    /// @param exitedValidatorsKeysCount Count of exited validators
-    /// @param stuckValidatorsKeysCount Count of stuck validators
     function unsafeUpdateValidatorsCount(
         uint256 nodeOperatorId,
-        uint256 exitedValidatorsKeysCount,
-        uint256 stuckValidatorsKeysCount
+        uint256 /* exitedValidatorsKeysCount */,
+        uint256 /* stuckValidatorsKeysCount */
     )
         external
         onlyRole(STAKING_ROUTER_ROLE)
@@ -929,81 +936,32 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         _incrementModuleNonce();
     }
 
-    /// @notice Vet keys. Called when key validator oracle checks the queue
-    /// @param nodeOperatorId ID of the node operator
-    /// @param vetKeysPointer Pointer to keys to vet
-    function vetKeys(
-        uint256 nodeOperatorId,
-        uint64 vetKeysPointer
-    )
-        external
-        onlyRole(KEY_VALIDATOR_ROLE)
-        onlyExistingNodeOperator(nodeOperatorId)
-    {
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+    function decreaseOperatorVettedKeys(
+        uint256[] calldata nodeOperatorIds,
+        uint256[] calldata vettedKeysByOperator
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        // INFO: It seems it does not  make sense to implement any sanity checks.
+        for (uint256 i; i < nodeOperatorIds.length; ++i) {
+            uint256 nodeOperatorId = nodeOperatorIds[i];
+            if (nodeOperatorId >= _nodeOperatorsCount) {
+                revert NodeOperatorDoesNotExist();
+            }
 
-        if (vetKeysPointer <= no.totalVettedKeys)
-            revert InvalidVetKeysPointer();
-        if (vetKeysPointer > no.totalAddedKeys) revert InvalidVetKeysPointer();
-        _validateVetKeys(nodeOperatorId, vetKeysPointer);
+            NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
-        uint64 count = SafeCast.toUint64(vetKeysPointer - no.totalVettedKeys);
-        uint64 start = SafeCast.toUint64(no.totalVettedKeys);
+            if (vettedKeysByOperator[i] >= no.totalVettedKeys) {
+                revert InvalidVetKeysPointer();
+            }
 
-        bytes32 pointer = Batch.serialize({
-            nodeOperatorId: SafeCast.toUint64(nodeOperatorId),
-            start: start,
-            count: count,
-            nonce: SafeCast.toUint64(no.queueNonce)
-        });
+            no.totalVettedKeys = vettedKeysByOperator[i];
+            emit VettedSigningKeysCountChanged(
+                nodeOperatorId,
+                vettedKeysByOperator[i]
+            );
 
-        no.totalVettedKeys = vetKeysPointer;
-        _updateDepositableValidatorsCount(nodeOperatorId);
-        queue.enqueue(pointer);
+            _updateDepositableValidatorsCount(nodeOperatorId);
+        }
 
-        emit BatchEnqueued(nodeOperatorId, start, count);
-        emit VettedSigningKeysCountChanged(nodeOperatorId, vetKeysPointer);
-
-        _incrementModuleNonce();
-    }
-
-    function _validateVetKeys(
-        uint256 nodeOperatorId,
-        uint64 vetKeysPointer
-    ) internal view {
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-
-        if (
-            no.isTargetLimitActive &&
-            vetKeysPointer > (no.totalExitedKeys + no.targetLimit)
-        ) revert TargetLimitExceeded();
-        if (no.stuckValidatorsCount > 0) revert StuckKeysPresent();
-        if (accounting.getUnbondedKeysCount(nodeOperatorId) > 0)
-            revert UnbondedKeysPresent();
-    }
-
-    /// @notice Unvets keys and charges fee. Called when key validator oracle checks the queue or manually by node operator manager
-    /// @param nodeOperatorId ID of the node operator
-    function unvetKeys(
-        uint256 nodeOperatorId
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
-        onlyKeyValidatorOrNodeOperatorManager(nodeOperatorId);
-        _unvetKeys(nodeOperatorId);
-        _applyUnvettingFee(nodeOperatorId);
-        _incrementModuleNonce();
-    }
-
-    /// @notice Unsafe unvetting of keys by DAO
-    /// @dev Doesn't charge fee
-    /// @param nodeOperatorId ID of the node operator
-    function unsafeUnvetKeys(
-        uint256 nodeOperatorId
-    )
-        external
-        onlyRole(UNSAFE_UNVET_KEYS_ROLE)
-        onlyExistingNodeOperator(nodeOperatorId)
-    {
-        _unvetKeys(nodeOperatorId);
         _incrementModuleNonce();
     }
 
@@ -1016,12 +974,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         uint256 keysCount
     ) external onlyExistingNodeOperator(nodeOperatorId) {
         onlyNodeOperatorManager(nodeOperatorId);
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (no.totalVettedKeys > startIndex) {
-            _unvetKeys(nodeOperatorId);
-            _applyUnvettingFee(nodeOperatorId);
-        }
-
         _removeSigningKeys(nodeOperatorId, startIndex, keysCount);
     }
 
@@ -1033,41 +985,39 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         uint256 keysCount
     ) external onlyExistingNodeOperator(nodeOperatorId) {
         onlyNodeOperatorManager(nodeOperatorId);
-        /// TODO: implement
-        /// Mark validators for priority ejection
-        /// Confiscate ejection fee from the bond
+        // TODO: implement
+        // Mark validators for priority ejection
+        // Confiscate ejection fee from the bond
     }
 
-    /// @dev NB! doesn't increment module nonce
-    function _unvetKeys(uint256 nodeOperatorId) internal {
+    function normalizeQueue(
+        uint256 nodeOperatorId
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        onlyNodeOperatorManager(nodeOperatorId);
+        _normalizeQueue(nodeOperatorId);
+    }
+
+    function _normalizeQueue(uint256 nodeOperatorId) internal {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        no.totalVettedKeys = no.totalDepositedKeys;
-        no.queueNonce++;
-        _updateDepositableValidatorsCount(nodeOperatorId);
-        emit VettedSigningKeysCountChanged(nodeOperatorId, no.totalVettedKeys);
-    }
+        uint256 depositable = no.depositableValidatorsCount;
+        uint256 enqueued = no.enqueuedCount;
 
-    function _checkForUnbondedKeys(uint256 nodeOperatorId) internal {
-        if (accounting.getUnbondedKeysCount(nodeOperatorId) > 0) {
-            _unvetKeys(nodeOperatorId);
-            _incrementModuleNonce();
+        if (enqueued < depositable) {
+            unchecked {
+                uint256 count = depositable - enqueued;
+                Batch item = createBatch(nodeOperatorId, count);
+                no.enqueuedCount += count;
+                queue.enqueue(item);
+                emit BatchEnqueued(nodeOperatorId, count);
+            }
         }
     }
 
-    /// @notice any penalty might cause bond out, so we need to clear any benefits from the node operator
+    /// @notice reset benefits for the Node Operator
     /// @param nodeOperatorId ID of the node operator
-    function _checkForOutOfBond(uint256 nodeOperatorId) internal {
-        // TODO: Should be done manually or automatically? Any penalty should reset bond curve or not?
-        if (accounting.getBondShares(nodeOperatorId) == 0) {
-            accounting.resetBondCurve(nodeOperatorId);
-        }
-    }
-
-    function _applyUnvettingFee(uint256 nodeOperatorId) internal {
-        accounting.chargeFee(nodeOperatorId, unvettingFee);
-        emit UnvettingFeeApplied(nodeOperatorId);
-
-        _checkForOutOfBond(nodeOperatorId);
+    function _resetBenefits(uint256 nodeOperatorId) internal {
+        accounting.resetBondCurve(nodeOperatorId);
+        _updateDepositableValidatorsCount(nodeOperatorId);
     }
 
     /// @notice Reports EL rewards stealing for the given node operator.
@@ -1095,7 +1045,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             amount + EL_REWARDS_STEALING_FINE
         );
 
-        _checkForUnbondedKeys(nodeOperatorId);
+        _updateDepositableValidatorsCount(nodeOperatorId);
     }
 
     /// @dev Should be called by the committee.
@@ -1108,8 +1058,10 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             uint256 nodeOperatorId = nodeOperatorIds[i];
             if (nodeOperatorId >= _nodeOperatorsCount)
                 revert NodeOperatorDoesNotExist();
-            accounting.settleLockedBondETH(nodeOperatorId);
-            _checkForOutOfBond(nodeOperatorId);
+            uint256 settled = accounting.settleLockedBondETH(nodeOperatorId);
+            if (settled > 0) {
+                _resetBenefits(nodeOperatorId);
+            }
         }
     }
 
@@ -1125,8 +1077,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             revert Expired();
         }
         accounting.penalize(nodeOperatorId, amount);
-        _checkForUnbondedKeys(nodeOperatorId);
-        _checkForOutOfBond(nodeOperatorId);
+        _resetBenefits(nodeOperatorId);
     }
 
     /// @notice Checks if the given node operators's key is proved as withdrawn.
@@ -1170,9 +1121,11 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         if (_isValidatorSlashed[pointer]) amount += INITIAL_SLASHING_PENALTY;
         if (amount < DEPOSIT_SIZE) {
             accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - amount);
-            _checkForUnbondedKeys(nodeOperatorId);
-            _checkForOutOfBond(nodeOperatorId);
         }
+
+        _updateDepositableValidatorsCount(nodeOperatorId);
+        _normalizeQueue(nodeOperatorId);
+        _incrementModuleNonce();
     }
 
     /// @notice Checks if the given node operators's key is proved as slashed.
@@ -1207,11 +1160,11 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             revert AlreadySubmitted();
         }
         _isValidatorSlashed[pointer] = true;
+        emit InitialSlashingSubmitted(nodeOperatorId, keyIndex);
 
         accounting.penalize(nodeOperatorId, INITIAL_SLASHING_PENALTY);
-        _checkForUnbondedKeys(nodeOperatorId);
-        _checkForOutOfBond(nodeOperatorId);
-        emit InitialSlashingSubmitted(nodeOperatorId, keyIndex);
+        _resetBenefits(nodeOperatorId);
+        _incrementModuleNonce();
     }
 
     /// @dev both nodeOperatorId and keyIndex are limited to uint64 by the contract.
@@ -1236,8 +1189,9 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         bytes calldata publicKeys,
         bytes calldata signatures
     ) internal {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
         // TODO: sanity checks
-        uint256 startIndex = _nodeOperators[nodeOperatorId].totalAddedKeys;
+        uint256 startIndex = no.totalAddedKeys;
         if (
             block.timestamp < publicReleaseTimestamp &&
             startIndex + keysCount > MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE
@@ -1256,11 +1210,18 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         );
 
         _totalAddedValidators += keysCount;
-        _nodeOperators[nodeOperatorId].totalAddedKeys += keysCount;
-        emit TotalSigningKeysCountChanged(
-            nodeOperatorId,
-            _nodeOperators[nodeOperatorId].totalAddedKeys
-        );
+
+        // Optimistic vetting takes place.
+        if (no.totalAddedKeys == no.totalVettedKeys) {
+            no.totalVettedKeys += keysCount;
+            emit VettedSigningKeysCountChanged(
+                nodeOperatorId,
+                no.totalVettedKeys
+            );
+        }
+
+        no.totalAddedKeys += keysCount;
+        emit TotalSigningKeysCountChanged(nodeOperatorId, no.totalAddedKeys);
 
         _incrementModuleNonce();
     }
@@ -1289,9 +1250,21 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             no.totalAddedKeys
         );
 
+        // We charge the node operator for the every removed key. It's motivated by the fact that the DAO should cleanup
+        // the queue from the empty batches of the node operator. It's possible to have multiple batches with only one
+        // key in it, so it means the DAO should have remove as much batches as keys removed in this case.
+        uint256 amountToCharge = removalCharge * keysCount;
+        accounting.chargeFee(nodeOperatorId, amountToCharge);
+        emit RemovalChargeApplied(nodeOperatorId, amountToCharge);
+
         no.totalAddedKeys = newTotalSigningKeys;
         emit TotalSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
 
+        no.totalVettedKeys = newTotalSigningKeys;
+        emit VettedSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
+
+        _updateDepositableValidatorsCount(nodeOperatorId);
+        _normalizeQueue(nodeOperatorId);
         _incrementModuleNonce();
     }
 
@@ -1312,185 +1285,142 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         uint256 depositsLeft = depositsCount;
         uint256 loadedKeysCount = 0;
 
-        for (bytes32 p = queue.peek(); !Batch.isNil(p); ) {
-            (
-                uint256 nodeOperatorId,
-                uint256 startIndex,
-                uint256 depositableKeysCount
-            ) = _depositableKeysInBatch(p);
+        for (Batch item = queue.peek(); !item.isNil(); item = queue.peek()) {
+            // NOTE: see the `enqueuedCount` note below.
+            // TODO: write invariant test for that.
+            unchecked {
+                uint256 noId = item.noId();
+                uint256 keysInBatch = item.keys();
+                NodeOperator storage no = _nodeOperators[noId];
 
-            uint256 keysCount = Math.min(depositsLeft, depositableKeysCount);
-            if (depositableKeysCount == keysCount) {
-                queue.dequeue();
+                uint256 keysCount = Math.min(
+                    Math.min(no.depositableValidatorsCount, keysInBatch),
+                    depositsLeft
+                );
+                // `depositsLeft` is non-zero at this point all the time, so the check `depositsLeft > keysCount`
+                // covers the case when no depositable keys on the node operator have been left.
+                if (depositsLeft > keysCount || keysCount == keysInBatch) {
+                    // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
+                    no.enqueuedCount -= keysInBatch;
+                    // We've consumed all the keys in the batch, so we dequeue it.
+                    queue.dequeue();
+                } else {
+                    // This branch covers the case when we stop in the middle of the batch.
+                    // We release the amount of keys consumed only, the rest will be kept.
+                    no.enqueuedCount -= keysCount;
+                    // NOTE: `keysInBatch` can't be less than `keysCount` at this point.
+                    // We update the batch with the remaining keys.
+                    item = item.setKeys(keysInBatch - keysCount);
+                    // Store the updated batch back to the queue.
+                    queue.queue[queue.head] = item;
+                }
+
+                if (keysCount == 0) {
+                    continue;
+                }
+
+                // solhint-disable-next-line func-named-parameters
+                SigningKeys.loadKeysSigs(
+                    SIGNING_KEYS_POSITION,
+                    noId,
+                    no.totalDepositedKeys,
+                    keysCount,
+                    publicKeys,
+                    signatures,
+                    loadedKeysCount
+                );
+
+                // It's impossible in practice to reach the limit of these variables.
+                loadedKeysCount += keysCount;
+                no.totalDepositedKeys += keysCount;
+
+                emit DepositedSigningKeysCountChanged(
+                    noId,
+                    no.totalDepositedKeys
+                );
+
+                // No need for `_updateDepositableValidatorsCount` call, we can update the number directly.
+                // `keysCount` is min of `depositableValidatorsCount` and `depositsLeft`.
+                no.depositableValidatorsCount -= keysCount;
+                depositsLeft -= keysCount;
+                if (depositsLeft == 0) {
+                    break;
+                }
             }
-
-            // solhint-disable-next-line func-named-parameters
-            SigningKeys.loadKeysSigs(
-                SIGNING_KEYS_POSITION,
-                nodeOperatorId,
-                startIndex,
-                keysCount,
-                publicKeys,
-                signatures,
-                loadedKeysCount
-            );
-            loadedKeysCount += keysCount;
-
-            _totalDepositedValidators += keysCount;
-            NodeOperator storage no = _nodeOperators[nodeOperatorId];
-            no.totalDepositedKeys += keysCount;
-            _updateDepositableValidatorsCount(nodeOperatorId);
-            // redundant check, enforced by _assertIsValidBatch
-            if (no.totalDepositedKeys > no.totalVettedKeys) {
-                revert TooManyKeys();
-            }
-
-            emit DepositedSigningKeysCountChanged(
-                nodeOperatorId,
-                no.totalDepositedKeys
-            );
-
-            depositsLeft = depositsLeft - keysCount;
-            if (depositsLeft == 0) {
-                break;
-            }
-
-            p = queue.peek();
         }
         if (loadedKeysCount != depositsCount) {
             revert NotEnoughKeys();
         }
+
+        unchecked {
+            _depositableValidatorsCount -= depositsCount;
+            _totalDepositedValidators += depositsCount;
+        }
+
         _incrementModuleNonce();
     }
 
-    function _depositableKeysInBatch(
-        bytes32 batch
-    )
-        internal
-        view
-        returns (
-            uint256 nodeOperatorId,
-            uint256 startIndex,
-            uint256 depositableKeysCount
-        )
-    {
-        uint256 start;
-        uint256 count;
-        uint256 nonce;
-
-        (nodeOperatorId, start, count, nonce) = Batch.deserialize(batch);
-
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        // solhint-disable-next-line func-named-parameters
-        _assertIsValidBatch(no, batch, start, count, nonce);
-
-        startIndex = Math.max(start, no.totalDepositedKeys);
-        depositableKeysCount = start + count - startIndex;
-    }
-
-    function _assertIsValidBatch(
-        NodeOperator storage no,
-        bytes32 batch,
-        uint256 start,
-        uint256 count,
-        uint256 nonce
-    ) internal view {
-        if (count == 0) revert QueueEmptyBatch();
-        if (nonce != no.queueNonce) revert QueueBatchInvalidNonce(batch);
-        if (start > no.totalDepositedKeys) revert QueueBatchInvalidStart(batch);
-        if (start + count > no.totalAddedKeys)
-            revert QueueBatchInvalidCount(batch);
-    }
-
-    /// @notice Cleans the deposit queue from invalid batches
-    /// @param maxItems Max count of items to clean
-    /// @param pointer Pointer to the first item to clean
-    /// @return pointer Pointer when cleaning is finished
+    /// @notice Cleans the deposit queue from batches with no depositable keys.
+    /// @dev Use **eth_call** to check how many items will be removed.
+    /// @param maxItems How many queue items to review.
+    /// @return toRemove How many items were removed from the queue.
     function cleanDepositQueue(
-        uint256 maxItems,
-        bytes32 pointer
-    ) external returns (bytes32) {
+        uint256 maxItems
+    ) external returns (uint256 toRemove) {
         if (maxItems == 0) revert QueueLookupNoLimit();
 
-        if (Batch.isNil(pointer)) {
-            pointer = queue.front;
-        }
+        Batch prev;
+        uint128 indexOfPrev;
 
-        for (uint256 i; i < maxItems; i++) {
-            bytes32 item = queue.at(pointer);
-            if (Batch.isNil(item)) {
-                break;
+        uint128 head = queue.head;
+        uint128 curr = head;
+
+        // Make sure we don't have any leftovers from the previous call.
+        _queueLookup.clear();
+
+        for (uint256 i; i < maxItems; ++i) {
+            Batch item = queue.queue[curr];
+            if (item.isNil()) {
+                return toRemove;
             }
 
-            (
-                uint256 nodeOperatorId,
-                uint256 start,
-                uint256 count,
-                uint256 nonce
-            ) = Batch.deserialize(item);
-            NodeOperator storage no = _nodeOperators[nodeOperatorId];
-            if (nonce != no.queueNonce) {
-                queue.remove(pointer, item);
-                continue;
+            uint256 noId = item.noId();
+            NodeOperator storage no = _nodeOperators[noId];
+            uint256 enqueuedSoFar = _queueLookup.get(noId);
+            if (enqueuedSoFar >= no.depositableValidatorsCount) {
+                // NOTE: Since we reached that point there's no way for a node operator to have a depositable batch
+                // later in the queue, and hence we don't update _queueLookup for the node operator.
+                if (curr == head) {
+                    queue.dequeue();
+                    head = queue.head;
+                } else {
+                    // There's no `prev` item while we call `dequeue`, and removing an item will keep the `prev` intact
+                    // other than changing its `next` field.
+                    prev = queue.remove(indexOfPrev, prev, item);
+                }
+
+                unchecked {
+                    // We assume that the invariant `enqueuedCount` >= `keys` is kept.
+                    uint256 keysInBatch = item.keys();
+                    no.enqueuedCount -= keysInBatch;
+                    ++toRemove;
+                }
+            } else {
+                _queueLookup.add(noId, item.keys());
+                indexOfPrev = curr;
+                prev = item;
             }
 
-            pointer = item;
+            curr = item.next();
         }
-
-        return pointer;
     }
 
-    /// @notice Gets the deposit queue
-    /// @param maxItems Max count of items to get
-    /// @param pointer Pointer to the first item to get
-    /// @return items Items in the queue
-    /// @return count Count of items in the queue
-    function depositQueue(
-        uint256 maxItems,
-        bytes32 pointer
-    ) external view returns (bytes32[] memory items, uint256 /* count */) {
-        if (maxItems == 0) revert QueueLookupNoLimit();
-
-        if (Batch.isNil(pointer)) {
-            pointer = queue.front;
-        }
-
-        return queue.list(pointer, maxItems);
-    }
-
-    /// @notice Checks if the deposit queue is dirty
-    /// @dev it is dirty if it contains a batch with unvetted keys
-    ///      or with invalid nonce
-    /// @return bool is queue dirty
-    /// @return bytes32 next pointer to start check from
-    function isQueueDirty(
-        uint256 maxItems,
-        bytes32 pointer
-    ) external view returns (bool, bytes32) {
-        if (maxItems == 0) revert QueueLookupNoLimit();
-
-        if (Batch.isNil(pointer)) {
-            pointer = queue.front;
-        }
-
-        for (uint256 i; i < maxItems; i++) {
-            bytes32 item = queue.at(pointer);
-            if (Batch.isNil(item)) {
-                break;
-            }
-
-            (uint256 nodeOperatorId, , , uint256 nonce) = Batch.deserialize(
-                item
-            );
-            NodeOperator storage no = _nodeOperators[nodeOperatorId];
-            if (nonce != no.queueNonce) {
-                return (true, pointer);
-            }
-
-            pointer = item;
-        }
-
-        return (false, pointer);
+    /// @notice Gets the deposit queue item by an index.
+    /// @param index Index of a queue item.
+    function depositQueueItem(
+        uint128 index
+    ) external view returns (Batch item) {
+        return queue.at(index);
     }
 
     function _incrementModuleNonce() internal {
@@ -1528,17 +1458,6 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     function onlyNodeOperatorManager(uint256 nodeOperatorId) internal {
         if (_nodeOperators[nodeOperatorId].managerAddress != msg.sender)
             revert SenderIsNotManagerAddress();
-    }
-
-    function onlyKeyValidatorOrNodeOperatorManager(
-        uint256 nodeOperatorId
-    ) internal {
-        if (
-            !hasRole(KEY_VALIDATOR_ROLE, msg.sender) &&
-            _nodeOperators[nodeOperatorId].managerAddress != msg.sender
-        ) {
-            revert SenderIsNotManagerOrKeyValidator();
-        }
     }
 
     modifier onlyExistingNodeOperator(uint256 nodeOperatorId) {

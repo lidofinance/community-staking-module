@@ -94,6 +94,28 @@ contract Utilities is CommonBase {
         );
     }
 
+    /// @dev It's super annoying to make a memory array all the time without an array literal, so the function pretends
+    /// to provide the familiar syntax. By overloading the function, we can have a different number of arguments.
+    function UintArr() public pure returns (uint256[] memory) {
+        return new uint256[](0);
+    }
+
+    function UintArr(uint256 e0) public pure returns (uint256[] memory) {
+        uint256[] memory arr = new uint256[](1);
+        arr[0] = e0;
+        return arr;
+    }
+
+    function UintArr(
+        uint256 e0,
+        uint256 e1
+    ) public pure returns (uint256[] memory) {
+        uint256[] memory arr = new uint256[](2);
+        arr[0] = e0;
+        arr[1] = e1;
+        return arr;
+    }
+
     /// See https://github.com/Vectorized/solady - MIT licensed.
     /// @dev Fills the memory with junk, for more robust testing of inline assembly
     /// which reads/write to the memory.

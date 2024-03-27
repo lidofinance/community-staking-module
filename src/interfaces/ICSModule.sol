@@ -16,6 +16,7 @@ interface ICSModule is IStakingModule {
         uint256 totalWithdrawnValidators;
         uint256 totalAddedValidators;
         uint256 totalDepositedValidators;
+        uint256 enqueuedCount;
     }
 
     /// @notice Returns the node operator by id
@@ -52,4 +53,7 @@ interface ICSModule is IStakingModule {
         uint256 keyIndex,
         uint256 amount
     ) external;
+
+    /// @notice Notify the module about the operator's bond change. The hook call is optional.
+    function onBondChanged(uint256 nodeOperatorId) external;
 }
