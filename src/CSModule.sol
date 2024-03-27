@@ -949,7 +949,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
 
             NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
-            if (vettedKeysByOperator[i] > no.totalVettedKeys) {
+            if (vettedKeysByOperator[i] >= no.totalVettedKeys) {
                 revert InvalidVetKeysPointer();
             }
 
