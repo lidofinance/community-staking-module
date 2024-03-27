@@ -4547,7 +4547,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
         assertEq(accounting.chargeRecipient(), address(1337));
     }
 
-    function test_setChargeRecipien_RevertWhen_DoesNotHaveRole() public {
+    function test_setChargeRecipient_RevertWhen_DoesNotHaveRole() public {
         expectRoleRevert(stranger, accounting.DEFAULT_ADMIN_ROLE());
 
         vm.prank(stranger);

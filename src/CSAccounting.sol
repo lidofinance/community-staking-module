@@ -101,6 +101,7 @@ contract CSAccounting is
         CSM = ICSModule(communityStakingModule);
 
         chargeRecipient = _chargeRecipient;
+        emit ChargeRecipientSet(_chargeRecipient);
     }
 
     /// @notice Resume accounting
