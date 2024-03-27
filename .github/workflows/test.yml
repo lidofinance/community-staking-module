@@ -22,7 +22,7 @@ jobs:
       cache-path: ${{ steps.cache.outputs.path }}
       cache-key: ${{ steps.cache.outputs.key }}
     env:
-      FORGE_REV: d58ab7f
+      FORGE_REV: 35a8cce
       JUST_TAG: 1.24.0
     steps:
       - name: Build cache params
