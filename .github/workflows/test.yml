@@ -34,8 +34,8 @@ jobs:
           CACHE_PATH: |
             ~/.cargo/bin/
           KEY_INPUT: |
-            forge:${FORGE_REV}
-            just:${JUST_TAG}
+            forge:${{env.FORGE_REV}}
+            just:${{env.JUST_TAG}}
 
       - uses: actions/cache@v3
         id: get-cache
