@@ -17,6 +17,7 @@ import { IStETH } from "../src/interfaces/IStETH.sol";
 import { IBurner } from "../src/interfaces/IBurner.sol";
 import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
 
+import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 
 contract CSBondCoreTestable is CSBondCore {
@@ -76,12 +77,21 @@ contract CSBondCoreTestable is CSBondCore {
         _burn(nodeOperatorId, amount);
     }
 
-    function charge(uint256 nodeOperatorId, uint256 amount) external {
-        _charge(nodeOperatorId, amount);
+    function charge(
+        uint256 nodeOperatorId,
+        uint256 amount,
+        address recipient
+    ) external {
+        _charge(nodeOperatorId, amount, recipient);
     }
 }
 
-abstract contract CSBondCoreTestBase is Test, Fixtures, CSBondCoreBase {
+abstract contract CSBondCoreTestBase is
+    Test,
+    Fixtures,
+    Utilities,
+    CSBondCoreBase
+{
     LidoLocatorMock internal locator;
     WstETHMock internal wstETH;
     LidoMock internal stETH;
@@ -91,11 +101,13 @@ abstract contract CSBondCoreTestBase is Test, Fixtures, CSBondCoreBase {
     CSBondCoreTestable public bondCore;
 
     address internal user;
+    address internal testChargeRecipient;
 
     function setUp() public {
         (locator, wstETH, stETH, burner) = initLido();
 
-        user = address(2);
+        user = nextAddress("USER");
+        testChargeRecipient = nextAddress("CHARGERECIPIENT");
 
         bondCore = new CSBondCoreTestable(address(locator), address(wstETH));
     }
@@ -618,11 +630,11 @@ contract CSBondCoreChargeTest is CSBondCoreTestBase {
             abi.encodeWithSelector(
                 IStETH.transferSharesFrom.selector,
                 address(bondCore),
-                locator.treasury(),
+                testChargeRecipient,
                 shares
             )
         );
-        bondCore.charge(0, 1 ether);
+        bondCore.charge(0, 1 ether, testChargeRecipient);
         uint256 bondSharesAfter = bondCore.getBondShares(0);
 
         assertEq(
@@ -650,11 +662,11 @@ contract CSBondCoreChargeTest is CSBondCoreTestBase {
             abi.encodeWithSelector(
                 IStETH.transferSharesFrom.selector,
                 address(bondCore),
-                locator.treasury(),
+                testChargeRecipient,
                 stETH.getSharesByPooledEth(32 ether)
             )
         );
-        bondCore.charge(0, 33 ether);
+        bondCore.charge(0, 33 ether, testChargeRecipient);
 
         assertEq(
             bondCore.getBondShares(0),
@@ -677,12 +689,12 @@ contract CSBondCoreChargeTest is CSBondCoreTestBase {
             abi.encodeWithSelector(
                 IStETH.transferSharesFrom.selector,
                 address(bondCore),
-                locator.treasury(),
+                testChargeRecipient,
                 shares
             )
         );
 
-        bondCore.charge(0, 32 ether);
+        bondCore.charge(0, 32 ether, testChargeRecipient);
 
         assertEq(
             bondCore.getBondShares(0),

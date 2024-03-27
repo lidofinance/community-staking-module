@@ -88,6 +88,7 @@ abstract contract DeployBase is Script {
                     PUBLIC_RELEASE_TIMESHIFT,
                 admin: address(deployer)
             });
+            address treasury = locator.treasury();
             uint256[] memory curve = new uint256[](2);
             curve[0] = 2 ether;
             curve[1] = 4 ether;
@@ -98,7 +99,8 @@ abstract contract DeployBase is Script {
                 communityStakingModule: address(csm),
                 wstETH: address(wstETH),
                 // TODO: arguable. should be discussed
-                bondLockRetentionPeriod: 8 weeks
+                bondLockRetentionPeriod: 8 weeks,
+                _chargeRecipient: treasury
             });
             csm.grantRole(csm.SET_ACCOUNTING_ROLE(), deployer);
             csm.setAccounting(address(accounting));

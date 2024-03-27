@@ -36,7 +36,8 @@ contract CSAccountingForTests is CSAccounting {
         address lidoLocator,
         address wstETH,
         address communityStakingModule,
-        uint256 lockedBondRetentionPeriod
+        uint256 lockedBondRetentionPeriod,
+        address _chargeRecepient
     )
         CSAccounting(
             bondCurve,
@@ -44,7 +45,8 @@ contract CSAccountingForTests is CSAccounting {
             lidoLocator,
             wstETH,
             communityStakingModule,
-            lockedBondRetentionPeriod
+            lockedBondRetentionPeriod,
+            _chargeRecepient
         )
     {}
 
@@ -75,12 +77,14 @@ contract CSAccountingBaseTest is
     address internal admin;
     address internal user;
     address internal stranger;
+    address internal testChargeRecipient;
 
     function setUp() public virtual {
         admin = nextAddress("ADMIN");
 
         user = nextAddress("USER");
         stranger = nextAddress("STRANGER");
+        testChargeRecipient = nextAddress("CHARGERECIPIENT");
 
         (locator, wstETH, stETH, ) = initLido();
 
@@ -95,7 +99,8 @@ contract CSAccountingBaseTest is
             address(locator),
             address(wstETH),
             address(stakingModule),
-            8 weeks
+            8 weeks,
+            testChargeRecipient
         );
 
         vm.startPrank(admin);
@@ -4528,6 +4533,8 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
 
     function test_setFeeDistributor() public {
         vm.prank(admin);
+        vm.expectEmit(true, false, false, true, address(accounting));
+        emit FeeDistributorSet(address(1337));
         accounting.setFeeDistributor(address(1337));
         assertEq(accounting.feeDistributor(), address(1337));
     }
@@ -4537,5 +4544,20 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
 
         vm.prank(stranger);
         accounting.setFeeDistributor(address(1337));
+    }
+
+    function test_setChargeRecipient() public {
+        vm.prank(admin);
+        vm.expectEmit(true, false, false, true, address(accounting));
+        emit ChargeRecipientSet(address(1337));
+        accounting.setChargeRecipient(address(1337));
+        assertEq(accounting.chargeRecipient(), address(1337));
+    }
+
+    function test_setChargeRecipient_RevertWhen_DoesNotHaveRole() public {
+        expectRoleRevert(stranger, accounting.DEFAULT_ADMIN_ROLE());
+
+        vm.prank(stranger);
+        accounting.setChargeRecipient(address(1337));
     }
 }

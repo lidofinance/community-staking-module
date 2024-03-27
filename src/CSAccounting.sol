@@ -17,6 +17,8 @@ import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 abstract contract CSAccountingBase {
     event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
     event BondLockReleased(uint256 indexed nodeOperatorId, uint256 amount);
+    event FeeDistributorSet(address feeDistributor);
+    event ChargeRecipientSet(address chargeRecipient);
 
     error NotOwnerToClaim(address msgSender, address owner);
     error InvalidSender();
@@ -58,6 +60,7 @@ contract CSAccounting is
     ICSModule private immutable CSM;
 
     address public feeDistributor;
+    address public chargeRecipient;
 
     /// @param bondCurve initial bond curve
     /// @param admin admin role member address
@@ -65,13 +68,15 @@ contract CSAccounting is
     /// @param wstETH wstETH contract address
     /// @param communityStakingModule community staking module contract address
     /// @param bondLockRetentionPeriod retention period for locked bond in seconds
+    /// @param _chargeRecipient recepient of the charge panalty type
     constructor(
         uint256[] memory bondCurve,
         address admin,
         address lidoLocator,
         address wstETH,
         address communityStakingModule,
-        uint256 bondLockRetentionPeriod
+        uint256 bondLockRetentionPeriod,
+        address _chargeRecipient
     )
         CSBondCore(lidoLocator, wstETH)
         CSBondCurve(bondCurve)
@@ -84,10 +89,16 @@ contract CSAccounting is
         if (communityStakingModule == address(0)) {
             revert ZeroAddress("communityStakingModule");
         }
+        if (_chargeRecipient == address(0)) {
+            revert ZeroAddress("chargeRecipient");
+        }
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
         CSM = ICSModule(communityStakingModule);
+
+        chargeRecipient = _chargeRecipient;
+        emit ChargeRecipientSet(_chargeRecipient);
     }
 
     /// @notice Resume accounting
@@ -107,7 +118,23 @@ contract CSAccounting is
     function setFeeDistributor(
         address fdAddress
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (fdAddress == address(0)) {
+            revert ZeroAddress("feeDistributor");
+        }
         feeDistributor = fdAddress;
+        emit FeeDistributorSet(fdAddress);
+    }
+
+    /// @notice Sets charge recepient address.
+    /// @param _chargeRecipient  charge recepient address.
+    function setChargeRecipient(
+        address _chargeRecipient
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (_chargeRecipient == address(0)) {
+            revert ZeroAddress("chargeRecipient");
+        }
+        chargeRecipient = _chargeRecipient;
+        emit ChargeRecipientSet(_chargeRecipient);
     }
 
     /// @notice Sets bond lock retention period.
@@ -695,14 +722,14 @@ contract CSAccounting is
         CSBondCore._burn(nodeOperatorId, amount);
     }
 
-    /// @notice Charge fee from bond by transferring shares of the given node operator to the treasury.
+    /// @notice Charge fee from bond by transferring shares of the given node operator to the charge recipient.
     /// @param nodeOperatorId id of the node operator to penalize bond for.
     /// @param amount amount of ETH to charge.
     function chargeFee(
         uint256 nodeOperatorId,
         uint256 amount
     ) external onlyCSM {
-        CSBondCore._charge(nodeOperatorId, amount);
+        CSBondCore._charge(nodeOperatorId, amount, chargeRecipient);
     }
 
     function _getActiveKeys(

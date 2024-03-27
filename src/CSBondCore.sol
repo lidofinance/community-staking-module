@@ -230,16 +230,16 @@ abstract contract CSBondCore is CSBondCoreBase {
 
     /// @dev Transfer Node Operator's bond shares to Lido treasury to pay some fee.
     /// @param amount amount to charge in ETH.
-    function _charge(uint256 nodeOperatorId, uint256 amount) internal {
+    function _charge(
+        uint256 nodeOperatorId,
+        uint256 amount,
+        address recipient
+    ) internal {
         (uint256 toChargeShares, uint256 chargedShares) = _reduceBond(
             nodeOperatorId,
             _sharesByEth(amount)
         );
-        LIDO.transferSharesFrom(
-            address(this),
-            LIDO_LOCATOR.treasury(),
-            chargedShares
-        );
+        LIDO.transferSharesFrom(address(this), recipient, chargedShares);
         emit BondCharged(
             nodeOperatorId,
             _ethByShares(toChargeShares),
