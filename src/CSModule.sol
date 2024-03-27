@@ -1345,8 +1345,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
 
         for (Batch item = queue.peek(); !item.isNil(); item = queue.peek()) {
             // NOTE: see the `enqueuedCount` note below.
+            // TODO: write invariant test for that.
             unchecked {
-                // TODO: To keep it easy to refactor or to keep it cheap? Maybe both works?
                 uint256 noId = item.noId();
                 uint256 keysInBatch = item.keys();
                 NodeOperator storage no = _nodeOperators[noId];
@@ -1360,11 +1360,16 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
                 if (depositsLeft > keysCount || keysCount == keysInBatch) {
                     // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
                     no.enqueuedCount -= keysInBatch;
+                    // We've consumed all the keys in the batch, so we dequeue it.
                     queue.dequeue();
                 } else {
+                    // This branch covers the case when we stop in the middle of the batch.
+                    // We release the amount of keys consumed only, the rest will be kept.
                     no.enqueuedCount -= keysCount;
                     // NOTE: `keysInBatch` can't be less than `keysCount` at this point.
+                    // We update the batch with the remaining keys.
                     item = item.setKeys(keysInBatch - keysCount);
+                    // Store the updated batch back to the queue.
                     queue.queue[queue.head] = item;
                 }
 
