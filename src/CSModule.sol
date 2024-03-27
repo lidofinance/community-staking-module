@@ -968,6 +968,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         );
 
         _updateDepositableValidatorsCount(nodeOperatorId);
+        _normalizeQueue(nodeOperatorId);
         _incrementModuleNonce();
     }
 

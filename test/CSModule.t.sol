@@ -1269,7 +1269,9 @@ contract CsmQueueOps is CSMCommon {
         csm.normalizeQueue(noId);
     }
 
-    function test_normalizeQueue_OnSkippedKeys_WhenTargetLimit() public {
+    function test_queueNormalized_WhenSkippedKeysAndTargetValidatorsLimitRaised()
+        public
+    {
         uint256 noId = createNodeOperator(7);
         csm.updateTargetValidatorsLimits({
             nodeOperatorId: noId,
@@ -1277,17 +1279,15 @@ contract CsmQueueOps is CSMCommon {
             targetLimit: 0
         });
         csm.cleanDepositQueue(1);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit BatchEnqueued(noId, 7);
+
         csm.updateTargetValidatorsLimits({
             nodeOperatorId: noId,
             isTargetLimitActive: true,
             targetLimit: 7
         });
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit BatchEnqueued(noId, 7);
-
-        vm.prank(nodeOperator);
-        csm.normalizeQueue(noId);
     }
 
     function test_queueNormalized_WhenWithdrawalChangesDepositable() public {
