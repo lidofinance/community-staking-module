@@ -109,3 +109,8 @@ jobs:
         run: just test
         env:
           RPC_URL: ${{ secrets.RPC_URL }}
+
+      - name: Check snapshot
+        run: just snapshot --check
+        env:
+          RPC_URL: ${{ secrets.RPC_URL }}

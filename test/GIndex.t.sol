@@ -94,15 +94,12 @@ contract GIndexTest is Test {
         assertTrue(pack(1024, 0).isParentOf(pack(4098, 0)));
     }
 
-    function test_Fuzz_ROOT_isParentOfAnyChild(GIndex rhs) public {
+    function testFuzz_ROOT_isParentOfAnyChild(GIndex rhs) public {
         vm.assume(rhs.index() > 1);
         assertTrue(ROOT.isParentOf(rhs));
     }
 
-    function test_Fuzz_isParentOf_LessThanAnchor(
-        GIndex lhs,
-        GIndex rhs
-    ) public {
+    function testFuzz_isParentOf_LessThanAnchor(GIndex lhs, GIndex rhs) public {
         vm.assume(rhs.index() < lhs.index());
         assertFalse(lhs.isParentOf(rhs));
     }
@@ -178,7 +175,7 @@ contract GIndexTest is Test {
         lib.concat(pack(2 ** 200, 0), pack(2 ** 48, 0));
     }
 
-    function test_Fuzz_concat_WithRoot(GIndex rhs) public {
+    function testFuzz_concat_WithRoot(GIndex rhs) public {
         vm.assume(rhs.index() > 0);
         assertEq(
             ROOT.concat(rhs).unwrap(),
@@ -187,7 +184,7 @@ contract GIndexTest is Test {
         );
     }
 
-    function test_Fuzz_concat_isParentOf(GIndex lhs, GIndex rhs) public {
+    function testFuzz_concat_isParentOf(GIndex lhs, GIndex rhs) public {
         // Left-hand side value can be a root.
         vm.assume(lhs.index() > 0);
         // But root.concat(root) will result in a root value again, and root is not a parent for itself.
@@ -209,7 +206,7 @@ contract GIndexTest is Test {
         );
     }
 
-    function test_Fuzz_unpack(uint248 index, uint8 pow) public {
+    function testFuzz_unpack(uint248 index, uint8 pow) public {
         GIndex gI = pack(index, pow);
         assertEq(gI.index(), index);
         assertEq(gI.width(), 2 ** pow);
@@ -275,7 +272,7 @@ contract GIndexTest is Test {
         lib.shl(pack(1023, 4), 16);
     }
 
-    function test_Fuzz_shl_shr_Idempotent(GIndex gI, uint256 shift) public {
+    function testFuzz_shl_shr_Idempotent(GIndex gI, uint256 shift) public {
         vm.assume(gI.index() > 0);
         vm.assume(gI.index() >= gI.width());
         vm.assume(shift < gI.index() % gI.width());
@@ -283,7 +280,7 @@ contract GIndexTest is Test {
         assertEq(lib.shr(lib.shl(gI, shift), shift).unwrap(), gI.unwrap());
     }
 
-    function test_Fuzz_shr_shl_Idempotent(GIndex gI, uint256 shift) public {
+    function testFuzz_shr_shl_Idempotent(GIndex gI, uint256 shift) public {
         vm.assume(gI.index() > 0);
         vm.assume(gI.index() >= gI.width());
         vm.assume(shift < gI.width() - (gI.index() % gI.width()));

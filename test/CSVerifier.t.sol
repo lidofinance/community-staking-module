@@ -40,12 +40,7 @@ contract CSVerifierTest is Test {
     Stub public locator;
     Stub public module;
 
-    string internal fixturesPath;
-
-    constructor() {
-        string memory root = vm.projectRoot();
-        fixturesPath = string.concat(root, "/test/fixtures/CSVerifier/");
-    }
+    string internal fixturesPath = "./test/fixtures/CSVerifier/";
 
     function setUp() public {
         verifier = new CSVerifier({
@@ -142,7 +137,7 @@ contract CSVerifierTest is Test {
 
     function _readFixture(
         string memory filename
-    ) internal returns (bytes memory data) {
+    ) internal noGasMetering returns (bytes memory data) {
         string memory path = string.concat(fixturesPath, filename);
         string memory json = vm.readFile(path);
         data = json.parseRaw("$");

@@ -48,6 +48,9 @@ test-unit *args:
 test-integration *args:
 	forge test --match-path '*test/integration*' -vvv {{args}}
 
+snapshot *args:
+	forge snapshot --no-match-test 'testFuzz_\w{1,}?' --no-match-path '*test/integration*' {{args}}
+
 coverage:
 	forge coverage
 
