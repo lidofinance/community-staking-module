@@ -22,7 +22,7 @@ jobs:
       cache-path: ${{ steps.cache.outputs.path }}
       cache-key: ${{ steps.cache.outputs.key }}
     env:
-      FORGE_REV: d58ab7f
+      FORGE_REV: 35a8cce
       JUST_TAG: 1.24.0
     steps:
       - name: Build cache params
@@ -34,8 +34,8 @@ jobs:
           CACHE_PATH: |
             ~/.cargo/bin/
           KEY_INPUT: |
-            forge:${FORGE_REV}
-            just:${JUST_TAG}
+            forge:${{env.FORGE_REV}}
+            just:${{env.JUST_TAG}}
 
       - uses: actions/cache@v3
         id: get-cache
