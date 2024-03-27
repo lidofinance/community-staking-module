@@ -38,6 +38,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
     address internal admin;
     address internal stranger;
     address internal nodeOperator;
+    address internal testChargeRecipient;
 
     struct NodeOperatorSummary {
         bool isTargetLimitActive;
@@ -211,6 +212,7 @@ contract CSMCommon is CSMFixtures {
         nodeOperator = nextAddress("NODE_OPERATOR");
         stranger = nextAddress("STRANGER");
         admin = nextAddress("ADMIN");
+        testChargeRecipient = nextAddress("CHARGERECIPIENT");
 
         (locator, wstETH, stETH, ) = initLido();
 
@@ -225,7 +227,8 @@ contract CSMCommon is CSMFixtures {
             address(locator),
             address(wstETH),
             address(csm),
-            8 weeks
+            8 weeks,
+            testChargeRecipient
         );
 
         vm.startPrank(admin);
@@ -265,6 +268,7 @@ contract CSMCommonNoRoles is CSMFixtures {
         stranger = nextAddress("STRANGER");
         admin = nextAddress("ADMIN");
         actor = nextAddress("ACTOR");
+        testChargeRecipient = nextAddress("CHARGERECIPIENT");
 
         (locator, wstETH, stETH, ) = initLido();
 
@@ -282,7 +286,8 @@ contract CSMCommonNoRoles is CSMFixtures {
             address(locator),
             address(wstETH),
             address(csm),
-            8 weeks
+            8 weeks,
+            testChargeRecipient
         );
 
         csm.setAccounting(address(accounting));

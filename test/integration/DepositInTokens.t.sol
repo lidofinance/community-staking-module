@@ -60,7 +60,8 @@ contract DepositIntegrationTest is
             address(locator),
             address(wstETH),
             address(csm),
-            8 weeks
+            8 weeks,
+            locator.treasury()
         );
 
         csm.setNodeOperator({
