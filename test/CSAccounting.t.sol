@@ -4521,6 +4521,8 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
 
     function test_setFeeDistributor() public {
         vm.prank(admin);
+        vm.expectEmit(true, false, false, true, address(accounting));
+        emit FeeDistributorSet(address(1337));
         accounting.setFeeDistributor(address(1337));
         assertEq(accounting.feeDistributor(), address(1337));
     }

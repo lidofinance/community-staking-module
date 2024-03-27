@@ -17,6 +17,7 @@ import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 abstract contract CSAccountingBase {
     event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
     event BondLockReleased(uint256 indexed nodeOperatorId, uint256 amount);
+    event FeeDistributorSet(address feeDistributor);
 
     error NotOwnerToClaim(address msgSender, address owner);
     error InvalidSender();
@@ -111,6 +112,7 @@ contract CSAccounting is
         address fdAddress
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         feeDistributor = fdAddress;
+        emit FeeDistributorSet(fdAddress);
     }
 
     /// @notice Sets bond lock retention period.
