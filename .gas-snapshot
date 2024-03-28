@@ -1,5 +1,3 @@
-BatchTest:test_deserialize() (gas: 1712)
-BatchTest:test_serialize() (gas: 568)
 CSAccountingBondCurveTest:test_addBondCurve() (gas: 137088)
 CSAccountingBondCurveTest:test_addBondCurve_RevertWhen_DoesNotHaveRole() (gas: 15394)
 CSAccountingBondCurveTest:test_resetBondCurve() (gas: 165087)
