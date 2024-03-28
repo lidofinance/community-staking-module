@@ -16,7 +16,6 @@ import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 
 abstract contract CSAccountingBase {
     event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
-    event BondLockReleased(uint256 indexed nodeOperatorId, uint256 amount);
     event FeeDistributorSet(address feeDistributor);
     event ChargeRecipientSet(address chargeRecipient);
 
@@ -46,8 +45,6 @@ contract CSAccounting is
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
 
-    bytes32 public constant RELEASE_BOND_LOCK_ROLE =
-        keccak256("RELEASE_BOND_LOCK_ROLE"); // 0xf723fcf26e445713fa93db3104d7d11a854bcce37a6d136271a134eb64a0d891
     bytes32 public constant ADD_BOND_CURVE_ROLE =
         keccak256("ADD_BOND_CURVE_ROLE"); // 0xd2becf7ae0eafe4edadee8d89582631d5922eccd2ac7b3fdf4afbef7595f4512
     bytes32 public constant SET_DEFAULT_BOND_CURVE_ROLE =
@@ -680,14 +677,8 @@ contract CSAccounting is
     function releaseLockedBondETH(
         uint256 nodeOperatorId,
         uint256 amount
-    )
-        external
-        onlyRole(RELEASE_BOND_LOCK_ROLE)
-        onlyExistingNodeOperator(nodeOperatorId)
-    {
+    ) external onlyCSM onlyExistingNodeOperator(nodeOperatorId) {
         CSBondLock._reduceAmount(nodeOperatorId, amount);
-        emit BondLockReleased(nodeOperatorId, amount);
-        CSM.onBondChanged(nodeOperatorId);
     }
 
     /// @notice Compensates locked bond ETH for the given node operator.
