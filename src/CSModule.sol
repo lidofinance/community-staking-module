@@ -1039,15 +1039,15 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
+        accounting.lockBondETH(
+            nodeOperatorId,
+            amount + EL_REWARDS_STEALING_FINE
+        );
+
         emit ELRewardsStealingPenaltyReported(
             nodeOperatorId,
             blockNumber,
             amount
-        );
-
-        accounting.lockBondETH(
-            nodeOperatorId,
-            amount + EL_REWARDS_STEALING_FINE
         );
 
         _updateDepositableValidatorsCount(nodeOperatorId);
@@ -1055,8 +1055,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
 
     /// @notice Cancel EL rewards stealing for the given node operator.
     /// @dev The funds will be unlocked.
-    /// @param nodeOperatorId id of the node operator to cancel penaltu for.
-    /// @param amount amount of cancelled penaly.
+    /// @param nodeOperatorId id of the node operator to cancel penalty for.
+    /// @param amount amount of cancelled penalty.
     function cancelELRewardsStealingPenalty(
         uint256 nodeOperatorId,
         uint256 amount
@@ -1065,9 +1065,9 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
-        emit ELRewardsStealingPenaltyCancelled(nodeOperatorId, amount);
-
         accounting.releaseLockedBondETH(nodeOperatorId, amount);
+
+        emit ELRewardsStealingPenaltyCancelled(nodeOperatorId, amount);
 
         _updateDepositableValidatorsCount(nodeOperatorId);
     }
