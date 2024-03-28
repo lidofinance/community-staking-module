@@ -277,6 +277,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
+    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
+    /// @param referral Optional referral address
     /// TODO consider splitting into methods with proof and without
     function addNodeOperatorETH(
         uint256 keysCount,
@@ -308,6 +310,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
+    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
+    /// @param referral Optional referral address
     function addNodeOperatorStETH(
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -335,7 +339,9 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
+    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
     /// @param permit Permit to use stETH as bond
+    /// @param referral Optional referral address
     function addNodeOperatorStETHWithPermit(
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -365,6 +371,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
+    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
+    /// @param referral Optional referral address
     function addNodeOperatorWstETH(
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -391,8 +399,9 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     /// @notice Adds a new node operator with permit to use wstETH as bond
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of public keys
+    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
     /// @param permit Permit to use wstETH as bond
+    /// @param referral Optional referral address
     function addNodeOperatorWstETHWithPermit(
         uint256 keysCount,
         bytes calldata publicKeys,
