@@ -110,7 +110,7 @@ jobs:
         env:
           RPC_URL: ${{ secrets.RPC_URL }}
 
-      - name: Check snapshot
-        run: just snapshot --check
+      - name: Check gas report
+        run: just gas-report && git diff --exit-code GAS.md
         env:
           RPC_URL: ${{ secrets.RPC_URL }}

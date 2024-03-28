@@ -40,10 +40,10 @@ just test-unit
 just test-inegration
 ```
 
-- Make a gas snapshot
+- Make a gas report
 
 ```bash
-just snapshot
+just gas-report
 ```
 
 - Install dependencies
