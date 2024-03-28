@@ -85,7 +85,8 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
             keysCount,
             keys,
             signatures,
-            new bytes32[](0)
+            new bytes32[](0),
+            address(0)
         );
         return csm.getNodeOperatorsCount() - 1;
     }
@@ -371,7 +372,13 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
 
         csm.pauseFor(1 days);
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        csm.addNodeOperatorETH(keysCount, keys, signatures, new bytes32[](0));
+        csm.addNodeOperatorETH(
+            keysCount,
+            keys,
+            signatures,
+            new bytes32[](0),
+            address(0)
+        );
     }
 
     function test_addNodeOperatorStETH_RevertWhen_Paused() public {
@@ -382,7 +389,13 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
 
         csm.pauseFor(1 days);
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        csm.addNodeOperatorStETH(keysCount, keys, signatures, new bytes32[](0));
+        csm.addNodeOperatorStETH(
+            keysCount,
+            keys,
+            signatures,
+            new bytes32[](0),
+            address(0)
+        );
     }
 
     function test_addNodeOperatorWstETH_RevertWhen_Paused() public {
@@ -397,7 +410,8 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
             keysCount,
             keys,
             signatures,
-            new bytes32[](0)
+            new bytes32[](0),
+            address(0)
         );
     }
 
@@ -420,7 +434,8 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
                 v: 0,
                 r: 0,
                 s: 0
-            })
+            }),
+            address(0)
         );
     }
 
@@ -443,7 +458,8 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
                 v: 0,
                 r: 0,
                 s: 0
-            })
+            }),
+            address(0)
         );
     }
 
@@ -536,12 +552,18 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, nodeOperator);
+            emit NodeOperatorAdded(0, address(154), nodeOperator);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
         }
 
-        csm.addNodeOperatorWstETH(1, keys, signatures, new bytes32[](0));
+        csm.addNodeOperatorWstETH(
+            1,
+            keys,
+            signatures,
+            new bytes32[](0),
+            address(154)
+        );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
     }
@@ -559,7 +581,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, nodeOperator);
+            emit NodeOperatorAdded(0, address(154), nodeOperator);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, true, true, address(wstETH));
@@ -578,7 +600,8 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
                 v: 0,
                 r: 0,
                 s: 0
-            })
+            }),
+            address(154)
         );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
@@ -646,13 +669,19 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, nodeOperator);
+            emit NodeOperatorAdded(0, address(154), nodeOperator);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
         }
 
         vm.prank(nodeOperator);
-        csm.addNodeOperatorStETH(1, keys, signatures, new bytes32[](0));
+        csm.addNodeOperatorStETH(
+            1,
+            keys,
+            signatures,
+            new bytes32[](0),
+            address(154)
+        );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
     }
@@ -670,7 +699,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, nodeOperator);
+            emit NodeOperatorAdded(0, address(154), nodeOperator);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, true, true, address(stETH));
@@ -690,7 +719,8 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
                 v: 0,
                 r: 0,
                 s: 0
-            })
+            }),
+            address(154)
         );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
@@ -757,7 +787,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit NodeOperatorAdded(0, nodeOperator);
+            emit NodeOperatorAdded(0, address(154), nodeOperator);
             vm.expectEmit(true, true, false, true, address(csm));
             emit TotalSigningKeysCountChanged(0, 1);
         }
@@ -767,7 +797,8 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
             1,
             keys,
             signatures,
-            new bytes32[](0)
+            new bytes32[](0),
+            address(154)
         );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
@@ -803,7 +834,8 @@ contract CSMObtainDepositData is CSMCommon {
             1,
             keys,
             signatures,
-            new bytes32[](0)
+            new bytes32[](0),
+            address(0)
         );
 
         (bytes memory obtainedKeys, bytes memory obtainedSignatures) = csm
@@ -2800,7 +2832,8 @@ contract CSMPublicReleaseTimestamp is CSMCommon {
             keysCount,
             keys,
             signatures,
-            new bytes32[](0)
+            new bytes32[](0),
+            address(0)
         );
     }
 
@@ -2817,7 +2850,8 @@ contract CSMPublicReleaseTimestamp is CSMCommon {
             keysCount,
             keys,
             signatures,
-            new bytes32[](0)
+            new bytes32[](0),
+            address(0)
         );
     }
 }
@@ -2873,12 +2907,13 @@ contract CSMEarlyAdoptionTest is CSMCommon {
         vm.deal(nodeOperator, BOND_SIZE / 2);
         vm.prank(nodeOperator);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit NodeOperatorAdded(0, nodeOperator);
+        emit NodeOperatorAdded(0, address(0), nodeOperator);
         csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
             keysCount,
             keys,
             signatures,
-            proof
+            proof,
+            address(0)
         );
         CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
         assertEq(curve.points[0], BOND_SIZE / 2);
@@ -2903,12 +2938,13 @@ contract CSMEarlyAdoptionTest is CSMCommon {
         vm.deal(nodeOperator, BOND_SIZE / 2);
         vm.prank(nodeOperator);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit NodeOperatorAdded(0, nodeOperator);
+        emit NodeOperatorAdded(0, address(0), nodeOperator);
         csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
             keysCount,
             keys,
             signatures,
-            proof
+            proof,
+            address(0)
         );
         CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
         assertEq(curve.points[0], BOND_SIZE / 2);
@@ -2937,7 +2973,8 @@ contract CSMEarlyAdoptionTest is CSMCommon {
             keysCount,
             keys,
             signatures,
-            proof
+            proof,
+            address(0)
         );
     }
 }

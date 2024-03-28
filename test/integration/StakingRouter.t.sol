@@ -103,7 +103,8 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
             2,
             keys,
             signatures,
-            new bytes32[](0)
+            new bytes32[](0),
+            address(0)
         );
 
         // It's impossible to process deposits if withdrawal requests amount is more than the buffered ether,

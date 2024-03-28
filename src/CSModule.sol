@@ -40,7 +40,11 @@ struct NodeOperator {
 }
 
 contract CSModuleBase {
-    event NodeOperatorAdded(uint256 indexed nodeOperatorId, address from);
+    event NodeOperatorAdded(
+        uint256 indexed nodeOperatorId,
+        address indexed referral,
+        address from
+    );
     event VettedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
         uint256 approvedValidatorsCount
@@ -278,11 +282,12 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
-        bytes32[] calldata eaProof
+        bytes32[] calldata eaProof,
+        address referral
     ) external payable whenResumed {
         // TODO: sanity checks
 
-        uint256 nodeOperatorId = _createNodeOperator();
+        uint256 nodeOperatorId = _createNodeOperator(referral);
         _processEarlyAdoption(nodeOperatorId, eaProof);
 
         if (
@@ -307,11 +312,12 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
-        bytes32[] calldata eaProof
+        bytes32[] calldata eaProof,
+        address referral
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 nodeOperatorId = _createNodeOperator();
+        uint256 nodeOperatorId = _createNodeOperator(referral);
         _processEarlyAdoption(nodeOperatorId, eaProof);
 
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
@@ -335,11 +341,12 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         bytes calldata publicKeys,
         bytes calldata signatures,
         bytes32[] calldata eaProof,
-        ICSAccounting.PermitInput calldata permit
+        ICSAccounting.PermitInput calldata permit,
+        address referral
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 nodeOperatorId = _createNodeOperator();
+        uint256 nodeOperatorId = _createNodeOperator(referral);
         _processEarlyAdoption(nodeOperatorId, eaProof);
 
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
@@ -362,11 +369,12 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
-        bytes32[] calldata eaProof
+        bytes32[] calldata eaProof,
+        address referral
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 nodeOperatorId = _createNodeOperator();
+        uint256 nodeOperatorId = _createNodeOperator(referral);
         _processEarlyAdoption(nodeOperatorId, eaProof);
 
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
@@ -390,11 +398,12 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         bytes calldata publicKeys,
         bytes calldata signatures,
         bytes32[] calldata eaProof,
-        ICSAccounting.PermitInput calldata permit
+        ICSAccounting.PermitInput calldata permit,
+        address referral
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 nodeOperatorId = _createNodeOperator();
+        uint256 nodeOperatorId = _createNodeOperator(referral);
         _processEarlyAdoption(nodeOperatorId, eaProof);
 
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
@@ -1427,7 +1436,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         _nonce++;
     }
 
-    function _createNodeOperator() internal returns (uint256) {
+    function _createNodeOperator(address referral) internal returns (uint256) {
         uint256 id = _nodeOperatorsCount;
         NodeOperator storage no = _nodeOperators[id];
 
@@ -1437,7 +1446,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         _nodeOperatorsCount++;
         _activeNodeOperatorsCount++;
 
-        emit NodeOperatorAdded(id, msg.sender);
+        emit NodeOperatorAdded(id, referral, msg.sender);
         return id;
     }
 
