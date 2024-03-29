@@ -13,7 +13,6 @@ import { CSBondCore } from "./CSBondCore.sol";
 import { CSBondCurve } from "./CSBondCurve.sol";
 import { CSBondLock } from "./CSBondLock.sol";
 
-import { IStETH } from "./interfaces/IStETH.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { AssetRecoverer } from "./AssetRecoverer.sol";
@@ -748,7 +747,7 @@ contract CSAccounting is
 
     function recoverERC20(address token, uint256 amount) external override {
         checkRecovererRole();
-        if (token == LIDO_LOCATOR.lido()) {
+        if (token == address(LIDO)) {
             revert NotAllowedToRecover();
         }
         AssetRecovererLib.recoverERC20(token, amount);
@@ -756,9 +755,8 @@ contract CSAccounting is
 
     function recoverStETHShares() external {
         checkRecovererRole();
-        IStETH stETH = IStETH(LIDO_LOCATOR.lido());
-        uint256 shares = stETH.sharesOf(address(this)) - totalBondShares;
-        AssetRecovererLib.recoverStETHShares(address(stETH), shares);
+        uint256 shares = LIDO.sharesOf(address(this)) - totalBondShares;
+        AssetRecovererLib.recoverStETHShares(address(LIDO), shares);
     }
 
     function _getActiveKeys(

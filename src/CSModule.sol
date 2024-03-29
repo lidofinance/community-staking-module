@@ -753,9 +753,9 @@ contract CSModule is
     }
 
     function onRewardsDistributed(
-        uint256 totalShares
+        uint256 distributedShares
     ) external onlyRole(FEE_DISTRIBUTOR_ROLE) {
-        _totalRewardsShares -= totalShares;
+        _totalRewardsShares -= distributedShares;
     }
 
     function _updateDepositableValidatorsCount(uint256 nodeOperatorId) private {

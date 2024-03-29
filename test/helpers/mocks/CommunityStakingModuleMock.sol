@@ -84,7 +84,7 @@ contract CommunityStakingModuleMock {
         // do nothing
     }
 
-    function onRewardsDistributed(uint256 totalShares) external {
+    function onRewardsDistributed(uint256 distributedShares) external {
         // do nothing
     }
 }

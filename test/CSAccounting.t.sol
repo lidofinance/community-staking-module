@@ -4606,7 +4606,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
         accounting.recoverERC20(address(stETH), 1000);
     }
 
-    function test_recoverStETH() public {
+    function test_recoverStETHShares() public {
         mock_getNodeOperatorsCount(1);
         vm.startPrank(admin);
         accounting.grantRole(accounting.RECOVERER_ROLE(), stranger);

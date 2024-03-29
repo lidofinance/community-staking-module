@@ -22,7 +22,7 @@ contract CSFeeDistributorBase {
 
     error ZeroAddress(string field);
 
-    error NotBondManager();
+    error NotAccounting();
     error NotOracle();
 
     error InvalidShares();
@@ -45,7 +45,7 @@ contract CSFeeDistributor is
     address public immutable ORACLE;
     address public immutable ACCOUNTING;
 
-    /// @notice Amount of shares sent to the BondManager in favor of the NO
+    /// @notice Amount of shares sent to the Accounting in favor of the NO
     mapping(uint256 => uint256) public distributedShares;
     uint256 private _totalShares;
 
@@ -93,7 +93,7 @@ contract CSFeeDistributor is
         return shares - distributedShares[nodeOperatorId];
     }
 
-    /// @notice Distribute fees to the BondManager in favor of the NO
+    /// @notice Distribute fees to the Accounting in favor of the NO
     /// @param proof Merkle proof of the leaf
     /// @param nodeOperatorId ID of the NO
     /// @param shares Total amount of shares earned as fees
@@ -103,7 +103,7 @@ contract CSFeeDistributor is
         uint256 nodeOperatorId,
         uint256 shares
     ) external returns (uint256) {
-        if (msg.sender != ACCOUNTING) revert NotBondManager();
+        if (msg.sender != ACCOUNTING) revert NotAccounting();
 
         uint256 sharesToDistribute = getFeesToDistribute(
             proof,

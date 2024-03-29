@@ -35,14 +35,14 @@ contract CSFeeDistributorTest is
     CSFeeDistributor internal feeDistributor;
     CommunityStakingModuleMock internal csm;
     OracleMock internal oracle;
-    Stub internal bondManager;
+    Stub internal accounting;
     MerkleTree internal tree;
 
     function setUp() public {
         stranger = nextAddress("stranger");
         csm = new CommunityStakingModuleMock();
         oracle = new OracleMock();
-        bondManager = new Stub();
+        accounting = new Stub();
 
         (, , stETH, ) = initLido();
 
@@ -50,13 +50,13 @@ contract CSFeeDistributorTest is
             address(csm),
             address(stETH),
             address(oracle),
-            address(bondManager),
+            address(accounting),
             address(this)
         );
 
         tree = oracle.merkleTree();
 
-        vm.label(address(bondManager), "BOND_MANAGER");
+        vm.label(address(accounting), "ACCOUNTING");
         vm.label(address(oracle), "ORACLE");
         vm.label(address(stETH), "STETH");
         vm.label(address(csm), "CSM");
@@ -75,18 +75,18 @@ contract CSFeeDistributorTest is
         vm.expectEmit(true, true, false, true, address(feeDistributor));
         emit FeeDistributed(nodeOperatorId, shares);
 
-        vm.prank(address(bondManager));
+        vm.prank(address(accounting));
         feeDistributor.distributeFees({
             proof: proof,
             nodeOperatorId: nodeOperatorId,
             shares: shares
         });
 
-        assertEq(stETH.sharesOf(address(bondManager)), shares);
+        assertEq(stETH.sharesOf(address(accounting)), shares);
     }
 
-    function test_RevertIf_NotBondManager() public {
-        vm.expectRevert(NotBondManager.selector);
+    function test_RevertIf_NotAccounting() public {
+        vm.expectRevert(NotAccounting.selector);
 
         feeDistributor.distributeFees({
             proof: new bytes32[](1),
@@ -98,7 +98,7 @@ contract CSFeeDistributorTest is
     function test_RevertIf_InvalidProof() public {
         vm.expectRevert(InvalidProof.selector);
 
-        vm.prank(address(bondManager));
+        vm.prank(address(accounting));
         feeDistributor.distributeFees({
             proof: new bytes32[](1),
             nodeOperatorId: 0,
@@ -119,7 +119,7 @@ contract CSFeeDistributorTest is
             .checked_write(shares + 99);
 
         vm.expectRevert(InvalidShares.selector);
-        vm.prank(address(bondManager));
+        vm.prank(address(accounting));
         feeDistributor.distributeFees({
             proof: proof,
             nodeOperatorId: nodeOperatorId,
@@ -140,7 +140,7 @@ contract CSFeeDistributorTest is
             .checked_write(shares);
 
         vm.recordLogs();
-        vm.prank(address(bondManager));
+        vm.prank(address(accounting));
         uint256 sharesToDistribute = feeDistributor.distributeFees({
             proof: proof,
             nodeOperatorId: nodeOperatorId,
@@ -174,7 +174,7 @@ contract CSFeeDistributorTest is
         feeDistributor.recoverERC20(address(stETH), 1000);
     }
 
-    function test_recoverStETH() public {
+    function test_recoverStETHShares() public {
         feeDistributor.grantRole(feeDistributor.RECOVERER_ROLE(), stranger);
 
         stETH.mintShares(address(csm), stETH.getSharesByPooledEth(1 ether));

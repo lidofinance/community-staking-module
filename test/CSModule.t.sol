@@ -3116,7 +3116,7 @@ contract CSMRecoverERC20 is CSMCommon {
         csm.recoverERC20(address(stETH), 1000);
     }
 
-    function test_recoverStETH() public {
+    function test_recoverStETHShares() public {
         vm.startPrank(admin);
         csm.grantRole(csm.RECOVERER_ROLE(), stranger);
         vm.stopPrank();

@@ -58,5 +58,5 @@ interface ICSModule is IStakingModule {
     function onBondChanged(uint256 nodeOperatorId) external;
 
     /// @notice Report distribution of rewards to the Fee Distributor contract.
-    function onRewardsDistributed(uint256 totalShares) external;
+    function onRewardsDistributed(uint256 distributedShares) external;
 }
