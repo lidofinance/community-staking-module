@@ -16,4 +16,6 @@ interface ILido is IStETH {
         uint256 _stakingModuleId,
         bytes calldata _depositCalldata
     ) external;
+
+    function removeStakingLimit() external;
 }
