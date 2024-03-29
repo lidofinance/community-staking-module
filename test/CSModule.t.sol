@@ -13,6 +13,8 @@ import "./helpers/mocks/WstETHMock.sol";
 import "./helpers/Utilities.sol";
 import "../src/CSEarlyAdoption.sol";
 import "./helpers/MerkleTree.sol";
+import { ERC20Testable } from "./helpers/ERCTestable.sol";
+import { AssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
 
 abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
     using Strings for uint256;
@@ -228,7 +230,12 @@ contract CSMCommon is CSMFixtures {
 
         communityStakingFeeDistributor = new Stub();
 
-        csm = new CSModule("community-staking-module", 0, admin);
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            0,
+            admin
+        );
         uint256[] memory curve = new uint256[](1);
         curve[0] = BOND_SIZE;
         accounting = new CSAccounting(
@@ -285,7 +292,12 @@ contract CSMCommonNoRoles is CSMFixtures {
         (locator, wstETH, stETH, ) = initLido();
 
         communityStakingFeeDistributor = new Stub();
-        csm = new CSModule("community-staking-module", 0, admin);
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            0,
+            admin
+        );
 
         vm.startPrank(admin);
         csm.grantRole(csm.SET_ACCOUNTING_ROLE(), admin);
@@ -309,13 +321,23 @@ contract CSMCommonNoRoles is CSMFixtures {
 
 contract CsmInitialization is CSMCommon {
     function test_initContract() public {
-        csm = new CSModule("community-staking-module", 0, admin);
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            0,
+            admin
+        );
         assertEq(csm.getType(), "community-staking-module");
         assertEq(csm.getNodeOperatorsCount(), 0);
     }
 
     function test_setAccounting() public {
-        csm = new CSModule("community-staking-module", 0, admin);
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            0,
+            admin
+        );
         vm.startPrank(admin);
         csm.grantRole(csm.SET_ACCOUNTING_ROLE(), address(admin));
         csm.setAccounting(address(accounting));
@@ -2413,7 +2435,7 @@ contract CsmGetStakingModuleSummary is CSMCommon {
 
 contract CSMAccessControl is CSMCommonNoRoles {
     function test_adminRole() public {
-        CSModule csm = new CSModule("csm", 0, actor);
+        CSModule csm = new CSModule("csm", address(locator), 0, actor);
         bytes32 role = csm.SET_ACCOUNTING_ROLE();
         vm.prank(actor);
         csm.grantRole(role, stranger);
@@ -2425,7 +2447,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_adminRole_revert() public {
-        CSModule csm = new CSModule("csm", 0, actor);
+        CSModule csm = new CSModule("csm", address(locator), 0, actor);
         bytes32 role = csm.SET_ACCOUNTING_ROLE();
         bytes32 adminRole = csm.DEFAULT_ADMIN_ROLE();
 
@@ -2435,7 +2457,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_setAccountingRole() public {
-        CSModule csm = new CSModule("csm", 0, admin);
+        CSModule csm = new CSModule("csm", address(locator), 0, admin);
         bytes32 role = csm.SET_ACCOUNTING_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
@@ -2774,6 +2796,23 @@ contract CSMAccessControl is CSMCommonNoRoles {
         expectRoleRevert(stranger, role);
         csm.setEarlyAdoption(address(0));
     }
+
+    function test_recovererRole() public {
+        bytes32 role = csm.RECOVERER_ROLE();
+        vm.prank(admin);
+        csm.grantRole(role, actor);
+
+        vm.prank(actor);
+        csm.recoverEther();
+    }
+
+    function test_recovererRole_revert() public {
+        bytes32 role = csm.RECOVERER_ROLE();
+
+        vm.prank(stranger);
+        expectRoleRevert(stranger, role);
+        csm.recoverEther();
+    }
 }
 
 contract CSMPublicReleaseTimestamp is CSMCommon {
@@ -3046,5 +3085,53 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         csm.removeKeys(noId, 3, 1); // Removal charge is applied, hence one key is unbonded.
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 6);
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 6);
+    }
+}
+
+contract CSMRecoverERC20 is CSMCommon {
+    function test_recoverERC20() public {
+        vm.startPrank(admin);
+        csm.grantRole(csm.RECOVERER_ROLE(), stranger);
+        vm.stopPrank();
+
+        ERC20Testable token = new ERC20Testable();
+        token.mint(address(csm), 1000);
+
+        vm.prank(stranger);
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit AssetRecovererLib.ERC20Recovered(address(token), stranger, 1000);
+        csm.recoverERC20(address(token), 1000);
+
+        assertEq(token.balanceOf(address(csm)), 0);
+        assertEq(token.balanceOf(stranger), 1000);
+    }
+
+    function test_recoverERC20_revertWhenStETH() public {
+        vm.startPrank(admin);
+        csm.grantRole(csm.RECOVERER_ROLE(), stranger);
+        vm.stopPrank();
+
+        vm.prank(stranger);
+        vm.expectRevert(AssetRecoverer.NotAllowedToRecover.selector);
+        csm.recoverERC20(address(stETH), 1000);
+    }
+
+    function test_recoverStETHShares() public {
+        vm.startPrank(admin);
+        csm.grantRole(csm.RECOVERER_ROLE(), stranger);
+        vm.stopPrank();
+
+        stETH.mintShares(address(csm), stETH.getSharesByPooledEth(1 ether));
+        uint256 rewardsShares = stETH.getSharesByPooledEth(0.3 ether);
+        csm.onRewardsMinted(rewardsShares);
+        uint256 sharesToRecover = stETH.sharesOf(address(csm)) - rewardsShares;
+
+        vm.prank(stranger);
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit AssetRecovererLib.StETHSharesRecovered(stranger, sharesToRecover);
+        csm.recoverStETHShares();
+
+        assertEq(stETH.sharesOf(address(csm)), rewardsShares);
+        assertEq(stETH.sharesOf(stranger), sharesToRecover);
     }
 }

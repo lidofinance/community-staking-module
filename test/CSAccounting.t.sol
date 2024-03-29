@@ -16,6 +16,8 @@ import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
 import { CSAccountingBase, CSAccounting } from "../src/CSAccounting.sol";
 import { CSBondLock } from "../src/CSBondLock.sol";
 import { CSBondCurve } from "../src/CSBondCurve.sol";
+import { AssetRecoverer } from "../src/AssetRecoverer.sol";
+import { AssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
 import { PermitTokenBase } from "./helpers/Permit.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 import { LidoMock } from "./helpers/mocks/LidoMock.sol";
@@ -24,6 +26,7 @@ import { LidoLocatorMock } from "./helpers/mocks/LidoLocatorMock.sol";
 
 import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
+import { ERC20Testable } from "./helpers/ERCTestable.sol";
 
 // TODO: non-existing node operator tests
 // TODO: bond lock permission tests
@@ -4559,5 +4562,72 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
 
         vm.prank(stranger);
         accounting.setChargeRecipient(address(1337));
+    }
+
+    function test_recovererRole() public {
+        bytes32 role = accounting.RECOVERER_ROLE();
+        vm.prank(admin);
+        accounting.grantRole(role, address(1337));
+
+        vm.prank(address(1337));
+        accounting.recoverEther();
+    }
+
+    function test_recovererRole_RevertWhen_DoesNotHaveRole() public {
+        expectRoleRevert(stranger, accounting.RECOVERER_ROLE());
+        vm.prank(stranger);
+        accounting.recoverEther();
+    }
+
+    function test_recoverERC20() public {
+        vm.startPrank(admin);
+        accounting.grantRole(accounting.RECOVERER_ROLE(), stranger);
+        vm.stopPrank();
+
+        ERC20Testable token = new ERC20Testable();
+        token.mint(address(accounting), 1000);
+
+        vm.prank(stranger);
+        vm.expectEmit(true, true, true, true, address(accounting));
+        emit AssetRecovererLib.ERC20Recovered(address(token), stranger, 1000);
+        accounting.recoverERC20(address(token), 1000);
+
+        assertEq(token.balanceOf(address(accounting)), 0);
+        assertEq(token.balanceOf(stranger), 1000);
+    }
+
+    function test_recoverERC20_revertWhenStETH() public {
+        vm.startPrank(admin);
+        accounting.grantRole(accounting.RECOVERER_ROLE(), stranger);
+        vm.stopPrank();
+
+        vm.prank(stranger);
+        vm.expectRevert(AssetRecoverer.NotAllowedToRecover.selector);
+        accounting.recoverERC20(address(stETH), 1000);
+    }
+
+    function test_recoverStETHShares() public {
+        mock_getNodeOperatorsCount(1);
+        vm.startPrank(admin);
+        accounting.grantRole(accounting.RECOVERER_ROLE(), stranger);
+        vm.stopPrank();
+
+        vm.deal(user, 2 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 2 ether }(address(0));
+        accounting.depositStETH(address(user), 0, 1 ether);
+        vm.stopPrank();
+
+        uint256 sharesBefore = stETH.sharesOf(address(accounting));
+        uint256 sharesToRecover = stETH.getSharesByPooledEth(0.3 ether);
+        stETH.mintShares(address(accounting), sharesToRecover);
+
+        vm.prank(stranger);
+        vm.expectEmit(true, true, true, true, address(accounting));
+        emit AssetRecovererLib.StETHSharesRecovered(stranger, sharesToRecover);
+        accounting.recoverStETHShares();
+
+        assertEq(stETH.sharesOf(address(accounting)), sharesBefore);
+        assertEq(stETH.sharesOf(stranger), sharesToRecover);
     }
 }

@@ -7,7 +7,11 @@ pragma solidity 0.8.24;
 import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
+import { IStETH } from "./interfaces/IStETH.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSEarlyAdoption } from "./interfaces/ICSEarlyAdoption.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
@@ -18,6 +22,8 @@ import { TransientUintUintMap } from "./lib/TransientUintUintMapLib.sol";
 import { NOAddresses } from "./lib/NOAddresses.sol";
 
 import { SigningKeys } from "./lib/SigningKeys.sol";
+import { AssetRecoverer } from "./AssetRecoverer.sol";
+import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
 struct NodeOperator {
     address managerAddress;
@@ -119,7 +125,15 @@ contract CSModuleBase {
     error MaxSigningKeysCountExceeded();
 }
 
-contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
+contract CSModule is
+    ICSModule,
+    CSModuleBase,
+    AccessControl,
+    PausableUntil,
+    AssetRecoverer
+{
+    /// @notice This contract stores minted stETH shares for further distribution between node operators
+    using SafeERC20 for IERC20;
     using QueueLib for QueueLib.Queue;
 
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
@@ -135,6 +149,8 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         keccak256("SET_REMOVAL_CHARGE_ROLE"); // 0xec192e8f5533ece8d0718d6180775a3e45c9499f95d7b1b0d2858b2c536b4d40
     bytes32 public constant STAKING_ROUTER_ROLE =
         keccak256("STAKING_ROUTER_ROLE"); // 0xbb75b874360e0bfd87f964eadd8276d8efb7c942134fc329b513032d0803e0c6
+    bytes32 public constant FEE_DISTRIBUTOR_ROLE =
+        keccak256("FEE_DISTRIBUTOR_ROLE"); //
     bytes32 public constant REPORT_EL_REWARDS_STEALING_PENALTY_ROLE =
         keccak256("REPORT_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0x59911a6aa08a72fe3824aec4500dc42335c6d0702b6d5c5c72ceb265a0de9302
     bytes32 public constant SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE =
@@ -144,6 +160,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     bytes32 public constant SLASHING_SUBMITTER_ROLE =
         keccak256("SLASHING_SUBMITTER_ROLE"); // 0x1490d8fc0656a30996bd2e7374c51790f74c101556ce56c87b64719da11a23dd
     bytes32 public constant PENALIZE_ROLE = keccak256("PENALIZE_ROLE"); // 0x014ffee5f075680f5690d491d67de8e1aba5c4a88326c3be77d991796b44f86b
+    bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE"); // 0xb3e25b5404b87e5a838579cb5d7481d61ad96ee284d38ec1e97c07ba64e7f6fc
 
     uint8 public constant MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE = 10;
     // might be received dynamically in case of increasing possible deposit size
@@ -163,6 +180,7 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     uint256 public removalCharge;
     QueueLib.Queue public queue;
 
+    ILidoLocator public lidoLocator;
     ICSAccounting public accounting;
     ICSEarlyAdoption public earlyAdoption;
     // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
@@ -179,16 +197,19 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     uint256 private _totalExitedValidators;
     uint256 private _totalAddedValidators;
     uint256 private _depositableValidatorsCount;
+    uint256 private _totalRewardsShares;
 
     TransientUintUintMap private _queueLookup;
 
     constructor(
         bytes32 moduleType,
+        address _lidoLocator,
         uint256 _publicReleaseTimestamp,
         address admin
     ) {
         TEMP_METHODS_EXPIRE_TIME = block.timestamp + ONE_YEAR;
         _moduleType = moduleType;
+        lidoLocator = ILidoLocator(_lidoLocator);
         emit StakingModuleTypeSet(moduleType);
 
         publicReleaseTimestamp = _publicReleaseTimestamp;
@@ -726,8 +747,16 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     /// @notice Called when rewards minted for the module
     /// @dev Empty due to oracle using CSM balance for distribution
     function onRewardsMinted(
-        uint256 /*_totalShares*/
-    ) external onlyRole(STAKING_ROUTER_ROLE) {}
+        uint256 totalShares
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        _totalRewardsShares += totalShares;
+    }
+
+    function onRewardsDistributed(
+        uint256 distributedShares
+    ) external onlyRole(FEE_DISTRIBUTOR_ROLE) {
+        _totalRewardsShares -= distributedShares;
+    }
 
     function _updateDepositableValidatorsCount(uint256 nodeOperatorId) private {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
@@ -1421,6 +1450,25 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
         uint128 index
     ) external view returns (Batch item) {
         return queue.at(index);
+    }
+
+    function checkRecovererRole() internal override {
+        _checkRole(RECOVERER_ROLE);
+    }
+
+    function recoverERC20(address token, uint256 amount) external override {
+        checkRecovererRole();
+        if (token == lidoLocator.lido()) {
+            revert NotAllowedToRecover();
+        }
+        AssetRecovererLib.recoverERC20(token, amount);
+    }
+
+    function recoverStETHShares() external {
+        checkRecovererRole();
+        IStETH stETH = IStETH(lidoLocator.lido());
+        uint256 shares = stETH.sharesOf(address(this)) - _totalRewardsShares;
+        AssetRecovererLib.recoverStETHShares(address(stETH), shares);
     }
 
     function _incrementModuleNonce() internal {

@@ -6,6 +6,8 @@ pragma solidity 0.8.24;
 
 import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import { CSBondCore } from "./CSBondCore.sol";
 import { CSBondCurve } from "./CSBondCurve.sol";
@@ -13,6 +15,8 @@ import { CSBondLock } from "./CSBondLock.sol";
 
 import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
+import { AssetRecoverer } from "./AssetRecoverer.sol";
+import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
 abstract contract CSAccountingBase {
     event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
@@ -33,8 +37,12 @@ contract CSAccounting is
     CSBondLock,
     CSAccountingBase,
     PausableUntil,
-    AccessControlEnumerable
+    AccessControlEnumerable,
+    AssetRecoverer
 {
+    /// @notice This contract stores the node operators' bonds in form of stETH shares,
+    /// so it should be considered in the recovery process
+    using SafeERC20 for IERC20;
     struct PermitInput {
         uint256 value;
         uint256 deadline;
@@ -56,6 +64,7 @@ contract CSAccounting is
         keccak256("SET_BOND_CURVE_ROLE"); // 0x645c9e6d2a86805cb5a28b1e4751c0dab493df7cf935070ce405489ba1a7bf72
     bytes32 public constant RESET_BOND_CURVE_ROLE =
         keccak256("RESET_BOND_CURVE_ROLE"); // 0xb5dffea014b759c493d63b1edaceb942631d6468998125e1b4fe427c99082134
+    bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE"); // 0xb3e25b5404b87e5a838579cb5d7481d61ad96ee284d38ec1e97c07ba64e7f6fc
 
     ICSModule private immutable CSM;
 
@@ -732,6 +741,24 @@ contract CSAccounting is
         CSBondCore._charge(nodeOperatorId, amount, chargeRecipient);
     }
 
+    function checkRecovererRole() internal override {
+        _checkRole(RECOVERER_ROLE);
+    }
+
+    function recoverERC20(address token, uint256 amount) external override {
+        checkRecovererRole();
+        if (token == address(LIDO)) {
+            revert NotAllowedToRecover();
+        }
+        AssetRecovererLib.recoverERC20(token, amount);
+    }
+
+    function recoverStETHShares() external {
+        checkRecovererRole();
+        uint256 shares = LIDO.sharesOf(address(this)) - totalBondShares;
+        AssetRecovererLib.recoverStETHShares(address(LIDO), shares);
+    }
+
     function _getActiveKeys(
         uint256 nodeOperatorId
     ) internal view returns (uint256) {
@@ -762,8 +789,7 @@ contract CSAccounting is
             nodeOperatorId,
             cumulativeFeeShares
         );
-        _bondShares[nodeOperatorId] += distributed;
-        totalBondShares += distributed;
+        _increaseBond(nodeOperatorId, distributed);
         CSM.onBondChanged(nodeOperatorId);
     }
 

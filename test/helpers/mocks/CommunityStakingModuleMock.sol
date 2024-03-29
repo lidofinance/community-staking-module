@@ -83,4 +83,8 @@ contract CommunityStakingModuleMock {
     function onBondChanged(uint256 nodeOperatorId) external {
         // do nothing
     }
+
+    function onRewardsDistributed(uint256 distributedShares) external {
+        // do nothing
+    }
 }

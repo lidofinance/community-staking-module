@@ -6,10 +6,14 @@ pragma solidity 0.8.24;
 
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 
+import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { ICSFeeOracle } from "./interfaces/ICSFeeOracle.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
+import { AssetRecoverer } from "./AssetRecoverer.sol";
+import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
 /// @author madlabman
 contract CSFeeDistributorBase {
@@ -18,7 +22,7 @@ contract CSFeeDistributorBase {
 
     error ZeroAddress(string field);
 
-    error NotBondManager();
+    error NotAccounting();
     error NotOracle();
 
     error InvalidShares();
@@ -26,32 +30,43 @@ contract CSFeeDistributorBase {
 }
 
 /// @author madlabman
-contract CSFeeDistributor is ICSFeeDistributor, CSFeeDistributorBase {
+contract CSFeeDistributor is
+    ICSFeeDistributor,
+    CSFeeDistributorBase,
+    AccessControlEnumerable,
+    AssetRecoverer
+{
+    /// @notice this contract stores stETH shares that were distributed via the Oracle Report
     using SafeCast for uint256;
 
+    bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE"); // 0xb3e25b5404b87e5a838579cb5d7481d61ad96ee284d38ec1e97c07ba64e7f6fc
     address public immutable CSM;
     address public immutable STETH;
     address public immutable ORACLE;
     address public immutable ACCOUNTING;
 
-    /// @notice Amount of shares sent to the BondManager in favor of the NO
+    /// @notice Amount of shares sent to the Accounting in favor of the NO
     mapping(uint256 => uint256) public distributedShares;
+    uint256 private _totalShares;
 
     constructor(
         address csm,
         address stETH,
         address oracle,
-        address accounting
+        address accounting,
+        address admin
     ) {
         if (accounting == address(0)) revert ZeroAddress("accounting");
         if (oracle == address(0)) revert ZeroAddress("oracle");
         if (stETH == address(0)) revert ZeroAddress("stETH");
         if (csm == address(0)) revert ZeroAddress("_CSM");
+        if (admin == address(0)) revert ZeroAddress("admin");
 
         ACCOUNTING = accounting;
         ORACLE = oracle;
         STETH = stETH;
         CSM = csm;
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
     /// @notice Returns the amount of shares that can be distributed in favor of the NO
@@ -78,7 +93,7 @@ contract CSFeeDistributor is ICSFeeDistributor, CSFeeDistributorBase {
         return shares - distributedShares[nodeOperatorId];
     }
 
-    /// @notice Distribute fees to the BondManager in favor of the NO
+    /// @notice Distribute fees to the Accounting in favor of the NO
     /// @param proof Merkle proof of the leaf
     /// @param nodeOperatorId ID of the NO
     /// @param shares Total amount of shares earned as fees
@@ -88,7 +103,7 @@ contract CSFeeDistributor is ICSFeeDistributor, CSFeeDistributorBase {
         uint256 nodeOperatorId,
         uint256 shares
     ) external returns (uint256) {
-        if (msg.sender != ACCOUNTING) revert NotBondManager();
+        if (msg.sender != ACCOUNTING) revert NotAccounting();
 
         uint256 sharesToDistribute = getFeesToDistribute(
             proof,
@@ -102,6 +117,7 @@ contract CSFeeDistributor is ICSFeeDistributor, CSFeeDistributorBase {
         distributedShares[nodeOperatorId] += sharesToDistribute;
         IStETH(STETH).transferShares(ACCOUNTING, sharesToDistribute);
         emit FeeDistributed(nodeOperatorId, sharesToDistribute);
+        _totalShares -= sharesToDistribute;
 
         return sharesToDistribute;
     }
@@ -110,6 +126,27 @@ contract CSFeeDistributor is ICSFeeDistributor, CSFeeDistributorBase {
     /// @param amount Amount of shares to transfer
     function receiveFees(uint256 amount) external {
         if (msg.sender != ORACLE) revert NotOracle();
+        ICSModule(CSM).onRewardsDistributed(amount);
         IStETH(STETH).transferSharesFrom(CSM, address(this), amount);
+        _totalShares += amount;
+    }
+
+    function checkRecovererRole() internal override {
+        _checkRole(RECOVERER_ROLE);
+    }
+
+    function recoverERC20(address token, uint256 amount) external override {
+        checkRecovererRole();
+        if (token == STETH) {
+            revert NotAllowedToRecover();
+        }
+        AssetRecovererLib.recoverERC20(token, amount);
+    }
+
+    function recoverStETHShares() external {
+        checkRecovererRole();
+        IStETH steth = IStETH(STETH);
+        uint256 shares = steth.sharesOf(address(this)) - _totalShares;
+        AssetRecovererLib.recoverStETHShares(address(steth), shares);
     }
 }
