@@ -107,12 +107,15 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
             address(0)
         );
 
+        vm.prank(ARAGON_VOTING_ADDRESS);
+        lido.removeStakingLimit();
+
         // It's impossible to process deposits if withdrawal requests amount is more than the buffered ether,
         // so we need to make sure that the buffered ether is enough by submitting this tremendous amount.
         address whale = nextAddress();
         vm.prank(whale);
-        vm.deal(whale, 1e5 ether);
-        lido.submit{ value: 1e5 ether }(address(0));
+        vm.deal(whale, 1e7 ether);
+        lido.submit{ value: 1e7 ether }(address(0));
 
         vm.prank(locator.depositSecurityModule());
         lido.deposit(1, moduleId, "");
