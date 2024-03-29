@@ -2052,6 +2052,128 @@ contract CsmUpdateExitedValidatorsCount is CSMCommon {
     }
 }
 
+contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
+    function test_unsafeUpdateValidatorsCount_NonZero() public {
+        uint256 noId = createNodeOperator(5);
+        csm.obtainDepositData(5, "");
+        uint256 nonce = csm.getNonce();
+
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit StuckSigningKeysCountChanged(noId, 1);
+        emit ExitedSigningKeysCountChanged(noId, 1);
+        csm.unsafeUpdateValidatorsCount({
+            nodeOperatorId: noId,
+            exitedValidatorsKeysCount: 1,
+            stuckValidatorsKeysCount: 1
+        });
+
+        NodeOperatorSummary memory noSummary = getNodeOperatorSummary(noId);
+        assertEq(
+            noSummary.totalExitedValidators,
+            1,
+            "totalExitedValidators not increased"
+        );
+        assertEq(
+            noSummary.stuckValidatorsCount,
+            1,
+            "stuckValidatorsCount not increased"
+        );
+
+        assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_unsafeUpdateValidatorsCount_RevertIfNoNodeOperator() public {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.unsafeUpdateValidatorsCount({
+            nodeOperatorId: 100500,
+            exitedValidatorsKeysCount: 1,
+            stuckValidatorsKeysCount: 1
+        });
+    }
+
+    function test_unsafeUpdateValidatorsCount_RevertIfNotStakingRouter()
+        public
+    {
+        expectRoleRevert(stranger, csm.STAKING_ROUTER_ROLE());
+        vm.prank(stranger);
+        csm.unsafeUpdateValidatorsCount({
+            nodeOperatorId: 100500,
+            exitedValidatorsKeysCount: 1,
+            stuckValidatorsKeysCount: 1
+        });
+    }
+
+    function test_unsafeUpdateValidatorsCount_RevertIfExitedCountMoreThanDeposited()
+        public
+    {
+        uint256 noId = createNodeOperator(1);
+
+        vm.expectRevert(ExitedKeysHigherThanTotalDeposited.selector);
+        csm.unsafeUpdateValidatorsCount({
+            nodeOperatorId: noId,
+            exitedValidatorsKeysCount: 100500,
+            stuckValidatorsKeysCount: 1
+        });
+    }
+
+    function test_unsafeUpdateValidatorsCount_RevertIfStuckCountMoreThanDeposited()
+        public
+    {
+        uint256 noId = createNodeOperator(1);
+        csm.obtainDepositData(1, "");
+
+        vm.expectRevert(StuckKeysHigherThanTotalDeposited.selector);
+        csm.unsafeUpdateValidatorsCount({
+            nodeOperatorId: noId,
+            exitedValidatorsKeysCount: 1,
+            stuckValidatorsKeysCount: 100500
+        });
+    }
+
+    function test_unsafeUpdateValidatorsCount_DecreaseExitedKeys() public {
+        uint256 noId = createNodeOperator(1);
+        csm.obtainDepositData(1, "");
+
+        csm.updateExitedValidatorsCount(
+            bytes.concat(bytes8(0x0000000000000000)),
+            bytes.concat(bytes16(0x00000000000000000000000000000001))
+        );
+
+        csm.unsafeUpdateValidatorsCount({
+            nodeOperatorId: noId,
+            exitedValidatorsKeysCount: 0,
+            stuckValidatorsKeysCount: 0
+        });
+
+        NodeOperatorSummary memory noSummary = getNodeOperatorSummary(noId);
+        assertEq(
+            noSummary.totalExitedValidators,
+            0,
+            "totalExitedValidators should be zero"
+        );
+    }
+
+    function test_unsafeUpdateValidatorsCount_NoEventIfSameValue() public {
+        uint256 noId = createNodeOperator(2);
+        csm.obtainDepositData(2, "");
+
+        csm.unsafeUpdateValidatorsCount({
+            nodeOperatorId: noId,
+            exitedValidatorsKeysCount: 1,
+            stuckValidatorsKeysCount: 1
+        });
+
+        vm.recordLogs();
+        csm.unsafeUpdateValidatorsCount({
+            nodeOperatorId: noId,
+            exitedValidatorsKeysCount: 1,
+            stuckValidatorsKeysCount: 1
+        });
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 0);
+    }
+}
+
 contract CsmPenalize is CSMCommon {
     function test_penalize_NoUnvet() public {
         uint256 noId = createNodeOperator();

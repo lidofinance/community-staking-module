@@ -791,28 +791,32 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
                 );
             if (nodeOperatorId >= _nodeOperatorsCount)
                 revert NodeOperatorDoesNotExist();
-            NodeOperator storage no = _nodeOperators[nodeOperatorId];
-            if (stuckValidatorsCount > no.totalDepositedKeys)
-                revert StuckKeysHigherThanTotalDeposited();
-            if (stuckValidatorsCount == no.stuckValidatorsCount) continue;
-
-            no.stuckValidatorsCount = stuckValidatorsCount;
-            emit StuckSigningKeysCountChanged(
-                nodeOperatorId,
-                stuckValidatorsCount
-            );
-
-            if (stuckValidatorsCount > 0 && no.depositableValidatorsCount > 0) {
-                // INFO: The only consequence of stuck keys from the on-chain perspective is suspending deposits to the
-                // node operator. To do that, we set the depositableValidatorsCount to 0 for this node operator. Hence
-                // we can omit the call to the _updateDepositableValidatorsCount function here to save gas.
-                _depositableValidatorsCount -= no.depositableValidatorsCount;
-                no.depositableValidatorsCount = 0;
-            } else {
-                _updateDepositableValidatorsCount(nodeOperatorId);
-            }
+            _updateStuckValidatorsCount(nodeOperatorId, stuckValidatorsCount);
         }
         _incrementModuleNonce();
+    }
+
+    function _updateStuckValidatorsCount(
+        uint256 nodeOperatorId,
+        uint256 stuckValidatorsCount
+    ) internal {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (stuckValidatorsCount == no.stuckValidatorsCount) return;
+        if (stuckValidatorsCount > no.totalDepositedKeys)
+            revert StuckKeysHigherThanTotalDeposited();
+
+        no.stuckValidatorsCount = stuckValidatorsCount;
+        emit StuckSigningKeysCountChanged(nodeOperatorId, stuckValidatorsCount);
+
+        if (stuckValidatorsCount > 0 && no.depositableValidatorsCount > 0) {
+            // INFO: The only consequence of stuck keys from the on-chain perspective is suspending deposits to the
+            // node operator. To do that, we set the depositableValidatorsCount to 0 for this node operator. Hence
+            // we can omit the call to the _updateDepositableValidatorsCount function here to save gas.
+            _depositableValidatorsCount -= no.depositableValidatorsCount;
+            no.depositableValidatorsCount = 0;
+        } else {
+            _updateDepositableValidatorsCount(nodeOperatorId);
+        }
     }
 
     /// @notice Updates exited validators count for node operators by StakingRouter
@@ -840,23 +844,37 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
             if (nodeOperatorId >= _nodeOperatorsCount)
                 revert NodeOperatorDoesNotExist();
 
-            NodeOperator storage no = _nodeOperators[nodeOperatorId];
-            if (exitedValidatorsCount > no.totalDepositedKeys)
-                revert ExitedKeysHigherThanTotalDeposited();
-            if (exitedValidatorsCount < no.totalExitedKeys)
-                revert ExitedKeysDecrease();
-            if (exitedValidatorsCount == no.totalExitedKeys) continue;
-
-            _totalExitedValidators +=
-                exitedValidatorsCount -
-                no.totalExitedKeys;
-            no.totalExitedKeys = exitedValidatorsCount;
-            emit ExitedSigningKeysCountChanged(
+            _updateExitedValidatorsCount(
                 nodeOperatorId,
-                exitedValidatorsCount
+                exitedValidatorsCount,
+                false /* _allowDecrease */
             );
         }
         _incrementModuleNonce();
+    }
+
+    // @dev updates exited validators count for a single node operator. allows decrease the count for unsafe updates
+    function _updateExitedValidatorsCount(
+        uint256 nodeOperatorId,
+        uint256 exitedValidatorsCount,
+        bool allowDecrease
+    ) internal {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (exitedValidatorsCount == no.totalExitedKeys) return;
+        if (exitedValidatorsCount > no.totalDepositedKeys)
+            revert ExitedKeysHigherThanTotalDeposited();
+        if (!allowDecrease && exitedValidatorsCount < no.totalExitedKeys)
+            revert ExitedKeysDecrease();
+
+        _totalExitedValidators =
+            (_totalExitedValidators - no.totalExitedKeys) +
+            exitedValidatorsCount;
+        no.totalExitedKeys = exitedValidatorsCount;
+
+        emit ExitedSigningKeysCountChanged(
+            nodeOperatorId,
+            exitedValidatorsCount
+        );
     }
 
     /// @notice Updates refunded validators count by StakingRouter
@@ -924,15 +942,19 @@ contract CSModule is ICSModule, CSModuleBase, AccessControl, PausableUntil {
     /// @notice Unsafe updates of validators count for node operators by DAO
     function unsafeUpdateValidatorsCount(
         uint256 nodeOperatorId,
-        uint256 /* exitedValidatorsKeysCount */,
-        uint256 /* stuckValidatorsKeysCount */
+        uint256 exitedValidatorsKeysCount,
+        uint256 stuckValidatorsKeysCount
     )
         external
         onlyRole(STAKING_ROUTER_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
-        // TODO: implement
-        _updateDepositableValidatorsCount(nodeOperatorId);
+        _updateExitedValidatorsCount(
+            nodeOperatorId,
+            exitedValidatorsKeysCount,
+            true /* _allowDecrease */
+        );
+        _updateStuckValidatorsCount(nodeOperatorId, stuckValidatorsKeysCount);
         _incrementModuleNonce();
     }
 
