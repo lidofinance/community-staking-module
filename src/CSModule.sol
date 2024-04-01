@@ -46,7 +46,11 @@ struct NodeOperator {
 }
 
 contract CSModuleBase {
-    event NodeOperatorAdded(uint256 indexed nodeOperatorId, address from);
+    event NodeOperatorAdded(
+        uint256 indexed nodeOperatorId,
+        address indexed referral,
+        address from
+    );
     event VettedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
         uint256 approvedValidatorsCount
@@ -294,16 +298,19 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
+    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
+    /// @param referral Optional referral address
     /// TODO consider splitting into methods with proof and without
     function addNodeOperatorETH(
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
-        bytes32[] calldata eaProof
+        bytes32[] calldata eaProof,
+        address referral
     ) external payable whenResumed {
         // TODO: sanity checks
 
-        uint256 nodeOperatorId = _createNodeOperator();
+        uint256 nodeOperatorId = _createNodeOperator(referral);
         _processEarlyAdoption(nodeOperatorId, eaProof);
 
         if (
@@ -324,15 +331,18 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
+    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
+    /// @param referral Optional referral address
     function addNodeOperatorStETH(
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
-        bytes32[] calldata eaProof
+        bytes32[] calldata eaProof,
+        address referral
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 nodeOperatorId = _createNodeOperator();
+        uint256 nodeOperatorId = _createNodeOperator(referral);
         _processEarlyAdoption(nodeOperatorId, eaProof);
 
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
@@ -350,17 +360,20 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
+    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
     /// @param permit Permit to use stETH as bond
+    /// @param referral Optional referral address
     function addNodeOperatorStETHWithPermit(
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
         bytes32[] calldata eaProof,
-        ICSAccounting.PermitInput calldata permit
+        ICSAccounting.PermitInput calldata permit,
+        address referral
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 nodeOperatorId = _createNodeOperator();
+        uint256 nodeOperatorId = _createNodeOperator(referral);
         _processEarlyAdoption(nodeOperatorId, eaProof);
 
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
@@ -379,15 +392,18 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
+    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
+    /// @param referral Optional referral address
     function addNodeOperatorWstETH(
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
-        bytes32[] calldata eaProof
+        bytes32[] calldata eaProof,
+        address referral
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 nodeOperatorId = _createNodeOperator();
+        uint256 nodeOperatorId = _createNodeOperator(referral);
         _processEarlyAdoption(nodeOperatorId, eaProof);
 
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
@@ -404,18 +420,20 @@ contract CSModule is
     /// @notice Adds a new node operator with permit to use wstETH as bond
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of public keys
+    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
     /// @param permit Permit to use wstETH as bond
+    /// @param referral Optional referral address
     function addNodeOperatorWstETHWithPermit(
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
         bytes32[] calldata eaProof,
-        ICSAccounting.PermitInput calldata permit
+        ICSAccounting.PermitInput calldata permit,
+        address referral
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 nodeOperatorId = _createNodeOperator();
+        uint256 nodeOperatorId = _createNodeOperator(referral);
         _processEarlyAdoption(nodeOperatorId, eaProof);
 
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
@@ -1497,7 +1515,7 @@ contract CSModule is
         _nonce++;
     }
 
-    function _createNodeOperator() internal returns (uint256) {
+    function _createNodeOperator(address referral) internal returns (uint256) {
         uint256 id = _nodeOperatorsCount;
         NodeOperator storage no = _nodeOperators[id];
 
@@ -1507,7 +1525,7 @@ contract CSModule is
         _nodeOperatorsCount++;
         _activeNodeOperatorsCount++;
 
-        emit NodeOperatorAdded(id, msg.sender);
+        emit NodeOperatorAdded(id, referral, msg.sender);
         return id;
     }
 

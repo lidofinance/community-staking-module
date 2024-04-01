@@ -108,7 +108,8 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
             2,
             keys,
             signatures,
-            new bytes32[](0)
+            new bytes32[](0),
+            address(0)
         );
 
         vm.prank(ARAGON_VOTING_ADDRESS);
