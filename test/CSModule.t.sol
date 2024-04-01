@@ -264,8 +264,7 @@ contract CSMCommon is CSMFixtures {
             address(this)
         );
         csm.grantRole(csm.PENALIZE_ROLE(), address(this));
-        csm.grantRole(csm.WITHDRAWAL_SUBMITTER_ROLE(), address(this));
-        csm.grantRole(csm.SLASHING_SUBMITTER_ROLE(), address(this));
+        csm.grantRole(csm.VERIFIER_ROLE(), address(this));
         accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), address(this));
         vm.stopPrank();
 
@@ -2960,9 +2959,9 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.penalize(noId, 1 ether);
     }
 
-    function test_withdrawalSubmitterRole() public {
+    function test_verifierRole_submitWithdrawal() public {
         uint256 noId = createNodeOperator();
-        bytes32 role = csm.WITHDRAWAL_SUBMITTER_ROLE();
+        bytes32 role = csm.VERIFIER_ROLE();
 
         vm.startPrank(admin);
         csm.grantRole(role, actor);
@@ -2974,13 +2973,36 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.submitWithdrawal(noId, 0, 1 ether);
     }
 
-    function test_withdrawalSubmitterRole_revert() public {
+    function test_verifierRole_submitWithdrawal_revert() public {
         uint256 noId = createNodeOperator();
-        bytes32 role = csm.WITHDRAWAL_SUBMITTER_ROLE();
+        bytes32 role = csm.VERIFIER_ROLE();
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
         csm.submitWithdrawal(noId, 0, 1 ether);
+    }
+
+    function test_verifierRole_submitInitialSlashing() public {
+        uint256 noId = createNodeOperator();
+        bytes32 role = csm.VERIFIER_ROLE();
+
+        vm.startPrank(admin);
+        csm.grantRole(role, actor);
+        csm.grantRole(csm.STAKING_ROUTER_ROLE(), admin);
+        csm.obtainDepositData(1, "");
+        vm.stopPrank();
+
+        vm.prank(actor);
+        csm.submitInitialSlashing(noId, 0);
+    }
+
+    function test_verifierRole_submitInitialSlashing_revert() public {
+        uint256 noId = createNodeOperator();
+        bytes32 role = csm.VERIFIER_ROLE();
+
+        vm.prank(stranger);
+        expectRoleRevert(stranger, role);
+        csm.submitInitialSlashing(noId, 0);
     }
 
     function test_recovererRole() public {

@@ -159,10 +159,7 @@ contract CSModule is
         keccak256("REPORT_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0x59911a6aa08a72fe3824aec4500dc42335c6d0702b6d5c5c72ceb265a0de9302
     bytes32 public constant SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE =
         keccak256("SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0xe85fdec10fe0f93d0792364051df7c3d73e37c17b3a954bffe593960e3cd3012
-    bytes32 public constant WITHDRAWAL_SUBMITTER_ROLE =
-        keccak256("WITHDRAWAL_SUBMITTER_ROLE"); // 0x2938d532d58b8c4c6a0b79de9ab9d63ffc286cbbc262cbd6cbebe54dd3431dec
-    bytes32 public constant SLASHING_SUBMITTER_ROLE =
-        keccak256("SLASHING_SUBMITTER_ROLE"); // 0x1490d8fc0656a30996bd2e7374c51790f74c101556ce56c87b64719da11a23dd
+    bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE"); // 0x0ce23c3e399818cfee81a7ab0880f714e53d7672b08df0fa62f2843416e1ea09
     bytes32 public constant PENALIZE_ROLE = keccak256("PENALIZE_ROLE"); // 0x014ffee5f075680f5690d491d67de8e1aba5c4a88326c3be77d991796b44f86b
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE"); // 0xb3e25b5404b87e5a838579cb5d7481d61ad96ee284d38ec1e97c07ba64e7f6fc
 
@@ -1188,7 +1185,7 @@ contract CSModule is
         uint256 amount
     )
         external
-        onlyRole(WITHDRAWAL_SUBMITTER_ROLE)
+        onlyRole(VERIFIER_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
@@ -1234,7 +1231,7 @@ contract CSModule is
         uint256 keyIndex
     )
         external
-        onlyRole(SLASHING_SUBMITTER_ROLE)
+        onlyRole(VERIFIER_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
