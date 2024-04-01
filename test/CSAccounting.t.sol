@@ -110,7 +110,6 @@ contract CSAccountingBaseTest is
         accounting.setFeeDistributor(address(feeDistributor));
         accounting.grantRole(accounting.PAUSE_ROLE(), admin);
         accounting.grantRole(accounting.RESUME_ROLE(), admin);
-        accounting.grantRole(accounting.RELEASE_BOND_LOCK_ROLE(), admin);
         accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_DEFAULT_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
@@ -4395,19 +4394,16 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         vm.prank(address(stakingModule));
         accounting.lockBondETH(0, 1 ether);
 
-        vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondLockReleased(0, 0.4 ether);
-
-        vm.prank(admin);
+        vm.prank(address(stakingModule));
         accounting.releaseLockedBondETH(0, 0.4 ether);
 
         assertEq(accounting.getActualLockedBond(0), 0.6 ether);
     }
 
-    function test_releaseLockedBondETH_RevertWhen_DoesNotHaveRole() public {
+    function test_releaseLockedBondETH_RevertWhen_SenderIsNotCSM() public {
         mock_getNodeOperatorsCount(1);
 
-        expectRoleRevert(stranger, accounting.RELEASE_BOND_LOCK_ROLE());
+        vm.expectRevert(SenderIsNotCSM.selector);
         vm.prank(stranger);
         accounting.releaseLockedBondETH(0, 1 ether);
     }

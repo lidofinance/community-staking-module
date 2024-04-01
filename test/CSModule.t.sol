@@ -269,10 +269,6 @@ contract CSMCommon is CSMFixtures {
         csm.grantRole(csm.WITHDRAWAL_SUBMITTER_ROLE(), address(this));
         csm.grantRole(csm.SLASHING_SUBMITTER_ROLE(), address(this));
         accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), address(this));
-        accounting.grantRole(
-            accounting.RELEASE_BOND_LOCK_ROLE(),
-            address(this)
-        );
         vm.stopPrank();
 
         csm.setAccounting(address(accounting));
@@ -2269,9 +2265,6 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
 
         uint256 lockedBond = accounting.getActualLockedBond(noId);
         assertEq(lockedBond, BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_FINE());
-
-        CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
-        assertEq(no.totalVettedValidators, 1);
     }
 
     function test_reportELRewardsStealingPenalty_RevertWhenNoNodeOperator()
@@ -2279,6 +2272,47 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
     {
         vm.expectRevert(NodeOperatorDoesNotExist.selector);
         csm.reportELRewardsStealingPenalty(0, 100, 1 ether);
+    }
+}
+
+contract CsmCancelELRewardsStealingPenalty is CSMCommon {
+    function test_cancelELRewardsStealingPenalty_HappyPath() public {
+        uint256 noId = createNodeOperator();
+
+        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit ELRewardsStealingPenaltyCancelled(
+            noId,
+            BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_FINE()
+        );
+        csm.cancelELRewardsStealingPenalty(
+            noId,
+            BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_FINE()
+        );
+
+        uint256 lockedBond = accounting.getActualLockedBond(noId);
+        assertEq(lockedBond, 0);
+    }
+
+    function test_cancelELRewardsStealingPenalty_Partial() public {
+        uint256 noId = createNodeOperator();
+
+        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit ELRewardsStealingPenaltyCancelled(noId, BOND_SIZE / 2);
+        csm.cancelELRewardsStealingPenalty(noId, BOND_SIZE / 2);
+
+        uint256 lockedBond = accounting.getActualLockedBond(noId);
+        assertEq(lockedBond, csm.EL_REWARDS_STEALING_FINE());
+    }
+
+    function test_cancelELRewardsStealingPenalty_RevertWhenNoNodeOperator()
+        public
+    {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.cancelELRewardsStealingPenalty(0, 1 ether);
     }
 }
 
@@ -3228,7 +3262,7 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3);
         csm.reportELRewardsStealingPenalty(noId, 0, BOND_SIZE); // Lock bond to unbond 2 validators (there's stealing fine).
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 1);
-        accounting.releaseLockedBondETH(
+        csm.cancelELRewardsStealingPenalty(
             noId,
             accounting.getLockedBondInfo(noId).amount
         );

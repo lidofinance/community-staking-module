@@ -99,6 +99,11 @@ contract CSModuleBase {
         uint256 stolenAmount
     );
 
+    event ELRewardsStealingPenaltyCancelled(
+        uint256 indexed nodeOperatorId,
+        uint256 amount
+    );
+
     error NodeOperatorDoesNotExist();
     error SenderIsNotManagerAddress();
     error SenderIsNotManagerOrKeyValidator();
@@ -1103,16 +1108,35 @@ contract CSModule is
         onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
+        accounting.lockBondETH(
+            nodeOperatorId,
+            amount + EL_REWARDS_STEALING_FINE
+        );
+
         emit ELRewardsStealingPenaltyReported(
             nodeOperatorId,
             blockNumber,
             amount
         );
 
-        accounting.lockBondETH(
-            nodeOperatorId,
-            amount + EL_REWARDS_STEALING_FINE
-        );
+        _updateDepositableValidatorsCount(nodeOperatorId);
+    }
+
+    /// @notice Cancel EL rewards stealing for the given node operator.
+    /// @dev The funds will be unlocked.
+    /// @param nodeOperatorId id of the node operator to cancel penalty for.
+    /// @param amount amount of cancelled penalty.
+    function cancelELRewardsStealingPenalty(
+        uint256 nodeOperatorId,
+        uint256 amount
+    )
+        external
+        onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE)
+        onlyExistingNodeOperator(nodeOperatorId)
+    {
+        accounting.releaseLockedBondETH(nodeOperatorId, amount);
+
+        emit ELRewardsStealingPenaltyCancelled(nodeOperatorId, amount);
 
         _updateDepositableValidatorsCount(nodeOperatorId);
     }

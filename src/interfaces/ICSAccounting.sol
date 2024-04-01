@@ -72,6 +72,11 @@ interface ICSAccounting is ICSBondCore, ICSBondCurve, ICSBondLock {
 
     function lockBondETH(uint256 nodeOperatorId, uint256 amount) external;
 
+    function releaseLockedBondETH(
+        uint256 nodeOperatorId,
+        uint256 amount
+    ) external;
+
     function settleLockedBondETH(
         uint256 nodeOperatorId
     ) external returns (uint256);
