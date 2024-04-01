@@ -252,8 +252,7 @@ contract CSMCommon is CSMFixtures {
         vm.startPrank(admin);
         csm.grantRole(csm.PAUSE_ROLE(), address(this));
         csm.grantRole(csm.RESUME_ROLE(), address(this));
-        csm.grantRole(csm.SET_ACCOUNTING_ROLE(), address(this));
-        csm.grantRole(csm.SET_EARLY_ADOPTION_ROLE(), address(this));
+        csm.grantRole(csm.INITIALIZE_ROLE(), address(this));
         csm.grantRole(csm.SET_PUBLIC_RELEASE_TIMESTAMP_ROLE(), address(this));
         csm.grantRole(csm.SET_REMOVAL_CHARGE_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(this));
@@ -297,7 +296,7 @@ contract CSMCommonNoRoles is CSMFixtures {
         );
 
         vm.startPrank(admin);
-        csm.grantRole(csm.SET_ACCOUNTING_ROLE(), admin);
+        csm.grantRole(csm.INITIALIZE_ROLE(), admin);
 
         uint256[] memory curve = new uint256[](1);
         curve[0] = BOND_SIZE;
@@ -336,7 +335,7 @@ contract CsmInitialization is CSMCommon {
             admin
         );
         vm.startPrank(admin);
-        csm.grantRole(csm.SET_ACCOUNTING_ROLE(), address(admin));
+        csm.grantRole(csm.INITIALIZE_ROLE(), address(admin));
         csm.setAccounting(address(accounting));
         vm.stopPrank();
         assertEq(address(csm.accounting()), address(accounting));
@@ -2624,7 +2623,7 @@ contract CsmGetStakingModuleSummary is CSMCommon {
 contract CSMAccessControl is CSMCommonNoRoles {
     function test_adminRole() public {
         CSModule csm = new CSModule("csm", address(locator), 0, actor);
-        bytes32 role = csm.SET_ACCOUNTING_ROLE();
+        bytes32 role = csm.INITIALIZE_ROLE();
         vm.prank(actor);
         csm.grantRole(role, stranger);
         assertTrue(csm.hasRole(role, stranger));
@@ -2636,7 +2635,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
 
     function test_adminRole_revert() public {
         CSModule csm = new CSModule("csm", address(locator), 0, actor);
-        bytes32 role = csm.SET_ACCOUNTING_ROLE();
+        bytes32 role = csm.INITIALIZE_ROLE();
         bytes32 adminRole = csm.DEFAULT_ADMIN_ROLE();
 
         vm.startPrank(stranger);
@@ -2644,9 +2643,9 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.grantRole(role, stranger);
     }
 
-    function test_setAccountingRole() public {
+    function test_initializeRole_setAccounting() public {
         CSModule csm = new CSModule("csm", address(locator), 0, admin);
-        bytes32 role = csm.SET_ACCOUNTING_ROLE();
+        bytes32 role = csm.INITIALIZE_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
 
@@ -2654,12 +2653,29 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.setAccounting(nextAddress());
     }
 
-    function test_setAccountingRole_revert() public {
-        bytes32 role = csm.SET_ACCOUNTING_ROLE();
+    function test_initializeRole_setAccounting_revert() public {
+        bytes32 role = csm.INITIALIZE_ROLE();
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
         csm.setAccounting(nextAddress());
+    }
+
+    function test_initializeRole_setEarlyAdoption() public {
+        bytes32 role = csm.INITIALIZE_ROLE();
+        vm.prank(admin);
+        csm.grantRole(role, actor);
+
+        vm.prank(actor);
+        csm.setEarlyAdoption(address(0));
+    }
+
+    function test_initializeRole_setEarlyAdoption_revert() public {
+        bytes32 role = csm.INITIALIZE_ROLE();
+
+        vm.prank(stranger);
+        expectRoleRevert(stranger, role);
+        csm.setEarlyAdoption(address(0));
     }
 
     function test_setRemovalChargeRole() public {
@@ -2966,23 +2982,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
         csm.setPublicReleaseTimestamp(0);
-    }
-
-    function test_setEarlyAdoptionRole() public {
-        bytes32 role = csm.SET_EARLY_ADOPTION_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.prank(actor);
-        csm.setEarlyAdoption(address(0));
-    }
-
-    function test_setEarlyAdoptionRole_revert() public {
-        bytes32 role = csm.SET_EARLY_ADOPTION_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.setEarlyAdoption(address(0));
     }
 
     function test_recovererRole() public {

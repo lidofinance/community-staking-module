@@ -103,7 +103,7 @@ abstract contract DeployBase is Script {
                 bondLockRetentionPeriod: 8 weeks,
                 _chargeRecipient: treasury
             });
-            csm.grantRole(csm.SET_ACCOUNTING_ROLE(), deployer);
+            csm.grantRole(csm.INITIALIZE_ROLE(), deployer);
             csm.setAccounting(address(accounting));
 
             CSFeeOracle oracleImpl = new CSFeeOracle({

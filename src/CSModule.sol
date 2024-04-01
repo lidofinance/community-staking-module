@@ -148,10 +148,7 @@ contract CSModule is
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
 
-    bytes32 public constant SET_ACCOUNTING_ROLE =
-        keccak256("SET_ACCOUNTING_ROLE"); // 0xbad3cb5f7add8fade9c376f76021c1c4106ee82e38abc73f6e8d234042d33f7d
-    bytes32 public constant SET_EARLY_ADOPTION_ROLE =
-        keccak256("SET_EARLY_ADOPTION_ROLE"); // 0xe0d27b865f229f5162f7b9ae24065c2d5cdae1ed1eaabf46a5f7809b1edf2ec1
+    bytes32 public constant INITIALIZE_ROLE = keccak256("INITIALIZE_ROLE"); // 0xf1d56a0879c1f3fb7b8db84f8f66a72839440915c8cc40c60b771b23d8349df0
     bytes32 public constant SET_PUBLIC_RELEASE_TIMESTAMP_ROLE =
         keccak256("SET_PUBLIC_RELEASE_TIMESTAMP_ROLE"); // 0x66d6616db95aac3b33b9261e42ab01ad71f311cff562503c33c742c54f22bbcd
     bytes32 public constant SET_REMOVAL_CHARGE_ROLE =
@@ -242,7 +239,7 @@ contract CSModule is
     /// @param _accounting Address of the accounting contract
     function setAccounting(
         address _accounting
-    ) external onlyRole(SET_ACCOUNTING_ROLE) {
+    ) external onlyRole(INITIALIZE_ROLE) {
         if (address(accounting) != address(0)) {
             revert AlreadyInitialized();
         }
@@ -253,7 +250,7 @@ contract CSModule is
     /// @param _earlyAdoption Address of the early adoption contract
     function setEarlyAdoption(
         address _earlyAdoption
-    ) external onlyRole(SET_EARLY_ADOPTION_ROLE) {
+    ) external onlyRole(INITIALIZE_ROLE) {
         if (address(earlyAdoption) != address(0)) {
             revert AlreadyInitialized();
         }
