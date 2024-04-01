@@ -149,10 +149,8 @@ contract CSModule is
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
 
     bytes32 public constant INITIALIZE_ROLE = keccak256("INITIALIZE_ROLE"); // 0xf1d56a0879c1f3fb7b8db84f8f66a72839440915c8cc40c60b771b23d8349df0
-    bytes32 public constant SET_PUBLIC_RELEASE_TIMESTAMP_ROLE =
-        keccak256("SET_PUBLIC_RELEASE_TIMESTAMP_ROLE"); // 0x66d6616db95aac3b33b9261e42ab01ad71f311cff562503c33c742c54f22bbcd
-    bytes32 public constant SET_REMOVAL_CHARGE_ROLE =
-        keccak256("SET_REMOVAL_CHARGE_ROLE"); // 0xec192e8f5533ece8d0718d6180775a3e45c9499f95d7b1b0d2858b2c536b4d40
+    bytes32 public constant MODULE_MANAGER_ROLE =
+        keccak256("MODULE_MANAGER_ROLE"); // 0x79dfcec784e591aafcf60db7db7b029a5c8b12aac4afd4e8c4eb740430405fa6
     bytes32 public constant STAKING_ROUTER_ROLE =
         keccak256("STAKING_ROUTER_ROLE"); // 0xbb75b874360e0bfd87f964eadd8276d8efb7c942134fc329b513032d0803e0c6
     bytes32 public constant FEE_DISTRIBUTOR_ROLE =
@@ -259,7 +257,7 @@ contract CSModule is
 
     function setPublicReleaseTimestamp(
         uint256 timestamp
-    ) external onlyRole(SET_PUBLIC_RELEASE_TIMESTAMP_ROLE) {
+    ) external onlyRole(MODULE_MANAGER_ROLE) {
         publicReleaseTimestamp = timestamp;
         emit PublicReleaseTimestampSet(timestamp);
     }
@@ -268,7 +266,7 @@ contract CSModule is
     /// @param amount Amount of wei to be charged for removing a single key.
     function setRemovalCharge(
         uint256 amount
-    ) external onlyRole(SET_REMOVAL_CHARGE_ROLE) {
+    ) external onlyRole(MODULE_MANAGER_ROLE) {
         removalCharge = amount;
         emit RemovalChargeSet(amount);
     }

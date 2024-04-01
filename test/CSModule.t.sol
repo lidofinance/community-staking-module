@@ -253,8 +253,7 @@ contract CSMCommon is CSMFixtures {
         csm.grantRole(csm.PAUSE_ROLE(), address(this));
         csm.grantRole(csm.RESUME_ROLE(), address(this));
         csm.grantRole(csm.INITIALIZE_ROLE(), address(this));
-        csm.grantRole(csm.SET_PUBLIC_RELEASE_TIMESTAMP_ROLE(), address(this));
-        csm.grantRole(csm.SET_REMOVAL_CHARGE_ROLE(), address(this));
+        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(this));
         csm.grantRole(
             csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE(),
@@ -2678,8 +2677,8 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.setEarlyAdoption(address(0));
     }
 
-    function test_setRemovalChargeRole() public {
-        bytes32 role = csm.SET_REMOVAL_CHARGE_ROLE();
+    function test_moduleManagerRole_setRemovalCharge() public {
+        bytes32 role = csm.MODULE_MANAGER_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
 
@@ -2687,12 +2686,29 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.setRemovalCharge(0.1 ether);
     }
 
-    function test_setRemovalChargeRole_revert() public {
-        bytes32 role = csm.SET_REMOVAL_CHARGE_ROLE();
+    function test_moduleManagerRole_setRemovalCharge_revert() public {
+        bytes32 role = csm.MODULE_MANAGER_ROLE();
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
         csm.setRemovalCharge(0.1 ether);
+    }
+
+    function test_moduleManagerRole_setPublicReleaseTimestamp() public {
+        bytes32 role = csm.MODULE_MANAGER_ROLE();
+        vm.prank(admin);
+        csm.grantRole(role, actor);
+
+        vm.prank(actor);
+        csm.setPublicReleaseTimestamp(0);
+    }
+
+    function test_moduleManagerRole_setPublicReleaseTimestamp_revert() public {
+        bytes32 role = csm.MODULE_MANAGER_ROLE();
+
+        vm.prank(stranger);
+        expectRoleRevert(stranger, role);
+        csm.setPublicReleaseTimestamp(0);
     }
 
     function test_stakingRouterRole_onRewardsMinted() public {
@@ -2965,23 +2981,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
         csm.submitWithdrawal(noId, 0, 1 ether);
-    }
-
-    function test_setPublicReleaseTimestampRole() public {
-        bytes32 role = csm.SET_PUBLIC_RELEASE_TIMESTAMP_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.prank(actor);
-        csm.setPublicReleaseTimestamp(0);
-    }
-
-    function test_setPublicReleaseTimestampRole_revert() public {
-        bytes32 role = csm.SET_PUBLIC_RELEASE_TIMESTAMP_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.setPublicReleaseTimestamp(0);
     }
 
     function test_recovererRole() public {
