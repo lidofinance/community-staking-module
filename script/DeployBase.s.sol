@@ -126,10 +126,17 @@ abstract contract DeployBase is Script {
                 accounting: address(accounting),
                 admin: deployer
             });
-            // TODO: not sure about this role
             accounting.grantRole(
-                accounting.ACCOUNTING_MANAGER_ROLE(),
+                accounting.INITIALIZE_ROLE(),
                 address(deployer)
+            );
+            accounting.grantRole(
+                accounting.SET_BOND_CURVE_ROLE(),
+                address(csm)
+            );
+            accounting.grantRole(
+                accounting.RESET_BOND_CURVE_ROLE(),
+                address(csm)
             );
             accounting.setFeeDistributor(address(feeDistributor));
 

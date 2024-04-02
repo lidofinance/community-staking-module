@@ -266,6 +266,8 @@ contract CSMCommon is CSMFixtures {
         csm.grantRole(csm.PENALIZE_ROLE(), address(this));
         csm.grantRole(csm.VERIFIER_ROLE(), address(this));
         accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), address(this));
+        accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), address(csm));
+        accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm));
         vm.stopPrank();
 
         csm.setAccounting(address(accounting));
@@ -309,6 +311,8 @@ contract CSMCommonNoRoles is CSMFixtures {
         );
 
         csm.setAccounting(address(accounting));
+        accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), address(csm));
+        accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm));
         vm.stopPrank();
     }
 }
