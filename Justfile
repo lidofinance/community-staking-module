@@ -14,8 +14,6 @@ deploy_script_path := if chain == "mainnet" {
 anvil_host := env_var_or_default("ANVIL_IP_ADDR", "127.0.0.1")
 anvil_port := "8545"
 
-tmpdir := `mktemp -d`
-
 default: clean deps build test-all
 
 build *args:
@@ -51,7 +49,7 @@ test-integration *args:
 	forge test --match-path '*test/integration*' -vvv {{args}}
 
 gas-report:
-	forge test --nmt 'testFuzz_\w{1,}?' --nmp '*test/integration*'  --gas-report | sed -n '/^|/,$p' | grep -E '(\|.*)|$^' > GAS.md
+	forge test --nmt 'testFuzz_\w{1,}?' --nmp '*test/integration*'  --gas-report | sed -n '/^|/,$p' | sed -n '/^|\stest/,$!p' > GAS.md
 
 coverage:
 	forge coverage
