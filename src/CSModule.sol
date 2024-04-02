@@ -49,7 +49,7 @@ contract CSModuleBase {
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
         address indexed referral,
-        address from
+        address indexed from
     );
     event VettedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
