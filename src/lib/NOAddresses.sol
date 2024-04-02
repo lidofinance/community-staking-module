@@ -9,21 +9,21 @@ import { NodeOperator } from "../CSModule.sol";
 library NOAddresses {
     event NodeOperatorManagerAddressChangeProposed(
         uint256 indexed nodeOperatorId,
-        address proposedAddress
+        address indexed proposedAddress
     );
     event NodeOperatorRewardAddressChangeProposed(
         uint256 indexed nodeOperatorId,
-        address proposedAddress
+        address indexed proposedAddress
     );
     event NodeOperatorRewardAddressChanged(
         uint256 indexed nodeOperatorId,
-        address oldAddress,
-        address newAddress
+        address indexed newAddress,
+        address oldAddress
     );
     event NodeOperatorManagerAddressChanged(
         uint256 indexed nodeOperatorId,
-        address oldAddress,
-        address newAddress
+        address indexed newAddress,
+        address oldAddress
     );
 
     error AlreadyProposed();
@@ -63,8 +63,8 @@ library NOAddresses {
 
         emit NodeOperatorManagerAddressChanged(
             nodeOperatorId,
-            oldAddress,
-            msg.sender
+            msg.sender,
+            oldAddress
         );
     }
 
@@ -99,8 +99,8 @@ library NOAddresses {
 
         emit NodeOperatorRewardAddressChanged(
             nodeOperatorId,
-            oldAddress,
-            msg.sender
+            msg.sender,
+            oldAddress
         );
     }
 
@@ -118,8 +118,8 @@ library NOAddresses {
             delete no.proposedManagerAddress;
         emit NodeOperatorManagerAddressChanged(
             nodeOperatorId,
-            previousManagerAddress,
-            no.rewardAddress
+            no.rewardAddress,
+            previousManagerAddress
         );
     }
 }
