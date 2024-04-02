@@ -107,7 +107,9 @@ contract CSAccountingBaseTest is
         );
 
         vm.startPrank(admin);
+        accounting.grantRole(accounting.ACCOUNTING_MANAGER_ROLE(), admin);
         accounting.setFeeDistributor(address(feeDistributor));
+
         accounting.grantRole(accounting.PAUSE_ROLE(), admin);
         accounting.grantRole(accounting.RESUME_ROLE(), admin);
         accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), admin);
@@ -4367,7 +4369,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
     }
 
     function setLockedBondRetentionPeriod_RevertWhen_DoesNotHaveRole() public {
-        expectRoleRevert(stranger, accounting.DEFAULT_ADMIN_ROLE());
+        expectRoleRevert(stranger, accounting.ACCOUNTING_MANAGER_ROLE());
         vm.prank(stranger);
         accounting.setLockedBondRetentionPeriod(200 days);
     }
@@ -4539,7 +4541,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
     }
 
     function test_setFeeDistributor_RevertWhen_DoesNotHaveRole() public {
-        expectRoleRevert(stranger, accounting.DEFAULT_ADMIN_ROLE());
+        expectRoleRevert(stranger, accounting.ACCOUNTING_MANAGER_ROLE());
 
         vm.prank(stranger);
         accounting.setFeeDistributor(address(1337));
@@ -4554,7 +4556,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
     }
 
     function test_setChargeRecipient_RevertWhen_DoesNotHaveRole() public {
-        expectRoleRevert(stranger, accounting.DEFAULT_ADMIN_ROLE());
+        expectRoleRevert(stranger, accounting.ACCOUNTING_MANAGER_ROLE());
 
         vm.prank(stranger);
         accounting.setChargeRecipient(address(1337));

@@ -105,6 +105,7 @@ abstract contract DeployBase is Script {
             });
             csm.grantRole(csm.INITIALIZE_ROLE(), deployer);
             csm.setAccounting(address(accounting));
+            // TODO: add early adoption initialization
 
             CSFeeOracle oracleImpl = new CSFeeOracle({
                 secondsPerSlot: SECONDS_PER_SLOT,
@@ -125,6 +126,11 @@ abstract contract DeployBase is Script {
                 accounting: address(accounting),
                 admin: deployer
             });
+            // TODO: not sure about this role
+            accounting.grantRole(
+                accounting.ACCOUNTING_MANAGER_ROLE(),
+                address(deployer)
+            );
             accounting.setFeeDistributor(address(feeDistributor));
 
             HashConsensus hashConsensus = new HashConsensus({
@@ -157,6 +163,7 @@ abstract contract DeployBase is Script {
                 )
             });
             verifier.initialize(address(locator), address(csm));
+            csm.grantRole(csm.VERIFIER_ROLE(), address(verifier));
 
             JsonObj memory deployJson = Json.newObj();
             deployJson.set("CSModule", address(csm));
