@@ -295,7 +295,7 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
-    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
+    /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
     /// @param referral Optional referral address
     /// TODO consider splitting into methods with proof and without
     function addNodeOperatorETH(
@@ -328,7 +328,7 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
-    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
+    /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
     /// @param referral Optional referral address
     function addNodeOperatorStETH(
         uint256 keysCount,
@@ -357,7 +357,7 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
-    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
+    /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
     /// @param permit Permit to use stETH as bond
     /// @param referral Optional referral address
     function addNodeOperatorStETHWithPermit(
@@ -389,7 +389,7 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
-    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
+    /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
     /// @param referral Optional referral address
     function addNodeOperatorWstETH(
         uint256 keysCount,
@@ -417,7 +417,7 @@ contract CSModule is
     /// @notice Adds a new node operator with permit to use wstETH as bond
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
-    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
+    /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
     /// @param permit Permit to use wstETH as bond
     /// @param referral Optional referral address
     function addNodeOperatorWstETHWithPermit(
@@ -1165,7 +1165,7 @@ contract CSModule is
         _resetBenefits(nodeOperatorId);
     }
 
-    /// @notice Checks if the given node operators's key is proved as withdrawn.
+    /// @notice Checks if the given node operator's key is proved as withdrawn.
     /// @param nodeOperatorId id of the node operator to check.
     /// @param keyIndex index of the key to check.
     function isValidatorWithdrawn(
@@ -1176,6 +1176,7 @@ contract CSModule is
     }
 
     /// @notice Report node operator's key as withdrawn and settle withdrawn amount.
+    /// See CSVerifier.processWithdrawalProof to use this method permissionless
     /// @param nodeOperatorId Operator ID in the module.
     /// @param keyIndex Index of the withdrawn key in the node operator's keys.
     /// @param amount Amount of withdrawn ETH in wei.
@@ -1213,7 +1214,7 @@ contract CSModule is
         _incrementModuleNonce();
     }
 
-    /// @notice Checks if the given node operators's key is proved as slashed.
+    /// @notice Checks if the given node operator's key is proved as slashed.
     /// @param nodeOperatorId id of the node operator to check.
     /// @param keyIndex index of the key to check.
     function isValidatorSlashed(
@@ -1224,6 +1225,7 @@ contract CSModule is
     }
 
     /// @notice Report node operator's key as slashed and apply initial slashing penalty.
+    /// See CSVerifier.processSlashingProof to use this method permissionless
     /// @param nodeOperatorId Operator ID in the module.
     /// @param keyIndex Index of the slashed key in the node operator's keys.
     function submitInitialSlashing(
