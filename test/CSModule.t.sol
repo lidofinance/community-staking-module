@@ -55,8 +55,6 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
         uint256 depositableValidatorsCount;
     }
 
-    function setUp() public virtual {}
-
     function createNodeOperator() internal returns (uint256) {
         return createNodeOperator(nodeOperator, 1);
     }
@@ -220,8 +218,8 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
     }
 }
 
-contract CSMCommon is CSMFixtures {
-    function setUp() public override {
+contract CSMCommonNoPublicRelease is CSMFixtures {
+    function setUp() public virtual {
         nodeOperator = nextAddress("NODE_OPERATOR");
         stranger = nextAddress("STRANGER");
         admin = nextAddress("ADMIN");
@@ -231,12 +229,7 @@ contract CSMCommon is CSMFixtures {
 
         communityStakingFeeDistributor = new Stub();
 
-        csm = new CSModule(
-            "community-staking-module",
-            address(locator),
-            0,
-            admin
-        );
+        csm = new CSModule("community-staking-module", address(locator), admin);
         uint256[] memory curve = new uint256[](1);
         curve[0] = BOND_SIZE;
         accounting = new CSAccounting(
@@ -275,10 +268,17 @@ contract CSMCommon is CSMFixtures {
     }
 }
 
+contract CSMCommon is CSMCommonNoPublicRelease {
+    function setUp() public override {
+        super.setUp();
+        csm.setPublicRelease();
+    }
+}
+
 contract CSMCommonNoRoles is CSMFixtures {
     address internal actor;
 
-    function setUp() public override {
+    function setUp() public {
         nodeOperator = nextAddress("NODE_OPERATOR");
         stranger = nextAddress("STRANGER");
         admin = nextAddress("ADMIN");
@@ -288,15 +288,11 @@ contract CSMCommonNoRoles is CSMFixtures {
         (locator, wstETH, stETH, ) = initLido();
 
         communityStakingFeeDistributor = new Stub();
-        csm = new CSModule(
-            "community-staking-module",
-            address(locator),
-            0,
-            admin
-        );
+        csm = new CSModule("community-staking-module", address(locator), admin);
 
         vm.startPrank(admin);
         csm.grantRole(csm.INITIALIZE_ROLE(), admin);
+        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
 
         uint256[] memory curve = new uint256[](1);
         curve[0] = BOND_SIZE;
@@ -319,23 +315,13 @@ contract CSMCommonNoRoles is CSMFixtures {
 
 contract CsmInitialization is CSMCommon {
     function test_initContract() public {
-        csm = new CSModule(
-            "community-staking-module",
-            address(locator),
-            0,
-            admin
-        );
+        csm = new CSModule("community-staking-module", address(locator), admin);
         assertEq(csm.getType(), "community-staking-module");
         assertEq(csm.getNodeOperatorsCount(), 0);
     }
 
     function test_setAccounting() public {
-        csm = new CSModule(
-            "community-staking-module",
-            address(locator),
-            0,
-            admin
-        );
+        csm = new CSModule("community-staking-module", address(locator), admin);
         vm.startPrank(admin);
         csm.grantRole(csm.INITIALIZE_ROLE(), address(admin));
         csm.setAccounting(address(accounting));
@@ -2225,37 +2211,6 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
     }
 }
 
-contract CsmPenalize is CSMCommon {
-    function test_penalize_NoUnvet() public {
-        uint256 noId = createNodeOperator();
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.penalize.selector, noId, 1 ether)
-        );
-        csm.penalize(noId, 1 ether);
-
-        CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
-        assertEq(no.totalVettedValidators, 1);
-    }
-
-    function test_penalize_ResetBenefitsIfNoBond() public {
-        uint256 noId = createNodeOperator();
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
-        csm.penalize(noId, BOND_SIZE);
-    }
-
-    function test_penalize_RevertWhenExpired() public {
-        uint256 noId = createNodeOperator();
-        vm.warp(block.timestamp + 60 * 60 * 24 * 365 + 1);
-        vm.expectRevert(Expired.selector);
-        csm.penalize(noId, 1 ether);
-    }
-}
-
 contract CsmReportELRewardsStealingPenalty is CSMCommon {
     function test_reportELRewardsStealingPenalty_HappyPath() public {
         uint256 noId = createNodeOperator();
@@ -2530,7 +2485,11 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
 
-        csm.penalize(noId, csm.DEPOSIT_SIZE() - csm.INITIAL_SLASHING_PENALTY());
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            0,
+            csm.DEPOSIT_SIZE() - csm.INITIAL_SLASHING_PENALTY()
+        );
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
@@ -2624,7 +2583,7 @@ contract CsmGetStakingModuleSummary is CSMCommon {
 
 contract CSMAccessControl is CSMCommonNoRoles {
     function test_adminRole() public {
-        CSModule csm = new CSModule("csm", address(locator), 0, actor);
+        CSModule csm = new CSModule("csm", address(locator), actor);
         bytes32 role = csm.INITIALIZE_ROLE();
         vm.prank(actor);
         csm.grantRole(role, stranger);
@@ -2636,7 +2595,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_adminRole_revert() public {
-        CSModule csm = new CSModule("csm", address(locator), 0, actor);
+        CSModule csm = new CSModule("csm", address(locator), actor);
         bytes32 role = csm.INITIALIZE_ROLE();
         bytes32 adminRole = csm.DEFAULT_ADMIN_ROLE();
 
@@ -2646,7 +2605,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_initializeRole_setAccounting() public {
-        CSModule csm = new CSModule("csm", address(locator), 0, admin);
+        CSModule csm = new CSModule("csm", address(locator), admin);
         bytes32 role = csm.INITIALIZE_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
@@ -2697,21 +2656,21 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.setRemovalCharge(0.1 ether);
     }
 
-    function test_moduleManagerRole_setPublicReleaseTimestamp() public {
+    function test_moduleManagerRole_setPublicRelease() public {
         bytes32 role = csm.MODULE_MANAGER_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
 
         vm.prank(actor);
-        csm.setPublicReleaseTimestamp(0);
+        csm.setPublicRelease();
     }
 
-    function test_moduleManagerRole_setPublicReleaseTimestamp_revert() public {
+    function test_moduleManagerRole_setPublicRelease_revert() public {
         bytes32 role = csm.MODULE_MANAGER_ROLE();
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
-        csm.setPublicReleaseTimestamp(0);
+        csm.setPublicRelease();
     }
 
     function test_stakingRouterRole_onRewardsMinted() public {
@@ -2768,6 +2727,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_stakingRouterRole_updateRefundedValidatorsCount() public {
+        csm.setPublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
         vm.prank(admin);
@@ -2780,6 +2740,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     function test_stakingRouterRole_updateRefundedValidatorsCount_revert()
         public
     {
+        csm.setPublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
 
@@ -2789,6 +2750,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_stakingRouterRole_updateTargetValidatorsLimits() public {
+        csm.setPublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
         vm.prank(admin);
@@ -2801,6 +2763,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     function test_stakingRouterRole_updateTargetValidatorsLimits_revert()
         public
     {
+        csm.setPublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
 
@@ -2867,6 +2830,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_stakingRouterRole_unsafeUpdateValidatorsCountRole() public {
+        csm.setPublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
         vm.prank(admin);
@@ -2879,6 +2843,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     function test_stakingRouterRole_unsafeUpdateValidatorsCountRole_revert()
         public
     {
+        csm.setPublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
 
@@ -2888,6 +2853,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_stakingRouterRole_unvetKeys() public {
+        csm.setPublicRelease();
         createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
         vm.prank(admin);
@@ -2898,6 +2864,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_stakingRouterRole_unvetKeys_revert() public {
+        csm.setPublicRelease();
         createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
 
@@ -2907,6 +2874,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_reportELRewardsStealingPenaltyRole() public {
+        csm.setPublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE();
         vm.prank(admin);
@@ -2917,6 +2885,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_reportELRewardsStealingPenaltyRole_revert() public {
+        csm.setPublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE();
 
@@ -2926,6 +2895,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_settleELRewardsStealingPenaltyRole() public {
+        csm.setPublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE();
         vm.prank(admin);
@@ -2936,6 +2906,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_settleELRewardsStealingPenaltyRole_revert() public {
+        csm.setPublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE();
 
@@ -2944,26 +2915,8 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.settleELRewardsStealingPenalty(UintArr(noId));
     }
 
-    function test_penalizeRole() public {
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.PENALIZE_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.prank(actor);
-        csm.penalize(noId, 1 ether);
-    }
-
-    function test_penalizeRole_revert() public {
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.PENALIZE_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.penalize(noId, 1 ether);
-    }
-
     function test_verifierRole_submitWithdrawal() public {
+        csm.setPublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.VERIFIER_ROLE();
 
@@ -2978,6 +2931,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_verifierRole_submitWithdrawal_revert() public {
+        csm.setPublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.VERIFIER_ROLE();
 
@@ -2987,6 +2941,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_verifierRole_submitInitialSlashing() public {
+        csm.setPublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.VERIFIER_ROLE();
 
@@ -3001,6 +2956,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_verifierRole_submitInitialSlashing_revert() public {
+        csm.setPublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.VERIFIER_ROLE();
 
@@ -3027,15 +2983,13 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 }
 
-contract CSMPublicReleaseTimestamp is CSMCommon {
-    function test_setPublicReleaseTimestamp() public {
-        uint256 timestamp = block.timestamp + 30 days;
-
+contract CSMSetPublicRelease is CSMCommonNoPublicRelease {
+    function test_setPublicRelease() public {
         vm.expectEmit(true, true, true, true, address(csm));
-        emit PublicReleaseTimestampSet(timestamp);
-        csm.setPublicReleaseTimestamp(timestamp);
+        emit PublicRelease();
+        csm.setPublicRelease();
 
-        assertEq(csm.publicReleaseTimestamp(), timestamp);
+        assertTrue(csm.publicRelease());
     }
 
     function test_addNodeOperatorETH_RevertWhenNoPublicReleaseYet() public {
@@ -3043,8 +2997,6 @@ contract CSMPublicReleaseTimestamp is CSMCommon {
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
-        uint256 timestamp = block.timestamp + 30 days;
-        csm.setPublicReleaseTimestamp(timestamp);
 
         vm.expectRevert(NotAllowedToJoinYet.selector);
         csm.addNodeOperatorETH{ value: keysCount * BOND_SIZE }(
@@ -3061,10 +3013,8 @@ contract CSMPublicReleaseTimestamp is CSMCommon {
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
-        uint256 timestamp = block.timestamp + 30 days;
-        csm.setPublicReleaseTimestamp(timestamp);
+        csm.setPublicRelease();
 
-        vm.warp(timestamp + 1);
         csm.addNodeOperatorETH{ value: keysCount * BOND_SIZE }(
             keysCount,
             keys,
@@ -3075,7 +3025,7 @@ contract CSMPublicReleaseTimestamp is CSMCommon {
     }
 }
 
-contract CSMEarlyAdoptionTest is CSMCommon {
+contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
     function initEarlyAdoption()
         private
         returns (MerkleTree merkleTree, CSEarlyAdoption earlyAdoption)
@@ -3105,7 +3055,7 @@ contract CSMEarlyAdoptionTest is CSMCommon {
         csm.setEarlyAdoption(address(earlyAdoption));
         address newEarlyAdoption = nextAddress();
 
-        vm.expectRevert(AlreadyInitialized.selector);
+        vm.expectRevert(AlreadySet.selector);
         csm.setEarlyAdoption(newEarlyAdoption);
     }
 
@@ -3115,7 +3065,7 @@ contract CSMEarlyAdoptionTest is CSMCommon {
             CSEarlyAdoption earlyAdoption
         ) = initEarlyAdoption();
         csm.setEarlyAdoption(address(earlyAdoption));
-        csm.setPublicReleaseTimestamp(block.timestamp + 30 days);
+        csm.setPublicRelease();
         bytes32[] memory proof = merkleTree.getProof(0);
 
         uint16 keysCount = 1;
@@ -3149,9 +3099,7 @@ contract CSMEarlyAdoptionTest is CSMCommon {
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
-        uint256 timestamp = block.timestamp + 30 days;
-        csm.setPublicReleaseTimestamp(timestamp);
-        vm.warp(timestamp + 1);
+        csm.setPublicRelease();
 
         bytes32[] memory proof = merkleTree.getProof(0);
         vm.deal(nodeOperator, BOND_SIZE / 2);
@@ -3177,7 +3125,6 @@ contract CSMEarlyAdoptionTest is CSMCommon {
             CSEarlyAdoption earlyAdoption
         ) = initEarlyAdoption();
         csm.setEarlyAdoption(address(earlyAdoption));
-        csm.setPublicReleaseTimestamp(block.timestamp + 30 days);
         bytes32[] memory proof = merkleTree.getProof(0);
 
         uint16 keysCount = csm.MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE() + 1;
@@ -3245,20 +3192,17 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 0);
     }
 
-    function test_depositableValidatorsCountChanges_OnPenalize() public {
-        // Even small penalty will make a key unbonded (keep in mind 10 wei leeway).
-        uint256 noId = createNodeOperator(7);
-        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 7);
-        csm.penalize(noId, BOND_SIZE * 3); // Penalty to unbond 3 validators.
-        assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 4);
-        assertEq(getStakingModuleSummary().depositableValidatorsCount, 4);
-    }
-
     function test_depositableValidatorsCountChanges_OnWithdrawal() public {
         uint256 noId = createNodeOperator(7);
         csm.obtainDepositData(4, "");
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3);
-        csm.penalize(noId, BOND_SIZE * 3); // Penalty to unbond 3 validators.
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            0,
+            BOND_SIZE * 3 - csm.EL_REWARDS_STEALING_FINE()
+        ); // Penalty to unbond 3 validators.
+        csm.settleELRewardsStealingPenalty(UintArr(noId));
+
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 0);
         csm.submitWithdrawal(noId, 0, csm.DEPOSIT_SIZE());
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 1);
