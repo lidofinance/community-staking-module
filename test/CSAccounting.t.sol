@@ -107,12 +107,23 @@ contract CSAccountingBaseTest is
         );
 
         vm.startPrank(admin);
+        accounting.grantRole(accounting.INITIALIZE_ROLE(), admin);
         accounting.setFeeDistributor(address(feeDistributor));
+
+        accounting.grantRole(accounting.ACCOUNTING_MANAGER_ROLE(), admin);
         accounting.grantRole(accounting.PAUSE_ROLE(), admin);
         accounting.grantRole(accounting.RESUME_ROLE(), admin);
         accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_DEFAULT_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
+        accounting.grantRole(
+            accounting.SET_BOND_CURVE_ROLE(),
+            address(stakingModule)
+        );
+        accounting.grantRole(
+            accounting.RESET_BOND_CURVE_ROLE(),
+            address(stakingModule)
+        );
         vm.stopPrank();
 
         // HACK: To avoid changing the Stub to a mock so far.
@@ -4367,7 +4378,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
     }
 
     function setLockedBondRetentionPeriod_RevertWhen_DoesNotHaveRole() public {
-        expectRoleRevert(stranger, accounting.DEFAULT_ADMIN_ROLE());
+        expectRoleRevert(stranger, accounting.ACCOUNTING_MANAGER_ROLE());
         vm.prank(stranger);
         accounting.setLockedBondRetentionPeriod(200 days);
     }
@@ -4486,7 +4497,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
     }
 
     function test_setBondCurve_RevertWhen_DoesNotHaveRole() public {
-        vm.expectRevert(InvalidSender.selector);
+        expectRoleRevert(stranger, accounting.SET_BOND_CURVE_ROLE());
         vm.prank(stranger);
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
     }
@@ -4510,8 +4521,8 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         assertEq(curve.points[0], defaultPoints[0]);
     }
 
-    function test_resetBondCurve_RevertWhen_SenderIsNotCSMOrRole() public {
-        vm.expectRevert(InvalidSender.selector);
+    function test_resetBondCurve_RevertWhen_DoesNotHaveRole() public {
+        expectRoleRevert(stranger, accounting.RESET_BOND_CURVE_ROLE());
         vm.prank(stranger);
         accounting.resetBondCurve({ nodeOperatorId: 0 });
     }
@@ -4531,7 +4542,20 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
     }
 
     function test_setFeeDistributor() public {
-        vm.prank(admin);
+        uint256[] memory curve = new uint256[](1);
+        curve[0] = 2 ether;
+        accounting = new CSAccountingForTests(
+            curve,
+            admin,
+            address(locator),
+            address(wstETH),
+            address(stakingModule),
+            8 weeks,
+            testChargeRecipient
+        );
+        vm.startPrank(admin);
+        accounting.grantRole(accounting.INITIALIZE_ROLE(), admin);
+
         vm.expectEmit(true, false, false, true, address(accounting));
         emit FeeDistributorSet(address(1337));
         accounting.setFeeDistributor(address(1337));
@@ -4539,10 +4563,16 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
     }
 
     function test_setFeeDistributor_RevertWhen_DoesNotHaveRole() public {
-        expectRoleRevert(stranger, accounting.DEFAULT_ADMIN_ROLE());
+        expectRoleRevert(stranger, accounting.INITIALIZE_ROLE());
 
         vm.prank(stranger);
         accounting.setFeeDistributor(address(1337));
+    }
+
+    function test_setFeeDistributor_RevertWhen_AlreadyInitialized() public {
+        vm.expectRevert(AlreadyInitialized.selector);
+        vm.prank(admin);
+        accounting.setFeeDistributor(address(7331));
     }
 
     function test_setChargeRecipient() public {
@@ -4554,7 +4584,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
     }
 
     function test_setChargeRecipient_RevertWhen_DoesNotHaveRole() public {
-        expectRoleRevert(stranger, accounting.DEFAULT_ADMIN_ROLE());
+        expectRoleRevert(stranger, accounting.ACCOUNTING_MANAGER_ROLE());
 
         vm.prank(stranger);
         accounting.setChargeRecipient(address(1337));

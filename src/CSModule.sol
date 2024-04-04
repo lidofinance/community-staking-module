@@ -148,14 +148,9 @@ contract CSModule is
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
 
-    bytes32 public constant SET_ACCOUNTING_ROLE =
-        keccak256("SET_ACCOUNTING_ROLE"); // 0xbad3cb5f7add8fade9c376f76021c1c4106ee82e38abc73f6e8d234042d33f7d
-    bytes32 public constant SET_EARLY_ADOPTION_ROLE =
-        keccak256("SET_EARLY_ADOPTION_ROLE"); // 0xe0d27b865f229f5162f7b9ae24065c2d5cdae1ed1eaabf46a5f7809b1edf2ec1
-    bytes32 public constant SET_PUBLIC_RELEASE_TIMESTAMP_ROLE =
-        keccak256("SET_PUBLIC_RELEASE_TIMESTAMP_ROLE"); // 0x66d6616db95aac3b33b9261e42ab01ad71f311cff562503c33c742c54f22bbcd
-    bytes32 public constant SET_REMOVAL_CHARGE_ROLE =
-        keccak256("SET_REMOVAL_CHARGE_ROLE"); // 0xec192e8f5533ece8d0718d6180775a3e45c9499f95d7b1b0d2858b2c536b4d40
+    bytes32 public constant INITIALIZE_ROLE = keccak256("INITIALIZE_ROLE"); // 0xf1d56a0879c1f3fb7b8db84f8f66a72839440915c8cc40c60b771b23d8349df0
+    bytes32 public constant MODULE_MANAGER_ROLE =
+        keccak256("MODULE_MANAGER_ROLE"); // 0x79dfcec784e591aafcf60db7db7b029a5c8b12aac4afd4e8c4eb740430405fa6
     bytes32 public constant STAKING_ROUTER_ROLE =
         keccak256("STAKING_ROUTER_ROLE"); // 0xbb75b874360e0bfd87f964eadd8276d8efb7c942134fc329b513032d0803e0c6
     bytes32 public constant FEE_DISTRIBUTOR_ROLE =
@@ -164,10 +159,7 @@ contract CSModule is
         keccak256("REPORT_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0x59911a6aa08a72fe3824aec4500dc42335c6d0702b6d5c5c72ceb265a0de9302
     bytes32 public constant SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE =
         keccak256("SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0xe85fdec10fe0f93d0792364051df7c3d73e37c17b3a954bffe593960e3cd3012
-    bytes32 public constant WITHDRAWAL_SUBMITTER_ROLE =
-        keccak256("WITHDRAWAL_SUBMITTER_ROLE"); // 0x2938d532d58b8c4c6a0b79de9ab9d63ffc286cbbc262cbd6cbebe54dd3431dec
-    bytes32 public constant SLASHING_SUBMITTER_ROLE =
-        keccak256("SLASHING_SUBMITTER_ROLE"); // 0x1490d8fc0656a30996bd2e7374c51790f74c101556ce56c87b64719da11a23dd
+    bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE"); // 0x0ce23c3e399818cfee81a7ab0880f714e53d7672b08df0fa62f2843416e1ea09
     bytes32 public constant PENALIZE_ROLE = keccak256("PENALIZE_ROLE"); // 0x014ffee5f075680f5690d491d67de8e1aba5c4a88326c3be77d991796b44f86b
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE"); // 0xb3e25b5404b87e5a838579cb5d7481d61ad96ee284d38ec1e97c07ba64e7f6fc
 
@@ -242,7 +234,7 @@ contract CSModule is
     /// @param _accounting Address of the accounting contract
     function setAccounting(
         address _accounting
-    ) external onlyRole(SET_ACCOUNTING_ROLE) {
+    ) external onlyRole(INITIALIZE_ROLE) {
         if (address(accounting) != address(0)) {
             revert AlreadyInitialized();
         }
@@ -253,7 +245,7 @@ contract CSModule is
     /// @param _earlyAdoption Address of the early adoption contract
     function setEarlyAdoption(
         address _earlyAdoption
-    ) external onlyRole(SET_EARLY_ADOPTION_ROLE) {
+    ) external onlyRole(INITIALIZE_ROLE) {
         if (address(earlyAdoption) != address(0)) {
             revert AlreadyInitialized();
         }
@@ -262,7 +254,7 @@ contract CSModule is
 
     function setPublicReleaseTimestamp(
         uint256 timestamp
-    ) external onlyRole(SET_PUBLIC_RELEASE_TIMESTAMP_ROLE) {
+    ) external onlyRole(MODULE_MANAGER_ROLE) {
         publicReleaseTimestamp = timestamp;
         emit PublicReleaseTimestampSet(timestamp);
     }
@@ -271,7 +263,7 @@ contract CSModule is
     /// @param amount Amount of wei to be charged for removing a single key.
     function setRemovalCharge(
         uint256 amount
-    ) external onlyRole(SET_REMOVAL_CHARGE_ROLE) {
+    ) external onlyRole(MODULE_MANAGER_ROLE) {
         removalCharge = amount;
         emit RemovalChargeSet(amount);
     }
@@ -303,7 +295,7 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
-    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
+    /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
     /// @param referral Optional referral address
     /// TODO consider splitting into methods with proof and without
     function addNodeOperatorETH(
@@ -336,7 +328,7 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
-    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
+    /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
     /// @param referral Optional referral address
     function addNodeOperatorStETH(
         uint256 keysCount,
@@ -365,7 +357,7 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
-    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
+    /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
     /// @param permit Permit to use stETH as bond
     /// @param referral Optional referral address
     function addNodeOperatorStETHWithPermit(
@@ -397,7 +389,7 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
-    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
+    /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
     /// @param referral Optional referral address
     function addNodeOperatorWstETH(
         uint256 keysCount,
@@ -425,7 +417,7 @@ contract CSModule is
     /// @notice Adds a new node operator with permit to use wstETH as bond
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
-    /// @param eaProof Merkle proof of the sender baing elligible for the Early Adoption
+    /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
     /// @param permit Permit to use wstETH as bond
     /// @param referral Optional referral address
     function addNodeOperatorWstETHWithPermit(
@@ -1173,7 +1165,7 @@ contract CSModule is
         _resetBenefits(nodeOperatorId);
     }
 
-    /// @notice Checks if the given node operators's key is proved as withdrawn.
+    /// @notice Checks if the given node operator's key is proved as withdrawn.
     /// @param nodeOperatorId id of the node operator to check.
     /// @param keyIndex index of the key to check.
     function isValidatorWithdrawn(
@@ -1184,6 +1176,7 @@ contract CSModule is
     }
 
     /// @notice Report node operator's key as withdrawn and settle withdrawn amount.
+    /// See CSVerifier.processWithdrawalProof to use this method permissionless
     /// @param nodeOperatorId Operator ID in the module.
     /// @param keyIndex Index of the withdrawn key in the node operator's keys.
     /// @param amount Amount of withdrawn ETH in wei.
@@ -1193,7 +1186,7 @@ contract CSModule is
         uint256 amount
     )
         external
-        onlyRole(WITHDRAWAL_SUBMITTER_ROLE)
+        onlyRole(VERIFIER_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
@@ -1221,7 +1214,7 @@ contract CSModule is
         _incrementModuleNonce();
     }
 
-    /// @notice Checks if the given node operators's key is proved as slashed.
+    /// @notice Checks if the given node operator's key is proved as slashed.
     /// @param nodeOperatorId id of the node operator to check.
     /// @param keyIndex index of the key to check.
     function isValidatorSlashed(
@@ -1232,6 +1225,7 @@ contract CSModule is
     }
 
     /// @notice Report node operator's key as slashed and apply initial slashing penalty.
+    /// See CSVerifier.processSlashingProof to use this method permissionless
     /// @param nodeOperatorId Operator ID in the module.
     /// @param keyIndex Index of the slashed key in the node operator's keys.
     function submitInitialSlashing(
@@ -1239,7 +1233,7 @@ contract CSModule is
         uint256 keyIndex
     )
         external
-        onlyRole(SLASHING_SUBMITTER_ROLE)
+        onlyRole(VERIFIER_ROLE)
         onlyExistingNodeOperator(nodeOperatorId)
     {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];

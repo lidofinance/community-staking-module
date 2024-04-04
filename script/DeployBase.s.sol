@@ -103,8 +103,9 @@ abstract contract DeployBase is Script {
                 bondLockRetentionPeriod: 8 weeks,
                 _chargeRecipient: treasury
             });
-            csm.grantRole(csm.SET_ACCOUNTING_ROLE(), deployer);
+            csm.grantRole(csm.INITIALIZE_ROLE(), deployer);
             csm.setAccounting(address(accounting));
+            // TODO: add early adoption initialization
 
             CSFeeOracle oracleImpl = new CSFeeOracle({
                 secondsPerSlot: SECONDS_PER_SLOT,
@@ -125,6 +126,18 @@ abstract contract DeployBase is Script {
                 accounting: address(accounting),
                 admin: deployer
             });
+            accounting.grantRole(
+                accounting.INITIALIZE_ROLE(),
+                address(deployer)
+            );
+            accounting.grantRole(
+                accounting.SET_BOND_CURVE_ROLE(),
+                address(csm)
+            );
+            accounting.grantRole(
+                accounting.RESET_BOND_CURVE_ROLE(),
+                address(csm)
+            );
             accounting.setFeeDistributor(address(feeDistributor));
 
             HashConsensus hashConsensus = new HashConsensus({
@@ -157,6 +170,7 @@ abstract contract DeployBase is Script {
                 )
             });
             verifier.initialize(address(locator), address(csm));
+            csm.grantRole(csm.VERIFIER_ROLE(), address(verifier));
 
             JsonObj memory deployJson = Json.newObj();
             deployJson.set("CSModule", address(csm));

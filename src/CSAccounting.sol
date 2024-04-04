@@ -23,6 +23,7 @@ abstract contract CSAccountingBase {
     event FeeDistributorSet(address feeDistributor);
     event ChargeRecipientSet(address chargeRecipient);
 
+    error AlreadyInitialized();
     error NotOwnerToClaim(address msgSender, address owner);
     error InvalidSender();
     error SenderIsNotCSM();
@@ -53,6 +54,9 @@ contract CSAccounting is
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
 
+    bytes32 public constant INITIALIZE_ROLE = keccak256("INITIALIZE_ROLE"); // 0xf1d56a0879c1f3fb7b8db84f8f66a72839440915c8cc40c60b771b23d8349df0
+    bytes32 public constant ACCOUNTING_MANAGER_ROLE =
+        keccak256("ACCOUNTING_MANAGER_ROLE"); // 0x40579467dba486691cc62fd8536d22c6d4dc9cdc7bc716ef2518422aa554c098
     bytes32 public constant ADD_BOND_CURVE_ROLE =
         keccak256("ADD_BOND_CURVE_ROLE"); // 0xd2becf7ae0eafe4edadee8d89582631d5922eccd2ac7b3fdf4afbef7595f4512
     bytes32 public constant SET_DEFAULT_BOND_CURVE_ROLE =
@@ -74,7 +78,7 @@ contract CSAccounting is
     /// @param wstETH wstETH contract address
     /// @param communityStakingModule community staking module contract address
     /// @param bondLockRetentionPeriod retention period for locked bond in seconds
-    /// @param _chargeRecipient recepient of the charge panalty type
+    /// @param _chargeRecipient recipient of the charge penalty type
     constructor(
         uint256[] memory bondCurve,
         address admin,
@@ -123,19 +127,22 @@ contract CSAccounting is
     /// @param fdAddress fee distributor contract address.
     function setFeeDistributor(
         address fdAddress
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyRole(INITIALIZE_ROLE) {
         if (fdAddress == address(0)) {
             revert ZeroAddress("feeDistributor");
+        }
+        if (feeDistributor != address(0)) {
+            revert AlreadyInitialized();
         }
         feeDistributor = fdAddress;
         emit FeeDistributorSet(fdAddress);
     }
 
-    /// @notice Sets charge recepient address.
-    /// @param _chargeRecipient  charge recepient address.
+    /// @notice Sets charge recipient address.
+    /// @param _chargeRecipient  charge recipient address.
     function setChargeRecipient(
         address _chargeRecipient
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyRole(ACCOUNTING_MANAGER_ROLE) {
         if (_chargeRecipient == address(0)) {
             revert ZeroAddress("chargeRecipient");
         }
@@ -147,8 +154,7 @@ contract CSAccounting is
     /// @param retention period in seconds to retain bond lock
     function setLockedBondRetentionPeriod(
         uint256 retention
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        // TODO: is it admin role?
+    ) external onlyRole(ACCOUNTING_MANAGER_ROLE) {
         CSBondLock._setBondLockRetentionPeriod(retention);
     }
 
@@ -174,7 +180,7 @@ contract CSAccounting is
     function setBondCurve(
         uint256 nodeOperatorId,
         uint256 curveId
-    ) external onlyCSMOrRole(SET_BOND_CURVE_ROLE) {
+    ) external onlyRole(SET_BOND_CURVE_ROLE) {
         CSBondCurve._setBondCurve(nodeOperatorId, curveId);
     }
 
@@ -182,7 +188,7 @@ contract CSAccounting is
     /// @param nodeOperatorId id of the node operator to reset bond curve for.
     function resetBondCurve(
         uint256 nodeOperatorId
-    ) external onlyCSMOrRole(RESET_BOND_CURVE_ROLE) {
+    ) external onlyRole(RESET_BOND_CURVE_ROLE) {
         CSBondCurve._resetBondCurve(nodeOperatorId);
     }
 
@@ -787,13 +793,6 @@ contract CSAccounting is
     modifier onlyCSM() {
         if (msg.sender != address(CSM)) {
             revert SenderIsNotCSM();
-        }
-        _;
-    }
-
-    modifier onlyCSMOrRole(bytes32 role) {
-        if (msg.sender != address(CSM) && !hasRole(role, msg.sender)) {
-            revert InvalidSender();
         }
         _;
     }
