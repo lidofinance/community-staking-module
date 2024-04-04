@@ -58,6 +58,8 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
         );
         csm.grantRole(csm.INITIALIZE_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(stakingRouter));
+        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
+        csm.activatePublicRelease();
 
         csm.setAccounting(address(accounting));
 

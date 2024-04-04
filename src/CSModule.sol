@@ -240,7 +240,7 @@ contract CSModule is
         earlyAdoption = ICSEarlyAdoption(_earlyAdoption);
     }
 
-    function setPublicRelease() external onlyRole(MODULE_MANAGER_ROLE) {
+    function activatePublicRelease() external onlyRole(MODULE_MANAGER_ROLE) {
         if (publicRelease) {
             revert AlreadySet();
         }
