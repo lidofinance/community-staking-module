@@ -89,7 +89,7 @@
 | src/CSModule.sol:CSModule contract      |                 |        |        |         |         |
 |-----------------------------------------|-----------------|--------|--------|---------|---------|
 | Deployment Cost                         | Deployment Size |        |        |         |         |
-| 5307245                                 | 24674           |        |        |         |         |
+| 5311802                                 | 24695           |        |        |         |         |
 | Function Name                           | min             | avg    | median | max     | # calls |
 | DEFAULT_ADMIN_ROLE                      | 305             | 305    | 305    | 305     | 1       |
 | DEPOSIT_SIZE                            | 307             | 307    | 307    | 307     | 10      |
@@ -107,16 +107,16 @@
 | STAKING_ROUTER_ROLE                     | 283             | 283    | 283    | 283     | 191     |
 | VERIFIER_ROLE                           | 305             | 305    | 305    | 305     | 172     |
 | accounting                              | 427             | 427    | 427    | 427     | 1       |
-| addNodeOperatorETH                      | 26187           | 602973 | 547326 | 1072488 | 153     |
-| addNodeOperatorStETH                    | 26190           | 280056 | 280056 | 533922  | 2       |
-| addNodeOperatorStETHWithPermit          | 26946           | 283396 | 283396 | 539847  | 2       |
-| addNodeOperatorWstETH                   | 26192           | 291510 | 291510 | 556828  | 2       |
-| addNodeOperatorWstETHWithPermit         | 26946           | 290046 | 290046 | 553147  | 2       |
-| addValidatorKeysETH                     | 25615           | 229261 | 259213 | 313630  | 6       |
-| addValidatorKeysStETH                   | 25596           | 133054 | 133054 | 240513  | 2       |
-| addValidatorKeysStETHWithPermit         | 26351           | 136243 | 136243 | 246135  | 2       |
-| addValidatorKeysWstETH                  | 25643           | 142121 | 142121 | 258600  | 2       |
-| addValidatorKeysWstETHWithPermit        | 26396           | 145300 | 145300 | 264204  | 2       |
+| addNodeOperatorETH                      | 26187           | 602890 | 547242 | 1072404 | 153     |
+| addNodeOperatorStETH                    | 26190           | 280014 | 280014 | 533838  | 2       |
+| addNodeOperatorStETHWithPermit          | 26946           | 283354 | 283354 | 539763  | 2       |
+| addNodeOperatorWstETH                   | 26192           | 291468 | 291468 | 556744  | 2       |
+| addNodeOperatorWstETHWithPermit         | 26946           | 290004 | 290004 | 553063  | 2       |
+| addValidatorKeysETH                     | 25615           | 229191 | 259129 | 313546  | 6       |
+| addValidatorKeysStETH                   | 25596           | 133012 | 133012 | 240429  | 2       |
+| addValidatorKeysStETHWithPermit         | 26351           | 136201 | 136201 | 246051  | 2       |
+| addValidatorKeysWstETH                  | 25643           | 142079 | 142079 | 258516  | 2       |
+| addValidatorKeysWstETHWithPermit        | 26396           | 145258 | 145258 | 264120  | 2       |
 | cancelELRewardsStealingPenalty          | 26275           | 90246  | 99911  | 134888  | 4       |
 | cleanDepositQueue                       | 26304           | 36076  | 33834  | 53080   | 12      |
 | confirmNodeOperatorManagerAddressChange | 23712           | 29037  | 29097  | 34186   | 5       |
@@ -134,7 +134,7 @@
 | grantRole                               | 26965           | 51457  | 51473  | 51473   | 1582    |
 | hasRole                                 | 769             | 769    | 769    | 769     | 2       |
 | isPaused                                | 461             | 861    | 461    | 2461    | 5       |
-| normalizeQueue                          | 30233           | 54754  | 54754  | 79275   | 2       |
+| normalizeQueue                          | 30233           | 54712  | 54712  | 79191   | 2       |
 | obtainDepositData                       | 24421           | 107050 | 96713  | 158508  | 43      |
 | onExitedAndStuckValidatorsCountsUpdated | 23682           | 23715  | 23715  | 23748   | 2       |
 | onRewardsMinted                         | 23954           | 32109  | 26189  | 46185   | 3       |
@@ -160,12 +160,12 @@
 | setRemovalCharge                        | 24026           | 46981  | 47117  | 47129   | 170     |
 | settleELRewardsStealingPenalty          | 24690           | 59986  | 38696  | 111722  | 6       |
 | submitInitialSlashing                   | 24058           | 101712 | 139167 | 140067  | 12      |
-| submitWithdrawal                        | 24327           | 120995 | 141015 | 234830  | 14      |
+| submitWithdrawal                        | 24327           | 120989 | 141015 | 234746  | 14      |
 | unsafeUpdateValidatorsCount             | 24231           | 61214  | 35897  | 159804  | 10      |
 | updateExitedValidatorsCount             | 24801           | 58502  | 47479  | 110207  | 11      |
 | updateRefundedValidatorsCount           | 24104           | 27691  | 27691  | 31278   | 2       |
 | updateStuckValidatorsCount              | 24756           | 72980  | 60488  | 138473  | 13      |
-| updateTargetValidatorsLimits            | 24292           | 118231 | 137467 | 210471  | 19      |
+| updateTargetValidatorsLimits            | 24292           | 118226 | 137467 | 210387  | 19      |
 
 
 | src/CSVerifier.sol:CSVerifier contract |                 |        |        |        |         |

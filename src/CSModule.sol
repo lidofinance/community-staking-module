@@ -1072,7 +1072,7 @@ contract CSModule is
             unchecked {
                 uint256 count = depositable - enqueued;
                 Batch item = createBatch(nodeOperatorId, count);
-                no.enqueuedCount += count;
+                no.enqueuedCount = depositable;
                 queue.enqueue(item);
                 emit BatchEnqueued(nodeOperatorId, count);
             }
