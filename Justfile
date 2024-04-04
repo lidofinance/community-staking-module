@@ -49,7 +49,28 @@ test-integration *args:
 	forge test --match-path '*test/integration*' -vvv {{args}}
 
 gas-report:
-	forge test --nmt 'testFuzz_\w{1,}?' --nmp '*test/integration*'  --gas-report | sed -n '/^|/,$p' | sed -n '/^|\stest/,$!p' > GAS.md
+	#!/usr/bin/env python
+
+	import subprocess
+
+	command = "forge test --nmt 'testFuzz_\\w{1,}?' --nmp '*test/integration*'  --gas-report"
+	output = subprocess.check_output(command, shell=True, text=True)
+
+	lines = output.split('\n')
+
+	filename = 'GAS.md'
+	to_print = False
+
+	with open(filename, 'w') as fh:
+		for line in lines:
+			if line.startswith('| test'):
+				break
+
+			if line.startswith('|'):
+				to_print = True
+
+			if to_print:
+				fh.write(line + '\n')
 
 coverage:
 	forge coverage
