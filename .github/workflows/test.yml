@@ -109,3 +109,8 @@ jobs:
         run: just test
         env:
           RPC_URL: ${{ secrets.RPC_URL }}
+
+      - name: Check gas report
+        run: just gas-report && git diff --exit-code GAS.md
+        env:
+          RPC_URL: ${{ secrets.RPC_URL }}

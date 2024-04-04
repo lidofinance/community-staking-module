@@ -58,7 +58,7 @@ contract SSZTest is Utilities, Test {
         assertEq(actual, expected);
     }
 
-    function test_Fuzz_toLittleEndian_Idempotent(uint256 v) public {
+    function testFuzz_toLittleEndian_Idempotent(uint256 v) public {
         uint256 n = v;
         n = uint256(SSZ.toLittleEndian(n));
         n = uint256(SSZ.toLittleEndian(n));
@@ -77,7 +77,7 @@ contract SSZTest is Utilities, Test {
         assertEq(actual, expected);
     }
 
-    function test_Fuzz_withdrawalRoot_memory(
+    function testFuzz_withdrawalRoot_memory(
         Withdrawal memory w
     ) public brutalizeMemory {
         SSZ.hashTreeRoot(w);
@@ -175,7 +175,7 @@ contract SSZTest is Utilities, Test {
         assertEq(actual, expected);
     }
 
-    function test_Fuzz_validatorRoot_memory(
+    function testFuzz_validatorRoot_memory(
         Validator memory v
     ) public brutalizeMemory {
         SSZ.hashTreeRoot(v);
@@ -224,7 +224,7 @@ contract SSZTest is Utilities, Test {
         assertEq(actual, expected);
     }
 
-    function test_Fuzz_BeaconBlockHeaderRoot_memory(
+    function testFuzz_BeaconBlockHeaderRoot_memory(
         BeaconBlockHeader memory h
     ) public brutalizeMemory {
         SSZ.hashTreeRoot(h);

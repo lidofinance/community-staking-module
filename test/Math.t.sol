@@ -26,11 +26,11 @@ contract MathTest is Test {
         assertEq(Math.log2(10), 3);
     }
 
-    function test_Fuzz_log2(uint8 pow) public {
+    function testFuzz_log2(uint8 pow) public {
         assertEq(Math.log2(2 ** pow), pow);
     }
 
-    function test_Fuzz_log2_RoundsDown(uint256 n) public {
+    function testFuzz_log2_RoundsDown(uint256 n) public {
         vm.assume(n > 0);
         uint256 pow = Math.log2(n);
         assertLe(2 ** pow, n);

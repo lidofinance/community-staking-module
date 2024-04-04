@@ -40,6 +40,12 @@ just test-unit
 just test-inegration
 ```
 
+- Make a gas report
+
+```bash
+just gas-report
+```
+
 - Install dependencies
 
 Dependencies are managed using yarn. To install new dependencies, run:

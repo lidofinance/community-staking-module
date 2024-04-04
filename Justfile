@@ -48,6 +48,9 @@ test-unit *args:
 test-integration *args:
 	forge test --match-path '*test/integration*' -vvv {{args}}
 
+gas-report:
+	forge test --nmt 'testFuzz_\w{1,}?' --nmp '*test/integration*'  --gas-report | sed -n '/^|/,$p' | sed -n '/^|\stest/,$!p' > GAS.md
+
 coverage:
 	forge coverage
 
