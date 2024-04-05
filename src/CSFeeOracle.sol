@@ -183,7 +183,8 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         }
     }
 
-    function checkRecovererRole() internal override {
+    modifier onlyRecoverer() override {
         _checkRole(RECOVERER_ROLE, msg.sender);
+        _;
     }
 }

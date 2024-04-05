@@ -16,14 +16,15 @@ abstract contract AssetRecoverer {
 
     // @dev Modifier to restrict access to the recover methods.
     // needs to be implemented by the inheriting contract
-    function checkRecovererRole() internal virtual {}
+    modifier onlyRecoverer() virtual {
+        _;
+    }
 
     /**
      * @dev Allows the sender to recover Ether held by the contract.
      * Emits an EtherRecovered event upon success.
      */
-    function recoverEther() external {
-        checkRecovererRole();
+    function recoverEther() external onlyRecoverer {
         AssetRecovererLib.recoverEther();
     }
 
@@ -33,8 +34,10 @@ abstract contract AssetRecoverer {
      * Emits an ERC20Recovered event upon success.
      * Optionally, the inheriting contract can override this function to add additional restrictions.
      */
-    function recoverERC20(address token, uint256 amount) external virtual {
-        checkRecovererRole();
+    function recoverERC20(
+        address token,
+        uint256 amount
+    ) external virtual onlyRecoverer {
         AssetRecovererLib.recoverERC20(token, amount);
     }
 
@@ -44,8 +47,10 @@ abstract contract AssetRecoverer {
      * @param tokenId The token ID of the ERC721 token to recover.
      * Emits an ERC721Recovered event upon success.
      */
-    function recoverERC721(address token, uint256 tokenId) external {
-        checkRecovererRole();
+    function recoverERC721(
+        address token,
+        uint256 tokenId
+    ) external onlyRecoverer {
         AssetRecovererLib.recoverERC721(token, tokenId);
     }
 
@@ -55,8 +60,10 @@ abstract contract AssetRecoverer {
      * @param tokenId The token ID of the ERC1155 token to recover.
      * Emits an ERC1155Recovered event upon success.
      */
-    function recoverERC1155(address token, uint256 tokenId) external {
-        checkRecovererRole();
+    function recoverERC1155(
+        address token,
+        uint256 tokenId
+    ) external onlyRecoverer {
         AssetRecovererLib.recoverERC1155(token, tokenId);
     }
 }

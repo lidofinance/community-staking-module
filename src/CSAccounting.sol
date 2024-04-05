@@ -700,12 +700,12 @@ contract CSAccounting is
         CSBondCore._charge(nodeOperatorId, amount, chargeRecipient);
     }
 
-    function checkRecovererRole() internal override {
+    modifier onlyRecoverer() override {
         _checkRole(RECOVERER_ROLE);
+        _;
     }
 
     function recoverERC20(address token, uint256 amount) external override {
-        checkRecovererRole();
         if (token == address(LIDO)) {
             revert NotAllowedToRecover();
         }
@@ -713,7 +713,6 @@ contract CSAccounting is
     }
 
     function recoverStETHShares() external {
-        checkRecovererRole();
         uint256 shares = LIDO.sharesOf(address(this)) - totalBondShares;
         AssetRecovererLib.recoverStETHShares(address(LIDO), shares);
     }

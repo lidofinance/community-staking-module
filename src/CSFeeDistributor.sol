@@ -147,12 +147,7 @@ contract CSFeeDistributor is
             );
     }
 
-    function checkRecovererRole() internal override {
-        _checkRole(RECOVERER_ROLE);
-    }
-
     function recoverERC20(address token, uint256 amount) external override {
-        checkRecovererRole();
         if (token == STETH) {
             revert NotAllowedToRecover();
         }
@@ -160,9 +155,13 @@ contract CSFeeDistributor is
     }
 
     function recoverStETHShares() external {
-        checkRecovererRole();
         IStETH steth = IStETH(STETH);
         uint256 shares = steth.sharesOf(address(this)) - _totalShares;
         AssetRecovererLib.recoverStETHShares(address(steth), shares);
+    }
+
+    modifier onlyRecoverer() override {
+        _checkRole(RECOVERER_ROLE);
+        _;
     }
 }

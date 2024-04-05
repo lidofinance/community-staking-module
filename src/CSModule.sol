@@ -1389,12 +1389,7 @@ contract CSModule is
         return queue.at(index);
     }
 
-    function checkRecovererRole() internal override {
-        _checkRole(RECOVERER_ROLE);
-    }
-
     function recoverERC20(address token, uint256 amount) external override {
-        checkRecovererRole();
         if (token == lidoLocator.lido()) {
             revert NotAllowedToRecover();
         }
@@ -1402,10 +1397,14 @@ contract CSModule is
     }
 
     function recoverStETHShares() external {
-        checkRecovererRole();
         IStETH stETH = IStETH(lidoLocator.lido());
         uint256 shares = stETH.sharesOf(address(this)) - _totalRewardsShares;
         AssetRecovererLib.recoverStETHShares(address(stETH), shares);
+    }
+
+    modifier onlyRecoverer() override {
+        _checkRole(RECOVERER_ROLE);
+        _;
     }
 
     function _incrementModuleNonce() internal {

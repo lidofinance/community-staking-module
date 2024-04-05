@@ -17,10 +17,11 @@ contract AssetRecovererTestable is AssetRecoverer, ERC1155Holder {
         recoverer = _recoverer;
     }
 
-    function checkRecovererRole() internal override {
+    modifier onlyRecoverer() override {
         if (msg.sender != recoverer) {
             revert OnlyRecoverer();
         }
+        _;
     }
 }
 
