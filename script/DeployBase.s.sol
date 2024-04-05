@@ -119,10 +119,14 @@ abstract contract DeployBase is Script {
             CSFeeDistributor feeDistributor = new CSFeeDistributor({
                 csm: address(csm),
                 stETH: locator.lido(),
-                oracle: address(oracle),
                 accounting: address(accounting),
                 admin: deployer
             });
+            feeDistributor.grantRole(
+                feeDistributor.ORACLE_ROLE(),
+                address(oracle)
+            );
+
             accounting.grantRole(
                 accounting.INITIALIZE_ROLE(),
                 address(deployer)

@@ -110,9 +110,6 @@ contract CSFeeOracleTest is Test, Utilities {
         vm.prank(members[0]);
         oracle.submitReportData({ data: data, contractVersion: 1 });
 
-        assertEq(oracle.treeRoot(), data.treeRoot);
-        assertEq(oracle.treeCid(), data.treeCid);
-
         (, startSlot, , ) = oracle.getConsensusReport();
         (refSlot, ) = consensus.getCurrentFrame();
         assertEq(startSlot, refSlot);

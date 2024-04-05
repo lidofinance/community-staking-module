@@ -9,13 +9,11 @@ import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { AssetRecoverer } from "../src/AssetRecoverer.sol";
 import { AssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
 
-import { ICSFeeOracle } from "../src/interfaces/ICSFeeOracle.sol";
 import { IStETH } from "../src/interfaces/IStETH.sol";
 
 import { Fixtures } from "./helpers/Fixtures.sol";
 import { MerkleTree } from "./helpers/MerkleTree.sol";
 import { CommunityStakingModuleMock } from "./helpers/mocks/CommunityStakingModuleMock.sol";
-import { OracleMock } from "./helpers/mocks/OracleMock.sol";
 import { StETHMock } from "./helpers/mocks/StETHMock.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
@@ -32,16 +30,16 @@ contract CSFeeDistributorTest is
     StETHMock internal stETH;
 
     address internal stranger;
+    address internal oracle;
     CSFeeDistributor internal feeDistributor;
     CommunityStakingModuleMock internal csm;
-    OracleMock internal oracle;
     Stub internal accounting;
     MerkleTree internal tree;
 
     function setUp() public {
         stranger = nextAddress("stranger");
+        oracle = nextAddress("oracle");
         csm = new CommunityStakingModuleMock();
-        oracle = new OracleMock();
         accounting = new Stub();
 
         (, , stETH, ) = initLido();
@@ -49,15 +47,14 @@ contract CSFeeDistributorTest is
         feeDistributor = new CSFeeDistributor(
             address(csm),
             address(stETH),
-            address(oracle),
             address(accounting),
             address(this)
         );
+        feeDistributor.grantRole(feeDistributor.ORACLE_ROLE(), oracle);
 
-        tree = oracle.merkleTree();
+        tree = new MerkleTree();
 
         vm.label(address(accounting), "ACCOUNTING");
-        vm.label(address(oracle), "ORACLE");
         vm.label(address(stETH), "STETH");
         vm.label(address(csm), "CSM");
     }
@@ -67,10 +64,11 @@ contract CSFeeDistributorTest is
         uint256 shares = 100;
         tree.pushLeaf(abi.encode(nodeOperatorId, shares));
         bytes32[] memory proof = tree.getProof(0);
+        bytes32 root = tree.root();
 
         stETH.mintShares(address(csm), shares);
-        vm.prank(address(oracle));
-        feeDistributor.receiveFees(shares);
+        vm.prank(oracle);
+        feeDistributor.processTreeData(root, "", shares);
 
         vm.expectEmit(true, true, false, true, address(feeDistributor));
         emit FeeDistributed(nodeOperatorId, shares);
@@ -111,6 +109,11 @@ contract CSFeeDistributorTest is
         uint256 shares = 100;
         tree.pushLeaf(abi.encode(nodeOperatorId, shares));
         bytes32[] memory proof = tree.getProof(0);
+        bytes32 root = tree.root();
+
+        stETH.mintShares(address(csm), shares);
+        vm.prank(oracle);
+        feeDistributor.processTreeData(root, "", shares);
 
         stdstore
             .target(address(feeDistributor))
@@ -132,6 +135,10 @@ contract CSFeeDistributorTest is
         uint256 shares = 100;
         tree.pushLeaf(abi.encode(nodeOperatorId, shares));
         bytes32[] memory proof = tree.getProof(0);
+        bytes32 root = tree.root();
+        stETH.mintShares(address(csm), shares);
+        vm.prank(oracle);
+        feeDistributor.processTreeData(root, "", shares);
 
         stdstore
             .target(address(feeDistributor))
@@ -176,12 +183,13 @@ contract CSFeeDistributorTest is
 
     function test_recoverStETHShares() public {
         feeDistributor.grantRole(feeDistributor.RECOVERER_ROLE(), stranger);
+        bytes32 root = tree.root();
 
         stETH.mintShares(address(csm), stETH.getSharesByPooledEth(1 ether));
         uint256 receivedShares = stETH.getSharesByPooledEth(0.3 ether);
 
-        vm.prank(address(oracle));
-        feeDistributor.receiveFees(receivedShares);
+        vm.prank(oracle);
+        feeDistributor.processTreeData(root, "", receivedShares);
         uint256 sharesToRecover = stETH.sharesOf(address(feeDistributor)) -
             receivedShares;
 
