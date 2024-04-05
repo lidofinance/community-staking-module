@@ -10,7 +10,6 @@ import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensio
 
 import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
-import { ICSFeeOracle } from "./interfaces/ICSFeeOracle.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
 import { AssetRecoverer } from "./AssetRecoverer.sol";
 import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
@@ -23,7 +22,6 @@ contract CSFeeDistributorBase {
     error ZeroAddress(string field);
 
     error NotAccounting();
-    error NotOracle();
 
     error InvalidShares();
     error InvalidProof();
@@ -39,31 +37,29 @@ contract CSFeeDistributor is
     /// @notice this contract stores stETH shares that were distributed via the Oracle Report
     using SafeCast for uint256;
 
+    bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE"); // 0x68e79a7bf1e0bc45d0a330c573bc367f9cf464fd326078812f301165fbda4ef1
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE"); // 0xb3e25b5404b87e5a838579cb5d7481d61ad96ee284d38ec1e97c07ba64e7f6fc
     address public immutable CSM;
     address public immutable STETH;
-    address public immutable ORACLE;
     address public immutable ACCOUNTING;
+
+    /// @notice Merkle Tree root
+    bytes32 public treeRoot;
+
+    /// @notice CID of the published Merkle tree
+    string public treeCid;
 
     /// @notice Amount of shares sent to the Accounting in favor of the NO
     mapping(uint256 => uint256) public distributedShares;
     uint256 private _totalShares;
 
-    constructor(
-        address csm,
-        address stETH,
-        address oracle,
-        address accounting,
-        address admin
-    ) {
+    constructor(address csm, address stETH, address accounting, address admin) {
         if (accounting == address(0)) revert ZeroAddress("accounting");
-        if (oracle == address(0)) revert ZeroAddress("oracle");
         if (stETH == address(0)) revert ZeroAddress("stETH");
         if (csm == address(0)) revert ZeroAddress("_CSM");
         if (admin == address(0)) revert ZeroAddress("admin");
 
         ACCOUNTING = accounting;
-        ORACLE = oracle;
         STETH = stETH;
         CSM = csm;
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -81,8 +77,8 @@ contract CSFeeDistributor is
     ) public view returns (uint256) {
         bool isValid = MerkleProof.verifyCalldata(
             proof,
-            ICSFeeOracle(ORACLE).treeRoot(),
-            ICSFeeOracle(ORACLE).hashLeaf(nodeOperatorId, shares)
+            treeRoot,
+            hashLeaf(nodeOperatorId, shares)
         );
         if (!isValid) revert InvalidProof();
 
@@ -122,13 +118,33 @@ contract CSFeeDistributor is
         return sharesToDistribute;
     }
 
-    /// Transfers shares from the CSM to the distributor
-    /// @param amount Amount of shares to transfer
-    function receiveFees(uint256 amount) external {
-        if (msg.sender != ORACLE) revert NotOracle();
-        ICSModule(CSM).onRewardsDistributed(amount);
-        IStETH(STETH).transferSharesFrom(CSM, address(this), amount);
-        _totalShares += amount;
+    // @notice Receives the data of the Merkle tree from the Oracle contract and process it
+    /// Transfers distributed shares from the CSM to the distributor
+    function processTreeData(
+        bytes32 _treeRoot,
+        string calldata _treeCid,
+        uint256 distributedShares
+    ) external onlyRole(ORACLE_ROLE) {
+        treeRoot = _treeRoot;
+        treeCid = _treeCid;
+
+        ICSModule(CSM).onRewardsDistributed(distributedShares);
+        IStETH(STETH).transferSharesFrom(CSM, address(this), distributedShares);
+        _totalShares += distributedShares;
+    }
+
+    /// @notice Get a hash of a leaf
+    /// @param nodeOperatorId ID of the node operator
+    /// @param shares Amount of shares
+    /// @dev Double hash the leaf to prevent second preimage attacks
+    function hashLeaf(
+        uint256 nodeOperatorId,
+        uint256 shares
+    ) public pure returns (bytes32) {
+        return
+            keccak256(
+                bytes.concat(keccak256(abi.encode(nodeOperatorId, shares)))
+            );
     }
 
     function checkRecovererRole() internal override {

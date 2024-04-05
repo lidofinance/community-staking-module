@@ -49,31 +49,30 @@
 | src/CSFeeDistributor.sol:CSFeeDistributor contract |                 |        |        |        |         |
 |----------------------------------------------------|-----------------|--------|--------|--------|---------|
 | Function Name                                      | min             | avg    | median | max    | # calls |
+| ORACLE_ROLE                                        | 263             | 263    | 263    | 263    | 8       |
 | RECOVERER_ROLE                                     | 261             | 261    | 261    | 261    | 3       |
-| distributeFees                                     | 22306           | 48119  | 44639  | 93152  | 5       |
+| distributeFees                                     | 22284           | 35883  | 27710  | 76226  | 5       |
 | distributedShares                                  | 523             | 1523   | 1523   | 2523   | 4       |
-| grantRole                                          | 118348          | 118348 | 118348 | 118348 | 3       |
-| receiveFees                                        | 73146           | 75588  | 75588  | 78030  | 2       |
-| recoverERC20                                       | 24450           | 41465  | 41465  | 58480  | 2       |
-| recoverStETHShares                                 | 39753           | 39753  | 39753  | 39753  | 1       |
+| grantRole                                          | 118348          | 118348 | 118348 | 118348 | 11      |
+| processTreeData                                    | 85699           | 97249  | 101099 | 101099 | 4       |
+| recoverERC20                                       | 24428           | 41443  | 41443  | 58458  | 2       |
+| recoverStETHShares                                 | 39731           | 39731  | 39731  | 39731  | 1       |
 
 
 | src/CSFeeOracle.sol:CSFeeOracle contract |                 |        |        |        |         |
 |------------------------------------------|-----------------|--------|--------|--------|---------|
 | Function Name                            | min             | avg    | median | max    | # calls |
-| MANAGE_CONSENSUS_CONTRACT_ROLE           | 262             | 262    | 262    | 262    | 2       |
+| MANAGE_CONSENSUS_CONTRACT_ROLE           | 284             | 284    | 284    | 284    | 2       |
 | MANAGE_CONSENSUS_VERSION_ROLE            | 262             | 262    | 262    | 262    | 2       |
 | PAUSE_ROLE                               | 285             | 285    | 285    | 285    | 2       |
-| RESUME_ROLE                              | 307             | 307    | 307    | 307    | 2       |
+| RESUME_ROLE                              | 285             | 285    | 285    | 285    | 2       |
 | SUBMIT_DATA_ROLE                         | 262             | 262    | 262    | 262    | 3       |
-| getConsensusReport                       | 948             | 1355   | 961    | 2948   | 10      |
+| getConsensusReport                       | 903             | 1310   | 916    | 2903   | 10      |
 | getConsensusVersion                      | 396             | 1729   | 2396   | 2396   | 3       |
 | getLastProcessingRefSlot                 | 440             | 2190   | 2440   | 2440   | 8       |
 | grantRole                                | 101103          | 115093 | 118203 | 118203 | 11      |
-| initialize                               | 260549          | 260555 | 260555 | 260561 | 2       |
-| submitReportData                         | 97163           | 97163  | 97163  | 97163  | 1       |
-| treeCid                                  | 1292            | 1292   | 1292   | 1292   | 1       |
-| treeRoot                                 | 363             | 363    | 363    | 363    | 1       |
+| initialize                               | 260571          | 260577 | 260577 | 260583 | 2       |
+| submitReportData                         | 53030           | 53030  | 53030  | 53030  | 1       |
 
 
 | src/CSModule.sol:CSModule contract      |                 |        |        |         |         |

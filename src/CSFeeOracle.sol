@@ -7,15 +7,9 @@ import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
 import { BaseOracle } from "base-oracle/oracle/BaseOracle.sol";
 
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
-import { ICSFeeOracle } from "./interfaces/ICSFeeOracle.sol";
 import { AssetRecoverer } from "./AssetRecoverer.sol";
 
-contract CSFeeOracle is
-    ICSFeeOracle,
-    BaseOracle,
-    PausableUntil,
-    AssetRecoverer
-{
+contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
     /// @notice There are no any assets to store in the contract
 
     struct ReportData {
@@ -52,12 +46,6 @@ contract CSFeeOracle is
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
     ICSFeeDistributor public feeDistributor;
-
-    /// @notice Merkle Tree root
-    bytes32 public treeRoot;
-
-    /// @notice CID of the published Merkle tree
-    string public treeCid;
 
     /// @dev Emitted when a new fee distributor contract is set
     event FeeDistributorContractSet(address feeDistributorContract);
@@ -138,20 +126,6 @@ contract CSFeeOracle is
         _pauseFor(duration);
     }
 
-    /// @notice Get a hash of a leaf
-    /// @param nodeOperatorId ID of the node operator
-    /// @param shares Amount of shares
-    /// @dev Double hash the leaf to prevent second preimage attacks
-    function hashLeaf(
-        uint256 nodeOperatorId,
-        uint256 shares
-    ) public pure returns (bytes32) {
-        return
-            keccak256(
-                bytes.concat(keccak256(abi.encode(nodeOperatorId, shares)))
-            );
-    }
-
     /// @notice Pause accepting oracle reports until a timestamp
     /// @param pauseUntilInclusive Timestamp until which the oracle reports are paused
     function pauseUntil(
@@ -182,9 +156,11 @@ contract CSFeeOracle is
     function _handleConsensusReportData(ReportData calldata data) internal {
         _reportDataSanityCheck(data);
 
-        feeDistributor.receiveFees(data.distributed);
-        treeRoot = data.treeRoot;
-        treeCid = data.treeCid;
+        feeDistributor.processTreeData(
+            data.treeRoot,
+            data.treeCid,
+            data.distributed
+        );
         emit ReportConsolidated(
             data.refSlot,
             data.distributed,

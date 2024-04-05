@@ -16,5 +16,9 @@ interface ICSFeeDistributor {
         uint256 shares
     ) external returns (uint256);
 
-    function receiveFees(uint256 shares) external;
+    function processTreeData(
+        bytes32 _treeRoot,
+        string calldata _treeCid,
+        uint256 distributedShares
+    ) external;
 }
