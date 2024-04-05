@@ -1222,6 +1222,7 @@ contract CSModule is
         emit InitialSlashingSubmitted(nodeOperatorId, keyIndex);
 
         accounting.penalize(nodeOperatorId, INITIAL_SLASHING_PENALTY);
+
         _updateDepositableValidatorsCount(nodeOperatorId);
         _incrementModuleNonce();
     }
