@@ -1,7 +1,5 @@
 | lib/base-oracle/oracle/HashConsensus.sol:HashConsensus contract |                 |        |        |        |         |
 |-----------------------------------------------------------------|-----------------|--------|--------|--------|---------|
-| Deployment Cost                                                 | Deployment Size |        |        |        |         |
-| 3243314                                                         | 16051           |        |        |        |         |
 | Function Name                                                   | min             | avg    | median | max    | # calls |
 | DISABLE_CONSENSUS_ROLE                                          | 261             | 261    | 261    | 261    | 2       |
 | MANAGE_FAST_LANE_CONFIG_ROLE                                    | 285             | 285    | 285    | 285    | 2       |
@@ -20,29 +18,25 @@
 
 | src/CSAccounting.sol:CSAccounting contract |                 |        |        |        |         |
 |--------------------------------------------|-----------------|--------|--------|--------|---------|
-| Deployment Cost                            | Deployment Size |        |        |        |         |
-| 5186086                                    | 25688           |        |        |        |         |
 | Function Name                              | min             | avg    | median | max    | # calls |
-| ADD_BOND_CURVE_ROLE                        | 275             | 275    | 275    | 275    | 168     |
-| RESET_BOND_CURVE_ROLE                      | 296             | 296    | 296    | 296    | 210     |
-| SET_BOND_CURVE_ROLE                        | 274             | 274    | 274    | 274    | 210     |
+| ADD_BOND_CURVE_ROLE                        | 275             | 275    | 275    | 275    | 164     |
+| RESET_BOND_CURVE_ROLE                      | 296             | 296    | 296    | 296    | 204     |
+| SET_BOND_CURVE_ROLE                        | 274             | 274    | 274    | 274    | 204     |
 | addBondCurve                               | 121324          | 121324 | 121324 | 121324 | 5       |
 | getActualLockedBond                        | 581             | 687    | 741    | 741    | 3       |
-| getBondAmountByKeysCount                   | 1303            | 1395   | 1303   | 1566   | 153     |
+| getBondAmountByKeysCount                   | 1303            | 1397   | 1303   | 1566   | 147     |
 | getBondAmountByKeysCountWstETH             | 14217           | 14217  | 14217  | 14217  | 2       |
-| getBondCurve                               | 2204            | 16003  | 16300  | 16300  | 157     |
+| getBondCurve                               | 2204            | 15992  | 16300  | 16300  | 151     |
 | getBondLockRetentionPeriod                 | 2370            | 2370   | 2370   | 2370   | 2       |
 | getLockedBondInfo                          | 837             | 837    | 837    | 837    | 6       |
-| getRequiredBondForNextKeys                 | 10197           | 33405  | 52697  | 53223  | 13      |
-| getRequiredBondForNextKeysWstETH           | 59047           | 59047  | 59047  | 59047  | 2       |
-| getUnbondedKeysCount                       | 7775            | 24005  | 15775  | 46275  | 249     |
-| grantRole                                  | 118386          | 118389 | 118386 | 118398 | 588     |
+| getRequiredBondForNextKeys                 | 10152           | 33360  | 52652  | 53178  | 13      |
+| getRequiredBondForNextKeysWstETH           | 59002           | 59002  | 59002  | 59002  | 2       |
+| getUnbondedKeysCount                       | 7730            | 24022  | 15730  | 46230  | 240     |
+| grantRole                                  | 118386          | 118389 | 118386 | 118398 | 572     |
 
 
 | src/CSEarlyAdoption.sol:CSEarlyAdoption contract |                 |       |        |       |         |
 |--------------------------------------------------|-----------------|-------|--------|-------|---------|
-| Deployment Cost                                  | Deployment Size |       |        |       |         |
-| 351780                                           | 1423            |       |        |       |         |
 | Function Name                                    | min             | avg   | median | max   | # calls |
 | consume                                          | 24919           | 37973 | 29967  | 51280 | 7       |
 | consumed                                         | 549             | 549   | 549    | 549   | 1       |
@@ -54,8 +48,6 @@
 
 | src/CSFeeDistributor.sol:CSFeeDistributor contract |                 |        |        |        |         |
 |----------------------------------------------------|-----------------|--------|--------|--------|---------|
-| Deployment Cost                                    | Deployment Size |        |        |        |         |
-| 1271985                                            | 6368            |        |        |        |         |
 | Function Name                                      | min             | avg    | median | max    | # calls |
 | RECOVERER_ROLE                                     | 261             | 261    | 261    | 261    | 3       |
 | distributeFees                                     | 22306           | 48119  | 44639  | 93152  | 5       |
@@ -68,8 +60,6 @@
 
 | src/CSFeeOracle.sol:CSFeeOracle contract |                 |        |        |        |         |
 |------------------------------------------|-----------------|--------|--------|--------|---------|
-| Deployment Cost                          | Deployment Size |        |        |        |         |
-| 2641146                                  | 12323           |        |        |        |         |
 | Function Name                            | min             | avg    | median | max    | # calls |
 | MANAGE_CONSENSUS_CONTRACT_ROLE           | 262             | 262    | 262    | 262    | 2       |
 | MANAGE_CONSENSUS_VERSION_ROLE            | 262             | 262    | 262    | 262    | 2       |
@@ -88,90 +78,85 @@
 
 | src/CSModule.sol:CSModule contract      |                 |        |        |         |         |
 |-----------------------------------------|-----------------|--------|--------|---------|---------|
-| Deployment Cost                         | Deployment Size |        |        |         |         |
-| 5311802                                 | 24695           |        |        |         |         |
 | Function Name                           | min             | avg    | median | max     | # calls |
-| DEFAULT_ADMIN_ROLE                      | 305             | 305    | 305    | 305     | 1       |
-| DEPOSIT_SIZE                            | 307             | 307    | 307    | 307     | 10      |
-| EL_REWARDS_STEALING_FINE                | 328             | 328    | 328    | 328     | 4       |
-| INITIALIZE_ROLE                         | 308             | 308    | 308    | 308     | 217     |
+| DEFAULT_ADMIN_ROLE                      | 283             | 283    | 283    | 283     | 1       |
+| DEPOSIT_SIZE                            | 329             | 329    | 329    | 329     | 10      |
+| EL_REWARDS_STEALING_FINE                | 306             | 306    | 306    | 306     | 5       |
+| INITIALIZE_ROLE                         | 285             | 285    | 285    | 285     | 211     |
 | INITIAL_SLASHING_PENALTY                | 352             | 352    | 352    | 352     | 3       |
-| MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE  | 315             | 315    | 315    | 315     | 1       |
-| MODULE_MANAGER_ROLE                     | 328             | 328    | 328    | 328     | 172     |
-| PAUSE_ROLE                              | 285             | 285    | 285    | 285     | 169     |
-| PENALIZE_ROLE                           | 284             | 284    | 284    | 284     | 170     |
-| RECOVERER_ROLE                          | 283             | 283    | 283    | 283     | 5       |
-| REPORT_EL_REWARDS_STEALING_PENALTY_ROLE | 286             | 286    | 286    | 286     | 170     |
-| RESUME_ROLE                             | 286             | 286    | 286    | 286     | 169     |
-| SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE | 306             | 306    | 306    | 306     | 170     |
-| STAKING_ROUTER_ROLE                     | 283             | 283    | 283    | 283     | 191     |
-| VERIFIER_ROLE                           | 305             | 305    | 305    | 305     | 172     |
-| accounting                              | 427             | 427    | 427    | 427     | 1       |
-| addNodeOperatorETH                      | 26187           | 602890 | 547242 | 1072404 | 153     |
-| addNodeOperatorStETH                    | 26190           | 280014 | 280014 | 533838  | 2       |
-| addNodeOperatorStETHWithPermit          | 26946           | 283354 | 283354 | 539763  | 2       |
-| addNodeOperatorWstETH                   | 26192           | 291468 | 291468 | 556744  | 2       |
-| addNodeOperatorWstETHWithPermit         | 26946           | 290004 | 290004 | 553063  | 2       |
-| addValidatorKeysETH                     | 25615           | 229191 | 259129 | 313546  | 6       |
-| addValidatorKeysStETH                   | 25596           | 133012 | 133012 | 240429  | 2       |
-| addValidatorKeysStETHWithPermit         | 26351           | 136201 | 136201 | 246051  | 2       |
-| addValidatorKeysWstETH                  | 25643           | 142079 | 142079 | 258516  | 2       |
-| addValidatorKeysWstETHWithPermit        | 26396           | 145258 | 145258 | 264120  | 2       |
-| cancelELRewardsStealingPenalty          | 26275           | 90246  | 99911  | 134888  | 4       |
+| MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE  | 293             | 293    | 293    | 293     | 1       |
+| MODULE_MANAGER_ROLE                     | 306             | 306    | 306    | 306     | 208     |
+| PAUSE_ROLE                              | 307             | 307    | 307    | 307     | 165     |
+| PENALIZE_ROLE                           | 307             | 307    | 307    | 307     | 164     |
+| RECOVERER_ROLE                          | 328             | 328    | 328    | 328     | 5       |
+| REPORT_EL_REWARDS_STEALING_PENALTY_ROLE | 286             | 286    | 286    | 286     | 166     |
+| RESUME_ROLE                             | 286             | 286    | 286    | 286     | 165     |
+| SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE | 328             | 328    | 328    | 328     | 166     |
+| STAKING_ROUTER_ROLE                     | 283             | 283    | 283    | 283     | 187     |
+| VERIFIER_ROLE                           | 305             | 305    | 305    | 305     | 168     |
+| accounting                              | 470             | 470    | 470    | 470     | 1       |
+| activatePublicRelease                   | 23726           | 46548  | 46677  | 46677   | 178     |
+| addNodeOperatorETH                      | 26187           | 602878 | 547183 | 1072345 | 147     |
+| addNodeOperatorStETH                    | 26235           | 280029 | 280029 | 533824  | 2       |
+| addNodeOperatorStETHWithPermit          | 26946           | 283325 | 283325 | 539704  | 2       |
+| addNodeOperatorWstETH                   | 26192           | 291438 | 291438 | 556685  | 2       |
+| addNodeOperatorWstETHWithPermit         | 26988           | 290017 | 290017 | 553046  | 2       |
+| addValidatorKeysETH                     | 25615           | 229101 | 259021 | 313438  | 6       |
+| addValidatorKeysStETH                   | 25596           | 132958 | 132958 | 240321  | 2       |
+| addValidatorKeysStETHWithPermit         | 26351           | 136147 | 136147 | 245943  | 2       |
+| addValidatorKeysWstETH                  | 25643           | 142025 | 142025 | 258408  | 2       |
+| addValidatorKeysWstETHWithPermit        | 26351           | 145159 | 145159 | 263967  | 2       |
+| cancelELRewardsStealingPenalty          | 26233           | 90154  | 99802  | 134779  | 4       |
 | cleanDepositQueue                       | 26304           | 36076  | 33834  | 53080   | 12      |
 | confirmNodeOperatorManagerAddressChange | 23712           | 29037  | 29097  | 34186   | 5       |
-| confirmNodeOperatorRewardAddressChange  | 23691           | 33081  | 33970  | 38918   | 6       |
-| decreaseOperatorVettedKeys              | 24802           | 91397  | 107440 | 155179  | 15      |
-| depositQueueItem                        | 624             | 1224   | 624    | 2624    | 10      |
+| confirmNodeOperatorRewardAddressChange  | 23713           | 33103  | 33992  | 38940   | 6       |
+| decreaseOperatorVettedKeys              | 24802           | 91358  | 107395 | 155089  | 15      |
+| depositQueueItem                        | 646             | 1246   | 646    | 2646    | 10      |
 | earlyAdoption                           | 471             | 471    | 471    | 471     | 1       |
-| getNodeOperator                         | 2259            | 9884   | 8259   | 20259   | 288     |
-| getNodeOperatorSigningKeys              | 819             | 2877   | 3594   | 3594    | 7       |
-| getNodeOperatorSummary                  | 1515            | 5426   | 7515   | 7515    | 45      |
-| getNodeOperatorsCount                   | 403             | 464    | 403    | 2403    | 327     |
-| getNonce                                | 402             | 702    | 402    | 2402    | 40      |
-| getStakingModuleSummary                 | 640             | 2890   | 2640   | 4640    | 16      |
+| getNodeOperator                         | 2214            | 9832   | 8214   | 20214   | 278     |
+| getNodeOperatorSigningKeys              | 841             | 2899   | 3616   | 3616    | 7       |
+| getNodeOperatorSummary                  | 1493            | 5446   | 7493   | 7493    | 43      |
+| getNodeOperatorsCount                   | 381             | 444    | 381    | 2381    | 317     |
+| getNonce                                | 380             | 680    | 380    | 2380    | 40      |
+| getStakingModuleSummary                 | 618             | 2751   | 2618   | 4618    | 15      |
 | getType                                 | 383             | 383    | 383    | 383     | 1       |
-| grantRole                               | 26965           | 51457  | 51473  | 51473   | 1582    |
-| hasRole                                 | 769             | 769    | 769    | 769     | 2       |
-| isPaused                                | 461             | 861    | 461    | 2461    | 5       |
-| normalizeQueue                          | 30233           | 54712  | 54712  | 79191   | 2       |
-| obtainDepositData                       | 24421           | 107050 | 96713  | 158508  | 43      |
+| grantRole                               | 26965           | 51457  | 51473  | 51473   | 1583    |
+| hasRole                                 | 747             | 747    | 747    | 747     | 2       |
+| isPaused                                | 439             | 839    | 439    | 2439    | 5       |
+| normalizeQueue                          | 30211           | 54690  | 54690  | 79169   | 2       |
+| obtainDepositData                       | 24465           | 107094 | 96757  | 158552  | 43      |
 | onExitedAndStuckValidatorsCountsUpdated | 23682           | 23715  | 23715  | 23748   | 2       |
 | onRewardsMinted                         | 23954           | 32109  | 26189  | 46185   | 3       |
-| onWithdrawalCredentialsChanged          | 23661           | 23694  | 23694  | 23727   | 2       |
+| onWithdrawalCredentialsChanged          | 23639           | 23672  | 23672  | 23705   | 2       |
 | pauseFor                                | 23988           | 45929  | 47497  | 47497   | 15      |
-| penalize                                | 24131           | 87230  | 105030 | 119157  | 8       |
 | proposeNodeOperatorManagerAddressChange | 24165           | 42614  | 53604  | 53604   | 9       |
 | proposeNodeOperatorRewardAddressChange  | 24166           | 33434  | 36483  | 36483   | 10      |
-| publicReleaseTimestamp                  | 384             | 384    | 384    | 384     | 1       |
+| publicRelease                           | 387             | 387    | 387    | 387     | 1       |
 | queue                                   | 520             | 920    | 520    | 2520    | 5       |
 | recoverERC20                            | 31862           | 48877  | 48877  | 65892   | 2       |
-| recoverEther                            | 23718           | 26011  | 26011  | 28304   | 2       |
-| recoverStETHShares                      | 69862           | 69862  | 69862  | 69862   | 1       |
+| recoverEther                            | 23740           | 26033  | 26033  | 28326   | 2       |
+| recoverStETHShares                      | 69884           | 69884  | 69884  | 69884   | 1       |
 | removalCharge                           | 2408            | 2408   | 2408   | 2408    | 1       |
-| removeKeys                              | 23982           | 145205 | 172225 | 240207  | 15      |
-| reportELRewardsStealingPenalty          | 24328           | 119017 | 136859 | 146864  | 12      |
+| removeKeys                              | 23982           | 145174 | 172189 | 240171  | 15      |
+| reportELRewardsStealingPenalty          | 24283           | 120450 | 136747 | 146752  | 14      |
 | resetNodeOperatorManagerAddress         | 23690           | 31835  | 31312  | 38442   | 5       |
 | resume                                  | 23707           | 26619  | 26619  | 29532   | 2       |
 | revokeRole                              | 29529           | 29529  | 29529  | 29529   | 1       |
-| setAccounting                           | 24268           | 46392  | 46497  | 46497   | 213     |
-| setEarlyAdoption                        | 24006           | 38634  | 46475  | 46475   | 8       |
-| setPublicReleaseTimestamp               | 23909           | 41673  | 47059  | 47059   | 8       |
-| setRemovalCharge                        | 24026           | 46981  | 47117  | 47129   | 170     |
-| settleELRewardsStealingPenalty          | 24690           | 59986  | 38696  | 111722  | 6       |
-| submitInitialSlashing                   | 24058           | 101712 | 139167 | 140067  | 12      |
-| submitWithdrawal                        | 24327           | 120989 | 141015 | 234746  | 14      |
-| unsafeUpdateValidatorsCount             | 24231           | 61214  | 35897  | 159804  | 10      |
-| updateExitedValidatorsCount             | 24801           | 58502  | 47479  | 110207  | 11      |
-| updateRefundedValidatorsCount           | 24104           | 27691  | 27691  | 31278   | 2       |
-| updateStuckValidatorsCount              | 24756           | 72980  | 60488  | 138473  | 13      |
-| updateTargetValidatorsLimits            | 24292           | 118226 | 137467 | 210387  | 19      |
+| setAccounting                           | 24268           | 46389  | 46497  | 46497   | 207     |
+| setEarlyAdoption                        | 23984           | 38612  | 46453  | 46453   | 8       |
+| setRemovalCharge                        | 23981           | 46931  | 47071  | 47083   | 166     |
+| settleELRewardsStealingPenalty          | 24646           | 67374  | 38652  | 112050  | 7       |
+| submitInitialSlashing                   | 24058           | 101332 | 139122 | 140022  | 12      |
+| submitWithdrawal                        | 24283           | 120913 | 140926 | 234657  | 14      |
+| unsafeUpdateValidatorsCount             | 24231           | 61205  | 35897  | 159759  | 10      |
+| updateExitedValidatorsCount             | 24779           | 58480  | 47457  | 110185  | 11      |
+| updateRefundedValidatorsCount           | 24082           | 27669  | 27669  | 31256   | 2       |
+| updateStuckValidatorsCount              | 24801           | 73008  | 60533  | 138473  | 13      |
+| updateTargetValidatorsLimits            | 24270           | 118166 | 137400 | 210320  | 19      |
 
 
 | src/CSVerifier.sol:CSVerifier contract |                 |        |        |        |         |
 |----------------------------------------|-----------------|--------|--------|--------|---------|
-| Deployment Cost                        | Deployment Size |        |        |        |         |
-| 1547301                                | 7449            |        |        |        |         |
 | Function Name                          | min             | avg    | median | max    | # calls |
 | BEACON_ROOTS                           | 260             | 260    | 260    | 260    | 3       |
 | initialize                             | 66498           | 66498  | 66498  | 66498  | 3       |
@@ -182,8 +167,6 @@
 
 | src/lib/AssetRecovererLib.sol:AssetRecovererLib contract |                 |       |        |       |         |
 |----------------------------------------------------------|-----------------|-------|--------|-------|---------|
-| Deployment Cost                                          | Deployment Size |       |        |       |         |
-| 413472                                                   | 2118            |       |        |       |         |
 | Function Name                                            | min             | avg   | median | max   | # calls |
 | recoverERC1155                                           | 38590           | 38590 | 38590  | 38590 | 1       |
 | recoverERC20                                             | 35969           | 35969 | 35969  | 35969 | 4       |

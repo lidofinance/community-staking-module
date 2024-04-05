@@ -89,7 +89,7 @@ contract CSModuleBase {
     event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
 
     event StakingModuleTypeSet(bytes32 moduleType);
-    event PublicReleaseTimestampSet(uint256 timestamp);
+    event PublicRelease();
     event RemovalChargeSet(uint256 amount);
 
     event RemovalChargeApplied(uint256 indexed nodeOperatorId, uint256 amount);
@@ -127,8 +127,7 @@ contract CSModuleBase {
 
     error AlreadySubmitted();
 
-    error Expired();
-    error AlreadyInitialized();
+    error AlreadySet();
     error InvalidAmount();
     error NotAllowedToJoinYet();
     error MaxSigningKeysCountExceeded();
@@ -175,9 +174,7 @@ contract CSModule is
     uint256 public constant EL_REWARDS_STEALING_FINE = 0.1 ether;
     uint256 private constant ONE_YEAR = 365 days;
 
-    uint256 private immutable TEMP_METHODS_EXPIRE_TIME;
-
-    uint256 public publicReleaseTimestamp;
+    bool public publicRelease;
     uint256 public removalCharge;
     QueueLib.Queue public queue;
 
@@ -202,19 +199,10 @@ contract CSModule is
 
     TransientUintUintMap private _queueLookup;
 
-    constructor(
-        bytes32 moduleType,
-        address _lidoLocator,
-        uint256 _publicReleaseTimestamp,
-        address admin
-    ) {
-        TEMP_METHODS_EXPIRE_TIME = block.timestamp + ONE_YEAR;
+    constructor(bytes32 moduleType, address _lidoLocator, address admin) {
         _moduleType = moduleType;
         lidoLocator = ILidoLocator(_lidoLocator);
         emit StakingModuleTypeSet(moduleType);
-
-        publicReleaseTimestamp = _publicReleaseTimestamp;
-        emit PublicReleaseTimestampSet(_publicReleaseTimestamp);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
@@ -236,7 +224,7 @@ contract CSModule is
         address _accounting
     ) external onlyRole(INITIALIZE_ROLE) {
         if (address(accounting) != address(0)) {
-            revert AlreadyInitialized();
+            revert AlreadySet();
         }
         accounting = ICSAccounting(_accounting);
     }
@@ -247,16 +235,17 @@ contract CSModule is
         address _earlyAdoption
     ) external onlyRole(INITIALIZE_ROLE) {
         if (address(earlyAdoption) != address(0)) {
-            revert AlreadyInitialized();
+            revert AlreadySet();
         }
         earlyAdoption = ICSEarlyAdoption(_earlyAdoption);
     }
 
-    function setPublicReleaseTimestamp(
-        uint256 timestamp
-    ) external onlyRole(MODULE_MANAGER_ROLE) {
-        publicReleaseTimestamp = timestamp;
-        emit PublicReleaseTimestampSet(timestamp);
+    function activatePublicRelease() external onlyRole(MODULE_MANAGER_ROLE) {
+        if (publicRelease) {
+            revert AlreadySet();
+        }
+        publicRelease = true;
+        emit PublicRelease();
     }
 
     /// @notice Sets the key deletion fine
@@ -1150,21 +1139,6 @@ contract CSModule is
         }
     }
 
-    /// @notice Penalize bond by burning shares of the given node operator.
-    /// @dev Have a limited lifetime. Reverts when expired
-    /// @param nodeOperatorId id of the node operator to penalize bond for.
-    /// @param amount amount of ETH to penalize.
-    function penalize(
-        uint256 nodeOperatorId,
-        uint256 amount
-    ) public onlyRole(PENALIZE_ROLE) onlyExistingNodeOperator(nodeOperatorId) {
-        if (block.timestamp > TEMP_METHODS_EXPIRE_TIME) {
-            revert Expired();
-        }
-        accounting.penalize(nodeOperatorId, amount);
-        _resetBenefits(nodeOperatorId);
-    }
-
     /// @notice Checks if the given node operator's key is proved as withdrawn.
     /// @param nodeOperatorId id of the node operator to check.
     /// @param keyIndex index of the key to check.
@@ -1280,7 +1254,7 @@ contract CSModule is
         // TODO: sanity checks
         uint256 startIndex = no.totalAddedKeys;
         if (
-            block.timestamp < publicReleaseTimestamp &&
+            !publicRelease &&
             startIndex + keysCount > MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE
         ) {
             revert MaxSigningKeysCountExceeded();
@@ -1552,7 +1526,7 @@ contract CSModule is
         uint256 nodeOperatorId,
         bytes32[] calldata proof
     ) internal {
-        if (block.timestamp < publicReleaseTimestamp && proof.length == 0) {
+        if (!publicRelease && proof.length == 0) {
             revert NotAllowedToJoinYet();
         }
         if (proof.length == 0) return;
