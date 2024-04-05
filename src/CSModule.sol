@@ -1068,13 +1068,6 @@ contract CSModule is
         }
     }
 
-    /// @notice reset benefits for the Node Operator
-    /// @param nodeOperatorId ID of the node operator
-    function _resetBenefits(uint256 nodeOperatorId) internal {
-        accounting.resetBondCurve(nodeOperatorId);
-        _updateDepositableValidatorsCount(nodeOperatorId);
-    }
-
     /// @notice Reports EL rewards stealing for the given node operator.
     /// @dev The funds will be locked, so if there any unbonded keys after that, they will be unvetted.
     /// @param nodeOperatorId id of the node operator to report EL rewards stealing for.
@@ -1134,7 +1127,8 @@ contract CSModule is
                 revert NodeOperatorDoesNotExist();
             uint256 settled = accounting.settleLockedBondETH(nodeOperatorId);
             if (settled > 0) {
-                _resetBenefits(nodeOperatorId);
+                accounting.resetBondCurve(nodeOperatorId);
+                _updateDepositableValidatorsCount(nodeOperatorId);
             }
         }
     }
@@ -1178,7 +1172,11 @@ contract CSModule is
 
         emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount);
 
-        if (_isValidatorSlashed[pointer]) amount += INITIAL_SLASHING_PENALTY;
+        if (_isValidatorSlashed[pointer]) {
+            amount += INITIAL_SLASHING_PENALTY;
+            accounting.resetBondCurve(nodeOperatorId);
+        }
+
         if (amount < DEPOSIT_SIZE) {
             accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - amount);
         }
@@ -1224,7 +1222,8 @@ contract CSModule is
         emit InitialSlashingSubmitted(nodeOperatorId, keyIndex);
 
         accounting.penalize(nodeOperatorId, INITIAL_SLASHING_PENALTY);
-        _resetBenefits(nodeOperatorId);
+
+        _updateDepositableValidatorsCount(nodeOperatorId);
         _incrementModuleNonce();
     }
 

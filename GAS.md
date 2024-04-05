@@ -31,7 +31,7 @@
 | getLockedBondInfo                          | 837             | 837    | 837    | 837    | 6       |
 | getRequiredBondForNextKeys                 | 10152           | 33360  | 52652  | 53178  | 13      |
 | getRequiredBondForNextKeysWstETH           | 59002           | 59002  | 59002  | 59002  | 2       |
-| getUnbondedKeysCount                       | 7730            | 24022  | 15730  | 46230  | 240     |
+| getUnbondedKeysCount                       | 7730            | 24122  | 15730  | 46230  | 240     |
 | grantRole                                  | 118386          | 118389 | 118386 | 118398 | 572     |
 
 
@@ -144,9 +144,9 @@
 | setAccounting                           | 24268           | 46389  | 46497  | 46497   | 207     |
 | setEarlyAdoption                        | 23984           | 38612  | 46453  | 46453   | 8       |
 | setRemovalCharge                        | 23981           | 46931  | 47071  | 47083   | 166     |
-| settleELRewardsStealingPenalty          | 24646           | 67374  | 38652  | 112050  | 7       |
-| submitInitialSlashing                   | 24058           | 101332 | 139122 | 140022  | 12      |
-| submitWithdrawal                        | 24283           | 120913 | 140926 | 234657  | 14      |
+| settleELRewardsStealingPenalty          | 24646           | 67365  | 38652  | 112027  | 7       |
+| submitInitialSlashing                   | 24058           | 97644  | 134090 | 134990  | 12      |
+| submitWithdrawal                        | 24283           | 121270 | 140926 | 234657  | 14      |
 | unsafeUpdateValidatorsCount             | 24231           | 61205  | 35897  | 159759  | 10      |
 | updateExitedValidatorsCount             | 24779           | 58480  | 47457  | 110185  | 11      |
 | updateRefundedValidatorsCount           | 24082           | 27669  | 27669  | 31256   | 2       |

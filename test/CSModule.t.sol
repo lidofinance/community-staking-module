@@ -2409,6 +2409,10 @@ contract CsmSubmitWithdrawal is CSMCommon {
                 0.05 ether
             )
         );
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
+        );
         csm.submitWithdrawal(noId, keyIndex, exitBalance - 0.05 ether);
     }
 
@@ -2460,10 +2464,6 @@ contract CsmSubmitInitialSlashing is CSMCommon {
                 penaltyAmount
             )
         );
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
         csm.submitInitialSlashing(noId, 0);
     }
 
@@ -2489,10 +2489,6 @@ contract CsmSubmitInitialSlashing is CSMCommon {
             noId,
             0,
             csm.DEPOSIT_SIZE() - csm.INITIAL_SLASHING_PENALTY()
-        );
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
         );
         csm.submitInitialSlashing(noId, keyIndex);
     }
