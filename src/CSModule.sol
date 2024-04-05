@@ -317,44 +317,15 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
+    /// @param permit Permit to use stETH as bond
     /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
     /// @param referral Optional referral address
     function addNodeOperatorStETH(
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
-        bytes32[] calldata eaProof,
-        address referral
-    ) external whenResumed {
-        // TODO: sanity checks
-
-        uint256 nodeOperatorId = _createNodeOperator(referral);
-        _processEarlyAdoption(nodeOperatorId, eaProof);
-
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-        accounting.depositStETH(
-            msg.sender,
-            nodeOperatorId,
-            accounting.getBondAmountByKeysCount(
-                keysCount,
-                accounting.getBondCurve(nodeOperatorId)
-            )
-        );
-    }
-
-    /// @notice Adds a new node operator with permit to use stETH as bond
-    /// @param keysCount Count of signing keys
-    /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of public keys
-    /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
-    /// @param permit Permit to use stETH as bond
-    /// @param referral Optional referral address
-    function addNodeOperatorStETHWithPermit(
-        uint256 keysCount,
-        bytes calldata publicKeys,
-        bytes calldata signatures,
-        bytes32[] calldata eaProof,
         ICSAccounting.PermitInput calldata permit,
+        bytes32[] calldata eaProof,
         address referral
     ) external whenResumed {
         // TODO: sanity checks
@@ -363,7 +334,8 @@ contract CSModule is
         _processEarlyAdoption(nodeOperatorId, eaProof);
 
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-        accounting.depositStETHWithPermit(
+
+        accounting.depositStETH(
             msg.sender,
             nodeOperatorId,
             accounting.getBondAmountByKeysCount(
@@ -378,43 +350,15 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
+    /// @param permit Permit to use wstETH as bond
     /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
     /// @param referral Optional referral address
     function addNodeOperatorWstETH(
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
-        bytes32[] calldata eaProof,
-        address referral
-    ) external whenResumed {
-        // TODO: sanity checks
-
-        uint256 nodeOperatorId = _createNodeOperator(referral);
-        _processEarlyAdoption(nodeOperatorId, eaProof);
-
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-        accounting.depositWstETH(
-            msg.sender,
-            nodeOperatorId,
-            accounting.getBondAmountByKeysCountWstETH(
-                keysCount,
-                accounting.getBondCurve(nodeOperatorId)
-            )
-        );
-    }
-
-    /// @notice Adds a new node operator with permit to use wstETH as bond
-    /// @param keysCount Count of signing keys
-    /// @param publicKeys Public keys to submit
-    /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
-    /// @param permit Permit to use wstETH as bond
-    /// @param referral Optional referral address
-    function addNodeOperatorWstETHWithPermit(
-        uint256 keysCount,
-        bytes calldata publicKeys,
-        bytes calldata signatures,
-        bytes32[] calldata eaProof,
         ICSAccounting.PermitInput calldata permit,
+        bytes32[] calldata eaProof,
         address referral
     ) external whenResumed {
         // TODO: sanity checks
@@ -423,7 +367,8 @@ contract CSModule is
         _processEarlyAdoption(nodeOperatorId, eaProof);
 
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-        accounting.depositWstETHWithPermit(
+
+        accounting.depositWstETH(
             msg.sender,
             nodeOperatorId,
             accounting.getBondAmountByKeysCountWstETH(
@@ -463,29 +408,8 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
-    function addValidatorKeysStETH(
-        uint256 nodeOperatorId,
-        uint256 keysCount,
-        bytes calldata publicKeys,
-        bytes calldata signatures
-    ) external whenResumed {
-        // TODO: sanity checks
-
-        uint256 amount = accounting.getRequiredBondForNextKeys(
-            nodeOperatorId,
-            keysCount
-        );
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-        accounting.depositStETH(msg.sender, nodeOperatorId, amount);
-    }
-
-    /// @notice Adds a new keys to the node operator with permit to use stETH as bond
-    /// @param nodeOperatorId ID of the node operator
-    /// @param keysCount Count of signing keys
-    /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of public keys
     /// @param permit Permit to use stETH as bond
-    function addValidatorKeysStETHWithPermit(
+    function addValidatorKeysStETH(
         uint256 nodeOperatorId,
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -493,18 +417,15 @@ contract CSModule is
         ICSAccounting.PermitInput calldata permit
     ) external whenResumed {
         // TODO: sanity checks
+        // TODO: allow only Node Operator manager
 
         uint256 amount = accounting.getRequiredBondForNextKeys(
             nodeOperatorId,
             keysCount
         );
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-        accounting.depositStETHWithPermit(
-            msg.sender,
-            nodeOperatorId,
-            amount,
-            permit
-        );
+
+        accounting.depositStETH(msg.sender, nodeOperatorId, amount, permit);
     }
 
     /// @notice Adds a new keys to the node operator with wstETH bond
@@ -512,29 +433,8 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
-    function addValidatorKeysWstETH(
-        uint256 nodeOperatorId,
-        uint256 keysCount,
-        bytes calldata publicKeys,
-        bytes calldata signatures
-    ) external whenResumed {
-        // TODO: sanity checks
-
-        uint256 amount = accounting.getRequiredBondForNextKeysWstETH(
-            nodeOperatorId,
-            keysCount
-        );
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-        accounting.depositWstETH(msg.sender, nodeOperatorId, amount);
-    }
-
-    /// @notice Adds a new keys to the node operator with permit to use wstETH as bond
-    /// @param nodeOperatorId ID of the node operator
-    /// @param keysCount Count of signing keys
-    /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of public keys
     /// @param permit Permit to use wstETH as bond
-    function addValidatorKeysWstETHWithPermit(
+    function addValidatorKeysWstETH(
         uint256 nodeOperatorId,
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -542,18 +442,15 @@ contract CSModule is
         ICSAccounting.PermitInput calldata permit
     ) external whenResumed {
         // TODO: sanity checks
+        // TODO: allow only Node Operator manager
 
         uint256 amount = accounting.getRequiredBondForNextKeysWstETH(
             nodeOperatorId,
             keysCount
         );
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-        accounting.depositWstETHWithPermit(
-            msg.sender,
-            nodeOperatorId,
-            amount,
-            permit
-        );
+
+        accounting.depositWstETH(msg.sender, nodeOperatorId, amount, permit);
     }
 
     /// @notice Notify the module about the operator's bond change.
