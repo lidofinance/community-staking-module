@@ -45,7 +45,6 @@ contract CSFeeDistributorTest is
         (, , stETH, ) = initLido();
 
         feeDistributor = new CSFeeDistributor(
-            address(csm),
             address(stETH),
             address(accounting),
             address(this)
@@ -66,9 +65,9 @@ contract CSFeeDistributorTest is
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
 
-        stETH.mintShares(address(csm), shares);
+        stETH.mintShares(address(feeDistributor), shares);
         vm.prank(oracle);
-        feeDistributor.processTreeData(root, "", shares);
+        feeDistributor.processOracleReport(root, "", shares);
 
         vm.expectEmit(true, true, false, true, address(feeDistributor));
         emit FeeDistributed(nodeOperatorId, shares);
@@ -113,7 +112,7 @@ contract CSFeeDistributorTest is
 
         stETH.mintShares(address(csm), shares);
         vm.prank(oracle);
-        feeDistributor.processTreeData(root, "", shares);
+        feeDistributor.processOracleReport(root, "", shares);
 
         stdstore
             .target(address(feeDistributor))
@@ -138,7 +137,7 @@ contract CSFeeDistributorTest is
         bytes32 root = tree.root();
         stETH.mintShares(address(csm), shares);
         vm.prank(oracle);
-        feeDistributor.processTreeData(root, "", shares);
+        feeDistributor.processOracleReport(root, "", shares);
 
         stdstore
             .target(address(feeDistributor))
@@ -179,26 +178,5 @@ contract CSFeeDistributorTest is
         vm.prank(stranger);
         vm.expectRevert(AssetRecoverer.NotAllowedToRecover.selector);
         feeDistributor.recoverERC20(address(stETH), 1000);
-    }
-
-    function test_recoverStETHShares() public {
-        feeDistributor.grantRole(feeDistributor.RECOVERER_ROLE(), stranger);
-        bytes32 root = tree.root();
-
-        stETH.mintShares(address(csm), stETH.getSharesByPooledEth(1 ether));
-        uint256 receivedShares = stETH.getSharesByPooledEth(0.3 ether);
-
-        vm.prank(oracle);
-        feeDistributor.processTreeData(root, "", receivedShares);
-        uint256 sharesToRecover = stETH.sharesOf(address(feeDistributor)) -
-            receivedShares;
-
-        vm.prank(stranger);
-        vm.expectEmit(true, true, true, true, address(feeDistributor));
-        emit AssetRecovererLib.StETHSharesRecovered(stranger, sharesToRecover);
-        feeDistributor.recoverStETHShares();
-
-        assertEq(stETH.sharesOf(address(feeDistributor)), receivedShares);
-        assertEq(stETH.sharesOf(stranger), sharesToRecover);
     }
 }

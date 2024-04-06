@@ -512,7 +512,7 @@ contract CSAccounting is
             nodeOperatorId
         );
         _isSenderEligibleToClaim(nodeOperator.managerAddress);
-        _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
+        _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         if (stETHAmount == 0) return;
         uint256 claimableShares = _getExcessBondShares(
             nodeOperatorId,
@@ -567,7 +567,7 @@ contract CSAccounting is
             nodeOperatorId
         );
         _isSenderEligibleToClaim(nodeOperator.managerAddress);
-        _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
+        _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         CSBondCore._claimWstETH(
             nodeOperatorId,
             _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
@@ -612,7 +612,7 @@ contract CSAccounting is
             nodeOperatorId
         );
         _isSenderEligibleToClaim(nodeOperator.managerAddress);
-        _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
+        _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         if (ethAmount == 0) return;
         uint256 claimableShares = _getExcessBondShares(
             nodeOperatorId,
@@ -738,14 +738,14 @@ contract CSAccounting is
     }
 
     function _pullFeeRewards(
-        bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
-        uint256 cumulativeFeeShares
+        uint256 cumulativeFeeShares,
+        bytes32[] memory rewardsProof
     ) internal {
         uint256 distributed = ICSFeeDistributor(feeDistributor).distributeFees(
-            rewardsProof,
             nodeOperatorId,
-            cumulativeFeeShares
+            cumulativeFeeShares,
+            rewardsProof
         );
         _increaseBond(nodeOperatorId, distributed);
         CSM.onBondChanged(nodeOperatorId);

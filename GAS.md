@@ -1,20 +1,20 @@
 | src/CSAccounting.sol:CSAccounting contract |                 |        |        |        |         |
 |--------------------------------------------|-----------------|--------|--------|--------|---------|
 | Function Name                              | min             | avg    | median | max    | # calls |
-| ADD_BOND_CURVE_ROLE                        | 275             | 275    | 275    | 275    | 161     |
-| RESET_BOND_CURVE_ROLE                      | 296             | 296    | 296    | 296    | 201     |
-| SET_BOND_CURVE_ROLE                        | 252             | 252    | 252    | 252    | 201     |
-| addBondCurve                               | 121302          | 121302 | 121302 | 121302 | 5       |
-| getActualLockedBond                        | 559             | 665    | 719    | 719    | 3       |
-| getBondAmountByKeysCount                   | 1325            | 1421   | 1325   | 1588   | 145     |
-| getBondAmountByKeysCountWstETH             | 14173           | 14173  | 14173  | 14173  | 2       |
-| getBondCurve                               | 2226            | 16010  | 16322  | 16322  | 149     |
-| getBondLockRetentionPeriod                 | 2413            | 2413   | 2413   | 2413   | 2       |
-| getLockedBondInfo                          | 793             | 793    | 793    | 793    | 6       |
-| getRequiredBondForNextKeys                 | 10130           | 33338  | 52630  | 53156  | 13      |
-| getRequiredBondForNextKeysWstETH           | 59024           | 59024  | 59024  | 59024  | 2       |
-| getUnbondedKeysCount                       | 7752            | 24214  | 15752  | 46252  | 238     |
-| grantRole                                  | 118364          | 118367 | 118364 | 118376 | 563     |
+| ADD_BOND_CURVE_ROLE                        | 275             | 275    | 275    | 275    | 163     |
+| RESET_BOND_CURVE_ROLE                      | 296             | 296    | 296    | 296    | 203     |
+| SET_BOND_CURVE_ROLE                        | 274             | 274    | 274    | 274    | 203     |
+| addBondCurve                               | 121324          | 121324 | 121324 | 121324 | 5       |
+| getActualLockedBond                        | 581             | 687    | 741    | 741    | 3       |
+| getBondAmountByKeysCount                   | 1303            | 1397   | 1303   | 1566   | 147     |
+| getBondAmountByKeysCountWstETH             | 14217           | 14217  | 14217  | 14217  | 2       |
+| getBondCurve                               | 2204            | 15992  | 16300  | 16300  | 151     |
+| getBondLockRetentionPeriod                 | 2370            | 2370   | 2370   | 2370   | 2       |
+| getLockedBondInfo                          | 837             | 837    | 837    | 837    | 6       |
+| getRequiredBondForNextKeys                 | 10197           | 33405  | 52697  | 53223  | 13      |
+| getRequiredBondForNextKeysWstETH           | 59047           | 59047  | 59047  | 59047  | 2       |
+| getUnbondedKeysCount                       | 7775            | 24167  | 15775  | 46275  | 240     |
+| grantRole                                  | 118386          | 118389 | 118386 | 118398 | 569     |
 
 
 | src/CSEarlyAdoption.sol:CSEarlyAdoption contract |                 |       |        |       |         |
@@ -31,14 +31,13 @@
 | src/CSFeeDistributor.sol:CSFeeDistributor contract |                 |        |        |        |         |
 |----------------------------------------------------|-----------------|--------|--------|--------|---------|
 | Function Name                                      | min             | avg    | median | max    | # calls |
-| ORACLE_ROLE                                        | 263             | 263    | 263    | 263    | 8       |
-| RECOVERER_ROLE                                     | 261             | 261    | 261    | 261    | 3       |
-| distributeFees                                     | 22284           | 35883  | 27710  | 76226  | 5       |
+| ORACLE_ROLE                                        | 263             | 263    | 263    | 263    | 7       |
+| RECOVERER_ROLE                                     | 239             | 239    | 239    | 239    | 2       |
+| distributeFees                                     | 22284           | 35882  | 27710  | 76223  | 5       |
 | distributedShares                                  | 523             | 1523   | 1523   | 2523   | 4       |
-| grantRole                                          | 118348          | 118348 | 118348 | 118348 | 11      |
-| processTreeData                                    | 85699           | 97249  | 101099 | 101099 | 4       |
-| recoverERC20                                       | 24428           | 41443  | 41443  | 58458  | 2       |
-| recoverStETHShares                                 | 39731           | 39731  | 39731  | 39731  | 1       |
+| grantRole                                          | 118370          | 118370 | 118370 | 118370 | 9       |
+| processOracleReport                                | 71708           | 71708  | 71708  | 71708  | 3       |
+| recoverERC20                                       | 22067           | 39082  | 39082  | 56097  | 2       |
 
 
 | src/CSFeeOracle.sol:CSFeeOracle contract |                 |        |        |        |         |

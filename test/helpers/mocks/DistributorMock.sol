@@ -3,10 +3,10 @@
 pragma solidity 0.8.24;
 
 contract DistributorMock {
-    function processTreeData(
-        bytes32 _treeRoot,
-        string calldata _treeCid,
-        uint256 distributedShares
+    function processOracleReport(
+        bytes32 /* treeRoot */,
+        string calldata /* treeCid */,
+        uint256 /* distributedShares */
     ) external {
         // do nothing
     }

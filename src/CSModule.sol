@@ -152,8 +152,6 @@ contract CSModule is
         keccak256("MODULE_MANAGER_ROLE"); // 0x79dfcec784e591aafcf60db7db7b029a5c8b12aac4afd4e8c4eb740430405fa6
     bytes32 public constant STAKING_ROUTER_ROLE =
         keccak256("STAKING_ROUTER_ROLE"); // 0xbb75b874360e0bfd87f964eadd8276d8efb7c942134fc329b513032d0803e0c6
-    bytes32 public constant FEE_DISTRIBUTOR_ROLE =
-        keccak256("FEE_DISTRIBUTOR_ROLE"); //
     bytes32 public constant REPORT_EL_REWARDS_STEALING_PENALTY_ROLE =
         keccak256("REPORT_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0x59911a6aa08a72fe3824aec4500dc42335c6d0702b6d5c5c72ceb265a0de9302
     bytes32 public constant SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE =
@@ -179,6 +177,7 @@ contract CSModule is
     QueueLib.Queue public queue;
 
     ILidoLocator public lidoLocator;
+    address public feeDistributor;
     ICSAccounting public accounting;
     ICSEarlyAdoption public earlyAdoption;
     // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
@@ -238,6 +237,15 @@ contract CSModule is
             revert AlreadySet();
         }
         earlyAdoption = ICSEarlyAdoption(_earlyAdoption);
+    }
+
+    function setFeeDistributor(
+        address _feeDistributor
+    ) external onlyRole(INITIALIZE_ROLE) {
+        if (feeDistributor != address(0)) {
+            revert AlreadySet();
+        }
+        feeDistributor = _feeDistributor;
     }
 
     function activatePublicRelease() external onlyRole(MODULE_MANAGER_ROLE) {
@@ -649,18 +657,12 @@ contract CSModule is
         }
     }
 
-    /// @notice Called when rewards minted for the module
-    /// @dev Empty due to oracle using CSM balance for distribution
+    /// @notice Called when rewards minted for the module.
+    /// @dev Passes through the minted shares to the fee distributor.
     function onRewardsMinted(
         uint256 totalShares
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        _totalRewardsShares += totalShares;
-    }
-
-    function onRewardsDistributed(
-        uint256 distributedShares
-    ) external onlyRole(FEE_DISTRIBUTOR_ROLE) {
-        _totalRewardsShares -= distributedShares;
+        IStETH(lidoLocator.lido()).transferShares(feeDistributor, totalShares);
     }
 
     function _updateDepositableValidatorsCount(uint256 nodeOperatorId) private {
@@ -1389,17 +1391,13 @@ contract CSModule is
         return queue.at(index);
     }
 
-    function recoverERC20(address token, uint256 amount) external override {
-        if (token == lidoLocator.lido()) {
-            revert NotAllowedToRecover();
-        }
-        AssetRecovererLib.recoverERC20(token, amount);
-    }
-
-    function recoverStETHShares() external {
+    function recoverStETHShares() external onlyRecoverer {
         IStETH stETH = IStETH(lidoLocator.lido());
-        uint256 shares = stETH.sharesOf(address(this)) - _totalRewardsShares;
-        AssetRecovererLib.recoverStETHShares(address(stETH), shares);
+
+        AssetRecovererLib.recoverStETHShares(
+            address(stETH),
+            stETH.sharesOf(address(this))
+        );
     }
 
     modifier onlyRecoverer() override {
@@ -1439,7 +1437,7 @@ contract CSModule is
         accounting.setBondCurve(nodeOperatorId, earlyAdoption.curveId());
     }
 
-    function onlyNodeOperatorManager(uint256 nodeOperatorId) internal {
+    function onlyNodeOperatorManager(uint256 nodeOperatorId) internal view {
         if (_nodeOperators[nodeOperatorId].managerAddress != msg.sender)
             revert SenderIsNotManagerAddress();
     }

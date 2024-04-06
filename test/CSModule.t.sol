@@ -3258,32 +3258,20 @@ contract CSMRecoverERC20 is CSMCommon {
         assertEq(token.balanceOf(stranger), 1000);
     }
 
-    function test_recoverERC20_revertWhenStETH() public {
-        vm.startPrank(admin);
-        csm.grantRole(csm.RECOVERER_ROLE(), stranger);
-        vm.stopPrank();
-
-        vm.prank(stranger);
-        vm.expectRevert(AssetRecoverer.NotAllowedToRecover.selector);
-        csm.recoverERC20(address(stETH), 1000);
-    }
-
     function test_recoverStETHShares() public {
         vm.startPrank(admin);
         csm.grantRole(csm.RECOVERER_ROLE(), stranger);
         vm.stopPrank();
 
-        stETH.mintShares(address(csm), stETH.getSharesByPooledEth(1 ether));
-        uint256 rewardsShares = stETH.getSharesByPooledEth(0.3 ether);
-        csm.onRewardsMinted(rewardsShares);
-        uint256 sharesToRecover = stETH.sharesOf(address(csm)) - rewardsShares;
+        uint256 sharesToRecover = stETH.getSharesByPooledEth(1 ether);
+        stETH.mintShares(address(csm), sharesToRecover);
 
         vm.prank(stranger);
         vm.expectEmit(true, true, true, true, address(csm));
         emit AssetRecovererLib.StETHSharesRecovered(stranger, sharesToRecover);
         csm.recoverStETHShares();
 
-        assertEq(stETH.sharesOf(address(csm)), rewardsShares);
+        assertEq(stETH.sharesOf(address(csm)), 0);
         assertEq(stETH.sharesOf(stranger), sharesToRecover);
     }
 }

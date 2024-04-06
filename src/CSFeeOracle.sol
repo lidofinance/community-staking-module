@@ -156,7 +156,7 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
     function _handleConsensusReportData(ReportData calldata data) internal {
         _reportDataSanityCheck(data);
 
-        feeDistributor.processTreeData(
+        feeDistributor.processOracleReport(
             data.treeRoot,
             data.treeCid,
             data.distributed
