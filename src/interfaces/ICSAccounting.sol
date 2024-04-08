@@ -60,6 +60,27 @@ interface ICSAccounting is ICSBondCore, ICSBondCurve, ICSBondLock {
         uint256 nodeOperatorId
     ) external payable returns (uint256);
 
+    function claimRewardsStETH(
+        uint256 nodeOperatorId,
+        uint256 stETHAmount,
+        bytes32[] memory rewardsProof,
+        uint256 cumulativeFeeShares
+    ) external;
+
+    function claimRewardsWstETH(
+        uint256 nodeOperatorId,
+        uint256 stETHAmount,
+        bytes32[] memory rewardsProof,
+        uint256 cumulativeFeeShares
+    ) external;
+
+    function requestRewardsETH(
+        uint256 nodeOperatorId,
+        uint256 stETHAmount,
+        bytes32[] memory rewardsProof,
+        uint256 cumulativeFeeShares
+    ) external;
+
     function lockBondETH(uint256 nodeOperatorId, uint256 amount) external;
 
     function releaseLockedBondETH(

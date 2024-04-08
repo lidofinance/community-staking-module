@@ -24,7 +24,6 @@ abstract contract CSAccountingBase {
     event ChargeRecipientSet(address chargeRecipient);
 
     error AlreadyInitialized();
-    error NotOwnerToClaim(address msgSender, address owner);
     error InvalidSender();
     error SenderIsNotCSM();
     error NodeOperatorDoesNotExist();
@@ -482,16 +481,16 @@ contract CSAccounting is
     /// @param stETHAmount amount of stETH to claim.
     /// @param rewardsProof merkle proof of the rewards.
     /// @param cumulativeFeeShares cumulative fee shares for the node operator.
+    /// @notice rewardsProof and cumulativeFeeShares might be empty in order to claim only excess bond
     function claimRewardsStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount,
         bytes32[] memory rewardsProof,
         uint256 cumulativeFeeShares
-    ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
+    ) external whenResumed onlyCSM {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
         );
-        _isSenderEligibleToClaim(nodeOperator.managerAddress);
 
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
@@ -506,20 +505,20 @@ contract CSAccounting is
     }
 
     /// @notice Claims full reward (fee + bond) in wstETH for the given node operator available for this moment
-    /// @param rewardsProof merkle proof of the rewards.
     /// @param nodeOperatorId id of the node operator to claim rewards for.
-    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
     /// @param wstETHAmount amount of wstETH to claim.
+    /// @param rewardsProof merkle proof of the rewards.
+    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
+    /// @notice rewardsProof and cumulativeFeeShares might be empty in order to claim only excess bond
     function claimRewardsWstETH(
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
         bytes32[] memory rewardsProof,
         uint256 cumulativeFeeShares
-    ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
+    ) external whenResumed onlyCSM {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
         );
-        _isSenderEligibleToClaim(nodeOperator.managerAddress);
 
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
@@ -534,20 +533,20 @@ contract CSAccounting is
 
     /// @notice Request full reward (fee + bond) in Withdrawal NFT (unstETH) for the given node operator available for this moment.
     /// @dev reverts if amount isn't between MIN_STETH_WITHDRAWAL_AMOUNT and MAX_STETH_WITHDRAWAL_AMOUNT
-    /// @param rewardsProof merkle proof of the rewards.
     /// @param nodeOperatorId id of the node operator to request rewards for.
-    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
     /// @param ethAmount amount of ETH to request.
+    /// @param rewardsProof merkle proof of the rewards.
+    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
+    /// @notice rewardsProof and cumulativeFeeShares might be empty in order to claim only excess bond
     function requestRewardsETH(
         uint256 nodeOperatorId,
         uint256 ethAmount,
         bytes32[] memory rewardsProof,
         uint256 cumulativeFeeShares
-    ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
+    ) external whenResumed onlyCSM {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
         );
-        _isSenderEligibleToClaim(nodeOperator.managerAddress);
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
@@ -665,12 +664,6 @@ contract CSAccounting is
         return
             nodeOperator.totalAddedValidators -
             nodeOperator.totalWithdrawnValidators;
-    }
-
-    function _isSenderEligibleToClaim(address rewardAddress) internal view {
-        if (msg.sender != rewardAddress) {
-            revert NotOwnerToClaim(msg.sender, rewardAddress);
-        }
     }
 
     function _pullFeeRewards(

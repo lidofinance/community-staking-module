@@ -455,6 +455,67 @@ contract CSModule is
         accounting.depositWstETH(msg.sender, nodeOperatorId, amount, permit);
     }
 
+    /// @notice Claims full reward (fee + bond) in stETH for the given node operator with desirable value
+    /// @param nodeOperatorId id of the node operator to claim rewards for.
+    /// @param stETHAmount amount of stETH to claim.
+    /// @param rewardsProof merkle proof of the rewards.
+    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
+    function claimRewardsStETH(
+        uint256 nodeOperatorId,
+        uint256 stETHAmount,
+        bytes32[] memory rewardsProof,
+        uint256 cumulativeFeeShares
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        onlyNodeOperatorManager(nodeOperatorId);
+        accounting.claimRewardsStETH(
+            nodeOperatorId,
+            stETHAmount,
+            rewardsProof,
+            cumulativeFeeShares
+        );
+    }
+
+    /// @notice Claims full reward (fee + bond) in wstETH for the given node operator available for this moment
+    /// @param nodeOperatorId id of the node operator to claim rewards for.
+    /// @param wstETHAmount amount of wstETH to claim.
+    /// @param rewardsProof merkle proof of the rewards.
+    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
+    function claimRewardsWstETH(
+        uint256 nodeOperatorId,
+        uint256 wstETHAmount,
+        bytes32[] memory rewardsProof,
+        uint256 cumulativeFeeShares
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        onlyNodeOperatorManager(nodeOperatorId);
+        accounting.claimRewardsWstETH(
+            nodeOperatorId,
+            wstETHAmount,
+            rewardsProof,
+            cumulativeFeeShares
+        );
+    }
+
+    /// @notice Request full reward (fee + bond) in Withdrawal NFT (unstETH) for the given node operator available for this moment.
+    /// @dev reverts if amount isn't between MIN_STETH_WITHDRAWAL_AMOUNT and MAX_STETH_WITHDRAWAL_AMOUNT
+    /// @param nodeOperatorId id of the node operator to request rewards for.
+    /// @param ethAmount amount of ETH to request.
+    /// @param rewardsProof merkle proof of the rewards.
+    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
+    function requestRewardsETH(
+        uint256 nodeOperatorId,
+        uint256 ethAmount,
+        bytes32[] memory rewardsProof,
+        uint256 cumulativeFeeShares
+    ) external onlyExistingNodeOperator(nodeOperatorId) {
+        onlyNodeOperatorManager(nodeOperatorId);
+        accounting.requestRewardsETH(
+            nodeOperatorId,
+            ethAmount,
+            rewardsProof,
+            cumulativeFeeShares
+        );
+    }
+
     /// @notice Notify the module about the operator's bond change.
     function onBondChanged(uint256 nodeOperatorId) external {
         _updateDepositableValidatorsCount(nodeOperatorId);

@@ -877,6 +877,98 @@ contract CSMObtainDepositData is CSMCommon {
     }
 }
 
+contract CSMClaimRewards is CSMCommon {
+    function test_claimRewardsStETH() public {
+        uint256 noId = createNodeOperator();
+        (bytes memory obtainedKeys, bytes memory obtainedSignatures) = csm
+            .obtainDepositData(1, "");
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.claimRewardsStETH.selector,
+                noId,
+                0,
+                new bytes32[](0),
+                0
+            ),
+            1
+        );
+        vm.prank(nodeOperator);
+        csm.claimRewardsStETH(noId, 0, new bytes32[](0), 0);
+    }
+
+    function test_claimRewardsStETH_revertWhenNoNodeOperator() public {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.claimRewardsStETH(0, 0, new bytes32[](0), 0);
+    }
+
+    function test_claimRewardsStETH_revertWhenNotManager() public {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(SenderIsNotManagerAddress.selector);
+        csm.claimRewardsStETH(noId, 0, new bytes32[](0), 0);
+    }
+
+    function test_claimRewardsWstETH() public {
+        uint256 noId = createNodeOperator();
+        (bytes memory obtainedKeys, bytes memory obtainedSignatures) = csm
+            .obtainDepositData(1, "");
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.claimRewardsWstETH.selector,
+                noId,
+                0,
+                new bytes32[](0),
+                0
+            ),
+            1
+        );
+        vm.prank(nodeOperator);
+        csm.claimRewardsWstETH(noId, 0, new bytes32[](0), 0);
+    }
+
+    function test_claimRewardsWstETH_revertWhenNoNodeOperator() public {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.claimRewardsWstETH(0, 0, new bytes32[](0), 0);
+    }
+
+    function test_claimRewardsWstETH_revertWhenNotManager() public {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(SenderIsNotManagerAddress.selector);
+        csm.claimRewardsWstETH(noId, 0, new bytes32[](0), 0);
+    }
+
+    function test_requestRewardsETH() public {
+        uint256 noId = createNodeOperator();
+        (bytes memory obtainedKeys, bytes memory obtainedSignatures) = csm
+            .obtainDepositData(1, "");
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.requestRewardsETH.selector,
+                noId,
+                0,
+                new bytes32[](0),
+                0
+            ),
+            1
+        );
+        vm.prank(nodeOperator);
+        csm.requestRewardsETH(noId, 0, new bytes32[](0), 0);
+    }
+
+    function test_requestRewardsETH_revertWhenNoNodeOperator() public {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.requestRewardsETH(0, 0, new bytes32[](0), 0);
+    }
+
+    function test_requestRewardsETH_revertWhenNotManager() public {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(SenderIsNotManagerAddress.selector);
+        csm.requestRewardsETH(noId, 0, new bytes32[](0), 0);
+    }
+}
+
 contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
     function test_proposeNodeOperatorManagerAddressChange() public {
         uint256 noId = createNodeOperator();

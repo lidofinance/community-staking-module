@@ -1132,7 +1132,7 @@ abstract contract CSAccountingClaimRewardsBaseTest is
 
     function test_ExcessBondWithoutProof() public virtual;
 
-    function test_RevertWhen_NotOwner() public virtual;
+    function test_RevertWhen_SenderIsNotCSM() public virtual;
 }
 
 contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
@@ -1142,7 +1142,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1180,7 +1180,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _curve(defaultCurve);
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1219,7 +1219,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _lock({ id: 0, amount: 1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1259,7 +1259,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _lock({ id: 0, amount: 1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1298,7 +1298,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1337,7 +1337,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1374,7 +1374,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1412,7 +1412,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1450,7 +1450,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1489,7 +1489,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1526,7 +1526,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1566,7 +1566,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         uint256 stETHToClaim = stETH.getPooledEthByShares(sharesToClaim);
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             0.05 ether,
@@ -1599,7 +1599,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             0,
@@ -1626,7 +1626,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1648,12 +1648,10 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
     }
 
-    function test_RevertWhen_NotOwner() public override {
+    function test_RevertWhen_SenderIsNotCSM() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
 
-        vm.expectRevert(
-            abi.encodeWithSelector(NotOwnerToClaim.selector, stranger, user)
-        );
+        vm.expectRevert(abi.encodeWithSelector(SenderIsNotCSM.selector));
         vm.prank(stranger);
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
@@ -1673,7 +1671,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1717,7 +1715,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _curve(defaultCurve);
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1761,7 +1759,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _lock({ id: 0, amount: 1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1806,7 +1804,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _lock({ id: 0, amount: 1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1850,7 +1848,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1894,7 +1892,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1937,7 +1935,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -1981,7 +1979,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -2025,7 +2023,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -2069,7 +2067,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -2111,7 +2109,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -2158,7 +2156,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             sharesToClaim,
@@ -2201,7 +2199,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             0,
@@ -2228,7 +2226,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -2250,12 +2248,10 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
     }
 
-    function test_RevertWhen_NotOwner() public override {
+    function test_RevertWhen_SenderIsNotCSM() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
 
-        vm.expectRevert(
-            abi.encodeWithSelector(NotOwnerToClaim.selector, stranger, user)
-        );
+        vm.expectRevert(abi.encodeWithSelector(SenderIsNotCSM.selector));
         vm.prank(stranger);
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
@@ -2280,7 +2276,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -2309,7 +2305,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         _curve(defaultCurve);
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -2339,7 +2335,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         _lock({ id: 0, amount: 1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -2369,7 +2365,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         _lock({ id: 0, amount: 1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -2399,7 +2395,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -2430,7 +2426,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -2460,7 +2456,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -2491,7 +2487,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -2522,7 +2518,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -2553,7 +2549,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -2583,7 +2579,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -2618,7 +2614,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         );
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             0.05 ether,
@@ -2646,7 +2642,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             0,
@@ -2673,7 +2669,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -2695,12 +2691,10 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         );
     }
 
-    function test_RevertWhen_NotOwner() public override {
+    function test_RevertWhen_SenderIsNotCSM() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
 
-        vm.expectRevert(
-            abi.encodeWithSelector(NotOwnerToClaim.selector, stranger, user)
-        );
+        vm.expectRevert(abi.encodeWithSelector(SenderIsNotCSM.selector));
         vm.prank(stranger);
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
