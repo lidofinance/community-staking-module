@@ -13,6 +13,19 @@ cache_path  = "cache"
 block_gas_limit = 30_000_000
 fuzz = { runs = 256 }
 
+gas_reports = [
+    "CSAccounting",
+    "CSBondCore",
+    "CSBondCurve",
+    "CSBondLock",
+    "CSEarlyAdoption",
+    "CSFeeDistributor",
+    "CSFeeOracle",
+    "CSModule",
+    "CSVerifier",
+    "AssetRecovererLib",
+]
+
 fs_permissions = [
     { access = "write", path = "./out" },
     { access = "read", path = "./test/fixtures" }

@@ -84,7 +84,18 @@ contract DepositIntegrationTest is
         });
 
         ILido(locator.lido()).approve(address(accounting), type(uint256).max);
-        accounting.depositStETH(user, 0, 32 ether);
+        accounting.depositStETH(
+            user,
+            0,
+            32 ether,
+            CSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
 
         assertEq(ILido(locator.lido()).balanceOf(user), 0);
         assertEq(accounting.getBondShares(0), shares);
@@ -112,7 +123,18 @@ contract DepositIntegrationTest is
 
         vm.startPrank(user);
         wstETH.approve(address(accounting), type(uint256).max);
-        uint256 shares = accounting.depositWstETH(user, 0, wstETHAmount);
+        uint256 shares = accounting.depositWstETH(
+            user,
+            0,
+            wstETHAmount,
+            CSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
 
         assertEq(wstETH.balanceOf(user), 0);
         assertEq(accounting.getBondShares(0), shares);
@@ -138,7 +160,7 @@ contract DepositIntegrationTest is
         vm.stopPrank();
 
         vm.prank(user);
-        accounting.depositStETHWithPermit(
+        accounting.depositStETH(
             user,
             0,
             32 ether,
@@ -177,7 +199,7 @@ contract DepositIntegrationTest is
         vm.stopPrank();
 
         vm.prank(user);
-        uint256 shares = accounting.depositWstETHWithPermit(
+        uint256 shares = accounting.depositWstETH(
             user,
             0,
             wstETHAmount,
