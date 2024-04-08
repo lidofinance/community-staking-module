@@ -933,18 +933,20 @@ contract CSModule is
         _removeSigningKeys(nodeOperatorId, startIndex, keysCount);
     }
 
-    /// @notice Node Operator should be able to voluntary eject own validators
-    /// @notice Validator private key might be lost
-    function voluntaryEjectValidator(
-        uint256 nodeOperatorId,
-        uint256 startIndex,
-        uint256 keysCount
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
-        onlyNodeOperatorManager(nodeOperatorId);
-        // TODO: implement
-        // Mark validators for priority ejection
-        // Confiscate ejection fee from the bond
-    }
+    // @notice CSM will go live before EIP-7002
+    // @notice to be implemented in CSM v2
+    // /// @notice Node Operator should be able to voluntary eject own validators
+    // /// @notice Validator private key might be lost
+    // function voluntaryEjectValidator(
+    //     uint256 nodeOperatorId,
+    //     uint256 startIndex,
+    //     uint256 keysCount
+    // ) external onlyExistingNodeOperator(nodeOperatorId) {
+    //     onlyNodeOperatorManager(nodeOperatorId);
+    //     // TODO: implement
+    //     // Mark validators for priority ejection
+    //     // Confiscate ejection fee from the bond
+    // }
 
     function normalizeQueue(
         uint256 nodeOperatorId

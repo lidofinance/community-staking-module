@@ -103,10 +103,10 @@
 | normalizeQueue                          | 30255           | 54734  | 54734  | 79213   | 2       |
 | obtainDepositData                       | 24453           | 107082 | 96745  | 158540  | 43      |
 | onExitedAndStuckValidatorsCountsUpdated | 23670           | 23703  | 23703  | 23736   | 2       |
-| onRewardsMinted                         | 23964           | 32119  | 26199  | 46195   | 3       |
-| onWithdrawalCredentialsChanged          | 23782           | 25268  | 25011  | 27011   | 3       |
+| onRewardsMinted                         | 23942           | 32097  | 26177  | 46173   | 3       |
+| onWithdrawalCredentialsChanged          | 23760           | 25246  | 24989  | 26989   | 3       |
 | pauseFor                                | 23988           | 45359  | 47497  | 47497   | 11      |
-| proposeNodeOperatorManagerAddressChange | 24143           | 42592  | 53582  | 53582   | 9       |
+| proposeNodeOperatorManagerAddressChange | 24187           | 42636  | 53626  | 53626   | 9       |
 | proposeNodeOperatorRewardAddressChange  | 24143           | 33411  | 36460  | 36460   | 10      |
 | publicRelease                           | 409             | 409    | 409    | 409     | 1       |
 | queue                                   | 475             | 875    | 475    | 2475    | 5       |
@@ -114,7 +114,7 @@
 | recoverEther                            | 23740           | 26033  | 26033  | 28326   | 2       |
 | recoverStETHShares                      | 69884           | 69884  | 69884  | 69884   | 1       |
 | removalCharge                           | 408             | 1408   | 1408   | 2408    | 2       |
-| removeKeys                              | 24026           | 145260 | 172276 | 240257  | 15      |
+| removeKeys                              | 24004           | 145239 | 172258 | 240240  | 15      |
 | reportELRewardsStealingPenalty          | 24305           | 120509 | 136813 | 146818  | 14      |
 | resetNodeOperatorManagerAddress         | 23712           | 31857  | 31334  | 38464   | 5       |
 | resume                                  | 23707           | 26619  | 26619  | 29532   | 2       |
