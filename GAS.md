@@ -1,21 +1,3 @@
-| lib/base-oracle/oracle/HashConsensus.sol:HashConsensus contract |                 |        |        |        |         |
-|-----------------------------------------------------------------|-----------------|--------|--------|--------|---------|
-| Function Name                                                   | min             | avg    | median | max    | # calls |
-| DISABLE_CONSENSUS_ROLE                                          | 261             | 261    | 261    | 261    | 2       |
-| MANAGE_FAST_LANE_CONFIG_ROLE                                    | 285             | 285    | 285    | 285    | 2       |
-| MANAGE_FRAME_CONFIG_ROLE                                        | 263             | 263    | 263    | 263    | 2       |
-| MANAGE_MEMBERS_AND_QUORUM_ROLE                                  | 283             | 283    | 283    | 283    | 2       |
-| MANAGE_REPORT_PROCESSOR_ROLE                                    | 304             | 304    | 304    | 304    | 2       |
-| addMember                                                       | 100214          | 120552 | 105072 | 156372 | 3       |
-| getChainConfig                                                  | 346             | 346    | 346    | 346    | 2       |
-| getConsensusState                                               | 4484            | 4484   | 4484   | 4484   | 1       |
-| getCurrentFrame                                                 | 2618            | 2618   | 2618   | 2618   | 7       |
-| getInitialRefSlot                                               | 3807            | 3807   | 3807   | 3807   | 2       |
-| grantRole                                                       | 118213          | 118222 | 118225 | 118225 | 10      |
-| submitReport                                                    | 118546          | 138070 | 138070 | 157594 | 2       |
-| updateInitialEpoch                                              | 40570           | 40570  | 40570  | 40570  | 2       |
-
-
 | src/CSAccounting.sol:CSAccounting contract |                 |        |        |        |         |
 |--------------------------------------------|-----------------|--------|--------|--------|---------|
 | Function Name                              | min             | avg    | median | max    | # calls |
@@ -167,5 +149,7 @@
 | recoverERC20                                             | 35969           | 35969 | 35969  | 35969 | 4       |
 | recoverERC721                                            | 43274           | 43274 | 43274  | 43274 | 1       |
 | recoverEther                                             | 1816            | 12382 | 1816   | 33516 | 3       |
+
+
 
 
