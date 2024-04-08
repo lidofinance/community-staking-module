@@ -253,6 +253,10 @@ contract CSModule is
     function setRemovalCharge(
         uint256 amount
     ) external onlyRole(MODULE_MANAGER_ROLE) {
+        _setRemovalCharge(amount);
+    }
+
+    function _setRemovalCharge(uint256 amount) internal {
         removalCharge = amount;
         emit RemovalChargeSet(amount);
     }
@@ -1132,12 +1136,15 @@ contract CSModule is
         return (nodeOperatorId << 128) | keyIndex;
     }
 
-    /// @notice Called when withdrawal credentials changed by DAO
+    /// @notice Called when withdrawal credentials changed by DAO and resets the keys removal charge
+    /// @dev Changing the WC means that the current keys in the queue are not valid anymore and can't be vetted to deposit
+    ///     So, the removal charge should be reset to 0 to allow the node operator to remove the keys without any charge.
+    ///     Then the DAO should set the new removal charge.
     function onWithdrawalCredentialsChanged()
         external
         onlyRole(STAKING_ROUTER_ROLE)
     {
-        // TODO: implement it
+        _setRemovalCharge(0);
     }
 
     function _addSigningKeys(

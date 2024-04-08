@@ -930,6 +930,17 @@ contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
     }
 }
 
+contract CsmOnWithdrawalCredentialsChanged is CSMCommon {
+    function test_onWithdrawalCredentialsChanged() public {
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit RemovalChargeSet(0 ether);
+        csm.onWithdrawalCredentialsChanged();
+
+        uint256 removalChargeAfter = csm.removalCharge();
+        assertEq(removalChargeAfter, 0 ether);
+    }
+}
+
 contract CsmConfirmNodeOperatorManagerAddressChange is CSMCommon {
     function test_confirmNodeOperatorManagerAddressChange() public {
         uint256 noId = createNodeOperator();
