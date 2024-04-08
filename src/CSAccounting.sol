@@ -622,11 +622,6 @@ contract CSAccounting is
         AssetRecovererLib.recoverStETHShares(address(LIDO), shares);
     }
 
-    modifier onlyRecoverer() override {
-        _checkRole(RECOVERER_ROLE);
-        _;
-    }
-
     function _getActiveKeys(
         uint256 nodeOperatorId
     ) internal view returns (uint256) {
@@ -658,6 +653,11 @@ contract CSAccounting is
         if (msg.sender != address(CSM)) {
             revert SenderIsNotCSM();
         }
+        _;
+    }
+
+    modifier onlyRecoverer() override {
+        _checkRole(RECOVERER_ROLE);
         _;
     }
 }
