@@ -52,6 +52,7 @@ gas-report:
     #!/usr/bin/env python
 
     import subprocess
+    import re
 
     command = "forge test --nmt 'testFuzz_\\w{1,}?' --nmp '*test/integration*'  --gas-report"
     output = subprocess.check_output(command, shell=True, text=True)
@@ -68,15 +69,15 @@ gas-report:
                 skip_next = False
                 continue
 
-            if line.startswith('| test'):
-                break
-
             if line.startswith('|'):
                 to_print = True
 
             if line.startswith('| Deployment Cost'):
                 to_print = False
                 skip_next = True
+
+            if re.match("Ran \d+ test suites", line):
+                break
 
             if to_print:
                 fh.write(line + '\n')
