@@ -407,7 +407,7 @@ contract CSAccounting is
     {
         // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
-        // preventing revert for already used permit
+        // preventing revert for already used permit or avoid permit usage in case of value == 0
         if (
             permit.value > 0 &&
             LIDO.allowance(from, address(this)) < permit.value
@@ -447,7 +447,7 @@ contract CSAccounting is
     {
         // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
-        // preventing revert for already used permit
+        // preventing revert for already used permit or avoid permit usage in case of value == 0
         if (
             permit.value > 0 &&
             WSTETH.allowance(from, address(this)) < permit.value
