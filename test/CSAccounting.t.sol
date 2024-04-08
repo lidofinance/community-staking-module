@@ -4551,6 +4551,14 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
 }
 
 contract CSAccountingMiscTest is CSAccountingBaseTest {
+    address recoverer;
+
+    function setUp() public override {
+        super.setUp();
+
+        recoverer = nextAddress("RECOVERER");
+    }
+
     function test_totalBondShares() public {
         mock_getNodeOperatorsCount(2);
         vm.deal(user, 64 ether);
@@ -4621,7 +4629,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
         accounting.recoverEther();
     }
 
-    function test_recovererRole_RevertWhen_DoesNotHaveRole() public {
+    function test_recovererRole_RevertWhen_Unauthorized() public {
         expectRoleRevert(stranger, accounting.RECOVERER_ROLE());
         vm.prank(stranger);
         accounting.recoverEther();
@@ -4629,27 +4637,36 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
 
     function test_recoverERC20() public {
         vm.startPrank(admin);
-        accounting.grantRole(accounting.RECOVERER_ROLE(), stranger);
+        accounting.grantRole(accounting.RECOVERER_ROLE(), recoverer);
         vm.stopPrank();
 
         ERC20Testable token = new ERC20Testable();
         token.mint(address(accounting), 1000);
 
-        vm.prank(stranger);
+        vm.prank(recoverer);
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit AssetRecovererLib.ERC20Recovered(address(token), stranger, 1000);
+        emit AssetRecovererLib.ERC20Recovered(address(token), recoverer, 1000);
         accounting.recoverERC20(address(token), 1000);
 
         assertEq(token.balanceOf(address(accounting)), 0);
-        assertEq(token.balanceOf(stranger), 1000);
+        assertEq(token.balanceOf(recoverer), 1000);
     }
 
-    function test_recoverERC20_revertWhenStETH() public {
+    function test_recoverERC20_RevertWhen_Unauthorized() public {
+        ERC20Testable token = new ERC20Testable();
+        token.mint(address(accounting), 1000);
+
+        expectRoleRevert(stranger, accounting.RECOVERER_ROLE());
+        vm.prank(stranger);
+        accounting.recoverERC20(address(token), 1000);
+    }
+
+    function test_recoverERC20_RevertWhenStETH() public {
         vm.startPrank(admin);
-        accounting.grantRole(accounting.RECOVERER_ROLE(), stranger);
+        accounting.grantRole(accounting.RECOVERER_ROLE(), recoverer);
         vm.stopPrank();
 
-        vm.prank(stranger);
+        vm.prank(recoverer);
         vm.expectRevert(AssetRecoverer.NotAllowedToRecover.selector);
         accounting.recoverERC20(address(stETH), 1000);
     }
@@ -4657,7 +4674,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
     function test_recoverStETHShares() public {
         mock_getNodeOperatorsCount(1);
         vm.startPrank(admin);
-        accounting.grantRole(accounting.RECOVERER_ROLE(), stranger);
+        accounting.grantRole(accounting.RECOVERER_ROLE(), recoverer);
         vm.stopPrank();
 
         vm.deal(user, 2 ether);
@@ -4681,12 +4698,18 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
         uint256 sharesToRecover = stETH.getSharesByPooledEth(0.3 ether);
         stETH.mintShares(address(accounting), sharesToRecover);
 
-        vm.prank(stranger);
+        vm.prank(recoverer);
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit AssetRecovererLib.StETHSharesRecovered(stranger, sharesToRecover);
+        emit AssetRecovererLib.StETHSharesRecovered(recoverer, sharesToRecover);
         accounting.recoverStETHShares();
 
         assertEq(stETH.sharesOf(address(accounting)), sharesBefore);
-        assertEq(stETH.sharesOf(stranger), sharesToRecover);
+        assertEq(stETH.sharesOf(recoverer), sharesToRecover);
+    }
+
+    function test_recoverStETHShares_RevertWhen_Unauthorized() public {
+        expectRoleRevert(stranger, accounting.RECOVERER_ROLE());
+        vm.prank(stranger);
+        accounting.recoverStETHShares();
     }
 }

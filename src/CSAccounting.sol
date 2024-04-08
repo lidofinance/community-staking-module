@@ -700,21 +700,24 @@ contract CSAccounting is
         CSBondCore._charge(nodeOperatorId, amount, chargeRecipient);
     }
 
-    modifier onlyRecoverer() override {
-        _checkRole(RECOVERER_ROLE);
-        _;
-    }
-
-    function recoverERC20(address token, uint256 amount) external override {
+    function recoverERC20(
+        address token,
+        uint256 amount
+    ) external override onlyRecoverer {
         if (token == address(LIDO)) {
             revert NotAllowedToRecover();
         }
         AssetRecovererLib.recoverERC20(token, amount);
     }
 
-    function recoverStETHShares() external {
+    function recoverStETHShares() external onlyRecoverer {
         uint256 shares = LIDO.sharesOf(address(this)) - totalBondShares;
         AssetRecovererLib.recoverStETHShares(address(LIDO), shares);
+    }
+
+    modifier onlyRecoverer() override {
+        _checkRole(RECOVERER_ROLE);
+        _;
     }
 
     function _getActiveKeys(

@@ -63,7 +63,7 @@ contract CSFeeDistributor is
 
     /// @notice Returns the amount of shares that are pending to be distributed
     function pendingToDistribute() external view returns (uint256) {
-        return IStETH(STETH).balanceOf(address(this)) - sharesOfOperators;
+        return IStETH(STETH).sharesOf(address(this)) - sharesOfOperators;
     }
 
     /// @notice Returns the amount of shares that can be distributed in favor of the NO
@@ -126,9 +126,19 @@ contract CSFeeDistributor is
         string calldata _treeCid,
         uint256 _distributedShares
     ) external onlyRole(ORACLE_ROLE) {
+        if (
+            sharesOfOperators + _distributedShares >
+            IStETH(STETH).sharesOf(address(this))
+        ) {
+            revert InvalidShares();
+        }
+
+        unchecked {
+            sharesOfOperators += _distributedShares;
+        }
+
         treeRoot = _treeRoot;
         treeCid = _treeCid;
-        sharesOfOperators += _distributedShares;
     }
 
     /// @notice Get a hash of a leaf
@@ -145,7 +155,10 @@ contract CSFeeDistributor is
             );
     }
 
-    function recoverERC20(address token, uint256 amount) external override {
+    function recoverERC20(
+        address token,
+        uint256 amount
+    ) external override onlyRecoverer {
         if (token == STETH) {
             revert NotAllowedToRecover();
         }
