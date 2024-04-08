@@ -477,77 +477,30 @@ contract CSAccounting is
         return from;
     }
 
-    /// @notice Claims excess bond in ETH for the given node operator with desirable value
-    /// @param nodeOperatorId id of the node operator to claim excess bond for.
+    /// @notice Claims full reward (fee + bond) in stETH for the given node operator with desirable value
+    /// @param nodeOperatorId id of the node operator to claim rewards for.
     /// @param stETHAmount amount of stETH to claim.
-    function claimExcessBondStETH(
+    /// @param rewardsProof merkle proof of the rewards.
+    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
+    function claimRewardsStETH(
         uint256 nodeOperatorId,
-        uint256 stETHAmount
+        uint256 stETHAmount,
+        bytes32[] memory rewardsProof,
+        uint256 cumulativeFeeShares
     ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
         );
         _isSenderEligibleToClaim(nodeOperator.managerAddress);
+
+        if (rewardsProof.length != 0) {
+            _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
+        }
+        if (stETHAmount == 0) return;
         CSBondCore._claimStETH(
             nodeOperatorId,
             _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
             stETHAmount,
-            nodeOperator.rewardAddress
-        );
-    }
-
-    /// @notice Claims full reward (fee + bond) in stETH for the given node operator with desirable value
-    /// @param rewardsProof merkle proof of the rewards.
-    /// @param nodeOperatorId id of the node operator to claim rewards for.
-    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
-    /// @param stETHAmount amount of stETH to claim.
-    function claimRewardsStETH(
-        bytes32[] memory rewardsProof,
-        uint256 nodeOperatorId,
-        uint256 cumulativeFeeShares,
-        uint256 stETHAmount
-    ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
-        // TODO: reorder ops to use only one func (first is pull) ???
-        ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
-            nodeOperatorId
-        );
-        _isSenderEligibleToClaim(nodeOperator.managerAddress);
-        _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
-        if (stETHAmount == 0) return;
-        uint256 claimableShares = _getExcessBondShares(
-            nodeOperatorId,
-            _calcActiveKeys(nodeOperator)
-        );
-        if (claimableShares == 0) return;
-        CSBondCore._claimStETH(
-            nodeOperatorId,
-            claimableShares,
-            stETHAmount,
-            nodeOperator.rewardAddress
-        );
-    }
-
-    /// @notice Claims excess bond in wstETH for the given node operator with desirable value
-    /// @param nodeOperatorId id of the node operator to claim excess bond for.
-    /// @param wstETHAmount amount of wstETH to claim.
-    function claimExcessBondWstETH(
-        uint256 nodeOperatorId,
-        uint256 wstETHAmount
-    ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
-        ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
-            nodeOperatorId
-        );
-        _isSenderEligibleToClaim(nodeOperator.managerAddress);
-        if (wstETHAmount == 0) return;
-        uint256 claimableShares = _getExcessBondShares(
-            nodeOperatorId,
-            _calcActiveKeys(nodeOperator)
-        );
-        if (claimableShares == 0) return;
-        CSBondCore._claimWstETH(
-            nodeOperatorId,
-            claimableShares,
-            wstETHAmount,
             nodeOperator.rewardAddress
         );
     }
@@ -558,40 +511,23 @@ contract CSAccounting is
     /// @param cumulativeFeeShares cumulative fee shares for the node operator.
     /// @param wstETHAmount amount of wstETH to claim.
     function claimRewardsWstETH(
-        bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
-        uint256 cumulativeFeeShares,
-        uint256 wstETHAmount
+        uint256 wstETHAmount,
+        bytes32[] memory rewardsProof,
+        uint256 cumulativeFeeShares
     ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
         );
         _isSenderEligibleToClaim(nodeOperator.managerAddress);
-        _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
+
+        if (rewardsProof.length != 0) {
+            _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
+        }
         CSBondCore._claimWstETH(
             nodeOperatorId,
             _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
             wstETHAmount,
-            nodeOperator.rewardAddress
-        );
-    }
-
-    /// @notice Request excess bond in Withdrawal NFT (unstETH) for the given node operator available for this moment.
-    /// @dev reverts if amount isn't between MIN_STETH_WITHDRAWAL_AMOUNT and MAX_STETH_WITHDRAWAL_AMOUNT
-    /// @param nodeOperatorId id of the node operator to request rewards for.
-    /// @param ethAmount amount of ETH to request.
-    function requestExcessBondETH(
-        uint256 nodeOperatorId,
-        uint256 ethAmount
-    ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
-        ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
-            nodeOperatorId
-        );
-        _isSenderEligibleToClaim(nodeOperator.managerAddress);
-        CSBondCore._requestETH(
-            nodeOperatorId,
-            _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
-            ethAmount,
             nodeOperator.rewardAddress
         );
     }
@@ -603,25 +539,22 @@ contract CSAccounting is
     /// @param cumulativeFeeShares cumulative fee shares for the node operator.
     /// @param ethAmount amount of ETH to request.
     function requestRewardsETH(
-        bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
-        uint256 cumulativeFeeShares,
-        uint256 ethAmount
+        uint256 ethAmount,
+        bytes32[] memory rewardsProof,
+        uint256 cumulativeFeeShares
     ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
         );
         _isSenderEligibleToClaim(nodeOperator.managerAddress);
-        _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
+        if (rewardsProof.length != 0) {
+            _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
+        }
         if (ethAmount == 0) return;
-        uint256 claimableShares = _getExcessBondShares(
-            nodeOperatorId,
-            _calcActiveKeys(nodeOperator)
-        );
-        if (claimableShares == 0) return;
         CSBondCore._requestETH(
             nodeOperatorId,
-            claimableShares,
+            _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
             ethAmount,
             nodeOperator.rewardAddress
         );
