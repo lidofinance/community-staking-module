@@ -5,10 +5,8 @@
 pragma solidity 0.8.24;
 
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 
-import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
 import { AssetRecoverer } from "./AssetRecoverer.sol";
@@ -34,12 +32,9 @@ contract CSFeeDistributor is
     AccessControlEnumerable,
     AssetRecoverer
 {
-    /// @notice this contract stores stETH shares that were distributed via the Oracle Report
-    using SafeCast for uint256;
-
     bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE"); // 0x68e79a7bf1e0bc45d0a330c573bc367f9cf464fd326078812f301165fbda4ef1
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE"); // 0xb3e25b5404b87e5a838579cb5d7481d61ad96ee284d38ec1e97c07ba64e7f6fc
-    address public immutable CSM;
+
     address public immutable STETH;
     address public immutable ACCOUNTING;
 
@@ -51,18 +46,24 @@ contract CSFeeDistributor is
 
     /// @notice Amount of shares sent to the Accounting in favor of the NO
     mapping(uint256 => uint256) public distributedShares;
-    uint256 private _totalShares;
 
-    constructor(address csm, address stETH, address accounting, address admin) {
+    /// @notice Total amount of shares available for claiming by NOs
+    uint256 public claimableShares;
+
+    constructor(address stETH, address accounting, address admin) {
         if (accounting == address(0)) revert ZeroAddress("accounting");
         if (stETH == address(0)) revert ZeroAddress("stETH");
-        if (csm == address(0)) revert ZeroAddress("_CSM");
         if (admin == address(0)) revert ZeroAddress("admin");
 
         ACCOUNTING = accounting;
         STETH = stETH;
-        CSM = csm;
+
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
+    }
+
+    /// @notice Returns the amount of shares that are pending to be distributed
+    function pendingToDistribute() external view returns (uint256) {
+        return IStETH(STETH).sharesOf(address(this)) - claimableShares;
     }
 
     /// @notice Returns the amount of shares that can be distributed in favor of the NO
@@ -71,9 +72,9 @@ contract CSFeeDistributor is
     /// @param shares Total amount of shares earned as fees
     /// @return Amount of shares that can be distributed
     function getFeesToDistribute(
-        bytes32[] calldata proof,
         uint256 nodeOperatorId,
-        uint256 shares
+        uint256 shares,
+        bytes32[] calldata proof
     ) public view returns (uint256) {
         bool isValid = MerkleProof.verifyCalldata(
             proof,
@@ -95,42 +96,49 @@ contract CSFeeDistributor is
     /// @param shares Total amount of shares earned as fees
     /// @return Amount of shares distributed
     function distributeFees(
-        bytes32[] calldata proof,
         uint256 nodeOperatorId,
-        uint256 shares
-    ) external returns (uint256) {
-        if (msg.sender != ACCOUNTING) revert NotAccounting();
-
+        uint256 shares,
+        bytes32[] calldata proof
+    ) external onlyAccounting returns (uint256) {
         uint256 sharesToDistribute = getFeesToDistribute(
-            proof,
             nodeOperatorId,
-            shares
+            shares,
+            proof
         );
+
         if (sharesToDistribute == 0) {
             // To avoid breaking claim rewards logic
             return 0;
         }
+
+        claimableShares -= sharesToDistribute;
         distributedShares[nodeOperatorId] += sharesToDistribute;
+
         IStETH(STETH).transferShares(ACCOUNTING, sharesToDistribute);
         emit FeeDistributed(nodeOperatorId, sharesToDistribute);
-        _totalShares -= sharesToDistribute;
 
         return sharesToDistribute;
     }
 
     // @notice Receives the data of the Merkle tree from the Oracle contract and process it
-    /// Transfers distributed shares from the CSM to the distributor
-    function processTreeData(
+    function processOracleReport(
         bytes32 _treeRoot,
         string calldata _treeCid,
-        uint256 distributedShares
+        uint256 _distributedShares
     ) external onlyRole(ORACLE_ROLE) {
+        if (
+            claimableShares + _distributedShares >
+            IStETH(STETH).sharesOf(address(this))
+        ) {
+            revert InvalidShares();
+        }
+
+        unchecked {
+            claimableShares += _distributedShares;
+        }
+
         treeRoot = _treeRoot;
         treeCid = _treeCid;
-
-        ICSModule(CSM).onRewardsDistributed(distributedShares);
-        IStETH(STETH).transferSharesFrom(CSM, address(this), distributedShares);
-        _totalShares += distributedShares;
     }
 
     /// @notice Get a hash of a leaf
@@ -147,22 +155,23 @@ contract CSFeeDistributor is
             );
     }
 
-    function checkRecovererRole() internal override {
-        _checkRole(RECOVERER_ROLE);
-    }
-
-    function recoverERC20(address token, uint256 amount) external override {
-        checkRecovererRole();
+    function recoverERC20(
+        address token,
+        uint256 amount
+    ) external override onlyRecoverer {
         if (token == STETH) {
             revert NotAllowedToRecover();
         }
         AssetRecovererLib.recoverERC20(token, amount);
     }
 
-    function recoverStETHShares() external {
-        checkRecovererRole();
-        IStETH steth = IStETH(STETH);
-        uint256 shares = steth.sharesOf(address(this)) - _totalShares;
-        AssetRecovererLib.recoverStETHShares(address(steth), shares);
+    modifier onlyAccounting() {
+        if (msg.sender != ACCOUNTING) revert NotAccounting();
+        _;
+    }
+
+    modifier onlyRecoverer() override {
+        _checkRole(RECOVERER_ROLE);
+        _;
     }
 }

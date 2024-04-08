@@ -37,15 +37,14 @@ contract CSFeeDistributorTest is
     MerkleTree internal tree;
 
     function setUp() public {
-        stranger = nextAddress("stranger");
-        oracle = nextAddress("oracle");
+        stranger = nextAddress("STRANGER");
+        oracle = nextAddress("ORACLE");
         csm = new CommunityStakingModuleMock();
         accounting = new Stub();
 
         (, , stETH, ) = initLido();
 
         feeDistributor = new CSFeeDistributor(
-            address(csm),
             address(stETH),
             address(accounting),
             address(this)
@@ -66,9 +65,9 @@ contract CSFeeDistributorTest is
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
 
-        stETH.mintShares(address(csm), shares);
+        stETH.mintShares(address(feeDistributor), shares);
         vm.prank(oracle);
-        feeDistributor.processTreeData(root, "", shares);
+        feeDistributor.processOracleReport(root, "", shares);
 
         vm.expectEmit(true, true, false, true, address(feeDistributor));
         emit FeeDistributed(nodeOperatorId, shares);
@@ -111,9 +110,9 @@ contract CSFeeDistributorTest is
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
 
-        stETH.mintShares(address(csm), shares);
+        stETH.mintShares(address(feeDistributor), shares);
         vm.prank(oracle);
-        feeDistributor.processTreeData(root, "", shares);
+        feeDistributor.processOracleReport(root, "", shares);
 
         stdstore
             .target(address(feeDistributor))
@@ -136,9 +135,10 @@ contract CSFeeDistributorTest is
         tree.pushLeaf(abi.encode(nodeOperatorId, shares));
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
-        stETH.mintShares(address(csm), shares);
+
+        stETH.mintShares(address(feeDistributor), shares);
         vm.prank(oracle);
-        feeDistributor.processTreeData(root, "", shares);
+        feeDistributor.processOracleReport(root, "", shares);
 
         stdstore
             .target(address(feeDistributor))
@@ -158,47 +158,88 @@ contract CSFeeDistributorTest is
         assertEq(sharesToDistribute, 0);
     }
 
-    function test_recoverERC20() public {
-        feeDistributor.grantRole(feeDistributor.RECOVERER_ROLE(), stranger);
+    function test_PendingToDistribute() public {
+        uint256 totalShares = 1000;
+        stETH.mintShares(address(feeDistributor), totalShares);
 
+        vm.prank(oracle);
+        feeDistributor.processOracleReport(0, "", 899);
+
+        assertEq(feeDistributor.pendingToDistribute(), 101);
+    }
+}
+
+contract CSFeeDistributorAssetRecovererTest is Test, Fixtures, Utilities {
+    StETHMock internal stETH;
+
+    address internal recoverer;
+    address internal stranger;
+
+    CSFeeDistributor internal feeDistributor;
+
+    function setUp() public {
+        Stub accounting = new Stub();
+
+        (, , stETH, ) = initLido();
+        vm.label(address(stETH), "STETH");
+
+        recoverer = nextAddress("RECOVERER");
+        stranger = nextAddress("STRANGER");
+
+        feeDistributor = new CSFeeDistributor(
+            address(stETH),
+            address(accounting),
+            address(this)
+        );
+
+        feeDistributor.grantRole(feeDistributor.RECOVERER_ROLE(), recoverer);
+    }
+
+    function test_recoverEtherHappyPath() public {
+        uint256 amount = 42 ether;
+        vm.deal(address(feeDistributor), amount);
+
+        vm.expectEmit(true, true, true, true, address(feeDistributor));
+        emit AssetRecovererLib.EtherRecovered(recoverer, amount);
+
+        vm.prank(recoverer);
+        feeDistributor.recoverEther();
+
+        assertEq(address(feeDistributor).balance, 0);
+        assertEq(address(recoverer).balance, amount);
+    }
+
+    function test_recoverEther_RevertWhen_Unauthorized() public {
+        expectRoleRevert(stranger, feeDistributor.RECOVERER_ROLE());
+        vm.prank(stranger);
+        feeDistributor.recoverEther();
+    }
+
+    function test_recoverERC20HappyPath() public {
         ERC20Testable token = new ERC20Testable();
         token.mint(address(feeDistributor), 1000);
 
-        vm.prank(stranger);
+        vm.prank(recoverer);
         vm.expectEmit(true, true, true, true, address(feeDistributor));
-        emit AssetRecovererLib.ERC20Recovered(address(token), stranger, 1000);
+        emit AssetRecovererLib.ERC20Recovered(address(token), recoverer, 1000);
         feeDistributor.recoverERC20(address(token), 1000);
 
         assertEq(token.balanceOf(address(feeDistributor)), 0);
-        assertEq(token.balanceOf(stranger), 1000);
+        assertEq(token.balanceOf(recoverer), 1000);
     }
 
-    function test_recoverERC20_revertWhenStETH() public {
-        feeDistributor.grantRole(feeDistributor.RECOVERER_ROLE(), stranger);
+    function test_recoverERC20_RevertWhen_Unauthorized() public {
+        ERC20Testable token = new ERC20Testable();
+        token.mint(address(feeDistributor), 1000);
 
+        expectRoleRevert(stranger, feeDistributor.RECOVERER_ROLE());
         vm.prank(stranger);
+        feeDistributor.recoverERC20(address(token), 1000);
+    }
+
+    function test_recoverERC20_RevertWhenStETH() public {
+        vm.prank(recoverer);
         vm.expectRevert(AssetRecoverer.NotAllowedToRecover.selector);
         feeDistributor.recoverERC20(address(stETH), 1000);
-    }
-
-    function test_recoverStETHShares() public {
-        feeDistributor.grantRole(feeDistributor.RECOVERER_ROLE(), stranger);
-        bytes32 root = tree.root();
-
-        stETH.mintShares(address(csm), stETH.getSharesByPooledEth(1 ether));
-        uint256 receivedShares = stETH.getSharesByPooledEth(0.3 ether);
-
-        vm.prank(oracle);
-        feeDistributor.processTreeData(root, "", receivedShares);
-        uint256 sharesToRecover = stETH.sharesOf(address(feeDistributor)) -
-            receivedShares;
-
-        vm.prank(stranger);
-        vm.expectEmit(true, true, true, true, address(feeDistributor));
-        emit AssetRecovererLib.StETHSharesRecovered(stranger, sharesToRecover);
-        feeDistributor.recoverStETHShares();
-
-        assertEq(stETH.sharesOf(address(feeDistributor)), receivedShares);
-        assertEq(stETH.sharesOf(stranger), sharesToRecover);
     }
 }

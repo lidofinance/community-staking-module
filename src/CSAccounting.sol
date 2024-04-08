@@ -512,7 +512,7 @@ contract CSAccounting is
             nodeOperatorId
         );
         _isSenderEligibleToClaim(nodeOperator.managerAddress);
-        _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
+        _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         if (stETHAmount == 0) return;
         uint256 claimableShares = _getExcessBondShares(
             nodeOperatorId,
@@ -567,7 +567,7 @@ contract CSAccounting is
             nodeOperatorId
         );
         _isSenderEligibleToClaim(nodeOperator.managerAddress);
-        _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
+        _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         CSBondCore._claimWstETH(
             nodeOperatorId,
             _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
@@ -612,7 +612,7 @@ contract CSAccounting is
             nodeOperatorId
         );
         _isSenderEligibleToClaim(nodeOperator.managerAddress);
-        _pullFeeRewards(rewardsProof, nodeOperatorId, cumulativeFeeShares);
+        _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         if (ethAmount == 0) return;
         uint256 claimableShares = _getExcessBondShares(
             nodeOperatorId,
@@ -700,22 +700,24 @@ contract CSAccounting is
         CSBondCore._charge(nodeOperatorId, amount, chargeRecipient);
     }
 
-    function checkRecovererRole() internal override {
-        _checkRole(RECOVERER_ROLE);
-    }
-
-    function recoverERC20(address token, uint256 amount) external override {
-        checkRecovererRole();
+    function recoverERC20(
+        address token,
+        uint256 amount
+    ) external override onlyRecoverer {
         if (token == address(LIDO)) {
             revert NotAllowedToRecover();
         }
         AssetRecovererLib.recoverERC20(token, amount);
     }
 
-    function recoverStETHShares() external {
-        checkRecovererRole();
+    function recoverStETHShares() external onlyRecoverer {
         uint256 shares = LIDO.sharesOf(address(this)) - totalBondShares;
         AssetRecovererLib.recoverStETHShares(address(LIDO), shares);
+    }
+
+    modifier onlyRecoverer() override {
+        _checkRole(RECOVERER_ROLE);
+        _;
     }
 
     function _getActiveKeys(
@@ -739,14 +741,14 @@ contract CSAccounting is
     }
 
     function _pullFeeRewards(
-        bytes32[] memory rewardsProof,
         uint256 nodeOperatorId,
-        uint256 cumulativeFeeShares
+        uint256 cumulativeFeeShares,
+        bytes32[] memory rewardsProof
     ) internal {
         uint256 distributed = ICSFeeDistributor(feeDistributor).distributeFees(
-            rewardsProof,
             nodeOperatorId,
-            cumulativeFeeShares
+            cumulativeFeeShares,
+            rewardsProof
         );
         _increaseBond(nodeOperatorId, distributed);
         CSM.onBondChanged(nodeOperatorId);

@@ -5,20 +5,23 @@ pragma solidity 0.8.24;
 
 interface ICSFeeDistributor {
     function getFeesToDistribute(
-        bytes32[] calldata rewardProof,
         uint256 noIndex,
-        uint256 shares
+        uint256 shares,
+        bytes32[] calldata proof
     ) external view returns (uint256);
 
     function distributeFees(
-        bytes32[] calldata rewardProof,
         uint256 noIndex,
-        uint256 shares
+        uint256 shares,
+        bytes32[] calldata proof
     ) external returns (uint256);
 
-    function processTreeData(
+    function processOracleReport(
         bytes32 _treeRoot,
         string calldata _treeCid,
-        uint256 distributedShares
+        uint256 _distributedShares
     ) external;
+
+    /// @notice Returns the amount of shares that are pending to be distributed
+    function pendingToDistribute() external view returns (uint256);
 }

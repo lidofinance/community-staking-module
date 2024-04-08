@@ -31,7 +31,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
     LidoMock public stETH;
     CSModule public csm;
     CSAccounting public accounting;
-    Stub public communityStakingFeeDistributor;
+    Stub public feeDistributor;
 
     address internal admin;
     address internal stranger;
@@ -227,7 +227,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
 
         (locator, wstETH, stETH, ) = initLido();
 
-        communityStakingFeeDistributor = new Stub();
+        feeDistributor = new Stub();
 
         csm = new CSModule("community-staking-module", address(locator), admin);
         uint256[] memory curve = new uint256[](1);
@@ -261,15 +261,17 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), address(this));
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), address(csm));
         accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm));
+        accounting.grantRole(accounting.INITIALIZE_ROLE(), address(this));
         vm.stopPrank();
 
+        accounting.setFeeDistributor(address(feeDistributor));
         csm.setAccounting(address(accounting));
         csm.setRemovalCharge(0.05 ether);
     }
 }
 
 contract CSMCommon is CSMCommonNoPublicRelease {
-    function setUp() public override {
+    function setUp() public virtual override {
         super.setUp();
         csm.activatePublicRelease();
     }
@@ -287,7 +289,7 @@ contract CSMCommonNoRoles is CSMFixtures {
 
         (locator, wstETH, stETH, ) = initLido();
 
-        communityStakingFeeDistributor = new Stub();
+        feeDistributor = new Stub();
         csm = new CSModule("community-staking-module", address(locator), admin);
 
         vm.startPrank(admin);
@@ -3240,6 +3242,32 @@ contract CSMDepositableValidatorsCount is CSMCommon {
     }
 }
 
+contract CSMOnRewardsMinted is CSMCommon {
+    address public stakingRouter;
+
+    function setUp() public override {
+        super.setUp();
+        stakingRouter = nextAddress("STAKING_ROUTER");
+        vm.startPrank(admin);
+        csm.grantRole(csm.STAKING_ROUTER_ROLE(), stakingRouter);
+        vm.stopPrank();
+    }
+
+    function test_onRewardsMinted() public {
+        uint256 reportShares = 100000;
+        uint256 someDustShares = 100;
+
+        stETH.mintShares(address(csm), someDustShares);
+        stETH.mintShares(address(csm), reportShares);
+
+        vm.prank(stakingRouter);
+        csm.onRewardsMinted(reportShares);
+
+        assertEq(stETH.sharesOf(address(csm)), someDustShares);
+        assertEq(stETH.sharesOf(address(feeDistributor)), reportShares);
+    }
+}
+
 contract CSMRecoverERC20 is CSMCommon {
     function test_recoverERC20() public {
         vm.startPrank(admin);
@@ -3258,32 +3286,20 @@ contract CSMRecoverERC20 is CSMCommon {
         assertEq(token.balanceOf(stranger), 1000);
     }
 
-    function test_recoverERC20_revertWhenStETH() public {
-        vm.startPrank(admin);
-        csm.grantRole(csm.RECOVERER_ROLE(), stranger);
-        vm.stopPrank();
-
-        vm.prank(stranger);
-        vm.expectRevert(AssetRecoverer.NotAllowedToRecover.selector);
-        csm.recoverERC20(address(stETH), 1000);
-    }
-
     function test_recoverStETHShares() public {
         vm.startPrank(admin);
         csm.grantRole(csm.RECOVERER_ROLE(), stranger);
         vm.stopPrank();
 
-        stETH.mintShares(address(csm), stETH.getSharesByPooledEth(1 ether));
-        uint256 rewardsShares = stETH.getSharesByPooledEth(0.3 ether);
-        csm.onRewardsMinted(rewardsShares);
-        uint256 sharesToRecover = stETH.sharesOf(address(csm)) - rewardsShares;
+        uint256 sharesToRecover = stETH.getSharesByPooledEth(1 ether);
+        stETH.mintShares(address(csm), sharesToRecover);
 
         vm.prank(stranger);
         vm.expectEmit(true, true, true, true, address(csm));
         emit AssetRecovererLib.StETHSharesRecovered(stranger, sharesToRecover);
         csm.recoverStETHShares();
 
-        assertEq(stETH.sharesOf(address(csm)), rewardsShares);
+        assertEq(stETH.sharesOf(address(csm)), 0);
         assertEq(stETH.sharesOf(stranger), sharesToRecover);
     }
 }

@@ -119,7 +119,6 @@ abstract contract DeployBase is Script {
             );
 
             CSFeeDistributor feeDistributor = new CSFeeDistributor({
-                csm: address(csm),
                 stETH: locator.lido(),
                 accounting: address(accounting),
                 admin: deployer

@@ -56,7 +56,4 @@ interface ICSModule is IStakingModule {
 
     /// @notice Notify the module about the operator's bond change. The hook call is optional.
     function onBondChanged(uint256 nodeOperatorId) external;
-
-    /// @notice Report distribution of rewards to the Fee Distributor contract.
-    function onRewardsDistributed(uint256 distributedShares) external;
 }
