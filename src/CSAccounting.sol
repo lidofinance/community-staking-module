@@ -392,31 +392,9 @@ contract CSAccounting is
     /// @param from address to deposit stETH from
     /// @param nodeOperatorId id of the node operator to deposit stETH for
     /// @param stETHAmount amount of stETH to deposit
-    /// @return shares stETH shares amount
-    function depositStETH(
-        address from,
-        uint256 nodeOperatorId,
-        uint256 stETHAmount
-    )
-        external
-        whenResumed
-        onlyExistingNodeOperator(nodeOperatorId)
-        returns (uint256 shares)
-    {
-        // TODO: can it be two functions rather than one with `from` param and condition?
-        from = _validateDepositSender(from);
-        shares = CSBondCore._depositStETH(from, nodeOperatorId, stETHAmount);
-        CSM.onBondChanged(nodeOperatorId);
-    }
-
-    /// @notice Deposit user's stETH to the bond for the given Node Operator using the proper permit for the contract
-    /// @dev if `from` is not the same as `msg.sender`, then `msg.sender` should be CSM
-    /// @param from address to deposit stETH from
-    /// @param nodeOperatorId id of the node operator to deposit stETH for
-    /// @param stETHAmount amount of stETH to deposit
     /// @param permit stETH permit for the contract
     /// @return shares stETH shares amount
-    function depositStETHWithPermit(
+    function depositStETH(
         address from,
         uint256 nodeOperatorId,
         uint256 stETHAmount,
@@ -429,8 +407,11 @@ contract CSAccounting is
     {
         // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
-        // preventing revert for already used permit
-        if (LIDO.allowance(from, address(this)) < permit.value) {
+        // preventing revert for already used permit or avoid permit usage in case of value == 0
+        if (
+            permit.value > 0 &&
+            LIDO.allowance(from, address(this)) < permit.value
+        ) {
             // solhint-disable-next-line func-named-parameters
             LIDO.permit(
                 from,
@@ -451,31 +432,9 @@ contract CSAccounting is
     /// @param from address to unwrap wstETH from
     /// @param nodeOperatorId id of the node operator to deposit stETH for
     /// @param wstETHAmount amount of wstETH to deposit
-    /// @return shares stETH shares amount
-    function depositWstETH(
-        address from,
-        uint256 nodeOperatorId,
-        uint256 wstETHAmount
-    )
-        external
-        whenResumed
-        onlyExistingNodeOperator(nodeOperatorId)
-        returns (uint256 shares)
-    {
-        // TODO: can it be two functions rather than one with `from` param and condition?
-        from = _validateDepositSender(from);
-        shares = CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
-        CSM.onBondChanged(nodeOperatorId);
-    }
-
-    /// @notice Unwrap user's wstETH and make deposit in stETH to the bond for the given Node Operator using the proper permit for the contract
-    /// @dev if `from` is not the same as `msg.sender`, then `msg.sender` should be CSM
-    /// @param from address to unwrap wstETH from
-    /// @param nodeOperatorId id of the node operator to deposit stETH for
-    /// @param wstETHAmount amount of wstETH to deposit
     /// @param permit wstETH permit for the contract
     /// @return shares stETH shares amount
-    function depositWstETHWithPermit(
+    function depositWstETH(
         address from,
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
@@ -488,8 +447,11 @@ contract CSAccounting is
     {
         // TODO: can it be two functions rather than one with `from` param and condition?
         from = _validateDepositSender(from);
-        // preventing revert for already used permit
-        if (WSTETH.allowance(from, address(this)) < permit.value) {
+        // preventing revert for already used permit or avoid permit usage in case of value == 0
+        if (
+            permit.value > 0 &&
+            WSTETH.allowance(from, address(this)) < permit.value
+        ) {
             // solhint-disable-next-line func-named-parameters
             WSTETH.permit(
                 from,
