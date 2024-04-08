@@ -102,6 +102,8 @@ abstract contract DeployBase is Script {
             });
             csm.grantRole(csm.INITIALIZE_ROLE(), deployer);
             csm.setAccounting(address(accounting));
+            csm.grantRole(csm.MODULE_MANAGER_ROLE(), deployer);
+            csm.activatePublicRelease();
             // TODO: add early adoption initialization
 
             CSFeeOracle oracleImpl = new CSFeeOracle({
