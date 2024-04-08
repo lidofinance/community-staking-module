@@ -35,13 +35,13 @@
 |----------------------------------------------------|-----------------|--------|--------|--------|---------|
 | Function Name                                      | min             | avg    | median | max    | # calls |
 | ORACLE_ROLE                                        | 263             | 263    | 263    | 263    | 6       |
-| RECOVERER_ROLE                                     | 239             | 239    | 239    | 239    | 7       |
+| RECOVERER_ROLE                                     | 283             | 283    | 283    | 283    | 7       |
 | distributeFees                                     | 22284           | 35884  | 27716  | 76223  | 5       |
 | distributedShares                                  | 523             | 1523   | 1523   | 2523   | 4       |
 | grantRole                                          | 118370          | 118370 | 118370 | 118370 | 11      |
-| pendingToDistribute                                | 1454            | 1454   | 1454   | 1454   | 1       |
-| processOracleReport                                | 57030           | 72234  | 77302  | 77302  | 4       |
-| recoverERC20                                       | 24378           | 35738  | 24404  | 58434  | 3       |
+| pendingToDistribute                                | 1432            | 1432   | 1432   | 1432   | 1       |
+| processOracleReport                                | 57008           | 72212  | 77280  | 77280  | 4       |
+| recoverERC20                                       | 24356           | 35716  | 24382  | 58412  | 3       |
 | recoverEther                                       | 23680           | 41818  | 41818  | 59957  | 2       |
 
 

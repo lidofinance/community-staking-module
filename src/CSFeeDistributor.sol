@@ -48,7 +48,7 @@ contract CSFeeDistributor is
     mapping(uint256 => uint256) public distributedShares;
 
     /// @notice Total amount of shares available for claiming by NOs
-    uint256 public sharesOfOperators;
+    uint256 public claimableShares;
 
     constructor(address stETH, address accounting, address admin) {
         if (accounting == address(0)) revert ZeroAddress("accounting");
@@ -63,7 +63,7 @@ contract CSFeeDistributor is
 
     /// @notice Returns the amount of shares that are pending to be distributed
     function pendingToDistribute() external view returns (uint256) {
-        return IStETH(STETH).sharesOf(address(this)) - sharesOfOperators;
+        return IStETH(STETH).sharesOf(address(this)) - claimableShares;
     }
 
     /// @notice Returns the amount of shares that can be distributed in favor of the NO
@@ -111,7 +111,7 @@ contract CSFeeDistributor is
             return 0;
         }
 
-        sharesOfOperators -= sharesToDistribute;
+        claimableShares -= sharesToDistribute;
         distributedShares[nodeOperatorId] += sharesToDistribute;
 
         IStETH(STETH).transferShares(ACCOUNTING, sharesToDistribute);
@@ -127,14 +127,14 @@ contract CSFeeDistributor is
         uint256 _distributedShares
     ) external onlyRole(ORACLE_ROLE) {
         if (
-            sharesOfOperators + _distributedShares >
+            claimableShares + _distributedShares >
             IStETH(STETH).sharesOf(address(this))
         ) {
             revert InvalidShares();
         }
 
         unchecked {
-            sharesOfOperators += _distributedShares;
+            claimableShares += _distributedShares;
         }
 
         treeRoot = _treeRoot;
