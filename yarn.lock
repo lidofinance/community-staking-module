@@ -386,7 +386,7 @@ __metadata:
     lint-staged: "npm:^14.0.1"
     prettier: "npm:^3.0.3"
     prettier-plugin-solidity: "npm:^1.1.3"
-    solhint: "npm:^4.5.2"
+    solhint: "patch:solhint@npm%3A4.5.2#~/.yarn/patches/solhint-npm-4.5.2-10dbd0e73b.patch"
     solhint-plugin-lido-csm: "https://github.com/lidofinance/solhint-plugin-lido-csm.git#0.3.2"
   languageName: unknown
   linkType: soft
@@ -1320,7 +1320,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"solhint@npm:4.5.2, solhint@npm:^4.5.2":
+"solhint@npm:4.5.2":
   version: 4.5.2
   resolution: "solhint@npm:4.5.2"
   dependencies:
@@ -1349,6 +1349,38 @@ __metadata:
   bin:
     solhint: solhint.js
   checksum: 10c0/a54cc8df54ed711ca6be783b9291eb9e838f518f236d4df05c6ef412ead6a21f4a5bf3bace62ca7d2ed69f4566d5289db4c8c93e0c5e23ac91401904e1f1f312
+  languageName: node
+  linkType: hard
+
+"solhint@patch:solhint@npm%3A4.5.2#~/.yarn/patches/solhint-npm-4.5.2-10dbd0e73b.patch":
+  version: 4.5.2
+  resolution: "solhint@patch:solhint@npm%3A4.5.2#~/.yarn/patches/solhint-npm-4.5.2-10dbd0e73b.patch::version=4.5.2&hash=9a1c1e"
+  dependencies:
+    "@solidity-parser/parser": "npm:^0.18.0"
+    ajv: "npm:^6.12.6"
+    antlr4: "npm:^4.13.1-patch-1"
+    ast-parents: "npm:^0.0.1"
+    chalk: "npm:^4.1.2"
+    commander: "npm:^10.0.0"
+    cosmiconfig: "npm:^8.0.0"
+    fast-diff: "npm:^1.2.0"
+    glob: "npm:^8.0.3"
+    ignore: "npm:^5.2.4"
+    js-yaml: "npm:^4.1.0"
+    latest-version: "npm:^7.0.0"
+    lodash: "npm:^4.17.21"
+    pluralize: "npm:^8.0.0"
+    prettier: "npm:^2.8.3"
+    semver: "npm:^7.5.2"
+    strip-ansi: "npm:^6.0.1"
+    table: "npm:^6.8.1"
+    text-table: "npm:^0.2.0"
+  dependenciesMeta:
+    prettier:
+      optional: true
+  bin:
+    solhint: solhint.js
+  checksum: 10c0/2c8f3ec3b58b67693c3fc9570fbaa37b56c52235e53820e67595ef33f885c4725fc4f72707521d01f0864f7287365a0703207284eb5b2a8c5f99837edcabb086
   languageName: node
   linkType: hard
 
