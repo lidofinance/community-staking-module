@@ -16,6 +16,8 @@ interface ICSAccounting is ICSBondCore, ICSBondCurve, ICSBondLock {
         bytes32 s;
     }
 
+    function feeDistributor() external view returns (address);
+
     function getRequiredBondForNextKeys(
         uint256 nodeOperatorId,
         uint256 additionalKeys

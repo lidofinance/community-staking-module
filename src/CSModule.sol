@@ -177,7 +177,6 @@ contract CSModule is
     QueueLib.Queue public queue;
 
     ILidoLocator public lidoLocator;
-    address public feeDistributor;
     ICSAccounting public accounting;
     ICSEarlyAdoption public earlyAdoption;
     // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
@@ -237,15 +236,6 @@ contract CSModule is
             revert AlreadySet();
         }
         earlyAdoption = ICSEarlyAdoption(_earlyAdoption);
-    }
-
-    function setFeeDistributor(
-        address _feeDistributor
-    ) external onlyRole(INITIALIZE_ROLE) {
-        if (feeDistributor != address(0)) {
-            revert AlreadySet();
-        }
-        feeDistributor = _feeDistributor;
     }
 
     function activatePublicRelease() external onlyRole(MODULE_MANAGER_ROLE) {
@@ -659,10 +649,14 @@ contract CSModule is
 
     /// @notice Called when rewards minted for the module.
     /// @dev Passes through the minted shares to the fee distributor.
+    /// XXX: Make sure the fee distributor is set before calling this function.
     function onRewardsMinted(
         uint256 totalShares
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        IStETH(lidoLocator.lido()).transferShares(feeDistributor, totalShares);
+        IStETH(lidoLocator.lido()).transferShares(
+            accounting.feeDistributor(),
+            totalShares
+        );
     }
 
     function _updateDepositableValidatorsCount(uint256 nodeOperatorId) private {

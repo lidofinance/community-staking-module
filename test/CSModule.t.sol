@@ -31,7 +31,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
     LidoMock public stETH;
     CSModule public csm;
     CSAccounting public accounting;
-    Stub public communityStakingFeeDistributor;
+    Stub public feeDistributor;
 
     address internal admin;
     address internal stranger;
@@ -227,7 +227,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
 
         (locator, wstETH, stETH, ) = initLido();
 
-        communityStakingFeeDistributor = new Stub();
+        feeDistributor = new Stub();
 
         csm = new CSModule("community-staking-module", address(locator), admin);
         uint256[] memory curve = new uint256[](1);
@@ -261,15 +261,17 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), address(this));
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), address(csm));
         accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm));
+        accounting.grantRole(accounting.INITIALIZE_ROLE(), address(this));
         vm.stopPrank();
 
+        accounting.setFeeDistributor(address(feeDistributor));
         csm.setAccounting(address(accounting));
         csm.setRemovalCharge(0.05 ether);
     }
 }
 
 contract CSMCommon is CSMCommonNoPublicRelease {
-    function setUp() public override {
+    function setUp() public virtual override {
         super.setUp();
         csm.activatePublicRelease();
     }
@@ -287,7 +289,7 @@ contract CSMCommonNoRoles is CSMFixtures {
 
         (locator, wstETH, stETH, ) = initLido();
 
-        communityStakingFeeDistributor = new Stub();
+        feeDistributor = new Stub();
         csm = new CSModule("community-staking-module", address(locator), admin);
 
         vm.startPrank(admin);
@@ -3237,6 +3239,32 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         csm.removeKeys(noId, 3, 1); // Removal charge is applied, hence one key is unbonded.
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 6);
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 6);
+    }
+}
+
+contract CSMOnRewardsMinted is CSMCommon {
+    address public stakingRouter;
+
+    function setUp() public override {
+        super.setUp();
+        stakingRouter = nextAddress("STAKING_ROUTER");
+        vm.startPrank(admin);
+        csm.grantRole(csm.STAKING_ROUTER_ROLE(), stakingRouter);
+        vm.stopPrank();
+    }
+
+    function test_onRewardsMinted() public {
+        uint256 reportShares = 100000;
+        uint256 someDustShares = 100;
+
+        stETH.mintShares(address(csm), someDustShares);
+        stETH.mintShares(address(csm), reportShares);
+
+        vm.prank(stakingRouter);
+        csm.onRewardsMinted(reportShares);
+
+        assertEq(stETH.sharesOf(address(csm)), someDustShares);
+        assertEq(stETH.sharesOf(address(feeDistributor)), reportShares);
     }
 }
 
