@@ -27,5 +27,9 @@
   "lint-staged": {
     "*": "prettier --ignore-unknown --write",
     "src/**/*.sol": "solhint"
-  }
+  },
+  "resolutions": {
+    "solhint@npm:4.5.2": "patch:solhint@npm%3A4.5.2#~/.yarn/patches/solhint-npm-4.5.2-10dbd0e73b.patch"
+  },
+  "packageManager": "yarn@4.1.1"
 }
