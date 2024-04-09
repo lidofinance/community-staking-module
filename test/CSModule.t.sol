@@ -877,6 +877,95 @@ contract CSMObtainDepositData is CSMCommon {
     }
 }
 
+contract CSMClaimRewards is CSMCommon {
+    function test_claimRewardsStETH() public {
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.claimRewardsStETH.selector,
+                noId,
+                UINT256_MAX,
+                0,
+                new bytes32[](0)
+            ),
+            1
+        );
+        vm.prank(nodeOperator);
+        csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
+    }
+
+    function test_claimRewardsStETH_revertWhenNoNodeOperator() public {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.claimRewardsStETH(0, UINT256_MAX, 0, new bytes32[](0));
+    }
+
+    function test_claimRewardsStETH_revertWhenNotManager() public {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(SenderIsNotManagerAddress.selector);
+        csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
+    }
+
+    function test_claimRewardsWstETH() public {
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.claimRewardsWstETH.selector,
+                noId,
+                UINT256_MAX,
+                0,
+                new bytes32[](0)
+            ),
+            1
+        );
+        vm.prank(nodeOperator);
+        csm.claimRewardsWstETH(noId, UINT256_MAX, 0, new bytes32[](0));
+    }
+
+    function test_claimRewardsWstETH_revertWhenNoNodeOperator() public {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.claimRewardsWstETH(0, UINT256_MAX, 0, new bytes32[](0));
+    }
+
+    function test_claimRewardsWstETH_revertWhenNotManager() public {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(SenderIsNotManagerAddress.selector);
+        csm.claimRewardsWstETH(noId, UINT256_MAX, 0, new bytes32[](0));
+    }
+
+    function test_requestRewardsETH() public {
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.requestRewardsETH.selector,
+                noId,
+                UINT256_MAX,
+                0,
+                new bytes32[](0)
+            ),
+            1
+        );
+        vm.prank(nodeOperator);
+        csm.requestRewardsETH(noId, UINT256_MAX, 0, new bytes32[](0));
+    }
+
+    function test_requestRewardsETH_revertWhenNoNodeOperator() public {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.requestRewardsETH(0, UINT256_MAX, 0, new bytes32[](0));
+    }
+
+    function test_requestRewardsETH_revertWhenNotManager() public {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(SenderIsNotManagerAddress.selector);
+        csm.requestRewardsETH(noId, UINT256_MAX, 0, new bytes32[](0));
+    }
+}
+
 contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
     function test_proposeNodeOperatorManagerAddressChange() public {
         uint256 noId = createNodeOperator();
@@ -2358,6 +2447,55 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(lock.amount, 0 ether);
         assertEq(lock.retentionUntil, 0);
+    }
+}
+
+contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
+    function test_compensateELRewardsStealingPenalty() public {
+        uint256 noId = createNodeOperator();
+        uint256 amount = 1 ether;
+        uint256 fine = csm.EL_REWARDS_STEALING_FINE();
+        csm.reportELRewardsStealingPenalty(noId, block.number, amount);
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.compensateLockedBondETH.selector,
+                noId
+            )
+        );
+        csm.compensateELRewardsStealingPenalty{ value: amount + fine }(noId);
+
+        CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
+        assertEq(lock.amount, 0);
+    }
+
+    function test_compensateELRewardsStealingPenalty_depositableValidatorsChanged()
+        public
+    {
+        uint256 noId = createNodeOperator(2);
+        uint256 amount = 1 ether;
+        uint256 fine = csm.EL_REWARDS_STEALING_FINE();
+        csm.reportELRewardsStealingPenalty(noId, block.number, amount);
+        csm.obtainDepositData(1, "");
+        uint256 depositableBefore = getNodeOperatorSummary(noId)
+            .depositableValidatorsCount;
+
+        csm.compensateELRewardsStealingPenalty{ value: amount + fine }(noId);
+        uint256 depositableAfter = getNodeOperatorSummary(noId)
+            .depositableValidatorsCount;
+        assertEq(depositableAfter, depositableBefore + 1);
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 1 });
+        _assertQueueState(exp);
+    }
+
+    function test_compensateELRewardsStealingPenalty_revertWhenNoNodeOperator()
+        public
+    {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.compensateELRewardsStealingPenalty{ value: 1 ether }(0);
     }
 }
 

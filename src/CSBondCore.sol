@@ -228,7 +228,7 @@ abstract contract CSBondCore is CSBondCoreBase {
         );
     }
 
-    /// @dev Transfer Node Operator's bond shares to Lido treasury to pay some fee.
+    /// @dev Transfer Node Operator's bond shares to charge recipient to pay some fee.
     /// @param amount amount to charge in ETH.
     function _charge(
         uint256 nodeOperatorId,
