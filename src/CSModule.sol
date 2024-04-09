@@ -1093,6 +1093,16 @@ contract CSModule is
         }
     }
 
+    /// @notice Compensate EL rewards stealing penalty for the given node operator to prevent further validator exits.
+    /// @param nodeOperatorId id of the node operator.
+    function compensateELRewardsStealingPenalty(
+        uint256 nodeOperatorId
+    ) external payable onlyExistingNodeOperator(nodeOperatorId) {
+        accounting.compensateLockedBondETH{ value: msg.value }(nodeOperatorId);
+        _updateDepositableValidatorsCount(nodeOperatorId);
+        _normalizeQueue(nodeOperatorId);
+    }
+
     /// @notice Checks if the given node operator's key is proved as withdrawn.
     /// @param nodeOperatorId id of the node operator to check.
     /// @param keyIndex index of the key to check.

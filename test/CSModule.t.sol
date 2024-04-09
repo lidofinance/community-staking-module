@@ -2450,6 +2450,55 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
     }
 }
 
+contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
+    function test_compensateELRewardsStealingPenalty() public {
+        uint256 noId = createNodeOperator();
+        uint256 amount = 1 ether;
+        uint256 fine = csm.EL_REWARDS_STEALING_FINE();
+        csm.reportELRewardsStealingPenalty(noId, block.number, amount);
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.compensateLockedBondETH.selector,
+                noId
+            )
+        );
+        csm.compensateELRewardsStealingPenalty{ value: amount + fine }(noId);
+
+        CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
+        assertEq(lock.amount, 0);
+    }
+
+    function test_compensateELRewardsStealingPenalty_depositableValidatorsChanged()
+        public
+    {
+        uint256 noId = createNodeOperator(2);
+        uint256 amount = 1 ether;
+        uint256 fine = csm.EL_REWARDS_STEALING_FINE();
+        csm.reportELRewardsStealingPenalty(noId, block.number, amount);
+        csm.obtainDepositData(1, "");
+        uint256 depositableBefore = getNodeOperatorSummary(noId)
+            .depositableValidatorsCount;
+
+        csm.compensateELRewardsStealingPenalty{ value: amount + fine }(noId);
+        uint256 depositableAfter = getNodeOperatorSummary(noId)
+            .depositableValidatorsCount;
+        assertEq(depositableAfter, depositableBefore + 1);
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 1 });
+        _assertQueueState(exp);
+    }
+
+    function test_compensateELRewardsStealingPenalty_revertWhenNoNodeOperator()
+        public
+    {
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.compensateELRewardsStealingPenalty{ value: 1 ether }(0);
+    }
+}
+
 contract CsmSubmitWithdrawal is CSMCommon {
     function test_submitWithdrawal() public {
         uint256 keyIndex = 0;

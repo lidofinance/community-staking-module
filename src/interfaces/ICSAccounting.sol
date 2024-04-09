@@ -92,6 +92,8 @@ interface ICSAccounting is ICSBondCore, ICSBondCurve, ICSBondLock {
         uint256 nodeOperatorId
     ) external returns (uint256);
 
+    function compensateLockedBondETH(uint256 nodeOperatorId) external payable;
+
     function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external;
 
     function resetBondCurve(uint256 nodeOperatorId) external;

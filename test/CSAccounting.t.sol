@@ -3399,8 +3399,8 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         vm.expectEmit(true, true, true, true, address(accounting));
         emit BondLockCompensated(0, 0.4 ether);
 
-        vm.deal(user, 0.4 ether);
-        vm.prank(user);
+        vm.deal(address(stakingModule), 0.4 ether);
+        vm.prank(address(stakingModule));
         accounting.compensateLockedBondETH{ value: 0.4 ether }(0);
 
         assertEq(accounting.getActualLockedBond(0), 0.6 ether);

@@ -577,7 +577,7 @@ contract CSAccounting is
     function lockBondETH(
         uint256 nodeOperatorId,
         uint256 amount
-    ) external onlyCSM onlyExistingNodeOperator(nodeOperatorId) {
+    ) external onlyCSM {
         CSBondLock._lock(nodeOperatorId, amount);
     }
 
@@ -587,7 +587,7 @@ contract CSAccounting is
     function releaseLockedBondETH(
         uint256 nodeOperatorId,
         uint256 amount
-    ) external onlyCSM onlyExistingNodeOperator(nodeOperatorId) {
+    ) external onlyCSM {
         CSBondLock._reduceAmount(nodeOperatorId, amount);
     }
 
@@ -595,11 +595,10 @@ contract CSAccounting is
     /// @param nodeOperatorId id of the node operator to compensate locked bond for.
     function compensateLockedBondETH(
         uint256 nodeOperatorId
-    ) external payable onlyExistingNodeOperator(nodeOperatorId) {
+    ) external payable onlyCSM {
         payable(LIDO_LOCATOR.elRewardsVault()).transfer(msg.value);
         CSBondLock._reduceAmount(nodeOperatorId, msg.value);
         emit BondLockCompensated(nodeOperatorId, msg.value);
-        CSM.onBondChanged(nodeOperatorId);
     }
 
     /// @notice Settles locked bond ETH for the given node operator.
