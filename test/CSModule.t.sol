@@ -836,6 +836,32 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
         );
     }
 
+    function test_DepositETH_NonceShouldChange() public {
+        uint256 noId = createNodeOperator();
+
+        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+
+        uint256 nonce = csm.getNonce();
+
+        vm.deal(nodeOperator, 32 ether);
+        vm.prank(nodeOperator);
+        csm.depositETH{ value: 32 ether }(0);
+
+        assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_DepositETH_NonceShouldNotChange() public {
+        uint256 noId = createNodeOperator();
+
+        uint256 nonce = csm.getNonce();
+
+        vm.deal(nodeOperator, 32 ether);
+        vm.prank(nodeOperator);
+        csm.depositETH{ value: 32 ether }(0);
+
+        assertEq(csm.getNonce(), nonce);
+    }
+
     function test_DepositStETH() public {
         uint256 noId = createNodeOperator();
         uint256 preShares = accounting.getBondShares(0);
@@ -903,6 +929,58 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
             sharesToDeposit + preShares,
             "bond shares should be equal to deposited shares + pre shares"
         );
+    }
+
+    function test_DepositStETH_NonceShouldChange() public {
+        uint256 noId = createNodeOperator();
+
+        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+
+        uint256 nonce = csm.getNonce();
+
+        vm.deal(nodeOperator, 32 ether);
+        vm.startPrank(nodeOperator);
+        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
+            _referal: address(0)
+        });
+        csm.depositStETH(
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_DepositStETH_NonceShouldNotChange() public {
+        uint256 noId = createNodeOperator();
+
+        uint256 nonce = csm.getNonce();
+
+        vm.deal(nodeOperator, 32 ether);
+        vm.startPrank(nodeOperator);
+        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
+            _referal: address(0)
+        });
+        csm.depositStETH(
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(csm.getNonce(), nonce);
     }
 
     function test_DepositWstETH() public {
@@ -978,6 +1056,64 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
             "bond shares should be equal to deposited shares + pre shares"
         );
     }
+
+    function test_DepositWstETH_NonceShouldChange() public {
+        uint256 noId = createNodeOperator();
+
+        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+
+        uint256 nonce = csm.getNonce();
+
+        vm.deal(nodeOperator, 32 ether);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        uint256 sharesToDeposit = stETH.getSharesByPooledEth(
+            wstETH.getStETHByWstETH(wstETHAmount)
+        );
+
+        csm.depositWstETH(
+            0,
+            wstETHAmount,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_DepositWstETH_NonceShouldNotChange() public {
+        uint256 noId = createNodeOperator();
+
+        uint256 nonce = csm.getNonce();
+
+        vm.deal(nodeOperator, 32 ether);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        uint256 sharesToDeposit = stETH.getSharesByPooledEth(
+            wstETH.getStETHByWstETH(wstETHAmount)
+        );
+
+        csm.depositWstETH(
+            0,
+            wstETHAmount,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(csm.getNonce(), nonce);
+    }
 }
 
 contract CSMObtainDepositData is CSMCommon {
@@ -1045,6 +1181,7 @@ contract CSMObtainDepositData is CSMCommon {
 }
 
 contract CSMClaimRewards is CSMCommon {
+    // TODO: Add nonce tests
     function test_claimRewardsStETH() public {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
@@ -2467,6 +2604,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
 contract CsmReportELRewardsStealingPenalty is CSMCommon {
     function test_reportELRewardsStealingPenalty_HappyPath() public {
         uint256 noId = createNodeOperator();
+        uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
         emit ELRewardsStealingPenaltyReported(noId, 100, BOND_SIZE / 2);
@@ -2474,6 +2612,7 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
 
         uint256 lockedBond = accounting.getActualLockedBond(noId);
         assertEq(lockedBond, BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_FINE());
+        assertEq(csm.getNonce(), nonce + 1);
     }
 
     function test_reportELRewardsStealingPenalty_RevertWhenNoNodeOperator()
@@ -2482,6 +2621,20 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         vm.expectRevert(NodeOperatorDoesNotExist.selector);
         csm.reportELRewardsStealingPenalty(0, 100, 1 ether);
     }
+
+    function test_reportELRewardsStealingPenalty_NoNonceChange() public {
+        uint256 noId = createNodeOperator();
+
+        vm.deal(nodeOperator, 32 ether);
+        vm.prank(nodeOperator);
+        csm.depositETH{ value: 32 ether }(0);
+
+        uint256 nonce = csm.getNonce();
+
+        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+
+        assertEq(csm.getNonce(), nonce);
+    }
 }
 
 contract CsmCancelELRewardsStealingPenalty is CSMCommon {
@@ -2489,6 +2642,8 @@ contract CsmCancelELRewardsStealingPenalty is CSMCommon {
         uint256 noId = createNodeOperator();
 
         csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+
+        uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
         emit ELRewardsStealingPenaltyCancelled(
@@ -2502,6 +2657,7 @@ contract CsmCancelELRewardsStealingPenalty is CSMCommon {
 
         uint256 lockedBond = accounting.getActualLockedBond(noId);
         assertEq(lockedBond, 0);
+        assertEq(csm.getNonce(), nonce + 1);
     }
 
     function test_cancelELRewardsStealingPenalty_Partial() public {
@@ -2509,12 +2665,16 @@ contract CsmCancelELRewardsStealingPenalty is CSMCommon {
 
         csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
 
+        uint256 nonce = csm.getNonce();
+
         vm.expectEmit(true, true, true, true, address(csm));
         emit ELRewardsStealingPenaltyCancelled(noId, BOND_SIZE / 2);
         csm.cancelELRewardsStealingPenalty(noId, BOND_SIZE / 2);
 
         uint256 lockedBond = accounting.getActualLockedBond(noId);
         assertEq(lockedBond, csm.EL_REWARDS_STEALING_FINE());
+        // nonce should not change due to no changes in the depositable validators
+        assertEq(csm.getNonce(), nonce);
     }
 
     function test_cancelELRewardsStealingPenalty_RevertWhenNoNodeOperator()
@@ -2615,6 +2775,84 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         assertEq(lock.amount, 0 ether);
         assertEq(lock.retentionUntil, 0);
     }
+
+    function test_settleELRewardsStealingPenalty_CurveReset_NoNewUnbonded()
+        public
+    {
+        uint256 noId = createNodeOperator();
+
+        uint256[] memory curvePoints = new uint256[](2);
+        curvePoints[0] = 2 ether;
+        curvePoints[1] = 3 ether;
+
+        accounting.addBondCurve(curvePoints);
+
+        vm.prank(address(csm));
+        accounting.setBondCurve(0, 2);
+
+        uploadMoreKeys(0, 1);
+
+        vm.deal(nodeOperator, 3 ether);
+        vm.prank(nodeOperator);
+        csm.depositETH{ value: 3 ether }(0);
+
+        uint256 amount = 1 ether;
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+        csm.reportELRewardsStealingPenalty(noId, block.number, amount);
+
+        uint256 nonce = csm.getNonce();
+        uint256 unbonded = accounting.getUnbondedKeysCount(noId);
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
+        );
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        assertEq(accounting.getBondCurve(noId).id, 1);
+        assertEq(csm.getNonce(), nonce);
+        assertEq(accounting.getUnbondedKeysCount(noId), unbonded);
+    }
+
+    function test_settleELRewardsStealingPenalty_CurveReset_NewUnbonded()
+        public
+    {
+        uint256 noId = createNodeOperator();
+
+        uint256[] memory curvePoints = new uint256[](2);
+        curvePoints[0] = 2 ether;
+        curvePoints[1] = 3 ether;
+
+        accounting.addBondCurve(curvePoints);
+
+        vm.prank(address(csm));
+        accounting.setBondCurve(0, 2);
+
+        uploadMoreKeys(0, 1);
+
+        vm.deal(nodeOperator, 2 ether);
+        vm.prank(nodeOperator);
+        csm.depositETH{ value: 2 ether }(0);
+
+        uint256 amount = 1 ether;
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+        csm.reportELRewardsStealingPenalty(noId, block.number, amount);
+
+        uint256 nonce = csm.getNonce();
+        uint256 unbonded = accounting.getUnbondedKeysCount(noId);
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
+        );
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        assertEq(accounting.getBondCurve(noId).id, 1);
+        assertEq(csm.getNonce(), nonce + 1);
+        assertEq(accounting.getUnbondedKeysCount(noId), unbonded + 1);
+    }
 }
 
 contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
@@ -2623,6 +2861,8 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
         uint256 amount = 1 ether;
         uint256 fine = csm.EL_REWARDS_STEALING_FINE();
         csm.reportELRewardsStealingPenalty(noId, block.number, amount);
+
+        uint256 nonce = csm.getNonce();
 
         vm.expectCall(
             address(accounting),
@@ -2635,6 +2875,29 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(lock.amount, 0);
+        assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_compensateELRewardsStealingPenalty_Partial() public {
+        uint256 noId = createNodeOperator();
+        uint256 amount = 1 ether;
+        uint256 fine = csm.EL_REWARDS_STEALING_FINE();
+        csm.reportELRewardsStealingPenalty(noId, block.number, amount);
+
+        uint256 nonce = csm.getNonce();
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.compensateLockedBondETH.selector,
+                noId
+            )
+        );
+        csm.compensateELRewardsStealingPenalty{ value: amount }(noId);
+
+        CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
+        assertEq(lock.amount, fine);
+        assertEq(csm.getNonce(), nonce);
     }
 
     function test_compensateELRewardsStealingPenalty_depositableValidatorsChanged()
@@ -2672,12 +2935,15 @@ contract CsmSubmitWithdrawal is CSMCommon {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
 
+        uint256 nonce = csm.getNonce();
+
         vm.expectEmit(true, true, true, true, address(csm));
         emit WithdrawalSubmitted(noId, keyIndex, csm.DEPOSIT_SIZE());
         csm.submitWithdrawal(noId, keyIndex, csm.DEPOSIT_SIZE());
 
         CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
         assertEq(no.totalWithdrawnValidators, 1);
+        assertEq(csm.getNonce(), nonce + 1);
     }
 
     function test_submitWithdrawal_lowExitBalance() public {
@@ -2752,9 +3018,11 @@ contract CsmSubmitWithdrawal is CSMCommon {
 
 contract CsmSubmitInitialSlashing is CSMCommon {
     function test_submitInitialSlashing() public {
-        uint256 noId = createNodeOperator();
+        uint256 noId = createNodeOperator(2);
         csm.obtainDepositData(1, "");
         uint256 penaltyAmount = csm.INITIAL_SLASHING_PENALTY();
+
+        uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
         emit InitialSlashingSubmitted(noId, 0);
@@ -2767,6 +3035,33 @@ contract CsmSubmitInitialSlashing is CSMCommon {
             )
         );
         csm.submitInitialSlashing(noId, 0);
+
+        assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_submitInitialSlashing_Overbonded() public {
+        uint256 noId = createNodeOperator(2);
+        vm.deal(nodeOperator, 32 ether);
+        vm.prank(nodeOperator);
+        csm.depositETH{ value: 32 ether }(0);
+        csm.obtainDepositData(1, "");
+        uint256 penaltyAmount = csm.INITIAL_SLASHING_PENALTY();
+
+        uint256 nonce = csm.getNonce();
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit InitialSlashingSubmitted(noId, 0);
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                penaltyAmount
+            )
+        );
+        csm.submitInitialSlashing(noId, 0);
+
+        assertEq(csm.getNonce(), nonce);
     }
 
     function test_submitInitialSlashing_differentKeys() public {
@@ -3474,10 +3769,12 @@ contract CSMDepositableValidatorsCount is CSMCommon {
 
     function test_depositableValidatorsCountChanges_OnUnvetKeys() public {
         uint256 noId = createNodeOperator(7);
+        uint256 nonce = csm.getNonce();
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 7);
         csm.decreaseOperatorVettedKeys(UintArr(noId), UintArr(3));
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3);
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 3);
+        assertEq(csm.getNonce(), nonce + 1);
     }
 
     function test_depositableValidatorsCountChanges_OnInitialSlashing() public {

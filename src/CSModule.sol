@@ -285,7 +285,6 @@ contract CSModule is
     /// @param signatures Signatures of public keys
     /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
     /// @param referral Optional referral address
-    /// TODO consider splitting into methods with proof and without
     function addNodeOperatorETH(
         uint256 keysCount,
         bytes calldata publicKeys,
