@@ -4,6 +4,7 @@
 pragma solidity 0.8.24;
 
 import { IStakingModule } from "./IStakingModule.sol";
+import { ICSAccounting } from "./ICSAccounting.sol";
 
 /// @title Lido's Community Staking Module interface
 interface ICSModule is IStakingModule {
@@ -54,6 +55,17 @@ interface ICSModule is IStakingModule {
         uint256 amount
     ) external;
 
-    /// @notice Notify the module about the operator's bond change. The hook call is optional.
-    function onBondChanged(uint256 nodeOperatorId) external;
+    function depositWstETH(
+        uint256 nodeOperatorId,
+        uint256 wstETHAmount,
+        ICSAccounting.PermitInput calldata permit
+    ) external;
+
+    function depositStETH(
+        uint256 nodeOperatorId,
+        uint256 stETHAmount,
+        ICSAccounting.PermitInput calldata permit
+    ) external;
+
+    function depositETH(uint256 nodeOperatorId) external payable;
 }

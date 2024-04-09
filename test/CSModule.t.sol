@@ -97,7 +97,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
         );
         uint256 amount = accounting.getRequiredBondForNextKeys(noId, keysCount);
         vm.deal(nodeOperator, amount);
-        // NOTE: There's no check for the sender address to be a manager of the operator at the moment.
+        vm.prank(nodeOperator);
         csm.addValidatorKeysETH{ value: amount }(
             noId,
             keysCount,
@@ -571,6 +571,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         uint256 noId = createNodeOperator();
         uint256 toWrap = BOND_SIZE + 1 wei;
         vm.deal(nodeOperator, toWrap);
+        vm.startPrank(nodeOperator);
         stETH.submit{ value: toWrap }(address(0));
         wstETH.wrap(toWrap);
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
