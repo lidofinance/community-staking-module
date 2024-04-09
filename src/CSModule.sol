@@ -458,40 +458,40 @@ contract CSModule is
     /// @notice Claims full reward (fee + bond) in stETH for the given node operator with desirable value
     /// @param nodeOperatorId id of the node operator to claim rewards for.
     /// @param stETHAmount amount of stETH to claim.
-    /// @param rewardsProof merkle proof of the rewards.
     /// @param cumulativeFeeShares cumulative fee shares for the node operator.
+    /// @param rewardsProof merkle proof of the rewards.
     function claimRewardsStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount,
-        bytes32[] memory rewardsProof,
-        uint256 cumulativeFeeShares
+        uint256 cumulativeFeeShares,
+        bytes32[] memory rewardsProof
     ) external onlyExistingNodeOperator(nodeOperatorId) {
         onlyNodeOperatorManager(nodeOperatorId);
         accounting.claimRewardsStETH(
             nodeOperatorId,
             stETHAmount,
-            rewardsProof,
-            cumulativeFeeShares
+            cumulativeFeeShares,
+            rewardsProof
         );
     }
 
     /// @notice Claims full reward (fee + bond) in wstETH for the given node operator available for this moment
     /// @param nodeOperatorId id of the node operator to claim rewards for.
     /// @param wstETHAmount amount of wstETH to claim.
-    /// @param rewardsProof merkle proof of the rewards.
     /// @param cumulativeFeeShares cumulative fee shares for the node operator.
+    /// @param rewardsProof merkle proof of the rewards.
     function claimRewardsWstETH(
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
-        bytes32[] memory rewardsProof,
-        uint256 cumulativeFeeShares
+        uint256 cumulativeFeeShares,
+        bytes32[] memory rewardsProof
     ) external onlyExistingNodeOperator(nodeOperatorId) {
         onlyNodeOperatorManager(nodeOperatorId);
         accounting.claimRewardsWstETH(
             nodeOperatorId,
             wstETHAmount,
-            rewardsProof,
-            cumulativeFeeShares
+            cumulativeFeeShares,
+            rewardsProof
         );
     }
 
@@ -499,20 +499,20 @@ contract CSModule is
     /// @dev reverts if amount isn't between MIN_STETH_WITHDRAWAL_AMOUNT and MAX_STETH_WITHDRAWAL_AMOUNT
     /// @param nodeOperatorId id of the node operator to request rewards for.
     /// @param ethAmount amount of ETH to request.
-    /// @param rewardsProof merkle proof of the rewards.
     /// @param cumulativeFeeShares cumulative fee shares for the node operator.
+    /// @param rewardsProof merkle proof of the rewards.
     function requestRewardsETH(
         uint256 nodeOperatorId,
         uint256 ethAmount,
-        bytes32[] memory rewardsProof,
-        uint256 cumulativeFeeShares
+        uint256 cumulativeFeeShares,
+        bytes32[] memory rewardsProof
     ) external onlyExistingNodeOperator(nodeOperatorId) {
         onlyNodeOperatorManager(nodeOperatorId);
         accounting.requestRewardsETH(
             nodeOperatorId,
             ethAmount,
-            rewardsProof,
-            cumulativeFeeShares
+            cumulativeFeeShares,
+            rewardsProof
         );
     }
 

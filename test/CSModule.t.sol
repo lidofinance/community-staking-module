@@ -887,24 +887,24 @@ contract CSMClaimRewards is CSMCommon {
                 accounting.claimRewardsStETH.selector,
                 noId,
                 UINT256_MAX,
-                new bytes32[](0),
-                0
+                0,
+                new bytes32[](0)
             ),
             1
         );
         vm.prank(nodeOperator);
-        csm.claimRewardsStETH(noId, UINT256_MAX, new bytes32[](0), 0);
+        csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
     function test_claimRewardsStETH_revertWhenNoNodeOperator() public {
         vm.expectRevert(NodeOperatorDoesNotExist.selector);
-        csm.claimRewardsStETH(0, UINT256_MAX, new bytes32[](0), 0);
+        csm.claimRewardsStETH(0, UINT256_MAX, 0, new bytes32[](0));
     }
 
     function test_claimRewardsStETH_revertWhenNotManager() public {
         uint256 noId = createNodeOperator();
         vm.expectRevert(SenderIsNotManagerAddress.selector);
-        csm.claimRewardsStETH(noId, UINT256_MAX, new bytes32[](0), 0);
+        csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
     function test_claimRewardsWstETH() public {
@@ -916,24 +916,24 @@ contract CSMClaimRewards is CSMCommon {
                 accounting.claimRewardsWstETH.selector,
                 noId,
                 UINT256_MAX,
-                new bytes32[](0),
-                0
+                0,
+                new bytes32[](0)
             ),
             1
         );
         vm.prank(nodeOperator);
-        csm.claimRewardsWstETH(noId, UINT256_MAX, new bytes32[](0), 0);
+        csm.claimRewardsWstETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
     function test_claimRewardsWstETH_revertWhenNoNodeOperator() public {
         vm.expectRevert(NodeOperatorDoesNotExist.selector);
-        csm.claimRewardsWstETH(0, UINT256_MAX, new bytes32[](0), 0);
+        csm.claimRewardsWstETH(0, UINT256_MAX, 0, new bytes32[](0));
     }
 
     function test_claimRewardsWstETH_revertWhenNotManager() public {
         uint256 noId = createNodeOperator();
         vm.expectRevert(SenderIsNotManagerAddress.selector);
-        csm.claimRewardsWstETH(noId, UINT256_MAX, new bytes32[](0), 0);
+        csm.claimRewardsWstETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
     function test_requestRewardsETH() public {
@@ -945,24 +945,24 @@ contract CSMClaimRewards is CSMCommon {
                 accounting.requestRewardsETH.selector,
                 noId,
                 UINT256_MAX,
-                new bytes32[](0),
-                0
+                0,
+                new bytes32[](0)
             ),
             1
         );
         vm.prank(nodeOperator);
-        csm.requestRewardsETH(noId, UINT256_MAX, new bytes32[](0), 0);
+        csm.requestRewardsETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
     function test_requestRewardsETH_revertWhenNoNodeOperator() public {
         vm.expectRevert(NodeOperatorDoesNotExist.selector);
-        csm.requestRewardsETH(0, UINT256_MAX, new bytes32[](0), 0);
+        csm.requestRewardsETH(0, UINT256_MAX, 0, new bytes32[](0));
     }
 
     function test_requestRewardsETH_revertWhenNotManager() public {
         uint256 noId = createNodeOperator();
         vm.expectRevert(SenderIsNotManagerAddress.selector);
-        csm.requestRewardsETH(noId, UINT256_MAX, new bytes32[](0), 0);
+        csm.requestRewardsETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 }
 

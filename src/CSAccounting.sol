@@ -480,13 +480,13 @@ contract CSAccounting is
     /// rewardsProof and cumulativeFeeShares might be empty in order to claim only excess bond
     /// @param nodeOperatorId id of the node operator to claim rewards for.
     /// @param stETHAmount amount of stETH to claim.
-    /// @param rewardsProof merkle proof of the rewards.
     /// @param cumulativeFeeShares cumulative fee shares for the node operator.
+    /// @param rewardsProof merkle proof of the rewards.
     function claimRewardsStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount,
-        bytes32[] memory rewardsProof,
-        uint256 cumulativeFeeShares
+        uint256 cumulativeFeeShares,
+        bytes32[] memory rewardsProof
     ) external whenResumed onlyCSM {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
@@ -508,13 +508,13 @@ contract CSAccounting is
     /// rewardsProof and cumulativeFeeShares might be empty in order to claim only excess bond
     /// @param nodeOperatorId id of the node operator to claim rewards for.
     /// @param wstETHAmount amount of wstETH to claim.
-    /// @param rewardsProof merkle proof of the rewards.
     /// @param cumulativeFeeShares cumulative fee shares for the node operator.
+    /// @param rewardsProof merkle proof of the rewards.
     function claimRewardsWstETH(
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
-        bytes32[] memory rewardsProof,
-        uint256 cumulativeFeeShares
+        uint256 cumulativeFeeShares,
+        bytes32[] memory rewardsProof
     ) external whenResumed onlyCSM {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId
@@ -536,13 +536,13 @@ contract CSAccounting is
     /// @dev reverts if amount isn't between MIN_STETH_WITHDRAWAL_AMOUNT and MAX_STETH_WITHDRAWAL_AMOUNT
     /// @param nodeOperatorId id of the node operator to request rewards for.
     /// @param ethAmount amount of ETH to request.
-    /// @param rewardsProof merkle proof of the rewards.
     /// @param cumulativeFeeShares cumulative fee shares for the node operator.
+    /// @param rewardsProof merkle proof of the rewards.
     function requestRewardsETH(
         uint256 nodeOperatorId,
         uint256 ethAmount,
-        bytes32[] memory rewardsProof,
-        uint256 cumulativeFeeShares
+        uint256 cumulativeFeeShares,
+        bytes32[] memory rewardsProof
     ) external whenResumed onlyCSM {
         ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
             nodeOperatorId

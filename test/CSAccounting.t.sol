@@ -273,17 +273,17 @@ contract CSAccountingPauseAffectingTest is CSAccountingBaseTest {
 
     function test_claimRewardsStETH_RevertWhen_Paused() public {
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        accounting.claimRewardsStETH(0, 1 ether, new bytes32[](1), 1 ether);
+        accounting.claimRewardsStETH(0, 1 ether, 1 ether, new bytes32[](1));
     }
 
     function test_claimRewardsWstETH_RevertWhen_Paused() public {
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        accounting.claimRewardsWstETH(0, 1 ether, new bytes32[](1), 1 ether);
+        accounting.claimRewardsWstETH(0, 1 ether, 1 ether, new bytes32[](1));
     }
 
     function test_requestRewardsETH_RevertWhen_Paused() public {
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        accounting.requestRewardsETH(0, 1 ether, new bytes32[](1), 1 ether);
+        accounting.requestRewardsETH(0, 1 ether, 1 ether, new bytes32[](1));
     }
 }
 
@@ -1146,8 +1146,8 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1184,8 +1184,8 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1223,8 +1223,8 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1263,8 +1263,8 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1302,8 +1302,8 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1341,8 +1341,8 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1378,8 +1378,8 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1416,8 +1416,8 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1454,8 +1454,8 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1493,8 +1493,8 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1530,8 +1530,8 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1570,8 +1570,8 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             0.05 ether,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1603,8 +1603,8 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             0,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1630,8 +1630,8 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            new bytes32[](0),
-            0
+            0,
+            new bytes32[](0)
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1656,8 +1656,8 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
     }
 }
@@ -1675,8 +1675,8 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1719,8 +1719,8 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1763,8 +1763,8 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1808,8 +1808,8 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1852,8 +1852,8 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1896,8 +1896,8 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1939,8 +1939,8 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -1983,8 +1983,8 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -2027,8 +2027,8 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -2071,8 +2071,8 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -2113,8 +2113,8 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -2160,8 +2160,8 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             sharesToClaim,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -2203,8 +2203,8 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             0,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -2230,8 +2230,8 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            new bytes32[](0),
-            0
+            0,
+            new bytes32[](0)
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -2256,8 +2256,8 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
     }
 }
@@ -2280,8 +2280,8 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -2309,8 +2309,8 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -2339,8 +2339,8 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -2369,8 +2369,8 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -2399,8 +2399,8 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
 
         uint256 bondSharesAfter = accounting.getBondShares(0);
@@ -2430,8 +2430,8 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
 
         uint256 bondSharesAfter = accounting.getBondShares(0);
@@ -2460,8 +2460,8 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
 
         uint256 bondSharesAfter = accounting.getBondShares(0);
@@ -2491,8 +2491,8 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
 
         uint256 bondSharesAfter = accounting.getBondShares(0);
@@ -2522,8 +2522,8 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
 
         uint256 bondSharesAfter = accounting.getBondShares(0);
@@ -2553,8 +2553,8 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
 
         uint256 bondSharesAfter = accounting.getBondShares(0);
@@ -2583,8 +2583,8 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
 
         uint256 bondSharesAfter = accounting.getBondShares(0);
@@ -2618,8 +2618,8 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             0.05 ether,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -2646,8 +2646,8 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             0,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -2673,8 +2673,8 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            new bytes32[](0),
-            0
+            0,
+            new bytes32[](0)
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
@@ -2699,8 +2699,8 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
-            leaf.proof,
-            leaf.shares
+            leaf.shares,
+            leaf.proof
         );
     }
 }
