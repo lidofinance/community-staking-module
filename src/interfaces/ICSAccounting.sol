@@ -41,6 +41,10 @@ interface ICSAccounting is ICSBondCore, ICSBondCurve, ICSBondLock {
         uint256 nodeOperatorId
     ) external view returns (uint256);
 
+    function getUnbondedKeysCountToEject(
+        uint256 nodeOperatorId
+    ) external view returns (uint256);
+
     function depositWstETH(
         address from,
         uint256 nodeOperatorId,
