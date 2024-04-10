@@ -2991,6 +2991,32 @@ contract CsmSubmitWithdrawal is CSMCommon {
 
         CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
         assertEq(no.totalWithdrawnValidators, 1);
+        // no chages in depositable keys or keys in general
+        assertEq(csm.getNonce(), nonce);
+    }
+
+    function test_submitWithdrawal_changeNonce() public {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator(2);
+        csm.obtainDepositData(1, "");
+
+        uint256 nonce = csm.getNonce();
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit WithdrawalSubmitted(
+            noId,
+            keyIndex,
+            csm.DEPOSIT_SIZE() - BOND_SIZE - 1 ether
+        );
+        csm.submitWithdrawal(
+            noId,
+            keyIndex,
+            csm.DEPOSIT_SIZE() - BOND_SIZE - 1 ether
+        );
+
+        CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnValidators, 1);
+        // depositable decrease should
         assertEq(csm.getNonce(), nonce + 1);
     }
 

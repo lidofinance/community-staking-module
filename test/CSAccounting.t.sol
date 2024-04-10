@@ -3167,46 +3167,6 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             "should emit only one event about deposit"
         );
     }
-
-    // function test_depositETH_RevertIfNotExistedOperator() public {
-    //     vm.expectRevert(NodeOperatorDoesNotExist.selector);
-    //     vm.prank(user);
-    //     accounting.depositETH{ value: 0 }(user, 1);
-    // }
-
-    // function test_depositStETH_RevertIfNotExistedOperator() public {
-    //     vm.expectRevert(NodeOperatorDoesNotExist.selector);
-    //     vm.prank(user);
-    //     accounting.depositStETH(
-    //         user,
-    //         1,
-    //         0 ether,
-    //         CSAccounting.PermitInput({
-    //             value: 0,
-    //             deadline: 0,
-    //             v: 0,
-    //             r: 0,
-    //             s: 0
-    //         })
-    //     );
-    // }
-
-    // function test_depositWstETH_RevertIfNotExistedOperator() public {
-    //     vm.expectRevert(NodeOperatorDoesNotExist.selector);
-    //     vm.prank(user);
-    //     accounting.depositWstETH(
-    //         user,
-    //         1,
-    //         0 ether,
-    //         CSAccounting.PermitInput({
-    //             value: 0,
-    //             deadline: 0,
-    //             v: 0,
-    //             r: 0,
-    //             s: 0
-    //         })
-    //     );
-    // }
 }
 
 contract CSAccountingPenalizeTest is CSAccountingBaseTest {
