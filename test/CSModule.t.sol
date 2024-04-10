@@ -2349,7 +2349,11 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
     function test_getNodeOperatorSummary_noTargetLimitDueToLockedBond() public {
         uint256 noId = createNodeOperator(3);
         csm.obtainDepositData(3, "");
-        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE / 2
+        );
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
         assertEq(summary.targetLimitMode, 0);
         assertEq(summary.targetValidatorsCount, 0);
@@ -2360,7 +2364,11 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
     {
         uint256 noId = createNodeOperator(3);
         csm.obtainDepositData(3, "");
-        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE / 2
+        );
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
         csm.settleELRewardsStealingPenalty(idsToSettle);
@@ -2374,7 +2382,11 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
     {
         uint256 noId = createNodeOperator(3);
         csm.obtainDepositData(2, "");
-        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE / 2
+        );
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
         csm.settleELRewardsStealingPenalty(idsToSettle);
@@ -2386,7 +2398,11 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
     function test_getNodeOperatorSummary_targetLimitDueToAllUnbonded() public {
         uint256 noId = createNodeOperator(3);
         csm.obtainDepositData(2, "");
-        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE * 3);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE * 3
+        );
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
         csm.settleELRewardsStealingPenalty(idsToSettle);
