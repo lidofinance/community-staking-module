@@ -53,11 +53,11 @@ contract CSModuleBase {
     );
     event VettedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 approvedValidatorsCount
+        uint256 approvedValidatorsCount // TODO: check name
     );
     event DepositedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 depositedValidatorsCount
+        uint256 depositedValidatorsCount // TODO: validators or signing keys?
     );
     event ExitedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
@@ -65,13 +65,14 @@ contract CSModuleBase {
     );
     event TotalSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 totalValidatorsCount
+        uint256 totalValidatorsCount // TODO: validators or signing keys?
     );
     event StuckSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 stuckValidatorsCount
+        uint256 stuckValidatorsCount // TODO: validators or signing keys?
     );
     event TargetValidatorsCountChanged(
+        // TODO: think about better name
         uint256 indexed nodeOperatorId,
         uint8 targetLimitMode,
         uint256 targetValidatorsCount
@@ -86,18 +87,21 @@ contract CSModuleBase {
         uint256 keyIndex
     );
 
+    // TODO: do we want event for queue cursor moving as well?
     event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
 
     event StakingModuleTypeSet(bytes32 moduleType);
     event PublicRelease();
     event RemovalChargeSet(uint256 amount);
 
+    // TODO: check words "charge" & "stealing" with legal team
     event RemovalChargeApplied(uint256 indexed nodeOperatorId, uint256 amount);
     event ELRewardsStealingPenaltyReported(
         uint256 indexed nodeOperatorId,
         uint256 proposedBlockNumber,
         uint256 stolenAmount
     );
+    // TODO: consider adding ELRewardsStealingPenaltySettled event
     event ELRewardsStealingPenaltyCancelled(
         uint256 indexed nodeOperatorId,
         uint256 amount
@@ -105,7 +109,7 @@ contract CSModuleBase {
 
     error NodeOperatorDoesNotExist();
     error SenderIsNotManagerAddress();
-    error SenderIsNotManagerOrKeyValidator();
+    error SenderIsNotManagerOrKeyValidator(); // TODO: remove unused
     error InvalidVetKeysPointer();
     error TargetLimitExceeded();
     error StuckKeysPresent();
@@ -139,7 +143,7 @@ contract CSModule is
     PausableUntil,
     AssetRecoverer
 {
-    using SafeERC20 for IERC20;
+    using SafeERC20 for IERC20; // TODO: unused?
     using QueueLib for QueueLib.Queue;
 
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
@@ -157,35 +161,36 @@ contract CSModule is
     bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE"); // 0x0ce23c3e399818cfee81a7ab0880f714e53d7672b08df0fa62f2843416e1ea09
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE"); // 0xb3e25b5404b87e5a838579cb5d7481d61ad96ee284d38ec1e97c07ba64e7f6fc
 
-    uint8 public constant MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE = 10;
+    uint8 public constant MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE = 10; // TODO: 1) per operator 2) uint256? 3) immutable and set in constructor
     // might be received dynamically in case of increasing possible deposit size
     uint256 public constant DEPOSIT_SIZE = 32 ether;
     uint256 private constant MIN_SLASHING_PENALTY_QUOTIENT = 32;
     uint256 public constant INITIAL_SLASHING_PENALTY =
         DEPOSIT_SIZE / MIN_SLASHING_PENALTY_QUOTIENT;
     bytes32 private constant SIGNING_KEYS_POSITION =
-        keccak256("lido.CommunityStakingModule.signingKeysPosition");
+        keccak256("lido.CommunityStakingModule.signingKeysPosition"); // TODO: consider use unstructered or structered storage
 
-    uint256 public constant EL_REWARDS_STEALING_FINE = 0.1 ether;
+    uint256 public constant EL_REWARDS_STEALING_FINE = 0.1 ether; // consider to use immutable var and set it in constructor
 
     bool public publicRelease;
-    uint256 public removalCharge;
-    QueueLib.Queue public queue;
+    uint256 public removalCharge; // TODO: think about better name, smth like keyRemovalCharge
+    QueueLib.Queue public queue; // TODO: depositQueue? public?
 
     ILidoLocator public lidoLocator;
     ICSAccounting public accounting;
     ICSEarlyAdoption public earlyAdoption;
     // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
     // it seems to be enough
-    uint256 private _nodeOperatorsCount;
+    // TODO: ^^ comment
+    uint256 private _nodeOperatorsCount; // TODO: pack more efficinetly
     uint256 private _activeNodeOperatorsCount;
     bytes32 private _moduleType;
     uint256 private _nonce;
     mapping(uint256 => NodeOperator) private _nodeOperators;
-    mapping(uint256 noIdWithKeyIndex => bool) private _isValidatorWithdrawn;
+    mapping(uint256 noIdWithKeyIndex => bool) private _isValidatorWithdrawn; // TODO: noIdWithKeyIndex naming
     mapping(uint256 noIdWithKeyIndex => bool) private _isValidatorSlashed;
 
-    uint256 private _totalDepositedValidators;
+    uint256 private _totalDepositedValidators; // TODO: think about more efficient way to store this
     uint256 private _totalExitedValidators;
     uint256 private _totalAddedValidators;
     uint256 private _depositableValidatorsCount;
@@ -197,6 +202,7 @@ contract CSModule is
         _moduleType = moduleType;
         lidoLocator = ILidoLocator(_lidoLocator);
         emit StakingModuleTypeSet(moduleType);
+        // TODO: Do events for all storage mutation or migrate to immutable vars
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
@@ -217,6 +223,7 @@ contract CSModule is
     function setAccounting(
         address _accounting
     ) external onlyRole(INITIALIZE_ROLE) {
+        // TODO: move to initialise method
         if (address(accounting) != address(0)) {
             revert AlreadySet();
         }
@@ -228,6 +235,7 @@ contract CSModule is
     function setEarlyAdoption(
         address _earlyAdoption
     ) external onlyRole(INITIALIZE_ROLE) {
+        // TODO: move to initialise method
         if (address(earlyAdoption) != address(0)) {
             revert AlreadySet();
         }
@@ -247,6 +255,7 @@ contract CSModule is
     function setRemovalCharge(
         uint256 amount
     ) external onlyRole(MODULE_MANAGER_ROLE) {
+        // TODO: think about limits
         _setRemovalCharge(amount);
     }
 
@@ -281,7 +290,7 @@ contract CSModule is
     /// @notice Adds a new node operator with ETH bond
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of public keys
+    /// @param signatures Signatures of public keys // TODO: not quite right comment
     /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
     /// @param referral Optional referral address
     function addNodeOperatorETH(
@@ -294,7 +303,7 @@ contract CSModule is
         // TODO: sanity checks
 
         uint256 nodeOperatorId = _createNodeOperator(referral);
-        _processEarlyAdoption(nodeOperatorId, eaProof);
+        _processEarlyAdoption(nodeOperatorId, eaProof); // TODO: think about better name
 
         if (
             msg.value !=
@@ -306,6 +315,7 @@ contract CSModule is
             revert InvalidAmount();
         }
 
+        // TODO: ad comment reverts if keysCount is 0
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
 
         accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
@@ -322,8 +332,8 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of public keys
-    /// @param permit Permit to use stETH as bond
-    /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
+    /// @param permit Permit to use stETH as bond // TODO: mark as "optional"
+    /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption // TODO: mark as "optional"
     /// @param referral Optional referral address
     function addNodeOperatorStETH(
         uint256 keysCount,
@@ -1195,7 +1205,7 @@ contract CSModule is
     /// @param amount amount of stolen EL rewards in ETH.
     function reportELRewardsStealingPenalty(
         uint256 nodeOperatorId,
-        uint256 blockNumber,
+        uint256 blockNumber, // TODO: consider to use blockhash instead
         uint256 amount
     )
         external
@@ -1676,6 +1686,7 @@ contract CSModule is
         no.managerAddress = msg.sender;
         no.rewardAddress = msg.sender;
         no.active = true;
+        // TODO: consider wrapping with unchecked
         _nodeOperatorsCount++;
         _activeNodeOperatorsCount++;
 
