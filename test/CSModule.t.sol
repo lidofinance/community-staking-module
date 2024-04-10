@@ -39,7 +39,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
     address internal testChargeRecipient;
 
     struct NodeOperatorSummary {
-        bool isTargetLimitActive;
+        uint8 targetLimitMode;
         uint256 targetValidatorsCount;
         uint256 stuckValidatorsCount;
         uint256 refundedValidatorsCount;
@@ -177,7 +177,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
         uint256 noId
     ) public view returns (NodeOperatorSummary memory) {
         (
-            bool isTargetLimitActive,
+            uint8 targetLimitMode,
             uint256 targetValidatorsCount,
             uint256 stuckValidatorsCount,
             uint256 refundedValidatorsCount,
@@ -188,7 +188,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
         ) = csm.getNodeOperatorSummary(noId);
         return
             NodeOperatorSummary({
-                isTargetLimitActive: isTargetLimitActive,
+                targetLimitMode: targetLimitMode,
                 targetValidatorsCount: targetValidatorsCount,
                 stuckValidatorsCount: stuckValidatorsCount,
                 refundedValidatorsCount: refundedValidatorsCount,
@@ -1829,7 +1829,7 @@ contract CsmQueueOps is CSMCommon {
         uint256 noId = createNodeOperator(7);
         csm.updateTargetValidatorsLimits({
             nodeOperatorId: noId,
-            isTargetLimitActive: true,
+            targetLimitMode: 1,
             targetLimit: 0
         });
         csm.cleanDepositQueue(1);
@@ -1839,7 +1839,7 @@ contract CsmQueueOps is CSMCommon {
 
         csm.updateTargetValidatorsLimits({
             nodeOperatorId: noId,
-            isTargetLimitActive: true,
+            targetLimitMode: 1,
             targetLimit: 7
         });
     }
@@ -1848,7 +1848,7 @@ contract CsmQueueOps is CSMCommon {
         uint256 noId = createNodeOperator(7);
         csm.updateTargetValidatorsLimits({
             nodeOperatorId: noId,
-            isTargetLimitActive: true,
+            targetLimitMode: 1,
             targetLimit: 2
         });
         csm.obtainDepositData(2, "");
@@ -2252,7 +2252,7 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         uint256 noId = createNodeOperator(1);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.isTargetLimitActive, false);
+        assertEq(summary.targetLimitMode, 0);
         assertEq(summary.targetValidatorsCount, 0); // ?
         assertEq(summary.stuckValidatorsCount, 0);
         assertEq(summary.refundedValidatorsCount, 0);
@@ -2271,15 +2271,27 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         assertEq(summary.totalDepositedValidators, 1);
     }
 
-    function test_getNodeOperatorSummary_targetLimit() public {
+    function test_getNodeOperatorSummary_softTargetLimit() public {
         uint256 noId = createNodeOperator(3);
 
-        csm.updateTargetValidatorsLimits(noId, true, 1);
+        csm.updateTargetValidatorsLimits(noId, 1, 1);
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
 
         summary = getNodeOperatorSummary(noId);
         assertEq(summary.targetValidatorsCount, 1);
-        assertTrue(summary.isTargetLimitActive);
+        assertEq(summary.targetLimitMode, 1);
+        assertEq(summary.depositableValidatorsCount, 1);
+    }
+
+    function test_getNodeOperatorSummary_hardTargetLimit() public {
+        uint256 noId = createNodeOperator(3);
+
+        csm.updateTargetValidatorsLimits(noId, 2, 1);
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+
+        summary = getNodeOperatorSummary(noId);
+        assertEq(summary.targetValidatorsCount, 1);
+        assertEq(summary.targetLimitMode, 2);
         assertEq(summary.depositableValidatorsCount, 1);
     }
 
@@ -2289,9 +2301,9 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         uint256 noId = createNodeOperator(3);
         csm.obtainDepositData(1, "");
 
-        csm.updateTargetValidatorsLimits(noId, true, 1);
+        csm.updateTargetValidatorsLimits(noId, 1, 1);
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertTrue(summary.isTargetLimitActive);
+        assertEq(summary.targetLimitMode, 1);
         assertEq(summary.targetValidatorsCount, 1);
         assertEq(summary.depositableValidatorsCount, 0);
     }
@@ -2302,9 +2314,9 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         uint256 noId = createNodeOperator(3);
         csm.obtainDepositData(2, "");
 
-        csm.updateTargetValidatorsLimits(noId, true, 1);
+        csm.updateTargetValidatorsLimits(noId, 1, 1);
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertTrue(summary.isTargetLimitActive);
+        assertEq(summary.targetLimitMode, 1);
         assertEq(summary.targetValidatorsCount, 1);
         assertEq(summary.depositableValidatorsCount, 0);
     }
@@ -2314,9 +2326,9 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
     {
         uint256 noId = createNodeOperator(3);
 
-        csm.updateTargetValidatorsLimits(noId, true, 2);
+        csm.updateTargetValidatorsLimits(noId, 1, 2);
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertTrue(summary.isTargetLimitActive);
+        assertEq(summary.targetLimitMode, 1);
         assertEq(summary.targetValidatorsCount, 2);
         assertEq(summary.depositableValidatorsCount, 2);
         CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
@@ -2327,11 +2339,60 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         public
     {
         uint256 noId = createNodeOperator(3);
-        csm.updateTargetValidatorsLimits(noId, true, 9);
+        csm.updateTargetValidatorsLimits(noId, 1, 9);
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertTrue(summary.isTargetLimitActive);
+        assertEq(summary.targetLimitMode, 1);
         assertEq(summary.targetValidatorsCount, 9);
         assertEq(summary.depositableValidatorsCount, 3);
+    }
+
+    function test_getNodeOperatorSummary_noTargetLimitDueToLockedBond() public {
+        uint256 noId = createNodeOperator(3);
+        csm.obtainDepositData(3, "");
+        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(summary.targetLimitMode, 0);
+        assertEq(summary.targetValidatorsCount, 0);
+    }
+
+    function test_getNodeOperatorSummary_targetLimitDueToUnbondedDeposited()
+        public
+    {
+        uint256 noId = createNodeOperator(3);
+        csm.obtainDepositData(3, "");
+        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(summary.targetLimitMode, 2);
+        assertEq(summary.targetValidatorsCount, 2);
+    }
+
+    function test_getNodeOperatorSummary_targetLimitDueToUnbondedNonDeposited()
+        public
+    {
+        uint256 noId = createNodeOperator(3);
+        csm.obtainDepositData(2, "");
+        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(summary.targetLimitMode, 2);
+        assertEq(summary.targetValidatorsCount, 2);
+    }
+
+    function test_getNodeOperatorSummary_targetLimitDueToAllUnbonded() public {
+        uint256 noId = createNodeOperator(3);
+        csm.obtainDepositData(2, "");
+        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE * 3);
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(summary.targetLimitMode, 2);
+        assertEq(summary.targetValidatorsCount, 0);
     }
 }
 
@@ -2341,42 +2402,82 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit TargetValidatorsCountChanged(noId, true, 1);
-        csm.updateTargetValidatorsLimits(noId, true, 1);
+        emit TargetValidatorsCountChanged(noId, 1, 1);
+        csm.updateTargetValidatorsLimits(noId, 1, 1);
         assertEq(csm.getNonce(), nonce + 1);
     }
 
     function test_updateTargetValidatorsLimits_limitIsZero() public {
         uint256 noId = createNodeOperator();
         vm.expectEmit(true, true, true, true, address(csm));
-        emit TargetValidatorsCountChanged(noId, true, 0);
-        csm.updateTargetValidatorsLimits(noId, true, 0);
+        emit TargetValidatorsCountChanged(noId, 1, 0);
+        csm.updateTargetValidatorsLimits(noId, 1, 0);
     }
 
-    function test_updateTargetValidatorsLimits_enableLimit() public {
+    function test_updateTargetValidatorsLimits_enableSoftLimit() public {
         uint256 noId = createNodeOperator();
-        csm.updateTargetValidatorsLimits(noId, false, 10);
+        csm.updateTargetValidatorsLimits(noId, 0, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit TargetValidatorsCountChanged(noId, true, 10);
-        csm.updateTargetValidatorsLimits(noId, true, 10);
+        emit TargetValidatorsCountChanged(noId, 1, 10);
+        csm.updateTargetValidatorsLimits(noId, 1, 10);
     }
 
-    function test_updateTargetValidatorsLimits_disableLimit() public {
+    function test_updateTargetValidatorsLimits_enableHardLimit() public {
         uint256 noId = createNodeOperator();
-        csm.updateTargetValidatorsLimits(noId, true, 10);
+        csm.updateTargetValidatorsLimits(noId, 0, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit TargetValidatorsCountChanged(noId, false, 10);
-        csm.updateTargetValidatorsLimits(noId, false, 10);
+        emit TargetValidatorsCountChanged(noId, 2, 10);
+        csm.updateTargetValidatorsLimits(noId, 2, 10);
+    }
+
+    function test_updateTargetValidatorsLimits_disableSoftLimit() public {
+        uint256 noId = createNodeOperator();
+        csm.updateTargetValidatorsLimits(noId, 1, 10);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit TargetValidatorsCountChanged(noId, 0, 10);
+        csm.updateTargetValidatorsLimits(noId, 0, 10);
+    }
+
+    function test_updateTargetValidatorsLimits_disableHardLimit() public {
+        uint256 noId = createNodeOperator();
+        csm.updateTargetValidatorsLimits(noId, 2, 10);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit TargetValidatorsCountChanged(noId, 0, 10);
+        csm.updateTargetValidatorsLimits(noId, 0, 10);
+    }
+
+    function test_updateTargetValidatorsLimits_switchFromHardToSoftLimit()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        csm.updateTargetValidatorsLimits(noId, 2, 10);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit TargetValidatorsCountChanged(noId, 1, 5);
+        csm.updateTargetValidatorsLimits(noId, 1, 5);
+    }
+
+    function test_updateTargetValidatorsLimits_switchFromSoftToHardLimit()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        csm.updateTargetValidatorsLimits(noId, 1, 10);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit TargetValidatorsCountChanged(noId, 2, 5);
+        csm.updateTargetValidatorsLimits(noId, 2, 5);
     }
 
     function test_updateTargetValidatorsLimits_NoUnvetKeysWhenLimitDisabled()
         public
     {
         uint256 noId = createNodeOperator(2);
-        csm.updateTargetValidatorsLimits(noId, true, 1);
-        csm.updateTargetValidatorsLimits(noId, false, 1);
+        csm.updateTargetValidatorsLimits(noId, 1, 1);
+        csm.updateTargetValidatorsLimits(noId, 0, 1);
         CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
         assertEq(no.totalVettedValidators, 2);
     }
@@ -2385,7 +2486,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         public
     {
         vm.expectRevert(NodeOperatorDoesNotExist.selector);
-        csm.updateTargetValidatorsLimits(0, true, 1);
+        csm.updateTargetValidatorsLimits(0, 1, 1);
     }
 }
 
@@ -3602,7 +3703,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.grantRole(role, actor);
 
         vm.prank(actor);
-        csm.updateTargetValidatorsLimits(noId, false, 0);
+        csm.updateTargetValidatorsLimits(noId, 0, 0);
     }
 
     function test_stakingRouterRole_updateTargetValidatorsLimits_revert()
@@ -3614,7 +3715,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
-        csm.updateTargetValidatorsLimits(noId, false, 0);
+        csm.updateTargetValidatorsLimits(noId, 0, 0);
     }
 
     function test_stakingRouterRole_onExitedAndStuckValidatorsCountsUpdated()
