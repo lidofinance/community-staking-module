@@ -26,7 +26,6 @@ abstract contract CSAccountingBase {
     error AlreadyInitialized();
     error InvalidSender();
     error SenderIsNotCSM();
-    error NodeOperatorDoesNotExist();
 }
 
 /// @author vgorkavenko
@@ -374,16 +373,8 @@ contract CSAccounting is
     function depositETH(
         address from,
         uint256 nodeOperatorId
-    )
-        external
-        payable
-        whenResumed
-        onlyExistingNodeOperator(nodeOperatorId)
-        returns (uint256 shares)
-    {
-        from = _validateDepositSender(from);
+    ) external payable whenResumed onlyCSM returns (uint256 shares) {
         shares = CSBondCore._depositETH(from, nodeOperatorId);
-        CSM.onBondChanged(nodeOperatorId);
     }
 
     /// @notice Deposit user's stETH to the bond for the given Node Operator
@@ -398,14 +389,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 stETHAmount,
         PermitInput calldata permit
-    )
-        external
-        whenResumed
-        onlyExistingNodeOperator(nodeOperatorId)
-        returns (uint256 shares)
-    {
-        // TODO: can it be two functions rather than one with `from` param and condition?
-        from = _validateDepositSender(from);
+    ) external whenResumed onlyCSM returns (uint256 shares) {
         // preventing revert for already used permit or avoid permit usage in case of value == 0
         if (
             permit.value > 0 &&
@@ -423,7 +407,6 @@ contract CSAccounting is
             );
         }
         shares = CSBondCore._depositStETH(from, nodeOperatorId, stETHAmount);
-        CSM.onBondChanged(nodeOperatorId);
     }
 
     /// @notice Unwrap user's wstETH and make deposit in stETH to the bond for the given Node Operator
@@ -438,14 +421,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
         PermitInput calldata permit
-    )
-        external
-        whenResumed
-        onlyExistingNodeOperator(nodeOperatorId)
-        returns (uint256 shares)
-    {
-        // TODO: can it be two functions rather than one with `from` param and condition?
-        from = _validateDepositSender(from);
+    ) external whenResumed onlyCSM returns (uint256 shares) {
         // preventing revert for already used permit or avoid permit usage in case of value == 0
         if (
             permit.value > 0 &&
@@ -463,7 +439,6 @@ contract CSAccounting is
             );
         }
         shares = CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
-        CSM.onBondChanged(nodeOperatorId);
     }
 
     /// @dev only CSM can pass `from` != `msg.sender`
@@ -677,19 +652,11 @@ contract CSAccounting is
             rewardsProof
         );
         _increaseBond(nodeOperatorId, distributed);
-        CSM.onBondChanged(nodeOperatorId);
     }
 
     modifier onlyCSM() {
         if (msg.sender != address(CSM)) {
             revert SenderIsNotCSM();
-        }
-        _;
-    }
-
-    modifier onlyExistingNodeOperator(uint256 nodeOperatorId) {
-        if (nodeOperatorId >= CSM.getNodeOperatorsCount()) {
-            revert NodeOperatorDoesNotExist();
         }
         _;
     }

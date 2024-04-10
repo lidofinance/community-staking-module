@@ -125,13 +125,6 @@ contract CSAccountingBaseTest is
             address(stakingModule)
         );
         vm.stopPrank();
-
-        // HACK: To avoid changing the Stub to a mock so far.
-        vm.mockCall(
-            address(stakingModule),
-            abi.encodeWithSelector(ICSModule.onBondChanged.selector),
-            ""
-        );
     }
 
     function mock_getNodeOperatorsCount(uint256 returnValue) internal {
@@ -235,11 +228,14 @@ contract CSAccountingPauseAffectingTest is CSAccountingBaseTest {
     }
 
     function test_depositETH_RevertWhen_Paused() public {
+        vm.deal(address(stakingModule), 1 ether);
+        vm.prank(address(stakingModule));
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
         accounting.depositETH{ value: 1 ether }(address(user), 0);
     }
 
     function test_depositStETH_RevertWhen_Paused() public {
+        vm.prank(address(stakingModule));
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
         accounting.depositStETH(
             address(user),
@@ -256,6 +252,7 @@ contract CSAccountingPauseAffectingTest is CSAccountingBaseTest {
     }
 
     function test_depositWstETH_RevertWhen_Paused() public {
+        vm.prank(address(stakingModule));
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
         accounting.depositWstETH(
             address(user),
@@ -272,16 +269,19 @@ contract CSAccountingPauseAffectingTest is CSAccountingBaseTest {
     }
 
     function test_claimRewardsStETH_RevertWhen_Paused() public {
+        vm.prank(address(stakingModule));
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
         accounting.claimRewardsStETH(0, 1 ether, 1 ether, new bytes32[](1));
     }
 
     function test_claimRewardsWstETH_RevertWhen_Paused() public {
+        vm.prank(address(stakingModule));
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
         accounting.claimRewardsWstETH(0, 1 ether, 1 ether, new bytes32[](1));
     }
 
     function test_requestRewardsETH_RevertWhen_Paused() public {
+        vm.prank(address(stakingModule));
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
         accounting.requestRewardsETH(0, 1 ether, 1 ether, new bytes32[](1));
     }
@@ -328,8 +328,8 @@ abstract contract CSAccountingBondStateBaseTest is
     }
 
     function _deposit(uint256 bond) internal virtual {
-        vm.deal(user, bond);
-        vm.prank(user);
+        vm.deal(address(stakingModule), bond);
+        vm.prank(address(stakingModule));
         accounting.depositETH{ value: bond }({
             from: address(0),
             nodeOperatorId: 0
@@ -2722,14 +2722,14 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
     }
 
     function test_depositETH() public {
-        vm.deal(user, 32 ether);
+        vm.deal(address(stakingModule), 32 ether);
         uint256 sharesToDeposit = stETH.getSharesByPooledEth(32 ether);
 
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.depositETH{ value: 32 ether }(user, 0);
 
         assertEq(
-            address(user).balance,
+            address(stakingModule).balance,
             0,
             "user balance should be 0 after deposit"
         );
@@ -2753,7 +2753,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             _referal: address(0)
         });
 
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.depositStETH(
             user,
             0,
@@ -2795,7 +2795,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         );
         vm.stopPrank();
 
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.depositWstETH(
             user,
             0,
@@ -2834,10 +2834,10 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             _referal: address(0)
         });
 
+        vm.prank(address(stakingModule));
         vm.expectEmit(true, true, true, true, address(stETH));
         emit Approval(user, address(accounting), 32 ether);
 
-        vm.prank(user);
         accounting.depositStETH(
             user,
             0,
@@ -2890,7 +2890,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
 
         vm.recordLogs();
 
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.depositStETH(
             user,
             0,
@@ -2927,9 +2927,10 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             abi.encode(UINT256_MAX)
         );
 
+        vm.prank(address(stakingModule));
+
         vm.recordLogs();
 
-        vm.prank(user);
         accounting.depositStETH(
             user,
             0,
@@ -2968,7 +2969,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
 
         vm.recordLogs();
 
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.depositStETH(
             user,
             0,
@@ -3003,7 +3004,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         vm.expectEmit(true, true, true, true, address(wstETH));
         emit Approval(user, address(accounting), 32 ether);
 
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.depositWstETH(
             user,
             0,
@@ -3061,7 +3062,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
 
         vm.recordLogs();
 
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.depositWstETH(
             user,
             0,
@@ -3102,7 +3103,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
 
         vm.recordLogs();
 
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.depositWstETH(
             user,
             0,
@@ -3145,7 +3146,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
 
         vm.recordLogs();
 
-        vm.prank(user);
+        vm.prank(address(stakingModule));
         accounting.depositWstETH(
             user,
             0,
@@ -3166,86 +3167,6 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             "should emit only one event about deposit"
         );
     }
-
-    function test_depositETH_RevertIfNotExistedOperator() public {
-        vm.expectRevert(NodeOperatorDoesNotExist.selector);
-        vm.prank(user);
-        accounting.depositETH{ value: 0 }(user, 1);
-    }
-
-    function test_depositStETH_RevertIfNotExistedOperator() public {
-        vm.expectRevert(NodeOperatorDoesNotExist.selector);
-        vm.prank(user);
-        accounting.depositStETH(
-            user,
-            1,
-            0 ether,
-            CSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-    }
-
-    function test_depositWstETH_RevertIfNotExistedOperator() public {
-        vm.expectRevert(NodeOperatorDoesNotExist.selector);
-        vm.prank(user);
-        accounting.depositWstETH(
-            user,
-            1,
-            0 ether,
-            CSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-    }
-
-    function test_depositETH_RevertIfInvalidSender() public {
-        vm.expectRevert(InvalidSender.selector);
-        vm.prank(stranger);
-        accounting.depositETH{ value: 0 }(user, 0);
-    }
-
-    function test_depositStETH_RevertIfInvalidSender() public {
-        vm.expectRevert(InvalidSender.selector);
-        vm.prank(stranger);
-        accounting.depositStETH(
-            user,
-            0,
-            32 ether,
-            CSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-    }
-
-    function test_depositWstETH_RevertIfInvalidSender() public {
-        vm.expectRevert(InvalidSender.selector);
-        vm.prank(stranger);
-        accounting.depositWstETH(
-            user,
-            0,
-            32 ether,
-            CSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-    }
 }
 
 contract CSAccountingPenalizeTest is CSAccountingBaseTest {
@@ -3262,8 +3183,8 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
         n.totalDepositedValidators = 0;
         mock_getNodeOperator(n);
         mock_getNodeOperatorsCount(1);
-        vm.deal(user, 32 ether);
-        vm.prank(user);
+        vm.deal(address(stakingModule), 32 ether);
+        vm.prank(address(stakingModule));
         accounting.depositETH{ value: 32 ether }(user, 0);
     }
 
@@ -3313,8 +3234,8 @@ contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
         n.totalDepositedValidators = 0;
         mock_getNodeOperator(n);
         mock_getNodeOperatorsCount(1);
-        vm.deal(user, 32 ether);
-        vm.prank(user);
+        vm.deal(address(stakingModule), 32 ether);
+        vm.prank(address(stakingModule));
         accounting.depositETH{ value: 32 ether }(user, 0);
     }
 
@@ -3502,8 +3423,8 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
 contract CSAccountingMiscTest is CSAccountingBaseTest {
     function test_totalBondShares() public {
         mock_getNodeOperatorsCount(2);
-        vm.deal(user, 64 ether);
-        vm.startPrank(user);
+        vm.deal(address(stakingModule), 64 ether);
+        vm.startPrank(address(stakingModule));
         accounting.depositETH{ value: 32 ether }(user, 0);
         accounting.depositETH{ value: 32 ether }(user, 1);
         vm.stopPrank();
@@ -3635,11 +3556,11 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
     function test_recoverStETHShares() public {
         mock_getNodeOperatorsCount(1);
 
-        vm.deal(user, 2 ether);
-        vm.startPrank(user);
+        vm.deal(address(stakingModule), 2 ether);
+        vm.startPrank(address(stakingModule));
         stETH.submit{ value: 2 ether }(address(0));
         accounting.depositStETH(
-            address(user),
+            address(stakingModule),
             0,
             1 ether,
             CSAccounting.PermitInput({

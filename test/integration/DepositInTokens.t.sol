@@ -10,6 +10,7 @@ import { CSAccounting } from "../../src/CSAccounting.sol";
 import { IWstETH } from "../../src/interfaces/IWstETH.sol";
 import { ILido } from "../../src/interfaces/ILido.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
+import { ICSAccounting } from "../../src/interfaces/ICSAccounting.sol";
 import { Utilities } from "../helpers/Utilities.sol";
 import { PermitHelper } from "../helpers/Permit.sol";
 import { IntegrationFixtures } from "../helpers/Fixtures.sol";
@@ -23,7 +24,7 @@ contract DepositIntegrationTest is
 {
     uint256 networkFork;
 
-    CommunityStakingModuleMock public csm;
+    CSModule public csm;
     CSAccounting public accounting;
     ILidoLocator public locator;
     IWstETH public wstETH;
@@ -42,7 +43,11 @@ contract DepositIntegrationTest is
         checkChainId(1);
 
         locator = ILidoLocator(LOCATOR_ADDRESS);
-        csm = new CommunityStakingModuleMock();
+        csm = new CSModule(
+            "community-staking-module",
+            LOCATOR_ADDRESS,
+            address(this)
+        );
 
         wstETH = IWstETH(WSTETH_ADDRESS);
 
@@ -64,16 +69,23 @@ contract DepositIntegrationTest is
             locator.treasury()
         );
 
-        csm.setNodeOperator({
-            _nodeOperatorId: 0,
-            _active: true,
-            _rewardAddress: user,
-            _totalVettedValidators: 16,
-            _totalExitedValidators: 0,
-            _totalWithdrawnValidators: 1,
-            _totalAddedValidators: 16,
-            _totalDepositedValidators: 16
-        });
+        csm.grantRole(csm.INITIALIZE_ROLE(), address(this));
+        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
+        csm.activatePublicRelease();
+
+        csm.setAccounting(address(accounting));
+
+        (bytes memory keys, bytes memory signatures) = keysSignatures(2);
+        address nodeOperator = address(2);
+        vm.deal(nodeOperator, 4 ether);
+        vm.prank(nodeOperator);
+        csm.addNodeOperatorETH{ value: 4 ether }(
+            2,
+            keys,
+            signatures,
+            new bytes32[](0),
+            address(0)
+        );
     }
 
     function test_depositStETH() public {
@@ -83,12 +95,13 @@ contract DepositIntegrationTest is
             _referal: address(0)
         });
 
+        uint256 preShares = accounting.getBondShares(0);
+
         ILido(locator.lido()).approve(address(accounting), type(uint256).max);
-        accounting.depositStETH(
-            user,
+        csm.depositStETH(
             0,
             32 ether,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
                 v: 0,
@@ -98,18 +111,22 @@ contract DepositIntegrationTest is
         );
 
         assertEq(ILido(locator.lido()).balanceOf(user), 0);
-        assertEq(accounting.getBondShares(0), shares);
-        assertEq(accounting.totalBondShares(), shares);
+        assertEq(accounting.getBondShares(0), shares + preShares);
+        assertEq(accounting.totalBondShares(), shares + preShares);
     }
 
     function test_depositETH() public {
-        vm.prank(user);
+        vm.startPrank(user);
         vm.deal(user, 32 ether);
-        uint256 shares = accounting.depositETH{ value: 32 ether }(user, 0);
+
+        uint256 preShares = accounting.getBondShares(0);
+
+        uint256 shares = ILido(locator.lido()).getSharesByPooledEth(32 ether);
+        csm.depositETH{ value: 32 ether }(0);
 
         assertEq(user.balance, 0);
-        assertEq(accounting.getBondShares(0), shares);
-        assertEq(accounting.totalBondShares(), shares);
+        assertEq(accounting.getBondShares(0), shares + preShares);
+        assertEq(accounting.totalBondShares(), shares + preShares);
     }
 
     function test_depositWstETH() public {
@@ -121,13 +138,17 @@ contract DepositIntegrationTest is
         ILido(locator.lido()).approve(address(wstETH), type(uint256).max);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
 
-        vm.startPrank(user);
+        uint256 shares = ILido(locator.lido()).getSharesByPooledEth(
+            wstETH.getStETHByWstETH(wstETHAmount)
+        );
+
+        uint256 preShares = accounting.getBondShares(0);
+
         wstETH.approve(address(accounting), type(uint256).max);
-        uint256 shares = accounting.depositWstETH(
-            user,
+        csm.depositWstETH(
             0,
             wstETHAmount,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
                 v: 0,
@@ -137,8 +158,8 @@ contract DepositIntegrationTest is
         );
 
         assertEq(wstETH.balanceOf(user), 0);
-        assertEq(accounting.getBondShares(0), shares);
-        assertEq(accounting.totalBondShares(), shares);
+        assertEq(accounting.getBondShares(0), shares + preShares);
+        assertEq(accounting.totalBondShares(), shares + preShares);
     }
 
     function test_depositStETHWithPermit() public {
@@ -157,14 +178,13 @@ contract DepositIntegrationTest is
         uint256 shares = ILido(locator.lido()).submit{ value: 32 ether }({
             _referal: address(0)
         });
-        vm.stopPrank();
 
-        vm.prank(user);
-        accounting.depositStETH(
-            user,
+        uint256 preShares = accounting.getBondShares(0);
+
+        csm.depositStETH(
             0,
             32 ether,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 32 ether,
                 deadline: type(uint256).max,
                 v: v,
@@ -174,8 +194,8 @@ contract DepositIntegrationTest is
         );
 
         assertEq(ILido(locator.lido()).balanceOf(user), 0);
-        assertEq(accounting.getBondShares(0), shares);
-        assertEq(accounting.totalBondShares(), shares);
+        assertEq(accounting.getBondShares(0), shares + preShares);
+        assertEq(accounting.totalBondShares(), shares + preShares);
     }
 
     function test_depositWstETHWithPermit() public {
@@ -196,14 +216,17 @@ contract DepositIntegrationTest is
         });
         ILido(locator.lido()).approve(address(wstETH), type(uint256).max);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
-        vm.stopPrank();
 
-        vm.prank(user);
-        uint256 shares = accounting.depositWstETH(
-            user,
+        uint256 shares = ILido(locator.lido()).getSharesByPooledEth(
+            wstETH.getStETHByWstETH(wstETHAmount)
+        );
+
+        uint256 preShares = accounting.getBondShares(0);
+
+        csm.depositWstETH(
             0,
             wstETHAmount,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 32 ether,
                 deadline: type(uint256).max,
                 v: v,
@@ -213,7 +236,7 @@ contract DepositIntegrationTest is
         );
 
         assertEq(wstETH.balanceOf(user), 0);
-        assertEq(accounting.getBondShares(0), shares);
-        assertEq(accounting.totalBondShares(), shares);
+        assertEq(accounting.getBondShares(0), shares + preShares);
+        assertEq(accounting.totalBondShares(), shares + preShares);
     }
 }
