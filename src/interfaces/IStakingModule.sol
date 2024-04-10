@@ -29,7 +29,7 @@ interface IStakingModule {
 
     /// @notice Returns all-validators summary belonging to the node operator with the given id
     /// @param _nodeOperatorId id of the operator to return report for
-    /// @return isTargetLimitActive shows whether the current target limit applied to the node operator
+    /// @return targetLimitMode shows whether the current target limit applied to the node operator
     /// @return targetValidatorsCount relative target active validators limit for operator
     /// @return stuckValidatorsCount number of validators with an expired request to exit time
     /// @return refundedValidatorsCount number of validators that can't be withdrawn, but deposit
@@ -48,7 +48,7 @@ interface IStakingModule {
         external
         view
         returns (
-            bool isTargetLimitActive,
+            uint8 targetLimitMode,
             uint256 targetValidatorsCount,
             uint256 stuckValidatorsCount,
             uint256 refundedValidatorsCount,
@@ -125,11 +125,11 @@ interface IStakingModule {
 
     /// @notice Updates the limit of the validators that can be used for deposit
     /// @param _nodeOperatorId Id of the node operator
-    /// @param _isTargetLimitActive Active flag
+    /// @param _targetLimitMode Active flag
     /// @param _targetLimit Target limit of the node operator
     function updateTargetValidatorsLimits(
         uint256 _nodeOperatorId,
-        bool _isTargetLimitActive,
+        uint8 _targetLimitMode,
         uint256 _targetLimit
     ) external;
 

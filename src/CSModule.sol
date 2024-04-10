@@ -32,7 +32,7 @@ struct NodeOperator {
     address proposedRewardAddress;
     bool active;
     uint256 targetLimit;
-    bool isTargetLimitActive;
+    uint8 targetLimitMode;
     uint256 stuckPenaltyEndTimestamp;
     uint256 totalExitedKeys; // @dev only increased
     uint256 totalAddedKeys; // @dev increased and decreased when removed
@@ -73,7 +73,7 @@ contract CSModuleBase {
     );
     event TargetValidatorsCountChanged(
         uint256 indexed nodeOperatorId,
-        bool isTargetLimitActive,
+        uint8 targetLimitMode,
         uint256 targetValidatorsCount
     );
     event WithdrawalSubmitted(
@@ -730,7 +730,7 @@ contract CSModule is
     ///      - totalVettedKeys
     ///      - totalDepositedKeys
     ///      - totalExitedKeys
-    ///      - isTargetLimitActive
+    ///      - targetLimitMode
     ///      - targetValidatorsCount
     function getNodeOperatorSummary(
         uint256 nodeOperatorId
@@ -738,7 +738,7 @@ contract CSModule is
         external
         view
         returns (
-            bool isTargetLimitActive,
+            uint8 targetLimitMode,
             uint256 targetValidatorsCount,
             uint256 stuckValidatorsCount,
             uint256 refundedValidatorsCount,
@@ -749,8 +749,20 @@ contract CSModule is
         )
     {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        isTargetLimitActive = no.isTargetLimitActive;
-        targetValidatorsCount = no.targetLimit;
+        uint256 totalUnbondedKeys = accounting.getUnbondedKeysCountToEject(
+            nodeOperatorId
+        );
+        if (totalUnbondedKeys > 0) {
+            // TODO: Use enum?
+            targetLimitMode = 2;
+            targetValidatorsCount =
+                no.totalAddedKeys -
+                no.totalExitedKeys -
+                totalUnbondedKeys;
+        } else {
+            targetLimitMode = no.targetLimitMode;
+            targetValidatorsCount = no.targetLimit;
+        }
         stuckValidatorsCount = no.stuckValidatorsCount;
         refundedValidatorsCount = no.refundedValidatorsCount;
         stuckPenaltyEndTimestamp = no.stuckPenaltyEndTimestamp;
@@ -849,7 +861,7 @@ contract CSModule is
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         uint256 newCount = no.totalVettedKeys - no.totalDepositedKeys;
-        if (no.isTargetLimitActive) {
+        if (no.targetLimitMode > 0) {
             uint256 activeKeys = no.totalDepositedKeys - no.totalWithdrawnKeys;
             newCount = Math.min(
                 no.targetLimit > activeKeys ? no.targetLimit - activeKeys : 0,
@@ -1022,11 +1034,11 @@ contract CSModule is
     /// @notice Updates target limits for node operator by StakingRouter
     /// @dev Target limit decreasing (or appearing) must unvet node operator's keys from the queue
     /// @param nodeOperatorId ID of the node operator
-    /// @param isTargetLimitActive Is target limit active for the node operator
+    /// @param targetLimitMode Is target limit active for the node operator
     /// @param targetLimit Target limit of validators
     function updateTargetValidatorsLimits(
         uint256 nodeOperatorId,
-        bool isTargetLimitActive,
+        uint8 targetLimitMode,
         uint256 targetLimit
     )
         external
@@ -1036,12 +1048,12 @@ contract CSModule is
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         if (
-            no.isTargetLimitActive == isTargetLimitActive &&
+            no.targetLimitMode == targetLimitMode &&
             no.targetLimit == targetLimit
         ) return;
 
-        if (no.isTargetLimitActive != isTargetLimitActive) {
-            no.isTargetLimitActive = isTargetLimitActive;
+        if (no.targetLimitMode != targetLimitMode) {
+            no.targetLimitMode = targetLimitMode;
         }
 
         if (no.targetLimit != targetLimit) {
@@ -1050,7 +1062,7 @@ contract CSModule is
 
         emit TargetValidatorsCountChanged(
             nodeOperatorId,
-            isTargetLimitActive,
+            targetLimitMode,
             targetLimit
         );
 

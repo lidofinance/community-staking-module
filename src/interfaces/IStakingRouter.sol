@@ -104,7 +104,7 @@ interface IStakingRouter {
     error ZeroAddress(string field);
 
     struct NodeOperatorSummary {
-        bool isTargetLimitActive;
+        uint8 targetLimitMode;
         uint256 targetValidatorsCount;
         uint256 stuckValidatorsCount;
         uint256 refundedValidatorsCount;
