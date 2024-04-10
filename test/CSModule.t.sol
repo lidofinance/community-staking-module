@@ -229,7 +229,13 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
 
         feeDistributor = new Stub();
 
-        csm = new CSModule("community-staking-module", address(locator), admin);
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            admin,
+            0.1 ether,
+            10
+        );
         uint256[] memory curve = new uint256[](1);
         curve[0] = BOND_SIZE;
         accounting = new CSAccounting(
@@ -289,7 +295,13 @@ contract CSMCommonNoRoles is CSMFixtures {
         (locator, wstETH, stETH, ) = initLido();
 
         feeDistributor = new Stub();
-        csm = new CSModule("community-staking-module", address(locator), admin);
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            admin,
+            0.1 ether,
+            10
+        );
 
         vm.startPrank(admin);
         csm.grantRole(csm.INITIALIZE_ROLE(), admin);
@@ -316,13 +328,25 @@ contract CSMCommonNoRoles is CSMFixtures {
 
 contract CsmInitialization is CSMCommon {
     function test_initContract() public {
-        csm = new CSModule("community-staking-module", address(locator), admin);
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            admin,
+            0.1 ether,
+            10
+        );
         assertEq(csm.getType(), "community-staking-module");
         assertEq(csm.getNodeOperatorsCount(), 0);
     }
 
     function test_setAccounting() public {
-        csm = new CSModule("community-staking-module", address(locator), admin);
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            admin,
+            0.1 ether,
+            10
+        );
         vm.startPrank(admin);
         csm.grantRole(csm.INITIALIZE_ROLE(), address(admin));
         csm.setAccounting(address(accounting));
@@ -847,7 +871,11 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
     function test_DepositETH_NonceShouldChange() public {
         uint256 noId = createNodeOperator();
 
-        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE / 2
+        );
 
         uint256 nonce = csm.getNonce();
 
@@ -961,7 +989,11 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
     function test_DepositStETH_NonceShouldChange() public {
         uint256 noId = createNodeOperator();
 
-        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE / 2
+        );
 
         uint256 nonce = csm.getNonce();
 
@@ -1107,7 +1139,11 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
     function test_DepositWstETH_NonceShouldChange() public {
         uint256 noId = createNodeOperator();
 
-        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE / 2
+        );
 
         uint256 nonce = csm.getNonce();
 
@@ -2654,8 +2690,16 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit ELRewardsStealingPenaltyReported(noId, 100, BOND_SIZE / 2);
-        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+        emit ELRewardsStealingPenaltyReported(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE / 2
+        );
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE / 2
+        );
 
         uint256 lockedBond = accounting.getActualLockedBond(noId);
         assertEq(lockedBond, BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_FINE());
@@ -2666,7 +2710,7 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         public
     {
         vm.expectRevert(NodeOperatorDoesNotExist.selector);
-        csm.reportELRewardsStealingPenalty(0, 100, 1 ether);
+        csm.reportELRewardsStealingPenalty(0, blockhash(block.number), 1 ether);
     }
 
     function test_reportELRewardsStealingPenalty_NoNonceChange() public {
@@ -2678,7 +2722,11 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
 
         uint256 nonce = csm.getNonce();
 
-        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE / 2
+        );
 
         assertEq(csm.getNonce(), nonce);
     }
@@ -2688,7 +2736,11 @@ contract CsmCancelELRewardsStealingPenalty is CSMCommon {
     function test_cancelELRewardsStealingPenalty_HappyPath() public {
         uint256 noId = createNodeOperator();
 
-        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE / 2
+        );
 
         uint256 nonce = csm.getNonce();
 
@@ -2710,7 +2762,11 @@ contract CsmCancelELRewardsStealingPenalty is CSMCommon {
     function test_cancelELRewardsStealingPenalty_Partial() public {
         uint256 noId = createNodeOperator();
 
-        csm.reportELRewardsStealingPenalty(noId, 100, BOND_SIZE / 2);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE / 2
+        );
 
         uint256 nonce = csm.getNonce();
 
@@ -2738,8 +2794,17 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         uint256 amount = 1 ether;
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
-        csm.reportELRewardsStealingPenalty(noId, block.number, amount);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            amount
+        );
 
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit ELRewardsStealingPenaltySettled(
+            noId,
+            amount + csm.EL_REWARDS_STEALING_FINE()
+        );
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
@@ -2774,10 +2839,82 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         uint256[] memory idsToSettle = new uint256[](2);
         idsToSettle[0] = firstNoId;
         idsToSettle[1] = secondNoId;
-        csm.reportELRewardsStealingPenalty(firstNoId, block.number, 1 ether);
-        vm.warp(block.timestamp + retentionPeriod + 1 seconds);
-        csm.reportELRewardsStealingPenalty(secondNoId, block.number, BOND_SIZE);
+        csm.reportELRewardsStealingPenalty(
+            firstNoId,
+            blockhash(block.number),
+            1 ether
+        );
+        csm.reportELRewardsStealingPenalty(
+            secondNoId,
+            blockhash(block.number),
+            BOND_SIZE
+        );
 
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit ELRewardsStealingPenaltySettled(
+            firstNoId,
+            1 ether + csm.EL_REWARDS_STEALING_FINE()
+        );
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit ELRewardsStealingPenaltySettled(
+            secondNoId,
+            BOND_SIZE + csm.EL_REWARDS_STEALING_FINE()
+        );
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.resetBondCurve.selector,
+                secondNoId
+            ),
+            1
+        );
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.resetBondCurve.selector,
+                firstNoId
+            ),
+            1
+        );
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(
+            firstNoId
+        );
+        assertEq(lock.amount, 0 ether);
+        assertEq(lock.retentionUntil, 0);
+
+        lock = accounting.getLockedBondInfo(secondNoId);
+        assertEq(lock.amount, 0 ether);
+        assertEq(lock.retentionUntil, 0);
+    }
+
+    function test_settleELRewardsStealingPenalty_multipleNOs_oneExpired()
+        public
+    {
+        uint256 retentionPeriod = accounting.getBondLockRetentionPeriod();
+        uint256 firstNoId = createNodeOperator();
+        uint256 secondNoId = createNodeOperator();
+        uint256[] memory idsToSettle = new uint256[](2);
+        idsToSettle[0] = firstNoId;
+        idsToSettle[1] = secondNoId;
+        csm.reportELRewardsStealingPenalty(
+            firstNoId,
+            blockhash(block.number),
+            1 ether
+        );
+        vm.warp(block.timestamp + retentionPeriod + 1 seconds);
+        csm.reportELRewardsStealingPenalty(
+            secondNoId,
+            blockhash(block.number),
+            BOND_SIZE
+        );
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit ELRewardsStealingPenaltySettled(
+            secondNoId,
+            BOND_SIZE + csm.EL_REWARDS_STEALING_FINE()
+        );
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
@@ -2808,7 +2945,11 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         idsToSettle[0] = noId;
         uint256 amount = 1 ether;
 
-        csm.reportELRewardsStealingPenalty(noId, block.number, amount);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            amount
+        );
 
         vm.warp(block.timestamp + retentionPeriod + 1 seconds);
 
@@ -2846,7 +2987,11 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         uint256 amount = 1 ether;
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
-        csm.reportELRewardsStealingPenalty(noId, block.number, amount);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            amount
+        );
 
         uint256 nonce = csm.getNonce();
         uint256 unbonded = accounting.getUnbondedKeysCount(noId);
@@ -2885,7 +3030,11 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         uint256 amount = 1 ether;
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
-        csm.reportELRewardsStealingPenalty(noId, block.number, amount);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            amount
+        );
 
         uint256 nonce = csm.getNonce();
         uint256 unbonded = accounting.getUnbondedKeysCount(noId);
@@ -2907,7 +3056,11 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
         uint256 noId = createNodeOperator();
         uint256 amount = 1 ether;
         uint256 fine = csm.EL_REWARDS_STEALING_FINE();
-        csm.reportELRewardsStealingPenalty(noId, block.number, amount);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            amount
+        );
 
         uint256 nonce = csm.getNonce();
 
@@ -2929,7 +3082,11 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
         uint256 noId = createNodeOperator();
         uint256 amount = 1 ether;
         uint256 fine = csm.EL_REWARDS_STEALING_FINE();
-        csm.reportELRewardsStealingPenalty(noId, block.number, amount);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            amount
+        );
 
         uint256 nonce = csm.getNonce();
 
@@ -2953,7 +3110,11 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
         uint256 noId = createNodeOperator(2);
         uint256 amount = 1 ether;
         uint256 fine = csm.EL_REWARDS_STEALING_FINE();
-        csm.reportELRewardsStealingPenalty(noId, block.number, amount);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            amount
+        );
         csm.obtainDepositData(1, "");
         uint256 depositableBefore = getNodeOperatorSummary(noId)
             .depositableValidatorsCount;
@@ -3157,7 +3318,7 @@ contract CsmSubmitInitialSlashing is CSMCommon {
 
         csm.reportELRewardsStealingPenalty(
             noId,
-            0,
+            blockhash(block.number),
             csm.DEPOSIT_SIZE() - csm.INITIAL_SLASHING_PENALTY()
         );
         csm.submitInitialSlashing(noId, keyIndex);
@@ -3249,7 +3410,13 @@ contract CsmGetStakingModuleSummary is CSMCommon {
 
 contract CSMAccessControl is CSMCommonNoRoles {
     function test_adminRole() public {
-        CSModule csm = new CSModule("csm", address(locator), actor);
+        CSModule csm = new CSModule(
+            "csm",
+            address(locator),
+            actor,
+            0.1 ether,
+            10
+        );
         bytes32 role = csm.INITIALIZE_ROLE();
         vm.prank(actor);
         csm.grantRole(role, stranger);
@@ -3261,7 +3428,13 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_adminRole_revert() public {
-        CSModule csm = new CSModule("csm", address(locator), actor);
+        CSModule csm = new CSModule(
+            "csm",
+            address(locator),
+            actor,
+            0.1 ether,
+            10
+        );
         bytes32 role = csm.INITIALIZE_ROLE();
         bytes32 adminRole = csm.DEFAULT_ADMIN_ROLE();
 
@@ -3271,7 +3444,13 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_initializeRole_setAccounting() public {
-        CSModule csm = new CSModule("csm", address(locator), admin);
+        CSModule csm = new CSModule(
+            "csm",
+            address(locator),
+            admin,
+            0.1 ether,
+            10
+        );
         bytes32 role = csm.INITIALIZE_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
@@ -3547,7 +3726,11 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.grantRole(role, actor);
 
         vm.prank(actor);
-        csm.reportELRewardsStealingPenalty(noId, 0, 1 ether);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            1 ether
+        );
     }
 
     function test_reportELRewardsStealingPenaltyRole_revert() public {
@@ -3557,7 +3740,11 @@ contract CSMAccessControl is CSMCommonNoRoles {
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
-        csm.reportELRewardsStealingPenalty(noId, 0, 1 ether);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            1 ether
+        );
     }
 
     function test_settleELRewardsStealingPenaltyRole() public {
@@ -3793,7 +3980,8 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
         csm.setEarlyAdoption(address(earlyAdoption));
         bytes32[] memory proof = merkleTree.getProof(0);
 
-        uint16 keysCount = csm.MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE() + 1;
+        uint256 keysCount = csm
+            .MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE() + 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
@@ -3866,7 +4054,7 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3);
         csm.reportELRewardsStealingPenalty(
             noId,
-            0,
+            blockhash(block.number),
             BOND_SIZE * 3 - csm.EL_REWARDS_STEALING_FINE()
         ); // Penalty to unbond 3 validators.
         csm.settleELRewardsStealingPenalty(UintArr(noId));
@@ -3885,7 +4073,11 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         uint256 noId = createNodeOperator(7);
         csm.obtainDepositData(4, "");
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3);
-        csm.reportELRewardsStealingPenalty(noId, 0, (BOND_SIZE * 3) / 2); // Lock bond to unbond 2 validators.
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            (BOND_SIZE * 3) / 2
+        ); // Lock bond to unbond 2 validators.
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 1);
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 1);
     }
@@ -3896,7 +4088,11 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         uint256 noId = createNodeOperator(7);
         csm.obtainDepositData(4, "");
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3);
-        csm.reportELRewardsStealingPenalty(noId, 0, BOND_SIZE); // Lock bond to unbond 2 validators (there's stealing fine).
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE
+        ); // Lock bond to unbond 2 validators (there's stealing fine).
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 1);
         csm.cancelELRewardsStealingPenalty(
             noId,

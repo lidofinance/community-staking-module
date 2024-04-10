@@ -7,8 +7,6 @@ pragma solidity 0.8.24;
 import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
@@ -53,23 +51,23 @@ contract CSModuleBase {
     );
     event VettedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 approvedValidatorsCount // TODO: check name
+        uint256 vettedKeysCount
     );
     event DepositedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 depositedValidatorsCount // TODO: validators or signing keys?
+        uint256 depositedKeysCount
     );
     event ExitedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 exitedValidatorsCount
+        uint256 exitedKeysCount
     );
     event TotalSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 totalValidatorsCount // TODO: validators or signing keys?
+        uint256 totalKeysCount
     );
     event StuckSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 stuckValidatorsCount // TODO: validators or signing keys?
+        uint256 stuckKeysCount
     );
     event TargetValidatorsCountChanged(
         // TODO: think about better name
@@ -90,7 +88,6 @@ contract CSModuleBase {
     // TODO: do we want event for queue cursor moving as well?
     event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
 
-    event StakingModuleTypeSet(bytes32 moduleType);
     event PublicRelease();
     event RemovalChargeSet(uint256 amount);
 
@@ -98,32 +95,26 @@ contract CSModuleBase {
     event RemovalChargeApplied(uint256 indexed nodeOperatorId, uint256 amount);
     event ELRewardsStealingPenaltyReported(
         uint256 indexed nodeOperatorId,
-        uint256 proposedBlockNumber,
+        bytes32 proposedBlockHash,
         uint256 stolenAmount
     );
-    // TODO: consider adding ELRewardsStealingPenaltySettled event
     event ELRewardsStealingPenaltyCancelled(
+        uint256 indexed nodeOperatorId,
+        uint256 amount
+    );
+    event ELRewardsStealingPenaltySettled(
         uint256 indexed nodeOperatorId,
         uint256 amount
     );
 
     error NodeOperatorDoesNotExist();
     error SenderIsNotManagerAddress();
-    error SenderIsNotManagerOrKeyValidator(); // TODO: remove unused
     error InvalidVetKeysPointer();
-    error TargetLimitExceeded();
-    error StuckKeysPresent();
-    error UnbondedKeysPresent();
     error StuckKeysHigherThanTotalDeposited();
     error ExitedKeysHigherThanTotalDeposited();
     error ExitedKeysDecrease();
 
     error QueueLookupNoLimit();
-    error QueueEmptyBatch();
-    error QueueBatchInvalidNonce(bytes32 batch);
-    error QueueBatchInvalidStart(bytes32 batch);
-    error QueueBatchInvalidCount(bytes32 batch);
-    error TooManyKeys();
     error NotEnoughKeys();
 
     error SigningKeysInvalidOffset();
@@ -143,7 +134,6 @@ contract CSModule is
     PausableUntil,
     AssetRecoverer
 {
-    using SafeERC20 for IERC20; // TODO: unused?
     using QueueLib for QueueLib.Queue;
 
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
@@ -161,8 +151,6 @@ contract CSModule is
     bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE"); // 0x0ce23c3e399818cfee81a7ab0880f714e53d7672b08df0fa62f2843416e1ea09
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE"); // 0xb3e25b5404b87e5a838579cb5d7481d61ad96ee284d38ec1e97c07ba64e7f6fc
 
-    uint8 public constant MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE = 10; // TODO: 1) per operator 2) uint256? 3) immutable and set in constructor
-    // might be received dynamically in case of increasing possible deposit size
     uint256 public constant DEPOSIT_SIZE = 32 ether;
     uint256 private constant MIN_SLASHING_PENALTY_QUOTIENT = 32;
     uint256 public constant INITIAL_SLASHING_PENALTY =
@@ -170,7 +158,10 @@ contract CSModule is
     bytes32 private constant SIGNING_KEYS_POSITION =
         keccak256("lido.CommunityStakingModule.signingKeysPosition"); // TODO: consider use unstructered or structered storage
 
-    uint256 public constant EL_REWARDS_STEALING_FINE = 0.1 ether; // consider to use immutable var and set it in constructor
+    uint256 public immutable EL_REWARDS_STEALING_FINE;
+    uint256
+        public immutable MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE;
+    bytes32 private immutable MODULE_TYPE;
 
     bool public publicRelease;
     uint256 public removalCharge; // TODO: think about better name, smth like keyRemovalCharge
@@ -184,7 +175,6 @@ contract CSModule is
     // TODO: ^^ comment
     uint256 private _nodeOperatorsCount; // TODO: pack more efficinetly
     uint256 private _activeNodeOperatorsCount;
-    bytes32 private _moduleType;
     uint256 private _nonce;
     mapping(uint256 => NodeOperator) private _nodeOperators;
     mapping(uint256 noIdWithKeyIndex => bool) private _isValidatorWithdrawn; // TODO: noIdWithKeyIndex naming
@@ -198,11 +188,17 @@ contract CSModule is
 
     TransientUintUintMap private _queueLookup;
 
-    constructor(bytes32 moduleType, address _lidoLocator, address admin) {
-        _moduleType = moduleType;
+    constructor(
+        bytes32 moduleType,
+        address _lidoLocator,
+        address admin,
+        uint256 elStealingFine,
+        uint256 maxKeysPerOperatorEA
+    ) {
         lidoLocator = ILidoLocator(_lidoLocator);
-        emit StakingModuleTypeSet(moduleType);
-        // TODO: Do events for all storage mutation or migrate to immutable vars
+        MODULE_TYPE = moduleType;
+        EL_REWARDS_STEALING_FINE = elStealingFine;
+        MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE = maxKeysPerOperatorEA;
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
@@ -267,7 +263,7 @@ contract CSModule is
     /// @notice Gets the module type
     /// @return Module type
     function getType() external view returns (bytes32) {
-        return _moduleType;
+        return MODULE_TYPE;
     }
 
     /// @notice Gets staking summary of the module
@@ -290,8 +286,8 @@ contract CSModule is
     /// @notice Adds a new node operator with ETH bond
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of public keys // TODO: not quite right comment
-    /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
+    /// @param signatures Signatures of (deposit_message, domain) tuples
+    /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
     /// @param referral Optional referral address
     function addNodeOperatorETH(
         uint256 keysCount,
@@ -315,7 +311,7 @@ contract CSModule is
             revert InvalidAmount();
         }
 
-        // TODO: ad comment reverts if keysCount is 0
+        // Reverts if keysCount is 0
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
 
         accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
@@ -331,9 +327,9 @@ contract CSModule is
     /// @notice Adds a new node operator with stETH bond
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of public keys
-    /// @param permit Permit to use stETH as bond // TODO: mark as "optional"
-    /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption // TODO: mark as "optional"
+    /// @param signatures Signatures of (deposit_message, domain) tuples
+    /// @param permit Optional. Permit to use stETH as bond
+    /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
     /// @param referral Optional referral address
     function addNodeOperatorStETH(
         uint256 keysCount,
@@ -348,6 +344,7 @@ contract CSModule is
         uint256 nodeOperatorId = _createNodeOperator(referral);
         _processEarlyAdoption(nodeOperatorId, eaProof);
 
+        // Reverts if keysCount is 0
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
 
         accounting.depositStETH(
@@ -371,9 +368,9 @@ contract CSModule is
     /// @notice Adds a new node operator with wstETH bond
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of public keys
-    /// @param permit Permit to use wstETH as bond
-    /// @param eaProof Merkle proof of the sender being eligible for the Early Adoption
+    /// @param signatures Signatures of (deposit_message, domain) tuples
+    /// @param permit Optional. Permit to use wstETH as bond
+    /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
     /// @param referral Optional referral address
     function addNodeOperatorWstETH(
         uint256 keysCount,
@@ -388,6 +385,7 @@ contract CSModule is
         uint256 nodeOperatorId = _createNodeOperator(referral);
         _processEarlyAdoption(nodeOperatorId, eaProof);
 
+        // Reverts if keysCount is 0
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
 
         accounting.depositWstETH(
@@ -412,7 +410,7 @@ contract CSModule is
     /// @param nodeOperatorId ID of the node operator
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of public keys
+    /// @param signatures Signatures of (deposit_message, domain) tuples
     function addValidatorKeysETH(
         uint256 nodeOperatorId,
         uint256 keysCount,
@@ -429,6 +427,7 @@ contract CSModule is
             revert InvalidAmount();
         }
 
+        // Reverts if keysCount is 0
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
 
         accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
@@ -445,8 +444,8 @@ contract CSModule is
     /// @param nodeOperatorId ID of the node operator
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of public keys
-    /// @param permit Permit to use stETH as bond
+    /// @param signatures Signatures of (deposit_message, domain) tuples
+    /// @param permit Optional. Permit to use stETH as bond
     function addValidatorKeysStETH(
         uint256 nodeOperatorId,
         uint256 keysCount,
@@ -461,6 +460,8 @@ contract CSModule is
             nodeOperatorId,
             keysCount
         );
+
+        // Reverts if keysCount is 0
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
 
         accounting.depositStETH(msg.sender, nodeOperatorId, amount, permit);
@@ -477,8 +478,8 @@ contract CSModule is
     /// @param nodeOperatorId ID of the node operator
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of public keys
-    /// @param permit Permit to use wstETH as bond
+    /// @param signatures Signatures of (deposit_message, domain) tuples
+    /// @param permit Optional. Permit to use wstETH as bond
     function addValidatorKeysWstETH(
         uint256 nodeOperatorId,
         uint256 keysCount,
@@ -493,6 +494,8 @@ contract CSModule is
             nodeOperatorId,
             keysCount
         );
+
+        // Reverts if keysCount is 0
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
 
         accounting.depositWstETH(msg.sender, nodeOperatorId, amount, permit);
@@ -523,7 +526,7 @@ contract CSModule is
     /// @notice Deposit user's stETH to the bond for the given Node Operator
     /// @param nodeOperatorId id of the node operator to deposit stETH for
     /// @param stETHAmount amount of stETH to deposit
-    /// @param permit stETH permit for the contract
+    /// @param permit Optional. Permit to use stETH as bond
     function depositStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount,
@@ -547,7 +550,7 @@ contract CSModule is
     /// @notice Unwrap user's wstETH and make deposit in stETH to the bond for the given Node Operator
     /// @param nodeOperatorId id of the node operator to deposit stETH for
     /// @param wstETHAmount amount of wstETH to deposit
-    /// @param permit wstETH permit for the contract
+    /// @param permit Optional. Permit to use wstETH as bond
     function depositWstETH(
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
@@ -571,8 +574,8 @@ contract CSModule is
     /// @notice Claims full reward (fee + bond) in stETH for the given node operator with desirable value
     /// @param nodeOperatorId id of the node operator to claim rewards for.
     /// @param stETHAmount amount of stETH to claim.
-    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
-    /// @param rewardsProof merkle proof of the rewards.
+    /// @param cumulativeFeeShares Optional. Cumulative fee shares for the node operator.
+    /// @param rewardsProof Optional. Merkle proof of the rewards.
     function claimRewardsStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount,
@@ -599,8 +602,8 @@ contract CSModule is
     /// @notice Claims full reward (fee + bond) in wstETH for the given node operator available for this moment
     /// @param nodeOperatorId id of the node operator to claim rewards for.
     /// @param wstETHAmount amount of wstETH to claim.
-    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
-    /// @param rewardsProof merkle proof of the rewards.
+    /// @param cumulativeFeeShares Optional. Cumulative fee shares for the node operator.
+    /// @param rewardsProof Optional. Merkle proof of the rewards.
     function claimRewardsWstETH(
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
@@ -628,8 +631,8 @@ contract CSModule is
     /// @dev reverts if amount isn't between MIN_STETH_WITHDRAWAL_AMOUNT and MAX_STETH_WITHDRAWAL_AMOUNT
     /// @param nodeOperatorId id of the node operator to request rewards for.
     /// @param ethAmount amount of ETH to request.
-    /// @param cumulativeFeeShares cumulative fee shares for the node operator.
-    /// @param rewardsProof merkle proof of the rewards.
+    /// @param cumulativeFeeShares Optional. Cumulative fee shares for the node operator.
+    /// @param rewardsProof Optional. Merkle proof of the rewards.
     function requestRewardsETH(
         uint256 nodeOperatorId,
         uint256 ethAmount,
@@ -1189,11 +1192,11 @@ contract CSModule is
     /// @notice Reports EL rewards stealing for the given node operator.
     /// @dev The funds will be locked, so if there any unbonded keys after that, they will be unvetted.
     /// @param nodeOperatorId id of the node operator to report EL rewards stealing for.
-    /// @param blockNumber consensus layer block number of the proposed block with EL rewards stealing.
+    /// @param blockHash consensus layer block hash of the proposed block with EL rewards stealing.
     /// @param amount amount of stolen EL rewards in ETH.
     function reportELRewardsStealingPenalty(
         uint256 nodeOperatorId,
-        uint256 blockNumber, // TODO: consider to use blockhash instead
+        bytes32 blockHash,
         uint256 amount
     )
         external
@@ -1207,7 +1210,7 @@ contract CSModule is
 
         emit ELRewardsStealingPenaltyReported(
             nodeOperatorId,
-            blockNumber,
+            blockHash,
             amount
         );
 
@@ -1257,6 +1260,7 @@ contract CSModule is
                 revert NodeOperatorDoesNotExist();
             uint256 settled = accounting.settleLockedBondETH(nodeOperatorId);
             if (settled > 0) {
+                emit ELRewardsStealingPenaltySettled(nodeOperatorId, settled);
                 accounting.resetBondCurve(nodeOperatorId);
                 // Nonce should be updated if depositableValidators change
                 // No need to normalize queue due to only decrease in depositable possible
@@ -1417,7 +1421,8 @@ contract CSModule is
         uint256 startIndex = no.totalAddedKeys;
         if (
             !publicRelease &&
-            startIndex + keysCount > MAX_SIGNING_KEYS_BEFORE_PUBLIC_RELEASE
+            startIndex + keysCount >
+            MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE
         ) {
             revert MaxSigningKeysCountExceeded();
         }
@@ -1674,9 +1679,11 @@ contract CSModule is
         no.managerAddress = msg.sender;
         no.rewardAddress = msg.sender;
         no.active = true;
-        // TODO: consider wrapping with unchecked
-        _nodeOperatorsCount++;
-        _activeNodeOperatorsCount++;
+
+        unchecked {
+            _nodeOperatorsCount++;
+            _activeNodeOperatorsCount++;
+        }
 
         emit NodeOperatorAdded(id, referral, msg.sender);
         return id;
