@@ -256,7 +256,6 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
             csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(),
             address(this)
         );
-        csm.grantRole(csm.PENALIZE_ROLE(), address(this));
         csm.grantRole(csm.VERIFIER_ROLE(), address(this));
         accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), address(this));
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), address(csm));
