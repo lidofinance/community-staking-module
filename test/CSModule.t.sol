@@ -817,12 +817,12 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
 contract CSMDeposit is CSMCommon, PermitTokenBase {
     function test_DepositETH() public {
         uint256 noId = createNodeOperator();
-        uint256 preShares = accounting.getBondShares(0);
+        uint256 preShares = accounting.getBondShares(noId);
         vm.deal(nodeOperator, 32 ether);
         uint256 sharesToDeposit = stETH.getSharesByPooledEth(32 ether);
 
         vm.prank(nodeOperator);
-        csm.depositETH{ value: 32 ether }(0);
+        csm.depositETH{ value: 32 ether }(noId);
 
         assertEq(
             nodeOperator.balance,
@@ -830,10 +830,19 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
             "user balance should be 0 after deposit"
         );
         assertEq(
-            accounting.getBondShares(0),
+            accounting.getBondShares(noId),
             sharesToDeposit + preShares,
             "bond shares should be equal to deposited shares + pre shares"
         );
+    }
+
+    function test_DepositETH_NotExistingNodeOperator() public {
+        uint256 noId = createNodeOperator();
+        vm.deal(nodeOperator, 32 ether);
+
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        vm.prank(nodeOperator);
+        csm.depositETH{ value: 32 ether }(noId + 1);
     }
 
     function test_DepositETH_NonceShouldChange() public {
@@ -864,14 +873,14 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
 
     function test_DepositStETH() public {
         uint256 noId = createNodeOperator();
-        uint256 preShares = accounting.getBondShares(0);
+        uint256 preShares = accounting.getBondShares(noId);
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
         uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
             _referal: address(0)
         });
         csm.depositStETH(
-            0,
+            noId,
             32 ether,
             ICSAccounting.PermitInput({
                 value: 0,
@@ -888,15 +897,34 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
             "user balance should be 0 after deposit"
         );
         assertEq(
-            accounting.getBondShares(0),
+            accounting.getBondShares(noId),
             sharesToDeposit + preShares,
             "bond shares should be equal to deposited shares + pre shares"
         );
     }
 
+    function test_DepositStETH_NotExistingNodeOperator() public {
+        uint256 noId = createNodeOperator();
+        vm.deal(nodeOperator, 32 ether);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.depositStETH(
+            noId + 1,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
     function test_DepositStETH_withPermit() public {
         uint256 noId = createNodeOperator();
-        uint256 preShares = accounting.getBondShares(0);
+        uint256 preShares = accounting.getBondShares(noId);
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
         uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
@@ -907,7 +935,7 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
         emit Approval(nodeOperator, address(accounting), 32 ether);
 
         csm.depositStETH(
-            0,
+            noId,
             32 ether,
             ICSAccounting.PermitInput({
                 value: 32 ether,
@@ -925,7 +953,7 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
             "user balance should be 0 after deposit"
         );
         assertEq(
-            accounting.getBondShares(0),
+            accounting.getBondShares(noId),
             sharesToDeposit + preShares,
             "bond shares should be equal to deposited shares + pre shares"
         );
@@ -985,7 +1013,7 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
 
     function test_DepositWstETH() public {
         uint256 noId = createNodeOperator();
-        uint256 preShares = accounting.getBondShares(0);
+        uint256 preShares = accounting.getBondShares(noId);
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
@@ -995,7 +1023,7 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
         );
 
         csm.depositWstETH(
-            0,
+            noId,
             wstETHAmount,
             ICSAccounting.PermitInput({
                 value: 0,
@@ -1012,15 +1040,35 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
             "user balance should be 0 after deposit"
         );
         assertEq(
-            accounting.getBondShares(0),
+            accounting.getBondShares(noId),
             sharesToDeposit + preShares,
             "bond shares should be equal to deposited shares + pre shares"
         );
     }
 
+    function test_DepositWstETH_NotExistingNodeOperator() public {
+        uint256 noId = createNodeOperator();
+        vm.deal(nodeOperator, 32 ether);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.depositWstETH(
+            noId + 1,
+            wstETHAmount,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
     function test_DepositWstETH_withPermit() public {
         uint256 noId = createNodeOperator();
-        uint256 preShares = accounting.getBondShares(0);
+        uint256 preShares = accounting.getBondShares(noId);
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
@@ -1033,7 +1081,7 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
         emit Approval(nodeOperator, address(accounting), 32 ether);
 
         csm.depositWstETH(
-            0,
+            noId,
             wstETHAmount,
             ICSAccounting.PermitInput({
                 value: 32 ether,
@@ -1051,7 +1099,7 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
             "user balance should be 0 after deposit"
         );
         assertEq(
-            accounting.getBondShares(0),
+            accounting.getBondShares(noId),
             sharesToDeposit + preShares,
             "bond shares should be equal to deposited shares + pre shares"
         );
