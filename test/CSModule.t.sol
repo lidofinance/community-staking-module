@@ -2938,6 +2938,8 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
 
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit ELRewardsStealingPenaltySettled(noId, 0);
         expectNoCall(
             address(accounting),
             abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
@@ -3027,6 +3029,8 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
             BOND_SIZE
         );
 
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit ELRewardsStealingPenaltySettled(firstNoId, 0);
         vm.expectEmit(true, true, true, true, address(csm));
         emit ELRewardsStealingPenaltySettled(
             secondNoId,

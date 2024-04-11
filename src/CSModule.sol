@@ -1204,7 +1204,7 @@ contract CSModule is
     /// @notice Reports EL rewards stealing for the given node operator.
     /// @dev The funds will be locked, so if there any unbonded keys after that, they will be unvetted.
     /// @param nodeOperatorId id of the node operator to report EL rewards stealing for.
-    /// @param blockHash consensus layer block hash of the proposed block with EL rewards stealing.
+    /// @param blockHash execution layer block hash of the proposed block with EL rewards stealing.
     /// @param amount amount of stolen EL rewards in ETH.
     function reportELRewardsStealingPenalty(
         uint256 nodeOperatorId,
@@ -1271,8 +1271,8 @@ contract CSModule is
             if (nodeOperatorId >= _nodeOperatorsCount)
                 revert NodeOperatorDoesNotExist();
             uint256 settled = accounting.settleLockedBondETH(nodeOperatorId);
+            emit ELRewardsStealingPenaltySettled(nodeOperatorId, settled);
             if (settled > 0) {
-                emit ELRewardsStealingPenaltySettled(nodeOperatorId, settled);
                 accounting.resetBondCurve(nodeOperatorId);
                 // Nonce should be updated if depositableValidators change
                 // No need to normalize queue due to only decrease in depositable possible

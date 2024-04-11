@@ -135,7 +135,7 @@
 | setAccounting                                       | 24226           | 46364  | 46455  | 46455   | 246     |
 | setEarlyAdoption                                    | 24006           | 38634  | 46475  | 46475   | 8       |
 | setRemovalCharge                                    | 24025           | 47032  | 47145  | 47157   | 205     |
-| settleELRewardsStealingPenalty                      | 24668           | 92752  | 112110 | 162702  | 13      |
+| settleELRewardsStealingPenalty                      | 24668           | 93174  | 113110 | 162702  | 13      |
 | submitInitialSlashing                               | 24058           | 97708  | 129465 | 133674  | 13      |
 | submitWithdrawal                                    | 24305           | 121478 | 135793 | 234734  | 15      |
 | unsafeUpdateValidatorsCount                         | 24263           | 61233  | 35920  | 159794  | 10      |
