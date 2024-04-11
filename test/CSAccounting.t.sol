@@ -3327,6 +3327,19 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         assertEq(accounting.getActualLockedBond(0), 0.6 ether);
     }
 
+    function test_settleLockedBondETHH() public {
+        mock_getNodeOperatorsCount(1);
+
+        vm.prank(address(stakingModule));
+        accounting.lockBondETH(0, 1 ether);
+        assertEq(accounting.getActualLockedBond(0), 1 ether);
+
+        vm.prank(address(stakingModule));
+        uint256 settled = accounting.settleLockedBondETH(0);
+        assertEq(settled, 1 ether);
+        assertEq(accounting.getActualLockedBond(0), 0);
+    }
+
     // TODO: tests for settleLockedBondETH
 }
 
@@ -3467,6 +3480,12 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
         accounting.setFeeDistributor(address(7331));
     }
 
+    function test_setFeeDistributor_RevertWhen_Zero() public {
+        vm.expectRevert();
+        vm.prank(admin);
+        accounting.setFeeDistributor(address(0));
+    }
+
     function test_setChargeRecipient() public {
         vm.prank(admin);
         vm.expectEmit(true, false, false, true, address(accounting));
@@ -3477,9 +3496,22 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
 
     function test_setChargeRecipient_RevertWhen_DoesNotHaveRole() public {
         expectRoleRevert(stranger, accounting.ACCOUNTING_MANAGER_ROLE());
-
         vm.prank(stranger);
         accounting.setChargeRecipient(address(1337));
+    }
+
+    function test_setChargeRecipient_RevertWhen_Zero() public {
+        vm.expectRevert();
+        vm.prank(admin);
+        accounting.setChargeRecipient(address(0));
+    }
+
+    function test_setLockedBondRetentionPeriod() public {
+        uint256 retention = accounting.MIN_BOND_LOCK_RETENTION_PERIOD() + 1;
+        vm.prank(admin);
+        accounting.setLockedBondRetentionPeriod(retention);
+        uint256 actualRetention = accounting.getBondLockRetentionPeriod();
+        assertEq(actualRetention, retention);
     }
 }
 

@@ -353,6 +353,23 @@ contract CsmInitialization is CSMCommon {
         vm.stopPrank();
         assertEq(address(csm.accounting()), address(accounting));
     }
+
+    function test_setAccounting_alreadySet() public {
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            admin,
+            0.1 ether,
+            10
+        );
+        vm.startPrank(admin);
+        csm.grantRole(csm.INITIALIZE_ROLE(), address(admin));
+        csm.setAccounting(address(accounting));
+        assertEq(address(csm.accounting()), address(accounting));
+        vm.expectRevert(AlreadySet.selector);
+        csm.setAccounting(address(accounting));
+        vm.stopPrank();
+    }
 }
 
 contract CSMPauseTest is CSMCommon {
@@ -2973,6 +2990,24 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
             amount + csm.EL_REWARDS_STEALING_FINE()
         );
         vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
+        );
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
+        assertEq(lock.amount, 0 ether);
+        assertEq(lock.retentionUntil, 0);
+    }
+
+    function test_settleELRewardsStealingPenalty_NoLock() public {
+        uint256 noId = createNodeOperator();
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit ELRewardsStealingPenaltySettled(noId, 0);
+        expectNoCall(
             address(accounting),
             abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
         );

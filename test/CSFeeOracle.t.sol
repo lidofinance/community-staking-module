@@ -46,6 +46,7 @@ contract CSFeeOracleTest is Test, Utilities {
     HashConsensus public consensus;
     ChainConfig public chainConfig;
     address[] public members;
+    address public stranger;
     uint256 public quorum;
 
     event ReportReceived(
@@ -60,6 +61,12 @@ contract CSFeeOracleTest is Test, Utilities {
         bytes32 newRoot,
         string treeCid
     );
+
+    event FeeDistributorContractSet(address feeDistributorContract);
+
+    error AdminCannotBeZero();
+    error AddressCannotBeZero();
+    error SenderNotAllowed();
 
     function setUp() public {
         chainConfig = ChainConfig({
@@ -125,6 +132,90 @@ contract CSFeeOracleTest is Test, Utilities {
         (, startSlot, , ) = oracle.getConsensusReport();
         (refSlot, ) = consensus.getCurrentFrame();
         assertLt(startSlot, refSlot);
+    }
+
+    function test_invalidReportSender() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+            _seedMembers(3);
+        }
+
+        uint256 startSlot;
+        uint256 refSlot;
+
+        (, startSlot, , ) = oracle.getConsensusReport();
+        (refSlot, ) = consensus.getCurrentFrame();
+        // INITIAL_EPOCH is far above the lastProcessingRefSlot's epoch
+        assertNotEq(startSlot, refSlot);
+
+        CSFeeOracle.ReportData memory data = CSFeeOracle.ReportData({
+            consensusVersion: oracle.getConsensusVersion(),
+            refSlot: refSlot,
+            treeRoot: keccak256("root"),
+            treeCid: "QmCID0",
+            distributed: 1337
+        });
+
+        vm.expectRevert(SenderNotAllowed.selector);
+        vm.prank(stranger);
+        oracle.submitReportData({ data: data, contractVersion: 1 });
+    }
+
+    function test_initialize_AdminCannotBeZero() public {
+        oracle = new CSFeeOracleForTest({
+            secondsPerSlot: chainConfig.secondsPerSlot,
+            genesisTime: chainConfig.genesisTime
+        });
+
+        consensus = new HashConsensus({
+            slotsPerEpoch: chainConfig.slotsPerEpoch,
+            secondsPerSlot: chainConfig.secondsPerSlot,
+            genesisTime: chainConfig.genesisTime,
+            epochsPerFrame: _epochsInDays(28),
+            fastLaneLengthSlots: 0,
+            admin: ORACLE_ADMIN,
+            reportProcessor: address(oracle)
+        });
+
+        DistributorMock distributor = new DistributorMock();
+        vm.expectRevert(AdminCannotBeZero.selector);
+        oracle.initialize(
+            address(0),
+            address(distributor),
+            address(consensus),
+            CONSENSUS_VERSION,
+            154
+        );
+    }
+
+    function test_setFeeDistributorContract() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+        }
+
+        vm.expectEmit(true, true, true, true, address(oracle));
+        emit FeeDistributorContractSet(address(1));
+        vm.prank(ORACLE_ADMIN);
+        oracle.setFeeDistributorContract(address(1));
+    }
+
+    function test_setFeeDistributorContract_AddressCannotBeZero() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+        }
+
+        vm.expectRevert(AddressCannotBeZero.selector);
+        vm.prank(ORACLE_ADMIN);
+        oracle.setFeeDistributorContract(address(0));
     }
 
     function test_reportFrame() public {
@@ -204,6 +295,7 @@ contract CSFeeOracleTest is Test, Utilities {
             oracle.grantRole(oracle.MANAGE_CONSENSUS_VERSION_ROLE(), ORACLE_ADMIN);
             oracle.grantRole(oracle.PAUSE_ROLE(), ORACLE_ADMIN);
             oracle.grantRole(oracle.RESUME_ROLE(), ORACLE_ADMIN);
+            oracle.grantRole(oracle.MANAGE_FEE_DISTRIBUTOR_CONTRACT_ROLE(), ORACLE_ADMIN);
         }
         vm.stopPrank();
     }
@@ -222,6 +314,7 @@ contract CSFeeOracleTest is Test, Utilities {
             members.push(newMember);
             quorum = q;
         }
+        stranger = nextAddress();
     }
 
     function _assertNoReportOnInit() internal {
