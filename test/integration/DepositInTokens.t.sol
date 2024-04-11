@@ -46,7 +46,9 @@ contract DepositIntegrationTest is
         csm = new CSModule(
             "community-staking-module",
             LOCATOR_ADDRESS,
-            address(this)
+            address(this),
+            0.1 ether,
+            10
         );
 
         wstETH = IWstETH(WSTETH_ADDRESS);
