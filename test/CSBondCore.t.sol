@@ -5,7 +5,7 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { CSBondCore, CSBondCoreBase } from "../src/CSBondCore.sol";
+import { CSBondCore, CSBondCoreBase } from "../src/abstract/CSBondCore.sol";
 
 import { Stub } from "./helpers/mocks/Stub.sol";
 import { LidoMock } from "./helpers/mocks/LidoMock.sol";

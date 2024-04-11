@@ -5,7 +5,7 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { CSBondCurve, CSBondCurveBase } from "../src/CSBondCurve.sol";
+import { CSBondCurve, CSBondCurveBase } from "../src/abstract/CSBondCurve.sol";
 
 contract CSBondCurveTestable is CSBondCurve {
     constructor(uint256[] memory bondCurve) CSBondCurve(bondCurve) {}

@@ -5,7 +5,7 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { CSBondLockBase, CSBondLock } from "../src/CSBondLock.sol";
+import { CSBondLockBase, CSBondLock } from "../src/abstract/CSBondLock.sol";
 import { PermitTokenBase } from "./helpers/Permit.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 import { LidoMock } from "./helpers/mocks/LidoMock.sol";

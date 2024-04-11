@@ -7,7 +7,7 @@ import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
 import { BaseOracle } from "base-oracle/oracle/BaseOracle.sol";
 
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
-import { AssetRecoverer } from "./AssetRecoverer.sol";
+import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 
 contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
     /// @notice There are no any assets to store in the contract
