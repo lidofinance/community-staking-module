@@ -84,7 +84,9 @@ abstract contract DeployBase is Script {
             csm = new CSModule({
                 moduleType: "community-staking-module",
                 _lidoLocator: LIDO_LOCATOR_ADDRESS,
-                admin: address(deployer)
+                admin: address(deployer),
+                elStealingFine: 0.1 ether,
+                maxKeysPerOperatorEA: 10
             });
             address treasury = locator.treasury();
             uint256[] memory curve = new uint256[](2);
