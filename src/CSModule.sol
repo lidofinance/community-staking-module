@@ -118,7 +118,6 @@ contract CSModuleBase {
     error ExitedKeysHigherThanTotalDeposited();
     error ExitedKeysDecrease();
 
-    error QueueLookupNoLimit();
     error QueueEmptyBatch();
     error QueueBatchInvalidNonce(bytes32 batch);
     error QueueBatchInvalidStart(bytes32 batch);
@@ -1605,52 +1604,7 @@ contract CSModule is
     function cleanDepositQueue(
         uint256 maxItems
     ) external returns (uint256 toRemove) {
-        if (maxItems == 0) revert QueueLookupNoLimit();
-
-        Batch prev;
-        uint128 indexOfPrev;
-
-        uint128 head = queue.head;
-        uint128 curr = head;
-
-        // Make sure we don't have any leftovers from the previous call.
-        _queueLookup.clear();
-
-        for (uint256 i; i < maxItems; ++i) {
-            Batch item = queue.queue[curr];
-            if (item.isNil()) {
-                return toRemove;
-            }
-
-            uint256 noId = item.noId();
-            NodeOperator storage no = _nodeOperators[noId];
-            uint256 enqueuedSoFar = _queueLookup.get(noId);
-            if (enqueuedSoFar >= no.depositableValidatorsCount) {
-                // NOTE: Since we reached that point there's no way for a node operator to have a depositable batch
-                // later in the queue, and hence we don't update _queueLookup for the node operator.
-                if (curr == head) {
-                    queue.dequeue();
-                    head = queue.head;
-                } else {
-                    // There's no `prev` item while we call `dequeue`, and removing an item will keep the `prev` intact
-                    // other than changing its `next` field.
-                    prev = queue.remove(indexOfPrev, prev, item);
-                }
-
-                unchecked {
-                    // We assume that the invariant `enqueuedCount` >= `keys` is kept.
-                    uint256 keysInBatch = item.keys();
-                    no.enqueuedCount -= keysInBatch;
-                    ++toRemove;
-                }
-            } else {
-                _queueLookup.add(noId, item.keys());
-                indexOfPrev = curr;
-                prev = item;
-            }
-
-            curr = item.next();
-        }
+        return QueueLib.clean(queue, _queueLookup, _nodeOperators, maxItems);
     }
 
     /// @notice Gets the deposit queue item by an index.

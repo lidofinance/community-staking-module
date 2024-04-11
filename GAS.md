@@ -18,7 +18,7 @@
 | getRequiredBondForNextKeysWstETH           | 57023           | 57023  | 57023  | 57023  | 2       |
 | getUnbondedKeysCount                       | 7774            | 25145  | 15774  | 46274  | 331     |
 | getUnbondedKeysCountToEject                | 7113            | 7472   | 7471   | 7530   | 51      |
-| grantRole                                  | 118386          | 118391 | 118386 | 118398 | 888     |
+| grantRole                                  | 118398          | 118398 | 118398 | 118398 | 888     |
 | setBondCurve                               | 49830           | 49830  | 49830  | 49830  | 2       |
 | setFeeDistributor                          | 47567           | 47567  | 47567  | 47567  | 202     |
 
@@ -92,7 +92,7 @@
 | cancelELRewardsStealingPenalty          | 26275           | 92404  | 101872 | 139597  | 4       |
 | claimRewardsStETH                       | 25028           | 50604  | 27245  | 99539   | 3       |
 | claimRewardsWstETH                      | 25050           | 50256  | 27267  | 98452   | 3       |
-| cleanDepositQueue                       | 26303           | 36075  | 33833  | 53079   | 12      |
+| cleanDepositQueue                       | 29546           | 39348  | 37089  | 56424   | 12      |
 | compensateELRewardsStealingPenalty      | 23643           | 114360 | 137725 | 158350  | 4       |
 | confirmNodeOperatorManagerAddressChange | 23690           | 29015  | 29075  | 34164   | 5       |
 | confirmNodeOperatorRewardAddressChange  | 23713           | 33103  | 33992  | 38940   | 6       |
@@ -122,7 +122,7 @@
 | proposeNodeOperatorRewardAddressChange  | 24166           | 33434  | 36483  | 36483   | 10      |
 | publicRelease                           | 409             | 409    | 409    | 409     | 1       |
 | queue                                   | 520             | 853    | 520    | 2520    | 6       |
-| recoverERC20                            | 58392           | 58392  | 58392  | 58392   | 1       |
+| recoverERC20                            | 58380           | 58380  | 58380  | 58380   | 1       |
 | recoverEther                            | 23725           | 26013  | 26013  | 28302   | 2       |
 | recoverStETHShares                      | 62845           | 62845  | 62845  | 62845   | 1       |
 | removalCharge                           | 386             | 1386   | 1386   | 2386    | 2       |
