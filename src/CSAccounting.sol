@@ -9,13 +9,13 @@ import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensio
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import { CSBondCore } from "./CSBondCore.sol";
-import { CSBondCurve } from "./CSBondCurve.sol";
-import { CSBondLock } from "./CSBondLock.sol";
+import { CSBondCore } from "./abstract/CSBondCore.sol";
+import { CSBondCurve } from "./abstract/CSBondCurve.sol";
+import { CSBondLock } from "./abstract/CSBondLock.sol";
 
 import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
-import { AssetRecoverer } from "./AssetRecoverer.sol";
+import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
 abstract contract CSAccountingBase {

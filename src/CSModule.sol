@@ -22,7 +22,7 @@ import { TransientUintUintMap } from "./lib/TransientUintUintMapLib.sol";
 import { NOAddresses } from "./lib/NOAddresses.sol";
 
 import { SigningKeys } from "./lib/SigningKeys.sol";
-import { AssetRecoverer } from "./AssetRecoverer.sol";
+import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
 struct NodeOperator {

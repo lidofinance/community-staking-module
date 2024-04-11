@@ -4,11 +4,11 @@
 // solhint-disable-next-line one-contract-per-file
 pragma solidity 0.8.24;
 
-import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
-import { ILido } from "./interfaces/ILido.sol";
-import { IBurner } from "./interfaces/IBurner.sol";
-import { IWstETH } from "./interfaces/IWstETH.sol";
-import { IWithdrawalQueue } from "./interfaces/IWithdrawalQueue.sol";
+import { ILidoLocator } from "../interfaces/ILidoLocator.sol";
+import { ILido } from "../interfaces/ILido.sol";
+import { IBurner } from "../interfaces/IBurner.sol";
+import { IWstETH } from "../interfaces/IWstETH.sol";
+import { IWithdrawalQueue } from "../interfaces/IWithdrawalQueue.sol";
 
 abstract contract CSBondCoreBase {
     event BondDeposited(

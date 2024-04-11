@@ -14,9 +14,9 @@ import { ICSFeeDistributor } from "../src/interfaces/ICSFeeDistributor.sol";
 import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
 
 import { CSAccountingBase, CSAccounting } from "../src/CSAccounting.sol";
-import { CSBondLock } from "../src/CSBondLock.sol";
-import { CSBondCurve } from "../src/CSBondCurve.sol";
-import { AssetRecoverer } from "../src/AssetRecoverer.sol";
+import { CSBondLock } from "../src/abstract/CSBondLock.sol";
+import { CSBondCurve } from "../src/abstract/CSBondCurve.sol";
+import { AssetRecoverer } from "../src/abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
 import { PermitTokenBase } from "./helpers/Permit.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";

@@ -9,7 +9,7 @@ import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensio
 
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
-import { AssetRecoverer } from "./AssetRecoverer.sol";
+import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
 /// @author madlabman

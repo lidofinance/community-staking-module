@@ -6,7 +6,7 @@ import "forge-std/Test.sol";
 
 import { CSFeeDistributorBase, CSFeeDistributor } from "../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
-import { AssetRecoverer } from "../src/AssetRecoverer.sol";
+import { AssetRecoverer } from "../src/abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
 
 import { IStETH } from "../src/interfaces/IStETH.sol";

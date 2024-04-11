@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import { Test } from "forge-std/Test.sol";
-import { AssetRecoverer } from "../src/AssetRecoverer.sol";
+import { AssetRecoverer } from "../src/abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
 import { Utilities } from "./helpers/Utilities.sol";
 import { ERC1155Holder } from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";

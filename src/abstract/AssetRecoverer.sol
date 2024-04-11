@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.24;
 
-import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
+import { AssetRecovererLib } from "../lib/AssetRecovererLib.sol";
 
 /**
  * @title AssetRecoverer
