@@ -1675,11 +1675,6 @@ contract CSModule is
         );
     }
 
-    modifier onlyRecoverer() override {
-        _checkRole(RECOVERER_ROLE);
-        _;
-    }
-
     function _incrementModuleNonce() internal {
         _nonce++;
     }
@@ -1723,6 +1718,11 @@ contract CSModule is
     modifier onlyExistingNodeOperator(uint256 nodeOperatorId) {
         if (nodeOperatorId >= _nodeOperatorsCount)
             revert NodeOperatorDoesNotExist();
+        _;
+    }
+
+    modifier onlyRecoverer() override {
+        _checkRole(RECOVERER_ROLE);
         _;
     }
 }
