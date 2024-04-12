@@ -51,19 +51,22 @@
 | src/CSFeeOracle.sol:CSFeeOracle contract |                 |        |        |        |         |
 |------------------------------------------|-----------------|--------|--------|--------|---------|
 | Function Name                            | min             | avg    | median | max    | # calls |
-| MANAGE_CONSENSUS_CONTRACT_ROLE           | 284             | 284    | 284    | 284    | 5       |
-| MANAGE_CONSENSUS_VERSION_ROLE            | 262             | 262    | 262    | 262    | 5       |
-| MANAGE_FEE_DISTRIBUTOR_CONTRACT_ROLE     | 261             | 261    | 261    | 261    | 5       |
-| PAUSE_ROLE                               | 285             | 285    | 285    | 285    | 5       |
-| RESUME_ROLE                              | 285             | 285    | 285    | 285    | 5       |
-| SUBMIT_DATA_ROLE                         | 262             | 262    | 262    | 262    | 6       |
-| getConsensusReport                       | 903             | 1622   | 929    | 2903   | 14      |
-| getConsensusVersion                      | 396             | 1396   | 1396   | 2396   | 4       |
-| getLastProcessingRefSlot                 | 440             | 2297   | 2440   | 2440   | 14      |
-| grantRole                                | 101103          | 115996 | 118203 | 118203 | 31      |
-| initialize                               | 22907           | 220966 | 260577 | 260583 | 6       |
+| MANAGE_CONSENSUS_CONTRACT_ROLE           | 284             | 284    | 284    | 284    | 12      |
+| MANAGE_CONSENSUS_VERSION_ROLE            | 262             | 262    | 262    | 262    | 12      |
+| MANAGE_FEE_DISTRIBUTOR_CONTRACT_ROLE     | 261             | 261    | 261    | 261    | 12      |
+| PAUSE_ROLE                               | 285             | 285    | 285    | 285    | 12      |
+| RESUME_ROLE                              | 285             | 285    | 285    | 285    | 12      |
+| SUBMIT_DATA_ROLE                         | 262             | 262    | 262    | 262    | 27      |
+| getConsensusReport                       | 903             | 1708   | 929    | 2903   | 30      |
+| getConsensusVersion                      | 396             | 1596   | 2396   | 2396   | 20      |
+| getLastProcessingRefSlot                 | 440             | 2229   | 2440   | 2440   | 57      |
+| grantRole                                | 101103          | 114665 | 118203 | 118203 | 87      |
+| initialize                               | 22907           | 242291 | 260571 | 260583 | 13      |
+| pauseFor                                 | 47435           | 47435  | 47435  | 47435  | 2       |
+| pauseUntil                               | 47451           | 47451  | 47451  | 47451  | 1       |
+| resume                                   | 23520           | 26610  | 26610  | 29701  | 2       |
 | setFeeDistributorContract                | 23966           | 27011  | 27011  | 30057  | 2       |
-| submitReportData                         | 35409           | 44219  | 44219  | 53030  | 2       |
+| submitReportData                         | 25414           | 40569  | 43980  | 53030  | 8       |
 
 
 | src/CSModule.sol:CSModule contract                  |                 |        |        |         |         |
@@ -152,14 +155,15 @@
 | updateTargetValidatorsLimits                        | 24310           | 119625 | 128091 | 210409  | 28      |
 
 
-| src/CSVerifier.sol:CSVerifier contract |                 |        |        |        |         |
-|----------------------------------------|-----------------|--------|--------|--------|---------|
-| Function Name                          | min             | avg    | median | max    | # calls |
-| BEACON_ROOTS                           | 260             | 260    | 260    | 260    | 3       |
-| initialize                             | 66498           | 66498  | 66498  | 66498  | 3       |
-| processHistoricalWithdrawalProof       | 152118          | 152118 | 152118 | 152118 | 1       |
-| processSlashingProof                   | 83048           | 83048  | 83048  | 83048  | 1       |
-| processWithdrawalProof                 | 107007          | 107007 | 107007 | 107007 | 1       |
+| src/CSVerifier.sol:CSVerifier contract |                 |       |        |        |         |
+|----------------------------------------|-----------------|-------|--------|--------|---------|
+| Function Name                          | min             | avg   | median | max    | # calls |
+| BEACON_ROOTS                           | 260             | 260   | 260    | 260    | 21      |
+| FIRST_SUPPORTED_SLOT                   | 226             | 226   | 226    | 226    | 4       |
+| initialize                             | 66498           | 66498 | 66498  | 66498  | 17      |
+| processHistoricalWithdrawalProof       | 80216           | 97451 | 87201  | 152118 | 5       |
+| processSlashingProof                   | 48728           | 62430 | 55516  | 83048  | 3       |
+| processWithdrawalProof                 | 56326           | 74945 | 73902  | 107007 | 9       |
 
 
 | src/lib/AssetRecovererLib.sol:AssetRecovererLib contract |                 |       |        |       |         |

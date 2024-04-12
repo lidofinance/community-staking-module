@@ -9,6 +9,8 @@ import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { ICSModule } from "../src/interfaces/ICSModule.sol";
 
+import { GIndex } from "../src/lib/GIndex.sol";
+
 import { CSVerifier } from "../src/CSVerifier.sol";
 import { pack } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
@@ -27,6 +29,15 @@ contract CSVerifierHistoricalTest is Test {
         ICSVerifier.WithdrawalWitness witness;
     }
 
+    error RootNotFound();
+    error InvalidGIndex();
+    error InvalidBlockHeader();
+    error InvalidChainConfig();
+    error PartialWitdrawal();
+    error ValidatorNotWithdrawn();
+    error InvalidWithdrawalAddress();
+    error UnsupportedSlot(uint256 slot);
+
     // On **prater**, see https://github.com/eth-clients/goerli/blob/main/prater/config.yaml.
     uint64 public constant DENEB_FORK_EPOCH = 231680;
 
@@ -37,15 +48,6 @@ contract CSVerifierHistoricalTest is Test {
     HistoricalWithdrawalFixture public fixture;
 
     function setUp() public {
-        string memory root = vm.projectRoot();
-        string memory path = string.concat(
-            root,
-            "/test/fixtures/CSVerifier/historicalWithdrawal.json"
-        );
-        string memory json = vm.readFile(path);
-        bytes memory data = json.parseRaw("$");
-        fixture = abi.decode(data, (HistoricalWithdrawalFixture));
-
         verifier = new CSVerifier({
             slotsPerEpoch: 32,
             gIHistoricalSummaries: pack(0x3b, 5),
@@ -60,33 +62,44 @@ contract CSVerifierHistoricalTest is Test {
         verifier.initialize(address(locator), address(module));
     }
 
+    function _get_fixture() internal {
+        string memory root = vm.projectRoot();
+        string memory path = string.concat(
+            root,
+            "/test/fixtures/CSVerifier/historicalWithdrawal.json"
+        );
+        string memory json = vm.readFile(path);
+        bytes memory data = json.parseRaw("$");
+        fixture = abi.decode(data, (HistoricalWithdrawalFixture));
+    }
+
     function test_processWithdrawalProof() public {
-        vm.mockCall(
-            verifier.BEACON_ROOTS(),
-            abi.encode(fixture.beaconBlock.rootsTimestamp),
-            abi.encode(fixture._blockRoot)
-        );
+        _get_fixture();
+        _setMocksWithdrawal(fixture);
 
-        vm.mockCall(
-            address(module),
+        // solhint-disable-next-line func-named-parameters
+        verifier.processHistoricalWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.oldBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processWithdrawalProof_UnsupportedSlot() public {
+        _get_fixture();
+        _setMocksWithdrawal(fixture);
+
+        fixture.beaconBlock.header.slot =
+            verifier.FIRST_SUPPORTED_SLOT().unwrap() -
+            1;
+
+        vm.expectRevert(
             abi.encodeWithSelector(
-                ICSModule.getNodeOperatorSigningKeys.selector,
-                0,
-                0
-            ),
-            abi.encode(fixture._pubkey)
-        );
-
-        vm.mockCall(
-            address(locator),
-            abi.encodeWithSelector(ILidoLocator.withdrawalVault.selector),
-            abi.encode(fixture._withdrawalAddress)
-        );
-
-        vm.mockCall(
-            address(module),
-            abi.encodeWithSelector(ICSModule.submitWithdrawal.selector),
-            ""
+                UnsupportedSlot.selector,
+                fixture.beaconBlock.header.slot
+            )
         );
 
         // solhint-disable-next-line func-named-parameters
@@ -96,6 +109,101 @@ contract CSVerifierHistoricalTest is Test {
             fixture.witness,
             0,
             0
+        );
+    }
+
+    function test_processWithdrawalProof_UnsupportedSlot_OldBlock() public {
+        _get_fixture();
+        _setMocksWithdrawal(fixture);
+
+        fixture.oldBlock.header.slot =
+            verifier.FIRST_SUPPORTED_SLOT().unwrap() -
+            1;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                UnsupportedSlot.selector,
+                fixture.oldBlock.header.slot
+            )
+        );
+
+        // solhint-disable-next-line func-named-parameters
+        verifier.processHistoricalWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.oldBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processWithdrawalProof_InvalidBlockHeader() public {
+        _get_fixture();
+        _setMocksWithdrawal(fixture);
+
+        vm.mockCall(
+            verifier.BEACON_ROOTS(),
+            abi.encode(fixture.beaconBlock.rootsTimestamp),
+            abi.encode("lol")
+        );
+
+        vm.expectRevert(InvalidBlockHeader.selector);
+        // solhint-disable-next-line func-named-parameters
+        verifier.processHistoricalWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.oldBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processWithdrawalProof_InvalidGI() public {
+        _get_fixture();
+        _setMocksWithdrawal(fixture);
+
+        fixture.oldBlock.rootGIndex = GIndex.wrap(bytes32(0));
+
+        vm.expectRevert(InvalidGIndex.selector);
+        // solhint-disable-next-line func-named-parameters
+        verifier.processHistoricalWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.oldBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function _setMocksWithdrawal(
+        HistoricalWithdrawalFixture memory _fixture
+    ) internal {
+        vm.mockCall(
+            verifier.BEACON_ROOTS(),
+            abi.encode(_fixture.beaconBlock.rootsTimestamp),
+            abi.encode(_fixture._blockRoot)
+        );
+
+        vm.mockCall(
+            address(module),
+            abi.encodeWithSelector(
+                ICSModule.getNodeOperatorSigningKeys.selector,
+                0,
+                0
+            ),
+            abi.encode(_fixture._pubkey)
+        );
+
+        vm.mockCall(
+            address(locator),
+            abi.encodeWithSelector(ILidoLocator.withdrawalVault.selector),
+            abi.encode(_fixture._withdrawalAddress)
+        );
+
+        vm.mockCall(
+            address(module),
+            abi.encodeWithSelector(ICSModule.submitWithdrawal.selector),
+            ""
         );
     }
 }

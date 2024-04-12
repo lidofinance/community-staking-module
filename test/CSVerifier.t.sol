@@ -33,6 +33,15 @@ contract CSVerifierTest is Test {
         ICSVerifier.SlashingWitness witness;
     }
 
+    error RootNotFound();
+    error InvalidGIndex();
+    error InvalidBlockHeader();
+    error InvalidChainConfig();
+    error PartialWitdrawal();
+    error ValidatorNotWithdrawn();
+    error InvalidWithdrawalAddress();
+    error UnsupportedSlot(uint256 slot);
+
     // On **prater**, see https://github.com/eth-clients/goerli/blob/main/prater/config.yaml.
     uint64 public constant DENEB_FORK_EPOCH = 231680;
 
@@ -48,7 +57,8 @@ contract CSVerifierTest is Test {
             gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
             gIFirstWithdrawal: pack(0xe1c0, 4),
             gIFirstValidator: pack(0x560000000000, 40),
-            firstSupportedSlot: Slot.wrap(DENEB_FORK_EPOCH * 32)
+            // TODO: Fix proofs and set Slot.wrap(DENEB_FORK_EPOCH * 32)
+            firstSupportedSlot: Slot.wrap(1357000)
         });
 
         locator = new Stub();
@@ -63,6 +73,217 @@ contract CSVerifierTest is Test {
             (SlashingFixture)
         );
 
+        _setMocksSlashing(fixture);
+
+        verifier.processSlashingProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processSlashingProof_UnsupportedSlot() public {
+        SlashingFixture memory fixture = abi.decode(
+            _readFixture("slashing.json"),
+            (SlashingFixture)
+        );
+
+        _setMocksSlashing(fixture);
+
+        fixture.beaconBlock.header.slot =
+            verifier.FIRST_SUPPORTED_SLOT().unwrap() -
+            1;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                UnsupportedSlot.selector,
+                fixture.beaconBlock.header.slot
+            )
+        );
+        verifier.processSlashingProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processSlashingProof_InvalidBlockHeader() public {
+        SlashingFixture memory fixture = abi.decode(
+            _readFixture("slashing.json"),
+            (SlashingFixture)
+        );
+
+        _setMocksSlashing(fixture);
+
+        vm.mockCall(
+            verifier.BEACON_ROOTS(),
+            abi.encode(fixture.beaconBlock.rootsTimestamp),
+            abi.encode("lol")
+        );
+
+        vm.expectRevert(InvalidBlockHeader.selector);
+        verifier.processSlashingProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processWithdrawalProof() public {
+        WithdrawalFixture memory fixture = abi.decode(
+            _readFixture("withdrawal.json"),
+            (WithdrawalFixture)
+        );
+
+        _setMocksWithdrawal(fixture);
+
+        verifier.processWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processWithdrawalProof_ZeroWithrawalIndex() public {
+        WithdrawalFixture memory fixture = abi.decode(
+            _readFixture("withdrawal_zero_index.json"),
+            (WithdrawalFixture)
+        );
+
+        _setMocksWithdrawal(fixture);
+
+        verifier.processWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processWithdrawalProof_UnsupportedSlot() public {
+        WithdrawalFixture memory fixture = abi.decode(
+            _readFixture("withdrawal.json"),
+            (WithdrawalFixture)
+        );
+
+        _setMocksWithdrawal(fixture);
+
+        fixture.beaconBlock.header.slot =
+            verifier.FIRST_SUPPORTED_SLOT().unwrap() -
+            1;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                UnsupportedSlot.selector,
+                fixture.beaconBlock.header.slot
+            )
+        );
+        verifier.processWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processWithdrawalProof_InvalidBlockHeader() public {
+        WithdrawalFixture memory fixture = abi.decode(
+            _readFixture("withdrawal.json"),
+            (WithdrawalFixture)
+        );
+
+        _setMocksWithdrawal(fixture);
+
+        vm.mockCall(
+            verifier.BEACON_ROOTS(),
+            abi.encode(fixture.beaconBlock.rootsTimestamp),
+            abi.encode("lol")
+        );
+
+        vm.expectRevert(InvalidBlockHeader.selector);
+        verifier.processWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processWithdrawalProof_No4788Contract() public {
+        WithdrawalFixture memory fixture = abi.decode(
+            _readFixture("withdrawal.json"),
+            (WithdrawalFixture)
+        );
+
+        vm.mockCall(
+            address(module),
+            abi.encodeWithSelector(
+                ICSModule.getNodeOperatorSigningKeys.selector,
+                0,
+                0
+            ),
+            abi.encode(fixture._pubkey)
+        );
+
+        vm.mockCall(
+            address(locator),
+            abi.encodeWithSelector(ILidoLocator.withdrawalVault.selector),
+            abi.encode(fixture._withdrawalAddress)
+        );
+
+        vm.mockCall(
+            address(module),
+            abi.encodeWithSelector(ICSModule.submitWithdrawal.selector),
+            ""
+        );
+
+        vm.etch(verifier.BEACON_ROOTS(), new bytes(0));
+
+        vm.expectRevert(RootNotFound.selector);
+        verifier.processWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processWithdrawalProof_revertFrom4788() public {
+        WithdrawalFixture memory fixture = abi.decode(
+            _readFixture("withdrawal.json"),
+            (WithdrawalFixture)
+        );
+
+        _setMocksWithdrawal(fixture);
+
+        vm.mockCallRevert(
+            verifier.BEACON_ROOTS(),
+            abi.encode(fixture.beaconBlock.rootsTimestamp),
+            ""
+        );
+
+        vm.expectRevert(RootNotFound.selector);
+        verifier.processWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function _readFixture(
+        string memory filename
+    ) internal noGasMetering returns (bytes memory data) {
+        string memory path = string.concat(fixturesPath, filename);
+        string memory json = vm.readFile(path);
+        data = json.parseRaw("$");
+    }
+
+    function _setMocksSlashing(SlashingFixture memory fixture) internal {
         vm.mockCall(
             verifier.BEACON_ROOTS(),
             abi.encode(fixture.beaconBlock.rootsTimestamp),
@@ -84,8 +305,20 @@ contract CSVerifierTest is Test {
             abi.encodeWithSelector(ICSModule.submitInitialSlashing.selector),
             ""
         );
+    }
 
-        verifier.processSlashingProof(
+    function test_processWithdrawalProof_InvalidWithdrawalAddress() public {
+        WithdrawalFixture memory fixture = abi.decode(
+            _readFixture("withdrawal.json"),
+            (WithdrawalFixture)
+        );
+
+        _setMocksWithdrawal(fixture);
+
+        fixture.witness.withdrawalCredentials = bytes32(0);
+
+        vm.expectRevert(InvalidWithdrawalAddress.selector);
+        verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,
             0,
@@ -93,12 +326,48 @@ contract CSVerifierTest is Test {
         );
     }
 
-    function test_processWithdrawalProof() public {
+    function test_processWithdrawalProof_ValidatorNotWithdrawn() public {
         WithdrawalFixture memory fixture = abi.decode(
             _readFixture("withdrawal.json"),
             (WithdrawalFixture)
         );
 
+        _setMocksWithdrawal(fixture);
+
+        fixture.witness.withdrawableEpoch =
+            fixture.beaconBlock.header.slot /
+            32 +
+            154;
+
+        vm.expectRevert(ValidatorNotWithdrawn.selector);
+        verifier.processWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processWithdrawalProof_PartialWitdrawal() public {
+        WithdrawalFixture memory fixture = abi.decode(
+            _readFixture("withdrawal.json"),
+            (WithdrawalFixture)
+        );
+
+        _setMocksWithdrawal(fixture);
+
+        fixture.witness.amount = 154;
+
+        vm.expectRevert(PartialWitdrawal.selector);
+        verifier.processWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function _setMocksWithdrawal(WithdrawalFixture memory fixture) internal {
         vm.mockCall(
             verifier.BEACON_ROOTS(),
             abi.encode(fixture.beaconBlock.rootsTimestamp),
@@ -126,20 +395,5 @@ contract CSVerifierTest is Test {
             abi.encodeWithSelector(ICSModule.submitWithdrawal.selector),
             ""
         );
-
-        verifier.processWithdrawalProof(
-            fixture.beaconBlock,
-            fixture.witness,
-            0,
-            0
-        );
-    }
-
-    function _readFixture(
-        string memory filename
-    ) internal noGasMetering returns (bytes memory data) {
-        string memory path = string.concat(fixturesPath, filename);
-        string memory json = vm.readFile(path);
-        data = json.parseRaw("$");
     }
 }

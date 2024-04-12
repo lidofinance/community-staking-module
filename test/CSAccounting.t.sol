@@ -1040,6 +1040,8 @@ abstract contract CSAccountingGetRequiredBondForKeysBaseTest is
 {
     uint256[] public defaultCurve = [2 ether, 3 ether];
 
+    uint256[] public bigCurve = [1.5 ether, 2.5 ether, 3.5 ether, 4 ether];
+
     function _curve(uint256[] memory curve) internal virtual {
         accounting.setBondCurve_ForTest(0, curve);
     }
@@ -1086,6 +1088,27 @@ contract CSAccountingGetBondAmountByKeysCountWstETHTest is
         assertEq(
             accounting.getBondAmountByKeysCountWstETH(15, curve),
             wstETH.getWstETHByStETH(16 ether)
+        );
+    }
+
+    function test_WithBigCurve() public {
+        CSBondCurve.BondCurve memory curve = CSBondCurve.BondCurve({
+            id: 0,
+            points: bigCurve,
+            trend: 0.5 ether
+        });
+        assertEq(accounting.getBondAmountByKeysCountWstETH(0, curve), 0);
+        assertEq(
+            accounting.getBondAmountByKeysCountWstETH(1, curve),
+            wstETH.getWstETHByStETH(1.5 ether)
+        );
+        assertEq(
+            accounting.getBondAmountByKeysCountWstETH(2, curve),
+            wstETH.getWstETHByStETH(2.5 ether)
+        );
+        assertEq(
+            accounting.getBondAmountByKeysCountWstETH(16, curve),
+            wstETH.getWstETHByStETH(10 ether)
         );
     }
 }
@@ -2701,6 +2724,31 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
             UINT256_MAX,
             leaf.shares,
             leaf.proof
+        );
+    }
+
+    function test_revertWhenRequestedLessThanMinWithdrawal() public {
+        _operator({ ongoing: 1, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+
+        uint256 minWithdrawal = IWithdrawalQueue(locator.withdrawalQueue())
+            .MIN_STETH_WITHDRAWAL_AMOUNT();
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.startPrank(address(stakingModule));
+        accounting.requestRewardsETH(
+            leaf.nodeOperatorId,
+            stETH.getPooledEthByShares(minWithdrawal) - 10 wei,
+            leaf.shares,
+            leaf.proof
+        );
+        vm.stopPrank();
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+
+        assertEq(
+            bondSharesAfter,
+            bondSharesBefore,
+            "bond shares should not change after request"
         );
     }
 }
