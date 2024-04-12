@@ -37,7 +37,7 @@ just
 just test # run all tests
 # or run specific tests
 just test-unit
-just test-inegration
+just test-integration
 ```
 
 - Make a gas report

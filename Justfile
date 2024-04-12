@@ -76,7 +76,7 @@ gas-report:
                 to_print = False
                 skip_next = True
 
-            if re.match("Ran \d+ test suites", line):
+            if re.match(r"Ran \d+ test suites", line):
                 break
 
             if to_print:
