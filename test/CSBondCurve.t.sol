@@ -229,4 +229,22 @@ contract CSBondCurveTest is Test, CSBondCurveBase {
         assertEq(bondCurve.getBondAmountByKeysCount(2, curve), 3.6 ether);
         assertEq(bondCurve.getBondAmountByKeysCount(3, curve), 5.4 ether);
     }
+
+    function test_getBondAmountByKeysCount_bigCurve() public {
+        CSBondCurve.BondCurve memory curve;
+        uint256[] memory points = new uint256[](4);
+        points[0] = 1.5 ether;
+        points[1] = 2.5 ether;
+        points[2] = 3.5 ether;
+        points[3] = 4 ether;
+        curve.points = points;
+        curve.trend = 0.5 ether;
+
+        assertEq(bondCurve.getBondAmountByKeysCount(0, curve), 0);
+        assertEq(bondCurve.getBondAmountByKeysCount(1, curve), 1.5 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(2, curve), 2.5 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(3, curve), 3.5 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(4, curve), 4 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(16, curve), 10 ether);
+    }
 }

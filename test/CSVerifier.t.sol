@@ -33,15 +33,6 @@ contract CSVerifierTest is Test {
         ICSVerifier.SlashingWitness witness;
     }
 
-    error RootNotFound();
-    error InvalidGIndex();
-    error InvalidBlockHeader();
-    error InvalidChainConfig();
-    error PartialWitdrawal();
-    error ValidatorNotWithdrawn();
-    error InvalidWithdrawalAddress();
-    error UnsupportedSlot(uint256 slot);
-
     // On **prater**, see https://github.com/eth-clients/goerli/blob/main/prater/config.yaml.
     uint64 public constant DENEB_FORK_EPOCH = 231680;
 
@@ -97,7 +88,7 @@ contract CSVerifierTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                UnsupportedSlot.selector,
+                CSVerifier.UnsupportedSlot.selector,
                 fixture.beaconBlock.header.slot
             )
         );
@@ -123,7 +114,7 @@ contract CSVerifierTest is Test {
             abi.encode("lol")
         );
 
-        vm.expectRevert(InvalidBlockHeader.selector);
+        vm.expectRevert(CSVerifier.InvalidBlockHeader.selector);
         verifier.processSlashingProof(
             fixture.beaconBlock,
             fixture.witness,
@@ -178,7 +169,7 @@ contract CSVerifierTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                UnsupportedSlot.selector,
+                CSVerifier.UnsupportedSlot.selector,
                 fixture.beaconBlock.header.slot
             )
         );
@@ -204,7 +195,7 @@ contract CSVerifierTest is Test {
             abi.encode("lol")
         );
 
-        vm.expectRevert(InvalidBlockHeader.selector);
+        vm.expectRevert(CSVerifier.InvalidBlockHeader.selector);
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,
@@ -243,7 +234,7 @@ contract CSVerifierTest is Test {
 
         vm.etch(verifier.BEACON_ROOTS(), new bytes(0));
 
-        vm.expectRevert(RootNotFound.selector);
+        vm.expectRevert(CSVerifier.RootNotFound.selector);
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,
@@ -266,7 +257,7 @@ contract CSVerifierTest is Test {
             ""
         );
 
-        vm.expectRevert(RootNotFound.selector);
+        vm.expectRevert(CSVerifier.RootNotFound.selector);
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,
@@ -317,7 +308,7 @@ contract CSVerifierTest is Test {
 
         fixture.witness.withdrawalCredentials = bytes32(0);
 
-        vm.expectRevert(InvalidWithdrawalAddress.selector);
+        vm.expectRevert(CSVerifier.InvalidWithdrawalAddress.selector);
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,
@@ -339,7 +330,7 @@ contract CSVerifierTest is Test {
             32 +
             154;
 
-        vm.expectRevert(ValidatorNotWithdrawn.selector);
+        vm.expectRevert(CSVerifier.ValidatorNotWithdrawn.selector);
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,
@@ -358,7 +349,7 @@ contract CSVerifierTest is Test {
 
         fixture.witness.amount = 154;
 
-        vm.expectRevert(PartialWitdrawal.selector);
+        vm.expectRevert(CSVerifier.PartialWitdrawal.selector);
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,

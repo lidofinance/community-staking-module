@@ -354,7 +354,7 @@ contract CsmInitialization is CSMCommon {
         assertEq(address(csm.accounting()), address(accounting));
     }
 
-    function test_setAccounting_alreadySet() public {
+    function test_setAccounting_RevertWhen_AlreadySet() public {
         csm = new CSModule(
             "community-staking-module",
             address(locator),
@@ -836,7 +836,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_AddNodeOperatorETH_InvalidAmount() public {
+    function test_AddNodeOperatorETH_RevertWhen_InvalidAmount() public {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -871,7 +871,7 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_AddValidatorKeysETH_InvalidAmount() public {
+    function test_AddValidatorKeysETH_RevertWhen_InvalidAmount() public {
         uint256 noId = createNodeOperator();
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
 
@@ -1295,6 +1295,14 @@ contract CSMObtainDepositData is CSMCommon {
         csm.decreaseOperatorVettedKeys(UintArr(secondNoId), UintArr(0));
 
         csm.obtainDepositData(5, "");
+
+        (
+            uint256 totalExitedValidators,
+            uint256 totalDepositedValidators,
+            uint256 depositableValidatorsCount
+        ) = csm.getStakingModuleSummary();
+        assertEq(totalDepositedValidators, 5);
+        assertEq(depositableValidatorsCount, 0);
     }
 
     function test_obtainDepositData_counters_WhenLessThanLastBatch() public {
@@ -3016,6 +3024,47 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(lock.amount, 0 ether);
         assertEq(lock.retentionUntil, 0);
+    }
+
+    function test_settleELRewardsStealingPenalty_NoLock_MultipleOperators()
+        public
+    {
+        uint256 firstNoId = createNodeOperator();
+        uint256 secondNoId = createNodeOperator();
+        uint256[] memory idsToSettle = new uint256[](2);
+        idsToSettle[0] = firstNoId;
+        idsToSettle[1] = secondNoId;
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit ELRewardsStealingPenaltySettled(firstNoId, 0);
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit ELRewardsStealingPenaltySettled(secondNoId, 0);
+        expectNoCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.resetBondCurve.selector,
+                firstNoId
+            )
+        );
+        expectNoCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.resetBondCurve.selector,
+                secondNoId
+            )
+        );
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        CSBondLock.BondLock memory firstLock = accounting.getLockedBondInfo(
+            firstNoId
+        );
+        assertEq(firstLock.amount, 0 ether);
+        assertEq(firstLock.retentionUntil, 0);
+        CSBondLock.BondLock memory secondLock = accounting.getLockedBondInfo(
+            secondNoId
+        );
+        assertEq(secondLock.amount, 0 ether);
+        assertEq(secondLock.retentionUntil, 0);
     }
 
     function test_settleELRewardsStealingPenalty_NoExistingNodeOperator()

@@ -8,6 +8,8 @@ import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 import { UnstructuredStorage } from "../lib/base-oracle/lib/UnstructuredStorage.sol";
 import { HashConsensus } from "../lib/base-oracle/oracle/HashConsensus.sol";
+import { PausableUntil } from "../lib/base-oracle/utils/PausableUntil.sol";
+import { BaseOracle } from "../lib/base-oracle/oracle/BaseOracle.sol";
 import { DistributorMock } from "./helpers/mocks/DistributorMock.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { Utilities } from "./helpers/Utilities.sol";
@@ -49,30 +51,6 @@ contract CSFeeOracleTest is Test, Utilities {
     address public stranger;
     uint256 public quorum;
 
-    event ReportReceived(
-        uint256 indexed refSlot,
-        address indexed member,
-        bytes32 report
-    );
-
-    event ReportConsolidated(
-        uint256 indexed refSlot,
-        uint256 distributed,
-        bytes32 newRoot,
-        string treeCid
-    );
-
-    event FeeDistributorContractSet(address feeDistributorContract);
-
-    error TreeRootCannotBeZero();
-    error TreeCidCannotBeEmpty();
-    error NothingToDistribute();
-    error AdminCannotBeZero();
-    error AddressCannotBeZero();
-    error SenderNotAllowed();
-    error ResumedExpected();
-    error PausedExpected();
-
     function setUp() public {
         chainConfig = ChainConfig({
             secondsPerSlot: 12,
@@ -82,6 +60,7 @@ contract CSFeeOracleTest is Test, Utilities {
 
         vm.label(ORACLE_ADMIN, "ORACLE_ADMIN");
         _vmSetEpoch(INITIAL_EPOCH);
+        stranger = nextAddress();
     }
 
     function test_happyPath() public {
@@ -113,7 +92,7 @@ contract CSFeeOracleTest is Test, Utilities {
         _reachConsensus(refSlot, reportHash);
 
         vm.expectEmit(true, true, true, true, address(oracle));
-        emit ReportConsolidated(
+        emit CSFeeOracle.ReportConsolidated(
             refSlot,
             data.distributed,
             data.treeRoot,
@@ -139,7 +118,7 @@ contract CSFeeOracleTest is Test, Utilities {
         assertLt(startSlot, refSlot);
     }
 
-    function test_invalidReportSender() public {
+    function test_submitReportData_RevertWhen_InvalidReportSender() public {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
             _grantAllRolesToAdmin();
@@ -167,12 +146,12 @@ contract CSFeeOracleTest is Test, Utilities {
         bytes32 reportHash = keccak256(abi.encode(data));
         _reachConsensus(refSlot, reportHash);
 
-        vm.expectRevert(SenderNotAllowed.selector);
+        vm.expectRevert(CSFeeOracle.SenderNotAllowed.selector);
         vm.prank(stranger);
         oracle.submitReportData({ data: data, contractVersion: 1 });
     }
 
-    function test_submitReport_whenPausedFor() public {
+    function test_submitReport_RevertWhen_PausedFor() public {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
             _grantAllRolesToAdmin();
@@ -200,12 +179,12 @@ contract CSFeeOracleTest is Test, Utilities {
             distributed: 1337
         });
 
-        vm.expectRevert(ResumedExpected.selector);
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
         vm.prank(members[0]);
         oracle.submitReportData({ data: data, contractVersion: 1 });
     }
 
-    function test_submitReport_whenPausedUntil() public {
+    function test_submitReport_RevertWhen_PausedUntil() public {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
             _grantAllRolesToAdmin();
@@ -233,7 +212,7 @@ contract CSFeeOracleTest is Test, Utilities {
             distributed: 1337
         });
 
-        vm.expectRevert(ResumedExpected.selector);
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
         vm.prank(members[0]);
         oracle.submitReportData({ data: data, contractVersion: 1 });
     }
@@ -272,7 +251,7 @@ contract CSFeeOracleTest is Test, Utilities {
         _reachConsensus(refSlot, reportHash);
 
         vm.expectEmit(true, true, true, true, address(oracle));
-        emit ReportConsolidated(
+        emit CSFeeOracle.ReportConsolidated(
             refSlot,
             data.distributed,
             data.treeRoot,
@@ -307,12 +286,12 @@ contract CSFeeOracleTest is Test, Utilities {
             _seedMembers(3);
         }
 
-        vm.expectRevert(PausedExpected.selector);
+        vm.expectRevert(PausableUntil.PausedExpected.selector);
         vm.prank(ORACLE_ADMIN);
         oracle.resume();
     }
 
-    function test_reportSanityChecks_NothingToDistribute() public {
+    function test_reportSanityChecks_RevertIf_NothingToDistribute() public {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
             _grantAllRolesToAdmin();
@@ -340,7 +319,7 @@ contract CSFeeOracleTest is Test, Utilities {
         bytes32 reportHash = keccak256(abi.encode(data));
         _reachConsensus(refSlot, reportHash);
 
-        vm.expectRevert(NothingToDistribute.selector);
+        vm.expectRevert(CSFeeOracle.NothingToDistribute.selector);
         vm.prank(members[0]);
         oracle.submitReportData({ data: data, contractVersion: 1 });
     }
@@ -373,12 +352,12 @@ contract CSFeeOracleTest is Test, Utilities {
         bytes32 reportHash = keccak256(abi.encode(data));
         _reachConsensus(refSlot, reportHash);
 
-        vm.expectRevert(TreeRootCannotBeZero.selector);
+        vm.expectRevert(CSFeeOracle.TreeRootCannotBeZero.selector);
         vm.prank(members[0]);
         oracle.submitReportData({ data: data, contractVersion: 1 });
     }
 
-    function test_reportSanityChecks_TreeCidCannotBeEmpty() public {
+    function test_reportSanityChecks_RevertIf_TreeCidCannotBeEmpty() public {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
             _grantAllRolesToAdmin();
@@ -406,12 +385,12 @@ contract CSFeeOracleTest is Test, Utilities {
         bytes32 reportHash = keccak256(abi.encode(data));
         _reachConsensus(refSlot, reportHash);
 
-        vm.expectRevert(TreeCidCannotBeEmpty.selector);
+        vm.expectRevert(CSFeeOracle.TreeCidCannotBeEmpty.selector);
         vm.prank(members[0]);
         oracle.submitReportData({ data: data, contractVersion: 1 });
     }
 
-    function test_initialize_AdminCannotBeZero() public {
+    function test_initialize_RevertIf_AdminCannotBeZero() public {
         oracle = new CSFeeOracleForTest({
             secondsPerSlot: chainConfig.secondsPerSlot,
             genesisTime: chainConfig.genesisTime
@@ -428,7 +407,7 @@ contract CSFeeOracleTest is Test, Utilities {
         });
 
         DistributorMock distributor = new DistributorMock();
-        vm.expectRevert(AdminCannotBeZero.selector);
+        vm.expectRevert(CSFeeOracle.AdminCannotBeZero.selector);
         oracle.initialize(
             address(0),
             address(distributor),
@@ -447,12 +426,14 @@ contract CSFeeOracleTest is Test, Utilities {
         }
 
         vm.expectEmit(true, true, true, true, address(oracle));
-        emit FeeDistributorContractSet(address(1));
+        emit CSFeeOracle.FeeDistributorContractSet(address(1));
         vm.prank(ORACLE_ADMIN);
         oracle.setFeeDistributorContract(address(1));
     }
 
-    function test_setFeeDistributorContract_AddressCannotBeZero() public {
+    function test_setFeeDistributorContract_RevertIf_AddressCannotBeZero()
+        public
+    {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
             _grantAllRolesToAdmin();
@@ -460,7 +441,7 @@ contract CSFeeOracleTest is Test, Utilities {
             _setInitialEpoch();
         }
 
-        vm.expectRevert(AddressCannotBeZero.selector);
+        vm.expectRevert(BaseOracle.AddressCannotBeZero.selector);
         vm.prank(ORACLE_ADMIN);
         oracle.setFeeDistributorContract(address(0));
     }
@@ -561,7 +542,6 @@ contract CSFeeOracleTest is Test, Utilities {
             members.push(newMember);
             quorum = q;
         }
-        stranger = nextAddress();
     }
 
     function _assertNoReportOnInit() internal {
@@ -586,7 +566,7 @@ contract CSFeeOracleTest is Test, Utilities {
     function _reachConsensus(uint256 refSlot, bytes32 hash) internal {
         for (uint256 i; i < quorum; i++) {
             vm.expectEmit(true, true, true, true, address(consensus));
-            emit ReportReceived(refSlot, members[i], hash);
+            emit HashConsensus.ReportReceived(refSlot, members[i], hash);
 
             vm.prank(members[i]);
             consensus.submitReport(refSlot, hash, CONSENSUS_VERSION);

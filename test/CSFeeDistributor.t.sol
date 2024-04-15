@@ -103,7 +103,7 @@ contract CSFeeDistributorTest is
         });
     }
 
-    function test_processOracleReport_InvalidShares() public {
+    function test_processOracleReport_RevertWhen_InvalidShares() public {
         uint256 nodeOperatorId = 42;
         uint256 shares = 100;
         tree.pushLeaf(abi.encode(nodeOperatorId, shares));

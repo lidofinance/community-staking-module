@@ -29,15 +29,6 @@ contract CSVerifierHistoricalTest is Test {
         ICSVerifier.WithdrawalWitness witness;
     }
 
-    error RootNotFound();
-    error InvalidGIndex();
-    error InvalidBlockHeader();
-    error InvalidChainConfig();
-    error PartialWitdrawal();
-    error ValidatorNotWithdrawn();
-    error InvalidWithdrawalAddress();
-    error UnsupportedSlot(uint256 slot);
-
     // On **prater**, see https://github.com/eth-clients/goerli/blob/main/prater/config.yaml.
     uint64 public constant DENEB_FORK_EPOCH = 231680;
 
@@ -97,7 +88,7 @@ contract CSVerifierHistoricalTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                UnsupportedSlot.selector,
+                CSVerifier.UnsupportedSlot.selector,
                 fixture.beaconBlock.header.slot
             )
         );
@@ -122,7 +113,7 @@ contract CSVerifierHistoricalTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                UnsupportedSlot.selector,
+                CSVerifier.UnsupportedSlot.selector,
                 fixture.oldBlock.header.slot
             )
         );
@@ -147,7 +138,7 @@ contract CSVerifierHistoricalTest is Test {
             abi.encode("lol")
         );
 
-        vm.expectRevert(InvalidBlockHeader.selector);
+        vm.expectRevert(CSVerifier.InvalidBlockHeader.selector);
         // solhint-disable-next-line func-named-parameters
         verifier.processHistoricalWithdrawalProof(
             fixture.beaconBlock,
@@ -164,7 +155,7 @@ contract CSVerifierHistoricalTest is Test {
 
         fixture.oldBlock.rootGIndex = GIndex.wrap(bytes32(0));
 
-        vm.expectRevert(InvalidGIndex.selector);
+        vm.expectRevert(CSVerifier.InvalidGIndex.selector);
         // solhint-disable-next-line func-named-parameters
         verifier.processHistoricalWithdrawalProof(
             fixture.beaconBlock,
