@@ -441,16 +441,6 @@ contract CSAccounting is
         shares = CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
     }
 
-    /// @dev only CSM can pass `from` != `msg.sender`
-    function _validateDepositSender(
-        address from
-    ) internal view returns (address) {
-        if (from == address(0)) from = msg.sender;
-        if (from != msg.sender && msg.sender != address(CSM))
-            revert InvalidSender();
-        return from;
-    }
-
     /// @notice Claims full reward (fee + bond) in stETH for the given node operator with desirable value.
     /// rewardsProof and cumulativeFeeShares might be empty in order to claim only excess bond
     /// @param nodeOperatorId id of the node operator to claim rewards for.
@@ -587,7 +577,6 @@ contract CSAccounting is
         }
         // reduce all locked bond even if bond isn't covered lock fully
         CSBondLock._remove(nodeOperatorId);
-        return lockedAmount;
     }
 
     /// @notice Penalize bond by burning shares of the given node operator.

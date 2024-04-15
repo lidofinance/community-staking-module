@@ -8,6 +8,8 @@ import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 import { UnstructuredStorage } from "../lib/base-oracle/lib/UnstructuredStorage.sol";
 import { HashConsensus } from "../lib/base-oracle/oracle/HashConsensus.sol";
+import { PausableUntil } from "../lib/base-oracle/utils/PausableUntil.sol";
+import { BaseOracle } from "../lib/base-oracle/oracle/BaseOracle.sol";
 import { DistributorMock } from "./helpers/mocks/DistributorMock.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { Utilities } from "./helpers/Utilities.sol";
@@ -46,20 +48,8 @@ contract CSFeeOracleTest is Test, Utilities {
     HashConsensus public consensus;
     ChainConfig public chainConfig;
     address[] public members;
+    address public stranger;
     uint256 public quorum;
-
-    event ReportReceived(
-        uint256 indexed refSlot,
-        address indexed member,
-        bytes32 report
-    );
-
-    event ReportConsolidated(
-        uint256 indexed refSlot,
-        uint256 distributed,
-        bytes32 newRoot,
-        string treeCid
-    );
 
     function setUp() public {
         chainConfig = ChainConfig({
@@ -70,6 +60,7 @@ contract CSFeeOracleTest is Test, Utilities {
 
         vm.label(ORACLE_ADMIN, "ORACLE_ADMIN");
         _vmSetEpoch(INITIAL_EPOCH);
+        stranger = nextAddress();
     }
 
     function test_happyPath() public {
@@ -101,7 +92,7 @@ contract CSFeeOracleTest is Test, Utilities {
         _reachConsensus(refSlot, reportHash);
 
         vm.expectEmit(true, true, true, true, address(oracle));
-        emit ReportConsolidated(
+        emit CSFeeOracle.ReportConsolidated(
             refSlot,
             data.distributed,
             data.treeRoot,
@@ -125,6 +116,334 @@ contract CSFeeOracleTest is Test, Utilities {
         (, startSlot, , ) = oracle.getConsensusReport();
         (refSlot, ) = consensus.getCurrentFrame();
         assertLt(startSlot, refSlot);
+    }
+
+    function test_submitReportData_RevertWhen_InvalidReportSender() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+            _seedMembers(3);
+        }
+
+        uint256 startSlot;
+        uint256 refSlot;
+
+        (, startSlot, , ) = oracle.getConsensusReport();
+        (refSlot, ) = consensus.getCurrentFrame();
+        // INITIAL_EPOCH is far above the lastProcessingRefSlot's epoch
+        assertNotEq(startSlot, refSlot);
+
+        CSFeeOracle.ReportData memory data = CSFeeOracle.ReportData({
+            consensusVersion: oracle.getConsensusVersion(),
+            refSlot: refSlot,
+            treeRoot: keccak256("root"),
+            treeCid: "QmCID0",
+            distributed: 1337
+        });
+
+        bytes32 reportHash = keccak256(abi.encode(data));
+        _reachConsensus(refSlot, reportHash);
+
+        vm.expectRevert(CSFeeOracle.SenderNotAllowed.selector);
+        vm.prank(stranger);
+        oracle.submitReportData({ data: data, contractVersion: 1 });
+    }
+
+    function test_submitReport_RevertWhen_PausedFor() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+            _seedMembers(3);
+        }
+
+        vm.prank(ORACLE_ADMIN);
+        oracle.pauseFor(1000);
+
+        uint256 startSlot;
+        uint256 refSlot;
+
+        (, startSlot, , ) = oracle.getConsensusReport();
+        (refSlot, ) = consensus.getCurrentFrame();
+        // INITIAL_EPOCH is far above the lastProcessingRefSlot's epoch
+        assertNotEq(startSlot, refSlot);
+
+        CSFeeOracle.ReportData memory data = CSFeeOracle.ReportData({
+            consensusVersion: oracle.getConsensusVersion(),
+            refSlot: refSlot,
+            treeRoot: keccak256("root"),
+            treeCid: "QmCID0",
+            distributed: 1337
+        });
+
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        vm.prank(members[0]);
+        oracle.submitReportData({ data: data, contractVersion: 1 });
+    }
+
+    function test_submitReport_RevertWhen_PausedUntil() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+            _seedMembers(3);
+        }
+
+        vm.prank(ORACLE_ADMIN);
+        oracle.pauseUntil(block.timestamp + 1000);
+
+        uint256 startSlot;
+        uint256 refSlot;
+
+        (, startSlot, , ) = oracle.getConsensusReport();
+        (refSlot, ) = consensus.getCurrentFrame();
+        // INITIAL_EPOCH is far above the lastProcessingRefSlot's epoch
+        assertNotEq(startSlot, refSlot);
+
+        CSFeeOracle.ReportData memory data = CSFeeOracle.ReportData({
+            consensusVersion: oracle.getConsensusVersion(),
+            refSlot: refSlot,
+            treeRoot: keccak256("root"),
+            treeCid: "QmCID0",
+            distributed: 1337
+        });
+
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        vm.prank(members[0]);
+        oracle.submitReportData({ data: data, contractVersion: 1 });
+    }
+
+    function test_happyPath_whenResumed() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+            _seedMembers(3);
+        }
+
+        vm.startPrank(ORACLE_ADMIN);
+        oracle.pauseFor(1000);
+        oracle.resume();
+        vm.stopPrank();
+
+        uint256 startSlot;
+        uint256 refSlot;
+
+        (, startSlot, , ) = oracle.getConsensusReport();
+        (refSlot, ) = consensus.getCurrentFrame();
+        // INITIAL_EPOCH is far above the lastProcessingRefSlot's epoch
+        assertNotEq(startSlot, refSlot);
+
+        CSFeeOracle.ReportData memory data = CSFeeOracle.ReportData({
+            consensusVersion: oracle.getConsensusVersion(),
+            refSlot: refSlot,
+            treeRoot: keccak256("root"),
+            treeCid: "QmCID0",
+            distributed: 1337
+        });
+
+        bytes32 reportHash = keccak256(abi.encode(data));
+        _reachConsensus(refSlot, reportHash);
+
+        vm.expectEmit(true, true, true, true, address(oracle));
+        emit CSFeeOracle.ReportConsolidated(
+            refSlot,
+            data.distributed,
+            data.treeRoot,
+            data.treeCid
+        );
+        vm.prank(members[0]);
+        oracle.submitReportData({ data: data, contractVersion: 1 });
+
+        (, startSlot, , ) = oracle.getConsensusReport();
+        (refSlot, ) = consensus.getCurrentFrame();
+        assertEq(startSlot, refSlot);
+
+        // Advance block.timestamp to the middle of the frame
+        _vmSetEpoch(INITIAL_EPOCH + _epochsInDays(14));
+        (, startSlot, , ) = oracle.getConsensusReport();
+        (refSlot, ) = consensus.getCurrentFrame();
+        assertEq(startSlot, refSlot);
+
+        // Advance block.timestamp to the end of the frame
+        _vmSetEpoch(INITIAL_EPOCH + _epochsInDays(28));
+        (, startSlot, , ) = oracle.getConsensusReport();
+        (refSlot, ) = consensus.getCurrentFrame();
+        assertLt(startSlot, refSlot);
+    }
+
+    function test_resumeWhenNotPaused() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+            _seedMembers(3);
+        }
+
+        vm.expectRevert(PausableUntil.PausedExpected.selector);
+        vm.prank(ORACLE_ADMIN);
+        oracle.resume();
+    }
+
+    function test_reportSanityChecks_RevertWhen_NothingToDistribute() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+            _seedMembers(3);
+        }
+
+        uint256 startSlot;
+        uint256 refSlot;
+
+        (, startSlot, , ) = oracle.getConsensusReport();
+        (refSlot, ) = consensus.getCurrentFrame();
+        // INITIAL_EPOCH is far above the lastProcessingRefSlot's epoch
+        assertNotEq(startSlot, refSlot);
+
+        CSFeeOracle.ReportData memory data = CSFeeOracle.ReportData({
+            consensusVersion: oracle.getConsensusVersion(),
+            refSlot: refSlot,
+            treeRoot: keccak256("root"),
+            treeCid: "QmCID0",
+            distributed: 0
+        });
+
+        bytes32 reportHash = keccak256(abi.encode(data));
+        _reachConsensus(refSlot, reportHash);
+
+        vm.expectRevert(CSFeeOracle.NothingToDistribute.selector);
+        vm.prank(members[0]);
+        oracle.submitReportData({ data: data, contractVersion: 1 });
+    }
+
+    function test_reportSanityChecks_RevertWhen_TreeRootCannotBeZero() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+            _seedMembers(3);
+        }
+
+        uint256 startSlot;
+        uint256 refSlot;
+
+        (, startSlot, , ) = oracle.getConsensusReport();
+        (refSlot, ) = consensus.getCurrentFrame();
+        // INITIAL_EPOCH is far above the lastProcessingRefSlot's epoch
+        assertNotEq(startSlot, refSlot);
+
+        CSFeeOracle.ReportData memory data = CSFeeOracle.ReportData({
+            consensusVersion: oracle.getConsensusVersion(),
+            refSlot: refSlot,
+            treeRoot: bytes32(0),
+            treeCid: "QmCID0",
+            distributed: 1337
+        });
+
+        bytes32 reportHash = keccak256(abi.encode(data));
+        _reachConsensus(refSlot, reportHash);
+
+        vm.expectRevert(CSFeeOracle.TreeRootCannotBeZero.selector);
+        vm.prank(members[0]);
+        oracle.submitReportData({ data: data, contractVersion: 1 });
+    }
+
+    function test_reportSanityChecks_RevertWhen_TreeCidCannotBeEmpty() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+            _seedMembers(3);
+        }
+
+        uint256 startSlot;
+        uint256 refSlot;
+
+        (, startSlot, , ) = oracle.getConsensusReport();
+        (refSlot, ) = consensus.getCurrentFrame();
+        // INITIAL_EPOCH is far above the lastProcessingRefSlot's epoch
+        assertNotEq(startSlot, refSlot);
+
+        CSFeeOracle.ReportData memory data = CSFeeOracle.ReportData({
+            consensusVersion: oracle.getConsensusVersion(),
+            refSlot: refSlot,
+            treeRoot: keccak256("root"),
+            treeCid: "",
+            distributed: 1337
+        });
+
+        bytes32 reportHash = keccak256(abi.encode(data));
+        _reachConsensus(refSlot, reportHash);
+
+        vm.expectRevert(CSFeeOracle.TreeCidCannotBeEmpty.selector);
+        vm.prank(members[0]);
+        oracle.submitReportData({ data: data, contractVersion: 1 });
+    }
+
+    function test_initialize_RevertWhen_AdminCannotBeZero() public {
+        oracle = new CSFeeOracleForTest({
+            secondsPerSlot: chainConfig.secondsPerSlot,
+            genesisTime: chainConfig.genesisTime
+        });
+
+        consensus = new HashConsensus({
+            slotsPerEpoch: chainConfig.slotsPerEpoch,
+            secondsPerSlot: chainConfig.secondsPerSlot,
+            genesisTime: chainConfig.genesisTime,
+            epochsPerFrame: _epochsInDays(28),
+            fastLaneLengthSlots: 0,
+            admin: ORACLE_ADMIN,
+            reportProcessor: address(oracle)
+        });
+
+        DistributorMock distributor = new DistributorMock();
+        vm.expectRevert(CSFeeOracle.AdminCannotBeZero.selector);
+        oracle.initialize(
+            address(0),
+            address(distributor),
+            address(consensus),
+            CONSENSUS_VERSION,
+            154
+        );
+    }
+
+    function test_setFeeDistributorContract() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+        }
+
+        vm.expectEmit(true, true, true, true, address(oracle));
+        emit CSFeeOracle.FeeDistributorContractSet(address(1));
+        vm.prank(ORACLE_ADMIN);
+        oracle.setFeeDistributorContract(address(1));
+    }
+
+    function test_setFeeDistributorContract_RevertWhen_AddressCannotBeZero()
+        public
+    {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+        }
+
+        vm.expectRevert(BaseOracle.AddressCannotBeZero.selector);
+        vm.prank(ORACLE_ADMIN);
+        oracle.setFeeDistributorContract(address(0));
     }
 
     function test_reportFrame() public {
@@ -204,6 +523,7 @@ contract CSFeeOracleTest is Test, Utilities {
             oracle.grantRole(oracle.MANAGE_CONSENSUS_VERSION_ROLE(), ORACLE_ADMIN);
             oracle.grantRole(oracle.PAUSE_ROLE(), ORACLE_ADMIN);
             oracle.grantRole(oracle.RESUME_ROLE(), ORACLE_ADMIN);
+            oracle.grantRole(oracle.MANAGE_FEE_DISTRIBUTOR_CONTRACT_ROLE(), ORACLE_ADMIN);
         }
         vm.stopPrank();
     }
@@ -246,7 +566,7 @@ contract CSFeeOracleTest is Test, Utilities {
     function _reachConsensus(uint256 refSlot, bytes32 hash) internal {
         for (uint256 i; i < quorum; i++) {
             vm.expectEmit(true, true, true, true, address(consensus));
-            emit ReportReceived(refSlot, members[i], hash);
+            emit HashConsensus.ReportReceived(refSlot, members[i], hash);
 
             vm.prank(members[i]);
             consensus.submitReport(refSlot, hash, CONSENSUS_VERSION);

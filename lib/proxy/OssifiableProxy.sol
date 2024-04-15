@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 /* See contracts/COMPILERS.md */
-pragma solidity ^0.8.9;
+pragma solidity 0.8.24;
 
 import {Address} from "@openzeppelin/contracts-v4.4/utils/Address.sol";
 import {StorageSlot} from "@openzeppelin/contracts-v4.4/utils/StorageSlot.sol";

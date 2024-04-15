@@ -103,6 +103,18 @@ contract CSFeeDistributorTest is
         });
     }
 
+    function test_processOracleReport_RevertWhen_InvalidShares() public {
+        uint256 nodeOperatorId = 42;
+        uint256 shares = 100;
+        tree.pushLeaf(abi.encode(nodeOperatorId, shares));
+        bytes32 root = tree.root();
+
+        stETH.mintShares(address(feeDistributor), shares);
+        vm.expectRevert(InvalidShares.selector);
+        vm.prank(oracle);
+        feeDistributor.processOracleReport(root, "", shares + 1);
+    }
+
     function test_RevertIf_InvalidShares() public {
         uint256 nodeOperatorId = 42;
         uint256 shares = 100;
