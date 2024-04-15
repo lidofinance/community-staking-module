@@ -10,6 +10,7 @@
     "lint:solhint": "solhint './src/**/*.sol'",
     "lint:check": "prettier --check **.sol && yarn lint:solhint",
     "lint:fix": "prettier --write **.sol",
+    "generate:abis": "node script/generateAbis.js",
     "postinstall": "husky install"
   },
   "devDependencies": {
