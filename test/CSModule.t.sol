@@ -1829,7 +1829,7 @@ contract CsmQueueOps is CSMCommon {
         assertEq(toRemove, 0, "queue should be clean");
     }
 
-    function test_cleanup_zeroDepth() public {
+    function test_cleanup_RevertWhen_zeroDepth() public {
         vm.expectRevert(QueueLookupNoLimit.selector);
         csm.cleanDepositQueue(0);
     }
@@ -3067,7 +3067,7 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         assertEq(secondLock.retentionUntil, 0);
     }
 
-    function test_settleELRewardsStealingPenalty_NoExistingNodeOperator()
+    function test_settleELRewardsStealingPenalty_RevertWhen_NoExistingNodeOperator()
         public
     {
         uint256 noId = createNodeOperator();
@@ -4118,13 +4118,11 @@ contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
         assertTrue(csm.publicRelease());
     }
 
-    function test_activatePublicRelease_AlreadySet() public {
+    function test_activatePublicRelease_RevertWhen_AlreadySet() public {
         csm.activatePublicRelease();
 
         vm.expectRevert(AlreadySet.selector);
         csm.activatePublicRelease();
-
-        assertTrue(csm.publicRelease());
     }
 
     function test_addNodeOperatorETH_RevertWhenNoPublicReleaseYet() public {
@@ -4656,7 +4654,9 @@ contract CSMMisc is CSMCommon {
         assertEq(actualVettedThird, 15);
     }
 
-    function test_decreaseOperatorVettedKeys_MissingVettedData() public {
+    function test_decreaseOperatorVettedKeys_RevertWhen_MissingVettedData()
+        public
+    {
         uint256 firstNoId = createNodeOperator(10);
         uint256 secondNoId = createNodeOperator(7);
         uint256 newVettedFirst = 5;
@@ -4669,7 +4669,9 @@ contract CSMMisc is CSMCommon {
         );
     }
 
-    function test_decreaseOperatorVettedKeys_NewVettedEqOld() public {
+    function test_decreaseOperatorVettedKeys_RevertWhen_NewVettedEqOld()
+        public
+    {
         uint256 noId = createNodeOperator(10);
         uint256 newVetted = 10;
 
@@ -4677,7 +4679,9 @@ contract CSMMisc is CSMCommon {
         csm.decreaseOperatorVettedKeys(UintArr(noId), UintArr(newVetted));
     }
 
-    function test_decreaseOperatorVettedKeys_NewVettedGreaterOld() public {
+    function test_decreaseOperatorVettedKeys_RevertWhen_NewVettedGreaterOld()
+        public
+    {
         uint256 noId = createNodeOperator(10);
         uint256 newVetted = 15;
 
@@ -4685,7 +4689,9 @@ contract CSMMisc is CSMCommon {
         csm.decreaseOperatorVettedKeys(UintArr(noId), UintArr(newVetted));
     }
 
-    function test_decreaseOperatorVettedKeys_() public {
+    function test_decreaseOperatorVettedKeys_RevertWhen_NodeOperatorDoesNotExist()
+        public
+    {
         uint256 noId = createNodeOperator(10);
         uint256 newVetted = 15;
 

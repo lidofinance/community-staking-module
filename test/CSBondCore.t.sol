@@ -268,7 +268,7 @@ contract CSBondCoreETHTest is CSBondCoreTestBase {
         bondCore.requestETH(0, 2 ether, 0.5 ether, user);
     }
 
-    function test_requestETH_RequestedLessThanMinWithdrawa() public {
+    function test_requestETH_RequestedLessThanMinWithdrawal() public {
         mock_requestWithdrawals(mockedRequestIds);
         _deposit(1 ether);
 

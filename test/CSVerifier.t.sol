@@ -74,7 +74,7 @@ contract CSVerifierTest is Test {
         );
     }
 
-    function test_processSlashingProof_UnsupportedSlot() public {
+    function test_processSlashingProof_RevertWhen_UnsupportedSlot() public {
         SlashingFixture memory fixture = abi.decode(
             _readFixture("slashing.json"),
             (SlashingFixture)
@@ -100,7 +100,7 @@ contract CSVerifierTest is Test {
         );
     }
 
-    function test_processSlashingProof_InvalidBlockHeader() public {
+    function test_processSlashingProof_RevertWhen_InvalidBlockHeader() public {
         SlashingFixture memory fixture = abi.decode(
             _readFixture("slashing.json"),
             (SlashingFixture)
@@ -155,7 +155,7 @@ contract CSVerifierTest is Test {
         );
     }
 
-    function test_processWithdrawalProof_UnsupportedSlot() public {
+    function test_processWithdrawalProof_RevertWhen_UnsupportedSlot() public {
         WithdrawalFixture memory fixture = abi.decode(
             _readFixture("withdrawal.json"),
             (WithdrawalFixture)
@@ -181,7 +181,9 @@ contract CSVerifierTest is Test {
         );
     }
 
-    function test_processWithdrawalProof_InvalidBlockHeader() public {
+    function test_processWithdrawalProof_RevertWhen_InvalidBlockHeader()
+        public
+    {
         WithdrawalFixture memory fixture = abi.decode(
             _readFixture("withdrawal.json"),
             (WithdrawalFixture)
@@ -204,7 +206,7 @@ contract CSVerifierTest is Test {
         );
     }
 
-    function test_processWithdrawalProof_No4788Contract() public {
+    function test_processWithdrawalProof_RevertWhen_No4788Contract() public {
         WithdrawalFixture memory fixture = abi.decode(
             _readFixture("withdrawal.json"),
             (WithdrawalFixture)
@@ -243,7 +245,7 @@ contract CSVerifierTest is Test {
         );
     }
 
-    function test_processWithdrawalProof_revertFrom4788() public {
+    function test_processWithdrawalProof_RevertWhen_revertFrom4788() public {
         WithdrawalFixture memory fixture = abi.decode(
             _readFixture("withdrawal.json"),
             (WithdrawalFixture)
@@ -298,7 +300,9 @@ contract CSVerifierTest is Test {
         );
     }
 
-    function test_processWithdrawalProof_InvalidWithdrawalAddress() public {
+    function test_processWithdrawalProof_RevertWhen_InvalidWithdrawalAddress()
+        public
+    {
         WithdrawalFixture memory fixture = abi.decode(
             _readFixture("withdrawal.json"),
             (WithdrawalFixture)
@@ -317,7 +321,9 @@ contract CSVerifierTest is Test {
         );
     }
 
-    function test_processWithdrawalProof_ValidatorNotWithdrawn() public {
+    function test_processWithdrawalProof_RevertWhen_ValidatorNotWithdrawn()
+        public
+    {
         WithdrawalFixture memory fixture = abi.decode(
             _readFixture("withdrawal.json"),
             (WithdrawalFixture)
@@ -339,7 +345,7 @@ contract CSVerifierTest is Test {
         );
     }
 
-    function test_processWithdrawalProof_PartialWitdrawal() public {
+    function test_processWithdrawalProof_RevertWhen_PartialWitdrawal() public {
         WithdrawalFixture memory fixture = abi.decode(
             _readFixture("withdrawal.json"),
             (WithdrawalFixture)

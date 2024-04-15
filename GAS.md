@@ -130,7 +130,7 @@
 | pauseFor                                            | 23988           | 45359  | 47497  | 47497   | 11      |
 | proposeNodeOperatorManagerAddressChange             | 24142           | 42591  | 53581  | 53581   | 9       |
 | proposeNodeOperatorRewardAddressChange              | 24166           | 33434  | 36483  | 36483   | 10      |
-| publicRelease                                       | 409             | 409    | 409    | 409     | 2       |
+| publicRelease                                       | 409             | 409    | 409    | 409     | 1       |
 | queue                                               | 520             | 853    | 520    | 2520    | 6       |
 | recoverERC20                                        | 58414           | 58414  | 58414  | 58414   | 1       |
 | recoverEther                                        | 23747           | 26035  | 26035  | 28324   | 2       |

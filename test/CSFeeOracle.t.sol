@@ -291,7 +291,7 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.resume();
     }
 
-    function test_reportSanityChecks_RevertIf_NothingToDistribute() public {
+    function test_reportSanityChecks_RevertWhen_NothingToDistribute() public {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
             _grantAllRolesToAdmin();
@@ -324,7 +324,7 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.submitReportData({ data: data, contractVersion: 1 });
     }
 
-    function test_reportSanityChecks_TreeRootCannotBeZero() public {
+    function test_reportSanityChecks_RevertWhen_TreeRootCannotBeZero() public {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
             _grantAllRolesToAdmin();
@@ -357,7 +357,7 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.submitReportData({ data: data, contractVersion: 1 });
     }
 
-    function test_reportSanityChecks_RevertIf_TreeCidCannotBeEmpty() public {
+    function test_reportSanityChecks_RevertWhen_TreeCidCannotBeEmpty() public {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
             _grantAllRolesToAdmin();
@@ -390,7 +390,7 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.submitReportData({ data: data, contractVersion: 1 });
     }
 
-    function test_initialize_RevertIf_AdminCannotBeZero() public {
+    function test_initialize_RevertWhen_AdminCannotBeZero() public {
         oracle = new CSFeeOracleForTest({
             secondsPerSlot: chainConfig.secondsPerSlot,
             genesisTime: chainConfig.genesisTime
@@ -431,7 +431,7 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.setFeeDistributorContract(address(1));
     }
 
-    function test_setFeeDistributorContract_RevertIf_AddressCannotBeZero()
+    function test_setFeeDistributorContract_RevertWhen_AddressCannotBeZero()
         public
     {
         {

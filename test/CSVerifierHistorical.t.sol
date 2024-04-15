@@ -78,7 +78,7 @@ contract CSVerifierHistoricalTest is Test {
         );
     }
 
-    function test_processWithdrawalProof_UnsupportedSlot() public {
+    function test_processWithdrawalProof_RevertWhen_UnsupportedSlot() public {
         _get_fixture();
         _setMocksWithdrawal(fixture);
 
@@ -103,7 +103,9 @@ contract CSVerifierHistoricalTest is Test {
         );
     }
 
-    function test_processWithdrawalProof_UnsupportedSlot_OldBlock() public {
+    function test_processWithdrawalProof_RevertWhen_UnsupportedSlot_OldBlock()
+        public
+    {
         _get_fixture();
         _setMocksWithdrawal(fixture);
 
@@ -128,7 +130,9 @@ contract CSVerifierHistoricalTest is Test {
         );
     }
 
-    function test_processWithdrawalProof_InvalidBlockHeader() public {
+    function test_processWithdrawalProof_RevertWhen_InvalidBlockHeader()
+        public
+    {
         _get_fixture();
         _setMocksWithdrawal(fixture);
 
@@ -149,7 +153,7 @@ contract CSVerifierHistoricalTest is Test {
         );
     }
 
-    function test_processWithdrawalProof_InvalidGI() public {
+    function test_processWithdrawalProof_RevertWhen_InvalidGI() public {
         _get_fixture();
         _setMocksWithdrawal(fixture);
 

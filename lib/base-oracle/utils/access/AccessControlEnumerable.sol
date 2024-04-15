@@ -5,7 +5,7 @@
 // https://github.com/OpenZeppelin/openzeppelin-contracts/tree/6bd6b76/contracts/access
 //
 /* See contracts/COMPILERS.md */
-pragma solidity ^0.8.9;
+pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts-v4.4/access/IAccessControlEnumerable.sol";
 import "@openzeppelin/contracts-v4.4/utils/structs/EnumerableSet.sol";
