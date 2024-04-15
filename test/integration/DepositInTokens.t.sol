@@ -43,14 +43,11 @@ contract DepositIntegrationTest is
         checkChainId(1);
 
         locator = ILidoLocator(LOCATOR_ADDRESS);
-        csm = new CSModule(
-            "community-staking-module",
-            LOCATOR_ADDRESS,
-            address(this),
-            0.1 ether,
-            10
-        );
-
+        csm = new CSModule({
+            moduleType: "community-staking-module",
+            elStealingFine: 0.1 ether,
+            maxKeysPerOperatorEA: 10
+        });
         wstETH = IWstETH(WSTETH_ADDRESS);
 
         userPrivateKey = 0xa11ce;
@@ -70,12 +67,15 @@ contract DepositIntegrationTest is
             8 weeks,
             locator.treasury()
         );
+        csm.initialize({
+            _lidoLocator: address(locator),
+            _accounting: address(accounting),
+            _earlyAdoption: address(0),
+            admin: address(this)
+        });
 
-        csm.grantRole(csm.INITIALIZE_ROLE(), address(this));
         csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
         csm.activatePublicRelease();
-
-        csm.setAccounting(address(accounting));
 
         (bytes memory keys, bytes memory signatures) = keysSignatures(2);
         address nodeOperator = address(2);

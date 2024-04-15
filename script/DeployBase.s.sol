@@ -19,6 +19,7 @@ import { IWstETH } from "../src/interfaces/IWstETH.sol";
 import { JsonObj, Json } from "./utils/Json.sol";
 import { pack } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
+import { CSEarlyAdoption } from "../src/CSEarlyAdoption.sol";
 
 abstract contract DeployBase is Script {
     // TODO: some contracts of the module probably should be deployed behind a proxy
@@ -81,13 +82,12 @@ abstract contract DeployBase is Script {
 
         vm.startBroadcast(pk);
         {
-            csm = new CSModule({
+            CSModule csmImpl = new CSModule({
                 moduleType: "community-staking-module",
-                _lidoLocator: LIDO_LOCATOR_ADDRESS,
-                admin: address(deployer),
                 elStealingFine: 0.1 ether,
                 maxKeysPerOperatorEA: 10
             });
+            csm = CSModule(_deployProxy(deployer, address(csmImpl)));
             address treasury = locator.treasury();
             uint256[] memory curve = new uint256[](2);
             curve[0] = 2 ether;
@@ -102,9 +102,13 @@ abstract contract DeployBase is Script {
                 bondLockRetentionPeriod: 8 weeks,
                 _chargeRecipient: treasury
             });
-            csm.grantRole(csm.INITIALIZE_ROLE(), deployer);
-            csm.setAccounting(address(accounting));
-            csm.grantRole(csm.MODULE_MANAGER_ROLE(), deployer);
+            csm.initialize({
+                _lidoLocator: LIDO_LOCATOR_ADDRESS,
+                _accounting: address(accounting),
+                _earlyAdoption: address(0),
+                admin: address(deployer)
+            });
+            csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(deployer));
             csm.activatePublicRelease();
             // TODO: add early adoption initialization
 

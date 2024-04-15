@@ -17,3 +17,7 @@ lcov.info
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+lib/forge-std
+lib/openzeppelin-contracts
+lib/openzeppelin-contracts-v4.4
