@@ -14,7 +14,6 @@ import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
 
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
-import { IWstETH } from "../src/interfaces/IWstETH.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
 import { pack } from "../src/lib/GIndex.sol";
@@ -30,15 +29,15 @@ abstract contract DeployBase is Script {
     uint256 immutable VERIFIER_SUPPORTED_EPOCH;
     uint256 immutable INITIALIZATION_EPOCH;
     address immutable LIDO_LOCATOR_ADDRESS;
-    address immutable WSTETH_ADDRESS;
 
     ILidoLocator private locator;
-    IWstETH private wstETH;
 
     address private deployer;
     uint256 private pk;
     CSModule public csm;
     CSAccounting public accounting;
+    CSFeeOracle public oracle;
+    CSFeeDistributor public feeDistributor;
 
     error ChainIdMismatch(uint256 actual, uint256 expected);
 
@@ -49,8 +48,7 @@ abstract contract DeployBase is Script {
         uint256 clGenesisTime,
         uint256 verifierSupportedEpoch,
         uint256 initializationEpoch,
-        address lidoLocatorAddress,
-        address wstETHAddress
+        address lidoLocatorAddress
     ) {
         CHAIN_ID = chainId;
         SECONDS_PER_SLOT = secondsPerSlot;
@@ -59,13 +57,10 @@ abstract contract DeployBase is Script {
         VERIFIER_SUPPORTED_EPOCH = verifierSupportedEpoch;
         INITIALIZATION_EPOCH = initializationEpoch;
         LIDO_LOCATOR_ADDRESS = lidoLocatorAddress;
-        WSTETH_ADDRESS = wstETHAddress;
 
         vm.label(LIDO_LOCATOR_ADDRESS, "LIDO_LOCATOR");
-        vm.label(WSTETH_ADDRESS, "WSTETH");
 
         locator = ILidoLocator(LIDO_LOCATOR_ADDRESS);
-        wstETH = IWstETH(WSTETH_ADDRESS);
     }
 
     function run() external {
@@ -82,62 +77,66 @@ abstract contract DeployBase is Script {
 
         vm.startBroadcast(pk);
         {
+            address treasury = locator.treasury();
+            uint256[] memory curve = new uint256[](2);
+            curve[0] = 2 ether;
+            curve[1] = 4 ether;
+
             CSModule csmImpl = new CSModule({
                 moduleType: "community-staking-module",
                 elStealingFine: 0.1 ether,
                 maxKeysPerOperatorEA: 10
             });
             csm = CSModule(_deployProxy(deployer, address(csmImpl)));
-            address treasury = locator.treasury();
-            uint256[] memory curve = new uint256[](2);
-            curve[0] = 2 ether;
-            curve[1] = 4 ether;
-            accounting = new CSAccounting({
-                bondCurve: curve,
-                admin: deployer,
-                lidoLocator: address(locator),
-                communityStakingModule: address(csm),
-                wstETH: address(wstETH),
-                // TODO: arguable. should be discussed
-                bondLockRetentionPeriod: 8 weeks,
-                _chargeRecipient: treasury
+
+            CSAccounting accountingImpl = new CSAccounting({
+                lidoLocator: LIDO_LOCATOR_ADDRESS,
+                communityStakingModule: address(csm)
             });
+            accounting = CSAccounting(
+                _deployProxy(deployer, address(accountingImpl))
+            );
+
+            CSFeeOracle oracleImpl = new CSFeeOracle({
+                secondsPerSlot: SECONDS_PER_SLOT,
+                genesisTime: CL_GENESIS_TIME
+            });
+            oracle = CSFeeOracle(_deployProxy(deployer, address(oracleImpl)));
+
+            CSFeeDistributor feeDistributorImpl = new CSFeeDistributor({
+                stETH: locator.lido(),
+                accounting: address(accounting)
+            });
+            feeDistributor = CSFeeDistributor(
+                _deployProxy(deployer, address(feeDistributorImpl))
+            );
+
+            /// @dev initialize contracts
             csm.initialize({
                 _lidoLocator: LIDO_LOCATOR_ADDRESS,
                 _accounting: address(accounting),
                 _earlyAdoption: address(0),
                 admin: address(deployer)
             });
+            accounting.initialize({
+                bondCurve: curve,
+                admin: deployer,
+                _feeDistributor: address(feeDistributor),
+                // TODO: arguable. should be discussed
+                bondLockRetentionPeriod: 8 weeks,
+                _chargeRecipient: treasury
+            });
+            feeDistributor.initialize({ admin: deployer });
+
             csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(deployer));
             csm.activatePublicRelease();
             // TODO: add early adoption initialization
 
-            CSFeeOracle oracleImpl = new CSFeeOracle({
-                secondsPerSlot: SECONDS_PER_SLOT,
-                genesisTime: CL_GENESIS_TIME
-            });
-
-            CSFeeOracle oracle = CSFeeOracle(
-                _deployProxy({
-                    admin: deployer,
-                    implementation: address(oracleImpl)
-                })
-            );
-
-            CSFeeDistributor feeDistributor = new CSFeeDistributor({
-                stETH: locator.lido(),
-                accounting: address(accounting),
-                admin: deployer
-            });
             feeDistributor.grantRole(
                 feeDistributor.ORACLE_ROLE(),
                 address(oracle)
             );
 
-            accounting.grantRole(
-                accounting.INITIALIZE_ROLE(),
-                address(deployer)
-            );
             accounting.grantRole(
                 accounting.SET_BOND_CURVE_ROLE(),
                 address(csm)
@@ -146,7 +145,6 @@ abstract contract DeployBase is Script {
                 accounting.RESET_BOND_CURVE_ROLE(),
                 address(csm)
             );
-            accounting.setFeeDistributor(address(feeDistributor));
 
             HashConsensus hashConsensus = new HashConsensus({
                 slotsPerEpoch: SLOTS_PER_EPOCH,

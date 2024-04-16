@@ -32,36 +32,6 @@ import { ERC20Testable } from "./helpers/ERCTestable.sol";
 // TODO: bond lock permission tests
 // TODO: bond lock emit event tests
 
-contract CSAccountingForTests is CSAccounting {
-    constructor(
-        uint256[] memory bondCurve,
-        address admin,
-        address lidoLocator,
-        address wstETH,
-        address communityStakingModule,
-        uint256 lockedBondRetentionPeriod,
-        address _chargeRecepient
-    )
-        CSAccounting(
-            bondCurve,
-            admin,
-            lidoLocator,
-            wstETH,
-            communityStakingModule,
-            lockedBondRetentionPeriod,
-            _chargeRecepient
-        )
-    {}
-
-    function setBondCurve_ForTest(uint256 id, uint256[] memory curve) public {
-        _setBondCurve(id, _addBondCurve(curve));
-    }
-
-    function setBondLock_ForTest(uint256 id, uint256 amount) public {
-        CSBondLock._lock(id, amount);
-    }
-}
-
 contract CSAccountingBaseTest is
     Test,
     Fixtures,
@@ -73,7 +43,7 @@ contract CSAccountingBaseTest is
     WstETHMock internal wstETH;
     LidoMock internal stETH;
 
-    CSAccountingForTests public accounting;
+    CSAccounting public accounting;
     Stub public stakingModule;
     Stub public feeDistributor;
 
@@ -96,19 +66,16 @@ contract CSAccountingBaseTest is
 
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
-        accounting = new CSAccountingForTests(
+        accounting = new CSAccounting(address(locator), address(stakingModule));
+        accounting.initialize(
             curve,
             admin,
-            address(locator),
-            address(wstETH),
-            address(stakingModule),
+            address(feeDistributor),
             8 weeks,
             testChargeRecipient
         );
 
         vm.startPrank(admin);
-        accounting.grantRole(accounting.INITIALIZE_ROLE(), admin);
-        accounting.setFeeDistributor(address(feeDistributor));
 
         accounting.grantRole(accounting.ACCOUNTING_MANAGER_ROLE(), admin);
         accounting.grantRole(accounting.PAUSE_ROLE(), admin);
@@ -340,11 +307,15 @@ abstract contract CSAccountingBondStateBaseTest is
     uint256[] public individualCurve = [1.8 ether, 2.7 ether];
 
     function _curve(uint256[] memory curve) internal virtual {
-        accounting.setBondCurve_ForTest(0, curve);
+        vm.startPrank(admin);
+        uint256 curveId = accounting.addBondCurve(curve);
+        accounting.setBondCurve(0, curveId);
+        vm.stopPrank();
     }
 
     function _lock(uint256 id, uint256 amount) internal virtual {
-        accounting.setBondLock_ForTest(id, amount);
+        vm.prank(address(stakingModule));
+        accounting.lockBondETH(id, amount);
     }
 
     function test_WithOneWithdrawnValidator() public virtual;
@@ -1041,7 +1012,10 @@ abstract contract CSAccountingGetRequiredBondForKeysBaseTest is
     uint256[] public defaultCurve = [2 ether, 3 ether];
 
     function _curve(uint256[] memory curve) internal virtual {
-        accounting.setBondCurve_ForTest(0, curve);
+        vm.startPrank(admin);
+        uint256 curveId = accounting.addBondCurve(curve);
+        accounting.setBondCurve(0, curveId);
+        vm.stopPrank();
     }
 
     function test_default() public virtual;
@@ -3442,46 +3416,6 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
         uint256 totalDepositedShares = stETH.getSharesByPooledEth(32 ether) +
             stETH.getSharesByPooledEth(32 ether);
         assertEq(accounting.totalBondShares(), totalDepositedShares);
-    }
-
-    function test_setFeeDistributor() public {
-        uint256[] memory curve = new uint256[](1);
-        curve[0] = 2 ether;
-        accounting = new CSAccountingForTests(
-            curve,
-            admin,
-            address(locator),
-            address(wstETH),
-            address(stakingModule),
-            8 weeks,
-            testChargeRecipient
-        );
-        vm.startPrank(admin);
-        accounting.grantRole(accounting.INITIALIZE_ROLE(), admin);
-
-        vm.expectEmit(true, false, false, true, address(accounting));
-        emit FeeDistributorSet(address(1337));
-        accounting.setFeeDistributor(address(1337));
-        assertEq(accounting.feeDistributor(), address(1337));
-    }
-
-    function test_setFeeDistributor_RevertWhen_DoesNotHaveRole() public {
-        expectRoleRevert(stranger, accounting.INITIALIZE_ROLE());
-
-        vm.prank(stranger);
-        accounting.setFeeDistributor(address(1337));
-    }
-
-    function test_setFeeDistributor_RevertWhen_AlreadyInitialized() public {
-        vm.expectRevert(AlreadyInitialized.selector);
-        vm.prank(admin);
-        accounting.setFeeDistributor(address(7331));
-    }
-
-    function test_setFeeDistributor_RevertWhen_Zero() public {
-        vm.expectRevert();
-        vm.prank(admin);
-        accounting.setFeeDistributor(address(0));
     }
 
     function test_setChargeRecipient() public {

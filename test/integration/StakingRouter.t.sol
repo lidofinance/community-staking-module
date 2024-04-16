@@ -48,11 +48,13 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
         curve[0] = 2 ether;
         curve[1] = 4 ether;
         CSAccounting accounting = new CSAccounting(
+            address(locator),
+            address(csm)
+        );
+        accounting.initialize(
             curve,
             address(csm),
-            address(locator),
-            address(wstETH),
-            address(csm),
+            address(1337),
             8 weeks,
             locator.treasury()
         );

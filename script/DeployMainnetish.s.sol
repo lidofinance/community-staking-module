@@ -21,9 +21,7 @@ contract DeployMainnetish is DeployBase {
             // initializationEpoch
             239853,
             // lidoLocatorAddress
-            0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb,
-            // wstETHAddress
-            0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0
+            0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb
         )
     {}
 }

@@ -15,6 +15,7 @@ import "../src/CSEarlyAdoption.sol";
 import "./helpers/MerkleTree.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
 import { AssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
+import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
 
 abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
     using Strings for uint256;
@@ -239,12 +240,11 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         });
         uint256[] memory curve = new uint256[](1);
         curve[0] = BOND_SIZE;
-        accounting = new CSAccounting(
+        accounting = new CSAccounting(address(locator), address(csm));
+        accounting.initialize(
             curve,
             admin,
-            address(locator),
-            address(wstETH),
-            address(csm),
+            address(feeDistributor),
             8 weeks,
             testChargeRecipient
         );
@@ -290,10 +290,8 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), address(this));
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), address(csm));
         accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm));
-        accounting.grantRole(accounting.INITIALIZE_ROLE(), address(this));
         vm.stopPrank();
 
-        accounting.setFeeDistributor(address(feeDistributor));
         csm.setRemovalCharge(0.05 ether);
     }
 }
@@ -326,12 +324,11 @@ contract CSMCommonNoRoles is CSMFixtures {
 
         uint256[] memory curve = new uint256[](1);
         curve[0] = BOND_SIZE;
-        accounting = new CSAccounting(
+        accounting = new CSAccounting(address(locator), address(csm));
+        accounting.initialize(
             curve,
             admin,
-            address(locator),
-            address(wstETH),
-            address(csm),
+            address(feeDistributor),
             8 weeks,
             testChargeRecipient
         );

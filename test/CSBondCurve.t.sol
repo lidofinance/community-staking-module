@@ -8,7 +8,9 @@ import "forge-std/Test.sol";
 import { CSBondCurve, CSBondCurveBase } from "../src/abstract/CSBondCurve.sol";
 
 contract CSBondCurveTestable is CSBondCurve {
-    constructor(uint256[] memory bondCurve) CSBondCurve(bondCurve) {}
+    function initialize(uint256[] memory bondCurve) public initializer {
+        __CSBondCurve_init(bondCurve);
+    }
 
     function addBondCurve(
         uint256[] memory _bondCurve
@@ -39,7 +41,8 @@ contract CSBondCurveTest is Test, CSBondCurveBase {
         _bondCurve[0] = 2 ether;
         _bondCurve[1] = 4 ether;
         _bondCurve[2] = 5 ether;
-        bondCurve = new CSBondCurveTestable(_bondCurve);
+        bondCurve = new CSBondCurveTestable();
+        bondCurve.initialize(_bondCurve);
     }
 
     function test_addBondCurve() public {

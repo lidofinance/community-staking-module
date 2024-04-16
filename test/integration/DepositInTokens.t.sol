@@ -58,15 +58,15 @@ contract DepositIntegrationTest is
         uint256[] memory curve = new uint256[](2);
         curve[0] = 2 ether;
         curve[1] = 4 ether;
-        accounting = new CSAccounting(
+        accounting = new CSAccounting(address(locator), address(csm));
+        accounting.initialize(
             curve,
             user,
-            address(locator),
-            address(wstETH),
-            address(csm),
+            address(1337),
             8 weeks,
             locator.treasury()
         );
+
         csm.initialize({
             _lidoLocator: address(locator),
             _accounting: address(accounting),
