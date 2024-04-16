@@ -267,6 +267,25 @@ contract CSBondCoreETHTest is CSBondCoreTestBase {
         vm.expectRevert(InvalidClaimableShares.selector);
         bondCore.requestETH(0, 2 ether, 0.5 ether, user);
     }
+
+    function test_requestETH_RequestedLessThanMinWithdrawal() public {
+        mock_requestWithdrawals(mockedRequestIds);
+        _deposit(1 ether);
+
+        uint256 minWithdrawal = IWithdrawalQueue(locator.withdrawalQueue())
+            .MIN_STETH_WITHDRAWAL_AMOUNT();
+
+        uint256 bondSharesBefore = bondCore.getBondShares(0);
+        bondCore.requestETH(
+            0,
+            0.5 ether,
+            stETH.getPooledEthByShares(minWithdrawal) - 10 wei,
+            user
+        );
+
+        assertEq(bondCore.getBondShares(0), bondSharesBefore);
+        assertEq(bondCore.totalBondShares(), bondSharesBefore);
+    }
 }
 
 contract CSBondCoreStETHTest is CSBondCoreTestBase {

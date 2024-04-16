@@ -353,6 +353,23 @@ contract CsmInitialization is CSMCommon {
         vm.stopPrank();
         assertEq(address(csm.accounting()), address(accounting));
     }
+
+    function test_setAccounting_RevertWhen_AlreadySet() public {
+        csm = new CSModule(
+            "community-staking-module",
+            address(locator),
+            admin,
+            0.1 ether,
+            10
+        );
+        vm.startPrank(admin);
+        csm.grantRole(csm.INITIALIZE_ROLE(), address(admin));
+        csm.setAccounting(address(accounting));
+        assertEq(address(csm.accounting()), address(accounting));
+        vm.expectRevert(AlreadySet.selector);
+        csm.setAccounting(address(accounting));
+        vm.stopPrank();
+    }
 }
 
 contract CSMPauseTest is CSMCommon {
@@ -819,6 +836,24 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
+    function test_AddNodeOperatorETH_RevertWhen_InvalidAmount() public {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        vm.deal(nodeOperator, BOND_SIZE - 1);
+
+        vm.expectRevert(InvalidAmount.selector);
+        vm.prank(nodeOperator);
+        csm.addNodeOperatorETH{ value: BOND_SIZE - 1 ether }(
+            1,
+            keys,
+            signatures,
+            new bytes32[](0),
+            address(154)
+        );
+    }
+
     function test_AddValidatorKeysETH() public {
         uint256 noId = createNodeOperator();
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
@@ -834,6 +869,23 @@ contract CSMAddNodeOperator is CSMCommon, PermitTokenBase {
         }
         csm.addValidatorKeysETH{ value: required }(noId, 1, keys, signatures);
         assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_AddValidatorKeysETH_RevertWhen_InvalidAmount() public {
+        uint256 noId = createNodeOperator();
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
+        vm.deal(nodeOperator, required - 1 ether);
+
+        vm.expectRevert(InvalidAmount.selector);
+        vm.prank(nodeOperator);
+        csm.addValidatorKeysETH{ value: required - 1 ether }(
+            noId,
+            1,
+            keys,
+            signatures
+        );
     }
 }
 
@@ -1233,6 +1285,24 @@ contract CSMObtainDepositData is CSMCommon {
         assertEq(no.enqueuedCount, 0);
         assertEq(no.totalDepositedValidators, 1);
         assertEq(summary.depositableValidatorsCount, 0);
+    }
+
+    function test_obtainDepositData_unvettedKeys() public {
+        uint256 firstNoId = createNodeOperator(2);
+        uint256 secondNoId = createNodeOperator(1);
+        uint256 thirdNoId = createNodeOperator(3);
+
+        csm.decreaseOperatorVettedKeys(UintArr(secondNoId), UintArr(0));
+
+        csm.obtainDepositData(5, "");
+
+        (
+            uint256 totalExitedValidators,
+            uint256 totalDepositedValidators,
+            uint256 depositableValidatorsCount
+        ) = csm.getStakingModuleSummary();
+        assertEq(totalDepositedValidators, 5);
+        assertEq(depositableValidatorsCount, 0);
     }
 
     function test_obtainDepositData_counters_WhenLessThanLastBatch() public {
@@ -1757,6 +1827,11 @@ contract CsmQueueOps is CSMCommon {
 
         uint256 toRemove = csm.cleanDepositQueue(LOOKUP_DEPTH);
         assertEq(toRemove, 0, "queue should be clean");
+    }
+
+    function test_cleanup_RevertWhen_zeroDepth() public {
+        vm.expectRevert(QueueLookupNoLimit.selector);
+        csm.cleanDepositQueue(0);
     }
 
     function test_cleanup_WhenMultipleInvalidBatchesInRow() public {
@@ -2933,6 +3008,76 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         assertEq(lock.retentionUntil, 0);
     }
 
+    function test_settleELRewardsStealingPenalty_NoLock() public {
+        uint256 noId = createNodeOperator();
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit ELRewardsStealingPenaltySettled(noId, 0);
+        expectNoCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
+        );
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
+        assertEq(lock.amount, 0 ether);
+        assertEq(lock.retentionUntil, 0);
+    }
+
+    function test_settleELRewardsStealingPenalty_NoLock_MultipleOperators()
+        public
+    {
+        uint256 firstNoId = createNodeOperator();
+        uint256 secondNoId = createNodeOperator();
+        uint256[] memory idsToSettle = new uint256[](2);
+        idsToSettle[0] = firstNoId;
+        idsToSettle[1] = secondNoId;
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit ELRewardsStealingPenaltySettled(firstNoId, 0);
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit ELRewardsStealingPenaltySettled(secondNoId, 0);
+        expectNoCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.resetBondCurve.selector,
+                firstNoId
+            )
+        );
+        expectNoCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.resetBondCurve.selector,
+                secondNoId
+            )
+        );
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        CSBondLock.BondLock memory firstLock = accounting.getLockedBondInfo(
+            firstNoId
+        );
+        assertEq(firstLock.amount, 0 ether);
+        assertEq(firstLock.retentionUntil, 0);
+        CSBondLock.BondLock memory secondLock = accounting.getLockedBondInfo(
+            secondNoId
+        );
+        assertEq(secondLock.amount, 0 ether);
+        assertEq(secondLock.retentionUntil, 0);
+    }
+
+    function test_settleELRewardsStealingPenalty_RevertWhen_NoExistingNodeOperator()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId + 1;
+
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+    }
+
     function test_settleELRewardsStealingPenalty_noLocked() public {
         uint256 noId = createNodeOperator();
         uint256[] memory idsToSettle = new uint256[](1);
@@ -3272,6 +3417,9 @@ contract CsmSubmitWithdrawal is CSMCommon {
 
         CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
         assertEq(no.totalWithdrawnValidators, 1);
+        bool withdrawn = csm.isValidatorWithdrawn(noId, keyIndex);
+        assertTrue(withdrawn);
+
         // no chages in depositable keys or keys in general
         assertEq(csm.getNonce(), nonce);
     }
@@ -3373,6 +3521,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
 
 contract CsmSubmitInitialSlashing is CSMCommon {
     function test_submitInitialSlashing() public {
+        uint256 keyIndex = 0;
         uint256 noId = createNodeOperator(2);
         csm.obtainDepositData(1, "");
         uint256 penaltyAmount = csm.INITIAL_SLASHING_PENALTY();
@@ -3380,7 +3529,7 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit InitialSlashingSubmitted(noId, 0);
+        emit InitialSlashingSubmitted(noId, keyIndex);
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
@@ -3389,7 +3538,10 @@ contract CsmSubmitInitialSlashing is CSMCommon {
                 penaltyAmount
             )
         );
-        csm.submitInitialSlashing(noId, 0);
+        csm.submitInitialSlashing(noId, keyIndex);
+
+        bool slashed = csm.isValidatorSlashed(noId, keyIndex);
+        assertTrue(slashed);
 
         assertEq(csm.getNonce(), nonce + 1);
     }
@@ -3966,6 +4118,13 @@ contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
         assertTrue(csm.publicRelease());
     }
 
+    function test_activatePublicRelease_RevertWhen_AlreadySet() public {
+        csm.activatePublicRelease();
+
+        vm.expectRevert(AlreadySet.selector);
+        csm.activatePublicRelease();
+    }
+
     function test_addNodeOperatorETH_RevertWhenNoPublicReleaseYet() public {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
@@ -4293,5 +4452,250 @@ contract CSMRecoverERC20 is CSMCommon {
 
         assertEq(stETH.sharesOf(address(csm)), 0);
         assertEq(stETH.sharesOf(stranger), sharesToRecover);
+    }
+}
+
+contract CSMMisc is CSMCommon {
+    function test_getActiveNodeOperatorsCount_OneOperator() public {
+        createNodeOperator();
+        uint256 noCount = csm.getNodeOperatorsCount();
+        assertEq(noCount, 1);
+    }
+
+    function test_getActiveNodeOperatorsCount_MultipleOperators() public {
+        createNodeOperator();
+        createNodeOperator();
+        createNodeOperator();
+        uint256 noCount = csm.getNodeOperatorsCount();
+        assertEq(noCount, 3);
+    }
+
+    function test_getNodeOperatorIsActive() public {
+        uint256 noId = createNodeOperator();
+        bool active = csm.getNodeOperatorIsActive(noId);
+        assertTrue(active);
+    }
+
+    function test_getNodeOperatorIds() public {
+        uint256 firstNoId = createNodeOperator();
+        uint256 secondNoId = createNodeOperator();
+        uint256 thirdNoId = createNodeOperator();
+
+        uint256[] memory noIds = new uint256[](3);
+        noIds[0] = firstNoId;
+        noIds[1] = secondNoId;
+        noIds[2] = thirdNoId;
+
+        uint256[] memory noIdsActual = new uint256[](5);
+        noIdsActual = csm.getNodeOperatorIds(0, 5);
+
+        assertEq(noIdsActual, noIds);
+    }
+
+    function test_getNodeOperatorIds_Offset() public {
+        uint256 firstNoId = createNodeOperator();
+        uint256 secondNoId = createNodeOperator();
+        uint256 thirdNoId = createNodeOperator();
+
+        uint256[] memory noIds = new uint256[](2);
+        noIds[0] = secondNoId;
+        noIds[1] = thirdNoId;
+
+        uint256[] memory noIdsActual = new uint256[](5);
+        noIdsActual = csm.getNodeOperatorIds(1, 5);
+
+        assertEq(noIdsActual, noIds);
+    }
+
+    function test_getNodeOperatorIds_OffsetEqualsnNodeOperatorsCount() public {
+        uint256 firstNoId = createNodeOperator();
+        uint256 secondNoId = createNodeOperator();
+        uint256 thirdNoId = createNodeOperator();
+
+        uint256[] memory noIds = new uint256[](0);
+
+        uint256[] memory noIdsActual = new uint256[](5);
+        noIdsActual = csm.getNodeOperatorIds(3, 5);
+
+        assertEq(noIdsActual, noIds);
+    }
+
+    function test_getNodeOperatorIds_OffsetHigherThanNodeOperatorsCount()
+        public
+    {
+        uint256 firstNoId = createNodeOperator();
+        uint256 secondNoId = createNodeOperator();
+        uint256 thirdNoId = createNodeOperator();
+
+        uint256[] memory noIds = new uint256[](0);
+
+        uint256[] memory noIdsActual = new uint256[](5);
+        noIdsActual = csm.getNodeOperatorIds(4, 5);
+
+        assertEq(noIdsActual, noIds);
+    }
+
+    function test_getNodeOperatorIds_ZeroLimit() public {
+        uint256 firstNoId = createNodeOperator();
+        uint256 secondNoId = createNodeOperator();
+        uint256 thirdNoId = createNodeOperator();
+
+        uint256[] memory noIds = new uint256[](0);
+
+        uint256[] memory noIdsActual = new uint256[](0);
+        noIdsActual = csm.getNodeOperatorIds(0, 0);
+
+        assertEq(noIdsActual, noIds);
+    }
+
+    function test_getNodeOperatorIds_ZeroLimitAndOffsetHigherThanNodeOperatorsCount()
+        public
+    {
+        uint256 firstNoId = createNodeOperator();
+        uint256 secondNoId = createNodeOperator();
+        uint256 thirdNoId = createNodeOperator();
+
+        uint256[] memory noIds = new uint256[](0);
+
+        uint256[] memory noIdsActual = new uint256[](0);
+        noIdsActual = csm.getNodeOperatorIds(4, 0);
+
+        assertEq(noIdsActual, noIds);
+    }
+
+    function test_getNodeOperatorIds_Limit() public {
+        uint256 firstNoId = createNodeOperator();
+        uint256 secondNoId = createNodeOperator();
+        uint256 thirdNoId = createNodeOperator();
+
+        uint256[] memory noIds = new uint256[](2);
+        noIds[0] = firstNoId;
+        noIds[1] = secondNoId;
+
+        uint256[] memory noIdsActual = new uint256[](2);
+        noIdsActual = csm.getNodeOperatorIds(0, 2);
+
+        assertEq(noIdsActual, noIds);
+    }
+
+    function test_getNodeOperatorIds_LimitAndOffset() public {
+        uint256 firstNoId = createNodeOperator();
+        uint256 secondNoId = createNodeOperator();
+        uint256 thirdNoId = createNodeOperator();
+        uint256 forthNoId = createNodeOperator();
+
+        uint256[] memory noIds = new uint256[](2);
+        noIds[0] = secondNoId;
+        noIds[1] = thirdNoId;
+
+        uint256[] memory noIdsActual = new uint256[](5);
+        noIdsActual = csm.getNodeOperatorIds(1, 2);
+
+        assertEq(noIdsActual, noIds);
+    }
+
+    function test_getActiveNodeOperatorsCount_One() public {
+        createNodeOperator();
+
+        uint256 activeCount = csm.getActiveNodeOperatorsCount();
+
+        assertEq(activeCount, 1);
+    }
+
+    function test_getActiveNodeOperatorsCount_Multiple() public {
+        createNodeOperator();
+        createNodeOperator();
+        createNodeOperator();
+
+        uint256 activeCount = csm.getActiveNodeOperatorsCount();
+
+        assertEq(activeCount, 3);
+    }
+
+    function test_decreaseOperatorVettedKeys_OneOperator() public {
+        uint256 noId = createNodeOperator(10);
+        uint256 newVetted = 5;
+
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit VettedSigningKeysCountChanged(noId, newVetted);
+        csm.decreaseOperatorVettedKeys(UintArr(noId), UintArr(newVetted));
+
+        uint256 actualVetted = csm.getNodeOperator(noId).totalVettedValidators;
+        assertEq(actualVetted, newVetted);
+    }
+
+    function test_decreaseOperatorVettedKeys_MultipleOperators() public {
+        uint256 firstNoId = createNodeOperator(10);
+        uint256 secondNoId = createNodeOperator(7);
+        uint256 thirdNoId = createNodeOperator(15);
+        uint256 newVettedFirst = 5;
+        uint256 newVettedSecond = 3;
+
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit VettedSigningKeysCountChanged(firstNoId, newVettedFirst);
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit VettedSigningKeysCountChanged(secondNoId, newVettedSecond);
+        csm.decreaseOperatorVettedKeys(
+            UintArr(firstNoId, secondNoId),
+            UintArr(newVettedFirst, newVettedSecond)
+        );
+
+        uint256 actualVettedFirst = csm
+            .getNodeOperator(firstNoId)
+            .totalVettedValidators;
+        uint256 actualVettedSecond = csm
+            .getNodeOperator(secondNoId)
+            .totalVettedValidators;
+        uint256 actualVettedThird = csm
+            .getNodeOperator(thirdNoId)
+            .totalVettedValidators;
+        assertEq(actualVettedFirst, newVettedFirst);
+        assertEq(actualVettedSecond, newVettedSecond);
+        assertEq(actualVettedThird, 15);
+    }
+
+    function test_decreaseOperatorVettedKeys_RevertWhen_MissingVettedData()
+        public
+    {
+        uint256 firstNoId = createNodeOperator(10);
+        uint256 secondNoId = createNodeOperator(7);
+        uint256 newVettedFirst = 5;
+        uint256 newVettedSecond = 3;
+
+        vm.expectRevert();
+        csm.decreaseOperatorVettedKeys(
+            UintArr(firstNoId, secondNoId),
+            UintArr(newVettedFirst)
+        );
+    }
+
+    function test_decreaseOperatorVettedKeys_RevertWhen_NewVettedEqOld()
+        public
+    {
+        uint256 noId = createNodeOperator(10);
+        uint256 newVetted = 10;
+
+        vm.expectRevert(InvalidVetKeysPointer.selector);
+        csm.decreaseOperatorVettedKeys(UintArr(noId), UintArr(newVetted));
+    }
+
+    function test_decreaseOperatorVettedKeys_RevertWhen_NewVettedGreaterOld()
+        public
+    {
+        uint256 noId = createNodeOperator(10);
+        uint256 newVetted = 15;
+
+        vm.expectRevert(InvalidVetKeysPointer.selector);
+        csm.decreaseOperatorVettedKeys(UintArr(noId), UintArr(newVetted));
+    }
+
+    function test_decreaseOperatorVettedKeys_RevertWhen_NodeOperatorDoesNotExist()
+        public
+    {
+        uint256 noId = createNodeOperator(10);
+        uint256 newVetted = 15;
+
+        vm.expectRevert(NodeOperatorDoesNotExist.selector);
+        csm.decreaseOperatorVettedKeys(UintArr(noId + 1), UintArr(newVetted));
     }
 }

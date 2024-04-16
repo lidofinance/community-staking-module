@@ -160,10 +160,9 @@ abstract contract CSBondCore is CSBondCoreBase {
             ? _sharesByEth(amountToClaim)
             : claimableShares;
         if (sharesToClaim == 0) return;
-        _unsafeReduceBond(nodeOperatorId, sharesToClaim);
-
         if (sharesToClaim < WITHDRAWAL_QUEUE.MIN_STETH_WITHDRAWAL_AMOUNT())
             return;
+        _unsafeReduceBond(nodeOperatorId, sharesToClaim);
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = _ethByShares(sharesToClaim);
         // Reverts if `sharesToClaim` is greater than `WITHDRAWAL_QUEUE.MAX_STETH_WITHDRAWAL_AMOUNT`
