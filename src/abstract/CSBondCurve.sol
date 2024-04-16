@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
+// solhint-disable one-contract-per-file
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-// solhint-disable-next-line one-contract-per-file
 pragma solidity 0.8.24;
 
 abstract contract CSBondCurveBase {

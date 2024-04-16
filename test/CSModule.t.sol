@@ -236,7 +236,8 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         csm = new CSModule({
             moduleType: "community-staking-module",
             elStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10
+            maxKeysPerOperatorEA: 10,
+            lidoLocator: address(locator)
         });
         uint256[] memory curve = new uint256[](1);
         curve[0] = BOND_SIZE;
@@ -267,7 +268,6 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         );
 
         csm.initialize({
-            _lidoLocator: address(locator),
             _accounting: address(accounting),
             _earlyAdoption: address(earlyAdoption),
             admin: admin
@@ -319,7 +319,8 @@ contract CSMCommonNoRoles is CSMFixtures {
         csm = new CSModule({
             moduleType: "community-staking-module",
             elStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10
+            maxKeysPerOperatorEA: 10,
+            lidoLocator: address(locator)
         });
 
         uint256[] memory curve = new uint256[](1);
@@ -351,7 +352,6 @@ contract CSMCommonNoRoles is CSMFixtures {
         );
 
         csm.initialize({
-            _lidoLocator: address(locator),
             _accounting: address(accounting),
             _earlyAdoption: address(earlyAdoption),
             admin: admin
@@ -370,26 +370,27 @@ contract CsmInitialize is CSMCommon {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             elStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10
+            maxKeysPerOperatorEA: 10,
+            lidoLocator: address(locator)
         });
         assertEq(csm.getType(), "community-staking-module");
         assertEq(csm.EL_REWARDS_STEALING_FINE(), 0.1 ether);
         assertEq(csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(), 10);
+        assertEq(address(csm.LIDO_LOCATOR()), address(locator));
     }
 
     function test_initialize() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             elStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10
+            maxKeysPerOperatorEA: 10,
+            lidoLocator: address(locator)
         });
         csm.initialize({
-            _lidoLocator: address(locator),
             _accounting: address(accounting),
             _earlyAdoption: address(1337),
             admin: address(this)
         });
-        assertEq(address(csm.lidoLocator()), address(locator));
         assertEq(address(csm.accounting()), address(accounting));
         assertEq(address(csm.earlyAdoption()), address(1337));
     }
@@ -3709,9 +3710,10 @@ contract CSMAccessControl is CSMCommonNoRoles {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             elStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10
+            maxKeysPerOperatorEA: 10,
+            lidoLocator: address(locator)
         });
-        csm.initialize(address(0), address(0), address(0), actor);
+        csm.initialize(address(0), address(0), actor);
 
         bytes32 role = csm.MODULE_MANAGER_ROLE();
         vm.prank(actor);
@@ -3727,7 +3729,8 @@ contract CSMAccessControl is CSMCommonNoRoles {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             elStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10
+            maxKeysPerOperatorEA: 10,
+            lidoLocator: address(locator)
         });
         bytes32 role = csm.MODULE_MANAGER_ROLE();
         bytes32 adminRole = csm.DEFAULT_ADMIN_ROLE();

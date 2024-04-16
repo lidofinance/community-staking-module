@@ -18,7 +18,6 @@ import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { JsonObj, Json } from "./utils/Json.sol";
 import { pack } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
-import { CSEarlyAdoption } from "../src/CSEarlyAdoption.sol";
 
 abstract contract DeployBase is Script {
     // TODO: some contracts of the module probably should be deployed behind a proxy
@@ -85,7 +84,8 @@ abstract contract DeployBase is Script {
             CSModule csmImpl = new CSModule({
                 moduleType: "community-staking-module",
                 elStealingFine: 0.1 ether,
-                maxKeysPerOperatorEA: 10
+                maxKeysPerOperatorEA: 10,
+                lidoLocator: LIDO_LOCATOR_ADDRESS
             });
             csm = CSModule(_deployProxy(deployer, address(csmImpl)));
 
@@ -113,7 +113,6 @@ abstract contract DeployBase is Script {
 
             /// @dev initialize contracts
             csm.initialize({
-                _lidoLocator: LIDO_LOCATOR_ADDRESS,
                 _accounting: address(accounting),
                 _earlyAdoption: address(0),
                 admin: address(deployer)
@@ -130,7 +129,7 @@ abstract contract DeployBase is Script {
 
             csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(deployer));
             csm.activatePublicRelease();
-            // TODO: add early adoption initialization
+            // TODO: deploy early adoption contract
 
             feeDistributor.grantRole(
                 feeDistributor.ORACLE_ROLE(),

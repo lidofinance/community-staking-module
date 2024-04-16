@@ -6,7 +6,7 @@ pragma solidity 0.8.24;
 
 import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
@@ -132,7 +132,7 @@ contract CSModule is
     ICSModule,
     CSModuleBase,
     Initializable,
-    AccessControlUpgradeable,
+    AccessControlEnumerableUpgradeable,
     PausableUntil,
     AssetRecoverer
 {
@@ -163,12 +163,12 @@ contract CSModule is
     uint256
         public immutable MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE;
     bytes32 private immutable MODULE_TYPE;
+    ILidoLocator public immutable LIDO_LOCATOR;
 
     bool public publicRelease;
     uint256 public removalCharge; // TODO: think about better name, smth like keyRemovalCharge
     QueueLib.Queue public queue; // TODO: depositQueue? public?
 
-    ILidoLocator public lidoLocator;
     ICSAccounting public accounting;
     ICSEarlyAdoption public earlyAdoption;
     // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
@@ -192,22 +192,21 @@ contract CSModule is
     constructor(
         bytes32 moduleType,
         uint256 elStealingFine,
-        uint256 maxKeysPerOperatorEA
+        uint256 maxKeysPerOperatorEA,
+        address lidoLocator
     ) {
         MODULE_TYPE = moduleType;
         EL_REWARDS_STEALING_FINE = elStealingFine;
         MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE = maxKeysPerOperatorEA;
+        LIDO_LOCATOR = ILidoLocator(lidoLocator);
     }
 
     function initialize(
-        address _lidoLocator,
         address _accounting,
         address _earlyAdoption,
         address admin
     ) external initializer {
-        __AccessControl_init();
-
-        lidoLocator = ILidoLocator(_lidoLocator);
+        __AccessControlEnumerable_init();
 
         accounting = ICSAccounting(_accounting);
         earlyAdoption = ICSEarlyAdoption(_earlyAdoption);
@@ -848,7 +847,7 @@ contract CSModule is
     function onRewardsMinted(
         uint256 totalShares
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        IStETH(lidoLocator.lido()).transferShares(
+        IStETH(LIDO_LOCATOR.lido()).transferShares(
             accounting.feeDistributor(),
             totalShares
         );
@@ -1082,6 +1081,7 @@ contract CSModule is
         external
         onlyRole(STAKING_ROUTER_ROLE)
     {
+        // solhint-disable-previous-line no-empty-blocks
         // Nothing to do, rewards are distributed by a performance oracle.
     }
 
@@ -1655,7 +1655,7 @@ contract CSModule is
     }
 
     function recoverStETHShares() external onlyRecoverer {
-        IStETH stETH = IStETH(lidoLocator.lido());
+        IStETH stETH = IStETH(LIDO_LOCATOR.lido());
 
         AssetRecovererLib.recoverStETHShares(
             address(stETH),

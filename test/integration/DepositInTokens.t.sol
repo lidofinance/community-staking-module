@@ -46,7 +46,8 @@ contract DepositIntegrationTest is
         csm = new CSModule({
             moduleType: "community-staking-module",
             elStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10
+            maxKeysPerOperatorEA: 10,
+            lidoLocator: address(locator)
         });
         wstETH = IWstETH(WSTETH_ADDRESS);
 
@@ -68,7 +69,6 @@ contract DepositIntegrationTest is
         );
 
         csm.initialize({
-            _lidoLocator: address(locator),
             _accounting: address(accounting),
             _earlyAdoption: address(0),
             admin: address(this)

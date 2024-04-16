@@ -59,7 +59,7 @@ abstract contract CSBondLock is CSBondLockBase, Initializable {
     mapping(uint256 => BondLock) internal _bondLock;
 
     // solhint-disable-next-line func-name-mixedcase
-    function __CSBondLock__init(
+    function __CSBondLock_init(
         uint256 retentionPeriod
     ) internal onlyInitializing {
         _setBondLockRetentionPeriod(retentionPeriod);

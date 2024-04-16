@@ -42,7 +42,8 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
         csm = new CSModule({
             moduleType: "community-staking-module",
             elStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10
+            maxKeysPerOperatorEA: 10,
+            lidoLocator: address(locator)
         });
         uint256[] memory curve = new uint256[](2);
         curve[0] = 2 ether;
@@ -59,7 +60,6 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
             locator.treasury()
         );
         csm.initialize({
-            _lidoLocator: address(locator),
             _accounting: address(accounting),
             _earlyAdoption: address(0),
             admin: address(this)

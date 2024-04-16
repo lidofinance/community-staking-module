@@ -17,7 +17,7 @@ import { Fixtures } from "./helpers/Fixtures.sol";
 
 contract CSBondLockTestable is CSBondLock {
     function initialize(uint256 retentionPeriod) public initializer {
-        CSBondLock.__CSBondLock__init(retentionPeriod);
+        CSBondLock.__CSBondLock_init(retentionPeriod);
     }
 
     function setBondLockRetentionPeriod(uint256 retention) external {

@@ -93,7 +93,7 @@ contract CSAccounting is
     ) external initializer {
         __AccessControlEnumerable_init();
         __CSBondCurve_init(bondCurve);
-        __CSBondLock__init(bondLockRetentionPeriod);
+        __CSBondLock_init(bondLockRetentionPeriod);
 
         if (admin == address(0)) {
             revert ZeroAddress("admin");
