@@ -77,7 +77,7 @@ contract ValidatorCountsReportTest is Test {
     }
 
     function test_count() public {
-        (bytes memory ids, bytes memory counts) = (
+        (bytes memory ids, ) = (
             bytes.concat(bytes8(0x0000000000000001)),
             bytes.concat(bytes16(0x00000000000000000000000000000001))
         );

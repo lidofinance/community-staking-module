@@ -4,7 +4,7 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { CSFeeDistributorBase, CSFeeDistributor } from "../src/CSFeeDistributor.sol";
+import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { AssetRecoverer } from "../src/abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
@@ -19,12 +19,44 @@ import { Stub } from "./helpers/mocks/Stub.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
 import { Utilities } from "./helpers/Utilities.sol";
 
-contract CSFeeDistributorTest is
-    Test,
-    Fixtures,
-    Utilities,
-    CSFeeDistributorBase
-{
+contract CSFeeDistributorInitTest is Test, Fixtures, Utilities {
+    using stdStorage for StdStorage;
+
+    StETHMock internal stETH;
+
+    address internal stranger;
+    address internal oracle;
+    CSFeeDistributor internal feeDistributor;
+    CommunityStakingModuleMock internal csm;
+    Stub internal accounting;
+    MerkleTree internal tree;
+
+    function setUp() public {
+        stranger = nextAddress("STRANGER");
+        oracle = nextAddress("ORACLE");
+        csm = new CommunityStakingModuleMock();
+        accounting = new Stub();
+
+        (, , stETH, ) = initLido();
+
+        feeDistributor = new CSFeeDistributor(
+            address(stETH),
+            address(accounting)
+        );
+    }
+
+    function test_initialize_revertWhen_zeroAdmin() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CSFeeDistributor.ZeroAddress.selector,
+                "admin"
+            )
+        );
+        feeDistributor.initialize(address(0));
+    }
+}
+
+contract CSFeeDistributorTest is Test, Fixtures, Utilities {
     using stdStorage for StdStorage;
 
     StETHMock internal stETH;
@@ -70,7 +102,7 @@ contract CSFeeDistributorTest is
         feeDistributor.processOracleReport(root, "", shares);
 
         vm.expectEmit(true, true, false, true, address(feeDistributor));
-        emit FeeDistributed(nodeOperatorId, shares);
+        emit CSFeeDistributor.FeeDistributed(nodeOperatorId, shares);
 
         vm.prank(address(accounting));
         feeDistributor.distributeFees({
@@ -82,8 +114,63 @@ contract CSFeeDistributorTest is
         assertEq(stETH.sharesOf(address(accounting)), shares);
     }
 
+    function test_getFeesToDistribute_notDistributedYet() public {
+        uint256 nodeOperatorId = 42;
+        uint256 shares = 100;
+        tree.pushLeaf(abi.encode(nodeOperatorId, shares));
+        bytes32[] memory proof = tree.getProof(0);
+        bytes32 root = tree.root();
+
+        stETH.mintShares(address(feeDistributor), shares);
+        vm.prank(oracle);
+        feeDistributor.processOracleReport(root, "", shares);
+
+        uint256 sharesToDistribute = feeDistributor.getFeesToDistribute({
+            proof: proof,
+            nodeOperatorId: nodeOperatorId,
+            shares: shares
+        });
+
+        assertEq(sharesToDistribute, shares);
+    }
+
+    function test_getFeesToDistribute_alreadyDistributed() public {
+        uint256 nodeOperatorId = 42;
+        uint256 shares = 100;
+        tree.pushLeaf(abi.encode(nodeOperatorId, shares));
+        bytes32[] memory proof = tree.getProof(0);
+        bytes32 root = tree.root();
+
+        stETH.mintShares(address(feeDistributor), shares);
+        vm.prank(oracle);
+        feeDistributor.processOracleReport(root, "", shares);
+
+        vm.prank(address(accounting));
+        feeDistributor.distributeFees({
+            proof: proof,
+            nodeOperatorId: nodeOperatorId,
+            shares: shares
+        });
+
+        uint256 sharesToDistribute = feeDistributor.getFeesToDistribute({
+            proof: proof,
+            nodeOperatorId: nodeOperatorId,
+            shares: shares
+        });
+
+        assertEq(sharesToDistribute, 0);
+    }
+
+    function test_hashLeaf() public {
+        //  keccak256(bytes.concat(keccak256(abi.encode(1, 1000)))) == 0xe2ad525aaaf1fb7709959cc06e210437a97f34a5833e3a5c90d2099c5373116a
+        assertEq(
+            feeDistributor.hashLeaf(1, 1000),
+            0xe2ad525aaaf1fb7709959cc06e210437a97f34a5833e3a5c90d2099c5373116a
+        );
+    }
+
     function test_RevertIf_NotAccounting() public {
-        vm.expectRevert(NotAccounting.selector);
+        vm.expectRevert(CSFeeDistributor.NotAccounting.selector);
 
         feeDistributor.distributeFees({
             proof: new bytes32[](1),
@@ -93,7 +180,7 @@ contract CSFeeDistributorTest is
     }
 
     function test_RevertIf_InvalidProof() public {
-        vm.expectRevert(InvalidProof.selector);
+        vm.expectRevert(CSFeeDistributor.InvalidProof.selector);
 
         vm.prank(address(accounting));
         feeDistributor.distributeFees({
@@ -110,7 +197,7 @@ contract CSFeeDistributorTest is
         bytes32 root = tree.root();
 
         stETH.mintShares(address(feeDistributor), shares);
-        vm.expectRevert(InvalidShares.selector);
+        vm.expectRevert(CSFeeDistributor.InvalidShares.selector);
         vm.prank(oracle);
         feeDistributor.processOracleReport(root, "", shares + 1);
     }
@@ -132,7 +219,7 @@ contract CSFeeDistributorTest is
             .with_key(nodeOperatorId)
             .checked_write(shares + 99);
 
-        vm.expectRevert(InvalidShares.selector);
+        vm.expectRevert(CSFeeDistributor.InvalidShares.selector);
         vm.prank(address(accounting));
         feeDistributor.distributeFees({
             proof: proof,

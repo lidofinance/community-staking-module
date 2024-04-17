@@ -1,22 +1,9 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
-// solhint-disable-next-line one-contract-per-file
 pragma solidity 0.8.24;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
-abstract contract CSBondLockBase {
-    event BondLockChanged(
-        uint256 indexed nodeOperatorId,
-        uint256 newAmount,
-        uint256 retentionUntil
-    );
-    event BondLockRetentionPeriodChanged(uint256 retentionPeriod);
-
-    error InvalidBondLockRetentionPeriod();
-    error InvalidBondLockAmount();
-}
 
 /// @dev Bond lock mechanics abstract contract.
 ///
@@ -37,7 +24,7 @@ abstract contract CSBondLockBase {
 /// Internal non-view methods should be used in Module contract with additional requirements (if required).
 ///
 /// @author vgorkavenko
-abstract contract CSBondLock is CSBondLockBase, Initializable {
+abstract contract CSBondLock is Initializable {
     /// @dev Bond lock structure.
     /// It contains:
     ///  - amount         |> amount of locked bond
@@ -57,6 +44,16 @@ abstract contract CSBondLock is CSBondLockBase, Initializable {
 
     /// @dev Mapping of the node operator id to the bond lock
     mapping(uint256 => BondLock) internal _bondLock;
+
+    event BondLockChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 newAmount,
+        uint256 retentionUntil
+    );
+    event BondLockRetentionPeriodChanged(uint256 retentionPeriod);
+
+    error InvalidBondLockRetentionPeriod();
+    error InvalidBondLockAmount();
 
     // solhint-disable-next-line func-name-mixedcase
     function __CSBondLock_init(

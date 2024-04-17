@@ -10,7 +10,7 @@ import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 
 contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
-    /// @notice There are no any assets to store in the contract
+    /// @notice No assets are stored in the contract
 
     struct ReportData {
         /// @dev Version of the oracle consensus rules. Current version expected

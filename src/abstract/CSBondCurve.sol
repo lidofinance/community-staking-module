@@ -1,20 +1,9 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
-// solhint-disable one-contract-per-file
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 pragma solidity 0.8.24;
-
-abstract contract CSBondCurveBase {
-    event BondCurveAdded(uint256[] bondCurve);
-    event DefaultBondCurveChanged(uint256 curveId);
-    event BondCurveChanged(uint256 indexed nodeOperatorId, uint256 curveId);
-
-    error InvalidBondCurveLength();
-    error InvalidBondCurveValues();
-    error InvalidBondCurveId();
-}
 
 /// @dev Bond curve mechanics abstract contract
 ///
@@ -34,7 +23,7 @@ abstract contract CSBondCurveBase {
 /// Internal non-view methods should be used in Module contract with additional requirements (if required).
 ///
 /// @author vgorkavenko
-abstract contract CSBondCurve is CSBondCurveBase, Initializable {
+abstract contract CSBondCurve is Initializable {
     /// @dev Bond curve structure.
     /// It contains:
     ///  - id     |> identifier to set default curve for the module or particular node operator
@@ -86,6 +75,14 @@ abstract contract CSBondCurve is CSBondCurveBase, Initializable {
     // TODO: might be redefined in the future
     uint256 internal constant MAX_CURVE_LENGTH = 20;
     uint256 internal constant MIN_CURVE_LENGTH = 1;
+
+    event BondCurveAdded(uint256[] bondCurve);
+    event DefaultBondCurveChanged(uint256 curveId);
+    event BondCurveChanged(uint256 indexed nodeOperatorId, uint256 curveId);
+
+    error InvalidBondCurveLength();
+    error InvalidBondCurveValues();
+    error InvalidBondCurveId();
 
     // solhint-disable-next-line func-name-mixedcase
     function __CSBondCurve_init(
