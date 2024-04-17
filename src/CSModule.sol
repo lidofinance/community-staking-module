@@ -772,7 +772,7 @@ contract CSModule is
     /// @param startIndex Index of the first key
     /// @param keysCount Count of keys to get
     /// @return Signing keys
-    function getNodeOperatorSigningKeys(
+    function getSigningKeys(
         uint256 nodeOperatorId,
         uint256 startIndex,
         uint256 keysCount
@@ -794,6 +794,39 @@ contract CSModule is
                 startIndex,
                 keysCount
             );
+    }
+
+    /// @notice Gets node operator signing keys with signatures
+    /// @param nodeOperatorId ID of the node operator
+    /// @param startIndex Index of the first key
+    /// @param keysCount Count of keys to get
+    /// @return keys Signing keys
+    /// @return signatures Signatures of (deposit_message, domain) tuples
+    function getSigningKeysWithSignatures(
+        uint256 nodeOperatorId,
+        uint256 startIndex,
+        uint256 keysCount
+    )
+        external
+        view
+        onlyExistingNodeOperator(nodeOperatorId)
+        returns (bytes memory keys, bytes memory signatures)
+    {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (startIndex + keysCount > no.totalAddedKeys) {
+            revert SigningKeysInvalidOffset();
+        }
+        (keys, signatures) = SigningKeys.initKeysSigsBuf(keysCount);
+        // solhint-disable-next-line func-named-parameters
+        SigningKeys.loadKeysSigs(
+            SIGNING_KEYS_POSITION,
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            keys,
+            signatures,
+            0
+        );
     }
 
     /// @notice Gets nonce of the module.
