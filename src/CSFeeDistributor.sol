@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
-// solhint-disable-next-line one-contract-per-file
 pragma solidity 0.8.24;
 
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
@@ -14,22 +13,8 @@ import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
 /// @author madlabman
-contract CSFeeDistributorBase {
-    /// @dev Emitted when fees are distributed
-    event FeeDistributed(uint256 indexed nodeOperatorId, uint256 shares);
-
-    error ZeroAddress(string field);
-
-    error NotAccounting();
-
-    error InvalidShares();
-    error InvalidProof();
-}
-
-/// @author madlabman
 contract CSFeeDistributor is
     ICSFeeDistributor,
-    CSFeeDistributorBase,
     Initializable,
     AccessControlEnumerableUpgradeable,
     AssetRecoverer
@@ -51,6 +36,15 @@ contract CSFeeDistributor is
 
     /// @notice Total amount of shares available for claiming by NOs
     uint256 public claimableShares;
+
+    /// @dev Emitted when fees are distributed
+    event FeeDistributed(uint256 indexed nodeOperatorId, uint256 shares);
+
+    error ZeroAddress(string field);
+    error NotAccounting();
+
+    error InvalidShares();
+    error InvalidProof();
 
     constructor(address stETH, address accounting) {
         if (accounting == address(0)) revert ZeroAddress("accounting");

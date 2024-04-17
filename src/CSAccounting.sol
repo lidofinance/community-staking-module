@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
-// solhint-disable-next-line one-contract-per-file
 pragma solidity 0.8.24;
 // TODO prevent storage overlaps in the base contracts
 
@@ -19,18 +18,8 @@ import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
-abstract contract CSAccountingBase {
-    event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
-    event ChargeRecipientSet(address chargeRecipient);
-
-    error AlreadyInitialized();
-    error InvalidSender();
-    error SenderIsNotCSM();
-}
-
 /// @author vgorkavenko
 contract CSAccounting is
-    CSAccountingBase,
     CSBondCore,
     CSBondCurve,
     CSBondLock,
@@ -41,6 +30,7 @@ contract CSAccounting is
     /// @notice This contract stores the node operators' bonds in form of stETH shares,
     /// so it should be considered in the recovery process
     using SafeERC20 for IERC20;
+
     struct PermitInput {
         uint256 value;
         uint256 deadline;
@@ -67,6 +57,13 @@ contract CSAccounting is
     ICSModule private immutable CSM;
     ICSFeeDistributor public feeDistributor;
     address public chargeRecipient;
+
+    event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
+    event ChargeRecipientSet(address chargeRecipient);
+
+    error AlreadyInitialized();
+    error InvalidSender();
+    error SenderIsNotCSM();
 
     /// @param lidoLocator lido locator contract address
     /// @param communityStakingModule community staking module contract address

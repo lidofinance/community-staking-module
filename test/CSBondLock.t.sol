@@ -5,7 +5,7 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { CSBondLockBase, CSBondLock } from "../src/abstract/CSBondLock.sol";
+import { CSBondLock } from "../src/abstract/CSBondLock.sol";
 import { PermitTokenBase } from "./helpers/Permit.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 import { LidoMock } from "./helpers/mocks/LidoMock.sol";
@@ -37,7 +37,7 @@ contract CSBondLockTestable is CSBondLock {
     }
 }
 
-contract CSBondLockTest is Test, CSBondLockBase {
+contract CSBondLockTest is Test {
     CSBondLockTestable public bondLock;
 
     function setUp() public {
@@ -49,7 +49,7 @@ contract CSBondLockTest is Test, CSBondLockBase {
         uint256 retention = 4 weeks;
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondLockRetentionPeriodChanged(retention);
+        emit CSBondLock.BondLockRetentionPeriodChanged(retention);
 
         bondLock.setBondLockRetentionPeriod(retention);
 
@@ -61,7 +61,7 @@ contract CSBondLockTest is Test, CSBondLockBase {
         public
     {
         uint256 minRetention = bondLock.MIN_BOND_LOCK_RETENTION_PERIOD();
-        vm.expectRevert(InvalidBondLockRetentionPeriod.selector);
+        vm.expectRevert(CSBondLock.InvalidBondLockRetentionPeriod.selector);
         bondLock.setBondLockRetentionPeriod(minRetention - 1 seconds);
     }
 
@@ -69,7 +69,7 @@ contract CSBondLockTest is Test, CSBondLockBase {
         public
     {
         uint256 maxRetention = bondLock.MAX_BOND_LOCK_RETENTION_PERIOD();
-        vm.expectRevert(InvalidBondLockRetentionPeriod.selector);
+        vm.expectRevert(CSBondLock.InvalidBondLockRetentionPeriod.selector);
         bondLock.setBondLockRetentionPeriod(maxRetention + 1 seconds);
     }
 
@@ -101,7 +101,7 @@ contract CSBondLockTest is Test, CSBondLockBase {
         uint256 retentionUntil = block.timestamp + retentionPeriod;
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondLockChanged(noId, amount, retentionUntil);
+        emit CSBondLock.BondLockChanged(noId, amount, retentionUntil);
 
         bondLock.lock(noId, amount);
 
@@ -142,7 +142,7 @@ contract CSBondLockTest is Test, CSBondLockBase {
     }
 
     function test_lock_RevertWhen_ZeroAmount() public {
-        vm.expectRevert(InvalidBondLockAmount.selector);
+        vm.expectRevert(CSBondLock.InvalidBondLockAmount.selector);
         bondLock.lock(0, 0);
     }
 
@@ -153,7 +153,7 @@ contract CSBondLockTest is Test, CSBondLockBase {
         bondLock.lock(noId, amount);
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondLockChanged(noId, 0, 0);
+        emit CSBondLock.BondLockChanged(noId, 0, 0);
 
         bondLock.reduceAmount(noId, amount);
 
@@ -176,7 +176,7 @@ contract CSBondLockTest is Test, CSBondLockBase {
         vm.warp(block.timestamp + 1 seconds);
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondLockChanged(noId, rest, retentionPeriodWhenLock);
+        emit CSBondLock.BondLockChanged(noId, rest, retentionPeriodWhenLock);
 
         bondLock.reduceAmount(noId, toRelease);
 
@@ -186,7 +186,7 @@ contract CSBondLockTest is Test, CSBondLockBase {
     }
 
     function test_reduceAmount_RevertWhen_ZeroAmount() public {
-        vm.expectRevert(InvalidBondLockAmount.selector);
+        vm.expectRevert(CSBondLock.InvalidBondLockAmount.selector);
         bondLock.reduceAmount(0, 0);
     }
 
@@ -196,7 +196,7 @@ contract CSBondLockTest is Test, CSBondLockBase {
 
         bondLock.lock(noId, amount);
 
-        vm.expectRevert(InvalidBondLockAmount.selector);
+        vm.expectRevert(CSBondLock.InvalidBondLockAmount.selector);
         bondLock.reduceAmount(noId, amount + 1 ether);
     }
 
@@ -207,7 +207,7 @@ contract CSBondLockTest is Test, CSBondLockBase {
         bondLock.lock(noId, amount);
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit BondLockChanged(noId, 0, 0);
+        emit CSBondLock.BondLockChanged(noId, 0, 0);
 
         bondLock.remove(noId);
 

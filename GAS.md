@@ -20,13 +20,13 @@
 | depositETH                                                          | 24183           | 112098 | 113268 | 113508 | 104     |
 | depositStETH                                                        | 25196           | 94179  | 104018 | 107937 | 7       |
 | depositWstETH                                                       | 25193           | 105414 | 120251 | 123963 | 6       |
-| feeDistributor                                                      | 2405            | 2405   | 2405   | 2405   | 2       |
+| feeDistributor                                                      | 405             | 1738   | 2405   | 2405   | 3       |
 | getActualLockedBond                                                 | 559             | 679    | 719    | 719    | 8       |
 | getBondAmountByKeysCount                                            | 1325            | 1406   | 1325   | 1588   | 236     |
 | getBondAmountByKeysCountWstETH(uint256)                             | 3889            | 9728   | 4152   | 26720  | 4       |
 | getBondAmountByKeysCountWstETH(uint256,(uint256,uint256[],uint256)) | 3309            | 8801   | 8856   | 14239  | 6       |
 | getBondCurve                                                        | 2226            | 15888  | 16322  | 16322  | 245     |
-| getBondLockRetentionPeriod                                          | 413             | 1913   | 2413   | 2413   | 4       |
+| getBondLockRetentionPeriod                                          | 413             | 1746   | 2413   | 2413   | 3       |
 | getBondShares                                                       | 563             | 601    | 563    | 2563   | 103     |
 | getBondSummary                                                      | 14092           | 22841  | 21375  | 29875  | 12      |
 | getBondSummaryShares                                                | 14067           | 22816  | 21350  | 29850  | 12      |
@@ -37,7 +37,7 @@
 | getUnbondedKeysCount                                                | 3368            | 24143  | 15957  | 46457  | 405     |
 | getUnbondedKeysCountToEject                                         | 5335            | 9424   | 7654   | 19278  | 63      |
 | grantRole                                                           | 29570           | 109150 | 118658 | 118658 | 2461    |
-| initialize                                                          | 345871          | 345871 | 345871 | 345871 | 443     |
+| initialize                                                          | 207352          | 344941 | 345871 | 345871 | 447     |
 | isPaused                                                            | 438             | 838    | 438    | 2438   | 5       |
 | lockBondETH                                                         | 21804           | 68440  | 70230  | 70254  | 27      |
 | pauseFor                                                            | 24043           | 45429  | 47568  | 47568  | 11      |
@@ -71,14 +71,16 @@
 | src/CSFeeDistributor.sol:CSFeeDistributor contract |                 |        |        |        |         |
 |----------------------------------------------------|-----------------|--------|--------|--------|---------|
 | Function Name                                      | min             | avg    | median | max    | # calls |
-| ORACLE_ROLE                                        | 240             | 240    | 240    | 240    | 7       |
+| ORACLE_ROLE                                        | 240             | 240    | 240    | 240    | 10      |
 | RECOVERER_ROLE                                     | 315             | 315    | 315    | 315    | 7       |
-| distributeFees                                     | 22334           | 35940  | 27771  | 76284  | 5       |
+| distributeFees                                     | 22334           | 42664  | 27944  | 76284  | 6       |
 | distributedShares                                  | 523             | 1523   | 1523   | 2523   | 4       |
-| grantRole                                          | 118703          | 118703 | 118703 | 118703 | 12      |
-| initialize                                         | 137592          | 137592 | 137592 | 137592 | 12      |
+| getFeesToDistribute                                | 1820            | 2820   | 2820   | 3820   | 2       |
+| grantRole                                          | 118703          | 118703 | 118703 | 118703 | 15      |
+| hashLeaf                                           | 678             | 678    | 678    | 678    | 1       |
+| initialize                                         | 44500           | 131773 | 137592 | 137592 | 16      |
 | pendingToDistribute                                | 1432            | 1432   | 1432   | 1432   | 1       |
-| processOracleReport                                | 32656           | 64412  | 77419  | 77419  | 5       |
+| processOracleReport                                | 32656           | 68128  | 77419  | 77419  | 7       |
 | recoverERC20                                       | 24480           | 35853  | 24494  | 58586  | 3       |
 | recoverEther                                       | 23804           | 41922  | 41922  | 60040  | 2       |
 
