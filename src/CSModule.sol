@@ -733,7 +733,14 @@ contract CSModule is
 
     /// @notice Gets node operator summary
     /// @param nodeOperatorId ID of the node operator
-    /// @return Node operator summary
+    /// @return targetLimitMode Target limit mode
+    /// @return targetValidatorsCount Target validators count
+    /// @return stuckValidatorsCount Stuck validators count
+    /// @return refundedValidatorsCount Refunded validators count
+    /// @return stuckPenaltyEndTimestamp Stuck penalty end timestamp
+    /// @return totalExitedValidators Total exited validators
+    /// @return totalDepositedValidators Total deposited validators
+    /// @return depositableValidatorsCount Depositable validators count
     /// @dev depositableValidatorsCount depends on:
     ///      - totalVettedKeys
     ///      - totalDepositedKeys
