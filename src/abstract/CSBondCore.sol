@@ -71,18 +71,15 @@ abstract contract CSBondCore is CSBondCoreBase {
     mapping(uint256 => uint256) internal _bondShares;
     uint256 public totalBondShares;
 
-    constructor(address lidoLocator, address wstETH) {
+    constructor(address lidoLocator) {
         if (lidoLocator == address(0)) {
             revert ZeroAddress("lidoLocator");
         }
-        if (wstETH == address(0)) {
-            revert ZeroAddress("wstETH");
-        }
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
         LIDO = ILido(LIDO_LOCATOR.lido());
-        WSTETH = IWstETH(wstETH);
         BURNER = IBurner(LIDO_LOCATOR.burner());
         WITHDRAWAL_QUEUE = IWithdrawalQueue(LIDO_LOCATOR.withdrawalQueue());
+        WSTETH = IWstETH(WITHDRAWAL_QUEUE.WSTETH());
     }
 
     /// @notice Returns the bond shares for the given node operator.

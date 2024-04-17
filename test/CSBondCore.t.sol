@@ -21,10 +21,7 @@ import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 
 contract CSBondCoreTestable is CSBondCore {
-    constructor(
-        address lidoLocator,
-        address wstETH
-    ) CSBondCore(lidoLocator, wstETH) {}
+    constructor(address lidoLocator) CSBondCore(lidoLocator) {}
 
     function depositETH(address from, uint256 nodeOperatorId) external payable {
         _depositETH(from, nodeOperatorId);
@@ -109,7 +106,7 @@ abstract contract CSBondCoreTestBase is
         user = nextAddress("USER");
         testChargeRecipient = nextAddress("CHARGERECIPIENT");
 
-        bondCore = new CSBondCoreTestable(address(locator), address(wstETH));
+        bondCore = new CSBondCoreTestable(address(locator));
     }
 
     uint256[] public mockedRequestIds = [1];

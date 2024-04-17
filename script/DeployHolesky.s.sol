@@ -21,9 +21,7 @@ contract DeployHolesky is DeployBase {
             // initializationEpoch
             8888,
             // lidoLocatorAddress
-            0x28FAB2059C713A7F9D8c86Db49f9bb0e96Af1ef8,
-            // wstETHAddress
-            0x8d09a4502Cc8Cf1547aD300E066060D043f6982D
+            0x28FAB2059C713A7F9D8c86Db49f9bb0e96Af1ef8
         )
     {}
 }

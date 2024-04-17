@@ -4,6 +4,8 @@
 // solhint-disable-next-line one-contract-per-file
 pragma solidity 0.8.24;
 
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 abstract contract CSBondLockBase {
     event BondLockChanged(
         uint256 indexed nodeOperatorId,
@@ -35,7 +37,7 @@ abstract contract CSBondLockBase {
 /// Internal non-view methods should be used in Module contract with additional requirements (if required).
 ///
 /// @author vgorkavenko
-abstract contract CSBondLock is CSBondLockBase {
+abstract contract CSBondLock is CSBondLockBase, Initializable {
     /// @dev Bond lock structure.
     /// It contains:
     ///  - amount         |> amount of locked bond
@@ -56,7 +58,10 @@ abstract contract CSBondLock is CSBondLockBase {
     /// @dev Mapping of the node operator id to the bond lock
     mapping(uint256 => BondLock) internal _bondLock;
 
-    constructor(uint256 retentionPeriod) {
+    // solhint-disable-next-line func-name-mixedcase
+    function __CSBondLock_init(
+        uint256 retentionPeriod
+    ) internal onlyInitializing {
         _setBondLockRetentionPeriod(retentionPeriod);
     }
 

@@ -46,9 +46,9 @@ contract CSFeeDistributorTest is
 
         feeDistributor = new CSFeeDistributor(
             address(stETH),
-            address(accounting),
-            address(this)
+            address(accounting)
         );
+        feeDistributor.initialize(address(this));
         feeDistributor.grantRole(feeDistributor.ORACLE_ROLE(), oracle);
 
         tree = new MerkleTree();
@@ -200,9 +200,9 @@ contract CSFeeDistributorAssetRecovererTest is Test, Fixtures, Utilities {
 
         feeDistributor = new CSFeeDistributor(
             address(stETH),
-            address(accounting),
-            address(this)
+            address(accounting)
         );
+        feeDistributor.initialize(address(this));
 
         feeDistributor.grantRole(feeDistributor.RECOVERER_ROLE(), recoverer);
     }

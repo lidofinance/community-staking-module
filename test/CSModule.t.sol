@@ -15,6 +15,7 @@ import "../src/CSEarlyAdoption.sol";
 import "./helpers/MerkleTree.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
 import { AssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
+import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
 
 abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
     using Strings for uint256;
@@ -31,12 +32,15 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, CSModuleBase {
     LidoMock public stETH;
     CSModule public csm;
     CSAccounting public accounting;
+    CSEarlyAdoption public earlyAdoption;
     Stub public feeDistributor;
 
     address internal admin;
     address internal stranger;
     address internal nodeOperator;
     address internal testChargeRecipient;
+
+    MerkleTree internal merkleTree;
 
     struct NodeOperatorSummary {
         uint8 targetLimitMode;
@@ -229,29 +233,49 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
 
         feeDistributor = new Stub();
 
-        csm = new CSModule(
-            "community-staking-module",
-            address(locator),
-            admin,
-            0.1 ether,
-            10
-        );
+        csm = new CSModule({
+            moduleType: "community-staking-module",
+            elStealingFine: 0.1 ether,
+            maxKeysPerOperatorEA: 10,
+            lidoLocator: address(locator)
+        });
         uint256[] memory curve = new uint256[](1);
         curve[0] = BOND_SIZE;
-        accounting = new CSAccounting(
+        accounting = new CSAccounting(address(locator), address(csm));
+        accounting.initialize(
             curve,
             admin,
-            address(locator),
-            address(wstETH),
-            address(csm),
+            address(feeDistributor),
             8 weeks,
             testChargeRecipient
         );
 
+        merkleTree = new MerkleTree();
+        merkleTree.pushLeaf(abi.encode(nodeOperator));
+
+        uint256[] memory earlyAdoptionCurve = new uint256[](1);
+        earlyAdoptionCurve[0] = BOND_SIZE / 2;
+
+        vm.startPrank(admin);
+        accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), address(this));
+        vm.stopPrank();
+
+        uint256 curveId = accounting.addBondCurve(earlyAdoptionCurve);
+        earlyAdoption = new CSEarlyAdoption(
+            merkleTree.root(),
+            curveId,
+            address(csm)
+        );
+
+        csm.initialize({
+            _accounting: address(accounting),
+            _earlyAdoption: address(earlyAdoption),
+            admin: admin
+        });
+
         vm.startPrank(admin);
         csm.grantRole(csm.PAUSE_ROLE(), address(this));
         csm.grantRole(csm.RESUME_ROLE(), address(this));
-        csm.grantRole(csm.INITIALIZE_ROLE(), address(this));
         csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(this));
         csm.grantRole(
@@ -266,11 +290,8 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), address(this));
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), address(csm));
         accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm));
-        accounting.grantRole(accounting.INITIALIZE_ROLE(), address(this));
         vm.stopPrank();
 
-        accounting.setFeeDistributor(address(feeDistributor));
-        csm.setAccounting(address(accounting));
         csm.setRemovalCharge(0.05 ether);
     }
 }
@@ -295,80 +316,83 @@ contract CSMCommonNoRoles is CSMFixtures {
         (locator, wstETH, stETH, ) = initLido();
 
         feeDistributor = new Stub();
-        csm = new CSModule(
-            "community-staking-module",
-            address(locator),
-            admin,
-            0.1 ether,
-            10
-        );
-
-        vm.startPrank(admin);
-        csm.grantRole(csm.INITIALIZE_ROLE(), admin);
-        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
+        csm = new CSModule({
+            moduleType: "community-staking-module",
+            elStealingFine: 0.1 ether,
+            maxKeysPerOperatorEA: 10,
+            lidoLocator: address(locator)
+        });
 
         uint256[] memory curve = new uint256[](1);
         curve[0] = BOND_SIZE;
-        accounting = new CSAccounting(
+        accounting = new CSAccounting(address(locator), address(csm));
+        accounting.initialize(
             curve,
             admin,
-            address(locator),
-            address(wstETH),
-            address(csm),
+            address(feeDistributor),
             8 weeks,
             testChargeRecipient
         );
 
-        csm.setAccounting(address(accounting));
+        merkleTree = new MerkleTree();
+        merkleTree.pushLeaf(abi.encode(nodeOperator));
+
+        uint256[] memory earlyAdoptionCurve = new uint256[](1);
+        earlyAdoptionCurve[0] = BOND_SIZE / 2;
+
+        vm.startPrank(admin);
+        accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), address(this));
+        vm.stopPrank();
+
+        uint256 curveId = accounting.addBondCurve(earlyAdoptionCurve);
+        earlyAdoption = new CSEarlyAdoption(
+            merkleTree.root(),
+            curveId,
+            address(csm)
+        );
+
+        csm.initialize({
+            _accounting: address(accounting),
+            _earlyAdoption: address(earlyAdoption),
+            admin: admin
+        });
+
+        vm.startPrank(admin);
+        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), address(csm));
         accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm));
         vm.stopPrank();
     }
 }
 
-contract CsmInitialization is CSMCommon {
-    function test_initContract() public {
-        csm = new CSModule(
-            "community-staking-module",
-            address(locator),
-            admin,
-            0.1 ether,
-            10
-        );
+contract CsmInitialize is CSMCommon {
+    function test_constructor() public {
+        CSModule csm = new CSModule({
+            moduleType: "community-staking-module",
+            elStealingFine: 0.1 ether,
+            maxKeysPerOperatorEA: 10,
+            lidoLocator: address(locator)
+        });
         assertEq(csm.getType(), "community-staking-module");
-        assertEq(csm.getNodeOperatorsCount(), 0);
+        assertEq(csm.EL_REWARDS_STEALING_FINE(), 0.1 ether);
+        assertEq(csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(), 10);
+        assertEq(address(csm.LIDO_LOCATOR()), address(locator));
     }
 
-    function test_setAccounting() public {
-        csm = new CSModule(
-            "community-staking-module",
-            address(locator),
-            admin,
-            0.1 ether,
-            10
-        );
-        vm.startPrank(admin);
-        csm.grantRole(csm.INITIALIZE_ROLE(), address(admin));
-        csm.setAccounting(address(accounting));
-        vm.stopPrank();
+    function test_initialize() public {
+        CSModule csm = new CSModule({
+            moduleType: "community-staking-module",
+            elStealingFine: 0.1 ether,
+            maxKeysPerOperatorEA: 10,
+            lidoLocator: address(locator)
+        });
+        csm.initialize({
+            _accounting: address(accounting),
+            _earlyAdoption: address(1337),
+            admin: address(this)
+        });
         assertEq(address(csm.accounting()), address(accounting));
-    }
-
-    function test_setAccounting_RevertWhen_AlreadySet() public {
-        csm = new CSModule(
-            "community-staking-module",
-            address(locator),
-            admin,
-            0.1 ether,
-            10
-        );
-        vm.startPrank(admin);
-        csm.grantRole(csm.INITIALIZE_ROLE(), address(admin));
-        csm.setAccounting(address(accounting));
-        assertEq(address(csm.accounting()), address(accounting));
-        vm.expectRevert(AlreadySet.selector);
-        csm.setAccounting(address(accounting));
-        vm.stopPrank();
+        assertEq(address(csm.earlyAdoption()), address(1337));
     }
 }
 
@@ -3239,10 +3263,10 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         curvePoints[0] = 2 ether;
         curvePoints[1] = 3 ether;
 
-        accounting.addBondCurve(curvePoints);
+        uint256 curveId = accounting.addBondCurve(curvePoints);
 
         vm.prank(address(csm));
-        accounting.setBondCurve(0, 2);
+        accounting.setBondCurve(0, curveId);
 
         uploadMoreKeys(0, 1);
 
@@ -3282,10 +3306,10 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         curvePoints[0] = 2 ether;
         curvePoints[1] = 3 ether;
 
-        accounting.addBondCurve(curvePoints);
+        uint256 curveId = accounting.addBondCurve(curvePoints);
 
         vm.prank(address(csm));
-        accounting.setBondCurve(0, 2);
+        accounting.setBondCurve(0, curveId);
 
         uploadMoreKeys(0, 1);
 
@@ -3683,14 +3707,15 @@ contract CsmGetStakingModuleSummary is CSMCommon {
 
 contract CSMAccessControl is CSMCommonNoRoles {
     function test_adminRole() public {
-        CSModule csm = new CSModule(
-            "csm",
-            address(locator),
-            actor,
-            0.1 ether,
-            10
-        );
-        bytes32 role = csm.INITIALIZE_ROLE();
+        CSModule csm = new CSModule({
+            moduleType: "community-staking-module",
+            elStealingFine: 0.1 ether,
+            maxKeysPerOperatorEA: 10,
+            lidoLocator: address(locator)
+        });
+        csm.initialize(address(0), address(0), actor);
+
+        bytes32 role = csm.MODULE_MANAGER_ROLE();
         vm.prank(actor);
         csm.grantRole(role, stranger);
         assertTrue(csm.hasRole(role, stranger));
@@ -3701,60 +3726,18 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_adminRole_revert() public {
-        CSModule csm = new CSModule(
-            "csm",
-            address(locator),
-            actor,
-            0.1 ether,
-            10
-        );
-        bytes32 role = csm.INITIALIZE_ROLE();
+        CSModule csm = new CSModule({
+            moduleType: "community-staking-module",
+            elStealingFine: 0.1 ether,
+            maxKeysPerOperatorEA: 10,
+            lidoLocator: address(locator)
+        });
+        bytes32 role = csm.MODULE_MANAGER_ROLE();
         bytes32 adminRole = csm.DEFAULT_ADMIN_ROLE();
 
         vm.startPrank(stranger);
         expectRoleRevert(stranger, adminRole);
         csm.grantRole(role, stranger);
-    }
-
-    function test_initializeRole_setAccounting() public {
-        CSModule csm = new CSModule(
-            "csm",
-            address(locator),
-            admin,
-            0.1 ether,
-            10
-        );
-        bytes32 role = csm.INITIALIZE_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.prank(actor);
-        csm.setAccounting(nextAddress());
-    }
-
-    function test_initializeRole_setAccounting_revert() public {
-        bytes32 role = csm.INITIALIZE_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.setAccounting(nextAddress());
-    }
-
-    function test_initializeRole_setEarlyAdoption() public {
-        bytes32 role = csm.INITIALIZE_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.prank(actor);
-        csm.setEarlyAdoption(address(0));
-    }
-
-    function test_initializeRole_setEarlyAdoption_revert() public {
-        bytes32 role = csm.INITIALIZE_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.setEarlyAdoption(address(0));
     }
 
     function test_moduleManagerRole_setRemovalCharge() public {
@@ -4159,45 +4142,7 @@ contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
 }
 
 contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
-    function initEarlyAdoption()
-        private
-        returns (MerkleTree merkleTree, CSEarlyAdoption earlyAdoption)
-    {
-        merkleTree = new MerkleTree();
-        merkleTree.pushLeaf(abi.encode(nodeOperator));
-
-        uint256[] memory curve = new uint256[](1);
-        curve[0] = BOND_SIZE / 2;
-
-        uint256 curveId = accounting.addBondCurve(curve);
-        earlyAdoption = new CSEarlyAdoption(
-            merkleTree.root(),
-            curveId,
-            address(csm)
-        );
-    }
-
-    function test_setEarlyAdoption() public {
-        (, CSEarlyAdoption earlyAdoption) = initEarlyAdoption();
-        csm.setEarlyAdoption(address(earlyAdoption));
-        assertEq(address(csm.earlyAdoption()), address(earlyAdoption));
-    }
-
-    function test_setEarlyAdoption_revertIfAlreadySet() public {
-        (, CSEarlyAdoption earlyAdoption) = initEarlyAdoption();
-        csm.setEarlyAdoption(address(earlyAdoption));
-        address newEarlyAdoption = nextAddress();
-
-        vm.expectRevert(AlreadySet.selector);
-        csm.setEarlyAdoption(newEarlyAdoption);
-    }
-
     function test_addNodeOperator_earlyAdoptionProof() public {
-        (
-            MerkleTree merkleTree,
-            CSEarlyAdoption earlyAdoption
-        ) = initEarlyAdoption();
-        csm.setEarlyAdoption(address(earlyAdoption));
         csm.activatePublicRelease();
         bytes32[] memory proof = merkleTree.getProof(0);
 
@@ -4222,12 +4167,6 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
     }
 
     function test_addNodeOperator_WhenPublicReleaseWithProof() public {
-        (
-            MerkleTree merkleTree,
-            CSEarlyAdoption earlyAdoption
-        ) = initEarlyAdoption();
-        csm.setEarlyAdoption(address(earlyAdoption));
-
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -4253,11 +4192,6 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
     function test_addNodeOperator_RevertWhenMoreThanMaxSigningKeysLimit()
         public
     {
-        (
-            MerkleTree merkleTree,
-            CSEarlyAdoption earlyAdoption
-        ) = initEarlyAdoption();
-        csm.setEarlyAdoption(address(earlyAdoption));
         bytes32[] memory proof = merkleTree.getProof(0);
 
         uint256 keysCount = csm

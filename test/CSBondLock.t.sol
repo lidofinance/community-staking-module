@@ -16,7 +16,9 @@ import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 
 contract CSBondLockTestable is CSBondLock {
-    constructor(uint256 retentionPeriod) CSBondLock(retentionPeriod) {}
+    function initialize(uint256 retentionPeriod) public initializer {
+        CSBondLock.__CSBondLock_init(retentionPeriod);
+    }
 
     function setBondLockRetentionPeriod(uint256 retention) external {
         _setBondLockRetentionPeriod(retention);
@@ -39,7 +41,8 @@ contract CSBondLockTest is Test, CSBondLockBase {
     CSBondLockTestable public bondLock;
 
     function setUp() public {
-        bondLock = new CSBondLockTestable(8 weeks);
+        bondLock = new CSBondLockTestable();
+        bondLock.initialize(8 weeks);
     }
 
     function test_setBondLockRetentionPeriod() public {

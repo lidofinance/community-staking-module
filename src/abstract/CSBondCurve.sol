@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
+// solhint-disable one-contract-per-file
 
-// solhint-disable-next-line one-contract-per-file
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 pragma solidity 0.8.24;
 
 abstract contract CSBondCurveBase {
@@ -32,7 +34,7 @@ abstract contract CSBondCurveBase {
 /// Internal non-view methods should be used in Module contract with additional requirements (if required).
 ///
 /// @author vgorkavenko
-abstract contract CSBondCurve is CSBondCurveBase {
+abstract contract CSBondCurve is CSBondCurveBase, Initializable {
     /// @dev Bond curve structure.
     /// It contains:
     ///  - id     |> identifier to set default curve for the module or particular node operator
@@ -85,7 +87,10 @@ abstract contract CSBondCurve is CSBondCurveBase {
     uint256 internal constant MAX_CURVE_LENGTH = 20;
     uint256 internal constant MIN_CURVE_LENGTH = 1;
 
-    constructor(uint256[] memory defaultBondCurvePoints) {
+    // solhint-disable-next-line func-name-mixedcase
+    function __CSBondCurve_init(
+        uint256[] memory defaultBondCurvePoints
+    ) internal onlyInitializing {
         _setDefaultBondCurve(_addBondCurve(defaultBondCurvePoints));
     }
 

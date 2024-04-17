@@ -6,7 +6,8 @@ pragma solidity 0.8.24;
 
 import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
@@ -130,7 +131,8 @@ contract CSModuleBase {
 contract CSModule is
     ICSModule,
     CSModuleBase,
-    AccessControl,
+    Initializable,
+    AccessControlEnumerableUpgradeable,
     PausableUntil,
     AssetRecoverer
 {
@@ -139,7 +141,6 @@ contract CSModule is
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
 
-    bytes32 public constant INITIALIZE_ROLE = keccak256("INITIALIZE_ROLE"); // 0xf1d56a0879c1f3fb7b8db84f8f66a72839440915c8cc40c60b771b23d8349df0
     bytes32 public constant MODULE_MANAGER_ROLE =
         keccak256("MODULE_MANAGER_ROLE"); // 0x79dfcec784e591aafcf60db7db7b029a5c8b12aac4afd4e8c4eb740430405fa6
     bytes32 public constant STAKING_ROUTER_ROLE =
@@ -162,12 +163,12 @@ contract CSModule is
     uint256
         public immutable MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE;
     bytes32 private immutable MODULE_TYPE;
+    ILidoLocator public immutable LIDO_LOCATOR;
 
     bool public publicRelease;
     uint256 public removalCharge; // TODO: think about better name, smth like keyRemovalCharge
     QueueLib.Queue public queue; // TODO: depositQueue? public?
 
-    ILidoLocator public lidoLocator;
     ICSAccounting public accounting;
     ICSEarlyAdoption public earlyAdoption;
     // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
@@ -190,15 +191,25 @@ contract CSModule is
 
     constructor(
         bytes32 moduleType,
-        address _lidoLocator,
-        address admin,
         uint256 elStealingFine,
-        uint256 maxKeysPerOperatorEA
+        uint256 maxKeysPerOperatorEA,
+        address lidoLocator
     ) {
-        lidoLocator = ILidoLocator(_lidoLocator);
         MODULE_TYPE = moduleType;
         EL_REWARDS_STEALING_FINE = elStealingFine;
         MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE = maxKeysPerOperatorEA;
+        LIDO_LOCATOR = ILidoLocator(lidoLocator);
+    }
+
+    function initialize(
+        address _accounting,
+        address _earlyAdoption,
+        address admin
+    ) external initializer {
+        __AccessControlEnumerable_init();
+
+        accounting = ICSAccounting(_accounting);
+        earlyAdoption = ICSEarlyAdoption(_earlyAdoption);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
@@ -212,30 +223,6 @@ contract CSModule is
     /// @param duration Duration of the pause in seconds
     function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
         _pauseFor(duration);
-    }
-
-    /// @notice Sets the accounting contract
-    /// @param _accounting Address of the accounting contract
-    function setAccounting(
-        address _accounting
-    ) external onlyRole(INITIALIZE_ROLE) {
-        // TODO: move to initialise method
-        if (address(accounting) != address(0)) {
-            revert AlreadySet();
-        }
-        accounting = ICSAccounting(_accounting);
-    }
-
-    /// @notice Sets the early adoption contract
-    /// @param _earlyAdoption Address of the early adoption contract
-    function setEarlyAdoption(
-        address _earlyAdoption
-    ) external onlyRole(INITIALIZE_ROLE) {
-        // TODO: move to initialise method
-        if (address(earlyAdoption) != address(0)) {
-            revert AlreadySet();
-        }
-        earlyAdoption = ICSEarlyAdoption(_earlyAdoption);
     }
 
     function activatePublicRelease() external onlyRole(MODULE_MANAGER_ROLE) {
@@ -860,7 +847,7 @@ contract CSModule is
     function onRewardsMinted(
         uint256 totalShares
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        IStETH(lidoLocator.lido()).transferShares(
+        IStETH(LIDO_LOCATOR.lido()).transferShares(
             accounting.feeDistributor(),
             totalShares
         );
@@ -1094,6 +1081,7 @@ contract CSModule is
         external
         onlyRole(STAKING_ROUTER_ROLE)
     {
+        // solhint-disable-previous-line no-empty-blocks
         // Nothing to do, rewards are distributed by a performance oracle.
     }
 
@@ -1667,7 +1655,7 @@ contract CSModule is
     }
 
     function recoverStETHShares() external onlyRecoverer {
-        IStETH stETH = IStETH(lidoLocator.lido());
+        IStETH stETH = IStETH(LIDO_LOCATOR.lido());
 
         AssetRecovererLib.recoverStETHShares(
             address(stETH),

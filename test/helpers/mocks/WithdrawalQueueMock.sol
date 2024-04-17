@@ -4,6 +4,7 @@
 pragma solidity 0.8.24;
 
 contract WithdrawalQueueMock {
+    address public WSTETH;
     /// @notice minimal amount of stETH that is possible to withdraw
     uint256 public constant MIN_STETH_WITHDRAWAL_AMOUNT = 100;
 
@@ -11,4 +12,8 @@ contract WithdrawalQueueMock {
     /// Prevents accumulating too much funds per single request fulfillment in the future.
     /// @dev To withdraw larger amounts, it's recommended to split it to several requests
     uint256 public constant MAX_STETH_WITHDRAWAL_AMOUNT = 1000 * 1e18;
+
+    constructor(address wsteth) {
+        WSTETH = wsteth;
+    }
 }
