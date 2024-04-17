@@ -18,6 +18,6 @@ lcov.info
 !.yarn/sdks
 !.yarn/versions
 
-lib/forge-std
-lib/openzeppelin-contracts
-lib/openzeppelin-contracts-v4.4
+lib/*
+!lib/base-oracle
+!lib/proxy
