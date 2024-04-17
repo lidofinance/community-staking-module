@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
-// solhint-disable-next-line one-contract-per-file
 pragma solidity 0.8.24;
 
 import { ILidoLocator } from "../interfaces/ILidoLocator.sol";
@@ -10,7 +9,31 @@ import { IBurner } from "../interfaces/IBurner.sol";
 import { IWstETH } from "../interfaces/IWstETH.sol";
 import { IWithdrawalQueue } from "../interfaces/IWithdrawalQueue.sol";
 
-abstract contract CSBondCoreBase {
+/// @dev Bond core mechanics abstract contract
+///
+/// It gives basic abilities to manage bond shares of the node operator.
+///
+/// It contains:
+///  - store bond shares
+///  - get bond shares and bond amount
+///  - deposit ETH/stETH/wstETH
+///  - claim ETH/stETH/wstETH
+///  - burn
+///
+/// Should be inherited by Module contract, or Module-related contract.
+/// Internal non-view methods should be used in Module contract with additional requirements (if required).
+///
+/// @author vgorkavenko
+abstract contract CSBondCore {
+    ILidoLocator internal immutable LIDO_LOCATOR;
+    ILido internal immutable LIDO;
+    IBurner internal immutable BURNER;
+    IWithdrawalQueue internal immutable WITHDRAWAL_QUEUE;
+    IWstETH internal immutable WSTETH;
+
+    mapping(uint256 => uint256) internal _bondShares;
+    uint256 public totalBondShares;
+
     event BondDeposited(
         uint256 indexed nodeOperatorId,
         address from,
@@ -44,45 +67,16 @@ abstract contract CSBondCoreBase {
 
     error InvalidClaimableShares();
     error ZeroAddress(string field);
-}
 
-/// @dev Bond core mechanics abstract contract
-///
-/// It gives basic abilities to manage bond shares of the node operator.
-///
-/// It contains:
-///  - store bond shares
-///  - get bond shares and bond amount
-///  - deposit ETH/stETH/wstETH
-///  - claim ETH/stETH/wstETH
-///  - burn
-///
-/// Should be inherited by Module contract, or Module-related contract.
-/// Internal non-view methods should be used in Module contract with additional requirements (if required).
-///
-/// @author vgorkavenko
-abstract contract CSBondCore is CSBondCoreBase {
-    ILidoLocator internal immutable LIDO_LOCATOR;
-    ILido internal immutable LIDO;
-    IBurner internal immutable BURNER;
-    IWithdrawalQueue internal immutable WITHDRAWAL_QUEUE;
-    IWstETH internal immutable WSTETH;
-
-    mapping(uint256 => uint256) internal _bondShares;
-    uint256 public totalBondShares;
-
-    constructor(address lidoLocator, address wstETH) {
+    constructor(address lidoLocator) {
         if (lidoLocator == address(0)) {
             revert ZeroAddress("lidoLocator");
         }
-        if (wstETH == address(0)) {
-            revert ZeroAddress("wstETH");
-        }
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
         LIDO = ILido(LIDO_LOCATOR.lido());
-        WSTETH = IWstETH(wstETH);
         BURNER = IBurner(LIDO_LOCATOR.burner());
         WITHDRAWAL_QUEUE = IWithdrawalQueue(LIDO_LOCATOR.withdrawalQueue());
+        WSTETH = IWstETH(WITHDRAWAL_QUEUE.WSTETH());
     }
 
     /// @notice Returns the bond shares for the given node operator.

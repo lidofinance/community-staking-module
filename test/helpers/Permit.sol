@@ -17,17 +17,17 @@ contract PermitTokenBase {
         address owner,
         address spender,
         uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        uint256 /* deadline */,
+        uint8 /* v */,
+        bytes32 /* r */,
+        bytes32 /* s */
     ) external {
         emit Approval(owner, spender, value);
     }
 
     function allowance(
-        address _owner,
-        address _spender
+        address /* _owner */,
+        address /* _spender */
     ) external view returns (uint256) {
         return 0;
     }

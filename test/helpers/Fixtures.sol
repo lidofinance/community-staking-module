@@ -28,7 +28,8 @@ contract Fixtures is StdCheats, Test {
         });
         burner = new BurnerMock();
         Stub elVault = new Stub();
-        WithdrawalQueueMock wq = new WithdrawalQueueMock();
+        wstETH = new WstETHMock(address(stETH));
+        WithdrawalQueueMock wq = new WithdrawalQueueMock(address(wstETH));
         Stub treasury = new Stub();
         locator = new LidoLocatorMock(
             address(stETH),
@@ -37,7 +38,6 @@ contract Fixtures is StdCheats, Test {
             address(elVault),
             address(treasury)
         );
-        wstETH = new WstETHMock(address(stETH));
         vm.label(address(stETH), "lido");
         vm.label(address(wstETH), "wstETH");
         vm.label(address(locator), "locator");

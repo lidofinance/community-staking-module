@@ -13,7 +13,8 @@ import { IStakingModule } from "../src/interfaces/IStakingModule.sol";
 import { ICSFeeDistributor } from "../src/interfaces/ICSFeeDistributor.sol";
 import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
 
-import { CSAccountingBase, CSAccounting } from "../src/CSAccounting.sol";
+import { CSAccounting } from "../src/CSAccounting.sol";
+import { CSBondCore } from "../src/abstract/CSBondCore.sol";
 import { CSBondLock } from "../src/abstract/CSBondLock.sol";
 import { CSBondCurve } from "../src/abstract/CSBondCurve.sol";
 import { AssetRecoverer } from "../src/abstract/AssetRecoverer.sol";
@@ -32,48 +33,117 @@ import { ERC20Testable } from "./helpers/ERCTestable.sol";
 // TODO: bond lock permission tests
 // TODO: bond lock emit event tests
 
-contract CSAccountingForTests is CSAccounting {
-    constructor(
-        uint256[] memory bondCurve,
-        address admin,
-        address lidoLocator,
-        address wstETH,
-        address communityStakingModule,
-        uint256 lockedBondRetentionPeriod,
-        address _chargeRecepient
-    )
-        CSAccounting(
-            bondCurve,
-            admin,
-            lidoLocator,
-            wstETH,
-            communityStakingModule,
-            lockedBondRetentionPeriod,
-            _chargeRecepient
-        )
-    {}
-
-    function setBondCurve_ForTest(uint256 id, uint256[] memory curve) public {
-        _setBondCurve(id, _addBondCurve(curve));
-    }
-
-    function setBondLock_ForTest(uint256 id, uint256 amount) public {
-        CSBondLock._lock(id, amount);
-    }
-}
-
-contract CSAccountingBaseTest is
-    Test,
-    Fixtures,
-    Utilities,
-    PermitTokenBase,
-    CSAccountingBase
-{
+contract CSAccountingBaseInitTest is Test, Fixtures, Utilities {
     LidoLocatorMock internal locator;
     WstETHMock internal wstETH;
     LidoMock internal stETH;
 
-    CSAccountingForTests public accounting;
+    CSAccounting public accounting;
+    Stub public stakingModule;
+    Stub public feeDistributor;
+
+    address internal admin;
+    address internal user;
+    address internal stranger;
+    address internal testChargeRecipient;
+
+    function setUp() public virtual {
+        admin = nextAddress("ADMIN");
+
+        user = nextAddress("USER");
+        stranger = nextAddress("STRANGER");
+        testChargeRecipient = nextAddress("CHARGERECIPIENT");
+
+        (locator, wstETH, stETH, ) = initLido();
+
+        stakingModule = new Stub();
+        feeDistributor = new Stub();
+
+        accounting = new CSAccounting(address(locator), address(stakingModule));
+    }
+}
+
+contract CSAccountingInitTest is CSAccountingBaseInitTest {
+    function test_initialize_happyPath() public {
+        uint256[] memory curve = new uint256[](1);
+        curve[0] = 2 ether;
+        vm.expectEmit(true, false, false, true, address(accounting));
+        emit CSBondCurve.BondCurveAdded(curve);
+        vm.expectEmit(true, false, false, true, address(accounting));
+        emit CSBondCurve.DefaultBondCurveChanged(1);
+        vm.expectEmit(true, false, false, true, address(accounting));
+        emit CSBondLock.BondLockRetentionPeriodChanged(8 weeks);
+        vm.expectEmit(true, false, false, true, address(accounting));
+        emit CSAccounting.ChargeRecipientSet(testChargeRecipient);
+        accounting.initialize(
+            curve,
+            admin,
+            address(feeDistributor),
+            8 weeks,
+            testChargeRecipient
+        );
+
+        assertEq(address(accounting.feeDistributor()), address(feeDistributor));
+    }
+
+    function test_initialize_revertWhen_zeroAdmin() public {
+        uint256[] memory curve = new uint256[](1);
+        curve[0] = 2 ether;
+        vm.expectRevert(
+            abi.encodeWithSelector(CSBondCore.ZeroAddress.selector, "admin")
+        );
+        accounting.initialize(
+            curve,
+            address(0),
+            address(feeDistributor),
+            8 weeks,
+            testChargeRecipient
+        );
+    }
+
+    function test_initialize_revertWhen_zeroFeeDistributor() public {
+        uint256[] memory curve = new uint256[](1);
+        curve[0] = 2 ether;
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CSBondCore.ZeroAddress.selector,
+                "feeDistributor"
+            )
+        );
+        accounting.initialize(
+            curve,
+            admin,
+            address(0),
+            8 weeks,
+            testChargeRecipient
+        );
+    }
+
+    function test_initialize_revertWhen_zeroChargeRecipient() public {
+        uint256[] memory curve = new uint256[](1);
+        curve[0] = 2 ether;
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CSBondCore.ZeroAddress.selector,
+                "chargeRecipient"
+            )
+        );
+        accounting.initialize(
+            curve,
+            admin,
+            address(feeDistributor),
+            8 weeks,
+            address(0)
+        );
+    }
+}
+
+contract CSAccountingBaseTest is Test, Fixtures, Utilities, PermitTokenBase {
+    LidoLocatorMock internal locator;
+    WstETHMock internal wstETH;
+    LidoMock internal stETH;
+
+    CSAccounting public accounting;
     Stub public stakingModule;
     Stub public feeDistributor;
 
@@ -96,19 +166,16 @@ contract CSAccountingBaseTest is
 
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
-        accounting = new CSAccountingForTests(
+        accounting = new CSAccounting(address(locator), address(stakingModule));
+        accounting.initialize(
             curve,
             admin,
-            address(locator),
-            address(wstETH),
-            address(stakingModule),
+            address(feeDistributor),
             8 weeks,
             testChargeRecipient
         );
 
         vm.startPrank(admin);
-        accounting.grantRole(accounting.INITIALIZE_ROLE(), admin);
-        accounting.setFeeDistributor(address(feeDistributor));
 
         accounting.grantRole(accounting.ACCOUNTING_MANAGER_ROLE(), admin);
         accounting.grantRole(accounting.PAUSE_ROLE(), admin);
@@ -340,11 +407,15 @@ abstract contract CSAccountingBondStateBaseTest is
     uint256[] public individualCurve = [1.8 ether, 2.7 ether];
 
     function _curve(uint256[] memory curve) internal virtual {
-        accounting.setBondCurve_ForTest(0, curve);
+        vm.startPrank(admin);
+        uint256 curveId = accounting.addBondCurve(curve);
+        accounting.setBondCurve(0, curveId);
+        vm.stopPrank();
     }
 
     function _lock(uint256 id, uint256 amount) internal virtual {
-        accounting.setBondLock_ForTest(id, amount);
+        vm.prank(address(stakingModule));
+        accounting.lockBondETH(id, amount);
     }
 
     function test_WithOneWithdrawnValidator() public virtual;
@@ -1041,7 +1112,10 @@ abstract contract CSAccountingGetRequiredBondForKeysBaseTest is
     uint256[] public defaultCurve = [2 ether, 3 ether];
 
     function _curve(uint256[] memory curve) internal virtual {
-        accounting.setBondCurve_ForTest(0, curve);
+        vm.startPrank(admin);
+        uint256 curveId = accounting.addBondCurve(curve);
+        accounting.setBondCurve(0, curveId);
+        vm.stopPrank();
     }
 
     function test_default() public virtual;
@@ -1651,7 +1725,9 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
     function test_RevertWhen_SenderIsNotCSM() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
 
-        vm.expectRevert(abi.encodeWithSelector(SenderIsNotCSM.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(CSAccounting.SenderIsNotCSM.selector)
+        );
         vm.prank(stranger);
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
@@ -2251,7 +2327,9 @@ contract CSAccountingClaimWstETHRewardsTest is
     function test_RevertWhen_SenderIsNotCSM() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
 
-        vm.expectRevert(abi.encodeWithSelector(SenderIsNotCSM.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(CSAccounting.SenderIsNotCSM.selector)
+        );
         vm.prank(stranger);
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
@@ -2608,10 +2686,6 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 sharesToRequest = stETH.getSharesByPooledEth(0.05 ether);
-        uint256 unstETHToRequest = stETH.getPooledEthByShares(sharesToRequest);
-        uint256 unstETHSharesToRequest = stETH.getSharesByPooledEth(
-            unstETHToRequest
-        );
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(address(stakingModule));
@@ -2694,7 +2768,9 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
     function test_RevertWhen_SenderIsNotCSM() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
 
-        vm.expectRevert(abi.encodeWithSelector(SenderIsNotCSM.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(CSAccounting.SenderIsNotCSM.selector)
+        );
         vm.prank(stranger);
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
@@ -3042,9 +3118,6 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
         uint256 wstETHAmount = wstETH.wrap(32 ether);
-        uint256 sharesToDeposit = stETH.getSharesByPooledEth(
-            wstETH.getStETHByWstETH(wstETHAmount)
-        );
         vm.stopPrank();
 
         vm.mockCall(
@@ -3214,7 +3287,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
     }
 
     function test_penalize_RevertWhenSenderIsNotCSM() public {
-        vm.expectRevert(SenderIsNotCSM.selector);
+        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
         vm.prank(stranger);
         accounting.penalize(0, 20);
     }
@@ -3256,7 +3329,7 @@ contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
     }
 
     function test_chargeFee_RevertWhenSenderIsNotCSM() public {
-        vm.expectRevert(SenderIsNotCSM.selector);
+        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
         vm.prank(stranger);
         accounting.chargeFee(0, 20);
     }
@@ -3286,7 +3359,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
     function test_lockBondETH_RevertWhen_SenderIsNotCSM() public {
         mock_getNodeOperatorsCount(1);
 
-        vm.expectRevert(SenderIsNotCSM.selector);
+        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
         vm.prank(stranger);
         accounting.lockBondETH(0, 1 ether);
     }
@@ -3306,7 +3379,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
     function test_releaseLockedBondETH_RevertWhen_SenderIsNotCSM() public {
         mock_getNodeOperatorsCount(1);
 
-        vm.expectRevert(SenderIsNotCSM.selector);
+        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
         vm.prank(stranger);
         accounting.releaseLockedBondETH(0, 1 ether);
     }
@@ -3318,7 +3391,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         accounting.lockBondETH(0, 1 ether);
 
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit BondLockCompensated(0, 0.4 ether);
+        emit CSAccounting.BondLockCompensated(0, 0.4 ether);
 
         vm.deal(address(stakingModule), 0.4 ether);
         vm.prank(address(stakingModule));
@@ -3444,50 +3517,10 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), totalDepositedShares);
     }
 
-    function test_setFeeDistributor() public {
-        uint256[] memory curve = new uint256[](1);
-        curve[0] = 2 ether;
-        accounting = new CSAccountingForTests(
-            curve,
-            admin,
-            address(locator),
-            address(wstETH),
-            address(stakingModule),
-            8 weeks,
-            testChargeRecipient
-        );
-        vm.startPrank(admin);
-        accounting.grantRole(accounting.INITIALIZE_ROLE(), admin);
-
-        vm.expectEmit(true, false, false, true, address(accounting));
-        emit FeeDistributorSet(address(1337));
-        accounting.setFeeDistributor(address(1337));
-        assertEq(accounting.feeDistributor(), address(1337));
-    }
-
-    function test_setFeeDistributor_RevertWhen_DoesNotHaveRole() public {
-        expectRoleRevert(stranger, accounting.INITIALIZE_ROLE());
-
-        vm.prank(stranger);
-        accounting.setFeeDistributor(address(1337));
-    }
-
-    function test_setFeeDistributor_RevertWhen_AlreadyInitialized() public {
-        vm.expectRevert(AlreadyInitialized.selector);
-        vm.prank(admin);
-        accounting.setFeeDistributor(address(7331));
-    }
-
-    function test_setFeeDistributor_RevertWhen_Zero() public {
-        vm.expectRevert();
-        vm.prank(admin);
-        accounting.setFeeDistributor(address(0));
-    }
-
     function test_setChargeRecipient() public {
         vm.prank(admin);
         vm.expectEmit(true, false, false, true, address(accounting));
-        emit ChargeRecipientSet(address(1337));
+        emit CSAccounting.ChargeRecipientSet(address(1337));
         accounting.setChargeRecipient(address(1337));
         assertEq(accounting.chargeRecipient(), address(1337));
     }

@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "@openzeppelin/contracts": "5.0.2",
+    "@openzeppelin/contracts-upgradeable": "5.0.2",
     "@openzeppelin/contracts-v4.4": "npm:@openzeppelin/contracts@4.4.1",
     "ds-test": "https://github.com/dapphub/ds-test",
     "forge-std": "https://github.com/foundry-rs/forge-std.git#v1.7.6",

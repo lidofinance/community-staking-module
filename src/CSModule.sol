@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
-// solhint-disable-next-line one-contract-per-file
 pragma solidity 0.8.24;
 
 import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
@@ -43,7 +43,66 @@ struct NodeOperator {
     uint256 enqueuedCount; // Tracks how many places are occupied by the node operator's keys in the queue.
 }
 
-contract CSModuleBase {
+contract CSModule is
+    ICSModule,
+    Initializable,
+    AccessControlEnumerableUpgradeable,
+    PausableUntil,
+    AssetRecoverer
+{
+    using QueueLib for QueueLib.Queue;
+
+    bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
+    bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
+
+    bytes32 public constant MODULE_MANAGER_ROLE =
+        keccak256("MODULE_MANAGER_ROLE"); // 0x79dfcec784e591aafcf60db7db7b029a5c8b12aac4afd4e8c4eb740430405fa6
+    bytes32 public constant STAKING_ROUTER_ROLE =
+        keccak256("STAKING_ROUTER_ROLE"); // 0xbb75b874360e0bfd87f964eadd8276d8efb7c942134fc329b513032d0803e0c6
+    bytes32 public constant REPORT_EL_REWARDS_STEALING_PENALTY_ROLE =
+        keccak256("REPORT_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0x59911a6aa08a72fe3824aec4500dc42335c6d0702b6d5c5c72ceb265a0de9302
+    bytes32 public constant SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE =
+        keccak256("SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0xe85fdec10fe0f93d0792364051df7c3d73e37c17b3a954bffe593960e3cd3012
+    bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE"); // 0x0ce23c3e399818cfee81a7ab0880f714e53d7672b08df0fa62f2843416e1ea09
+    bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE"); // 0xb3e25b5404b87e5a838579cb5d7481d61ad96ee284d38ec1e97c07ba64e7f6fc
+
+    uint256 public constant DEPOSIT_SIZE = 32 ether;
+    uint256 private constant MIN_SLASHING_PENALTY_QUOTIENT = 32;
+    uint256 public constant INITIAL_SLASHING_PENALTY =
+        DEPOSIT_SIZE / MIN_SLASHING_PENALTY_QUOTIENT;
+    bytes32 private constant SIGNING_KEYS_POSITION =
+        keccak256("lido.CommunityStakingModule.signingKeysPosition"); // TODO: consider use unstructered or structered storage
+
+    uint256 public immutable EL_REWARDS_STEALING_FINE;
+    uint256
+        public immutable MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE;
+    bytes32 private immutable MODULE_TYPE;
+    ILidoLocator public immutable LIDO_LOCATOR;
+
+    bool public publicRelease;
+    uint256 public removalCharge; // TODO: think about better name, smth like keyRemovalCharge
+    QueueLib.Queue public queue; // TODO: depositQueue? public?
+
+    ICSAccounting public accounting;
+    ICSEarlyAdoption public earlyAdoption;
+    // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
+    // it seems to be enough
+    // TODO: ^^ comment
+    uint256 private _nodeOperatorsCount; // TODO: pack more efficinetly
+    uint256 private _activeNodeOperatorsCount;
+    uint256 private _nonce;
+    mapping(uint256 => NodeOperator) private _nodeOperators;
+    mapping(uint256 noIdWithKeyIndex => bool) private _isValidatorWithdrawn; // TODO: noIdWithKeyIndex naming
+    mapping(uint256 noIdWithKeyIndex => bool) private _isValidatorSlashed;
+
+    uint256 private _totalDepositedValidators; // TODO: think about more efficient way to store this
+    uint256 private _totalExitedValidators;
+    uint256 private _totalAddedValidators;
+    uint256 private _depositableValidatorsCount;
+    uint256 private _totalRewardsShares;
+
+    TransientUintUintMap private _queueLookup;
+
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
         address indexed referral,
@@ -125,80 +184,28 @@ contract CSModuleBase {
     error InvalidAmount();
     error NotAllowedToJoinYet();
     error MaxSigningKeysCountExceeded();
-}
-
-contract CSModule is
-    ICSModule,
-    CSModuleBase,
-    AccessControl,
-    PausableUntil,
-    AssetRecoverer
-{
-    using QueueLib for QueueLib.Queue;
-
-    bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
-    bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
-
-    bytes32 public constant INITIALIZE_ROLE = keccak256("INITIALIZE_ROLE"); // 0xf1d56a0879c1f3fb7b8db84f8f66a72839440915c8cc40c60b771b23d8349df0
-    bytes32 public constant MODULE_MANAGER_ROLE =
-        keccak256("MODULE_MANAGER_ROLE"); // 0x79dfcec784e591aafcf60db7db7b029a5c8b12aac4afd4e8c4eb740430405fa6
-    bytes32 public constant STAKING_ROUTER_ROLE =
-        keccak256("STAKING_ROUTER_ROLE"); // 0xbb75b874360e0bfd87f964eadd8276d8efb7c942134fc329b513032d0803e0c6
-    bytes32 public constant REPORT_EL_REWARDS_STEALING_PENALTY_ROLE =
-        keccak256("REPORT_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0x59911a6aa08a72fe3824aec4500dc42335c6d0702b6d5c5c72ceb265a0de9302
-    bytes32 public constant SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE =
-        keccak256("SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0xe85fdec10fe0f93d0792364051df7c3d73e37c17b3a954bffe593960e3cd3012
-    bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE"); // 0x0ce23c3e399818cfee81a7ab0880f714e53d7672b08df0fa62f2843416e1ea09
-    bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE"); // 0xb3e25b5404b87e5a838579cb5d7481d61ad96ee284d38ec1e97c07ba64e7f6fc
-
-    uint256 public constant DEPOSIT_SIZE = 32 ether;
-    uint256 private constant MIN_SLASHING_PENALTY_QUOTIENT = 32;
-    uint256 public constant INITIAL_SLASHING_PENALTY =
-        DEPOSIT_SIZE / MIN_SLASHING_PENALTY_QUOTIENT;
-    bytes32 private constant SIGNING_KEYS_POSITION =
-        keccak256("lido.CommunityStakingModule.signingKeysPosition"); // TODO: consider use unstructered or structered storage
-
-    uint256 public immutable EL_REWARDS_STEALING_FINE;
-    uint256
-        public immutable MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE;
-    bytes32 private immutable MODULE_TYPE;
-
-    bool public publicRelease;
-    uint256 public removalCharge; // TODO: think about better name, smth like keyRemovalCharge
-    QueueLib.Queue public queue; // TODO: depositQueue? public?
-
-    ILidoLocator public lidoLocator;
-    ICSAccounting public accounting;
-    ICSEarlyAdoption public earlyAdoption;
-    // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
-    // it seems to be enough
-    // TODO: ^^ comment
-    uint256 private _nodeOperatorsCount; // TODO: pack more efficinetly
-    uint256 private _activeNodeOperatorsCount;
-    uint256 private _nonce;
-    mapping(uint256 => NodeOperator) private _nodeOperators;
-    mapping(uint256 noIdWithKeyIndex => bool) private _isValidatorWithdrawn; // TODO: noIdWithKeyIndex naming
-    mapping(uint256 noIdWithKeyIndex => bool) private _isValidatorSlashed;
-
-    uint256 private _totalDepositedValidators; // TODO: think about more efficient way to store this
-    uint256 private _totalExitedValidators;
-    uint256 private _totalAddedValidators;
-    uint256 private _depositableValidatorsCount;
-    uint256 private _totalRewardsShares;
-
-    TransientUintUintMap private _queueLookup;
 
     constructor(
         bytes32 moduleType,
-        address _lidoLocator,
-        address admin,
         uint256 elStealingFine,
-        uint256 maxKeysPerOperatorEA
+        uint256 maxKeysPerOperatorEA,
+        address lidoLocator
     ) {
-        lidoLocator = ILidoLocator(_lidoLocator);
         MODULE_TYPE = moduleType;
         EL_REWARDS_STEALING_FINE = elStealingFine;
         MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE = maxKeysPerOperatorEA;
+        LIDO_LOCATOR = ILidoLocator(lidoLocator);
+    }
+
+    function initialize(
+        address _accounting,
+        address _earlyAdoption,
+        address admin
+    ) external initializer {
+        __AccessControlEnumerable_init();
+
+        accounting = ICSAccounting(_accounting);
+        earlyAdoption = ICSEarlyAdoption(_earlyAdoption);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
@@ -212,30 +219,6 @@ contract CSModule is
     /// @param duration Duration of the pause in seconds
     function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
         _pauseFor(duration);
-    }
-
-    /// @notice Sets the accounting contract
-    /// @param _accounting Address of the accounting contract
-    function setAccounting(
-        address _accounting
-    ) external onlyRole(INITIALIZE_ROLE) {
-        // TODO: move to initialise method
-        if (address(accounting) != address(0)) {
-            revert AlreadySet();
-        }
-        accounting = ICSAccounting(_accounting);
-    }
-
-    /// @notice Sets the early adoption contract
-    /// @param _earlyAdoption Address of the early adoption contract
-    function setEarlyAdoption(
-        address _earlyAdoption
-    ) external onlyRole(INITIALIZE_ROLE) {
-        // TODO: move to initialise method
-        if (address(earlyAdoption) != address(0)) {
-            revert AlreadySet();
-        }
-        earlyAdoption = ICSEarlyAdoption(_earlyAdoption);
     }
 
     function activatePublicRelease() external onlyRole(MODULE_MANAGER_ROLE) {
@@ -860,7 +843,7 @@ contract CSModule is
     function onRewardsMinted(
         uint256 totalShares
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        IStETH(lidoLocator.lido()).transferShares(
+        IStETH(LIDO_LOCATOR.lido()).transferShares(
             accounting.feeDistributor(),
             totalShares
         );
@@ -1094,6 +1077,7 @@ contract CSModule is
         external
         onlyRole(STAKING_ROUTER_ROLE)
     {
+        // solhint-disable-previous-line no-empty-blocks
         // Nothing to do, rewards are distributed by a performance oracle.
     }
 
@@ -1667,7 +1651,7 @@ contract CSModule is
     }
 
     function recoverStETHShares() external onlyRecoverer {
-        IStETH stETH = IStETH(lidoLocator.lido());
+        IStETH stETH = IStETH(LIDO_LOCATOR.lido());
 
         AssetRecovererLib.recoverStETHShares(
             address(stETH),

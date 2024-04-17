@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
-// solhint-disable-next-line one-contract-per-file
 pragma solidity 0.8.24;
+// TODO prevent storage overlaps in the base contracts
 
 import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
-import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -18,29 +18,19 @@ import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
-abstract contract CSAccountingBase {
-    event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
-    event FeeDistributorSet(address feeDistributor);
-    event ChargeRecipientSet(address chargeRecipient);
-
-    error AlreadyInitialized();
-    error InvalidSender();
-    error SenderIsNotCSM();
-}
-
 /// @author vgorkavenko
 contract CSAccounting is
     CSBondCore,
     CSBondCurve,
     CSBondLock,
-    CSAccountingBase,
     PausableUntil,
-    AccessControlEnumerable,
+    AccessControlEnumerableUpgradeable,
     AssetRecoverer
 {
     /// @notice This contract stores the node operators' bonds in form of stETH shares,
     /// so it should be considered in the recovery process
     using SafeERC20 for IERC20;
+
     struct PermitInput {
         uint256 value;
         uint256 deadline;
@@ -52,7 +42,6 @@ contract CSAccounting is
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
 
-    bytes32 public constant INITIALIZE_ROLE = keccak256("INITIALIZE_ROLE"); // 0xf1d56a0879c1f3fb7b8db84f8f66a72839440915c8cc40c60b771b23d8349df0
     bytes32 public constant ACCOUNTING_MANAGER_ROLE =
         keccak256("ACCOUNTING_MANAGER_ROLE"); // 0x40579467dba486691cc62fd8536d22c6d4dc9cdc7bc716ef2518422aa554c098
     bytes32 public constant ADD_BOND_CURVE_ROLE =
@@ -66,36 +55,48 @@ contract CSAccounting is
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE"); // 0xb3e25b5404b87e5a838579cb5d7481d61ad96ee284d38ec1e97c07ba64e7f6fc
 
     ICSModule private immutable CSM;
-
-    address public feeDistributor;
+    ICSFeeDistributor public feeDistributor;
     address public chargeRecipient;
+
+    event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
+    event ChargeRecipientSet(address chargeRecipient);
+
+    error AlreadyInitialized();
+    error InvalidSender();
+    error SenderIsNotCSM();
+
+    /// @param lidoLocator lido locator contract address
+    /// @param communityStakingModule community staking module contract address
+    constructor(
+        address lidoLocator,
+        address communityStakingModule
+    ) CSBondCore(lidoLocator) {
+        if (communityStakingModule == address(0)) {
+            revert ZeroAddress("communityStakingModule");
+        }
+        CSM = ICSModule(communityStakingModule);
+    }
 
     /// @param bondCurve initial bond curve
     /// @param admin admin role member address
-    /// @param lidoLocator lido locator contract address
-    /// @param wstETH wstETH contract address
-    /// @param communityStakingModule community staking module contract address
     /// @param bondLockRetentionPeriod retention period for locked bond in seconds
     /// @param _chargeRecipient recipient of the charge penalty type
-    constructor(
+    function initialize(
         uint256[] memory bondCurve,
         address admin,
-        address lidoLocator,
-        address wstETH,
-        address communityStakingModule,
+        address _feeDistributor,
         uint256 bondLockRetentionPeriod,
         address _chargeRecipient
-    )
-        CSBondCore(lidoLocator, wstETH)
-        CSBondCurve(bondCurve)
-        CSBondLock(bondLockRetentionPeriod)
-    {
-        // check zero addresses
+    ) external initializer {
+        __AccessControlEnumerable_init();
+        __CSBondCurve_init(bondCurve);
+        __CSBondLock_init(bondLockRetentionPeriod);
+
         if (admin == address(0)) {
             revert ZeroAddress("admin");
         }
-        if (communityStakingModule == address(0)) {
-            revert ZeroAddress("communityStakingModule");
+        if (_feeDistributor == address(0)) {
+            revert ZeroAddress("feeDistributor");
         }
         if (_chargeRecipient == address(0)) {
             revert ZeroAddress("chargeRecipient");
@@ -103,7 +104,7 @@ contract CSAccounting is
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
-        CSM = ICSModule(communityStakingModule);
+        feeDistributor = ICSFeeDistributor(_feeDistributor);
 
         chargeRecipient = _chargeRecipient;
         emit ChargeRecipientSet(_chargeRecipient);
@@ -119,21 +120,6 @@ contract CSAccounting is
     /// @param duration Duration of the pause
     function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
         _pauseFor(duration);
-    }
-
-    /// @notice Sets fee distributor contract address.
-    /// @param fdAddress fee distributor contract address.
-    function setFeeDistributor(
-        address fdAddress
-    ) external onlyRole(INITIALIZE_ROLE) {
-        if (fdAddress == address(0)) {
-            revert ZeroAddress("feeDistributor");
-        }
-        if (feeDistributor != address(0)) {
-            revert AlreadyInitialized();
-        }
-        feeDistributor = fdAddress;
-        emit FeeDistributorSet(fdAddress);
     }
 
     /// @notice Sets charge recipient address.
@@ -630,7 +616,7 @@ contract CSAccounting is
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
     ) internal {
-        uint256 distributed = ICSFeeDistributor(feeDistributor).distributeFees(
+        uint256 distributed = feeDistributor.distributeFees(
             nodeOperatorId,
             cumulativeFeeShares,
             rewardsProof

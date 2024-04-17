@@ -4,6 +4,8 @@
 pragma solidity 0.8.24;
 
 interface IWithdrawalQueue {
+    function WSTETH() external view returns (address);
+
     /// @notice minimal amount of stETH that is possible to withdraw
     function MIN_STETH_WITHDRAWAL_AMOUNT() external view returns (uint256);
 

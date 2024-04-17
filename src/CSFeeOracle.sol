@@ -10,7 +10,7 @@ import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 
 contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
-    /// @notice There are no any assets to store in the contract
+    /// @notice No assets are stored in the contract
 
     struct ReportData {
         /// @dev Version of the oracle consensus rules. Current version expected
@@ -147,6 +147,7 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         uint256 /* prevSubmittedRefSlot */,
         uint256 /* prevProcessingRefSlot */
     ) internal override {
+        // solhint-disable-previous-line no-empty-blocks
         // TODO: Implement me
         // NOTE: if we implement sending all leafs directly, we probably will need to support the sending in batches,
         // which means, we'll be ought to check the processing state and revert if not all data was send so far.

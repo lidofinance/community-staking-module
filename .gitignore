@@ -18,3 +18,7 @@ lcov.info
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+lib/*
+!lib/base-oracle
+!lib/proxy

@@ -39,31 +39,35 @@ contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
         vm.label(address(lido), "lido");
         vm.label(address(stakingRouter), "stakingRouter");
 
-        csm = new CSModule(
-            "community-staking-module",
-            LOCATOR_ADDRESS,
-            address(this),
-            0.1 ether,
-            10
-        );
+        csm = new CSModule({
+            moduleType: "community-staking-module",
+            elStealingFine: 0.1 ether,
+            maxKeysPerOperatorEA: 10,
+            lidoLocator: address(locator)
+        });
         uint256[] memory curve = new uint256[](2);
         curve[0] = 2 ether;
         curve[1] = 4 ether;
         CSAccounting accounting = new CSAccounting(
+            address(locator),
+            address(csm)
+        );
+        accounting.initialize(
             curve,
             address(csm),
-            address(locator),
-            address(wstETH),
-            address(csm),
+            address(1337),
             8 weeks,
             locator.treasury()
         );
-        csm.grantRole(csm.INITIALIZE_ROLE(), address(this));
+        csm.initialize({
+            _accounting: address(accounting),
+            _earlyAdoption: address(0),
+            admin: address(this)
+        });
+
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(stakingRouter));
         csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
         csm.activatePublicRelease();
-
-        csm.setAccounting(address(accounting));
 
         agent = stakingRouter.getRoleMember(
             stakingRouter.DEFAULT_ADMIN_ROLE(),
