@@ -31,8 +31,15 @@ abstract contract CSBondCore {
     IWithdrawalQueue internal immutable WITHDRAWAL_QUEUE;
     IWstETH internal immutable WSTETH;
 
-    mapping(uint256 => uint256) internal _bondShares;
-    uint256 public totalBondShares;
+    /// @custom:storage-location erc7201:CSAccounting.CSBondCore
+    struct CSBondCoreStorage {
+        mapping(uint256 => uint256) bondShares;
+        uint256 totalBondShares;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("CSAccounting.CSBondCore")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant CSBondCoreStorageLocation =
+        0x47989332924309831e1cc5ac062b59a9f1e0f7ffb37c93b1e656d5a2c362c900;
 
     event BondDeposited(
         uint256 indexed nodeOperatorId,
@@ -79,13 +86,21 @@ abstract contract CSBondCore {
         WSTETH = IWstETH(WITHDRAWAL_QUEUE.WSTETH());
     }
 
+    /// @notice Returns the total bond shares.
+    /// @return total bond shares.
+    function totalBondShares() public view returns (uint256) {
+        CSBondCoreStorage storage $ = _getCSBondCoreStorage();
+        return $.totalBondShares;
+    }
+
     /// @notice Returns the bond shares for the given node operator.
     /// @param nodeOperatorId id of the node operator to get bond for.
     /// @return bond shares.
     function getBondShares(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
-        return _bondShares[nodeOperatorId];
+        CSBondCoreStorage storage $ = _getCSBondCoreStorage();
+        return $.bondShares[nodeOperatorId];
     }
 
     /// @notice Returns the bond amount in ETH (stETH) for the given node operator.
@@ -135,8 +150,9 @@ abstract contract CSBondCore {
     }
 
     function _increaseBond(uint256 nodeOperatorId, uint256 shares) internal {
-        _bondShares[nodeOperatorId] += shares;
-        totalBondShares += shares;
+        CSBondCoreStorage storage $ = _getCSBondCoreStorage();
+        $.bondShares[nodeOperatorId] += shares;
+        $.totalBondShares += shares;
     }
 
     /// @dev Claims Node Operator's excess bond shares in ETH by requesting withdrawal from the protocol
@@ -147,7 +163,8 @@ abstract contract CSBondCore {
         uint256 amountToClaim,
         address to
     ) internal {
-        if (claimableShares > _bondShares[nodeOperatorId]) {
+        CSBondCoreStorage storage $ = _getCSBondCoreStorage();
+        if (claimableShares > $.bondShares[nodeOperatorId]) {
             revert InvalidClaimableShares();
         }
         uint256 sharesToClaim = amountToClaim < _ethByShares(claimableShares)
@@ -171,7 +188,8 @@ abstract contract CSBondCore {
         uint256 amountToClaim,
         address to
     ) internal {
-        if (claimableShares > _bondShares[nodeOperatorId]) {
+        CSBondCoreStorage storage $ = _getCSBondCoreStorage();
+        if (claimableShares > $.bondShares[nodeOperatorId]) {
             revert InvalidClaimableShares();
         }
         uint256 sharesToClaim = amountToClaim < _ethByShares(claimableShares)
@@ -191,7 +209,8 @@ abstract contract CSBondCore {
         uint256 amountToClaim,
         address to
     ) internal {
-        if (claimableShares > _bondShares[nodeOperatorId]) {
+        CSBondCoreStorage storage $ = _getCSBondCoreStorage();
+        if (claimableShares > $.bondShares[nodeOperatorId]) {
             revert InvalidClaimableShares();
         }
         uint256 sharesToClaim = amountToClaim < claimableShares
@@ -242,8 +261,9 @@ abstract contract CSBondCore {
 
     /// @dev Unsafe reduce bond shares (possible underflow). Safety checks should be done outside.
     function _unsafeReduceBond(uint256 nodeOperatorId, uint256 shares) private {
-        _bondShares[nodeOperatorId] -= shares;
-        totalBondShares -= shares;
+        CSBondCoreStorage storage $ = _getCSBondCoreStorage();
+        $.bondShares[nodeOperatorId] -= shares;
+        $.totalBondShares -= shares;
     }
 
     /// @dev Safe reduce bond shares. The maximum shares to reduce is the current bond shares.
@@ -266,5 +286,15 @@ abstract contract CSBondCore {
     /// @dev Shortcut for Lido's getPooledEthByShares
     function _ethByShares(uint256 shares) internal view returns (uint256) {
         return LIDO.getPooledEthByShares(shares);
+    }
+
+    function _getCSBondCoreStorage()
+        private
+        pure
+        returns (CSBondCoreStorage storage $)
+    {
+        assembly {
+            $.slot := CSBondCoreStorageLocation
+        }
     }
 }

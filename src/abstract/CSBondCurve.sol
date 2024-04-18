@@ -65,12 +65,19 @@ abstract contract CSBondCurve is Initializable {
         uint256 trend;
     }
 
-    // TODO: should we strictly define max curves array length?
-    BondCurve[] internal _bondCurves;
-    /// @dev Default bond curve id for node operator if no special curve is set
-    uint256 public defaultBondCurveId;
-    /// @dev Mapping of node operator id to bond curve id
-    mapping(uint256 => uint256) public operatorBondCurveId;
+    /// @custom:storage-location erc7201:CSAccounting.CSBondCurve
+    struct CSBondCurveStorage {
+        // TODO: should we strictly define max curves array length?
+        BondCurve[] bondCurves;
+        /// @dev Default bond curve id for node operator if no special curve is set
+        uint256 defaultBondCurveId;
+        /// @dev Mapping of node operator id to bond curve id
+        mapping(uint256 => uint256) operatorBondCurveId;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("CSAccounting.CSBondCurve")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant CSBondCurveStorageLocation =
+        0xecd18ac5fe40b69924776afad2bbf434f360f087b9e5a81f68acc5c2c0e24400;
 
     // TODO: might be redefined in the future
     uint256 internal constant MAX_CURVE_LENGTH = 20;
@@ -96,6 +103,7 @@ abstract contract CSBondCurve is Initializable {
     function _addBondCurve(
         uint256[] memory curvePoints
     ) internal returns (uint256) {
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
         if (
             curvePoints.length < MIN_CURVE_LENGTH ||
             curvePoints.length > MAX_CURVE_LENGTH
@@ -109,44 +117,52 @@ abstract contract CSBondCurve is Initializable {
         uint256 curveTrend = curvePoints[curvePoints.length - 1] -
             // if the curve length is 1, then 0 is used as the previous value to calculate the trend
             (curvePoints.length > 1 ? curvePoints[curvePoints.length - 2] : 0);
-        _bondCurves.push(
+        $.bondCurves.push(
             BondCurve({
-                id: _bondCurves.length + 1, // to avoid zero id in arrays
+                id: $.bondCurves.length + 1, // to avoid zero id in arrays
                 points: curvePoints,
                 trend: curveTrend
             })
         );
         emit BondCurveAdded(curvePoints);
-        return _bondCurves.length;
+        return $.bondCurves.length;
     }
 
     /// @dev Sets default bond curve for the module.
     ///      It will be used for the node operators without special curve.
     function _setDefaultBondCurve(uint256 curveId) internal {
         // TODO: should we check that new curve is not worse than the old one?
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
         if (
             curveId == 0 ||
-            curveId > _bondCurves.length ||
-            curveId == defaultBondCurveId
+            curveId > $.bondCurves.length ||
+            curveId == $.defaultBondCurveId
         ) revert InvalidBondCurveId();
-        defaultBondCurveId = curveId;
+        $.defaultBondCurveId = curveId;
         emit DefaultBondCurveChanged(curveId);
     }
 
     /// @dev Sets bond curve for the given node operator.
     ///      It will be used for the node operator instead of default curve.
     function _setBondCurve(uint256 nodeOperatorId, uint256 curveId) internal {
-        if (curveId == 0 || curveId > _bondCurves.length)
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
+        if (curveId == 0 || curveId > $.bondCurves.length)
             revert InvalidBondCurveId();
-        operatorBondCurveId[nodeOperatorId] = curveId;
+        $.operatorBondCurveId[nodeOperatorId] = curveId;
         emit BondCurveChanged(nodeOperatorId, curveId);
     }
 
     /// @dev Resets bond curve for the given node operator to default (for example, because of breaking the rules by node operator)
     function _resetBondCurve(uint256 nodeOperatorId) internal {
         // TODO: check existing
-        delete operatorBondCurveId[nodeOperatorId];
-        emit BondCurveChanged(nodeOperatorId, defaultBondCurveId);
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
+        delete $.operatorBondCurveId[nodeOperatorId];
+        emit BondCurveChanged(nodeOperatorId, $.defaultBondCurveId);
+    }
+
+    function defaultBondCurveId() public view returns (uint256) {
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
+        return $.defaultBondCurveId;
     }
 
     /// @dev returns default bond curve info if `curveId` is `0` or invalid
@@ -156,10 +172,11 @@ abstract contract CSBondCurve is Initializable {
     function getCurveInfo(
         uint256 curveId
     ) public view returns (BondCurve memory) {
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
         return
             (curveId == 0)
-                ? _bondCurves[defaultBondCurveId - 1]
-                : _bondCurves[curveId - 1];
+                ? $.bondCurves[$.defaultBondCurveId - 1]
+                : $.bondCurves[curveId - 1];
     }
 
     /// @notice Returns bond curve for the given node operator.
@@ -168,7 +185,8 @@ abstract contract CSBondCurve is Initializable {
     function getBondCurve(
         uint256 nodeOperatorId
     ) public view returns (BondCurve memory) {
-        return getCurveInfo(operatorBondCurveId[nodeOperatorId]);
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
+        return getCurveInfo($.operatorBondCurveId[nodeOperatorId]);
     }
 
     /// @notice Returns the required bond in ETH for the given number of keys for default bond curve.
@@ -179,7 +197,9 @@ abstract contract CSBondCurve is Initializable {
     function getBondAmountByKeysCount(
         uint256 keys
     ) public view returns (uint256) {
-        return getBondAmountByKeysCount(keys, getCurveInfo(defaultBondCurveId));
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
+        return
+            getBondAmountByKeysCount(keys, getCurveInfo($.defaultBondCurveId));
     }
 
     /// @notice Returns the required bond in ETH for the given number of keys for particular bond curve.
@@ -208,8 +228,12 @@ abstract contract CSBondCurve is Initializable {
     function getKeysCountByBondAmount(
         uint256 amount
     ) public view returns (uint256) {
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
         return
-            getKeysCountByBondAmount(amount, getCurveInfo(defaultBondCurveId));
+            getKeysCountByBondAmount(
+                amount,
+                getCurveInfo($.defaultBondCurveId)
+            );
     }
 
     /// @notice Returns keys count for the given bond amount for particular bond curve.
@@ -249,5 +273,15 @@ abstract contract CSBondCurve is Initializable {
             }
         }
         return low;
+    }
+
+    function _getCSBondCurveStorage()
+        private
+        pure
+        returns (CSBondCurveStorage storage $)
+    {
+        assembly {
+            $.slot := CSBondCurveStorageLocation
+        }
     }
 }
