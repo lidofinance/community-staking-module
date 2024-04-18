@@ -221,6 +221,16 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities {
                 depositableValidatorsCount: depositableValidatorsCount
             });
     }
+
+    // amount can not be lower than EL_REWARDS_STEALING_FINE
+    function penalize(uint256 noId, uint256 amount) public {
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            amount - csm.EL_REWARDS_STEALING_FINE()
+        );
+        csm.settleELRewardsStealingPenalty(UintArr(noId));
+    }
 }
 
 contract CSMCommonNoPublicRelease is CSMFixtures {
@@ -2371,13 +2381,13 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         assertEq(
             summary.targetValidatorsCount,
             1,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
-        assertEq(summary.targetLimitMode, 1, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 1, "targetLimitMode mismatch");
         assertEq(
             summary.depositableValidatorsCount,
             1,
-            "depositableValidatorsCount missmatch"
+            "depositableValidatorsCount mismatch"
         );
     }
 
@@ -2392,13 +2402,13 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         assertEq(
             summary.targetValidatorsCount,
             1,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
-        assertEq(summary.targetLimitMode, 1, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 1, "targetLimitMode mismatch");
         assertEq(
             summary.depositableValidatorsCount,
             0,
-            "depositableValidatorsCount missmatch"
+            "depositableValidatorsCount mismatch"
         );
     }
 
@@ -2413,13 +2423,13 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         assertEq(
             summary.targetValidatorsCount,
             5,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
-        assertEq(summary.targetLimitMode, 1, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 1, "targetLimitMode mismatch");
         assertEq(
             summary.depositableValidatorsCount,
             3,
-            "depositableValidatorsCount missmatch"
+            "depositableValidatorsCount mismatch"
         );
     }
 
@@ -2432,13 +2442,13 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         assertEq(
             summary.targetValidatorsCount,
             1,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
-        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
         assertEq(
             summary.depositableValidatorsCount,
             1,
-            "depositableValidatorsCount missmatch"
+            "depositableValidatorsCount mismatch"
         );
     }
 
@@ -2453,13 +2463,13 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         assertEq(
             summary.targetValidatorsCount,
             1,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
-        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
         assertEq(
             summary.depositableValidatorsCount,
             0,
-            "depositableValidatorsCount missmatch"
+            "depositableValidatorsCount mismatch"
         );
     }
 
@@ -2474,13 +2484,13 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         assertEq(
             summary.targetValidatorsCount,
             5,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
-        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
         assertEq(
             summary.depositableValidatorsCount,
             3,
-            "depositableValidatorsCount missmatch"
+            "depositableValidatorsCount mismatch"
         );
     }
 
@@ -2494,16 +2504,16 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 1, 1);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetLimitMode, 1, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 1, "targetLimitMode mismatch");
         assertEq(
             summary.targetValidatorsCount,
             1,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
         assertEq(
             summary.depositableValidatorsCount,
             0,
-            "depositableValidatorsCount missmatch"
+            "depositableValidatorsCount mismatch"
         );
     }
 
@@ -2517,16 +2527,16 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 1, 1);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetLimitMode, 1, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 1, "targetLimitMode mismatch");
         assertEq(
             summary.targetValidatorsCount,
             1,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
         assertEq(
             summary.depositableValidatorsCount,
             0,
-            "depositableValidatorsCount missmatch"
+            "depositableValidatorsCount mismatch"
         );
     }
 
@@ -2538,16 +2548,16 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 1, 2);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetLimitMode, 1, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 1, "targetLimitMode mismatch");
         assertEq(
             summary.targetValidatorsCount,
             2,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
         assertEq(
             summary.depositableValidatorsCount,
             2,
-            "depositableValidatorsCount missmatch"
+            "depositableValidatorsCount mismatch"
         );
 
         CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
@@ -2562,16 +2572,16 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 1, 9);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetLimitMode, 1, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 1, "targetLimitMode mismatch");
         assertEq(
             summary.targetValidatorsCount,
             9,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
         assertEq(
             summary.depositableValidatorsCount,
             3,
-            "depositableValidatorsCount missmatch"
+            "depositableValidatorsCount mismatch"
         );
     }
 
@@ -2587,11 +2597,11 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         );
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetLimitMode, 0, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 0, "targetLimitMode mismatch");
         assertEq(
             summary.targetValidatorsCount,
             0,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
     }
 
@@ -2602,21 +2612,14 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
 
         csm.obtainDepositData(3, "");
 
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            BOND_SIZE / 2
-        );
-        uint256[] memory idsToSettle = new uint256[](1);
-        idsToSettle[0] = noId;
-        csm.settleELRewardsStealingPenalty(idsToSettle);
+        penalize(noId, BOND_SIZE / 2);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
         assertEq(
             summary.targetValidatorsCount,
             2,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
     }
 
@@ -2627,21 +2630,14 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
 
         csm.obtainDepositData(2, "");
 
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            BOND_SIZE / 2
-        );
-        uint256[] memory idsToSettle = new uint256[](1);
-        idsToSettle[0] = noId;
-        csm.settleELRewardsStealingPenalty(idsToSettle);
+        penalize(noId, BOND_SIZE / 2);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
         assertEq(
             summary.targetValidatorsCount,
             2,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
     }
 
@@ -2650,21 +2646,14 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
 
         csm.obtainDepositData(2, "");
 
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            BOND_SIZE * 3
-        );
-        uint256[] memory idsToSettle = new uint256[](1);
-        idsToSettle[0] = noId;
-        csm.settleELRewardsStealingPenalty(idsToSettle);
+        penalize(noId, BOND_SIZE * 3);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
         assertEq(
             summary.targetValidatorsCount,
             0,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
     }
 
@@ -2675,26 +2664,19 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
 
         csm.updateTargetValidatorsLimits(noId, 2, 1);
 
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            BOND_SIZE / 2
-        );
-        uint256[] memory idsToSettle = new uint256[](1);
-        idsToSettle[0] = noId;
-        csm.settleELRewardsStealingPenalty(idsToSettle);
+        penalize(noId, BOND_SIZE / 2);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
         assertEq(
             summary.targetValidatorsCount,
             1,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
-        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
         assertEq(
             summary.depositableValidatorsCount,
             1,
-            "depositableValidatorsCount missmatch"
+            "depositableValidatorsCount mismatch"
         );
     }
 
@@ -2707,26 +2689,19 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
 
         csm.updateTargetValidatorsLimits(noId, 2, 2);
 
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            BOND_SIZE / 2
-        );
-        uint256[] memory idsToSettle = new uint256[](1);
-        idsToSettle[0] = noId;
-        csm.settleELRewardsStealingPenalty(idsToSettle);
+        penalize(noId, BOND_SIZE / 2);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
         assertEq(
             summary.targetValidatorsCount,
             2,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
-        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
         assertEq(
             summary.depositableValidatorsCount,
             1,
-            "depositableValidatorsCount missmatch"
+            "depositableValidatorsCount mismatch"
         );
     }
 
@@ -2737,26 +2712,19 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
 
         csm.updateTargetValidatorsLimits(noId, 2, 4);
 
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            BOND_SIZE
-        );
-        uint256[] memory idsToSettle = new uint256[](1);
-        idsToSettle[0] = noId;
-        csm.settleELRewardsStealingPenalty(idsToSettle);
+        penalize(noId, BOND_SIZE + 100 wei);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
         assertEq(
             summary.targetValidatorsCount,
             3,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
-        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
         assertEq(
             summary.depositableValidatorsCount,
             3,
-            "depositableValidatorsCount missmatch"
+            "depositableValidatorsCount mismatch"
         );
     }
 
@@ -2765,26 +2733,19 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
 
         csm.updateTargetValidatorsLimits(noId, 2, 4);
 
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            BOND_SIZE / 2
-        );
-        uint256[] memory idsToSettle = new uint256[](1);
-        idsToSettle[0] = noId;
-        csm.settleELRewardsStealingPenalty(idsToSettle);
+        penalize(noId, BOND_SIZE / 2);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
         assertEq(
             summary.targetValidatorsCount,
             4,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
-        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
         assertEq(
             summary.depositableValidatorsCount,
             4,
-            "depositableValidatorsCount missmatch"
+            "depositableValidatorsCount mismatch"
         );
     }
 
@@ -2795,26 +2756,19 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
 
         csm.updateTargetValidatorsLimits(noId, 1, 1);
 
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            BOND_SIZE / 2
-        );
-        uint256[] memory idsToSettle = new uint256[](1);
-        idsToSettle[0] = noId;
-        csm.settleELRewardsStealingPenalty(idsToSettle);
+        penalize(noId, BOND_SIZE / 2);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
         assertEq(
             summary.targetValidatorsCount,
             4,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
-        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
         assertEq(
             summary.depositableValidatorsCount,
             1,
-            "depositableValidatorsCount missmatch"
+            "depositableValidatorsCount mismatch"
         );
     }
 
@@ -2827,26 +2781,19 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
 
         csm.updateTargetValidatorsLimits(noId, 1, 2);
 
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            BOND_SIZE / 2
-        );
-        uint256[] memory idsToSettle = new uint256[](1);
-        idsToSettle[0] = noId;
-        csm.settleELRewardsStealingPenalty(idsToSettle);
+        penalize(noId, BOND_SIZE / 2);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
         assertEq(
             summary.targetValidatorsCount,
             4,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
-        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
         assertEq(
             summary.depositableValidatorsCount,
             1,
-            "depositableValidatorsCount missmatch"
+            "depositableValidatorsCount mismatch"
         );
     }
 
@@ -2857,26 +2804,19 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
 
         csm.updateTargetValidatorsLimits(noId, 1, 4);
 
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            BOND_SIZE
-        );
-        uint256[] memory idsToSettle = new uint256[](1);
-        idsToSettle[0] = noId;
-        csm.settleELRewardsStealingPenalty(idsToSettle);
+        penalize(noId, BOND_SIZE + 100 wei);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
         assertEq(
             summary.targetValidatorsCount,
             3,
-            "targetValidatorsCount missmatch"
+            "targetValidatorsCount mismatch"
         );
-        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
         assertEq(
             summary.depositableValidatorsCount,
             3,
-            "depositableValidatorsCount missmatch"
+            "depositableValidatorsCount mismatch"
         );
     }
 }
@@ -4635,12 +4575,8 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         uint256 noId = createNodeOperator(7);
         csm.obtainDepositData(4, "");
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 3);
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            BOND_SIZE * 3 - csm.EL_REWARDS_STEALING_FINE()
-        ); // Penalty to unbond 3 validators.
-        csm.settleELRewardsStealingPenalty(UintArr(noId));
+
+        penalize(noId, BOND_SIZE * 3);
 
         assertEq(getNodeOperatorSummary(noId).depositableValidatorsCount, 0);
         csm.submitWithdrawal(noId, 0, csm.DEPOSIT_SIZE());

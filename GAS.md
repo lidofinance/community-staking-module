@@ -34,7 +34,7 @@
 | getLockedBondInfo                                                   | 815             | 815    | 815    | 815    | 13      |
 | getRequiredBondForNextKeys                                          | 10230           | 29186  | 24470  | 51405  | 34      |
 | getRequiredBondForNextKeysWstETH                                    | 23593           | 35071  | 30819  | 57228  | 17      |
-| getUnbondedKeysCount                                                | 3368            | 25037  | 15957  | 46457  | 441     |
+| getUnbondedKeysCount                                                | 3368            | 25073  | 15957  | 46457  | 441     |
 | getUnbondedKeysCountToEject                                         | 5335            | 9208   | 7654   | 19278  | 72      |
 | grantRole                                                           | 29570           | 108925 | 118658 | 118658 | 2505    |
 | initialize                                                          | 207352          | 344963 | 345871 | 345871 | 458     |
@@ -111,7 +111,7 @@
 | Function Name                                       | min             | avg    | median | max     | # calls |
 | DEFAULT_ADMIN_ROLE                                  | 260             | 260    | 260    | 260     | 1       |
 | DEPOSIT_SIZE                                        | 307             | 307    | 307    | 307     | 12      |
-| EL_REWARDS_STEALING_FINE                            | 306             | 306    | 306    | 306     | 13      |
+| EL_REWARDS_STEALING_FINE                            | 306             | 306    | 306    | 306     | 23      |
 | INITIAL_SLASHING_PENALTY                            | 439             | 439    | 439    | 439     | 4       |
 | LIDO_LOCATOR                                        | 282             | 282    | 282    | 282     | 1       |
 | MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE | 263             | 263    | 263    | 263     | 2       |
@@ -175,7 +175,7 @@
 | recoverStETHShares                                  | 60928           | 60928  | 60928  | 60928   | 1       |
 | removalCharge                                       | 408             | 1408   | 1408   | 2408    | 2       |
 | removeKeys                                          | 24048           | 145626 | 172684 | 240695  | 15      |
-| reportELRewardsStealingPenalty                      | 24429           | 134451 | 141497 | 154215  | 36      |
+| reportELRewardsStealingPenalty                      | 24429           | 134895 | 141497 | 154227  | 36      |
 | requestRewardsETH                                   | 25109           | 50820  | 27332  | 100019  | 3       |
 | resetNodeOperatorManagerAddress                     | 23734           | 31901  | 31384  | 38514   | 5       |
 | resume                                              | 23787           | 26728  | 26728  | 29670   | 2       |
