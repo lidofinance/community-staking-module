@@ -767,7 +767,7 @@ contract CSModule is
         uint256 totalUnbondedKeys = accounting.getUnbondedKeysCountToEject(
             nodeOperatorId
         );
-
+        // Force mode enabled and unbonded
         if (
             no.targetLimitMode == FORCED_TARGET_LIMIT_MODE_ID &&
             totalUnbondedKeys > 0
@@ -777,6 +777,7 @@ contract CSModule is
                 no.targetLimit,
                 no.totalAddedKeys - no.totalExitedKeys - totalUnbondedKeys
             );
+            // No force mode enabled but unbonded
         } else if (totalUnbondedKeys > 0) {
             targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
             targetValidatorsCount =
