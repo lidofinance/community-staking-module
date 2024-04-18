@@ -55,7 +55,6 @@ contract CSModule is
 
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
-
     bytes32 public constant MODULE_MANAGER_ROLE =
         keccak256("MODULE_MANAGER_ROLE"); // 0x79dfcec784e591aafcf60db7db7b029a5c8b12aac4afd4e8c4eb740430405fa6
     bytes32 public constant STAKING_ROUTER_ROLE =
@@ -73,6 +72,7 @@ contract CSModule is
         DEPOSIT_SIZE / MIN_SLASHING_PENALTY_QUOTIENT;
     bytes32 private constant SIGNING_KEYS_POSITION =
         keccak256("lido.CommunityStakingModule.signingKeysPosition"); // TODO: consider use unstructered or structered storage
+    uint8 private constant FORCED_TARGET_LIMIT_MODE_ID = 2;
 
     uint256 public immutable EL_REWARDS_STEALING_FINE;
     uint256
@@ -767,10 +767,18 @@ contract CSModule is
         uint256 totalUnbondedKeys = accounting.getUnbondedKeysCountToEject(
             nodeOperatorId
         );
-        // TODO: reconsider the logic
-        if (totalUnbondedKeys > 0) {
-            // TODO: Use enum or constant to safe some bytes
-            targetLimitMode = 2;
+
+        if (
+            no.targetLimitMode == FORCED_TARGET_LIMIT_MODE_ID &&
+            totalUnbondedKeys > 0
+        ) {
+            targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
+            targetValidatorsCount = Math.min(
+                no.targetLimit,
+                no.totalAddedKeys - no.totalExitedKeys - totalUnbondedKeys
+            );
+        } else if (totalUnbondedKeys > 0) {
+            targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
             targetValidatorsCount =
                 no.totalAddedKeys -
                 no.totalExitedKeys -
@@ -877,13 +885,6 @@ contract CSModule is
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         uint256 newCount = no.totalVettedKeys - no.totalDepositedKeys;
-        if (no.targetLimitMode > 0) {
-            uint256 activeKeys = no.totalDepositedKeys - no.totalWithdrawnKeys;
-            newCount = Math.min(
-                no.targetLimit > activeKeys ? no.targetLimit - activeKeys : 0,
-                newCount
-            );
-        }
 
         // NOTE: Probably this check can be extracted to a separate function to reduce gas costs for the methods
         // requiring only it.
@@ -896,6 +897,14 @@ contract CSModule is
 
         if (no.stuckValidatorsCount != 0) {
             newCount = 0;
+        }
+
+        if (no.targetLimitMode > 0) {
+            uint256 activeKeys = no.totalDepositedKeys - no.totalWithdrawnKeys;
+            newCount = Math.min(
+                no.targetLimit > activeKeys ? no.targetLimit - activeKeys : 0,
+                newCount
+            );
         }
 
         if (no.depositableValidatorsCount != newCount) {

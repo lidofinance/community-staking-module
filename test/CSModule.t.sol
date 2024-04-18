@@ -2354,6 +2354,7 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
 
     function test_getNodeOperatorSummary_depositedKey() public {
         uint256 noId = createNodeOperator(2);
+
         csm.obtainDepositData(1, "");
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
@@ -2365,50 +2366,168 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         uint256 noId = createNodeOperator(3);
 
         csm.updateTargetValidatorsLimits(noId, 1, 1);
-        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
 
-        summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetValidatorsCount, 1);
-        assertEq(summary.targetLimitMode, 1);
-        assertEq(summary.depositableValidatorsCount, 1);
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.targetValidatorsCount,
+            1,
+            "targetValidatorsCount missmatch"
+        );
+        assertEq(summary.targetLimitMode, 1, "targetLimitMode missmatch");
+        assertEq(
+            summary.depositableValidatorsCount,
+            1,
+            "depositableValidatorsCount missmatch"
+        );
+    }
+
+    function test_getNodeOperatorSummary_softTargetLimitAndDeposited() public {
+        uint256 noId = createNodeOperator(3);
+
+        csm.obtainDepositData(1, "");
+
+        csm.updateTargetValidatorsLimits(noId, 1, 1);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.targetValidatorsCount,
+            1,
+            "targetValidatorsCount missmatch"
+        );
+        assertEq(summary.targetLimitMode, 1, "targetLimitMode missmatch");
+        assertEq(
+            summary.depositableValidatorsCount,
+            0,
+            "depositableValidatorsCount missmatch"
+        );
+    }
+
+    function test_getNodeOperatorSummary_softTargetLimitAboveTotalKeys()
+        public
+    {
+        uint256 noId = createNodeOperator(3);
+
+        csm.updateTargetValidatorsLimits(noId, 1, 5);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.targetValidatorsCount,
+            5,
+            "targetValidatorsCount missmatch"
+        );
+        assertEq(summary.targetLimitMode, 1, "targetLimitMode missmatch");
+        assertEq(
+            summary.depositableValidatorsCount,
+            3,
+            "depositableValidatorsCount missmatch"
+        );
     }
 
     function test_getNodeOperatorSummary_hardTargetLimit() public {
         uint256 noId = createNodeOperator(3);
 
         csm.updateTargetValidatorsLimits(noId, 2, 1);
-        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
 
-        summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetValidatorsCount, 1);
-        assertEq(summary.targetLimitMode, 2);
-        assertEq(summary.depositableValidatorsCount, 1);
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.targetValidatorsCount,
+            1,
+            "targetValidatorsCount missmatch"
+        );
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(
+            summary.depositableValidatorsCount,
+            1,
+            "depositableValidatorsCount missmatch"
+        );
+    }
+
+    function test_getNodeOperatorSummary_hardTargetLimitAndDeposited() public {
+        uint256 noId = createNodeOperator(3);
+
+        csm.obtainDepositData(1, "");
+
+        csm.updateTargetValidatorsLimits(noId, 2, 1);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.targetValidatorsCount,
+            1,
+            "targetValidatorsCount missmatch"
+        );
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(
+            summary.depositableValidatorsCount,
+            0,
+            "depositableValidatorsCount missmatch"
+        );
+    }
+
+    function test_getNodeOperatorSummary_hardTargetLimitAboveTotalKeys()
+        public
+    {
+        uint256 noId = createNodeOperator(3);
+
+        csm.updateTargetValidatorsLimits(noId, 2, 5);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.targetValidatorsCount,
+            5,
+            "targetValidatorsCount missmatch"
+        );
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(
+            summary.depositableValidatorsCount,
+            3,
+            "depositableValidatorsCount missmatch"
+        );
     }
 
     function test_getNodeOperatorSummary_targetLimitEqualToDepositedKeys()
         public
     {
         uint256 noId = createNodeOperator(3);
+
         csm.obtainDepositData(1, "");
 
         csm.updateTargetValidatorsLimits(noId, 1, 1);
+
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetLimitMode, 1);
-        assertEq(summary.targetValidatorsCount, 1);
-        assertEq(summary.depositableValidatorsCount, 0);
+        assertEq(summary.targetLimitMode, 1, "targetLimitMode missmatch");
+        assertEq(
+            summary.targetValidatorsCount,
+            1,
+            "targetValidatorsCount missmatch"
+        );
+        assertEq(
+            summary.depositableValidatorsCount,
+            0,
+            "depositableValidatorsCount missmatch"
+        );
     }
 
     function test_getNodeOperatorSummary_targetLimitLowerThanDepositedKeys()
         public
     {
         uint256 noId = createNodeOperator(3);
+
         csm.obtainDepositData(2, "");
 
         csm.updateTargetValidatorsLimits(noId, 1, 1);
+
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetLimitMode, 1);
-        assertEq(summary.targetValidatorsCount, 1);
-        assertEq(summary.depositableValidatorsCount, 0);
+        assertEq(summary.targetLimitMode, 1, "targetLimitMode missmatch");
+        assertEq(
+            summary.targetValidatorsCount,
+            1,
+            "targetValidatorsCount missmatch"
+        );
+        assertEq(
+            summary.depositableValidatorsCount,
+            0,
+            "depositableValidatorsCount missmatch"
+        );
     }
 
     function test_getNodeOperatorSummary_targetLimitLowerThanVettedKeys()
@@ -2417,10 +2536,20 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         uint256 noId = createNodeOperator(3);
 
         csm.updateTargetValidatorsLimits(noId, 1, 2);
+
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetLimitMode, 1);
-        assertEq(summary.targetValidatorsCount, 2);
-        assertEq(summary.depositableValidatorsCount, 2);
+        assertEq(summary.targetLimitMode, 1, "targetLimitMode missmatch");
+        assertEq(
+            summary.targetValidatorsCount,
+            2,
+            "targetValidatorsCount missmatch"
+        );
+        assertEq(
+            summary.depositableValidatorsCount,
+            2,
+            "depositableValidatorsCount missmatch"
+        );
+
         CSModule.NodeOperatorInfo memory no = csm.getNodeOperator(noId);
         assertEq(no.totalVettedValidators, 3); // Should NOT be unvetted.
     }
@@ -2429,31 +2558,50 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         public
     {
         uint256 noId = createNodeOperator(3);
+
         csm.updateTargetValidatorsLimits(noId, 1, 9);
+
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetLimitMode, 1);
-        assertEq(summary.targetValidatorsCount, 9);
-        assertEq(summary.depositableValidatorsCount, 3);
+        assertEq(summary.targetLimitMode, 1, "targetLimitMode missmatch");
+        assertEq(
+            summary.targetValidatorsCount,
+            9,
+            "targetValidatorsCount missmatch"
+        );
+        assertEq(
+            summary.depositableValidatorsCount,
+            3,
+            "depositableValidatorsCount missmatch"
+        );
     }
 
     function test_getNodeOperatorSummary_noTargetLimitDueToLockedBond() public {
         uint256 noId = createNodeOperator(3);
+
         csm.obtainDepositData(3, "");
+
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
             BOND_SIZE / 2
         );
+
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetLimitMode, 0);
-        assertEq(summary.targetValidatorsCount, 0);
+        assertEq(summary.targetLimitMode, 0, "targetLimitMode missmatch");
+        assertEq(
+            summary.targetValidatorsCount,
+            0,
+            "targetValidatorsCount missmatch"
+        );
     }
 
     function test_getNodeOperatorSummary_targetLimitDueToUnbondedDeposited()
         public
     {
         uint256 noId = createNodeOperator(3);
+
         csm.obtainDepositData(3, "");
+
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
@@ -2462,16 +2610,23 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
         csm.settleELRewardsStealingPenalty(idsToSettle);
+
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetLimitMode, 2);
-        assertEq(summary.targetValidatorsCount, 2);
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(
+            summary.targetValidatorsCount,
+            2,
+            "targetValidatorsCount missmatch"
+        );
     }
 
     function test_getNodeOperatorSummary_targetLimitDueToUnbondedNonDeposited()
         public
     {
         uint256 noId = createNodeOperator(3);
+
         csm.obtainDepositData(2, "");
+
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
@@ -2480,14 +2635,21 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
         csm.settleELRewardsStealingPenalty(idsToSettle);
+
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetLimitMode, 2);
-        assertEq(summary.targetValidatorsCount, 2);
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(
+            summary.targetValidatorsCount,
+            2,
+            "targetValidatorsCount missmatch"
+        );
     }
 
     function test_getNodeOperatorSummary_targetLimitDueToAllUnbonded() public {
         uint256 noId = createNodeOperator(3);
+
         csm.obtainDepositData(2, "");
+
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
@@ -2496,9 +2658,226 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
         csm.settleELRewardsStealingPenalty(idsToSettle);
+
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetLimitMode, 2);
-        assertEq(summary.targetValidatorsCount, 0);
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(
+            summary.targetValidatorsCount,
+            0,
+            "targetValidatorsCount missmatch"
+        );
+    }
+
+    function test_getNodeOperatorSummary_hardTargetLimitLowerThanUnbonded()
+        public
+    {
+        uint256 noId = createNodeOperator(5);
+
+        csm.updateTargetValidatorsLimits(noId, 2, 1);
+
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE / 2
+        );
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.targetValidatorsCount,
+            1,
+            "targetValidatorsCount missmatch"
+        );
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(
+            summary.depositableValidatorsCount,
+            1,
+            "depositableValidatorsCount missmatch"
+        );
+    }
+
+    function test_getNodeOperatorSummary_hardTargetLimitLowerThanUnbonded_deposited()
+        public
+    {
+        uint256 noId = createNodeOperator(5);
+
+        csm.obtainDepositData(1, "");
+
+        csm.updateTargetValidatorsLimits(noId, 2, 2);
+
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE / 2
+        );
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.targetValidatorsCount,
+            2,
+            "targetValidatorsCount missmatch"
+        );
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(
+            summary.depositableValidatorsCount,
+            1,
+            "depositableValidatorsCount missmatch"
+        );
+    }
+
+    function test_getNodeOperatorSummary_hardTargetLimitGreaterThanUnbonded()
+        public
+    {
+        uint256 noId = createNodeOperator(5);
+
+        csm.updateTargetValidatorsLimits(noId, 2, 4);
+
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE
+        );
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.targetValidatorsCount,
+            3,
+            "targetValidatorsCount missmatch"
+        );
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(
+            summary.depositableValidatorsCount,
+            3,
+            "depositableValidatorsCount missmatch"
+        );
+    }
+
+    function test_getNodeOperatorSummary_hardTargetLimitEqualUnbonded() public {
+        uint256 noId = createNodeOperator(5);
+
+        csm.updateTargetValidatorsLimits(noId, 2, 4);
+
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE / 2
+        );
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.targetValidatorsCount,
+            4,
+            "targetValidatorsCount missmatch"
+        );
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(
+            summary.depositableValidatorsCount,
+            4,
+            "depositableValidatorsCount missmatch"
+        );
+    }
+
+    function test_getNodeOperatorSummary_softTargetLimitLowerThanUnbonded()
+        public
+    {
+        uint256 noId = createNodeOperator(5);
+
+        csm.updateTargetValidatorsLimits(noId, 1, 1);
+
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE / 2
+        );
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.targetValidatorsCount,
+            4,
+            "targetValidatorsCount missmatch"
+        );
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(
+            summary.depositableValidatorsCount,
+            1,
+            "depositableValidatorsCount missmatch"
+        );
+    }
+
+    function test_getNodeOperatorSummary_softTargetLimitLowerThanUnbonded_deposited()
+        public
+    {
+        uint256 noId = createNodeOperator(5);
+
+        csm.obtainDepositData(1, "");
+
+        csm.updateTargetValidatorsLimits(noId, 1, 2);
+
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE / 2
+        );
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.targetValidatorsCount,
+            4,
+            "targetValidatorsCount missmatch"
+        );
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(
+            summary.depositableValidatorsCount,
+            1,
+            "depositableValidatorsCount missmatch"
+        );
+    }
+
+    function test_getNodeOperatorSummary_softTargetLimitGreaterThanUnbonded()
+        public
+    {
+        uint256 noId = createNodeOperator(5);
+
+        csm.updateTargetValidatorsLimits(noId, 1, 4);
+
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE
+        );
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.targetValidatorsCount,
+            3,
+            "targetValidatorsCount missmatch"
+        );
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode missmatch");
+        assertEq(
+            summary.depositableValidatorsCount,
+            3,
+            "depositableValidatorsCount missmatch"
+        );
     }
 }
 
