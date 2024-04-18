@@ -181,11 +181,7 @@ contract CSVerifierHistoricalTest is Test {
 
         vm.mockCall(
             address(module),
-            abi.encodeWithSelector(
-                ICSModule.getNodeOperatorSigningKeys.selector,
-                0,
-                0
-            ),
+            abi.encodeWithSelector(ICSModule.getSigningKeys.selector, 0, 0),
             abi.encode(_fixture._pubkey)
         );
 
