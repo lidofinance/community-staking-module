@@ -38,7 +38,7 @@ abstract contract CSBondCore {
     }
 
     // keccak256(abi.encode(uint256(keccak256("CSAccounting.CSBondCore")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant CSBondCoreStorageLocation =
+    bytes32 private constant CS_BOND_CORE_STORAGE_LOCATION =
         0x47989332924309831e1cc5ac062b59a9f1e0f7ffb37c93b1e656d5a2c362c900;
 
     event BondDeposited(
@@ -294,7 +294,7 @@ abstract contract CSBondCore {
         returns (CSBondCoreStorage storage $)
     {
         assembly {
-            $.slot := CSBondCoreStorageLocation
+            $.slot := CS_BOND_CORE_STORAGE_LOCATION
         }
     }
 }

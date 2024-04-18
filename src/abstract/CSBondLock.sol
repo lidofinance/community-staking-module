@@ -44,7 +44,7 @@ abstract contract CSBondLock is Initializable {
     }
 
     // keccak256(abi.encode(uint256(keccak256("CSAccounting.CSBondLock")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant CSBondLockStorageLocation =
+    bytes32 private constant CS_BOND_LOCK_STORAGE_LOCATION =
         0xde370123b9d98e59208021489ba3cc409fe2a07de86192b6a571d85c904ce000;
 
     // TODO: should be reconsidered
@@ -179,7 +179,7 @@ abstract contract CSBondLock is Initializable {
         returns (CSBondLockStorage storage $)
     {
         assembly {
-            $.slot := CSBondLockStorageLocation
+            $.slot := CS_BOND_LOCK_STORAGE_LOCATION
         }
     }
 }

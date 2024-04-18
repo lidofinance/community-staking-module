@@ -76,7 +76,7 @@ abstract contract CSBondCurve is Initializable {
     }
 
     // keccak256(abi.encode(uint256(keccak256("CSAccounting.CSBondCurve")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant CSBondCurveStorageLocation =
+    bytes32 private constant CS_BOND_CURVE_STORAGE_LOCATION =
         0xecd18ac5fe40b69924776afad2bbf434f360f087b9e5a81f68acc5c2c0e24400;
 
     // TODO: might be redefined in the future
@@ -281,7 +281,7 @@ abstract contract CSBondCurve is Initializable {
         returns (CSBondCurveStorage storage $)
     {
         assembly {
-            $.slot := CSBondCurveStorageLocation
+            $.slot := CS_BOND_CURVE_STORAGE_LOCATION
         }
     }
 }
