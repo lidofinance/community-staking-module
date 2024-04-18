@@ -116,6 +116,8 @@ library NOAddresses {
         no.managerAddress = msg.sender;
         if (no.proposedManagerAddress != address(0))
             delete no.proposedManagerAddress;
+
+        // TODO: check owners ordering in OZ owner2step library
         emit NodeOperatorManagerAddressChanged(
             nodeOperatorId,
             no.rewardAddress,
