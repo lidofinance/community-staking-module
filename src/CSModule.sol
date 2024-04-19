@@ -81,7 +81,7 @@ contract CSModule is
     ILidoLocator public immutable LIDO_LOCATOR;
 
     bool public publicRelease;
-    uint256 public removalCharge; // TODO: think about better name, smth like keyRemovalCharge
+    uint256 public keyRemovalCharge;
     QueueLib.Queue public queue; // TODO: depositQueue? public?
 
     ICSAccounting public accounting;
@@ -149,10 +149,13 @@ contract CSModule is
     event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
 
     event PublicRelease();
-    event RemovalChargeSet(uint256 amount);
+    event KeyRemovalChargeSet(uint256 amount);
 
     // TODO: check words "charge" & "stealing" with legal team
-    event RemovalChargeApplied(uint256 indexed nodeOperatorId, uint256 amount);
+    event KeyRemovalChargeApplied(
+        uint256 indexed nodeOperatorId,
+        uint256 amount
+    );
     event ELRewardsStealingPenaltyReported(
         uint256 indexed nodeOperatorId,
         bytes32 proposedBlockHash,
@@ -232,16 +235,16 @@ contract CSModule is
 
     /// @notice Sets the key deletion fine
     /// @param amount Amount of wei to be charged for removing a single key.
-    function setRemovalCharge(
+    function setKeyRemovalCharge(
         uint256 amount
     ) external onlyRole(MODULE_MANAGER_ROLE) {
         // TODO: think about limits
-        _setRemovalCharge(amount);
+        _setKeyRemovalCharge(amount);
     }
 
-    function _setRemovalCharge(uint256 amount) internal {
-        removalCharge = amount;
-        emit RemovalChargeSet(amount);
+    function _setKeyRemovalCharge(uint256 amount) internal {
+        keyRemovalCharge = amount;
+        emit KeyRemovalChargeSet(amount);
     }
 
     /// @notice Gets the module type
@@ -1448,15 +1451,15 @@ contract CSModule is
         return (nodeOperatorId << 128) | keyIndex;
     }
 
-    /// @notice Called when withdrawal credentials changed by DAO and resets the keys removal charge
+    /// @notice Called when withdrawal credentials changed by DAO and resets the key removal charge
     /// @dev Changing the WC means that the current keys in the queue are not valid anymore and can't be vetted to deposit
-    ///     So, the removal charge should be reset to 0 to allow the node operator to remove the keys without any charge.
-    ///     Then the DAO should set the new removal charge.
+    ///     So, the key removal charge should be reset to 0 to allow the node operator to remove the keys without any charge.
+    ///     Then the DAO should set the new key removal charge.
     function onWithdrawalCredentialsChanged()
         external
         onlyRole(STAKING_ROUTER_ROLE)
     {
-        _setRemovalCharge(0);
+        _setKeyRemovalCharge(0);
     }
 
     function _addSigningKeys(
@@ -1528,9 +1531,9 @@ contract CSModule is
         // We charge the node operator for the every removed key. It's motivated by the fact that the DAO should cleanup
         // the queue from the empty batches of the node operator. It's possible to have multiple batches with only one
         // key in it, so it means the DAO should have remove as much batches as keys removed in this case.
-        uint256 amountToCharge = removalCharge * keysCount;
+        uint256 amountToCharge = keyRemovalCharge * keysCount;
         accounting.chargeFee(nodeOperatorId, amountToCharge);
-        emit RemovalChargeApplied(nodeOperatorId, amountToCharge);
+        emit KeyRemovalChargeApplied(nodeOperatorId, amountToCharge);
 
         no.totalAddedKeys = newTotalSigningKeys;
         emit TotalSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
