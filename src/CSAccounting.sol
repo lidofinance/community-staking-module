@@ -266,7 +266,7 @@ contract CSAccounting is
         /// https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205
         /// Should be sufficient for ~ 40 years
         uint256 currentBond = CSBondCore._ethByShares(
-            _bondShares[nodeOperatorId]
+            getBondShares(nodeOperatorId)
         ) + 10 wei;
         if (accountLockedBond) {
             uint256 lockedBond = CSBondLock.getActualLockedBond(nodeOperatorId);
@@ -593,7 +593,7 @@ contract CSAccounting is
     }
 
     function recoverStETHShares() external onlyRecoverer {
-        uint256 shares = LIDO.sharesOf(address(this)) - totalBondShares;
+        uint256 shares = LIDO.sharesOf(address(this)) - totalBondShares();
         AssetRecovererLib.recoverStETHShares(address(LIDO), shares);
     }
 
