@@ -303,7 +303,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm));
         vm.stopPrank();
 
-        csm.setRemovalCharge(0.05 ether);
+        csm.setKeyRemovalCharge(0.05 ether);
     }
 }
 
@@ -1506,10 +1506,10 @@ contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
 contract CsmOnWithdrawalCredentialsChanged is CSMCommon {
     function test_onWithdrawalCredentialsChanged() public {
         vm.expectEmit(true, true, false, true, address(csm));
-        emit CSModule.RemovalChargeSet(0 ether);
+        emit CSModule.KeyRemovalChargeSet(0 ether);
         csm.onWithdrawalCredentialsChanged();
 
-        uint256 removalChargeAfter = csm.removalCharge();
+        uint256 removalChargeAfter = csm.keyRemovalCharge();
         assertEq(removalChargeAfter, 0 ether);
     }
 }
@@ -2415,7 +2415,7 @@ contract CsmRemoveKeys is CSMCommon {
             abi.encodeWithSelector(
                 accounting.chargeFee.selector,
                 noId,
-                csm.removalCharge() * 2
+                csm.keyRemovalCharge() * 2
             ),
             1
         );
@@ -4134,7 +4134,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.grantRole(role, actor);
 
         vm.prank(actor);
-        csm.setRemovalCharge(0.1 ether);
+        csm.setKeyRemovalCharge(0.1 ether);
     }
 
     function test_moduleManagerRole_setRemovalCharge_revert() public {
@@ -4142,7 +4142,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
-        csm.setRemovalCharge(0.1 ether);
+        csm.setKeyRemovalCharge(0.1 ether);
     }
 
     function test_moduleManagerRole_activatePublicRelease() public {
