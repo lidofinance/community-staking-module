@@ -89,11 +89,20 @@ coverage:
 coverage-lcov:
     forge coverage --report lcov
 
+abis:
+    yarn generate:abis
+
 make-fork *args:
-    @if pgrep -x "anvil" > /dev/null; then just _warn "anvil process is already running in the background. Make sure it's connected to the right network and in the right state."; else anvil -f ${RPC_URL} --host {{anvil_host}} --port {{anvil_port}} {{args}}; fi
+    @if pgrep -x "anvil" > /dev/null; \
+        then just _warn "anvil process is already running in the background. Make sure it's connected to the right network and in the right state."; \
+        else anvil -f ${RPC_URL} --host {{anvil_host}} --port {{anvil_port}} --config-out localhost.json {{args}}; \
+    fi
 
 kill-fork:
     @-pkill anvil && just _warn "anvil process is killed"
+
+deploy:
+    forge script {{deploy_script_path}} --rpc-url http://{{anvil_host}}:{{anvil_port}} --broadcast --slow
 
 deploy-prod:
     forge script {{deploy_script_path}} --force --rpc-url ${RPC_URL} --broadcast --slow
@@ -101,7 +110,7 @@ deploy-prod:
 deploy-local:
     just make-fork &
     @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
-    forge script {{deploy_script_path}} --force --fork-url http://{{anvil_host}}:{{anvil_port}} --broadcast --slow
+    just deploy
     @if ${KEEP_ANVIL_AFTER_LOCAL_DEPLOY}; then just _warn "anvil is kept running in the background: http://{{anvil_host}}:{{anvil_port}}"; else just kill-fork; fi
 
 _warn message:
