@@ -214,11 +214,7 @@ contract CSVerifierTest is Test {
 
         vm.mockCall(
             address(module),
-            abi.encodeWithSelector(
-                ICSModule.getNodeOperatorSigningKeys.selector,
-                0,
-                0
-            ),
+            abi.encodeWithSelector(ICSModule.getSigningKeys.selector, 0, 0),
             abi.encode(fixture._pubkey)
         );
 
@@ -285,11 +281,7 @@ contract CSVerifierTest is Test {
 
         vm.mockCall(
             address(module),
-            abi.encodeWithSelector(
-                ICSModule.getNodeOperatorSigningKeys.selector,
-                0,
-                0
-            ),
+            abi.encodeWithSelector(ICSModule.getSigningKeys.selector, 0, 0),
             abi.encode(fixture._pubkey)
         );
 
@@ -373,11 +365,7 @@ contract CSVerifierTest is Test {
 
         vm.mockCall(
             address(module),
-            abi.encodeWithSelector(
-                ICSModule.getNodeOperatorSigningKeys.selector,
-                0,
-                0
-            ),
+            abi.encodeWithSelector(ICSModule.getSigningKeys.selector, 0, 0),
             abi.encode(fixture._pubkey)
         );
 

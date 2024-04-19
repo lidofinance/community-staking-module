@@ -31,6 +31,7 @@ struct NodeOperator {
     bool active;
     uint256 targetLimit;
     uint8 targetLimitMode;
+    // TODO: keys could be packed into uint32
     uint256 stuckPenaltyEndTimestamp;
     uint256 totalExitedKeys; // @dev only increased
     uint256 totalAddedKeys; // @dev increased and decreased when removed
@@ -330,6 +331,8 @@ contract CSModule is
         // Reverts if keysCount is 0
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
 
+        // TODO: check is it possible to face with decreased
+        // share rate during transaction sent if some one submit at this time
         accounting.depositStETH(
             msg.sender,
             nodeOperatorId,
@@ -371,6 +374,7 @@ contract CSModule is
         // Reverts if keysCount is 0
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
 
+        // TODO: same as in addNodeOperatorStETH
         accounting.depositWstETH(
             msg.sender,
             nodeOperatorId,
@@ -383,6 +387,7 @@ contract CSModule is
 
         // Due to new bonded keys nonce update is required and normalize queue is required
         _updateDepositableValidatorsCount({
+            // TODO: double check that this feature (notated args) is safu
             nodeOperatorId: nodeOperatorId,
             doIncrementNonce: true,
             doNormalizeQueue: true
@@ -393,7 +398,7 @@ contract CSModule is
     /// @param nodeOperatorId ID of the node operator
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of (deposit_message, domain) tuples
+    /// @param signatures Signatures of (deposit_message, domain) tuples // TODO: may be add link to the spec
     function addValidatorKeysETH(
         uint256 nodeOperatorId,
         uint256 keysCount,
@@ -401,6 +406,9 @@ contract CSModule is
         bytes calldata signatures
     ) external payable whenResumed onlyExistingNodeOperator(nodeOperatorId) {
         // TODO: sanity checks
+
+        // TODO: use one code style: modifiers or guardians
+        // TODO: use underscore for internal methods: _onlyNodeOperatorManager
         onlyNodeOperatorManager(nodeOperatorId);
 
         if (
@@ -612,6 +620,7 @@ contract CSModule is
 
     /// @notice Request full reward (fee + bond) in Withdrawal NFT (unstETH) for the given node operator available for this moment.
     /// @dev reverts if amount isn't between MIN_STETH_WITHDRAWAL_AMOUNT and MAX_STETH_WITHDRAWAL_AMOUNT
+    /// TODO: write a note how to get more than MAX_STETH_WITHDRAWAL_AMOUNT rewards
     /// @param nodeOperatorId id of the node operator to request rewards for.
     /// @param ethAmount amount of ETH to request.
     /// @param cumulativeFeeShares Optional. Cumulative fee shares for the node operator.
@@ -706,8 +715,10 @@ contract CSModule is
     function getNodeOperator(
         uint256 nodeOperatorId
     ) external view returns (NodeOperatorInfo memory) {
+        // TODO: add onlyExist modifier
+        // TODO: think about "heavily" methods for frontend with proposed addresses
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        NodeOperatorInfo memory info;
+        NodeOperatorInfo memory info; // TODO: could be moved to returns()
         info.active = no.active;
         info.managerAddress = no.managerAddress;
         info.rewardAddress = no.rewardAddress;
@@ -722,6 +733,14 @@ contract CSModule is
 
     /// @notice Gets node operator summary
     /// @param nodeOperatorId ID of the node operator
+    /// @return targetLimitMode Target limit mode
+    /// @return targetValidatorsCount Target validators count
+    /// @return stuckValidatorsCount Stuck validators count
+    /// @return refundedValidatorsCount Refunded validators count
+    /// @return stuckPenaltyEndTimestamp Stuck penalty end timestamp
+    /// @return totalExitedValidators Total exited validators
+    /// @return totalDepositedValidators Total deposited validators
+    /// @return depositableValidatorsCount Depositable validators count
     /// @dev depositableValidatorsCount depends on:
     ///      - totalVettedKeys
     ///      - totalDepositedKeys
@@ -748,8 +767,9 @@ contract CSModule is
         uint256 totalUnbondedKeys = accounting.getUnbondedKeysCountToEject(
             nodeOperatorId
         );
+        // TODO: reconsider the logic
         if (totalUnbondedKeys > 0) {
-            // TODO: Use enum?
+            // TODO: Use enum or constant to safe some bytes
             targetLimitMode = 2;
             targetValidatorsCount =
                 no.totalAddedKeys -
@@ -772,7 +792,7 @@ contract CSModule is
     /// @param startIndex Index of the first key
     /// @param keysCount Count of keys to get
     /// @return Signing keys
-    function getNodeOperatorSigningKeys(
+    function getSigningKeys(
         uint256 nodeOperatorId,
         uint256 startIndex,
         uint256 keysCount
@@ -794,6 +814,39 @@ contract CSModule is
                 startIndex,
                 keysCount
             );
+    }
+
+    /// @notice Gets node operator signing keys with signatures
+    /// @param nodeOperatorId ID of the node operator
+    /// @param startIndex Index of the first key
+    /// @param keysCount Count of keys to get
+    /// @return keys Signing keys
+    /// @return signatures Signatures of (deposit_message, domain) tuples
+    function getSigningKeysWithSignatures(
+        uint256 nodeOperatorId,
+        uint256 startIndex,
+        uint256 keysCount
+    )
+        external
+        view
+        onlyExistingNodeOperator(nodeOperatorId)
+        returns (bytes memory keys, bytes memory signatures)
+    {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (startIndex + keysCount > no.totalAddedKeys) {
+            revert SigningKeysInvalidOffset();
+        }
+        (keys, signatures) = SigningKeys.initKeysSigsBuf(keysCount);
+        // solhint-disable-next-line func-named-parameters
+        SigningKeys.loadKeysSigs(
+            SIGNING_KEYS_POSITION,
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            keys,
+            signatures,
+            0
+        );
     }
 
     /// @notice Gets nonce of the module.

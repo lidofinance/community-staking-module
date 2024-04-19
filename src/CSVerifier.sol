@@ -98,7 +98,7 @@ contract CSVerifier is ICSVerifier {
             }
         }
 
-        bytes memory pubkey = module.getNodeOperatorSigningKeys(
+        bytes memory pubkey = module.getSigningKeys(
             nodeOperatorId,
             keyIndex,
             1
@@ -144,7 +144,7 @@ contract CSVerifier is ICSVerifier {
             }
         }
 
-        bytes memory pubkey = module.getNodeOperatorSigningKeys(
+        bytes memory pubkey = module.getSigningKeys(
             nodeOperatorId,
             keyIndex,
             1
@@ -198,7 +198,7 @@ contract CSVerifier is ICSVerifier {
             gI: oldBlock.rootGIndex
         });
 
-        bytes memory pubkey = module.getNodeOperatorSigningKeys(
+        bytes memory pubkey = module.getSigningKeys(
             nodeOperatorId,
             keyIndex,
             1

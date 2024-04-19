@@ -1994,8 +1994,8 @@ contract CsmUnvetKeys is CSMCommon {
     }
 }
 
-contract CsmViewKeys is CSMCommon {
-    function test_viewAllKeys() public {
+contract CsmGetSigningKeys is CSMCommon {
+    function test_getSigningKeys() public {
         bytes memory keys = randomBytes(48 * 3);
 
         uint256 noId = createNodeOperator({
@@ -2005,7 +2005,7 @@ contract CsmViewKeys is CSMCommon {
             signatures: randomBytes(96 * 3)
         });
 
-        bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
+        bytes memory obtainedKeys = csm.getSigningKeys({
             nodeOperatorId: noId,
             startIndex: 0,
             keysCount: 3
@@ -2014,7 +2014,7 @@ contract CsmViewKeys is CSMCommon {
         assertEq(obtainedKeys, keys, "unexpected keys");
     }
 
-    function test_viewNonExistingKeys() public {
+    function test_getSigningKeys_getNonExistingKeys() public {
         bytes memory keys = randomBytes(48);
 
         uint256 noId = createNodeOperator({
@@ -2025,14 +2025,14 @@ contract CsmViewKeys is CSMCommon {
         });
 
         vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
-        csm.getNodeOperatorSigningKeys({
+        csm.getSigningKeys({
             nodeOperatorId: noId,
             startIndex: 0,
             keysCount: 3
         });
     }
 
-    function test_viewKeysFromOffset() public {
+    function test_getSigningKeys_getKeysFromOffset() public {
         bytes memory wantedKey = randomBytes(48);
         bytes memory keys = bytes.concat(
             randomBytes(48),
@@ -2047,13 +2047,92 @@ contract CsmViewKeys is CSMCommon {
             signatures: randomBytes(96 * 3)
         });
 
-        bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
+        bytes memory obtainedKeys = csm.getSigningKeys({
             nodeOperatorId: noId,
             startIndex: 1,
             keysCount: 1
         });
 
         assertEq(obtainedKeys, wantedKey, "unexpected key at position 1");
+    }
+}
+
+contract CsmGetSigningKeysWithSignatures is CSMCommon {
+    function test_getSigningKeysWithSignatures() public {
+        bytes memory keys = randomBytes(48 * 3);
+        bytes memory signatures = randomBytes(96 * 3);
+
+        uint256 noId = createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 3,
+            keys: keys,
+            signatures: signatures
+        });
+
+        (bytes memory obtainedKeys, bytes memory obtainedSignatures) = csm
+            .getSigningKeysWithSignatures({
+                nodeOperatorId: noId,
+                startIndex: 0,
+                keysCount: 3
+            });
+
+        assertEq(obtainedKeys, keys, "unexpected keys");
+        assertEq(obtainedSignatures, signatures, "unexpected signatures");
+    }
+
+    function test_getSigningKeysWithSignatures_getNonExistingKeys() public {
+        bytes memory keys = randomBytes(48);
+        bytes memory signatures = randomBytes(96);
+
+        uint256 noId = createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 1,
+            keys: keys,
+            signatures: signatures
+        });
+
+        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
+        csm.getSigningKeysWithSignatures({
+            nodeOperatorId: noId,
+            startIndex: 0,
+            keysCount: 3
+        });
+    }
+
+    function test_getSigningKeysWithSignatures_getKeysFromOffset() public {
+        bytes memory wantedKey = randomBytes(48);
+        bytes memory wantedSignature = randomBytes(96);
+        bytes memory keys = bytes.concat(
+            randomBytes(48),
+            wantedKey,
+            randomBytes(48)
+        );
+        bytes memory signatures = bytes.concat(
+            randomBytes(96),
+            wantedSignature,
+            randomBytes(96)
+        );
+
+        uint256 noId = createNodeOperator({
+            managerAddress: address(this),
+            keysCount: 3,
+            keys: keys,
+            signatures: signatures
+        });
+
+        (bytes memory obtainedKeys, bytes memory obtainedSignatures) = csm
+            .getSigningKeysWithSignatures({
+                nodeOperatorId: noId,
+                startIndex: 1,
+                keysCount: 1
+            });
+
+        assertEq(obtainedKeys, wantedKey, "unexpected key at position 1");
+        assertEq(
+            obtainedSignatures,
+            wantedSignature,
+            "unexpected sitnature at position 1"
+        );
     }
 }
 
@@ -2121,7 +2200,7 @@ contract CsmRemoveKeys is CSMCommon {
             key3
         */
 
-        bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
+        bytes memory obtainedKeys = csm.getSigningKeys({
             nodeOperatorId: noId,
             startIndex: 0,
             keysCount: 2
@@ -2155,7 +2234,7 @@ contract CsmRemoveKeys is CSMCommon {
 
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 2 });
 
-        bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
+        bytes memory obtainedKeys = csm.getSigningKeys({
             nodeOperatorId: noId,
             startIndex: 0,
             keysCount: 3
@@ -2193,7 +2272,7 @@ contract CsmRemoveKeys is CSMCommon {
 
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 1, keysCount: 2 });
 
-        bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
+        bytes memory obtainedKeys = csm.getSigningKeys({
             nodeOperatorId: noId,
             startIndex: 0,
             keysCount: 3
@@ -2231,7 +2310,7 @@ contract CsmRemoveKeys is CSMCommon {
 
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 3, keysCount: 2 });
 
-        bytes memory obtainedKeys = csm.getNodeOperatorSigningKeys({
+        bytes memory obtainedKeys = csm.getSigningKeys({
             nodeOperatorId: noId,
             startIndex: 0,
             keysCount: 3

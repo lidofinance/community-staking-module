@@ -31,11 +31,23 @@ interface ICSModule is IStakingModule {
     /// @param startIndex Index of the first key
     /// @param keysCount Count of keys to get
     /// @return Signing keys
-    function getNodeOperatorSigningKeys(
+    function getSigningKeys(
         uint256 nodeOperatorId,
         uint256 startIndex,
         uint256 keysCount
     ) external view returns (bytes memory);
+
+    /// @notice Gets node operator signing keys with signatures
+    /// @param nodeOperatorId ID of the node operator
+    /// @param startIndex Index of the first key
+    /// @param keysCount Count of keys to get
+    /// @return keys Signing keys
+    /// @return signatures Signatures of (deposit_message, domain) tuples
+    function getSigningKeysWithSignatures(
+        uint256 nodeOperatorId,
+        uint256 startIndex,
+        uint256 keysCount
+    ) external view returns (bytes memory keys, bytes memory signatures);
 
     /// @notice Report node operator's key as slashed and apply initial slashing penalty.
     /// @param nodeOperatorId Operator ID in the module.
