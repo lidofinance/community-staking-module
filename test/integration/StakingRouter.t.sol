@@ -12,9 +12,9 @@ import { CSAccounting } from "../../src/CSAccounting.sol";
 import { ILido } from "../../src/interfaces/ILido.sol";
 import { IWstETH } from "../../src/interfaces/IWstETH.sol";
 import { Utilities } from "../helpers/Utilities.sol";
-import { IntegrationFixtures } from "../helpers/Fixtures.sol";
+import { EnvFixtures } from "../helpers/Fixtures.sol";
 
-contract StakingRouterIntegrationTest is Test, Utilities, IntegrationFixtures {
+contract StakingRouterIntegrationTest is Test, Utilities, EnvFixtures {
     uint256 networkFork;
 
     CSModule public csm;

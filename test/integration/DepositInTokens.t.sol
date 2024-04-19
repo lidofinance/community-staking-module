@@ -13,15 +13,10 @@ import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 import { ICSAccounting } from "../../src/interfaces/ICSAccounting.sol";
 import { Utilities } from "../helpers/Utilities.sol";
 import { PermitHelper } from "../helpers/Permit.sol";
-import { IntegrationFixtures } from "../helpers/Fixtures.sol";
+import { EnvFixtures } from "../helpers/Fixtures.sol";
 import { CommunityStakingModuleMock } from "../helpers/mocks/CommunityStakingModuleMock.sol";
 
-contract DepositIntegrationTest is
-    Test,
-    Utilities,
-    PermitHelper,
-    IntegrationFixtures
-{
+contract DepositIntegrationTest is Test, Utilities, PermitHelper, EnvFixtures {
     uint256 networkFork;
 
     CSModule public csm;

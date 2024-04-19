@@ -5,8 +5,8 @@ deploy_script_path := if chain == "mainnet" {
     "script" / "DeployMainnetish.s.sol" + ":DeployMainnetish"
 } else if chain == "holesky" {
     "script" / "DeployHolesky.s.sol" + ":DeployHolesky"
-} else if chain == "goerli" {
-    "script" / "DeployGoerli.s.sol" + ":DeployGoerli"
+} else if chain == "devnet" {
+    "script" / "DeployHoleskyDevnet.s.sol" + ":DeployHoleskyDevnet"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -40,13 +40,16 @@ test-all:
     just test-integration
 
 test *args:
-    forge test {{args}}
+    forge test --no-match-path '*test/post-deploy*' {{args}}
 
 test-unit *args:
-    forge test --no-match-path '*test/integration*' -vvv {{args}}
+    forge test --no-match-path '*test/{integration,post-deploy}*' -vvv {{args}}
 
 test-integration *args:
     forge test --match-path '*test/integration*' -vvv {{args}}
+
+test-post-deploy *args:
+    forge test --match-path '*test/post-deploy*' -vvv {{args}}
 
 gas-report:
     #!/usr/bin/env python
@@ -54,7 +57,7 @@ gas-report:
     import subprocess
     import re
 
-    command = "forge test --nmt 'testFuzz_\\w{1,}?' --nmp '*test/integration*'  --gas-report"
+    command = "just test-unit --nmt 'testFuzz.+' --gas-report"
     output = subprocess.check_output(command, shell=True, text=True)
 
     lines = output.split('\n')

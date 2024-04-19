@@ -20,7 +20,7 @@ import { pack } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 
 abstract contract DeployBase is Script {
-    // TODO: some contracts of the module probably should be deployed behind a proxy
+    string NAME;
     uint256 immutable CHAIN_ID;
     uint256 immutable SECONDS_PER_SLOT;
     uint256 immutable SLOTS_PER_EPOCH;
@@ -41,6 +41,7 @@ abstract contract DeployBase is Script {
     error ChainIdMismatch(uint256 actual, uint256 expected);
 
     constructor(
+        string memory name,
         uint256 chainId,
         uint256 secondsPerSlot,
         uint256 slotsPerEpoch,
@@ -49,6 +50,7 @@ abstract contract DeployBase is Script {
         uint256 initializationEpoch,
         address lidoLocatorAddress
     ) {
+        NAME = name;
         CHAIN_ID = chainId;
         SECONDS_PER_SLOT = secondsPerSlot;
         SLOTS_PER_EPOCH = slotsPerEpoch;
@@ -213,23 +215,6 @@ abstract contract DeployBase is Script {
     }
 
     function _deployJsonFilename() internal returns (string memory) {
-        return
-            string(
-                abi.encodePacked(
-                    "./out/",
-                    "deploy-",
-                    _deployJsonSuffix(),
-                    ".json"
-                )
-            );
-    }
-
-    function _deployJsonSuffix() internal returns (string memory) {
-        // prettier-ignore
-        return
-            block.chainid == 17000 ? "holesky" :
-            block.chainid == 1 ? "mainnet" :
-            block.chainid == 5 ? "goerli" :
-            /* default: */ "unknown";
+        return string(abi.encodePacked("./out/", "deploy-", NAME, ".json"));
     }
 }

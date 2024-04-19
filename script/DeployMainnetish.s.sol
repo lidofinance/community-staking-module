@@ -8,6 +8,8 @@ import { DeployBase } from "./DeployBase.s.sol";
 contract DeployMainnetish is DeployBase {
     constructor()
         DeployBase(
+            // name
+            "mainnet",
             // chainId
             1,
             // secondsPerSlot

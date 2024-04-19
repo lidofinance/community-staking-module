@@ -48,9 +48,10 @@ contract Fixtures is StdCheats, Test {
     }
 }
 
-contract IntegrationFixtures is StdCheats, Test {
+contract EnvFixtures is StdCheats, Test {
     struct Env {
         string RPC_URL;
+        string POST_DEPLOY_CONFIG;
     }
 
     address internal immutable LOCATOR_ADDRESS =
@@ -61,7 +62,10 @@ contract IntegrationFixtures is StdCheats, Test {
         0x2e59A20f205bB85a89C53f1936454680651E618e;
 
     function envVars() public returns (Env memory) {
-        Env memory env = Env(vm.envOr("RPC_URL", string("")));
+        Env memory env = Env(
+            vm.envOr("RPC_URL", string("")),
+            vm.envOr("POST_DEPLOY_CONFIG", string(""))
+        );
         vm.skip(_isEmpty(env.RPC_URL));
         return env;
     }

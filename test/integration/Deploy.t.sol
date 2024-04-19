@@ -8,7 +8,7 @@ import "../../src/CSModule.sol";
 import { Vm } from "forge-std/Vm.sol";
 import "../helpers/Fixtures.sol";
 
-contract TestDeployMainnet is Test, IntegrationFixtures {
+contract TestDeployMainnet is Test, EnvFixtures {
     DeployMainnetish public script;
     uint256 public networkFork;
 
