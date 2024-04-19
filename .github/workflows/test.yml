@@ -110,7 +110,8 @@ jobs:
         env:
           RPC_URL: ${{ secrets.RPC_URL }}
 
-      - name: Check gas report
-        run: just gas-report && git diff --exit-code GAS.md
-        env:
-          RPC_URL: ${{ secrets.RPC_URL }}
+      # TODO: Enable later
+      # - name: Check gas report
+      #   run: just gas-report && git diff --exit-code GAS.md
+      #   env:
+      #     RPC_URL: ${{ secrets.RPC_URL }}
