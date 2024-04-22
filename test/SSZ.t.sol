@@ -18,7 +18,7 @@ contract Library {
         bytes32 root,
         bytes32 leaf,
         GIndex gI
-    ) external {
+    ) external view {
         SSZ.verifyProof(proof, root, leaf, gI);
     }
 }
@@ -79,7 +79,7 @@ contract SSZTest is Utilities, Test {
 
     function testFuzz_withdrawalRoot_memory(
         Withdrawal memory w
-    ) public brutalizeMemory {
+    ) public view brutalizeMemory {
         SSZ.hashTreeRoot(w);
     }
 
@@ -177,7 +177,7 @@ contract SSZTest is Utilities, Test {
 
     function testFuzz_validatorRoot_memory(
         Validator memory v
-    ) public brutalizeMemory {
+    ) public view brutalizeMemory {
         SSZ.hashTreeRoot(v);
     }
 
@@ -226,7 +226,7 @@ contract SSZTest is Utilities, Test {
 
     function testFuzz_BeaconBlockHeaderRoot_memory(
         BeaconBlockHeader memory h
-    ) public brutalizeMemory {
+    ) public view brutalizeMemory {
         SSZ.hashTreeRoot(h);
     }
 
@@ -242,7 +242,7 @@ contract SSZTest is Utilities, Test {
     // --
     // 0xda1c902c54a4386439ce622d7e527dc11decace28ebb902379cba91c4a116b1c
 
-    function test_verifyProof_HappyPath() public {
+    function test_verifyProof_HappyPath() public view {
         bytes32[] memory proof = new bytes32[](2);
 
         // prettier-ignore
@@ -272,7 +272,7 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_OneItem() public {
+    function test_verifyProof_OneItem() public view {
         bytes32[] memory proof = new bytes32[](1);
 
         // prettier-ignore
@@ -390,7 +390,7 @@ contract SSZTest is Utilities, Test {
         bytes32 root,
         bytes32 leaf,
         GIndex gI
-    ) public {
+    ) public view {
         try this.verifyProofCallJunkMemory(proof, root, leaf, gI) {} catch {}
     }
 
@@ -399,7 +399,7 @@ contract SSZTest is Utilities, Test {
         bytes32 root,
         bytes32 leaf,
         GIndex gI
-    ) external brutalizeMemory {
+    ) external view brutalizeMemory {
         SSZ.verifyProof(proof, root, leaf, gI);
     }
 }

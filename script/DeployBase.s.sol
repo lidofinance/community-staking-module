@@ -212,7 +212,7 @@ abstract contract DeployBase is Script {
         return epoch * SLOTS_PER_EPOCH - 1;
     }
 
-    function _deployJsonFilename() internal returns (string memory) {
+    function _deployJsonFilename() internal view returns (string memory) {
         return
             string(
                 abi.encodePacked(
@@ -224,7 +224,7 @@ abstract contract DeployBase is Script {
             );
     }
 
-    function _deployJsonSuffix() internal returns (string memory) {
+    function _deployJsonSuffix() internal view returns (string memory) {
         // prettier-ignore
         return
             block.chainid == 17000 ? "holesky" :
