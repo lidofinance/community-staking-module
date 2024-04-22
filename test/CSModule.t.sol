@@ -3443,6 +3443,23 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
+    function test_updateTargetValidatorsLimits_sameValues() public {
+        uint256 noId = createNodeOperator();
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.TargetValidatorsCountChanged(noId, 1, 1);
+        csm.updateTargetValidatorsLimits(noId, 1, 1);
+
+        // expectNoEmit hack
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        csm.updateTargetValidatorsLimits(noId, 1, 1);
+        assertEq(entries.length, 0);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(summary.targetLimitMode, 1);
+        assertEq(summary.targetValidatorsCount, 1);
+    }
+
     function test_updateTargetValidatorsLimits_limitIsZero() public {
         uint256 noId = createNodeOperator();
         vm.expectEmit(true, true, true, true, address(csm));
