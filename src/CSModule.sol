@@ -106,9 +106,9 @@ contract CSModule is
 
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
-        address indexed referral,
         address indexed from
     );
+    event ReferrerSet(uint256 indexed nodeOperatorId, address indexed referrer);
     event VettedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
         uint256 vettedKeysCount
@@ -275,17 +275,17 @@ contract CSModule is
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of (deposit_message, domain) tuples
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
-    /// @param referral Optional referral address
+    /// @param referrer Optional. Referrer address
     function addNodeOperatorETH(
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
         bytes32[] calldata eaProof,
-        address referral
+        address referrer
     ) external payable whenResumed {
         // TODO: sanity checks
 
-        uint256 nodeOperatorId = _createNodeOperator(referral);
+        uint256 nodeOperatorId = _createNodeOperator(referrer);
         _processEarlyAdoption(nodeOperatorId, eaProof); // TODO: think about better name
 
         if (
@@ -317,18 +317,18 @@ contract CSModule is
     /// @param signatures Signatures of (deposit_message, domain) tuples
     /// @param permit Optional. Permit to use stETH as bond
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
-    /// @param referral Optional referral address
+    /// @param referrer Optional, Referrer address
     function addNodeOperatorStETH(
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit,
         bytes32[] calldata eaProof,
-        address referral
+        address referrer
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 nodeOperatorId = _createNodeOperator(referral);
+        uint256 nodeOperatorId = _createNodeOperator(referrer);
         _processEarlyAdoption(nodeOperatorId, eaProof);
 
         // Reverts if keysCount is 0
@@ -360,18 +360,18 @@ contract CSModule is
     /// @param signatures Signatures of (deposit_message, domain) tuples
     /// @param permit Optional. Permit to use wstETH as bond
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
-    /// @param referral Optional referral address
+    /// @param referrer Optional. Referrer address
     function addNodeOperatorWstETH(
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit,
         bytes32[] calldata eaProof,
-        address referral
+        address referrer
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 nodeOperatorId = _createNodeOperator(referral);
+        uint256 nodeOperatorId = _createNodeOperator(referrer);
         _processEarlyAdoption(nodeOperatorId, eaProof);
 
         // Reverts if keysCount is 0
@@ -1729,7 +1729,7 @@ contract CSModule is
         _nonce++;
     }
 
-    function _createNodeOperator(address referral) internal returns (uint256) {
+    function _createNodeOperator(address referrer) internal returns (uint256) {
         uint256 id = _nodeOperatorsCount;
         NodeOperator storage no = _nodeOperators[id];
 
@@ -1742,7 +1742,10 @@ contract CSModule is
             _activeNodeOperatorsCount++;
         }
 
-        emit NodeOperatorAdded(id, referral, msg.sender);
+        emit NodeOperatorAdded(id, msg.sender);
+
+        if (referrer != address(0)) emit ReferrerSet(id, referrer);
+
         return id;
     }
 
