@@ -53,6 +53,14 @@ contract WstETHMock is PermitTokenBase {
         _balance[recipient] += amount;
     }
 
+    function transfer(address recipient, uint256 amount) public {
+        if (_balance[msg.sender] < amount) {
+            revert NotEnoughBalance(_balance[msg.sender]);
+        }
+        _balance[msg.sender] -= amount;
+        _balance[recipient] += amount;
+    }
+
     /**
      * @notice Get amount of wstETH for a given amount of stETH
      * @param _stETHAmount amount of stETH
