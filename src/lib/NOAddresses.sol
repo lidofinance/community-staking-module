@@ -15,15 +15,16 @@ library NOAddresses {
         uint256 indexed nodeOperatorId,
         address indexed proposedAddress
     );
+    // args order as in https://github.com/OpenZeppelin/openzeppelin-contracts/blob/11dc5e3809ebe07d5405fe524385cbe4f890a08b/contracts/access/Ownable.sol#L33
     event NodeOperatorRewardAddressChanged(
         uint256 indexed nodeOperatorId,
-        address indexed newAddress,
-        address oldAddress
+        address indexed oldAddress,
+        address indexed newAddress
     );
     event NodeOperatorManagerAddressChanged(
         uint256 indexed nodeOperatorId,
-        address indexed newAddress,
-        address oldAddress
+        address indexed oldAddress,
+        address indexed newAddress
     );
 
     error AlreadyProposed();
@@ -63,8 +64,8 @@ library NOAddresses {
 
         emit NodeOperatorManagerAddressChanged(
             nodeOperatorId,
-            msg.sender,
-            oldAddress
+            oldAddress,
+            msg.sender
         );
     }
 
@@ -99,8 +100,8 @@ library NOAddresses {
 
         emit NodeOperatorRewardAddressChanged(
             nodeOperatorId,
-            msg.sender,
-            oldAddress
+            oldAddress,
+            msg.sender
         );
     }
 
@@ -113,15 +114,14 @@ library NOAddresses {
         if (no.managerAddress == no.rewardAddress) revert SameAddress();
         address previousManagerAddress = no.managerAddress;
 
-        no.managerAddress = msg.sender;
+        no.managerAddress = no.rewardAddress;
         if (no.proposedManagerAddress != address(0))
             delete no.proposedManagerAddress;
 
-        // TODO: check owners ordering in OZ owner2step library
         emit NodeOperatorManagerAddressChanged(
             nodeOperatorId,
-            no.rewardAddress,
-            previousManagerAddress
+            previousManagerAddress,
+            no.rewardAddress
         );
     }
 }

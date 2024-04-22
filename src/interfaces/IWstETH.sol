@@ -18,6 +18,8 @@ interface IWstETH {
         uint256 amount
     ) external;
 
+    function transfer(address recipient, uint256 amount) external;
+
     function getStETHByWstETH(
         uint256 _wstETHAmount
     ) external view returns (uint256);
