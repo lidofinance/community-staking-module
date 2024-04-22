@@ -37,19 +37,13 @@ lint:
 
 test-all:
     just test-unit &
-    just test-integration
-
-test *args:
-    forge test --no-match-path '*test/post-deploy*' {{args}}
+    just test-local
 
 test-unit *args:
-    forge test --no-match-path '*test/{integration,post-deploy}*' -vvv {{args}}
+    forge test --no-match-path '*test/integration*' -vvv {{args}}
 
 test-integration *args:
     forge test --match-path '*test/integration*' -vvv {{args}}
-
-test-post-deploy *args:
-    forge test --match-path '*test/post-deploy*' -vvv {{args}}
 
 gas-report:
     #!/usr/bin/env python
@@ -116,5 +110,15 @@ deploy-local:
     just deploy
     @if ${KEEP_ANVIL_AFTER_LOCAL_DEPLOY}; then just _warn "anvil is kept running in the background: http://{{anvil_host}}:{{anvil_port}}"; else just kill-fork; fi
 
+test-local *args:
+    just make-fork --silent &
+    @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
+    DEPLOYER_PRIVATE_KEY=`cat localhost.json | jq -r ".private_keys[0]"` \
+        just deploy
+    DEPLOY_CONFIG=./out/latest.json \
+    RPC_URL=http://{{anvil_host}}:{{anvil_port}} \
+        just test-integration {{args}}
+    just kill-fork
+
 _warn message:
-    @tput setaf 3 && printf "[WARNING]" && tput sgr0 && echo " {{message}}"
+    @tput setaf 3 && printf "[WARNING] " && tput sgr0 && echo " {{message}}"

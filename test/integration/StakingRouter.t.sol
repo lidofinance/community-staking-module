@@ -12,62 +12,17 @@ import { CSAccounting } from "../../src/CSAccounting.sol";
 import { ILido } from "../../src/interfaces/ILido.sol";
 import { IWstETH } from "../../src/interfaces/IWstETH.sol";
 import { Utilities } from "../helpers/Utilities.sol";
-import { EnvFixtures } from "../helpers/Fixtures.sol";
+import { DeploymentFixtures } from "../helpers/Fixtures.sol";
+import { IKernel } from "../../src/interfaces/IKernel.sol";
+import { IACL } from "../../src/interfaces/IACL.sol";
 
-contract StakingRouterIntegrationTest is Test, Utilities, EnvFixtures {
-    uint256 networkFork;
-
-    CSModule public csm;
-    ILidoLocator public locator;
-    IStakingRouter public stakingRouter;
-    ILido public lido;
-    IWstETH public wstETH;
-
+contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
     address internal agent;
 
     function setUp() public {
         Env memory env = envVars();
-
-        networkFork = vm.createFork(env.RPC_URL);
-        vm.selectFork(networkFork);
-        checkChainId(1);
-
-        locator = ILidoLocator(LOCATOR_ADDRESS);
-        stakingRouter = IStakingRouter(payable(locator.stakingRouter()));
-        lido = ILido(locator.lido());
-        wstETH = IWstETH(WSTETH_ADDRESS);
-        vm.label(address(lido), "lido");
-        vm.label(address(stakingRouter), "stakingRouter");
-
-        csm = new CSModule({
-            moduleType: "community-staking-module",
-            elStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10,
-            lidoLocator: address(locator)
-        });
-        uint256[] memory curve = new uint256[](2);
-        curve[0] = 2 ether;
-        curve[1] = 4 ether;
-        CSAccounting accounting = new CSAccounting(
-            address(locator),
-            address(csm)
-        );
-        accounting.initialize(
-            curve,
-            address(csm),
-            address(1337),
-            8 weeks,
-            locator.treasury()
-        );
-        csm.initialize({
-            _accounting: address(accounting),
-            _earlyAdoption: address(0),
-            admin: address(this)
-        });
-
-        csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(stakingRouter));
-        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
-        csm.activatePublicRelease();
+        vm.createSelectFork(env.RPC_URL);
+        initializeFromDeployment(env.DEPLOY_CONFIG);
 
         agent = stakingRouter.getRoleMember(
             stakingRouter.DEFAULT_ADMIN_ROLE(),
@@ -119,9 +74,13 @@ contract StakingRouterIntegrationTest is Test, Utilities, EnvFixtures {
             address(0)
         );
 
-        vm.prank(ARAGON_VOTING_ADDRESS);
-        lido.removeStakingLimit();
+        IACL acl = IACL(IKernel(lido.kernel()).acl());
+        bytes32 role = lido.STAKING_CONTROL_ROLE();
+        vm.prank(acl.getPermissionManager(address(lido), role));
+        acl.grantPermission(agent, address(lido), role);
 
+        vm.prank(agent);
+        lido.removeStakingLimit();
         // It's impossible to process deposits if withdrawal requests amount is more than the buffered ether,
         // so we need to make sure that the buffered ether is enough by submitting this tremendous amount.
         address whale = nextAddress();

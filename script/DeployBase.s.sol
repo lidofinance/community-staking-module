@@ -37,6 +37,8 @@ abstract contract DeployBase is Script {
     CSAccounting public accounting;
     CSFeeOracle public oracle;
     CSFeeDistributor public feeDistributor;
+    CSVerifier public verifier;
+    HashConsensus public hashConsensus;
 
     error ChainIdMismatch(uint256 actual, uint256 expected);
 
@@ -147,7 +149,7 @@ abstract contract DeployBase is Script {
                 address(csm)
             );
 
-            HashConsensus hashConsensus = new HashConsensus({
+            hashConsensus = new HashConsensus({
                 slotsPerEpoch: SLOTS_PER_EPOCH,
                 secondsPerSlot: SECONDS_PER_SLOT,
                 genesisTime: CL_GENESIS_TIME,
@@ -166,7 +168,7 @@ abstract contract DeployBase is Script {
                 lastProcessingRefSlot: _refSlotFromEpoch(INITIALIZATION_EPOCH)
             });
 
-            CSVerifier verifier = new CSVerifier({
+            verifier = new CSVerifier({
                 slotsPerEpoch: uint64(SLOTS_PER_EPOCH),
                 // NOTE: Deneb fork gIndexes. Should be updated according to `VERIFIER_SUPPORTED_EPOCH` fork epoch if needed
                 gIHistoricalSummaries: pack(0x3b, 5),
@@ -179,14 +181,22 @@ abstract contract DeployBase is Script {
             verifier.initialize(address(locator), address(csm));
             csm.grantRole(csm.VERIFIER_ROLE(), address(verifier));
 
+            csm.grantRole(
+                csm.STAKING_ROUTER_ROLE(),
+                address(locator.stakingRouter())
+            );
+
             JsonObj memory deployJson = Json.newObj();
+            deployJson.set("ChainId", CHAIN_ID);
             deployJson.set("CSModule", address(csm));
             deployJson.set("CSAccounting", address(accounting));
             deployJson.set("CSFeeOracle", address(oracle));
             deployJson.set("CSFeeDistributor", address(feeDistributor));
             deployJson.set("HashConsensus", address(hashConsensus));
             deployJson.set("CSVerifier", address(verifier));
+            deployJson.set("LidoLocator", LIDO_LOCATOR_ADDRESS);
             vm.writeJson(deployJson.str, _deployJsonFilename());
+            vm.writeJson(deployJson.str, "./out/latest.json");
         }
 
         vm.stopBroadcast();

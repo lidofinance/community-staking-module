@@ -22,7 +22,7 @@ jobs:
       cache-path: ${{ steps.cache.outputs.path }}
       cache-key: ${{ steps.cache.outputs.key }}
     env:
-      FORGE_REV: 35a8cce
+      FORGE_REV: 844caa8
       JUST_TAG: 1.24.0
     steps:
       - name: Build cache params
@@ -48,7 +48,7 @@ jobs:
         if: steps.get-cache.outputs.cache-hit != 'true'
 
       - name: Install forge
-        run: cargo install --git https://github.com/foundry-rs/foundry --rev "$FORGE_REV" --profile local forge
+        run: cargo install --git https://github.com/foundry-rs/foundry --rev "$FORGE_REV" --profile local forge anvil
         if: steps.get-cache.outputs.cache-hit != 'true'
 
   linters:
@@ -106,7 +106,7 @@ jobs:
         run: just build --sizes
 
       - name: Run tests
-        run: just test
+        run: just test-all
         env:
           RPC_URL: ${{ secrets.RPC_URL }}
 

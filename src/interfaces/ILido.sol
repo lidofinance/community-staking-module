@@ -9,6 +9,8 @@ import { IStETH } from "./IStETH.sol";
  * @title Interface defining Lido contract
  */
 interface ILido is IStETH {
+    function STAKING_CONTROL_ROLE() external view returns (bytes32);
+
     function submit(address _referal) external payable returns (uint256);
 
     function deposit(
@@ -18,4 +20,6 @@ interface ILido is IStETH {
     ) external;
 
     function removeStakingLimit() external;
+
+    function kernel() external returns (address);
 }
