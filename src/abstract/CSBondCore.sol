@@ -198,7 +198,7 @@ abstract contract CSBondCore {
         if (sharesToClaim == 0) return;
         _unsafeReduceBond(nodeOperatorId, sharesToClaim);
 
-        LIDO.transferSharesFrom(address(this), to, sharesToClaim);
+        LIDO.transferShares(to, sharesToClaim);
         emit BondClaimed(nodeOperatorId, to, _ethByShares(sharesToClaim));
     }
 
@@ -220,7 +220,7 @@ abstract contract CSBondCore {
         uint256 amount = WSTETH.wrap(_ethByShares(sharesToClaim));
         _unsafeReduceBond(nodeOperatorId, amount);
 
-        WSTETH.transferFrom(address(this), to, amount);
+        WSTETH.transfer(to, amount);
         emit BondClaimedWstETH(nodeOperatorId, to, amount);
     }
 
@@ -251,7 +251,7 @@ abstract contract CSBondCore {
             nodeOperatorId,
             _sharesByEth(amount)
         );
-        LIDO.transferSharesFrom(address(this), recipient, chargedShares);
+        LIDO.transferShares(recipient, chargedShares);
         emit BondCharged(
             nodeOperatorId,
             _ethByShares(toChargeShares),

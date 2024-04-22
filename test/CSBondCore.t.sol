@@ -639,8 +639,7 @@ contract CSBondCoreChargeTest is CSBondCoreTestBase {
         vm.expectCall(
             locator.lido(),
             abi.encodeWithSelector(
-                IStETH.transferSharesFrom.selector,
-                address(bondCore),
+                IStETH.transferShares.selector,
                 testChargeRecipient,
                 shares
             )
@@ -671,8 +670,7 @@ contract CSBondCoreChargeTest is CSBondCoreTestBase {
         vm.expectCall(
             locator.lido(),
             abi.encodeWithSelector(
-                IStETH.transferSharesFrom.selector,
-                address(bondCore),
+                IStETH.transferShares.selector,
                 testChargeRecipient,
                 stETH.getSharesByPooledEth(32 ether)
             )
@@ -698,8 +696,7 @@ contract CSBondCoreChargeTest is CSBondCoreTestBase {
         vm.expectCall(
             locator.lido(),
             abi.encodeWithSelector(
-                IStETH.transferSharesFrom.selector,
-                address(bondCore),
+                IStETH.transferShares.selector,
                 testChargeRecipient,
                 shares
             )

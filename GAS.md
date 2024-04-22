@@ -13,13 +13,13 @@
 | addBondCurve                                                        | 24663           | 122862 | 121473 | 144611 | 330     |
 | chargeFee                                                           | 21724           | 48244  | 48244  | 74765  | 2       |
 | chargeRecipient                                                     | 404             | 404    | 404    | 404    | 1       |
-| claimRewardsStETH                                                   | 25163           | 82344  | 97072  | 104884 | 16      |
-| claimRewardsWstETH                                                  | 25098           | 118327 | 156737 | 159104 | 16      |
+| claimRewardsStETH                                                   | 25163           | 82221  | 96875  | 104687 | 16      |
+| claimRewardsWstETH                                                  | 25098           | 118257 | 156625 | 158992 | 16      |
 | compensateLockedBondETH                                             | 47658           | 47658  | 47658  | 47658  | 1       |
 | defaultBondCurveId                                                  | 490             | 490    | 490    | 490    | 1       |
 | depositETH                                                          | 24205           | 112166 | 113336 | 113576 | 104     |
-| depositStETH                                                        | 25129           | 94152  | 103997 | 107916 | 7       |
-| depositWstETH                                                       | 25193           | 105453 | 120297 | 124009 | 6       |
+| depositStETH                                                        | 25129           | 94093  | 103928 | 107847 | 7       |
+| depositWstETH                                                       | 25193           | 105395 | 120228 | 123940 | 6       |
 | feeDistributor                                                      | 404             | 1737   | 2404   | 2404   | 3       |
 | getActualLockedBond                                                 | 621             | 741    | 782    | 782    | 8       |
 | getBondAmountByKeysCount                                            | 1178            | 1430   | 1347   | 1610   | 269     |
