@@ -18,12 +18,12 @@ library NOAddresses {
     event NodeOperatorRewardAddressChanged(
         uint256 indexed nodeOperatorId,
         address indexed newAddress,
-        address oldAddress
+        address indexed oldAddress
     );
     event NodeOperatorManagerAddressChanged(
         uint256 indexed nodeOperatorId,
         address indexed newAddress,
-        address oldAddress
+        address indexed oldAddress
     );
 
     error AlreadyProposed();
