@@ -224,7 +224,7 @@ abstract contract DeployBase is Script {
         return epoch * SLOTS_PER_EPOCH - 1;
     }
 
-    function _deployJsonFilename() internal returns (string memory) {
+    function _deployJsonFilename() internal view returns (string memory) {
         return string(abi.encodePacked("./out/", "deploy-", NAME, ".json"));
     }
 }

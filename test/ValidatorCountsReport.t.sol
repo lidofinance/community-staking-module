@@ -19,7 +19,7 @@ contract ReportCaller {
         bytes calldata ids,
         bytes calldata counts,
         uint256 offset
-    ) public returns (uint256 nodeOperatorId, uint256 count) {
+    ) public pure returns (uint256 nodeOperatorId, uint256 _count) {
         return ValidatorCountsReport.next(ids, counts, offset);
     }
 }
@@ -31,7 +31,7 @@ contract ValidatorCountsReportTest is Test {
         caller = new ReportCaller();
     }
 
-    function test_validate() public {
+    function test_validate() public view {
         (bytes memory ids, bytes memory counts) = (
             bytes.concat(bytes8(0x0000000000000001)),
             bytes.concat(bytes16(0x00000000000000000000000000000001))
