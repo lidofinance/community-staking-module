@@ -85,6 +85,8 @@ contract DepositIntegrationTest is
             2,
             keys,
             signatures,
+            address(0),
+            address(0),
             new bytes32[](0),
             address(0)
         );
