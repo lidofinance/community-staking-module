@@ -121,4 +121,4 @@ test-local *args:
     just kill-fork
 
 _warn message:
-    @tput setaf 3 && printf "[WARNING] " && tput sgr0 && echo " {{message}}"
+    @tput setaf 3 && printf "[WARNING]" && tput sgr0 && echo " {{message}}"

@@ -47,7 +47,7 @@ jobs:
         run: cargo install "just@$JUST_TAG"
         if: steps.get-cache.outputs.cache-hit != 'true'
 
-      - name: Install forge
+      - name: Install forge & anvil
         run: cargo install --git https://github.com/foundry-rs/foundry --rev "$FORGE_REV" --profile local forge anvil
         if: steps.get-cache.outputs.cache-hit != 'true'
 
