@@ -918,8 +918,8 @@ contract HashConsensus is AccessControlEnumerable {
             if (varIndex == prevVarIndex) {
                 revert DuplicateReport();
             } else {
-                uint256 support = --_reportVariants[prevVarIndex].support;
-                if (support == _quorum - 1) {
+                uint256 _support = --_reportVariants[prevVarIndex].support;
+                if (_support == _quorum - 1) {
                     prevConsensusLost = true;
                 }
             }

@@ -22,8 +22,18 @@ contract MathTest is Test {
     }
 
     function test_log2() public {
+        assertEq(Math.log2(1), 0);
+        assertEq(Math.log2(2), 1);
         assertEq(Math.log2(4), 2);
+        assertEq(Math.log2(8), 3);
+        assertEq(Math.log2(256), 8);
+    }
+
+    function test_log2_RoundsDow() public {
+        assertEq(Math.log2(3), 1);
+        assertEq(Math.log2(7), 2);
         assertEq(Math.log2(10), 3);
+        assertEq(Math.log2(300), 8);
     }
 
     function testFuzz_log2(uint8 pow) public {

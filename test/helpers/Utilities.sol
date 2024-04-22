@@ -56,6 +56,29 @@ contract Utilities is CommonBase {
         return (keys, signatures);
     }
 
+    function keysSignaturesWithZeroKey(
+        uint256 keysCount,
+        uint16 startIndex
+    ) public pure returns (bytes memory, bytes memory) {
+        bytes memory keys;
+        bytes memory signatures;
+        for (uint16 i = startIndex; i < startIndex + keysCount; i++) {
+            bytes memory keyIndex = abi.encodePacked(i);
+            bytes memory sigIndex = abi.encodePacked(i + 1);
+            bytes memory key = bytes.concat(
+                new bytes(48 - keyIndex.length),
+                keyIndex
+            );
+            bytes memory sign = bytes.concat(
+                new bytes(96 - sigIndex.length),
+                sigIndex
+            );
+            keys = bytes.concat(keys, key);
+            signatures = bytes.concat(signatures, sign);
+        }
+        return (keys, signatures);
+    }
+
     function randomBytes(uint256 length) public returns (bytes memory b) {
         b = new bytes(length);
 
