@@ -1959,8 +1959,8 @@ contract CsmConfirmNodeOperatorManagerAddressChange is CSMCommon {
         vm.expectEmit(true, true, true, true, address(csm));
         emit NOAddresses.NodeOperatorManagerAddressChanged(
             noId,
-            stranger,
-            nodeOperator
+            nodeOperator,
+            stranger
         );
         vm.prank(stranger);
         csm.confirmNodeOperatorManagerAddressChange(noId);
@@ -2067,8 +2067,8 @@ contract CsmConfirmNodeOperatorRewardAddressChange is CSMCommon {
         vm.expectEmit(true, true, true, true, address(csm));
         emit NOAddresses.NodeOperatorRewardAddressChanged(
             noId,
-            stranger,
-            nodeOperator
+            nodeOperator,
+            stranger
         );
         vm.prank(stranger);
         csm.confirmNodeOperatorRewardAddressChange(noId);
@@ -2119,8 +2119,8 @@ contract CsmResetNodeOperatorManagerAddress is CSMCommon {
         vm.expectEmit(true, true, true, true, address(csm));
         emit NOAddresses.NodeOperatorManagerAddressChanged(
             noId,
-            stranger,
-            nodeOperator
+            nodeOperator,
+            stranger
         );
         vm.prank(stranger);
         csm.resetNodeOperatorManagerAddress(noId);
