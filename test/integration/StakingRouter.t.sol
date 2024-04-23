@@ -43,6 +43,10 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
             stakingRouter.REPORT_REWARDS_MINTED_ROLE(),
             agent
         );
+        stakingRouter.grantRole(
+            stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(),
+            agent
+        );
         vm.stopPrank();
 
         if (env.MODULE_ID == 0) {
@@ -52,7 +56,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         }
     }
 
-    function addCsmModule() public returns (uint256) {
+    function addCsmModule() internal returns (uint256) {
         vm.prank(agent);
         stakingRouter.addStakingModule({
             _name: "community-staking-v1",
@@ -65,19 +69,18 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         return ids[ids.length - 1];
     }
 
-    function test_connectCSMToRouter() public {
-        IStakingRouter.StakingModule memory module = stakingRouter
-            .getStakingModule(moduleId);
-        assertTrue(module.stakingModuleAddress == address(csm));
-    }
-
-    function test_RouterDeposit() public {
-        (bytes memory keys, bytes memory signatures) = keysSignatures(2);
-        address nodeOperator = address(2);
-        vm.deal(nodeOperator, 4 ether);
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: 4 ether }(
-            2,
+    function addNodeOperator(
+        address from,
+        uint256 keysCount
+    ) internal returns (uint256) {
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        uint256 amount = accounting.getBondAmountByKeysCount(keysCount);
+        vm.deal(from, amount);
+        vm.prank(from);
+        csm.addNodeOperatorETH{ value: amount }(
+            keysCount,
             keys,
             signatures,
             address(0),
@@ -85,7 +88,10 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
             new bytes32[](0),
             address(0)
         );
+        return csm.getNodeOperatorsCount() - 1;
+    }
 
+    function hugeDeposit() internal {
         IACL acl = IACL(IKernel(lido.kernel()).acl());
         bytes32 role = lido.STAKING_CONTROL_ROLE();
         vm.prank(acl.getPermissionManager(address(lido), role));
@@ -99,22 +105,207 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         vm.prank(whale);
         vm.deal(whale, 1e7 ether);
         lido.submit{ value: 1e7 ether }(address(0));
+    }
+
+    function test_connectCSMToRouter() public {
+        IStakingRouter.StakingModule memory module = stakingRouter
+            .getStakingModule(moduleId);
+        assertTrue(module.stakingModuleAddress == address(csm));
+    }
+
+    function test_RouterDeposit() public {
+        address nodeOperatorManager = nextAddress();
+        uint256 noId = addNodeOperator(nodeOperatorManager, 2);
+
+        hugeDeposit();
 
         vm.prank(locator.depositSecurityModule());
         lido.deposit(1, moduleId, "");
         (, , , , , , uint256 totalDepositedValidators, ) = csm
-            .getNodeOperatorSummary(0);
+            .getNodeOperatorSummary(noId);
         assertEq(totalDepositedValidators, 1);
     }
 
     function test_routerReportRewardsMinted() public {
+        uint256 prevShares = lido.sharesOf(address(feeDistributor));
+
+        uint256 ethToStake = 1 ether;
+        address dummy = nextAddress();
+        vm.startPrank(dummy);
+        vm.deal(dummy, ethToStake);
+        uint256 rewardsShares = lido.submit{ value: ethToStake }(address(0));
+        lido.transferShares(address(csm), rewardsShares);
+        vm.stopPrank();
+
         uint256[] memory moduleIds = new uint256[](1);
         uint256[] memory rewards = new uint256[](1);
-
         moduleIds[0] = moduleId;
-        rewards[0] = 100;
+        rewards[0] = rewardsShares;
+
         vm.prank(agent);
-        vm.expectCall(address(csm), abi.encodeCall(csm.onRewardsMinted, (100)));
+        vm.expectCall(
+            address(csm),
+            abi.encodeCall(csm.onRewardsMinted, (rewardsShares))
+        );
         stakingRouter.reportRewardsMinted(moduleIds, rewards);
+
+        assertEq(lido.sharesOf(address(csm)), 0);
+        assertEq(
+            lido.sharesOf(address(feeDistributor)),
+            prevShares + rewardsShares
+        );
+    }
+
+    function test_updateTargetValidatorsLimits() public {
+        // fails when tested against mainnet due to SR inteface missmatch
+        vm.skip(true);
+        address nodeOperatorManager = nextAddress();
+        uint256 noId = addNodeOperator(nodeOperatorManager, 5);
+
+        vm.prank(agent);
+        stakingRouter.updateTargetValidatorsLimits(moduleId, noId, 1, 2);
+
+        (uint8 targetLimitMode, uint256 targetValidatorsCount, , , , , , ) = csm
+            .getNodeOperatorSummary(noId);
+        assertEq(targetLimitMode, 1);
+        assertEq(targetValidatorsCount, 1);
+    }
+
+    function test_updateRefundedValidatorsCount() public {
+        address nodeOperatorManager = nextAddress();
+        uint256 noId = addNodeOperator(nodeOperatorManager, 5);
+
+        vm.prank(agent);
+        stakingRouter.updateRefundedValidatorsCount(moduleId, noId, 1);
+
+        (, , , uint256 refundedValidatorsCount, , , , ) = csm
+            .getNodeOperatorSummary(noId);
+        assertEq(refundedValidatorsCount, 1);
+    }
+
+    function test_reportStakingModuleExitedValidatorsCountByNodeOperator()
+        public
+    {
+        address nodeOperatorManager = nextAddress();
+        uint256 noId = addNodeOperator(nodeOperatorManager, 5);
+
+        hugeDeposit();
+
+        vm.prank(locator.depositSecurityModule());
+        lido.deposit(3, moduleId, "");
+
+        uint256 exited = 1;
+        vm.prank(agent);
+        stakingRouter.reportStakingModuleExitedValidatorsCountByNodeOperator(
+            moduleId,
+            bytes.concat(bytes8(uint64(noId))),
+            bytes.concat(bytes16(uint128(exited)))
+        );
+
+        (, , , , , uint256 totalExitedValidators, , ) = csm
+            .getNodeOperatorSummary(noId);
+        assertEq(totalExitedValidators, exited);
+    }
+
+    function test_reportStakingModuleStuckValidatorsCountByNodeOperator()
+        public
+    {
+        address nodeOperatorManager = nextAddress();
+        uint256 noId = addNodeOperator(nodeOperatorManager, 5);
+
+        hugeDeposit();
+
+        vm.prank(locator.depositSecurityModule());
+        lido.deposit(3, moduleId, "");
+
+        uint256 stuck = 1;
+        vm.prank(agent);
+        stakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator(
+            moduleId,
+            bytes.concat(bytes8(uint64(noId))),
+            bytes.concat(bytes16(uint128(stuck)))
+        );
+
+        (, , uint256 stuckValidatorsCount, , , , , ) = csm
+            .getNodeOperatorSummary(noId);
+        assertEq(stuckValidatorsCount, stuck);
+    }
+
+    function test_getStakingModuleSummary() public {
+        IStakingRouter.StakingModuleSummary memory summaryOld = stakingRouter
+            .getStakingModuleSummary(moduleId);
+
+        address nodeOperatorManager = nextAddress();
+        uint256 keysCount = 5;
+        uint256 noId = addNodeOperator(nodeOperatorManager, keysCount);
+
+        hugeDeposit();
+
+        uint256 keysToDeposit = 3;
+        vm.prank(locator.depositSecurityModule());
+        lido.deposit(keysToDeposit, moduleId, "");
+
+        uint256 exited = 1;
+        vm.prank(agent);
+        stakingRouter.reportStakingModuleExitedValidatorsCountByNodeOperator(
+            moduleId,
+            bytes.concat(bytes8(uint64(noId))),
+            bytes.concat(bytes16(uint128(exited)))
+        );
+
+        IStakingRouter.StakingModuleSummary memory summary = stakingRouter
+            .getStakingModuleSummary(moduleId);
+        assertEq(
+            summary.totalExitedValidators,
+            summaryOld.totalExitedValidators + exited
+        );
+        assertEq(
+            summary.totalDepositedValidators,
+            summaryOld.totalDepositedValidators + keysToDeposit
+        );
+        assertEq(
+            summary.depositableValidatorsCount,
+            summaryOld.depositableValidatorsCount + keysCount - keysToDeposit
+        );
+    }
+
+    function test_getNodeOperatorSummary() public {
+        address nodeOperatorManager = nextAddress();
+        uint256 keysCount = 5;
+        uint256 noId = addNodeOperator(nodeOperatorManager, keysCount);
+
+        hugeDeposit();
+
+        uint256 keysToDeposit = 3;
+        vm.prank(locator.depositSecurityModule());
+        lido.deposit(keysToDeposit, moduleId, "");
+
+        uint256 exited = 1;
+        vm.prank(agent);
+        stakingRouter.reportStakingModuleExitedValidatorsCountByNodeOperator(
+            moduleId,
+            bytes.concat(bytes8(uint64(noId))),
+            bytes.concat(bytes16(uint128(exited)))
+        );
+
+        uint256 stuck = 1;
+        vm.prank(agent);
+        stakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator(
+            moduleId,
+            bytes.concat(bytes8(uint64(noId))),
+            bytes.concat(bytes16(uint128(stuck)))
+        );
+
+        IStakingRouter.NodeOperatorSummary memory summary = stakingRouter
+            .getNodeOperatorSummary(moduleId, noId);
+        // TODO: Uncomment. Commented due to interface mismatch
+        // assertEq(summary.isTargetLimitActive, 0);
+        // assertEq(summary.targetValidatorsCount, 0);
+        assertEq(summary.stuckValidatorsCount, stuck);
+        assertEq(summary.refundedValidatorsCount, 0);
+        assertEq(summary.stuckPenaltyEndTimestamp, 0);
+        assertEq(summary.totalExitedValidators, exited);
+        assertEq(summary.totalDepositedValidators, keysToDeposit);
+        assertEq(summary.depositableValidatorsCount, 0); // due to stuck != 0
     }
 }

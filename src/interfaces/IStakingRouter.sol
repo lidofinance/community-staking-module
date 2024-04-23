@@ -415,7 +415,7 @@ interface IStakingRouter {
     function updateTargetValidatorsLimits(
         uint256 _stakingModuleId,
         uint256 _nodeOperatorId,
-        bool _isTargetLimitActive,
+        uint8 _targetLimitMode,
         uint256 _targetLimit
     ) external;
 
