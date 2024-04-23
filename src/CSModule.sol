@@ -109,6 +109,10 @@ contract CSModule is
         uint256 indexed nodeOperatorId,
         uint256 stuckKeysCount
     );
+    event RefundedKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 refundedKeysCount
+    );
     event TargetValidatorsCountChanged(
         // TODO: think about better name
         uint256 indexed nodeOperatorId,
@@ -1091,10 +1095,12 @@ contract CSModule is
     /// @param nodeOperatorId ID of the node operator
     function updateRefundedValidatorsCount(
         uint256 nodeOperatorId,
-        uint256 /* refundedValidatorsCount */
+        uint256 refundedValidatorsCount
     ) external onlyRole(STAKING_ROUTER_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
-        // TODO: implement
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        no.refundedValidatorsCount = refundedValidatorsCount;
+        emit RefundedKeysCountChanged(nodeOperatorId, refundedValidatorsCount);
         _incrementModuleNonce();
     }
 
