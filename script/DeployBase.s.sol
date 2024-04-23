@@ -28,6 +28,7 @@ abstract contract DeployBase is Script {
     uint256 immutable VERIFIER_SUPPORTED_EPOCH;
     uint256 immutable INITIALIZATION_EPOCH;
     address immutable LIDO_LOCATOR_ADDRESS;
+    uint256 immutable ORACLE_REPORT_EPOCHS_PER_FRAME;
 
     ILidoLocator private locator;
 
@@ -50,7 +51,8 @@ abstract contract DeployBase is Script {
         uint256 clGenesisTime,
         uint256 verifierSupportedEpoch,
         uint256 initializationEpoch,
-        address lidoLocatorAddress
+        address lidoLocatorAddress,
+        uint256 oracleReportEpochsPerFrame
     ) {
         NAME = name;
         CHAIN_ID = chainId;
@@ -59,11 +61,12 @@ abstract contract DeployBase is Script {
         CL_GENESIS_TIME = clGenesisTime;
         VERIFIER_SUPPORTED_EPOCH = verifierSupportedEpoch;
         INITIALIZATION_EPOCH = initializationEpoch;
+
         LIDO_LOCATOR_ADDRESS = lidoLocatorAddress;
-
         vm.label(LIDO_LOCATOR_ADDRESS, "LIDO_LOCATOR");
-
         locator = ILidoLocator(LIDO_LOCATOR_ADDRESS);
+
+        ORACLE_REPORT_EPOCHS_PER_FRAME = oracleReportEpochsPerFrame;
     }
 
     function run() external {
@@ -86,7 +89,7 @@ abstract contract DeployBase is Script {
             curve[1] = 4 ether;
 
             CSModule csmImpl = new CSModule({
-                moduleType: "community-staking-module",
+                moduleType: "community-onchain-v1",
                 elStealingFine: 0.1 ether,
                 maxKeysPerOperatorEA: 10,
                 lidoLocator: LIDO_LOCATOR_ADDRESS
@@ -133,6 +136,10 @@ abstract contract DeployBase is Script {
 
             csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(deployer));
             csm.activatePublicRelease();
+
+            csm.grantRole(csm.PAUSE_ROLE(), address(deployer));
+            csm.pauseFor(UINT256_MAX);
+            csm.revokeRole(csm.PAUSE_ROLE(), address(deployer));
             // TODO: deploy early adoption contract
 
             feeDistributor.grantRole(
@@ -153,7 +160,7 @@ abstract contract DeployBase is Script {
                 slotsPerEpoch: SLOTS_PER_EPOCH,
                 secondsPerSlot: SECONDS_PER_SLOT,
                 genesisTime: CL_GENESIS_TIME,
-                epochsPerFrame: 225 * 28, // 28 days
+                epochsPerFrame: ORACLE_REPORT_EPOCHS_PER_FRAME,
                 fastLaneLengthSlots: 0,
                 admin: deployer,
                 reportProcessor: address(oracle)
