@@ -34,7 +34,7 @@ interface ILidoLocator {
 
     function postTokenRebaseReceiver() external view returns (address);
 
-    function stakingRouter() external view returns (address);
+    function stakingRouter() external view returns (address payable);
 
     function treasury() external view returns (address);
 

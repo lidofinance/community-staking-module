@@ -5,11 +5,11 @@ pragma solidity 0.8.24;
 
 import { DeployBase } from "./DeployBase.s.sol";
 
-contract DeployHolesky is DeployBase {
+contract DeployHoleskyDevnet is DeployBase {
     constructor()
         DeployBase(
             // name
-            "holesky",
+            "holesky-devnet",
             // chainId
             17000,
             // secondsPerSlot
@@ -23,7 +23,7 @@ contract DeployHolesky is DeployBase {
             // initializationEpoch
             8888,
             // lidoLocatorAddress
-            0x28FAB2059C713A7F9D8c86Db49f9bb0e96Af1ef8
+            0x5bF85BadDac33F91B38617c18a3F829f912Ca060
         )
     {}
 }
