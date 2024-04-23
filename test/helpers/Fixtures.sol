@@ -10,6 +10,17 @@ import { BurnerMock } from "./mocks/BurnerMock.sol";
 import { WithdrawalQueueMock } from "./mocks/WithdrawalQueueMock.sol";
 import { Stub } from "./mocks/Stub.sol";
 import "forge-std/Test.sol";
+import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
+import { ILido } from "../../src/interfaces/ILido.sol";
+import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
+import { IWstETH } from "../../src/interfaces/IWstETH.sol";
+import { HashConsensus } from "../../lib/base-oracle/oracle/HashConsensus.sol";
+import { IWithdrawalQueue } from "../../src/interfaces/IWithdrawalQueue.sol";
+import { CSModule } from "../../src/CSModule.sol";
+import { CSAccounting } from "../../src/CSAccounting.sol";
+import { CSFeeOracle } from "../../src/CSFeeOracle.sol";
+import { CSFeeDistributor } from "../../src/CSFeeDistributor.sol";
+import { CSVerifier } from "../../src/CSVerifier.sol";
 
 contract Fixtures is StdCheats, Test {
     function initLido()
@@ -48,22 +59,100 @@ contract Fixtures is StdCheats, Test {
     }
 }
 
-contract IntegrationFixtures is StdCheats, Test {
+contract DeploymentFixtures is StdCheats, Test {
+    CSModule public csm;
+    CSAccounting public accounting;
+    CSFeeOracle public oracle;
+    CSFeeDistributor public feeDistributor;
+    CSVerifier public verifier;
+    HashConsensus public hashConsensus;
+    ILidoLocator public locator;
+    IWstETH public wstETH;
+    IStakingRouter public stakingRouter;
+    ILido public lido;
+
     struct Env {
         string RPC_URL;
+        string DEPLOY_CONFIG;
     }
 
-    address internal immutable LOCATOR_ADDRESS =
-        0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb;
-    address internal immutable WSTETH_ADDRESS =
-        0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-    address internal immutable ARAGON_VOTING_ADDRESS =
-        0x2e59A20f205bB85a89C53f1936454680651E618e;
+    struct DeploymentConfig {
+        uint256 chainId;
+        address csm;
+        address accounting;
+        address oracle;
+        address feeDistributor;
+        address verifier;
+        address hashConsensus;
+        address lidoLocator;
+    }
 
     function envVars() public returns (Env memory) {
-        Env memory env = Env(vm.envOr("RPC_URL", string("")));
+        Env memory env = Env(
+            vm.envOr("RPC_URL", string("")),
+            vm.envOr("DEPLOY_CONFIG", string(""))
+        );
         vm.skip(_isEmpty(env.RPC_URL));
+        vm.skip(_isEmpty(env.DEPLOY_CONFIG));
         return env;
+    }
+
+    function initializeFromDeployment(string memory deployConfigPath) public {
+        string memory config = vm.readFile(deployConfigPath);
+        DeploymentConfig memory deploymentConfig = parseDeploymentConfig(
+            config
+        );
+        assertEq(deploymentConfig.chainId, block.chainid, "ChainId mismatch");
+
+        csm = CSModule(deploymentConfig.csm);
+        accounting = CSAccounting(deploymentConfig.accounting);
+        oracle = CSFeeOracle(deploymentConfig.oracle);
+        feeDistributor = CSFeeDistributor(deploymentConfig.feeDistributor);
+        verifier = CSVerifier(deploymentConfig.verifier);
+        hashConsensus = HashConsensus(deploymentConfig.hashConsensus);
+        locator = ILidoLocator(deploymentConfig.lidoLocator);
+        lido = ILido(locator.lido());
+        stakingRouter = IStakingRouter(locator.stakingRouter());
+        wstETH = IWstETH(IWithdrawalQueue(locator.withdrawalQueue()).WSTETH());
+    }
+
+    function parseDeploymentConfig(
+        string memory config
+    ) public returns (DeploymentConfig memory deploymentConfig) {
+        deploymentConfig.chainId = vm.parseJsonUint(config, ".ChainId");
+
+        deploymentConfig.csm = vm.parseJsonAddress(config, ".CSModule");
+        vm.label(deploymentConfig.csm, "csm");
+
+        deploymentConfig.accounting = vm.parseJsonAddress(
+            config,
+            ".CSAccounting"
+        );
+        vm.label(deploymentConfig.accounting, "accounting");
+
+        deploymentConfig.oracle = vm.parseJsonAddress(config, ".CSFeeOracle");
+        vm.label(deploymentConfig.oracle, "oracle");
+
+        deploymentConfig.feeDistributor = vm.parseJsonAddress(
+            config,
+            ".CSFeeDistributor"
+        );
+        vm.label(deploymentConfig.feeDistributor, "feeDistributor");
+
+        deploymentConfig.verifier = vm.parseJsonAddress(config, ".CSVerifier");
+        vm.label(deploymentConfig.verifier, "verifier");
+
+        deploymentConfig.hashConsensus = vm.parseJsonAddress(
+            config,
+            ".HashConsensus"
+        );
+        vm.label(deploymentConfig.hashConsensus, "hashConsensus");
+
+        deploymentConfig.lidoLocator = vm.parseJsonAddress(
+            config,
+            ".LidoLocator"
+        );
+        vm.label(deploymentConfig.lidoLocator, "LidoLocator");
     }
 
     function _isEmpty(string memory s) internal pure returns (bool) {

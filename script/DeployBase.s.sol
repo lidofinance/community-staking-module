@@ -20,7 +20,7 @@ import { pack } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 
 abstract contract DeployBase is Script {
-    // TODO: some contracts of the module probably should be deployed behind a proxy
+    string NAME;
     uint256 immutable CHAIN_ID;
     uint256 immutable SECONDS_PER_SLOT;
     uint256 immutable SLOTS_PER_EPOCH;
@@ -37,10 +37,13 @@ abstract contract DeployBase is Script {
     CSAccounting public accounting;
     CSFeeOracle public oracle;
     CSFeeDistributor public feeDistributor;
+    CSVerifier public verifier;
+    HashConsensus public hashConsensus;
 
     error ChainIdMismatch(uint256 actual, uint256 expected);
 
     constructor(
+        string memory name,
         uint256 chainId,
         uint256 secondsPerSlot,
         uint256 slotsPerEpoch,
@@ -49,6 +52,7 @@ abstract contract DeployBase is Script {
         uint256 initializationEpoch,
         address lidoLocatorAddress
     ) {
+        NAME = name;
         CHAIN_ID = chainId;
         SECONDS_PER_SLOT = secondsPerSlot;
         SLOTS_PER_EPOCH = slotsPerEpoch;
@@ -145,7 +149,7 @@ abstract contract DeployBase is Script {
                 address(csm)
             );
 
-            HashConsensus hashConsensus = new HashConsensus({
+            hashConsensus = new HashConsensus({
                 slotsPerEpoch: SLOTS_PER_EPOCH,
                 secondsPerSlot: SECONDS_PER_SLOT,
                 genesisTime: CL_GENESIS_TIME,
@@ -164,7 +168,7 @@ abstract contract DeployBase is Script {
                 lastProcessingRefSlot: _refSlotFromEpoch(INITIALIZATION_EPOCH)
             });
 
-            CSVerifier verifier = new CSVerifier({
+            verifier = new CSVerifier({
                 slotsPerEpoch: uint64(SLOTS_PER_EPOCH),
                 // NOTE: Deneb fork gIndexes. Should be updated according to `VERIFIER_SUPPORTED_EPOCH` fork epoch if needed
                 gIHistoricalSummaries: pack(0x3b, 5),
@@ -177,14 +181,22 @@ abstract contract DeployBase is Script {
             verifier.initialize(address(locator), address(csm));
             csm.grantRole(csm.VERIFIER_ROLE(), address(verifier));
 
+            csm.grantRole(
+                csm.STAKING_ROUTER_ROLE(),
+                address(locator.stakingRouter())
+            );
+
             JsonObj memory deployJson = Json.newObj();
+            deployJson.set("ChainId", CHAIN_ID);
             deployJson.set("CSModule", address(csm));
             deployJson.set("CSAccounting", address(accounting));
             deployJson.set("CSFeeOracle", address(oracle));
             deployJson.set("CSFeeDistributor", address(feeDistributor));
             deployJson.set("HashConsensus", address(hashConsensus));
             deployJson.set("CSVerifier", address(verifier));
+            deployJson.set("LidoLocator", LIDO_LOCATOR_ADDRESS);
             vm.writeJson(deployJson.str, _deployJsonFilename());
+            vm.writeJson(deployJson.str, "./out/latest.json");
         }
 
         vm.stopBroadcast();
@@ -213,23 +225,6 @@ abstract contract DeployBase is Script {
     }
 
     function _deployJsonFilename() internal view returns (string memory) {
-        return
-            string(
-                abi.encodePacked(
-                    "./out/",
-                    "deploy-",
-                    _deployJsonSuffix(),
-                    ".json"
-                )
-            );
-    }
-
-    function _deployJsonSuffix() internal view returns (string memory) {
-        // prettier-ignore
-        return
-            block.chainid == 17000 ? "holesky" :
-            block.chainid == 1 ? "mainnet" :
-            block.chainid == 5 ? "goerli" :
-            /* default: */ "unknown";
+        return string(abi.encodePacked("./out/", "deploy-", NAME, ".json"));
     }
 }

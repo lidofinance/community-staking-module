@@ -27,8 +27,9 @@ gas_reports = [
 ]
 
 fs_permissions = [
-    { access = "write", path = "./out" },
-    { access = "read", path = "./test/fixtures" }
+    { access = "read-write", path = "./out" },
+    { access = "read", path = "./test/fixtures" },
+    { access = "read", path = "./configs" }
 ]
 
 [profile.ci]

@@ -34,10 +34,15 @@ just
 - Run tests
 
 ```bash
-just test # run all tests
+just test-all # run all tests that possible to run without additional configurations
 # or run specific tests
 just test-unit
-just test-integration
+# deploy CSM to local fork and run integration tests over it
+just test-local
+
+# run integration tests with specific deployment config
+# make sure that corresponding RPC_URL is set
+DEPLOYMENT_CONFIG=./config/holesky-devnet-0/deploy-holesky-devnet.json just test-integration
 ```
 
 - Make a gas report

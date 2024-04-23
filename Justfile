@@ -5,8 +5,8 @@ deploy_script_path := if chain == "mainnet" {
     "script" / "DeployMainnetish.s.sol" + ":DeployMainnetish"
 } else if chain == "holesky" {
     "script" / "DeployHolesky.s.sol" + ":DeployHolesky"
-} else if chain == "goerli" {
-    "script" / "DeployGoerli.s.sol" + ":DeployGoerli"
+} else if chain == "devnet" {
+    "script" / "DeployHoleskyDevnet.s.sol" + ":DeployHoleskyDevnet"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -37,10 +37,7 @@ lint:
 
 test-all:
     just test-unit &
-    just test-integration
-
-test *args:
-    forge test {{args}}
+    just test-local
 
 test-unit *args:
     forge test --no-match-path '*test/integration*' -vvv {{args}}
@@ -54,7 +51,7 @@ gas-report:
     import subprocess
     import re
 
-    command = "forge test --nmt 'testFuzz_\\w{1,}?' --nmp '*test/integration*'  --gas-report"
+    command = "just test-unit --nmt 'testFuzz.+' --gas-report"
     output = subprocess.check_output(command, shell=True, text=True)
 
     lines = output.split('\n')
@@ -112,6 +109,16 @@ deploy-local:
     @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
     just deploy
     @if ${KEEP_ANVIL_AFTER_LOCAL_DEPLOY}; then just _warn "anvil is kept running in the background: http://{{anvil_host}}:{{anvil_port}}"; else just kill-fork; fi
+
+test-local *args:
+    just make-fork --silent &
+    @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
+    DEPLOYER_PRIVATE_KEY=`cat localhost.json | jq -r ".private_keys[0]"` \
+        just deploy
+    DEPLOY_CONFIG=./out/latest.json \
+    RPC_URL=http://{{anvil_host}}:{{anvil_port}} \
+        just test-integration {{args}}
+    just kill-fork
 
 _warn message:
     @tput setaf 3 && printf "[WARNING]" && tput sgr0 && echo " {{message}}"

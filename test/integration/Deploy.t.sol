@@ -2,31 +2,31 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
-import { Test } from "forge-std/Test.sol";
-import { DeployMainnetish } from "../../script/DeployMainnetish.s.sol";
 import "../../src/CSModule.sol";
+import "../../src/CSAccounting.sol";
+import "../../src/CSFeeOracle.sol";
+import "../../src/CSFeeDistributor.sol";
+import "../../src/CSVerifier.sol";
+import { HashConsensus } from "../../lib/base-oracle/oracle/HashConsensus.sol";
+import { Test } from "forge-std/Test.sol";
+import { DeployBase } from "../../script/DeployBase.s.sol";
+import { DeployMainnetish } from "../../script/DeployMainnetish.s.sol";
+import { DeployHolesky } from "../../script/DeployHolesky.s.sol";
+import { DeployHoleskyDevnet } from "../../script/DeployHoleskyDevnet.s.sol";
 import { Vm } from "forge-std/Vm.sol";
 import "../helpers/Fixtures.sol";
 
-contract TestDeployMainnet is Test, IntegrationFixtures {
-    DeployMainnetish public script;
-    uint256 public networkFork;
-
+contract TestDeployment is Test, DeploymentFixtures {
     function setUp() public {
         Env memory env = envVars();
-
-        networkFork = vm.createFork(env.RPC_URL);
-        vm.selectFork(networkFork);
-
-        script = new DeployMainnetish();
-        vm.chainId(1);
-        Vm.Wallet memory wallet = vm.createWallet("deployer");
-        vm.setEnv("DEPLOYER_PRIVATE_KEY", vm.toString(wallet.privateKey));
+        vm.createSelectFork(env.RPC_URL);
+        initializeFromDeployment(env.DEPLOY_CONFIG);
     }
 
-    function test_run() public {
-        script.run();
-        CSModule csm = CSModule(script.csm());
-        assertEq(address(csm.accounting()), address(script.accounting()));
+    function test_init() public {
+        assertEq(csm.getType(), "community-staking-module");
+        assertEq(address(csm.accounting()), address(accounting));
+        assertEq(address(accounting.feeDistributor()), address(feeDistributor));
+        assertEq(feeDistributor.ACCOUNTING(), address(accounting));
     }
 }

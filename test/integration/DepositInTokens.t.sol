@@ -13,23 +13,15 @@ import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 import { ICSAccounting } from "../../src/interfaces/ICSAccounting.sol";
 import { Utilities } from "../helpers/Utilities.sol";
 import { PermitHelper } from "../helpers/Permit.sol";
-import { IntegrationFixtures } from "../helpers/Fixtures.sol";
+import { DeploymentFixtures } from "../helpers/Fixtures.sol";
 import { CommunityStakingModuleMock } from "../helpers/mocks/CommunityStakingModuleMock.sol";
 
 contract DepositIntegrationTest is
     Test,
     Utilities,
     PermitHelper,
-    IntegrationFixtures
+    DeploymentFixtures
 {
-    uint256 networkFork;
-
-    CSModule public csm;
-    CSAccounting public accounting;
-    ILidoLocator public locator;
-    IWstETH public wstETH;
-
-    address internal agent;
     address internal user;
     address internal stranger;
     uint256 internal userPrivateKey;
@@ -37,45 +29,13 @@ contract DepositIntegrationTest is
 
     function setUp() public {
         Env memory env = envVars();
-
-        networkFork = vm.createFork(env.RPC_URL);
-        vm.selectFork(networkFork);
-        checkChainId(1);
-
-        locator = ILidoLocator(LOCATOR_ADDRESS);
-        csm = new CSModule({
-            moduleType: "community-staking-module",
-            elStealingFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10,
-            lidoLocator: address(locator)
-        });
-        wstETH = IWstETH(WSTETH_ADDRESS);
+        vm.createSelectFork(env.RPC_URL);
+        initializeFromDeployment(env.DEPLOY_CONFIG);
 
         userPrivateKey = 0xa11ce;
         user = vm.addr(userPrivateKey);
         strangerPrivateKey = 0x517a4637;
         stranger = vm.addr(strangerPrivateKey);
-
-        uint256[] memory curve = new uint256[](2);
-        curve[0] = 2 ether;
-        curve[1] = 4 ether;
-        accounting = new CSAccounting(address(locator), address(csm));
-        accounting.initialize(
-            curve,
-            user,
-            address(1337),
-            8 weeks,
-            locator.treasury()
-        );
-
-        csm.initialize({
-            _accounting: address(accounting),
-            _earlyAdoption: address(0),
-            admin: address(this)
-        });
-
-        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
-        csm.activatePublicRelease();
 
         (bytes memory keys, bytes memory signatures) = keysSignatures(2);
         address nodeOperator = address(2);
@@ -125,7 +85,7 @@ contract DepositIntegrationTest is
 
         uint256 preShares = accounting.getBondShares(0);
 
-        uint256 shares = ILido(locator.lido()).getSharesByPooledEth(32 ether);
+        uint256 shares = lido.getSharesByPooledEth(32 ether);
         csm.depositETH{ value: 32 ether }(0);
 
         assertEq(user.balance, 0);
