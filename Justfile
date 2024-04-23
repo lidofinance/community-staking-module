@@ -43,7 +43,7 @@ test-unit *args:
     forge test --no-match-path '*test/integration*' -vvv {{args}}
 
 test-integration *args:
-    forge test --match-path '*test/integration*' -vvv {{args}}
+    forge test --match-path '*test/integration*' -vvvv {{args}}
 
 gas-report:
     #!/usr/bin/env python

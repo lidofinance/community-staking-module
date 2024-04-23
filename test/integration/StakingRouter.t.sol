@@ -18,6 +18,7 @@ import { IACL } from "../../src/interfaces/IACL.sol";
 
 contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
     address internal agent;
+    uint256 internal moduleId;
 
     function setUp() public {
         Env memory env = envVars();
@@ -43,6 +44,12 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
             agent
         );
         vm.stopPrank();
+
+        if (env.MODULE_ID == 0) {
+            moduleId = addCsmModule();
+        } else {
+            moduleId = env.MODULE_ID;
+        }
     }
 
     function addCsmModule() public returns (uint256) {
@@ -59,14 +66,12 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_connectCSMToRouter() public {
-        uint256 moduleId = addCsmModule();
         IStakingRouter.StakingModule memory module = stakingRouter
             .getStakingModule(moduleId);
         assertTrue(module.stakingModuleAddress == address(csm));
     }
 
     function test_RouterDeposit() public {
-        uint256 moduleId = addCsmModule();
         (bytes memory keys, bytes memory signatures) = keysSignatures(2);
         address nodeOperator = address(2);
         vm.deal(nodeOperator, 4 ether);
@@ -103,7 +108,6 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_routerReportRewardsMinted() public {
-        uint256 moduleId = addCsmModule();
         uint256[] memory moduleIds = new uint256[](1);
         uint256[] memory rewards = new uint256[](1);
 
