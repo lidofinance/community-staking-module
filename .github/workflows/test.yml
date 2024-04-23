@@ -7,6 +7,7 @@ on:
 
 env:
   FOUNDRY_PROFILE: ci
+  TERM: ansi
 
 jobs:
   security:
