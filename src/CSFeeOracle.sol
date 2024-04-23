@@ -48,6 +48,9 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
     uint256 internal constant MAX_BP = 10000;
 
     ICSFeeDistributor public feeDistributor;
+
+    /// @notice Threshold in basis points used to determine the underperforming validators (by comparing with the
+    /// network average).
     uint256 public perfThresholdBP;
 
     /// @dev Emitted when a new fee distributor contract is set
