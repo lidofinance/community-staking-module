@@ -23,7 +23,9 @@ contract DeployMainnetish is DeployBase {
             // initializationEpoch
             239853,
             // lidoLocatorAddress
-            0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb
+            0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb,
+            // oracleReportEpochsPerFrame
+            225 * 28 // 28 days
         )
     {}
 }

@@ -24,6 +24,11 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment(env.DEPLOY_CONFIG);
 
+        vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
+        csm.grantRole(csm.RESUME_ROLE(), address(this));
+        vm.stopPrank();
+        csm.resume();
+
         agent = stakingRouter.getRoleMember(
             stakingRouter.DEFAULT_ADMIN_ROLE(),
             0

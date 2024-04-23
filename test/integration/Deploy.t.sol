@@ -21,10 +21,15 @@ contract TestDeployment is Test, DeploymentFixtures {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment(env.DEPLOY_CONFIG);
+
+        vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
+        csm.grantRole(csm.RESUME_ROLE(), address(this));
+        vm.stopPrank();
+        csm.resume();
     }
 
     function test_init() public {
-        assertEq(csm.getType(), "community-staking-module");
+        assertEq(csm.getType(), "community-onchain-v1");
         assertEq(address(csm.accounting()), address(accounting));
         assertEq(address(accounting.feeDistributor()), address(feeDistributor));
         assertEq(feeDistributor.ACCOUNTING(), address(accounting));

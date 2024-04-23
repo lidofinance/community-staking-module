@@ -17,13 +17,15 @@ contract DeployHoleskyDevnet is DeployBase {
             // slotsPerEpoch
             32,
             // clGenesisTime
-            1695902100,
+            1695902400,
             // Verifier supported epoch. Deneb fork epoch so far
             29696,
             // initializationEpoch
             8888,
             // lidoLocatorAddress
-            0x5bF85BadDac33F91B38617c18a3F829f912Ca060
+            0x5bF85BadDac33F91B38617c18a3F829f912Ca060,
+            // oracleReportEpochsPerFrame
+            225 // 1 days
         )
     {}
 }
