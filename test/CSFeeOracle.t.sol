@@ -43,6 +43,7 @@ contract CSFeeOracleTest is Test, Utilities {
 
     uint256 internal constant CONSENSUS_VERSION = 1;
     uint256 internal constant INITIAL_EPOCH = 17;
+    uint256 internal constant PERF_THRESHOLD = 9500;
 
     CSFeeOracleForTest public oracle;
     HashConsensus public consensus;
@@ -413,7 +414,8 @@ contract CSFeeOracleTest is Test, Utilities {
             address(distributor),
             address(consensus),
             CONSENSUS_VERSION,
-            154
+            154,
+            PERF_THRESHOLD
         );
     }
 
@@ -425,10 +427,14 @@ contract CSFeeOracleTest is Test, Utilities {
             _setInitialEpoch();
         }
 
+        address newDistributor = nextAddress();
+
         vm.expectEmit(true, true, true, true, address(oracle));
-        emit CSFeeOracle.FeeDistributorContractSet(address(1));
+        emit CSFeeOracle.FeeDistributorContractSet(newDistributor);
         vm.prank(ORACLE_ADMIN);
-        oracle.setFeeDistributorContract(address(1));
+        oracle.setFeeDistributorContract(newDistributor);
+
+        assertEq(address(oracle.feeDistributor()), newDistributor);
     }
 
     function test_setFeeDistributorContract_RevertWhen_AddressCannotBeZero()
@@ -444,6 +450,37 @@ contract CSFeeOracleTest is Test, Utilities {
         vm.expectRevert(BaseOracle.AddressCannotBeZero.selector);
         vm.prank(ORACLE_ADMIN);
         oracle.setFeeDistributorContract(address(0));
+    }
+
+    function test_setPerformanceThreshold() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+        }
+
+        uint256 newThreshold = 4200;
+
+        vm.expectEmit(true, true, true, true, address(oracle));
+        emit CSFeeOracle.PerformanceThresholdSet(newThreshold);
+        vm.prank(ORACLE_ADMIN);
+        oracle.setPerformanceThreshold(newThreshold);
+
+        assertEq(oracle.perfThresholdBP(), newThreshold);
+    }
+
+    function test_setPerformanceThreshold_RevertsWhenInvalidBP() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+        }
+
+        vm.expectRevert(CSFeeOracle.InvalidPerfThreshold.selector);
+        vm.prank(ORACLE_ADMIN);
+        oracle.setPerformanceThreshold(99999);
     }
 
     function test_reportFrame() public {
@@ -505,7 +542,8 @@ contract CSFeeOracleTest is Test, Utilities {
             address(new DistributorMock()),
             address(consensus),
             CONSENSUS_VERSION,
-            lastProcessingRefSlot
+            lastProcessingRefSlot,
+            PERF_THRESHOLD
         );
     }
 
@@ -523,7 +561,7 @@ contract CSFeeOracleTest is Test, Utilities {
             oracle.grantRole(oracle.MANAGE_CONSENSUS_VERSION_ROLE(), ORACLE_ADMIN);
             oracle.grantRole(oracle.PAUSE_ROLE(), ORACLE_ADMIN);
             oracle.grantRole(oracle.RESUME_ROLE(), ORACLE_ADMIN);
-            oracle.grantRole(oracle.MANAGE_FEE_DISTRIBUTOR_CONTRACT_ROLE(), ORACLE_ADMIN);
+            oracle.grantRole(oracle.CONTRACT_MANAGER_ROLE(), ORACLE_ADMIN);
         }
         vm.stopPrank();
     }
