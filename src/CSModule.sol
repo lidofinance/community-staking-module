@@ -267,8 +267,6 @@ contract CSModule is
         bytes32[] calldata eaProof,
         address referrer
     ) external payable whenResumed {
-        // TODO: sanity checks
-
         uint256 nodeOperatorId = _createNodeOperator(
             managerAddress,
             rewardAddress,
@@ -318,8 +316,6 @@ contract CSModule is
         bytes32[] calldata eaProof,
         address referrer
     ) external whenResumed {
-        // TODO: sanity checks
-
         uint256 nodeOperatorId = _createNodeOperator(
             managerAddress,
             rewardAddress,
@@ -367,8 +363,6 @@ contract CSModule is
         bytes32[] calldata eaProof,
         address referrer
     ) external whenResumed {
-        // TODO: sanity checks
-
         uint256 nodeOperatorId = _createNodeOperator(
             managerAddress,
             rewardAddress,
@@ -414,10 +408,6 @@ contract CSModule is
         bytes calldata signatures
     ) external payable whenResumed {
         _onlyExistingNodeOperator(nodeOperatorId);
-        // TODO: sanity checks
-
-        // TODO: use one code style: modifiers or guardians
-        // TODO: use underscore for internal methods: _onlyNodeOperatorManager
         _onlyNodeOperatorManager(nodeOperatorId);
 
         if (
@@ -454,7 +444,6 @@ contract CSModule is
         ICSAccounting.PermitInput calldata permit
     ) external whenResumed {
         _onlyExistingNodeOperator(nodeOperatorId);
-        // TODO: sanity checks
         _onlyNodeOperatorManager(nodeOperatorId);
 
         uint256 amount = accounting.getRequiredBondForNextKeys(
@@ -489,7 +478,6 @@ contract CSModule is
         ICSAccounting.PermitInput calldata permit
     ) external whenResumed {
         _onlyExistingNodeOperator(nodeOperatorId);
-        // TODO: sanity checks
         _onlyNodeOperatorManager(nodeOperatorId);
 
         uint256 amount = accounting.getRequiredBondForNextKeysWstETH(
@@ -745,9 +733,8 @@ contract CSModule is
         uint256 nodeOperatorId
     ) external view returns (uint256) {
         _onlyExistingNodeOperator(nodeOperatorId);
-        return
-            _nodeOperators[nodeOperatorId].totalAddedKeys -
-            _nodeOperators[nodeOperatorId].totalWithdrawnKeys;
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        return no.totalAddedKeys - no.totalWithdrawnKeys;
     }
 
     /// @notice Gets node operator reward address
@@ -955,9 +942,12 @@ contract CSModule is
         }
 
         if (no.targetLimitMode > 0) {
-            uint256 activeKeys = no.totalDepositedKeys - no.totalWithdrawnKeys;
+            uint256 nonWithdrawnValidators = no.totalDepositedKeys -
+                no.totalWithdrawnKeys;
             newCount = Math.min(
-                no.targetLimit > activeKeys ? no.targetLimit - activeKeys : 0,
+                no.targetLimit > nonWithdrawnValidators
+                    ? no.targetLimit - nonWithdrawnValidators
+                    : 0,
                 newCount
             );
         }
@@ -1778,10 +1768,9 @@ contract CSModule is
     function _onlyNodeOperatorManagerOrRewardAddresses(
         uint256 nodeOperatorId
     ) internal view {
-        if (
-            _nodeOperators[nodeOperatorId].managerAddress != msg.sender &&
-            _nodeOperators[nodeOperatorId].rewardAddress != msg.sender
-        ) revert SenderIsNotEligible();
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (no.managerAddress != msg.sender && no.rewardAddress != msg.sender)
+            revert SenderIsNotEligible();
     }
 
     function _onlyExistingNodeOperator(uint256 nodeOperatorId) internal view {

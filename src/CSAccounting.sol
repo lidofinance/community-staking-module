@@ -185,7 +185,11 @@ contract CSAccounting is
     function getBondSummary(
         uint256 nodeOperatorId
     ) public view returns (uint256 current, uint256 required) {
-        return _getBondSummary(nodeOperatorId, _getActiveKeys(nodeOperatorId));
+        return
+            _getBondSummary(
+                nodeOperatorId,
+                CSM.getNodeOperatorActiveKeys(nodeOperatorId)
+            );
     }
 
     function _getBondSummary(
@@ -213,7 +217,7 @@ contract CSAccounting is
         return
             _getBondSummaryShares(
                 nodeOperatorId,
-                _getActiveKeys(nodeOperatorId)
+                CSM.getNodeOperatorActiveKeys(nodeOperatorId)
             );
     }
 
@@ -261,7 +265,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         bool accountLockedBond
     ) internal view returns (uint256) {
-        uint256 activeKeys = _getActiveKeys(nodeOperatorId);
+        uint256 activeKeys = CSM.getNodeOperatorActiveKeys(nodeOperatorId);
         /// 10 wei added to account for possible stETH rounding errors
         /// https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205
         /// Should be sufficient for ~ 40 years
@@ -292,7 +296,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 additionalKeys
     ) public view returns (uint256) {
-        uint256 activeKeys = _getActiveKeys(nodeOperatorId);
+        uint256 activeKeys = CSM.getNodeOperatorActiveKeys(nodeOperatorId);
         (uint256 current, uint256 required) = _getBondSummary(
             nodeOperatorId,
             activeKeys
@@ -447,7 +451,7 @@ contract CSAccounting is
             nodeOperatorId,
             _getExcessBondShares(
                 nodeOperatorId,
-                _getActiveKeys(nodeOperatorId)
+                CSM.getNodeOperatorActiveKeys(nodeOperatorId)
             ),
             stETHAmount,
             CSM.getNodeOperatorRewardAddress(nodeOperatorId)
@@ -473,7 +477,7 @@ contract CSAccounting is
             nodeOperatorId,
             _getExcessBondShares(
                 nodeOperatorId,
-                _getActiveKeys(nodeOperatorId)
+                CSM.getNodeOperatorActiveKeys(nodeOperatorId)
             ),
             wstETHAmount,
             CSM.getNodeOperatorRewardAddress(nodeOperatorId)
@@ -501,7 +505,7 @@ contract CSAccounting is
             nodeOperatorId,
             _getExcessBondShares(
                 nodeOperatorId,
-                _getActiveKeys(nodeOperatorId)
+                CSM.getNodeOperatorActiveKeys(nodeOperatorId)
             ),
             ethAmount,
             CSM.getNodeOperatorRewardAddress(nodeOperatorId)
@@ -591,12 +595,6 @@ contract CSAccounting is
         _onlyRecoverer();
         uint256 shares = LIDO.sharesOf(address(this)) - totalBondShares();
         AssetRecovererLib.recoverStETHShares(address(LIDO), shares);
-    }
-
-    function _getActiveKeys(
-        uint256 nodeOperatorId
-    ) internal view returns (uint256) {
-        return CSM.getNodeOperatorActiveKeys(nodeOperatorId);
     }
 
     function _pullFeeRewards(
