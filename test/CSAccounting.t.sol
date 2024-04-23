@@ -8,7 +8,7 @@ import "forge-std/Test.sol";
 import { PausableUntil } from "../lib/base-oracle/utils/PausableUntil.sol";
 
 import { IBurner } from "../src/interfaces/IBurner.sol";
-import { ICSModule } from "../src/interfaces/ICSModule.sol";
+import { ICSModule, NodeOperator } from "../src/interfaces/ICSModule.sol";
 import { IStakingModule } from "../src/interfaces/IStakingModule.sol";
 import { ICSFeeDistributor } from "../src/interfaces/ICSFeeDistributor.sol";
 import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
@@ -204,13 +204,22 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities, PermitTokenBase {
         );
     }
 
-    function mock_getNodeOperator(
-        ICSModule.NodeOperatorInfo memory returnValue
-    ) internal {
+    function mock_getNodeOperatorActiveKeys(uint256 returnValue) internal {
         vm.mockCall(
             address(stakingModule),
-            abi.encodeWithSelector(ICSModule.getNodeOperator.selector, 0),
+            abi.encodeWithSelector(
+                ICSModule.getNodeOperatorActiveKeys.selector,
+                0
+            ),
             abi.encode(returnValue)
+        );
+        vm.mockCall(
+            address(stakingModule),
+            abi.encodeWithSelector(
+                ICSModule.getNodeOperatorRewardAddress.selector,
+                0
+            ),
+            abi.encode(address(user))
         );
     }
 
@@ -381,16 +390,7 @@ abstract contract CSAccountingBondStateBaseTest is
     CSAccountingBaseTest
 {
     function _operator(uint256 ongoing, uint256 withdrawn) internal virtual {
-        ICSModule.NodeOperatorInfo memory n;
-        n.active = true;
-        n.managerAddress = address(user);
-        n.rewardAddress = address(user);
-        n.totalVettedValidators = ongoing;
-        n.totalExitedValidators = 0;
-        n.totalWithdrawnValidators = withdrawn;
-        n.totalAddedValidators = ongoing;
-        n.totalDepositedValidators = ongoing;
-        mock_getNodeOperator(n);
+        mock_getNodeOperatorActiveKeys(ongoing - withdrawn);
         mock_getNodeOperatorsCount(1);
     }
 
@@ -2784,16 +2784,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
 contract CSAccountingDepositsTest is CSAccountingBaseTest {
     function setUp() public override {
         super.setUp();
-        ICSModule.NodeOperatorInfo memory n;
-        n.active = true;
-        n.managerAddress = address(user);
-        n.rewardAddress = address(user);
-        n.totalVettedValidators = 0;
-        n.totalExitedValidators = 0;
-        n.totalWithdrawnValidators = 0;
-        n.totalAddedValidators = 0;
-        n.totalDepositedValidators = 0;
-        mock_getNodeOperator(n);
+        mock_getNodeOperatorActiveKeys(0);
         mock_getNodeOperatorsCount(1);
     }
 
@@ -3245,16 +3236,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
 contract CSAccountingPenalizeTest is CSAccountingBaseTest {
     function setUp() public override {
         super.setUp();
-        ICSModule.NodeOperatorInfo memory n;
-        n.active = true;
-        n.managerAddress = address(user);
-        n.rewardAddress = address(user);
-        n.totalVettedValidators = 0;
-        n.totalExitedValidators = 0;
-        n.totalWithdrawnValidators = 0;
-        n.totalAddedValidators = 0;
-        n.totalDepositedValidators = 0;
-        mock_getNodeOperator(n);
+        mock_getNodeOperatorActiveKeys(0);
         mock_getNodeOperatorsCount(1);
         vm.deal(address(stakingModule), 32 ether);
         vm.prank(address(stakingModule));
@@ -3296,16 +3278,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
 contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
     function setUp() public override {
         super.setUp();
-        ICSModule.NodeOperatorInfo memory n;
-        n.active = true;
-        n.managerAddress = address(user);
-        n.rewardAddress = address(user);
-        n.totalVettedValidators = 0;
-        n.totalExitedValidators = 0;
-        n.totalWithdrawnValidators = 0;
-        n.totalAddedValidators = 0;
-        n.totalDepositedValidators = 0;
-        mock_getNodeOperator(n);
+        mock_getNodeOperatorActiveKeys(0);
         mock_getNodeOperatorsCount(1);
         vm.deal(address(stakingModule), 32 ether);
         vm.prank(address(stakingModule));

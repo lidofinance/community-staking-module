@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
-import { NodeOperator } from "../CSModule.sol";
+import { NodeOperator } from "../interfaces/ICSModule.sol";
 
 /// Library for changing and reset node operator's manager and reward addresses
 /// @dev the only use of this to be a library is to save CSModule contract size via delegatecalls
