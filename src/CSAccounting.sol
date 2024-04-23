@@ -185,7 +185,11 @@ contract CSAccounting is
     function getBondSummary(
         uint256 nodeOperatorId
     ) public view returns (uint256 current, uint256 required) {
-        return _getBondSummary(nodeOperatorId, _getActiveKeys(nodeOperatorId));
+        return
+            _getBondSummary(
+                nodeOperatorId,
+                CSM.getNodeOperatorActiveKeys(nodeOperatorId)
+            );
     }
 
     function _getBondSummary(
@@ -213,7 +217,7 @@ contract CSAccounting is
         return
             _getBondSummaryShares(
                 nodeOperatorId,
-                _getActiveKeys(nodeOperatorId)
+                CSM.getNodeOperatorActiveKeys(nodeOperatorId)
             );
     }
 
@@ -261,7 +265,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         bool accountLockedBond
     ) internal view returns (uint256) {
-        uint256 activeKeys = _getActiveKeys(nodeOperatorId);
+        uint256 activeKeys = CSM.getNodeOperatorActiveKeys(nodeOperatorId);
         /// 10 wei added to account for possible stETH rounding errors
         /// https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205
         /// Should be sufficient for ~ 40 years
@@ -292,7 +296,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 additionalKeys
     ) public view returns (uint256) {
-        uint256 activeKeys = _getActiveKeys(nodeOperatorId);
+        uint256 activeKeys = CSM.getNodeOperatorActiveKeys(nodeOperatorId);
         (uint256 current, uint256 required) = _getBondSummary(
             nodeOperatorId,
             activeKeys
@@ -439,19 +443,18 @@ contract CSAccounting is
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
     ) external whenResumed onlyCSM {
-        ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
-            nodeOperatorId
-        );
-
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
         if (stETHAmount == 0) return;
         CSBondCore._claimStETH(
             nodeOperatorId,
-            _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
+            _getExcessBondShares(
+                nodeOperatorId,
+                CSM.getNodeOperatorActiveKeys(nodeOperatorId)
+            ),
             stETHAmount,
-            nodeOperator.rewardAddress
+            CSM.getNodeOperatorRewardAddress(nodeOperatorId)
         );
     }
 
@@ -467,18 +470,17 @@ contract CSAccounting is
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
     ) external whenResumed onlyCSM {
-        ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
-            nodeOperatorId
-        );
-
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
         CSBondCore._claimWstETH(
             nodeOperatorId,
-            _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
+            _getExcessBondShares(
+                nodeOperatorId,
+                CSM.getNodeOperatorActiveKeys(nodeOperatorId)
+            ),
             wstETHAmount,
-            nodeOperator.rewardAddress
+            CSM.getNodeOperatorRewardAddress(nodeOperatorId)
         );
     }
 
@@ -495,19 +497,18 @@ contract CSAccounting is
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
     ) external whenResumed onlyCSM {
-        ICSModule.NodeOperatorInfo memory nodeOperator = CSM.getNodeOperator(
-            nodeOperatorId
-        );
-
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
         if (ethAmount == 0) return;
         CSBondCore._requestETH(
             nodeOperatorId,
-            _getExcessBondShares(nodeOperatorId, _calcActiveKeys(nodeOperator)),
+            _getExcessBondShares(
+                nodeOperatorId,
+                CSM.getNodeOperatorActiveKeys(nodeOperatorId)
+            ),
             ethAmount,
-            nodeOperator.rewardAddress
+            CSM.getNodeOperatorRewardAddress(nodeOperatorId)
         );
     }
 
@@ -582,33 +583,18 @@ contract CSAccounting is
         CSBondCore._charge(nodeOperatorId, amount, chargeRecipient);
     }
 
-    function recoverERC20(
-        address token,
-        uint256 amount
-    ) external override onlyRecoverer {
+    function recoverERC20(address token, uint256 amount) external override {
+        _onlyRecoverer();
         if (token == address(LIDO)) {
             revert NotAllowedToRecover();
         }
         AssetRecovererLib.recoverERC20(token, amount);
     }
 
-    function recoverStETHShares() external onlyRecoverer {
+    function recoverStETHShares() external {
+        _onlyRecoverer();
         uint256 shares = LIDO.sharesOf(address(this)) - totalBondShares();
         AssetRecovererLib.recoverStETHShares(address(LIDO), shares);
-    }
-
-    function _getActiveKeys(
-        uint256 nodeOperatorId
-    ) internal view returns (uint256) {
-        return _calcActiveKeys(CSM.getNodeOperator(nodeOperatorId));
-    }
-
-    function _calcActiveKeys(
-        ICSModule.NodeOperatorInfo memory nodeOperator
-    ) private pure returns (uint256) {
-        return
-            nodeOperator.totalAddedValidators -
-            nodeOperator.totalWithdrawnValidators;
     }
 
     function _pullFeeRewards(
@@ -624,15 +610,14 @@ contract CSAccounting is
         _increaseBond(nodeOperatorId, distributed);
     }
 
+    function _onlyRecoverer() internal view override {
+        _checkRole(RECOVERER_ROLE);
+    }
+
     modifier onlyCSM() {
         if (msg.sender != address(CSM)) {
             revert SenderIsNotCSM();
         }
-        _;
-    }
-
-    modifier onlyRecoverer() override {
-        _checkRole(RECOVERER_ROLE);
         _;
     }
 }

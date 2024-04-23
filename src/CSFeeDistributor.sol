@@ -154,23 +154,20 @@ contract CSFeeDistributor is
             );
     }
 
-    function recoverERC20(
-        address token,
-        uint256 amount
-    ) external override onlyRecoverer {
+    function recoverERC20(address token, uint256 amount) external override {
+        _onlyRecoverer();
         if (token == address(STETH)) {
             revert NotAllowedToRecover();
         }
         AssetRecovererLib.recoverERC20(token, amount);
     }
 
-    modifier onlyAccounting() {
-        if (msg.sender != ACCOUNTING) revert NotAccounting();
-        _;
+    function _onlyRecoverer() internal view override {
+        _checkRole(RECOVERER_ROLE);
     }
 
-    modifier onlyRecoverer() override {
-        _checkRole(RECOVERER_ROLE);
+    modifier onlyAccounting() {
+        if (msg.sender != ACCOUNTING) revert NotAccounting();
         _;
     }
 }

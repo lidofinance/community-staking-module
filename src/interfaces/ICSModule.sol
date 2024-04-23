@@ -6,25 +6,48 @@ pragma solidity 0.8.24;
 import { IStakingModule } from "./IStakingModule.sol";
 import { ICSAccounting } from "./ICSAccounting.sol";
 
+struct NodeOperator {
+    address managerAddress;
+    address proposedManagerAddress;
+    address rewardAddress;
+    address proposedRewardAddress;
+    bool active;
+    uint256 targetLimit;
+    uint8 targetLimitMode;
+    // TODO: keys could be packed into uint32
+    uint256 stuckPenaltyEndTimestamp;
+    uint256 totalExitedKeys; // @dev only increased
+    uint256 totalAddedKeys; // @dev increased and decreased when removed
+    uint256 totalWithdrawnKeys; // @dev only increased
+    uint256 totalDepositedKeys; // @dev only increased
+    uint256 totalVettedKeys; // @dev both increased and decreased
+    uint256 stuckValidatorsCount; // @dev both increased and decreased
+    uint256 refundedValidatorsCount; // @dev only increased
+    uint256 depositableValidatorsCount; // @dev any value
+    uint256 enqueuedCount; // Tracks how many places are occupied by the node operator's keys in the queue.
+}
+
 /// @title Lido's Community Staking Module interface
 interface ICSModule is IStakingModule {
-    struct NodeOperatorInfo {
-        bool active;
-        address managerAddress;
-        address rewardAddress;
-        uint256 totalVettedValidators;
-        uint256 totalExitedValidators;
-        uint256 totalWithdrawnValidators;
-        uint256 totalAddedValidators;
-        uint256 totalDepositedValidators;
-        uint256 enqueuedCount;
-    }
+    /// @notice Gets node operator active keys including non-deposited
+    /// @param nodeOperatorId ID of the node operator
+    /// @return Active keys count
+    function getNodeOperatorActiveKeys(
+        uint256 nodeOperatorId
+    ) external view returns (uint256);
+
+    /// @notice Gets node operator reward address
+    /// @param nodeOperatorId ID of the node operator
+    /// @return Reward address
+    function getNodeOperatorRewardAddress(
+        uint256 nodeOperatorId
+    ) external view returns (address);
 
     /// @notice Returns the node operator by id
     /// @param nodeOperatorId Node Operator id
     function getNodeOperator(
         uint256 nodeOperatorId
-    ) external view returns (NodeOperatorInfo memory);
+    ) external view returns (NodeOperator memory);
 
     /// @notice Gets node operator signing keys
     /// @param nodeOperatorId ID of the node operator
