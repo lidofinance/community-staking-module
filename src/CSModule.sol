@@ -106,9 +106,10 @@ contract CSModule is
 
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
-        address indexed referral,
-        address indexed from
+        address indexed managerAddress,
+        address indexed rewardAddress
     );
+    event ReferrerSet(uint256 indexed nodeOperatorId, address indexed referrer);
     event VettedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
         uint256 vettedKeysCount
@@ -274,18 +275,26 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of (deposit_message, domain) tuples
+    /// @param managerAddress Optional. Used as managerAddress for the Node Operator. If not passed msg.sender will be used
+    /// @param rewardAddress Optional. Used as rewardAddress for the Node Operator. If not passed msg.sender will be used
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
-    /// @param referral Optional referral address
+    /// @param referrer Optional. Referrer address
     function addNodeOperatorETH(
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
+        address managerAddress,
+        address rewardAddress,
         bytes32[] calldata eaProof,
-        address referral
+        address referrer
     ) external payable whenResumed {
         // TODO: sanity checks
 
-        uint256 nodeOperatorId = _createNodeOperator(referral);
+        uint256 nodeOperatorId = _createNodeOperator(
+            managerAddress,
+            rewardAddress,
+            referrer
+        );
         _processEarlyAdoption(nodeOperatorId, eaProof); // TODO: think about better name
 
         if (
@@ -315,20 +324,28 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of (deposit_message, domain) tuples
+    /// @param managerAddress Optional. Used as managerAddress for the Node Operator. If not passed msg.sender will be used
+    /// @param rewardAddress Optional. Used as rewardAddress for the Node Operator. If not passed msg.sender will be used
     /// @param permit Optional. Permit to use stETH as bond
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
-    /// @param referral Optional referral address
+    /// @param referrer Optional, Referrer address
     function addNodeOperatorStETH(
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
+        address managerAddress,
+        address rewardAddress,
         ICSAccounting.PermitInput calldata permit,
         bytes32[] calldata eaProof,
-        address referral
+        address referrer
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 nodeOperatorId = _createNodeOperator(referral);
+        uint256 nodeOperatorId = _createNodeOperator(
+            managerAddress,
+            rewardAddress,
+            referrer
+        );
         _processEarlyAdoption(nodeOperatorId, eaProof);
 
         // Reverts if keysCount is 0
@@ -336,15 +353,13 @@ contract CSModule is
 
         // TODO: check is it possible to face with decreased
         // share rate during transaction sent if some one submit at this time
-        accounting.depositStETH(
-            msg.sender,
-            nodeOperatorId,
-            accounting.getBondAmountByKeysCount(
+        {
+            uint256 amount = accounting.getBondAmountByKeysCount(
                 keysCount,
                 accounting.getBondCurve(nodeOperatorId)
-            ),
-            permit
-        );
+            );
+            accounting.depositStETH(msg.sender, nodeOperatorId, amount, permit);
+        }
 
         // Due to new bonded keys nonce update is required and normalize queue is required
         _updateDepositableValidatorsCount({
@@ -358,35 +373,46 @@ contract CSModule is
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of (deposit_message, domain) tuples
+    /// @param managerAddress Optional. Used as managerAddress for the Node Operator. If not passed msg.sender will be used
+    /// @param rewardAddress Optional. Used as rewardAddress for the Node Operator. If not passed msg.sender will be used
     /// @param permit Optional. Permit to use wstETH as bond
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
-    /// @param referral Optional referral address
+    /// @param referrer Optional. Referrer address
     function addNodeOperatorWstETH(
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
+        address managerAddress,
+        address rewardAddress,
         ICSAccounting.PermitInput calldata permit,
         bytes32[] calldata eaProof,
-        address referral
+        address referrer
     ) external whenResumed {
         // TODO: sanity checks
 
-        uint256 nodeOperatorId = _createNodeOperator(referral);
+        uint256 nodeOperatorId = _createNodeOperator(
+            managerAddress,
+            rewardAddress,
+            referrer
+        );
         _processEarlyAdoption(nodeOperatorId, eaProof);
 
         // Reverts if keysCount is 0
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
 
-        // TODO: same as in addNodeOperatorStETH
-        accounting.depositWstETH(
-            msg.sender,
-            nodeOperatorId,
-            accounting.getBondAmountByKeysCountWstETH(
+        {
+            uint256 amount = accounting.getBondAmountByKeysCountWstETH(
                 keysCount,
                 accounting.getBondCurve(nodeOperatorId)
-            ),
-            permit
-        );
+            );
+            // TODO: same as in addNodeOperatorStETH
+            accounting.depositWstETH(
+                msg.sender,
+                nodeOperatorId,
+                amount,
+                permit
+            );
+        }
 
         // Due to new bonded keys nonce update is required and normalize queue is required
         _updateDepositableValidatorsCount({
@@ -1729,12 +1755,20 @@ contract CSModule is
         _nonce++;
     }
 
-    function _createNodeOperator(address referral) internal returns (uint256) {
+    function _createNodeOperator(
+        address managerAddress,
+        address rewardAddress,
+        address referrer
+    ) internal returns (uint256) {
         uint256 id = _nodeOperatorsCount;
         NodeOperator storage no = _nodeOperators[id];
 
-        no.managerAddress = msg.sender;
-        no.rewardAddress = msg.sender;
+        no.managerAddress = managerAddress == address(0)
+            ? msg.sender
+            : managerAddress;
+        no.rewardAddress = rewardAddress == address(0)
+            ? msg.sender
+            : rewardAddress;
         no.active = true;
 
         unchecked {
@@ -1742,7 +1776,10 @@ contract CSModule is
             _activeNodeOperatorsCount++;
         }
 
-        emit NodeOperatorAdded(id, referral, msg.sender);
+        emit NodeOperatorAdded(id, no.managerAddress, no.rewardAddress);
+
+        if (referrer != address(0)) emit ReferrerSet(id, referrer);
+
         return id;
     }
 
