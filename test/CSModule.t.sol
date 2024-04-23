@@ -2040,14 +2040,27 @@ contract CSMClaimRewards is CSMCommon {
         csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
+    function test_claimRewardsStETH_fromRewardAddress() public {
+        uint256 noId = createNodeOperator();
+        address rewardAddress = nextAddress("rewardAddress");
+        csm.obtainDepositData(1, "");
+
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorRewardAddressChange(noId, rewardAddress);
+
+        vm.startPrank(rewardAddress);
+        csm.confirmNodeOperatorRewardAddressChange(noId);
+        csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
+    }
+
     function test_claimRewardsStETH_revertWhenNoNodeOperator() public {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.claimRewardsStETH(0, UINT256_MAX, 0, new bytes32[](0));
     }
 
-    function test_claimRewardsStETH_revertWhenNotManager() public {
+    function test_claimRewardsStETH_revertWhenNotEligible() public {
         uint256 noId = createNodeOperator();
-        vm.expectRevert(CSModule.SenderIsNotManagerAddress.selector);
+        vm.expectRevert(CSModule.SenderIsNotEligible.selector);
         csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
@@ -2069,14 +2082,27 @@ contract CSMClaimRewards is CSMCommon {
         csm.claimRewardsWstETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
+    function test_claimRewardsWstETH_fromRewardAddress() public {
+        uint256 noId = createNodeOperator();
+        address rewardAddress = nextAddress("rewardAddress");
+        csm.obtainDepositData(1, "");
+
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorRewardAddressChange(noId, rewardAddress);
+
+        vm.startPrank(rewardAddress);
+        csm.confirmNodeOperatorRewardAddressChange(noId);
+        csm.claimRewardsWstETH(noId, UINT256_MAX, 0, new bytes32[](0));
+    }
+
     function test_claimRewardsWstETH_revertWhenNoNodeOperator() public {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.claimRewardsWstETH(0, UINT256_MAX, 0, new bytes32[](0));
     }
 
-    function test_claimRewardsWstETH_revertWhenNotManager() public {
+    function test_claimRewardsWstETH_revertWhenNotEligible() public {
         uint256 noId = createNodeOperator();
-        vm.expectRevert(CSModule.SenderIsNotManagerAddress.selector);
+        vm.expectRevert(CSModule.SenderIsNotEligible.selector);
         csm.claimRewardsWstETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
@@ -2098,14 +2124,27 @@ contract CSMClaimRewards is CSMCommon {
         csm.requestRewardsETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
+    function test_requestRewardsETH_fromRewardAddress() public {
+        uint256 noId = createNodeOperator();
+        address rewardAddress = nextAddress("rewardAddress");
+        csm.obtainDepositData(1, "");
+
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorRewardAddressChange(noId, rewardAddress);
+
+        vm.startPrank(rewardAddress);
+        csm.confirmNodeOperatorRewardAddressChange(noId);
+        csm.requestRewardsETH(noId, UINT256_MAX, 0, new bytes32[](0));
+    }
+
     function test_requestRewardsETH_revertWhenNoNodeOperator() public {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.requestRewardsETH(0, UINT256_MAX, 0, new bytes32[](0));
     }
 
-    function test_requestRewardsETH_revertWhenNotManager() public {
+    function test_requestRewardsETH_revertWhenNotEligible() public {
         uint256 noId = createNodeOperator();
-        vm.expectRevert(CSModule.SenderIsNotManagerAddress.selector);
+        vm.expectRevert(CSModule.SenderIsNotEligible.selector);
         csm.requestRewardsETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 }
@@ -2139,7 +2178,7 @@ contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
         public
     {
         uint256 noId = createNodeOperator();
-        vm.expectRevert(CSModule.SenderIsNotManagerAddress.selector);
+        vm.expectRevert(NOAddresses.SenderIsNotManagerAddress.selector);
         csm.proposeNodeOperatorManagerAddressChange(noId, stranger);
     }
 
@@ -3056,14 +3095,14 @@ contract CsmRemoveKeys is CSMCommon {
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 1 });
     }
 
-    function test_removeKeys_RevertWhenNotManager() public {
+    function test_removeKeys_RevertWhenNotEligible() public {
         uint256 noId = createNodeOperator({
             managerAddress: address(this),
             keysCount: 1
         });
 
         vm.prank(stranger);
-        vm.expectRevert(CSModule.SenderIsNotManagerAddress.selector);
+        vm.expectRevert(CSModule.SenderIsNotEligible.selector);
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 1 });
     }
 

@@ -151,7 +151,7 @@ contract CSModule is
     );
 
     error NodeOperatorDoesNotExist();
-    error SenderIsNotManagerAddress();
+    error SenderIsNotEligible();
     error InvalidVetKeysPointer();
     error StuckKeysHigherThanTotalDeposited();
     error ExitedKeysHigherThanTotalDeposited();
@@ -586,7 +586,7 @@ contract CSModule is
         bytes32[] memory rewardsProof
     ) external {
         _onlyExistingNodeOperator(nodeOperatorId);
-        _onlyNodeOperatorManager(nodeOperatorId);
+        _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
         accounting.claimRewardsStETH(
             nodeOperatorId,
@@ -615,7 +615,7 @@ contract CSModule is
         bytes32[] memory rewardsProof
     ) external {
         _onlyExistingNodeOperator(nodeOperatorId);
-        _onlyNodeOperatorManager(nodeOperatorId);
+        _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
         accounting.claimRewardsWstETH(
             nodeOperatorId,
@@ -646,7 +646,7 @@ contract CSModule is
         bytes32[] memory rewardsProof
     ) external {
         _onlyExistingNodeOperator(nodeOperatorId);
-        _onlyNodeOperatorManager(nodeOperatorId);
+        _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
         accounting.requestRewardsETH(
             nodeOperatorId,
@@ -1772,7 +1772,16 @@ contract CSModule is
 
     function _onlyNodeOperatorManager(uint256 nodeOperatorId) internal view {
         if (_nodeOperators[nodeOperatorId].managerAddress != msg.sender)
-            revert SenderIsNotManagerAddress();
+            revert SenderIsNotEligible();
+    }
+
+    function _onlyNodeOperatorManagerOrRewardAddresses(
+        uint256 nodeOperatorId
+    ) internal view {
+        if (
+            _nodeOperators[nodeOperatorId].managerAddress != msg.sender &&
+            _nodeOperators[nodeOperatorId].rewardAddress != msg.sender
+        ) revert SenderIsNotEligible();
     }
 
     function _onlyExistingNodeOperator(uint256 nodeOperatorId) internal view {
