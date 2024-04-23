@@ -98,8 +98,8 @@ make-fork *args:
 kill-fork:
     @-pkill anvil && just _warn "anvil process is killed"
 
-deploy:
-    forge script {{deploy_script_path}} --rpc-url http://{{anvil_host}}:{{anvil_port}} --broadcast --slow
+deploy *args:
+    forge script {{deploy_script_path}} --rpc-url http://{{anvil_host}}:{{anvil_port}} --broadcast --slow {{args}}
 
 deploy-prod:
     forge script {{deploy_script_path}} --force --rpc-url ${RPC_URL} --broadcast --slow
@@ -114,7 +114,7 @@ test-local *args:
     just make-fork --silent &
     @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
     DEPLOYER_PRIVATE_KEY=`cat localhost.json | jq -r ".private_keys[0]"` \
-        just deploy
+        just deploy --silent
     DEPLOY_CONFIG=./out/latest.json \
     RPC_URL=http://{{anvil_host}}:{{anvil_port}} \
         just test-integration {{args}}

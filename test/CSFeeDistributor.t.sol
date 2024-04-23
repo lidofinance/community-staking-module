@@ -13,7 +13,6 @@ import { IStETH } from "../src/interfaces/IStETH.sol";
 
 import { Fixtures } from "./helpers/Fixtures.sol";
 import { MerkleTree } from "./helpers/MerkleTree.sol";
-import { CommunityStakingModuleMock } from "./helpers/mocks/CommunityStakingModuleMock.sol";
 import { StETHMock } from "./helpers/mocks/StETHMock.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
@@ -27,14 +26,14 @@ contract CSFeeDistributorInitTest is Test, Fixtures, Utilities {
     address internal stranger;
     address internal oracle;
     CSFeeDistributor internal feeDistributor;
-    CommunityStakingModuleMock internal csm;
+    Stub internal csm;
     Stub internal accounting;
     MerkleTree internal tree;
 
     function setUp() public {
         stranger = nextAddress("STRANGER");
         oracle = nextAddress("ORACLE");
-        csm = new CommunityStakingModuleMock();
+        csm = new Stub();
         accounting = new Stub();
 
         (, , stETH, ) = initLido();
@@ -64,14 +63,14 @@ contract CSFeeDistributorTest is Test, Fixtures, Utilities {
     address internal stranger;
     address internal oracle;
     CSFeeDistributor internal feeDistributor;
-    CommunityStakingModuleMock internal csm;
+    Stub internal csm;
     Stub internal accounting;
     MerkleTree internal tree;
 
     function setUp() public {
         stranger = nextAddress("STRANGER");
         oracle = nextAddress("ORACLE");
-        csm = new CommunityStakingModuleMock();
+        csm = new Stub();
         accounting = new Stub();
 
         (, , stETH, ) = initLido();

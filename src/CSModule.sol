@@ -12,7 +12,7 @@ import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSEarlyAdoption } from "./interfaces/ICSEarlyAdoption.sol";
-import { ICSModule } from "./interfaces/ICSModule.sol";
+import { ICSModule, NodeOperator } from "./interfaces/ICSModule.sol";
 
 import { QueueLib, Batch, createBatch } from "./lib/QueueLib.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
@@ -22,27 +22,6 @@ import { NOAddresses } from "./lib/NOAddresses.sol";
 import { SigningKeys } from "./lib/SigningKeys.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
-
-struct NodeOperator {
-    address managerAddress;
-    address proposedManagerAddress;
-    address rewardAddress;
-    address proposedRewardAddress;
-    bool active;
-    uint256 targetLimit;
-    uint8 targetLimitMode;
-    // TODO: keys could be packed into uint32
-    uint256 stuckPenaltyEndTimestamp;
-    uint256 totalExitedKeys; // @dev only increased
-    uint256 totalAddedKeys; // @dev increased and decreased when removed
-    uint256 totalWithdrawnKeys; // @dev only increased
-    uint256 totalDepositedKeys; // @dev only increased
-    uint256 totalVettedKeys; // @dev both increased and decreased
-    uint256 stuckValidatorsCount; // @dev both increased and decreased
-    uint256 refundedValidatorsCount; // @dev only increased
-    uint256 depositableValidatorsCount; // @dev any value
-    uint256 enqueuedCount; // Tracks how many places are occupied by the node operator's keys in the queue.
-}
 
 contract CSModule is
     ICSModule,
@@ -433,12 +412,13 @@ contract CSModule is
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures
-    ) external payable whenResumed onlyExistingNodeOperator(nodeOperatorId) {
+    ) external payable whenResumed {
+        _onlyExistingNodeOperator(nodeOperatorId);
         // TODO: sanity checks
 
         // TODO: use one code style: modifiers or guardians
         // TODO: use underscore for internal methods: _onlyNodeOperatorManager
-        onlyNodeOperatorManager(nodeOperatorId);
+        _onlyNodeOperatorManager(nodeOperatorId);
 
         if (
             msg.value !=
@@ -472,9 +452,10 @@ contract CSModule is
         bytes calldata publicKeys,
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
-    ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
+    ) external whenResumed {
+        _onlyExistingNodeOperator(nodeOperatorId);
         // TODO: sanity checks
-        onlyNodeOperatorManager(nodeOperatorId);
+        _onlyNodeOperatorManager(nodeOperatorId);
 
         uint256 amount = accounting.getRequiredBondForNextKeys(
             nodeOperatorId,
@@ -506,9 +487,10 @@ contract CSModule is
         bytes calldata publicKeys,
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
-    ) external whenResumed onlyExistingNodeOperator(nodeOperatorId) {
+    ) external whenResumed {
+        _onlyExistingNodeOperator(nodeOperatorId);
         // TODO: sanity checks
-        onlyNodeOperatorManager(nodeOperatorId);
+        _onlyNodeOperatorManager(nodeOperatorId);
 
         uint256 amount = accounting.getRequiredBondForNextKeysWstETH(
             nodeOperatorId,
@@ -530,9 +512,8 @@ contract CSModule is
 
     /// @notice Stake user's ETH to Lido and make deposit in stETH to the bond
     /// @param nodeOperatorId id of the node operator to stake ETH and deposit stETH for
-    function depositETH(
-        uint256 nodeOperatorId
-    ) external payable onlyExistingNodeOperator(nodeOperatorId) {
+    function depositETH(uint256 nodeOperatorId) external payable {
+        _onlyExistingNodeOperator(nodeOperatorId);
         accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
 
         // Due to new bond nonce update might be required and normalize queue might be required
@@ -551,7 +532,8 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint256 stETHAmount,
         ICSAccounting.PermitInput calldata permit
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
+    ) external {
+        _onlyExistingNodeOperator(nodeOperatorId);
         accounting.depositStETH(
             msg.sender,
             nodeOperatorId,
@@ -575,7 +557,8 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
         ICSAccounting.PermitInput calldata permit
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
+    ) external {
+        _onlyExistingNodeOperator(nodeOperatorId);
         accounting.depositWstETH(
             msg.sender,
             nodeOperatorId,
@@ -601,8 +584,9 @@ contract CSModule is
         uint256 stETHAmount,
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
-        onlyNodeOperatorManager(nodeOperatorId);
+    ) external {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        _onlyNodeOperatorManager(nodeOperatorId);
 
         accounting.claimRewardsStETH(
             nodeOperatorId,
@@ -629,8 +613,9 @@ contract CSModule is
         uint256 wstETHAmount,
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
-        onlyNodeOperatorManager(nodeOperatorId);
+    ) external {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        _onlyNodeOperatorManager(nodeOperatorId);
 
         accounting.claimRewardsWstETH(
             nodeOperatorId,
@@ -659,8 +644,9 @@ contract CSModule is
         uint256 ethAmount,
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
-        onlyNodeOperatorManager(nodeOperatorId);
+    ) external {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        _onlyNodeOperatorManager(nodeOperatorId);
 
         accounting.requestRewardsETH(
             nodeOperatorId,
@@ -683,7 +669,8 @@ contract CSModule is
     function proposeNodeOperatorManagerAddressChange(
         uint256 nodeOperatorId,
         address proposedAddress
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
+    ) external {
+        _onlyExistingNodeOperator(nodeOperatorId);
         NOAddresses.proposeNodeOperatorManagerAddressChange(
             _nodeOperators,
             nodeOperatorId,
@@ -695,7 +682,8 @@ contract CSModule is
     /// @param nodeOperatorId ID of the node operator
     function confirmNodeOperatorManagerAddressChange(
         uint256 nodeOperatorId
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
+    ) external {
+        _onlyExistingNodeOperator(nodeOperatorId);
         NOAddresses.confirmNodeOperatorManagerAddressChange(
             _nodeOperators,
             nodeOperatorId
@@ -708,7 +696,8 @@ contract CSModule is
     function proposeNodeOperatorRewardAddressChange(
         uint256 nodeOperatorId,
         address proposedAddress
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
+    ) external {
+        _onlyExistingNodeOperator(nodeOperatorId);
         NOAddresses.proposeNodeOperatorRewardAddressChange(
             _nodeOperators,
             nodeOperatorId,
@@ -720,7 +709,8 @@ contract CSModule is
     /// @param nodeOperatorId ID of the node operator
     function confirmNodeOperatorRewardAddressChange(
         uint256 nodeOperatorId
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
+    ) external {
+        _onlyExistingNodeOperator(nodeOperatorId);
         NOAddresses.confirmNodeOperatorRewardAddressChange(
             _nodeOperators,
             nodeOperatorId
@@ -729,9 +719,8 @@ contract CSModule is
 
     /// @notice Resets the manager address to the reward address
     /// @param nodeOperatorId ID of the node operator
-    function resetNodeOperatorManagerAddress(
-        uint256 nodeOperatorId
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
+    function resetNodeOperatorManagerAddress(uint256 nodeOperatorId) external {
+        _onlyExistingNodeOperator(nodeOperatorId);
         NOAddresses.resetNodeOperatorManagerAddress(
             _nodeOperators,
             nodeOperatorId
@@ -743,21 +732,32 @@ contract CSModule is
     /// @return Node operator info
     function getNodeOperator(
         uint256 nodeOperatorId
-    ) external view returns (NodeOperatorInfo memory) {
-        // TODO: add onlyExist modifier
+    ) external view returns (NodeOperator memory) {
+        _onlyExistingNodeOperator(nodeOperatorId);
         // TODO: think about "heavily" methods for frontend with proposed addresses
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        NodeOperatorInfo memory info; // TODO: could be moved to returns()
-        info.active = no.active;
-        info.managerAddress = no.managerAddress;
-        info.rewardAddress = no.rewardAddress;
-        info.totalVettedValidators = no.totalVettedKeys;
-        info.totalExitedValidators = no.totalExitedKeys;
-        info.totalWithdrawnValidators = no.totalWithdrawnKeys;
-        info.totalAddedValidators = no.totalAddedKeys;
-        info.totalDepositedValidators = no.totalDepositedKeys;
-        info.enqueuedCount = no.enqueuedCount;
-        return info;
+        return _nodeOperators[nodeOperatorId];
+    }
+
+    /// @notice Gets node operator active keys including non-deposited
+    /// @param nodeOperatorId ID of the node operator
+    /// @return Active keys count
+    function getNodeOperatorActiveKeys(
+        uint256 nodeOperatorId
+    ) external view returns (uint256) {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        return
+            _nodeOperators[nodeOperatorId].totalAddedKeys -
+            _nodeOperators[nodeOperatorId].totalWithdrawnKeys;
+    }
+
+    /// @notice Gets node operator reward address
+    /// @param nodeOperatorId ID of the node operator
+    /// @return Reward address
+    function getNodeOperatorRewardAddress(
+        uint256 nodeOperatorId
+    ) external view returns (address) {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        return _nodeOperators[nodeOperatorId].rewardAddress;
     }
 
     /// @notice Gets node operator summary
@@ -834,12 +834,8 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint256 startIndex,
         uint256 keysCount
-    )
-        external
-        view
-        onlyExistingNodeOperator(nodeOperatorId)
-        returns (bytes memory)
-    {
+    ) external view returns (bytes memory) {
+        _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (startIndex + keysCount > no.totalAddedKeys) {
             revert SigningKeysInvalidOffset();
@@ -864,12 +860,8 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint256 startIndex,
         uint256 keysCount
-    )
-        external
-        view
-        onlyExistingNodeOperator(nodeOperatorId)
-        returns (bytes memory keys, bytes memory signatures)
-    {
+    ) external view returns (bytes memory keys, bytes memory signatures) {
+        _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (startIndex + keysCount > no.totalAddedKeys) {
             revert SigningKeysInvalidOffset();
@@ -1110,11 +1102,8 @@ contract CSModule is
     function updateRefundedValidatorsCount(
         uint256 nodeOperatorId,
         uint256 /* refundedValidatorsCount */
-    )
-        external
-        onlyRole(STAKING_ROUTER_ROLE)
-        onlyExistingNodeOperator(nodeOperatorId)
-    {
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
         // TODO: implement
         _incrementModuleNonce();
     }
@@ -1128,11 +1117,8 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint8 targetLimitMode,
         uint256 targetLimit
-    )
-        external
-        onlyRole(STAKING_ROUTER_ROLE)
-        onlyExistingNodeOperator(nodeOperatorId)
-    {
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         if (
@@ -1178,11 +1164,8 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint256 exitedValidatorsKeysCount,
         uint256 stuckValidatorsKeysCount
-    )
-        external
-        onlyRole(STAKING_ROUTER_ROLE)
-        onlyExistingNodeOperator(nodeOperatorId)
-    {
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
         _updateExitedValidatorsCount(
             nodeOperatorId,
             exitedValidatorsKeysCount,
@@ -1234,8 +1217,9 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint256 startIndex,
         uint256 keysCount
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
-        onlyNodeOperatorManager(nodeOperatorId);
+    ) external {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        _onlyNodeOperatorManager(nodeOperatorId);
         _removeSigningKeys(nodeOperatorId, startIndex, keysCount);
     }
 
@@ -1254,10 +1238,9 @@ contract CSModule is
     //     // Confiscate ejection fee from the bond
     // }
 
-    function normalizeQueue(
-        uint256 nodeOperatorId
-    ) external onlyExistingNodeOperator(nodeOperatorId) {
-        onlyNodeOperatorManager(nodeOperatorId);
+    function normalizeQueue(uint256 nodeOperatorId) external {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        _onlyNodeOperatorManager(nodeOperatorId);
         _normalizeQueue(nodeOperatorId);
     }
 
@@ -1286,11 +1269,8 @@ contract CSModule is
         uint256 nodeOperatorId,
         bytes32 blockHash,
         uint256 amount
-    )
-        external
-        onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE)
-        onlyExistingNodeOperator(nodeOperatorId)
-    {
+    ) external onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
         accounting.lockBondETH(
             nodeOperatorId,
             amount + EL_REWARDS_STEALING_FINE
@@ -1318,11 +1298,8 @@ contract CSModule is
     function cancelELRewardsStealingPenalty(
         uint256 nodeOperatorId,
         uint256 amount
-    )
-        external
-        onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE)
-        onlyExistingNodeOperator(nodeOperatorId)
-    {
+    ) external onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
         accounting.releaseLockedBondETH(nodeOperatorId, amount);
 
         emit ELRewardsStealingPenaltyCancelled(nodeOperatorId, amount);
@@ -1365,7 +1342,8 @@ contract CSModule is
     /// @param nodeOperatorId id of the node operator.
     function compensateELRewardsStealingPenalty(
         uint256 nodeOperatorId
-    ) external payable onlyExistingNodeOperator(nodeOperatorId) {
+    ) external payable {
+        _onlyExistingNodeOperator(nodeOperatorId);
         accounting.compensateLockedBondETH{ value: msg.value }(nodeOperatorId);
         // Nonce should be updated if depositableValidators change
         // Normalize queue should be called due to only increase in depositable possible
@@ -1395,11 +1373,8 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint256 keyIndex,
         uint256 amount
-    )
-        external
-        onlyRole(VERIFIER_ROLE)
-        onlyExistingNodeOperator(nodeOperatorId)
-    {
+    ) external onlyRole(VERIFIER_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (keyIndex >= no.totalDepositedKeys) {
             revert SigningKeysInvalidOffset();
@@ -1450,11 +1425,8 @@ contract CSModule is
     function submitInitialSlashing(
         uint256 nodeOperatorId,
         uint256 keyIndex
-    )
-        external
-        onlyRole(VERIFIER_ROLE)
-        onlyExistingNodeOperator(nodeOperatorId)
-    {
+    ) external onlyRole(VERIFIER_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (keyIndex >= no.totalDepositedKeys) {
             revert SigningKeysInvalidOffset();
@@ -1742,7 +1714,8 @@ contract CSModule is
         return queue.at(index);
     }
 
-    function recoverStETHShares() external onlyRecoverer {
+    function recoverStETHShares() external {
+        _onlyRecoverer();
         IStETH stETH = IStETH(LIDO_LOCATOR.lido());
 
         AssetRecovererLib.recoverStETHShares(
@@ -1797,19 +1770,17 @@ contract CSModule is
         accounting.setBondCurve(nodeOperatorId, earlyAdoption.curveId());
     }
 
-    function onlyNodeOperatorManager(uint256 nodeOperatorId) internal view {
+    function _onlyNodeOperatorManager(uint256 nodeOperatorId) internal view {
         if (_nodeOperators[nodeOperatorId].managerAddress != msg.sender)
             revert SenderIsNotManagerAddress();
     }
 
-    modifier onlyExistingNodeOperator(uint256 nodeOperatorId) {
+    function _onlyExistingNodeOperator(uint256 nodeOperatorId) internal view {
         if (nodeOperatorId >= _nodeOperatorsCount)
             revert NodeOperatorDoesNotExist();
-        _;
     }
 
-    modifier onlyRecoverer() override {
+    function _onlyRecoverer() internal view override {
         _checkRole(RECOVERER_ROLE);
-        _;
     }
 }
