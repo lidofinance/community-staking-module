@@ -125,9 +125,9 @@
 | VERIFIER_ROLE                                       | 260             | 260    | 260    | 260     | 273     |
 | accounting                                          | 470             | 470    | 470    | 470     | 1       |
 | activatePublicRelease                               | 23828           | 46615  | 46769  | 46769   | 286     |
-| addNodeOperatorETH                                  | 26728           | 586881 | 546565 | 1173320 | 267     |
-| addNodeOperatorStETH                                | 27665           | 326551 | 341085 | 539097  | 8       |
-| addNodeOperatorWstETH                               | 27556           | 336751 | 349979 | 558992  | 8       |
+| addNodeOperatorETH                                  | 26728           | 587457 | 547144 | 1173899 | 267     |
+| addNodeOperatorStETH                                | 27665           | 327058 | 341664 | 539676  | 8       |
+| addNodeOperatorWstETH                               | 27556           | 337258 | 350558 | 559571  | 8       |
 | addValidatorKeysETH                                 | 25733           | 186949 | 258282 | 313380  | 12      |
 | addValidatorKeysStETH                               | 26447           | 130381 | 89982  | 245916  | 6       |
 | addValidatorKeysWstETH                              | 26425           | 139671 | 96420  | 264145  | 6       |

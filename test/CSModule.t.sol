@@ -586,7 +586,7 @@ contract CSMAddNodeOperatorETH is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator);
+            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, false, true, address(csm));
             emit CSModule.TotalSigningKeysCountChanged(0, 1);
         }
@@ -615,6 +615,8 @@ contract CSMAddNodeOperatorETH is CSMCommon, PermitTokenBase {
         address manager = address(154);
         address reward = address(42);
 
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit CSModule.NodeOperatorAdded(0, manager, reward);
         vm.prank(nodeOperator);
         csm.addNodeOperatorETH{ value: BOND_SIZE }(
             keysCount,
@@ -640,7 +642,7 @@ contract CSMAddNodeOperatorETH is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator);
+            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, false, true, address(csm));
             emit CSModule.ReferrerSet(0, address(154));
         }
@@ -692,7 +694,7 @@ contract CSMAddNodeOperatorStETH is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator);
+            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, false, true, address(csm));
             emit CSModule.TotalSigningKeysCountChanged(0, 1);
         }
@@ -730,6 +732,8 @@ contract CSMAddNodeOperatorStETH is CSMCommon, PermitTokenBase {
         address manager = address(154);
         address reward = address(42);
 
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit CSModule.NodeOperatorAdded(0, manager, reward);
         vm.prank(nodeOperator);
         csm.addNodeOperatorStETH(
             1,
@@ -764,7 +768,7 @@ contract CSMAddNodeOperatorStETH is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator);
+            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, false, true, address(csm));
             emit CSModule.ReferrerSet(0, address(154));
         }
@@ -801,7 +805,7 @@ contract CSMAddNodeOperatorStETH is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator);
+            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, false, true, address(csm));
             emit CSModule.TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, true, true, address(stETH));
@@ -845,7 +849,7 @@ contract CSMAddNodeOperatorWstETH is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator);
+            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, false, true, address(csm));
             emit CSModule.TotalSigningKeysCountChanged(0, 1);
         }
@@ -883,6 +887,8 @@ contract CSMAddNodeOperatorWstETH is CSMCommon, PermitTokenBase {
         address manager = address(154);
         address reward = address(42);
 
+        vm.expectEmit(true, true, false, true, address(csm));
+        emit CSModule.NodeOperatorAdded(0, manager, reward);
         csm.addNodeOperatorWstETH(
             keysCount,
             keys,
@@ -917,7 +923,7 @@ contract CSMAddNodeOperatorWstETH is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator);
+            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, false, true, address(csm));
             emit CSModule.ReferrerSet(0, address(154));
         }
@@ -953,7 +959,7 @@ contract CSMAddNodeOperatorWstETH is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, false, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator);
+            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, false, true, address(csm));
             emit CSModule.TotalSigningKeysCountChanged(0, 1);
             vm.expectEmit(true, true, true, true, address(wstETH));
@@ -5231,7 +5237,7 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
         vm.deal(nodeOperator, BOND_SIZE / 2);
         vm.prank(nodeOperator);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.NodeOperatorAdded(0, nodeOperator);
+        emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
         csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
             keysCount,
             keys,
@@ -5256,7 +5262,7 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
         vm.deal(nodeOperator, BOND_SIZE / 2);
         vm.prank(nodeOperator);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.NodeOperatorAdded(0, nodeOperator);
+        emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
         csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
             keysCount,
             keys,

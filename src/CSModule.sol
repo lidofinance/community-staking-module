@@ -106,7 +106,8 @@ contract CSModule is
 
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
-        address indexed from
+        address indexed managerAddress,
+        address indexed rewardAddress
     );
     event ReferrerSet(uint256 indexed nodeOperatorId, address indexed referrer);
     event VettedSigningKeysCountChanged(
@@ -1775,7 +1776,7 @@ contract CSModule is
             _activeNodeOperatorsCount++;
         }
 
-        emit NodeOperatorAdded(id, msg.sender);
+        emit NodeOperatorAdded(id, no.managerAddress, no.rewardAddress);
 
         if (referrer != address(0)) emit ReferrerSet(id, referrer);
 
