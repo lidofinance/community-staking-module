@@ -75,9 +75,9 @@ abstract contract CSBondCurve is Initializable {
         mapping(uint256 => uint256) operatorBondCurveId;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("CSAccounting.CSBondCurve")) - 1)) & ~bytes32(uint256(0xff))
+    // keccak256(abi.encode(uint256(keccak256("CSBondCurve")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant CS_BOND_CURVE_STORAGE_LOCATION =
-        0xecd18ac5fe40b69924776afad2bbf434f360f087b9e5a81f68acc5c2c0e24400;
+        0x8f22e270e477f5becb8793b61d439ab7ae990ed8eba045eb72061c0e6cfe1500;
 
     // TODO: might be redefined in the future
     uint256 internal constant MAX_CURVE_LENGTH = 20;

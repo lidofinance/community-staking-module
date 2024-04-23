@@ -43,9 +43,9 @@ abstract contract CSBondLock is Initializable {
         mapping(uint256 => BondLock) bondLock;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("CSAccounting.CSBondLock")) - 1)) & ~bytes32(uint256(0xff))
+    // keccak256(abi.encode(uint256(keccak256("CSBondLock")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant CS_BOND_LOCK_STORAGE_LOCATION =
-        0xde370123b9d98e59208021489ba3cc409fe2a07de86192b6a571d85c904ce000;
+        0x78c5a36767279da056404c09083fca30cf3ea61c442cfaba6669f76a37393f00;
 
     // TODO: should be reconsidered
     uint256 public constant MIN_BOND_LOCK_RETENTION_PERIOD = 4 weeks;

@@ -37,9 +37,9 @@ abstract contract CSBondCore {
         uint256 totalBondShares;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("CSAccounting.CSBondCore")) - 1)) & ~bytes32(uint256(0xff))
+    // keccak256(abi.encode(uint256(keccak256("CSBondCore")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant CS_BOND_CORE_STORAGE_LOCATION =
-        0x47989332924309831e1cc5ac062b59a9f1e0f7ffb37c93b1e656d5a2c362c900;
+        0x23f334b9eb5378c2a1573857b8f9d9ca79959360a69e73d3f16848e56ec92100;
 
     event BondDeposited(
         uint256 indexed nodeOperatorId,
