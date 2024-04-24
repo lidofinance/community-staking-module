@@ -111,6 +111,7 @@ contract CSAccounting is
 
         LIDO.approve(address(WSTETH), type(uint256).max);
         LIDO.approve(address(WITHDRAWAL_QUEUE), type(uint256).max);
+        LIDO.approve(address(BURNER), type(uint256).max);
     }
 
     /// @notice Resume accounting

@@ -61,14 +61,14 @@ contract ClaimIntegrationTest is
     }
 
     function test_claimExessBondStETH() public {
-        uint256 sharesBefore = lido.sharesOf(nodeOperator);
-
         uint256 amount = 1 ether;
         vm.startPrank(user);
         vm.deal(user, amount);
 
         csm.depositETH{ value: amount }(defaultNoId);
         vm.stopPrank();
+
+        uint256 sharesBefore = lido.sharesOf(nodeOperator);
 
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             defaultNoId
@@ -90,8 +90,6 @@ contract ClaimIntegrationTest is
     }
 
     function test_claimExessBondWstETH() public {
-        uint256 balanceBefore = wstETH.balanceOf(nodeOperator);
-
         uint256 amount = 1 ether;
         vm.startPrank(user);
         vm.deal(user, amount);
@@ -99,12 +97,16 @@ contract ClaimIntegrationTest is
         csm.depositETH{ value: amount }(defaultNoId);
         vm.stopPrank();
 
-        (uint256 current, uint256 required) = accounting.getBondSummary(
+        uint256 balanceBefore = wstETH.balanceOf(nodeOperator);
+
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             defaultNoId
         );
 
         uint256 excessBond = current > required ? current - required : 0;
-        uint256 excessBondWstETH = wstETH.getWstETHByStETH(excessBond);
+        uint256 excessBondWstETH = wstETH.getWstETHByStETH(
+            lido.getPooledEthByShares(excessBond)
+        );
 
         vm.prank(nodeOperator);
         csm.claimRewardsWstETH(
