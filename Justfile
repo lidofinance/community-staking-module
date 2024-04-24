@@ -87,6 +87,7 @@ coverage-lcov:
     forge coverage --report lcov
 
 abis:
+    just build --ast
     yarn generate:abis
 
 make-fork *args:
