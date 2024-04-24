@@ -284,6 +284,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         csm.initialize({
             _accounting: address(accounting),
             _earlyAdoption: address(earlyAdoption),
+            verifier: address(this),
             admin: admin
         });
 
@@ -302,11 +303,10 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         );
         csm.grantRole(csm.VERIFIER_ROLE(), address(this));
         accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), address(this));
-        accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), address(csm));
-        accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm));
         vm.stopPrank();
 
         csm.setKeyRemovalCharge(0.05 ether);
+        csm.resume();
     }
 }
 
@@ -368,13 +368,14 @@ contract CSMCommonNoRoles is CSMFixtures {
         csm.initialize({
             _accounting: address(accounting),
             _earlyAdoption: address(earlyAdoption),
+            verifier: address(this),
             admin: admin
         });
 
         vm.startPrank(admin);
         csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
-        accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), address(csm));
-        accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm));
+        csm.grantRole(csm.RESUME_ROLE(), admin);
+        csm.resume();
         vm.stopPrank();
     }
 }
@@ -403,10 +404,12 @@ contract CsmInitialize is CSMCommon {
         csm.initialize({
             _accounting: address(accounting),
             _earlyAdoption: address(1337),
+            verifier: address(this),
             admin: address(this)
         });
         assertEq(address(csm.accounting()), address(accounting));
         assertEq(address(csm.earlyAdoption()), address(1337));
+        assertTrue(csm.isPaused());
     }
 }
 
@@ -4850,7 +4853,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
             maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator)
         });
-        csm.initialize(address(0), address(0), actor);
+        csm.initialize(address(0), address(0), address(0), actor);
 
         bytes32 role = csm.MODULE_MANAGER_ROLE();
         vm.prank(actor);

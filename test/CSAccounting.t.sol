@@ -183,14 +183,6 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities, PermitTokenBase {
         accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_DEFAULT_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
-        accounting.grantRole(
-            accounting.SET_BOND_CURVE_ROLE(),
-            address(stakingModule)
-        );
-        accounting.grantRole(
-            accounting.RESET_BOND_CURVE_ROLE(),
-            address(stakingModule)
-        );
         vm.stopPrank();
     }
 

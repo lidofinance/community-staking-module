@@ -103,6 +103,8 @@ contract CSAccounting is
         }
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(SET_BOND_CURVE_ROLE, address(CSM));
+        _grantRole(RESET_BOND_CURVE_ROLE, address(CSM));
 
         feeDistributor = ICSFeeDistributor(_feeDistributor);
 

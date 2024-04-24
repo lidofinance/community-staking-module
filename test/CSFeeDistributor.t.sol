@@ -51,7 +51,17 @@ contract CSFeeDistributorInitTest is Test, Fixtures, Utilities {
                 "admin"
             )
         );
-        feeDistributor.initialize(address(0));
+        feeDistributor.initialize(address(0), oracle);
+    }
+
+    function test_initialize_revertWhen_zeroOracle() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CSFeeDistributor.ZeroAddress.selector,
+                "oracle"
+            )
+        );
+        feeDistributor.initialize(address(this), address(0));
     }
 }
 
@@ -79,8 +89,7 @@ contract CSFeeDistributorTest is Test, Fixtures, Utilities {
             address(stETH),
             address(accounting)
         );
-        feeDistributor.initialize(address(this));
-        feeDistributor.grantRole(feeDistributor.ORACLE_ROLE(), oracle);
+        feeDistributor.initialize(address(this), oracle);
 
         tree = new MerkleTree();
 
@@ -368,7 +377,7 @@ contract CSFeeDistributorAssetRecovererTest is Test, Fixtures, Utilities {
             address(stETH),
             address(accounting)
         );
-        feeDistributor.initialize(address(this));
+        feeDistributor.initialize(address(this), nextAddress("ORACLE"));
 
         feeDistributor.grantRole(feeDistributor.RECOVERER_ROLE(), recoverer);
     }

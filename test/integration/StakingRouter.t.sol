@@ -27,6 +27,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
 
         vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
         csm.grantRole(csm.RESUME_ROLE(), address(this));
+        csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(stakingRouter));
         vm.stopPrank();
         csm.resume();
 
