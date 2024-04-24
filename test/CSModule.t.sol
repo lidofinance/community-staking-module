@@ -5536,8 +5536,14 @@ contract CSMMisc is CSMCommon {
     function test_updateRefundedValidatorsCount() public {
         uint256 noId = createNodeOperator();
         uint256 nonce = csm.getNonce();
-        csm.updateRefundedValidatorsCount(noId, 1);
+        uint256 refunded = 1;
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.RefundedKeysCountChanged(noId, refunded);
+        csm.updateRefundedValidatorsCount(noId, refunded);
         assertEq(csm.getNonce(), nonce + 1);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(summary.refundedValidatorsCount, refunded);
     }
 
     function test_getActiveNodeOperatorsCount_OneOperator() public {
