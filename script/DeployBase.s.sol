@@ -172,7 +172,8 @@ abstract contract DeployBase is Script {
                 feeDistributorContract: address(feeDistributor),
                 consensusContract: address(hashConsensus),
                 consensusVersion: 1,
-                lastProcessingRefSlot: _refSlotFromEpoch(INITIALIZATION_EPOCH)
+                lastProcessingRefSlot: _refSlotFromEpoch(INITIALIZATION_EPOCH),
+                _perfThresholdBP: 9500
             });
 
             verifier = new CSVerifier({

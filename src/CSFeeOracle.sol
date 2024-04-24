@@ -29,9 +29,9 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         uint256 distributed;
     }
 
-    /// @notice An ACL role granting the permission to submit the data for a committee report.
-    bytes32 public constant MANAGE_FEE_DISTRIBUTOR_CONTRACT_ROLE =
-        keccak256("MANAGE_FEE_DISTRIBUTOR_CONTRACT_ROLE");
+    /// @notice An ACL role granting the permission to manage the contract (update variables).
+    bytes32 public constant CONTRACT_MANAGER_ROLE =
+        keccak256("CONTRACT_MANAGER_ROLE");
 
     /// @notice An ACL role granting the permission to submit the data for a committee report.
     bytes32 public constant SUBMIT_DATA_ROLE = keccak256("SUBMIT_DATA_ROLE");
@@ -45,10 +45,18 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
     /// @notice An ACL role granting the permission to recover assets
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
+    uint256 internal constant MAX_BP = 10000;
+
     ICSFeeDistributor public feeDistributor;
+
+    /// @notice Threshold in basis points used to determine the underperforming validators (by comparing with the
+    /// network average).
+    uint256 public perfThresholdBP;
 
     /// @dev Emitted when a new fee distributor contract is set
     event FeeDistributorContractSet(address feeDistributorContract);
+
+    event PerformanceThresholdSet(uint256 valueBP);
 
     /// @dev Emitted when a report is consolidated
     event ReportConsolidated(
@@ -58,6 +66,7 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         string treeCid
     );
 
+    error InvalidPerfThreshold();
     error TreeRootCannotBeZero();
     error TreeCidCannotBeEmpty();
     error NothingToDistribute();
@@ -74,7 +83,8 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         address feeDistributorContract,
         address consensusContract,
         uint256 consensusVersion,
-        uint256 lastProcessingRefSlot // will be the first ref slot in getConsensusReport()
+        uint256 lastProcessingRefSlot, // will be the first ref slot in getConsensusReport()
+        uint256 _perfThresholdBP
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
@@ -86,14 +96,23 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         );
         /// @dev _setFeeDistributorContract() reverts if zero address
         _setFeeDistributorContract(feeDistributorContract);
+        _setPerformanceThreshold(_perfThresholdBP);
     }
 
     /// @notice Sets a new fee distributor contract
     /// @param feeDistributorContract Address of the new fee distributor contract
     function setFeeDistributorContract(
         address feeDistributorContract
-    ) external onlyRole(MANAGE_FEE_DISTRIBUTOR_CONTRACT_ROLE) {
+    ) external onlyRole(CONTRACT_MANAGER_ROLE) {
         _setFeeDistributorContract(feeDistributorContract);
+    }
+
+    /// @notice Sets a new performance threshold value in basis points.
+    /// @param valueBP performance threshold in basis points.
+    function setPerformanceThreshold(
+        uint256 valueBP
+    ) external onlyRole(CONTRACT_MANAGER_ROLE) {
+        _setPerformanceThreshold(valueBP);
     }
 
     /// @notice Submits the data for a committee report
@@ -142,6 +161,15 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         emit FeeDistributorContractSet(feeDistributorContract);
     }
 
+    function _setPerformanceThreshold(uint256 valueBP) internal {
+        if (valueBP > MAX_BP) {
+            revert InvalidPerfThreshold();
+        }
+
+        perfThresholdBP = valueBP;
+        emit PerformanceThresholdSet(valueBP);
+    }
+
     function _handleConsensusReport(
         ConsensusReport memory /* report */,
         uint256 /* prevSubmittedRefSlot */,
@@ -156,17 +184,17 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
 
     function _handleConsensusReportData(ReportData calldata data) internal {
         _reportDataSanityCheck(data);
-
-        feeDistributor.processOracleReport(
-            data.treeRoot,
-            data.treeCid,
-            data.distributed
-        );
         emit ReportConsolidated(
             data.refSlot,
             data.distributed,
             data.treeRoot,
             data.treeCid
+        );
+
+        feeDistributor.processOracleReport(
+            data.treeRoot,
+            data.treeCid,
+            data.distributed
         );
     }
 
