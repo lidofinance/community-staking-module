@@ -46,7 +46,7 @@ contract CSModule is
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE"); // 0xb3e25b5404b87e5a838579cb5d7481d61ad96ee284d38ec1e97c07ba64e7f6fc
 
     uint256 public constant DEPOSIT_SIZE = 32 ether;
-    uint256 private constant MIN_SLASHING_PENALTY_QUOTIENT = 32;
+    uint256 private constant MIN_SLASHING_PENALTY_QUOTIENT = 32; // TODO: consider to move to immutable variable
     uint256 public constant INITIAL_SLASHING_PENALTY =
         DEPOSIT_SIZE / MIN_SLASHING_PENALTY_QUOTIENT;
     bytes32 private constant SIGNING_KEYS_POSITION =
@@ -733,6 +733,7 @@ contract CSModule is
     /// @notice Gets node operator active keys including non-deposited
     /// @param nodeOperatorId ID of the node operator
     /// @return Active keys count
+    // TODO: think about better naming. there is a convention in SR that active = deposited - exited
     function getNodeOperatorActiveKeys(
         uint256 nodeOperatorId
     ) external view returns (uint256) {
@@ -795,6 +796,7 @@ contract CSModule is
             targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
             targetValidatorsCount = Math.min(
                 no.targetLimit,
+                // TODO: check invariant for range of totalUnbondedKeys (withdrawn?)
                 no.totalAddedKeys - no.totalExitedKeys - totalUnbondedKeys
             );
             // No force mode enabled but unbonded
@@ -827,8 +829,10 @@ contract CSModule is
         uint256 keysCount
     ) external view returns (bytes memory) {
         _onlyExistingNodeOperator(nodeOperatorId);
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (startIndex + keysCount > no.totalAddedKeys) {
+        if (
+            startIndex + keysCount >
+            _nodeOperators[nodeOperatorId].totalAddedKeys
+        ) {
             revert SigningKeysInvalidOffset();
         }
 
@@ -853,10 +857,14 @@ contract CSModule is
         uint256 keysCount
     ) external view returns (bytes memory keys, bytes memory signatures) {
         _onlyExistingNodeOperator(nodeOperatorId);
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (startIndex + keysCount > no.totalAddedKeys) {
+        if (
+            startIndex + keysCount >
+            _nodeOperators[nodeOperatorId].totalAddedKeys
+        ) {
             revert SigningKeysInvalidOffset();
         }
+
+        // TODO: think about universal interface to interact with loadKeysSigs and loadKeys
         (keys, signatures) = SigningKeys.initKeysSigsBuf(keysCount);
         // solhint-disable-next-line func-named-parameters
         SigningKeys.loadKeysSigs(
@@ -913,7 +921,6 @@ contract CSModule is
 
     /// @notice Called when rewards minted for the module.
     /// @dev Passes through the minted shares to the fee distributor.
-    /// XXX: Make sure the fee distributor is set before calling this function.
     function onRewardsMinted(
         uint256 totalShares
     ) external onlyRole(STAKING_ROUTER_ROLE) {
@@ -925,8 +932,8 @@ contract CSModule is
 
     function _updateDepositableValidatorsCount(
         uint256 nodeOperatorId,
-        bool doIncrementNonce,
-        bool doNormalizeQueue
+        bool doIncrementNonce, // TODO: think about better name, like incrementNonceIfUpdated
+        bool doNormalizeQueue // TODO: think about better name, like normilizeQueueIfUpdated
     ) private {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
@@ -938,19 +945,21 @@ contract CSModule is
         if (unbondedKeys > newCount) {
             newCount = 0;
         } else {
-            newCount -= unbondedKeys;
+            unchecked {
+                newCount -= unbondedKeys;
+            }
         }
 
-        if (no.stuckValidatorsCount != 0) {
+        if (no.stuckValidatorsCount > 0) {
             newCount = 0;
         }
 
         if (no.targetLimitMode > 0) {
-            uint256 nonWithdrawnValidators = no.totalDepositedKeys -
+            uint256 activeValidators = no.totalDepositedKeys -
                 no.totalWithdrawnKeys;
             newCount = Math.min(
-                no.targetLimit > nonWithdrawnValidators
-                    ? no.targetLimit - nonWithdrawnValidators
+                no.targetLimit > activeValidators
+                    ? no.targetLimit - activeValidators
                     : 0,
                 newCount
             );
@@ -962,6 +971,8 @@ contract CSModule is
                 _depositableValidatorsCount -
                 no.depositableValidatorsCount +
                 newCount;
+            // TODO: think about event emitting for depositableValidatorsCount changing.
+            // Note: it also changes outisde this method
             no.depositableValidatorsCount = newCount;
             if (doIncrementNonce) {
                 _incrementModuleNonce();
@@ -973,9 +984,9 @@ contract CSModule is
     }
 
     /// @notice Updates stuck validators count for node operators by StakingRouter
+    /// TODO: update natspec
     /// @dev Presence of stuck validators leads to stop vetting for the node operator
     ///      to prevent further deposits and clean batches from the deposit queue.
-    /// @dev stuck keys doesn't affect depositable keys count, so no need to recalculate it here
     /// @param nodeOperatorIds bytes packed array of node operator ids
     /// @param stuckValidatorsCounts bytes packed array of stuck validators counts
     function updateStuckValidatorsCount(
@@ -986,8 +997,9 @@ contract CSModule is
 
         for (
             uint256 i = 0;
+            // TODO: move to separate variable
             i < ValidatorCountsReport.count(nodeOperatorIds);
-            i++
+            ++i
         ) {
             (
                 uint256 nodeOperatorId,
@@ -997,7 +1009,7 @@ contract CSModule is
                     stuckValidatorsCounts,
                     i
                 );
-            if (nodeOperatorId >= _nodeOperatorsCount)
+            if (_nodeOperatorsCount < nodeOperatorId)
                 revert NodeOperatorDoesNotExist();
             _updateStuckValidatorsCount(nodeOperatorId, stuckValidatorsCount);
         }
@@ -1010,6 +1022,7 @@ contract CSModule is
     ) internal {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (stuckValidatorsCount == no.stuckValidatorsCount) return;
+        // TODO: more strict invariant should be: stuck <= deposited - exited
         if (stuckValidatorsCount > no.totalDepositedKeys)
             revert StuckKeysHigherThanTotalDeposited();
 
@@ -1044,8 +1057,9 @@ contract CSModule is
 
         for (
             uint256 i = 0;
+            // TODO: move to separate variable
             i < ValidatorCountsReport.count(nodeOperatorIds);
-            i++
+            ++i
         ) {
             (
                 uint256 nodeOperatorId,
@@ -1055,19 +1069,19 @@ contract CSModule is
                     exitedValidatorsCounts,
                     i
                 );
-            if (nodeOperatorId >= _nodeOperatorsCount)
+            if (_nodeOperatorsCount < nodeOperatorId)
                 revert NodeOperatorDoesNotExist();
 
             _updateExitedValidatorsCount(
                 nodeOperatorId,
                 exitedValidatorsCount,
-                false /* _allowDecrease */
+                false /* _allowDecrease */ // TODO: use one approach to name args in codebase
             );
         }
         _incrementModuleNonce();
     }
 
-    // @dev updates exited validators count for a single node operator. allows decrease the count for unsafe updates
+    /// @dev updates exited validators count for a single node operator. allows decrease the count for unsafe updates
     function _updateExitedValidatorsCount(
         uint256 nodeOperatorId,
         uint256 exitedValidatorsCount,

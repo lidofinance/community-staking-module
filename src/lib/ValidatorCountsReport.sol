@@ -12,6 +12,7 @@ library ValidatorCountsReport {
 
     function validate(bytes calldata ids, bytes calldata counts) internal pure {
         if (
+            // TODO: rename `count`
             counts.length / 16 != count(ids) ||
             ids.length % 8 != 0 ||
             counts.length % 16 != 0
