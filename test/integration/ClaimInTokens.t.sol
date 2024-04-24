@@ -15,6 +15,7 @@ import { ICSAccounting } from "../../src/interfaces/ICSAccounting.sol";
 import { Utilities } from "../helpers/Utilities.sol";
 import { PermitHelper } from "../helpers/Permit.sol";
 import { DeploymentFixtures } from "../helpers/Fixtures.sol";
+import { MerkleTree } from "../helpers/MerkleTree.sol";
 
 contract ClaimIntegrationTest is
     Test,
@@ -36,6 +37,12 @@ contract ClaimIntegrationTest is
         csm.grantRole(csm.RESUME_ROLE(), address(this));
         vm.stopPrank();
         csm.resume();
+
+        vm.startPrank(
+            feeDistributor.getRoleMember(feeDistributor.DEFAULT_ADMIN_ROLE(), 0)
+        );
+        feeDistributor.grantRole(feeDistributor.ORACLE_ROLE(), address(this));
+        vm.stopPrank();
 
         user = nextAddress("User");
         stranger = nextAddress("stranger");
@@ -139,7 +146,7 @@ contract ClaimIntegrationTest is
         csm.depositETH{ value: amount }(defaultNoId);
         vm.stopPrank();
 
-        (uint256 current, uint256 required) = accounting.getBondSummary(
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             defaultNoId
         );
 
@@ -164,5 +171,114 @@ contract ClaimIntegrationTest is
 
         IWithdrawalQueue.WithdrawalRequestStatus[] memory statuses = wq
             .getWithdrawalStatus(requestsIdsAfter);
+
+        assertEq(
+            statuses[0].amountOfStETH,
+            lido.getPooledEthByShares(excessBond)
+        );
+    }
+
+    function test_claimRewardsStETH() public {
+        uint256 sharesBefore = lido.sharesOf(nodeOperator);
+        uint256 amount = 1 ether;
+
+        // Supply funds to feeDistributor
+        vm.startPrank(user);
+        vm.deal(user, amount);
+        uint256 shares = lido.submit{ value: amount }({ _referal: address(0) });
+        lido.transferShares(address(feeDistributor), shares);
+        vm.stopPrank();
+
+        // Prepare and submit report data
+        MerkleTree tree = new MerkleTree();
+        tree.pushLeaf(abi.encode(defaultNoId, shares));
+        bytes32[] memory proof = tree.getProof(0);
+        bytes32 root = tree.root();
+
+        feeDistributor.processOracleReport(root, "", shares);
+
+        vm.prank(nodeOperator);
+        csm.claimRewardsStETH(defaultNoId, type(uint256).max, shares, proof);
+
+        uint256 sharesAfter = lido.sharesOf(nodeOperator);
+
+        assertEq(sharesAfter, sharesBefore + shares);
+    }
+
+    function test_claimRewardsWstETH() public {
+        uint256 balanceBefore = wstETH.balanceOf(nodeOperator);
+        uint256 amount = 1 ether;
+
+        // Supply funds to feeDistributor
+        vm.startPrank(user);
+        vm.deal(user, amount);
+        uint256 shares = lido.submit{ value: amount }({ _referal: address(0) });
+        lido.transferShares(address(feeDistributor), shares);
+        vm.stopPrank();
+
+        uint256 rewardsWstETH = wstETH.getWstETHByStETH(
+            lido.getPooledEthByShares(shares)
+        );
+
+        // Prepare and submit report data
+        MerkleTree tree = new MerkleTree();
+        tree.pushLeaf(abi.encode(defaultNoId, shares));
+        bytes32[] memory proof = tree.getProof(0);
+        bytes32 root = tree.root();
+
+        feeDistributor.processOracleReport(root, "", shares);
+
+        vm.prank(nodeOperator);
+        csm.claimRewardsWstETH(defaultNoId, type(uint256).max, shares, proof);
+
+        uint256 balanceAfter = wstETH.balanceOf(nodeOperator);
+
+        assertEq(balanceAfter, balanceBefore + rewardsWstETH);
+    }
+
+    function test_requestRewardsETH() public {
+        IWithdrawalQueue wq = IWithdrawalQueue(locator.withdrawalQueue());
+        uint256[] memory requestsIdsBefore = wq.getWithdrawalRequests(
+            nodeOperator
+        );
+        assertEq(
+            requestsIdsBefore.length,
+            0,
+            "should be no wd requests for the Node Operator"
+        );
+
+        uint256 amount = 1 ether;
+
+        // Supply funds to feeDistributor
+        vm.startPrank(user);
+        vm.deal(user, amount);
+        uint256 shares = lido.submit{ value: amount }({ _referal: address(0) });
+        lido.transferShares(address(feeDistributor), shares);
+        vm.stopPrank();
+
+        // Prepare and submit report data
+        MerkleTree tree = new MerkleTree();
+        tree.pushLeaf(abi.encode(defaultNoId, shares));
+        bytes32[] memory proof = tree.getProof(0);
+        bytes32 root = tree.root();
+
+        feeDistributor.processOracleReport(root, "", shares);
+
+        vm.prank(nodeOperator);
+        csm.requestRewardsETH(defaultNoId, type(uint256).max, shares, proof);
+
+        uint256[] memory requestsIdsAfter = wq.getWithdrawalRequests(
+            nodeOperator
+        );
+        assertEq(
+            requestsIdsAfter.length,
+            1,
+            "should be 1 wd request for the Node Operator"
+        );
+
+        IWithdrawalQueue.WithdrawalRequestStatus[] memory statuses = wq
+            .getWithdrawalStatus(requestsIdsAfter);
+
+        assertEq(statuses[0].amountOfStETH, lido.getPooledEthByShares(shares));
     }
 }
