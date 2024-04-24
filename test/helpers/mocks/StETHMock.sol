@@ -111,4 +111,11 @@ contract StETHMock is PermitTokenBase {
         shares[_recipient] += _sharesAmount;
         return _sharesAmount;
     }
+
+    function approve(
+        address /* spender */,
+        uint256 /* value */
+    ) public virtual returns (bool) {
+        return true;
+    }
 }
