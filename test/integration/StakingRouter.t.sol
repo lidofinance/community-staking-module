@@ -47,6 +47,10 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
             stakingRouter.REPORT_EXITED_VALIDATORS_ROLE(),
             agent
         );
+        stakingRouter.grantRole(
+            stakingRouter.UNSAFE_SET_EXITED_VALIDATORS_ROLE(),
+            agent
+        );
         vm.stopPrank();
 
         if (env.MODULE_ID == 0) {
@@ -307,5 +311,70 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         assertEq(summary.totalExitedValidators, exited);
         assertEq(summary.totalDepositedValidators, keysToDeposit);
         assertEq(summary.depositableValidatorsCount, 0); // due to stuck != 0
+    }
+
+    function test_unsafeSetExitedValidatorsCount() public {
+        address nodeOperatorManager = nextAddress();
+        uint256 noId = addNodeOperator(nodeOperatorManager, 10);
+
+        hugeDeposit();
+
+        vm.prank(locator.depositSecurityModule());
+        lido.deposit(6, moduleId, "");
+
+        uint256 exited = 2;
+        vm.prank(agent);
+        stakingRouter.reportStakingModuleExitedValidatorsCountByNodeOperator(
+            moduleId,
+            bytes.concat(bytes8(uint64(noId))),
+            bytes.concat(bytes16(uint128(exited)))
+        );
+
+        uint256 stuck = 2;
+        vm.prank(agent);
+        stakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator(
+            moduleId,
+            bytes.concat(bytes8(uint64(noId))),
+            bytes.concat(bytes16(uint128(stuck)))
+        );
+
+        IStakingRouter.StakingModule memory moduleInfo = stakingRouter
+            .getStakingModule(moduleId);
+
+        uint256 unsafeExited = 1;
+        uint256 unsafeStuck = 1;
+
+        IStakingRouter.ValidatorsCountsCorrection
+            memory correction = IStakingRouter.ValidatorsCountsCorrection({
+                currentModuleExitedValidatorsCount: moduleInfo
+                    .exitedValidatorsCount,
+                currentNodeOperatorExitedValidatorsCount: exited,
+                currentNodeOperatorStuckValidatorsCount: stuck,
+                // dirty hack since prev call does not update total counts
+                newModuleExitedValidatorsCount: moduleInfo
+                    .exitedValidatorsCount + unsafeExited,
+                newNodeOperatorExitedValidatorsCount: unsafeExited,
+                newNodeOperatorStuckValidatorsCount: unsafeStuck
+            });
+        vm.prank(agent);
+        stakingRouter.unsafeSetExitedValidatorsCount(
+            moduleId,
+            noId,
+            false,
+            correction
+        );
+
+        (
+            ,
+            ,
+            uint256 stuckValidatorsCount,
+            ,
+            ,
+            uint256 totalExitedValidators,
+            ,
+
+        ) = csm.getNodeOperatorSummary(noId);
+        assertEq(stuckValidatorsCount, unsafeStuck);
+        assertEq(totalExitedValidators, unsafeExited);
     }
 }
