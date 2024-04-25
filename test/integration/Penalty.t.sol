@@ -81,11 +81,11 @@ contract PenaltyIntegrationTest is
     }
 
     function test_penalty() public {
-        uint256 sharesBefore = lido.sharesOf(nodeOperator);
-
         uint256 amount = 1 ether;
 
-        (uint256 bondBefore, ) = accounting.getBondSummary(defaultNoId);
+        uint256 amountShares = lido.getSharesByPooledEth(amount);
+
+        (uint256 bondBefore, ) = accounting.getBondSummaryShares(defaultNoId);
 
         csm.reportELRewardsStealingPenalty(
             defaultNoId,
@@ -98,8 +98,8 @@ contract PenaltyIntegrationTest is
 
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
-        (uint256 bondAfter, ) = accounting.getBondSummary(defaultNoId);
+        (uint256 bondAfter, ) = accounting.getBondSummaryShares(defaultNoId);
 
-        assertApproxEqAbs(bondAfter, bondBefore - amount, 1 wei);
+        assertEq(bondAfter, bondBefore - amountShares);
     }
 }

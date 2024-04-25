@@ -3,8 +3,8 @@
 
 pragma solidity 0.8.24;
 
-import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
-import { BaseOracle } from "base-oracle/oracle/BaseOracle.sol";
+import { PausableUntil } from "./lib/utils/PausableUntil.sol";
+import { BaseOracle } from "./lib/base-oracle/BaseOracle.sol";
 
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
@@ -83,7 +83,7 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         uint256 _perfThresholdBP
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
-        _setupRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
         BaseOracle._initialize(consensusContract, consensusVersion, 0);
         /// @dev _setFeeDistributorContract() reverts if zero address

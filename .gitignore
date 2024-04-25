@@ -20,5 +20,3 @@ lcov.info
 !.yarn/versions
 
 lib/*
-!lib/base-oracle
-!lib/proxy

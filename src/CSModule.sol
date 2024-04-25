@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.24;
 
-import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
+import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";

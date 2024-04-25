@@ -98,14 +98,14 @@
 | getConsensusReport                       | 1041            | 1923   | 1079   | 3041   | 32      |
 | getConsensusVersion                      | 427             | 1627   | 2427   | 2427   | 20      |
 | getLastProcessingRefSlot                 | 494             | 2290   | 2494   | 2494   | 59      |
-| grantRole                                | 101393          | 115318 | 118493 | 118493 | 97      |
-| initialize                               | 23134           | 266931 | 284341 | 284353 | 15      |
-| pauseFor                                 | 47614           | 47614  | 47614  | 47614  | 2       |
-| pauseUntil                               | 47630           | 47630  | 47630  | 47630  | 1       |
+| grantRole                                | 101559          | 115484 | 118659 | 118659 | 97      |
+| initialize                               | 23134           | 267027 | 284444 | 284456 | 15      |
+| pauseFor                                 | 47643           | 47643  | 47643  | 47643  | 2       |
+| pauseUntil                               | 47659           | 47659  | 47659  | 47659  | 1       |
 | perfThresholdBP                          | 428             | 428    | 428    | 428    | 1       |
-| resume                                   | 23535           | 26690  | 26690  | 29845  | 2       |
-| setFeeDistributorContract                | 24081           | 27248  | 27248  | 30415  | 2       |
-| setPerformanceThreshold                  | 24028           | 27048  | 27048  | 30068  | 2       |
+| resume                                   | 23535           | 26704  | 26704  | 29874  | 2       |
+| setFeeDistributorContract                | 24110           | 27277  | 27277  | 30444  | 2       |
+| setPerformanceThreshold                  | 24057           | 27077  | 27077  | 30097  | 2       |
 | submitReportData                         | 25486           | 40971  | 44533  | 53601  | 8       |
 
 

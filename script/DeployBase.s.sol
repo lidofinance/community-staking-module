@@ -5,8 +5,8 @@ pragma solidity 0.8.24;
 
 import "forge-std/Script.sol";
 
-import { HashConsensus } from "../lib/base-oracle/oracle/HashConsensus.sol";
-import { OssifiableProxy } from "../lib/proxy/OssifiableProxy.sol";
+import { HashConsensus } from "../src/lib/base-oracle/HashConsensus.sol";
+import { OssifiableProxy } from "../src/lib/proxy/OssifiableProxy.sol";
 import { CSModule } from "../src/CSModule.sol";
 import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
