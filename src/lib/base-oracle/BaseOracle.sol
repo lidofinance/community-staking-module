@@ -1,37 +1,45 @@
 // SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.9;
+pragma solidity 0.8.24;
 
 import { SafeCast } from "@openzeppelin/contracts-v4.4/utils/math/SafeCast.sol";
 
-import { UnstructuredStorage } from "../lib/UnstructuredStorage.sol";
+import { UnstructuredStorage } from "../UnstructuredStorage.sol";
 import { Versioned } from "../utils/Versioned.sol";
-import { AccessControlEnumerable } from "../utils/access/AccessControlEnumerable.sol";
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 
 import { IReportAsyncProcessor } from "./HashConsensus.sol";
-
 
 interface IConsensusContract {
     function getIsMember(address addr) external view returns (bool);
 
-    function getCurrentFrame() external view returns (
-        uint256 refSlot,
-        uint256 reportProcessingDeadlineSlot
-    );
+    function getCurrentFrame()
+        external
+        view
+        returns (uint256 refSlot, uint256 reportProcessingDeadlineSlot);
 
-    function getChainConfig() external view returns (
-        uint256 slotsPerEpoch,
-        uint256 secondsPerSlot,
-        uint256 genesisTime
-    );
+    function getChainConfig()
+        external
+        view
+        returns (
+            uint256 slotsPerEpoch,
+            uint256 secondsPerSlot,
+            uint256 genesisTime
+        );
 
-    function getFrameConfig() external view returns (uint256 initialEpoch, uint256 epochsPerFrame);
+    function getFrameConfig()
+        external
+        view
+        returns (uint256 initialEpoch, uint256 epochsPerFrame);
 
     function getInitialRefSlot() external view returns (uint256);
 }
 
-
-abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, Versioned {
+abstract contract BaseOracle is
+    IReportAsyncProcessor,
+    AccessControlEnumerableUpgradeable,
+    Versioned
+{
     using UnstructuredStorage for bytes32;
     using SafeCast for uint256;
 
@@ -40,21 +48,40 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     error VersionCannotBeSame();
     error UnexpectedChainConfig();
     error SenderIsNotTheConsensusContract();
-    error InitialRefSlotCannotBeLessThanProcessingOne(uint256 initialRefSlot, uint256 processingRefSlot);
-    error RefSlotMustBeGreaterThanProcessingOne(uint256 refSlot, uint256 processingRefSlot);
+    error InitialRefSlotCannotBeLessThanProcessingOne(
+        uint256 initialRefSlot,
+        uint256 processingRefSlot
+    );
+    error RefSlotMustBeGreaterThanProcessingOne(
+        uint256 refSlot,
+        uint256 processingRefSlot
+    );
     error RefSlotCannotDecrease(uint256 refSlot, uint256 prevRefSlot);
     error NoConsensusReportToProcess();
     error ProcessingDeadlineMissed(uint256 deadline);
     error RefSlotAlreadyProcessing();
     error UnexpectedRefSlot(uint256 consensusRefSlot, uint256 dataRefSlot);
-    error UnexpectedConsensusVersion(uint256 expectedVersion, uint256 receivedVersion);
+    error UnexpectedConsensusVersion(
+        uint256 expectedVersion,
+        uint256 receivedVersion
+    );
     error HashCannotBeZero();
     error UnexpectedDataHash(bytes32 consensusHash, bytes32 receivedHash);
     error SecondsPerSlotCannotBeZero();
 
-    event ConsensusHashContractSet(address indexed addr, address indexed prevAddr);
-    event ConsensusVersionSet(uint256 indexed version, uint256 indexed prevVersion);
-    event ReportSubmitted(uint256 indexed refSlot, bytes32 hash, uint256 processingDeadlineTime);
+    event ConsensusHashContractSet(
+        address indexed addr,
+        address indexed prevAddr
+    );
+    event ConsensusVersionSet(
+        uint256 indexed version,
+        uint256 indexed prevVersion
+    );
+    event ReportSubmitted(
+        uint256 indexed refSlot,
+        bytes32 hash,
+        uint256 processingDeadlineTime
+    );
     event ReportDiscarded(uint256 indexed refSlot, bytes32 hash);
     event ProcessingStarted(uint256 indexed refSlot, bytes32 hash);
     event WarnProcessingMissed(uint256 indexed refSlot);
@@ -75,7 +102,6 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     bytes32 public constant MANAGE_CONSENSUS_VERSION_ROLE =
         keccak256("MANAGE_CONSENSUS_VERSION_ROLE");
 
-
     /// @dev Storage slot: address consensusContract
     bytes32 internal constant CONSENSUS_CONTRACT_POSITION =
         keccak256("lido.BaseOracle.consensusContract");
@@ -91,7 +117,6 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     /// @dev Storage slot: ConsensusReport consensusReport
     bytes32 internal constant CONSENSUS_REPORT_POSITION =
         keccak256("lido.BaseOracle.consensusReport");
-
 
     uint256 public immutable SECONDS_PER_SLOT;
     uint256 public immutable GENESIS_TIME;
@@ -114,8 +139,13 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
 
     /// @notice Sets the address of the HashConsensus contract.
     ///
-    function setConsensusContract(address addr) external onlyRole(MANAGE_CONSENSUS_CONTRACT_ROLE) {
-        _setConsensusContract(addr, LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256());
+    function setConsensusContract(
+        address addr
+    ) external onlyRole(MANAGE_CONSENSUS_CONTRACT_ROLE) {
+        _setConsensusContract(
+            addr,
+            LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256()
+        );
     }
 
     /// @notice Returns the current consensus version expected by the oracle contract.
@@ -129,7 +159,9 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
 
     /// @notice Sets the consensus version expected by the oracle contract.
     ///
-    function setConsensusVersion(uint256 version) external onlyRole(MANAGE_CONSENSUS_VERSION_ROLE) {
+    function setConsensusVersion(
+        uint256 version
+    ) external onlyRole(MANAGE_CONSENSUS_VERSION_ROLE) {
         _setConsensusVersion(version);
     }
 
@@ -139,14 +171,19 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
 
     /// @notice Returns the last consensus report hash and metadata.
     ///
-    function getConsensusReport() external view returns (
-        bytes32 hash,
-        uint256 refSlot,
-        uint256 processingDeadlineTime,
-        bool processingStarted
-    ) {
+    function getConsensusReport()
+        external
+        view
+        returns (
+            bytes32 hash,
+            uint256 refSlot,
+            uint256 processingDeadlineTime,
+            bool processingStarted
+        )
+    {
         ConsensusReport memory report = _storageConsensusReport().value;
-        uint256 processingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
+        uint256 processingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION
+            .getStorageUint256();
         return (
             report.hash,
             report.refSlot,
@@ -167,7 +204,11 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     /// submit it using this same function, or to lose the consensus on the submitted report,
     /// notifying the processor via `discardConsensusReport`.
     ///
-    function submitConsensusReport(bytes32 reportHash, uint256 refSlot, uint256 deadline) external {
+    function submitConsensusReport(
+        bytes32 reportHash,
+        uint256 refSlot,
+        uint256 deadline
+    ) external {
         _checkSenderIsConsensusContract();
 
         uint256 prevSubmittedRefSlot = _storageConsensusReport().value.refSlot;
@@ -175,16 +216,23 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
             revert RefSlotCannotDecrease(refSlot, prevSubmittedRefSlot);
         }
 
-        uint256 prevProcessingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
+        uint256 prevProcessingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION
+            .getStorageUint256();
         if (refSlot <= prevProcessingRefSlot) {
-            revert RefSlotMustBeGreaterThanProcessingOne(refSlot, prevProcessingRefSlot);
+            revert RefSlotMustBeGreaterThanProcessingOne(
+                refSlot,
+                prevProcessingRefSlot
+            );
         }
 
         if (_getTime() > deadline) {
             revert ProcessingDeadlineMissed(deadline);
         }
 
-        if (refSlot != prevSubmittedRefSlot && prevProcessingRefSlot != prevSubmittedRefSlot) {
+        if (
+            refSlot != prevSubmittedRefSlot &&
+            prevProcessingRefSlot != prevSubmittedRefSlot
+        ) {
             emit WarnProcessingMissed(prevSubmittedRefSlot);
         }
 
@@ -201,7 +249,11 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         });
 
         _storageConsensusReport().value = report;
-        _handleConsensusReport(report, prevSubmittedRefSlot, prevProcessingRefSlot);
+        _handleConsensusReport(
+            report,
+            prevSubmittedRefSlot,
+            prevProcessingRefSlot
+        );
     }
 
     /// @notice Called by HashConsensus contract to notify that the report for the given ref. slot
@@ -221,14 +273,16 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     function discardConsensusReport(uint256 refSlot) external {
         _checkSenderIsConsensusContract();
 
-        ConsensusReport memory submittedReport = _storageConsensusReport().value;
+        ConsensusReport memory submittedReport = _storageConsensusReport()
+            .value;
         if (refSlot < submittedReport.refSlot) {
             revert RefSlotCannotDecrease(refSlot, submittedReport.refSlot);
         } else if (refSlot > submittedReport.refSlot) {
             return;
         }
 
-        uint256 lastProcessingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
+        uint256 lastProcessingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION
+            .getStorageUint256();
         if (refSlot <= lastProcessingRefSlot) {
             revert RefSlotAlreadyProcessing();
         }
@@ -260,8 +314,11 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         _initializeContractVersionTo(1);
         _setConsensusContract(consensusContract, lastProcessingRefSlot);
         _setConsensusVersion(consensusVersion);
-        LAST_PROCESSING_REF_SLOT_POSITION.setStorageUint256(lastProcessingRefSlot);
-        _storageConsensusReport().value.refSlot = lastProcessingRefSlot.toUint64();
+        LAST_PROCESSING_REF_SLOT_POSITION.setStorageUint256(
+            lastProcessingRefSlot
+        );
+        _storageConsensusReport().value.refSlot = lastProcessingRefSlot
+            .toUint64();
     }
 
     /// @notice Returns whether the given address is a member of the oracle committee.
@@ -288,22 +345,30 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     /// report that is not processing yet and asks to discard this report. Only called if there is
     /// no new consensus report at the moment; otherwise, `_handleConsensusReport` is called instead.
     ///
-    function _handleConsensusReportDiscarded(ConsensusReport memory report) internal virtual {}
+    function _handleConsensusReportDiscarded(
+        ConsensusReport memory report
+    ) internal virtual;
 
     /// @notice May be called by a descendant contract to check if the received data matches
     /// the currently submitted consensus report. Reverts otherwise.
     ///
-    function _checkConsensusData(uint256 refSlot, uint256 consensusVersion, bytes32 hash)
-        internal view
-    {
+    function _checkConsensusData(
+        uint256 refSlot,
+        uint256 consensusVersion,
+        bytes32 hash
+    ) internal view {
         ConsensusReport memory report = _storageConsensusReport().value;
         if (refSlot != report.refSlot) {
             revert UnexpectedRefSlot(report.refSlot, refSlot);
         }
 
-        uint256 expectedConsensusVersion = CONSENSUS_VERSION_POSITION.getStorageUint256();
+        uint256 expectedConsensusVersion = CONSENSUS_VERSION_POSITION
+            .getStorageUint256();
         if (consensusVersion != expectedConsensusVersion) {
-            revert UnexpectedConsensusVersion(expectedConsensusVersion, consensusVersion);
+            revert UnexpectedConsensusVersion(
+                expectedConsensusVersion,
+                consensusVersion
+            );
         }
 
         if (hash != report.hash) {
@@ -327,7 +392,8 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
 
         _checkProcessingDeadline(report.processingDeadlineTime);
 
-        uint256 prevProcessingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION.getStorageUint256();
+        uint256 prevProcessingRefSlot = LAST_PROCESSING_REF_SLOT_POSITION
+            .getStorageUint256();
         if (prevProcessingRefSlot == report.refSlot) {
             revert RefSlotAlreadyProcessing();
         }
@@ -341,18 +407,23 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
     /// @notice Reverts if the processing deadline for the current consensus report is missed.
     ///
     function _checkProcessingDeadline() internal view {
-        _checkProcessingDeadline(_storageConsensusReport().value.processingDeadlineTime);
+        _checkProcessingDeadline(
+            _storageConsensusReport().value.processingDeadlineTime
+        );
     }
 
     function _checkProcessingDeadline(uint256 deadlineTime) internal view {
-        if (_getTime() > deadlineTime) revert ProcessingDeadlineMissed(deadlineTime);
+        if (_getTime() > deadlineTime)
+            revert ProcessingDeadlineMissed(deadlineTime);
     }
 
     /// @notice Returns the reference slot for the current frame.
     ///
     function _getCurrentRefSlot() internal view returns (uint256) {
-        address consensusContract = CONSENSUS_CONTRACT_POSITION.getStorageAddress();
-        (uint256 refSlot, ) = IConsensusContract(consensusContract).getCurrentFrame();
+        address consensusContract = CONSENSUS_CONTRACT_POSITION
+            .getStorageAddress();
+        (uint256 refSlot, ) = IConsensusContract(consensusContract)
+            .getCurrentFrame();
         return refSlot;
     }
 
@@ -367,20 +438,28 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         emit ConsensusVersionSet(version, prevVersion);
     }
 
-    function _setConsensusContract(address addr, uint256 lastProcessingRefSlot) internal {
+    function _setConsensusContract(
+        address addr,
+        uint256 lastProcessingRefSlot
+    ) internal {
         if (addr == address(0)) revert AddressCannotBeZero();
 
         address prevAddr = CONSENSUS_CONTRACT_POSITION.getStorageAddress();
         if (addr == prevAddr) revert AddressCannotBeSame();
 
-        (, uint256 secondsPerSlot, uint256 genesisTime) = IConsensusContract(addr).getChainConfig();
+        (, uint256 secondsPerSlot, uint256 genesisTime) = IConsensusContract(
+            addr
+        ).getChainConfig();
         if (secondsPerSlot != SECONDS_PER_SLOT || genesisTime != GENESIS_TIME) {
             revert UnexpectedChainConfig();
         }
 
         uint256 initialRefSlot = IConsensusContract(addr).getInitialRefSlot();
         if (initialRefSlot < lastProcessingRefSlot) {
-            revert InitialRefSlotCannotBeLessThanProcessingOne(initialRefSlot, lastProcessingRefSlot);
+            revert InitialRefSlotCannotBeLessThanProcessingOne(
+                initialRefSlot,
+                lastProcessingRefSlot
+            );
         }
 
         CONSENSUS_CONTRACT_POSITION.setStorageAddress(addr);
@@ -393,7 +472,7 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         }
     }
 
-    function _getTime() internal virtual view returns (uint256) {
+    function _getTime() internal view virtual returns (uint256) {
         return block.timestamp; // solhint-disable-line not-rely-on-time
     }
 
@@ -405,8 +484,14 @@ abstract contract BaseOracle is IReportAsyncProcessor, AccessControlEnumerable, 
         ConsensusReport value;
     }
 
-    function _storageConsensusReport() internal pure returns (StorageConsensusReport storage r) {
+    function _storageConsensusReport()
+        internal
+        pure
+        returns (StorageConsensusReport storage r)
+    {
         bytes32 position = CONSENSUS_REPORT_POSITION;
-        assembly { r.slot := position }
+        assembly {
+            r.slot := position
+        }
     }
 }

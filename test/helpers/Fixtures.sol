@@ -14,7 +14,7 @@ import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
 import { ILido } from "../../src/interfaces/ILido.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 import { IWstETH } from "../../src/interfaces/IWstETH.sol";
-import { HashConsensus } from "../../lib/base-oracle/oracle/HashConsensus.sol";
+import { HashConsensus } from "../../src/lib/base-oracle/HashConsensus.sol";
 import { IWithdrawalQueue } from "../../src/interfaces/IWithdrawalQueue.sol";
 import { CSModule } from "../../src/CSModule.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";

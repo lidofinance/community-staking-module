@@ -7,7 +7,7 @@ import "../../src/CSAccounting.sol";
 import "../../src/CSFeeOracle.sol";
 import "../../src/CSFeeDistributor.sol";
 import "../../src/CSVerifier.sol";
-import { HashConsensus } from "../../lib/base-oracle/oracle/HashConsensus.sol";
+import { HashConsensus } from "../../src/lib/base-oracle/HashConsensus.sol";
 import { Test } from "forge-std/Test.sol";
 import { DeployBase } from "../../script/DeployBase.s.sol";
 import { DeployMainnetish } from "../../script/DeployMainnetish.s.sol";

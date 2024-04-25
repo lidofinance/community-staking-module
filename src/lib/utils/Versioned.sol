@@ -2,18 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
-
-import "../lib/UnstructuredStorage.sol";
-
+import { UnstructuredStorage } from "../UnstructuredStorage.sol";
 
 contract Versioned {
     using UnstructuredStorage for bytes32;
-
-    event ContractVersionSet(uint256 version);
-
-    error NonZeroContractVersionOnInit();
-    error InvalidContractVersionIncrement();
-    error UnexpectedContractVersion(uint256 expected, uint256 received);
 
     /// @dev Storage slot: uint256 version
     /// Version of the initialized contract storage.
@@ -21,9 +13,16 @@ contract Versioned {
     /// - 0 right after the deployment, before an initializer is invoked (and only at that moment);
     /// - N after calling initialize(), where N is the initially deployed contract version;
     /// - N after upgrading contract by calling finalizeUpgrade_vN().
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lido.Versioned.contractVersion");
+    bytes32 internal constant CONTRACT_VERSION_POSITION =
+        keccak256("lido.Versioned.contractVersion");
 
     uint256 internal constant PETRIFIED_VERSION_MARK = type(uint256).max;
+
+    event ContractVersionSet(uint256 version);
+
+    error NonZeroContractVersionOnInit();
+    error InvalidContractVersionIncrement();
+    error UnexpectedContractVersion(uint256 expected, uint256 received);
 
     constructor() {
         // lock version in the implementation's storage to prevent initialization
@@ -50,7 +49,8 @@ contract Versioned {
 
     /// @dev Updates the contract version. Should be called from a finalizeUpgrade_vN() function.
     function _updateContractVersion(uint256 newVersion) internal {
-        if (newVersion != getContractVersion() + 1) revert InvalidContractVersionIncrement();
+        if (newVersion != getContractVersion() + 1)
+            revert InvalidContractVersionIncrement();
         _setContractVersion(newVersion);
     }
 

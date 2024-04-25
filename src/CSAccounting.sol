@@ -4,7 +4,7 @@
 pragma solidity 0.8.24;
 // TODO prevent storage overlaps in the base contracts
 
-import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
+import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";

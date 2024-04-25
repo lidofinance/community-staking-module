@@ -5,7 +5,7 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { PausableUntil } from "../lib/base-oracle/utils/PausableUntil.sol";
+import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 
 import { IBurner } from "../src/interfaces/IBurner.sol";
 import { ICSModule, NodeOperator } from "../src/interfaces/ICSModule.sol";
