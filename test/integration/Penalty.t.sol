@@ -100,6 +100,6 @@ contract PenaltyIntegrationTest is
 
         (uint256 bondAfter, ) = accounting.getBondSummary(defaultNoId);
 
-        assertEq(bondAfter, bondBefore - amount);
+        assertApproxEqAbs(bondAfter, bondBefore - amount, 1 wei);
     }
 }

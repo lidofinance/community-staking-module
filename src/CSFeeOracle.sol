@@ -67,9 +67,6 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
     );
 
     error InvalidPerfThreshold();
-    error TreeRootCannotBeZero();
-    error TreeCidCannotBeEmpty();
-    error NothingToDistribute();
     error AdminCannotBeZero();
     error SenderNotAllowed();
 
@@ -83,17 +80,12 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         address feeDistributorContract,
         address consensusContract,
         uint256 consensusVersion,
-        uint256 lastProcessingRefSlot, // will be the first ref slot in getConsensusReport()
         uint256 _perfThresholdBP
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
 
-        BaseOracle._initialize(
-            consensusContract,
-            consensusVersion,
-            lastProcessingRefSlot
-        );
+        BaseOracle._initialize(consensusContract, consensusVersion, 0);
         /// @dev _setFeeDistributorContract() reverts if zero address
         _setFeeDistributorContract(feeDistributorContract);
         _setPerformanceThreshold(_perfThresholdBP);
@@ -183,7 +175,6 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
     }
 
     function _handleConsensusReportData(ReportData calldata data) internal {
-        _reportDataSanityCheck(data);
         emit ReportConsolidated(
             data.refSlot,
             data.distributed,
@@ -196,13 +187,6 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
             data.treeCid,
             data.distributed
         );
-    }
-
-    function _reportDataSanityCheck(ReportData calldata data) internal pure {
-        if (bytes(data.treeCid).length == 0) revert TreeCidCannotBeEmpty();
-        if (data.treeRoot == bytes32(0)) revert TreeRootCannotBeZero();
-        if (data.distributed == 0) revert NothingToDistribute();
-        // refSlot is checked by HashConsensus
     }
 
     function _checkMsgSenderIsAllowedToSubmitData() internal view {

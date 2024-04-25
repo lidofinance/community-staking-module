@@ -292,105 +292,6 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.resume();
     }
 
-    function test_reportSanityChecks_RevertWhen_NothingToDistribute() public {
-        {
-            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
-            _grantAllRolesToAdmin();
-            _assertNoReportOnInit();
-            _setInitialEpoch();
-            _seedMembers(3);
-        }
-
-        uint256 startSlot;
-        uint256 refSlot;
-
-        (, startSlot, , ) = oracle.getConsensusReport();
-        (refSlot, ) = consensus.getCurrentFrame();
-        // INITIAL_EPOCH is far above the lastProcessingRefSlot's epoch
-        assertNotEq(startSlot, refSlot);
-
-        CSFeeOracle.ReportData memory data = CSFeeOracle.ReportData({
-            consensusVersion: oracle.getConsensusVersion(),
-            refSlot: refSlot,
-            treeRoot: keccak256("root"),
-            treeCid: "QmCID0",
-            distributed: 0
-        });
-
-        bytes32 reportHash = keccak256(abi.encode(data));
-        _reachConsensus(refSlot, reportHash);
-
-        vm.expectRevert(CSFeeOracle.NothingToDistribute.selector);
-        vm.prank(members[0]);
-        oracle.submitReportData({ data: data, contractVersion: 1 });
-    }
-
-    function test_reportSanityChecks_RevertWhen_TreeRootCannotBeZero() public {
-        {
-            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
-            _grantAllRolesToAdmin();
-            _assertNoReportOnInit();
-            _setInitialEpoch();
-            _seedMembers(3);
-        }
-
-        uint256 startSlot;
-        uint256 refSlot;
-
-        (, startSlot, , ) = oracle.getConsensusReport();
-        (refSlot, ) = consensus.getCurrentFrame();
-        // INITIAL_EPOCH is far above the lastProcessingRefSlot's epoch
-        assertNotEq(startSlot, refSlot);
-
-        CSFeeOracle.ReportData memory data = CSFeeOracle.ReportData({
-            consensusVersion: oracle.getConsensusVersion(),
-            refSlot: refSlot,
-            treeRoot: bytes32(0),
-            treeCid: "QmCID0",
-            distributed: 1337
-        });
-
-        bytes32 reportHash = keccak256(abi.encode(data));
-        _reachConsensus(refSlot, reportHash);
-
-        vm.expectRevert(CSFeeOracle.TreeRootCannotBeZero.selector);
-        vm.prank(members[0]);
-        oracle.submitReportData({ data: data, contractVersion: 1 });
-    }
-
-    function test_reportSanityChecks_RevertWhen_TreeCidCannotBeEmpty() public {
-        {
-            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
-            _grantAllRolesToAdmin();
-            _assertNoReportOnInit();
-            _setInitialEpoch();
-            _seedMembers(3);
-        }
-
-        uint256 startSlot;
-        uint256 refSlot;
-
-        (, startSlot, , ) = oracle.getConsensusReport();
-        (refSlot, ) = consensus.getCurrentFrame();
-        // INITIAL_EPOCH is far above the lastProcessingRefSlot's epoch
-        assertNotEq(startSlot, refSlot);
-
-        CSFeeOracle.ReportData memory data = CSFeeOracle.ReportData({
-            consensusVersion: oracle.getConsensusVersion(),
-            refSlot: refSlot,
-            treeRoot: keccak256("root"),
-            treeCid: "",
-            distributed: 1337
-        });
-
-        bytes32 reportHash = keccak256(abi.encode(data));
-        _reachConsensus(refSlot, reportHash);
-
-        vm.expectRevert(CSFeeOracle.TreeCidCannotBeEmpty.selector);
-        vm.prank(members[0]);
-        oracle.submitReportData({ data: data, contractVersion: 1 });
-    }
-
     function test_initialize_RevertWhen_AdminCannotBeZero() public {
         oracle = new CSFeeOracleForTest({
             secondsPerSlot: chainConfig.secondsPerSlot,
@@ -414,7 +315,6 @@ contract CSFeeOracleTest is Test, Utilities {
             address(distributor),
             address(consensus),
             CONSENSUS_VERSION,
-            154,
             PERF_THRESHOLD
         );
     }
@@ -483,42 +383,6 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.setPerformanceThreshold(99999);
     }
 
-    function test_reportFrame() public {
-        {
-            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
-            _grantAllRolesToAdmin();
-            _assertNoReportOnInit();
-            _setInitialEpoch();
-        }
-
-        uint256 startSlot;
-        uint256 refSlot;
-        uint256 tmp;
-
-        // Check the startSlot at the very beginning of the frame
-        (, startSlot, , ) = oracle.getConsensusReport();
-        (refSlot, ) = consensus.getCurrentFrame();
-        assertEq(startSlot, refSlot);
-
-        // Advance block.timestamp to the middle of the frame
-        _vmSetEpoch(INITIAL_EPOCH + _epochsInDays(14));
-        (, startSlot, , ) = oracle.getConsensusReport();
-        (refSlot, ) = consensus.getCurrentFrame();
-        assertEq(startSlot, refSlot);
-
-        // Advance block.timestamp to the end of the frame
-        _vmSetEpoch(INITIAL_EPOCH + _epochsInDays(28));
-        (, startSlot, , ) = oracle.getConsensusReport();
-        (refSlot, ) = consensus.getCurrentFrame();
-        assertGt(refSlot, startSlot);
-
-        tmp = startSlot;
-        // Advance block.timestamp far above the first frame
-        _vmSetEpoch(INITIAL_EPOCH + _epochsInDays(999));
-        (, startSlot, , ) = oracle.getConsensusReport();
-        assertEq(tmp, startSlot, "startSlot must not change");
-    }
-
     function _deployFeeOracleAndHashConsensus(
         uint256 lastProcessingRefSlot
     ) internal {
@@ -542,7 +406,6 @@ contract CSFeeOracleTest is Test, Utilities {
             address(new DistributorMock()),
             address(consensus),
             CONSENSUS_VERSION,
-            lastProcessingRefSlot,
             PERF_THRESHOLD
         );
     }

@@ -96,6 +96,12 @@ contract Utilities is CommonBase {
         }
     }
 
+    function someBytes32() public returns (bytes32) {
+        bytes32 buf = keccak256(abi.encodePacked(seed));
+        seed = buf;
+        return buf;
+    }
+
     function checkChainId(uint256 chainId) public view {
         if (chainId != block.chainid) {
             revert("wrong chain id");
