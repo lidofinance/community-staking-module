@@ -67,7 +67,7 @@ contract OssifiableProxy is ERC1967Proxy {
     /// @param newImplementation_ Address of the new implementation
     // solhint-disable-next-line func-name-mixedcase
     function proxy__upgradeTo(address newImplementation_) external onlyAdmin {
-        ERC1967Utils.upgradeToAndCall(newImplementation_, new bytes(0));
+        ERC1967Utils.upgradeToAndCall(newImplementation_, bytes(""));
     }
 
     /// @notice Upgrades the proxy to a new implementation, optionally performing an additional
