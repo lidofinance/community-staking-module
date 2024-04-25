@@ -82,6 +82,7 @@ contract ClaimIntegrationTest is
         );
 
         uint256 excessBond = current > required ? current - required : 0;
+        assertTrue(excessBond > 0, "Excess bond should be > 0");
 
         vm.prank(nodeOperator);
         csm.claimRewardsStETH(
@@ -111,6 +112,8 @@ contract ClaimIntegrationTest is
         );
 
         uint256 excessBond = current > required ? current - required : 0;
+        assertTrue(excessBond > 0, "Excess bond should be > 0");
+
         uint256 excessBondWstETH = wstETH.getWstETHByStETH(
             lido.getPooledEthByShares(excessBond)
         );
@@ -151,6 +154,7 @@ contract ClaimIntegrationTest is
         );
 
         uint256 excessBond = current > required ? current - required : 0;
+        assertTrue(excessBond > 0, "Excess bond should be > 0");
 
         vm.prank(nodeOperator);
         csm.requestRewardsETH(
