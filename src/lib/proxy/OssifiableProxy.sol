@@ -3,8 +3,9 @@
 
 pragma solidity 0.8.24;
 
-import { StorageSlot } from "@openzeppelin/contracts-v4.4/utils/StorageSlot.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts-v4.4/proxy/ERC1967/ERC1967Proxy.sol";
+import { StorageSlot } from "@openzeppelin/contracts/utils/StorageSlot.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 
 /// @notice An ossifiable proxy contract. Extends the ERC1967Proxy contract by
 ///     adding admin functionality
@@ -24,13 +25,13 @@ contract OssifiableProxy is ERC1967Proxy {
         address admin_,
         bytes memory data_
     ) ERC1967Proxy(implementation_, data_) {
-        _changeAdmin(admin_);
+        ERC1967Utils.changeAdmin(admin_);
     }
 
     /// @notice Returns the current admin of the proxy
     // solhint-disable-next-line func-name-mixedcase
     function proxy__getAdmin() external view returns (address) {
-        return _getAdmin();
+        return ERC1967Utils.getAdmin();
     }
 
     /// @notice Returns the current implementation address
@@ -42,16 +43,16 @@ contract OssifiableProxy is ERC1967Proxy {
     /// @notice Returns whether the implementation is locked forever
     // solhint-disable-next-line func-name-mixedcase
     function proxy__getIsOssified() external view returns (bool) {
-        return _getAdmin() == address(0);
+        return ERC1967Utils.getAdmin() == address(0);
     }
 
     /// @notice Allows to transfer admin rights to zero address and prevent future
     ///     upgrades of the proxy
     // solhint-disable-next-line func-name-mixedcase
     function proxy__ossify() external onlyAdmin {
-        address prevAdmin = _getAdmin();
-        StorageSlot.getAddressSlot(_ADMIN_SLOT).value = address(0);
-        emit AdminChanged(prevAdmin, address(0));
+        address prevAdmin = ERC1967Utils.getAdmin();
+        StorageSlot.getAddressSlot(ERC1967Utils.ADMIN_SLOT).value = address(0);
+        emit ERC1967Utils.AdminChanged(prevAdmin, address(0));
         emit ProxyOssified();
     }
 
@@ -59,14 +60,14 @@ contract OssifiableProxy is ERC1967Proxy {
     /// @param newAdmin_ Address of the new admin
     // solhint-disable-next-line func-name-mixedcase
     function proxy__changeAdmin(address newAdmin_) external onlyAdmin {
-        _changeAdmin(newAdmin_);
+        ERC1967Utils.changeAdmin(newAdmin_);
     }
 
     /// @notice Upgrades the implementation of the proxy
     /// @param newImplementation_ Address of the new implementation
     // solhint-disable-next-line func-name-mixedcase
     function proxy__upgradeTo(address newImplementation_) external onlyAdmin {
-        _upgradeTo(newImplementation_);
+        ERC1967Utils.upgradeToAndCall(newImplementation_, new bytes(0));
     }
 
     /// @notice Upgrades the proxy to a new implementation, optionally performing an additional
@@ -74,20 +75,18 @@ contract OssifiableProxy is ERC1967Proxy {
     /// @param newImplementation_ Address of the new implementation
     /// @param setupCalldata_ Data for the setup call. The call is skipped if setupCalldata_ is
     ///     empty and forceCall_ is false
-    /// @param forceCall_ Forces make delegate call to the implementation even with empty data_
     // solhint-disable-next-line func-name-mixedcase
     function proxy__upgradeToAndCall(
         address newImplementation_,
-        bytes memory setupCalldata_,
-        bool forceCall_
+        bytes memory setupCalldata_
     ) external onlyAdmin {
-        _upgradeToAndCall(newImplementation_, setupCalldata_, forceCall_);
+        ERC1967Utils.upgradeToAndCall(newImplementation_, setupCalldata_);
     }
 
     /// @dev Validates that proxy is not ossified and that method is called by the admin
     ///     of the proxy
     modifier onlyAdmin() {
-        address admin = _getAdmin();
+        address admin = ERC1967Utils.getAdmin();
         if (admin == address(0)) {
             revert ProxyIsOssified();
         }
