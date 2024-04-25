@@ -5,7 +5,7 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { PausableUntil } from "../lib/base-oracle/utils/PausableUntil.sol";
+import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 
 import { IBurner } from "../src/interfaces/IBurner.sol";
 import { ICSModule, NodeOperator } from "../src/interfaces/ICSModule.sol";
@@ -183,14 +183,6 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities, PermitTokenBase {
         accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_DEFAULT_BOND_CURVE_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
-        accounting.grantRole(
-            accounting.SET_BOND_CURVE_ROLE(),
-            address(stakingModule)
-        );
-        accounting.grantRole(
-            accounting.RESET_BOND_CURVE_ROLE(),
-            address(stakingModule)
-        );
         vm.stopPrank();
     }
 

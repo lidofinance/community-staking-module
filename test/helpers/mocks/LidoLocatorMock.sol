@@ -9,19 +9,22 @@ contract LidoLocatorMock {
     address public wq;
     address public el;
     address public t;
+    address public sr;
 
     constructor(
         address _lido,
         address _burner,
         address _wq,
         address _el,
-        address _t
+        address _t,
+        address _sr
     ) {
         l = _lido;
         b = _burner;
         wq = _wq;
         el = _el;
         t = _t;
+        sr = _sr;
     }
 
     function lido() external view returns (address) {
@@ -42,5 +45,9 @@ contract LidoLocatorMock {
 
     function treasury() external view returns (address) {
         return t;
+    }
+
+    function stakingRouter() external view returns (address payable) {
+        return payable(sr);
     }
 }

@@ -14,7 +14,7 @@ import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
 import { ILido } from "../../src/interfaces/ILido.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 import { IWstETH } from "../../src/interfaces/IWstETH.sol";
-import { HashConsensus } from "../../lib/base-oracle/oracle/HashConsensus.sol";
+import { HashConsensus } from "../../src/lib/base-oracle/HashConsensus.sol";
 import { IWithdrawalQueue } from "../../src/interfaces/IWithdrawalQueue.sol";
 import { CSModule } from "../../src/CSModule.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";
@@ -42,12 +42,14 @@ contract Fixtures is StdCheats, Test {
         wstETH = new WstETHMock(address(stETH));
         WithdrawalQueueMock wq = new WithdrawalQueueMock(address(wstETH));
         Stub treasury = new Stub();
+        Stub stakingRouter = new Stub();
         locator = new LidoLocatorMock(
             address(stETH),
             address(burner),
             address(wq),
             address(elVault),
-            address(treasury)
+            address(treasury),
+            address(stakingRouter)
         );
         vm.label(address(stETH), "lido");
         vm.label(address(wstETH), "wstETH");
@@ -56,6 +58,7 @@ contract Fixtures is StdCheats, Test {
         vm.label(address(wq), "wq");
         vm.label(address(elVault), "elVault");
         vm.label(address(treasury), "treasury");
+        vm.label(address(stakingRouter), "stakingRouter");
     }
 }
 

@@ -6,10 +6,10 @@ import "forge-std/Test.sol";
 
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
-import { UnstructuredStorage } from "../lib/base-oracle/lib/UnstructuredStorage.sol";
-import { HashConsensus } from "../lib/base-oracle/oracle/HashConsensus.sol";
-import { PausableUntil } from "../lib/base-oracle/utils/PausableUntil.sol";
-import { BaseOracle } from "../lib/base-oracle/oracle/BaseOracle.sol";
+import { UnstructuredStorage } from "../src/lib/UnstructuredStorage.sol";
+import { HashConsensus } from "../src/lib/base-oracle/HashConsensus.sol";
+import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
+import { BaseOracle } from "../src/lib/base-oracle/BaseOracle.sol";
 import { DistributorMock } from "./helpers/mocks/DistributorMock.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { Utilities } from "./helpers/Utilities.sol";

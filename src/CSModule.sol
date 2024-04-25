@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.24;
 
-import { PausableUntil } from "base-oracle/utils/PausableUntil.sol";
+import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -188,6 +188,7 @@ contract CSModule is
     function initialize(
         address _accounting,
         address _earlyAdoption,
+        address verifier,
         address admin
     ) external initializer {
         __AccessControlEnumerable_init();
@@ -196,6 +197,11 @@ contract CSModule is
         earlyAdoption = ICSEarlyAdoption(_earlyAdoption);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(VERIFIER_ROLE, verifier);
+        _grantRole(STAKING_ROUTER_ROLE, address(LIDO_LOCATOR.stakingRouter()));
+
+        // CSM is on pause initially and should be resumed by voting
+        _pauseFor(type(uint256).max);
     }
 
     /// @notice Resume module
@@ -726,7 +732,6 @@ contract CSModule is
         uint256 nodeOperatorId
     ) external view returns (NodeOperator memory) {
         _onlyExistingNodeOperator(nodeOperatorId);
-        // TODO: think about "heavily" methods for frontend with proposed addresses
         return _nodeOperators[nodeOperatorId];
     }
 
