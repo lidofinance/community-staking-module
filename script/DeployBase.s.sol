@@ -94,28 +94,30 @@ abstract contract DeployBase is Script {
                 maxKeysPerOperatorEA: 10,
                 lidoLocator: LIDO_LOCATOR_ADDRESS
             });
-            csm = CSModule(_deployProxy(deployer, address(csmImpl)));
+            csm = CSModule(_deployProxy(VOTING_ADDRESS, address(csmImpl)));
 
             CSAccounting accountingImpl = new CSAccounting({
                 lidoLocator: LIDO_LOCATOR_ADDRESS,
                 communityStakingModule: address(csm)
             });
             accounting = CSAccounting(
-                _deployProxy(deployer, address(accountingImpl))
+                _deployProxy(VOTING_ADDRESS, address(accountingImpl))
             );
 
             CSFeeOracle oracleImpl = new CSFeeOracle({
                 secondsPerSlot: SECONDS_PER_SLOT,
                 genesisTime: CL_GENESIS_TIME
             });
-            oracle = CSFeeOracle(_deployProxy(deployer, address(oracleImpl)));
+            oracle = CSFeeOracle(
+                _deployProxy(VOTING_ADDRESS, address(oracleImpl))
+            );
 
             CSFeeDistributor feeDistributorImpl = new CSFeeDistributor({
                 stETH: locator.lido(),
                 accounting: address(accounting)
             });
             feeDistributor = CSFeeDistributor(
-                _deployProxy(deployer, address(feeDistributorImpl))
+                _deployProxy(VOTING_ADDRESS, address(feeDistributorImpl))
             );
 
             verifier = new CSVerifier({
