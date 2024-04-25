@@ -735,11 +735,10 @@ contract CSModule is
         return _nodeOperators[nodeOperatorId];
     }
 
-    /// @notice Gets node operator active keys including non-deposited
+    /// @notice Gets node operator non-withdrawn keys
     /// @param nodeOperatorId ID of the node operator
-    /// @return Active keys count
-    // TODO: think about better naming. there is a convention in SR that active = deposited - exited
-    function getNodeOperatorActiveKeys(
+    /// @return Non-withdrawn keys count
+    function getNodeOperatorNonWithdrawnKeys(
         uint256 nodeOperatorId
     ) external view returns (uint256) {
         _onlyExistingNodeOperator(nodeOperatorId);
