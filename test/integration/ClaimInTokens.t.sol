@@ -199,7 +199,7 @@ contract ClaimIntegrationTest is
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
 
-        feeDistributor.processOracleReport(root, "", shares);
+        feeDistributor.processOracleReport(root, "Qm", shares);
 
         vm.prank(nodeOperator);
         csm.claimRewardsStETH(defaultNoId, type(uint256).max, shares, proof);
@@ -230,7 +230,7 @@ contract ClaimIntegrationTest is
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
 
-        feeDistributor.processOracleReport(root, "", shares);
+        feeDistributor.processOracleReport(root, "Qm", shares);
 
         vm.prank(nodeOperator);
         csm.claimRewardsWstETH(defaultNoId, type(uint256).max, shares, proof);
@@ -266,7 +266,7 @@ contract ClaimIntegrationTest is
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
 
-        feeDistributor.processOracleReport(root, "", shares);
+        feeDistributor.processOracleReport(root, "Qm", shares);
 
         vm.prank(nodeOperator);
         csm.requestRewardsETH(defaultNoId, type(uint256).max, shares, proof);
