@@ -43,6 +43,8 @@ contract CSFeeDistributor is
     error ZeroAddress(string field);
     error NotAccounting();
 
+    error InvalidTreeRoot();
+    error InvalidTreeCID();
     error InvalidShares();
     error InvalidProof();
 
@@ -124,20 +126,25 @@ contract CSFeeDistributor is
     function processOracleReport(
         bytes32 _treeRoot,
         string calldata _treeCid,
-        uint256 _distributedShares
+        uint256 distributed
     ) external onlyRole(ORACLE_ROLE) {
-        if (
-            claimableShares + _distributedShares > STETH.sharesOf(address(this))
-        ) {
+        if (claimableShares + distributed > STETH.sharesOf(address(this))) {
             revert InvalidShares();
         }
 
-        unchecked {
-            claimableShares += _distributedShares;
-        }
+        if (distributed > 0) {
+            if (bytes(_treeCid).length == 0) revert InvalidTreeCID();
+            if (_treeRoot == bytes32(0)) revert InvalidTreeRoot();
+            if (_treeRoot == treeRoot) revert InvalidTreeRoot();
 
-        treeRoot = _treeRoot;
-        treeCid = _treeCid;
+            // Doesn't overflow because of the very first check.
+            unchecked {
+                claimableShares += distributed;
+            }
+
+            treeRoot = _treeRoot;
+            treeCid = _treeCid;
+        }
     }
 
     /// @notice Get a hash of a leaf

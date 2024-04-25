@@ -67,9 +67,6 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
     );
 
     error InvalidPerfThreshold();
-    error TreeRootCannotBeZero();
-    error TreeCidCannotBeEmpty();
-    error NothingToDistribute();
     error AdminCannotBeZero();
     error SenderNotAllowed();
 
@@ -183,7 +180,6 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
     }
 
     function _handleConsensusReportData(ReportData calldata data) internal {
-        _reportDataSanityCheck(data);
         emit ReportConsolidated(
             data.refSlot,
             data.distributed,
@@ -196,13 +192,6 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
             data.treeCid,
             data.distributed
         );
-    }
-
-    function _reportDataSanityCheck(ReportData calldata data) internal pure {
-        if (bytes(data.treeCid).length == 0) revert TreeCidCannotBeEmpty();
-        if (data.treeRoot == bytes32(0)) revert TreeRootCannotBeZero();
-        if (data.distributed == 0) revert NothingToDistribute();
-        // refSlot is checked by HashConsensus
     }
 
     function _checkMsgSenderIsAllowedToSubmitData() internal view {
