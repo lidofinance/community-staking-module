@@ -196,11 +196,13 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities, PermitTokenBase {
         );
     }
 
-    function mock_getNodeOperatorActiveKeys(uint256 returnValue) internal {
+    function mock_getNodeOperatorNonWithdrawnKeys(
+        uint256 returnValue
+    ) internal {
         vm.mockCall(
             address(stakingModule),
             abi.encodeWithSelector(
-                ICSModule.getNodeOperatorActiveKeys.selector,
+                ICSModule.getNodeOperatorNonWithdrawnKeys.selector,
                 0
             ),
             abi.encode(returnValue)
@@ -382,7 +384,7 @@ abstract contract CSAccountingBondStateBaseTest is
     CSAccountingBaseTest
 {
     function _operator(uint256 ongoing, uint256 withdrawn) internal virtual {
-        mock_getNodeOperatorActiveKeys(ongoing - withdrawn);
+        mock_getNodeOperatorNonWithdrawnKeys(ongoing - withdrawn);
         mock_getNodeOperatorsCount(1);
     }
 
@@ -2776,7 +2778,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
 contract CSAccountingDepositsTest is CSAccountingBaseTest {
     function setUp() public override {
         super.setUp();
-        mock_getNodeOperatorActiveKeys(0);
+        mock_getNodeOperatorNonWithdrawnKeys(0);
         mock_getNodeOperatorsCount(1);
     }
 
@@ -3228,7 +3230,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
 contract CSAccountingPenalizeTest is CSAccountingBaseTest {
     function setUp() public override {
         super.setUp();
-        mock_getNodeOperatorActiveKeys(0);
+        mock_getNodeOperatorNonWithdrawnKeys(0);
         mock_getNodeOperatorsCount(1);
         vm.deal(address(stakingModule), 32 ether);
         vm.prank(address(stakingModule));
@@ -3270,7 +3272,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
 contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
     function setUp() public override {
         super.setUp();
-        mock_getNodeOperatorActiveKeys(0);
+        mock_getNodeOperatorNonWithdrawnKeys(0);
         mock_getNodeOperatorsCount(1);
         vm.deal(address(stakingModule), 32 ether);
         vm.prank(address(stakingModule));

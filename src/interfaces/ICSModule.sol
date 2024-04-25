@@ -29,10 +29,10 @@ struct NodeOperator {
 
 /// @title Lido's Community Staking Module interface
 interface ICSModule is IStakingModule {
-    /// @notice Gets node operator active keys including non-deposited
+    /// @notice Gets node operator non-withdrawn keys
     /// @param nodeOperatorId ID of the node operator
-    /// @return Active keys count
-    function getNodeOperatorActiveKeys(
+    /// @return Non-withdrawn keys count
+    function getNodeOperatorNonWithdrawnKeys(
         uint256 nodeOperatorId
     ) external view returns (uint256);
 

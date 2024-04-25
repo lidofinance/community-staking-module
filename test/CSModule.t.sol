@@ -3136,24 +3136,26 @@ contract CsmRemoveKeys is CSMCommon {
     }
 }
 
-contract CsmGetNodeOperatorActiveKeys is CSMCommon {
-    function test_getNodeOperatorActiveKeys() public {
+contract CsmGetNodeOperatorNonWithdrawnKeys is CSMCommon {
+    function test_getNodeOperatorNonWithdrawnKeys() public {
         uint256 noId = createNodeOperator(3);
-        uint256 activeKeys = csm.getNodeOperatorActiveKeys(noId);
-        assertEq(activeKeys, 3);
+        uint256 keys = csm.getNodeOperatorNonWithdrawnKeys(noId);
+        assertEq(keys, 3);
     }
 
-    function test_getNodeOperatorActiveKeys_WithdrawnKeys() public {
+    function test_getNodeOperatorNonWithdrawnKeys_WithdrawnKeys() public {
         uint256 noId = createNodeOperator(3);
         csm.obtainDepositData(3, "");
         csm.submitWithdrawal(noId, 0, csm.DEPOSIT_SIZE());
-        uint256 activeKeys = csm.getNodeOperatorActiveKeys(noId);
-        assertEq(activeKeys, 2);
+        uint256 keys = csm.getNodeOperatorNonWithdrawnKeys(noId);
+        assertEq(keys, 2);
     }
 
-    function test_getNodeOperatorActiveKeys_RevertWhenNoNodeOperator() public {
+    function test_getNodeOperatorNonWithdrawnKeys_RevertWhenNoNodeOperator()
+        public
+    {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
-        csm.getNodeOperatorActiveKeys(0);
+        csm.getNodeOperatorNonWithdrawnKeys(0);
     }
 }
 
