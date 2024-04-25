@@ -1009,7 +1009,7 @@ contract CSModule is
                     stuckValidatorsCounts,
                     i
                 );
-            if (_nodeOperatorsCount < nodeOperatorId)
+            if (nodeOperatorId >= _nodeOperatorsCount)
                 revert NodeOperatorDoesNotExist();
             _updateStuckValidatorsCount(nodeOperatorId, stuckValidatorsCount);
         }
@@ -1069,7 +1069,7 @@ contract CSModule is
                     exitedValidatorsCounts,
                     i
                 );
-            if (_nodeOperatorsCount < nodeOperatorId)
+            if (nodeOperatorId >= _nodeOperatorsCount)
                 revert NodeOperatorDoesNotExist();
 
             _updateExitedValidatorsCount(

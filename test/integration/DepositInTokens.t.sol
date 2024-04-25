@@ -59,13 +59,13 @@ contract DepositIntegrationTest is
     function test_depositStETH() public {
         vm.startPrank(user);
         vm.deal(user, 32 ether);
-        uint256 shares = ILido(locator.lido()).submit{ value: 32 ether }({
+        uint256 shares = lido.submit{ value: 32 ether }({
             _referal: address(0)
         });
 
         uint256 preShares = accounting.getBondShares(0);
 
-        ILido(locator.lido()).approve(address(accounting), type(uint256).max);
+        lido.approve(address(accounting), type(uint256).max);
         csm.depositStETH(
             0,
             32 ether,
@@ -100,13 +100,11 @@ contract DepositIntegrationTest is
     function test_depositWstETH() public {
         vm.startPrank(user);
         vm.deal(user, 32 ether);
-        ILido(locator.lido()).submit{ value: 32 ether }({
-            _referal: address(0)
-        });
-        ILido(locator.lido()).approve(address(wstETH), type(uint256).max);
+        lido.submit{ value: 32 ether }({ _referal: address(0) });
+        lido.approve(address(wstETH), type(uint256).max);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
 
-        uint256 shares = ILido(locator.lido()).getSharesByPooledEth(
+        uint256 shares = lido.getSharesByPooledEth(
             wstETH.getStETHByWstETH(wstETHAmount)
         );
 
@@ -137,13 +135,13 @@ contract DepositIntegrationTest is
             32 ether,
             vm.getNonce(user),
             type(uint256).max,
-            address(locator.lido())
+            address(lido)
         );
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, digest);
 
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        uint256 shares = ILido(locator.lido()).submit{ value: 32 ether }({
+        uint256 shares = lido.submit{ value: 32 ether }({
             _referal: address(0)
         });
 
@@ -161,7 +159,7 @@ contract DepositIntegrationTest is
             })
         );
 
-        assertEq(ILido(locator.lido()).balanceOf(user), 0);
+        assertEq(lido.balanceOf(user), 0);
         assertEq(accounting.getBondShares(0), shares + preShares);
         assertEq(accounting.totalBondShares(), shares + preShares);
     }
@@ -179,13 +177,11 @@ contract DepositIntegrationTest is
 
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        ILido(locator.lido()).submit{ value: 32 ether }({
-            _referal: address(0)
-        });
-        ILido(locator.lido()).approve(address(wstETH), type(uint256).max);
+        lido.submit{ value: 32 ether }({ _referal: address(0) });
+        lido.approve(address(wstETH), type(uint256).max);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
 
-        uint256 shares = ILido(locator.lido()).getSharesByPooledEth(
+        uint256 shares = lido.getSharesByPooledEth(
             wstETH.getStETHByWstETH(wstETHAmount)
         );
 
