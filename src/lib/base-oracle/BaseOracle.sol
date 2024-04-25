@@ -347,7 +347,7 @@ abstract contract BaseOracle is
     ///
     function _handleConsensusReportDiscarded(
         ConsensusReport memory report
-    ) internal virtual;
+    ) internal virtual {}
 
     /// @notice May be called by a descendant contract to check if the received data matches
     /// the currently submitted consensus report. Reverts otherwise.
