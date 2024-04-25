@@ -3,6 +3,8 @@
 </p>
 <h1 align="center"> Lido Community Staking Module </h1>
 
+> **This project is under heavy development. Do not consider any code as final.**
+
 ### Getting Started
 
 - Install [Foundry tools](https://book.getfoundry.sh/getting-started/installation)
