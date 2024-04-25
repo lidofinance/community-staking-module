@@ -109,8 +109,11 @@ jobs:
       - name: Build
         run: just build --sizes
 
-      - name: Run tests
-        run: just test-all
+      - name: Run unit-tests
+        run: just test-unit
+
+      - name: Run integration tests
+        run: just test-integration
         env:
           RPC_URL: ${{ secrets.RPC_URL }}
 
