@@ -56,11 +56,13 @@ contract CSFeeDistributor is
         STETH = IStETH(stETH);
     }
 
-    function initialize(address admin) external initializer {
+    function initialize(address admin, address oracle) external initializer {
         __AccessControlEnumerable_init();
         if (admin == address(0)) revert ZeroAddress("admin");
+        if (oracle == address(0)) revert ZeroAddress("oracle");
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(ORACLE_ROLE, oracle);
     }
 
     /// @notice Returns the amount of shares that are pending to be distributed

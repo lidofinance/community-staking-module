@@ -20,10 +20,10 @@ contract DeployMainnetish is DeployBase {
             1606824023,
             // Verifier supported epoch. Deneb fork epoch so far
             269568,
-            // initializationEpoch
-            239853,
             // lidoLocatorAddress
             0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb,
+            // votingAddress
+            0x2e59A20f205bB85a89C53f1936454680651E618e,
             // oracleReportEpochsPerFrame
             225 * 28 // 28 days
         )

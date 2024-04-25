@@ -26,8 +26,8 @@ abstract contract DeployBase is Script {
     uint256 immutable SLOTS_PER_EPOCH;
     uint256 immutable CL_GENESIS_TIME;
     uint256 immutable VERIFIER_SUPPORTED_EPOCH;
-    uint256 immutable INITIALIZATION_EPOCH;
     address immutable LIDO_LOCATOR_ADDRESS;
+    address immutable VOTING_ADDRESS;
     uint256 immutable ORACLE_REPORT_EPOCHS_PER_FRAME;
 
     ILidoLocator private locator;
@@ -50,8 +50,8 @@ abstract contract DeployBase is Script {
         uint256 slotsPerEpoch,
         uint256 clGenesisTime,
         uint256 verifierSupportedEpoch,
-        uint256 initializationEpoch,
         address lidoLocatorAddress,
+        address votingAddress,
         uint256 oracleReportEpochsPerFrame
     ) {
         NAME = name;
@@ -60,11 +60,11 @@ abstract contract DeployBase is Script {
         SLOTS_PER_EPOCH = slotsPerEpoch;
         CL_GENESIS_TIME = clGenesisTime;
         VERIFIER_SUPPORTED_EPOCH = verifierSupportedEpoch;
-        INITIALIZATION_EPOCH = initializationEpoch;
 
         LIDO_LOCATOR_ADDRESS = lidoLocatorAddress;
         vm.label(LIDO_LOCATOR_ADDRESS, "LIDO_LOCATOR");
         locator = ILidoLocator(LIDO_LOCATOR_ADDRESS);
+        VOTING_ADDRESS = votingAddress;
 
         ORACLE_REPORT_EPOCHS_PER_FRAME = oracleReportEpochsPerFrame;
     }
@@ -118,63 +118,6 @@ abstract contract DeployBase is Script {
                 _deployProxy(deployer, address(feeDistributorImpl))
             );
 
-            /// @dev initialize contracts
-            csm.initialize({
-                _accounting: address(accounting),
-                _earlyAdoption: address(0),
-                admin: address(deployer)
-            });
-            accounting.initialize({
-                bondCurve: curve,
-                admin: deployer,
-                _feeDistributor: address(feeDistributor),
-                // TODO: arguable. should be discussed
-                bondLockRetentionPeriod: 8 weeks,
-                _chargeRecipient: treasury
-            });
-            feeDistributor.initialize({ admin: deployer });
-
-            csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(deployer));
-            csm.activatePublicRelease();
-
-            csm.grantRole(csm.PAUSE_ROLE(), address(deployer));
-            csm.pauseFor(UINT256_MAX);
-            csm.revokeRole(csm.PAUSE_ROLE(), address(deployer));
-            // TODO: deploy early adoption contract
-
-            feeDistributor.grantRole(
-                feeDistributor.ORACLE_ROLE(),
-                address(oracle)
-            );
-
-            accounting.grantRole(
-                accounting.SET_BOND_CURVE_ROLE(),
-                address(csm)
-            );
-            accounting.grantRole(
-                accounting.RESET_BOND_CURVE_ROLE(),
-                address(csm)
-            );
-
-            hashConsensus = new HashConsensus({
-                slotsPerEpoch: SLOTS_PER_EPOCH,
-                secondsPerSlot: SECONDS_PER_SLOT,
-                genesisTime: CL_GENESIS_TIME,
-                epochsPerFrame: ORACLE_REPORT_EPOCHS_PER_FRAME,
-                fastLaneLengthSlots: 0,
-                admin: deployer,
-                reportProcessor: address(oracle)
-            });
-            hashConsensus.updateInitialEpoch(INITIALIZATION_EPOCH);
-
-            oracle.initialize({
-                admin: deployer,
-                feeDistributorContract: address(feeDistributor),
-                consensusContract: address(hashConsensus),
-                consensusVersion: 1,
-                _perfThresholdBP: 9500
-            });
-
             verifier = new CSVerifier({
                 slotsPerEpoch: uint64(SLOTS_PER_EPOCH),
                 // NOTE: Deneb fork gIndexes. Should be updated according to `VERIFIER_SUPPORTED_EPOCH` fork epoch if needed
@@ -185,13 +128,67 @@ abstract contract DeployBase is Script {
                     uint64(VERIFIER_SUPPORTED_EPOCH * SLOTS_PER_EPOCH)
                 )
             });
-            verifier.initialize(address(locator), address(csm));
-            csm.grantRole(csm.VERIFIER_ROLE(), address(verifier));
 
-            csm.grantRole(
-                csm.STAKING_ROUTER_ROLE(),
-                address(locator.stakingRouter())
-            );
+            /// @dev initialize contracts
+            csm.initialize({
+                _accounting: address(accounting),
+                _earlyAdoption: address(0),
+                verifier: address(verifier),
+                admin: address(deployer)
+            });
+            accounting.initialize({
+                bondCurve: curve,
+                admin: VOTING_ADDRESS,
+                _feeDistributor: address(feeDistributor),
+                // TODO: arguable. should be discussed
+                bondLockRetentionPeriod: 8 weeks,
+                _chargeRecipient: treasury
+            });
+            feeDistributor.initialize({
+                admin: VOTING_ADDRESS,
+                oracle: address(oracle)
+            });
+            verifier.initialize(address(locator), address(csm));
+
+            // TODO: deploy early adoption contract
+            csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(deployer));
+            csm.activatePublicRelease();
+            csm.revokeRole(csm.MODULE_MANAGER_ROLE(), address(deployer));
+
+            hashConsensus = new HashConsensus({
+                slotsPerEpoch: SLOTS_PER_EPOCH,
+                secondsPerSlot: SECONDS_PER_SLOT,
+                genesisTime: CL_GENESIS_TIME,
+                epochsPerFrame: ORACLE_REPORT_EPOCHS_PER_FRAME,
+                fastLaneLengthSlots: 0,
+                admin: VOTING_ADDRESS,
+                reportProcessor: address(oracle)
+            });
+
+            oracle.initialize({
+                admin: VOTING_ADDRESS,
+                feeDistributorContract: address(feeDistributor),
+                consensusContract: address(hashConsensus),
+                consensusVersion: 1,
+                _perfThresholdBP: 9500
+            });
+
+            // TODO: remove these lines after early adoption deployment
+            csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), VOTING_ADDRESS);
+            csm.revokeRole(csm.DEFAULT_ADMIN_ROLE(), address(deployer));
+
+            // TODO: these roles might be granted to multisig for testing purposes
+            //            csm.grantRole(csm.PAUSE_ROLE(), address(0)); GateSeal or multisig
+
+            //            csm.grantRole(csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(), address(0)); EOA or multisig
+            //            csm.grantRole(csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE(), address(0)); multisig or EasyTrack
+
+            //            accounting.grantRole(accounting.PAUSE_ROLE(), address(0)); GateSeal or multisig
+
+            //            accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), address(0)); multisig
+            //            accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(0)); multisig
+
+            //            oracle.grantRole(oracle.PAUSE_ROLE(), address(0)); GateSeal or multisig
 
             JsonObj memory deployJson = Json.newObj();
             deployJson.set("ChainId", CHAIN_ID);
