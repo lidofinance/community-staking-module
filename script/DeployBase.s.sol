@@ -172,7 +172,6 @@ abstract contract DeployBase is Script {
                 feeDistributorContract: address(feeDistributor),
                 consensusContract: address(hashConsensus),
                 consensusVersion: 1,
-                lastProcessingRefSlot: _refSlotFromEpoch(INITIALIZATION_EPOCH),
                 _perfThresholdBP: 9500
             });
 
@@ -226,10 +225,6 @@ abstract contract DeployBase is Script {
     function _deployGateSeal() internal returns (address) {
         // PAUSE_ROLE for some contracts should be granted to GateSeals
         revert("Not yet implemented");
-    }
-
-    function _refSlotFromEpoch(uint256 epoch) internal view returns (uint256) {
-        return epoch * SLOTS_PER_EPOCH - 1;
     }
 
     function _deployJsonFilename() internal view returns (string memory) {
