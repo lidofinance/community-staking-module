@@ -199,7 +199,7 @@ contract RecoverIntegrationTest is
         assertEq(recoverer.balance, contractBalance + amount);
     }
 
-    function test_recoverWstETH_ffromOracle() public {
+    function test_recoverWstETH_fromOracle() public {
         assertEq(wstETH.balanceOf(recoverer), 0);
 
         uint256 amount = 1 ether;
