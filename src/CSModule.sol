@@ -49,8 +49,6 @@ contract CSModule is
     uint256 private constant MIN_SLASHING_PENALTY_QUOTIENT = 32; // TODO: consider to move to immutable variable
     uint256 public constant INITIAL_SLASHING_PENALTY =
         DEPOSIT_SIZE / MIN_SLASHING_PENALTY_QUOTIENT;
-    bytes32 private constant SIGNING_KEYS_POSITION =
-        keccak256("lido.CommunityStakingModule.signingKeysPosition"); // TODO: consider use unstructered or structered storage
     uint8 private constant FORCED_TARGET_LIMIT_MODE_ID = 2;
 
     uint256 public immutable EL_REWARDS_STEALING_FINE;
@@ -113,8 +111,7 @@ contract CSModule is
         uint256 indexed nodeOperatorId,
         uint256 refundedKeysCount
     );
-    event TargetValidatorsCountChanged(
-        // TODO: think about better name
+    event TargetValidatorsCountChangedByRequest(
         uint256 indexed nodeOperatorId,
         uint8 targetLimitMode,
         uint256 targetValidatorsCount
@@ -157,7 +154,7 @@ contract CSModule is
     error NodeOperatorDoesNotExist();
     error SenderIsNotEligible();
     error InvalidVetKeysPointer();
-    error StuckKeysHigherThanTotalDeposited();
+    error StuckKeysHigherThanTotalDepositedMinusTotalExited();
     error ExitedKeysHigherThanTotalDeposited();
     error ExitedKeysDecrease();
 
@@ -263,7 +260,8 @@ contract CSModule is
     /// @notice Adds a new node operator with ETH bond
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of (deposit_message, domain) tuples
+    /// @param signatures Signatures of (deposit_message_root, domain) tuples.
+    ///                   https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#signingdata
     /// @param managerAddress Optional. Used as managerAddress for the Node Operator. If not passed msg.sender will be used
     /// @param rewardAddress Optional. Used as rewardAddress for the Node Operator. If not passed msg.sender will be used
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
@@ -282,7 +280,7 @@ contract CSModule is
             rewardAddress,
             referrer
         );
-        _processEarlyAdoption(nodeOperatorId, eaProof); // TODO: think about better name
+        _checkEarlyAdoptionEligibility(nodeOperatorId, eaProof);
 
         if (
             msg.value !=
@@ -302,15 +300,17 @@ contract CSModule is
         // Due to new bonded keys nonce update is required and normalize queue is required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: true,
-            doNormalizeQueue: true
+            incrementNonceIfUpdated: true,
+            normilizeQueueIfUpdated: true
         });
     }
 
     /// @notice Adds a new node operator with stETH bond
+    /// @notice Due to the stETH rouding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of (deposit_message, domain) tuples
+    /// @param signatures Signatures of (deposit_message_root, domain) tuples.
+    ///                   https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#signingdata
     /// @param managerAddress Optional. Used as managerAddress for the Node Operator. If not passed msg.sender will be used
     /// @param rewardAddress Optional. Used as rewardAddress for the Node Operator. If not passed msg.sender will be used
     /// @param permit Optional. Permit to use stETH as bond
@@ -331,13 +331,11 @@ contract CSModule is
             rewardAddress,
             referrer
         );
-        _processEarlyAdoption(nodeOperatorId, eaProof);
+        _checkEarlyAdoptionEligibility(nodeOperatorId, eaProof);
 
         // Reverts if keysCount is 0
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
 
-        // TODO: check is it possible to face with decreased
-        // share rate during transaction sent if some one submit at this time
         {
             uint256 amount = accounting.getBondAmountByKeysCount(
                 keysCount,
@@ -349,15 +347,17 @@ contract CSModule is
         // Due to new bonded keys nonce update is required and normalize queue is required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: true,
-            doNormalizeQueue: true
+            incrementNonceIfUpdated: true,
+            normilizeQueueIfUpdated: true
         });
     }
 
     /// @notice Adds a new node operator with wstETH bond
+    /// @notice Due to the stETH rouding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of (deposit_message, domain) tuples
+    /// @param signatures Signatures of (deposit_message_root, domain) tuples.
+    ///                   https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#signingdata
     /// @param managerAddress Optional. Used as managerAddress for the Node Operator. If not passed msg.sender will be used
     /// @param rewardAddress Optional. Used as rewardAddress for the Node Operator. If not passed msg.sender will be used
     /// @param permit Optional. Permit to use wstETH as bond
@@ -378,7 +378,7 @@ contract CSModule is
             rewardAddress,
             referrer
         );
-        _processEarlyAdoption(nodeOperatorId, eaProof);
+        _checkEarlyAdoptionEligibility(nodeOperatorId, eaProof);
 
         // Reverts if keysCount is 0
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
@@ -388,7 +388,6 @@ contract CSModule is
                 keysCount,
                 accounting.getBondCurve(nodeOperatorId)
             );
-            // TODO: same as in addNodeOperatorStETH
             accounting.depositWstETH(
                 msg.sender,
                 nodeOperatorId,
@@ -399,10 +398,9 @@ contract CSModule is
 
         // Due to new bonded keys nonce update is required and normalize queue is required
         _updateDepositableValidatorsCount({
-            // TODO: double check that this feature (notated args) is safu
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: true,
-            doNormalizeQueue: true
+            incrementNonceIfUpdated: true,
+            normilizeQueueIfUpdated: true
         });
     }
 
@@ -410,7 +408,8 @@ contract CSModule is
     /// @param nodeOperatorId ID of the node operator
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of (deposit_message, domain) tuples // TODO: may be add link to the spec
+    /// @param signatures Signatures of (deposit_message_root, domain) tuples.
+    ///                   https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#signingdata
     function addValidatorKeysETH(
         uint256 nodeOperatorId,
         uint256 keysCount,
@@ -435,16 +434,18 @@ contract CSModule is
         // Due to new bonded keys nonce update is required and normalize queue is required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: true,
-            doNormalizeQueue: true
+            incrementNonceIfUpdated: true,
+            normilizeQueueIfUpdated: true
         });
     }
 
     /// @notice Adds a new keys to the node operator with stETH bond
+    /// @notice Due to the stETH rouding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
     /// @param nodeOperatorId ID of the node operator
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of (deposit_message, domain) tuples
+    /// @param signatures Signatures of (deposit_message_root, domain) tuples.
+    ///                   https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#signingdata
     /// @param permit Optional. Permit to use stETH as bond
     function addValidatorKeysStETH(
         uint256 nodeOperatorId,
@@ -469,16 +470,18 @@ contract CSModule is
         // Due to new bonded keys nonce update is required and normalize queue is required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: true,
-            doNormalizeQueue: true
+            incrementNonceIfUpdated: true,
+            normilizeQueueIfUpdated: true
         });
     }
 
     /// @notice Adds a new keys to the node operator with wstETH bond
+    /// @notice Due to the stETH rouding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
     /// @param nodeOperatorId ID of the node operator
     /// @param keysCount Count of signing keys
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of (deposit_message, domain) tuples
+    /// @param signatures Signatures of (deposit_message_root, domain) tuples.
+    ///                   https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#signingdata
     /// @param permit Optional. Permit to use wstETH as bond
     function addValidatorKeysWstETH(
         uint256 nodeOperatorId,
@@ -503,8 +506,8 @@ contract CSModule is
         // Due to new bonded keys nonce update is required and normalize queue is required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: true,
-            doNormalizeQueue: true
+            incrementNonceIfUpdated: true,
+            normilizeQueueIfUpdated: true
         });
     }
 
@@ -517,8 +520,8 @@ contract CSModule is
         // Due to new bond nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: true,
-            doNormalizeQueue: true
+            incrementNonceIfUpdated: true,
+            normilizeQueueIfUpdated: true
         });
     }
 
@@ -542,8 +545,8 @@ contract CSModule is
         // Due to new bond nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: true,
-            doNormalizeQueue: true
+            incrementNonceIfUpdated: true,
+            normilizeQueueIfUpdated: true
         });
     }
 
@@ -567,8 +570,8 @@ contract CSModule is
         // Due to new bond nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: true,
-            doNormalizeQueue: true
+            incrementNonceIfUpdated: true,
+            normilizeQueueIfUpdated: true
         });
     }
 
@@ -596,8 +599,8 @@ contract CSModule is
         // Due to possible missing bond compensation nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: true,
-            doNormalizeQueue: true
+            incrementNonceIfUpdated: true,
+            normilizeQueueIfUpdated: true
         });
     }
 
@@ -625,14 +628,15 @@ contract CSModule is
         // Due to possible missing bond compensation nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: true,
-            doNormalizeQueue: true
+            incrementNonceIfUpdated: true,
+            normilizeQueueIfUpdated: true
         });
     }
 
-    /// @notice Request full reward (fee + bond) in Withdrawal NFT (unstETH) for the given node operator available for this moment.
+    /// @notice Request a full reward (fee + bond) in Withdrawal NFT (unstETH) for the given node operator that is available at this moment.
+    /// @notice Amounts less than MIN_STETH_WITHDRAWAL_AMOUNT (see LidoWithdrawalQueue contract) are not allowed
+    /// @notice Amounts above MAX_STETH_WITHDRAWAL_AMOUNT should be requested in several transactions
     /// @dev reverts if amount isn't between MIN_STETH_WITHDRAWAL_AMOUNT and MAX_STETH_WITHDRAWAL_AMOUNT
-    /// TODO: write a note how to get more than MAX_STETH_WITHDRAWAL_AMOUNT rewards
     /// @param nodeOperatorId id of the node operator to request rewards for.
     /// @param ethAmount amount of ETH to request.
     /// @param cumulativeFeeShares Optional. Cumulative fee shares for the node operator.
@@ -656,8 +660,8 @@ contract CSModule is
         // Due to possible missing bond compensation nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: true,
-            doNormalizeQueue: true
+            incrementNonceIfUpdated: true,
+            normilizeQueueIfUpdated: true
         });
     }
 
@@ -839,13 +843,7 @@ contract CSModule is
             revert SigningKeysInvalidOffset();
         }
 
-        return
-            SigningKeys.loadKeys(
-                SIGNING_KEYS_POSITION,
-                nodeOperatorId,
-                startIndex,
-                keysCount
-            );
+        return SigningKeys.loadKeys(nodeOperatorId, startIndex, keysCount);
     }
 
     /// @notice Gets node operator signing keys with signatures
@@ -871,7 +869,6 @@ contract CSModule is
         (keys, signatures) = SigningKeys.initKeysSigsBuf(keysCount);
         // solhint-disable-next-line func-named-parameters
         SigningKeys.loadKeysSigs(
-            SIGNING_KEYS_POSITION,
             nodeOperatorId,
             startIndex,
             keysCount,
@@ -935,8 +932,8 @@ contract CSModule is
 
     function _updateDepositableValidatorsCount(
         uint256 nodeOperatorId,
-        bool doIncrementNonce, // TODO: think about better name, like incrementNonceIfUpdated
-        bool doNormalizeQueue // TODO: think about better name, like normilizeQueueIfUpdated
+        bool incrementNonceIfUpdated,
+        bool normilizeQueueIfUpdated
     ) private {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
@@ -977,19 +974,17 @@ contract CSModule is
             // TODO: think about event emitting for depositableValidatorsCount changing.
             // Note: it also changes outisde this method
             no.depositableValidatorsCount = newCount;
-            if (doIncrementNonce) {
+            if (incrementNonceIfUpdated) {
                 _incrementModuleNonce();
             }
-            if (doNormalizeQueue) {
+            if (normilizeQueueIfUpdated) {
                 _normalizeQueue(nodeOperatorId);
             }
         }
     }
 
     /// @notice Updates stuck validators count for node operators by StakingRouter
-    /// TODO: update natspec
-    /// @dev Presence of stuck validators leads to stop vetting for the node operator
-    ///      to prevent further deposits and clean batches from the deposit queue.
+    /// @dev If the stuck keys count is above zero, the depositable validators count is set to 0 for this Node Operator
     /// @param nodeOperatorIds bytes packed array of node operator ids
     /// @param stuckValidatorsCounts bytes packed array of stuck validators counts
     function updateStuckValidatorsCount(
@@ -998,12 +993,11 @@ contract CSModule is
     ) external onlyRole(STAKING_ROUTER_ROLE) {
         ValidatorCountsReport.validate(nodeOperatorIds, stuckValidatorsCounts);
 
-        for (
-            uint256 i = 0;
-            // TODO: move to separate variable
-            i < ValidatorCountsReport.count(nodeOperatorIds);
-            ++i
-        ) {
+        uint256 operatorsInReport = ValidatorCountsReport.count(
+            nodeOperatorIds
+        );
+
+        for (uint256 i = 0; i < operatorsInReport; ++i) {
             (
                 uint256 nodeOperatorId,
                 uint256 stuckValidatorsCount
@@ -1025,9 +1019,8 @@ contract CSModule is
     ) internal {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (stuckValidatorsCount == no.stuckValidatorsCount) return;
-        // TODO: more strict invariant should be: stuck <= deposited - exited
-        if (stuckValidatorsCount > no.totalDepositedKeys)
-            revert StuckKeysHigherThanTotalDeposited();
+        if (stuckValidatorsCount > no.totalDepositedKeys - no.totalExitedKeys)
+            revert StuckKeysHigherThanTotalDepositedMinusTotalExited();
 
         no.stuckValidatorsCount = stuckValidatorsCount;
         emit StuckSigningKeysCountChanged(nodeOperatorId, stuckValidatorsCount);
@@ -1043,8 +1036,8 @@ contract CSModule is
             // Node Operator should normalize queue himself in case of unstuck
             _updateDepositableValidatorsCount({
                 nodeOperatorId: nodeOperatorId,
-                doIncrementNonce: false,
-                doNormalizeQueue: false
+                incrementNonceIfUpdated: false,
+                normilizeQueueIfUpdated: false
             });
         }
     }
@@ -1058,12 +1051,11 @@ contract CSModule is
     ) external onlyRole(STAKING_ROUTER_ROLE) {
         ValidatorCountsReport.validate(nodeOperatorIds, exitedValidatorsCounts);
 
-        for (
-            uint256 i = 0;
-            // TODO: move to separate variable
-            i < ValidatorCountsReport.count(nodeOperatorIds);
-            ++i
-        ) {
+        uint256 operatorsInReport = ValidatorCountsReport.count(
+            nodeOperatorIds
+        );
+
+        for (uint256 i = 0; i < operatorsInReport; ++i) {
             (
                 uint256 nodeOperatorId,
                 uint256 exitedValidatorsCount
@@ -1075,11 +1067,11 @@ contract CSModule is
             if (nodeOperatorId >= _nodeOperatorsCount)
                 revert NodeOperatorDoesNotExist();
 
-            _updateExitedValidatorsCount(
-                nodeOperatorId,
-                exitedValidatorsCount,
-                false /* _allowDecrease */ // TODO: use one approach to name args in codebase
-            );
+            _updateExitedValidatorsCount({
+                nodeOperatorId: nodeOperatorId,
+                exitedValidatorsCount: exitedValidatorsCount,
+                allowDecrease: false
+            });
         }
         _incrementModuleNonce();
     }
@@ -1147,7 +1139,7 @@ contract CSModule is
             no.targetLimit = targetLimit;
         }
 
-        emit TargetValidatorsCountChanged(
+        emit TargetValidatorsCountChangedByRequest(
             nodeOperatorId,
             targetLimitMode,
             targetLimit
@@ -1157,8 +1149,8 @@ contract CSModule is
         // In case of targetLimit removal queue should be normalised
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: false,
-            doNormalizeQueue: true
+            incrementNonceIfUpdated: false,
+            normilizeQueueIfUpdated: true
         });
         _incrementModuleNonce();
     }
@@ -1215,8 +1207,8 @@ contract CSModule is
             // No need to normalize queue due to vetted decrease
             _updateDepositableValidatorsCount({
                 nodeOperatorId: nodeOperatorId,
-                doIncrementNonce: false,
-                doNormalizeQueue: false
+                incrementNonceIfUpdated: false,
+                normilizeQueueIfUpdated: false
             });
         }
 
@@ -1246,7 +1238,6 @@ contract CSModule is
     //     uint256 keysCount
     // ) external onlyExistingNodeOperator(nodeOperatorId) {
     //     onlyNodeOperatorManager(nodeOperatorId);
-    //     // TODO: implement
     //     // Mark validators for priority ejection
     //     // Confiscate ejection fee from the bond
     // }
@@ -1299,8 +1290,8 @@ contract CSModule is
         // No need to normalize queue due to only decrease in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: true,
-            doNormalizeQueue: false
+            incrementNonceIfUpdated: true,
+            normilizeQueueIfUpdated: false
         });
     }
 
@@ -1321,8 +1312,8 @@ contract CSModule is
         // Normalize queue should be called due to only increase in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: true,
-            doNormalizeQueue: true
+            incrementNonceIfUpdated: true,
+            normilizeQueueIfUpdated: true
         });
     }
 
@@ -1344,8 +1335,8 @@ contract CSModule is
                 // No need to normalize queue due to only decrease in depositable possible
                 _updateDepositableValidatorsCount({
                     nodeOperatorId: nodeOperatorId,
-                    doIncrementNonce: true,
-                    doNormalizeQueue: false
+                    incrementNonceIfUpdated: true,
+                    normilizeQueueIfUpdated: false
                 });
             }
         }
@@ -1362,8 +1353,8 @@ contract CSModule is
         // Normalize queue should be called due to only increase in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: true,
-            doNormalizeQueue: true
+            incrementNonceIfUpdated: true,
+            normilizeQueueIfUpdated: true
         });
     }
 
@@ -1416,8 +1407,8 @@ contract CSModule is
         // Normalize queue should be called due to possible increase in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: true,
-            doNormalizeQueue: true
+            incrementNonceIfUpdated: true,
+            normilizeQueueIfUpdated: true
         });
     }
 
@@ -1459,8 +1450,8 @@ contract CSModule is
         // Normalize queue should not be called due to only possible decrease in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: true,
-            doNormalizeQueue: false
+            incrementNonceIfUpdated: true,
+            normilizeQueueIfUpdated: false
         });
     }
 
@@ -1490,7 +1481,6 @@ contract CSModule is
         bytes calldata signatures
     ) internal {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        // TODO: sanity checks
         uint256 startIndex = no.totalAddedKeys;
         if (
             !publicRelease &&
@@ -1502,7 +1492,6 @@ contract CSModule is
 
         // solhint-disable-next-line func-named-parameters
         SigningKeys.saveKeysSigs(
-            SIGNING_KEYS_POSITION,
             nodeOperatorId,
             startIndex,
             keysCount,
@@ -1542,7 +1531,6 @@ contract CSModule is
 
         // solhint-disable-next-line func-named-parameters
         uint256 newTotalSigningKeys = SigningKeys.removeKeysSigs(
-            SIGNING_KEYS_POSITION,
             nodeOperatorId,
             startIndex,
             keysCount,
@@ -1566,8 +1554,8 @@ contract CSModule is
         // Normalize queue should be called due to possible increase in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            doIncrementNonce: false,
-            doNormalizeQueue: true
+            incrementNonceIfUpdated: false,
+            normilizeQueueIfUpdated: true
         });
         _incrementModuleNonce();
     }
@@ -1625,7 +1613,6 @@ contract CSModule is
 
                 // solhint-disable-next-line func-named-parameters
                 SigningKeys.loadKeysSigs(
-                    SIGNING_KEYS_POSITION,
                     noId,
                     no.totalDepositedKeys,
                     keysCount,
@@ -1770,7 +1757,7 @@ contract CSModule is
     }
 
     /// @notice it's possible to join with proof even after public release
-    function _processEarlyAdoption(
+    function _checkEarlyAdoptionEligibility(
         uint256 nodeOperatorId,
         bytes32[] calldata proof
     ) internal {
