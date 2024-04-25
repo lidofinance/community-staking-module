@@ -800,15 +800,14 @@ contract CSModule is
             targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
             targetValidatorsCount = Math.min(
                 no.targetLimit,
-                // TODO: check invariant for range of totalUnbondedKeys (withdrawn?)
-                no.totalAddedKeys - no.totalExitedKeys - totalUnbondedKeys
+                no.totalAddedKeys - no.totalWithdrawnKeys - totalUnbondedKeys
             );
             // No force mode enabled but unbonded
         } else if (totalUnbondedKeys > 0) {
             targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
             targetValidatorsCount =
                 no.totalAddedKeys -
-                no.totalExitedKeys -
+                no.totalWithdrawnKeys -
                 totalUnbondedKeys;
         } else {
             targetLimitMode = no.targetLimitMode;
