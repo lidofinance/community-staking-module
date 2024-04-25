@@ -80,17 +80,12 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         address feeDistributorContract,
         address consensusContract,
         uint256 consensusVersion,
-        uint256 lastProcessingRefSlot, // will be the first ref slot in getConsensusReport()
         uint256 _perfThresholdBP
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
 
-        BaseOracle._initialize(
-            consensusContract,
-            consensusVersion,
-            lastProcessingRefSlot
-        );
+        BaseOracle._initialize(consensusContract, consensusVersion, 0);
         /// @dev _setFeeDistributorContract() reverts if zero address
         _setFeeDistributorContract(feeDistributorContract);
         _setPerformanceThreshold(_perfThresholdBP);
