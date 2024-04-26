@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -65,14 +65,14 @@ contract CSFeeDistributor is
         _grantRole(ORACLE_ROLE, oracle);
     }
 
-    /// @notice Returns the amount of shares that are pending to be distributed
+    /// @notice Get the amount of shares that are pending to be distributed
     function pendingToDistribute() external view returns (uint256) {
         return STETH.sharesOf(address(this)) - claimableShares;
     }
 
-    /// @notice Returns the amount of shares that can be distributed in favor of the NO
+    /// @notice Get the amount of shares that can be distributed in favor of the Node Operator
     /// @param proof Merkle proof of the leaf
-    /// @param nodeOperatorId ID of the NO
+    /// @param nodeOperatorId ID of the Node Operator
     /// @param shares Total amount of shares earned as fees
     /// @return Amount of shares that can be distributed
     function getFeesToDistribute(
@@ -94,9 +94,9 @@ contract CSFeeDistributor is
         return shares - distributedShares[nodeOperatorId];
     }
 
-    /// @notice Distribute fees to the Accounting in favor of the NO
+    /// @notice Distribute fees to the Accounting in favor of the Node Operator
     /// @param proof Merkle proof of the leaf
-    /// @param nodeOperatorId ID of the NO
+    /// @param nodeOperatorId ID of the Node Operator
     /// @param shares Total amount of shares earned as fees
     /// @return Amount of shares distributed
     function distributeFees(
@@ -124,7 +124,7 @@ contract CSFeeDistributor is
         return sharesToDistribute;
     }
 
-    // @notice Receives the data of the Merkle tree from the Oracle contract and process it
+    /// @notice Receive the data of the Merkle tree from the Oracle contract and process it
     function processOracleReport(
         bytes32 _treeRoot,
         string calldata _treeCid,
@@ -150,7 +150,7 @@ contract CSFeeDistributor is
     }
 
     /// @notice Get a hash of a leaf
-    /// @param nodeOperatorId ID of the node operator
+    /// @param nodeOperatorId ID of the Node Operator
     /// @param shares Amount of shares
     /// @dev Double hash the leaf to prevent second preimage attacks
     function hashLeaf(
@@ -163,6 +163,10 @@ contract CSFeeDistributor is
             );
     }
 
+    /// @notice Recover ERC20 tokens (except for stETH) from the contract
+    /// @dev Any stETH transferred to feeDistributor is treated as a donation and can not be recovered
+    /// @param token Address of the ERC20 token to recover
+    /// @param amount Amount of the ERC20 token to recover
     function recoverERC20(address token, uint256 amount) external override {
         _onlyRecoverer();
         if (token == address(STETH)) {
