@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -91,7 +91,7 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         _setPerformanceThreshold(_perfThresholdBP);
     }
 
-    /// @notice Sets a new fee distributor contract
+    /// @notice Set a new fee distributor contract
     /// @param feeDistributorContract Address of the new fee distributor contract
     function setFeeDistributorContract(
         address feeDistributorContract
@@ -99,15 +99,15 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         _setFeeDistributorContract(feeDistributorContract);
     }
 
-    /// @notice Sets a new performance threshold value in basis points.
-    /// @param valueBP performance threshold in basis points.
+    /// @notice Set a new performance threshold value in basis points
+    /// @param valueBP performance threshold in basis points
     function setPerformanceThreshold(
         uint256 valueBP
     ) external onlyRole(CONTRACT_MANAGER_ROLE) {
         _setPerformanceThreshold(valueBP);
     }
 
-    /// @notice Submits the data for a committee report
+    /// @notice Submit the data for a committee report
     /// @param data Data for a committee report
     /// @param contractVersion Version of the oracle consensus rules
     function submitReportData(
@@ -131,8 +131,8 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         _resume();
     }
 
-    /// @notice Pause accepting oracle reports for a duration
-    /// @param duration Duration of the pause
+    /// @notice Pause accepting oracle reports for a `duration` seconds
+    /// @param duration Duration of the pause in seconds
     function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
         _pauseFor(duration);
     }
