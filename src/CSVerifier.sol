@@ -11,10 +11,14 @@ import { BeaconBlockHeader, Slot, Validator, Withdrawal } from "./lib/Types.sol"
 import { GIndex } from "./lib/GIndex.sol";
 import { SSZ } from "./lib/SSZ.sol";
 
+/// @notice Convert withdrawal amount to wei
+/// @param withdrawal Withdrawal struct
 function amountWei(Withdrawal memory withdrawal) pure returns (uint256) {
     return gweiToWei(withdrawal.amount);
 }
 
+/// @notice Convert gwei to wei
+/// @param amount Amount in gwei
 function gweiToWei(uint64 amount) pure returns (uint256) {
     return uint256(amount) * 1 gwei;
 }
@@ -79,6 +83,11 @@ contract CSVerifier is ICSVerifier {
         locator = ILidoLocator(_locator);
     }
 
+    /// @notice Verify slashing proof and report slashing to the module for valid proofs
+    /// @param beaconBlock Beacon block header
+    /// @param witness Slashing witness
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keyIndex Index of the validator key in the Node Operator's key storage
     function processSlashingProof(
         ProvableBeaconBlockHeader calldata beaconBlock,
         SlashingWitness calldata witness,
@@ -125,6 +134,11 @@ contract CSVerifier is ICSVerifier {
         module.submitInitialSlashing(nodeOperatorId, keyIndex);
     }
 
+    /// @notice Verify withdrawal proof and report withdrawal to the module for valid proofs
+    /// @param beaconBlock Beacon block header
+    /// @param witness Withdrawal witness
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keyIndex Index of the validator key in the Node Operator's key storage
     function processWithdrawalProof(
         ProvableBeaconBlockHeader calldata beaconBlock,
         WithdrawalWitness calldata witness,
@@ -164,6 +178,12 @@ contract CSVerifier is ICSVerifier {
         );
     }
 
+    /// @notice Verify withdrawal proof against historical summaries data and report withdrawal to the module for valid proofs
+    /// @param beaconBlock Beacon block header
+    /// @param oldBlock Historical block header witness
+    /// @param witness Withdrawal witness
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keyIndex Index of the validator key in the Node Operator's key storage
     function processHistoricalWithdrawalProof(
         ProvableBeaconBlockHeader calldata beaconBlock,
         HistoricalHeaderWitness calldata oldBlock,
@@ -239,7 +259,7 @@ contract CSVerifier is ICSVerifier {
         }
     }
 
-    // @dev `stateRoot` is supposed to be trusted at this point.
+    /// @dev `stateRoot` is supposed to be trusted at this point.
     function _processWithdrawalProof(
         WithdrawalWitness calldata witness,
         uint256 stateEpoch,
