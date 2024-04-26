@@ -63,7 +63,7 @@ contract CSModule is
 
     ICSAccounting public accounting;
     ICSEarlyAdoption public earlyAdoption;
-    // @dev max number of node operators is limited by uint64 due to Batch serialization in 32 bytes
+    // @dev max number of Node Operators is limited by uint64 due to Batch serialization in 32 bytes
     // it seems to be enough
     // TODO: ^^ comment
     uint256 private _nodeOperatorsCount; // TODO: pack more efficinetly
@@ -154,7 +154,7 @@ contract CSModule is
     error NodeOperatorDoesNotExist();
     error SenderIsNotEligible();
     error InvalidVetKeysPointer();
-    error StuckKeysHigherThanTotalDepositedMinusTotalExited();
+    error StuckKeysHigherThanNonWithdrawn();
     error ExitedKeysHigherThanTotalDeposited();
     error ExitedKeysDecrease();
 
@@ -197,7 +197,7 @@ contract CSModule is
         _grantRole(VERIFIER_ROLE, verifier);
         _grantRole(STAKING_ROUTER_ROLE, address(LIDO_LOCATOR.stakingRouter()));
 
-        // CSM is on pause initially and should be resumed by voting
+        // CSM is on pause initially and should be resumed duting the vote
         _pauseFor(type(uint256).max);
     }
 
@@ -206,12 +206,15 @@ contract CSModule is
         _resume();
     }
 
-    /// @notice Pause module
+    /// @notice Pause module for `duration` seconds
     /// @param duration Duration of the pause in seconds
     function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
         _pauseFor(duration);
     }
 
+    /// @notice Activate public release mode
+    ///         Enable permissionless creation of the Node Operators
+    ///         Remove the keys limit for the Node Operators
     function activatePublicRelease() external onlyRole(MODULE_MANAGER_ROLE) {
         if (publicRelease) {
             revert AlreadySet();
@@ -220,8 +223,8 @@ contract CSModule is
         emit PublicRelease();
     }
 
-    /// @notice Sets the key deletion fine
-    /// @param amount Amount of wei to be charged for removing a single key.
+    /// @notice Set the key deletion charge. A charge is taken from the bond for each deleted key
+    /// @param amount Amount of wei to be charged for removing a single key
     function setKeyRemovalCharge(
         uint256 amount
     ) external onlyRole(MODULE_MANAGER_ROLE) {
@@ -234,13 +237,13 @@ contract CSModule is
         emit KeyRemovalChargeSet(amount);
     }
 
-    /// @notice Gets the module type
+    /// @notice Get the module type
     /// @return Module type
     function getType() external view returns (bytes32) {
         return MODULE_TYPE;
     }
 
-    /// @notice Gets staking summary of the module
+    /// @notice Get staking module summary
     function getStakingModuleSummary()
         external
         view
@@ -257,11 +260,11 @@ contract CSModule is
         );
     }
 
-    /// @notice Adds a new node operator with ETH bond
-    /// @param keysCount Count of signing keys
+    /// @notice Add a new Node Operator using ETH as a bond
+    /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of (deposit_message_root, domain) tuples.
-    ///                   https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#signingdata
+    /// @param signatures Signatures of (deposit_message_root, domain) tuples
+    ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
     /// @param managerAddress Optional. Used as managerAddress for the Node Operator. If not passed msg.sender will be used
     /// @param rewardAddress Optional. Used as rewardAddress for the Node Operator. If not passed msg.sender will be used
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
@@ -301,16 +304,16 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
-            normilizeQueueIfUpdated: true
+            normalizeQueueIfUpdated: true
         });
     }
 
-    /// @notice Adds a new node operator with stETH bond
-    /// @notice Due to the stETH rouding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
-    /// @param keysCount Count of signing keys
+    /// @notice Add a new Node Operator using stETH as a bond
+    /// @notice Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
+    /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of (deposit_message_root, domain) tuples.
-    ///                   https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#signingdata
+    /// @param signatures Signatures of (deposit_message_root, domain) tuples
+    ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
     /// @param managerAddress Optional. Used as managerAddress for the Node Operator. If not passed msg.sender will be used
     /// @param rewardAddress Optional. Used as rewardAddress for the Node Operator. If not passed msg.sender will be used
     /// @param permit Optional. Permit to use stETH as bond
@@ -348,16 +351,16 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
-            normilizeQueueIfUpdated: true
+            normalizeQueueIfUpdated: true
         });
     }
 
-    /// @notice Adds a new node operator with wstETH bond
-    /// @notice Due to the stETH rouding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
-    /// @param keysCount Count of signing keys
+    /// @notice Add a new Node Operator using wstETH as a bond
+    /// @notice Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
+    /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of (deposit_message_root, domain) tuples.
-    ///                   https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#signingdata
+    /// @param signatures Signatures of (deposit_message_root, domain) tuples
+    ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
     /// @param managerAddress Optional. Used as managerAddress for the Node Operator. If not passed msg.sender will be used
     /// @param rewardAddress Optional. Used as rewardAddress for the Node Operator. If not passed msg.sender will be used
     /// @param permit Optional. Permit to use wstETH as bond
@@ -400,16 +403,16 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
-            normilizeQueueIfUpdated: true
+            normalizeQueueIfUpdated: true
         });
     }
 
-    /// @notice Adds a new keys to the node operator with ETH bond
-    /// @param nodeOperatorId ID of the node operator
-    /// @param keysCount Count of signing keys
+    /// @notice Add new keys to the Node Operator using ETH as a bond
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of (deposit_message_root, domain) tuples.
-    ///                   https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#signingdata
+    /// @param signatures Signatures of (deposit_message_root, domain) tuples
+    ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
     function addValidatorKeysETH(
         uint256 nodeOperatorId,
         uint256 keysCount,
@@ -435,17 +438,17 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
-            normilizeQueueIfUpdated: true
+            normalizeQueueIfUpdated: true
         });
     }
 
-    /// @notice Adds a new keys to the node operator with stETH bond
-    /// @notice Due to the stETH rouding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
-    /// @param nodeOperatorId ID of the node operator
-    /// @param keysCount Count of signing keys
+    /// @notice Add new keys to the Node Operator using stETH as a bond
+    /// @notice Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of (deposit_message_root, domain) tuples.
-    ///                   https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#signingdata
+    /// @param signatures Signatures of (deposit_message_root, domain) tuples
+    ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
     /// @param permit Optional. Permit to use stETH as bond
     function addValidatorKeysStETH(
         uint256 nodeOperatorId,
@@ -471,17 +474,17 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
-            normilizeQueueIfUpdated: true
+            normalizeQueueIfUpdated: true
         });
     }
 
-    /// @notice Adds a new keys to the node operator with wstETH bond
-    /// @notice Due to the stETH rouding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
-    /// @param nodeOperatorId ID of the node operator
-    /// @param keysCount Count of signing keys
+    /// @notice Add new keys to the Node Operator using wstETH as a bond
+    /// @notice Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of (deposit_message_root, domain) tuples.
-    ///                   https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#signingdata
+    /// @param signatures Signatures of (deposit_message_root, domain) tuples
+    ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
     /// @param permit Optional. Permit to use wstETH as bond
     function addValidatorKeysWstETH(
         uint256 nodeOperatorId,
@@ -507,12 +510,12 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
-            normilizeQueueIfUpdated: true
+            normalizeQueueIfUpdated: true
         });
     }
 
-    /// @notice Stake user's ETH to Lido and make deposit in stETH to the bond
-    /// @param nodeOperatorId id of the node operator to stake ETH and deposit stETH for
+    /// @notice Stake user's ETH to Lido and make a deposit in stETH to the bond
+    /// @param nodeOperatorId ID of the Node Operator
     function depositETH(uint256 nodeOperatorId) external payable {
         _onlyExistingNodeOperator(nodeOperatorId);
         accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
@@ -521,12 +524,12 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
-            normilizeQueueIfUpdated: true
+            normalizeQueueIfUpdated: true
         });
     }
 
     /// @notice Deposit user's stETH to the bond for the given Node Operator
-    /// @param nodeOperatorId id of the node operator to deposit stETH for
+    /// @param nodeOperatorId ID of the Node Operator
     /// @param stETHAmount amount of stETH to deposit
     /// @param permit Optional. Permit to use stETH as bond
     function depositStETH(
@@ -546,12 +549,12 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
-            normilizeQueueIfUpdated: true
+            normalizeQueueIfUpdated: true
         });
     }
 
-    /// @notice Unwrap user's wstETH and make deposit in stETH to the bond for the given Node Operator
-    /// @param nodeOperatorId id of the node operator to deposit stETH for
+    /// @notice Unwrap the user's wstETH and make a deposit in stETH to the bond for the given Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
     /// @param wstETHAmount amount of wstETH to deposit
     /// @param permit Optional. Permit to use wstETH as bond
     function depositWstETH(
@@ -571,15 +574,17 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
-            normilizeQueueIfUpdated: true
+            normalizeQueueIfUpdated: true
         });
     }
 
-    /// @notice Claims full reward (fee + bond) in stETH for the given node operator with desirable value
-    /// @param nodeOperatorId id of the node operator to claim rewards for.
-    /// @param stETHAmount amount of stETH to claim.
-    /// @param cumulativeFeeShares Optional. Cumulative fee shares for the node operator.
-    /// @param rewardsProof Optional. Merkle proof of the rewards.
+    /// @notice Claims full reward (fee + bond) in stETH for the given Node Operator
+    /// @notice If `stETHAmount` exceeds the current claimable amount, the claimable amount will be used instead
+    /// @notice If `rewardsProof` is not provided, only excess bond will be available for claim
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param stETHAmount amount of stETH to claim
+    /// @param cumulativeFeeShares Optional. Cumulative fee shares for the Node Operator
+    /// @param rewardsProof Optional. Merkle proof of the rewards
     function claimRewardsStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount,
@@ -600,15 +605,17 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
-            normilizeQueueIfUpdated: true
+            normalizeQueueIfUpdated: true
         });
     }
 
-    /// @notice Claims full reward (fee + bond) in wstETH for the given node operator available for this moment
-    /// @param nodeOperatorId id of the node operator to claim rewards for.
-    /// @param wstETHAmount amount of wstETH to claim.
-    /// @param cumulativeFeeShares Optional. Cumulative fee shares for the node operator.
-    /// @param rewardsProof Optional. Merkle proof of the rewards.
+    /// @notice Claims full reward (fee + bond) in цstETH for the given Node Operator
+    /// @notice If `wstETHAmount` exceeds the current claimable amount, the claimable amount will be used instead
+    /// @notice If `rewardsProof` is not provided, only excess bond will be awailable for claim
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param wstETHAmount amount of wstETH to claim
+    /// @param cumulativeFeeShares Optional. Cumulative fee shares for the Node Operator
+    /// @param rewardsProof Optional. Merkle proof of the rewards
     function claimRewardsWstETH(
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
@@ -629,18 +636,20 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
-            normilizeQueueIfUpdated: true
+            normalizeQueueIfUpdated: true
         });
     }
 
-    /// @notice Request a full reward (fee + bond) in Withdrawal NFT (unstETH) for the given node operator that is available at this moment.
+    /// @notice Request a full reward (fee + bond) in Withdrawal NFT (unstETH) for the given Node Operator
     /// @notice Amounts less than MIN_STETH_WITHDRAWAL_AMOUNT (see LidoWithdrawalQueue contract) are not allowed
     /// @notice Amounts above MAX_STETH_WITHDRAWAL_AMOUNT should be requested in several transactions
+    /// @notice If `ethAmount` exceeds the current claimable amount, the claimable amount will be used instead
+    /// @notice If `rewardsProof` is not provided, only excess bond will be available for claim
     /// @dev reverts if amount isn't between MIN_STETH_WITHDRAWAL_AMOUNT and MAX_STETH_WITHDRAWAL_AMOUNT
-    /// @param nodeOperatorId id of the node operator to request rewards for.
-    /// @param ethAmount amount of ETH to request.
-    /// @param cumulativeFeeShares Optional. Cumulative fee shares for the node operator.
-    /// @param rewardsProof Optional. Merkle proof of the rewards.
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param ethAmount amount of ETH to request
+    /// @param cumulativeFeeShares Optional. Cumulative fee shares for the Node Operator
+    /// @param rewardsProof Optional. Merkle proof of the rewards
     function requestRewardsETH(
         uint256 nodeOperatorId,
         uint256 ethAmount,
@@ -661,12 +670,12 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
-            normilizeQueueIfUpdated: true
+            normalizeQueueIfUpdated: true
         });
     }
 
-    /// @notice Proposes a new manager address for the node operator
-    /// @param nodeOperatorId ID of the node operator
+    /// @notice Propose a new manager address for the Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
     /// @param proposedAddress Proposed manager address
     function proposeNodeOperatorManagerAddressChange(
         uint256 nodeOperatorId,
@@ -680,8 +689,8 @@ contract CSModule is
         );
     }
 
-    /// @notice Confirms a new manager address for the node operator
-    /// @param nodeOperatorId ID of the node operator
+    /// @notice Confirm a new manager address for the Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
     function confirmNodeOperatorManagerAddressChange(
         uint256 nodeOperatorId
     ) external {
@@ -692,8 +701,8 @@ contract CSModule is
         );
     }
 
-    /// @notice Proposes a new reward address for the node operator
-    /// @param nodeOperatorId ID of the node operator
+    /// @notice Propose a new reward address for the Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
     /// @param proposedAddress Proposed reward address
     function proposeNodeOperatorRewardAddressChange(
         uint256 nodeOperatorId,
@@ -707,8 +716,8 @@ contract CSModule is
         );
     }
 
-    /// @notice Confirms a new reward address for the node operator
-    /// @param nodeOperatorId ID of the node operator
+    /// @notice Confirm a new reward address for the Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
     function confirmNodeOperatorRewardAddressChange(
         uint256 nodeOperatorId
     ) external {
@@ -719,8 +728,8 @@ contract CSModule is
         );
     }
 
-    /// @notice Resets the manager address to the reward address
-    /// @param nodeOperatorId ID of the node operator
+    /// @notice Reset the manager address to the reward address
+    /// @param nodeOperatorId ID of the Node Operator
     function resetNodeOperatorManagerAddress(uint256 nodeOperatorId) external {
         _onlyExistingNodeOperator(nodeOperatorId);
         NOAddresses.resetNodeOperatorManagerAddress(
@@ -729,9 +738,9 @@ contract CSModule is
         );
     }
 
-    /// @notice Gets node operator info
-    /// @param nodeOperatorId ID of the node operator
-    /// @return Node operator info
+    /// @notice Get Node Operator info
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return Node Operator info
     function getNodeOperator(
         uint256 nodeOperatorId
     ) external view returns (NodeOperator memory) {
@@ -739,8 +748,8 @@ contract CSModule is
         return _nodeOperators[nodeOperatorId];
     }
 
-    /// @notice Gets node operator non-withdrawn keys
-    /// @param nodeOperatorId ID of the node operator
+    /// @notice Get Node Operator non-withdrawn keys
+    /// @param nodeOperatorId ID of the Node Operator
     /// @return Non-withdrawn keys count
     function getNodeOperatorNonWithdrawnKeys(
         uint256 nodeOperatorId
@@ -750,8 +759,8 @@ contract CSModule is
         return no.totalAddedKeys - no.totalWithdrawnKeys;
     }
 
-    /// @notice Gets node operator reward address
-    /// @param nodeOperatorId ID of the node operator
+    /// @notice Get Node Operator reward address
+    /// @param nodeOperatorId ID of the Node Operator
     /// @return Reward address
     function getNodeOperatorRewardAddress(
         uint256 nodeOperatorId
@@ -760,8 +769,8 @@ contract CSModule is
         return _nodeOperators[nodeOperatorId].rewardAddress;
     }
 
-    /// @notice Gets node operator summary
-    /// @param nodeOperatorId ID of the node operator
+    /// @notice Get Node Operator summary
+    /// @param nodeOperatorId ID of the Node Operator
     /// @return targetLimitMode Target limit mode
     /// @return targetValidatorsCount Target validators count
     /// @return stuckValidatorsCount Stuck validators count
@@ -776,6 +785,8 @@ contract CSModule is
     ///      - totalExitedKeys
     ///      - targetLimitMode
     ///      - targetValidatorsCount
+    ///      - totalunbondedKeys
+    ///      - totalStuckKeys
     function getNodeOperatorSummary(
         uint256 nodeOperatorId
     )
@@ -825,8 +836,8 @@ contract CSModule is
         depositableValidatorsCount = no.depositableValidatorsCount;
     }
 
-    /// @notice Gets node operator signing keys
-    /// @param nodeOperatorId ID of the node operator
+    /// @notice Get Node Operator signing keys
+    /// @param nodeOperatorId ID of the Node Operator
     /// @param startIndex Index of the first key
     /// @param keysCount Count of keys to get
     /// @return Signing keys
@@ -846,12 +857,13 @@ contract CSModule is
         return SigningKeys.loadKeys(nodeOperatorId, startIndex, keysCount);
     }
 
-    /// @notice Gets node operator signing keys with signatures
-    /// @param nodeOperatorId ID of the node operator
+    /// @notice Get Node Operator signing keys with signatures
+    /// @param nodeOperatorId ID of the Node Operator
     /// @param startIndex Index of the first key
     /// @param keysCount Count of keys to get
     /// @return keys Signing keys
-    /// @return signatures Signatures of (deposit_message, domain) tuples
+    /// @param signatures Signatures of (deposit_message_root, domain) tuples
+    ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
     function getSigningKeysWithSignatures(
         uint256 nodeOperatorId,
         uint256 startIndex,
@@ -878,32 +890,32 @@ contract CSModule is
         );
     }
 
-    /// @notice Gets nonce of the module.
+    /// @notice Get nonce of the module.
     function getNonce() external view returns (uint256) {
         return _nonce;
     }
 
-    /// @notice Gets the total number of node operators
+    /// @notice Get the total number of Node Operators
     function getNodeOperatorsCount() external view returns (uint256) {
         return _nodeOperatorsCount;
     }
 
-    /// @notice Gets the total number of active node operators
+    /// @notice Get the total number of active Node Operators
     function getActiveNodeOperatorsCount() external view returns (uint256) {
         return _activeNodeOperatorsCount;
     }
 
-    /// @notice Gets node operator active status
-    /// @param nodeOperatorId ID of the node operator
+    /// @notice Get Node Operator active status
+    /// @param nodeOperatorId ID of the Node Operator
     function getNodeOperatorIsActive(
         uint256 nodeOperatorId
     ) external view returns (bool) {
         return _nodeOperators[nodeOperatorId].active;
     }
 
-    /// @notice Gets IDs of node operators
-    /// @param offset Offset of the first node operator
-    /// @param limit Count of node operators to get
+    /// @notice Get IDs of Node Operators
+    /// @param offset Offset of the first Node Operator ID to get
+    /// @param limit Count of Node Operator IDs to get
     function getNodeOperatorIds(
         uint256 offset,
         uint256 limit
@@ -919,8 +931,8 @@ contract CSModule is
         }
     }
 
-    /// @notice Called when rewards minted for the module.
-    /// @dev Passes through the minted shares to the fee distributor.
+    /// @notice Called when rewards are minted for the module
+    /// @dev Passes through the minted shares to the fee distributor
     function onRewardsMinted(
         uint256 totalShares
     ) external onlyRole(STAKING_ROUTER_ROLE) {
@@ -933,7 +945,7 @@ contract CSModule is
     function _updateDepositableValidatorsCount(
         uint256 nodeOperatorId,
         bool incrementNonceIfUpdated,
-        bool normilizeQueueIfUpdated
+        bool normalizeQueueIfUpdated
     ) private {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
@@ -977,15 +989,17 @@ contract CSModule is
             if (incrementNonceIfUpdated) {
                 _incrementModuleNonce();
             }
-            if (normilizeQueueIfUpdated) {
+            if (normalizeQueueIfUpdated) {
                 _normalizeQueue(nodeOperatorId);
             }
         }
     }
 
-    /// @notice Updates stuck validators count for node operators by StakingRouter
-    /// @dev If the stuck keys count is above zero, the depositable validators count is set to 0 for this Node Operator
-    /// @param nodeOperatorIds bytes packed array of node operator ids
+    /// @notice Update stuck validators count for Node Operators
+    /// @notice Called by StakingRouter
+    /// @dev If the stuck keys count is above zero for the Node Operator,
+    ///      the depositable validators count is set to 0 for this Node Operator
+    /// @param nodeOperatorIds bytes packed array of Node Operator IDs
     /// @param stuckValidatorsCounts bytes packed array of stuck validators counts
     function updateStuckValidatorsCount(
         bytes calldata nodeOperatorIds,
@@ -1020,14 +1034,14 @@ contract CSModule is
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (stuckValidatorsCount == no.stuckValidatorsCount) return;
         if (stuckValidatorsCount > no.totalDepositedKeys - no.totalExitedKeys)
-            revert StuckKeysHigherThanTotalDepositedMinusTotalExited();
+            revert StuckKeysHigherThanNonWithdrawn();
 
         no.stuckValidatorsCount = stuckValidatorsCount;
         emit StuckSigningKeysCountChanged(nodeOperatorId, stuckValidatorsCount);
 
         if (stuckValidatorsCount > 0 && no.depositableValidatorsCount > 0) {
             // INFO: The only consequence of stuck keys from the on-chain perspective is suspending deposits to the
-            // node operator. To do that, we set the depositableValidatorsCount to 0 for this node operator. Hence
+            // Node Operator. To do that, we set the depositableValidatorsCount to 0 for this Node Operator. Hence
             // we can omit the call to the _updateDepositableValidatorsCount function here to save gas.
             _depositableValidatorsCount -= no.depositableValidatorsCount;
             no.depositableValidatorsCount = 0;
@@ -1037,13 +1051,14 @@ contract CSModule is
             _updateDepositableValidatorsCount({
                 nodeOperatorId: nodeOperatorId,
                 incrementNonceIfUpdated: false,
-                normilizeQueueIfUpdated: false
+                normalizeQueueIfUpdated: false
             });
         }
     }
 
-    /// @notice Updates exited validators count for node operators by StakingRouter
-    /// @param nodeOperatorIds bytes packed array of node operator ids
+    /// @notice Updates exited validators count for Node Operators
+    /// @notice Called by StakingRouter
+    /// @param nodeOperatorIds bytes packed array of Node Operator IDs
     /// @param exitedValidatorsCounts bytes packed array of exited validators counts
     function updateExitedValidatorsCount(
         bytes calldata nodeOperatorIds,
@@ -1076,7 +1091,8 @@ contract CSModule is
         _incrementModuleNonce();
     }
 
-    /// @dev updates exited validators count for a single node operator. allows decrease the count for unsafe updates
+    /// @dev Update exited validators count for a single Node Operator
+    /// @dev Allows decrease the count for unsafe updates
     function _updateExitedValidatorsCount(
         uint256 nodeOperatorId,
         uint256 exitedValidatorsCount,
@@ -1100,8 +1116,9 @@ contract CSModule is
         );
     }
 
-    /// @notice Updates refunded validators count by StakingRouter
-    /// @param nodeOperatorId ID of the node operator
+    /// @notice Update refunded validators count for the Node Operator
+    /// @notice Called by StakingRouter
+    /// @param nodeOperatorId ID of the Node Operator
     function updateRefundedValidatorsCount(
         uint256 nodeOperatorId,
         uint256 refundedValidatorsCount
@@ -1113,10 +1130,13 @@ contract CSModule is
         _incrementModuleNonce();
     }
 
-    /// @notice Updates target limits for node operator by StakingRouter
-    /// @dev Target limit decreasing (or appearing) must unvet node operator's keys from the queue
-    /// @param nodeOperatorId ID of the node operator
-    /// @param targetLimitMode Is target limit active for the node operator
+    /// @notice Update target limits for Node Operator
+    /// @notice Called by StakingRouter
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param targetLimitMode Target limit mode for the Node Operator
+    ///                        0 - disabled
+    ///                        1 - soft mode
+    ///                        2 - forced mode
     /// @param targetLimit Target limit of validators
     function updateTargetValidatorsLimits(
         uint256 nodeOperatorId,
@@ -1150,12 +1170,12 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: false,
-            normilizeQueueIfUpdated: true
+            normalizeQueueIfUpdated: true
         });
         _incrementModuleNonce();
     }
 
-    /// @notice Called when exited and stuck validators counts updated by StakingRouter
+    /// @notice Called by the Staking Router when exited and stuck validators counts updated
     function onExitedAndStuckValidatorsCountsUpdated()
         external
         onlyRole(STAKING_ROUTER_ROLE)
@@ -1164,22 +1184,27 @@ contract CSModule is
         // Nothing to do, rewards are distributed by a performance oracle.
     }
 
-    /// @notice Unsafe updates of validators count for node operators by DAO
+    /// @notice Unsafe update of validators count for Node Operators by DAO
+    /// @notice Called by Staking Router
     function unsafeUpdateValidatorsCount(
         uint256 nodeOperatorId,
         uint256 exitedValidatorsKeysCount,
         uint256 stuckValidatorsKeysCount
     ) external onlyRole(STAKING_ROUTER_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
-        _updateExitedValidatorsCount(
-            nodeOperatorId,
-            exitedValidatorsKeysCount,
-            true /* _allowDecrease */
-        );
+        _updateExitedValidatorsCount({
+            nodeOperatorId: nodeOperatorId,
+            exitedValidatorsCount: exitedValidatorsKeysCount,
+            allowDecrease: true
+        });
         _updateStuckValidatorsCount(nodeOperatorId, stuckValidatorsKeysCount);
         _incrementModuleNonce();
     }
 
+    /// @notice Decrease totalVettedKeys for the Node Operator
+    /// @notice Called by Staking Router
+    /// @param nodeOperatorIds IDs of the Node Operators to decrease totalVettedKeys for
+    /// @param vettedKeysByOperator Corresponding values for totalVettedKeys decrease
     function decreaseOperatorVettedKeys(
         uint256[] calldata nodeOperatorIds,
         uint256[] calldata vettedKeysByOperator
@@ -1208,16 +1233,17 @@ contract CSModule is
             _updateDepositableValidatorsCount({
                 nodeOperatorId: nodeOperatorId,
                 incrementNonceIfUpdated: false,
-                normilizeQueueIfUpdated: false
+                normalizeQueueIfUpdated: false
             });
         }
 
         _incrementModuleNonce();
     }
 
-    /// @notice Removes keys from the node operator and charges fee if there are vetted keys among them
-    /// @param nodeOperatorId ID of the node operator
+    /// @notice Remove keys for the Node Operator and confiscate removal charge for each deleted key
+    /// @param nodeOperatorId ID of the Node Operator
     /// @param startIndex Index of the first key
+    /// @param keysCount Keys count to delete
     function removeKeys(
         uint256 nodeOperatorId,
         uint256 startIndex,
@@ -1242,6 +1268,9 @@ contract CSModule is
     //     // Confiscate ejection fee from the bond
     // }
 
+    /// @notice Perform queue normalization for the given Node Operator
+    /// @notice Normalization stands for adding vetted but not enqueued keys to the queue
+    /// @param nodeOperatorId ID of the Node Operator
     function normalizeQueue(uint256 nodeOperatorId) external {
         _onlyExistingNodeOperator(nodeOperatorId);
         _onlyNodeOperatorManager(nodeOperatorId);
@@ -1264,11 +1293,11 @@ contract CSModule is
         }
     }
 
-    /// @notice Reports EL rewards stealing for the given node operator.
-    /// @dev The funds will be locked, so if there any unbonded keys after that, they will be unvetted.
-    /// @param nodeOperatorId id of the node operator to report EL rewards stealing for.
-    /// @param blockHash execution layer block hash of the proposed block with EL rewards stealing.
-    /// @param amount amount of stolen EL rewards in ETH.
+    /// @notice Report EL rewards stealing for the given Node Operator
+    /// @notice The amount equal to the stolen funds plus EL stealing fine will be locked
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param blockHash Execution layer block hash of the proposed block with EL rewards stealing
+    /// @param amount Amount of stolen EL rewards in ETH
     function reportELRewardsStealingPenalty(
         uint256 nodeOperatorId,
         bytes32 blockHash,
@@ -1291,14 +1320,14 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
-            normilizeQueueIfUpdated: false
+            normalizeQueueIfUpdated: false
         });
     }
 
-    /// @notice Cancel EL rewards stealing for the given node operator.
-    /// @dev The funds will be unlocked.
-    /// @param nodeOperatorId id of the node operator to cancel penalty for.
-    /// @param amount amount of cancelled penalty.
+    /// @notice Cancel previously reported and not settled EL rewards stealing penalty for the given Node Operator
+    /// @notice The funds will be unlocked
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param amount Amount of penalty to cancel
     function cancelELRewardsStealingPenalty(
         uint256 nodeOperatorId,
         uint256 amount
@@ -1313,13 +1342,13 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
-            normilizeQueueIfUpdated: true
+            normalizeQueueIfUpdated: true
         });
     }
 
-    /// @dev Should be called by the committee.
-    /// @notice Settles blocked bond for the given node operators.
-    /// @param nodeOperatorIds ids of the node operators to settle blocked bond for.
+    /// @notice Settles blocked bond for the given Node Operators
+    /// @dev Should be called by the Easy Track
+    /// @param nodeOperatorIds IDs of the Node Operators
     function settleELRewardsStealingPenalty(
         uint256[] memory nodeOperatorIds
     ) external onlyRole(SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE) {
@@ -1336,14 +1365,15 @@ contract CSModule is
                 _updateDepositableValidatorsCount({
                     nodeOperatorId: nodeOperatorId,
                     incrementNonceIfUpdated: true,
-                    normilizeQueueIfUpdated: false
+                    normalizeQueueIfUpdated: false
                 });
             }
         }
     }
 
-    /// @notice Compensate EL rewards stealing penalty for the given node operator to prevent further validator exits.
-    /// @param nodeOperatorId id of the node operator.
+    /// @notice Compensate EL rewards stealing penalty for the given Node Operator to prevent further validator exits
+    /// @notice Expected to be called by the Node Operator, but can be called by anyone
+    /// @param nodeOperatorId ID of the Node Operator
     function compensateELRewardsStealingPenalty(
         uint256 nodeOperatorId
     ) external payable {
@@ -1354,13 +1384,13 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
-            normilizeQueueIfUpdated: true
+            normalizeQueueIfUpdated: true
         });
     }
 
-    /// @notice Checks if the given node operator's key is proved as withdrawn.
-    /// @param nodeOperatorId id of the node operator to check.
-    /// @param keyIndex index of the key to check.
+    /// @notice Check if the given Node Operator's key is reported as withdrawn
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keyIndex index of the key to check
     function isValidatorWithdrawn(
         uint256 nodeOperatorId,
         uint256 keyIndex
@@ -1368,11 +1398,12 @@ contract CSModule is
         return _isValidatorWithdrawn[_keyPointer(nodeOperatorId, keyIndex)];
     }
 
-    /// @notice Report node operator's key as withdrawn and settle withdrawn amount.
-    /// See CSVerifier.processWithdrawalProof to use this method permissionless
-    /// @param nodeOperatorId Operator ID in the module.
-    /// @param keyIndex Index of the withdrawn key in the node operator's keys.
-    /// @param amount Amount of withdrawn ETH in wei.
+    /// @notice Report Node Operator's key as withdrawn and settle withdrawn amount
+    /// @notice Called by the Verifier contract
+    ///         See CSVerifier.processWithdrawalProof to use this method permissionless
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keyIndex Index of the withdrawn key in the Node Operator's keys storage
+    /// @param amount Amount of withdrawn ETH in wei
     function submitWithdrawal(
         uint256 nodeOperatorId,
         uint256 keyIndex,
@@ -1408,13 +1439,13 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
-            normilizeQueueIfUpdated: true
+            normalizeQueueIfUpdated: true
         });
     }
 
-    /// @notice Checks if the given node operator's key is proved as slashed.
-    /// @param nodeOperatorId id of the node operator to check.
-    /// @param keyIndex index of the key to check.
+    /// @notice Check if the given Node Operator's key is reported as slashed
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keyIndex Index of the key to check
     function isValidatorSlashed(
         uint256 nodeOperatorId,
         uint256 keyIndex
@@ -1422,10 +1453,11 @@ contract CSModule is
         return _isValidatorSlashed[_keyPointer(nodeOperatorId, keyIndex)];
     }
 
-    /// @notice Report node operator's key as slashed and apply initial slashing penalty.
-    /// See CSVerifier.processSlashingProof to use this method permissionless
-    /// @param nodeOperatorId Operator ID in the module.
-    /// @param keyIndex Index of the slashed key in the node operator's keys.
+    /// @notice Report Node Operator's key as slashed and apply the initial slashing penalty
+    /// @notice Called by the Verifier contract
+    ///         See CSVerifier.processSlashingProof to use this method permissionless
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keyIndex Index of the slashed key in the Node Operator's keys storage
     function submitInitialSlashing(
         uint256 nodeOperatorId,
         uint256 keyIndex
@@ -1451,11 +1483,11 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
-            normilizeQueueIfUpdated: false
+            normalizeQueueIfUpdated: false
         });
     }
 
-    /// @dev both nodeOperatorId and keyIndex are limited to uint64 by the contract.
+    /// @dev Both nodeOperatorId and keyIndex are limited to uint64 by the contract
     function _keyPointer(
         uint256 nodeOperatorId,
         uint256 keyIndex
@@ -1463,10 +1495,11 @@ contract CSModule is
         return (nodeOperatorId << 128) | keyIndex;
     }
 
-    /// @notice Called when withdrawal credentials changed by DAO and resets the key removal charge
-    /// @dev Changing the WC means that the current keys in the queue are not valid anymore and can't be vetted to deposit
-    ///     So, the key removal charge should be reset to 0 to allow the node operator to remove the keys without any charge.
-    ///     Then the DAO should set the new key removal charge.
+    /// @notice Called by the Staking Router when withdrawal credentials changed by DAO
+    /// @notice Resets the key removal charge
+    /// @dev Changing the WC means that the current deposit data in the queue is not valid anymore and can't be deposited
+    ///      So, the key removal charge should be reset to 0 to allow Node Operators to remove the keys without any charge.
+    ///      After keys removal the DAO should set the new key removal charge.
     function onWithdrawalCredentialsChanged()
         external
         onlyRole(STAKING_ROUTER_ROLE)
@@ -1537,9 +1570,9 @@ contract CSModule is
             no.totalAddedKeys
         );
 
-        // We charge the node operator for the every removed key. It's motivated by the fact that the DAO should cleanup
-        // the queue from the empty batches of the node operator. It's possible to have multiple batches with only one
-        // key in it, so it means the DAO should have remove as much batches as keys removed in this case.
+        // The Node Operator is charged for the every removed key. It's motivated by the fact that the DAO should cleanup
+        // the queue from the empty batches related to the Node Operator. It's possible to have multiple batches with only one
+        // key in it, so it means the DAO should be able to cover removal costs for as much batches as keys removed in this case.
         uint256 amountToCharge = keyRemovalCharge * keysCount;
         accounting.chargeFee(nodeOperatorId, amountToCharge);
         emit KeyRemovalChargeApplied(nodeOperatorId, amountToCharge);
@@ -1555,12 +1588,12 @@ contract CSModule is
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: false,
-            normilizeQueueIfUpdated: true
+            normalizeQueueIfUpdated: true
         });
         _incrementModuleNonce();
     }
 
-    /// @notice Gets the depositable keys with signatures from the queue
+    /// @notice Get the next `depositsCount` of depositable keys with signatures from the queue
     /// @param depositsCount Count of deposits to get
     /// @param /* depositCalldata */ (unused) Deposit calldata
     /// @return publicKeys Public keys
@@ -1590,7 +1623,7 @@ contract CSModule is
                     depositsLeft
                 );
                 // `depositsLeft` is non-zero at this point all the time, so the check `depositsLeft > keysCount`
-                // covers the case when no depositable keys on the node operator have been left.
+                // covers the case when no depositable keys on the Node Operator have been left.
                 if (depositsLeft > keysCount || keysCount == keysInBatch) {
                     // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
                     no.enqueuedCount -= keysInBatch;
@@ -1651,10 +1684,10 @@ contract CSModule is
         _incrementModuleNonce();
     }
 
-    /// @notice Cleans the deposit queue from batches with no depositable keys.
-    /// @dev Use **eth_call** to check how many items will be removed.
-    /// @param maxItems How many queue items to review.
-    /// @return toRemove How many items were removed from the queue.
+    /// @notice Clean the deposit queue from batches with no depositable keys
+    /// @dev Use **eth_call** to check how many items will be removed
+    /// @param maxItems How many queue items to review
+    /// @return toRemove Number of the deposit data removed from the queue
     function cleanDepositQueue(
         uint256 maxItems
     ) external returns (uint256 toRemove) {
@@ -1679,8 +1712,8 @@ contract CSModule is
             NodeOperator storage no = _nodeOperators[noId];
             uint256 enqueuedSoFar = _queueLookup.get(noId);
             if (enqueuedSoFar >= no.depositableValidatorsCount) {
-                // NOTE: Since we reached that point there's no way for a node operator to have a depositable batch
-                // later in the queue, and hence we don't update _queueLookup for the node operator.
+                // NOTE: Since we reached that point there's no way for a Node Operator to have a depositable batch
+                // later in the queue, and hence we don't update _queueLookup for the Node Operator.
                 if (curr == head) {
                     queue.dequeue();
                     head = queue.head;
@@ -1706,14 +1739,16 @@ contract CSModule is
         }
     }
 
-    /// @notice Gets the deposit queue item by an index.
-    /// @param index Index of a queue item.
+    /// @notice Get the deposit queue item by an index
+    /// @param index Index of a queue item
     function depositQueueItem(
         uint128 index
     ) external view returns (Batch item) {
         return queue.at(index);
     }
 
+    /// @notice Recover all stETH shares from the contract
+    /// @dev There should be no stETH shares on the contract balance during regular operation
     function recoverStETHShares() external {
         _onlyRecoverer();
         IStETH stETH = IStETH(LIDO_LOCATOR.lido());
@@ -1756,7 +1791,7 @@ contract CSModule is
         return id;
     }
 
-    /// @notice it's possible to join with proof even after public release
+    /// @notice Tt's possible to join with proof even after public release to get beneficial bond curve
     function _checkEarlyAdoptionEligibility(
         uint256 nodeOperatorId,
         bytes32[] calldata proof
