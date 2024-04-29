@@ -11,11 +11,11 @@ import { IWithdrawalQueue } from "../interfaces/IWithdrawalQueue.sol";
 
 /// @dev Bond core mechanics abstract contract
 ///
-/// It gives basic abilities to manage bond shares of the Node Operator.
+/// It gives basic abilities to manage bond shares (stETH) of the Node Operator.
 ///
 /// It contains:
-///  - store bond shares
-///  - get bond shares and bond amount
+///  - store bond shares (stETH)
+///  - get bond shares (stETH) and bond amount
 ///  - deposit ETH/stETH/wstETH
 ///  - claim ETH/stETH/wstETH
 ///  - burn
@@ -86,14 +86,14 @@ abstract contract CSBondCore {
         WSTETH = IWstETH(WITHDRAWAL_QUEUE.WSTETH());
     }
 
-    /// @notice Get total bond stETH shares stored on the contract
-    /// @return total Bond shares
+    /// @notice Get total bond shares (stETH) stored on the contract
+    /// @return total bond shares (stETH)
     function totalBondShares() public view returns (uint256) {
         CSBondCoreStorage storage $ = _getCSBondCoreStorage();
         return $.totalBondShares;
     }
 
-    /// @notice Get bond stETH shares for the given Node Operator
+    /// @notice Get bond shares (stETH) for the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator
     /// @return bond Bond in stETH shares
     function getBondShares(
@@ -155,7 +155,7 @@ abstract contract CSBondCore {
         $.totalBondShares += shares;
     }
 
-    /// @dev Claim Node Operator's excess bond shares in ETH by requesting withdrawal from the protocol
+    /// @dev Claim Node Operator's excess bond shares (stETH) in ETH by requesting withdrawal from the protocol
     ///      As a usual withdrawal request, this claim might be processed on the next stETH rebase
     function _requestETH(
         uint256 nodeOperatorId,
@@ -181,7 +181,7 @@ abstract contract CSBondCore {
         emit BondClaimed(nodeOperatorId, to, amounts[0]);
     }
 
-    /// @dev Claim Node Operator's excess bond shares in stETH by transferring shares from the contract
+    /// @dev Claim Node Operator's excess bond shares (stETH) in stETH by transferring shares from the contract
     function _claimStETH(
         uint256 nodeOperatorId,
         uint256 claimableShares,
@@ -202,7 +202,7 @@ abstract contract CSBondCore {
         emit BondClaimed(nodeOperatorId, to, _ethByShares(sharesToClaim));
     }
 
-    /// @dev Claim Node Operator's excess bond shares in wstETH by wrapping stETH from the contract and transferring wstETH
+    /// @dev Claim Node Operator's excess bond shares (stETH) in wstETH by wrapping stETH from the contract and transferring wstETH
     function _claimWstETH(
         uint256 nodeOperatorId,
         uint256 claimableShares,
@@ -224,9 +224,9 @@ abstract contract CSBondCore {
         emit BondClaimedWstETH(nodeOperatorId, to, amount);
     }
 
-    /// @dev Burn Node Operator's bond shares. Shares will be burned on the next stETH rebase
+    /// @dev Burn Node Operator's bond shares (stETH). Shares will be burned on the next stETH rebase
     /// @dev The method sender should be granted as `Burner.REQUEST_BURN_SHARES_ROLE` and makes stETH allowance for `Burner`
-    /// @param amount Bond amount to burn in ETH
+    /// @param amount Bond amount to burn in ETH (stETH)
     function _burn(uint256 nodeOperatorId, uint256 amount) internal {
         (uint256 toBurnShares, uint256 burnedShares) = _reduceBond(
             nodeOperatorId,
@@ -240,8 +240,8 @@ abstract contract CSBondCore {
         );
     }
 
-    /// @dev Transfer Node Operator's bond shares to charge recipient to pay some fee
-    /// @param amount Bond amount to charge in ETH
+    /// @dev Transfer Node Operator's bond shares (stETH) to charge recipient to pay some fee
+    /// @param amount Bond amount to charge in ETH (stETH)
     function _charge(
         uint256 nodeOperatorId,
         uint256 amount,
@@ -259,14 +259,14 @@ abstract contract CSBondCore {
         );
     }
 
-    /// @dev Unsafe reduce bond shares (possible underflow). Safety checks should be done outside
+    /// @dev Unsafe reduce bond shares (stETH) (possible underflow). Safety checks should be done outside
     function _unsafeReduceBond(uint256 nodeOperatorId, uint256 shares) private {
         CSBondCoreStorage storage $ = _getCSBondCoreStorage();
         $.bondShares[nodeOperatorId] -= shares;
         $.totalBondShares -= shares;
     }
 
-    /// @dev Safe reduce bond shares. The maximum shares to reduce is the current bond shares
+    /// @dev Safe reduce bond shares (stETH). The maximum shares to reduce is the current bond shares
     function _reduceBond(
         uint256 nodeOperatorId,
         uint256 shares

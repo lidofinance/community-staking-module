@@ -31,6 +31,7 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
 
     /// @notice Check is the address is eligible to claim EA access
     /// @param sender Address to check
+    /// @param proof Merkle proof of EA eligibility
     function isEligible(
         address sender,
         bytes32[] calldata proof

@@ -79,6 +79,7 @@ contract CSAccounting is
     /// @param admin Admin role member address
     /// @param bondLockRetentionPeriod Retention period for locked bond in seconds
     /// @param _chargeRecipient Recipient of the charge penalty type
+    /// @param _feeDistributor Fee Distributor contract address
     function initialize(
         uint256[] memory bondCurve,
         address admin,
@@ -181,7 +182,7 @@ contract CSAccounting is
     }
 
     /// @notice Get current and required bond amounts in ETH (stETH) for the given Node Operator
-    /// @dev To calculate excess bond amount subtract `required` from `current` value
+    /// @dev To calculate excess bond amount subtract `required` from `current` value.
     ///      To calculate missed bond amount subtract `current` from `required` value
     /// @param nodeOperatorId ID of the Node Operator
     /// @return current Current bond amount in ETH
@@ -210,7 +211,7 @@ contract CSAccounting is
     }
 
     /// @notice Get current and required bond amounts in stETH shares for the given Node Operator
-    /// @dev To calculate excess bond amount subtract `required` from `current` value
+    /// @dev To calculate excess bond amount subtract `required` from `current` value.
     ///      To calculate missed bond amount subtract `current` from `required` value
     /// @param nodeOperatorId ID of the Node Operator
     /// @return current Current bond amount in stETH shares
@@ -273,7 +274,7 @@ contract CSAccounting is
             nodeOperatorId
         );
         /// 10 wei added to account for possible stETH rounding errors
-        /// https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205
+        /// https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205.
         /// Should be sufficient for ~ 40 years
         uint256 currentBond = CSBondCore._ethByShares(
             getBondShares(nodeOperatorId)
@@ -446,11 +447,11 @@ contract CSAccounting is
     }
 
     /// @notice Claim full reward (fee + bond) in stETH for the given Node Operator with desirable value.
-    ///         rewardsProof and cumulativeFeeShares might be empty in order to claim only excess bond
+    ///         `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond
     /// @dev Сalled by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param stETHAmount Amount of stETH to claim
-    /// @param cumulativeFeeShares Cumulative fee shares for the Node Operator
+    /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
     function claimRewardsStETH(
         uint256 nodeOperatorId,
@@ -473,12 +474,12 @@ contract CSAccounting is
         );
     }
 
-    /// @notice Claim full reward (fee + bond) in wstETH for the given Node Operator available for this moment
-    ///         rewardsProof and cumulativeFeeShares might be empty in order to claim only excess bond
+    /// @notice Claim full reward (fee + bond) in wstETH for the given Node Operator available for this moment.
+    ///         `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond
     /// @dev Сalled by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param wstETHAmount Amount of wstETH to claim
-    /// @param cumulativeFeeShares Cumulative fee shares for the Node Operator
+    /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
     function claimRewardsWstETH(
         uint256 nodeOperatorId,
@@ -501,12 +502,12 @@ contract CSAccounting is
     }
 
     /// @notice Request full reward (fee + bond) in Withdrawal NFT (unstETH) for the given Node Operator available for this moment.
-    ///         rewardsProof and cumulativeFeeShares might be empty in order to claim only excess bond
-    /// @dev Reverts if amount isn't between MIN_STETH_WITHDRAWAL_AMOUNT and MAX_STETH_WITHDRAWAL_AMOUNT
+    ///         `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond
+    /// @dev Reverts if amount isn't between `MIN_STETH_WITHDRAWAL_AMOUNT` and `MAX_STETH_WITHDRAWAL_AMOUNT`
     /// @dev Сalled by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param ethAmount Amount of ETH to request
-    /// @param cumulativeFeeShares Cumulative fee shares for the Node Operator
+    /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
     function requestRewardsETH(
         uint256 nodeOperatorId,
@@ -543,7 +544,7 @@ contract CSAccounting is
     /// @notice Lock bond in ETH for the given Node Operator
     /// @dev Сalled by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param amount Amount of ETH to lock
+    /// @param amount Amount to lock in ETH (stETH)
     function lockBondETH(
         uint256 nodeOperatorId,
         uint256 amount
@@ -554,7 +555,7 @@ contract CSAccounting is
     /// @notice Release locked bond in ETH for the given Node Operator
     /// @dev Сalled by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param amount amount of ETH to release.
+    /// @param amount Amount to release in ETH (stETH)
     function releaseLockedBondETH(
         uint256 nodeOperatorId,
         uint256 amount
@@ -587,18 +588,18 @@ contract CSAccounting is
         CSBondLock._remove(nodeOperatorId);
     }
 
-    /// @notice Penalize bond by burning shares of the given Node Operator
+    /// @notice Penalize bond by burning stETH shares of the given Node Operator
     /// @dev Сalled by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param amount Amount of ETH to penalize
+    /// @param amount Amount to penalize in ETH (stETH)
     function penalize(uint256 nodeOperatorId, uint256 amount) public onlyCSM {
         CSBondCore._burn(nodeOperatorId, amount);
     }
 
-    /// @notice Charge fee from bond by transferring shares of the given Node Operator to the charge recipient
+    /// @notice Charge fee from bond by transferring stETH shares of the given Node Operator to the charge recipient
     /// @dev Сalled by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param amount Amount of ETH to charge
+    /// @param amount Amount to charge in ETH (stETH)
     function chargeFee(
         uint256 nodeOperatorId,
         uint256 amount

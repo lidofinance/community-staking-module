@@ -31,10 +31,10 @@ contract CSFeeDistributor is
     /// @notice CID of the published Merkle tree
     string public treeCid;
 
-    /// @notice Amount of shares sent to the Accounting in favor of the NO
+    /// @notice Amount of stETH shares sent to the Accounting in favor of the NO
     mapping(uint256 => uint256) public distributedShares;
 
-    /// @notice Total amount of shares available for claiming by NOs
+    /// @notice Total Amount of stETH shares available for claiming by NOs
     uint256 public claimableShares;
 
     /// @dev Emitted when fees are distributed
@@ -65,16 +65,16 @@ contract CSFeeDistributor is
         _grantRole(ORACLE_ROLE, oracle);
     }
 
-    /// @notice Get the amount of shares that are pending to be distributed
+    /// @notice Get the Amount of stETH shares that are pending to be distributed
     function pendingToDistribute() external view returns (uint256) {
         return STETH.sharesOf(address(this)) - claimableShares;
     }
 
-    /// @notice Get the amount of shares that can be distributed in favor of the Node Operator
+    /// @notice Get the Amount of stETH shares that can be distributed in favor of the Node Operator
     /// @param proof Merkle proof of the leaf
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param shares Total amount of shares earned as fees
-    /// @return Amount of shares that can be distributed
+    /// @param shares Total Amount of stETH shares earned as fees
+    /// @return Amount of stETH shares that can be distributed
     function getFeesToDistribute(
         uint256 nodeOperatorId,
         uint256 shares,
@@ -97,8 +97,8 @@ contract CSFeeDistributor is
     /// @notice Distribute fees to the Accounting in favor of the Node Operator
     /// @param proof Merkle proof of the leaf
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param shares Total amount of shares earned as fees
-    /// @return Amount of shares distributed
+    /// @param shares Total Amount of stETH shares earned as fees
+    /// @return Amount of stETH shares distributed
     function distributeFees(
         uint256 nodeOperatorId,
         uint256 shares,
@@ -151,7 +151,7 @@ contract CSFeeDistributor is
 
     /// @notice Get a hash of a leaf
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param shares Amount of shares
+    /// @param shares Amount of stETH shares
     /// @dev Double hash the leaf to prevent second preimage attacks
     function hashLeaf(
         uint256 nodeOperatorId,
