@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -11,7 +11,7 @@ import { IWithdrawalQueue } from "../interfaces/IWithdrawalQueue.sol";
 
 /// @dev Bond core mechanics abstract contract
 ///
-/// It gives basic abilities to manage bond shares of the node operator.
+/// It gives basic abilities to manage bond shares of the Node Operator.
 ///
 /// It contains:
 ///  - store bond shares
@@ -86,16 +86,16 @@ abstract contract CSBondCore {
         WSTETH = IWstETH(WITHDRAWAL_QUEUE.WSTETH());
     }
 
-    /// @notice Returns the total bond shares.
-    /// @return total bond shares.
+    /// @notice Get total bond stETH shares stored on the contract
+    /// @return total Bond shares
     function totalBondShares() public view returns (uint256) {
         CSBondCoreStorage storage $ = _getCSBondCoreStorage();
         return $.totalBondShares;
     }
 
-    /// @notice Returns the bond shares for the given node operator.
-    /// @param nodeOperatorId id of the node operator to get bond for.
-    /// @return bond shares.
+    /// @notice Get bond stETH shares for the given Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return bond Bond in stETH shares
     function getBondShares(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
@@ -103,14 +103,14 @@ abstract contract CSBondCore {
         return $.bondShares[nodeOperatorId];
     }
 
-    /// @notice Returns the bond amount in ETH (stETH) for the given node operator.
-    /// @param nodeOperatorId id of the node operator to get bond for.
-    /// @return bond amount.
+    /// @notice Get bond amount in ETH (stETH) for the given Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return bond Bond amount in ETH (stETH)
     function getBond(uint256 nodeOperatorId) public view returns (uint256) {
         return _ethByShares(getBondShares(nodeOperatorId));
     }
 
-    /// @dev Stakes user's ETH to the protocol and stores stETH shares as Node Operator's bond shares.
+    /// @dev Stake user's ETH with Lido and stores stETH shares as Node Operator's bond shares
     function _depositETH(
         address from,
         uint256 nodeOperatorId
@@ -123,7 +123,7 @@ abstract contract CSBondCore {
         return shares;
     }
 
-    /// @dev Transfers user's stETH to the contract and stores stETH shares as Node Operator's bond shares.
+    /// @dev Transfer user's stETH to the contract and stores stETH shares as Node Operator's bond shares
     function _depositStETH(
         address from,
         uint256 nodeOperatorId,
@@ -135,7 +135,7 @@ abstract contract CSBondCore {
         emit BondDeposited(nodeOperatorId, from, amount);
     }
 
-    /// @dev Transfers user's wstETH to the contract, unwrap and stores stETH shares as Node Operator's bond shares.
+    /// @dev Transfer user's wstETH to the contract, unwrap and store stETH shares as Node Operator's bond shares
     function _depositWstETH(
         address from,
         uint256 nodeOperatorId,
@@ -155,8 +155,8 @@ abstract contract CSBondCore {
         $.totalBondShares += shares;
     }
 
-    /// @dev Claims Node Operator's excess bond shares in ETH by requesting withdrawal from the protocol
-    ///      As usual request to withdrawal, this claim might be processed on the next stETH rebase
+    /// @dev Claim Node Operator's excess bond shares in ETH by requesting withdrawal from the protocol
+    ///      As a usual withdrawal request, this claim might be processed on the next stETH rebase
     function _requestETH(
         uint256 nodeOperatorId,
         uint256 claimableShares,
@@ -181,7 +181,7 @@ abstract contract CSBondCore {
         emit BondClaimed(nodeOperatorId, to, amounts[0]);
     }
 
-    /// @dev Claims Node Operator's excess bond shares in stETH by transferring shares from the contract
+    /// @dev Claim Node Operator's excess bond shares in stETH by transferring shares from the contract
     function _claimStETH(
         uint256 nodeOperatorId,
         uint256 claimableShares,
@@ -202,7 +202,7 @@ abstract contract CSBondCore {
         emit BondClaimed(nodeOperatorId, to, _ethByShares(sharesToClaim));
     }
 
-    /// @dev Claims Node Operator's excess bond shares in wstETH by wrapping stETH from the contract and transferring wstETH
+    /// @dev Claim Node Operator's excess bond shares in wstETH by wrapping stETH from the contract and transferring wstETH
     function _claimWstETH(
         uint256 nodeOperatorId,
         uint256 claimableShares,
@@ -224,9 +224,9 @@ abstract contract CSBondCore {
         emit BondClaimedWstETH(nodeOperatorId, to, amount);
     }
 
-    /// @dev Burn Node Operator's bond shares. Shares will be burned on the next stETH rebase.
+    /// @dev Burn Node Operator's bond shares. Shares will be burned on the next stETH rebase
     /// @dev The method sender should be granted as `Burner.REQUEST_BURN_SHARES_ROLE` and makes stETH allowance for `Burner`
-    /// @param amount amount to burn in ETH.
+    /// @param amount Bond amount to burn in ETH
     function _burn(uint256 nodeOperatorId, uint256 amount) internal {
         (uint256 toBurnShares, uint256 burnedShares) = _reduceBond(
             nodeOperatorId,
@@ -240,8 +240,8 @@ abstract contract CSBondCore {
         );
     }
 
-    /// @dev Transfer Node Operator's bond shares to charge recipient to pay some fee.
-    /// @param amount amount to charge in ETH.
+    /// @dev Transfer Node Operator's bond shares to charge recipient to pay some fee
+    /// @param amount Bond amount to charge in ETH
     function _charge(
         uint256 nodeOperatorId,
         uint256 amount,
@@ -259,14 +259,14 @@ abstract contract CSBondCore {
         );
     }
 
-    /// @dev Unsafe reduce bond shares (possible underflow). Safety checks should be done outside.
+    /// @dev Unsafe reduce bond shares (possible underflow). Safety checks should be done outside
     function _unsafeReduceBond(uint256 nodeOperatorId, uint256 shares) private {
         CSBondCoreStorage storage $ = _getCSBondCoreStorage();
         $.bondShares[nodeOperatorId] -= shares;
         $.totalBondShares -= shares;
     }
 
-    /// @dev Safe reduce bond shares. The maximum shares to reduce is the current bond shares.
+    /// @dev Safe reduce bond shares. The maximum shares to reduce is the current bond shares
     function _reduceBond(
         uint256 nodeOperatorId,
         uint256 shares
@@ -278,7 +278,6 @@ abstract contract CSBondCore {
     }
 
     /// @dev Shortcut for Lido's getSharesByPooledEth
-    // TODO: should be removed because of the contract size limit ?
     function _sharesByEth(uint256 ethAmount) internal view returns (uint256) {
         return LIDO.getSharesByPooledEth(ethAmount);
     }
