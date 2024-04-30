@@ -29,21 +29,6 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
         module = _module;
     }
 
-    /// @notice Check is the address is eligible to claim EA access
-    /// @param sender Address to check
-    /// @param proof Merkle proof of EA eligibility
-    function isEligible(
-        address sender,
-        bytes32[] calldata proof
-    ) public view returns (bool) {
-        return
-            MerkleProof.verifyCalldata(
-                proof,
-                treeRoot,
-                keccak256(bytes.concat(keccak256(abi.encode(sender))))
-            );
-    }
-
     /// @notice Validate EA eligibility proof and mark it as consumed
     /// @dev Called only by the module
     /// @param sender Address to be verified alongside the proof
@@ -61,5 +46,20 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
     /// @param sender Address to check
     function consumed(address sender) external view returns (bool) {
         return _consumedAddresses[sender];
+    }
+
+    /// @notice Check is the address is eligible to claim EA access
+    /// @param sender Address to check
+    /// @param proof Merkle proof of EA eligibility
+    function isEligible(
+        address sender,
+        bytes32[] calldata proof
+    ) public view returns (bool) {
+        return
+            MerkleProof.verifyCalldata(
+                proof,
+                treeRoot,
+                keccak256(bytes.concat(keccak256(abi.encode(sender))))
+            );
     }
 }

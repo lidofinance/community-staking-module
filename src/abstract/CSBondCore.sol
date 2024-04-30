@@ -25,17 +25,17 @@ import { IWithdrawalQueue } from "../interfaces/IWithdrawalQueue.sol";
 ///
 /// @author vgorkavenko
 abstract contract CSBondCore {
-    ILidoLocator internal immutable LIDO_LOCATOR;
-    ILido internal immutable LIDO;
-    IBurner internal immutable BURNER;
-    IWithdrawalQueue internal immutable WITHDRAWAL_QUEUE;
-    IWstETH internal immutable WSTETH;
-
     /// @custom:storage-location erc7201:CSAccounting.CSBondCore
     struct CSBondCoreStorage {
         mapping(uint256 => uint256) bondShares;
         uint256 totalBondShares;
     }
+
+    ILidoLocator internal immutable LIDO_LOCATOR;
+    ILido internal immutable LIDO;
+    IBurner internal immutable BURNER;
+    IWithdrawalQueue internal immutable WITHDRAWAL_QUEUE;
+    IWstETH internal immutable WSTETH;
 
     // keccak256(abi.encode(uint256(keccak256("CSBondCore")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant CS_BOND_CORE_STORAGE_LOCATION =
@@ -259,6 +259,16 @@ abstract contract CSBondCore {
         );
     }
 
+    /// @dev Shortcut for Lido's getSharesByPooledEth
+    function _sharesByEth(uint256 ethAmount) internal view returns (uint256) {
+        return LIDO.getSharesByPooledEth(ethAmount);
+    }
+
+    /// @dev Shortcut for Lido's getPooledEthByShares
+    function _ethByShares(uint256 shares) internal view returns (uint256) {
+        return LIDO.getPooledEthByShares(shares);
+    }
+
     /// @dev Unsafe reduce bond shares (stETH) (possible underflow). Safety checks should be done outside
     function _unsafeReduceBond(uint256 nodeOperatorId, uint256 shares) private {
         CSBondCoreStorage storage $ = _getCSBondCoreStorage();
@@ -275,16 +285,6 @@ abstract contract CSBondCore {
         reducedShares = shares < currentShares ? shares : currentShares;
         _unsafeReduceBond(nodeOperatorId, reducedShares);
         return (shares, reducedShares);
-    }
-
-    /// @dev Shortcut for Lido's getSharesByPooledEth
-    function _sharesByEth(uint256 ethAmount) internal view returns (uint256) {
-        return LIDO.getSharesByPooledEth(ethAmount);
-    }
-
-    /// @dev Shortcut for Lido's getPooledEthByShares
-    function _ethByShares(uint256 shares) internal view returns (uint256) {
-        return LIDO.getPooledEthByShares(shares);
     }
 
     function _getCSBondCoreStorage()

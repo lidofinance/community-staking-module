@@ -63,6 +63,13 @@ contract CSAccounting is
     error InvalidSender();
     error SenderIsNotCSM();
 
+    modifier onlyCSM() {
+        if (msg.sender != address(CSM)) {
+            revert SenderIsNotCSM();
+        }
+        _;
+    }
+
     /// @param lidoLocator Lido locator contract address
     /// @param communityStakingModule Community Staking Module contract address
     constructor(
@@ -179,195 +186,6 @@ contract CSAccounting is
         uint256 nodeOperatorId
     ) external onlyRole(RESET_BOND_CURVE_ROLE) {
         CSBondCurve._resetBondCurve(nodeOperatorId);
-    }
-
-    /// @notice Get current and required bond amounts in ETH (stETH) for the given Node Operator
-    /// @dev To calculate excess bond amount subtract `required` from `current` value.
-    ///      To calculate missed bond amount subtract `current` from `required` value
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @return current Current bond amount in ETH
-    /// @return required Required bond amount in ETH
-    function getBondSummary(
-        uint256 nodeOperatorId
-    ) public view returns (uint256 current, uint256 required) {
-        return
-            _getBondSummary(
-                nodeOperatorId,
-                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
-            );
-    }
-
-    function _getBondSummary(
-        uint256 nodeOperatorId,
-        uint256 nonWithdrawnKeys
-    ) internal view returns (uint256 current, uint256 required) {
-        current = CSBondCore.getBond(nodeOperatorId);
-        required =
-            CSBondCurve.getBondAmountByKeysCount(
-                nonWithdrawnKeys,
-                CSBondCurve.getBondCurve(nodeOperatorId)
-            ) +
-            CSBondLock.getActualLockedBond(nodeOperatorId);
-    }
-
-    /// @notice Get current and required bond amounts in stETH shares for the given Node Operator
-    /// @dev To calculate excess bond amount subtract `required` from `current` value.
-    ///      To calculate missed bond amount subtract `current` from `required` value
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @return current Current bond amount in stETH shares
-    /// @return required Required bond amount in stETH shares
-    function getBondSummaryShares(
-        uint256 nodeOperatorId
-    ) public view returns (uint256 current, uint256 required) {
-        return
-            _getBondSummaryShares(
-                nodeOperatorId,
-                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
-            );
-    }
-
-    function _getBondSummaryShares(
-        uint256 nodeOperatorId,
-        uint256 nonWithdrawnKeys
-    ) internal view returns (uint256 current, uint256 required) {
-        current = CSBondCore.getBondShares(nodeOperatorId);
-        required = _sharesByEth(
-            CSBondCurve.getBondAmountByKeysCount(
-                nonWithdrawnKeys,
-                CSBondCurve.getBondCurve(nodeOperatorId)
-            ) + CSBondLock.getActualLockedBond(nodeOperatorId)
-        );
-    }
-
-    /// @notice Get the number of the unbonded keys
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @return unbonded Unbonded keys count
-    function getUnbondedKeysCount(
-        uint256 nodeOperatorId
-    ) public view returns (uint256) {
-        return
-            _getUnbondedKeysCount({
-                nodeOperatorId: nodeOperatorId,
-                accountLockedBond: true
-            });
-    }
-
-    /// @notice Get the number of the unbonded keys to be ejected using a forcedTargetLimit
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @return unbonded Unbonded keys count
-    function getUnbondedKeysCountToEject(
-        uint256 nodeOperatorId
-    ) public view returns (uint256) {
-        return
-            _getUnbondedKeysCount({
-                nodeOperatorId: nodeOperatorId,
-                accountLockedBond: false
-            });
-    }
-
-    /// @dev Unbonded stands for the amount of the keys not fully covered with the bond
-    function _getUnbondedKeysCount(
-        uint256 nodeOperatorId,
-        bool accountLockedBond
-    ) internal view returns (uint256) {
-        uint256 nonWithdrawnKeys = CSM.getNodeOperatorNonWithdrawnKeys(
-            nodeOperatorId
-        );
-        /// 10 wei added to account for possible stETH rounding errors
-        /// https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205.
-        /// Should be sufficient for ~ 40 years
-        uint256 currentBond = CSBondCore._ethByShares(
-            getBondShares(nodeOperatorId)
-        ) + 10 wei;
-        if (accountLockedBond) {
-            uint256 lockedBond = CSBondLock.getActualLockedBond(nodeOperatorId);
-            if (currentBond <= lockedBond) return nonWithdrawnKeys;
-            currentBond -= lockedBond;
-        }
-        CSBondCurve.BondCurve memory bondCurve = CSBondCurve.getBondCurve(
-            nodeOperatorId
-        );
-        uint256 bondedKeys = CSBondCurve.getKeysCountByBondAmount(
-            currentBond,
-            bondCurve
-        );
-        if (bondedKeys >= nonWithdrawnKeys) return 0;
-        return nonWithdrawnKeys - bondedKeys;
-    }
-
-    /// @notice Get the required bond in ETH (inc. missed and excess) for the given Node Operator to upload new deposit data
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param additionalKeys Number of new keys to add
-    /// @return required Required bond amount in ETH
-    function getRequiredBondForNextKeys(
-        uint256 nodeOperatorId,
-        uint256 additionalKeys
-    ) public view returns (uint256) {
-        uint256 nonWithdrawnKeys = CSM.getNodeOperatorNonWithdrawnKeys(
-            nodeOperatorId
-        );
-        (uint256 current, uint256 required) = _getBondSummary(
-            nodeOperatorId,
-            nonWithdrawnKeys
-        );
-        CSBondCurve.BondCurve memory bondCurve = CSBondCurve.getBondCurve(
-            nodeOperatorId
-        );
-        uint256 requiredForNextKeys = CSBondCurve.getBondAmountByKeysCount(
-            nonWithdrawnKeys + additionalKeys,
-            bondCurve
-        ) - CSBondCurve.getBondAmountByKeysCount(nonWithdrawnKeys, bondCurve);
-
-        uint256 missing = required > current ? required - current : 0;
-        if (missing > 0) {
-            return missing + requiredForNextKeys;
-        }
-
-        uint256 excess = current - required;
-        if (excess >= requiredForNextKeys) {
-            return 0;
-        }
-
-        return requiredForNextKeys - excess;
-    }
-
-    /// @notice Get the bond amount in wstETH required for the `keysCount` keys using the default bond curve
-    /// @param keysCount Keys count to calculate the required bond amount
-    function getBondAmountByKeysCountWstETH(
-        uint256 keysCount
-    ) public view returns (uint256) {
-        return
-            WSTETH.getWstETHByStETH(
-                CSBondCurve.getBondAmountByKeysCount(keysCount)
-            );
-    }
-
-    /// @notice Get the bond amount in wstETH required for the `keysCount` keys using the custom bond curve
-    /// @param keysCount Keys count to calculate the required bond amount
-    /// @param curve Bond curve definition.
-    ///              Use CSBondCurve.getBondCurve(id) method to get the definition for the exiting curve
-    function getBondAmountByKeysCountWstETH(
-        uint256 keysCount,
-        BondCurve memory curve
-    ) public view returns (uint256) {
-        return
-            WSTETH.getWstETHByStETH(
-                CSBondCurve.getBondAmountByKeysCount(keysCount, curve)
-            );
-    }
-
-    /// @notice Get the required bond in wstETH (inc. missed and excess) for the given Node Operator to upload new keys
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param additionalKeys Number of new keys to add
-    /// @return required Required bond in wstETH
-    function getRequiredBondForNextKeysWstETH(
-        uint256 nodeOperatorId,
-        uint256 additionalKeys
-    ) public view returns (uint256) {
-        return
-            WSTETH.getWstETHByStETH(
-                getRequiredBondForNextKeys(nodeOperatorId, additionalKeys)
-            );
     }
 
     /// @notice Stake user's ETH with Lido and deposit stETH to the bond
@@ -530,17 +348,6 @@ contract CSAccounting is
         );
     }
 
-    function _getExcessBondShares(
-        uint256 nodeOperatorId,
-        uint256 nonWithdrawnKeys
-    ) internal view returns (uint256) {
-        (uint256 current, uint256 required) = _getBondSummaryShares(
-            nodeOperatorId,
-            nonWithdrawnKeys
-        );
-        return current > required ? current - required : 0;
-    }
-
     /// @notice Lock bond in ETH for the given Node Operator
     /// @dev Сalled by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
@@ -592,7 +399,7 @@ contract CSAccounting is
     /// @dev Сalled by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param amount Amount to penalize in ETH (stETH)
-    function penalize(uint256 nodeOperatorId, uint256 amount) public onlyCSM {
+    function penalize(uint256 nodeOperatorId, uint256 amount) external onlyCSM {
         CSBondCore._burn(nodeOperatorId, amount);
     }
 
@@ -626,6 +433,139 @@ contract CSAccounting is
         AssetRecovererLib.recoverStETHShares(address(LIDO), shares);
     }
 
+    /// @notice Get current and required bond amounts in ETH (stETH) for the given Node Operator
+    /// @dev To calculate excess bond amount subtract `required` from `current` value.
+    ///      To calculate missed bond amount subtract `current` from `required` value
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return current Current bond amount in ETH
+    /// @return required Required bond amount in ETH
+    function getBondSummary(
+        uint256 nodeOperatorId
+    ) public view returns (uint256 current, uint256 required) {
+        return
+            _getBondSummary(
+                nodeOperatorId,
+                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
+            );
+    }
+
+    /// @notice Get current and required bond amounts in stETH shares for the given Node Operator
+    /// @dev To calculate excess bond amount subtract `required` from `current` value.
+    ///      To calculate missed bond amount subtract `current` from `required` value
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return current Current bond amount in stETH shares
+    /// @return required Required bond amount in stETH shares
+    function getBondSummaryShares(
+        uint256 nodeOperatorId
+    ) public view returns (uint256 current, uint256 required) {
+        return
+            _getBondSummaryShares(
+                nodeOperatorId,
+                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
+            );
+    }
+
+    /// @notice Get the number of the unbonded keys
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return unbonded Unbonded keys count
+    function getUnbondedKeysCount(
+        uint256 nodeOperatorId
+    ) public view returns (uint256) {
+        return
+            _getUnbondedKeysCount({
+                nodeOperatorId: nodeOperatorId,
+                accountLockedBond: true
+            });
+    }
+
+    /// @notice Get the number of the unbonded keys to be ejected using a forcedTargetLimit
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return unbonded Unbonded keys count
+    function getUnbondedKeysCountToEject(
+        uint256 nodeOperatorId
+    ) public view returns (uint256) {
+        return
+            _getUnbondedKeysCount({
+                nodeOperatorId: nodeOperatorId,
+                accountLockedBond: false
+            });
+    }
+
+    /// @notice Get the required bond in ETH (inc. missed and excess) for the given Node Operator to upload new deposit data
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param additionalKeys Number of new keys to add
+    /// @return required Required bond amount in ETH
+    function getRequiredBondForNextKeys(
+        uint256 nodeOperatorId,
+        uint256 additionalKeys
+    ) public view returns (uint256) {
+        uint256 nonWithdrawnKeys = CSM.getNodeOperatorNonWithdrawnKeys(
+            nodeOperatorId
+        );
+        (uint256 current, uint256 required) = _getBondSummary(
+            nodeOperatorId,
+            nonWithdrawnKeys
+        );
+        CSBondCurve.BondCurve memory bondCurve = CSBondCurve.getBondCurve(
+            nodeOperatorId
+        );
+        uint256 requiredForNextKeys = CSBondCurve.getBondAmountByKeysCount(
+            nonWithdrawnKeys + additionalKeys,
+            bondCurve
+        ) - CSBondCurve.getBondAmountByKeysCount(nonWithdrawnKeys, bondCurve);
+
+        uint256 missing = required > current ? required - current : 0;
+        if (missing > 0) {
+            return missing + requiredForNextKeys;
+        }
+
+        uint256 excess = current - required;
+        if (excess >= requiredForNextKeys) {
+            return 0;
+        }
+
+        return requiredForNextKeys - excess;
+    }
+
+    /// @notice Get the bond amount in wstETH required for the `keysCount` keys using the default bond curve
+    /// @param keysCount Keys count to calculate the required bond amount
+    function getBondAmountByKeysCountWstETH(
+        uint256 keysCount
+    ) public view returns (uint256) {
+        return
+            WSTETH.getWstETHByStETH(
+                CSBondCurve.getBondAmountByKeysCount(keysCount)
+            );
+    }
+
+    /// @notice Get the bond amount in wstETH required for the `keysCount` keys using the custom bond curve
+    /// @param keysCount Keys count to calculate the required bond amount
+    /// @param curve Bond curve definition.
+    ///              Use CSBondCurve.getBondCurve(id) method to get the definition for the exiting curve
+    function getBondAmountByKeysCountWstETH(
+        uint256 keysCount,
+        BondCurve memory curve
+    ) public view returns (uint256) {
+        return
+            WSTETH.getWstETHByStETH(
+                CSBondCurve.getBondAmountByKeysCount(keysCount, curve)
+            );
+    }
+
+    /// @notice Get the required bond in wstETH (inc. missed and excess) for the given Node Operator to upload new keys
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param additionalKeys Number of new keys to add
+    /// @return required Required bond in wstETH
+    function getRequiredBondForNextKeysWstETH(
+        uint256 nodeOperatorId,
+        uint256 additionalKeys
+    ) public view returns (uint256) {
+        return
+            WSTETH.getWstETHByStETH(
+                getRequiredBondForNextKeys(nodeOperatorId, additionalKeys)
+            );
+    }
+
     function _pullFeeRewards(
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
@@ -639,14 +579,74 @@ contract CSAccounting is
         _increaseBond(nodeOperatorId, distributed);
     }
 
-    function _onlyRecoverer() internal view override {
-        _checkRole(RECOVERER_ROLE);
+    function _getBondSummary(
+        uint256 nodeOperatorId,
+        uint256 nonWithdrawnKeys
+    ) internal view returns (uint256 current, uint256 required) {
+        current = CSBondCore.getBond(nodeOperatorId);
+        required =
+            CSBondCurve.getBondAmountByKeysCount(
+                nonWithdrawnKeys,
+                CSBondCurve.getBondCurve(nodeOperatorId)
+            ) +
+            CSBondLock.getActualLockedBond(nodeOperatorId);
     }
 
-    modifier onlyCSM() {
-        if (msg.sender != address(CSM)) {
-            revert SenderIsNotCSM();
+    function _getBondSummaryShares(
+        uint256 nodeOperatorId,
+        uint256 nonWithdrawnKeys
+    ) internal view returns (uint256 current, uint256 required) {
+        current = CSBondCore.getBondShares(nodeOperatorId);
+        required = _sharesByEth(
+            CSBondCurve.getBondAmountByKeysCount(
+                nonWithdrawnKeys,
+                CSBondCurve.getBondCurve(nodeOperatorId)
+            ) + CSBondLock.getActualLockedBond(nodeOperatorId)
+        );
+    }
+
+    /// @dev Unbonded stands for the amount of the keys not fully covered with the bond
+    function _getUnbondedKeysCount(
+        uint256 nodeOperatorId,
+        bool accountLockedBond
+    ) internal view returns (uint256) {
+        uint256 nonWithdrawnKeys = CSM.getNodeOperatorNonWithdrawnKeys(
+            nodeOperatorId
+        );
+        /// 10 wei added to account for possible stETH rounding errors
+        /// https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205.
+        /// Should be sufficient for ~ 40 years
+        uint256 currentBond = CSBondCore._ethByShares(
+            getBondShares(nodeOperatorId)
+        ) + 10 wei;
+        if (accountLockedBond) {
+            uint256 lockedBond = CSBondLock.getActualLockedBond(nodeOperatorId);
+            if (currentBond <= lockedBond) return nonWithdrawnKeys;
+            currentBond -= lockedBond;
         }
-        _;
+        CSBondCurve.BondCurve memory bondCurve = CSBondCurve.getBondCurve(
+            nodeOperatorId
+        );
+        uint256 bondedKeys = CSBondCurve.getKeysCountByBondAmount(
+            currentBond,
+            bondCurve
+        );
+        if (bondedKeys >= nonWithdrawnKeys) return 0;
+        return nonWithdrawnKeys - bondedKeys;
+    }
+
+    function _getExcessBondShares(
+        uint256 nodeOperatorId,
+        uint256 nonWithdrawnKeys
+    ) internal view returns (uint256) {
+        (uint256 current, uint256 required) = _getBondSummaryShares(
+            nodeOperatorId,
+            nonWithdrawnKeys
+        );
+        return current > required ? current - required : 0;
+    }
+
+    function _onlyRecoverer() internal view override {
+        _checkRole(RECOVERER_ROLE);
     }
 }

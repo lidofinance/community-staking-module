@@ -313,10 +313,6 @@ contract CSVerifier is ICSVerifier {
         });
     }
 
-    function _wcToAddress(bytes32 value) internal pure returns (address) {
-        return address(uint160(uint256(value)));
-    }
-
     function _getValidatorGI(uint256 offset) internal view returns (GIndex) {
         GIndex gI = GI_FIRST_VALIDATOR;
         return gI.shr(offset);
@@ -332,5 +328,9 @@ contract CSVerifier is ICSVerifier {
     function _computeEpochAtSlot(uint256 slot) internal view returns (uint256) {
         // See: github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#compute_epoch_at_slot
         return slot / SLOTS_PER_EPOCH;
+    }
+
+    function _wcToAddress(bytes32 value) internal pure returns (address) {
+        return address(uint160(uint256(value)));
     }
 }

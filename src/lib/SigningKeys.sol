@@ -23,17 +23,6 @@ library SigningKeys {
     error InvalidLength();
     error EmptyKey();
 
-    function getKeyOffset(
-        bytes32 position,
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) internal pure returns (uint256) {
-        return
-            uint256(
-                keccak256(abi.encodePacked(position, nodeOperatorId, keyIndex))
-            );
-    }
-
     /// @dev store operator keys to storage
     /// @param nodeOperatorId operator id
     /// @param startIndex start index
@@ -229,5 +218,16 @@ library SigningKeys {
             new bytes(count * PUBKEY_LENGTH),
             new bytes(count * SIGNATURE_LENGTH)
         );
+    }
+
+    function getKeyOffset(
+        bytes32 position,
+        uint256 nodeOperatorId,
+        uint256 keyIndex
+    ) internal pure returns (uint256) {
+        return
+            uint256(
+                keccak256(abi.encodePacked(position, nodeOperatorId, keyIndex))
+            );
     }
 }

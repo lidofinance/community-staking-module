@@ -15,6 +15,19 @@ contract OssifiableProxy is ERC1967Proxy {
     error NotAdmin();
     error ProxyIsOssified();
 
+    /// @dev Validates that proxy is not ossified and that method is called by the admin
+    ///     of the proxy
+    modifier onlyAdmin() {
+        address admin = ERC1967Utils.getAdmin();
+        if (admin == address(0)) {
+            revert ProxyIsOssified();
+        }
+        if (admin != msg.sender) {
+            revert NotAdmin();
+        }
+        _;
+    }
+
     /// @dev Initializes the upgradeable proxy with the initial implementation and admin
     /// @param implementation_ Address of the implementation
     /// @param admin_ Address of the admin of the proxy
@@ -26,24 +39,6 @@ contract OssifiableProxy is ERC1967Proxy {
         bytes memory data_
     ) ERC1967Proxy(implementation_, data_) {
         ERC1967Utils.changeAdmin(admin_);
-    }
-
-    /// @notice Returns the current admin of the proxy
-    // solhint-disable-next-line func-name-mixedcase
-    function proxy__getAdmin() external view returns (address) {
-        return ERC1967Utils.getAdmin();
-    }
-
-    /// @notice Returns the current implementation address
-    // solhint-disable-next-line func-name-mixedcase
-    function proxy__getImplementation() external view returns (address) {
-        return _implementation();
-    }
-
-    /// @notice Returns whether the implementation is locked forever
-    // solhint-disable-next-line func-name-mixedcase
-    function proxy__getIsOssified() external view returns (bool) {
-        return ERC1967Utils.getAdmin() == address(0);
     }
 
     /// @notice Allows to transfer admin rights to zero address and prevent future
@@ -83,16 +78,21 @@ contract OssifiableProxy is ERC1967Proxy {
         ERC1967Utils.upgradeToAndCall(newImplementation_, setupCalldata_);
     }
 
-    /// @dev Validates that proxy is not ossified and that method is called by the admin
-    ///     of the proxy
-    modifier onlyAdmin() {
-        address admin = ERC1967Utils.getAdmin();
-        if (admin == address(0)) {
-            revert ProxyIsOssified();
-        }
-        if (admin != msg.sender) {
-            revert NotAdmin();
-        }
-        _;
+    /// @notice Returns the current admin of the proxy
+    // solhint-disable-next-line func-name-mixedcase
+    function proxy__getAdmin() external view returns (address) {
+        return ERC1967Utils.getAdmin();
+    }
+
+    /// @notice Returns the current implementation address
+    // solhint-disable-next-line func-name-mixedcase
+    function proxy__getImplementation() external view returns (address) {
+        return _implementation();
+    }
+
+    /// @notice Returns whether the implementation is locked forever
+    // solhint-disable-next-line func-name-mixedcase
+    function proxy__getIsOssified() external view returns (bool) {
+        return ERC1967Utils.getAdmin() == address(0);
     }
 }

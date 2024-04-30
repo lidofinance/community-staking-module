@@ -48,6 +48,11 @@ contract CSFeeDistributor is
     error InvalidShares();
     error InvalidProof();
 
+    modifier onlyAccounting() {
+        if (msg.sender != ACCOUNTING) revert NotAccounting();
+        _;
+    }
+
     constructor(address stETH, address accounting) {
         if (accounting == address(0)) revert ZeroAddress("accounting");
         if (stETH == address(0)) revert ZeroAddress("stETH");
@@ -63,35 +68,6 @@ contract CSFeeDistributor is
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(ORACLE_ROLE, oracle);
-    }
-
-    /// @notice Get the Amount of stETH shares that are pending to be distributed
-    function pendingToDistribute() external view returns (uint256) {
-        return STETH.sharesOf(address(this)) - claimableShares;
-    }
-
-    /// @notice Get the Amount of stETH shares that can be distributed in favor of the Node Operator
-    /// @param proof Merkle proof of the leaf
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param shares Total Amount of stETH shares earned as fees
-    /// @return Amount of stETH shares that can be distributed
-    function getFeesToDistribute(
-        uint256 nodeOperatorId,
-        uint256 shares,
-        bytes32[] calldata proof
-    ) public view returns (uint256) {
-        bool isValid = MerkleProof.verifyCalldata(
-            proof,
-            treeRoot,
-            hashLeaf(nodeOperatorId, shares)
-        );
-        if (!isValid) revert InvalidProof();
-
-        if (distributedShares[nodeOperatorId] > shares) {
-            revert InvalidShares();
-        }
-
-        return shares - distributedShares[nodeOperatorId];
     }
 
     /// @notice Distribute fees to the Accounting in favor of the Node Operator
@@ -149,6 +125,47 @@ contract CSFeeDistributor is
         }
     }
 
+    /// @notice Recover ERC20 tokens (except for stETH) from the contract
+    /// @dev Any stETH transferred to feeDistributor is treated as a donation and can not be recovered
+    /// @param token Address of the ERC20 token to recover
+    /// @param amount Amount of the ERC20 token to recover
+    function recoverERC20(address token, uint256 amount) external override {
+        _onlyRecoverer();
+        if (token == address(STETH)) {
+            revert NotAllowedToRecover();
+        }
+        AssetRecovererLib.recoverERC20(token, amount);
+    }
+
+    /// @notice Get the Amount of stETH shares that are pending to be distributed
+    function pendingToDistribute() external view returns (uint256) {
+        return STETH.sharesOf(address(this)) - claimableShares;
+    }
+
+    /// @notice Get the Amount of stETH shares that can be distributed in favor of the Node Operator
+    /// @param proof Merkle proof of the leaf
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param shares Total Amount of stETH shares earned as fees
+    /// @return Amount of stETH shares that can be distributed
+    function getFeesToDistribute(
+        uint256 nodeOperatorId,
+        uint256 shares,
+        bytes32[] calldata proof
+    ) public view returns (uint256) {
+        bool isValid = MerkleProof.verifyCalldata(
+            proof,
+            treeRoot,
+            hashLeaf(nodeOperatorId, shares)
+        );
+        if (!isValid) revert InvalidProof();
+
+        if (distributedShares[nodeOperatorId] > shares) {
+            revert InvalidShares();
+        }
+
+        return shares - distributedShares[nodeOperatorId];
+    }
+
     /// @notice Get a hash of a leaf
     /// @param nodeOperatorId ID of the Node Operator
     /// @param shares Amount of stETH shares
@@ -163,24 +180,7 @@ contract CSFeeDistributor is
             );
     }
 
-    /// @notice Recover ERC20 tokens (except for stETH) from the contract
-    /// @dev Any stETH transferred to feeDistributor is treated as a donation and can not be recovered
-    /// @param token Address of the ERC20 token to recover
-    /// @param amount Amount of the ERC20 token to recover
-    function recoverERC20(address token, uint256 amount) external override {
-        _onlyRecoverer();
-        if (token == address(STETH)) {
-            revert NotAllowedToRecover();
-        }
-        AssetRecovererLib.recoverERC20(token, amount);
-    }
-
     function _onlyRecoverer() internal view override {
         _checkRole(RECOVERER_ROLE);
-    }
-
-    modifier onlyAccounting() {
-        if (msg.sender != ACCOUNTING) revert NotAccounting();
-        _;
     }
 }

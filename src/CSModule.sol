@@ -232,34 +232,6 @@ contract CSModule is
         _setKeyRemovalCharge(amount);
     }
 
-    function _setKeyRemovalCharge(uint256 amount) internal {
-        keyRemovalCharge = amount;
-        emit KeyRemovalChargeSet(amount);
-    }
-
-    /// @notice Get the module type
-    /// @return Module type
-    function getType() external view returns (bytes32) {
-        return MODULE_TYPE;
-    }
-
-    /// @notice Get staking module summary
-    function getStakingModuleSummary()
-        external
-        view
-        returns (
-            uint256 /* totalExitedValidators */,
-            uint256 /* totalDepositedValidators */,
-            uint256 /* depositableValidatorsCount */
-        )
-    {
-        return (
-            _totalExitedValidators,
-            _totalDepositedValidators,
-            _depositableValidatorsCount
-        );
-    }
-
     /// @notice Add a new Node Operator using ETH as a bond
     /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
@@ -738,6 +710,643 @@ contract CSModule is
         );
     }
 
+    /// @notice Called when rewards are minted for the module
+    /// @dev Passes through the minted stETH shares to the fee distributor
+    function onRewardsMinted(
+        uint256 totalShares
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        IStETH(LIDO_LOCATOR.lido()).transferShares(
+            accounting.feeDistributor(),
+            totalShares
+        );
+    }
+
+    /// @notice Update stuck validators count for Node Operators
+    /// @dev Called by StakingRouter
+    /// @dev If the stuck keys count is above zero for the Node Operator,
+    ///      the depositable validators count is set to 0 for this Node Operator
+    /// @param nodeOperatorIds bytes packed array of Node Operator IDs
+    /// @param stuckValidatorsCounts bytes packed array of stuck validators counts
+    function updateStuckValidatorsCount(
+        bytes calldata nodeOperatorIds,
+        bytes calldata stuckValidatorsCounts
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        ValidatorCountsReport.validate(nodeOperatorIds, stuckValidatorsCounts);
+
+        uint256 operatorsInReport = ValidatorCountsReport.count(
+            nodeOperatorIds
+        );
+
+        for (uint256 i = 0; i < operatorsInReport; ++i) {
+            (
+                uint256 nodeOperatorId,
+                uint256 stuckValidatorsCount
+            ) = ValidatorCountsReport.next(
+                    nodeOperatorIds,
+                    stuckValidatorsCounts,
+                    i
+                );
+            if (nodeOperatorId >= _nodeOperatorsCount)
+                revert NodeOperatorDoesNotExist();
+            _updateStuckValidatorsCount(nodeOperatorId, stuckValidatorsCount);
+        }
+        _incrementModuleNonce();
+    }
+
+    /// @notice Updates exited validators count for Node Operators
+    /// @dev Called by StakingRouter
+    /// @param nodeOperatorIds bytes packed array of Node Operator IDs
+    /// @param exitedValidatorsCounts bytes packed array of exited validators counts
+    function updateExitedValidatorsCount(
+        bytes calldata nodeOperatorIds,
+        bytes calldata exitedValidatorsCounts
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        ValidatorCountsReport.validate(nodeOperatorIds, exitedValidatorsCounts);
+
+        uint256 operatorsInReport = ValidatorCountsReport.count(
+            nodeOperatorIds
+        );
+
+        for (uint256 i = 0; i < operatorsInReport; ++i) {
+            (
+                uint256 nodeOperatorId,
+                uint256 exitedValidatorsCount
+            ) = ValidatorCountsReport.next(
+                    nodeOperatorIds,
+                    exitedValidatorsCounts,
+                    i
+                );
+            if (nodeOperatorId >= _nodeOperatorsCount)
+                revert NodeOperatorDoesNotExist();
+
+            _updateExitedValidatorsCount({
+                nodeOperatorId: nodeOperatorId,
+                exitedValidatorsCount: exitedValidatorsCount,
+                allowDecrease: false
+            });
+        }
+        _incrementModuleNonce();
+    }
+
+    /// @notice Update refunded validators count for the Node Operator
+    /// @dev Called by StakingRouter
+    /// @dev `refundedValidatorsCount` is not used in the module
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param refundedValidatorsCount Number of refunded validators
+    function updateRefundedValidatorsCount(
+        uint256 nodeOperatorId,
+        uint256 refundedValidatorsCount
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        no.refundedValidatorsCount = refundedValidatorsCount;
+        emit RefundedKeysCountChanged(nodeOperatorId, refundedValidatorsCount);
+        _incrementModuleNonce();
+    }
+
+    /// @notice Update target limits for Node Operator
+    /// @dev Called by StakingRouter
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param targetLimitMode Target limit mode for the Node Operator
+    ///                        0 - disabled
+    ///                        1 - soft mode
+    ///                        2 - forced mode
+    /// @param targetLimit Target limit of validators
+    function updateTargetValidatorsLimits(
+        uint256 nodeOperatorId,
+        uint8 targetLimitMode,
+        uint256 targetLimit
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        if (
+            no.targetLimitMode == targetLimitMode &&
+            no.targetLimit == targetLimit
+        ) return;
+
+        if (no.targetLimitMode != targetLimitMode) {
+            no.targetLimitMode = targetLimitMode;
+        }
+
+        if (no.targetLimit != targetLimit) {
+            no.targetLimit = targetLimit;
+        }
+
+        emit TargetValidatorsCountChangedByRequest(
+            nodeOperatorId,
+            targetLimitMode,
+            targetLimit
+        );
+
+        // Nonce will be updated below even if depositable count was not changed
+        // In case of targetLimit removal queue should be normalised
+        _updateDepositableValidatorsCount({
+            nodeOperatorId: nodeOperatorId,
+            incrementNonceIfUpdated: false,
+            normalizeQueueIfUpdated: true
+        });
+        _incrementModuleNonce();
+    }
+
+    /// @notice Called by the Staking Router when exited and stuck validators counts updated
+    function onExitedAndStuckValidatorsCountsUpdated()
+        external
+        onlyRole(STAKING_ROUTER_ROLE)
+    {
+        // solhint-disable-previous-line no-empty-blocks
+        // Nothing to do, rewards are distributed by a performance oracle.
+    }
+
+    /// @notice Unsafe update of validators count for Node Operators by DAO
+    /// @notice Called by Staking Router
+    function unsafeUpdateValidatorsCount(
+        uint256 nodeOperatorId,
+        uint256 exitedValidatorsKeysCount,
+        uint256 stuckValidatorsKeysCount
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        _updateExitedValidatorsCount({
+            nodeOperatorId: nodeOperatorId,
+            exitedValidatorsCount: exitedValidatorsKeysCount,
+            allowDecrease: true
+        });
+        _updateStuckValidatorsCount(nodeOperatorId, stuckValidatorsKeysCount);
+        _incrementModuleNonce();
+    }
+
+    /// @notice Decrease totalVettedKeys for the Node Operator
+    /// @notice Called by Staking Router
+    /// @param nodeOperatorIds IDs of the Node Operators to decrease totalVettedKeys for
+    /// @param vettedKeysByOperator Corresponding values for totalVettedKeys decrease
+    function decreaseOperatorVettedKeys(
+        uint256[] calldata nodeOperatorIds,
+        uint256[] calldata vettedKeysByOperator
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        // INFO: It seems it does not  make sense to implement any sanity checks.
+        for (uint256 i; i < nodeOperatorIds.length; ++i) {
+            uint256 nodeOperatorId = nodeOperatorIds[i];
+            if (nodeOperatorId >= _nodeOperatorsCount) {
+                revert NodeOperatorDoesNotExist();
+            }
+
+            NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+            if (vettedKeysByOperator[i] >= no.totalVettedKeys) {
+                revert InvalidVetKeysPointer();
+            }
+
+            no.totalVettedKeys = vettedKeysByOperator[i];
+            emit VettedSigningKeysCountChanged(
+                nodeOperatorId,
+                vettedKeysByOperator[i]
+            );
+
+            // Nonce will be updated below once
+            // No need to normalize queue due to vetted decrease
+            _updateDepositableValidatorsCount({
+                nodeOperatorId: nodeOperatorId,
+                incrementNonceIfUpdated: false,
+                normalizeQueueIfUpdated: false
+            });
+        }
+
+        _incrementModuleNonce();
+    }
+
+    /// @notice Remove keys for the Node Operator and confiscate removal charge for each deleted key
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param startIndex Index of the first key
+    /// @param keysCount Keys count to delete
+    function removeKeys(
+        uint256 nodeOperatorId,
+        uint256 startIndex,
+        uint256 keysCount
+    ) external {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        _onlyNodeOperatorManager(nodeOperatorId);
+        _removeSigningKeys(nodeOperatorId, startIndex, keysCount);
+    }
+
+    // @notice CSM will go live before EIP-7002
+    // @notice to be implemented in CSM v2
+    // /// @notice Node Operator should be able to voluntary eject own validators
+    // /// @notice Validator private key might be lost
+    // function voluntaryEjectValidator(
+    //     uint256 nodeOperatorId,
+    //     uint256 startIndex,
+    //     uint256 keysCount
+    // ) external onlyExistingNodeOperator(nodeOperatorId) {
+    //     onlyNodeOperatorManager(nodeOperatorId);
+    //     // Mark validators for priority ejection
+    //     // Confiscate ejection fee from the bond
+    // }
+
+    /// @notice Perform queue normalization for the given Node Operator
+    /// @notice Normalization stands for adding vetted but not enqueued keys to the queue
+    /// @param nodeOperatorId ID of the Node Operator
+    function normalizeQueue(uint256 nodeOperatorId) external {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        _onlyNodeOperatorManager(nodeOperatorId);
+        _normalizeQueue(nodeOperatorId);
+    }
+
+    /// @notice Report EL rewards stealing for the given Node Operator
+    /// @notice The amount equal to the stolen funds plus EL stealing fine will be locked
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param blockHash Execution layer block hash of the proposed block with EL rewards stealing
+    /// @param amount Amount of stolen EL rewards in ETH
+    function reportELRewardsStealingPenalty(
+        uint256 nodeOperatorId,
+        bytes32 blockHash,
+        uint256 amount
+    ) external onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        accounting.lockBondETH(
+            nodeOperatorId,
+            amount + EL_REWARDS_STEALING_FINE
+        );
+
+        emit ELRewardsStealingPenaltyReported(
+            nodeOperatorId,
+            blockHash,
+            amount
+        );
+
+        // Nonce should be updated if depositableValidators change
+        // No need to normalize queue due to only decrease in depositable possible
+        _updateDepositableValidatorsCount({
+            nodeOperatorId: nodeOperatorId,
+            incrementNonceIfUpdated: true,
+            normalizeQueueIfUpdated: false
+        });
+    }
+
+    /// @notice Cancel previously reported and not settled EL rewards stealing penalty for the given Node Operator
+    /// @notice The funds will be unlocked
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param amount Amount of penalty to cancel
+    function cancelELRewardsStealingPenalty(
+        uint256 nodeOperatorId,
+        uint256 amount
+    ) external onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        accounting.releaseLockedBondETH(nodeOperatorId, amount);
+
+        emit ELRewardsStealingPenaltyCancelled(nodeOperatorId, amount);
+
+        // Nonce should be updated if depositableValidators change
+        // Normalize queue should be called due to only increase in depositable possible
+        _updateDepositableValidatorsCount({
+            nodeOperatorId: nodeOperatorId,
+            incrementNonceIfUpdated: true,
+            normalizeQueueIfUpdated: true
+        });
+    }
+
+    /// @notice Settles blocked bond for the given Node Operators
+    /// @dev Should be called by the Easy Track
+    /// @param nodeOperatorIds IDs of the Node Operators
+    function settleELRewardsStealingPenalty(
+        uint256[] memory nodeOperatorIds
+    ) external onlyRole(SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE) {
+        for (uint256 i; i < nodeOperatorIds.length; ++i) {
+            uint256 nodeOperatorId = nodeOperatorIds[i];
+            if (nodeOperatorId >= _nodeOperatorsCount)
+                revert NodeOperatorDoesNotExist();
+            uint256 settled = accounting.settleLockedBondETH(nodeOperatorId);
+            emit ELRewardsStealingPenaltySettled(nodeOperatorId, settled);
+            if (settled > 0) {
+                accounting.resetBondCurve(nodeOperatorId);
+                // Nonce should be updated if depositableValidators change
+                // No need to normalize queue due to only decrease in depositable possible
+                _updateDepositableValidatorsCount({
+                    nodeOperatorId: nodeOperatorId,
+                    incrementNonceIfUpdated: true,
+                    normalizeQueueIfUpdated: false
+                });
+            }
+        }
+    }
+
+    /// @notice Compensate EL rewards stealing penalty for the given Node Operator to prevent further validator exits
+    /// @dev Expected to be called by the Node Operator, but can be called by anyone
+    /// @param nodeOperatorId ID of the Node Operator
+    function compensateELRewardsStealingPenalty(
+        uint256 nodeOperatorId
+    ) external payable {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        accounting.compensateLockedBondETH{ value: msg.value }(nodeOperatorId);
+        // Nonce should be updated if depositableValidators change
+        // Normalize queue should be called due to only increase in depositable possible
+        _updateDepositableValidatorsCount({
+            nodeOperatorId: nodeOperatorId,
+            incrementNonceIfUpdated: true,
+            normalizeQueueIfUpdated: true
+        });
+    }
+
+    /// @notice Report Node Operator's key as withdrawn and settle withdrawn amount
+    /// @notice Called by the Verifier contract.
+    ///         See `CSVerifier.processWithdrawalProof` to use this method permissionless
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keyIndex Index of the withdrawn key in the Node Operator's keys storage
+    /// @param amount Amount of withdrawn ETH in wei
+    function submitWithdrawal(
+        uint256 nodeOperatorId,
+        uint256 keyIndex,
+        uint256 amount
+    ) external onlyRole(VERIFIER_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (keyIndex >= no.totalDepositedKeys) {
+            revert SigningKeysInvalidOffset();
+        }
+
+        uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
+        if (_isValidatorWithdrawn[pointer]) {
+            revert AlreadySubmitted();
+        }
+
+        _isValidatorWithdrawn[pointer] = true;
+        no.totalWithdrawnKeys++;
+
+        emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount);
+
+        if (_isValidatorSlashed[pointer]) {
+            amount += INITIAL_SLASHING_PENALTY;
+            accounting.resetBondCurve(nodeOperatorId);
+        }
+
+        if (amount < DEPOSIT_SIZE) {
+            accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - amount);
+        }
+
+        // Nonce should be updated if depositableValidators change
+        // Normalize queue should be called due to possible increase in depositable possible
+        _updateDepositableValidatorsCount({
+            nodeOperatorId: nodeOperatorId,
+            incrementNonceIfUpdated: true,
+            normalizeQueueIfUpdated: true
+        });
+    }
+
+    /// @notice Report Node Operator's key as slashed and apply the initial slashing penalty
+    /// @notice Called by the Verifier contract.
+    ///         See `CSVerifier.processSlashingProof` to use this method permissionless
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keyIndex Index of the slashed key in the Node Operator's keys storage
+    function submitInitialSlashing(
+        uint256 nodeOperatorId,
+        uint256 keyIndex
+    ) external onlyRole(VERIFIER_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (keyIndex >= no.totalDepositedKeys) {
+            revert SigningKeysInvalidOffset();
+        }
+
+        uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
+
+        if (_isValidatorSlashed[pointer]) {
+            revert AlreadySubmitted();
+        }
+        _isValidatorSlashed[pointer] = true;
+        emit InitialSlashingSubmitted(nodeOperatorId, keyIndex);
+
+        accounting.penalize(nodeOperatorId, INITIAL_SLASHING_PENALTY);
+
+        // Nonce should be updated if depositableValidators change
+        // Normalize queue should not be called due to only possible decrease in depositable possible
+        _updateDepositableValidatorsCount({
+            nodeOperatorId: nodeOperatorId,
+            incrementNonceIfUpdated: true,
+            normalizeQueueIfUpdated: false
+        });
+    }
+
+    /// @notice Called by the Staking Router when withdrawal credentials changed by DAO
+    /// @dev Resets the key removal charge
+    /// @dev Changing the WC means that the current deposit data in the queue is not valid anymore and can't be deposited
+    ///      So, the key removal charge should be reset to 0 to allow Node Operators to remove the keys without any charge.
+    ///      After keys removal the DAO should set the new key removal charge.
+    function onWithdrawalCredentialsChanged()
+        external
+        onlyRole(STAKING_ROUTER_ROLE)
+    {
+        _setKeyRemovalCharge(0);
+    }
+
+    /// @notice Get the next `depositsCount` of depositable keys with signatures from the queue
+    /// @dev Second param `depositCalldata` is not used
+    /// @param depositsCount Count of deposits to get
+    /// @param /* depositCalldata */ (unused) Deposit calldata
+    /// @return publicKeys Public keys
+    /// @return signatures Signatures
+    function obtainDepositData(
+        uint256 depositsCount,
+        bytes calldata /* depositCalldata */
+    )
+        external
+        onlyRole(STAKING_ROUTER_ROLE)
+        returns (bytes memory publicKeys, bytes memory signatures)
+    {
+        (publicKeys, signatures) = SigningKeys.initKeysSigsBuf(depositsCount);
+        uint256 depositsLeft = depositsCount;
+        uint256 loadedKeysCount = 0;
+
+        for (Batch item = queue.peek(); !item.isNil(); item = queue.peek()) {
+            // NOTE: see the `enqueuedCount` note below.
+            // TODO: write invariant test for that.
+            unchecked {
+                uint256 noId = item.noId();
+                uint256 keysInBatch = item.keys();
+                NodeOperator storage no = _nodeOperators[noId];
+
+                uint256 keysCount = Math.min(
+                    Math.min(no.depositableValidatorsCount, keysInBatch),
+                    depositsLeft
+                );
+                // `depositsLeft` is non-zero at this point all the time, so the check `depositsLeft > keysCount`
+                // covers the case when no depositable keys on the Node Operator have been left.
+                if (depositsLeft > keysCount || keysCount == keysInBatch) {
+                    // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
+                    no.enqueuedCount -= keysInBatch;
+                    // We've consumed all the keys in the batch, so we dequeue it.
+                    queue.dequeue();
+                } else {
+                    // This branch covers the case when we stop in the middle of the batch.
+                    // We release the amount of keys consumed only, the rest will be kept.
+                    no.enqueuedCount -= keysCount;
+                    // NOTE: `keysInBatch` can't be less than `keysCount` at this point.
+                    // We update the batch with the remaining keys.
+                    item = item.setKeys(keysInBatch - keysCount);
+                    // Store the updated batch back to the queue.
+                    queue.queue[queue.head] = item;
+                }
+
+                if (keysCount == 0) {
+                    continue;
+                }
+
+                // solhint-disable-next-line func-named-parameters
+                SigningKeys.loadKeysSigs(
+                    noId,
+                    no.totalDepositedKeys,
+                    keysCount,
+                    publicKeys,
+                    signatures,
+                    loadedKeysCount
+                );
+
+                // It's impossible in practice to reach the limit of these variables.
+                loadedKeysCount += keysCount;
+                no.totalDepositedKeys += keysCount;
+
+                emit DepositedSigningKeysCountChanged(
+                    noId,
+                    no.totalDepositedKeys
+                );
+
+                // No need for `_updateDepositableValidatorsCount` call since we update the number directly.
+                // `keysCount` is min of `depositableValidatorsCount` and `depositsLeft`.
+                no.depositableValidatorsCount -= keysCount;
+                depositsLeft -= keysCount;
+                if (depositsLeft == 0) {
+                    break;
+                }
+            }
+        }
+        if (loadedKeysCount != depositsCount) {
+            revert NotEnoughKeys();
+        }
+
+        unchecked {
+            _depositableValidatorsCount -= depositsCount;
+            _totalDepositedValidators += depositsCount;
+        }
+
+        _incrementModuleNonce();
+    }
+
+    /// @notice Clean the deposit queue from batches with no depositable keys
+    /// @dev Use **eth_call** to check how many items will be removed
+    /// @param maxItems How many queue items to review
+    /// @return toRemove Number of the deposit data removed from the queue
+    function cleanDepositQueue(
+        uint256 maxItems
+    ) external returns (uint256 toRemove) {
+        if (maxItems == 0) revert QueueLookupNoLimit();
+
+        Batch prev;
+        uint128 indexOfPrev;
+
+        uint128 head = queue.head;
+        uint128 curr = head;
+
+        // Make sure we don't have any leftovers from the previous call.
+        _queueLookup.clear();
+
+        for (uint256 i; i < maxItems; ++i) {
+            Batch item = queue.queue[curr];
+            if (item.isNil()) {
+                return toRemove;
+            }
+
+            uint256 noId = item.noId();
+            NodeOperator storage no = _nodeOperators[noId];
+            uint256 enqueuedSoFar = _queueLookup.get(noId);
+            if (enqueuedSoFar >= no.depositableValidatorsCount) {
+                // NOTE: Since we reached that point there's no way for a Node Operator to have a depositable batch
+                // later in the queue, and hence we don't update _queueLookup for the Node Operator.
+                if (curr == head) {
+                    queue.dequeue();
+                    head = queue.head;
+                } else {
+                    // There's no `prev` item while we call `dequeue`, and removing an item will keep the `prev` intact
+                    // other than changing its `next` field.
+                    prev = queue.remove(indexOfPrev, prev, item);
+                }
+
+                unchecked {
+                    // We assume that the invariant `enqueuedCount` >= `keys` is kept.
+                    uint256 keysInBatch = item.keys();
+                    no.enqueuedCount -= keysInBatch;
+                    ++toRemove;
+                }
+            } else {
+                _queueLookup.add(noId, item.keys());
+                indexOfPrev = curr;
+                prev = item;
+            }
+
+            curr = item.next();
+        }
+    }
+
+    /// @notice Recover all stETH shares from the contract
+    /// @dev There should be no stETH shares on the contract balance during regular operation
+    function recoverStETHShares() external {
+        _onlyRecoverer();
+        IStETH stETH = IStETH(LIDO_LOCATOR.lido());
+
+        AssetRecovererLib.recoverStETHShares(
+            address(stETH),
+            stETH.sharesOf(address(this))
+        );
+    }
+
+    /// @notice Get the deposit queue item by an index
+    /// @param index Index of a queue item
+    function depositQueueItem(
+        uint128 index
+    ) external view returns (Batch item) {
+        return queue.at(index);
+    }
+
+    /// @notice Check if the given Node Operator's key is reported as slashed
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keyIndex Index of the key to check
+    function isValidatorSlashed(
+        uint256 nodeOperatorId,
+        uint256 keyIndex
+    ) external view returns (bool) {
+        return _isValidatorSlashed[_keyPointer(nodeOperatorId, keyIndex)];
+    }
+
+    /// @notice Check if the given Node Operator's key is reported as withdrawn
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keyIndex index of the key to check
+    function isValidatorWithdrawn(
+        uint256 nodeOperatorId,
+        uint256 keyIndex
+    ) external view returns (bool) {
+        return _isValidatorWithdrawn[_keyPointer(nodeOperatorId, keyIndex)];
+    }
+
+    /// @notice Get the module type
+    /// @return Module type
+    function getType() external view returns (bytes32) {
+        return MODULE_TYPE;
+    }
+
+    /// @notice Get staking module summary
+    function getStakingModuleSummary()
+        external
+        view
+        returns (
+            uint256 /* totalExitedValidators */,
+            uint256 /* totalDepositedValidators */,
+            uint256 /* depositableValidatorsCount */
+        )
+    {
+        return (
+            _totalExitedValidators,
+            _totalDepositedValidators,
+            _depositableValidatorsCount
+        );
+    }
+
     /// @notice Get Node Operator info
     /// @param nodeOperatorId ID of the Node Operator
     /// @return Node Operator info
@@ -931,582 +1540,36 @@ contract CSModule is
         }
     }
 
-    /// @notice Called when rewards are minted for the module
-    /// @dev Passes through the minted stETH shares to the fee distributor
-    function onRewardsMinted(
-        uint256 totalShares
-    ) external onlyRole(STAKING_ROUTER_ROLE) {
-        IStETH(LIDO_LOCATOR.lido()).transferShares(
-            accounting.feeDistributor(),
-            totalShares
-        );
+    function _incrementModuleNonce() internal {
+        _nonce++;
     }
 
-    function _updateDepositableValidatorsCount(
-        uint256 nodeOperatorId,
-        bool incrementNonceIfUpdated,
-        bool normalizeQueueIfUpdated
-    ) private {
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+    function _createNodeOperator(
+        address managerAddress,
+        address rewardAddress,
+        address referrer
+    ) internal returns (uint256) {
+        uint256 id = _nodeOperatorsCount;
+        NodeOperator storage no = _nodeOperators[id];
 
-        uint256 newCount = no.totalVettedKeys - no.totalDepositedKeys;
+        no.managerAddress = managerAddress == address(0)
+            ? msg.sender
+            : managerAddress;
+        no.rewardAddress = rewardAddress == address(0)
+            ? msg.sender
+            : rewardAddress;
+        no.active = true;
 
-        // NOTE: Probably this check can be extracted to a separate function to reduce gas costs for the methods
-        // requiring only it.
-        uint256 unbondedKeys = accounting.getUnbondedKeysCount(nodeOperatorId);
-        if (unbondedKeys > newCount) {
-            newCount = 0;
-        } else {
-            unchecked {
-                newCount -= unbondedKeys;
-            }
+        unchecked {
+            _nodeOperatorsCount++;
+            _activeNodeOperatorsCount++;
         }
 
-        if (no.stuckValidatorsCount > 0) {
-            newCount = 0;
-        }
+        emit NodeOperatorAdded(id, no.managerAddress, no.rewardAddress);
 
-        if (no.targetLimitMode > 0) {
-            uint256 activeValidators = no.totalDepositedKeys -
-                no.totalWithdrawnKeys;
-            newCount = Math.min(
-                no.targetLimit > activeValidators
-                    ? no.targetLimit - activeValidators
-                    : 0,
-                newCount
-            );
-        }
+        if (referrer != address(0)) emit ReferrerSet(id, referrer);
 
-        if (no.depositableValidatorsCount != newCount) {
-            // Updating the global counter.
-            _depositableValidatorsCount =
-                _depositableValidatorsCount -
-                no.depositableValidatorsCount +
-                newCount;
-            // TODO: think about event emitting for depositableValidatorsCount changing.
-            // Note: it also changes outisde this method
-            no.depositableValidatorsCount = newCount;
-            if (incrementNonceIfUpdated) {
-                _incrementModuleNonce();
-            }
-            if (normalizeQueueIfUpdated) {
-                _normalizeQueue(nodeOperatorId);
-            }
-        }
-    }
-
-    /// @notice Update stuck validators count for Node Operators
-    /// @dev Called by StakingRouter
-    /// @dev If the stuck keys count is above zero for the Node Operator,
-    ///      the depositable validators count is set to 0 for this Node Operator
-    /// @param nodeOperatorIds bytes packed array of Node Operator IDs
-    /// @param stuckValidatorsCounts bytes packed array of stuck validators counts
-    function updateStuckValidatorsCount(
-        bytes calldata nodeOperatorIds,
-        bytes calldata stuckValidatorsCounts
-    ) external onlyRole(STAKING_ROUTER_ROLE) {
-        ValidatorCountsReport.validate(nodeOperatorIds, stuckValidatorsCounts);
-
-        uint256 operatorsInReport = ValidatorCountsReport.count(
-            nodeOperatorIds
-        );
-
-        for (uint256 i = 0; i < operatorsInReport; ++i) {
-            (
-                uint256 nodeOperatorId,
-                uint256 stuckValidatorsCount
-            ) = ValidatorCountsReport.next(
-                    nodeOperatorIds,
-                    stuckValidatorsCounts,
-                    i
-                );
-            if (nodeOperatorId >= _nodeOperatorsCount)
-                revert NodeOperatorDoesNotExist();
-            _updateStuckValidatorsCount(nodeOperatorId, stuckValidatorsCount);
-        }
-        _incrementModuleNonce();
-    }
-
-    function _updateStuckValidatorsCount(
-        uint256 nodeOperatorId,
-        uint256 stuckValidatorsCount
-    ) internal {
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (stuckValidatorsCount == no.stuckValidatorsCount) return;
-        if (stuckValidatorsCount > no.totalDepositedKeys - no.totalExitedKeys)
-            revert StuckKeysHigherThanNonWithdrawn();
-
-        no.stuckValidatorsCount = stuckValidatorsCount;
-        emit StuckSigningKeysCountChanged(nodeOperatorId, stuckValidatorsCount);
-
-        if (stuckValidatorsCount > 0 && no.depositableValidatorsCount > 0) {
-            // INFO: The only consequence of stuck keys from the on-chain perspective is suspending deposits to the
-            // Node Operator. To do that, we set the depositableValidatorsCount to 0 for this Node Operator. Hence
-            // we can omit the call to the _updateDepositableValidatorsCount function here to save gas.
-            _depositableValidatorsCount -= no.depositableValidatorsCount;
-            no.depositableValidatorsCount = 0;
-        } else {
-            // Nonce will be updated on the top level once per call
-            // Node Operator should normalize queue himself in case of unstuck
-            _updateDepositableValidatorsCount({
-                nodeOperatorId: nodeOperatorId,
-                incrementNonceIfUpdated: false,
-                normalizeQueueIfUpdated: false
-            });
-        }
-    }
-
-    /// @notice Updates exited validators count for Node Operators
-    /// @dev Called by StakingRouter
-    /// @param nodeOperatorIds bytes packed array of Node Operator IDs
-    /// @param exitedValidatorsCounts bytes packed array of exited validators counts
-    function updateExitedValidatorsCount(
-        bytes calldata nodeOperatorIds,
-        bytes calldata exitedValidatorsCounts
-    ) external onlyRole(STAKING_ROUTER_ROLE) {
-        ValidatorCountsReport.validate(nodeOperatorIds, exitedValidatorsCounts);
-
-        uint256 operatorsInReport = ValidatorCountsReport.count(
-            nodeOperatorIds
-        );
-
-        for (uint256 i = 0; i < operatorsInReport; ++i) {
-            (
-                uint256 nodeOperatorId,
-                uint256 exitedValidatorsCount
-            ) = ValidatorCountsReport.next(
-                    nodeOperatorIds,
-                    exitedValidatorsCounts,
-                    i
-                );
-            if (nodeOperatorId >= _nodeOperatorsCount)
-                revert NodeOperatorDoesNotExist();
-
-            _updateExitedValidatorsCount({
-                nodeOperatorId: nodeOperatorId,
-                exitedValidatorsCount: exitedValidatorsCount,
-                allowDecrease: false
-            });
-        }
-        _incrementModuleNonce();
-    }
-
-    /// @dev Update exited validators count for a single Node Operator
-    /// @dev Allows decrease the count for unsafe updates
-    function _updateExitedValidatorsCount(
-        uint256 nodeOperatorId,
-        uint256 exitedValidatorsCount,
-        bool allowDecrease
-    ) internal {
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (exitedValidatorsCount == no.totalExitedKeys) return;
-        if (exitedValidatorsCount > no.totalDepositedKeys)
-            revert ExitedKeysHigherThanTotalDeposited();
-        if (!allowDecrease && exitedValidatorsCount < no.totalExitedKeys)
-            revert ExitedKeysDecrease();
-
-        _totalExitedValidators =
-            (_totalExitedValidators - no.totalExitedKeys) +
-            exitedValidatorsCount;
-        no.totalExitedKeys = exitedValidatorsCount;
-
-        emit ExitedSigningKeysCountChanged(
-            nodeOperatorId,
-            exitedValidatorsCount
-        );
-    }
-
-    /// @notice Update refunded validators count for the Node Operator
-    /// @dev Called by StakingRouter
-    /// @dev `refundedValidatorsCount` is not used in the module
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param refundedValidatorsCount Number of refunded validators
-    function updateRefundedValidatorsCount(
-        uint256 nodeOperatorId,
-        uint256 refundedValidatorsCount
-    ) external onlyRole(STAKING_ROUTER_ROLE) {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        no.refundedValidatorsCount = refundedValidatorsCount;
-        emit RefundedKeysCountChanged(nodeOperatorId, refundedValidatorsCount);
-        _incrementModuleNonce();
-    }
-
-    /// @notice Update target limits for Node Operator
-    /// @dev Called by StakingRouter
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param targetLimitMode Target limit mode for the Node Operator
-    ///                        0 - disabled
-    ///                        1 - soft mode
-    ///                        2 - forced mode
-    /// @param targetLimit Target limit of validators
-    function updateTargetValidatorsLimits(
-        uint256 nodeOperatorId,
-        uint8 targetLimitMode,
-        uint256 targetLimit
-    ) external onlyRole(STAKING_ROUTER_ROLE) {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-
-        if (
-            no.targetLimitMode == targetLimitMode &&
-            no.targetLimit == targetLimit
-        ) return;
-
-        if (no.targetLimitMode != targetLimitMode) {
-            no.targetLimitMode = targetLimitMode;
-        }
-
-        if (no.targetLimit != targetLimit) {
-            no.targetLimit = targetLimit;
-        }
-
-        emit TargetValidatorsCountChangedByRequest(
-            nodeOperatorId,
-            targetLimitMode,
-            targetLimit
-        );
-
-        // Nonce will be updated below even if depositable count was not changed
-        // In case of targetLimit removal queue should be normalised
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: false,
-            normalizeQueueIfUpdated: true
-        });
-        _incrementModuleNonce();
-    }
-
-    /// @notice Called by the Staking Router when exited and stuck validators counts updated
-    function onExitedAndStuckValidatorsCountsUpdated()
-        external
-        onlyRole(STAKING_ROUTER_ROLE)
-    {
-        // solhint-disable-previous-line no-empty-blocks
-        // Nothing to do, rewards are distributed by a performance oracle.
-    }
-
-    /// @notice Unsafe update of validators count for Node Operators by DAO
-    /// @notice Called by Staking Router
-    function unsafeUpdateValidatorsCount(
-        uint256 nodeOperatorId,
-        uint256 exitedValidatorsKeysCount,
-        uint256 stuckValidatorsKeysCount
-    ) external onlyRole(STAKING_ROUTER_ROLE) {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        _updateExitedValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            exitedValidatorsCount: exitedValidatorsKeysCount,
-            allowDecrease: true
-        });
-        _updateStuckValidatorsCount(nodeOperatorId, stuckValidatorsKeysCount);
-        _incrementModuleNonce();
-    }
-
-    /// @notice Decrease totalVettedKeys for the Node Operator
-    /// @notice Called by Staking Router
-    /// @param nodeOperatorIds IDs of the Node Operators to decrease totalVettedKeys for
-    /// @param vettedKeysByOperator Corresponding values for totalVettedKeys decrease
-    function decreaseOperatorVettedKeys(
-        uint256[] calldata nodeOperatorIds,
-        uint256[] calldata vettedKeysByOperator
-    ) external onlyRole(STAKING_ROUTER_ROLE) {
-        // INFO: It seems it does not  make sense to implement any sanity checks.
-        for (uint256 i; i < nodeOperatorIds.length; ++i) {
-            uint256 nodeOperatorId = nodeOperatorIds[i];
-            if (nodeOperatorId >= _nodeOperatorsCount) {
-                revert NodeOperatorDoesNotExist();
-            }
-
-            NodeOperator storage no = _nodeOperators[nodeOperatorId];
-
-            if (vettedKeysByOperator[i] >= no.totalVettedKeys) {
-                revert InvalidVetKeysPointer();
-            }
-
-            no.totalVettedKeys = vettedKeysByOperator[i];
-            emit VettedSigningKeysCountChanged(
-                nodeOperatorId,
-                vettedKeysByOperator[i]
-            );
-
-            // Nonce will be updated below once
-            // No need to normalize queue due to vetted decrease
-            _updateDepositableValidatorsCount({
-                nodeOperatorId: nodeOperatorId,
-                incrementNonceIfUpdated: false,
-                normalizeQueueIfUpdated: false
-            });
-        }
-
-        _incrementModuleNonce();
-    }
-
-    /// @notice Remove keys for the Node Operator and confiscate removal charge for each deleted key
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param startIndex Index of the first key
-    /// @param keysCount Keys count to delete
-    function removeKeys(
-        uint256 nodeOperatorId,
-        uint256 startIndex,
-        uint256 keysCount
-    ) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        _onlyNodeOperatorManager(nodeOperatorId);
-        _removeSigningKeys(nodeOperatorId, startIndex, keysCount);
-    }
-
-    // @notice CSM will go live before EIP-7002
-    // @notice to be implemented in CSM v2
-    // /// @notice Node Operator should be able to voluntary eject own validators
-    // /// @notice Validator private key might be lost
-    // function voluntaryEjectValidator(
-    //     uint256 nodeOperatorId,
-    //     uint256 startIndex,
-    //     uint256 keysCount
-    // ) external onlyExistingNodeOperator(nodeOperatorId) {
-    //     onlyNodeOperatorManager(nodeOperatorId);
-    //     // Mark validators for priority ejection
-    //     // Confiscate ejection fee from the bond
-    // }
-
-    /// @notice Perform queue normalization for the given Node Operator
-    /// @notice Normalization stands for adding vetted but not enqueued keys to the queue
-    /// @param nodeOperatorId ID of the Node Operator
-    function normalizeQueue(uint256 nodeOperatorId) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        _onlyNodeOperatorManager(nodeOperatorId);
-        _normalizeQueue(nodeOperatorId);
-    }
-
-    function _normalizeQueue(uint256 nodeOperatorId) internal {
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        uint256 depositable = no.depositableValidatorsCount;
-        uint256 enqueued = no.enqueuedCount;
-
-        if (enqueued < depositable) {
-            unchecked {
-                uint256 count = depositable - enqueued;
-                Batch item = createBatch(nodeOperatorId, count);
-                no.enqueuedCount = depositable;
-                queue.enqueue(item);
-                emit BatchEnqueued(nodeOperatorId, count);
-            }
-        }
-    }
-
-    /// @notice Report EL rewards stealing for the given Node Operator
-    /// @notice The amount equal to the stolen funds plus EL stealing fine will be locked
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param blockHash Execution layer block hash of the proposed block with EL rewards stealing
-    /// @param amount Amount of stolen EL rewards in ETH
-    function reportELRewardsStealingPenalty(
-        uint256 nodeOperatorId,
-        bytes32 blockHash,
-        uint256 amount
-    ) external onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE) {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        accounting.lockBondETH(
-            nodeOperatorId,
-            amount + EL_REWARDS_STEALING_FINE
-        );
-
-        emit ELRewardsStealingPenaltyReported(
-            nodeOperatorId,
-            blockHash,
-            amount
-        );
-
-        // Nonce should be updated if depositableValidators change
-        // No need to normalize queue due to only decrease in depositable possible
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: false
-        });
-    }
-
-    /// @notice Cancel previously reported and not settled EL rewards stealing penalty for the given Node Operator
-    /// @notice The funds will be unlocked
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param amount Amount of penalty to cancel
-    function cancelELRewardsStealingPenalty(
-        uint256 nodeOperatorId,
-        uint256 amount
-    ) external onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE) {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        accounting.releaseLockedBondETH(nodeOperatorId, amount);
-
-        emit ELRewardsStealingPenaltyCancelled(nodeOperatorId, amount);
-
-        // Nonce should be updated if depositableValidators change
-        // Normalize queue should be called due to only increase in depositable possible
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
-        });
-    }
-
-    /// @notice Settles blocked bond for the given Node Operators
-    /// @dev Should be called by the Easy Track
-    /// @param nodeOperatorIds IDs of the Node Operators
-    function settleELRewardsStealingPenalty(
-        uint256[] memory nodeOperatorIds
-    ) external onlyRole(SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE) {
-        for (uint256 i; i < nodeOperatorIds.length; ++i) {
-            uint256 nodeOperatorId = nodeOperatorIds[i];
-            if (nodeOperatorId >= _nodeOperatorsCount)
-                revert NodeOperatorDoesNotExist();
-            uint256 settled = accounting.settleLockedBondETH(nodeOperatorId);
-            emit ELRewardsStealingPenaltySettled(nodeOperatorId, settled);
-            if (settled > 0) {
-                accounting.resetBondCurve(nodeOperatorId);
-                // Nonce should be updated if depositableValidators change
-                // No need to normalize queue due to only decrease in depositable possible
-                _updateDepositableValidatorsCount({
-                    nodeOperatorId: nodeOperatorId,
-                    incrementNonceIfUpdated: true,
-                    normalizeQueueIfUpdated: false
-                });
-            }
-        }
-    }
-
-    /// @notice Compensate EL rewards stealing penalty for the given Node Operator to prevent further validator exits
-    /// @dev Expected to be called by the Node Operator, but can be called by anyone
-    /// @param nodeOperatorId ID of the Node Operator
-    function compensateELRewardsStealingPenalty(
-        uint256 nodeOperatorId
-    ) external payable {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        accounting.compensateLockedBondETH{ value: msg.value }(nodeOperatorId);
-        // Nonce should be updated if depositableValidators change
-        // Normalize queue should be called due to only increase in depositable possible
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
-        });
-    }
-
-    /// @notice Check if the given Node Operator's key is reported as withdrawn
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex index of the key to check
-    function isValidatorWithdrawn(
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) external view returns (bool) {
-        return _isValidatorWithdrawn[_keyPointer(nodeOperatorId, keyIndex)];
-    }
-
-    /// @notice Report Node Operator's key as withdrawn and settle withdrawn amount
-    /// @notice Called by the Verifier contract.
-    ///         See `CSVerifier.processWithdrawalProof` to use this method permissionless
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the withdrawn key in the Node Operator's keys storage
-    /// @param amount Amount of withdrawn ETH in wei
-    function submitWithdrawal(
-        uint256 nodeOperatorId,
-        uint256 keyIndex,
-        uint256 amount
-    ) external onlyRole(VERIFIER_ROLE) {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (keyIndex >= no.totalDepositedKeys) {
-            revert SigningKeysInvalidOffset();
-        }
-
-        uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
-        if (_isValidatorWithdrawn[pointer]) {
-            revert AlreadySubmitted();
-        }
-
-        _isValidatorWithdrawn[pointer] = true;
-        no.totalWithdrawnKeys++;
-
-        emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount);
-
-        if (_isValidatorSlashed[pointer]) {
-            amount += INITIAL_SLASHING_PENALTY;
-            accounting.resetBondCurve(nodeOperatorId);
-        }
-
-        if (amount < DEPOSIT_SIZE) {
-            accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - amount);
-        }
-
-        // Nonce should be updated if depositableValidators change
-        // Normalize queue should be called due to possible increase in depositable possible
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
-        });
-    }
-
-    /// @notice Check if the given Node Operator's key is reported as slashed
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the key to check
-    function isValidatorSlashed(
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) external view returns (bool) {
-        return _isValidatorSlashed[_keyPointer(nodeOperatorId, keyIndex)];
-    }
-
-    /// @notice Report Node Operator's key as slashed and apply the initial slashing penalty
-    /// @notice Called by the Verifier contract.
-    ///         See `CSVerifier.processSlashingProof` to use this method permissionless
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the slashed key in the Node Operator's keys storage
-    function submitInitialSlashing(
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) external onlyRole(VERIFIER_ROLE) {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (keyIndex >= no.totalDepositedKeys) {
-            revert SigningKeysInvalidOffset();
-        }
-
-        uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
-
-        if (_isValidatorSlashed[pointer]) {
-            revert AlreadySubmitted();
-        }
-        _isValidatorSlashed[pointer] = true;
-        emit InitialSlashingSubmitted(nodeOperatorId, keyIndex);
-
-        accounting.penalize(nodeOperatorId, INITIAL_SLASHING_PENALTY);
-
-        // Nonce should be updated if depositableValidators change
-        // Normalize queue should not be called due to only possible decrease in depositable possible
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: false
-        });
-    }
-
-    /// @dev Both nodeOperatorId and keyIndex are limited to uint64 by the contract
-    function _keyPointer(
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) internal pure returns (uint256) {
-        return (nodeOperatorId << 128) | keyIndex;
-    }
-
-    /// @notice Called by the Staking Router when withdrawal credentials changed by DAO
-    /// @dev Resets the key removal charge
-    /// @dev Changing the WC means that the current deposit data in the queue is not valid anymore and can't be deposited
-    ///      So, the key removal charge should be reset to 0 to allow Node Operators to remove the keys without any charge.
-    ///      After keys removal the DAO should set the new key removal charge.
-    function onWithdrawalCredentialsChanged()
-        external
-        onlyRole(STAKING_ROUTER_ROLE)
-    {
-        _setKeyRemovalCharge(0);
+        return id;
     }
 
     function _addSigningKeys(
@@ -1595,205 +1658,6 @@ contract CSModule is
         _incrementModuleNonce();
     }
 
-    /// @notice Get the next `depositsCount` of depositable keys with signatures from the queue
-    /// @dev Second param `depositCalldata` is not used
-    /// @param depositsCount Count of deposits to get
-    /// @param /* depositCalldata */ (unused) Deposit calldata
-    /// @return publicKeys Public keys
-    /// @return signatures Signatures
-    function obtainDepositData(
-        uint256 depositsCount,
-        bytes calldata /* depositCalldata */
-    )
-        external
-        onlyRole(STAKING_ROUTER_ROLE)
-        returns (bytes memory publicKeys, bytes memory signatures)
-    {
-        (publicKeys, signatures) = SigningKeys.initKeysSigsBuf(depositsCount);
-        uint256 depositsLeft = depositsCount;
-        uint256 loadedKeysCount = 0;
-
-        for (Batch item = queue.peek(); !item.isNil(); item = queue.peek()) {
-            // NOTE: see the `enqueuedCount` note below.
-            // TODO: write invariant test for that.
-            unchecked {
-                uint256 noId = item.noId();
-                uint256 keysInBatch = item.keys();
-                NodeOperator storage no = _nodeOperators[noId];
-
-                uint256 keysCount = Math.min(
-                    Math.min(no.depositableValidatorsCount, keysInBatch),
-                    depositsLeft
-                );
-                // `depositsLeft` is non-zero at this point all the time, so the check `depositsLeft > keysCount`
-                // covers the case when no depositable keys on the Node Operator have been left.
-                if (depositsLeft > keysCount || keysCount == keysInBatch) {
-                    // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
-                    no.enqueuedCount -= keysInBatch;
-                    // We've consumed all the keys in the batch, so we dequeue it.
-                    queue.dequeue();
-                } else {
-                    // This branch covers the case when we stop in the middle of the batch.
-                    // We release the amount of keys consumed only, the rest will be kept.
-                    no.enqueuedCount -= keysCount;
-                    // NOTE: `keysInBatch` can't be less than `keysCount` at this point.
-                    // We update the batch with the remaining keys.
-                    item = item.setKeys(keysInBatch - keysCount);
-                    // Store the updated batch back to the queue.
-                    queue.queue[queue.head] = item;
-                }
-
-                if (keysCount == 0) {
-                    continue;
-                }
-
-                // solhint-disable-next-line func-named-parameters
-                SigningKeys.loadKeysSigs(
-                    noId,
-                    no.totalDepositedKeys,
-                    keysCount,
-                    publicKeys,
-                    signatures,
-                    loadedKeysCount
-                );
-
-                // It's impossible in practice to reach the limit of these variables.
-                loadedKeysCount += keysCount;
-                no.totalDepositedKeys += keysCount;
-
-                emit DepositedSigningKeysCountChanged(
-                    noId,
-                    no.totalDepositedKeys
-                );
-
-                // No need for `_updateDepositableValidatorsCount` call since we update the number directly.
-                // `keysCount` is min of `depositableValidatorsCount` and `depositsLeft`.
-                no.depositableValidatorsCount -= keysCount;
-                depositsLeft -= keysCount;
-                if (depositsLeft == 0) {
-                    break;
-                }
-            }
-        }
-        if (loadedKeysCount != depositsCount) {
-            revert NotEnoughKeys();
-        }
-
-        unchecked {
-            _depositableValidatorsCount -= depositsCount;
-            _totalDepositedValidators += depositsCount;
-        }
-
-        _incrementModuleNonce();
-    }
-
-    /// @notice Clean the deposit queue from batches with no depositable keys
-    /// @dev Use **eth_call** to check how many items will be removed
-    /// @param maxItems How many queue items to review
-    /// @return toRemove Number of the deposit data removed from the queue
-    function cleanDepositQueue(
-        uint256 maxItems
-    ) external returns (uint256 toRemove) {
-        if (maxItems == 0) revert QueueLookupNoLimit();
-
-        Batch prev;
-        uint128 indexOfPrev;
-
-        uint128 head = queue.head;
-        uint128 curr = head;
-
-        // Make sure we don't have any leftovers from the previous call.
-        _queueLookup.clear();
-
-        for (uint256 i; i < maxItems; ++i) {
-            Batch item = queue.queue[curr];
-            if (item.isNil()) {
-                return toRemove;
-            }
-
-            uint256 noId = item.noId();
-            NodeOperator storage no = _nodeOperators[noId];
-            uint256 enqueuedSoFar = _queueLookup.get(noId);
-            if (enqueuedSoFar >= no.depositableValidatorsCount) {
-                // NOTE: Since we reached that point there's no way for a Node Operator to have a depositable batch
-                // later in the queue, and hence we don't update _queueLookup for the Node Operator.
-                if (curr == head) {
-                    queue.dequeue();
-                    head = queue.head;
-                } else {
-                    // There's no `prev` item while we call `dequeue`, and removing an item will keep the `prev` intact
-                    // other than changing its `next` field.
-                    prev = queue.remove(indexOfPrev, prev, item);
-                }
-
-                unchecked {
-                    // We assume that the invariant `enqueuedCount` >= `keys` is kept.
-                    uint256 keysInBatch = item.keys();
-                    no.enqueuedCount -= keysInBatch;
-                    ++toRemove;
-                }
-            } else {
-                _queueLookup.add(noId, item.keys());
-                indexOfPrev = curr;
-                prev = item;
-            }
-
-            curr = item.next();
-        }
-    }
-
-    /// @notice Get the deposit queue item by an index
-    /// @param index Index of a queue item
-    function depositQueueItem(
-        uint128 index
-    ) external view returns (Batch item) {
-        return queue.at(index);
-    }
-
-    /// @notice Recover all stETH shares from the contract
-    /// @dev There should be no stETH shares on the contract balance during regular operation
-    function recoverStETHShares() external {
-        _onlyRecoverer();
-        IStETH stETH = IStETH(LIDO_LOCATOR.lido());
-
-        AssetRecovererLib.recoverStETHShares(
-            address(stETH),
-            stETH.sharesOf(address(this))
-        );
-    }
-
-    function _incrementModuleNonce() internal {
-        _nonce++;
-    }
-
-    function _createNodeOperator(
-        address managerAddress,
-        address rewardAddress,
-        address referrer
-    ) internal returns (uint256) {
-        uint256 id = _nodeOperatorsCount;
-        NodeOperator storage no = _nodeOperators[id];
-
-        no.managerAddress = managerAddress == address(0)
-            ? msg.sender
-            : managerAddress;
-        no.rewardAddress = rewardAddress == address(0)
-            ? msg.sender
-            : rewardAddress;
-        no.active = true;
-
-        unchecked {
-            _nodeOperatorsCount++;
-            _activeNodeOperatorsCount++;
-        }
-
-        emit NodeOperatorAdded(id, no.managerAddress, no.rewardAddress);
-
-        if (referrer != address(0)) emit ReferrerSet(id, referrer);
-
-        return id;
-    }
-
     /// @notice It's possible to join with proof even after public release to get beneficial bond curve
     function _checkEarlyAdoptionEligibility(
         uint256 nodeOperatorId,
@@ -1806,6 +1670,134 @@ contract CSModule is
 
         earlyAdoption.consume(msg.sender, proof);
         accounting.setBondCurve(nodeOperatorId, earlyAdoption.curveId());
+    }
+
+    function _setKeyRemovalCharge(uint256 amount) internal {
+        keyRemovalCharge = amount;
+        emit KeyRemovalChargeSet(amount);
+    }
+
+    /// @dev Update exited validators count for a single Node Operator
+    /// @dev Allows decrease the count for unsafe updates
+    function _updateExitedValidatorsCount(
+        uint256 nodeOperatorId,
+        uint256 exitedValidatorsCount,
+        bool allowDecrease
+    ) internal {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (exitedValidatorsCount == no.totalExitedKeys) return;
+        if (exitedValidatorsCount > no.totalDepositedKeys)
+            revert ExitedKeysHigherThanTotalDeposited();
+        if (!allowDecrease && exitedValidatorsCount < no.totalExitedKeys)
+            revert ExitedKeysDecrease();
+
+        _totalExitedValidators =
+            (_totalExitedValidators - no.totalExitedKeys) +
+            exitedValidatorsCount;
+        no.totalExitedKeys = exitedValidatorsCount;
+
+        emit ExitedSigningKeysCountChanged(
+            nodeOperatorId,
+            exitedValidatorsCount
+        );
+    }
+
+    function _updateStuckValidatorsCount(
+        uint256 nodeOperatorId,
+        uint256 stuckValidatorsCount
+    ) internal {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (stuckValidatorsCount == no.stuckValidatorsCount) return;
+        if (stuckValidatorsCount > no.totalDepositedKeys - no.totalExitedKeys)
+            revert StuckKeysHigherThanNonWithdrawn();
+
+        no.stuckValidatorsCount = stuckValidatorsCount;
+        emit StuckSigningKeysCountChanged(nodeOperatorId, stuckValidatorsCount);
+
+        if (stuckValidatorsCount > 0 && no.depositableValidatorsCount > 0) {
+            // INFO: The only consequence of stuck keys from the on-chain perspective is suspending deposits to the
+            // Node Operator. To do that, we set the depositableValidatorsCount to 0 for this Node Operator. Hence
+            // we can omit the call to the _updateDepositableValidatorsCount function here to save gas.
+            _depositableValidatorsCount -= no.depositableValidatorsCount;
+            no.depositableValidatorsCount = 0;
+        } else {
+            // Nonce will be updated on the top level once per call
+            // Node Operator should normalize queue himself in case of unstuck
+            _updateDepositableValidatorsCount({
+                nodeOperatorId: nodeOperatorId,
+                incrementNonceIfUpdated: false,
+                normalizeQueueIfUpdated: false
+            });
+        }
+    }
+
+    function _updateDepositableValidatorsCount(
+        uint256 nodeOperatorId,
+        bool incrementNonceIfUpdated,
+        bool normalizeQueueIfUpdated
+    ) internal {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        uint256 newCount = no.totalVettedKeys - no.totalDepositedKeys;
+
+        // NOTE: Probably this check can be extracted to a separate function to reduce gas costs for the methods
+        // requiring only it.
+        uint256 unbondedKeys = accounting.getUnbondedKeysCount(nodeOperatorId);
+        if (unbondedKeys > newCount) {
+            newCount = 0;
+        } else {
+            unchecked {
+                newCount -= unbondedKeys;
+            }
+        }
+
+        if (no.stuckValidatorsCount > 0) {
+            newCount = 0;
+        }
+
+        if (no.targetLimitMode > 0) {
+            uint256 activeValidators = no.totalDepositedKeys -
+                no.totalWithdrawnKeys;
+            newCount = Math.min(
+                no.targetLimit > activeValidators
+                    ? no.targetLimit - activeValidators
+                    : 0,
+                newCount
+            );
+        }
+
+        if (no.depositableValidatorsCount != newCount) {
+            // Updating the global counter.
+            _depositableValidatorsCount =
+                _depositableValidatorsCount -
+                no.depositableValidatorsCount +
+                newCount;
+            // TODO: think about event emitting for depositableValidatorsCount changing.
+            // Note: it also changes outisde this method
+            no.depositableValidatorsCount = newCount;
+            if (incrementNonceIfUpdated) {
+                _incrementModuleNonce();
+            }
+            if (normalizeQueueIfUpdated) {
+                _normalizeQueue(nodeOperatorId);
+            }
+        }
+    }
+
+    function _normalizeQueue(uint256 nodeOperatorId) internal {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        uint256 depositable = no.depositableValidatorsCount;
+        uint256 enqueued = no.enqueuedCount;
+
+        if (enqueued < depositable) {
+            unchecked {
+                uint256 count = depositable - enqueued;
+                Batch item = createBatch(nodeOperatorId, count);
+                no.enqueuedCount = depositable;
+                queue.enqueue(item);
+                emit BatchEnqueued(nodeOperatorId, count);
+            }
+        }
     }
 
     function _onlyNodeOperatorManager(uint256 nodeOperatorId) internal view {
@@ -1828,5 +1820,13 @@ contract CSModule is
 
     function _onlyRecoverer() internal view override {
         _checkRole(RECOVERER_ROLE);
+    }
+
+    /// @dev Both nodeOperatorId and keyIndex are limited to uint64 by the contract
+    function _keyPointer(
+        uint256 nodeOperatorId,
+        uint256 keyIndex
+    ) internal pure returns (uint256) {
+        return (nodeOperatorId << 128) | keyIndex;
     }
 }

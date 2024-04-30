@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
 pragma solidity 0.8.24;
+
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /// @dev Bond curve mechanics abstract contract
 ///
@@ -91,6 +91,99 @@ abstract contract CSBondCurve is Initializable {
     error InvalidBondCurveValues();
     error InvalidBondCurveId();
 
+    function defaultBondCurveId() public view returns (uint256) {
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
+        return $.defaultBondCurveId;
+    }
+
+    /// @dev Get default bond curve info if `curveId` is `0` or invalid
+    /// @notice Return bond curve for the given curve id
+    /// @param curveId Curve id to get bond curve for
+    /// @return bond Bond curve
+    function getCurveInfo(
+        uint256 curveId
+    ) public view returns (BondCurve memory) {
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
+        return
+            (curveId == 0)
+                ? $.bondCurves[$.defaultBondCurveId - 1]
+                : $.bondCurves[curveId - 1];
+    }
+
+    /// @notice Get bond curve for the given Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return bond Bond curve
+    function getBondCurve(
+        uint256 nodeOperatorId
+    ) public view returns (BondCurve memory) {
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
+        return getCurveInfo($.operatorBondCurveId[nodeOperatorId]);
+    }
+
+    /// @notice Get required bond in ETH for the given number of keys for default bond curve
+    /// @dev To calculate the amount for the new keys 2 calls are required:
+    ///      getBondAmountByKeysCount(newTotal) - getBondAmountByKeysCount(currentTotal)
+    /// @param keys Number of keys to get required bond for
+    /// @return required Amount for particular keys count
+    function getBondAmountByKeysCount(
+        uint256 keys
+    ) public view returns (uint256) {
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
+        return
+            getBondAmountByKeysCount(keys, getCurveInfo($.defaultBondCurveId));
+    }
+
+    /// @notice Get keys count for the given bond amount with default bond curve
+    /// @param amount Bond amount in ETH (stETH)to get keys count for
+    /// @return keys Keys count
+    function getKeysCountByBondAmount(
+        uint256 amount
+    ) public view returns (uint256) {
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
+        return
+            getKeysCountByBondAmount(
+                amount,
+                getCurveInfo($.defaultBondCurveId)
+            );
+    }
+
+    /// @notice Get required bond in ETH for the given number of keys for particular bond curve.
+    /// @dev To calculate the amount for the new keys 2 calls are required:
+    ///      getBondAmountByKeysCount(newTotal, curve) - getBondAmountByKeysCount(currentTotal, curve)
+    /// @param keys Number of keys to get required bond for
+    /// @param curve Bond curve to get required bond for
+    /// @return required Required bond amount in ETH (stETH) for particular keys count
+    function getBondAmountByKeysCount(
+        uint256 keys,
+        BondCurve memory curve
+    ) public pure returns (uint256) {
+        if (keys == 0) return 0;
+        if (keys <= curve.points.length) {
+            return curve.points[keys - 1];
+        }
+        return
+            curve.points[curve.points.length - 1] +
+            (keys - curve.points.length) *
+            curve.trend;
+    }
+
+    /// @notice Get keys count for the given bond amount for particular bond curve.
+    /// @param amount Bond amount to get keys count for
+    /// @param curve Bond curve to get keys count for
+    /// @return keys Keys count
+    function getKeysCountByBondAmount(
+        uint256 amount,
+        BondCurve memory curve
+    ) public pure returns (uint256) {
+        if (amount < curve.points[0]) return 0;
+        uint256 maxCurveAmount = curve.points[curve.points.length - 1];
+        if (amount >= maxCurveAmount) {
+            return
+                curve.points.length + (amount - maxCurveAmount) / curve.trend;
+        }
+        return _searchKeysCount(amount, curve.points);
+    }
+
     // solhint-disable-next-line func-name-mixedcase
     function __CSBondCurve_init(
         uint256[] memory defaultBondCurvePoints
@@ -156,99 +249,6 @@ abstract contract CSBondCurve is Initializable {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
         delete $.operatorBondCurveId[nodeOperatorId];
         emit BondCurveChanged(nodeOperatorId, $.defaultBondCurveId);
-    }
-
-    function defaultBondCurveId() public view returns (uint256) {
-        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        return $.defaultBondCurveId;
-    }
-
-    /// @dev Get default bond curve info if `curveId` is `0` or invalid
-    /// @notice Return bond curve for the given curve id
-    /// @param curveId Curve id to get bond curve for
-    /// @return bond Bond curve
-    function getCurveInfo(
-        uint256 curveId
-    ) public view returns (BondCurve memory) {
-        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        return
-            (curveId == 0)
-                ? $.bondCurves[$.defaultBondCurveId - 1]
-                : $.bondCurves[curveId - 1];
-    }
-
-    /// @notice Get bond curve for the given Node Operator
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @return bond Bond curve
-    function getBondCurve(
-        uint256 nodeOperatorId
-    ) public view returns (BondCurve memory) {
-        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        return getCurveInfo($.operatorBondCurveId[nodeOperatorId]);
-    }
-
-    /// @notice Get required bond in ETH for the given number of keys for default bond curve
-    /// @dev To calculate the amount for the new keys 2 calls are required:
-    ///      getBondAmountByKeysCount(newTotal) - getBondAmountByKeysCount(currentTotal)
-    /// @param keys Number of keys to get required bond for
-    /// @return required Amount for particular keys count
-    function getBondAmountByKeysCount(
-        uint256 keys
-    ) public view returns (uint256) {
-        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        return
-            getBondAmountByKeysCount(keys, getCurveInfo($.defaultBondCurveId));
-    }
-
-    /// @notice Get required bond in ETH for the given number of keys for particular bond curve.
-    /// @dev To calculate the amount for the new keys 2 calls are required:
-    ///      getBondAmountByKeysCount(newTotal, curve) - getBondAmountByKeysCount(currentTotal, curve)
-    /// @param keys Number of keys to get required bond for
-    /// @param curve Bond curve to get required bond for
-    /// @return required Required bond amount in ETH (stETH) for particular keys count
-    function getBondAmountByKeysCount(
-        uint256 keys,
-        BondCurve memory curve
-    ) public pure returns (uint256) {
-        if (keys == 0) return 0;
-        if (keys <= curve.points.length) {
-            return curve.points[keys - 1];
-        }
-        return
-            curve.points[curve.points.length - 1] +
-            (keys - curve.points.length) *
-            curve.trend;
-    }
-
-    /// @notice Get keys count for the given bond amount with default bond curve
-    /// @param amount Bond amount in ETH (stETH)to get keys count for
-    /// @return keys Keys count
-    function getKeysCountByBondAmount(
-        uint256 amount
-    ) public view returns (uint256) {
-        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        return
-            getKeysCountByBondAmount(
-                amount,
-                getCurveInfo($.defaultBondCurveId)
-            );
-    }
-
-    /// @notice Get keys count for the given bond amount for particular bond curve.
-    /// @param amount Bond amount to get keys count for
-    /// @param curve Bond curve to get keys count for
-    /// @return keys Keys count
-    function getKeysCountByBondAmount(
-        uint256 amount,
-        BondCurve memory curve
-    ) public pure returns (uint256) {
-        if (amount < curve.points[0]) return 0;
-        uint256 maxCurveAmount = curve.points[curve.points.length - 1];
-        if (amount >= maxCurveAmount) {
-            return
-                curve.points.length + (amount - maxCurveAmount) / curve.trend;
-        }
-        return _searchKeysCount(amount, curve.points);
     }
 
     function _searchKeysCount(

@@ -61,26 +61,6 @@ abstract contract CSBondLock is Initializable {
     error InvalidBondLockRetentionPeriod();
     error InvalidBondLockAmount();
 
-    // solhint-disable-next-line func-name-mixedcase
-    function __CSBondLock_init(
-        uint256 retentionPeriod
-    ) internal onlyInitializing {
-        _setBondLockRetentionPeriod(retentionPeriod);
-    }
-
-    /// @dev Set default bond lock retention period. That period will be sum with the current block timestamp of lock tx
-    function _setBondLockRetentionPeriod(uint256 retentionPeriod) internal {
-        CSBondLockStorage storage $ = _getCSBondLockStorage();
-        if (
-            retentionPeriod < MIN_BOND_LOCK_RETENTION_PERIOD ||
-            retentionPeriod > MAX_BOND_LOCK_RETENTION_PERIOD
-        ) {
-            revert InvalidBondLockRetentionPeriod();
-        }
-        $.bondLockRetentionPeriod = retentionPeriod;
-        emit BondLockRetentionPeriodChanged(retentionPeriod);
-    }
-
     /// @notice Get default bond lock retention period
     /// @return retention Default bond lock retention period
     function getBondLockRetentionPeriod()
@@ -153,6 +133,26 @@ abstract contract CSBondLock is Initializable {
         CSBondLockStorage storage $ = _getCSBondLockStorage();
         delete $.bondLock[nodeOperatorId];
         emit BondLockChanged(nodeOperatorId, 0, 0);
+    }
+
+    // solhint-disable-next-line func-name-mixedcase
+    function __CSBondLock_init(
+        uint256 retentionPeriod
+    ) internal onlyInitializing {
+        _setBondLockRetentionPeriod(retentionPeriod);
+    }
+
+    /// @dev Set default bond lock retention period. That period will be sum with the current block timestamp of lock tx
+    function _setBondLockRetentionPeriod(uint256 retentionPeriod) internal {
+        CSBondLockStorage storage $ = _getCSBondLockStorage();
+        if (
+            retentionPeriod < MIN_BOND_LOCK_RETENTION_PERIOD ||
+            retentionPeriod > MAX_BOND_LOCK_RETENTION_PERIOD
+        ) {
+            revert InvalidBondLockRetentionPeriod();
+        }
+        $.bondLockRetentionPeriod = retentionPeriod;
+        emit BondLockRetentionPeriodChanged(retentionPeriod);
     }
 
     function _changeBondLock(
