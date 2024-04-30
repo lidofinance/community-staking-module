@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -7,9 +7,9 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 
 /// @dev Bond lock mechanics abstract contract.
 ///
-/// It gives ability to lock bond amount of the node operator.
-/// There is a period of time during which the lock can be settled in any way by the module (for example, by penalizing the bond).
-/// After that period, the lock is removed and the bond amount is considered as unlocked.
+/// It gives the ability to lock the bond amount of the Node Operator.
+/// There is a period of time during which the module can settle the lock in any way (for example, by penalizing the bond).
+/// After that period, the lock is removed, and the bond amount is considered unlocked.
 ///
 /// The contract contains:
 ///  - set default bond lock retention period
@@ -20,8 +20,8 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 ///  - reduce locked bond amount
 ///  - remove bond lock
 ///
-/// Should be inherited by Module contract, or Module-related contract.
-/// Internal non-view methods should be used in Module contract with additional requirements (if required).
+/// It should be inherited by a module contract or a module-related contract.
+/// Internal non-view methods should be used in the Module contract with additional requirements (if required).
 ///
 /// @author vgorkavenko
 abstract contract CSBondLock is Initializable {
@@ -39,7 +39,7 @@ abstract contract CSBondLock is Initializable {
         /// @dev Default bond lock retention period for all locks
         ///      After this period the bond lock is removed and no longer valid
         uint256 bondLockRetentionPeriod;
-        /// @dev Mapping of the node operator id to the bond lock
+        /// @dev Mapping of the Node Operator id to the bond lock
         mapping(uint256 => BondLock) bondLock;
     }
 
@@ -47,7 +47,7 @@ abstract contract CSBondLock is Initializable {
     bytes32 private constant CS_BOND_LOCK_STORAGE_LOCATION =
         0x78c5a36767279da056404c09083fca30cf3ea61c442cfaba6669f76a37393f00;
 
-    // TODO: should be reconsidered
+    // TODO: can be reconsidered
     uint256 public constant MIN_BOND_LOCK_RETENTION_PERIOD = 4 weeks;
     uint256 public constant MAX_BOND_LOCK_RETENTION_PERIOD = 365 days;
 
@@ -61,28 +61,8 @@ abstract contract CSBondLock is Initializable {
     error InvalidBondLockRetentionPeriod();
     error InvalidBondLockAmount();
 
-    // solhint-disable-next-line func-name-mixedcase
-    function __CSBondLock_init(
-        uint256 retentionPeriod
-    ) internal onlyInitializing {
-        _setBondLockRetentionPeriod(retentionPeriod);
-    }
-
-    /// @dev Sets default bond lock retention period. That period will be sum with the current block timestamp of lock tx.
-    function _setBondLockRetentionPeriod(uint256 retentionPeriod) internal {
-        CSBondLockStorage storage $ = _getCSBondLockStorage();
-        if (
-            retentionPeriod < MIN_BOND_LOCK_RETENTION_PERIOD ||
-            retentionPeriod > MAX_BOND_LOCK_RETENTION_PERIOD
-        ) {
-            revert InvalidBondLockRetentionPeriod();
-        }
-        $.bondLockRetentionPeriod = retentionPeriod;
-        emit BondLockRetentionPeriodChanged(retentionPeriod);
-    }
-
-    /// @notice Returns default bond lock retention period.
-    /// @return retention default bond lock retention period.
+    /// @notice Get default bond lock retention period
+    /// @return retention Default bond lock retention period
     function getBondLockRetentionPeriod()
         external
         view
@@ -92,9 +72,9 @@ abstract contract CSBondLock is Initializable {
         return $.bondLockRetentionPeriod;
     }
 
-    /// @notice Returns information about the locked bond for the given node operator.
-    /// @param nodeOperatorId id of the node operator to get locked bond info for.
-    /// @return locked bond info.
+    /// @notice Get information about the locked bond for the given Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return locked Locked bond info
     function getLockedBondInfo(
         uint256 nodeOperatorId
     ) public view returns (BondLock memory) {
@@ -102,9 +82,9 @@ abstract contract CSBondLock is Initializable {
         return $.bondLock[nodeOperatorId];
     }
 
-    /// @notice Returns the amount of locked bond in ETH by the given node operator.
-    /// @param nodeOperatorId id of the node operator to get locked bond amount.
-    /// @return amount of actual locked bond.
+    /// @notice Get amount of the locked bond in ETH (stETH) by the given Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return amount Amount of the actual locked bond
     function getActualLockedBond(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
@@ -115,7 +95,7 @@ abstract contract CSBondLock is Initializable {
         return 0;
     }
 
-    /// @dev Locks bond amount for the given node operator until the retention period.
+    /// @dev Lock bond amount for the given Node Operator until the retention period.
     function _lock(uint256 nodeOperatorId, uint256 amount) internal {
         CSBondLockStorage storage $ = _getCSBondLockStorage();
         if (amount == 0) {
@@ -131,7 +111,7 @@ abstract contract CSBondLock is Initializable {
         });
     }
 
-    /// @dev Reduces locked bond amount for the given node operator without changing retention period.
+    /// @dev Reduce locked bond amount for the given Node Operator without changing retention period
     function _reduceAmount(uint256 nodeOperatorId, uint256 amount) internal {
         CSBondLockStorage storage $ = _getCSBondLockStorage();
         uint256 blocked = getActualLockedBond(nodeOperatorId);
@@ -148,12 +128,31 @@ abstract contract CSBondLock is Initializable {
         );
     }
 
-    /// @dev Removes bond lock for the given node operator.
+    /// @dev Remove bond lock for the given Node Operator
     function _remove(uint256 nodeOperatorId) internal {
         CSBondLockStorage storage $ = _getCSBondLockStorage();
-        // TODO: check existing lock
         delete $.bondLock[nodeOperatorId];
         emit BondLockChanged(nodeOperatorId, 0, 0);
+    }
+
+    // solhint-disable-next-line func-name-mixedcase
+    function __CSBondLock_init(
+        uint256 retentionPeriod
+    ) internal onlyInitializing {
+        _setBondLockRetentionPeriod(retentionPeriod);
+    }
+
+    /// @dev Set default bond lock retention period. That period will be sum with the current block timestamp of lock tx
+    function _setBondLockRetentionPeriod(uint256 retentionPeriod) internal {
+        CSBondLockStorage storage $ = _getCSBondLockStorage();
+        if (
+            retentionPeriod < MIN_BOND_LOCK_RETENTION_PERIOD ||
+            retentionPeriod > MAX_BOND_LOCK_RETENTION_PERIOD
+        ) {
+            revert InvalidBondLockRetentionPeriod();
+        }
+        $.bondLockRetentionPeriod = retentionPeriod;
+        emit BondLockRetentionPeriodChanged(retentionPeriod);
     }
 
     function _changeBondLock(

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
@@ -23,23 +23,16 @@ contract PausableUntil {
     error ResumedExpected();
     error PauseUntilMustBeInFuture();
 
-    function _checkPaused() internal view {
-        if (!isPaused()) {
-            revert PausedExpected();
-        }
+    /// @notice Reverts when resumed
+    modifier whenPaused() {
+        _checkPaused();
+        _;
     }
 
-    function _checkResumed() internal view {
-        if (isPaused()) {
-            revert ResumedExpected();
-        }
-    }
-
-    /// @notice Returns whether the contract is paused
-    function isPaused() public view returns (bool) {
-        return
-            block.timestamp <
-            RESUME_SINCE_TIMESTAMP_POSITION.getStorageUint256();
+    /// @notice Reverts when paused
+    modifier whenResumed() {
+        _checkResumed();
+        _;
     }
 
     /// @notice Returns one of:
@@ -48,6 +41,13 @@ contract PausableUntil {
     ///  - some timestamp in past if not paused
     function getResumeSinceTimestamp() external view returns (uint256) {
         return RESUME_SINCE_TIMESTAMP_POSITION.getStorageUint256();
+    }
+
+    /// @notice Returns whether the contract is paused
+    function isPaused() public view returns (bool) {
+        return
+            block.timestamp <
+            RESUME_SINCE_TIMESTAMP_POSITION.getStorageUint256();
     }
 
     function _resume() internal {
@@ -92,15 +92,15 @@ contract PausableUntil {
         }
     }
 
-    /// @notice Reverts when resumed
-    modifier whenPaused() {
-        _checkPaused();
-        _;
+    function _checkPaused() internal view {
+        if (!isPaused()) {
+            revert PausedExpected();
+        }
     }
 
-    /// @notice Reverts when paused
-    modifier whenResumed() {
-        _checkResumed();
-        _;
+    function _checkResumed() internal view {
+        if (isPaused()) {
+            revert ResumedExpected();
+        }
     }
 }

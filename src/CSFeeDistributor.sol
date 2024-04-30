@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -31,10 +31,10 @@ contract CSFeeDistributor is
     /// @notice CID of the published Merkle tree
     string public treeCid;
 
-    /// @notice Amount of shares sent to the Accounting in favor of the NO
+    /// @notice Amount of stETH shares sent to the Accounting in favor of the NO
     mapping(uint256 => uint256) public distributedShares;
 
-    /// @notice Total amount of shares available for claiming by NOs
+    /// @notice Total Amount of stETH shares available for claiming by NOs
     uint256 public claimableShares;
 
     /// @dev Emitted when fees are distributed
@@ -47,6 +47,11 @@ contract CSFeeDistributor is
     error InvalidTreeCID();
     error InvalidShares();
     error InvalidProof();
+
+    modifier onlyAccounting() {
+        if (msg.sender != ACCOUNTING) revert NotAccounting();
+        _;
+    }
 
     constructor(address stETH, address accounting) {
         if (accounting == address(0)) revert ZeroAddress("accounting");
@@ -65,40 +70,11 @@ contract CSFeeDistributor is
         _grantRole(ORACLE_ROLE, oracle);
     }
 
-    /// @notice Returns the amount of shares that are pending to be distributed
-    function pendingToDistribute() external view returns (uint256) {
-        return STETH.sharesOf(address(this)) - claimableShares;
-    }
-
-    /// @notice Returns the amount of shares that can be distributed in favor of the NO
+    /// @notice Distribute fees to the Accounting in favor of the Node Operator
     /// @param proof Merkle proof of the leaf
-    /// @param nodeOperatorId ID of the NO
-    /// @param shares Total amount of shares earned as fees
-    /// @return Amount of shares that can be distributed
-    function getFeesToDistribute(
-        uint256 nodeOperatorId,
-        uint256 shares,
-        bytes32[] calldata proof
-    ) public view returns (uint256) {
-        bool isValid = MerkleProof.verifyCalldata(
-            proof,
-            treeRoot,
-            hashLeaf(nodeOperatorId, shares)
-        );
-        if (!isValid) revert InvalidProof();
-
-        if (distributedShares[nodeOperatorId] > shares) {
-            revert InvalidShares();
-        }
-
-        return shares - distributedShares[nodeOperatorId];
-    }
-
-    /// @notice Distribute fees to the Accounting in favor of the NO
-    /// @param proof Merkle proof of the leaf
-    /// @param nodeOperatorId ID of the NO
-    /// @param shares Total amount of shares earned as fees
-    /// @return Amount of shares distributed
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param shares Total Amount of stETH shares earned as fees
+    /// @return Amount of stETH shares distributed
     function distributeFees(
         uint256 nodeOperatorId,
         uint256 shares,
@@ -124,7 +100,7 @@ contract CSFeeDistributor is
         return sharesToDistribute;
     }
 
-    // @notice Receives the data of the Merkle tree from the Oracle contract and process it
+    /// @notice Receive the data of the Merkle tree from the Oracle contract and process it
     function processOracleReport(
         bytes32 _treeRoot,
         string calldata _treeCid,
@@ -149,9 +125,50 @@ contract CSFeeDistributor is
         }
     }
 
+    /// @notice Recover ERC20 tokens (except for stETH) from the contract
+    /// @dev Any stETH transferred to feeDistributor is treated as a donation and can not be recovered
+    /// @param token Address of the ERC20 token to recover
+    /// @param amount Amount of the ERC20 token to recover
+    function recoverERC20(address token, uint256 amount) external override {
+        _onlyRecoverer();
+        if (token == address(STETH)) {
+            revert NotAllowedToRecover();
+        }
+        AssetRecovererLib.recoverERC20(token, amount);
+    }
+
+    /// @notice Get the Amount of stETH shares that are pending to be distributed
+    function pendingToDistribute() external view returns (uint256) {
+        return STETH.sharesOf(address(this)) - claimableShares;
+    }
+
+    /// @notice Get the Amount of stETH shares that can be distributed in favor of the Node Operator
+    /// @param proof Merkle proof of the leaf
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param shares Total Amount of stETH shares earned as fees
+    /// @return Amount of stETH shares that can be distributed
+    function getFeesToDistribute(
+        uint256 nodeOperatorId,
+        uint256 shares,
+        bytes32[] calldata proof
+    ) public view returns (uint256) {
+        bool isValid = MerkleProof.verifyCalldata(
+            proof,
+            treeRoot,
+            hashLeaf(nodeOperatorId, shares)
+        );
+        if (!isValid) revert InvalidProof();
+
+        if (distributedShares[nodeOperatorId] > shares) {
+            revert InvalidShares();
+        }
+
+        return shares - distributedShares[nodeOperatorId];
+    }
+
     /// @notice Get a hash of a leaf
-    /// @param nodeOperatorId ID of the node operator
-    /// @param shares Amount of shares
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param shares Amount of stETH shares
     /// @dev Double hash the leaf to prevent second preimage attacks
     function hashLeaf(
         uint256 nodeOperatorId,
@@ -163,20 +180,7 @@ contract CSFeeDistributor is
             );
     }
 
-    function recoverERC20(address token, uint256 amount) external override {
-        _onlyRecoverer();
-        if (token == address(STETH)) {
-            revert NotAllowedToRecover();
-        }
-        AssetRecovererLib.recoverERC20(token, amount);
-    }
-
     function _onlyRecoverer() internal view override {
         _checkRole(RECOVERER_ROLE);
-    }
-
-    modifier onlyAccounting() {
-        if (msg.sender != ACCOUNTING) revert NotAccounting();
-        _;
     }
 }

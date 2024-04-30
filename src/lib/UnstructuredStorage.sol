@@ -8,6 +8,30 @@ pragma solidity 0.8.24;
  * @notice Aragon Unstructured Storage library
  */
 library UnstructuredStorage {
+    function setStorageBool(bytes32 position, bool data) internal {
+        assembly {
+            sstore(position, data)
+        }
+    }
+
+    function setStorageAddress(bytes32 position, address data) internal {
+        assembly {
+            sstore(position, data)
+        }
+    }
+
+    function setStorageBytes32(bytes32 position, bytes32 data) internal {
+        assembly {
+            sstore(position, data)
+        }
+    }
+
+    function setStorageUint256(bytes32 position, uint256 data) internal {
+        assembly {
+            sstore(position, data)
+        }
+    }
+
     function getStorageBool(
         bytes32 position
     ) internal view returns (bool data) {
@@ -37,30 +61,6 @@ library UnstructuredStorage {
     ) internal view returns (uint256 data) {
         assembly {
             data := sload(position)
-        }
-    }
-
-    function setStorageBool(bytes32 position, bool data) internal {
-        assembly {
-            sstore(position, data)
-        }
-    }
-
-    function setStorageAddress(bytes32 position, address data) internal {
-        assembly {
-            sstore(position, data)
-        }
-    }
-
-    function setStorageBytes32(bytes32 position, bytes32 data) internal {
-        assembly {
-            sstore(position, data)
-        }
-    }
-
-    function setStorageUint256(bytes32 position, uint256 data) internal {
-        assembly {
-            sstore(position, data)
         }
     }
 }

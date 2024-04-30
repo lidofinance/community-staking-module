@@ -3820,9 +3820,7 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
         createNodeOperator(3);
         csm.obtainDepositData(1, "");
 
-        vm.expectRevert(
-            CSModule.StuckKeysHigherThanTotalDepositedMinusTotalExited.selector
-        );
+        vm.expectRevert(CSModule.StuckKeysHigherThanNonWithdrawn.selector);
         csm.updateStuckValidatorsCount(
             bytes.concat(bytes8(0x0000000000000000)),
             bytes.concat(bytes16(0x00000000000000000000000000000002))
@@ -3998,9 +3996,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         uint256 noId = createNodeOperator(1);
         csm.obtainDepositData(1, "");
 
-        vm.expectRevert(
-            CSModule.StuckKeysHigherThanTotalDepositedMinusTotalExited.selector
-        );
+        vm.expectRevert(CSModule.StuckKeysHigherThanNonWithdrawn.selector);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
             exitedValidatorsKeysCount: 1,

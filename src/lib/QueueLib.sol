@@ -116,17 +116,6 @@ library QueueLib {
         self.head = item.next();
     }
 
-    function peek(Queue storage self) internal view returns (Batch item) {
-        return self.queue[self.head];
-    }
-
-    function at(
-        Queue storage self,
-        uint128 index
-    ) internal view returns (Batch item) {
-        return self.queue[index];
-    }
-
     /// @dev Returns the updated item.
     /// @dev It's supposed the `indexOfPrev` is >= `queue.head`, otherwise, dequeue the item.
     /// @param indexOfPrev Index of the batch that points to the item to remove.
@@ -153,5 +142,16 @@ library QueueLib {
 
         self.queue[indexOfPrev] = prev;
         return prev;
+    }
+
+    function peek(Queue storage self) internal view returns (Batch item) {
+        return self.queue[self.head];
+    }
+
+    function at(
+        Queue storage self,
+        uint128 index
+    ) internal view returns (Batch item) {
+        return self.queue[index];
     }
 }

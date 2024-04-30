@@ -33,6 +33,9 @@ library NOAddresses {
     error SenderIsNotRewardAddress();
     error SenderIsNotProposedAddress();
 
+    /// @notice Propose a new manager address for the Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param proposedAddress Proposed manager address
     function proposeNodeOperatorManagerAddressChange(
         mapping(uint256 => NodeOperator) storage nodeOperators,
         uint256 nodeOperatorId,
@@ -51,6 +54,8 @@ library NOAddresses {
         );
     }
 
+    /// @notice Confirm a new manager address for the Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
     function confirmNodeOperatorManagerAddressChange(
         mapping(uint256 => NodeOperator) storage nodeOperators,
         uint256 nodeOperatorId
@@ -69,6 +74,9 @@ library NOAddresses {
         );
     }
 
+    /// @notice Propose a new reward address for the Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param proposedAddress Proposed reward address
     function proposeNodeOperatorRewardAddressChange(
         mapping(uint256 => NodeOperator) storage nodeOperators,
         uint256 nodeOperatorId,
@@ -87,6 +95,8 @@ library NOAddresses {
         );
     }
 
+    /// @notice Confirm a new reward address for the Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
     function confirmNodeOperatorRewardAddressChange(
         mapping(uint256 => NodeOperator) storage nodeOperators,
         uint256 nodeOperatorId
@@ -105,6 +115,8 @@ library NOAddresses {
         );
     }
 
+    /// @notice Reset the manager address to the reward address
+    /// @param nodeOperatorId ID of the Node Operator
     function resetNodeOperatorManagerAddress(
         mapping(uint256 => NodeOperator) storage nodeOperators,
         uint256 nodeOperatorId

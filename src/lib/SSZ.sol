@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -79,30 +79,6 @@ library SSZ {
                 }
             }
         }
-    }
-
-    // Inspired by https://github.com/succinctlabs/telepathy-contracts/blob/5aa4bb7/src/libraries/SimpleSerialize.sol#L59
-    function hashTreeRoot(
-        Withdrawal memory withdrawal
-    ) internal pure returns (bytes32) {
-        return
-            sha256(
-                bytes.concat(
-                    sha256(
-                        bytes.concat(
-                            toLittleEndian(withdrawal.index),
-                            toLittleEndian(withdrawal.validatorIndex)
-                        )
-                    ),
-                    sha256(
-                        bytes.concat(
-                            bytes20(withdrawal.withdrawalAddress),
-                            bytes12(0),
-                            toLittleEndian(withdrawal.amount)
-                        )
-                    )
-                )
-            );
     }
 
     function hashTreeRoot(
@@ -198,44 +174,6 @@ library SSZ {
         }
     }
 
-    // See https://github.com/succinctlabs/telepathy-contracts/blob/5aa4bb7/src/libraries/SimpleSerialize.sol#L17-L28
-    function toLittleEndian(uint256 v) internal pure returns (bytes32) {
-        v =
-            ((v &
-                0xFF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00) >>
-                8) |
-            ((v &
-                0x00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF) <<
-                8);
-        v =
-            ((v &
-                0xFFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000) >>
-                16) |
-            ((v &
-                0x0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF) <<
-                16);
-        v =
-            ((v &
-                0xFFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000) >>
-                32) |
-            ((v &
-                0x00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF) <<
-                32);
-        v =
-            ((v &
-                0xFFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF0000000000000000) >>
-                64) |
-            ((v &
-                0x0000000000000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF) <<
-                64);
-        v = (v >> 128) | (v << 128);
-        return bytes32(v);
-    }
-
-    function toLittleEndian(bool v) internal pure returns (bytes32) {
-        return bytes32(v ? 1 << 248 : 0);
-    }
-
     /// @notice Modified version of `verify` from Solady `MerkleProofLib` to support generalized indices and sha256 precompile.
     /// @dev Reverts if `leaf` doesn't exist in the Merkle tree with `root`, given `proof`.
     function verifyProof(
@@ -310,5 +248,67 @@ library SSZ {
                 revert(0x1c, 0x04)
             }
         }
+    }
+
+    // Inspired by https://github.com/succinctlabs/telepathy-contracts/blob/5aa4bb7/src/libraries/SimpleSerialize.sol#L59
+    function hashTreeRoot(
+        Withdrawal memory withdrawal
+    ) internal pure returns (bytes32) {
+        return
+            sha256(
+                bytes.concat(
+                    sha256(
+                        bytes.concat(
+                            toLittleEndian(withdrawal.index),
+                            toLittleEndian(withdrawal.validatorIndex)
+                        )
+                    ),
+                    sha256(
+                        bytes.concat(
+                            bytes20(withdrawal.withdrawalAddress),
+                            bytes12(0),
+                            toLittleEndian(withdrawal.amount)
+                        )
+                    )
+                )
+            );
+    }
+
+    // See https://github.com/succinctlabs/telepathy-contracts/blob/5aa4bb7/src/libraries/SimpleSerialize.sol#L17-L28
+    function toLittleEndian(uint256 v) internal pure returns (bytes32) {
+        v =
+            ((v &
+                0xFF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00) >>
+                8) |
+            ((v &
+                0x00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF) <<
+                8);
+        v =
+            ((v &
+                0xFFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000) >>
+                16) |
+            ((v &
+                0x0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF) <<
+                16);
+        v =
+            ((v &
+                0xFFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000) >>
+                32) |
+            ((v &
+                0x00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF) <<
+                32);
+        v =
+            ((v &
+                0xFFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF0000000000000000) >>
+                64) |
+            ((v &
+                0x0000000000000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF) <<
+                64);
+        v = (v >> 128) | (v << 128);
+        return bytes32(v);
+    }
+
+    function toLittleEndian(bool v) internal pure returns (bytes32) {
+        return bytes32(v ? 1 << 248 : 0);
     }
 }
