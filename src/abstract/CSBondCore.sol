@@ -87,7 +87,7 @@ abstract contract CSBondCore {
     }
 
     /// @notice Get total bond shares (stETH) stored on the contract
-    /// @return total bond shares (stETH)
+    /// @return total Total bond shares (stETH)
     function totalBondShares() public view returns (uint256) {
         CSBondCoreStorage storage $ = _getCSBondCoreStorage();
         return $.totalBondShares;
