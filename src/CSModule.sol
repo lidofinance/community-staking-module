@@ -581,7 +581,7 @@ contract CSModule is
         });
     }
 
-    /// @notice Claim full reward (fees + bond rewards) in цstETH for the given Node Operator
+    /// @notice Claim full reward (fees + bond rewards) in wstETH for the given Node Operator
     /// @notice If `wstETHAmount` exceeds the current claimable amount, the claimable amount will be used instead
     /// @notice If `rewardsProof` is not provided, only excess bond will be available for claim
     /// @param nodeOperatorId ID of the Node Operator

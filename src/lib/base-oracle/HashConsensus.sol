@@ -158,7 +158,7 @@ contract HashConsensus is AccessControlEnumerableUpgradeable {
     bytes32 public constant MANAGE_FAST_LANE_CONFIG_ROLE =
         keccak256("MANAGE_FAST_LANE_CONFIG_ROLE");
 
-    /// @notice An ACL role granting the permission to change еру report processor
+    /// @notice An ACL role granting the permission to change the report processor
     /// contract by calling setReportProcessor.
     bytes32 public constant MANAGE_REPORT_PROCESSOR_ROLE =
         keccak256("MANAGE_REPORT_PROCESSOR_ROLE");
