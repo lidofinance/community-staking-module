@@ -189,7 +189,7 @@ contract CSAccounting is
     }
 
     /// @notice Stake user's ETH with Lido and deposit stETH to the bond
-    /// @dev Сalled by CSM exclusively
+    /// @dev Called by CSM exclusively
     /// @param from Address to stake ETH and deposit stETH from
     /// @param nodeOperatorId ID of the Node Operator
     /// @return shares stETH shares amount
@@ -201,7 +201,7 @@ contract CSAccounting is
     }
 
     /// @notice Deposit user's stETH to the bond for the given Node Operator
-    /// @dev Сalled by CSM exclusively
+    /// @dev Called by CSM exclusively
     /// @param from Address to deposit stETH from
     /// @param nodeOperatorId ID of the Node Operator
     /// @param stETHAmount Amount of stETH to deposit
@@ -233,7 +233,7 @@ contract CSAccounting is
     }
 
     /// @notice Unwrap the user's wstETH and deposit stETH to the bond for the given Node Operator
-    /// @dev Сalled by CSM exclusively
+    /// @dev Called by CSM exclusively
     /// @param from Address to unwrap wstETH from
     /// @param nodeOperatorId ID of the Node Operator
     /// @param wstETHAmount Amount of wstETH to deposit
@@ -266,7 +266,7 @@ contract CSAccounting is
 
     /// @notice Claim full reward (fee + bond) in stETH for the given Node Operator with desirable value.
     ///         `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond
-    /// @dev Сalled by CSM exclusively
+    /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param stETHAmount Amount of stETH to claim
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
@@ -294,7 +294,7 @@ contract CSAccounting is
 
     /// @notice Claim full reward (fee + bond) in wstETH for the given Node Operator available for this moment.
     ///         `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond
-    /// @dev Сalled by CSM exclusively
+    /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param wstETHAmount Amount of wstETH to claim
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
@@ -322,7 +322,7 @@ contract CSAccounting is
     /// @notice Request full reward (fee + bond) in Withdrawal NFT (unstETH) for the given Node Operator available for this moment.
     ///         `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond
     /// @dev Reverts if amount isn't between `MIN_STETH_WITHDRAWAL_AMOUNT` and `MAX_STETH_WITHDRAWAL_AMOUNT`
-    /// @dev Сalled by CSM exclusively
+    /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param ethAmount Amount of ETH to request
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
@@ -349,7 +349,7 @@ contract CSAccounting is
     }
 
     /// @notice Lock bond in ETH for the given Node Operator
-    /// @dev Сalled by CSM exclusively
+    /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param amount Amount to lock in ETH (stETH)
     function lockBondETH(
@@ -360,7 +360,7 @@ contract CSAccounting is
     }
 
     /// @notice Release locked bond in ETH for the given Node Operator
-    /// @dev Сalled by CSM exclusively
+    /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param amount Amount to release in ETH (stETH)
     function releaseLockedBondETH(
@@ -371,7 +371,7 @@ contract CSAccounting is
     }
 
     /// @notice Compensate locked bond ETH for the given Node Operator
-    //// @dev Сalled by CSM exclusively
+    //// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     function compensateLockedBondETH(
         uint256 nodeOperatorId
@@ -382,7 +382,7 @@ contract CSAccounting is
     }
 
     /// @notice Settle locked bond ETH for the given Node Operator
-    /// @dev Сalled by CSM exclusively
+    /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     function settleLockedBondETH(
         uint256 nodeOperatorId
@@ -396,7 +396,7 @@ contract CSAccounting is
     }
 
     /// @notice Penalize bond by burning stETH shares of the given Node Operator
-    /// @dev Сalled by CSM exclusively
+    /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param amount Amount to penalize in ETH (stETH)
     function penalize(uint256 nodeOperatorId, uint256 amount) external onlyCSM {
@@ -404,7 +404,7 @@ contract CSAccounting is
     }
 
     /// @notice Charge fee from bond by transferring stETH shares of the given Node Operator to the charge recipient
-    /// @dev Сalled by CSM exclusively
+    /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param amount Amount to charge in ETH (stETH)
     function chargeFee(
