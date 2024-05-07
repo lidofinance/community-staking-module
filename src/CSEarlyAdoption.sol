@@ -8,9 +8,9 @@ import { ICSEarlyAdoption } from "./interfaces/ICSEarlyAdoption.sol";
 
 contract CSEarlyAdoption is ICSEarlyAdoption {
     mapping(address => bool) internal _consumedAddresses;
-    uint256 public curveId;
-    bytes32 public treeRoot;
-    address public module;
+    uint256 public immutable CURVE_ID;
+    bytes32 public immutable TREE_ROOT;
+    address public immutable MODULE;
 
     event Consumed(address indexed sender);
 
@@ -19,14 +19,14 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
     error InvalidValue();
     error OnlyModule();
 
-    constructor(bytes32 _treeRoot, uint256 _curveId, address _module) {
-        if (_treeRoot == bytes32(0)) revert InvalidValue();
-        if (_curveId == 0) revert InvalidValue();
-        if (_module == address(0)) revert InvalidValue();
+    constructor(bytes32 treeRoot, uint256 curveId, address module) {
+        if (treeRoot == bytes32(0)) revert InvalidValue();
+        if (curveId == 0) revert InvalidValue();
+        if (module == address(0)) revert InvalidValue();
 
-        treeRoot = _treeRoot;
-        curveId = _curveId;
-        module = _module;
+        TREE_ROOT = treeRoot;
+        CURVE_ID = curveId;
+        MODULE = module;
     }
 
     /// @notice Validate EA eligibility proof and mark it as consumed
@@ -34,7 +34,7 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
     /// @param sender Address to be verified alongside the proof
     /// @param proof Merkle proof of EA eligibility
     function consume(address sender, bytes32[] calldata proof) external {
-        if (msg.sender != module) revert OnlyModule();
+        if (msg.sender != MODULE) revert OnlyModule();
         if (_consumedAddresses[sender]) revert AlreadyConsumed();
 
         if (!isEligible(sender, proof)) revert InvalidProof();
@@ -58,7 +58,7 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
         return
             MerkleProof.verifyCalldata(
                 proof,
-                treeRoot,
+                TREE_ROOT,
                 keccak256(bytes.concat(keccak256(abi.encode(sender))))
             );
     }

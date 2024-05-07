@@ -77,7 +77,6 @@ contract CSModule is
     uint256 private _totalExitedValidators;
     uint256 private _totalAddedValidators;
     uint256 private _depositableValidatorsCount;
-    uint256 private _totalRewardsShares;
 
     TransientUintUintMap private _queueLookup;
 
@@ -1669,7 +1668,7 @@ contract CSModule is
         if (proof.length == 0) return;
 
         earlyAdoption.consume(msg.sender, proof);
-        accounting.setBondCurve(nodeOperatorId, earlyAdoption.curveId());
+        accounting.setBondCurve(nodeOperatorId, earlyAdoption.CURVE_ID());
     }
 
     function _setKeyRemovalCharge(uint256 amount) internal {
