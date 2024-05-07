@@ -29,7 +29,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         csm.grantRole(csm.RESUME_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(stakingRouter));
         vm.stopPrank();
-        csm.resume();
+        if (csm.isPaused()) csm.resume();
 
         agent = stakingRouter.getRoleMember(
             stakingRouter.DEFAULT_ADMIN_ROLE(),
@@ -54,24 +54,30 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         );
         vm.stopPrank();
 
-        if (env.MODULE_ID == 0) {
-            moduleId = addCsmModule();
-        } else {
-            moduleId = env.MODULE_ID;
-        }
+        moduleId = findOrAddCSModule();
     }
 
-    function addCsmModule() internal returns (uint256) {
+    function findOrAddCSModule() internal returns (uint256) {
+        uint256[] memory ids = stakingRouter.getStakingModuleIds();
+        for (uint256 i = ids.length - 1; i > 0; i--) {
+            IStakingRouter.StakingModule memory module = stakingRouter
+                .getStakingModule(ids[i]);
+            if (module.stakingModuleAddress == address(csm)) {
+                return ids[i];
+            }
+        }
         vm.prank(agent);
         stakingRouter.addStakingModule({
             _name: "community-staking-v1",
             _stakingModuleAddress: address(csm),
-            _targetShare: 10000,
+            _stakeShareLimit: 10000,
+            _priorityExitShareThreshold: 10000,
             _stakingModuleFee: 500,
-            _treasuryFee: 500
+            _treasuryFee: 500,
+            _maxDepositsPerBlock: 30,
+            _minDepositBlockDistance: 25
         });
-        uint256[] memory ids = stakingRouter.getStakingModuleIds();
-        return ids[ids.length - 1];
+        return ids[ids.length - 1] + 1;
     }
 
     function addNodeOperator(

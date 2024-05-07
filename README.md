@@ -33,7 +33,7 @@ just
 
 ### Features
 
-- Run tests
+## Run tests
 
 ```bash
 just test-all # run all tests that possible to run without additional configurations
@@ -47,13 +47,13 @@ just test-local
 DEPLOYMENT_CONFIG=./config/holesky-devnet-0/deploy-holesky-devnet.json just test-integration
 ```
 
-- Make a gas report
+## Make a gas report
 
 ```bash
 just gas-report
 ```
 
-- Install dependencies
+## Add new dependencies
 
 Dependencies are managed using yarn. To install new dependencies, run:
 
@@ -61,19 +61,46 @@ Dependencies are managed using yarn. To install new dependencies, run:
 yarn add <package-name>
 ```
 
-- Deploy to local fork
+Whenever you install new libraries using yarn, make sure to update your
+`remappings.txt`.
+
+## Deploy and test using local fork
 
 ```bash
 just deploy-local
 ```
 
-- Deploy to local fork of non-mainnet chain
+It's possible to specify a chain
 
 ```bash
 CHAIN=holesky just deploy-local
 ```
 
-### Notes
+The result of deployment is `./out/latest.json` deployment config, which is required for integration testing
 
-Whenever you install new libraries using yarn, make sure to update your
-`remappings.txt`.
+Integration tests should pass either before a vote, or after
+
+```bash
+just deploy-local
+
+RPC_URL=http://127.0.0.1:8545 \
+DEPLOY_CONFIG=./out/latest.json \
+just test-integration
+```
+
+There also fork helper scripts to prepare a fork state for e.g. UI testing purposes
+
+```bash
+just deploy-local
+just simulate-vote
+
+RPC_URL=http://127.0.0.1:8545 \
+DEPLOY_CONFIG=./out/latest.json \
+just test-integration
+```
+
+Kill fork after testing
+
+```bash
+just kill-fork
+```

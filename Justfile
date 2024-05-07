@@ -109,7 +109,7 @@ deploy-local:
     just make-fork &
     @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
     just deploy
-    @if ${KEEP_ANVIL_AFTER_LOCAL_DEPLOY}; then just _warn "anvil is kept running in the background: http://{{anvil_host}}:{{anvil_port}}"; else just kill-fork; fi
+    just _warn "anvil is kept running in the background: http://{{anvil_host}}:{{anvil_port}}"
 
 test-local *args:
     just make-fork --silent &
@@ -120,6 +120,12 @@ test-local *args:
     RPC_URL=http://{{anvil_host}}:{{anvil_port}} \
         just test-integration {{args}}
     just kill-fork
+
+simulate-vote:
+    cast rpc anvil_autoImpersonateAccount true
+    forge script script/fork-helpers/SimulateVote.sol --rpc-url=http://{{anvil_host}}:{{anvil_port}} -vvv \
+        --broadcast --slow --unlocked --sender=`cat localhost.json | jq -r ".available_accounts[0]"`
+    cast rpc anvil_autoImpersonateAccount false
 
 _warn message:
     @tput setaf 3 && printf "[WARNING]" && tput sgr0 && echo " {{message}}"

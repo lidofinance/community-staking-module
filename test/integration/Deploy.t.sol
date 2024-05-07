@@ -25,7 +25,7 @@ contract TestDeployment is Test, DeploymentFixtures {
         vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
         csm.grantRole(csm.RESUME_ROLE(), address(this));
         vm.stopPrank();
-        csm.resume();
+        if (csm.isPaused()) csm.resume();
     }
 
     function test_init() public {
