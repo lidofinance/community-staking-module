@@ -4,9 +4,9 @@
 pragma solidity 0.8.24;
 
 interface ICSEarlyAdoption {
-    function curveId() external view returns (uint256);
+    function CURVE_ID() external view returns (uint256);
 
-    function treeRoot() external view returns (bytes32);
+    function TREE_ROOT() external view returns (bytes32);
 
     function isEligible(
         address addr,

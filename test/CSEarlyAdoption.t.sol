@@ -28,9 +28,9 @@ contract CSEarlyAdoptionTest is Test, Utilities {
 
     function test_initialization() public {
         earlyAdoption = new CSEarlyAdoption(merkleTree.root(), curveId, csm);
-        assertEq(earlyAdoption.treeRoot(), merkleTree.root());
-        assertEq(earlyAdoption.curveId(), curveId);
-        assertEq(earlyAdoption.module(), csm);
+        assertEq(earlyAdoption.TREE_ROOT(), merkleTree.root());
+        assertEq(earlyAdoption.CURVE_ID(), curveId);
+        assertEq(earlyAdoption.MODULE(), csm);
     }
 
     function test_isEligible() public {
