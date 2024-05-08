@@ -115,6 +115,7 @@ abstract contract CSBondCore {
         address from,
         uint256 nodeOperatorId
     ) internal returns (uint256) {
+        if (msg.value == 0) return 0;
         uint256 shares = LIDO.submit{ value: msg.value }({
             _referal: address(0)
         });
