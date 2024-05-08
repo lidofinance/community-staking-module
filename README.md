@@ -47,6 +47,17 @@ just test-local
 DEPLOYMENT_CONFIG=./config/holesky-devnet-0/deploy-holesky-devnet.json just test-integration
 ```
 
+**Note:** the CSM requires to be added to the Staking Router 1.5,
+so it's impossible to run integration tests over the network with the old contracts.
+Technically it's possible to add the CSM to the previous Staking Router version,
+but it's supposed to be added to the new one.
+
+Please Make sure that `test-local` or `test-integration` are running against the correct protocol setup:
+
+```bash
+export CHAIN=devnet
+```
+
 ## Make a gas report
 
 ```bash
@@ -68,12 +79,6 @@ Whenever you install new libraries using yarn, make sure to update your
 
 ```bash
 just deploy-local
-```
-
-It's possible to specify a chain
-
-```bash
-CHAIN=holesky just deploy-local
 ```
 
 The result of deployment is `./out/latest.json` deployment config, which is required for integration testing
