@@ -4,7 +4,6 @@
 pragma solidity 0.8.24;
 
 import "forge-std/Script.sol";
-import "forge-std/console.sol";
 import { DeploymentFixtures } from "test/helpers/Fixtures.sol";
 import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
 import { IBurner } from "../../src/interfaces/IBurner.sol";
@@ -22,7 +21,6 @@ contract SimulateVote is Script, DeploymentFixtures {
             0
         );
         vm.label(agent, "agent");
-        console.logUint(agent.balance);
 
         address csmAdmin = payable(
             csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0)
@@ -34,26 +32,8 @@ contract SimulateVote is Script, DeploymentFixtures {
         );
         vm.label(burnerAdmin, "burnerAdmin");
 
-        vm.rpc(
-            "anvil_setBalance",
-            string.concat(
-                '["',
-                vm.toString(csmAdmin),
-                '", ',
-                "1000000000000000000",
-                "]"
-            )
-        );
-        vm.rpc(
-            "anvil_setBalance",
-            string.concat(
-                '["',
-                vm.toString(burnerAdmin),
-                '", ',
-                "1000000000000000000",
-                "]"
-            )
-        );
+        _setBalance(csmAdmin, "1000000000000000000");
+        _setBalance(burnerAdmin, "1000000000000000000");
 
         vm.startBroadcast(csmAdmin);
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), agent);
@@ -92,5 +72,12 @@ contract SimulateVote is Script, DeploymentFixtures {
         csm.revokeRole(csm.RESUME_ROLE(), agent);
         // 7. Update initial epoch
         hashConsensus.updateInitialEpoch(47480);
+    }
+
+    function _setBalance(address account, string memory balance) internal {
+        vm.rpc(
+            "anvil_setBalance",
+            string.concat('["', vm.toString(account), '", ', balance, "]")
+        );
     }
 }

@@ -77,7 +77,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
             _maxDepositsPerBlock: 30,
             _minDepositBlockDistance: 25
         });
-        return ids[ids.length - 1] + 1;
+        return ids.length + 1;
     }
 
     function addNodeOperator(
@@ -126,15 +126,14 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
 
     function test_RouterDeposit() public {
         address nodeOperatorManager = nextAddress();
-        uint256 noId = addNodeOperator(nodeOperatorManager, 2);
-
+        uint256 noId = addNodeOperator(nodeOperatorManager, 1);
+        (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
         hugeDeposit();
 
         vm.prank(locator.depositSecurityModule());
-        lido.deposit(1, moduleId, "");
-        (, , , , , , uint256 totalDepositedValidators, ) = csm
-            .getNodeOperatorSummary(noId);
-        assertEq(totalDepositedValidators, 1);
+        lido.deposit(totalDepositableKeys, moduleId, "");
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalDepositedKeys, 1);
     }
 
     function test_routerReportRewardsMinted() public {
@@ -189,9 +188,8 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         vm.prank(agent);
         stakingRouter.updateRefundedValidatorsCount(moduleId, noId, 1);
 
-        (, , , uint256 refundedValidatorsCount, , , , ) = csm
-            .getNodeOperatorSummary(noId);
-        assertEq(refundedValidatorsCount, 1);
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.refundedValidatorsCount, 1);
     }
 
     function test_reportStakingModuleExitedValidatorsCountByNodeOperator()
@@ -202,8 +200,9 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
 
         hugeDeposit();
 
+        (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
         vm.prank(locator.depositSecurityModule());
-        lido.deposit(3, moduleId, "");
+        lido.deposit(totalDepositableKeys - 2, moduleId, "");
 
         uint256 exited = 1;
         vm.prank(agent);
@@ -213,9 +212,8 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
             bytes.concat(bytes16(uint128(exited)))
         );
 
-        (, , , , , uint256 totalExitedValidators, , ) = csm
-            .getNodeOperatorSummary(noId);
-        assertEq(totalExitedValidators, exited);
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalExitedKeys, exited);
     }
 
     function test_reportStakingModuleStuckValidatorsCountByNodeOperator()
@@ -226,8 +224,9 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
 
         hugeDeposit();
 
+        (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
         vm.prank(locator.depositSecurityModule());
-        lido.deposit(3, moduleId, "");
+        lido.deposit(totalDepositableKeys - 2, moduleId, "");
 
         uint256 stuck = 1;
         vm.prank(agent);
@@ -237,9 +236,8 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
             bytes.concat(bytes16(uint128(stuck)))
         );
 
-        (, , uint256 stuckValidatorsCount, , , , , ) = csm
-            .getNodeOperatorSummary(noId);
-        assertEq(stuckValidatorsCount, stuck);
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.stuckValidatorsCount, stuck);
     }
 
     function test_getStakingModuleSummary() public {
@@ -252,7 +250,8 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
 
         hugeDeposit();
 
-        uint256 keysToDeposit = 3;
+        (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
+        uint256 keysToDeposit = totalDepositableKeys - 2;
         vm.prank(locator.depositSecurityModule());
         lido.deposit(keysToDeposit, moduleId, "");
 
@@ -287,7 +286,8 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
 
         hugeDeposit();
 
-        uint256 keysToDeposit = 3;
+        (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
+        uint256 keysToDeposit = totalDepositableKeys - 2;
         vm.prank(locator.depositSecurityModule());
         lido.deposit(keysToDeposit, moduleId, "");
 
@@ -309,14 +309,13 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
 
         IStakingRouter.NodeOperatorSummary memory summary = stakingRouter
             .getNodeOperatorSummary(moduleId, noId);
-        // TODO: Uncomment. Commented due to interface mismatch
-        // assertEq(summary.isTargetLimitActive, 0);
-        // assertEq(summary.targetValidatorsCount, 0);
+        assertEq(summary.targetLimitMode, 0);
+        assertEq(summary.targetValidatorsCount, 0);
         assertEq(summary.stuckValidatorsCount, stuck);
         assertEq(summary.refundedValidatorsCount, 0);
         assertEq(summary.stuckPenaltyEndTimestamp, 0);
         assertEq(summary.totalExitedValidators, exited);
-        assertEq(summary.totalDepositedValidators, keysToDeposit);
+        assertEq(summary.totalDepositedValidators, keysCount - 2);
         assertEq(summary.depositableValidatorsCount, 0); // due to stuck != 0
     }
 
@@ -326,8 +325,9 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
 
         hugeDeposit();
 
+        (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
         vm.prank(locator.depositSecurityModule());
-        lido.deposit(6, moduleId, "");
+        lido.deposit(totalDepositableKeys - 4, moduleId, "");
 
         uint256 exited = 2;
         vm.prank(agent);
@@ -371,17 +371,8 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
             correction
         );
 
-        (
-            ,
-            ,
-            uint256 stuckValidatorsCount,
-            ,
-            ,
-            uint256 totalExitedValidators,
-            ,
-
-        ) = csm.getNodeOperatorSummary(noId);
-        assertEq(stuckValidatorsCount, unsafeStuck);
-        assertEq(totalExitedValidators, unsafeExited);
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.stuckValidatorsCount, unsafeStuck);
+        assertEq(no.totalExitedKeys, unsafeExited);
     }
 }

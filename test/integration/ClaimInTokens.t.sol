@@ -33,10 +33,12 @@ contract ClaimIntegrationTest is
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment(env.DEPLOY_CONFIG);
 
-        vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
-        csm.grantRole(csm.RESUME_ROLE(), address(this));
-        vm.stopPrank();
-        if (csm.isPaused()) csm.resume();
+        if (csm.isPaused()) {
+            vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
+            csm.grantRole(csm.RESUME_ROLE(), address(this));
+            vm.stopPrank();
+            csm.resume();
+        }
 
         vm.startPrank(
             feeDistributor.getRoleMember(feeDistributor.DEFAULT_ADMIN_ROLE(), 0)

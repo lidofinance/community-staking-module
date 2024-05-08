@@ -87,9 +87,9 @@ Integration tests should pass either before a vote, or after
 
 ```bash
 just deploy-local
+export RPC_URL=http://127.0.0.1:8545
+export DEPLOY_CONFIG=./out/latest.json
 
-RPC_URL=http://127.0.0.1:8545 \
-DEPLOY_CONFIG=./out/latest.json \
 just test-integration
 ```
 
@@ -97,10 +97,10 @@ There also fork helper scripts to prepare a fork state for e.g. UI testing purpo
 
 ```bash
 just deploy-local
-just simulate-vote
+export RPC_URL=http://127.0.0.1:8545
+export DEPLOY_CONFIG=./out/latest.json
 
-RPC_URL=http://127.0.0.1:8545 \
-DEPLOY_CONFIG=./out/latest.json \
+just simulate-vote
 just test-integration
 ```
 
