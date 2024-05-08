@@ -115,6 +115,7 @@ abstract contract CSBondCore {
         address from,
         uint256 nodeOperatorId
     ) internal returns (uint256) {
+        if (msg.value == 0) return 0;
         uint256 shares = LIDO.submit{ value: msg.value }({
             _referal: address(0)
         });
@@ -129,6 +130,7 @@ abstract contract CSBondCore {
         uint256 nodeOperatorId,
         uint256 amount
     ) internal returns (uint256 shares) {
+        if (amount == 0) return 0;
         shares = _sharesByEth(amount);
         LIDO.transferSharesFrom(from, address(this), shares);
         _increaseBond(nodeOperatorId, shares);
@@ -141,6 +143,7 @@ abstract contract CSBondCore {
         uint256 nodeOperatorId,
         uint256 amount
     ) internal returns (uint256) {
+        if (amount == 0) return 0;
         WSTETH.transferFrom(from, address(this), amount);
         uint256 stETHAmount = WSTETH.unwrap(amount);
         uint256 shares = _sharesByEth(stETHAmount);
