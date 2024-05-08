@@ -2807,6 +2807,28 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), sharesToDeposit);
     }
 
+    function test_depositETH_zeroAmount() public {
+        vm.prank(address(stakingModule));
+        accounting.depositETH{ value: 0 ether }(user, 0);
+
+        assertEq(
+            address(stakingModule).balance,
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            0,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            0,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), 0);
+    }
+
     function test_depositStETH() public {
         vm.deal(user, 32 ether);
         vm.prank(user);
@@ -2844,6 +2866,39 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             "bond manager shares should be equal to deposited shares"
         );
         assertEq(accounting.totalBondShares(), sharesToDeposit);
+    }
+
+    function test_depositStETH_zeroAmount() public {
+        vm.prank(address(stakingModule));
+        accounting.depositStETH(
+            user,
+            0,
+            0 ether,
+            CSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            stETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            0,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            0,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), 0);
     }
 
     function test_depositWstETH() public {
@@ -2886,6 +2941,39 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             "bond manager shares should be equal to deposited shares"
         );
         assertEq(accounting.totalBondShares(), sharesToDeposit);
+    }
+
+    function test_depositWstETH_zeroAmount() public {
+        vm.prank(address(stakingModule));
+        accounting.depositWstETH(
+            user,
+            0,
+            0 ether,
+            CSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            wstETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            0,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            0,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), 0);
     }
 
     function test_depositStETH_withPermit() public {
