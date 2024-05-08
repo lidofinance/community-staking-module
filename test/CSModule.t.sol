@@ -3157,7 +3157,10 @@ contract CsmRemoveKeys is CSMCommon {
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
         for (uint256 i = 0; i < entries.length; i++) {
-            assertNotEq(entries[i].topics[0], accounting.chargeFee.selector);
+            assertNotEq(
+                entries[i].topics[0],
+                CSModule.KeyRemovalChargeApplied.selector
+            );
         }
     }
 }
