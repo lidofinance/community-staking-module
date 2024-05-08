@@ -52,7 +52,7 @@ contract CSAccounting is
         keccak256("RESET_BOND_CURVE_ROLE"); // 0xb5dffea014b759c493d63b1edaceb942631d6468998125e1b4fe427c99082134
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE"); // 0xb3e25b5404b87e5a838579cb5d7481d61ad96ee284d38ec1e97c07ba64e7f6fc
 
-    ICSModule private immutable CSM;
+    ICSModule public immutable CSM;
     ICSFeeDistributor public feeDistributor;
     address public chargeRecipient;
 
@@ -229,6 +229,7 @@ contract CSAccounting is
                 permit.s
             );
         }
+        // TODO: Return is unused
         shares = CSBondCore._depositStETH(from, nodeOperatorId, stETHAmount);
     }
 
@@ -261,6 +262,7 @@ contract CSAccounting is
                 permit.s
             );
         }
+        // TODO: Return is unused
         shares = CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
     }
 

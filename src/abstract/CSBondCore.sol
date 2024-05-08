@@ -154,8 +154,10 @@ abstract contract CSBondCore {
 
     function _increaseBond(uint256 nodeOperatorId, uint256 shares) internal {
         CSBondCoreStorage storage $ = _getCSBondCoreStorage();
-        $.bondShares[nodeOperatorId] += shares;
-        $.totalBondShares += shares;
+        unchecked {
+            $.bondShares[nodeOperatorId] += shares;
+            $.totalBondShares += shares;
+        }
     }
 
     /// @dev Claim Node Operator's excess bond shares (stETH) in ETH by requesting withdrawal from the protocol
