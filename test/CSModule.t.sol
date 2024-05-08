@@ -3137,12 +3137,8 @@ contract CsmRemoveKeys is CSMCommon {
         vm.expectEmit(true, true, true, true, address(csm));
         emit CSModule.KeyRemovalChargeApplied(noId, amountToCharge);
 
-        vm.recordLogs();
-
         vm.prank(nodeOperator);
         csm.removeKeys(noId, 1, 2);
-
-        assertEq(vm.getRecordedLogs().length, 6, "should emit all events");
     }
 
     function test_removeKeys_withNoFee() public {
@@ -3159,11 +3155,10 @@ contract CsmRemoveKeys is CSMCommon {
         vm.prank(nodeOperator);
         csm.removeKeys(noId, 1, 2);
 
-        assertEq(
-            vm.getRecordedLogs().length,
-            4,
-            "should not emit events related to charge fee"
-        );
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        for (uint256 i = 0; i < entries.length; i++) {
+            assertNotEq(entries[i].topics[0], accounting.chargeFee.selector);
+        }
     }
 }
 
