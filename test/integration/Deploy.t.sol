@@ -9,10 +9,6 @@ import "../../src/CSFeeDistributor.sol";
 import "../../src/CSVerifier.sol";
 import { HashConsensus } from "../../src/lib/base-oracle/HashConsensus.sol";
 import { Test } from "forge-std/Test.sol";
-import { DeployBase } from "../../script/DeployBase.s.sol";
-import { DeployMainnetish } from "../../script/DeployMainnetish.s.sol";
-import { DeployHolesky } from "../../script/DeployHolesky.s.sol";
-import { DeployHoleskyDevnet } from "../../script/DeployHoleskyDevnet.s.sol";
 import { Vm } from "forge-std/Vm.sol";
 import "../helpers/Fixtures.sol";
 

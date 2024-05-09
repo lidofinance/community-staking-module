@@ -6,16 +6,16 @@ pragma solidity 0.8.24;
 import { DeployBase } from "./DeployBase.s.sol";
 import { pack } from "../src/lib/GIndex.sol";
 
-contract DeployHoleskyDevnet is DeployBase {
-    constructor() DeployBase("holesky-devnet", 17000) {
+contract DeployMainnet is DeployBase {
+    constructor() DeployBase("mainnet", 1) {
         // Lido addresses
-        config.lidoLocatorAddress = 0x5bF85BadDac33F91B38617c18a3F829f912Ca060;
-        config.votingAddress = 0xd8B7F4EFd16e913648C6E9B74772BC3C38203301;
+        config.lidoLocatorAddress = 0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb;
+        config.votingAddress = 0x2e59A20f205bB85a89C53f1936454680651E618e;
         // Oracle
         config.secondsPerSlot = 12;
         config.slotsPerEpoch = 32;
-        config.clGenesisTime = 1695902400;
-        config.oracleReportEpochsPerFrame = 225; // 1 day
+        config.clGenesisTime = 1606824023;
+        config.oracleReportEpochsPerFrame = 225 * 28; // 28 days
         config.fastLaneLengthSlots = 0;
         config.consensusVersion = 1;
         config.performanceThresholdBP = 9500;
@@ -25,7 +25,7 @@ contract DeployHoleskyDevnet is DeployBase {
         config.gIFirstWithdrawal = pack(0xe1c0, 4);
         config.gIFirstValidator = pack(0x560000000000, 40);
 
-        config.verifierSupportedEpoch = 29696;
+        config.verifierSupportedEpoch = 269568;
         // Accounting
         config.bondCurve = new uint256[](2);
         config.bondCurve[0] = 2 ether;
