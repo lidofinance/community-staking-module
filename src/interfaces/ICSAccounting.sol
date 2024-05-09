@@ -67,20 +67,23 @@ interface ICSAccounting is ICSBondCore, ICSBondCurve, ICSBondLock {
     function claimRewardsStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount,
+        address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
     ) external;
 
     function claimRewardsWstETH(
         uint256 nodeOperatorId,
-        uint256 stETHAmount,
+        uint256 wstETHAmount,
+        address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
     ) external;
 
     function requestRewardsETH(
         uint256 nodeOperatorId,
-        uint256 stETHAmount,
+        uint256 ethAmount,
+        address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
     ) external;

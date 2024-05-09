@@ -207,14 +207,6 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities, PermitTokenBase {
             ),
             abi.encode(returnValue)
         );
-        vm.mockCall(
-            address(stakingModule),
-            abi.encodeWithSelector(
-                ICSModule.getNodeOperatorRewardAddress.selector,
-                0
-            ),
-            abi.encode(address(user))
-        );
     }
 
     function mock_requestWithdrawals(uint256[] memory returnValue) internal {
@@ -341,19 +333,37 @@ contract CSAccountingPauseAffectingTest is CSAccountingBaseTest {
     function test_claimRewardsStETH_RevertWhen_Paused() public {
         vm.prank(address(stakingModule));
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        accounting.claimRewardsStETH(0, 1 ether, 1 ether, new bytes32[](1));
+        accounting.claimRewardsStETH(
+            0,
+            1 ether,
+            address(0),
+            1 ether,
+            new bytes32[](1)
+        );
     }
 
     function test_claimRewardsWstETH_RevertWhen_Paused() public {
         vm.prank(address(stakingModule));
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        accounting.claimRewardsWstETH(0, 1 ether, 1 ether, new bytes32[](1));
+        accounting.claimRewardsWstETH(
+            0,
+            1 ether,
+            address(0),
+            1 ether,
+            new bytes32[](1)
+        );
     }
 
     function test_requestRewardsETH_RevertWhen_Paused() public {
         vm.prank(address(stakingModule));
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        accounting.requestRewardsETH(0, 1 ether, 1 ether, new bytes32[](1));
+        accounting.requestRewardsETH(
+            0,
+            1 ether,
+            address(0),
+            1 ether,
+            new bytes32[](1)
+        );
     }
 }
 
@@ -1214,6 +1224,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1252,6 +1263,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1291,6 +1303,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1331,6 +1344,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1370,6 +1384,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1409,6 +1424,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1446,6 +1462,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1484,6 +1501,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1522,6 +1540,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1561,6 +1580,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1598,6 +1618,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1638,6 +1659,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             0.05 ether,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1671,6 +1693,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             0,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1698,6 +1721,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             0,
             new bytes32[](0)
         );
@@ -1726,6 +1750,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1745,6 +1770,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1789,6 +1815,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1833,6 +1860,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1878,6 +1906,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1922,6 +1951,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -1966,6 +1996,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2009,6 +2040,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2053,6 +2085,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2097,6 +2130,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2141,6 +2175,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2183,6 +2218,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2230,6 +2266,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             sharesToClaim,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2273,6 +2310,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             0,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2300,6 +2338,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             0,
             new bytes32[](0)
         );
@@ -2328,6 +2367,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2352,6 +2392,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2381,6 +2422,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2411,6 +2453,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2441,6 +2484,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2471,6 +2515,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2502,6 +2547,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2532,6 +2578,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2563,6 +2610,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2594,6 +2642,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2625,6 +2674,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2655,6 +2705,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2686,6 +2737,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             0.05 ether,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2714,6 +2766,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             0,
+            address(user),
             leaf.shares,
             leaf.proof
         );
@@ -2741,6 +2794,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             0,
             new bytes32[](0)
         );
@@ -2769,6 +2823,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         accounting.requestRewardsETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
+            address(user),
             leaf.shares,
             leaf.proof
         );

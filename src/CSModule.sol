@@ -567,12 +567,13 @@ contract CSModule is
         _onlyExistingNodeOperator(nodeOperatorId);
         _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
-        accounting.claimRewardsStETH(
-            nodeOperatorId,
-            stETHAmount,
-            cumulativeFeeShares,
-            rewardsProof
-        );
+        accounting.claimRewardsStETH({
+            nodeOperatorId: nodeOperatorId,
+            stETHAmount: stETHAmount,
+            rewardAddress: _nodeOperators[nodeOperatorId].rewardAddress,
+            cumulativeFeeShares: cumulativeFeeShares,
+            rewardsProof: rewardsProof
+        });
 
         // Due to possible missing bond compensation nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
@@ -598,12 +599,13 @@ contract CSModule is
         _onlyExistingNodeOperator(nodeOperatorId);
         _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
-        accounting.claimRewardsWstETH(
-            nodeOperatorId,
-            wstETHAmount,
-            cumulativeFeeShares,
-            rewardsProof
-        );
+        accounting.claimRewardsWstETH({
+            nodeOperatorId: nodeOperatorId,
+            wstETHAmount: wstETHAmount,
+            rewardAddress: _nodeOperators[nodeOperatorId].rewardAddress,
+            cumulativeFeeShares: cumulativeFeeShares,
+            rewardsProof: rewardsProof
+        });
 
         // Due to possible missing bond compensation nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
@@ -632,12 +634,13 @@ contract CSModule is
         _onlyExistingNodeOperator(nodeOperatorId);
         _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
-        accounting.requestRewardsETH(
-            nodeOperatorId,
-            ethAmount,
-            cumulativeFeeShares,
-            rewardsProof
-        );
+        accounting.requestRewardsETH({
+            nodeOperatorId: nodeOperatorId,
+            ethAmount: ethAmount,
+            rewardAddress: _nodeOperators[nodeOperatorId].rewardAddress,
+            cumulativeFeeShares: cumulativeFeeShares,
+            rewardsProof: rewardsProof
+        });
 
         // Due to possible missing bond compensation nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
@@ -1367,16 +1370,6 @@ contract CSModule is
         _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         return no.totalAddedKeys - no.totalWithdrawnKeys;
-    }
-
-    /// @notice Get Node Operator reward address
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @return Reward address
-    function getNodeOperatorRewardAddress(
-        uint256 nodeOperatorId
-    ) external view returns (address) {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        return _nodeOperators[nodeOperatorId].rewardAddress;
     }
 
     /// @notice Get Node Operator summary
