@@ -38,7 +38,7 @@ contract RecoverIntegrationTest is
         csm.grantRole(csm.RESUME_ROLE(), address(this));
         csm.grantRole(csm.RECOVERER_ROLE(), recoverer);
         vm.stopPrank();
-        csm.resume();
+        if (csm.isPaused()) csm.resume();
 
         vm.startPrank(
             accounting.getRoleMember(accounting.DEFAULT_ADMIN_ROLE(), 0)

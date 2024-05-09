@@ -115,7 +115,8 @@ jobs:
       - name: Run local integration tests
         run: just test-local
         env:
-          RPC_URL: ${{ secrets.RPC_URL }}
+          CHAIN: devnet
+          RPC_URL: ${{ secrets.RPC_URL_HOLESKY }}
 
       # TODO: Enable later
       # - name: Check gas report

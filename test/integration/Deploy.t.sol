@@ -22,10 +22,12 @@ contract TestDeployment is Test, DeploymentFixtures {
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment(env.DEPLOY_CONFIG);
 
-        vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
-        csm.grantRole(csm.RESUME_ROLE(), address(this));
-        vm.stopPrank();
-        csm.resume();
+        if (csm.isPaused()) {
+            vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
+            csm.grantRole(csm.RESUME_ROLE(), address(this));
+            vm.stopPrank();
+            csm.resume();
+        }
     }
 
     function test_init() public {
