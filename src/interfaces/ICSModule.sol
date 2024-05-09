@@ -11,7 +11,6 @@ struct NodeOperator {
     address proposedManagerAddress;
     address rewardAddress;
     address proposedRewardAddress;
-    bool active;
     uint256 targetLimit;
     uint8 targetLimitMode;
     // TODO: keys could be packed into uint32

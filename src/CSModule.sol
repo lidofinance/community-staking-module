@@ -32,6 +32,7 @@ contract CSModule is
 {
     using QueueLib for QueueLib.Queue;
 
+    // TODO: Remove hashes
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
     bytes32 public constant MODULE_MANAGER_ROLE =
@@ -45,11 +46,11 @@ contract CSModule is
     bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE"); // 0x0ce23c3e399818cfee81a7ab0880f714e53d7672b08df0fa62f2843416e1ea09
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE"); // 0xb3e25b5404b87e5a838579cb5d7481d61ad96ee284d38ec1e97c07ba64e7f6fc
 
-    uint256 public constant DEPOSIT_SIZE = 32 ether;
-    uint256 private constant MIN_SLASHING_PENALTY_QUOTIENT = 32; // TODO: consider to move to immutable variable
+    uint256 public constant DEPOSIT_SIZE = 32 ether; // TODO: Make private
+    uint256 private constant MIN_SLASHING_PENALTY_QUOTIENT = 32; // TODO: consider to move to state variable due to EIP-7251
     uint256 public constant INITIAL_SLASHING_PENALTY =
         DEPOSIT_SIZE / MIN_SLASHING_PENALTY_QUOTIENT;
-    uint8 private constant FORCED_TARGET_LIMIT_MODE_ID = 2;
+    uint8 private constant FORCED_TARGET_LIMIT_MODE_ID = 2; // TODO: Add link to SR docs
 
     uint256 public immutable EL_REWARDS_STEALING_FINE;
     uint256
@@ -59,7 +60,7 @@ contract CSModule is
 
     bool public publicRelease;
     uint256 public keyRemovalCharge;
-    QueueLib.Queue public queue; // TODO: depositQueue? public?
+    QueueLib.Queue public queue; // TODO: Rename to depositQueue
 
     ICSAccounting public accounting;
     ICSEarlyAdoption public earlyAdoption;
@@ -78,7 +79,7 @@ contract CSModule is
     uint256 private _totalAddedValidators;
     uint256 private _depositableValidatorsCount;
 
-    TransientUintUintMap private _queueLookup;
+    TransientUintUintMap private _queueLookup; // TODO: Add explainer comment
 
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
@@ -171,7 +172,7 @@ contract CSModule is
 
     constructor(
         bytes32 moduleType,
-        uint256 elStealingFine,
+        uint256 elStealingFine, // TODO: rename elRewardsStealingFine
         uint256 maxKeysPerOperatorEA,
         address lidoLocator
     ) {
@@ -181,6 +182,7 @@ contract CSModule is
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
     }
 
+    // TODO: Add keyRemovalCharge setting
     function initialize(
         address _accounting,
         address _earlyAdoption,
@@ -254,7 +256,7 @@ contract CSModule is
             rewardAddress,
             referrer
         );
-        _checkEarlyAdoptionEligibility(nodeOperatorId, eaProof);
+        _processEarlyAdoptionData(nodeOperatorId, eaProof);
 
         if (
             msg.value !=
@@ -266,10 +268,10 @@ contract CSModule is
             revert InvalidAmount();
         }
 
+        accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
+
         // Reverts if keysCount is 0
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-
-        accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
 
         // Due to new bonded keys nonce update is required and normalize queue is required
         _updateDepositableValidatorsCount({
@@ -305,10 +307,7 @@ contract CSModule is
             rewardAddress,
             referrer
         );
-        _checkEarlyAdoptionEligibility(nodeOperatorId, eaProof);
-
-        // Reverts if keysCount is 0
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
+        _processEarlyAdoptionData(nodeOperatorId, eaProof);
 
         {
             uint256 amount = accounting.getBondAmountByKeysCount(
@@ -317,6 +316,9 @@ contract CSModule is
             );
             accounting.depositStETH(msg.sender, nodeOperatorId, amount, permit);
         }
+
+        // Reverts if keysCount is 0
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
 
         // Due to new bonded keys nonce update is required and normalize queue is required
         _updateDepositableValidatorsCount({
@@ -352,10 +354,7 @@ contract CSModule is
             rewardAddress,
             referrer
         );
-        _checkEarlyAdoptionEligibility(nodeOperatorId, eaProof);
-
-        // Reverts if keysCount is 0
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
+        _processEarlyAdoptionData(nodeOperatorId, eaProof);
 
         {
             uint256 amount = accounting.getBondAmountByKeysCountWstETH(
@@ -369,6 +368,9 @@ contract CSModule is
                 permit
             );
         }
+
+        // Reverts if keysCount is 0
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
 
         // Due to new bonded keys nonce update is required and normalize queue is required
         _updateDepositableValidatorsCount({
@@ -400,10 +402,10 @@ contract CSModule is
             revert InvalidAmount();
         }
 
+        accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
+
         // Reverts if keysCount is 0
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-
-        accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
 
         // Due to new bonded keys nonce update is required and normalize queue is required
         _updateDepositableValidatorsCount({
@@ -436,10 +438,10 @@ contract CSModule is
             keysCount
         );
 
+        accounting.depositStETH(msg.sender, nodeOperatorId, amount, permit);
+
         // Reverts if keysCount is 0
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-
-        accounting.depositStETH(msg.sender, nodeOperatorId, amount, permit);
 
         // Due to new bonded keys nonce update is required and normalize queue is required
         _updateDepositableValidatorsCount({
@@ -472,10 +474,10 @@ contract CSModule is
             keysCount
         );
 
+        accounting.depositWstETH(msg.sender, nodeOperatorId, amount, permit);
+
         // Reverts if keysCount is 0
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-
-        accounting.depositWstETH(msg.sender, nodeOperatorId, amount, permit);
 
         // Due to new bonded keys nonce update is required and normalize queue is required
         _updateDepositableValidatorsCount({
@@ -1510,7 +1512,7 @@ contract CSModule is
 
     /// @notice Get total number of active Node Operators
     function getActiveNodeOperatorsCount() external view returns (uint256) {
-        return _activeNodeOperatorsCount;
+        return _nodeOperatorsCount;
     }
 
     /// @notice Get Node Operator active status
@@ -1518,7 +1520,7 @@ contract CSModule is
     function getNodeOperatorIsActive(
         uint256 nodeOperatorId
     ) external view returns (bool) {
-        return _nodeOperators[nodeOperatorId].active;
+        return nodeOperatorId < _nodeOperatorsCount;
     }
 
     /// @notice Get IDs of Node Operators
@@ -1540,7 +1542,9 @@ contract CSModule is
     }
 
     function _incrementModuleNonce() internal {
-        _nonce++;
+        unchecked {
+            _nonce++;
+        }
     }
 
     function _createNodeOperator(
@@ -1557,11 +1561,9 @@ contract CSModule is
         no.rewardAddress = rewardAddress == address(0)
             ? msg.sender
             : rewardAddress;
-        no.active = true;
 
         unchecked {
             _nodeOperatorsCount++;
-            _activeNodeOperatorsCount++;
         }
 
         emit NodeOperatorAdded(id, no.managerAddress, no.rewardAddress);
@@ -1660,7 +1662,7 @@ contract CSModule is
     }
 
     /// @notice It's possible to join with proof even after public release to get beneficial bond curve
-    function _checkEarlyAdoptionEligibility(
+    function _processEarlyAdoptionData(
         uint256 nodeOperatorId,
         bytes32[] calldata proof
     ) internal {
@@ -1741,8 +1743,6 @@ contract CSModule is
 
         uint256 newCount = no.totalVettedKeys - no.totalDepositedKeys;
 
-        // NOTE: Probably this check can be extracted to a separate function to reduce gas costs for the methods
-        // requiring only it.
         uint256 unbondedKeys = accounting.getUnbondedKeysCount(nodeOperatorId);
         if (unbondedKeys > newCount) {
             newCount = 0;
@@ -1752,16 +1752,16 @@ contract CSModule is
             }
         }
 
-        if (no.stuckValidatorsCount > 0) {
+        if (no.stuckValidatorsCount > 0 && newCount > 0) {
             newCount = 0;
         }
 
-        if (no.targetLimitMode > 0) {
-            uint256 activeValidators = no.totalDepositedKeys -
+        if (no.targetLimitMode > 0 && newCount > 0) {
+            uint256 nonWithdrawnValidators = no.totalDepositedKeys -
                 no.totalWithdrawnKeys;
             newCount = Math.min(
-                no.targetLimit > activeValidators
-                    ? no.targetLimit - activeValidators
+                no.targetLimit > nonWithdrawnValidators
+                    ? no.targetLimit - nonWithdrawnValidators
                     : 0,
                 newCount
             );
@@ -1769,12 +1769,12 @@ contract CSModule is
 
         if (no.depositableValidatorsCount != newCount) {
             // Updating the global counter.
-            _depositableValidatorsCount =
-                _depositableValidatorsCount -
-                no.depositableValidatorsCount +
-                newCount;
-            // TODO: think about event emitting for depositableValidatorsCount changing.
-            // Note: it also changes outisde this method
+            unchecked {
+                _depositableValidatorsCount =
+                    _depositableValidatorsCount -
+                    no.depositableValidatorsCount +
+                    newCount;
+            }
             no.depositableValidatorsCount = newCount;
             if (incrementNonceIfUpdated) {
                 _incrementModuleNonce();
@@ -1791,6 +1791,7 @@ contract CSModule is
         uint256 enqueued = no.enqueuedCount;
 
         if (enqueued < depositable) {
+            // TODO: Consider shrinking unchecked
             unchecked {
                 uint256 count = depositable - enqueued;
                 Batch item = createBatch(nodeOperatorId, count);
