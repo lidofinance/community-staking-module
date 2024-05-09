@@ -880,7 +880,7 @@ contract CSModule is
     /// @notice Called by Staking Router
     /// @param nodeOperatorIds IDs of the Node Operators to decrease totalVettedKeys for
     /// @param vettedKeysByOperator Corresponding values for totalVettedKeys decrease
-    function decreaseOperatorVettedKeys(
+    function decreaseVettedSigningKeysCount(
         uint256[] calldata nodeOperatorIds,
         uint256[] calldata vettedKeysByOperator
     ) external onlyRole(STAKING_ROUTER_ROLE) {
