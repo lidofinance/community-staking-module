@@ -3119,20 +3119,49 @@ contract CsmRemoveKeys is CSMCommon {
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 0 });
     }
 
-    function testRemoveKeys_Charge() public {
+    function test_removeKeys_chargeFee() public {
         uint256 noId = createNodeOperator(3);
+
+        uint256 amountToCharge = csm.keyRemovalCharge() * 2;
 
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
                 accounting.chargeFee.selector,
                 noId,
-                csm.keyRemovalCharge() * 2
+                amountToCharge
             ),
             1
         );
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.KeyRemovalChargeApplied(noId, amountToCharge);
+
         vm.prank(nodeOperator);
         csm.removeKeys(noId, 1, 2);
+    }
+
+    function test_removeKeys_withNoFee() public {
+        bytes32 role = csm.MODULE_MANAGER_ROLE();
+        vm.prank(admin);
+        csm.grantRole(role, admin);
+        vm.prank(admin);
+        csm.setKeyRemovalCharge(0);
+
+        uint256 noId = createNodeOperator(3);
+
+        vm.recordLogs();
+
+        vm.prank(nodeOperator);
+        csm.removeKeys(noId, 1, 2);
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        for (uint256 i = 0; i < entries.length; i++) {
+            assertNotEq(
+                entries[i].topics[0],
+                CSModule.KeyRemovalChargeApplied.selector
+            );
+        }
     }
 }
 

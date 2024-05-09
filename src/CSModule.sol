@@ -1638,8 +1638,10 @@ contract CSModule is
         // the queue from the empty batches related to the Node Operator. It's possible to have multiple batches with only one
         // key in it, so it means the DAO should be able to cover removal costs for as much batches as keys removed in this case.
         uint256 amountToCharge = keyRemovalCharge * keysCount;
-        accounting.chargeFee(nodeOperatorId, amountToCharge);
-        emit KeyRemovalChargeApplied(nodeOperatorId, amountToCharge);
+        if (amountToCharge != 0) {
+            accounting.chargeFee(nodeOperatorId, amountToCharge);
+            emit KeyRemovalChargeApplied(nodeOperatorId, amountToCharge);
+        }
 
         no.totalAddedKeys = newTotalSigningKeys;
         emit TotalSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
