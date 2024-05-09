@@ -44,14 +44,25 @@ interface IStakingRouter {
         uint256 treasuryFee,
         address setBy
     );
+    event StakingModuleMaxDepositsPerBlockSet(
+        uint256 indexed stakingModuleId,
+        uint256 maxDepositsPerBlock,
+        address setBy
+    );
+    event StakingModuleMinDepositBlockDistanceSet(
+        uint256 indexed stakingModuleId,
+        uint256 minDepositBlockDistance,
+        address setBy
+    );
+    event StakingModuleShareLimitSet(
+        uint256 indexed stakingModuleId,
+        uint256 stakeShareLimit,
+        uint256 priorityExitShareThreshold,
+        address setBy
+    );
     event StakingModuleStatusSet(
         uint256 indexed stakingModuleId,
         uint8 status,
-        address setBy
-    );
-    event StakingModuleTargetShareSet(
-        uint256 indexed stakingModuleId,
-        uint256 targetShare,
         address setBy
     );
     event StakingRouterETHDeposited(
@@ -78,6 +89,8 @@ interface IStakingRouter {
     error ExitedValidatorsCountCannotDecrease();
     error InvalidContractVersionIncrement();
     error InvalidDepositsValue(uint256 etherValue, uint256 depositsCount);
+    error InvalidMinDepositBlockDistance();
+    error InvalidPriorityExitShareThreshold();
     error InvalidPublicKeysBatchLength(uint256 actual, uint256 expected);
     error InvalidReportData(uint256 code);
     error InvalidSignaturesBatchLength(uint256 actual, uint256 expected);
@@ -88,7 +101,6 @@ interface IStakingRouter {
     );
     error StakingModuleAddressExists();
     error StakingModuleNotActive();
-    error StakingModuleNotPaused();
     error StakingModuleStatusTheSame();
     error StakingModuleUnregistered();
     error StakingModuleWrongName();
@@ -104,7 +116,7 @@ interface IStakingRouter {
     error ZeroAddress(string field);
 
     struct NodeOperatorSummary {
-        uint8 targetLimitMode;
+        uint256 targetLimitMode;
         uint256 targetValidatorsCount;
         uint256 stuckValidatorsCount;
         uint256 refundedValidatorsCount;
@@ -125,12 +137,15 @@ interface IStakingRouter {
         address stakingModuleAddress;
         uint16 stakingModuleFee;
         uint16 treasuryFee;
-        uint16 targetShare;
+        uint16 stakeShareLimit;
         uint8 status;
         string name;
         uint64 lastDepositAt;
         uint256 lastDepositBlock;
         uint256 exitedValidatorsCount;
+        uint16 priorityExitShareThreshold;
+        uint64 maxDepositsPerBlock;
+        uint64 minDepositBlockDistance;
     }
 
     struct StakingModuleSummary {
@@ -176,9 +191,7 @@ interface IStakingRouter {
 
     function STAKING_MODULE_MANAGE_ROLE() external view returns (bytes32);
 
-    function STAKING_MODULE_PAUSE_ROLE() external view returns (bytes32);
-
-    function STAKING_MODULE_RESUME_ROLE() external view returns (bytes32);
+    function STAKING_MODULE_UNVETTING_ROLE() external view returns (bytes32);
 
     function TOTAL_BASIS_POINTS() external view returns (uint256);
 
@@ -190,9 +203,18 @@ interface IStakingRouter {
     function addStakingModule(
         string memory _name,
         address _stakingModuleAddress,
-        uint256 _targetShare,
+        uint256 _stakeShareLimit,
+        uint256 _priorityExitShareThreshold,
         uint256 _stakingModuleFee,
-        uint256 _treasuryFee
+        uint256 _treasuryFee,
+        uint256 _maxDepositsPerBlock,
+        uint256 _minDepositBlockDistance
+    ) external;
+
+    function decreaseStakingModuleVettedKeysCountByNodeOperator(
+        uint256 _stakingModuleId,
+        bytes memory _nodeOperatorIds,
+        bytes memory _vettedSigningKeysCounts
     ) external;
 
     function deposit(
@@ -201,14 +223,18 @@ interface IStakingRouter {
         bytes memory _depositCalldata
     ) external payable;
 
+    function finalizeUpgrade_v2(
+        uint256[] memory _priorityExitShareThresholds
+    ) external;
+
     function getAllNodeOperatorDigests(
         uint256 _stakingModuleId
-    ) external view returns (IStakingRouter.NodeOperatorDigest[] memory);
+    ) external view returns (NodeOperatorDigest[] memory);
 
     function getAllStakingModuleDigests()
         external
         view
-        returns (IStakingRouter.StakingModuleDigest[] memory);
+        returns (StakingModuleDigest[] memory);
 
     function getContractVersion() external view returns (uint256);
 
@@ -221,21 +247,18 @@ interface IStakingRouter {
     function getNodeOperatorDigests(
         uint256 _stakingModuleId,
         uint256[] memory _nodeOperatorIds
-    )
-        external
-        view
-        returns (IStakingRouter.NodeOperatorDigest[] memory digests);
+    ) external view returns (NodeOperatorDigest[] memory digests);
 
     function getNodeOperatorDigests(
         uint256 _stakingModuleId,
         uint256 _offset,
         uint256 _limit
-    ) external view returns (IStakingRouter.NodeOperatorDigest[] memory);
+    ) external view returns (NodeOperatorDigest[] memory);
 
     function getNodeOperatorSummary(
         uint256 _stakingModuleId,
         uint256 _nodeOperatorId
-    ) external view returns (IStakingRouter.NodeOperatorSummary memory summary);
+    ) external view returns (NodeOperatorSummary memory summary);
 
     function getRoleAdmin(bytes32 role) external view returns (bytes32);
 
@@ -258,7 +281,7 @@ interface IStakingRouter {
 
     function getStakingModule(
         uint256 _stakingModuleId
-    ) external view returns (IStakingRouter.StakingModule memory);
+    ) external view returns (StakingModule memory);
 
     function getStakingModuleActiveValidatorsCount(
         uint256 _stakingModuleId
@@ -266,10 +289,7 @@ interface IStakingRouter {
 
     function getStakingModuleDigests(
         uint256[] memory _stakingModuleIds
-    )
-        external
-        view
-        returns (IStakingRouter.StakingModuleDigest[] memory digests);
+    ) external view returns (StakingModuleDigest[] memory digests);
 
     function getStakingModuleIds()
         external
@@ -297,6 +317,14 @@ interface IStakingRouter {
         uint256 _maxDepositsValue
     ) external view returns (uint256);
 
+    function getStakingModuleMaxDepositsPerBlock(
+        uint256 _stakingModuleId
+    ) external view returns (uint256);
+
+    function getStakingModuleMinDepositBlockDistance(
+        uint256 _stakingModuleId
+    ) external view returns (uint256);
+
     function getStakingModuleNonce(
         uint256 _stakingModuleId
     ) external view returns (uint256);
@@ -307,15 +335,12 @@ interface IStakingRouter {
 
     function getStakingModuleSummary(
         uint256 _stakingModuleId
-    )
-        external
-        view
-        returns (IStakingRouter.StakingModuleSummary memory summary);
+    ) external view returns (StakingModuleSummary memory summary);
 
     function getStakingModules()
         external
         view
-        returns (IStakingRouter.StakingModule[] memory res);
+        returns (StakingModule[] memory res);
 
     function getStakingModulesCount() external view returns (uint256);
 
@@ -353,8 +378,6 @@ interface IStakingRouter {
 
     function onValidatorsCountsByNodeOperatorReportingFinished() external;
 
-    function pauseStakingModule(uint256 _stakingModuleId) external;
-
     function renounceRole(bytes32 role, address account) external;
 
     function reportRewardsMinted(
@@ -374,8 +397,6 @@ interface IStakingRouter {
         bytes memory _stuckValidatorsCounts
     ) external;
 
-    function resumeStakingModule(uint256 _stakingModuleId) external;
-
     function revokeRole(bytes32 role, address account) external;
 
     function setStakingModuleStatus(
@@ -391,7 +412,7 @@ interface IStakingRouter {
         uint256 _stakingModuleId,
         uint256 _nodeOperatorId,
         bool _triggerUpdateFinish,
-        IStakingRouter.ValidatorsCountsCorrection memory _correction
+        ValidatorsCountsCorrection memory _correction
     ) external;
 
     function updateExitedValidatorsCountByStakingModule(
@@ -407,15 +428,18 @@ interface IStakingRouter {
 
     function updateStakingModule(
         uint256 _stakingModuleId,
-        uint256 _targetShare,
+        uint256 _stakeShareLimit,
+        uint256 _priorityExitShareThreshold,
         uint256 _stakingModuleFee,
-        uint256 _treasuryFee
+        uint256 _treasuryFee,
+        uint256 _maxDepositsPerBlock,
+        uint256 _minDepositBlockDistance
     ) external;
 
     function updateTargetValidatorsLimits(
         uint256 _stakingModuleId,
         uint256 _nodeOperatorId,
-        uint8 _targetLimitMode,
+        uint256 _targetLimitMode,
         uint256 _targetLimit
     ) external;
 

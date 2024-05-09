@@ -44,7 +44,7 @@ contract PenaltyIntegrationTest is
             address(this)
         );
         vm.stopPrank();
-        csm.resume();
+        if (csm.isPaused()) csm.resume();
 
         user = nextAddress("User");
         stranger = nextAddress("stranger");
@@ -69,8 +69,13 @@ contract PenaltyIntegrationTest is
         defaultNoId = csm.getNodeOperatorsCount() - 1;
 
         // grant role if testing against non-connected CSM
-        if (env.MODULE_ID == 0) {
-            IBurner burner = IBurner(locator.burner());
+        IBurner burner = IBurner(locator.burner());
+        if (
+            !burner.hasRole(
+                burner.REQUEST_BURN_SHARES_ROLE(),
+                address(accounting)
+            )
+        ) {
             vm.startPrank(burner.getRoleMember(burner.DEFAULT_ADMIN_ROLE(), 0));
             burner.grantRole(
                 burner.REQUEST_BURN_SHARES_ROLE(),

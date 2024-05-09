@@ -15,6 +15,11 @@ interface IBurner {
 
     function grantRole(bytes32 role, address account) external;
 
+    function hasRole(
+        bytes32 role,
+        address account
+    ) external view returns (bool);
+
     function requestBurnShares(
         address _from,
         uint256 _sharesAmountToBurn
