@@ -72,7 +72,6 @@ abstract contract CSBondCore {
         uint256 chargedAmount
     );
 
-    error InvalidClaimableShares();
     error ZeroAddress(string field);
 
     constructor(address lidoLocator) {
@@ -164,14 +163,10 @@ abstract contract CSBondCore {
     ///      As a usual withdrawal request, this claim might be processed on the next stETH rebase
     function _requestETH(
         uint256 nodeOperatorId,
-        uint256 claimableShares,
         uint256 amountToClaim,
         address to
     ) internal {
-        CSBondCoreStorage storage $ = _getCSBondCoreStorage();
-        if (claimableShares > $.bondShares[nodeOperatorId]) {
-            revert InvalidClaimableShares();
-        }
+        uint256 claimableShares = _getClaimableBondShares(nodeOperatorId);
         uint256 sharesToClaim = amountToClaim < _ethByShares(claimableShares)
             ? _sharesByEth(amountToClaim)
             : claimableShares;
@@ -189,14 +184,10 @@ abstract contract CSBondCore {
     /// @dev Claim Node Operator's excess bond shares (stETH) in stETH by transferring shares from the contract
     function _claimStETH(
         uint256 nodeOperatorId,
-        uint256 claimableShares,
         uint256 amountToClaim,
         address to
     ) internal {
-        CSBondCoreStorage storage $ = _getCSBondCoreStorage();
-        if (claimableShares > $.bondShares[nodeOperatorId]) {
-            revert InvalidClaimableShares();
-        }
+        uint256 claimableShares = _getClaimableBondShares(nodeOperatorId);
         uint256 sharesToClaim = amountToClaim < _ethByShares(claimableShares)
             ? _sharesByEth(amountToClaim)
             : claimableShares;
@@ -210,14 +201,10 @@ abstract contract CSBondCore {
     /// @dev Claim Node Operator's excess bond shares (stETH) in wstETH by wrapping stETH from the contract and transferring wstETH
     function _claimWstETH(
         uint256 nodeOperatorId,
-        uint256 claimableShares,
         uint256 amountToClaim,
         address to
     ) internal {
-        CSBondCoreStorage storage $ = _getCSBondCoreStorage();
-        if (claimableShares > $.bondShares[nodeOperatorId]) {
-            revert InvalidClaimableShares();
-        }
+        uint256 claimableShares = _getClaimableBondShares(nodeOperatorId);
         uint256 sharesToClaim = amountToClaim < claimableShares
             ? amountToClaim
             : claimableShares;
@@ -262,6 +249,13 @@ abstract contract CSBondCore {
             _ethByShares(toChargeShares),
             _ethByShares(chargedShares)
         );
+    }
+
+    function _getClaimableBondShares(
+        uint256 nodeOperatorId
+    ) internal view virtual returns (uint256) {
+        CSBondCoreStorage storage $ = _getCSBondCoreStorage();
+        return $.bondShares[nodeOperatorId];
     }
 
     /// @dev Shortcut for Lido's getSharesByPooledEth
