@@ -13,6 +13,7 @@ deploy_script_path := if chain == "mainnet" {
 
 anvil_host := env_var_or_default("ANVIL_IP_ADDR", "127.0.0.1")
 anvil_port := "8545"
+anvil_rpc_url := "http://" + anvil_host + ":" + anvil_port
 
 default: clean deps build test-all
 
@@ -100,7 +101,7 @@ kill-fork:
     @-pkill anvil && just _warn "anvil process is killed"
 
 deploy *args:
-    forge script {{deploy_script_path}} --rpc-url http://{{anvil_host}}:{{anvil_port}} --broadcast --slow {{args}}
+    forge script {{deploy_script_path}} --rpc-url {{anvil_rpc_url}} --broadcast --slow {{args}}
 
 deploy-prod:
     forge script {{deploy_script_path}} --force --rpc-url ${RPC_URL} --broadcast --slow
@@ -109,7 +110,7 @@ deploy-local:
     just make-fork &
     @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
     just deploy
-    @if ${KEEP_ANVIL_AFTER_LOCAL_DEPLOY}; then just _warn "anvil is kept running in the background: http://{{anvil_host}}:{{anvil_port}}"; else just kill-fork; fi
+    just _warn "anvil is kept running in the background: {{anvil_rpc_url}}"
 
 test-local *args:
     just make-fork --silent &
@@ -117,9 +118,15 @@ test-local *args:
     DEPLOYER_PRIVATE_KEY=`cat localhost.json | jq -r ".private_keys[0]"` \
         just deploy --silent
     DEPLOY_CONFIG=./out/latest.json \
-    RPC_URL=http://{{anvil_host}}:{{anvil_port}} \
+    RPC_URL={{anvil_rpc_url}} \
         just test-integration {{args}}
     just kill-fork
+
+simulate-vote:
+    cast rpc --rpc-url={{anvil_rpc_url}} anvil_autoImpersonateAccount true
+    forge script script/fork-helpers/SimulateVote.sol --rpc-url={{anvil_rpc_url}} -vvv \
+        --broadcast --slow --unlocked --sender=`cat localhost.json | jq -r ".available_accounts[0]"`
+    cast rpc --rpc-url={{anvil_rpc_url}} anvil_autoImpersonateAccount false
 
 _warn message:
     @tput setaf 3 && printf "[WARNING]" && tput sgr0 && echo " {{message}}"

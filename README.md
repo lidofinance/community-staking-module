@@ -33,7 +33,7 @@ just
 
 ### Features
 
-- Run tests
+## Run tests
 
 ```bash
 just test-all # run all tests that possible to run without additional configurations
@@ -47,13 +47,24 @@ just test-local
 DEPLOYMENT_CONFIG=./config/holesky-devnet-0/deploy-holesky-devnet.json just test-integration
 ```
 
-- Make a gas report
+**Note:** the CSM requires to be added to the Staking Router 1.5,
+so it's impossible to run integration tests over the network with the old contracts.
+Technically it's possible to add the CSM to the previous Staking Router version,
+but it's supposed to be added to the new one.
+
+Please Make sure that `test-local` or `test-integration` are running against the correct protocol setup:
+
+```bash
+export CHAIN=devnet
+```
+
+## Make a gas report
 
 ```bash
 just gas-report
 ```
 
-- Install dependencies
+## Add new dependencies
 
 Dependencies are managed using yarn. To install new dependencies, run:
 
@@ -61,19 +72,40 @@ Dependencies are managed using yarn. To install new dependencies, run:
 yarn add <package-name>
 ```
 
-- Deploy to local fork
+Whenever you install new libraries using yarn, make sure to update your
+`remappings.txt`.
+
+## Deploy and test using local fork
 
 ```bash
 just deploy-local
 ```
 
-- Deploy to local fork of non-mainnet chain
+The result of deployment is `./out/latest.json` deployment config, which is required for integration testing
+
+Integration tests should pass either before a vote, or after
 
 ```bash
-CHAIN=holesky just deploy-local
+just deploy-local
+export RPC_URL=http://127.0.0.1:8545
+export DEPLOY_CONFIG=./out/latest.json
+
+just test-integration
 ```
 
-### Notes
+There also fork helper scripts to prepare a fork state for e.g. UI testing purposes
 
-Whenever you install new libraries using yarn, make sure to update your
-`remappings.txt`.
+```bash
+just deploy-local
+export RPC_URL=http://127.0.0.1:8545
+export DEPLOY_CONFIG=./out/latest.json
+
+just simulate-vote
+just test-integration
+```
+
+Kill fork after testing
+
+```bash
+just kill-fork
+```

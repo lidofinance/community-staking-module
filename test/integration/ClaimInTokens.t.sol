@@ -33,10 +33,12 @@ contract ClaimIntegrationTest is
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment(env.DEPLOY_CONFIG);
 
-        vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
-        csm.grantRole(csm.RESUME_ROLE(), address(this));
-        vm.stopPrank();
-        csm.resume();
+        if (csm.isPaused()) {
+            vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
+            csm.grantRole(csm.RESUME_ROLE(), address(this));
+            vm.stopPrank();
+            csm.resume();
+        }
 
         vm.startPrank(
             feeDistributor.getRoleMember(feeDistributor.DEFAULT_ADMIN_ROLE(), 0)
@@ -67,7 +69,7 @@ contract ClaimIntegrationTest is
         defaultNoId = csm.getNodeOperatorsCount() - 1;
     }
 
-    function test_claimExessBondStETH() public {
+    function test_claimExcessBondStETH() public {
         uint256 amount = 1 ether;
         vm.startPrank(user);
         vm.deal(user, amount);
@@ -97,7 +99,7 @@ contract ClaimIntegrationTest is
         assertEq(sharesAfter, sharesBefore + excessBond);
     }
 
-    function test_claimExessBondWstETH() public {
+    function test_claimExcessBondWstETH() public {
         uint256 amount = 1 ether;
         vm.startPrank(user);
         vm.deal(user, amount);
@@ -131,7 +133,7 @@ contract ClaimIntegrationTest is
         assertEq(balanceAfter, balanceBefore + excessBondWstETH);
     }
 
-    function test_requestExessBondETH() public {
+    function test_requestExcessBondETH() public {
         IWithdrawalQueue wq = IWithdrawalQueue(locator.withdrawalQueue());
         uint256[] memory requestsIdsBefore = wq.getWithdrawalRequests(
             nodeOperator
