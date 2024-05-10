@@ -2037,6 +2037,7 @@ contract CSMClaimRewards is CSMCommon {
                 accounting.claimRewardsStETH.selector,
                 noId,
                 UINT256_MAX,
+                nodeOperator,
                 0,
                 new bytes32[](0)
             ),
@@ -2079,6 +2080,7 @@ contract CSMClaimRewards is CSMCommon {
                 accounting.claimRewardsWstETH.selector,
                 noId,
                 UINT256_MAX,
+                nodeOperator,
                 0,
                 new bytes32[](0)
             ),
@@ -2121,6 +2123,7 @@ contract CSMClaimRewards is CSMCommon {
                 accounting.requestRewardsETH.selector,
                 noId,
                 UINT256_MAX,
+                nodeOperator,
                 0,
                 new bytes32[](0)
             ),
@@ -3188,21 +3191,6 @@ contract CsmGetNodeOperatorNonWithdrawnKeys is CSMCommon {
     {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.getNodeOperatorNonWithdrawnKeys(0);
-    }
-}
-
-contract CsmGetNodeOperatorRewardAddress is CSMCommon {
-    function test_getNodeOperatorRewardAddress() public {
-        uint256 noId = createNodeOperator();
-        address rewardAddress = csm.getNodeOperatorRewardAddress(noId);
-        assertEq(rewardAddress, nodeOperator);
-    }
-
-    function test_getNodeOperatorRewardAddress_RevertWhenNoNodeOperator()
-        public
-    {
-        vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
-        csm.getNodeOperatorRewardAddress(0);
     }
 }
 

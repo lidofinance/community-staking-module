@@ -35,13 +35,6 @@ interface ICSModule is IStakingModule {
         uint256 nodeOperatorId
     ) external view returns (uint256);
 
-    /// @notice Gets node operator reward address
-    /// @param nodeOperatorId ID of the node operator
-    /// @return Reward address
-    function getNodeOperatorRewardAddress(
-        uint256 nodeOperatorId
-    ) external view returns (address);
-
     /// @notice Returns the node operator by id
     /// @param nodeOperatorId Node Operator id
     function getNodeOperator(
