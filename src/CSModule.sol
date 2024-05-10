@@ -818,7 +818,7 @@ contract CSModule is
     /// @param targetLimit Target limit of validators
     function updateTargetValidatorsLimits(
         uint256 nodeOperatorId,
-        uint8 targetLimitMode,
+        uint256 targetLimitMode,
         uint256 targetLimit
     ) external onlyRole(STAKING_ROUTER_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
@@ -830,7 +830,7 @@ contract CSModule is
         ) return;
 
         if (no.targetLimitMode != targetLimitMode) {
-            no.targetLimitMode = targetLimitMode;
+            no.targetLimitMode = uint8(targetLimitMode);
         }
 
         if (no.targetLimit != targetLimit) {
@@ -839,7 +839,7 @@ contract CSModule is
 
         emit TargetValidatorsCountChangedByRequest(
             nodeOperatorId,
-            targetLimitMode,
+            uint8(targetLimitMode),
             targetLimit
         );
 
@@ -879,31 +879,44 @@ contract CSModule is
         _incrementModuleNonce();
     }
 
-    /// @notice Decrease totalVettedKeys for the Node Operator
-    /// @notice Called by Staking Router
-    /// @param nodeOperatorIds IDs of the Node Operators to decrease totalVettedKeys for
-    /// @param vettedKeysByOperator Corresponding values for totalVettedKeys decrease
-    function decreaseOperatorVettedKeys(
-        uint256[] calldata nodeOperatorIds,
-        uint256[] calldata vettedKeysByOperator
+    /// @notice Called by StakingRouter to decrease the number of vetted keys for node operator with given id
+    /// @param nodeOperatorIds bytes packed array of the node operators id
+    /// @param vettedSigningKeysCounts bytes packed array of the new number of vetted keys for the node operators
+    function decreaseVettedSigningKeysCount(
+        bytes calldata nodeOperatorIds,
+        bytes calldata vettedSigningKeysCounts
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        // INFO: It seems it does not  make sense to implement any sanity checks.
-        for (uint256 i; i < nodeOperatorIds.length; ++i) {
-            uint256 nodeOperatorId = nodeOperatorIds[i];
-            if (nodeOperatorId >= _nodeOperatorsCount) {
+        ValidatorCountsReport.validate(
+            nodeOperatorIds,
+            vettedSigningKeysCounts
+        );
+
+        uint256 operatorsInReport = ValidatorCountsReport.count(
+            nodeOperatorIds
+        );
+
+        for (uint256 i = 0; i < operatorsInReport; ++i) {
+            (
+                uint256 nodeOperatorId,
+                uint256 vettedSigningKeysCount
+            ) = ValidatorCountsReport.next(
+                    nodeOperatorIds,
+                    vettedSigningKeysCounts,
+                    i
+                );
+            if (nodeOperatorId >= _nodeOperatorsCount)
                 revert NodeOperatorDoesNotExist();
-            }
 
             NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
-            if (vettedKeysByOperator[i] >= no.totalVettedKeys) {
+            if (vettedSigningKeysCount >= no.totalVettedKeys) {
                 revert InvalidVetKeysPointer();
             }
 
-            no.totalVettedKeys = vettedKeysByOperator[i];
+            no.totalVettedKeys = vettedSigningKeysCount;
             emit VettedSigningKeysCountChanged(
                 nodeOperatorId,
-                vettedKeysByOperator[i]
+                vettedSigningKeysCount
             );
 
             // Nonce will be updated below once
@@ -1396,7 +1409,7 @@ contract CSModule is
         external
         view
         returns (
-            uint8 targetLimitMode,
+            uint256 targetLimitMode,
             uint256 targetValidatorsCount,
             uint256 stuckValidatorsCount,
             uint256 refundedValidatorsCount,
@@ -1538,6 +1551,7 @@ contract CSModule is
         unchecked {
             _nonce++;
         }
+        emit NonceChanged(_nonce);
     }
 
     function _createNodeOperator(
