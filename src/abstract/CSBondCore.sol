@@ -251,6 +251,7 @@ abstract contract CSBondCore {
         );
     }
 
+    /// @dev Should be overriden in case of additional restrictions on a claimable bond amount
     function _getClaimableBondShares(
         uint256 nodeOperatorId
     ) internal view virtual returns (uint256) {
