@@ -45,7 +45,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities {
     MerkleTree internal merkleTree;
 
     struct NodeOperatorSummary {
-        uint8 targetLimitMode;
+        uint256 targetLimitMode;
         uint256 targetValidatorsCount;
         uint256 stuckValidatorsCount;
         uint256 refundedValidatorsCount;
@@ -115,7 +115,10 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities {
     }
 
     function unvetKeys(uint256 noId, uint256 to) internal {
-        csm.decreaseOperatorVettedKeys(UintArr(noId), UintArr(to));
+        csm.decreaseVettedSigningKeysCount(
+            bytes.concat(bytes8(uint64(noId))),
+            bytes.concat(bytes16(uint128(to)))
+        );
     }
 
     function setExited(uint256 noId, uint256 to) internal {
@@ -185,7 +188,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities {
         uint256 noId
     ) public view returns (NodeOperatorSummary memory) {
         (
-            uint8 targetLimitMode,
+            uint256 targetLimitMode,
             uint256 targetValidatorsCount,
             uint256 stuckValidatorsCount,
             uint256 refundedValidatorsCount,
@@ -1992,7 +1995,7 @@ contract CSMObtainDepositData is CSMCommon {
         uint256 secondNoId = createNodeOperator(1);
         createNodeOperator(3);
 
-        csm.decreaseOperatorVettedKeys(UintArr(secondNoId), UintArr(0));
+        unvetKeys(secondNoId, 0);
 
         csm.obtainDepositData(5, "");
 
@@ -2043,6 +2046,7 @@ contract CSMClaimRewards is CSMCommon {
                 accounting.claimRewardsStETH.selector,
                 noId,
                 UINT256_MAX,
+                nodeOperator,
                 0,
                 new bytes32[](0)
             ),
@@ -2085,6 +2089,7 @@ contract CSMClaimRewards is CSMCommon {
                 accounting.claimRewardsWstETH.selector,
                 noId,
                 UINT256_MAX,
+                nodeOperator,
                 0,
                 new bytes32[](0)
             ),
@@ -2127,6 +2132,7 @@ contract CSMClaimRewards is CSMCommon {
                 accounting.requestRewardsETH.selector,
                 noId,
                 UINT256_MAX,
+                nodeOperator,
                 0,
                 new bytes32[](0)
             ),
@@ -2695,9 +2701,9 @@ contract CsmUnvetKeys is CSMCommon {
         vm.expectEmit(true, true, true, true, address(csm));
         emit CSModule.VettedSigningKeysCountChanged(noIdOne, 2);
         emit CSModule.VettedSigningKeysCountChanged(noIdTwo, 3);
-        csm.decreaseOperatorVettedKeys(
-            UintArr(noIdOne, noIdTwo),
-            UintArr(2, 3)
+        csm.decreaseVettedSigningKeysCount(
+            bytes.concat(bytes8(uint64(noIdOne)), bytes8(uint64(noIdTwo))),
+            bytes.concat(bytes16(uint128(2)), bytes16(uint128(3)))
         );
 
         assertEq(csm.getNonce(), nonce + 1);
@@ -2711,7 +2717,7 @@ contract CsmUnvetKeys is CSMCommon {
     function test_unvetKeys_RevertIfNodeOperatorDoesntExist() public {
         createNodeOperator(); // Make sure there is at least one node operator.
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
-        csm.decreaseOperatorVettedKeys(UintArr(1), UintArr(0));
+        unvetKeys(1, 0);
     }
 }
 
@@ -3194,21 +3200,6 @@ contract CsmGetNodeOperatorNonWithdrawnKeys is CSMCommon {
     {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.getNodeOperatorNonWithdrawnKeys(0);
-    }
-}
-
-contract CsmGetNodeOperatorRewardAddress is CSMCommon {
-    function test_getNodeOperatorRewardAddress() public {
-        uint256 noId = createNodeOperator();
-        address rewardAddress = csm.getNodeOperatorRewardAddress(noId);
-        assertEq(rewardAddress, nodeOperator);
-    }
-
-    function test_getNodeOperatorRewardAddress_RevertWhenNoNodeOperator()
-        public
-    {
-        vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
-        csm.getNodeOperatorRewardAddress(0);
     }
 }
 
@@ -3881,7 +3872,8 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
             bytes.concat(bytes16(0x00000000000000000000000000000001))
         );
         Vm.Log[] memory logs = vm.getRecordedLogs();
-        assertEq(logs.length, 0);
+        // One event is NonceChanged
+        assertEq(logs.length, 1);
     }
 }
 
@@ -3964,7 +3956,8 @@ contract CsmUpdateExitedValidatorsCount is CSMCommon {
             bytes.concat(bytes16(0x00000000000000000000000000000001))
         );
         Vm.Log[] memory logs = vm.getRecordedLogs();
-        assertEq(logs.length, 0);
+        // One event is NonceChanged
+        assertEq(logs.length, 1);
     }
 }
 
@@ -4078,7 +4071,8 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
             stuckValidatorsKeysCount: 1
         });
         Vm.Log[] memory logs = vm.getRecordedLogs();
-        assertEq(logs.length, 0);
+        // One event is NonceChanged
+        assertEq(logs.length, 1);
     }
 }
 
@@ -5141,7 +5135,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.grantRole(role, actor);
 
         vm.prank(actor);
-        csm.decreaseOperatorVettedKeys(UintArr(), UintArr());
+        csm.decreaseVettedSigningKeysCount(new bytes(0), new bytes(0));
     }
 
     function test_stakingRouterRole_unvetKeys_revert() public {
@@ -5151,7 +5145,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
-        csm.decreaseOperatorVettedKeys(UintArr(), UintArr());
+        csm.decreaseVettedSigningKeysCount(new bytes(0), new bytes(0));
     }
 
     function test_reportELRewardsStealingPenaltyRole() public {
@@ -5436,7 +5430,7 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         uint256 noId = createNodeOperator(7);
         uint256 nonce = csm.getNonce();
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 7);
-        csm.decreaseOperatorVettedKeys(UintArr(noId), UintArr(3));
+        unvetKeys(noId, 3);
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 3);
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 3);
         assertEq(csm.getNonce(), nonce + 1);
@@ -5504,7 +5498,7 @@ contract CSMDepositableValidatorsCount is CSMCommon {
 
     function test_depositableValidatorsCountChanges_OnRemoveUnvetted() public {
         uint256 noId = createNodeOperator(7);
-        csm.decreaseOperatorVettedKeys(UintArr(noId), UintArr(3));
+        unvetKeys(noId, 3);
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 3);
         vm.prank(nodeOperator);
         csm.removeKeys(noId, 3, 1); // Removal charge is applied, hence one key is unbonded.
@@ -5745,19 +5739,19 @@ contract CSMMisc is CSMCommon {
         assertEq(activeCount, 3);
     }
 
-    function test_decreaseOperatorVettedKeys_OneOperator() public {
+    function test_decreaseVettedSigningKeysCount_OneOperator() public {
         uint256 noId = createNodeOperator(10);
         uint256 newVetted = 5;
 
         vm.expectEmit(true, true, true, true, address(csm));
         emit CSModule.VettedSigningKeysCountChanged(noId, newVetted);
-        csm.decreaseOperatorVettedKeys(UintArr(noId), UintArr(newVetted));
+        unvetKeys(noId, newVetted);
 
         uint256 actualVetted = csm.getNodeOperator(noId).totalVettedKeys;
         assertEq(actualVetted, newVetted);
     }
 
-    function test_decreaseOperatorVettedKeys_MultipleOperators() public {
+    function test_decreaseVettedSigningKeysCount_MultipleOperators() public {
         uint256 firstNoId = createNodeOperator(10);
         uint256 secondNoId = createNodeOperator(7);
         uint256 thirdNoId = createNodeOperator(15);
@@ -5771,9 +5765,12 @@ contract CSMMisc is CSMCommon {
             secondNoId,
             newVettedSecond
         );
-        csm.decreaseOperatorVettedKeys(
-            UintArr(firstNoId, secondNoId),
-            UintArr(newVettedFirst, newVettedSecond)
+        csm.decreaseVettedSigningKeysCount(
+            bytes.concat(bytes8(uint64(firstNoId)), bytes8(uint64(secondNoId))),
+            bytes.concat(
+                bytes16(uint128(newVettedFirst)),
+                bytes16(uint128(newVettedSecond))
+            )
         );
 
         uint256 actualVettedFirst = csm
@@ -5790,7 +5787,7 @@ contract CSMMisc is CSMCommon {
         assertEq(actualVettedThird, 15);
     }
 
-    function test_decreaseOperatorVettedKeys_RevertWhen_MissingVettedData()
+    function test_decreaseVettedSigningKeysCount_RevertWhen_MissingVettedData()
         public
     {
         uint256 firstNoId = createNodeOperator(10);
@@ -5798,39 +5795,39 @@ contract CSMMisc is CSMCommon {
         uint256 newVettedFirst = 5;
 
         vm.expectRevert();
-        csm.decreaseOperatorVettedKeys(
-            UintArr(firstNoId, secondNoId),
-            UintArr(newVettedFirst)
+        csm.decreaseVettedSigningKeysCount(
+            bytes.concat(bytes8(uint64(firstNoId)), bytes8(uint64(secondNoId))),
+            bytes.concat(bytes16(uint128(newVettedFirst)))
         );
     }
 
-    function test_decreaseOperatorVettedKeys_RevertWhen_NewVettedEqOld()
+    function test_decreaseVettedSigningKeysCount_RevertWhen_NewVettedEqOld()
         public
     {
         uint256 noId = createNodeOperator(10);
         uint256 newVetted = 10;
 
         vm.expectRevert(CSModule.InvalidVetKeysPointer.selector);
-        csm.decreaseOperatorVettedKeys(UintArr(noId), UintArr(newVetted));
+        unvetKeys(noId, newVetted);
     }
 
-    function test_decreaseOperatorVettedKeys_RevertWhen_NewVettedGreaterOld()
+    function test_decreaseVettedSigningKeysCount_RevertWhen_NewVettedGreaterOld()
         public
     {
         uint256 noId = createNodeOperator(10);
         uint256 newVetted = 15;
 
         vm.expectRevert(CSModule.InvalidVetKeysPointer.selector);
-        csm.decreaseOperatorVettedKeys(UintArr(noId), UintArr(newVetted));
+        unvetKeys(noId, newVetted);
     }
 
-    function test_decreaseOperatorVettedKeys_RevertWhen_NodeOperatorDoesNotExist()
+    function test_decreaseVettedSigningKeysCount_RevertWhen_NodeOperatorDoesNotExist()
         public
     {
         uint256 noId = createNodeOperator(10);
         uint256 newVetted = 15;
 
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
-        csm.decreaseOperatorVettedKeys(UintArr(noId + 1), UintArr(newVetted));
+        unvetKeys(noId + 1, newVetted);
     }
 }

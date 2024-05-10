@@ -271,11 +271,13 @@ contract CSAccounting is
     /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param stETHAmount Amount of stETH to claim
+    /// @param rewardAddress Reward address of the node operator
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
     function claimRewardsStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount,
+        address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
     ) external whenResumed onlyCSM {
@@ -283,15 +285,7 @@ contract CSAccounting is
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
         if (stETHAmount == 0) return;
-        CSBondCore._claimStETH(
-            nodeOperatorId,
-            _getExcessBondShares(
-                nodeOperatorId,
-                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
-            ),
-            stETHAmount,
-            CSM.getNodeOperatorRewardAddress(nodeOperatorId)
-        );
+        CSBondCore._claimStETH(nodeOperatorId, stETHAmount, rewardAddress);
     }
 
     /// @notice Claim full reward (fee + bond) in wstETH for the given Node Operator available for this moment.
@@ -299,26 +293,20 @@ contract CSAccounting is
     /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param wstETHAmount Amount of wstETH to claim
+    /// @param rewardAddress Reward address of the node operator
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
     function claimRewardsWstETH(
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
+        address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
     ) external whenResumed onlyCSM {
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
-        CSBondCore._claimWstETH(
-            nodeOperatorId,
-            _getExcessBondShares(
-                nodeOperatorId,
-                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
-            ),
-            wstETHAmount,
-            CSM.getNodeOperatorRewardAddress(nodeOperatorId)
-        );
+        CSBondCore._claimWstETH(nodeOperatorId, wstETHAmount, rewardAddress);
     }
 
     /// @notice Request full reward (fee + bond) in Withdrawal NFT (unstETH) for the given Node Operator available for this moment.
@@ -327,11 +315,13 @@ contract CSAccounting is
     /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param ethAmount Amount of ETH to request
+    /// @param rewardAddress Reward address of the node operator
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
     function requestRewardsETH(
         uint256 nodeOperatorId,
         uint256 ethAmount,
+        address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
     ) external whenResumed onlyCSM {
@@ -339,15 +329,7 @@ contract CSAccounting is
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
         if (ethAmount == 0) return;
-        CSBondCore._requestETH(
-            nodeOperatorId,
-            _getExcessBondShares(
-                nodeOperatorId,
-                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
-            ),
-            ethAmount,
-            CSM.getNodeOperatorRewardAddress(nodeOperatorId)
-        );
+        CSBondCore._requestETH(nodeOperatorId, ethAmount, rewardAddress);
     }
 
     /// @notice Lock bond in ETH for the given Node Operator
@@ -579,6 +561,17 @@ contract CSAccounting is
             rewardsProof
         );
         _increaseBond(nodeOperatorId, distributed);
+    }
+
+    /// @dev Overrides the original implementation to account for a locked bond and withdrawn validators
+    function _getClaimableBondShares(
+        uint256 nodeOperatorId
+    ) internal view override returns (uint256) {
+        return
+            _getExcessBondShares(
+                nodeOperatorId,
+                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
+            );
     }
 
     function _getBondSummary(
