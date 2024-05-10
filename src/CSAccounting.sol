@@ -569,6 +569,7 @@ contract CSAccounting is
         _increaseBond(nodeOperatorId, distributed);
     }
 
+    /// @dev Overrides the original implementation to account for a locked bond
     function _getClaimableBondShares(
         uint256 nodeOperatorId
     ) internal view override returns (uint256) {
