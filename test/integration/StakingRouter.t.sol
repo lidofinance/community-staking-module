@@ -167,8 +167,6 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_updateTargetValidatorsLimits() public {
-        // fails when tested against mainnet due to SR inteface missmatch
-        vm.skip(true);
         address nodeOperatorManager = nextAddress();
         uint256 noId = addNodeOperator(nodeOperatorManager, 5);
 
@@ -186,7 +184,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
 
         ) = csm.getNodeOperatorSummary(noId);
         assertEq(targetLimitMode, 1);
-        assertEq(targetValidatorsCount, 1);
+        assertEq(targetValidatorsCount, 2);
     }
 
     function test_updateRefundedValidatorsCount() public {
@@ -382,5 +380,28 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         NodeOperator memory no = csm.getNodeOperator(noId);
         assertEq(no.stuckValidatorsCount, unsafeStuck);
         assertEq(no.totalExitedKeys, unsafeExited);
+    }
+
+    function test_decreaseVettedSigningKeysCount() public {
+        address nodeOperatorManager = nextAddress();
+        uint256 totalKeys = 10;
+        uint256 newVetted = 2;
+        uint256 noId = addNodeOperator(nodeOperatorManager, totalKeys);
+
+        vm.prank(
+            stakingRouter.getRoleMember(
+                stakingRouter.STAKING_MODULE_UNVETTING_ROLE(),
+                0
+            )
+        );
+        stakingRouter.decreaseStakingModuleVettedKeysCountByNodeOperator(
+            moduleId,
+            bytes.concat(bytes8(uint64(noId))),
+            bytes.concat(bytes16(uint128(newVetted)))
+        );
+
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalVettedKeys, newVetted);
+        assertEq(no.depositableValidatorsCount, newVetted);
     }
 }
