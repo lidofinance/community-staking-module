@@ -285,10 +285,6 @@ contract CSAccounting is
         if (stETHAmount == 0) return;
         CSBondCore._claimStETH(
             nodeOperatorId,
-            _getExcessBondShares(
-                nodeOperatorId,
-                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
-            ),
             stETHAmount,
             CSM.getNodeOperatorRewardAddress(nodeOperatorId)
         );
@@ -312,10 +308,6 @@ contract CSAccounting is
         }
         CSBondCore._claimWstETH(
             nodeOperatorId,
-            _getExcessBondShares(
-                nodeOperatorId,
-                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
-            ),
             wstETHAmount,
             CSM.getNodeOperatorRewardAddress(nodeOperatorId)
         );
@@ -341,10 +333,6 @@ contract CSAccounting is
         if (ethAmount == 0) return;
         CSBondCore._requestETH(
             nodeOperatorId,
-            _getExcessBondShares(
-                nodeOperatorId,
-                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
-            ),
             ethAmount,
             CSM.getNodeOperatorRewardAddress(nodeOperatorId)
         );
@@ -579,6 +567,17 @@ contract CSAccounting is
             rewardsProof
         );
         _increaseBond(nodeOperatorId, distributed);
+    }
+
+    /// @dev Overrides the original implementation to account for a locked bond and withdrawn validators
+    function _getClaimableBondShares(
+        uint256 nodeOperatorId
+    ) internal view override returns (uint256) {
+        return
+            _getExcessBondShares(
+                nodeOperatorId,
+                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
+            );
     }
 
     function _getBondSummary(
