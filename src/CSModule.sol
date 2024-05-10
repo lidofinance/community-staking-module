@@ -172,21 +172,21 @@ contract CSModule is
 
     constructor(
         bytes32 moduleType,
-        uint256 elStealingFine, // TODO: rename elRewardsStealingFine
+        uint256 elRewardsStealingFine,
         uint256 maxKeysPerOperatorEA,
         address lidoLocator
     ) {
         MODULE_TYPE = moduleType;
-        EL_REWARDS_STEALING_FINE = elStealingFine;
+        EL_REWARDS_STEALING_FINE = elRewardsStealingFine;
         MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE = maxKeysPerOperatorEA;
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
     }
 
-    // TODO: Add keyRemovalCharge setting
     function initialize(
         address _accounting,
         address _earlyAdoption,
         address verifier,
+        uint256 _keyRemovalCharge,
         address admin
     ) external initializer {
         __AccessControlEnumerable_init();
@@ -198,7 +198,8 @@ contract CSModule is
         _grantRole(VERIFIER_ROLE, verifier);
         _grantRole(STAKING_ROUTER_ROLE, address(LIDO_LOCATOR.stakingRouter()));
 
-        // CSM is on pause initially and should be resumed duting the vote
+        _setKeyRemovalCharge(_keyRemovalCharge);
+        // CSM is on pause initially and should be resumed during the vote
         _pauseFor(type(uint256).max);
     }
 

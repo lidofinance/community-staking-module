@@ -2,7 +2,7 @@ set dotenv-load
 
 chain := env_var_or_default("CHAIN", "mainnet")
 deploy_script_path := if chain == "mainnet" {
-    "script" / "DeployMainnetish.s.sol" + ":DeployMainnetish"
+    "script" / "DeployMainnet.s.sol" + ":DeployMainnet"
 } else if chain == "holesky" {
     "script" / "DeployHolesky.s.sol" + ":DeployHolesky"
 } else if chain == "devnet" {

@@ -16,20 +16,40 @@ import { CSVerifier } from "../src/CSVerifier.sol";
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
-import { pack } from "../src/lib/GIndex.sol";
+import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 
-abstract contract DeployBase is Script {
-    string NAME;
-    uint256 immutable CHAIN_ID;
-    uint256 immutable SECONDS_PER_SLOT;
-    uint256 immutable SLOTS_PER_EPOCH;
-    uint256 immutable CL_GENESIS_TIME;
-    uint256 immutable VERIFIER_SUPPORTED_EPOCH;
-    address immutable LIDO_LOCATOR_ADDRESS;
-    address immutable VOTING_ADDRESS;
-    uint256 immutable ORACLE_REPORT_EPOCHS_PER_FRAME;
+struct DeployParams {
+    // Lido addresses
+    address lidoLocatorAddress;
+    address votingAddress;
+    // Oracle
+    uint256 secondsPerSlot;
+    uint256 slotsPerEpoch;
+    uint256 clGenesisTime;
+    uint256 oracleReportEpochsPerFrame;
+    uint256 fastLaneLengthSlots;
+    uint256 consensusVersion;
+    uint256 performanceThresholdBP;
+    // Verifier
+    GIndex gIHistoricalSummaries;
+    GIndex gIFirstWithdrawal;
+    GIndex gIFirstValidator;
+    uint256 verifierSupportedEpoch;
+    // Accounting
+    uint256[] bondCurve;
+    uint256 bondLockRetentionPeriod;
+    // Module
+    bytes32 moduleType;
+    uint256 elRewardsStealingFine;
+    uint256 maxKeysPerOperatorEA;
+    uint256 keyRemovalCharge;
+}
 
+abstract contract DeployBase is Script {
+    DeployParams internal config;
+    string private chainName;
+    uint256 private chainId;
     ILidoLocator private locator;
 
     address private deployer;
@@ -43,37 +63,22 @@ abstract contract DeployBase is Script {
 
     error ChainIdMismatch(uint256 actual, uint256 expected);
 
-    constructor(
-        string memory name,
-        uint256 chainId,
-        uint256 secondsPerSlot,
-        uint256 slotsPerEpoch,
-        uint256 clGenesisTime,
-        uint256 verifierSupportedEpoch,
-        address lidoLocatorAddress,
-        address votingAddress,
-        uint256 oracleReportEpochsPerFrame
-    ) {
-        NAME = name;
-        CHAIN_ID = chainId;
-        SECONDS_PER_SLOT = secondsPerSlot;
-        SLOTS_PER_EPOCH = slotsPerEpoch;
-        CL_GENESIS_TIME = clGenesisTime;
-        VERIFIER_SUPPORTED_EPOCH = verifierSupportedEpoch;
+    constructor(string memory _chainName, uint256 _chainId) {
+        chainName = _chainName;
+        chainId = _chainId;
+    }
 
-        LIDO_LOCATOR_ADDRESS = lidoLocatorAddress;
-        vm.label(LIDO_LOCATOR_ADDRESS, "LIDO_LOCATOR");
-        locator = ILidoLocator(LIDO_LOCATOR_ADDRESS);
-        VOTING_ADDRESS = votingAddress;
-
-        ORACLE_REPORT_EPOCHS_PER_FRAME = oracleReportEpochsPerFrame;
+    function _setUp() internal {
+        vm.label(config.votingAddress, "VOTING_ADDRESS");
+        vm.label(config.lidoLocatorAddress, "LIDO_LOCATOR");
+        locator = ILidoLocator(config.lidoLocatorAddress);
     }
 
     function run() external {
-        if (CHAIN_ID != block.chainid) {
+        if (chainId != block.chainid) {
             revert ChainIdMismatch({
                 actual: block.chainid,
-                expected: CHAIN_ID
+                expected: chainId
             });
         }
 
@@ -84,32 +89,30 @@ abstract contract DeployBase is Script {
         vm.startBroadcast(pk);
         {
             address treasury = locator.treasury();
-            uint256[] memory curve = new uint256[](2);
-            curve[0] = 2 ether;
-            curve[1] = 4 ether;
-
             CSModule csmImpl = new CSModule({
-                moduleType: "community-onchain-v1",
-                elStealingFine: 0.1 ether,
-                maxKeysPerOperatorEA: 10,
-                lidoLocator: LIDO_LOCATOR_ADDRESS
+                moduleType: config.moduleType,
+                elRewardsStealingFine: config.elRewardsStealingFine,
+                maxKeysPerOperatorEA: config.maxKeysPerOperatorEA,
+                lidoLocator: config.lidoLocatorAddress
             });
-            csm = CSModule(_deployProxy(VOTING_ADDRESS, address(csmImpl)));
+            csm = CSModule(
+                _deployProxy(config.votingAddress, address(csmImpl))
+            );
 
             CSAccounting accountingImpl = new CSAccounting({
-                lidoLocator: LIDO_LOCATOR_ADDRESS,
+                lidoLocator: config.lidoLocatorAddress,
                 communityStakingModule: address(csm)
             });
             accounting = CSAccounting(
-                _deployProxy(VOTING_ADDRESS, address(accountingImpl))
+                _deployProxy(config.votingAddress, address(accountingImpl))
             );
 
             CSFeeOracle oracleImpl = new CSFeeOracle({
-                secondsPerSlot: SECONDS_PER_SLOT,
-                genesisTime: CL_GENESIS_TIME
+                secondsPerSlot: config.secondsPerSlot,
+                genesisTime: config.clGenesisTime
             });
             oracle = CSFeeOracle(
-                _deployProxy(VOTING_ADDRESS, address(oracleImpl))
+                _deployProxy(config.votingAddress, address(oracleImpl))
             );
 
             CSFeeDistributor feeDistributorImpl = new CSFeeDistributor({
@@ -117,17 +120,17 @@ abstract contract DeployBase is Script {
                 accounting: address(accounting)
             });
             feeDistributor = CSFeeDistributor(
-                _deployProxy(VOTING_ADDRESS, address(feeDistributorImpl))
+                _deployProxy(config.votingAddress, address(feeDistributorImpl))
             );
 
             verifier = new CSVerifier({
-                slotsPerEpoch: uint64(SLOTS_PER_EPOCH),
-                // NOTE: Deneb fork gIndexes. Should be updated according to `VERIFIER_SUPPORTED_EPOCH` fork epoch if needed
-                gIHistoricalSummaries: pack(0x3b, 5),
-                gIFirstWithdrawal: pack(0xe1c0, 4),
-                gIFirstValidator: pack(0x560000000000, 40),
+                slotsPerEpoch: uint64(config.slotsPerEpoch),
+                // NOTE: Deneb fork gIndexes. Should be updated according to `config.verifierSupportedEpoch` fork epoch if needed
+                gIHistoricalSummaries: config.gIHistoricalSummaries,
+                gIFirstWithdrawal: config.gIFirstWithdrawal,
+                gIFirstValidator: config.gIFirstValidator,
                 firstSupportedSlot: Slot.wrap(
-                    uint64(VERIFIER_SUPPORTED_EPOCH * SLOTS_PER_EPOCH)
+                    uint64(config.verifierSupportedEpoch * config.slotsPerEpoch)
                 )
             });
 
@@ -136,18 +139,18 @@ abstract contract DeployBase is Script {
                 _accounting: address(accounting),
                 _earlyAdoption: address(0),
                 verifier: address(verifier),
+                _keyRemovalCharge: config.keyRemovalCharge,
                 admin: address(deployer)
             });
             accounting.initialize({
-                bondCurve: curve,
-                admin: VOTING_ADDRESS,
+                bondCurve: config.bondCurve,
+                admin: config.votingAddress,
                 _feeDistributor: address(feeDistributor),
-                // TODO: arguable. should be discussed
-                bondLockRetentionPeriod: 8 weeks,
+                bondLockRetentionPeriod: config.bondLockRetentionPeriod,
                 _chargeRecipient: treasury
             });
             feeDistributor.initialize({
-                admin: VOTING_ADDRESS,
+                admin: config.votingAddress,
                 oracle: address(oracle)
             });
             verifier.initialize(address(locator), address(csm));
@@ -158,25 +161,25 @@ abstract contract DeployBase is Script {
             csm.revokeRole(csm.MODULE_MANAGER_ROLE(), address(deployer));
 
             hashConsensus = new HashConsensus({
-                slotsPerEpoch: SLOTS_PER_EPOCH,
-                secondsPerSlot: SECONDS_PER_SLOT,
-                genesisTime: CL_GENESIS_TIME,
-                epochsPerFrame: ORACLE_REPORT_EPOCHS_PER_FRAME,
-                fastLaneLengthSlots: 0,
-                admin: VOTING_ADDRESS,
+                slotsPerEpoch: config.slotsPerEpoch,
+                secondsPerSlot: config.secondsPerSlot,
+                genesisTime: config.clGenesisTime,
+                epochsPerFrame: config.oracleReportEpochsPerFrame,
+                fastLaneLengthSlots: config.fastLaneLengthSlots,
+                admin: config.votingAddress,
                 reportProcessor: address(oracle)
             });
 
             oracle.initialize({
-                admin: VOTING_ADDRESS,
+                admin: config.votingAddress,
                 feeDistributorContract: address(feeDistributor),
                 consensusContract: address(hashConsensus),
-                consensusVersion: 1,
-                _perfThresholdBP: 9500
+                consensusVersion: config.consensusVersion,
+                _perfThresholdBP: config.performanceThresholdBP
             });
 
             // TODO: remove these lines after early adoption deployment
-            csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), VOTING_ADDRESS);
+            csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.votingAddress);
             csm.revokeRole(csm.DEFAULT_ADMIN_ROLE(), address(deployer));
 
             // TODO: these roles might be granted to multisig for testing purposes
@@ -193,14 +196,14 @@ abstract contract DeployBase is Script {
             //            oracle.grantRole(oracle.PAUSE_ROLE(), address(0)); GateSeal or multisig
 
             JsonObj memory deployJson = Json.newObj();
-            deployJson.set("ChainId", CHAIN_ID);
+            deployJson.set("ChainId", chainId);
             deployJson.set("CSModule", address(csm));
             deployJson.set("CSAccounting", address(accounting));
             deployJson.set("CSFeeOracle", address(oracle));
             deployJson.set("CSFeeDistributor", address(feeDistributor));
             deployJson.set("HashConsensus", address(hashConsensus));
             deployJson.set("CSVerifier", address(verifier));
-            deployJson.set("LidoLocator", LIDO_LOCATOR_ADDRESS);
+            deployJson.set("LidoLocator", config.lidoLocatorAddress);
             vm.writeJson(deployJson.str, _deployJsonFilename());
             vm.writeJson(deployJson.str, "./out/latest.json");
         }
@@ -227,6 +230,7 @@ abstract contract DeployBase is Script {
     }
 
     function _deployJsonFilename() internal view returns (string memory) {
-        return string(abi.encodePacked("./out/", "deploy-", NAME, ".json"));
+        return
+            string(abi.encodePacked("./out/", "deploy-", chainName, ".json"));
     }
 }
