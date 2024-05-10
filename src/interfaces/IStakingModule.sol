@@ -5,9 +5,6 @@ pragma solidity 0.8.24;
 
 /// @title Lido's Staking Module interface
 interface IStakingModule {
-    /// @dev Event to be emitted on StakingModule's nonce change
-    event NonceChanged(uint256 nonce);
-
     /// @notice Returns the type of the staking module
     function getType() external view returns (bytes32);
 
@@ -29,7 +26,7 @@ interface IStakingModule {
 
     /// @notice Returns all-validators summary belonging to the node operator with the given id
     /// @param _nodeOperatorId id of the operator to return report for
-    /// @return targetLimitMode shows whether the current target limit applied to the node operator
+    /// @return targetLimitMode shows whether the current target limit applied to the node operator (1 = soft mode, 2 = forced mode)
     /// @return targetValidatorsCount relative target active validators limit for operator
     /// @return stuckValidatorsCount number of validators with an expired request to exit time
     /// @return refundedValidatorsCount number of validators that can't be withdrawn, but deposit
@@ -48,7 +45,7 @@ interface IStakingModule {
         external
         view
         returns (
-            uint8 targetLimitMode,
+            uint256 targetLimitMode,
             uint256 targetValidatorsCount,
             uint256 stuckValidatorsCount,
             uint256 refundedValidatorsCount,
@@ -98,6 +95,14 @@ interface IStakingModule {
     ///      Details about error data: https://docs.soliditylang.org/en/v0.8.9/control-structures.html#error-handling-assert-require-revert-and-exceptions
     function onRewardsMinted(uint256 _totalShares) external;
 
+    /// @notice Called by StakingRouter to decrease the number of vetted keys for node operator with given id
+    /// @param _nodeOperatorIds bytes packed array of the node operators id
+    /// @param _vettedSigningKeysCounts bytes packed array of the new number of vetted keys for the node operators
+    function decreaseVettedSigningKeysCount(
+        bytes calldata _nodeOperatorIds,
+        bytes calldata _vettedSigningKeysCounts
+    ) external;
+
     /// @notice Updates the number of the validators of the given node operator that were requested
     ///         to exit but failed to do so in the max allowed time
     /// @param _nodeOperatorIds bytes packed array of the node operators id
@@ -109,10 +114,10 @@ interface IStakingModule {
 
     /// @notice Updates the number of the validators in the EXITED state for node operator with given id
     /// @param _nodeOperatorIds bytes packed array of the node operators id
-    /// @param _stuckValidatorsCounts bytes packed array of the new number of EXITED validators for the node operators
+    /// @param _exitedValidatorsCounts bytes packed array of the new number of EXITED validators for the node operators
     function updateExitedValidatorsCount(
         bytes calldata _nodeOperatorIds,
-        bytes calldata _stuckValidatorsCounts
+        bytes calldata _exitedValidatorsCounts
     ) external;
 
     /// @notice Updates the number of the refunded validators for node operator with the given id
@@ -125,11 +130,11 @@ interface IStakingModule {
 
     /// @notice Updates the limit of the validators that can be used for deposit
     /// @param _nodeOperatorId Id of the node operator
-    /// @param _targetLimitMode Active flag
+    /// @param _targetLimitMode taret limit mode
     /// @param _targetLimit Target limit of the node operator
     function updateTargetValidatorsLimits(
         uint256 _nodeOperatorId,
-        uint8 _targetLimitMode,
+        uint256 _targetLimitMode,
         uint256 _targetLimit
     ) external;
 
@@ -176,4 +181,7 @@ interface IStakingModule {
     /// @dev IMPORTANT: this method SHOULD revert with empty error data ONLY because of "out of gas".
     ///      Details about error data: https://docs.soliditylang.org/en/v0.8.9/control-structures.html#error-handling-assert-require-revert-and-exceptions
     function onWithdrawalCredentialsChanged() external;
+
+    /// @dev Event to be emitted on StakingModule's nonce change
+    event NonceChanged(uint256 nonce);
 }

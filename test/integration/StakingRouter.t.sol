@@ -175,8 +175,16 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         vm.prank(agent);
         stakingRouter.updateTargetValidatorsLimits(moduleId, noId, 1, 2);
 
-        (uint8 targetLimitMode, uint256 targetValidatorsCount, , , , , , ) = csm
-            .getNodeOperatorSummary(noId);
+        (
+            uint256 targetLimitMode,
+            uint256 targetValidatorsCount,
+            ,
+            ,
+            ,
+            ,
+            ,
+
+        ) = csm.getNodeOperatorSummary(noId);
         assertEq(targetLimitMode, 1);
         assertEq(targetValidatorsCount, 1);
     }
