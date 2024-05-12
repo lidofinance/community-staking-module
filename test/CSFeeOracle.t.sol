@@ -384,7 +384,7 @@ contract CSFeeOracleTest is Test, Utilities {
     }
 
     function _deployFeeOracleAndHashConsensus(
-        uint256 lastProcessingRefSlot
+        uint256 /* lastProcessingRefSlot */
     ) internal {
         oracle = new CSFeeOracleForTest({
             secondsPerSlot: chainConfig.secondsPerSlot,

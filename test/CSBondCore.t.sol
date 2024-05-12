@@ -238,7 +238,6 @@ contract CSBondCoreETHTest is CSBondCoreTestBase {
         mock_requestWithdrawals(mockedRequestIds);
         _deposit(1 ether);
 
-        uint256 claimableShares = bondCore.getClaimableBondShares(0);
         uint256 claimedShares = stETH.getSharesByPooledEth(0.25 ether);
         uint256 claimedETH = stETH.getPooledEthByShares(claimedShares);
 
@@ -373,7 +372,6 @@ contract CSBondCoreStETHTest is CSBondCoreTestBase {
     function test_claimStETH_WhenToClaimIsLessThanClaimable() public {
         _deposit(1 ether);
 
-        uint256 claimableShares = bondCore.getClaimableBondShares(0);
         uint256 claimedShares = stETH.getSharesByPooledEth(0.25 ether);
         uint256 claimedETH = stETH.getPooledEthByShares(claimedShares);
 
@@ -493,7 +491,6 @@ contract CSBondCoreWstETHTest is CSBondCoreTestBase {
     function test_claimWstETH_WhenToClaimIsLessThanClaimable() public {
         _deposit(1 ether);
 
-        uint256 claimableShares = bondCore.getClaimableBondShares(0);
         uint256 claimedShares = stETH.getSharesByPooledEth(0.25 ether);
         uint256 claimedWstETH = stETH.getSharesByPooledEth(
             stETH.getPooledEthByShares(claimedShares)

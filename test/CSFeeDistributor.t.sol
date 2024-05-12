@@ -267,7 +267,6 @@ contract CSFeeDistributorTest is Test, Fixtures, Utilities {
         uint256 nodeOperatorId = 42;
         uint256 shares = 100;
         tree.pushLeaf(abi.encode(nodeOperatorId, shares));
-        bytes32 root = tree.root();
 
         stETH.mintShares(address(feeDistributor), shares);
     }
