@@ -7,23 +7,22 @@ import { IStakingModule } from "./IStakingModule.sol";
 import { ICSAccounting } from "./ICSAccounting.sol";
 
 struct NodeOperator {
-    address managerAddress;
-    address proposedManagerAddress;
-    address rewardAddress;
-    address proposedRewardAddress;
-    uint256 targetLimit;
-    uint8 targetLimitMode;
-    // TODO: keys could be packed into uint32
-    uint256 stuckPenaltyEndTimestamp;
-    uint256 totalExitedKeys; // @dev only increased
-    uint256 totalAddedKeys; // @dev increased and decreased when removed
-    uint256 totalWithdrawnKeys; // @dev only increased
-    uint256 totalDepositedKeys; // @dev only increased
-    uint256 totalVettedKeys; // @dev both increased and decreased
-    uint256 stuckValidatorsCount; // @dev both increased and decreased
-    uint256 refundedValidatorsCount; // @dev only increased
-    uint256 depositableValidatorsCount; // @dev any value
-    uint256 enqueuedCount; // Tracks how many places are occupied by the node operator's keys in the queue.
+    // All the counters below are used together e.g. in the _updateDepositableValidatorsCount
+    /* 1 */ uint32 totalAddedKeys; // @dev increased and decreased when removed
+    /* 1 */ uint32 totalWithdrawnKeys; // @dev only increased
+    /* 1 */ uint32 totalDepositedKeys; // @dev only increased
+    /* 1 */ uint32 totalVettedKeys; // @dev both increased and decreased
+    /* 1 */ uint32 stuckValidatorsCount; // @dev both increased and decreased
+    /* 1 */ uint32 depositableValidatorsCount; // @dev any value
+    /* 1 */ uint32 targetLimit;
+    /* 1 */ uint8 targetLimitMode;
+    /* 2 */ uint32 totalExitedKeys; // @dev only increased
+    /* 2 */ uint32 refundedValidatorsCount; // @dev only increased
+    /* 2 */ uint32 enqueuedCount; // Tracks how many places are occupied by the node operator's keys in the queue.
+    /* 2 */ address managerAddress;
+    /* 3 */ address proposedManagerAddress;
+    /* 4 */ address rewardAddress;
+    /* 5 */ address proposedRewardAddress;
 }
 
 /// @title Lido's Community Staking Module interface

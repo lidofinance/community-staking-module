@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
+import { NodeOperator } from "../interfaces/ICSModule.sol";
+import { TransientUintUintMap } from "./TransientUintUintMapLib.sol";
+
 // Batch is an uint256 as it's the internal data type used by solidity.
 // Batch is a packed value, consisting of the following fields:
 //    - uint64  nodeOperatorId
@@ -68,6 +71,7 @@ function createBatch(
 }
 
 using { noId, keys, setKeys, next, isNil, unwrap } for Batch global;
+using QueueLib for QueueLib.Queue;
 
 /// @author madlabman
 library QueueLib {
@@ -81,9 +85,106 @@ library QueueLib {
         mapping(uint128 => Batch) queue;
     }
 
+    event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
+
     error InvalidIndex();
     error QueueIsEmpty();
+    error QueueLookupNoLimit();
 
+    //////
+    /// External methods
+    //////
+    function normalize(
+        Queue storage self,
+        mapping(uint256 => NodeOperator) storage nodeOperators,
+        uint256 nodeOperatorId
+    ) external {
+        NodeOperator storage no = nodeOperators[nodeOperatorId];
+        uint32 depositable = no.depositableValidatorsCount;
+        uint32 enqueued = no.enqueuedCount;
+
+        if (enqueued < depositable) {
+            uint32 count;
+            unchecked {
+                count = depositable - enqueued;
+            }
+            Batch item = createBatch(nodeOperatorId, count);
+            no.enqueuedCount = depositable;
+            self.enqueue(item);
+            emit BatchEnqueued(nodeOperatorId, count);
+        }
+    }
+
+    function clean(
+        Queue storage self,
+        mapping(uint256 => NodeOperator) storage nodeOperators,
+        TransientUintUintMap storage queueLookup,
+        uint256 maxItems
+    ) external returns (uint256 toRemove) {
+        if (maxItems == 0) revert QueueLookupNoLimit();
+
+        Batch prev;
+        uint128 indexOfPrev;
+
+        uint128 head = self.head;
+        uint128 curr = head;
+
+        // Make sure we don't have any leftovers from the previous call.
+        queueLookup.clear();
+
+        for (uint256 i; i < maxItems; ++i) {
+            Batch item = self.queue[curr];
+            if (item.isNil()) {
+                return toRemove;
+            }
+
+            uint256 noId = item.noId();
+            NodeOperator storage no = nodeOperators[noId];
+            uint256 enqueuedSoFar = queueLookup.get(noId);
+            if (enqueuedSoFar >= no.depositableValidatorsCount) {
+                // NOTE: Since we reached that point there's no way for a Node Operator to have a depositable batch
+                // later in the queue, and hence we don't update _queueLookup for the Node Operator.
+                if (curr == head) {
+                    self.dequeue();
+                    head = self.head;
+                } else {
+                    // There's no `prev` item while we call `dequeue`, and removing an item will keep the `prev` intact
+                    // other than changing its `next` field.
+                    // @dev this is an inlined version of `remove` function.
+                    assembly {
+                        prev := or(
+                            and(
+                                prev,
+                                0xffffffffffffffffffffffffffffffff00000000000000000000000000000000
+                            ),
+                            and(
+                                item,
+                                0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff
+                            )
+                        ) // prev.next = item.next
+                    }
+
+                    self.queue[indexOfPrev] = prev;
+                }
+
+                unchecked {
+                    // We assume that the invariant `enqueuedCount` >= `keys` is kept.
+                    no.enqueuedCount -= uint32(item.keys());
+                    ++toRemove;
+                }
+            } else {
+                queueLookup.add(noId, item.keys());
+                indexOfPrev = curr;
+                prev = item;
+            }
+
+            curr = item.next();
+        }
+    }
+
+    /////
+    /// Internal methods
+    /////
     // TODO: Consider changing to accept the batch fields as arguments.
     function enqueue(Queue storage self, Batch item) internal returns (Batch) {
         uint128 length = self.length;

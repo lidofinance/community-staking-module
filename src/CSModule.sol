@@ -14,7 +14,7 @@ import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSEarlyAdoption } from "./interfaces/ICSEarlyAdoption.sol";
 import { ICSModule, NodeOperator } from "./interfaces/ICSModule.sol";
 
-import { QueueLib, Batch, createBatch } from "./lib/QueueLib.sol";
+import { QueueLib, Batch } from "./lib/QueueLib.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
 import { TransientUintUintMap } from "./lib/TransientUintUintMapLib.sol";
 import { NOAddresses } from "./lib/NOAddresses.sol";
@@ -57,29 +57,31 @@ contract CSModule is
     bytes32 private immutable MODULE_TYPE;
     ILidoLocator public immutable LIDO_LOCATOR;
 
-    bool public publicRelease;
+    ////////////////////////
+    // State variables below
+    ////////////////////////
     uint256 public keyRemovalCharge;
+
     QueueLib.Queue public depositQueue;
 
     ICSAccounting public accounting;
+
     ICSEarlyAdoption public earlyAdoption;
-    // @dev max number of Node Operators is limited by uint64 due to Batch serialization in 32 bytes
-    // it seems to be enough
-    // TODO: ^^ comment
-    uint256 private _nodeOperatorsCount; // TODO: pack more efficinetly
-    uint256 private _activeNodeOperatorsCount;
+    uint64 private _nodeOperatorsCount;
+    bool public publicRelease;
+
     uint256 private _nonce;
     mapping(uint256 => NodeOperator) private _nodeOperators;
     // @dev see _keyPointer function for details of noKeyIndexPacked structure
     mapping(uint256 noKeyIndexPacked => bool) private _isValidatorWithdrawn;
     mapping(uint256 noKeyIndexPacked => bool) private _isValidatorSlashed;
 
-    uint256 private _totalDepositedValidators; // TODO: think about more efficient way to store this
-    uint256 private _totalExitedValidators;
-    uint256 private _totalAddedValidators;
-    uint256 private _depositableValidatorsCount;
-
     TransientUintUintMap private _queueLookup; // TODO: Add explainer comment
+
+    uint64 private _totalDepositedValidators;
+    uint64 private _totalExitedValidators;
+    uint64 private _totalAddedValidators;
+    uint64 private _depositableValidatorsCount;
 
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
@@ -127,8 +129,6 @@ contract CSModule is
     );
 
     // TODO: do we want event for queue cursor moving as well?
-    event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
-
     event PublicRelease();
     event KeyRemovalChargeSet(uint256 amount);
 
@@ -158,7 +158,6 @@ contract CSModule is
     error ExitedKeysHigherThanTotalDeposited();
     error ExitedKeysDecrease();
 
-    error QueueLookupNoLimit();
     error NotEnoughKeys();
 
     error SigningKeysInvalidOffset();
@@ -805,7 +804,7 @@ contract CSModule is
     ) external onlyRole(STAKING_ROUTER_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        no.refundedValidatorsCount = refundedValidatorsCount;
+        no.refundedValidatorsCount = uint32(refundedValidatorsCount);
         emit RefundedKeysCountChanged(nodeOperatorId, refundedValidatorsCount);
         _incrementModuleNonce();
     }
@@ -836,7 +835,7 @@ contract CSModule is
         }
 
         if (no.targetLimit != targetLimit) {
-            no.targetLimit = targetLimit;
+            no.targetLimit = uint32(targetLimit);
         }
 
         emit TargetValidatorsCountChangedByRequest(
@@ -911,7 +910,7 @@ contract CSModule is
                 revert InvalidVetKeysPointer();
             }
 
-            no.totalVettedKeys = vettedSigningKeysCount;
+            no.totalVettedKeys = uint32(vettedSigningKeysCount);
             emit VettedSigningKeysCountChanged(
                 nodeOperatorId,
                 vettedSigningKeysCount
@@ -938,7 +937,6 @@ contract CSModule is
         uint256 startIndex,
         uint256 keysCount
     ) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
         _onlyNodeOperatorManager(nodeOperatorId);
         _removeSigningKeys(nodeOperatorId, startIndex, keysCount);
     }
@@ -961,9 +959,8 @@ contract CSModule is
     /// @notice Normalization stands for adding vetted but not enqueued keys to the queue
     /// @param nodeOperatorId ID of the Node Operator
     function normalizeQueue(uint256 nodeOperatorId) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
         _onlyNodeOperatorManager(nodeOperatorId);
-        _normalizeQueue(nodeOperatorId);
+        depositQueue.normalize(_nodeOperators, nodeOperatorId);
     }
 
     /// @notice Report EL rewards stealing for the given Node Operator
@@ -1196,13 +1193,13 @@ contract CSModule is
                 // covers the case when no depositable keys on the Node Operator have been left.
                 if (depositsLeft > keysCount || keysCount == keysInBatch) {
                     // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
-                    no.enqueuedCount -= keysInBatch;
+                    no.enqueuedCount -= uint32(keysInBatch);
                     // We've consumed all the keys in the batch, so we dequeue it.
                     depositQueue.dequeue();
                 } else {
                     // This branch covers the case when we stop in the middle of the batch.
                     // We release the amount of keys consumed only, the rest will be kept.
-                    no.enqueuedCount -= keysCount;
+                    no.enqueuedCount -= uint32(keysCount);
                     // NOTE: `keysInBatch` can't be less than `keysCount` at this point.
                     // We update the batch with the remaining keys.
                     item = item.setKeys(keysInBatch - keysCount);
@@ -1226,7 +1223,7 @@ contract CSModule is
 
                 // It's impossible in practice to reach the limit of these variables.
                 loadedKeysCount += keysCount;
-                no.totalDepositedKeys += keysCount;
+                no.totalDepositedKeys += uint32(keysCount);
 
                 emit DepositedSigningKeysCountChanged(
                     noId,
@@ -1235,7 +1232,7 @@ contract CSModule is
 
                 // No need for `_updateDepositableValidatorsCount` call since we update the number directly.
                 // `keysCount` is min of `depositableValidatorsCount` and `depositsLeft`.
-                no.depositableValidatorsCount -= keysCount;
+                no.depositableValidatorsCount -= uint32(keysCount);
                 depositsLeft -= keysCount;
                 if (depositsLeft == 0) {
                     break;
@@ -1247,8 +1244,8 @@ contract CSModule is
         }
 
         unchecked {
-            _depositableValidatorsCount -= depositsCount;
-            _totalDepositedValidators += depositsCount;
+            _depositableValidatorsCount -= uint64(depositsCount);
+            _totalDepositedValidators += uint64(depositsCount);
         }
 
         _incrementModuleNonce();
@@ -1261,52 +1258,7 @@ contract CSModule is
     function cleanDepositQueue(
         uint256 maxItems
     ) external returns (uint256 toRemove) {
-        if (maxItems == 0) revert QueueLookupNoLimit();
-
-        Batch prev;
-        uint128 indexOfPrev;
-
-        uint128 head = depositQueue.head;
-        uint128 curr = head;
-
-        // Make sure we don't have any leftovers from the previous call.
-        _queueLookup.clear();
-
-        for (uint256 i; i < maxItems; ++i) {
-            Batch item = depositQueue.queue[curr];
-            if (item.isNil()) {
-                return toRemove;
-            }
-
-            uint256 noId = item.noId();
-            NodeOperator storage no = _nodeOperators[noId];
-            uint256 enqueuedSoFar = _queueLookup.get(noId);
-            if (enqueuedSoFar >= no.depositableValidatorsCount) {
-                // NOTE: Since we reached that point there's no way for a Node Operator to have a depositable batch
-                // later in the queue, and hence we don't update _queueLookup for the Node Operator.
-                if (curr == head) {
-                    depositQueue.dequeue();
-                    head = depositQueue.head;
-                } else {
-                    // There's no `prev` item while we call `dequeue`, and removing an item will keep the `prev` intact
-                    // other than changing its `next` field.
-                    prev = depositQueue.remove(indexOfPrev, prev, item);
-                }
-
-                unchecked {
-                    // We assume that the invariant `enqueuedCount` >= `keys` is kept.
-                    uint256 keysInBatch = item.keys();
-                    no.enqueuedCount -= keysInBatch;
-                    ++toRemove;
-                }
-            } else {
-                _queueLookup.add(noId, item.keys());
-                indexOfPrev = curr;
-                prev = item;
-            }
-
-            curr = item.next();
-        }
+        return depositQueue.clean(_nodeOperators, _queueLookup, maxItems);
     }
 
     /// @notice Recover all stETH shares from the contract
@@ -1378,7 +1330,6 @@ contract CSModule is
     function getNodeOperator(
         uint256 nodeOperatorId
     ) external view returns (NodeOperator memory) {
-        _onlyExistingNodeOperator(nodeOperatorId); // TODO: consider to remove this check
         return _nodeOperators[nodeOperatorId];
     }
 
@@ -1388,7 +1339,6 @@ contract CSModule is
     function getNodeOperatorNonWithdrawnKeys(
         uint256 nodeOperatorId
     ) external view returns (uint256) {
-        _onlyExistingNodeOperator(nodeOperatorId); // TODO: consider to remove this check
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         return no.totalAddedKeys - no.totalWithdrawnKeys;
     }
@@ -1407,7 +1357,7 @@ contract CSModule is
     /// @return targetValidatorsCount Target validators count
     /// @return stuckValidatorsCount Stuck validators count
     /// @return refundedValidatorsCount Refunded validators count
-    /// @return stuckPenaltyEndTimestamp Stuck penalty end timestamp
+    /// @return stuckPenaltyEndTimestamp Stuck penalty end timestamp (unused)
     /// @return totalExitedValidators Total exited validators
     /// @return totalDepositedValidators Total deposited validators
     /// @return depositableValidatorsCount Depositable validators count
@@ -1454,7 +1404,8 @@ contract CSModule is
         }
         stuckValidatorsCount = no.stuckValidatorsCount;
         refundedValidatorsCount = no.refundedValidatorsCount;
-        stuckPenaltyEndTimestamp = no.stuckPenaltyEndTimestamp;
+        // @dev unused in CSM
+        stuckPenaltyEndTimestamp = 0;
         totalExitedValidators = no.totalExitedKeys;
         totalDepositedValidators = no.totalDepositedKeys;
         depositableValidatorsCount = no.depositableValidatorsCount;
@@ -1470,7 +1421,6 @@ contract CSModule is
         uint256 startIndex,
         uint256 keysCount
     ) external view returns (bytes memory) {
-        _onlyExistingNodeOperator(nodeOperatorId); // TODO: consider to remove this check
         if (
             startIndex + keysCount >
             _nodeOperators[nodeOperatorId].totalAddedKeys
@@ -1493,7 +1443,6 @@ contract CSModule is
         uint256 startIndex,
         uint256 keysCount
     ) external view returns (bytes memory keys, bytes memory signatures) {
-        _onlyExistingNodeOperator(nodeOperatorId); // TODO: consider to remove this check
         if (
             startIndex + keysCount >
             _nodeOperators[nodeOperatorId].totalAddedKeys
@@ -1612,18 +1561,18 @@ contract CSModule is
             signatures
         );
 
-        _totalAddedValidators += keysCount;
+        _totalAddedValidators += uint64(keysCount);
 
         // Optimistic vetting takes place.
         if (no.totalAddedKeys == no.totalVettedKeys) {
-            no.totalVettedKeys += keysCount;
+            no.totalVettedKeys += uint32(keysCount);
             emit VettedSigningKeysCountChanged(
                 nodeOperatorId,
                 no.totalVettedKeys
             );
         }
 
-        no.totalAddedKeys += keysCount;
+        no.totalAddedKeys += uint32(keysCount);
         emit TotalSigningKeysCountChanged(nodeOperatorId, no.totalAddedKeys);
     }
 
@@ -1659,10 +1608,10 @@ contract CSModule is
             emit KeyRemovalChargeApplied(nodeOperatorId, amountToCharge);
         }
 
-        no.totalAddedKeys = newTotalSigningKeys;
+        no.totalAddedKeys = uint32(newTotalSigningKeys);
         emit TotalSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
 
-        no.totalVettedKeys = newTotalSigningKeys;
+        no.totalVettedKeys = uint32(newTotalSigningKeys);
         emit VettedSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
 
         // Nonce is updated below due to keys state change
@@ -1710,8 +1659,8 @@ contract CSModule is
 
         _totalExitedValidators =
             (_totalExitedValidators - no.totalExitedKeys) +
-            exitedValidatorsCount;
-        no.totalExitedKeys = exitedValidatorsCount;
+            uint64(exitedValidatorsCount);
+        no.totalExitedKeys = uint32(exitedValidatorsCount);
 
         emit ExitedSigningKeysCountChanged(
             nodeOperatorId,
@@ -1728,7 +1677,7 @@ contract CSModule is
         if (stuckValidatorsCount > no.totalDepositedKeys - no.totalExitedKeys)
             revert StuckKeysHigherThanNonWithdrawn(); // TODO: rename to exited
 
-        no.stuckValidatorsCount = stuckValidatorsCount;
+        no.stuckValidatorsCount = uint32(stuckValidatorsCount);
         emit StuckSigningKeysCountChanged(nodeOperatorId, stuckValidatorsCount);
 
         // TODO: think about reforge the condition: is `no.depositableValidatorsCount > 0` required?
@@ -1789,32 +1738,15 @@ contract CSModule is
                 _depositableValidatorsCount =
                     _depositableValidatorsCount -
                     no.depositableValidatorsCount +
-                    newCount;
+                    uint32(newCount);
             }
-            no.depositableValidatorsCount = newCount;
+            no.depositableValidatorsCount = uint32(newCount);
             if (incrementNonceIfUpdated) {
                 _incrementModuleNonce();
             }
             if (normalizeQueueIfUpdated) {
-                _normalizeQueue(nodeOperatorId);
+                depositQueue.normalize(_nodeOperators, nodeOperatorId);
             }
-        }
-    }
-
-    function _normalizeQueue(uint256 nodeOperatorId) internal {
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        uint256 depositable = no.depositableValidatorsCount;
-        uint256 enqueued = no.enqueuedCount;
-
-        if (enqueued < depositable) {
-            uint256 count;
-            unchecked {
-                count = depositable - enqueued;
-            }
-            Batch item = createBatch(nodeOperatorId, count);
-            no.enqueuedCount = depositable;
-            depositQueue.enqueue(item);
-            emit BatchEnqueued(nodeOperatorId, count);
         }
     }
 
