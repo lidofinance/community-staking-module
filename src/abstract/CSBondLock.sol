@@ -89,10 +89,11 @@ abstract contract CSBondLock is Initializable {
         uint256 nodeOperatorId
     ) public view returns (uint256) {
         CSBondLockStorage storage $ = _getCSBondLockStorage();
-        if ($.bondLock[nodeOperatorId].retentionUntil >= block.timestamp) {
-            return $.bondLock[nodeOperatorId].amount;
+        BondLock storage bondLock = $.bondLock[nodeOperatorId];
+        if (bondLock.retentionUntil < block.timestamp) {
+            return 0;
         }
-        return 0;
+        return bondLock.amount;
     }
 
     /// @dev Lock bond amount for the given Node Operator until the retention period.
