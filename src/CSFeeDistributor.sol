@@ -35,7 +35,7 @@ contract CSFeeDistributor is
     mapping(uint256 => uint256) public distributedShares;
 
     /// @notice Total Amount of stETH shares available for claiming by NOs
-    uint256 public claimableShares;
+    uint256 public totalClaimableShares;
 
     /// @dev Emitted when fees are distributed
     event FeeDistributed(uint256 indexed nodeOperatorId, uint256 shares);
@@ -47,6 +47,8 @@ contract CSFeeDistributor is
     error InvalidTreeCID();
     error InvalidShares();
     error InvalidProof();
+    error FeeSharesDecrease();
+    error NotEnoughShares();
 
     modifier onlyAccounting() {
         if (msg.sender != ACCOUNTING) revert NotAccounting();
@@ -87,12 +89,17 @@ contract CSFeeDistributor is
         );
 
         if (sharesToDistribute == 0) {
-            // To avoid breaking claim rewards logic
             return 0;
         }
 
-        claimableShares -= sharesToDistribute;
-        distributedShares[nodeOperatorId] += sharesToDistribute;
+        if (totalClaimableShares < sharesToDistribute) {
+            revert NotEnoughShares();
+        }
+
+        unchecked {
+            totalClaimableShares -= sharesToDistribute;
+            distributedShares[nodeOperatorId] += sharesToDistribute;
+        }
 
         STETH.transferShares(ACCOUNTING, sharesToDistribute);
         emit FeeDistributed(nodeOperatorId, sharesToDistribute);
@@ -106,7 +113,9 @@ contract CSFeeDistributor is
         string calldata _treeCid,
         uint256 distributed
     ) external onlyRole(ORACLE_ROLE) {
-        if (claimableShares + distributed > STETH.sharesOf(address(this))) {
+        if (
+            totalClaimableShares + distributed > STETH.sharesOf(address(this))
+        ) {
             revert InvalidShares();
         }
 
@@ -117,7 +126,7 @@ contract CSFeeDistributor is
 
             // Doesn't overflow because of the very first check.
             unchecked {
-                claimableShares += distributed;
+                totalClaimableShares += distributed;
             }
 
             treeRoot = _treeRoot;
@@ -139,7 +148,7 @@ contract CSFeeDistributor is
 
     /// @notice Get the Amount of stETH shares that are pending to be distributed
     function pendingToDistribute() external view returns (uint256) {
-        return STETH.sharesOf(address(this)) - claimableShares;
+        return STETH.sharesOf(address(this)) - totalClaimableShares;
     }
 
     /// @notice Get the Amount of stETH shares that can be distributed in favor of the Node Operator
@@ -159,11 +168,15 @@ contract CSFeeDistributor is
         );
         if (!isValid) revert InvalidProof();
 
-        if (distributedShares[nodeOperatorId] > shares) {
-            revert InvalidShares();
+        uint256 _distributedShares = distributedShares[nodeOperatorId];
+        if (_distributedShares > shares) {
+            // This error means the fee oracle brought invalid data.
+            revert FeeSharesDecrease();
         }
 
-        return shares - distributedShares[nodeOperatorId];
+        unchecked {
+            return shares - _distributedShares;
+        }
     }
 
     /// @notice Get a hash of a leaf

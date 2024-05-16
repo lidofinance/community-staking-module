@@ -215,7 +215,7 @@ contract CSFeeDistributorTest is Test, Fixtures, Utilities {
             .with_key(nodeOperatorId)
             .checked_write(shares + 99);
 
-        vm.expectRevert(CSFeeDistributor.InvalidShares.selector);
+        vm.expectRevert(CSFeeDistributor.FeeSharesDecrease.selector);
         vm.prank(address(accounting));
         feeDistributor.distributeFees({
             proof: proof,

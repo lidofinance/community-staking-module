@@ -251,7 +251,7 @@ abstract contract CSBondCore {
         );
     }
 
-    /// @dev Should be overriden in case of additional restrictions on a claimable bond amount
+    /// @dev Should be overridden in case of additional restrictions on a claimable bond amount
     function _getClaimableBondShares(
         uint256 nodeOperatorId
     ) internal view virtual returns (uint256) {
@@ -272,8 +272,10 @@ abstract contract CSBondCore {
     /// @dev Unsafe reduce bond shares (stETH) (possible underflow). Safety checks should be done outside
     function _unsafeReduceBond(uint256 nodeOperatorId, uint256 shares) private {
         CSBondCoreStorage storage $ = _getCSBondCoreStorage();
-        $.bondShares[nodeOperatorId] -= shares;
-        $.totalBondShares -= shares;
+        unchecked {
+            $.bondShares[nodeOperatorId] -= shares;
+            $.totalBondShares -= shares;
+        }
     }
 
     /// @dev Safe reduce bond shares (stETH). The maximum shares to reduce is the current bond shares

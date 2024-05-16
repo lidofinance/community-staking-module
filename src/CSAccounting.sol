@@ -560,7 +560,7 @@ contract CSAccounting is
             cumulativeFeeShares,
             rewardsProof
         );
-        _increaseBond(nodeOperatorId, distributed);
+        CSBondCore._increaseBond(nodeOperatorId, distributed);
     }
 
     /// @dev Overrides the original implementation to account for a locked bond and withdrawn validators
