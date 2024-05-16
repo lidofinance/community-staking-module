@@ -4819,6 +4819,15 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         vm.expectRevert(CSModule.AlreadySubmitted.selector);
         csm.submitInitialSlashing(noId, 0);
     }
+
+    function test_submitInitialSlashing_RevertWhenAlreadyWithdrawn() public {
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+        csm.submitWithdrawal(noId, 0, 32 ether);
+
+        vm.expectRevert(CSModule.AlreadyWithdrawn.selector);
+        csm.submitInitialSlashing(noId, 0);
+    }
 }
 
 contract CsmGetStakingModuleSummary is CSMCommon {

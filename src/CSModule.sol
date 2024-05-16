@@ -164,6 +164,7 @@ contract CSModule is
     error SigningKeysInvalidOffset();
 
     error AlreadySubmitted();
+    error AlreadyWithdrawn();
 
     error AlreadySet();
     error InvalidAmount();
@@ -1093,6 +1094,7 @@ contract CSModule is
 
         if (_isValidatorSlashed[pointer]) {
             amount += INITIAL_SLASHING_PENALTY;
+            // TODO: Add an explainer.
             accounting.resetBondCurve(nodeOperatorId);
         }
 
@@ -1125,6 +1127,10 @@ contract CSModule is
         }
 
         uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
+
+        if (_isValidatorWithdrawn[pointer]) {
+            revert AlreadyWithdrawn();
+        }
 
         if (_isValidatorSlashed[pointer]) {
             revert AlreadySubmitted();
