@@ -41,15 +41,16 @@ abstract contract CSBondCore {
     bytes32 private constant CS_BOND_CORE_STORAGE_LOCATION =
         0x23f334b9eb5378c2a1573857b8f9d9ca79959360a69e73d3f16848e56ec92100;
 
-    event BondDeposited(
+    event BondDepositedETH(
         uint256 indexed nodeOperatorId,
         address from,
         uint256 amount
     );
-    event BondClaimed(
+    event BondClaimedUnstETH(
         uint256 indexed nodeOperatorId,
         address to,
-        uint256 amount
+        uint256 amount,
+        uint256 requestId
     );
     event BondDepositedWstETH(
         uint256 indexed nodeOperatorId,
@@ -57,6 +58,16 @@ abstract contract CSBondCore {
         uint256 amount
     );
     event BondClaimedWstETH(
+        uint256 indexed nodeOperatorId,
+        address to,
+        uint256 amount
+    );
+    event BondDepositedStETH(
+        uint256 indexed nodeOperatorId,
+        address from,
+        uint256 amount
+    );
+    event BondClaimedStETH(
         uint256 indexed nodeOperatorId,
         address to,
         uint256 amount
@@ -79,6 +90,7 @@ abstract contract CSBondCore {
             revert ZeroAddress("lidoLocator");
         }
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
+        // TODO: Keep only Locator immutable. Fetch the rest within module calls
         LIDO = ILido(LIDO_LOCATOR.lido());
         BURNER = IBurner(LIDO_LOCATOR.burner());
         WITHDRAWAL_QUEUE = IWithdrawalQueue(LIDO_LOCATOR.withdrawalQueue());
@@ -119,7 +131,7 @@ abstract contract CSBondCore {
             _referal: address(0)
         });
         _increaseBond(nodeOperatorId, shares);
-        emit BondDeposited(nodeOperatorId, from, msg.value);
+        emit BondDepositedETH(nodeOperatorId, from, msg.value);
         return shares;
     }
 
@@ -133,7 +145,7 @@ abstract contract CSBondCore {
         shares = _sharesByEth(amount);
         LIDO.transferSharesFrom(from, address(this), shares);
         _increaseBond(nodeOperatorId, shares);
-        emit BondDeposited(nodeOperatorId, from, amount);
+        emit BondDepositedStETH(nodeOperatorId, from, amount);
     }
 
     /// @dev Transfer user's wstETH to the contract, unwrap and store stETH shares as Node Operator's bond shares
@@ -161,6 +173,7 @@ abstract contract CSBondCore {
 
     /// @dev Claim Node Operator's excess bond shares (stETH) in ETH by requesting withdrawal from the protocol
     ///      As a usual withdrawal request, this claim might be processed on the next stETH rebase
+    /// TODO: Rename to claimUnstETH
     function _requestETH(
         uint256 nodeOperatorId,
         uint256 amountToClaim,
@@ -171,14 +184,15 @@ abstract contract CSBondCore {
             ? _sharesByEth(amountToClaim)
             : claimableShares;
         if (sharesToClaim == 0) return;
-        if (sharesToClaim < WITHDRAWAL_QUEUE.MIN_STETH_WITHDRAWAL_AMOUNT())
-            return;
         _unsafeReduceBond(nodeOperatorId, sharesToClaim);
+
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = _ethByShares(sharesToClaim);
-        // Reverts if `sharesToClaim` is greater than `WITHDRAWAL_QUEUE.MAX_STETH_WITHDRAWAL_AMOUNT`
-        WITHDRAWAL_QUEUE.requestWithdrawals(amounts, to);
-        emit BondClaimed(nodeOperatorId, to, amounts[0]);
+        uint256[] memory requestIds = WITHDRAWAL_QUEUE.requestWithdrawals(
+            amounts,
+            to
+        );
+        emit BondClaimedUnstETH(nodeOperatorId, to, amounts[0], requestIds[0]);
     }
 
     /// @dev Claim Node Operator's excess bond shares (stETH) in stETH by transferring shares from the contract
@@ -195,7 +209,7 @@ abstract contract CSBondCore {
         _unsafeReduceBond(nodeOperatorId, sharesToClaim);
 
         LIDO.transferShares(to, sharesToClaim);
-        emit BondClaimed(nodeOperatorId, to, _ethByShares(sharesToClaim));
+        emit BondClaimedStETH(nodeOperatorId, to, _ethByShares(sharesToClaim));
     }
 
     /// @dev Claim Node Operator's excess bond shares (stETH) in wstETH by wrapping stETH from the contract and transferring wstETH
@@ -212,6 +226,7 @@ abstract contract CSBondCore {
         uint256 amount = WSTETH.wrap(_ethByShares(sharesToClaim));
         _unsafeReduceBond(nodeOperatorId, amount);
 
+        // TODO: Check if return value should be checked
         WSTETH.transfer(to, amount);
         emit BondClaimedWstETH(nodeOperatorId, to, amount);
     }

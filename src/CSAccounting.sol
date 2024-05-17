@@ -284,7 +284,6 @@ contract CSAccounting is
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
-        if (stETHAmount == 0) return;
         CSBondCore._claimStETH(nodeOperatorId, stETHAmount, rewardAddress);
     }
 
@@ -309,12 +308,13 @@ contract CSAccounting is
         CSBondCore._claimWstETH(nodeOperatorId, wstETHAmount, rewardAddress);
     }
 
+    /// TODO: Reconsider interface and method naming
     /// @notice Request full reward (fee + bond) in Withdrawal NFT (unstETH) for the given Node Operator available for this moment.
     ///         `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond
     /// @dev Reverts if amount isn't between `MIN_STETH_WITHDRAWAL_AMOUNT` and `MAX_STETH_WITHDRAWAL_AMOUNT`
     /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param ethAmount Amount of ETH to request
+    /// @param ethAmount Amount of ETH to request TODO: Rename to stETH amount
     /// @param rewardAddress Reward address of the node operator
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
@@ -328,7 +328,6 @@ contract CSAccounting is
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
-        if (ethAmount == 0) return;
         CSBondCore._requestETH(nodeOperatorId, ethAmount, rewardAddress);
     }
 

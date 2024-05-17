@@ -6,14 +6,16 @@ pragma solidity 0.8.24;
 library ValidatorCountsReport {
     error InvalidReportData();
 
-    function count(bytes calldata ids) internal pure returns (uint256) {
+    // TODO: consider joining with validate
+    function countOperators(
+        bytes calldata ids
+    ) internal pure returns (uint256) {
         return ids.length / 8;
     }
 
     function validate(bytes calldata ids, bytes calldata counts) internal pure {
         if (
-            // TODO: rename `count`
-            counts.length / 16 != count(ids) ||
+            counts.length / 16 != ids.length / 8 ||
             ids.length % 8 != 0 ||
             counts.length % 16 != 0
         ) {
@@ -26,6 +28,7 @@ library ValidatorCountsReport {
         bytes calldata counts,
         uint256 offset
     ) internal pure returns (uint256 nodeOperatorId, uint256 keysCount) {
+        // TODO: Rewrite to Yul (@madlabman)
         nodeOperatorId = uint256(
             bytes32(ids[8 * offset:8 * offset + 8]) >> 192
         );

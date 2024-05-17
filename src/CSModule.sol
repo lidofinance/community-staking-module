@@ -617,6 +617,7 @@ contract CSModule is
         });
     }
 
+    /// TODO: Rename to unstETH
     /// @notice Request full reward (fees + bond rewards) in Withdrawal NFT (unstETH) for the given Node Operator
     /// @notice Amounts less than `MIN_STETH_WITHDRAWAL_AMOUNT` (see LidoWithdrawalQueue contract) are not allowed
     /// @notice Amounts above `MAX_STETH_WITHDRAWAL_AMOUNT` should be requested in several transactions
@@ -717,6 +718,7 @@ contract CSModule is
     }
 
     /// @notice Called when rewards are minted for the module
+    /// @dev Called by StakingRouter
     /// @dev Passes through the minted stETH shares to the fee distributor
     function onRewardsMinted(
         uint256 totalShares
@@ -739,7 +741,7 @@ contract CSModule is
     ) external onlyRole(STAKING_ROUTER_ROLE) {
         ValidatorCountsReport.validate(nodeOperatorIds, stuckValidatorsCounts);
 
-        uint256 operatorsInReport = ValidatorCountsReport.count(
+        uint256 operatorsInReport = ValidatorCountsReport.countOperators(
             nodeOperatorIds
         );
 
@@ -769,7 +771,7 @@ contract CSModule is
     ) external onlyRole(STAKING_ROUTER_ROLE) {
         ValidatorCountsReport.validate(nodeOperatorIds, exitedValidatorsCounts);
 
-        uint256 operatorsInReport = ValidatorCountsReport.count(
+        uint256 operatorsInReport = ValidatorCountsReport.countOperators(
             nodeOperatorIds
         );
 
@@ -893,7 +895,7 @@ contract CSModule is
             vettedSigningKeysCounts
         );
 
-        uint256 operatorsInReport = ValidatorCountsReport.count(
+        uint256 operatorsInReport = ValidatorCountsReport.countOperators(
             nodeOperatorIds
         );
 
