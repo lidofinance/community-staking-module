@@ -4,6 +4,8 @@
 pragma solidity 0.8.24;
 
 interface ICSBondCore {
+    function totalBondShares() external view returns (uint256);
+
     function getBondShares(
         uint256 nodeOperatorId
     ) external view returns (uint256);

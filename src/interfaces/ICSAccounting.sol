@@ -6,6 +6,7 @@ pragma solidity 0.8.24;
 import { ICSBondCore } from "./ICSBondCore.sol";
 import { ICSBondCurve } from "./ICSBondCurve.sol";
 import { ICSBondLock } from "./ICSBondLock.sol";
+import { ICSFeeDistributor } from "./ICSFeeDistributor.sol";
 
 interface ICSAccounting is ICSBondCore, ICSBondCurve, ICSBondLock {
     struct PermitInput {
@@ -16,7 +17,9 @@ interface ICSAccounting is ICSBondCore, ICSBondCurve, ICSBondLock {
         bytes32 s;
     }
 
-    function feeDistributor() external view returns (address);
+    function feeDistributor() external view returns (ICSFeeDistributor);
+
+    function chargeRecipient() external view returns (address);
 
     function getRequiredBondForNextKeys(
         uint256 nodeOperatorId,

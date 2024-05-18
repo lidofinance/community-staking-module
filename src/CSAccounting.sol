@@ -13,12 +13,14 @@ import { CSBondCurve } from "./abstract/CSBondCurve.sol";
 import { CSBondLock } from "./abstract/CSBondLock.sol";
 
 import { ICSModule } from "./interfaces/ICSModule.sol";
+import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
 /// @author vgorkavenko
 contract CSAccounting is
+    ICSAccounting,
     CSBondCore,
     CSBondCurve,
     CSBondLock,
@@ -29,14 +31,6 @@ contract CSAccounting is
     /// @notice This contract stores the Node Operators' bonds in the form of stETH shares,
     ///         so it should be considered in the recovery process
     using SafeERC20 for IERC20;
-
-    struct PermitInput {
-        uint256 value;
-        uint256 deadline;
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-    }
 
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
@@ -490,9 +484,7 @@ contract CSAccounting is
             nodeOperatorId,
             nonWithdrawnKeys
         );
-        CSBondCurve.BondCurve memory bondCurve = CSBondCurve.getBondCurve(
-            nodeOperatorId
-        );
+        BondCurve memory bondCurve = CSBondCurve.getBondCurve(nodeOperatorId);
         uint256 requiredForNextKeys = CSBondCurve.getBondAmountByKeysCount(
             nonWithdrawnKeys + additionalKeys,
             bondCurve
@@ -619,9 +611,7 @@ contract CSAccounting is
             if (currentBond <= lockedBond) return nonWithdrawnKeys;
             currentBond -= lockedBond;
         }
-        CSBondCurve.BondCurve memory bondCurve = CSBondCurve.getBondCurve(
-            nodeOperatorId
-        );
+        BondCurve memory bondCurve = CSBondCurve.getBondCurve(nodeOperatorId);
         uint256 bondedKeys = CSBondCurve.getKeysCountByBondAmount(
             currentBond,
             bondCurve
