@@ -32,21 +32,20 @@ contract CSModule is
 {
     using QueueLib for QueueLib.Queue;
 
-    // TODO: Remove hashes
-    bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
-    bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
+    bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
+    bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant MODULE_MANAGER_ROLE =
-        keccak256("MODULE_MANAGER_ROLE"); // 0x79dfcec784e591aafcf60db7db7b029a5c8b12aac4afd4e8c4eb740430405fa6
+        keccak256("MODULE_MANAGER_ROLE");
     bytes32 public constant STAKING_ROUTER_ROLE =
-        keccak256("STAKING_ROUTER_ROLE"); // 0xbb75b874360e0bfd87f964eadd8276d8efb7c942134fc329b513032d0803e0c6
+        keccak256("STAKING_ROUTER_ROLE");
     bytes32 public constant REPORT_EL_REWARDS_STEALING_PENALTY_ROLE =
-        keccak256("REPORT_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0x59911a6aa08a72fe3824aec4500dc42335c6d0702b6d5c5c72ceb265a0de9302
+        keccak256("REPORT_EL_REWARDS_STEALING_PENALTY_ROLE");
     bytes32 public constant SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE =
-        keccak256("SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE"); // 0xe85fdec10fe0f93d0792364051df7c3d73e37c17b3a954bffe593960e3cd3012
-    bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE"); // 0x0ce23c3e399818cfee81a7ab0880f714e53d7672b08df0fa62f2843416e1ea09
-    bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE"); // 0xb3e25b5404b87e5a838579cb5d7481d61ad96ee284d38ec1e97c07ba64e7f6fc
+        keccak256("SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE");
+    bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
+    bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
-    uint256 public constant DEPOSIT_SIZE = 32 ether; // TODO: Make private
+    uint256 private constant DEPOSIT_SIZE = 32 ether;
     uint256 private constant MIN_SLASHING_PENALTY_QUOTIENT = 32; // TODO: consider to move to state variable due to EIP-7251
     uint256 public constant INITIAL_SLASHING_PENALTY =
         DEPOSIT_SIZE / MIN_SLASHING_PENALTY_QUOTIENT;
@@ -60,7 +59,7 @@ contract CSModule is
 
     bool public publicRelease;
     uint256 public keyRemovalCharge;
-    QueueLib.Queue public queue; // TODO: Rename to depositQueue
+    QueueLib.Queue public depositQueue;
 
     ICSAccounting public accounting;
     ICSEarlyAdoption public earlyAdoption;
@@ -71,8 +70,9 @@ contract CSModule is
     uint256 private _activeNodeOperatorsCount;
     uint256 private _nonce;
     mapping(uint256 => NodeOperator) private _nodeOperators;
-    mapping(uint256 noIdWithKeyIndex => bool) private _isValidatorWithdrawn; // TODO: noIdWithKeyIndex naming
-    mapping(uint256 noIdWithKeyIndex => bool) private _isValidatorSlashed;
+    // @dev see _keyPointer function for details of noKeyIndexPacked structure
+    mapping(uint256 noKeyIndexPacked => bool) private _isValidatorWithdrawn;
+    mapping(uint256 noKeyIndexPacked => bool) private _isValidatorSlashed;
 
     uint256 private _totalDepositedValidators; // TODO: think about more efficient way to store this
     uint256 private _totalExitedValidators;
@@ -722,7 +722,7 @@ contract CSModule is
         uint256 totalShares
     ) external onlyRole(STAKING_ROUTER_ROLE) {
         IStETH(LIDO_LOCATOR.lido()).transferShares(
-            accounting.feeDistributor(),
+            address(accounting.feeDistributor()),
             totalShares
         );
     }
@@ -1179,7 +1179,11 @@ contract CSModule is
         uint256 depositsLeft = depositsCount;
         uint256 loadedKeysCount = 0;
 
-        for (Batch item = queue.peek(); !item.isNil(); item = queue.peek()) {
+        for (
+            Batch item = depositQueue.peek();
+            !item.isNil();
+            item = depositQueue.peek()
+        ) {
             // NOTE: see the `enqueuedCount` note below.
             // TODO: write invariant test for that.
             unchecked {
@@ -1197,7 +1201,7 @@ contract CSModule is
                     // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
                     no.enqueuedCount -= keysInBatch;
                     // We've consumed all the keys in the batch, so we dequeue it.
-                    queue.dequeue();
+                    depositQueue.dequeue();
                 } else {
                     // This branch covers the case when we stop in the middle of the batch.
                     // We release the amount of keys consumed only, the rest will be kept.
@@ -1206,7 +1210,7 @@ contract CSModule is
                     // We update the batch with the remaining keys.
                     item = item.setKeys(keysInBatch - keysCount);
                     // Store the updated batch back to the queue.
-                    queue.queue[queue.head] = item;
+                    depositQueue.queue[depositQueue.head] = item;
                 }
 
                 if (keysCount == 0) {
@@ -1265,14 +1269,14 @@ contract CSModule is
         Batch prev;
         uint128 indexOfPrev;
 
-        uint128 head = queue.head;
+        uint128 head = depositQueue.head;
         uint128 curr = head;
 
         // Make sure we don't have any leftovers from the previous call.
         _queueLookup.clear();
 
         for (uint256 i; i < maxItems; ++i) {
-            Batch item = queue.queue[curr];
+            Batch item = depositQueue.queue[curr];
             if (item.isNil()) {
                 return toRemove;
             }
@@ -1284,12 +1288,12 @@ contract CSModule is
                 // NOTE: Since we reached that point there's no way for a Node Operator to have a depositable batch
                 // later in the queue, and hence we don't update _queueLookup for the Node Operator.
                 if (curr == head) {
-                    queue.dequeue();
-                    head = queue.head;
+                    depositQueue.dequeue();
+                    head = depositQueue.head;
                 } else {
                     // There's no `prev` item while we call `dequeue`, and removing an item will keep the `prev` intact
                     // other than changing its `next` field.
-                    prev = queue.remove(indexOfPrev, prev, item);
+                    prev = depositQueue.remove(indexOfPrev, prev, item);
                 }
 
                 unchecked {
@@ -1325,7 +1329,7 @@ contract CSModule is
     function depositQueueItem(
         uint128 index
     ) external view returns (Batch item) {
-        return queue.at(index);
+        return depositQueue.at(index);
     }
 
     /// @notice Check if the given Node Operator's key is reported as slashed
@@ -1500,7 +1504,6 @@ contract CSModule is
             revert SigningKeysInvalidOffset();
         }
 
-        // TODO: think about universal interface to interact with loadKeysSigs and loadKeys
         (keys, signatures) = SigningKeys.initKeysSigsBuf(keysCount);
         // solhint-disable-next-line func-named-parameters
         SigningKeys.loadKeysSigs(
@@ -1805,14 +1808,14 @@ contract CSModule is
         uint256 enqueued = no.enqueuedCount;
 
         if (enqueued < depositable) {
-            // TODO: Consider shrinking unchecked
+            uint256 count;
             unchecked {
-                uint256 count = depositable - enqueued;
-                Batch item = createBatch(nodeOperatorId, count);
-                no.enqueuedCount = depositable;
-                queue.enqueue(item);
-                emit BatchEnqueued(nodeOperatorId, count);
+                count = depositable - enqueued;
             }
+            Batch item = createBatch(nodeOperatorId, count);
+            no.enqueuedCount = depositable;
+            depositQueue.enqueue(item);
+            emit BatchEnqueued(nodeOperatorId, count);
         }
     }
 

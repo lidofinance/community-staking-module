@@ -4,11 +4,12 @@
 pragma solidity 0.8.24;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { ICSBondCurve } from "../interfaces/ICSBondCurve.sol";
 
 /// @dev Bond curve mechanics abstract contract
 ///
-/// It gives the ability to build bond curves for bond math.
-/// There is a default bond curve for all Node Operators, which can be 'overridden' by a particular Node Operator.
+/// It gives the ability to build bond curves for flexible bond math.
+/// There is a default bond curve for all Node Operators, which might be 'overridden' for a particular Node Operator.
 ///
 /// It contains:
 ///  - add bond curve
@@ -20,51 +21,10 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 ///  - get keys count for the given bond amount
 ///
 /// It should be inherited by a module contract or a module-related contract.
-/// Internal non-view methods should be used in the Module contract with additional requirements (if required).
+/// Internal non-view methods should be used in the Module contract with additional requirements (if any).
 ///
 /// @author vgorkavenko
-abstract contract CSBondCurve is Initializable {
-    /// @dev Bond curve structure.
-    /// It contains:
-    ///  - id     |> identifier to set the default curve for the module or particular Node Operator
-    ///  - points |> bond amount for particular keys count
-    ///  - trend  |> value for the next keys after described points
-    ///
-    /// For example, how the curve points look like:
-    ///   Points Array Index  |>       0          1          2          i
-    ///   Bond Amount         |>   [ 2 ETH ] [ 3.9 ETH ] [ 5.7 ETH ] [ ... ]
-    ///   Keys Count          |>       1          2          3        i + 1
-    ///
-    ///   Bond Amount (ETH)
-    ///       ^
-    ///       |
-    ///     6 -
-    ///       | ------------------ 5.7 ETH --> .
-    ///   5.5 -                              ..^
-    ///       |                             .  |
-    ///     5 -                            .   |
-    ///       |                           .    |
-    ///   4.5 -                          .     |
-    ///       |                         .      |
-    ///     4 -                       ..       |
-    ///       | ------- 3.9 ETH --> ..         |
-    ///   3.5 -                    .^          |
-    ///       |                  .. |          |
-    ///     3 -                ..   |          |
-    ///       |               .     |          |
-    ///   2.5 -              .      |          |
-    ///       |            ..       |          |
-    ///     2 - -------->..         |          |
-    ///       |          ^          |          |
-    ///       |----------|----------|----------|----------|----> Keys Count
-    ///       |          1          2          3          i
-    ///
-    struct BondCurve {
-        uint256 id;
-        uint256[] points;
-        uint256 trend;
-    }
-
+abstract contract CSBondCurve is ICSBondCurve, Initializable {
     /// @custom:storage-location erc7201:CSAccounting.CSBondCurve
     struct CSBondCurveStorage {
         // TODO: should we strictly define max curves array length?
@@ -72,7 +32,7 @@ abstract contract CSBondCurve is Initializable {
         /// @dev Default bond curve id for Node Operator if no special curve is set
         uint256 defaultBondCurveId;
         /// @dev Mapping of Node Operator id to bond curve id
-        mapping(uint256 => uint256) operatorBondCurveId;
+        mapping(uint256 nodeOperatorId => uint256 bondCurveId) operatorBondCurveId;
     }
 
     // keccak256(abi.encode(uint256(keccak256("CSBondCurve")) - 1)) & ~bytes32(uint256(0xff))
