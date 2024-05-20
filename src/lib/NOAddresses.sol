@@ -33,6 +33,7 @@ library NOAddresses {
     error SenderIsNotRewardAddress();
     error SenderIsNotProposedAddress();
 
+    /// TODO: After adding noId to NO struct reconsider interface (remove mapping)
     /// @notice Propose a new manager address for the Node Operator
     /// @param nodeOperatorId ID of the Node Operator
     /// @param proposedAddress Proposed manager address
@@ -48,12 +49,14 @@ library NOAddresses {
             revert AlreadyProposed();
 
         no.proposedManagerAddress = proposedAddress;
+        /// TODO: Add prev proposed address
         emit NodeOperatorManagerAddressChangeProposed(
             nodeOperatorId,
             proposedAddress
         );
     }
 
+    /// TODO: After adding noId to NO struct reconsider interface (remove mapping)
     /// @notice Confirm a new manager address for the Node Operator
     /// @param nodeOperatorId ID of the Node Operator
     function confirmNodeOperatorManagerAddressChange(
@@ -74,6 +77,7 @@ library NOAddresses {
         );
     }
 
+    /// TODO: After adding noId to NO struct reconsider interface (remove mapping)
     /// @notice Propose a new reward address for the Node Operator
     /// @param nodeOperatorId ID of the Node Operator
     /// @param proposedAddress Proposed reward address
@@ -89,12 +93,14 @@ library NOAddresses {
             revert AlreadyProposed();
 
         no.proposedRewardAddress = proposedAddress;
+        /// TODO: Add prev proposed address
         emit NodeOperatorRewardAddressChangeProposed(
             nodeOperatorId,
             proposedAddress
         );
     }
 
+    /// TODO: After adding noId to NO struct reconsider interface (remove mapping)
     /// @notice Confirm a new reward address for the Node Operator
     /// @param nodeOperatorId ID of the Node Operator
     function confirmNodeOperatorRewardAddressChange(
@@ -115,6 +121,7 @@ library NOAddresses {
         );
     }
 
+    /// TODO: After adding noId to NO struct reconsider interface (remove mapping)
     /// @notice Reset the manager address to the reward address
     /// @param nodeOperatorId ID of the Node Operator
     function resetNodeOperatorManagerAddress(
@@ -127,6 +134,7 @@ library NOAddresses {
         address previousManagerAddress = no.managerAddress;
 
         no.managerAddress = no.rewardAddress;
+        // @dev Gas golfing
         if (no.proposedManagerAddress != address(0))
             delete no.proposedManagerAddress;
 
