@@ -7,8 +7,8 @@ import "forge-std/Test.sol";
 import { ValidatorCountsReport } from "../src/lib/ValidatorCountsReport.sol";
 
 contract ReportCaller {
-    function count(bytes calldata ids) public pure returns (uint256) {
-        return ValidatorCountsReport.count(ids);
+    function countOperators(bytes calldata ids) public pure returns (uint256) {
+        return ValidatorCountsReport.countOperators(ids);
     }
 
     function validate(bytes calldata ids, bytes calldata counts) public pure {
@@ -82,7 +82,7 @@ contract ValidatorCountsReportTest is Test {
             bytes.concat(bytes16(0x00000000000000000000000000000001))
         );
 
-        assertEq(caller.count(ids), 1);
+        assertEq(caller.countOperators(ids), 1);
     }
 
     function test_next() public {
