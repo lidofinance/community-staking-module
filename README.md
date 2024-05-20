@@ -60,6 +60,8 @@ export CHAIN=devnet
 
 ## Make a gas report
 
+It requires all unit tests to be green
+
 ```bash
 just gas-report
 ```
@@ -108,4 +110,29 @@ Kill fork after testing
 
 ```bash
 just kill-fork
+```
+
+## Deploy on a chain
+
+The following commands are related to the deployment process:
+
+- Dry run of deploy script to be sure it works as expected
+
+```bash
+just deploy-prod-dry
+```
+
+- Broadcast transactions
+
+> Note: pass `--legacy` arg in case of the following error: `Failed to get EIP-1559 fees`
+
+```bash
+just deploy-prod
+```
+
+After that there should be artifacts in the `./configs/latest` directory,
+which is might be moved to the particular directory and commited
+
+```bash
+mv ./configs/latest ./confits/$CHAIN
 ```

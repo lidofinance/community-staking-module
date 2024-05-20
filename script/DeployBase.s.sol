@@ -205,7 +205,7 @@ abstract contract DeployBase is Script {
             deployJson.set("CSVerifier", address(verifier));
             deployJson.set("LidoLocator", config.lidoLocatorAddress);
             vm.writeJson(deployJson.str, _deployJsonFilename());
-            vm.writeJson(deployJson.str, "./out/latest.json");
+            vm.writeJson(deployJson.str, "./deploy-latest.json");
         }
 
         vm.stopBroadcast();
