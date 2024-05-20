@@ -4,11 +4,48 @@
 pragma solidity 0.8.24;
 
 interface ICSBondCurve {
+    /// @dev Bond curve structure.
+    /// It contains:
+    ///  - id     |> identifier to set the default curve for the module or particular Node Operator
+    ///  - points |> total bond amount for particular keys count
+    ///  - trend  |> value for the next keys after described points
+    ///
+    /// For example, how the curve points look like:
+    ///   Points Array Index  |>       0          1          2          i
+    ///   Bond Amount         |>   [ 2 ETH ] [ 3.9 ETH ] [ 5.7 ETH ] [ ... ]
+    ///   Keys Count          |>       1          2          3        i + 1
+    ///
+    ///   Bond Amount (ETH)
+    ///       ^
+    ///       |
+    ///     6 -
+    ///       | ------------------ 5.7 ETH --> .
+    ///   5.5 -                              ..^
+    ///       |                             .  |
+    ///     5 -                            .   |
+    ///       |                           .    |
+    ///   4.5 -                          .     |
+    ///       |                         .      |
+    ///     4 -                       ..       |
+    ///       | ------- 3.9 ETH --> ..         |
+    ///   3.5 -                    .^          |
+    ///       |                  .. |          |
+    ///     3 -                ..   |          |
+    ///       |               .     |          |
+    ///   2.5 -              .      |          |
+    ///       |            ..       |          |
+    ///     2 - -------->..         |          |
+    ///       |          ^          |          |
+    ///       |----------|----------|----------|----------|----> Keys Count
+    ///       |          1          2          3          i
+    ///
     struct BondCurve {
         uint256 id;
         uint256[] points;
         uint256 trend;
     }
+
+    function defaultBondCurveId() external view returns (uint256);
 
     function getCurveInfo(
         uint256 curveId
@@ -33,6 +70,6 @@ interface ICSBondCurve {
 
     function getKeysCountByBondAmount(
         uint256 amount,
-        uint256 curveId
+        BondCurve memory curve
     ) external view returns (uint256);
 }

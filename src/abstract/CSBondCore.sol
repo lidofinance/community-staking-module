@@ -8,6 +8,7 @@ import { ILido } from "../interfaces/ILido.sol";
 import { IBurner } from "../interfaces/IBurner.sol";
 import { IWstETH } from "../interfaces/IWstETH.sol";
 import { IWithdrawalQueue } from "../interfaces/IWithdrawalQueue.sol";
+import { ICSBondCore } from "../interfaces/ICSBondCore.sol";
 
 /// @dev Bond core mechanics abstract contract
 ///
@@ -21,13 +22,13 @@ import { IWithdrawalQueue } from "../interfaces/IWithdrawalQueue.sol";
 ///  - burn
 ///
 /// Should be inherited by Module contract, or Module-related contract.
-/// Internal non-view methods should be used in Module contract with additional requirements (if required).
+/// Internal non-view methods should be used in Module contract with additional requirements (if any).
 ///
 /// @author vgorkavenko
-abstract contract CSBondCore {
+abstract contract CSBondCore is ICSBondCore {
     /// @custom:storage-location erc7201:CSAccounting.CSBondCore
     struct CSBondCoreStorage {
-        mapping(uint256 => uint256) bondShares;
+        mapping(uint256 nodeOperatorId => uint256 shares) bondShares;
         uint256 totalBondShares;
     }
 
@@ -266,7 +267,7 @@ abstract contract CSBondCore {
         );
     }
 
-    /// @dev Should be overridden in case of additional restrictions on a claimable bond amount
+    /// @dev Must be overridden in case of additional restrictions on a claimable bond amount
     function _getClaimableBondShares(
         uint256 nodeOperatorId
     ) internal view virtual returns (uint256) {

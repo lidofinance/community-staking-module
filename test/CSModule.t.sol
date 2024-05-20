@@ -28,6 +28,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities {
     }
 
     uint256 public constant BOND_SIZE = 2 ether;
+    uint256 public constant DEPOSIT_SIZE = 32 ether;
 
     LidoLocatorMock public locator;
     WstETHMock public wstETH;
@@ -137,7 +138,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities {
 
     // Checks that the queue is in the expected state starting from its head.
     function _assertQueueState(BatchInfo[] memory exp) internal {
-        (uint128 curr, ) = csm.queue(); // queue.head
+        (uint128 curr, ) = csm.depositQueue(); // queue.head
 
         for (uint256 i = 0; i < exp.length; ++i) {
             BatchInfo memory b = exp[i];
@@ -174,13 +175,13 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities {
     }
 
     function _assertQueueIsEmpty() internal {
-        (uint128 curr, ) = csm.queue(); // queue.head
+        (uint128 curr, ) = csm.depositQueue(); // queue.head
         assertTrue(csm.depositQueueItem(curr).isNil(), "queue should be empty");
     }
 
     function _isLastElementInQueue(uint128 index) internal view returns (bool) {
         Batch item = csm.depositQueueItem(index);
-        (, uint128 length) = csm.queue();
+        (, uint128 length) = csm.depositQueue();
         return item.next() == length;
     }
 
@@ -2674,7 +2675,7 @@ contract CsmQueueOps is CSMCommon {
 
         vm.expectEmit(true, true, true, true, address(csm));
         emit CSModule.BatchEnqueued(noId, 1);
-        csm.submitWithdrawal(noId, 0, csm.DEPOSIT_SIZE());
+        csm.submitWithdrawal(noId, 0, DEPOSIT_SIZE);
     }
 }
 
@@ -3190,7 +3191,7 @@ contract CsmGetNodeOperatorNonWithdrawnKeys is CSMCommon {
     function test_getNodeOperatorNonWithdrawnKeys_WithdrawnKeys() public {
         uint256 noId = createNodeOperator(3);
         csm.obtainDepositData(3, "");
-        csm.submitWithdrawal(noId, 0, csm.DEPOSIT_SIZE());
+        csm.submitWithdrawal(noId, 0, DEPOSIT_SIZE);
         uint256 keys = csm.getNodeOperatorNonWithdrawnKeys(noId);
         assertEq(keys, 2);
     }
@@ -3904,13 +3905,6 @@ contract CsmUpdateExitedValidatorsCount is CSMCommon {
         );
     }
 
-    function test_updateExitedValidatorsCount_RevertIfNotStakingRouter()
-        public
-    {
-        // TODO implement
-        vm.skip(true);
-    }
-
     function test_updateExitedValidatorsCount_RevertIfCountMoreThanDeposited()
         public
     {
@@ -4039,10 +4033,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         uint256 noId = createNodeOperator(1);
         csm.obtainDepositData(1, "");
 
-        csm.updateExitedValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
+        setExited(0, 1);
 
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
@@ -4613,8 +4604,8 @@ contract CsmSubmitWithdrawal is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.WithdrawalSubmitted(noId, keyIndex, csm.DEPOSIT_SIZE());
-        csm.submitWithdrawal(noId, keyIndex, csm.DEPOSIT_SIZE());
+        emit CSModule.WithdrawalSubmitted(noId, keyIndex, DEPOSIT_SIZE);
+        csm.submitWithdrawal(noId, keyIndex, DEPOSIT_SIZE);
 
         NodeOperator memory no = csm.getNodeOperator(noId);
         assertEq(no.totalWithdrawnKeys, 1);
@@ -4636,12 +4627,12 @@ contract CsmSubmitWithdrawal is CSMCommon {
         emit CSModule.WithdrawalSubmitted(
             noId,
             keyIndex,
-            csm.DEPOSIT_SIZE() - BOND_SIZE - 1 ether
+            DEPOSIT_SIZE - BOND_SIZE - 1 ether
         );
         csm.submitWithdrawal(
             noId,
             keyIndex,
-            csm.DEPOSIT_SIZE() - BOND_SIZE - 1 ether
+            DEPOSIT_SIZE - BOND_SIZE - 1 ether
         );
 
         NodeOperator memory no = csm.getNodeOperator(noId);
@@ -4653,7 +4644,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
     function test_submitWithdrawal_lowExitBalance() public {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
-        uint256 depositSize = csm.DEPOSIT_SIZE();
+        uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
         vm.expectCall(
@@ -4670,8 +4661,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
 
         csm.submitInitialSlashing(noId, 0);
 
-        uint256 exitBalance = csm.DEPOSIT_SIZE() -
-            csm.INITIAL_SLASHING_PENALTY();
+        uint256 exitBalance = DEPOSIT_SIZE - csm.INITIAL_SLASHING_PENALTY();
 
         vm.expectCall(
             address(accounting),
@@ -4712,7 +4702,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
     function test_submitWithdrawal_RevertWhenAlreadySubmitted() public {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
-        uint256 depositSize = csm.DEPOSIT_SIZE();
+        uint256 depositSize = DEPOSIT_SIZE;
 
         csm.submitWithdrawal(noId, 0, depositSize);
         vm.expectRevert(CSModule.AlreadySubmitted.selector);
@@ -4793,7 +4783,7 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
-            csm.DEPOSIT_SIZE() - csm.INITIAL_SLASHING_PENALTY()
+            DEPOSIT_SIZE - csm.INITIAL_SLASHING_PENALTY()
         );
         csm.submitInitialSlashing(noId, keyIndex);
     }
@@ -5428,11 +5418,40 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
     }
 
-    function test_depositableValidatorsCountChanges_OnUnsafeUpdateValidators()
+    function test_depositableValidatorsCountChanges_OnUnsafeUpdateExitedValidators()
         public
     {
-        // XXX: Underlying method is not implemented yet.
-        vm.skip(true);
+        uint256 noId = createNodeOperator(7);
+        createNodeOperator(2);
+        csm.obtainDepositData(4, "");
+
+        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 3);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
+        csm.unsafeUpdateValidatorsCount({
+            nodeOperatorId: noId,
+            exitedValidatorsKeysCount: 1,
+            stuckValidatorsKeysCount: 0
+        });
+        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 3);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
+    }
+
+    function test_depositableValidatorsCountChanges_OnUnsafeUpdateStuckValidators()
+        public
+    {
+        uint256 noId = createNodeOperator(7);
+        createNodeOperator(2);
+        csm.obtainDepositData(4, "");
+
+        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 3);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
+        csm.unsafeUpdateValidatorsCount({
+            nodeOperatorId: noId,
+            exitedValidatorsKeysCount: 0,
+            stuckValidatorsKeysCount: 1
+        });
+        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 0);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 2);
     }
 
     function test_depositableValidatorsCountChanges_OnUnvetKeys() public {
@@ -5463,11 +5482,11 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         penalize(noId, BOND_SIZE * 3);
 
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 0);
-        csm.submitWithdrawal(noId, 0, csm.DEPOSIT_SIZE());
+        csm.submitWithdrawal(noId, 0, DEPOSIT_SIZE);
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 1);
-        csm.submitWithdrawal(noId, 1, csm.DEPOSIT_SIZE());
+        csm.submitWithdrawal(noId, 1, DEPOSIT_SIZE);
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 2);
-        csm.submitWithdrawal(noId, 2, csm.DEPOSIT_SIZE() - BOND_SIZE); // Large CL balance drop, that doesn't change the unbonded count.
+        csm.submitWithdrawal(noId, 2, DEPOSIT_SIZE - BOND_SIZE); // Large CL balance drop, that doesn't change the unbonded count.
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 2);
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 2);
     }

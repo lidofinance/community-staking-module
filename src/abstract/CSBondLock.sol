@@ -4,6 +4,7 @@
 pragma solidity 0.8.24;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { ICSBondLock } from "../interfaces/ICSBondLock.sol";
 
 /// @dev Bond lock mechanics abstract contract.
 ///
@@ -21,26 +22,17 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 ///  - remove bond lock
 ///
 /// It should be inherited by a module contract or a module-related contract.
-/// Internal non-view methods should be used in the Module contract with additional requirements (if required).
+/// Internal non-view methods should be used in the Module contract with additional requirements (if any).
 ///
 /// @author vgorkavenko
-abstract contract CSBondLock is Initializable {
-    /// @dev Bond lock structure.
-    /// It contains:
-    ///  - amount         |> amount of locked bond
-    ///  - retentionUntil |> timestamp until locked bond is retained
-    struct BondLock {
-        uint256 amount;
-        uint256 retentionUntil;
-    }
-
+abstract contract CSBondLock is ICSBondLock, Initializable {
     /// @custom:storage-location erc7201:CSAccounting.CSBondLock
     struct CSBondLockStorage {
         /// @dev Default bond lock retention period for all locks
         ///      After this period the bond lock is removed and no longer valid
         uint256 bondLockRetentionPeriod;
         /// @dev Mapping of the Node Operator id to the bond lock
-        mapping(uint256 => BondLock) bondLock;
+        mapping(uint256 nodeOperatorId => BondLock) bondLock;
     }
 
     // keccak256(abi.encode(uint256(keccak256("CSBondLock")) - 1)) & ~bytes32(uint256(0xff))

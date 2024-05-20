@@ -4,6 +4,10 @@
 pragma solidity 0.8.24;
 
 interface ICSBondLock {
+    /// @dev Bond lock structure.
+    /// It contains:
+    ///  - amount         |> amount of locked bond
+    ///  - retentionUntil |> timestamp until locked bond is retained
     struct BondLock {
         uint256 amount;
         uint256 retentionUntil;

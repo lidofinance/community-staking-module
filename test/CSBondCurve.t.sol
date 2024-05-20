@@ -6,6 +6,7 @@ pragma solidity 0.8.24;
 import "forge-std/Test.sol";
 
 import { CSBondCurve } from "../src/abstract/CSBondCurve.sol";
+import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
 contract CSBondCurveTestable is CSBondCurve {
     function initialize(uint256[] memory bondCurve) public initializer {
@@ -55,7 +56,7 @@ contract CSBondCurveTest is Test {
 
         uint256 addedId = bondCurve.addBondCurve(_bondCurve);
 
-        CSBondCurve.BondCurve memory added = bondCurve.getCurveInfo(addedId);
+        ICSBondCurve.BondCurve memory added = bondCurve.getCurveInfo(addedId);
 
         assertEq(added.id, 2);
         assertEq(added.points.length, 2);
@@ -95,7 +96,7 @@ contract CSBondCurveTest is Test {
         uint256[] memory curvePoints = new uint256[](1);
         curvePoints[0] = 16 ether;
         uint256 addedId = bondCurve.addBondCurve(curvePoints);
-        CSBondCurve.BondCurve memory added = bondCurve.getCurveInfo(addedId);
+        ICSBondCurve.BondCurve memory added = bondCurve.getCurveInfo(addedId);
 
         vm.expectEmit(true, true, true, true, address(bondCurve));
         emit CSBondCurve.DefaultBondCurveChanged(added.id);
@@ -130,9 +131,9 @@ contract CSBondCurveTest is Test {
         curvePoints[0] = 16 ether;
         uint256 addedId = bondCurve.addBondCurve(curvePoints);
 
-        CSBondCurve.BondCurve memory added = bondCurve.getCurveInfo(addedId);
+        ICSBondCurve.BondCurve memory added = bondCurve.getCurveInfo(addedId);
         bondCurve.setBondCurve(noId, added.id);
-        CSBondCurve.BondCurve memory set = bondCurve.getBondCurve(noId);
+        ICSBondCurve.BondCurve memory set = bondCurve.getBondCurve(noId);
 
         assertEq(set.id, added.id);
     }
@@ -148,7 +149,7 @@ contract CSBondCurveTest is Test {
     }
 
     function test_getBondCurve_default() public {
-        CSBondCurve.BondCurve memory curve = bondCurve.getBondCurve(100500);
+        ICSBondCurve.BondCurve memory curve = bondCurve.getBondCurve(100500);
         assertEq(curve.id, bondCurve.defaultBondCurveId());
     }
 
@@ -157,14 +158,14 @@ contract CSBondCurveTest is Test {
         uint256[] memory curvePoints = new uint256[](1);
         curvePoints[0] = 16 ether;
         uint256 addedId = bondCurve.addBondCurve(curvePoints);
-        CSBondCurve.BondCurve memory added = bondCurve.getCurveInfo(addedId);
+        ICSBondCurve.BondCurve memory added = bondCurve.getCurveInfo(addedId);
         bondCurve.setBondCurve(noId, added.id);
 
         vm.expectEmit(true, true, true, true, address(bondCurve));
         emit CSBondCurve.BondCurveChanged(noId, bondCurve.defaultBondCurveId());
 
         bondCurve.resetBondCurve(noId);
-        CSBondCurve.BondCurve memory reset = bondCurve.getBondCurve(noId);
+        ICSBondCurve.BondCurve memory reset = bondCurve.getBondCurve(noId);
         assertEq(reset.id, bondCurve.defaultBondCurveId());
     }
 
@@ -188,7 +189,7 @@ contract CSBondCurveTest is Test {
     }
 
     function test_getKeysCountByCurveValue_individual() public {
-        CSBondCurve.BondCurve memory curve;
+        ICSBondCurve.BondCurve memory curve;
         uint256[] memory points = new uint256[](2);
         points[0] = 1 ether;
         points[1] = 2 ether;
@@ -210,7 +211,7 @@ contract CSBondCurveTest is Test {
     }
 
     function test_getBondAmountByKeysCount_individual() public {
-        CSBondCurve.BondCurve memory curve;
+        ICSBondCurve.BondCurve memory curve;
         uint256[] memory points = new uint256[](2);
         points[0] = 1 ether;
         points[1] = 2 ether;
@@ -234,7 +235,7 @@ contract CSBondCurveTest is Test {
     }
 
     function test_getBondAmountByKeysCount_bigCurve() public {
-        CSBondCurve.BondCurve memory curve;
+        ICSBondCurve.BondCurve memory curve;
         uint256[] memory points = new uint256[](4);
         points[0] = 1.5 ether;
         points[1] = 2.5 ether;

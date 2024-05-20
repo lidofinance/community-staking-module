@@ -12,6 +12,8 @@ import { ICSModule, NodeOperator } from "../src/interfaces/ICSModule.sol";
 import { IStakingModule } from "../src/interfaces/IStakingModule.sol";
 import { ICSFeeDistributor } from "../src/interfaces/ICSFeeDistributor.sol";
 import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
+import { ICSAccounting } from "../src/interfaces/ICSAccounting.sol";
+import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
 import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSBondCore } from "../src/abstract/CSBondCore.sol";
@@ -303,7 +305,7 @@ contract CSAccountingPauseAffectingTest is CSAccountingBaseTest {
             address(user),
             0,
             1 ether,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
                 v: 0,
@@ -320,7 +322,7 @@ contract CSAccountingPauseAffectingTest is CSAccountingBaseTest {
             address(user),
             0,
             1 ether,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
                 v: 0,
@@ -1147,7 +1149,7 @@ contract CSAccountingGetBondAmountByKeysCountWstETHTest is
     }
 
     function test_WithCurve() public override {
-        CSBondCurve.BondCurve memory curve = CSBondCurve.BondCurve({
+        ICSBondCurve.BondCurve memory curve = ICSBondCurve.BondCurve({
             id: 0,
             points: defaultCurve,
             trend: 1 ether
@@ -2896,7 +2898,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             user,
             0,
             32 ether,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
                 v: 0,
@@ -2929,7 +2931,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             user,
             0,
             0 ether,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
                 v: 0,
@@ -2971,7 +2973,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             user,
             0,
             wstETHAmount,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
                 v: 0,
@@ -3004,7 +3006,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             user,
             0,
             0 ether,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
                 v: 0,
@@ -3046,7 +3048,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             user,
             0,
             32 ether,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 32 ether,
                 deadline: type(uint256).max,
                 // mock permit signature
@@ -3099,7 +3101,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             user,
             0,
             32 ether,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 32 ether,
                 deadline: type(uint256).max,
                 // mock permit signature
@@ -3139,7 +3141,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             user,
             0,
             32 ether,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 32 ether,
                 deadline: type(uint256).max,
                 // mock permit signature
@@ -3178,7 +3180,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             user,
             0,
             32 ether,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 32 ether,
                 deadline: type(uint256).max,
                 // mock permit signature
@@ -3213,7 +3215,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             user,
             0,
             wstETHAmount,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 32 ether,
                 deadline: type(uint256).max,
                 // mock permit signature
@@ -3268,7 +3270,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             user,
             0,
             wstETHAmount,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 32 ether,
                 deadline: type(uint256).max,
                 // mock permit signature
@@ -3309,7 +3311,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             user,
             0,
             wstETHAmount,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 32 ether,
                 deadline: type(uint256).max,
                 // mock permit signature
@@ -3352,7 +3354,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             user,
             0,
             wstETHAmount,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 32 ether,
                 deadline: type(uint256).max,
                 // mock permit signature
@@ -3533,7 +3535,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         vm.prank(admin);
         accounting.addBondCurve(curvePoints);
 
-        CSBondCurve.BondCurve memory curve = accounting.getCurveInfo({
+        ICSBondCurve.BondCurve memory curve = accounting.getCurveInfo({
             curveId: 2
         });
 
@@ -3576,7 +3578,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
         vm.stopPrank();
 
-        CSBondCurve.BondCurve memory curve = accounting.getBondCurve(0);
+        ICSBondCurve.BondCurve memory curve = accounting.getBondCurve(0);
 
         assertEq(curve.points[0], 2 ether);
         assertEq(curve.points[1], 4 ether);
@@ -3600,7 +3602,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         vm.prank(address(stakingModule));
         accounting.resetBondCurve({ nodeOperatorId: 0 });
 
-        CSBondCurve.BondCurve memory curve = accounting.getBondCurve(0);
+        ICSBondCurve.BondCurve memory curve = accounting.getBondCurve(0);
 
         uint256[] memory defaultPoints = accounting.getBondCurve(1).points;
 
@@ -3736,7 +3738,7 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
             address(stakingModule),
             0,
             1 ether,
-            CSAccounting.PermitInput({
+            ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
                 v: 0,
