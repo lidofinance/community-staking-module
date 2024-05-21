@@ -106,10 +106,17 @@ deploy *args:
     forge script {{deploy_script_path}} --rpc-url {{anvil_rpc_url}} --broadcast --slow {{args}}
 
 deploy-prod *args:
+    just _warn "The current `tput bold`chain={{chain}}`tput sgr0` with the following rpc url: $RPC_URL"
+    just _deploy-prod-confirm {{args}}
+
+[confirm(
+    "You are about to broadcast the deployment transaction to the network. Are you sure?"
+)]
+_deploy-prod-confirm *args:
     just _deploy-prod --broadcast --verify --slow {{args}}
     mkdir -p ./configs/latest
     cp ./deploy-latest.json ./configs/latest/deploy-{{chain}}.json
-    cp ./broadcast/{{deploy_script_name}}.s.sol/`cast chain-id`/run-latest.json ./configs/latest/transactions.json
+    cp ./broadcast/{{deploy_script_name}}.s.sol/`cast --rpc-url=$RPC_URL chain-id`/run-latest.json ./configs/latest/transactions.json
 
 deploy-prod-dry:
     just _deploy-prod

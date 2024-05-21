@@ -134,5 +134,5 @@ After that there should be artifacts in the `./configs/latest` directory,
 which is might be moved to the particular directory and commited
 
 ```bash
-mv ./configs/latest ./confits/$CHAIN
+mv ./configs/latest ./configs/$CHAIN
 ```
