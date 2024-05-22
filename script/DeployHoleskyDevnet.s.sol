@@ -7,7 +7,7 @@ import { DeployBase } from "./DeployBase.s.sol";
 import { pack } from "../src/lib/GIndex.sol";
 
 contract DeployHoleskyDevnet is DeployBase {
-    constructor() DeployBase("holesky-devnet", 17000) {
+    constructor() DeployBase("devnet", 17000) {
         // Lido addresses
         config.lidoLocatorAddress = 0x5bF85BadDac33F91B38617c18a3F829f912Ca060;
         config.votingAddress = 0xd8B7F4EFd16e913648C6E9B74772BC3C38203301;

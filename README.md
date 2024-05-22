@@ -60,6 +60,8 @@ export CHAIN=devnet
 
 ## Make a gas report
 
+It requires all unit tests to be green
+
 ```bash
 just gas-report
 ```
@@ -81,14 +83,14 @@ Whenever you install new libraries using yarn, make sure to update your
 just deploy-local
 ```
 
-The result of deployment is `./out/latest.json` deployment config, which is required for integration testing
+The result of deployment is `./artifacts/local/deploy-devnet.json` deployment config, which is required for integration testing
 
 Integration tests should pass either before a vote, or after
 
 ```bash
 just deploy-local
 export RPC_URL=http://127.0.0.1:8545
-export DEPLOY_CONFIG=./out/latest.json
+export DEPLOY_CONFIG=./artifacts/local/deploy-devnet.json
 
 just test-integration
 ```
@@ -98,7 +100,7 @@ There also fork helper scripts to prepare a fork state for e.g. UI testing purpo
 ```bash
 just deploy-local
 export RPC_URL=http://127.0.0.1:8545
-export DEPLOY_CONFIG=./out/latest.json
+export DEPLOY_CONFIG=./artifacts/local/deploy-devnet.json
 
 just simulate-vote
 just test-integration
@@ -108,4 +110,29 @@ Kill fork after testing
 
 ```bash
 just kill-fork
+```
+
+## Deploy on a chain
+
+The following commands are related to the deployment process:
+
+- Dry run of deploy script to be sure it works as expected
+
+```bash
+just deploy-prod-dry
+```
+
+- Broadcast transactions
+
+> Note: pass `--legacy` arg in case of the following error: `Failed to get EIP-1559 fees`
+
+```bash
+just deploy-prod
+```
+
+After that there should be artifacts in the `./artifacts/latest` directory,
+which is might be moved to the particular directory and commited
+
+```bash
+mv ./artifacts/latest ./artifacts/$CHAIN
 ```
