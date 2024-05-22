@@ -512,7 +512,7 @@ contract CSModule is
         uint256 stETHAmount,
         ICSAccounting.PermitInput calldata permit
     ) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
+        _onlyExistingNodeOperator(nodeOperatorId); // TODO: think about it is needed or not
         accounting.depositStETH(
             msg.sender,
             nodeOperatorId,
@@ -1003,6 +1003,7 @@ contract CSModule is
         });
     }
 
+    // TODO: rename to release... ?
     /// @notice Cancel previously reported and not settled EL rewards stealing penalty for the given Node Operator
     /// @notice The funds will be unlocked
     /// @param nodeOperatorId ID of the Node Operator
@@ -1383,7 +1384,7 @@ contract CSModule is
     function getNodeOperator(
         uint256 nodeOperatorId
     ) external view returns (NodeOperator memory) {
-        _onlyExistingNodeOperator(nodeOperatorId);
+        _onlyExistingNodeOperator(nodeOperatorId); // TODO: consider to remove this check
         return _nodeOperators[nodeOperatorId];
     }
 
@@ -1393,7 +1394,7 @@ contract CSModule is
     function getNodeOperatorNonWithdrawnKeys(
         uint256 nodeOperatorId
     ) external view returns (uint256) {
-        _onlyExistingNodeOperator(nodeOperatorId);
+        _onlyExistingNodeOperator(nodeOperatorId); // TODO: consider to remove this check
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         return no.totalAddedKeys - no.totalWithdrawnKeys;
     }
@@ -1475,7 +1476,7 @@ contract CSModule is
         uint256 startIndex,
         uint256 keysCount
     ) external view returns (bytes memory) {
-        _onlyExistingNodeOperator(nodeOperatorId);
+        _onlyExistingNodeOperator(nodeOperatorId); // TODO: consider to remove this check
         if (
             startIndex + keysCount >
             _nodeOperators[nodeOperatorId].totalAddedKeys
@@ -1498,7 +1499,7 @@ contract CSModule is
         uint256 startIndex,
         uint256 keysCount
     ) external view returns (bytes memory keys, bytes memory signatures) {
-        _onlyExistingNodeOperator(nodeOperatorId);
+        _onlyExistingNodeOperator(nodeOperatorId); // TODO: consider to remove this check
         if (
             startIndex + keysCount >
             _nodeOperators[nodeOperatorId].totalAddedKeys
@@ -1731,11 +1732,12 @@ contract CSModule is
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (stuckValidatorsCount == no.stuckValidatorsCount) return;
         if (stuckValidatorsCount > no.totalDepositedKeys - no.totalExitedKeys)
-            revert StuckKeysHigherThanNonWithdrawn();
+            revert StuckKeysHigherThanNonWithdrawn(); // TODO: rename to exited
 
         no.stuckValidatorsCount = stuckValidatorsCount;
         emit StuckSigningKeysCountChanged(nodeOperatorId, stuckValidatorsCount);
 
+        // TODO: think about reforge the condition: is `no.depositableValidatorsCount > 0` required?
         if (stuckValidatorsCount > 0 && no.depositableValidatorsCount > 0) {
             // INFO: The only consequence of stuck keys from the on-chain perspective is suspending deposits to the
             // Node Operator. To do that, we set the depositableValidatorsCount to 0 for this Node Operator. Hence
@@ -1745,6 +1747,7 @@ contract CSModule is
         } else {
             // Nonce will be updated on the top level once per call
             // Node Operator should normalize queue himself in case of unstuck
+            // TODO: remind on UI to normalize queue after unstuck
             _updateDepositableValidatorsCount({
                 nodeOperatorId: nodeOperatorId,
                 incrementNonceIfUpdated: false,

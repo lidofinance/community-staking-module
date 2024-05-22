@@ -7,10 +7,12 @@ import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerklePr
 import { ICSEarlyAdoption } from "./interfaces/ICSEarlyAdoption.sol";
 
 contract CSEarlyAdoption is ICSEarlyAdoption {
-    mapping(address => bool) internal _consumedAddresses;
-    uint256 public immutable CURVE_ID;
+    // TODO: add natspec comments
     bytes32 public immutable TREE_ROOT;
+    uint256 public immutable CURVE_ID;
     address public immutable MODULE;
+
+    mapping(address => bool) internal _consumedAddresses;
 
     event Consumed(address indexed sender);
 
@@ -34,7 +36,8 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
     /// @param sender Address to be verified alongside the proof
     /// @param proof Merkle proof of EA eligibility
     function consume(address sender, bytes32[] calldata proof) external {
-        if (msg.sender != MODULE) revert OnlyModule();
+        // TODO: change `sender` to smth
+        if (msg.sender != MODULE) revert OnlyModule(); // TODO: change the name of the error
         if (_consumedAddresses[sender]) revert AlreadyConsumed();
 
         if (!isEligible(sender, proof)) revert InvalidProof();
@@ -42,17 +45,20 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
         emit Consumed(sender);
     }
 
-    /// @notice Check if the address has already claimed EA access
+    // TODO: rename to `isConsumed`
+    /// @notice Check if the address has already consumed EA access
     /// @param sender Address to check
     function consumed(address sender) external view returns (bool) {
+        // TODO: change `sender` to smth
         return _consumedAddresses[sender];
     }
 
-    /// @notice Check is the address is eligible to claim EA access
+    // TODO: rename to `verifyProof` ?
+    /// @notice Check is the address is eligible to consume EA access
     /// @param sender Address to check
     /// @param proof Merkle proof of EA eligibility
     function isEligible(
-        address sender,
+        address sender, // TODO: change `sender` to smth
         bytes32[] calldata proof
     ) public view returns (bool) {
         return
