@@ -103,7 +103,7 @@ kill-fork:
     @-pkill anvil && just _warn "anvil process is killed"
 
 deploy *args:
-    forge script {{deploy_script_path}} --rpc-url {{anvil_rpc_url}} --broadcast --slow --legacy {{args}}
+    forge script {{deploy_script_path}} --rpc-url {{anvil_rpc_url}} --broadcast --slow {{args}}
 
 deploy-prod *args:
     just _warn "The current `tput bold`chain={{chain}}`tput sgr0` with the following rpc url: $RPC_URL"
@@ -124,7 +124,7 @@ verify-prod *args:
     forge script {{deploy_script_path}} --rpc-url ${RPC_URL} --verify {{args}} --unlocked
 
 _deploy-prod *args:
-    forge script {{deploy_script_path}} --force --rpc-url ${RPC_URL} --legacy {{args}}
+    forge script {{deploy_script_path}} --force --rpc-url ${RPC_URL} {{args}}
 
 deploy-local:
     just make-fork &
