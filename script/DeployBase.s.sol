@@ -48,6 +48,7 @@ struct DeployParams {
 
 abstract contract DeployBase is Script {
     DeployParams internal config;
+    string private artifactDir;
     string private chainName;
     uint256 private chainId;
     ILidoLocator private locator;
@@ -82,6 +83,7 @@ abstract contract DeployBase is Script {
             });
         }
 
+        artifactDir = vm.envOr("ARTIFACTS_DIR", string("./artifacts/local/"));
         pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
         deployer = vm.addr(pk);
         vm.label(deployer, "DEPLOYER");
@@ -205,7 +207,6 @@ abstract contract DeployBase is Script {
             deployJson.set("CSVerifier", address(verifier));
             deployJson.set("LidoLocator", config.lidoLocatorAddress);
             vm.writeJson(deployJson.str, _deployJsonFilename());
-            vm.writeJson(deployJson.str, "./deploy-latest.json");
         }
 
         vm.stopBroadcast();
@@ -231,6 +232,8 @@ abstract contract DeployBase is Script {
 
     function _deployJsonFilename() internal view returns (string memory) {
         return
-            string(abi.encodePacked("./out/", "deploy-", chainName, ".json"));
+            string(
+                abi.encodePacked(artifactDir, "deploy-", chainName, ".json")
+            );
     }
 }

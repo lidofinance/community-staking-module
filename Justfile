@@ -103,20 +103,18 @@ kill-fork:
     @-pkill anvil && just _warn "anvil process is killed"
 
 deploy *args:
-    forge script {{deploy_script_path}} --rpc-url {{anvil_rpc_url}} --broadcast --slow {{args}}
+    forge script {{deploy_script_path}} --rpc-url {{anvil_rpc_url}} --broadcast --slow --legacy {{args}}
 
 deploy-prod *args:
     just _warn "The current `tput bold`chain={{chain}}`tput sgr0` with the following rpc url: $RPC_URL"
-    just _deploy-prod-confirm {{args}}
+    ARTIFACTS_DIR=./artifacts/latest/ just _deploy-prod-confirm {{args}}
 
-[confirm(
-    "You are about to broadcast the deployment transaction to the network. Are you sure?"
-)]
+    cp ./broadcast/{{deploy_script_name}}.s.sol/`cast chain-id --rpc-url=$RPC_URL`/run-latest.json \
+        ./artifacts/latest/transactions.json
+
+[confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]
 _deploy-prod-confirm *args:
-    just _deploy-prod --broadcast --verify --slow {{args}}
-    mkdir -p ./configs/latest
-    cp ./deploy-latest.json ./configs/latest/deploy-{{chain}}.json
-    cp ./broadcast/{{deploy_script_name}}.s.sol/`cast --rpc-url=$RPC_URL chain-id`/run-latest.json ./configs/latest/transactions.json
+    just _deploy-prod --broadcast --verify {{args}}
 
 deploy-prod-dry:
     just _deploy-prod
@@ -126,7 +124,7 @@ verify-prod *args:
     forge script {{deploy_script_path}} --rpc-url ${RPC_URL} --verify {{args}} --unlocked
 
 _deploy-prod *args:
-    forge script {{deploy_script_path}} --force --rpc-url ${RPC_URL} {{args}}
+    forge script {{deploy_script_path}} --force --rpc-url ${RPC_URL} --legacy {{args}}
 
 deploy-local:
     just make-fork &
@@ -139,7 +137,7 @@ test-local *args:
     @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
     DEPLOYER_PRIVATE_KEY=`cat localhost.json | jq -r ".private_keys[0]"` \
         just deploy --silent
-    DEPLOY_CONFIG=./deploy-latest.json \
+    DEPLOY_CONFIG=./artifacts/local/deploy-{{chain}}.json \
     RPC_URL={{anvil_rpc_url}} \
         just test-integration {{args}}
     just kill-fork

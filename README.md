@@ -83,14 +83,14 @@ Whenever you install new libraries using yarn, make sure to update your
 just deploy-local
 ```
 
-The result of deployment is `./out/latest.json` deployment config, which is required for integration testing
+The result of deployment is `./artifacts/local/deploy-devnet.json` deployment config, which is required for integration testing
 
 Integration tests should pass either before a vote, or after
 
 ```bash
 just deploy-local
 export RPC_URL=http://127.0.0.1:8545
-export DEPLOY_CONFIG=./out/latest.json
+export DEPLOY_CONFIG=./artifacts/local/deploy-devnet.json
 
 just test-integration
 ```
@@ -100,7 +100,7 @@ There also fork helper scripts to prepare a fork state for e.g. UI testing purpo
 ```bash
 just deploy-local
 export RPC_URL=http://127.0.0.1:8545
-export DEPLOY_CONFIG=./out/latest.json
+export DEPLOY_CONFIG=./artifacts/local/deploy-devnet.json
 
 just simulate-vote
 just test-integration
@@ -130,9 +130,9 @@ just deploy-prod-dry
 just deploy-prod
 ```
 
-After that there should be artifacts in the `./configs/latest` directory,
+After that there should be artifacts in the `./artifacts/latest` directory,
 which is might be moved to the particular directory and commited
 
 ```bash
-mv ./configs/latest ./configs/$CHAIN
+mv ./artifacts/latest ./artifacts/$CHAIN
 ```
