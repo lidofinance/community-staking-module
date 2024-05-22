@@ -739,10 +739,9 @@ contract CSModule is
         bytes calldata nodeOperatorIds,
         bytes calldata stuckValidatorsCounts
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        ValidatorCountsReport.validate(nodeOperatorIds, stuckValidatorsCounts);
-
-        uint256 operatorsInReport = ValidatorCountsReport.countOperators(
-            nodeOperatorIds
+        uint256 operatorsInReport = ValidatorCountsReport.safeCountOperators(
+            nodeOperatorIds,
+            stuckValidatorsCounts
         );
 
         for (uint256 i = 0; i < operatorsInReport; ++i) {
@@ -769,10 +768,9 @@ contract CSModule is
         bytes calldata nodeOperatorIds,
         bytes calldata exitedValidatorsCounts
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        ValidatorCountsReport.validate(nodeOperatorIds, exitedValidatorsCounts);
-
-        uint256 operatorsInReport = ValidatorCountsReport.countOperators(
-            nodeOperatorIds
+        uint256 operatorsInReport = ValidatorCountsReport.safeCountOperators(
+            nodeOperatorIds,
+            exitedValidatorsCounts
         );
 
         for (uint256 i = 0; i < operatorsInReport; ++i) {
@@ -890,13 +888,9 @@ contract CSModule is
         bytes calldata nodeOperatorIds,
         bytes calldata vettedSigningKeysCounts
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        ValidatorCountsReport.validate(
+        uint256 operatorsInReport = ValidatorCountsReport.safeCountOperators(
             nodeOperatorIds,
             vettedSigningKeysCounts
-        );
-
-        uint256 operatorsInReport = ValidatorCountsReport.countOperators(
-            nodeOperatorIds
         );
 
         for (uint256 i = 0; i < operatorsInReport; ++i) {
