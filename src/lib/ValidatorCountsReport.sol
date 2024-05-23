@@ -6,14 +6,10 @@ pragma solidity 0.8.24;
 library ValidatorCountsReport {
     error InvalidReportData();
 
-    // TODO: consider joining with validate
-    function countOperators(
-        bytes calldata ids
-    ) internal pure returns (uint256) {
-        return ids.length / 8;
-    }
-
-    function validate(bytes calldata ids, bytes calldata counts) internal pure {
+    function safeCountOperators(
+        bytes calldata ids,
+        bytes calldata counts
+    ) internal pure returns (uint256 count) {
         if (
             counts.length / 16 != ids.length / 8 ||
             ids.length % 8 != 0 ||
@@ -21,6 +17,8 @@ library ValidatorCountsReport {
         ) {
             revert InvalidReportData();
         }
+
+        return ids.length / 8;
     }
 
     function next(
@@ -28,12 +26,10 @@ library ValidatorCountsReport {
         bytes calldata counts,
         uint256 offset
     ) internal pure returns (uint256 nodeOperatorId, uint256 keysCount) {
-        // TODO: Rewrite to Yul (@madlabman)
-        nodeOperatorId = uint256(
-            bytes32(ids[8 * offset:8 * offset + 8]) >> 192
-        );
-        keysCount = uint256(
-            bytes32(counts[16 * offset:16 * offset + 16]) >> 128
-        );
+        // prettier-ignore
+        assembly ("memory-safe") {
+            nodeOperatorId := shr(192, calldataload(add(ids.offset, mul(offset, 8))))
+            keysCount := shr(128, calldataload(add(counts.offset, mul(offset, 16))))
+        }
     }
 }

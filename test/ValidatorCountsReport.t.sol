@@ -7,12 +7,11 @@ import "forge-std/Test.sol";
 import { ValidatorCountsReport } from "../src/lib/ValidatorCountsReport.sol";
 
 contract ReportCaller {
-    function countOperators(bytes calldata ids) public pure returns (uint256) {
-        return ValidatorCountsReport.countOperators(ids);
-    }
-
-    function validate(bytes calldata ids, bytes calldata counts) public pure {
-        ValidatorCountsReport.validate(ids, counts);
+    function safeCountOperators(
+        bytes calldata ids,
+        bytes calldata counts
+    ) public pure returns (uint256) {
+        return ValidatorCountsReport.safeCountOperators(ids, counts);
     }
 
     function next(
@@ -31,26 +30,26 @@ contract ValidatorCountsReportTest is Test {
         caller = new ReportCaller();
     }
 
-    function test_validate() public view {
+    function test_safeCountOperators() public view {
         (bytes memory ids, bytes memory counts) = (
             bytes.concat(bytes8(0x0000000000000001)),
             bytes.concat(bytes16(0x00000000000000000000000000000001))
         );
 
-        caller.validate(ids, counts);
+        caller.safeCountOperators(ids, counts);
     }
 
-    function test_validate_invalidIdsLength() public {
+    function test_safeCountOperators_invalidIdsLength() public {
         (bytes memory ids, bytes memory counts) = (
             bytes.concat(bytes8(0x0000000000000001), bytes4(0x00000001)),
             bytes.concat(bytes16(0x00000000000000000000000000000001))
         );
 
         vm.expectRevert(ValidatorCountsReport.InvalidReportData.selector);
-        caller.validate(ids, counts);
+        caller.safeCountOperators(ids, counts);
     }
 
-    function test_validate_invalidCountsLength() public {
+    function test_safeCountOperators_invalidCountsLength() public {
         (bytes memory ids, bytes memory counts) = (
             bytes.concat(bytes8(0x0000000000000001)),
             bytes.concat(
@@ -60,10 +59,10 @@ contract ValidatorCountsReportTest is Test {
         );
 
         vm.expectRevert(ValidatorCountsReport.InvalidReportData.selector);
-        caller.validate(ids, counts);
+        caller.safeCountOperators(ids, counts);
     }
 
-    function test_validate_differentItemsCount() public {
+    function test_safeCountOperators_differentItemsCount() public {
         (bytes memory ids, bytes memory counts) = (
             bytes.concat(
                 bytes8(0x0000000000000001),
@@ -73,16 +72,16 @@ contract ValidatorCountsReportTest is Test {
         );
 
         vm.expectRevert(ValidatorCountsReport.InvalidReportData.selector);
-        caller.validate(ids, counts);
+        caller.safeCountOperators(ids, counts);
     }
 
     function test_count() public {
-        (bytes memory ids, ) = (
+        (bytes memory ids, bytes memory counts) = (
             bytes.concat(bytes8(0x0000000000000001)),
             bytes.concat(bytes16(0x00000000000000000000000000000001))
         );
 
-        assertEq(caller.countOperators(ids), 1);
+        assertEq(caller.safeCountOperators(ids, counts), 1);
     }
 
     function test_next() public {
