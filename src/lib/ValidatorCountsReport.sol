@@ -10,30 +10,15 @@ library ValidatorCountsReport {
         bytes calldata ids,
         bytes calldata counts
     ) internal pure returns (uint256 count) {
-        assembly ("memory-safe") {
-            // counts.length / 16 != ids.length / 8
-            if iszero(eq(div(counts.length, 16), div(ids.length, 8))) {
-                // InvalidReportData
-                mstore(0x00, 0xc6726884)
-                revert(0x1c, 0x04)
-            }
-
-            // counts.length % 16 != 0
-            if iszero(iszero(mod(counts.length, 16))) {
-                // InvalidReportData
-                mstore(0x00, 0xc6726884)
-                revert(0x1c, 0x04)
-            }
-
-            // ids.length % 8 != 0
-            if iszero(iszero(mod(ids.length, 8))) {
-                // InvalidReportData
-                mstore(0x00, 0xc6726884)
-                revert(0x1c, 0x04)
-            }
-
-            count := div(ids.length, 8)
+        if (
+            counts.length / 16 != ids.length / 8 ||
+            ids.length % 8 != 0 ||
+            counts.length % 16 != 0
+        ) {
+            revert InvalidReportData();
         }
+
+        return ids.length / 8;
     }
 
     function next(
