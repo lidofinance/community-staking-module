@@ -93,7 +93,7 @@ contract CSFeeOracleTest is Test, Utilities {
         _reachConsensus(refSlot, reportHash);
 
         vm.expectEmit(true, true, true, true, address(oracle));
-        emit CSFeeOracle.ReportConsolidated(
+        emit CSFeeOracle.ReportSettled(
             refSlot,
             data.distributed,
             data.treeRoot,
@@ -252,7 +252,7 @@ contract CSFeeOracleTest is Test, Utilities {
         _reachConsensus(refSlot, reportHash);
 
         vm.expectEmit(true, true, true, true, address(oracle));
-        emit CSFeeOracle.ReportConsolidated(
+        emit CSFeeOracle.ReportSettled(
             refSlot,
             data.distributed,
             data.treeRoot,
