@@ -21,11 +21,11 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         /// changes resulting from that block. The epoch containing the slot
         /// should be finalized prior to calculating the report.
         uint256 refSlot;
-        /// @notice Merkle Tree root
+        /// @notice Merkle Tree root.
         bytes32 treeRoot;
-        /// @notice CID of the published Merkle tree
+        /// @notice CID of the published Merkle tree.
         string treeCid;
-        /// @notice Total amount of fees distributed
+        /// @notice Total amount of fees distributed in the report.
         uint256 distributed;
     }
 
@@ -58,8 +58,8 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
 
     event PerformanceThresholdSet(uint256 valueBP);
 
-    /// @dev Emitted when a report is consolidated
-    event ReportConsolidated(
+    /// @dev Emitted when a report is settled.
+    event ReportSettled(
         uint256 indexed refSlot,
         uint256 distributed,
         bytes32 newRoot,
@@ -162,30 +162,28 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         emit PerformanceThresholdSet(valueBP);
     }
 
+    /// @dev Called in `submitConsensusReport` after a consensus is reached.
     function _handleConsensusReport(
         ConsensusReport memory /* report */,
         uint256 /* prevSubmittedRefSlot */,
         uint256 /* prevProcessingRefSlot */
     ) internal override {
         // solhint-disable-previous-line no-empty-blocks
-        // TODO: Implement me
-        // NOTE: if we implement sending all leafs directly, we probably will need to support the sending in batches,
-        // which means, we'll be ought to check the processing state and revert if not all data was send so far.
-        // For reference look at the ValidatorExitBusOracle.
+        // We do not require any type of async processing so far, so no actions required.
     }
 
     function _handleConsensusReportData(ReportData calldata data) internal {
-        emit ReportConsolidated(
-            data.refSlot,
-            data.distributed,
-            data.treeRoot,
-            data.treeCid
-        );
-
         feeDistributor.processOracleReport(
             data.treeRoot,
             data.treeCid,
             data.distributed
+        );
+
+        emit ReportSettled(
+            data.refSlot,
+            data.distributed,
+            data.treeRoot,
+            data.treeCid
         );
     }
 
