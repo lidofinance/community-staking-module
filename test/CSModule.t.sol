@@ -2071,7 +2071,7 @@ contract CSMClaimRewards is CSMCommon {
     }
 
     function test_claimRewardsStETH_revertWhenNoNodeOperator() public {
-        vm.expectRevert();
+        vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.claimRewardsStETH(0, UINT256_MAX, 0, new bytes32[](0));
     }
 
@@ -2114,7 +2114,7 @@ contract CSMClaimRewards is CSMCommon {
     }
 
     function test_claimRewardsWstETH_revertWhenNoNodeOperator() public {
-        vm.expectRevert();
+        vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.claimRewardsWstETH(0, UINT256_MAX, 0, new bytes32[](0));
     }
 
@@ -2157,7 +2157,7 @@ contract CSMClaimRewards is CSMCommon {
     }
 
     function test_requestRewardsETH_revertWhenNoNodeOperator() public {
-        vm.expectRevert();
+        vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.requestRewardsETH(0, UINT256_MAX, 0, new bytes32[](0));
     }
 
@@ -2189,7 +2189,7 @@ contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
     function test_proposeNodeOperatorManagerAddressChange_RevertWhenNoNodeOperator()
         public
     {
-        vm.expectRevert();
+        vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.proposeNodeOperatorManagerAddressChange(0, stranger);
     }
 
@@ -2261,7 +2261,7 @@ contract CsmConfirmNodeOperatorManagerAddressChange is CSMCommon {
     function test_confirmNodeOperatorManagerAddressChange_RevertWhenNoNodeOperator()
         public
     {
-        vm.expectRevert();
+        vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.confirmNodeOperatorManagerAddressChange(0);
     }
 
@@ -2308,7 +2308,7 @@ contract CsmProposeNodeOperatorRewardAddressChange is CSMCommon {
     function test_proposeNodeOperatorRewardAddressChange_RevertWhenNoNodeOperator()
         public
     {
-        vm.expectRevert();
+        vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.proposeNodeOperatorRewardAddressChange(0, stranger);
     }
 
@@ -2369,7 +2369,7 @@ contract CsmConfirmNodeOperatorRewardAddressChange is CSMCommon {
     function test_confirmNodeOperatorRewardAddressChange_RevertWhenNoNodeOperator()
         public
     {
-        vm.expectRevert();
+        vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.confirmNodeOperatorRewardAddressChange(0);
     }
 
@@ -2442,7 +2442,7 @@ contract CsmResetNodeOperatorManagerAddress is CSMCommon {
     function test_resetNodeOperatorManagerAddress_RevertWhenNoNodeOperator()
         public
     {
-        vm.expectRevert();
+        vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.resetNodeOperatorManagerAddress(0);
     }
 
@@ -3088,7 +3088,7 @@ contract CsmRemoveKeys is CSMCommon {
     }
 
     function test_removeKeys_RevertWhenNoNodeOperator() public {
-        vm.expectRevert();
+        vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.removeKeys({ nodeOperatorId: 0, startIndex: 0, keysCount: 1 });
     }
 

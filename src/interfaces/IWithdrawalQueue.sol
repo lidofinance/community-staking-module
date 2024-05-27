@@ -19,6 +19,13 @@ interface IWithdrawalQueue {
         bool isClaimed;
     }
 
+    function ORACLE_ROLE() external view returns (bytes32);
+
+    function getRoleMember(
+        bytes32 role,
+        uint256 index
+    ) external view returns (address);
+
     function WSTETH() external view returns (address);
 
     /// @notice minimal amount of stETH that is possible to withdraw
@@ -41,4 +48,12 @@ interface IWithdrawalQueue {
     function getWithdrawalRequests(
         address _owner
     ) external view returns (uint256[] memory requestsIds);
+
+    function isBunkerModeActive() external view returns (bool);
+
+    function onOracleReport(
+        bool _isBunkerModeNow,
+        uint256 _bunkerStartTimestamp,
+        uint256 _currentReportTimestamp
+    ) external;
 }

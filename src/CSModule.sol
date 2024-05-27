@@ -937,6 +937,7 @@ contract CSModule is
         uint256 startIndex,
         uint256 keysCount
     ) external {
+        _onlyExistingNodeOperator(nodeOperatorId);
         _onlyNodeOperatorManager(nodeOperatorId);
         _removeSigningKeys(nodeOperatorId, startIndex, keysCount);
     }
