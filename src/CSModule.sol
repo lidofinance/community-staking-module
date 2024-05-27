@@ -67,8 +67,8 @@ contract CSModule is
     ICSAccounting public accounting;
 
     ICSEarlyAdoption public earlyAdoption;
-    uint64 private _nodeOperatorsCount;
     bool public publicRelease;
+    uint64 private _nodeOperatorsCount;
 
     uint256 private _nonce;
     mapping(uint256 => NodeOperator) private _nodeOperators;
