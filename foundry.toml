@@ -4,6 +4,8 @@ evm_version = "cancun"
 optimizer = true
 optimizer_runs = 1
 bytecode_hash = "none" # The metadata hash removed from the bytecode (not the metadata itself).
+# uncomment this to inspect storage layouts in build artifacts
+# extra_output = ["storageLayout"]
 
 src = "src"
 out = "out"

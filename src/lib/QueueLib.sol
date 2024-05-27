@@ -55,6 +55,22 @@ function setKeys(Batch self, uint256 keysCount) pure returns (Batch) {
     return self;
 }
 
+function setNext(Batch self, Batch from) pure returns (Batch) {
+    assembly {
+        self := or(
+            and(
+                self,
+                0xffffffffffffffffffffffffffffffff00000000000000000000000000000000
+            ),
+            and(
+                from,
+                0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff
+            )
+        ) // self.next = from.next
+    }
+    return self;
+}
+
 /// @dev Instantiate a new Batch to be added to the queue. The `next` field will be determined upon the enqueue.
 /// @dev Parameters are uint256 to make usage easier.
 function createBatch(
@@ -70,7 +86,7 @@ function createBatch(
     }
 }
 
-using { noId, keys, setKeys, next, isNil, unwrap } for Batch global;
+using { noId, keys, setKeys, setNext, next, isNil, unwrap } for Batch global;
 using QueueLib for QueueLib.Queue;
 
 /// @author madlabman
@@ -138,10 +154,8 @@ library QueueLib {
                 return toRemove;
             }
 
-            uint256 noId = item.noId();
-            NodeOperator storage no = nodeOperators[noId];
-            uint256 enqueuedSoFar = queueLookup.get(noId);
-            if (enqueuedSoFar >= no.depositableValidatorsCount) {
+            NodeOperator storage no = nodeOperators[item.noId()];
+            if (queueLookup.get(item.noId()) >= no.depositableValidatorsCount) {
                 // NOTE: Since we reached that point there's no way for a Node Operator to have a depositable batch
                 // later in the queue, and hence we don't update _queueLookup for the Node Operator.
                 if (curr == head) {
@@ -150,20 +164,7 @@ library QueueLib {
                 } else {
                     // There's no `prev` item while we call `dequeue`, and removing an item will keep the `prev` intact
                     // other than changing its `next` field.
-                    // @dev this is an inlined version of `remove` function.
-                    assembly {
-                        prev := or(
-                            and(
-                                prev,
-                                0xffffffffffffffffffffffffffffffff00000000000000000000000000000000
-                            ),
-                            and(
-                                item,
-                                0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff
-                            )
-                        ) // prev.next = item.next
-                    }
-
+                    prev = prev.setNext(item);
                     self.queue[indexOfPrev] = prev;
                 }
 
@@ -173,7 +174,7 @@ library QueueLib {
                     ++toRemove;
                 }
             } else {
-                queueLookup.add(noId, item.keys());
+                queueLookup.add(item.noId(), item.keys());
                 indexOfPrev = curr;
                 prev = item;
             }
@@ -215,34 +216,6 @@ library QueueLib {
         }
 
         self.head = item.next();
-    }
-
-    /// @dev Returns the updated item.
-    /// @dev It's supposed the `indexOfPrev` is >= `queue.head`, otherwise, dequeue the item.
-    /// @param indexOfPrev Index of the batch that points to the item to remove.
-    /// @param prev Batch is pointing to the item to remove.
-    /// @param item Batch to remove from the queue.
-    function remove(
-        Queue storage self,
-        uint128 indexOfPrev,
-        Batch prev,
-        Batch item
-    ) internal returns (Batch) {
-        assembly {
-            prev := or(
-                and(
-                    prev,
-                    0xffffffffffffffffffffffffffffffff00000000000000000000000000000000
-                ),
-                and(
-                    item,
-                    0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff
-                )
-            ) // prev.next = item.next
-        }
-
-        self.queue[indexOfPrev] = prev;
-        return prev;
     }
 
     function peek(Queue storage self) internal view returns (Batch item) {

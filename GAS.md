@@ -137,7 +137,7 @@
 | cancelELRewardsStealingPenalty                      | 26653           | 71108  | 83681  | 90417   | 4       |
 | claimRewardsStETH                                   | 25903           | 55105  | 56177  | 82165   | 4       |
 | claimRewardsWstETH                                  | 25463           | 53596  | 54667  | 79586   | 4       |
-| cleanDepositQueue                                   | 25336           | 41613  | 41591  | 62263   | 13      |
+| cleanDepositQueue                                   | 25336           | 41664  | 41622  | 62397   | 13      |
 | compensateELRewardsStealingPenalty                  | 24396           | 84038  | 101673 | 108411  | 4       |
 | confirmNodeOperatorManagerAddressChange             | 24398           | 29806  | 29846  | 35097   | 5       |
 | confirmNodeOperatorRewardAddressChange              | 24090           | 32311  | 34635  | 34635   | 9       |
