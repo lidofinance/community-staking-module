@@ -11,6 +11,7 @@
     "lint:check": "prettier --check **.sol && yarn lint:solhint",
     "lint:fix": "prettier --write **.sol",
     "generate:abis": "node script/generateAbis.js",
+    "generate:diffyscan": "node script/generateDiffyscanContracts.js",
     "postinstall": "husky install"
   },
   "devDependencies": {

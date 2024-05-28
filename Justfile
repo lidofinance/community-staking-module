@@ -93,6 +93,9 @@ abis:
     just build --ast
     yarn generate:abis
 
+diffyscan-contracts *args:
+    yarn generate:diffyscan {{args}}
+
 make-fork *args:
     @if pgrep -x "anvil" > /dev/null; \
         then just _warn "anvil process is already running in the background. Make sure it's connected to the right network and in the right state."; \
