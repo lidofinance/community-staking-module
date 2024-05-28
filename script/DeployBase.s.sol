@@ -23,6 +23,7 @@ struct DeployParams {
     // Lido addresses
     address lidoLocatorAddress;
     address votingAddress;
+    address easyTrackEVMScriptExecutor;
     // Oracle
     uint256 secondsPerSlot;
     uint256 slotsPerEpoch;
@@ -180,7 +181,11 @@ abstract contract DeployBase is Script {
                 _perfThresholdBP: config.performanceThresholdBP
             });
 
-            // TODO: remove these lines after early adoption deployment
+            csm.grantRole(
+                csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE(),
+                config.easyTrackEVMScriptExecutor
+            );
+
             csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.votingAddress);
             csm.revokeRole(csm.DEFAULT_ADMIN_ROLE(), address(deployer));
 
@@ -188,7 +193,6 @@ abstract contract DeployBase is Script {
             //            csm.grantRole(csm.PAUSE_ROLE(), address(0)); GateSeal or multisig
 
             //            csm.grantRole(csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(), address(0)); EOA or multisig
-            //            csm.grantRole(csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE(), address(0)); multisig or EasyTrack
 
             //            accounting.grantRole(accounting.PAUSE_ROLE(), address(0)); GateSeal or multisig
 

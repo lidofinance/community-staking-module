@@ -11,6 +11,9 @@ contract DeployHolesky is DeployBase {
         // Lido addresses
         config.lidoLocatorAddress = 0x28FAB2059C713A7F9D8c86Db49f9bb0e96Af1ef8;
         config.votingAddress = 0xdA7d2573Df555002503F29aA4003e398d28cc00f;
+        config
+            .easyTrackEVMScriptExecutor = 0x2819B65021E13CEEB9AC33E77DB32c7e64e7520D;
+
         // Oracle
         config.secondsPerSlot = 12;
         config.slotsPerEpoch = 32;
