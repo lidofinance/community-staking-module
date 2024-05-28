@@ -154,7 +154,7 @@ contract CSModule is
     error NodeOperatorDoesNotExist();
     error SenderIsNotEligible();
     error InvalidVetKeysPointer();
-    error StuckKeysHigherThanNonWithdrawn();
+    error StuckKeysHigherThanExited();
     error ExitedKeysHigherThanTotalDeposited();
     error ExitedKeysDecrease();
 
@@ -617,7 +617,6 @@ contract CSModule is
         });
     }
 
-    /// TODO: Rename to unstETH
     /// @notice Request full reward (fees + bond rewards) in Withdrawal NFT (unstETH) for the given Node Operator
     /// @notice Amounts less than `MIN_STETH_WITHDRAWAL_AMOUNT` (see LidoWithdrawalQueue contract) are not allowed
     /// @notice Amounts above `MAX_STETH_WITHDRAWAL_AMOUNT` should be requested in several transactions
@@ -625,21 +624,21 @@ contract CSModule is
     /// @notice If `rewardsProof` is not provided, only excess bond will be available for claim
     /// @dev Reverts if amount isn't between `MIN_STETH_WITHDRAWAL_AMOUNT` and `MAX_STETH_WITHDRAWAL_AMOUNT`
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param ethAmount Amount of ETH to request
+    /// @param stEthAmount Amount of ETH to request
     /// @param cumulativeFeeShares Optional. Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Optional. Merkle proof of the rewards
-    function requestRewardsETH(
+    function claimRewardsUnstETH(
         uint256 nodeOperatorId,
-        uint256 ethAmount,
+        uint256 stEthAmount,
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
     ) external {
         _onlyExistingNodeOperator(nodeOperatorId);
         _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
-        accounting.requestRewardsETH({
+        accounting.claimRewardsUnstETH({
             nodeOperatorId: nodeOperatorId,
-            ethAmount: ethAmount,
+            stEthAmount: stEthAmount,
             rewardAddress: _nodeOperators[nodeOperatorId].rewardAddress,
             cumulativeFeeShares: cumulativeFeeShares,
             rewardsProof: rewardsProof
@@ -1726,7 +1725,7 @@ contract CSModule is
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (stuckValidatorsCount == no.stuckValidatorsCount) return;
         if (stuckValidatorsCount > no.totalDepositedKeys - no.totalExitedKeys)
-            revert StuckKeysHigherThanNonWithdrawn(); // TODO: rename to exited
+            revert StuckKeysHigherThanExited();
 
         no.stuckValidatorsCount = stuckValidatorsCount;
         emit StuckSigningKeysCountChanged(nodeOperatorId, stuckValidatorsCount);

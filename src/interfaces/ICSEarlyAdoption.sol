@@ -8,12 +8,12 @@ interface ICSEarlyAdoption {
 
     function TREE_ROOT() external view returns (bytes32);
 
-    function isEligible(
+    function verifyProof(
         address addr,
         bytes32[] calldata proof
     ) external view returns (bool);
 
     function consume(address sender, bytes32[] calldata proof) external;
 
-    function consumed(address sender) external view returns (bool);
+    function isConsumed(address sender) external view returns (bool);
 }

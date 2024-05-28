@@ -14,12 +14,12 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
 
     mapping(address => bool) internal _consumedAddresses;
 
-    event Consumed(address indexed sender);
+    event Consumed(address indexed member);
 
     error InvalidProof();
     error AlreadyConsumed();
     error InvalidValue();
-    error OnlyModule();
+    error SenderIsNotModule();
 
     constructor(bytes32 treeRoot, uint256 curveId, address module) {
         if (treeRoot == bytes32(0)) revert InvalidValue();
@@ -33,39 +33,34 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
 
     /// @notice Validate EA eligibility proof and mark it as consumed
     /// @dev Called only by the module
-    /// @param sender Address to be verified alongside the proof
+    /// @param member Address to be verified alongside the proof
     /// @param proof Merkle proof of EA eligibility
-    function consume(address sender, bytes32[] calldata proof) external {
-        // TODO: change `sender` to smth
-        if (msg.sender != MODULE) revert OnlyModule(); // TODO: change the name of the error
-        if (_consumedAddresses[sender]) revert AlreadyConsumed();
-
-        if (!isEligible(sender, proof)) revert InvalidProof();
-        _consumedAddresses[sender] = true;
-        emit Consumed(sender);
+    function consume(address member, bytes32[] calldata proof) external {
+        if (msg.sender != MODULE) revert SenderIsNotModule();
+        if (_consumedAddresses[member]) revert AlreadyConsumed();
+        if (!verifyProof(member, proof)) revert InvalidProof();
+        _consumedAddresses[member] = true;
+        emit Consumed(member);
     }
 
-    // TODO: rename to `isConsumed`
     /// @notice Check if the address has already consumed EA access
-    /// @param sender Address to check
-    function consumed(address sender) external view returns (bool) {
-        // TODO: change `sender` to smth
-        return _consumedAddresses[sender];
+    /// @param member Address to check
+    function isConsumed(address member) external view returns (bool) {
+        return _consumedAddresses[member];
     }
 
-    // TODO: rename to `verifyProof` ?
     /// @notice Check is the address is eligible to consume EA access
-    /// @param sender Address to check
+    /// @param member Address to check
     /// @param proof Merkle proof of EA eligibility
-    function isEligible(
-        address sender, // TODO: change `sender` to smth
+    function verifyProof(
+        address member,
         bytes32[] calldata proof
     ) public view returns (bool) {
         return
             MerkleProof.verifyCalldata(
                 proof,
                 TREE_ROOT,
-                keccak256(bytes.concat(keccak256(abi.encode(sender))))
+                keccak256(bytes.concat(keccak256(abi.encode(member))))
             );
     }
 }

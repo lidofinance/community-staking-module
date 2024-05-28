@@ -356,10 +356,10 @@ contract CSAccountingPauseAffectingTest is CSAccountingBaseTest {
         );
     }
 
-    function test_requestRewardsETH_RevertWhen_Paused() public {
+    function test_claimRewardsUnstETH_RevertWhen_Paused() public {
         vm.prank(address(stakingModule));
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        accounting.requestRewardsETH(
+        accounting.claimRewardsUnstETH(
             0,
             1 ether,
             address(0),
@@ -2376,7 +2376,9 @@ contract CSAccountingClaimWstETHRewardsTest is
     }
 }
 
-contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
+contract CSAccountingclaimRewardsUnstETHTest is
+    CSAccountingClaimRewardsBaseTest
+{
     uint256[] public mockedRequestIds = [1];
 
     function setUp() public override {
@@ -2391,7 +2393,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(address(stakingModule));
-        accounting.requestRewardsETH(
+        accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
             address(user),
@@ -2421,7 +2423,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(address(stakingModule));
-        accounting.requestRewardsETH(
+        accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
             address(user),
@@ -2452,7 +2454,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(address(stakingModule));
-        accounting.requestRewardsETH(
+        accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
             address(user),
@@ -2483,7 +2485,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(address(stakingModule));
-        accounting.requestRewardsETH(
+        accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
             address(user),
@@ -2514,7 +2516,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
         vm.prank(address(stakingModule));
-        accounting.requestRewardsETH(
+        accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
             address(user),
@@ -2546,7 +2548,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
         vm.prank(address(stakingModule));
-        accounting.requestRewardsETH(
+        accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
             address(user),
@@ -2577,7 +2579,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
         vm.prank(address(stakingModule));
-        accounting.requestRewardsETH(
+        accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
             address(user),
@@ -2609,7 +2611,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
         vm.prank(address(stakingModule));
-        accounting.requestRewardsETH(
+        accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
             address(user),
@@ -2641,7 +2643,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
         vm.prank(address(stakingModule));
-        accounting.requestRewardsETH(
+        accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
             address(user),
@@ -2673,7 +2675,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
         vm.prank(address(stakingModule));
-        accounting.requestRewardsETH(
+        accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
             address(user),
@@ -2704,7 +2706,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
         vm.prank(address(stakingModule));
-        accounting.requestRewardsETH(
+        accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
             address(user),
@@ -2736,7 +2738,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(address(stakingModule));
-        accounting.requestRewardsETH(
+        accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             0.05 ether,
             address(user),
@@ -2765,7 +2767,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(address(stakingModule));
-        accounting.requestRewardsETH(
+        accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             0,
             address(user),
@@ -2793,7 +2795,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.prank(address(stakingModule));
-        accounting.requestRewardsETH(
+        accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
             address(user),
@@ -2822,7 +2824,7 @@ contract CSAccountingRequestRewardsETHTest is CSAccountingClaimRewardsBaseTest {
             abi.encodeWithSelector(CSAccounting.SenderIsNotCSM.selector)
         );
         vm.prank(stranger);
-        accounting.requestRewardsETH(
+        accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
             address(user),

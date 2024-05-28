@@ -113,7 +113,7 @@ contract CSAccounting is
 
         LIDO.approve(address(WSTETH), type(uint256).max);
         LIDO.approve(address(WITHDRAWAL_QUEUE), type(uint256).max);
-        LIDO.approve(address(BURNER), type(uint256).max);
+        LIDO.approve(address(LIDO_LOCATOR.burner()), type(uint256).max);
     }
 
     /// @notice Resume accounting
@@ -186,12 +186,11 @@ contract CSAccounting is
     /// @dev Called by CSM exclusively
     /// @param from Address to stake ETH and deposit stETH from
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return shares stETH shares amount
     function depositETH(
         address from,
         uint256 nodeOperatorId
-    ) external payable whenResumed onlyCSM returns (uint256 shares) {
-        shares = CSBondCore._depositETH(from, nodeOperatorId);
+    ) external payable whenResumed onlyCSM {
+        CSBondCore._depositETH(from, nodeOperatorId);
     }
 
     /// @notice Deposit user's stETH to the bond for the given Node Operator
@@ -200,13 +199,12 @@ contract CSAccounting is
     /// @param nodeOperatorId ID of the Node Operator
     /// @param stETHAmount Amount of stETH to deposit
     /// @param permit stETH permit for the contract
-    /// @return shares stETH shares amount
     function depositStETH(
         address from,
         uint256 nodeOperatorId,
         uint256 stETHAmount,
         PermitInput calldata permit
-    ) external whenResumed onlyCSM returns (uint256 shares) {
+    ) external whenResumed onlyCSM {
         // preventing revert for already used permit or avoid permit usage in case of value == 0
         if (
             permit.value > 0 &&
@@ -223,8 +221,8 @@ contract CSAccounting is
                 permit.s
             );
         }
-        // TODO: Return is unused
-        shares = CSBondCore._depositStETH(from, nodeOperatorId, stETHAmount);
+
+        CSBondCore._depositStETH(from, nodeOperatorId, stETHAmount);
     }
 
     /// @notice Unwrap the user's wstETH and deposit stETH to the bond for the given Node Operator
@@ -233,13 +231,12 @@ contract CSAccounting is
     /// @param nodeOperatorId ID of the Node Operator
     /// @param wstETHAmount Amount of wstETH to deposit
     /// @param permit wstETH permit for the contract
-    /// @return shares stETH shares amount
     function depositWstETH(
         address from,
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
         PermitInput calldata permit
-    ) external whenResumed onlyCSM returns (uint256 shares) {
+    ) external whenResumed onlyCSM {
         // preventing revert for already used permit or avoid permit usage in case of value == 0
         if (
             permit.value > 0 &&
@@ -256,8 +253,8 @@ contract CSAccounting is
                 permit.s
             );
         }
-        // TODO: Return is unused
-        shares = CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
+
+        CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
     }
 
     /// @notice Claim full reward (fee + bond) in stETH for the given Node Operator with desirable value.
@@ -302,19 +299,18 @@ contract CSAccounting is
         CSBondCore._claimWstETH(nodeOperatorId, wstETHAmount, rewardAddress);
     }
 
-    /// TODO: Reconsider interface and method naming
     /// @notice Request full reward (fee + bond) in Withdrawal NFT (unstETH) for the given Node Operator available for this moment.
     ///         `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond
     /// @dev Reverts if amount isn't between `MIN_STETH_WITHDRAWAL_AMOUNT` and `MAX_STETH_WITHDRAWAL_AMOUNT`
     /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param ethAmount Amount of ETH to request TODO: Rename to stETH amount
+    /// @param stEthAmount Amount of ETH to request
     /// @param rewardAddress Reward address of the node operator
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
-    function requestRewardsETH(
+    function claimRewardsUnstETH(
         uint256 nodeOperatorId,
-        uint256 ethAmount,
+        uint256 stEthAmount,
         address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
@@ -322,7 +318,7 @@ contract CSAccounting is
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
-        CSBondCore._requestETH(nodeOperatorId, ethAmount, rewardAddress);
+        CSBondCore._claimUnstETH(nodeOperatorId, stEthAmount, rewardAddress);
     }
 
     /// @notice Lock bond in ETH for the given Node Operator

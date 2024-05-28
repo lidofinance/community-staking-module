@@ -2130,7 +2130,7 @@ contract CSMClaimRewards is CSMCommon {
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
-                accounting.requestRewardsETH.selector,
+                accounting.claimRewardsUnstETH.selector,
                 noId,
                 UINT256_MAX,
                 nodeOperator,
@@ -2140,7 +2140,7 @@ contract CSMClaimRewards is CSMCommon {
             1
         );
         vm.prank(nodeOperator);
-        csm.requestRewardsETH(noId, UINT256_MAX, 0, new bytes32[](0));
+        csm.claimRewardsUnstETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
     function test_requestRewardsETH_fromRewardAddress() public {
@@ -2153,18 +2153,18 @@ contract CSMClaimRewards is CSMCommon {
 
         vm.startPrank(rewardAddress);
         csm.confirmNodeOperatorRewardAddressChange(noId);
-        csm.requestRewardsETH(noId, UINT256_MAX, 0, new bytes32[](0));
+        csm.claimRewardsUnstETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
     function test_requestRewardsETH_revertWhenNoNodeOperator() public {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
-        csm.requestRewardsETH(0, UINT256_MAX, 0, new bytes32[](0));
+        csm.claimRewardsUnstETH(0, UINT256_MAX, 0, new bytes32[](0));
     }
 
     function test_requestRewardsETH_revertWhenNotEligible() public {
         uint256 noId = createNodeOperator();
         vm.expectRevert(CSModule.SenderIsNotEligible.selector);
-        csm.requestRewardsETH(noId, UINT256_MAX, 0, new bytes32[](0));
+        csm.claimRewardsUnstETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 }
 
@@ -3850,7 +3850,7 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
         createNodeOperator(3);
         csm.obtainDepositData(1, "");
 
-        vm.expectRevert(CSModule.StuckKeysHigherThanNonWithdrawn.selector);
+        vm.expectRevert(CSModule.StuckKeysHigherThanExited.selector);
         csm.updateStuckValidatorsCount(
             bytes.concat(bytes8(0x0000000000000000)),
             bytes.concat(bytes16(0x00000000000000000000000000000002))
@@ -4021,7 +4021,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         uint256 noId = createNodeOperator(1);
         csm.obtainDepositData(1, "");
 
-        vm.expectRevert(CSModule.StuckKeysHigherThanNonWithdrawn.selector);
+        vm.expectRevert(CSModule.StuckKeysHigherThanExited.selector);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
             exitedValidatorsKeysCount: 1,

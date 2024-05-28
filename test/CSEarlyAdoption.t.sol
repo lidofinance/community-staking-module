@@ -33,12 +33,14 @@ contract CSEarlyAdoptionTest is Test, Utilities {
         assertEq(earlyAdoption.MODULE(), csm);
     }
 
-    function test_isEligible() public {
+    function test_verifyProof() public {
         earlyAdoption = new CSEarlyAdoption(merkleTree.root(), curveId, csm);
         assertTrue(
-            earlyAdoption.isEligible(nodeOperator, merkleTree.getProof(0))
+            earlyAdoption.verifyProof(nodeOperator, merkleTree.getProof(0))
         );
-        assertFalse(earlyAdoption.isEligible(stranger, merkleTree.getProof(0)));
+        assertFalse(
+            earlyAdoption.verifyProof(stranger, merkleTree.getProof(0))
+        );
     }
 
     function test_consume() public {
@@ -52,14 +54,14 @@ contract CSEarlyAdoptionTest is Test, Utilities {
         earlyAdoption.consume(nodeOperator, proof);
     }
 
-    function test_consumed() public {
+    function test_isConsumed() public {
         earlyAdoption = new CSEarlyAdoption(merkleTree.root(), curveId, csm);
 
         bytes32[] memory proof = merkleTree.getProof(0);
 
         vm.prank(csm);
         earlyAdoption.consume(nodeOperator, proof);
-        assertTrue(earlyAdoption.consumed(nodeOperator));
+        assertTrue(earlyAdoption.isConsumed(nodeOperator));
     }
 
     function test_consume_revert_onlyModule() public {
@@ -67,7 +69,7 @@ contract CSEarlyAdoptionTest is Test, Utilities {
         bytes32[] memory proof = merkleTree.getProof(0);
 
         vm.prank(stranger);
-        vm.expectRevert(CSEarlyAdoption.OnlyModule.selector);
+        vm.expectRevert(CSEarlyAdoption.SenderIsNotModule.selector);
         earlyAdoption.consume(nodeOperator, proof);
     }
 

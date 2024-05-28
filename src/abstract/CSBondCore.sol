@@ -34,7 +34,6 @@ abstract contract CSBondCore is ICSBondCore {
 
     ILidoLocator internal immutable LIDO_LOCATOR;
     ILido internal immutable LIDO;
-    IBurner internal immutable BURNER;
     IWithdrawalQueue internal immutable WITHDRAWAL_QUEUE;
     IWstETH internal immutable WSTETH;
 
@@ -91,9 +90,7 @@ abstract contract CSBondCore is ICSBondCore {
             revert ZeroAddress("lidoLocator");
         }
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
-        // TODO: Keep only Locator immutable. Fetch the rest within module calls
         LIDO = ILido(LIDO_LOCATOR.lido());
-        BURNER = IBurner(LIDO_LOCATOR.burner());
         WITHDRAWAL_QUEUE = IWithdrawalQueue(LIDO_LOCATOR.withdrawalQueue());
         WSTETH = IWstETH(WITHDRAWAL_QUEUE.WSTETH());
     }
@@ -123,17 +120,13 @@ abstract contract CSBondCore is ICSBondCore {
     }
 
     /// @dev Stake user's ETH with Lido and stores stETH shares as Node Operator's bond shares
-    function _depositETH(
-        address from,
-        uint256 nodeOperatorId
-    ) internal returns (uint256) {
-        if (msg.value == 0) return 0;
+    function _depositETH(address from, uint256 nodeOperatorId) internal {
+        if (msg.value == 0) return;
         uint256 shares = LIDO.submit{ value: msg.value }({
             _referal: address(0)
         });
         _increaseBond(nodeOperatorId, shares);
         emit BondDepositedETH(nodeOperatorId, from, msg.value);
-        return shares;
     }
 
     /// @dev Transfer user's stETH to the contract and stores stETH shares as Node Operator's bond shares
@@ -141,9 +134,9 @@ abstract contract CSBondCore is ICSBondCore {
         address from,
         uint256 nodeOperatorId,
         uint256 amount
-    ) internal returns (uint256 shares) {
-        if (amount == 0) return 0;
-        shares = _sharesByEth(amount);
+    ) internal {
+        if (amount == 0) return;
+        uint256 shares = _sharesByEth(amount);
         LIDO.transferSharesFrom(from, address(this), shares);
         _increaseBond(nodeOperatorId, shares);
         emit BondDepositedStETH(nodeOperatorId, from, amount);
@@ -154,14 +147,13 @@ abstract contract CSBondCore is ICSBondCore {
         address from,
         uint256 nodeOperatorId,
         uint256 amount
-    ) internal returns (uint256) {
-        if (amount == 0) return 0;
+    ) internal {
+        if (amount == 0) return;
         WSTETH.transferFrom(from, address(this), amount);
         uint256 stETHAmount = WSTETH.unwrap(amount);
         uint256 shares = _sharesByEth(stETHAmount);
         _increaseBond(nodeOperatorId, shares);
         emit BondDepositedWstETH(nodeOperatorId, from, amount);
-        return shares;
     }
 
     function _increaseBond(uint256 nodeOperatorId, uint256 shares) internal {
@@ -174,8 +166,7 @@ abstract contract CSBondCore is ICSBondCore {
 
     /// @dev Claim Node Operator's excess bond shares (stETH) in ETH by requesting withdrawal from the protocol
     ///      As a usual withdrawal request, this claim might be processed on the next stETH rebase
-    /// TODO: Rename to claimUnstETH
-    function _requestETH(
+    function _claimUnstETH(
         uint256 nodeOperatorId,
         uint256 amountToClaim,
         address to
@@ -227,7 +218,6 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 amount = WSTETH.wrap(_ethByShares(sharesToClaim));
         _unsafeReduceBond(nodeOperatorId, amount);
 
-        // TODO: Check if return value should be checked
         WSTETH.transfer(to, amount);
         emit BondClaimedWstETH(nodeOperatorId, to, amount);
     }
@@ -240,7 +230,10 @@ abstract contract CSBondCore is ICSBondCore {
             nodeOperatorId,
             _sharesByEth(amount)
         );
-        BURNER.requestBurnShares(address(this), burnedShares);
+        IBurner(LIDO_LOCATOR.burner()).requestBurnShares(
+            address(this),
+            burnedShares
+        );
         emit BondBurned(
             nodeOperatorId,
             _ethByShares(toBurnShares),
