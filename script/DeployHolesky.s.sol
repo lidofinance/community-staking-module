@@ -30,7 +30,7 @@ contract DeployHolesky is DeployBase {
         config.bondCurve = new uint256[](3);
         config.bondCurve[0] = 2 ether; // Validator 1 -> 2 ETH
         config.bondCurve[1] = 3.75 ether; // Validator 2 -> 1.75 ETH
-        config.bondCurve[2] = 5.24 ether; // Validator 3, 4, 5, ... -> 1.5 ETH
+        config.bondCurve[2] = 5.25 ether; // Validator 3, 4, 5, ... -> 1.5 ETH
 
         config.bondLockRetentionPeriod = 8 weeks;
         // Module
