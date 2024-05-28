@@ -2517,7 +2517,7 @@ contract CsmVetKeys is CSMCommon {
         vm.expectEmit(true, true, true, true, address(csm));
         emit CSModule.VettedSigningKeysCountChanged(noId, keys);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.BatchEnqueued(noId, keys);
+        emit QueueLib.BatchEnqueued(noId, keys);
         createNodeOperator(keys);
 
         BatchInfo[] memory exp = new BatchInfo[](1);
@@ -2531,7 +2531,7 @@ contract CsmVetKeys is CSMCommon {
         vm.expectEmit(true, true, true, true, address(csm));
         emit CSModule.VettedSigningKeysCountChanged(noId, 3);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.BatchEnqueued(noId, 1);
+        emit QueueLib.BatchEnqueued(noId, 1);
         uploadMoreKeys(noId, 1);
 
         NodeOperator memory no = csm.getNodeOperator(noId);
@@ -2620,7 +2620,7 @@ contract CsmQueueOps is CSMCommon {
     }
 
     function test_cleanup_RevertWhen_zeroDepth() public {
-        vm.expectRevert(CSModule.QueueLookupNoLimit.selector);
+        vm.expectRevert(QueueLib.QueueLookupNoLimit.selector);
         csm.cleanDepositQueue(0);
     }
 
@@ -2682,7 +2682,7 @@ contract CsmQueueOps is CSMCommon {
         setStuck(noId, 0);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.BatchEnqueued(noId, 4);
+        emit QueueLib.BatchEnqueued(noId, 4);
 
         vm.prank(nodeOperator);
         csm.normalizeQueue(noId);
@@ -2700,7 +2700,7 @@ contract CsmQueueOps is CSMCommon {
         csm.cleanDepositQueue(1);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.BatchEnqueued(noId, 7);
+        emit QueueLib.BatchEnqueued(noId, 7);
 
         csm.updateTargetValidatorsLimits({
             nodeOperatorId: noId,
@@ -2720,7 +2720,7 @@ contract CsmQueueOps is CSMCommon {
         csm.cleanDepositQueue(1);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.BatchEnqueued(noId, 1);
+        emit QueueLib.BatchEnqueued(noId, 1);
         csm.submitWithdrawal(noId, 0, DEPOSIT_SIZE);
     }
 }
@@ -2829,6 +2829,11 @@ contract CsmGetSigningKeys is CSMCommon {
 
         assertEq(obtainedKeys, wantedKey, "unexpected key at position 1");
     }
+
+    function test_getSigningKeys_WhenNoNodeOperator() public {
+        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
+        csm.getSigningKeys(0, 0, 1);
+    }
 }
 
 contract CsmGetSigningKeysWithSignatures is CSMCommon {
@@ -2907,6 +2912,11 @@ contract CsmGetSigningKeysWithSignatures is CSMCommon {
             wantedSignature,
             "unexpected sitnature at position 1"
         );
+    }
+
+    function test_getSigningKeysWithSignatures_WhenNoNodeOperator() public {
+        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
+        csm.getSigningKeysWithSignatures(0, 0, 1);
     }
 }
 
@@ -3242,11 +3252,11 @@ contract CsmGetNodeOperatorNonWithdrawnKeys is CSMCommon {
         assertEq(keys, 2);
     }
 
-    function test_getNodeOperatorNonWithdrawnKeys_RevertWhenNoNodeOperator()
+    function test_getNodeOperatorNonWithdrawnKeys_ZeroWhenNoNodeOperator()
         public
     {
-        vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
-        csm.getNodeOperatorNonWithdrawnKeys(0);
+        uint256 keys = csm.getNodeOperatorNonWithdrawnKeys(0);
+        assertEq(keys, 0);
     }
 }
 
@@ -3723,6 +3733,21 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
             3,
             "depositableValidatorsCount mismatch"
         );
+    }
+}
+
+contract CsmGetNodeOperator is CSMCommon {
+    function test_getNodeOperator() public {
+        uint256 noId = createNodeOperator();
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.managerAddress, nodeOperator);
+        assertEq(no.rewardAddress, nodeOperator);
+    }
+
+    function test_getNodeOperator_WhenNoNodeOperator() public {
+        NodeOperator memory no = csm.getNodeOperator(0);
+        assertEq(no.managerAddress, address(0));
+        assertEq(no.rewardAddress, address(0));
     }
 }
 
