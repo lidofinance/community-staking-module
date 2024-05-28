@@ -159,7 +159,7 @@ contract ClaimIntegrationTest is
         assertTrue(excessBond > 0, "Excess bond should be > 0");
 
         vm.prank(nodeOperator);
-        csm.requestRewardsETH(
+        csm.claimRewardsUnstETH(
             defaultNoId,
             type(uint256).max,
             0,
@@ -271,7 +271,7 @@ contract ClaimIntegrationTest is
         feeDistributor.processOracleReport(root, "Qm", shares);
 
         vm.prank(nodeOperator);
-        csm.requestRewardsETH(defaultNoId, type(uint256).max, shares, proof);
+        csm.claimRewardsUnstETH(defaultNoId, type(uint256).max, shares, proof);
 
         uint256[] memory requestsIdsAfter = wq.getWithdrawalRequests(
             nodeOperator
