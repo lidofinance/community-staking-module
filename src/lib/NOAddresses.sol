@@ -9,11 +9,13 @@ import { NodeOperator } from "../interfaces/ICSModule.sol";
 library NOAddresses {
     event NodeOperatorManagerAddressChangeProposed(
         uint256 indexed nodeOperatorId,
-        address indexed proposedAddress
+        address indexed oldProposedAddress,
+        address indexed newProposedAddress
     );
     event NodeOperatorRewardAddressChangeProposed(
         uint256 indexed nodeOperatorId,
-        address indexed proposedAddress
+        address indexed oldProposedAddress,
+        address indexed newProposedAddress
     );
     // args order as in https://github.com/OpenZeppelin/openzeppelin-contracts/blob/11dc5e3809ebe07d5405fe524385cbe4f890a08b/contracts/access/Ownable.sol#L33
     event NodeOperatorRewardAddressChanged(
@@ -33,7 +35,6 @@ library NOAddresses {
     error SenderIsNotRewardAddress();
     error SenderIsNotProposedAddress();
 
-    /// TODO: After adding noId to NO struct reconsider interface (remove mapping)
     /// @notice Propose a new manager address for the Node Operator
     /// @param nodeOperatorId ID of the Node Operator
     /// @param proposedAddress Proposed manager address
@@ -48,15 +49,15 @@ library NOAddresses {
         if (no.proposedManagerAddress == proposedAddress)
             revert AlreadyProposed();
 
+        address oldProposedAddress = no.proposedManagerAddress;
         no.proposedManagerAddress = proposedAddress;
-        /// TODO: Add prev proposed address
         emit NodeOperatorManagerAddressChangeProposed(
             nodeOperatorId,
+            oldProposedAddress,
             proposedAddress
         );
     }
 
-    /// TODO: After adding noId to NO struct reconsider interface (remove mapping)
     /// @notice Confirm a new manager address for the Node Operator
     /// @param nodeOperatorId ID of the Node Operator
     function confirmNodeOperatorManagerAddressChange(
@@ -77,7 +78,6 @@ library NOAddresses {
         );
     }
 
-    /// TODO: After adding noId to NO struct reconsider interface (remove mapping)
     /// @notice Propose a new reward address for the Node Operator
     /// @param nodeOperatorId ID of the Node Operator
     /// @param proposedAddress Proposed reward address
@@ -92,15 +92,15 @@ library NOAddresses {
         if (no.proposedRewardAddress == proposedAddress)
             revert AlreadyProposed();
 
+        address oldProposedAddress = no.proposedRewardAddress;
         no.proposedRewardAddress = proposedAddress;
-        /// TODO: Add prev proposed address
         emit NodeOperatorRewardAddressChangeProposed(
             nodeOperatorId,
+            oldProposedAddress,
             proposedAddress
         );
     }
 
-    /// TODO: After adding noId to NO struct reconsider interface (remove mapping)
     /// @notice Confirm a new reward address for the Node Operator
     /// @param nodeOperatorId ID of the Node Operator
     function confirmNodeOperatorRewardAddressChange(
@@ -121,7 +121,6 @@ library NOAddresses {
         );
     }
 
-    /// TODO: After adding noId to NO struct reconsider interface (remove mapping)
     /// @notice Reset the manager address to the reward address
     /// @param nodeOperatorId ID of the Node Operator
     function resetNodeOperatorManagerAddress(
