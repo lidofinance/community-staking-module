@@ -11,6 +11,8 @@ contract DeployMainnet is DeployBase {
         // Lido addresses
         config.lidoLocatorAddress = 0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb;
         config.votingAddress = 0x2e59A20f205bB85a89C53f1936454680651E618e;
+        config
+            .easyTrackEVMScriptExecutor = 0xFE5986E06210aC1eCC1aDCafc0cc7f8D63B3F977;
         // Oracle
         config.secondsPerSlot = 12;
         config.slotsPerEpoch = 32;
