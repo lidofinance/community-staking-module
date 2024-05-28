@@ -40,6 +40,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities {
 
     address internal admin;
     address internal stranger;
+    address internal strangerNumberTwo;
     address internal nodeOperator;
     address internal testChargeRecipient;
 
@@ -244,6 +245,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
     function setUp() public virtual {
         nodeOperator = nextAddress("NODE_OPERATOR");
         stranger = nextAddress("STRANGER");
+        strangerNumberTwo = nextAddress("STRANGER_TWO");
         admin = nextAddress("ADMIN");
         testChargeRecipient = nextAddress("CHARGERECIPIENT");
 
@@ -2178,10 +2180,32 @@ contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
         vm.expectEmit(true, true, true, true, address(csm));
         emit NOAddresses.NodeOperatorManagerAddressChangeProposed(
             noId,
+            address(0),
             stranger
         );
         vm.prank(nodeOperator);
         csm.proposeNodeOperatorManagerAddressChange(noId, stranger);
+        assertEq(no.managerAddress, nodeOperator);
+        assertEq(no.rewardAddress, nodeOperator);
+    }
+
+    function test_proposeNodeOperatorManagerAddressChange_proposeNew() public {
+        uint256 noId = createNodeOperator();
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.managerAddress, nodeOperator);
+        assertEq(no.rewardAddress, nodeOperator);
+
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorManagerAddressChange(noId, stranger);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit NOAddresses.NodeOperatorManagerAddressChangeProposed(
+            noId,
+            stranger,
+            strangerNumberTwo
+        );
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorManagerAddressChange(noId, strangerNumberTwo);
         assertEq(no.managerAddress, nodeOperator);
         assertEq(no.rewardAddress, nodeOperator);
     }
@@ -2297,10 +2321,32 @@ contract CsmProposeNodeOperatorRewardAddressChange is CSMCommon {
         vm.expectEmit(true, true, true, true, address(csm));
         emit NOAddresses.NodeOperatorRewardAddressChangeProposed(
             noId,
+            address(0),
             stranger
         );
         vm.prank(nodeOperator);
         csm.proposeNodeOperatorRewardAddressChange(noId, stranger);
+        assertEq(no.managerAddress, nodeOperator);
+        assertEq(no.rewardAddress, nodeOperator);
+    }
+
+    function test_proposeNodeOperatorRewardAddressChange_proposeNew() public {
+        uint256 noId = createNodeOperator();
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.managerAddress, nodeOperator);
+        assertEq(no.rewardAddress, nodeOperator);
+
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorRewardAddressChange(noId, stranger);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit NOAddresses.NodeOperatorRewardAddressChangeProposed(
+            noId,
+            stranger,
+            strangerNumberTwo
+        );
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorRewardAddressChange(noId, strangerNumberTwo);
         assertEq(no.managerAddress, nodeOperator);
         assertEq(no.rewardAddress, nodeOperator);
     }
