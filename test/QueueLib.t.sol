@@ -31,14 +31,6 @@ contract Library {
         return q.dequeue();
     }
 
-    function remove(
-        uint64 indexOfPrev,
-        Batch prev,
-        Batch item
-    ) public returns (Batch) {
-        return q.remove(indexOfPrev, prev, item);
-    }
-
     function peek() public view returns (Batch) {
         return q.peek();
     }
@@ -69,6 +61,13 @@ contract QueueLibTest is Test {
         Batch p = createBatch(a, b);
         p = p.setKeys(c);
         assertEq(p.keys(), c);
+    }
+
+    function testFuzz_setNext(uint64 a, uint64 b, uint64 c, uint64 d) public {
+        Batch p0 = createBatch(a, b);
+        Batch p1 = createBatch(c, d);
+        p0 = p0.setNext(p1);
+        assertEq(p0.next(), p1.next());
     }
 
     function testFuzz_enqueue(uint64 a, uint64 b, uint64 c, uint64 d) public {
@@ -110,41 +109,6 @@ contract QueueLibTest is Test {
         assertTrue(buf.eq(p1));
         assertTrue(q.peek().eq(p2));
 
-        q.dequeue();
-        assertTrue(q.peek().isNil());
-    }
-
-    function testFuzz_remove(
-        uint64 a,
-        uint64 b,
-        uint64 c,
-        uint64 d,
-        uint64 e,
-        uint64 f
-    ) public {
-        Batch p0 = q.enqueue(createBatch(a, b));
-        Batch p1 = q.enqueue(createBatch(c, d));
-        Batch p2 = q.enqueue(createBatch(e, f));
-
-        // [p0, p1, p2]
-        q.remove(0, p0, p1);
-        // [p0', p2]
-        buf = q.dequeue();
-        // [p2]
-        assertEq(p0.noId(), buf.noId());
-        assertEq(p0.keys(), buf.keys());
-        // [p2]
-        buf = q.dequeue();
-        // []
-        assertEq(p2.noId(), buf.noId());
-        assertEq(p2.keys(), buf.keys());
-        // []
-        q.enqueue(p1);
-        // [p1']
-        buf = q.peek();
-        assertEq(p1.noId(), buf.noId());
-        assertEq(p1.keys(), buf.keys());
-        // [p1']
         q.dequeue();
         assertTrue(q.peek().isNil());
     }
