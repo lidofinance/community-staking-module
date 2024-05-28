@@ -8,6 +8,7 @@ import "forge-std/Test.sol";
 import { CSModule, NodeOperator } from "../../src/CSModule.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
+import { IWithdrawalQueue } from "../../src/interfaces/IWithdrawalQueue.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";
 import { ILido } from "../../src/interfaces/ILido.sol";
 import { IWstETH } from "../../src/interfaces/IWstETH.sol";
@@ -110,6 +111,11 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
 
         vm.prank(agent);
         lido.removeStakingLimit();
+        IWithdrawalQueue wq = IWithdrawalQueue(locator.withdrawalQueue());
+        if (wq.isBunkerModeActive()) {
+            vm.prank(wq.getRoleMember(wq.ORACLE_ROLE(), 0));
+            wq.onOracleReport(false, 0, 0);
+        }
         // It's impossible to process deposits if withdrawal requests amount is more than the buffered ether,
         // so we need to make sure that the buffered ether is enough by submitting this tremendous amount.
         address whale = nextAddress();
