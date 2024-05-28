@@ -45,9 +45,10 @@ contract DepositIntegrationTest is
 
         (bytes memory keys, bytes memory signatures) = keysSignatures(2);
         address nodeOperator = address(2);
-        vm.deal(nodeOperator, 4 ether);
+        uint256 amount = accounting.getBondAmountByKeysCount(2);
+        vm.deal(nodeOperator, amount);
         vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: 4 ether }(
+        csm.addNodeOperatorETH{ value: amount }(
             2,
             keys,
             signatures,
