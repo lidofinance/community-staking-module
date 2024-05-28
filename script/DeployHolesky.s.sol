@@ -30,9 +30,11 @@ contract DeployHolesky is DeployBase {
 
         config.verifierSupportedEpoch = 29696;
         // Accounting
-        config.bondCurve = new uint256[](2);
-        config.bondCurve[0] = 2 ether;
-        config.bondCurve[1] = 4 ether;
+        config.bondCurve = new uint256[](3);
+        config.bondCurve[0] = 2 ether; // Validator 1 -> 2 ETH
+        config.bondCurve[1] = 3.75 ether; // Validator 2 -> 1.75 ETH
+        config.bondCurve[2] = 5.25 ether; // Validator 3, 4, 5, ... -> 1.5 ETH
+
         config.bondLockRetentionPeriod = 8 weeks;
         // Module
         config.moduleType = "community-onchain-v1";
