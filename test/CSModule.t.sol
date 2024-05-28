@@ -2783,6 +2783,11 @@ contract CsmGetSigningKeys is CSMCommon {
 
         assertEq(obtainedKeys, wantedKey, "unexpected key at position 1");
     }
+
+    function test_getSigningKeys_WhenNoNodeOperator() public {
+        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
+        csm.getSigningKeys(0, 0, 1);
+    }
 }
 
 contract CsmGetSigningKeysWithSignatures is CSMCommon {
@@ -2861,6 +2866,11 @@ contract CsmGetSigningKeysWithSignatures is CSMCommon {
             wantedSignature,
             "unexpected sitnature at position 1"
         );
+    }
+
+    function test_getSigningKeysWithSignatures_WhenNoNodeOperator() public {
+        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
+        csm.getSigningKeysWithSignatures(0, 0, 1);
     }
 }
 
@@ -3677,6 +3687,21 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
             3,
             "depositableValidatorsCount mismatch"
         );
+    }
+}
+
+contract CsmGetNodeOperator is CSMCommon {
+    function test_getNodeOperator() public {
+        uint256 noId = createNodeOperator();
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.managerAddress, nodeOperator);
+        assertEq(no.rewardAddress, nodeOperator);
+    }
+
+    function test_getNodeOperator_WhenNoNodeOperator() public {
+        NodeOperator memory no = csm.getNodeOperator(0);
+        assertEq(no.managerAddress, address(0));
+        assertEq(no.rewardAddress, address(0));
     }
 }
 
