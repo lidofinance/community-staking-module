@@ -19,6 +19,8 @@ import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
 /// @author vgorkavenko
+/// @notice This contract stores the Node Operators' bonds in the form of stETH shares,
+///         so it should be considered in the recovery process
 contract CSAccounting is
     ICSAccounting,
     CSBondCore,
@@ -28,8 +30,6 @@ contract CSAccounting is
     AccessControlEnumerableUpgradeable,
     AssetRecoverer
 {
-    /// @notice This contract stores the Node Operators' bonds in the form of stETH shares,
-    ///         so it should be considered in the recovery process
     using SafeERC20 for IERC20;
 
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
@@ -123,12 +123,12 @@ contract CSAccounting is
         LIDO.approve(LIDO_LOCATOR.burner(), type(uint256).max);
     }
 
-    /// @notice Resume accounting
+    /// @notice Resume reward claims and deposits
     function resume() external onlyRole(RESUME_ROLE) {
         _resume();
     }
 
-    /// @notice Pause accounting for `duration` seconds
+    /// @notice Pause reward claims and deposits for `duration` seconds
     /// @dev Must be called together with `CSModule.pauseFor`
     /// @param duration Duration of the pause in seconds
     function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
@@ -447,7 +447,7 @@ contract CSAccounting is
 
     /// @notice Get the number of the unbonded keys
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return unbonded Unbonded keys count
+    /// @return Unbonded keys count
     function getUnbondedKeysCount(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
@@ -460,7 +460,7 @@ contract CSAccounting is
 
     /// @notice Get the number of the unbonded keys to be ejected using a forcedTargetLimit
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return unbonded Unbonded keys count
+    /// @return Unbonded keys count
     function getUnbondedKeysCountToEject(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
@@ -474,7 +474,7 @@ contract CSAccounting is
     /// @notice Get the required bond in ETH (inc. missed and excess) for the given Node Operator to upload new deposit data
     /// @param nodeOperatorId ID of the Node Operator
     /// @param additionalKeys Number of new keys to add
-    /// @return required Required bond amount in ETH
+    /// @return Required bond amount in ETH
     function getRequiredBondForNextKeys(
         uint256 nodeOperatorId,
         uint256 additionalKeys
@@ -533,7 +533,7 @@ contract CSAccounting is
     /// @notice Get the required bond in wstETH (inc. missed and excess) for the given Node Operator to upload new keys
     /// @param nodeOperatorId ID of the Node Operator
     /// @param additionalKeys Number of new keys to add
-    /// @return required Required bond in wstETH
+    /// @return Required bond in wstETH
     function getRequiredBondForNextKeysWstETH(
         uint256 nodeOperatorId,
         uint256 additionalKeys

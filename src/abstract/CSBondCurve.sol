@@ -63,7 +63,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     /// @dev Get default bond curve info if `curveId` is `0` or invalid
     /// @notice Return bond curve for the given curve id
     /// @param curveId Curve id to get bond curve for
-    /// @return bond Bond curve
+    /// @return Bond curve
     function getCurveInfo(
         uint256 curveId
     ) public view returns (BondCurve memory) {
@@ -76,7 +76,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
     /// @notice Get bond curve for the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return bond Bond curve
+    /// @return Bond curve
     function getBondCurve(
         uint256 nodeOperatorId
     ) public view returns (BondCurve memory) {
@@ -88,7 +88,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     /// @dev To calculate the amount for the new keys 2 calls are required:
     ///      getBondAmountByKeysCount(newTotal) - getBondAmountByKeysCount(currentTotal)
     /// @param keys Number of keys to get required bond for
-    /// @return required Amount for particular keys count
+    /// @return Amount for particular keys count
     function getBondAmountByKeysCount(
         uint256 keys
     ) public view returns (uint256) {
@@ -99,7 +99,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
     /// @notice Get keys count for the given bond amount with default bond curve
     /// @param amount Bond amount in ETH (stETH)to get keys count for
-    /// @return keys Keys count
+    /// @return Keys count
     function getKeysCountByBondAmount(
         uint256 amount
     ) public view returns (uint256) {
@@ -116,7 +116,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     ///      getBondAmountByKeysCount(newTotal, curve) - getBondAmountByKeysCount(currentTotal, curve)
     /// @param keys Number of keys to get required bond for
     /// @param curve Bond curve to get required bond for
-    /// @return required Required bond amount in ETH (stETH) for particular keys count
+    /// @return Required bond amount in ETH (stETH) for particular keys count
     function getBondAmountByKeysCount(
         uint256 keys,
         BondCurve memory curve
@@ -134,7 +134,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     /// @notice Get keys count for the given bond amount for particular bond curve.
     /// @param amount Bond amount to get keys count for
     /// @param curve Bond curve to get keys count for
-    /// @return keys Keys count
+    /// @return Keys count
     function getKeysCountByBondAmount(
         uint256 amount,
         BondCurve memory curve

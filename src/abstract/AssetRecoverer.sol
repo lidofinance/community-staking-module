@@ -28,7 +28,7 @@ abstract contract AssetRecoverer {
         AssetRecovererLib.recoverERC20(token, amount);
     }
 
-    /// @dev Allows  sender to recover ERC721 tokens held by the contract
+    /// @dev Allows sender to recover ERC721 tokens held by the contract
     /// @param token The address of the ERC721 token to recover
     /// @param tokenId The token ID of the ERC721 token to recover
     /// Emits an ERC721Recovered event upon success
