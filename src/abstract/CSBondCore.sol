@@ -96,7 +96,7 @@ abstract contract CSBondCore is ICSBondCore {
     }
 
     /// @notice Get total bond shares (stETH) stored on the contract
-    /// @return total Total bond shares (stETH)
+    /// @return Total bond shares (stETH)
     function totalBondShares() public view returns (uint256) {
         CSBondCoreStorage storage $ = _getCSBondCoreStorage();
         return $.totalBondShares;
@@ -104,7 +104,7 @@ abstract contract CSBondCore is ICSBondCore {
 
     /// @notice Get bond shares (stETH) for the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return bond Bond in stETH shares
+    /// @return Bond in stETH shares
     function getBondShares(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
@@ -114,7 +114,7 @@ abstract contract CSBondCore is ICSBondCore {
 
     /// @notice Get bond amount in ETH (stETH) for the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return bond Bond amount in ETH (stETH)
+    /// @return Bond amount in ETH (stETH)
     function getBond(uint256 nodeOperatorId) public view returns (uint256) {
         return _ethByShares(getBondShares(nodeOperatorId));
     }

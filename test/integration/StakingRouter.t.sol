@@ -197,11 +197,9 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         address nodeOperatorManager = nextAddress();
         uint256 noId = addNodeOperator(nodeOperatorManager, 5);
 
+        vm.expectRevert(CSModule.NotSupported.selector);
         vm.prank(agent);
         stakingRouter.updateRefundedValidatorsCount(moduleId, noId, 1);
-
-        NodeOperator memory no = csm.getNodeOperator(noId);
-        assertEq(no.refundedValidatorsCount, 1);
     }
 
     function test_reportStakingModuleExitedValidatorsCountByNodeOperator()

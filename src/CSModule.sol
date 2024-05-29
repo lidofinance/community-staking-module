@@ -126,7 +126,6 @@ contract CSModule is
         uint256 keyIndex
     );
 
-    // TODO: do we want event for queue cursor moving as well?
     event PublicRelease();
     event KeyRemovalChargeSet(uint256 amount);
 
@@ -168,6 +167,8 @@ contract CSModule is
     error NotAllowedToJoinYet();
     error MaxSigningKeysCountExceeded();
 
+    error NotSupported();
+
     constructor(
         bytes32 moduleType,
         uint256 minSlashingPenaltyQuotient,
@@ -203,12 +204,14 @@ contract CSModule is
         _pauseFor(type(uint256).max);
     }
 
-    /// @notice Resume module
+    /// @notice Resume creation of the Node Operators and keys upload
     function resume() external onlyRole(RESUME_ROLE) {
         _resume();
     }
 
-    /// @notice Pause module for `duration` seconds
+    /// @notice Pause creation of the Node Operators and keys upload for `duration` seconds.
+    ///         Existing NO management and reward claims are still available.
+    ///         To pause reward claims use pause method on CSAccounting
     /// @param duration Duration of the pause in seconds
     function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
         _pauseFor(duration);
@@ -225,16 +228,17 @@ contract CSModule is
         emit PublicRelease();
     }
 
-    /// @notice Set the key removal charge. A charge is taken from the bond for each removed key
-    /// @param amount Amount of wei to be charged for removing a single key
+    /// @notice Set the key removal charge amount.
+    ///         A charge is taken from the bond for each removed key
+    /// @param amount Amount of stETH in wei to be charged for removing a single key
     function setKeyRemovalCharge(
         uint256 amount
     ) external onlyRole(MODULE_MANAGER_ROLE) {
-        // TODO: think about limits
         _setKeyRemovalCharge(amount);
     }
 
-    /// @notice Add a new Node Operator using ETH as a bond
+    /// @notice Add a new Node Operator using ETH as a bond.
+    ///         At least one deposit data and corresponding bond should be provided
     /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of `(deposit_message_root, domain)` tuples
@@ -242,7 +246,7 @@ contract CSModule is
     /// @param managerAddress Optional. Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used
     /// @param rewardAddress Optional. Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
-    /// @param referrer Optional. Referrer address
+    /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
     function addNodeOperatorETH(
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -282,7 +286,8 @@ contract CSModule is
         });
     }
 
-    /// @notice Add a new Node Operator using stETH as a bond
+    /// @notice Add a new Node Operator using stETH as a bond.
+    ///         At least one deposit data and corresponding bond should be provided
     /// @notice Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
     /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
@@ -292,7 +297,7 @@ contract CSModule is
     /// @param rewardAddress Optional. Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used
     /// @param permit Optional. Permit to use stETH as bond
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
-    /// @param referrer Optional, Referrer address
+    /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
     function addNodeOperatorStETH(
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -329,7 +334,8 @@ contract CSModule is
         });
     }
 
-    /// @notice Add a new Node Operator using wstETH as a bond
+    /// @notice Add a new Node Operator using wstETH as a bond.
+    ///         At least one deposit data and corresponding bond should be provided
     /// @notice Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
     /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
@@ -339,7 +345,7 @@ contract CSModule is
     /// @param rewardAddress Optional. Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used
     /// @param permit Optional. Permit to use wstETH as bond
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
-    /// @param referrer Optional. Referrer address
+    /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
     function addNodeOperatorWstETH(
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -381,7 +387,7 @@ contract CSModule is
         });
     }
 
-    /// @notice Add new keys to the Node Operator using ETH as a bond
+    /// @notice Add new keys to the existing Node Operator using ETH as a bond
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
@@ -416,7 +422,7 @@ contract CSModule is
         });
     }
 
-    /// @notice Add new keys to the Node Operator using stETH as a bond
+    /// @notice Add new keys to the existing Node Operator using stETH as a bond
     /// @notice Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keysCount Signing keys count
@@ -452,7 +458,7 @@ contract CSModule is
         });
     }
 
-    /// @notice Add new keys to the Node Operator using wstETH as a bond
+    /// @notice Add new keys to the existing Node Operator using wstETH as a bond
     /// @notice Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keysCount Signing keys count
@@ -488,7 +494,7 @@ contract CSModule is
         });
     }
 
-    /// @notice Stake user's ETH to Lido and make a deposit in stETH to the bond
+    /// @notice Stake user's ETH with Lido and make a deposit in stETH to the bond of the existing Node Operator
     /// @param nodeOperatorId ID of the Node Operator
     function depositETH(uint256 nodeOperatorId) external payable {
         _onlyExistingNodeOperator(nodeOperatorId);
@@ -502,7 +508,7 @@ contract CSModule is
         });
     }
 
-    /// @notice Deposit user's stETH to the bond for the given Node Operator
+    /// @notice Deposit user's stETH to the bond of the existing Node Operator
     /// @param nodeOperatorId ID of the Node Operator
     /// @param stETHAmount Amount of stETH to deposit
     /// @param permit Optional. Permit to use stETH as bond
@@ -527,7 +533,7 @@ contract CSModule is
         });
     }
 
-    /// @notice Unwrap the user's wstETH and make a deposit in stETH to the bond for the given Node Operator
+    /// @notice Unwrap the user's wstETH and make a deposit in stETH to the bond of the existing Node Operator
     /// @param nodeOperatorId ID of the Node Operator
     /// @param wstETHAmount Amount of wstETH to deposit
     /// @param permit Optional. Permit to use wstETH as bond
@@ -554,7 +560,7 @@ contract CSModule is
 
     /// @notice Claim full reward (fees + bond rewards) in stETH for the given Node Operator
     /// @notice If `stETHAmount` exceeds the current claimable amount, the claimable amount will be used instead
-    /// @notice If `rewardsProof` is not provided, only excess bond will be available for claim
+    /// @notice If `rewardsProof` is not provided, only excess bond (bond rewards) will be available for claim
     /// @param nodeOperatorId ID of the Node Operator
     /// @param stETHAmount Amount of stETH to claim
     /// @param cumulativeFeeShares Optional. Cumulative fee stETH shares for the Node Operator
@@ -586,7 +592,7 @@ contract CSModule is
 
     /// @notice Claim full reward (fees + bond rewards) in wstETH for the given Node Operator
     /// @notice If `wstETHAmount` exceeds the current claimable amount, the claimable amount will be used instead
-    /// @notice If `rewardsProof` is not provided, only excess bond will be available for claim
+    /// @notice If `rewardsProof` is not provided, only excess bond (bond rewards) will be available for claim
     /// @param nodeOperatorId ID of the Node Operator
     /// @param wstETHAmount Amount of wstETH to claim
     /// @param cumulativeFeeShares Optional. Cumulative fee stETH shares for the Node Operator
@@ -620,7 +626,7 @@ contract CSModule is
     /// @notice Amounts less than `MIN_STETH_WITHDRAWAL_AMOUNT` (see LidoWithdrawalQueue contract) are not allowed
     /// @notice Amounts above `MAX_STETH_WITHDRAWAL_AMOUNT` should be requested in several transactions
     /// @notice If `ethAmount` exceeds the current claimable amount, the claimable amount will be used instead
-    /// @notice If `rewardsProof` is not provided, only excess bond will be available for claim
+    /// @notice If `rewardsProof` is not provided, only excess bond (bond rewards) will be available for claim
     /// @dev Reverts if amount isn't between `MIN_STETH_WITHDRAWAL_AMOUNT` and `MAX_STETH_WITHDRAWAL_AMOUNT`
     /// @param nodeOperatorId ID of the Node Operator
     /// @param stEthAmount Amount of ETH to request
@@ -658,7 +664,6 @@ contract CSModule is
         uint256 nodeOperatorId,
         address proposedAddress
     ) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
         NOAddresses.proposeNodeOperatorManagerAddressChange(
             _nodeOperators,
             nodeOperatorId,
@@ -666,12 +671,12 @@ contract CSModule is
         );
     }
 
-    /// @notice Confirm a new manager address for the Node Operator
+    /// @notice Confirm a new manager address for the Node Operator.
+    ///         Should be called from the currently proposed address
     /// @param nodeOperatorId ID of the Node Operator
     function confirmNodeOperatorManagerAddressChange(
         uint256 nodeOperatorId
     ) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
         NOAddresses.confirmNodeOperatorManagerAddressChange(
             _nodeOperators,
             nodeOperatorId
@@ -685,7 +690,6 @@ contract CSModule is
         uint256 nodeOperatorId,
         address proposedAddress
     ) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
         NOAddresses.proposeNodeOperatorRewardAddressChange(
             _nodeOperators,
             nodeOperatorId,
@@ -693,22 +697,22 @@ contract CSModule is
         );
     }
 
-    /// @notice Confirm a new reward address for the Node Operator
+    /// @notice Confirm a new reward address for the Node Operator.
+    ///         Should be called from the currently proposed address
     /// @param nodeOperatorId ID of the Node Operator
     function confirmNodeOperatorRewardAddressChange(
         uint256 nodeOperatorId
     ) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
         NOAddresses.confirmNodeOperatorRewardAddressChange(
             _nodeOperators,
             nodeOperatorId
         );
     }
 
-    /// @notice Reset the manager address to the reward address
+    /// @notice Reset the manager address to the reward address.
+    ///         Should be called from the reward address
     /// @param nodeOperatorId ID of the Node Operator
     function resetNodeOperatorManagerAddress(uint256 nodeOperatorId) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
         NOAddresses.resetNodeOperatorManagerAddress(
             _nodeOperators,
             nodeOperatorId
@@ -758,7 +762,7 @@ contract CSModule is
         _incrementModuleNonce();
     }
 
-    /// @notice Updates exited validators count for Node Operators
+    /// @notice Update exited validators count for Node Operators
     /// @dev Called by StakingRouter
     /// @param nodeOperatorIds bytes packed array of Node Operator IDs
     /// @param exitedValidatorsCounts bytes packed array of exited validators counts
@@ -792,26 +796,22 @@ contract CSModule is
         _incrementModuleNonce();
     }
 
-    /// @notice Update refunded validators count for the Node Operator
+    /// @notice Update refunded validators count for the Node Operator.
+    ///         Non supported in CSM
     /// @dev Called by StakingRouter
+    /// @dev Always reverts
     /// @dev `refundedValidatorsCount` is not used in the module
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param refundedValidatorsCount Number of refunded validators
     function updateRefundedValidatorsCount(
-        uint256 nodeOperatorId,
-        uint256 refundedValidatorsCount
+        uint256 /* nodeOperatorId */,
+        uint256 /* refundedValidatorsCount */
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        no.refundedValidatorsCount = uint32(refundedValidatorsCount);
-        emit RefundedKeysCountChanged(nodeOperatorId, refundedValidatorsCount);
-        _incrementModuleNonce();
+        revert NotSupported();
     }
 
-    /// @notice Update target limits for Node Operator
+    /// @notice Update target validators limits for Node Operator
     /// @dev Called by StakingRouter
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param targetLimitMode Target limit mode for the Node Operator
+    /// @param targetLimitMode Target limit mode for the Node Operator (see https://hackmd.io/@lido/BJXRTxMRp)
     ///                        0 - disabled
     ///                        1 - soft mode
     ///                        2 - forced mode
@@ -853,7 +853,9 @@ contract CSModule is
         _incrementModuleNonce();
     }
 
-    /// @notice Called by the Staking Router when exited and stuck validators counts updated
+    /// @notice Called when exited and stuck validators counts updated.
+    ///         This method is not used in CSM, hence it is empty
+    /// @dev Called by StakingRouter
     function onExitedAndStuckValidatorsCountsUpdated()
         external
         onlyRole(STAKING_ROUTER_ROLE)
@@ -862,8 +864,11 @@ contract CSModule is
         // Nothing to do, rewards are distributed by a performance oracle.
     }
 
-    /// @notice Unsafe update of validators count for Node Operators by DAO
-    /// @notice Called by Staking Router
+    /// @notice Unsafe update of validators count for Node Operator by the DAO
+    /// @dev Called by StakingRouter
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param exitedValidatorsKeysCount Exited validators counts
+    /// @param stuckValidatorsKeysCount Stuck validators counts
     function unsafeUpdateValidatorsCount(
         uint256 nodeOperatorId,
         uint256 exitedValidatorsKeysCount,
@@ -879,9 +884,10 @@ contract CSModule is
         _incrementModuleNonce();
     }
 
-    /// @notice Called by StakingRouter to decrease the number of vetted keys for node operator with given id
-    /// @param nodeOperatorIds bytes packed array of the node operators id
-    /// @param vettedSigningKeysCounts bytes packed array of the new number of vetted keys for the node operators
+    /// @notice Called to decrease the number of vetted keys for Node Operators with given ids
+    /// @dev Called by StakingRouter
+    /// @param nodeOperatorIds Bytes packed array of the Node Operator ids
+    /// @param vettedSigningKeysCounts Bytes packed array of the new numbers of vetted keys for the Node Operators
     function decreaseVettedSigningKeysCount(
         bytes calldata nodeOperatorIds,
         bytes calldata vettedSigningKeysCounts
@@ -995,7 +1001,6 @@ contract CSModule is
         });
     }
 
-    // TODO: rename to release... ?
     /// @notice Cancel previously reported and not settled EL rewards stealing penalty for the given Node Operator
     /// @notice The funds will be unlocked
     /// @param nodeOperatorId ID of the Node Operator
@@ -1018,8 +1023,8 @@ contract CSModule is
         });
     }
 
-    /// @notice Settles blocked bond for the given Node Operators
-    /// @dev Should be called by the Easy Track
+    /// @notice Settle blocked bond for the given Node Operators
+    /// @dev SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE role is expected to be assigned to Easy Track
     /// @param nodeOperatorIds IDs of the Node Operators
     function settleELRewardsStealingPenalty(
         uint256[] memory nodeOperatorIds
@@ -1031,6 +1036,7 @@ contract CSModule is
             uint256 settled = accounting.settleLockedBondETH(nodeOperatorId);
             emit ELRewardsStealingPenaltySettled(nodeOperatorId, settled);
             if (settled > 0) {
+                // Bond curve should be reset to default in case of confirmed MEV stealing. See https://hackmd.io/@lido/SygBLW5ja
                 accounting.resetBondCurve(nodeOperatorId);
                 // Nonce should be updated if depositableValidators change
                 // No need to normalize queue due to only decrease in depositable possible
@@ -1089,7 +1095,7 @@ contract CSModule is
 
         if (_isValidatorSlashed[pointer]) {
             amount += INITIAL_SLASHING_PENALTY;
-            // TODO: Add an explainer.
+            // Bond curve should be reset to default in case of slashing. See https://hackmd.io/@lido/SygBLW5ja
             accounting.resetBondCurve(nodeOperatorId);
         }
 
@@ -1145,6 +1151,7 @@ contract CSModule is
     }
 
     /// @notice Called by the Staking Router when withdrawal credentials changed by DAO
+    /// @dev Called by StakingRouter
     /// @dev Resets the key removal charge
     /// @dev Changing the WC means that the current deposit data in the queue is not valid anymore and can't be deposited
     ///      So, the key removal charge should be reset to 0 to allow Node Operators to remove the keys without any charge.
@@ -1157,6 +1164,7 @@ contract CSModule is
     }
 
     /// @notice Get the next `depositsCount` of depositable keys with signatures from the queue
+    /// @dev Called by StakingRouter
     /// @dev Second param `depositCalldata` is not used
     /// @param depositsCount Count of deposits to get
     /// @param /* depositCalldata */ (unused) Deposit calldata
@@ -1404,7 +1412,8 @@ contract CSModule is
             targetValidatorsCount = no.targetLimit;
         }
         stuckValidatorsCount = no.stuckValidatorsCount;
-        refundedValidatorsCount = no.refundedValidatorsCount;
+        // @dev unused in CSM
+        refundedValidatorsCount = 0;
         // @dev unused in CSM
         stuckPenaltyEndTimestamp = 0;
         totalExitedValidators = no.totalExitedKeys;
