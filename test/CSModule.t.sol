@@ -261,7 +261,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         });
         uint256[] memory curve = new uint256[](1);
         curve[0] = BOND_SIZE;
-        accounting = new CSAccounting(address(locator), address(csm));
+        accounting = new CSAccounting(address(locator), address(csm), 10);
         accounting.initialize(
             curve,
             admin,
@@ -346,7 +346,7 @@ contract CSMCommonNoRoles is CSMFixtures {
 
         uint256[] memory curve = new uint256[](1);
         curve[0] = BOND_SIZE;
-        accounting = new CSAccounting(address(locator), address(csm));
+        accounting = new CSAccounting(address(locator), address(csm), 10);
         accounting.initialize(
             curve,
             admin,

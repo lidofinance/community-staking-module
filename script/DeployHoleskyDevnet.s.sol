@@ -29,6 +29,7 @@ contract DeployHoleskyDevnet is DeployBase {
 
         config.verifierSupportedEpoch = 29696;
         // Accounting
+        config.maxCurveLength = 10;
         config.bondCurve = new uint256[](3);
         config.bondCurve[0] = 2 ether; // Validator 1 -> 2 ETH
         config.bondCurve[1] = 3.75 ether; // Validator 2 -> 1.75 ETH

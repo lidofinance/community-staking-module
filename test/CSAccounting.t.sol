@@ -61,7 +61,11 @@ contract CSAccountingBaseInitTest is Test, Fixtures, Utilities {
         stakingModule = new Stub();
         feeDistributor = new Stub();
 
-        accounting = new CSAccounting(address(locator), address(stakingModule));
+        accounting = new CSAccounting(
+            address(locator),
+            address(stakingModule),
+            10
+        );
     }
 }
 
@@ -168,7 +172,11 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities, PermitTokenBase {
 
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
-        accounting = new CSAccounting(address(locator), address(stakingModule));
+        accounting = new CSAccounting(
+            address(locator),
+            address(stakingModule),
+            10
+        );
         accounting.initialize(
             curve,
             admin,

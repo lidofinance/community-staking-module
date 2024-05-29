@@ -38,6 +38,7 @@ struct DeployParams {
     GIndex gIFirstValidator;
     uint256 verifierSupportedEpoch;
     // Accounting
+    uint256 maxCurveLength;
     uint256[] bondCurve;
     uint256 bondLockRetentionPeriod;
     // Module
@@ -104,7 +105,8 @@ abstract contract DeployBase is Script {
 
             CSAccounting accountingImpl = new CSAccounting({
                 lidoLocator: config.lidoLocatorAddress,
-                communityStakingModule: address(csm)
+                communityStakingModule: address(csm),
+                maxCurveLength: config.maxCurveLength
             });
             accounting = CSAccounting(
                 _deployProxy(config.votingAddress, address(accountingImpl))

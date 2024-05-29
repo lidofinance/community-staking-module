@@ -39,9 +39,8 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     bytes32 private constant CS_BOND_CURVE_STORAGE_LOCATION =
         0x8f22e270e477f5becb8793b61d439ab7ae990ed8eba045eb72061c0e6cfe1500;
 
-    // TODO: might be redefined in the future
-    uint256 internal constant MAX_CURVE_LENGTH = 20;
     uint256 internal constant MIN_CURVE_LENGTH = 1;
+    uint256 internal immutable MAX_CURVE_LENGTH;
 
     event BondCurveAdded(uint256[] bondCurve);
     event DefaultBondCurveChanged(uint256 curveId);
@@ -50,6 +49,11 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     error InvalidBondCurveLength();
     error InvalidBondCurveValues();
     error InvalidBondCurveId();
+
+    constructor(uint256 maxCurveLength) {
+        if (maxCurveLength < MIN_CURVE_LENGTH) revert InvalidBondCurveLength();
+        MAX_CURVE_LENGTH = maxCurveLength;
+    }
 
     function defaultBondCurveId() public view returns (uint256) {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
