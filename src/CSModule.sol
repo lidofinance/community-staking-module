@@ -128,7 +128,6 @@ contract CSModule is
         uint256 keyIndex
     );
 
-    // TODO: do we want event for queue cursor moving as well?
     event PublicRelease();
     event KeyRemovalChargeSet(uint256 amount);
 
@@ -230,7 +229,6 @@ contract CSModule is
     function setKeyRemovalCharge(
         uint256 amount
     ) external onlyRole(MODULE_MANAGER_ROLE) {
-        // TODO: think about limits
         _setKeyRemovalCharge(amount);
     }
 
@@ -995,7 +993,6 @@ contract CSModule is
         });
     }
 
-    // TODO: rename to release... ?
     /// @notice Cancel previously reported and not settled EL rewards stealing penalty for the given Node Operator
     /// @notice The funds will be unlocked
     /// @param nodeOperatorId ID of the Node Operator
@@ -1031,6 +1028,7 @@ contract CSModule is
             uint256 settled = accounting.settleLockedBondETH(nodeOperatorId);
             emit ELRewardsStealingPenaltySettled(nodeOperatorId, settled);
             if (settled > 0) {
+                // Bond curve should be reset to default in case of confirmed MEV stealing. See https://hackmd.io/@lido/SygBLW5ja
                 accounting.resetBondCurve(nodeOperatorId);
                 // Nonce should be updated if depositableValidators change
                 // No need to normalize queue due to only decrease in depositable possible
@@ -1089,7 +1087,7 @@ contract CSModule is
 
         if (_isValidatorSlashed[pointer]) {
             amount += INITIAL_SLASHING_PENALTY;
-            // TODO: Add an explainer.
+            // Bond curve should be reset to default in case of slashing. See https://hackmd.io/@lido/SygBLW5ja
             accounting.resetBondCurve(nodeOperatorId);
         }
 
