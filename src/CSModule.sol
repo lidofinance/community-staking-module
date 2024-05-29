@@ -801,11 +801,9 @@ contract CSModule is
     /// @dev Called by StakingRouter
     /// @dev Always reverts
     /// @dev `refundedValidatorsCount` is not used in the module
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param refundedValidatorsCount Number of refunded validators
     function updateRefundedValidatorsCount(
-        uint256 nodeOperatorId,
-        uint256 refundedValidatorsCount
+        uint256 /* nodeOperatorId */,
+        uint256 /* refundedValidatorsCount */
     ) external onlyRole(STAKING_ROUTER_ROLE) {
         revert NotSupported();
     }
