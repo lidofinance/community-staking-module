@@ -19,8 +19,8 @@ contract CSFeeDistributor is
     AccessControlEnumerableUpgradeable,
     AssetRecoverer
 {
-    bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE"); // 0x68e79a7bf1e0bc45d0a330c573bc367f9cf464fd326078812f301165fbda4ef1
-    bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE"); // 0xb3e25b5404b87e5a838579cb5d7481d61ad96ee284d38ec1e97c07ba64e7f6fc
+    bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
+    bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
     IStETH public immutable STETH;
     address public immutable ACCOUNTING;
@@ -61,6 +61,8 @@ contract CSFeeDistributor is
 
         ACCOUNTING = accounting;
         STETH = IStETH(stETH);
+
+        // TODO: add _disableInitializers
     }
 
     function initialize(address admin, address oracle) external initializer {
@@ -73,9 +75,9 @@ contract CSFeeDistributor is
     }
 
     /// @notice Distribute fees to the Accounting in favor of the Node Operator
-    /// @param proof Merkle proof of the leaf
     /// @param nodeOperatorId ID of the Node Operator
     /// @param shares Total Amount of stETH shares earned as fees
+    /// @param proof Merkle proof of the leaf
     /// @return Amount of stETH shares distributed
     function distributeFees(
         uint256 nodeOperatorId,
@@ -129,6 +131,7 @@ contract CSFeeDistributor is
                 totalClaimableShares += distributed;
             }
 
+            // TODO: consider emiting events for changed values
             treeRoot = _treeRoot;
             treeCid = _treeCid;
         }
@@ -152,9 +155,9 @@ contract CSFeeDistributor is
     }
 
     /// @notice Get the Amount of stETH shares that can be distributed in favor of the Node Operator
-    /// @param proof Merkle proof of the leaf
     /// @param nodeOperatorId ID of the Node Operator
     /// @param shares Total Amount of stETH shares earned as fees
+    /// @param proof Merkle proof of the leaf
     /// @return Amount of stETH shares that can be distributed
     function getFeesToDistribute(
         uint256 nodeOperatorId,

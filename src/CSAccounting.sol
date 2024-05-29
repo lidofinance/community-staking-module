@@ -554,6 +554,7 @@ contract CSAccounting is
             cumulativeFeeShares,
             rewardsProof
         );
+        // TODO: consider check distributed == 0 and have early exit in this scenario
         CSBondCore._increaseBond(nodeOperatorId, distributed);
     }
 
