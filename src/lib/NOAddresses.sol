@@ -34,6 +34,7 @@ library NOAddresses {
     error SenderIsNotManagerAddress();
     error SenderIsNotRewardAddress();
     error SenderIsNotProposedAddress();
+    error NodeOperatorDoesNotExist();
 
     /// @notice Propose a new manager address for the Node Operator
     /// @param nodeOperatorId ID of the Node Operator
@@ -44,6 +45,7 @@ library NOAddresses {
         address proposedAddress
     ) external {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
+        if (no.managerAddress == address(0)) revert NodeOperatorDoesNotExist();
         if (no.managerAddress != msg.sender) revert SenderIsNotManagerAddress();
         if (no.managerAddress == proposedAddress) revert SameAddress();
         if (no.proposedManagerAddress == proposedAddress)
@@ -58,13 +60,15 @@ library NOAddresses {
         );
     }
 
-    /// @notice Confirm a new manager address for the Node Operator
+    /// @notice Confirm a new manager address for the Node Operator.
+    ///         Should be called from the currently proposed address
     /// @param nodeOperatorId ID of the Node Operator
     function confirmNodeOperatorManagerAddressChange(
         mapping(uint256 => NodeOperator) storage nodeOperators,
         uint256 nodeOperatorId
     ) external {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
+        if (no.managerAddress == address(0)) revert NodeOperatorDoesNotExist();
         if (no.proposedManagerAddress != msg.sender)
             revert SenderIsNotProposedAddress();
         address oldAddress = no.managerAddress;
@@ -87,6 +91,7 @@ library NOAddresses {
         address proposedAddress
     ) external {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
+        if (no.rewardAddress == address(0)) revert NodeOperatorDoesNotExist();
         if (no.rewardAddress != msg.sender) revert SenderIsNotRewardAddress();
         if (no.rewardAddress == proposedAddress) revert SameAddress();
         if (no.proposedRewardAddress == proposedAddress)
@@ -101,13 +106,15 @@ library NOAddresses {
         );
     }
 
-    /// @notice Confirm a new reward address for the Node Operator
+    /// @notice Confirm a new reward address for the Node Operator.
+    ///         Should be called from the currently proposed address
     /// @param nodeOperatorId ID of the Node Operator
     function confirmNodeOperatorRewardAddressChange(
         mapping(uint256 => NodeOperator) storage nodeOperators,
         uint256 nodeOperatorId
     ) external {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
+        if (no.rewardAddress == address(0)) revert NodeOperatorDoesNotExist();
         if (no.proposedRewardAddress != msg.sender)
             revert SenderIsNotProposedAddress();
         address oldAddress = no.rewardAddress;
@@ -121,13 +128,15 @@ library NOAddresses {
         );
     }
 
-    /// @notice Reset the manager address to the reward address
+    /// @notice Reset the manager address to the reward address.
+    ///         Should be called from the reward address
     /// @param nodeOperatorId ID of the Node Operator
     function resetNodeOperatorManagerAddress(
         mapping(uint256 => NodeOperator) storage nodeOperators,
         uint256 nodeOperatorId
     ) external {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
+        if (no.rewardAddress == address(0)) revert NodeOperatorDoesNotExist();
         if (no.rewardAddress != msg.sender) revert SenderIsNotRewardAddress();
         if (no.managerAddress == no.rewardAddress) revert SameAddress();
         address previousManagerAddress = no.managerAddress;

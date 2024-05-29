@@ -5090,6 +5090,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
         vm.prank(admin);
         csm.grantRole(role, actor);
 
+        vm.expectRevert(CSModule.NotSupported.selector);
         vm.prank(actor);
         csm.updateRefundedValidatorsCount(noId, 0);
     }
@@ -5685,13 +5686,8 @@ contract CSMMisc is CSMCommon {
         uint256 noId = createNodeOperator();
         uint256 nonce = csm.getNonce();
         uint256 refunded = 1;
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.RefundedKeysCountChanged(noId, refunded);
+        vm.expectRevert(CSModule.NotSupported.selector);
         csm.updateRefundedValidatorsCount(noId, refunded);
-        assertEq(csm.getNonce(), nonce + 1);
-
-        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.refundedValidatorsCount, refunded);
     }
 
     function test_getActiveNodeOperatorsCount_OneOperator() public {

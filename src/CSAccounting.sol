@@ -123,12 +123,12 @@ contract CSAccounting is
         LIDO.approve(LIDO_LOCATOR.burner(), type(uint256).max);
     }
 
-    /// @notice Resume accounting
+    /// @notice Resume reward claims and deposits
     function resume() external onlyRole(RESUME_ROLE) {
         _resume();
     }
 
-    /// @notice Pause accounting for `duration` seconds
+    /// @notice Pause reward claims and deposits for `duration` seconds
     /// @dev Must be called together with `CSModule.pauseFor`
     /// @param duration Duration of the pause in seconds
     function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
