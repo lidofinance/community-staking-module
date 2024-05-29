@@ -8,7 +8,7 @@ import "forge-std/Test.sol";
 import { CSBondCurve } from "../src/abstract/CSBondCurve.sol";
 import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
-contract CSBondCurveTestable is CSBondCurve {
+contract CSBondCurveTestable is CSBondCurve(10) {
     function initialize(uint256[] memory bondCurve) public initializer {
         __CSBondCurve_init(bondCurve);
     }

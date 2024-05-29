@@ -15,7 +15,7 @@ import { LidoLocatorMock } from "./helpers/mocks/LidoLocatorMock.sol";
 import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 
-contract CSBondLockTestable is CSBondLock {
+contract CSBondLockTestable is CSBondLock(4 weeks, 365 days) {
     function initialize(uint256 retentionPeriod) public initializer {
         CSBondLock.__CSBondLock_init(retentionPeriod);
     }

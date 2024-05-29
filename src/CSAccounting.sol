@@ -68,8 +68,15 @@ contract CSAccounting is
     /// @param communityStakingModule Community Staking Module contract address
     constructor(
         address lidoLocator,
-        address communityStakingModule
-    ) CSBondCore(lidoLocator) {
+        address communityStakingModule,
+        uint256 maxCurveLength,
+        uint256 minBondLockRetentionPeriod,
+        uint256 maxBondLockRetentionPeriod
+    )
+        CSBondCore(lidoLocator)
+        CSBondCurve(maxCurveLength)
+        CSBondLock(minBondLockRetentionPeriod, maxBondLockRetentionPeriod)
+    {
         if (communityStakingModule == address(0)) {
             revert ZeroAddress("communityStakingModule");
         }

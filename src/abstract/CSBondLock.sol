@@ -39,9 +39,8 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
     bytes32 private constant CS_BOND_LOCK_STORAGE_LOCATION =
         0x78c5a36767279da056404c09083fca30cf3ea61c442cfaba6669f76a37393f00;
 
-    // TODO: can be reconsidered
-    uint256 public constant MIN_BOND_LOCK_RETENTION_PERIOD = 4 weeks;
-    uint256 public constant MAX_BOND_LOCK_RETENTION_PERIOD = 365 days;
+    uint256 public immutable MIN_BOND_LOCK_RETENTION_PERIOD;
+    uint256 public immutable MAX_BOND_LOCK_RETENTION_PERIOD;
 
     event BondLockChanged(
         uint256 indexed nodeOperatorId,
@@ -52,6 +51,17 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
 
     error InvalidBondLockRetentionPeriod();
     error InvalidBondLockAmount();
+
+    constructor(
+        uint256 minBondLockRetentionPeriod,
+        uint256 maxBondLockRetentionPeriod
+    ) {
+        if (minBondLockRetentionPeriod > maxBondLockRetentionPeriod) {
+            revert InvalidBondLockRetentionPeriod();
+        }
+        MIN_BOND_LOCK_RETENTION_PERIOD = minBondLockRetentionPeriod;
+        MAX_BOND_LOCK_RETENTION_PERIOD = maxBondLockRetentionPeriod;
+    }
 
     /// @notice Get default bond lock retention period
     /// @return retention Default bond lock retention period
