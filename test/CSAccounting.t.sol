@@ -64,7 +64,9 @@ contract CSAccountingBaseInitTest is Test, Fixtures, Utilities {
         accounting = new CSAccounting(
             address(locator),
             address(stakingModule),
-            10
+            10,
+            4 weeks,
+            365 days
         );
     }
 }
@@ -175,7 +177,9 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities, PermitTokenBase {
         accounting = new CSAccounting(
             address(locator),
             address(stakingModule),
-            10
+            10,
+            4 weeks,
+            365 days
         );
         accounting.initialize(
             curve,

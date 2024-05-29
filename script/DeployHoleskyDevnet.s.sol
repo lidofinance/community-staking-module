@@ -35,6 +35,8 @@ contract DeployHoleskyDevnet is DeployBase {
         config.bondCurve[1] = 3.75 ether; // Validator 2 -> 1.75 ETH
         config.bondCurve[2] = 5.25 ether; // Validator 3, 4, 5, ... -> 1.5 ETH
 
+        config.minBondLockRetentionPeriod = 4 weeks;
+        config.maxBondLockRetentionPeriod = 365 days;
         config.bondLockRetentionPeriod = 8 weeks;
         // Module
         config.moduleType = "community-onchain-v1";
