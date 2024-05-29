@@ -46,11 +46,9 @@ contract CSModule is
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
-    uint256 private constant MIN_SLASHING_PENALTY_QUOTIENT = 32; // TODO: consider to move to state variable due to EIP-7251
-    uint256 public constant INITIAL_SLASHING_PENALTY =
-        DEPOSIT_SIZE / MIN_SLASHING_PENALTY_QUOTIENT;
     uint8 private constant FORCED_TARGET_LIMIT_MODE_ID = 2; // TODO: Add link to SR docs
 
+    uint256 public immutable INITIAL_SLASHING_PENALTY;
     uint256 public immutable EL_REWARDS_STEALING_FINE;
     uint256
         public immutable MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE;
@@ -172,11 +170,13 @@ contract CSModule is
 
     constructor(
         bytes32 moduleType,
+        uint256 minSlashingPenaltyQuotient,
         uint256 elRewardsStealingFine,
         uint256 maxKeysPerOperatorEA,
         address lidoLocator
     ) {
         MODULE_TYPE = moduleType;
+        INITIAL_SLASHING_PENALTY = DEPOSIT_SIZE / minSlashingPenaltyQuotient;
         EL_REWARDS_STEALING_FINE = elRewardsStealingFine;
         MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE = maxKeysPerOperatorEA;
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
