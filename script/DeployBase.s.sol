@@ -45,6 +45,7 @@ struct DeployParams {
     uint256 bondLockRetentionPeriod;
     // Module
     bytes32 moduleType;
+    uint256 minSlashingPenaltyQuotient;
     uint256 elRewardsStealingFine;
     uint256 maxKeysPerOperatorEA;
     uint256 keyRemovalCharge;
@@ -97,6 +98,7 @@ abstract contract DeployBase is Script {
             address treasury = locator.treasury();
             CSModule csmImpl = new CSModule({
                 moduleType: config.moduleType,
+                minSlashingPenaltyQuotient: config.minSlashingPenaltyQuotient,
                 elRewardsStealingFine: config.elRewardsStealingFine,
                 maxKeysPerOperatorEA: config.maxKeysPerOperatorEA,
                 lidoLocator: config.lidoLocatorAddress

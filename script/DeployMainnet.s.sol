@@ -41,6 +41,7 @@ contract DeployMainnet is DeployBase {
         config.bondLockRetentionPeriod = 8 weeks;
         // Module
         config.moduleType = "community-onchain-v1";
+        config.minSlashingPenaltyQuotient = 32;
         config.elRewardsStealingFine = 0.1 ether;
         config.maxKeysPerOperatorEA = 10;
         config.keyRemovalCharge = 0.05 ether;

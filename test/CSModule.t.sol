@@ -255,6 +255,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
 
         csm = new CSModule({
             moduleType: "community-staking-module",
+            minSlashingPenaltyQuotient: 32,
             elRewardsStealingFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator)
@@ -345,6 +346,7 @@ contract CSMCommonNoRoles is CSMFixtures {
         feeDistributor = new Stub();
         csm = new CSModule({
             moduleType: "community-staking-module",
+            minSlashingPenaltyQuotient: 32,
             elRewardsStealingFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator)
@@ -404,6 +406,7 @@ contract CsmInitialize is CSMCommon {
     function test_constructor() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
+            minSlashingPenaltyQuotient: 32,
             elRewardsStealingFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator)
@@ -417,6 +420,7 @@ contract CsmInitialize is CSMCommon {
     function test_initialize() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
+            minSlashingPenaltyQuotient: 32,
             elRewardsStealingFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator)
@@ -4965,6 +4969,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     function test_adminRole() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
+            minSlashingPenaltyQuotient: 32,
             elRewardsStealingFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator)
@@ -4984,6 +4989,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     function test_adminRole_revert() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
+            minSlashingPenaltyQuotient: 32,
             elRewardsStealingFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator)
