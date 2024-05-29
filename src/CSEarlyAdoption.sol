@@ -7,9 +7,11 @@ import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerklePr
 import { ICSEarlyAdoption } from "./interfaces/ICSEarlyAdoption.sol";
 
 contract CSEarlyAdoption is ICSEarlyAdoption {
-    // TODO: add natspec comments
+    /// @dev Root of the EA members Merkle Tree
     bytes32 public immutable TREE_ROOT;
+    /// @dev Id of the bond curve to be assigned for the EA members
     uint256 public immutable CURVE_ID;
+    /// @dev Address of the Staking Module using Early Adoption contract
     address public immutable MODULE;
 
     mapping(address => bool) internal _consumedAddresses;
