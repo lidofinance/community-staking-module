@@ -32,7 +32,7 @@ struct DeployParams {
     uint256 oracleReportEpochsPerFrame;
     uint256 fastLaneLengthSlots;
     uint256 consensusVersion;
-    uint256 performanceThresholdBP;
+    uint256 avgPerfLeewayBP;
     // Verifier
     GIndex gIHistoricalSummaries;
     GIndex gIFirstWithdrawal;
@@ -192,7 +192,7 @@ abstract contract DeployBase is Script {
                 feeDistributorContract: address(feeDistributor),
                 consensusContract: address(hashConsensus),
                 consensusVersion: config.consensusVersion,
-                _perfThresholdBP: config.performanceThresholdBP
+                _avgPerfLeewayBP: config.avgPerfLeewayBP
             });
 
             address gateSeal = _deployGateSeal();

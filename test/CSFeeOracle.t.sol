@@ -43,7 +43,7 @@ contract CSFeeOracleTest is Test, Utilities {
 
     uint256 internal constant CONSENSUS_VERSION = 1;
     uint256 internal constant INITIAL_EPOCH = 17;
-    uint256 internal constant PERF_THRESHOLD = 9500;
+    uint256 internal constant PERF_LEEWAY = 500;
 
     CSFeeOracleForTest public oracle;
     HashConsensus public consensus;
@@ -315,7 +315,7 @@ contract CSFeeOracleTest is Test, Utilities {
             address(distributor),
             address(consensus),
             CONSENSUS_VERSION,
-            PERF_THRESHOLD
+            PERF_LEEWAY
         );
     }
 
@@ -352,7 +352,7 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.setFeeDistributorContract(address(0));
     }
 
-    function test_setPerformanceThreshold() public {
+    function test_setPerformanceLeeway() public {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
             _grantAllRolesToAdmin();
@@ -363,11 +363,11 @@ contract CSFeeOracleTest is Test, Utilities {
         uint256 newThreshold = 4200;
 
         vm.expectEmit(true, true, true, true, address(oracle));
-        emit CSFeeOracle.PerformanceThresholdSet(newThreshold);
+        emit CSFeeOracle.PerfLeewaySet(newThreshold);
         vm.prank(ORACLE_ADMIN);
-        oracle.setPerformanceThreshold(newThreshold);
+        oracle.setPerformanceLeeway(newThreshold);
 
-        assertEq(oracle.perfThresholdBP(), newThreshold);
+        assertEq(oracle.avgPerfLeewayBP(), newThreshold);
     }
 
     function test_setPerformanceThreshold_RevertsWhenInvalidBP() public {
@@ -378,9 +378,9 @@ contract CSFeeOracleTest is Test, Utilities {
             _setInitialEpoch();
         }
 
-        vm.expectRevert(CSFeeOracle.InvalidPerfThreshold.selector);
+        vm.expectRevert(CSFeeOracle.InvalidPerfLeeway.selector);
         vm.prank(ORACLE_ADMIN);
-        oracle.setPerformanceThreshold(99999);
+        oracle.setPerformanceLeeway(99999);
     }
 
     function _deployFeeOracleAndHashConsensus(
@@ -406,7 +406,7 @@ contract CSFeeOracleTest is Test, Utilities {
             address(new DistributorMock()),
             address(consensus),
             CONSENSUS_VERSION,
-            PERF_THRESHOLD
+            PERF_LEEWAY
         );
     }
 
