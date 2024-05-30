@@ -20,7 +20,7 @@ contract DeployHoleskyDevnet is DeployBase {
         config.oracleReportEpochsPerFrame = 225; // 1 day
         config.fastLaneLengthSlots = 0;
         config.consensusVersion = 1;
-        config.performanceThresholdBP = 9500;
+        config.avgPerfLeewayBP = 500;
         // Verifier
         // NOTE: Deneb fork gIndexes. Should be updated according to `config.verifierSupportedEpoch` fork epoch if needed
         config.gIHistoricalSummaries = pack(0x3b, 5);

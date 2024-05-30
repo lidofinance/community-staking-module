@@ -49,14 +49,15 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
 
     ICSFeeDistributor public feeDistributor;
 
-    /// @notice Threshold in basis points used to determine the underperforming validators (by comparing with the
-    /// network average).
-    uint256 public perfThresholdBP;
+    /// @notice Leeway in basis points used to determine the underperforming validators threshold.
+    /// `threshold` = `avgPerfBP` - `avgPerfLeewayBP`, where `avgPerfBP` is an average
+    /// performance over the network computed by the off-chain oracle.
+    uint256 public avgPerfLeewayBP;
 
     /// @dev Emitted when a new fee distributor contract is set
     event FeeDistributorContractSet(address feeDistributorContract);
 
-    event PerformanceThresholdSet(uint256 valueBP);
+    event PerfLeewaySet(uint256 valueBP);
 
     /// @dev Emitted when a report is settled.
     event ReportSettled(
@@ -66,7 +67,7 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         string treeCid // TODO: consistent naming with newRoot
     );
 
-    error InvalidPerfThreshold();
+    error InvalidPerfLeeway();
     error AdminCannotBeZero();
     error SenderNotAllowed();
 
@@ -80,7 +81,7 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         address feeDistributorContract,
         address consensusContract,
         uint256 consensusVersion,
-        uint256 _perfThresholdBP
+        uint256 _avgPerfLeewayBP
     ) external {
         if (admin == address(0)) revert AdminCannotBeZero();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -88,7 +89,7 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         BaseOracle._initialize(consensusContract, consensusVersion, 0);
         /// @dev _setFeeDistributorContract() reverts if zero address
         _setFeeDistributorContract(feeDistributorContract);
-        _setPerformanceThreshold(_perfThresholdBP);
+        _setPerformanceLeeway(_avgPerfLeewayBP);
     }
 
     /// @notice Set a new fee distributor contract
@@ -101,10 +102,10 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
 
     /// @notice Set a new performance threshold value in basis points
     /// @param valueBP performance threshold in basis points
-    function setPerformanceThreshold(
+    function setPerformanceLeeway(
         uint256 valueBP
     ) external onlyRole(CONTRACT_MANAGER_ROLE) {
-        _setPerformanceThreshold(valueBP);
+        _setPerformanceLeeway(valueBP);
     }
 
     /// @notice Submit the data for a committee report
@@ -153,13 +154,13 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         emit FeeDistributorContractSet(feeDistributorContract);
     }
 
-    function _setPerformanceThreshold(uint256 valueBP) internal {
+    function _setPerformanceLeeway(uint256 valueBP) internal {
         if (valueBP > MAX_BP) {
-            revert InvalidPerfThreshold();
+            revert InvalidPerfLeeway();
         }
 
-        perfThresholdBP = valueBP;
-        emit PerformanceThresholdSet(valueBP);
+        avgPerfLeewayBP = valueBP;
+        emit PerfLeewaySet(valueBP);
     }
 
     /// @dev Called in `submitConsensusReport` after a consensus is reached.
