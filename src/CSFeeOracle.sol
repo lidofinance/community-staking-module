@@ -63,7 +63,7 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         uint256 indexed refSlot,
         uint256 distributed,
         bytes32 newRoot,
-        string treeCid
+        string treeCid // TODO: consistent naming with newRoot
     );
 
     error InvalidPerfThreshold();
