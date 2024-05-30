@@ -21,7 +21,7 @@ contract DeployHolesky is DeployBase {
         config.oracleReportEpochsPerFrame = 225 * 28; // 28 days
         config.fastLaneLengthSlots = 0;
         config.consensusVersion = 1;
-        config.performanceThresholdBP = 9500;
+        config.avgPerfLeewayBP = 500;
         // Verifier
         // NOTE: Deneb fork gIndexes. Should be updated according to `config.verifierSupportedEpoch` fork epoch if needed
         config.gIHistoricalSummaries = pack(0x3b, 5);
@@ -45,6 +45,12 @@ contract DeployHolesky is DeployBase {
         config.elRewardsStealingFine = 0.1 ether;
         config.maxKeysPerOperatorEA = 10;
         config.keyRemovalCharge = 0.05 ether;
+        // GateSeal
+        config.gateSealFactory = 0x1134F7077055b0B3559BE52AfeF9aA22A0E1eEC2;
+        // TODO reconsider committee address
+        config.sealingCommittee = address(0);
+        config.sealDuration = 6 days;
+        config.sealExpiryTimestamp = block.timestamp + 365 days;
 
         _setUp();
     }

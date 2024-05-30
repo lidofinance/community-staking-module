@@ -14,6 +14,7 @@ import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
 import { ILido } from "../../src/interfaces/ILido.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 import { IWstETH } from "../../src/interfaces/IWstETH.sol";
+import { IGateSeal } from "../../src/interfaces/IGateSeal.sol";
 import { HashConsensus } from "../../src/lib/base-oracle/HashConsensus.sol";
 import { IWithdrawalQueue } from "../../src/interfaces/IWithdrawalQueue.sol";
 import { CSModule } from "../../src/CSModule.sol";
@@ -76,6 +77,7 @@ contract DeploymentFixtures is StdCheats, Test {
     IWstETH public wstETH;
     IStakingRouter public stakingRouter;
     ILido public lido;
+    IGateSeal public gateSeal;
 
     struct Env {
         string RPC_URL;
@@ -91,6 +93,7 @@ contract DeploymentFixtures is StdCheats, Test {
         address verifier;
         address hashConsensus;
         address lidoLocator;
+        address gateSeal;
     }
 
     function envVars() public returns (Env memory) {
@@ -120,6 +123,7 @@ contract DeploymentFixtures is StdCheats, Test {
         lido = ILido(locator.lido());
         stakingRouter = IStakingRouter(locator.stakingRouter());
         wstETH = IWstETH(IWithdrawalQueue(locator.withdrawalQueue()).WSTETH());
+        gateSeal = IGateSeal(deploymentConfig.gateSeal);
     }
 
     function parseDeploymentConfig(
@@ -159,6 +163,9 @@ contract DeploymentFixtures is StdCheats, Test {
             ".LidoLocator"
         );
         vm.label(deploymentConfig.lidoLocator, "LidoLocator");
+
+        deploymentConfig.gateSeal = vm.parseJsonAddress(config, ".GateSeal");
+        vm.label(deploymentConfig.gateSeal, "GateSeal");
     }
 
     function _isEmpty(string memory s) internal pure returns (bool) {

@@ -14,6 +14,7 @@ import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
 
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
+import { IGateSealFactory } from "../src/interfaces/IGateSealFactory.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
@@ -31,7 +32,7 @@ struct DeployParams {
     uint256 oracleReportEpochsPerFrame;
     uint256 fastLaneLengthSlots;
     uint256 consensusVersion;
-    uint256 performanceThresholdBP;
+    uint256 avgPerfLeewayBP;
     // Verifier
     GIndex gIHistoricalSummaries;
     GIndex gIFirstWithdrawal;
@@ -49,6 +50,11 @@ struct DeployParams {
     uint256 elRewardsStealingFine;
     uint256 maxKeysPerOperatorEA;
     uint256 keyRemovalCharge;
+    // GateSeal
+    address gateSealFactory;
+    address sealingCommittee;
+    uint256 sealDuration;
+    uint256 sealExpiryTimestamp;
 }
 
 abstract contract DeployBase is Script {
@@ -152,11 +158,11 @@ abstract contract DeployBase is Script {
                 _accounting: address(accounting),
                 _earlyAdoption: address(0),
                 _keyRemovalCharge: config.keyRemovalCharge,
-                admin: address(deployer)
+                admin: deployer
             });
             accounting.initialize({
                 bondCurve: config.bondCurve,
-                admin: config.votingAddress,
+                admin: deployer,
                 _feeDistributor: address(feeDistributor),
                 bondLockRetentionPeriod: config.bondLockRetentionPeriod,
                 _chargeRecipient: treasury
@@ -167,9 +173,9 @@ abstract contract DeployBase is Script {
             });
 
             // TODO: deploy early adoption contract
-            csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(deployer));
+            csm.grantRole(csm.MODULE_MANAGER_ROLE(), deployer);
             csm.activatePublicRelease();
-            csm.revokeRole(csm.MODULE_MANAGER_ROLE(), address(deployer));
+            csm.revokeRole(csm.MODULE_MANAGER_ROLE(), deployer);
 
             hashConsensus = new HashConsensus({
                 slotsPerEpoch: config.slotsPerEpoch,
@@ -186,9 +192,13 @@ abstract contract DeployBase is Script {
                 feeDistributorContract: address(feeDistributor),
                 consensusContract: address(hashConsensus),
                 consensusVersion: config.consensusVersion,
-                _perfThresholdBP: config.performanceThresholdBP
+                _avgPerfLeewayBP: config.avgPerfLeewayBP
             });
 
+            address gateSeal = _deployGateSeal();
+
+            csm.grantRole(csm.PAUSE_ROLE(), gateSeal);
+            accounting.grantRole(accounting.PAUSE_ROLE(), gateSeal);
             csm.grantRole(
                 csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE(),
                 config.easyTrackEVMScriptExecutor
@@ -196,14 +206,15 @@ abstract contract DeployBase is Script {
 
             csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.votingAddress);
             csm.grantRole(csm.VERIFIER_ROLE(), address(verifier));
-            csm.revokeRole(csm.DEFAULT_ADMIN_ROLE(), address(deployer));
+            csm.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
+            accounting.grantRole(
+                csm.DEFAULT_ADMIN_ROLE(),
+                config.votingAddress
+            );
+            accounting.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
 
             // TODO: these roles might be granted to multisig for testing purposes
-            //            csm.grantRole(csm.PAUSE_ROLE(), address(0)); GateSeal or multisig
-
             //            csm.grantRole(csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(), address(0)); EOA or multisig
-
-            //            accounting.grantRole(accounting.PAUSE_ROLE(), address(0)); GateSeal or multisig
 
             //            accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), address(0)); multisig
             //            accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(0)); multisig
@@ -219,6 +230,7 @@ abstract contract DeployBase is Script {
             deployJson.set("HashConsensus", address(hashConsensus));
             deployJson.set("CSVerifier", address(verifier));
             deployJson.set("LidoLocator", config.lidoLocatorAddress);
+            deployJson.set("GateSeal", gateSeal);
             vm.writeJson(deployJson.str, _deployJsonFilename());
         }
 
@@ -239,8 +251,26 @@ abstract contract DeployBase is Script {
     }
 
     function _deployGateSeal() internal returns (address) {
-        // PAUSE_ROLE for some contracts should be granted to GateSeals
-        revert("Not yet implemented");
+        IGateSealFactory gateSealFactory = IGateSealFactory(
+            config.gateSealFactory
+        );
+        address[] memory sealables = new address[](2);
+        sealables[0] = address(csm);
+        sealables[1] = address(accounting);
+
+        address committee = config.sealingCommittee == address(0)
+            ? deployer
+            : config.sealingCommittee;
+
+        vm.recordLogs();
+        gateSealFactory.create_gate_seal({
+            sealingCommittee: committee,
+            sealDurationSeconds: config.sealDuration,
+            sealables: sealables,
+            expiryTimestamp: config.sealExpiryTimestamp
+        });
+        VmSafe.Log[] memory entries = vm.getRecordedLogs();
+        return abi.decode(entries[0].data, (address));
     }
 
     function _deployJsonFilename() internal view returns (string memory) {
