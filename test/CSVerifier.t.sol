@@ -43,7 +43,12 @@ contract CSVerifierTest is Test {
     string internal fixturesPath = "./test/fixtures/CSVerifier/";
 
     function setUp() public {
+        locator = new Stub();
+        module = new Stub();
+
         verifier = new CSVerifier({
+            _locator: address(locator),
+            _module: address(module),
             slotsPerEpoch: 32,
             gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
             gIFirstWithdrawal: pack(0xe1c0, 4),
@@ -51,11 +56,6 @@ contract CSVerifierTest is Test {
             // TODO: Fix proofs and set Slot.wrap(DENEB_FORK_EPOCH * 32)
             firstSupportedSlot: Slot.wrap(1357000)
         });
-
-        locator = new Stub();
-        module = new Stub();
-
-        verifier.initialize(address(locator), address(module));
     }
 
     function test_processSlashingProof() public {

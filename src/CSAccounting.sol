@@ -53,9 +53,12 @@ contract CSAccounting is
     event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
     event ChargeRecipientSet(address chargeRecipient);
 
-    error AlreadyInitialized();
     error InvalidSender();
     error SenderIsNotCSM();
+    error ZeroModuleAddress();
+    error ZeroAdminAddress();
+    error ZeroFeeDistributorAddress();
+    error ZeroChargeRecipientAddress();
 
     modifier onlyCSM() {
         if (msg.sender != address(CSM)) {
@@ -78,9 +81,11 @@ contract CSAccounting is
         CSBondLock(minBondLockRetentionPeriod, maxBondLockRetentionPeriod)
     {
         if (communityStakingModule == address(0)) {
-            revert ZeroAddress("communityStakingModule");
+            revert ZeroModuleAddress();
         }
         CSM = ICSModule(communityStakingModule);
+
+        _disableInitializers();
     }
 
     /// @param bondCurve Initial bond curve
@@ -100,13 +105,10 @@ contract CSAccounting is
         __CSBondLock_init(bondLockRetentionPeriod);
 
         if (admin == address(0)) {
-            revert ZeroAddress("admin");
+            revert ZeroAdminAddress();
         }
         if (_feeDistributor == address(0)) {
-            revert ZeroAddress("feeDistributor");
-        }
-        if (_chargeRecipient == address(0)) {
-            revert ZeroAddress("chargeRecipient");
+            revert ZeroFeeDistributorAddress();
         }
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -115,8 +117,7 @@ contract CSAccounting is
 
         feeDistributor = ICSFeeDistributor(_feeDistributor);
 
-        chargeRecipient = _chargeRecipient;
-        emit ChargeRecipientSet(_chargeRecipient);
+        _setChargeRecipient(_chargeRecipient);
 
         LIDO.approve(address(WSTETH), type(uint256).max);
         LIDO.approve(address(WITHDRAWAL_QUEUE), type(uint256).max);
@@ -140,11 +141,7 @@ contract CSAccounting is
     function setChargeRecipient(
         address _chargeRecipient
     ) external onlyRole(ACCOUNTING_MANAGER_ROLE) {
-        if (_chargeRecipient == address(0)) {
-            revert ZeroAddress("chargeRecipient");
-        }
-        chargeRecipient = _chargeRecipient;
-        emit ChargeRecipientSet(_chargeRecipient);
+        _setChargeRecipient(_chargeRecipient);
     }
 
     /// @notice Set bond lock retention period
@@ -544,6 +541,14 @@ contract CSAccounting is
             );
     }
 
+    function _setChargeRecipient(address _chargeRecipient) private {
+        if (_chargeRecipient == address(0)) {
+            revert ZeroChargeRecipientAddress();
+        }
+        chargeRecipient = _chargeRecipient;
+        emit ChargeRecipientSet(_chargeRecipient);
+    }
+
     function _pullFeeRewards(
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
@@ -554,7 +559,6 @@ contract CSAccounting is
             cumulativeFeeShares,
             rewardsProof
         );
-        // TODO: consider check distributed == 0 and have early exit in this scenario
         CSBondCore._increaseBond(nodeOperatorId, distributed);
     }
 

@@ -59,8 +59,11 @@ contract CSVerifier is ICSVerifier {
     error ValidatorNotWithdrawn();
     error InvalidWithdrawalAddress();
     error UnsupportedSlot(uint256 slot);
+    error AlreadyInitialized();
 
     constructor(
+        address _locator,
+        address _module,
         uint64 slotsPerEpoch,
         GIndex gIHistoricalSummaries,
         GIndex gIFirstWithdrawal,
@@ -69,6 +72,9 @@ contract CSVerifier is ICSVerifier {
     ) {
         if (slotsPerEpoch == 0) revert InvalidChainConfig();
 
+        module = ICSModule(_module);
+        locator = ILidoLocator(_locator);
+
         SLOTS_PER_EPOCH = slotsPerEpoch;
 
         GI_HISTORICAL_SUMMARIES = gIHistoricalSummaries;
@@ -76,11 +82,6 @@ contract CSVerifier is ICSVerifier {
         GI_FIRST_VALIDATOR = gIFirstValidator;
 
         FIRST_SUPPORTED_SLOT = firstSupportedSlot;
-    }
-
-    function initialize(address _locator, address _module) external {
-        module = ICSModule(_module);
-        locator = ILidoLocator(_locator);
     }
 
     /// @notice Verify slashing proof and report slashing to the module for valid proofs

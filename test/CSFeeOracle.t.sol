@@ -309,7 +309,7 @@ contract CSFeeOracleTest is Test, Utilities {
         });
 
         DistributorMock distributor = new DistributorMock();
-        vm.expectRevert(CSFeeOracle.AdminCannotBeZero.selector);
+        vm.expectRevert(CSFeeOracle.ZeroAdminAddress.selector);
         oracle.initialize(
             address(0),
             address(distributor),
@@ -337,7 +337,7 @@ contract CSFeeOracleTest is Test, Utilities {
         assertEq(address(oracle.feeDistributor()), newDistributor);
     }
 
-    function test_setFeeDistributorContract_RevertWhen_AddressCannotBeZero()
+    function test_setFeeDistributorContract_RevertWhen_ZeroFeeDistributorAddress()
         public
     {
         {
@@ -347,7 +347,7 @@ contract CSFeeOracleTest is Test, Utilities {
             _setInitialEpoch();
         }
 
-        vm.expectRevert(BaseOracle.AddressCannotBeZero.selector);
+        vm.expectRevert(CSFeeOracle.ZeroFeeDistributorAddress.selector);
         vm.prank(ORACLE_ADMIN);
         oracle.setFeeDistributorContract(address(0));
     }

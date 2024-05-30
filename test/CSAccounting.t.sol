@@ -75,6 +75,10 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     function test_initialize_happyPath() public {
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
+
+        // cheat to allow implementation initialisation
+        vm.store(address(accounting), INITIALIZABLE_STORAGE, bytes32(0));
+
         vm.expectEmit(true, false, false, true, address(accounting));
         emit CSBondCurve.BondCurveAdded(curve);
         vm.expectEmit(true, false, false, true, address(accounting));
@@ -97,9 +101,11 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     function test_initialize_revertWhen_zeroAdmin() public {
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
-        vm.expectRevert(
-            abi.encodeWithSelector(CSBondCore.ZeroAddress.selector, "admin")
-        );
+
+        // cheat to allow implementation initialisation
+        vm.store(address(accounting), INITIALIZABLE_STORAGE, bytes32(0));
+
+        vm.expectRevert(CSAccounting.ZeroAdminAddress.selector);
         accounting.initialize(
             curve,
             address(0),
@@ -112,12 +118,11 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     function test_initialize_revertWhen_zeroFeeDistributor() public {
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                CSBondCore.ZeroAddress.selector,
-                "feeDistributor"
-            )
-        );
+
+        // cheat to allow implementation initialisation
+        vm.store(address(accounting), INITIALIZABLE_STORAGE, bytes32(0));
+
+        vm.expectRevert(CSAccounting.ZeroFeeDistributorAddress.selector);
         accounting.initialize(
             curve,
             admin,
@@ -130,12 +135,11 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     function test_initialize_revertWhen_zeroChargeRecipient() public {
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                CSBondCore.ZeroAddress.selector,
-                "chargeRecipient"
-            )
-        );
+
+        // cheat to allow implementation initialisation
+        vm.store(address(accounting), INITIALIZABLE_STORAGE, bytes32(0));
+
+        vm.expectRevert(CSAccounting.ZeroChargeRecipientAddress.selector);
         accounting.initialize(
             curve,
             admin,
@@ -181,6 +185,10 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities, PermitTokenBase {
             4 weeks,
             365 days
         );
+
+        // cheat to allow implementation initialisation
+        vm.store(address(accounting), INITIALIZABLE_STORAGE, bytes32(0));
+
         accounting.initialize(
             curve,
             admin,

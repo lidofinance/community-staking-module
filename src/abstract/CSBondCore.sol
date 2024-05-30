@@ -83,11 +83,11 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 chargedAmount
     );
 
-    error ZeroAddress(string field);
+    error ZeroLocatorAddress();
 
     constructor(address lidoLocator) {
         if (lidoLocator == address(0)) {
-            revert ZeroAddress("lidoLocator");
+            revert ZeroLocatorAddress();
         }
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
         LIDO = ILido(LIDO_LOCATOR.lido());
@@ -157,6 +157,7 @@ abstract contract CSBondCore is ICSBondCore {
     }
 
     function _increaseBond(uint256 nodeOperatorId, uint256 shares) internal {
+        if (shares == 0) return;
         CSBondCoreStorage storage $ = _getCSBondCoreStorage();
         unchecked {
             $.bondShares[nodeOperatorId] += shares;
