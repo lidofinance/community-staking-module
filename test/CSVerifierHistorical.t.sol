@@ -41,7 +41,7 @@ contract CSVerifierHistoricalTest is Test {
     function setUp() public {
         verifier = new CSVerifier({
             slotsPerEpoch: 32,
-            gIHistoricalSummaries: pack(0x3b, 5),
+            gIHistoricalSummaries: pack(0x3b, 0),
             gIFirstWithdrawal: pack(0xe1c0, 4),
             gIFirstValidator: pack(0x560000000000, 40),
             firstSupportedSlot: Slot.wrap(DENEB_FORK_EPOCH * 32)
