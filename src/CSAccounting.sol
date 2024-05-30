@@ -541,14 +541,6 @@ contract CSAccounting is
             );
     }
 
-    function _setChargeRecipient(address _chargeRecipient) private {
-        if (_chargeRecipient == address(0)) {
-            revert ZeroChargeRecipientAddress();
-        }
-        chargeRecipient = _chargeRecipient;
-        emit ChargeRecipientSet(_chargeRecipient);
-    }
-
     function _pullFeeRewards(
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
@@ -640,5 +632,13 @@ contract CSAccounting is
 
     function _onlyRecoverer() internal view override {
         _checkRole(RECOVERER_ROLE);
+    }
+
+    function _setChargeRecipient(address _chargeRecipient) private {
+        if (_chargeRecipient == address(0)) {
+            revert ZeroChargeRecipientAddress();
+        }
+        chargeRecipient = _chargeRecipient;
+        emit ChargeRecipientSet(_chargeRecipient);
     }
 }
