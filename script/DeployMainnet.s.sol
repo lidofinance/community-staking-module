@@ -45,6 +45,12 @@ contract DeployMainnet is DeployBase {
         config.elRewardsStealingFine = 0.1 ether;
         config.maxKeysPerOperatorEA = 10;
         config.keyRemovalCharge = 0.05 ether;
+        // GateSeal
+        config.gateSealFactory = 0x6C82877cAC5a7A739f16Ca0A89c0A328B8764A24;
+        // TODO: Reconsider before the mainnet launch
+        config.sealingCommittee = address(0);
+        config.sealDuration = 6 days;
+        config.sealExpiryTimestamp = block.timestamp + 365 days;
 
         _setUp();
     }

@@ -44,6 +44,11 @@ contract DeployHoleskyDevnet is DeployBase {
         config.elRewardsStealingFine = 0.1 ether;
         config.maxKeysPerOperatorEA = 10;
         config.keyRemovalCharge = 0.05 ether;
+        // GateSeal
+        config.gateSealFactory = 0x1134F7077055b0B3559BE52AfeF9aA22A0E1eEC2;
+        config.sealingCommittee = address(0);
+        config.sealDuration = 6 days;
+        config.sealExpiryTimestamp = block.timestamp + 365 days;
 
         _setUp();
     }
