@@ -54,6 +54,7 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
     /// @notice Check is the address is eligible to consume EA access
     /// @param member Address to check
     /// @param proof Merkle proof of EA eligibility
+    // TODO: add return section to docs
     function verifyProof(
         address member,
         bytes32[] calldata proof
