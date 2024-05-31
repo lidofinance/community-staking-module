@@ -45,7 +45,7 @@ contract CSVerifierTest is Test {
             gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
             gIFirstWithdrawal: pack(0xe1c0, 4),
             gIFirstValidator: pack(0x560000000000, 40),
-            firstSupportedSlot: Slot.wrap(0xa5)
+            firstSupportedSlot: Slot.wrap(100_500) // Any value less than the slots from the fixtures.
         });
 
         locator = new Stub();
