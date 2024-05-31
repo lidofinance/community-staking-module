@@ -30,10 +30,14 @@ contract DeployHoleskyDevnet is DeployBase {
         config.verifierSupportedEpoch = 29696;
         // Accounting
         config.maxCurveLength = 10;
-        config.bondCurve = new uint256[](3);
-        config.bondCurve[0] = 2 ether; // Validator 1 -> 2 ETH
-        config.bondCurve[1] = 3.75 ether; // Validator 2 -> 1.75 ETH
-        config.bondCurve[2] = 5.25 ether; // Validator 3, 4, 5, ... -> 1.5 ETH
+        config.bondCurve = new uint256[](6);
+        // 2 -> 1.9 -> 1.8 -> 1.7 -> 1.6 -> 1.5
+        config.bondCurve[0] = 2 ether;
+        config.bondCurve[1] = 3.9 ether;
+        config.bondCurve[2] = 5.7 ether;
+        config.bondCurve[3] = 7.4 ether;
+        config.bondCurve[4] = 9 ether;
+        config.bondCurve[5] = 10.5 ether;
 
         config.minBondLockRetentionPeriod = 4 weeks;
         config.maxBondLockRetentionPeriod = 365 days;
@@ -46,10 +50,14 @@ contract DeployHoleskyDevnet is DeployBase {
         config.keyRemovalCharge = 0.05 ether;
         // EarlyAdoption
         config.earlyAdoptionTreeRoot = 0x0;
-        config.earlyAdoptionBondCurve = new uint256[](3);
-        config.earlyAdoptionBondCurve[0] = 1.5 ether; // Validator 1 -> 1.5 ETH
-        config.earlyAdoptionBondCurve[1] = 2.75 ether; // Validator 2 -> 1.25 ETH
-        config.earlyAdoptionBondCurve[2] = 3.75 ether; // Validator 3, 4, 5, ... -> 1 ETH
+        config.earlyAdoptionBondCurve = new uint256[](6);
+        // 1.5 -> 1.9 -> 1.8 -> 1.7 -> 1.6 -> 1.5
+        config.earlyAdoptionBondCurve[0] = 1.5 ether;
+        config.earlyAdoptionBondCurve[1] = 3.4 ether;
+        config.earlyAdoptionBondCurve[2] = 5.2 ether;
+        config.earlyAdoptionBondCurve[3] = 6.9 ether;
+        config.earlyAdoptionBondCurve[4] = 8.5 ether;
+        config.earlyAdoptionBondCurve[5] = 10 ether;
         // GateSeal
         config.gateSealFactory = 0x1134F7077055b0B3559BE52AfeF9aA22A0E1eEC2;
         config.sealingCommittee = address(0);
