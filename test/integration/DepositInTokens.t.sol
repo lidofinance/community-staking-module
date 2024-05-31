@@ -34,9 +34,11 @@ contract DepositIntegrationTest is
 
         vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
         csm.grantRole(csm.RESUME_ROLE(), address(this));
+        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(stakingRouter));
         vm.stopPrank();
         if (csm.isPaused()) csm.resume();
+        if (!csm.publicRelease()) csm.activatePublicRelease();
 
         userPrivateKey = 0xa11ce;
         user = vm.addr(userPrivateKey);

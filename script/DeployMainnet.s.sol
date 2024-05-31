@@ -45,6 +45,13 @@ contract DeployMainnet is DeployBase {
         config.elRewardsStealingFine = 0.1 ether;
         config.maxKeysPerOperatorEA = 10;
         config.keyRemovalCharge = 0.05 ether;
+        // EarlyAdoption
+        // TODO: Set earlyAdoptionTreeRoot
+        config.earlyAdoptionTreeRoot = 0x0;
+        config.earlyAdoptionBondCurve = new uint256[](3);
+        config.earlyAdoptionBondCurve[0] = 1.5 ether; // Validator 1 -> 1.5 ETH
+        config.earlyAdoptionBondCurve[1] = 2.75 ether; // Validator 2 -> 1.25 ETH
+        config.earlyAdoptionBondCurve[2] = 3.75 ether; // Validator 3, 4, 5, ... -> 1 ETH
         // GateSeal
         config.gateSealFactory = 0x6C82877cAC5a7A739f16Ca0A89c0A328B8764A24;
         // TODO: Reconsider before the mainnet launch

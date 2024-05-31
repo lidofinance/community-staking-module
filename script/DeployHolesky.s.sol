@@ -45,6 +45,13 @@ contract DeployHolesky is DeployBase {
         config.elRewardsStealingFine = 0.1 ether;
         config.maxKeysPerOperatorEA = 10;
         config.keyRemovalCharge = 0.05 ether;
+        // EarlyAdoption
+        // TODO set earlyAdoptionTreeRoot
+        config.earlyAdoptionTreeRoot = bytes32(0);
+        config.earlyAdoptionBondCurve = new uint256[](3);
+        config.earlyAdoptionBondCurve[0] = 1.5 ether; // Validator 1 -> 1.5 ETH
+        config.earlyAdoptionBondCurve[1] = 2.75 ether; // Validator 2 -> 1.25 ETH
+        config.earlyAdoptionBondCurve[2] = 3.75 ether; // Validator 3, 4, 5, ... -> 1 ETH
         // GateSeal
         config.gateSealFactory = 0x1134F7077055b0B3559BE52AfeF9aA22A0E1eEC2;
         // TODO reconsider committee address

@@ -12,6 +12,7 @@ import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
+import { CSEarlyAdoption } from "../src/CSEarlyAdoption.sol";
 
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { IGateSealFactory } from "../src/interfaces/IGateSealFactory.sol";
@@ -19,6 +20,7 @@ import { IGateSealFactory } from "../src/interfaces/IGateSealFactory.sol";
 import { JsonObj, Json } from "./utils/Json.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
+import { MerkleTree } from "../test/helpers/MerkleTree.sol";
 
 struct DeployParams {
     // Lido addresses
@@ -50,6 +52,9 @@ struct DeployParams {
     uint256 elRewardsStealingFine;
     uint256 maxKeysPerOperatorEA;
     uint256 keyRemovalCharge;
+    // EarlyAdoption
+    bytes32 earlyAdoptionTreeRoot;
+    uint256[] earlyAdoptionBondCurve;
     // GateSeal
     address gateSealFactory;
     address sealingCommittee;
@@ -71,6 +76,7 @@ abstract contract DeployBase is Script {
     CSFeeOracle public oracle;
     CSFeeDistributor public feeDistributor;
     CSVerifier public verifier;
+    CSEarlyAdoption public earlyAdoption;
     HashConsensus public hashConsensus;
 
     error ChainIdMismatch(uint256 actual, uint256 expected);
@@ -153,13 +159,6 @@ abstract contract DeployBase is Script {
                 )
             });
 
-            /// @dev initialize contracts
-            csm.initialize({
-                _accounting: address(accounting),
-                _earlyAdoption: address(0),
-                _keyRemovalCharge: config.keyRemovalCharge,
-                admin: deployer
-            });
             accounting.initialize({
                 bondCurve: config.bondCurve,
                 admin: deployer,
@@ -167,15 +166,39 @@ abstract contract DeployBase is Script {
                 bondLockRetentionPeriod: config.bondLockRetentionPeriod,
                 _chargeRecipient: treasury
             });
+
+            accounting.grantRole(
+                accounting.ADD_BOND_CURVE_ROLE(),
+                address(deployer)
+            );
+            uint256 eaCurveId = accounting.addBondCurve(
+                config.earlyAdoptionBondCurve
+            );
+            accounting.revokeRole(
+                accounting.ADD_BOND_CURVE_ROLE(),
+                address(deployer)
+            );
+
+            earlyAdoption = new CSEarlyAdoption({
+                treeRoot: config.earlyAdoptionTreeRoot == bytes32(0)
+                    ? _treeRootFromFork()
+                    : config.earlyAdoptionTreeRoot,
+                curveId: eaCurveId,
+                module: address(csm)
+            });
+
+            csm.initialize({
+                _accounting: address(accounting),
+                _earlyAdoption: address(earlyAdoption),
+                verifier: address(verifier),
+                _keyRemovalCharge: config.keyRemovalCharge,
+                admin: deployer
+            });
+
             feeDistributor.initialize({
                 admin: config.votingAddress,
                 oracle: address(oracle)
             });
-
-            // TODO: deploy early adoption contract
-            csm.grantRole(csm.MODULE_MANAGER_ROLE(), deployer);
-            csm.activatePublicRelease();
-            csm.revokeRole(csm.MODULE_MANAGER_ROLE(), deployer);
 
             hashConsensus = new HashConsensus({
                 slotsPerEpoch: config.slotsPerEpoch,
@@ -224,6 +247,7 @@ abstract contract DeployBase is Script {
             JsonObj memory deployJson = Json.newObj();
             deployJson.set("ChainId", chainId);
             deployJson.set("CSModule", address(csm));
+            deployJson.set("CSEarlyAdoption", address(earlyAdoption));
             deployJson.set("CSAccounting", address(accounting));
             deployJson.set("CSFeeOracle", address(oracle));
             deployJson.set("CSFeeDistributor", address(feeDistributor));
@@ -271,6 +295,21 @@ abstract contract DeployBase is Script {
         });
         VmSafe.Log[] memory entries = vm.getRecordedLogs();
         return abi.decode(entries[0].data, (address));
+    }
+
+    function _treeRootFromFork() internal returns (bytes32) {
+        if (vm.isFile("localhost.json")) {
+            string memory forkConfig = vm.readFile("localhost.json");
+            address[] memory availableAccounts = vm.parseJsonAddressArray(
+                forkConfig,
+                ".available_accounts"
+            );
+            MerkleTree tree = new MerkleTree();
+            for (uint256 i = 0; i < availableAccounts.length; i++) {
+                tree.pushLeaf(abi.encode(availableAccounts[i]));
+            }
+            return tree.root();
+        } else return bytes32(0);
     }
 
     function _deployJsonFilename() internal view returns (string memory) {

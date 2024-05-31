@@ -32,6 +32,7 @@ fs_permissions = [
     { access = "read-write", path = "./out" },
     { access = "read-write", path = "./artifacts" },
     { access = "read", path = "./test/fixtures" },
+    { access = "read", path = "./localhost.json" },
 ]
 
 [profile.ci]

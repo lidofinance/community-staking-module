@@ -39,6 +39,12 @@ contract ClaimIntegrationTest is
             vm.stopPrank();
             csm.resume();
         }
+        if (!csm.publicRelease()) {
+            vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
+            csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
+            vm.stopPrank();
+            csm.activatePublicRelease();
+        }
 
         vm.startPrank(
             feeDistributor.getRoleMember(feeDistributor.DEFAULT_ADMIN_ROLE(), 0)
