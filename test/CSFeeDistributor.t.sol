@@ -45,22 +45,16 @@ contract CSFeeDistributorInitTest is Test, Fixtures, Utilities {
     }
 
     function test_initialize_revertWhen_zeroAdmin() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                CSFeeDistributor.ZeroAddress.selector,
-                "admin"
-            )
-        );
+        _enableInitializers(address(feeDistributor));
+
+        vm.expectRevert(CSFeeDistributor.ZeroAdminAddress.selector);
         feeDistributor.initialize(address(0), oracle);
     }
 
     function test_initialize_revertWhen_zeroOracle() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                CSFeeDistributor.ZeroAddress.selector,
-                "oracle"
-            )
-        );
+        _enableInitializers(address(feeDistributor));
+
+        vm.expectRevert(CSFeeDistributor.ZeroOracleAddress.selector);
         feeDistributor.initialize(address(this), address(0));
     }
 }
@@ -89,6 +83,8 @@ contract CSFeeDistributorTest is Test, Fixtures, Utilities {
             address(stETH),
             address(accounting)
         );
+
+        _enableInitializers(address(feeDistributor));
         feeDistributor.initialize(address(this), oracle);
 
         tree = new MerkleTree();
@@ -253,14 +249,37 @@ contract CSFeeDistributorTest is Test, Fixtures, Utilities {
         assertEq(sharesToDistribute, 0);
     }
 
-    function test_PendingToDistribute() public {
+    function test_PendingSharesToDistribute() public {
         uint256 totalShares = 1000;
         stETH.mintShares(address(feeDistributor), totalShares);
 
         vm.prank(oracle);
         feeDistributor.processOracleReport(someBytes32(), "Qm", 899);
 
-        assertEq(feeDistributor.pendingToDistribute(), 101);
+        assertEq(feeDistributor.pendingSharesToDistribute(), 101);
+    }
+
+    function test_processOracleReport_HappyPath() public {
+        uint256 nodeOperatorId = 42;
+        uint256 shares = 100;
+        tree.pushLeaf(abi.encode(nodeOperatorId, shares));
+
+        stETH.mintShares(address(feeDistributor), shares);
+
+        vm.expectEmit(true, true, false, true, address(feeDistributor));
+        emit CSFeeDistributor.DistributionDataUpdated(
+            shares,
+            tree.root(),
+            "Test"
+        );
+        vm.startPrank(oracle);
+        feeDistributor.processOracleReport(tree.root(), "Test", shares);
+        vm.stopPrank();
+
+        assertEq(feeDistributor.treeRoot(), tree.root());
+        assertEq(feeDistributor.treeCid(), "Test");
+        assertEq(feeDistributor.pendingSharesToDistribute(), 0);
+        assertEq(feeDistributor.totalClaimableShares(), shares);
     }
 
     function test_processOracleReport_RevertWhen_InvalidShares() public {
@@ -269,6 +288,12 @@ contract CSFeeDistributorTest is Test, Fixtures, Utilities {
         tree.pushLeaf(abi.encode(nodeOperatorId, shares));
 
         stETH.mintShares(address(feeDistributor), shares);
+
+        bytes32 root = tree.root();
+
+        vm.expectRevert(CSFeeDistributor.InvalidShares.selector);
+        vm.prank(oracle);
+        feeDistributor.processOracleReport(root, "Test", shares + 1);
     }
 
     function test_processOracleReport_EmptyReport() public {
@@ -376,6 +401,9 @@ contract CSFeeDistributorAssetRecovererTest is Test, Fixtures, Utilities {
             address(stETH),
             address(accounting)
         );
+
+        _enableInitializers(address(feeDistributor));
+
         feeDistributor.initialize(address(this), nextAddress("ORACLE"));
 
         feeDistributor.grantRole(feeDistributor.RECOVERER_ROLE(), recoverer);

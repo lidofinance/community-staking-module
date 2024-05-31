@@ -168,6 +168,9 @@ contract CSModule is
     error MaxSigningKeysCountExceeded();
 
     error NotSupported();
+    error ZeroLocatorAddress();
+    error ZeroAccountingAddress();
+    error ZeroAdminAddress();
 
     constructor(
         bytes32 moduleType,
@@ -176,27 +179,32 @@ contract CSModule is
         uint256 maxKeysPerOperatorEA,
         address lidoLocator
     ) {
+        if (lidoLocator == address(0)) revert ZeroLocatorAddress();
+
         MODULE_TYPE = moduleType;
         INITIAL_SLASHING_PENALTY = DEPOSIT_SIZE / minSlashingPenaltyQuotient;
         EL_REWARDS_STEALING_FINE = elRewardsStealingFine;
         MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE = maxKeysPerOperatorEA;
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
+
+        _disableInitializers();
     }
 
     function initialize(
         address _accounting,
         address _earlyAdoption,
-        address verifier,
         uint256 _keyRemovalCharge,
         address admin
     ) external initializer {
+        if (_accounting == address(0)) revert ZeroAccountingAddress();
+        if (admin == address(0)) revert ZeroAdminAddress();
+
         __AccessControlEnumerable_init();
 
         accounting = ICSAccounting(_accounting);
         earlyAdoption = ICSEarlyAdoption(_earlyAdoption);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
-        _grantRole(VERIFIER_ROLE, verifier);
         _grantRole(STAKING_ROUTER_ROLE, address(LIDO_LOCATOR.stakingRouter()));
 
         _setKeyRemovalCharge(_keyRemovalCharge);
@@ -1642,7 +1650,7 @@ contract CSModule is
         if (!publicRelease && proof.length == 0) {
             revert NotAllowedToJoinYet();
         }
-        if (proof.length == 0) return;
+        if (proof.length == 0 || address(earlyAdoption) == address(0)) return;
 
         earlyAdoption.consume(msg.sender, proof);
         accounting.setBondCurve(nodeOperatorId, earlyAdoption.CURVE_ID());

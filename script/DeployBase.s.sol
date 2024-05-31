@@ -141,6 +141,8 @@ abstract contract DeployBase is Script {
             );
 
             verifier = new CSVerifier({
+                locator: address(locator),
+                module: address(csm),
                 slotsPerEpoch: uint64(config.slotsPerEpoch),
                 // NOTE: Deneb fork gIndexes. Should be updated according to `config.verifierSupportedEpoch` fork epoch if needed
                 gIHistoricalSummaries: config.gIHistoricalSummaries,
@@ -155,7 +157,6 @@ abstract contract DeployBase is Script {
             csm.initialize({
                 _accounting: address(accounting),
                 _earlyAdoption: address(0),
-                verifier: address(verifier),
                 _keyRemovalCharge: config.keyRemovalCharge,
                 admin: deployer
             });
@@ -170,7 +171,6 @@ abstract contract DeployBase is Script {
                 admin: config.votingAddress,
                 oracle: address(oracle)
             });
-            verifier.initialize(address(locator), address(csm));
 
             // TODO: deploy early adoption contract
             csm.grantRole(csm.MODULE_MANAGER_ROLE(), deployer);
@@ -205,6 +205,7 @@ abstract contract DeployBase is Script {
             );
 
             csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.votingAddress);
+            csm.grantRole(csm.VERIFIER_ROLE(), address(verifier));
             csm.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
             accounting.grantRole(
                 csm.DEFAULT_ADMIN_ROLE(),

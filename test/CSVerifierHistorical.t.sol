@@ -36,18 +36,17 @@ contract CSVerifierHistoricalTest is Test {
     HistoricalWithdrawalFixture public fixture;
 
     function setUp() public {
+        locator = new Stub();
+        module = new Stub();
         verifier = new CSVerifier({
+            locator: address(locator),
+            module: address(module),
             slotsPerEpoch: 32,
             gIHistoricalSummaries: pack(0x3b, 0),
             gIFirstWithdrawal: pack(0xe1c0, 4),
             gIFirstValidator: pack(0x560000000000, 40),
             firstSupportedSlot: Slot.wrap(100_500) // Any value less than the slots from the fixtures.
         });
-
-        locator = new Stub();
-        module = new Stub();
-
-        verifier.initialize(address(locator), address(module));
     }
 
     function _get_fixture() internal {

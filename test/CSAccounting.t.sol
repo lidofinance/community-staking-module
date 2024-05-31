@@ -75,6 +75,9 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     function test_initialize_happyPath() public {
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
+
+        _enableInitializers(address(accounting));
+
         vm.expectEmit(true, false, false, true, address(accounting));
         emit CSBondCurve.BondCurveAdded(curve);
         vm.expectEmit(true, false, false, true, address(accounting));
@@ -97,9 +100,10 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     function test_initialize_revertWhen_zeroAdmin() public {
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
-        vm.expectRevert(
-            abi.encodeWithSelector(CSBondCore.ZeroAddress.selector, "admin")
-        );
+
+        _enableInitializers(address(accounting));
+
+        vm.expectRevert(CSAccounting.ZeroAdminAddress.selector);
         accounting.initialize(
             curve,
             address(0),
@@ -112,12 +116,10 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     function test_initialize_revertWhen_zeroFeeDistributor() public {
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                CSBondCore.ZeroAddress.selector,
-                "feeDistributor"
-            )
-        );
+
+        _enableInitializers(address(accounting));
+
+        vm.expectRevert(CSAccounting.ZeroFeeDistributorAddress.selector);
         accounting.initialize(
             curve,
             admin,
@@ -130,12 +132,10 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     function test_initialize_revertWhen_zeroChargeRecipient() public {
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                CSBondCore.ZeroAddress.selector,
-                "chargeRecipient"
-            )
-        );
+
+        _enableInitializers(address(accounting));
+
+        vm.expectRevert(CSAccounting.ZeroChargeRecipientAddress.selector);
         accounting.initialize(
             curve,
             admin,
@@ -181,6 +181,9 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities, PermitTokenBase {
             4 weeks,
             365 days
         );
+
+        _enableInitializers(address(accounting));
+
         accounting.initialize(
             curve,
             admin,

@@ -40,7 +40,17 @@ contract CSFeeDistributor is
     /// @dev Emitted when fees are distributed
     event FeeDistributed(uint256 indexed nodeOperatorId, uint256 shares);
 
-    error ZeroAddress(string field);
+    /// @dev Emitted when distribution data is updated
+    event DistributionDataUpdated(
+        uint256 totalClaimableShares,
+        bytes32 treeRoot,
+        string treeCid
+    );
+
+    error ZeroAccountingAddress();
+    error ZeroStEthAddress();
+    error ZeroAdminAddress();
+    error ZeroOracleAddress();
     error NotAccounting();
 
     error InvalidTreeRoot();
@@ -56,19 +66,19 @@ contract CSFeeDistributor is
     }
 
     constructor(address stETH, address accounting) {
-        if (accounting == address(0)) revert ZeroAddress("accounting");
-        if (stETH == address(0)) revert ZeroAddress("stETH");
+        if (accounting == address(0)) revert ZeroAccountingAddress();
+        if (stETH == address(0)) revert ZeroStEthAddress();
 
         ACCOUNTING = accounting;
         STETH = IStETH(stETH);
 
-        // TODO: add _disableInitializers
+        _disableInitializers();
     }
 
     function initialize(address admin, address oracle) external initializer {
         __AccessControlEnumerable_init();
-        if (admin == address(0)) revert ZeroAddress("admin");
-        if (oracle == address(0)) revert ZeroAddress("oracle");
+        if (admin == address(0)) revert ZeroAdminAddress();
+        if (oracle == address(0)) revert ZeroOracleAddress();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(ORACLE_ROLE, oracle);
@@ -131,9 +141,14 @@ contract CSFeeDistributor is
                 totalClaimableShares += distributed;
             }
 
-            // TODO: consider emiting events for changed values
             treeRoot = _treeRoot;
             treeCid = _treeCid;
+
+            emit DistributionDataUpdated(
+                totalClaimableShares,
+                _treeRoot,
+                _treeCid
+            );
         }
     }
 
@@ -150,7 +165,7 @@ contract CSFeeDistributor is
     }
 
     /// @notice Get the Amount of stETH shares that are pending to be distributed
-    function pendingToDistribute() external view returns (uint256) {
+    function pendingSharesToDistribute() external view returns (uint256) {
         return STETH.sharesOf(address(this)) - totalClaimableShares;
     }
 
