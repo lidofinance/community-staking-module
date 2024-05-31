@@ -63,12 +63,14 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
     event ReportSettled(
         uint256 indexed refSlot,
         uint256 distributed,
-        bytes32 newRoot,
-        string treeCid // TODO: consistent naming with newRoot
+        bytes32 treeRoot,
+        string treeCid
     );
 
+    error InvalidPerfThreshold();
+    error ZeroAdminAddress();
+    error ZeroFeeDistributorAddress();
     error InvalidPerfLeeway();
-    error AdminCannotBeZero();
     error SenderNotAllowed();
 
     constructor(
@@ -83,7 +85,8 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         uint256 consensusVersion,
         uint256 _avgPerfLeewayBP
     ) external {
-        if (admin == address(0)) revert AdminCannotBeZero();
+        if (admin == address(0)) revert ZeroAdminAddress();
+
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
         BaseOracle._initialize(consensusContract, consensusVersion, 0);
@@ -149,7 +152,8 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
     function _setFeeDistributorContract(
         address feeDistributorContract
     ) internal {
-        if (feeDistributorContract == address(0)) revert AddressCannotBeZero();
+        if (feeDistributorContract == address(0))
+            revert ZeroFeeDistributorAddress();
         feeDistributor = ICSFeeDistributor(feeDistributorContract);
         emit FeeDistributorContractSet(feeDistributorContract);
     }

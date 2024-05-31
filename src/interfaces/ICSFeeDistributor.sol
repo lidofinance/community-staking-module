@@ -25,6 +25,5 @@ interface ICSFeeDistributor {
     ) external;
 
     /// @notice Returns the amount of shares that are pending to be distributed
-    // TODO: consider better naming
-    function pendingToDistribute() external view returns (uint256);
+    function pendingSharesToDistribute() external view returns (uint256);
 }

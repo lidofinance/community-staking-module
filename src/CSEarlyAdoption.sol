@@ -20,13 +20,15 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
 
     error InvalidProof();
     error AlreadyConsumed();
-    error InvalidValue();
+    error InvalidTreeRoot();
+    error InvalidCurveId();
+    error ZeroModuleAddress();
     error SenderIsNotModule();
 
     constructor(bytes32 treeRoot, uint256 curveId, address module) {
-        if (treeRoot == bytes32(0)) revert InvalidValue();
-        if (curveId == 0) revert InvalidValue();
-        if (module == address(0)) revert InvalidValue();
+        if (treeRoot == bytes32(0)) revert InvalidTreeRoot();
+        if (curveId == 0) revert InvalidCurveId();
+        if (module == address(0)) revert ZeroModuleAddress();
 
         TREE_ROOT = treeRoot;
         CURVE_ID = curveId;
@@ -54,7 +56,7 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
     /// @notice Check is the address is eligible to consume EA access
     /// @param member Address to check
     /// @param proof Merkle proof of EA eligibility
-    // TODO: add return section to docs
+    /// @return Boolean flag if the proof is valid or not
     function verifyProof(
         address member,
         bytes32[] calldata proof

@@ -269,6 +269,9 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
             4 weeks,
             365 days
         );
+
+        _enableInitializers(address(accounting));
+
         accounting.initialize(
             curve,
             admin,
@@ -294,10 +297,10 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
             address(csm)
         );
 
+        _enableInitializers(address(csm));
         csm.initialize({
             _accounting: address(accounting),
             _earlyAdoption: address(earlyAdoption),
-            verifier: address(this),
             _keyRemovalCharge: 0.05 ether,
             admin: admin
         });
@@ -361,6 +364,8 @@ contract CSMCommonNoRoles is CSMFixtures {
             4 weeks,
             365 days
         );
+
+        _enableInitializers(address(accounting));
         accounting.initialize(
             curve,
             admin,
@@ -386,10 +391,10 @@ contract CSMCommonNoRoles is CSMFixtures {
             address(csm)
         );
 
+        _enableInitializers(address(csm));
         csm.initialize({
             _accounting: address(accounting),
             _earlyAdoption: address(earlyAdoption),
-            verifier: address(this),
             _keyRemovalCharge: 0.05 ether,
             admin: admin
         });
@@ -397,6 +402,7 @@ contract CSMCommonNoRoles is CSMFixtures {
         vm.startPrank(admin);
         csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
         csm.grantRole(csm.RESUME_ROLE(), admin);
+        csm.grantRole(csm.VERIFIER_ROLE(), address(this));
         csm.resume();
         vm.stopPrank();
     }
@@ -425,10 +431,11 @@ contract CsmInitialize is CSMCommon {
             maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator)
         });
+
+        _enableInitializers(address(csm));
         csm.initialize({
             _accounting: address(accounting),
             _earlyAdoption: address(1337),
-            verifier: address(this),
             _keyRemovalCharge: 0.05 ether,
             admin: address(this)
         });
@@ -438,7 +445,6 @@ contract CsmInitialize is CSMCommon {
         assertEq(address(csm.LIDO_LOCATOR()), address(locator));
         assertEq(address(csm.accounting()), address(accounting));
         assertEq(address(csm.earlyAdoption()), address(1337));
-        assertTrue(csm.hasRole(csm.VERIFIER_ROLE(), address(this)));
         assertEq(csm.keyRemovalCharge(), 0.05 ether);
         assertTrue(csm.isPaused());
     }
@@ -4974,7 +4980,8 @@ contract CSMAccessControl is CSMCommonNoRoles {
             maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator)
         });
-        csm.initialize(address(0), address(0), address(0), 0.05 ether, actor);
+        _enableInitializers(address(csm));
+        csm.initialize(address(154), address(42), 0.05 ether, actor);
 
         bytes32 role = csm.MODULE_MANAGER_ROLE();
         vm.prank(actor);
