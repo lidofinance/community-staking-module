@@ -314,14 +314,11 @@ contract CSVerifier is ICSVerifier {
     }
 
     function _getValidatorGI(uint256 offset) internal view returns (GIndex) {
-        GIndex gI = GI_FIRST_VALIDATOR;
-        return gI.shr(offset);
+        return GI_FIRST_VALIDATOR.shr(offset);
     }
 
     function _getWithdrawalGI(uint256 offset) internal view returns (GIndex) {
-        GIndex gI = GI_FIRST_WITHDRAWAL;
-        if (offset == 0) return gI;
-        return gI.shr(offset);
+        return GI_FIRST_WITHDRAWAL.shr(offset);
     }
 
     // From HashConsensus contract.
