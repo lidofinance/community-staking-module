@@ -11,7 +11,7 @@ const BeaconBlock = ssz.deneb.BeaconBlock;
 
   const gI = pack(
     concatGindices([
-      BeaconState.getPathInfo(["latestExecutionPayloadHeader", "withdrawalsRoot"]),
+      BeaconState.getPathInfo(["latestExecutionPayloadHeader", "withdrawalsRoot"]).gindex,
       Withdrawals.getPropertyGindex(0),
     ]),
     Withdrawals.limit,
@@ -36,7 +36,7 @@ const BeaconBlock = ssz.deneb.BeaconBlock;
 }
 
 {
-  const gI = pack(BeaconState.getPathInfo(["historicalSummaries"]), 0); // 0 because `historicalSummaries` is a bytes32 value.
+  const gI = pack(BeaconState.getPathInfo(["historicalSummaries"]).gindex, 0); // 0 because `historicalSummaries` is a bytes32 value.
   console.log("BeaconState.historical_summaries`: ", `0x${gI.toString(16)}`);
 }
 
