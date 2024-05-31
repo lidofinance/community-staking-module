@@ -45,16 +45,14 @@ contract CSFeeDistributorInitTest is Test, Fixtures, Utilities {
     }
 
     function test_initialize_revertWhen_zeroAdmin() public {
-        // cheat to allow implementation initialisation
-        vm.store(address(feeDistributor), INITIALIZABLE_STORAGE, bytes32(0));
+        _enableInitializers(address(feeDistributor));
 
         vm.expectRevert(CSFeeDistributor.ZeroAdminAddress.selector);
         feeDistributor.initialize(address(0), oracle);
     }
 
     function test_initialize_revertWhen_zeroOracle() public {
-        // cheat to allow implementation initialisation
-        vm.store(address(feeDistributor), INITIALIZABLE_STORAGE, bytes32(0));
+        _enableInitializers(address(feeDistributor));
 
         vm.expectRevert(CSFeeDistributor.ZeroOracleAddress.selector);
         feeDistributor.initialize(address(this), address(0));
@@ -86,8 +84,7 @@ contract CSFeeDistributorTest is Test, Fixtures, Utilities {
             address(accounting)
         );
 
-        // cheat to allow implementation initialisation
-        vm.store(address(feeDistributor), INITIALIZABLE_STORAGE, bytes32(0));
+        _enableInitializers(address(feeDistributor));
         feeDistributor.initialize(address(this), oracle);
 
         tree = new MerkleTree();
@@ -405,8 +402,7 @@ contract CSFeeDistributorAssetRecovererTest is Test, Fixtures, Utilities {
             address(accounting)
         );
 
-        // cheat to allow implementation initialisation
-        vm.store(address(feeDistributor), INITIALIZABLE_STORAGE, bytes32(0));
+        _enableInitializers(address(feeDistributor));
 
         feeDistributor.initialize(address(this), nextAddress("ORACLE"));
 

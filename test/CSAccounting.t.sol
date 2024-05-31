@@ -101,8 +101,7 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
 
-        // cheat to allow implementation initialisation
-        vm.store(address(accounting), INITIALIZABLE_STORAGE, bytes32(0));
+        _enableInitializers(address(accounting));
 
         vm.expectRevert(CSAccounting.ZeroAdminAddress.selector);
         accounting.initialize(
@@ -118,8 +117,7 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
 
-        // cheat to allow implementation initialisation
-        vm.store(address(accounting), INITIALIZABLE_STORAGE, bytes32(0));
+        _enableInitializers(address(accounting));
 
         vm.expectRevert(CSAccounting.ZeroFeeDistributorAddress.selector);
         accounting.initialize(
@@ -135,8 +133,7 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
 
-        // cheat to allow implementation initialisation
-        vm.store(address(accounting), INITIALIZABLE_STORAGE, bytes32(0));
+        _enableInitializers(address(accounting));
 
         vm.expectRevert(CSAccounting.ZeroChargeRecipientAddress.selector);
         accounting.initialize(
@@ -185,8 +182,7 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities, PermitTokenBase {
             365 days
         );
 
-        // cheat to allow implementation initialisation
-        vm.store(address(accounting), INITIALIZABLE_STORAGE, bytes32(0));
+        _enableInitializers(address(accounting));
 
         accounting.initialize(
             curve,
