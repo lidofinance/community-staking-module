@@ -1,3 +1,5 @@
+// The script can be used to find the gindicies required for CSVerifier deployment.
+
 import { concatGindices } from "@chainsafe/persistent-merkle-tree";
 import { ssz } from "@lodestar/types";
 
