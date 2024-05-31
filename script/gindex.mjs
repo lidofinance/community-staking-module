@@ -6,10 +6,12 @@ const BeaconBlock = ssz.deneb.BeaconBlock;
 
 {
   const Withdrawals = BeaconBlock.getPathInfo(["body", "executionPayload", "withdrawals"]).type;
-  const nav = BeaconState.getPathInfo(["latestExecutionPayloadHeader", "withdrawalsRoot"]);
 
   const gI = pack(
-    concatGindices([nav.gindex, Withdrawals.getPropertyGindex(0)]),
+    concatGindices([
+      BeaconState.getPathInfo(["latestExecutionPayloadHeader", "withdrawalsRoot"]),
+      Withdrawals.getPropertyGindex(0),
+    ]),
     Withdrawals.limit,
   );
 
@@ -20,17 +22,19 @@ const BeaconBlock = ssz.deneb.BeaconBlock;
 }
 
 {
+  const Validators = BeaconState.getPathInfo(["validators"]).type;
+
+  // prettier-ignore
   const gI = pack(
     BeaconState.getPathInfo(["validators", 0]).gindex,
-    BeaconState.getPathInfo(["validators"]).type.limit,
+    Validators.limit
   );
 
   console.log("BeaconState.validators[0]`: ", `0x${gI.toString(16)}`);
 }
 
 {
-  const nav = BeaconState.getPathInfo(["historicalSummaries"]);
-  const gI = pack(nav.gindex, 0); // 0 because `historicalSummaries` is a bytes32 value.
+  const gI = pack(BeaconState.getPathInfo(["historicalSummaries"]), 0); // 0 because `historicalSummaries` is a bytes32 value.
   console.log("BeaconState.historical_summaries`: ", `0x${gI.toString(16)}`);
 }
 
