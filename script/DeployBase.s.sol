@@ -141,8 +141,8 @@ abstract contract DeployBase is Script {
             );
 
             verifier = new CSVerifier({
-                _locator: address(locator),
-                _module: address(csm),
+                locator: address(locator),
+                module: address(csm),
                 slotsPerEpoch: uint64(config.slotsPerEpoch),
                 // NOTE: Deneb fork gIndexes. Should be updated according to `config.verifierSupportedEpoch` fork epoch if needed
                 gIHistoricalSummaries: config.gIHistoricalSummaries,

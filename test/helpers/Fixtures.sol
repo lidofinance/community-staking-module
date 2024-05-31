@@ -64,6 +64,11 @@ contract Fixtures is StdCheats, Test {
         vm.label(address(treasury), "treasury");
         vm.label(address(stakingRouter), "stakingRouter");
     }
+
+    function _enableInitializers(address implementation) internal {
+        // cheat to allow implementation initialisation
+        vm.store(implementation, INITIALIZABLE_STORAGE, bytes32(0));
+    }
 }
 
 contract DeploymentFixtures is StdCheats, Test {

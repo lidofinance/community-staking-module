@@ -48,8 +48,11 @@ contract CSVerifier is ICSVerifier {
     /// @dev The very first slot the verifier is supposed to accept proofs for.
     Slot public immutable FIRST_SUPPORTED_SLOT;
 
-    ILidoLocator public locator;
-    ICSModule public module;
+    /// @dev Lido Locator contract
+    ILidoLocator public immutable LOCATOR;
+
+    /// @dev Staking module contract
+    ICSModule public immutable MODULE;
 
     error RootNotFound();
     error InvalidGIndex();
@@ -59,11 +62,12 @@ contract CSVerifier is ICSVerifier {
     error ValidatorNotWithdrawn();
     error InvalidWithdrawalAddress();
     error UnsupportedSlot(uint256 slot);
-    error AlreadyInitialized();
+    error ZeroLocatorAddress();
+    error ZeroModuleAddress();
 
     constructor(
-        address _locator,
-        address _module,
+        address locator,
+        address module,
         uint64 slotsPerEpoch,
         GIndex gIHistoricalSummaries,
         GIndex gIFirstWithdrawal,
@@ -71,9 +75,11 @@ contract CSVerifier is ICSVerifier {
         Slot firstSupportedSlot
     ) {
         if (slotsPerEpoch == 0) revert InvalidChainConfig();
+        if (module == address(0)) revert ZeroModuleAddress();
+        if (locator == address(0)) revert ZeroLocatorAddress();
 
-        module = ICSModule(_module);
-        locator = ILidoLocator(_locator);
+        MODULE = ICSModule(module);
+        LOCATOR = ILidoLocator(locator);
 
         SLOTS_PER_EPOCH = slotsPerEpoch;
 
@@ -108,7 +114,7 @@ contract CSVerifier is ICSVerifier {
             }
         }
 
-        bytes memory pubkey = module.getSigningKeys(
+        bytes memory pubkey = MODULE.getSigningKeys(
             nodeOperatorId,
             keyIndex,
             1
@@ -132,7 +138,7 @@ contract CSVerifier is ICSVerifier {
             gI: _getValidatorGI(witness.validatorIndex)
         });
 
-        module.submitInitialSlashing(nodeOperatorId, keyIndex);
+        MODULE.submitInitialSlashing(nodeOperatorId, keyIndex);
     }
 
     /// @notice Verify withdrawal proof and report withdrawal to the module for valid proofs
@@ -159,7 +165,7 @@ contract CSVerifier is ICSVerifier {
             }
         }
 
-        bytes memory pubkey = module.getSigningKeys(
+        bytes memory pubkey = MODULE.getSigningKeys(
             nodeOperatorId,
             keyIndex,
             1
@@ -172,7 +178,7 @@ contract CSVerifier is ICSVerifier {
             pubkey: pubkey
         });
 
-        module.submitWithdrawal(
+        MODULE.submitWithdrawal(
             nodeOperatorId,
             keyIndex,
             withdrawal.amountWei()
@@ -219,7 +225,7 @@ contract CSVerifier is ICSVerifier {
             gI: oldBlock.rootGIndex
         });
 
-        bytes memory pubkey = module.getSigningKeys(
+        bytes memory pubkey = MODULE.getSigningKeys(
             nodeOperatorId,
             keyIndex,
             1
@@ -232,7 +238,7 @@ contract CSVerifier is ICSVerifier {
             pubkey: pubkey
         });
 
-        module.submitWithdrawal(
+        MODULE.submitWithdrawal(
             nodeOperatorId,
             keyIndex,
             withdrawal.amountWei()
@@ -268,7 +274,7 @@ contract CSVerifier is ICSVerifier {
         bytes memory pubkey
     ) internal view returns (Withdrawal memory withdrawal) {
         address withdrawalAddress = _wcToAddress(witness.withdrawalCredentials);
-        if (withdrawalAddress != locator.withdrawalVault()) {
+        if (withdrawalAddress != LOCATOR.withdrawalVault()) {
             revert InvalidWithdrawalAddress();
         }
 

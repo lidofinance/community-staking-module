@@ -42,8 +42,8 @@ contract CSVerifierHistoricalTest is Test {
         locator = new Stub();
         module = new Stub();
         verifier = new CSVerifier({
-            _locator: address(locator),
-            _module: address(module),
+            locator: address(locator),
+            module: address(module),
             slotsPerEpoch: 32,
             gIHistoricalSummaries: pack(0x3b, 5),
             gIFirstWithdrawal: pack(0xe1c0, 4),

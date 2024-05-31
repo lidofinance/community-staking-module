@@ -47,8 +47,8 @@ contract CSVerifierTest is Test {
         module = new Stub();
 
         verifier = new CSVerifier({
-            _locator: address(locator),
-            _module: address(module),
+            locator: address(locator),
+            module: address(module),
             slotsPerEpoch: 32,
             gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
             gIFirstWithdrawal: pack(0xe1c0, 4),

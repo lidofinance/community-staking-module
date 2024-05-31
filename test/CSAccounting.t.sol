@@ -76,8 +76,7 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
 
-        // cheat to allow implementation initialisation
-        vm.store(address(accounting), INITIALIZABLE_STORAGE, bytes32(0));
+        _enableInitializers(address(accounting));
 
         vm.expectEmit(true, false, false, true, address(accounting));
         emit CSBondCurve.BondCurveAdded(curve);

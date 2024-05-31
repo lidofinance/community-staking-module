@@ -270,8 +270,8 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
             365 days
         );
 
-        // cheat to allow implementation initialisation
-        vm.store(address(accounting), INITIALIZABLE_STORAGE, bytes32(0));
+        _enableInitializers(address(accounting));
+
         accounting.initialize(
             curve,
             admin,
@@ -297,8 +297,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
             address(csm)
         );
 
-        // cheat to allow implementation initialisation
-        vm.store(address(csm), INITIALIZABLE_STORAGE, bytes32(0));
+        _enableInitializers(address(csm));
         csm.initialize({
             _accounting: address(accounting),
             _earlyAdoption: address(earlyAdoption),
@@ -366,8 +365,7 @@ contract CSMCommonNoRoles is CSMFixtures {
             365 days
         );
 
-        // cheat to allow implementation initialisation
-        vm.store(address(accounting), INITIALIZABLE_STORAGE, bytes32(0));
+        _enableInitializers(address(accounting));
         accounting.initialize(
             curve,
             admin,
@@ -393,8 +391,7 @@ contract CSMCommonNoRoles is CSMFixtures {
             address(csm)
         );
 
-        // cheat to allow implementation initialisation
-        vm.store(address(csm), INITIALIZABLE_STORAGE, bytes32(0));
+        _enableInitializers(address(csm));
         csm.initialize({
             _accounting: address(accounting),
             _earlyAdoption: address(earlyAdoption),
@@ -435,8 +432,7 @@ contract CsmInitialize is CSMCommon {
             lidoLocator: address(locator)
         });
 
-        // cheat to allow implementation initialisation
-        vm.store(address(csm), INITIALIZABLE_STORAGE, bytes32(0));
+        _enableInitializers(address(csm));
         csm.initialize({
             _accounting: address(accounting),
             _earlyAdoption: address(1337),
@@ -4984,8 +4980,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
             maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator)
         });
-        // cheat to allow implementation initialisation
-        vm.store(address(csm), INITIALIZABLE_STORAGE, bytes32(0));
+        _enableInitializers(address(csm));
         csm.initialize(address(154), address(42), 0.05 ether, actor);
 
         bytes32 role = csm.MODULE_MANAGER_ROLE();
