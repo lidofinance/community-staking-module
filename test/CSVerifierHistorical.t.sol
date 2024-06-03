@@ -29,9 +29,6 @@ contract CSVerifierHistoricalTest is Test {
         ICSVerifier.WithdrawalWitness witness;
     }
 
-    // On **prater**, see https://github.com/eth-clients/goerli/blob/main/prater/config.yaml.
-    uint64 public constant DENEB_FORK_EPOCH = 231680;
-
     CSVerifier public verifier;
     Stub public locator;
     Stub public module;
@@ -45,10 +42,10 @@ contract CSVerifierHistoricalTest is Test {
             locator: address(locator),
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummaries: pack(0x3b, 5),
+            gIHistoricalSummaries: pack(0x3b, 0),
             gIFirstWithdrawal: pack(0xe1c0, 4),
             gIFirstValidator: pack(0x560000000000, 40),
-            firstSupportedSlot: Slot.wrap(DENEB_FORK_EPOCH * 32)
+            firstSupportedSlot: Slot.wrap(100_500) // Any value less than the slots from the fixtures.
         });
     }
 

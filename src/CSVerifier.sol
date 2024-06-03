@@ -39,7 +39,7 @@ contract CSVerifier is ICSVerifier {
     /// @dev This index is relative to a state like: `BeaconState.historical_summaries`.
     GIndex public immutable GI_HISTORICAL_SUMMARIES;
 
-    /// @dev This index is relative to a block like: `BeaconBlock.body.execution_payload.withdrawals[0]`.
+    /// @dev This index is relative to a state like: `BeaconState.latest_execution_payload_header.withdrawals[0]`.
     GIndex public immutable GI_FIRST_WITHDRAWAL;
 
     /// @dev This index is relative to a state like: `BeaconState.validators[0]`.
@@ -321,14 +321,11 @@ contract CSVerifier is ICSVerifier {
     }
 
     function _getValidatorGI(uint256 offset) internal view returns (GIndex) {
-        GIndex gI = GI_FIRST_VALIDATOR;
-        return gI.shr(offset);
+        return GI_FIRST_VALIDATOR.shr(offset);
     }
 
     function _getWithdrawalGI(uint256 offset) internal view returns (GIndex) {
-        GIndex gI = GI_FIRST_WITHDRAWAL;
-        if (offset == 0) return gI;
-        return gI.shr(offset);
+        return GI_FIRST_WITHDRAWAL.shr(offset);
     }
 
     // From HashConsensus contract.
