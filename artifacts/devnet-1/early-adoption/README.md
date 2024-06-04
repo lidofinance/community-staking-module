@@ -2,7 +2,7 @@
 
 Consists of the following parts:
 
-## 10 addresses for testing purposes
+## 10 predefined addresses for testing purposes
 
 ## How to build
 

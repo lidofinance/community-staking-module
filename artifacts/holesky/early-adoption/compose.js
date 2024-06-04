@@ -38,13 +38,6 @@ async function readCsvFiles(files) {
   return addresses;
 }
 
-async function combineAddresses() {
-  const addresses = await readCsvFiles(csvFiles);
-  const uniqueAddresses = Object.keys(addresses);
-
-  return { addresses, uniqueAddresses };
-}
-
 function buildMerkleTree(addresses) {
   const tree = StandardMerkleTree.of(
     addresses.map((address) => [address]),
@@ -53,17 +46,31 @@ function buildMerkleTree(addresses) {
   return { tree };
 }
 
+function buildCsvContent(addresses) {
+  const header = ["address", ...csvFiles.map((file) => file.split("/").pop().split(".")[0])];
+  let content = header.join(",") + "\n";
+  for (const address in addresses) {
+    content += `${address},${csvFiles.map((file) => (addresses[address].sources.includes(file) ? "X" : "")).join(",")}\n`;
+  }
+  return content;
+}
+
 (async function main() {
-  const { addresses, uniqueAddresses } = await combineAddresses();
-  const { tree } = buildMerkleTree(uniqueAddresses);
+  const addresses = await readCsvFiles(csvFiles);
+  const { tree } = buildMerkleTree(Object.keys(addresses));
   console.log("Merkle Root:", tree.root);
 
+  const proofs = {}
   for (const [i, v] of tree.entries()) {
-    addresses[v[0]].proof = tree.getProof(i);
+    proofs[v[0]] = tree.getProof(i);
   }
-  fs.writeFileSync("addresses.json", JSON.stringify(uniqueAddresses, null, 2));
-  fs.writeFileSync("merkle-tree.json", JSON.stringify(tree.dump(), null, 2));
-  fs.writeFileSync("merkle-proofs.json", JSON.stringify(addresses, null, 2));
+
+  const content = buildCsvContent(addresses);
+
+  fs.writeFileSync("sources.csv", content);
+  fs.writeFileSync("addresses.json", JSON.stringify(Object.keys(addresses)));
+  fs.writeFileSync("merkle-tree.json", JSON.stringify(tree.dump()));
+  fs.writeFileSync("merkle-proofs.json", JSON.stringify(proofs));
   console.log("Merkle tree and proofs have been written to files.");
 
   const sources = {};
@@ -90,5 +97,5 @@ function buildMerkleTree(addresses) {
       console.log(`  ${key}:`, fileData[key]);
     }
   }
-  console.log("\nTotal unique addresses:", uniqueAddresses.length);
+  console.log("\nTotal unique addresses:", Object.keys(addresses).length);
 })();
