@@ -4,3 +4,4 @@ cache/
 lib/
 !src/lib
 GAS.md
+artifacts/

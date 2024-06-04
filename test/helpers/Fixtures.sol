@@ -22,6 +22,7 @@ import { CSAccounting } from "../../src/CSAccounting.sol";
 import { CSFeeOracle } from "../../src/CSFeeOracle.sol";
 import { CSFeeDistributor } from "../../src/CSFeeDistributor.sol";
 import { CSVerifier } from "../../src/CSVerifier.sol";
+import { CSEarlyAdoption } from "../../src/CSEarlyAdoption.sol";
 
 contract Fixtures is StdCheats, Test {
     bytes32 public constant INITIALIZABLE_STORAGE =
@@ -73,6 +74,7 @@ contract Fixtures is StdCheats, Test {
 
 contract DeploymentFixtures is StdCheats, Test {
     CSModule public csm;
+    CSEarlyAdoption earlyAdoption;
     CSAccounting public accounting;
     CSFeeOracle public oracle;
     CSFeeDistributor public feeDistributor;
@@ -92,6 +94,7 @@ contract DeploymentFixtures is StdCheats, Test {
     struct DeploymentConfig {
         uint256 chainId;
         address csm;
+        address earlyAdoption;
         address accounting;
         address oracle;
         address feeDistributor;
@@ -119,6 +122,7 @@ contract DeploymentFixtures is StdCheats, Test {
         assertEq(deploymentConfig.chainId, block.chainid, "ChainId mismatch");
 
         csm = CSModule(deploymentConfig.csm);
+        earlyAdoption = CSEarlyAdoption(deploymentConfig.earlyAdoption);
         accounting = CSAccounting(deploymentConfig.accounting);
         oracle = CSFeeOracle(deploymentConfig.oracle);
         feeDistributor = CSFeeDistributor(deploymentConfig.feeDistributor);
@@ -138,6 +142,12 @@ contract DeploymentFixtures is StdCheats, Test {
 
         deploymentConfig.csm = vm.parseJsonAddress(config, ".CSModule");
         vm.label(deploymentConfig.csm, "csm");
+
+        deploymentConfig.earlyAdoption = vm.parseJsonAddress(
+            config,
+            ".CSEarlyAdoption"
+        );
+        vm.label(deploymentConfig.earlyAdoption, "earlyAdoption");
 
         deploymentConfig.accounting = vm.parseJsonAddress(
             config,

@@ -35,6 +35,7 @@ contract PenaltyIntegrationTest is
 
         vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
         csm.grantRole(csm.RESUME_ROLE(), address(this));
+        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
         csm.grantRole(
             csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(),
             address(this)
@@ -45,6 +46,7 @@ contract PenaltyIntegrationTest is
         );
         vm.stopPrank();
         if (csm.isPaused()) csm.resume();
+        if (!csm.publicRelease()) csm.activatePublicRelease();
 
         user = nextAddress("User");
         stranger = nextAddress("stranger");

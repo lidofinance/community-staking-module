@@ -5,14 +5,6 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { CSModule } from "../../src/CSModule.sol";
-import { CSAccounting } from "../../src/CSAccounting.sol";
-import { IWstETH } from "../../src/interfaces/IWstETH.sol";
-import { ILido } from "../../src/interfaces/ILido.sol";
-import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
-import { IWithdrawalQueue } from "../../src/interfaces/IWithdrawalQueue.sol";
-import { IBurner } from "../../src/interfaces/IBurner.sol";
-import { ICSAccounting } from "../../src/interfaces/ICSAccounting.sol";
 import { Utilities } from "../helpers/Utilities.sol";
 import { DeploymentFixtures } from "../helpers/Fixtures.sol";
 
@@ -27,8 +19,10 @@ contract GateSealTest is Test, Utilities, DeploymentFixtures {
 
         vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
         csm.grantRole(csm.RESUME_ROLE(), address(this));
+        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
         vm.stopPrank();
         if (csm.isPaused()) csm.resume();
+        if (!csm.publicRelease()) csm.activatePublicRelease();
 
         nodeOperator = nextAddress("NodeOperator");
 
