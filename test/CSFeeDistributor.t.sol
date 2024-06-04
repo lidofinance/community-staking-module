@@ -8,6 +8,7 @@ import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { AssetRecoverer } from "../src/abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import { IStETH } from "../src/interfaces/IStETH.sol";
 
@@ -17,6 +18,58 @@ import { StETHMock } from "./helpers/mocks/StETHMock.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
 import { Utilities } from "./helpers/Utilities.sol";
+
+contract CSFeeDistributorConstructorTest is Test, Fixtures, Utilities {
+    using stdStorage for StdStorage;
+
+    StETHMock internal stETH;
+
+    address internal stranger;
+    address internal oracle;
+    CSFeeDistributor internal feeDistributor;
+    Stub internal csm;
+    Stub internal accounting;
+    MerkleTree internal tree;
+
+    function setUp() public {
+        stranger = nextAddress("STRANGER");
+        oracle = nextAddress("ORACLE");
+        csm = new Stub();
+        accounting = new Stub();
+
+        (, , stETH, ) = initLido();
+    }
+
+    function test_constructor_happyPath() public {
+        feeDistributor = new CSFeeDistributor(
+            address(stETH),
+            address(accounting)
+        );
+
+        assertEq(feeDistributor.ACCOUNTING(), address(accounting));
+        assertEq(address(feeDistributor.STETH()), address(stETH));
+    }
+
+    function test_constructor_canNotInit() public {
+        feeDistributor = new CSFeeDistributor(
+            address(stETH),
+            address(accounting)
+        );
+
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        feeDistributor.initialize(address(this), oracle);
+    }
+
+    function test_initialize_revertWhen_ZeroAccountingAddress() public {
+        vm.expectRevert(CSFeeDistributor.ZeroAccountingAddress.selector);
+        new CSFeeDistributor(address(stETH), address(0));
+    }
+
+    function test_initialize_revertWhen_ZeroStEthAddress() public {
+        vm.expectRevert(CSFeeDistributor.ZeroStEthAddress.selector);
+        new CSFeeDistributor(address(0), address(accounting));
+    }
+}
 
 contract CSFeeDistributorInitTest is Test, Fixtures, Utilities {
     using stdStorage for StdStorage;

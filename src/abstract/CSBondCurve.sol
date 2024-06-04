@@ -27,7 +27,6 @@ import { ICSBondCurve } from "../interfaces/ICSBondCurve.sol";
 abstract contract CSBondCurve is ICSBondCurve, Initializable {
     /// @custom:storage-location erc7201:CSAccounting.CSBondCurve
     struct CSBondCurveStorage {
-        // TODO: should we strictly define max curves array length?
         BondCurve[] bondCurves;
         /// @dev Default bond curve id for Node Operator if no special curve is set
         uint256 defaultBondCurveId;
@@ -165,7 +164,6 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             curvePoints.length < MIN_CURVE_LENGTH ||
             curvePoints.length > MAX_CURVE_LENGTH
         ) revert InvalidBondCurveLength();
-        // TODO: check curve values (that makes sense)
         if (curvePoints[0] == 0) revert InvalidBondCurveValues();
         for (uint256 i = 1; i < curvePoints.length; i++) {
             if (curvePoints[i] <= curvePoints[i - 1])

@@ -8,16 +8,16 @@ import { stdJson } from "forge-std/StdJson.sol";
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { ICSModule } from "../src/interfaces/ICSModule.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import { CSVerifier } from "../src/CSVerifier.sol";
 import { pack } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
+import { GIndex } from "../src/lib/GIndex.sol";
 
 import { Stub } from "./helpers/mocks/Stub.sol";
 
-contract CSVerifierTest is Test {
-    using stdJson for string;
-
+contract CSVerifierTestBase is Test {
     struct WithdrawalFixture {
         bytes32 _blockRoot;
         bytes _pubkey;
@@ -36,8 +36,92 @@ contract CSVerifierTest is Test {
     CSVerifier public verifier;
     Stub public locator;
     Stub public module;
+    Slot public firstSupportedSlot;
 
     string internal fixturesPath = "./test/fixtures/CSVerifier/";
+}
+
+contract CSVerifierTestConstructor is CSVerifierTestBase {
+    function setUp() public {
+        locator = new Stub();
+        module = new Stub();
+        firstSupportedSlot = Slot.wrap(100_500);
+    }
+
+    function test_constructor() public {
+        verifier = new CSVerifier({
+            locator: address(locator),
+            module: address(module),
+            slotsPerEpoch: 32,
+            gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
+            gIFirstWithdrawal: pack(0xe1c0, 4),
+            gIFirstValidator: pack(0x560000000000, 40),
+            firstSupportedSlot: firstSupportedSlot // Any value less than the slots from the fixtures.
+        });
+
+        assertEq(address(verifier.MODULE()), address(module));
+        assertEq(address(verifier.LOCATOR()), address(locator));
+        assertEq(verifier.SLOTS_PER_EPOCH(), 32);
+        assertEq(
+            GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES()),
+            GIndex.unwrap(pack(0x0, 0))
+        );
+        assertEq(
+            GIndex.unwrap(verifier.GI_FIRST_WITHDRAWAL()),
+            GIndex.unwrap(pack(0xe1c0, 4))
+        );
+        assertEq(
+            GIndex.unwrap(verifier.GI_FIRST_VALIDATOR()),
+            GIndex.unwrap(pack(0x560000000000, 40))
+        );
+        assertEq(
+            Slot.unwrap(verifier.FIRST_SUPPORTED_SLOT()),
+            Slot.unwrap(firstSupportedSlot)
+        );
+    }
+
+    function test_constructor_revertIf_InvalidChainConfig() public {
+        vm.expectRevert(CSVerifier.InvalidChainConfig.selector);
+        verifier = new CSVerifier({
+            locator: address(locator),
+            module: address(module),
+            slotsPerEpoch: 0,
+            gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
+            gIFirstWithdrawal: pack(0xe1c0, 4),
+            gIFirstValidator: pack(0x560000000000, 40),
+            firstSupportedSlot: firstSupportedSlot // Any value less than the slots from the fixtures.
+        });
+    }
+
+    function test_constructor_revertIf_ZeroModuleAddress() public {
+        vm.expectRevert(CSVerifier.ZeroModuleAddress.selector);
+        verifier = new CSVerifier({
+            locator: address(locator),
+            module: address(0),
+            slotsPerEpoch: 32,
+            gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
+            gIFirstWithdrawal: pack(0xe1c0, 4),
+            gIFirstValidator: pack(0x560000000000, 40),
+            firstSupportedSlot: firstSupportedSlot // Any value less than the slots from the fixtures.
+        });
+    }
+
+    function test_constructor_revertIf_ZeroLocatorAddress() public {
+        vm.expectRevert(CSVerifier.ZeroLocatorAddress.selector);
+        verifier = new CSVerifier({
+            locator: address(0),
+            module: address(module),
+            slotsPerEpoch: 32,
+            gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
+            gIFirstWithdrawal: pack(0xe1c0, 4),
+            gIFirstValidator: pack(0x560000000000, 40),
+            firstSupportedSlot: firstSupportedSlot // Any value less than the slots from the fixtures.
+        });
+    }
+}
+
+contract CSVerifierTest is CSVerifierTestBase {
+    using stdJson for string;
 
     function setUp() public {
         locator = new Stub();

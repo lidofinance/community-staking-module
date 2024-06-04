@@ -46,7 +46,8 @@ contract CSModule is
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
-    uint8 private constant FORCED_TARGET_LIMIT_MODE_ID = 2; // TODO: Add link to SR docs
+    // @dev see IStakingModule.sol
+    uint8 private constant FORCED_TARGET_LIMIT_MODE_ID = 2;
 
     uint256 public immutable INITIAL_SLASHING_PENALTY;
     uint256 public immutable EL_REWARDS_STEALING_FINE;
@@ -74,7 +75,8 @@ contract CSModule is
     mapping(uint256 noKeyIndexPacked => bool) private _isValidatorWithdrawn;
     mapping(uint256 noKeyIndexPacked => bool) private _isValidatorSlashed;
 
-    TransientUintUintMap private _queueLookup; // TODO: Add explainer comment
+    // @dev transient map used in by cleanDepositQueue method to keep track of already oserved queue batches contents
+    TransientUintUintMap private _queueLookup;
 
     uint64 private _totalDepositedValidators;
     uint64 private _totalExitedValidators;
@@ -107,10 +109,6 @@ contract CSModule is
         uint256 indexed nodeOperatorId,
         uint256 stuckKeysCount
     );
-    event RefundedKeysCountChanged(
-        uint256 indexed nodeOperatorId,
-        uint256 refundedKeysCount
-    );
     event TargetValidatorsCountChangedByRequest(
         uint256 indexed nodeOperatorId,
         uint8 targetLimitMode,
@@ -129,7 +127,6 @@ contract CSModule is
     event PublicRelease();
     event KeyRemovalChargeSet(uint256 amount);
 
-    // TODO: check words "charge" & "stealing" with legal team
     event KeyRemovalChargeApplied(
         uint256 indexed nodeOperatorId,
         uint256 amount
@@ -525,7 +522,7 @@ contract CSModule is
         uint256 stETHAmount,
         ICSAccounting.PermitInput calldata permit
     ) external {
-        _onlyExistingNodeOperator(nodeOperatorId); // TODO: think about it is needed or not
+        _onlyExistingNodeOperator(nodeOperatorId);
         accounting.depositStETH(
             msg.sender,
             nodeOperatorId,
@@ -869,7 +866,7 @@ contract CSModule is
         onlyRole(STAKING_ROUTER_ROLE)
     {
         // solhint-disable-previous-line no-empty-blocks
-        // Nothing to do, rewards are distributed by a performance oracle.
+        // Nothing to do, rewards are distributed by a performance ora`.
     }
 
     /// @notice Unsafe update of validators count for Node Operator by the DAO
@@ -1708,7 +1705,7 @@ contract CSModule is
         } else {
             // Nonce will be updated on the top level once per call
             // Node Operator should normalize queue himself in case of unstuck
-            // TODO: remind on UI to normalize queue after unstuck
+            // @dev remind on UI to normalize queue after unstuck
             _updateDepositableValidatorsCount({
                 nodeOperatorId: nodeOperatorId,
                 incrementNonceIfUpdated: false,
