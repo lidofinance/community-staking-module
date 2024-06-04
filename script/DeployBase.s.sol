@@ -188,7 +188,6 @@ abstract contract DeployBase is Script {
             csm.initialize({
                 _accounting: address(accounting),
                 _earlyAdoption: address(earlyAdoption),
-                verifier: address(verifier),
                 _keyRemovalCharge: config.keyRemovalCharge,
                 admin: deployer
             });
