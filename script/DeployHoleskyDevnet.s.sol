@@ -49,7 +49,8 @@ contract DeployHoleskyDevnet is DeployBase {
         config.maxKeysPerOperatorEA = 10;
         config.keyRemovalCharge = 0.05 ether;
         // EarlyAdoption
-        config.earlyAdoptionTreeRoot = 0x0;
+        config
+            .earlyAdoptionTreeRoot = 0xa9e0f9295f169913bafcc4bc9debb38acfbd0442ed9fce55d657dd7ad75c9ec4;
         config.earlyAdoptionBondCurve = new uint256[](6);
         // 1.5 -> 1.9 -> 1.8 -> 1.7 -> 1.6 -> 1.5
         config.earlyAdoptionBondCurve[0] = 1.5 ether;

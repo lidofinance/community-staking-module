@@ -180,9 +180,7 @@ abstract contract DeployBase is Script {
             );
 
             earlyAdoption = new CSEarlyAdoption({
-                treeRoot: config.earlyAdoptionTreeRoot == bytes32(0)
-                    ? _treeRootFromFork()
-                    : config.earlyAdoptionTreeRoot,
+                treeRoot: config.earlyAdoptionTreeRoot,
                 curveId: eaCurveId,
                 module: address(csm)
             });
@@ -295,21 +293,6 @@ abstract contract DeployBase is Script {
         });
         VmSafe.Log[] memory entries = vm.getRecordedLogs();
         return abi.decode(entries[0].data, (address));
-    }
-
-    function _treeRootFromFork() internal returns (bytes32) {
-        if (vm.isFile("localhost.json")) {
-            string memory forkConfig = vm.readFile("localhost.json");
-            address[] memory availableAccounts = vm.parseJsonAddressArray(
-                forkConfig,
-                ".available_accounts"
-            );
-            MerkleTree tree = new MerkleTree();
-            for (uint256 i = 0; i < availableAccounts.length; i++) {
-                tree.pushLeaf(abi.encode(availableAccounts[i]));
-            }
-            return tree.root();
-        } else return bytes32(0);
     }
 
     function _deployJsonFilename() internal view returns (string memory) {

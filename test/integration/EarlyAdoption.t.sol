@@ -24,25 +24,21 @@ contract EarlyAdoptionTest is Test, Utilities, DeploymentFixtures {
         vm.stopPrank();
         if (csm.isPaused()) csm.resume();
 
-        if (vm.isFile("localhost.json")) {
-            string memory forkConfig = vm.readFile("localhost.json");
-            address[] memory availableAccounts = vm.parseJsonAddressArray(
-                forkConfig,
-                ".available_accounts"
-            );
-            nodeOperator = availableAccounts[0];
-
-            MerkleTree tree = new MerkleTree();
-            for (uint256 i = 0; i < availableAccounts.length; i++) {
-                tree.pushLeaf(abi.encode(availableAccounts[i]));
-            }
-            proof = tree.getProof(0);
-        } else noAvailableAccounts = true;
+        // hardcoded address and proof from devnet sources, see artifacts/devnet-1/sources
+        nodeOperator = 0xC234dBA03943C9238067cDfBC2761844133DD386;
+        proof = new bytes32[](3);
+        proof[
+            0
+        ] = 0xe4a25c2e38607c9a21e0a06702eb838620e53d3e8307f2950255a278938dd346;
+        proof[
+            1
+        ] = 0x2c35e38e604130fee333a3b27af4ce444b54b4898c6155595097772bbd254e33;
+        proof[
+            2
+        ] = 0xea031c80497204f30fdb057a06dccddb9109c9f4c67cf0f198db9f6cb2f7d176;
     }
 
     function test_createNodeOperatorWithProof() public {
-        vm.skip(noAvailableAccounts);
-
         uint256 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
