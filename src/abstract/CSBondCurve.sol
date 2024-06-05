@@ -47,6 +47,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     error InvalidBondCurveLength();
     error InvalidBondCurveValues();
     error InvalidBondCurveId();
+    error InvalidInitialisationCurveId();
 
     constructor(uint256 maxCurveLength) {
         if (maxCurveLength < MIN_CURVE_LENGTH) revert InvalidBondCurveLength();
@@ -149,7 +150,10 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     function __CSBondCurve_init(
         uint256[] memory defaultBondCurvePoints
     ) internal onlyInitializing {
-        _addBondCurve(defaultBondCurvePoints);
+        uint256 addedId = _addBondCurve(defaultBondCurvePoints);
+        // TODO: Figure out how to test it
+        if (addedId != DEFAULT_BOND_CURVE_ID)
+            revert InvalidInitialisationCurveId();
     }
 
     /// @dev Add a new bond curve to the array
