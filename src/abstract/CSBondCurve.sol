@@ -227,6 +227,16 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         return low;
     }
 
+    function _getCSBondCurveStorage()
+        private
+        pure
+        returns (CSBondCurveStorage storage $)
+    {
+        assembly {
+            $.slot := CS_BOND_CURVE_STORAGE_LOCATION
+        }
+    }
+
     function _checkBondCurve(uint256[] memory curvePoints) private view {
         if (
             curvePoints.length < MIN_CURVE_LENGTH ||
@@ -236,16 +246,6 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         for (uint256 i = 1; i < curvePoints.length; i++) {
             if (curvePoints[i] <= curvePoints[i - 1])
                 revert InvalidBondCurveValues();
-        }
-    }
-
-    function _getCSBondCurveStorage()
-        private
-        pure
-        returns (CSBondCurveStorage storage $)
-    {
-        assembly {
-            $.slot := CS_BOND_CURVE_STORAGE_LOCATION
         }
     }
 }
