@@ -404,7 +404,6 @@ contract CSModule is
         bytes calldata publicKeys,
         bytes calldata signatures
     ) external payable whenResumed {
-        _onlyExistingNodeOperator(nodeOperatorId);
         _onlyNodeOperatorManager(nodeOperatorId);
 
         if (
@@ -442,7 +441,6 @@ contract CSModule is
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
     ) external whenResumed {
-        _onlyExistingNodeOperator(nodeOperatorId);
         _onlyNodeOperatorManager(nodeOperatorId);
 
         uint256 amount = accounting.getRequiredBondForNextKeys(
@@ -478,7 +476,6 @@ contract CSModule is
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
     ) external whenResumed {
-        _onlyExistingNodeOperator(nodeOperatorId);
         _onlyNodeOperatorManager(nodeOperatorId);
 
         uint256 amount = accounting.getRequiredBondForNextKeysWstETH(
@@ -576,7 +573,6 @@ contract CSModule is
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
     ) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
         _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
         accounting.claimRewardsStETH({
@@ -608,7 +604,6 @@ contract CSModule is
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
     ) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
         _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
         accounting.claimRewardsWstETH({
@@ -643,7 +638,6 @@ contract CSModule is
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
     ) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
         _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
         accounting.claimRewardsUnstETH({
@@ -911,8 +905,8 @@ contract CSModule is
                     vettedSigningKeysCounts,
                     i
                 );
-            if (nodeOperatorId >= _nodeOperatorsCount)
-                revert NodeOperatorDoesNotExist();
+
+            _onlyExistingNodeOperator(nodeOperatorId);
 
             NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
@@ -970,7 +964,6 @@ contract CSModule is
     /// @notice Normalization stands for adding vetted but not enqueued keys to the queue
     /// @param nodeOperatorId ID of the Node Operator
     function normalizeQueue(uint256 nodeOperatorId) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
         _onlyNodeOperatorManager(nodeOperatorId);
         depositQueue.normalize(_nodeOperators, nodeOperatorId);
     }
@@ -1036,8 +1029,7 @@ contract CSModule is
     ) external onlyRole(SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE) {
         for (uint256 i; i < nodeOperatorIds.length; ++i) {
             uint256 nodeOperatorId = nodeOperatorIds[i];
-            if (nodeOperatorId >= _nodeOperatorsCount)
-                revert NodeOperatorDoesNotExist();
+            _onlyExistingNodeOperator(nodeOperatorId);
             uint256 settled = accounting.settleLockedBondETH(nodeOperatorId);
             emit ELRewardsStealingPenaltySettled(nodeOperatorId, settled);
             if (settled > 0) {
@@ -1766,14 +1758,16 @@ contract CSModule is
     }
 
     function _onlyNodeOperatorManager(uint256 nodeOperatorId) internal view {
-        if (_nodeOperators[nodeOperatorId].managerAddress != msg.sender)
-            revert SenderIsNotEligible();
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (no.managerAddress == address(0)) revert NodeOperatorDoesNotExist();
+        if (no.managerAddress != msg.sender) revert SenderIsNotEligible();
     }
 
     function _onlyNodeOperatorManagerOrRewardAddresses(
         uint256 nodeOperatorId
     ) internal view {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (no.managerAddress == address(0)) revert NodeOperatorDoesNotExist();
         if (no.managerAddress != msg.sender && no.rewardAddress != msg.sender)
             revert SenderIsNotEligible();
     }
