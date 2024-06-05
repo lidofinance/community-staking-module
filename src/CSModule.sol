@@ -866,7 +866,7 @@ contract CSModule is
         onlyRole(STAKING_ROUTER_ROLE)
     {
         // solhint-disable-previous-line no-empty-blocks
-        // Nothing to do, rewards are distributed by a performance ora`.
+        // Nothing to do, rewards are distributed by a performance oracle.
     }
 
     /// @notice Unsafe update of validators count for Node Operator by the DAO
