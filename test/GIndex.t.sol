@@ -190,7 +190,7 @@ contract GIndexTest is Test {
         // But root.concat(root) will result in a root value again, and root is not a parent for itself.
         vm.assume(rhs.index() > 1);
         // Overflow check.
-        vm.assume(Math.log2(lhs.index()) + Math.log2(rhs.index()) < 248);
+        vm.assume(Math.log2(lhs.index()) + 1 + Math.log2(rhs.index()) < 248);
 
         assertTrue(
             lhs.isParentOf(lhs.concat(rhs)),
@@ -274,6 +274,25 @@ contract GIndexTest is Test {
         lib.shr(gIParent.concat(pack(1023, 4)), 1);
     }
 
+    function testFuzz_shr_OffTheWidth_AfterConcat(
+        GIndex lhs,
+        GIndex rhs,
+        uint256 shift
+    ) public {
+        // 0 is not a valid index.
+        vm.assume(lhs.index() > 0);
+        vm.assume(rhs.index() > 0);
+        vm.assume(rhs.index() >= rhs.width());
+        unchecked {
+            vm.assume(rhs.width() + shift > rhs.width());
+        }
+        // Indices concatenation overflow protection.
+        vm.assume(Math.log2(lhs.index()) + 1 + Math.log2(rhs.index()) < 248);
+
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.shr(lhs.concat(rhs), rhs.width() + shift);
+    }
+
     function test_shl() public {
         GIndex gI;
 
@@ -334,6 +353,23 @@ contract GIndexTest is Test {
         lib.shl(gIParent.concat(pack(1031, 4)), 9);
         vm.expectRevert(IndexOutOfRange.selector);
         lib.shl(gIParent.concat(pack(1023, 4)), 16);
+    }
+
+    function testFuzz_shl_OffTheWidth_AfterConcat(
+        GIndex lhs,
+        GIndex rhs,
+        uint256 shift
+    ) public {
+        // 0 is not a valid index.
+        vm.assume(lhs.index() > 0);
+        vm.assume(rhs.index() > 0);
+        vm.assume(rhs.index() >= rhs.width());
+        vm.assume(shift > rhs.index() % rhs.width());
+        // Indices concatenation overflow protection.
+        vm.assume(Math.log2(lhs.index()) + 1 + Math.log2(rhs.index()) < 248);
+
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.shl(lhs.concat(rhs), shift);
     }
 
     function testFuzz_shl_shr_Idempotent(GIndex gI, uint256 shift) public {
