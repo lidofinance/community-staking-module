@@ -42,7 +42,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
     event BondCurveAdded(uint256[] bondCurve);
     event BondCurveUpdated(uint256 indexed curveId, uint256[] bondCurve);
-    event BondCurveChanged(uint256 indexed nodeOperatorId, uint256 curveId);
+    event BondCurveSet(uint256 indexed nodeOperatorId, uint256 curveId);
 
     error InvalidBondCurveLength();
     error InvalidBondCurveValues();
@@ -200,14 +200,14 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
         if (curveId > $.bondCurves.length - 1) revert InvalidBondCurveId();
         $.operatorBondCurveId[nodeOperatorId] = curveId;
-        emit BondCurveChanged(nodeOperatorId, curveId);
+        emit BondCurveSet(nodeOperatorId, curveId);
     }
 
     /// @dev Reset bond curve for the given Node Operator to default (for example, because of breaking the rules by Node Operator)
     function _resetBondCurve(uint256 nodeOperatorId) internal {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
         $.operatorBondCurveId[nodeOperatorId] = DEFAULT_BOND_CURVE_ID;
-        emit BondCurveChanged(nodeOperatorId, DEFAULT_BOND_CURVE_ID);
+        emit BondCurveSet(nodeOperatorId, DEFAULT_BOND_CURVE_ID);
     }
 
     function _searchKeysCount(

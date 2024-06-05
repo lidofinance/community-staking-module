@@ -164,6 +164,8 @@ contract CSBondCurveTest is Test {
         curvePoints[0] = 16 ether;
         uint256 addedId = bondCurve.addBondCurve(curvePoints);
 
+        vm.expectEmit(true, true, true, true, address(bondCurve));
+        emit CSBondCurve.BondCurveSet(noId, addedId);
         bondCurve.setBondCurve(noId, addedId);
 
         assertEq(bondCurve.getBondCurveId(noId), addedId);
@@ -182,7 +184,7 @@ contract CSBondCurveTest is Test {
         bondCurve.setBondCurve(noId, addedId);
 
         vm.expectEmit(true, true, true, true, address(bondCurve));
-        emit CSBondCurve.BondCurveChanged(noId, 0);
+        emit CSBondCurve.BondCurveSet(noId, 0);
 
         bondCurve.resetBondCurve(noId);
         assertEq(bondCurve.getBondCurveId(noId), 0);
