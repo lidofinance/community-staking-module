@@ -47,7 +47,7 @@ contract AssetRecovererTest is Test, Utilities {
         assertEq(actor.balance, 1 ether);
     }
 
-    function test_recoverETH_revertIfNoRole() public {
+    function test_recoverETH_RevertWhen_NoRole() public {
         vm.prank(stranger);
         vm.expectRevert(AssetRecovererTestable.OnlyRecoverer.selector);
         recoverer.recoverEther();
@@ -66,7 +66,7 @@ contract AssetRecovererTest is Test, Utilities {
         assertEq(token.balanceOf(actor), 1000);
     }
 
-    function test_recoverERC20_revertIfNoRole() public {
+    function test_recoverERC20_RevertWhen_NoRole() public {
         ERC20Testable token = new ERC20Testable();
         token.mint(address(recoverer), 1000);
 
@@ -87,7 +87,7 @@ contract AssetRecovererTest is Test, Utilities {
         assertEq(token.ownerOf(0), actor);
     }
 
-    function test_recoverERC721_revertIfNoRole() public {
+    function test_recoverERC721_RevertWhen_NoRole() public {
         ERC721Testable token = new ERC721Testable();
         token.mint(address(recoverer), 0);
 
@@ -109,7 +109,7 @@ contract AssetRecovererTest is Test, Utilities {
         assertEq(token.balanceOf(address(recoverer), 0), 0);
     }
 
-    function test_recoverERC1155_revertIfNoRole() public {
+    function test_recoverERC1155_RevertWhen_NoRole() public {
         ERC1155Testable token = new ERC1155Testable();
         token.mint(address(recoverer), 0, 10, "");
 

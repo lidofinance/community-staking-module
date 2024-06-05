@@ -7,6 +7,50 @@ import "../src/CSEarlyAdoption.sol";
 import { Utilities } from "./helpers/Utilities.sol";
 import "./helpers/MerkleTree.sol";
 
+contract CSEarlyAdoptionConstructorTest is Test, Utilities {
+    CSEarlyAdoption internal earlyAdoption;
+    address internal csm;
+    address internal nodeOperator;
+    address internal stranger;
+    uint256 internal curveId;
+    MerkleTree internal merkleTree;
+    bytes32 internal root;
+
+    function setUp() public {
+        csm = nextAddress("CSM");
+        nodeOperator = nextAddress("NODE_OPERATOR");
+        stranger = nextAddress("STRANGER");
+
+        merkleTree = new MerkleTree();
+        merkleTree.pushLeaf(abi.encode(nodeOperator));
+
+        curveId = 1;
+        root = merkleTree.root();
+    }
+
+    function test_constructor() public {
+        earlyAdoption = new CSEarlyAdoption(root, curveId, csm);
+        assertEq(earlyAdoption.TREE_ROOT(), root);
+        assertEq(earlyAdoption.CURVE_ID(), curveId);
+        assertEq(earlyAdoption.MODULE(), csm);
+    }
+
+    function test_constructor_RevertWhen_InvalidTreeRoot() public {
+        vm.expectRevert(CSEarlyAdoption.InvalidTreeRoot.selector);
+        new CSEarlyAdoption(bytes32(0), curveId, csm);
+    }
+
+    function test_constructor_RevertWhen_InvalidCurveId() public {
+        vm.expectRevert(CSEarlyAdoption.InvalidCurveId.selector);
+        new CSEarlyAdoption(root, 0, csm);
+    }
+
+    function test_constructor_RevertWhen_ZeroModuleAddress() public {
+        vm.expectRevert(CSEarlyAdoption.ZeroModuleAddress.selector);
+        new CSEarlyAdoption(root, curveId, address(0));
+    }
+}
+
 contract CSEarlyAdoptionTest is Test, Utilities {
     CSEarlyAdoption internal earlyAdoption;
     address internal csm;
@@ -24,17 +68,10 @@ contract CSEarlyAdoptionTest is Test, Utilities {
         merkleTree.pushLeaf(abi.encode(nodeOperator));
 
         curveId = 1;
-    }
-
-    function test_initialization() public {
         earlyAdoption = new CSEarlyAdoption(merkleTree.root(), curveId, csm);
-        assertEq(earlyAdoption.TREE_ROOT(), merkleTree.root());
-        assertEq(earlyAdoption.CURVE_ID(), curveId);
-        assertEq(earlyAdoption.MODULE(), csm);
     }
 
     function test_verifyProof() public {
-        earlyAdoption = new CSEarlyAdoption(merkleTree.root(), curveId, csm);
         assertTrue(
             earlyAdoption.verifyProof(nodeOperator, merkleTree.getProof(0))
         );
@@ -44,8 +81,6 @@ contract CSEarlyAdoptionTest is Test, Utilities {
     }
 
     function test_consume() public {
-        earlyAdoption = new CSEarlyAdoption(merkleTree.root(), curveId, csm);
-
         bytes32[] memory proof = merkleTree.getProof(0);
 
         vm.prank(csm);
@@ -55,8 +90,6 @@ contract CSEarlyAdoptionTest is Test, Utilities {
     }
 
     function test_isConsumed() public {
-        earlyAdoption = new CSEarlyAdoption(merkleTree.root(), curveId, csm);
-
         bytes32[] memory proof = merkleTree.getProof(0);
 
         vm.prank(csm);
@@ -65,7 +98,6 @@ contract CSEarlyAdoptionTest is Test, Utilities {
     }
 
     function test_consume_revert_onlyModule() public {
-        earlyAdoption = new CSEarlyAdoption(merkleTree.root(), curveId, csm);
         bytes32[] memory proof = merkleTree.getProof(0);
 
         vm.prank(stranger);
@@ -74,7 +106,6 @@ contract CSEarlyAdoptionTest is Test, Utilities {
     }
 
     function test_consume_revert_alreadyConsumed() public {
-        earlyAdoption = new CSEarlyAdoption(merkleTree.root(), curveId, csm);
         bytes32[] memory proof = merkleTree.getProof(0);
 
         vm.startPrank(csm);
@@ -85,7 +116,6 @@ contract CSEarlyAdoptionTest is Test, Utilities {
     }
 
     function test_consume_revert_invalidAddress() public {
-        earlyAdoption = new CSEarlyAdoption(merkleTree.root(), curveId, csm);
         bytes32[] memory proof = merkleTree.getProof(0);
 
         vm.prank(csm);
@@ -94,7 +124,6 @@ contract CSEarlyAdoptionTest is Test, Utilities {
     }
 
     function test_consume_revert_invalidProof() public {
-        earlyAdoption = new CSEarlyAdoption(merkleTree.root(), curveId, csm);
         bytes32[] memory proof = merkleTree.getProof(0);
         proof[0] = bytes32(randomBytes(32));
 
