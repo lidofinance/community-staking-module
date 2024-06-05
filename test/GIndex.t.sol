@@ -231,6 +231,26 @@ contract GIndexTest is Test {
         assertEq(gI.shr(14).unwrap(), pack(2063, 4).unwrap());
     }
 
+    function test_shr_AfterConcat() public {
+        GIndex gI;
+        GIndex gIParent = pack(5, 4);
+
+        gI = pack(1024, 4);
+        assertEq(gIParent.concat(gI).shr(0).unwrap(), pack(5120, 4).unwrap());
+        assertEq(gIParent.concat(gI).shr(1).unwrap(), pack(5121, 4).unwrap());
+        assertEq(gIParent.concat(gI).shr(15).unwrap(), pack(5135, 4).unwrap());
+
+        gI = pack(1031, 4);
+        assertEq(gIParent.concat(gI).shr(0).unwrap(), pack(5127, 4).unwrap());
+        assertEq(gIParent.concat(gI).shr(1).unwrap(), pack(5128, 4).unwrap());
+        assertEq(gIParent.concat(gI).shr(8).unwrap(), pack(5135, 4).unwrap());
+
+        gI = pack(2049, 4);
+        assertEq(gIParent.concat(gI).shr(0).unwrap(), pack(10241, 4).unwrap());
+        assertEq(gIParent.concat(gI).shr(1).unwrap(), pack(10242, 4).unwrap());
+        assertEq(gIParent.concat(gI).shr(14).unwrap(), pack(10255, 4).unwrap());
+    }
+
     function test_shr_OffTheWidth() public {
         vm.expectRevert(IndexOutOfRange.selector);
         lib.shr(ROOT, 1);
@@ -240,6 +260,18 @@ contract GIndexTest is Test {
         lib.shr(pack(1031, 4), 9);
         vm.expectRevert(IndexOutOfRange.selector);
         lib.shr(pack(1023, 4), 1);
+    }
+
+    function test_shr_OffTheWidth_AfterConcat() public {
+        GIndex gIParent = pack(154, 4);
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.shr(gIParent.concat(ROOT), 1);
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.shr(gIParent.concat(pack(1024, 4)), 16);
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.shr(gIParent.concat(pack(1031, 4)), 9);
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.shr(gIParent.concat(pack(1023, 4)), 1);
     }
 
     function test_shl() public {
@@ -261,6 +293,26 @@ contract GIndexTest is Test {
         assertEq(gI.shl(15).unwrap(), pack(2048, 4).unwrap());
     }
 
+    function test_shl_AfterConcat() public {
+        GIndex gI;
+        GIndex gIParent = pack(5, 4);
+
+        gI = pack(1023, 4);
+        assertEq(gIParent.concat(gI).shl(0).unwrap(), pack(3071, 4).unwrap());
+        assertEq(gIParent.concat(gI).shl(1).unwrap(), pack(3070, 4).unwrap());
+        assertEq(gIParent.concat(gI).shl(15).unwrap(), pack(3056, 4).unwrap());
+
+        gI = pack(1031, 4);
+        assertEq(gIParent.concat(gI).shl(0).unwrap(), pack(5127, 4).unwrap());
+        assertEq(gIParent.concat(gI).shl(1).unwrap(), pack(5126, 4).unwrap());
+        assertEq(gIParent.concat(gI).shl(7).unwrap(), pack(5120, 4).unwrap());
+
+        gI = pack(2063, 4);
+        assertEq(gIParent.concat(gI).shl(0).unwrap(), pack(10255, 4).unwrap());
+        assertEq(gIParent.concat(gI).shl(1).unwrap(), pack(10254, 4).unwrap());
+        assertEq(gIParent.concat(gI).shl(15).unwrap(), pack(10240, 4).unwrap());
+    }
+
     function test_shl_OffTheWidth() public {
         vm.expectRevert(IndexOutOfRange.selector);
         lib.shl(ROOT, 1);
@@ -270,6 +322,18 @@ contract GIndexTest is Test {
         lib.shl(pack(1031, 4), 9);
         vm.expectRevert(IndexOutOfRange.selector);
         lib.shl(pack(1023, 4), 16);
+    }
+
+    function test_shl_OffTheWidth_AfterConcat() public {
+        GIndex gIParent = pack(154, 4);
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.shl(gIParent.concat(ROOT), 1);
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.shl(gIParent.concat(pack(1024, 4)), 1);
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.shl(gIParent.concat(pack(1031, 4)), 9);
+        vm.expectRevert(IndexOutOfRange.selector);
+        lib.shl(gIParent.concat(pack(1023, 4)), 16);
     }
 
     function testFuzz_shl_shr_Idempotent(GIndex gI, uint256 shift) public {
