@@ -264,9 +264,9 @@ contract CSModule is
         uint256 nodeOperatorId = _createNodeOperator(
             managerAddress,
             rewardAddress,
-            referrer
+            referrer,
+            eaProof
         );
-        _processEarlyAdoptionData(nodeOperatorId, eaProof);
 
         if (
             msg.value !=
@@ -280,15 +280,12 @@ contract CSModule is
 
         accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
 
-        // Reverts if keysCount is 0
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-
-        // Due to new bonded keys nonce update is required and normalize queue is required
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
-        });
+        _addKeysAndUpdateDepositableValidatorsCount(
+            nodeOperatorId,
+            keysCount,
+            publicKeys,
+            signatures
+        );
     }
 
     /// @notice Add a new Node Operator using stETH as a bond.
@@ -316,9 +313,9 @@ contract CSModule is
         uint256 nodeOperatorId = _createNodeOperator(
             managerAddress,
             rewardAddress,
-            referrer
+            referrer,
+            eaProof
         );
-        _processEarlyAdoptionData(nodeOperatorId, eaProof);
 
         {
             uint256 amount = accounting.getBondAmountByKeysCount(
@@ -328,15 +325,12 @@ contract CSModule is
             accounting.depositStETH(msg.sender, nodeOperatorId, amount, permit);
         }
 
-        // Reverts if keysCount is 0
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-
-        // Due to new bonded keys nonce update is required and normalize queue is required
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
-        });
+        _addKeysAndUpdateDepositableValidatorsCount(
+            nodeOperatorId,
+            keysCount,
+            publicKeys,
+            signatures
+        );
     }
 
     /// @notice Add a new Node Operator using wstETH as a bond.
@@ -364,9 +358,9 @@ contract CSModule is
         uint256 nodeOperatorId = _createNodeOperator(
             managerAddress,
             rewardAddress,
-            referrer
+            referrer,
+            eaProof
         );
-        _processEarlyAdoptionData(nodeOperatorId, eaProof);
 
         {
             uint256 amount = accounting.getBondAmountByKeysCountWstETH(
@@ -381,15 +375,12 @@ contract CSModule is
             );
         }
 
-        // Reverts if keysCount is 0
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-
-        // Due to new bonded keys nonce update is required and normalize queue is required
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
-        });
+        _addKeysAndUpdateDepositableValidatorsCount(
+            nodeOperatorId,
+            keysCount,
+            publicKeys,
+            signatures
+        );
     }
 
     /// @notice Add new keys to the existing Node Operator using ETH as a bond
@@ -415,15 +406,12 @@ contract CSModule is
 
         accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
 
-        // Reverts if keysCount is 0
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-
-        // Due to new bonded keys nonce update is required and normalize queue is required
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
-        });
+        _addKeysAndUpdateDepositableValidatorsCount(
+            nodeOperatorId,
+            keysCount,
+            publicKeys,
+            signatures
+        );
     }
 
     /// @notice Add new keys to the existing Node Operator using stETH as a bond
@@ -450,15 +438,12 @@ contract CSModule is
 
         accounting.depositStETH(msg.sender, nodeOperatorId, amount, permit);
 
-        // Reverts if keysCount is 0
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-
-        // Due to new bonded keys nonce update is required and normalize queue is required
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
-        });
+        _addKeysAndUpdateDepositableValidatorsCount(
+            nodeOperatorId,
+            keysCount,
+            publicKeys,
+            signatures
+        );
     }
 
     /// @notice Add new keys to the existing Node Operator using wstETH as a bond
@@ -485,15 +470,12 @@ contract CSModule is
 
         accounting.depositWstETH(msg.sender, nodeOperatorId, amount, permit);
 
-        // Reverts if keysCount is 0
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-
-        // Due to new bonded keys nonce update is required and normalize queue is required
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
-        });
+        _addKeysAndUpdateDepositableValidatorsCount(
+            nodeOperatorId,
+            keysCount,
+            publicKeys,
+            signatures
+        );
     }
 
     /// @notice Stake user's ETH with Lido and make a deposit in stETH to the bond of the existing Node Operator
@@ -1518,8 +1500,13 @@ contract CSModule is
     function _createNodeOperator(
         address managerAddress,
         address rewardAddress,
-        address referrer
+        address referrer,
+        bytes32[] calldata proof
     ) internal returns (uint256) {
+        if (!publicRelease && proof.length == 0) {
+            revert NotAllowedToJoinYet();
+        }
+
         uint256 id = _nodeOperatorsCount;
         NodeOperator storage no = _nodeOperators[id];
 
@@ -1537,6 +1524,13 @@ contract CSModule is
         emit NodeOperatorAdded(id, no.managerAddress, no.rewardAddress);
 
         if (referrer != address(0)) emit ReferrerSet(id, referrer);
+
+        // @dev It's possible to join with proof even after public release to get beneficial bond curve
+        if (proof.length == 0 || address(earlyAdoption) == address(0))
+            return id;
+
+        earlyAdoption.consume(msg.sender, proof);
+        accounting.setBondCurve(id, earlyAdoption.CURVE_ID());
 
         return id;
     }
@@ -1627,20 +1621,6 @@ contract CSModule is
             normalizeQueueIfUpdated: true
         });
         _incrementModuleNonce();
-    }
-
-    /// @notice It's possible to join with proof even after public release to get beneficial bond curve
-    function _processEarlyAdoptionData(
-        uint256 nodeOperatorId,
-        bytes32[] calldata proof
-    ) internal {
-        if (!publicRelease && proof.length == 0) {
-            revert NotAllowedToJoinYet();
-        }
-        if (proof.length == 0 || address(earlyAdoption) == address(0)) return;
-
-        earlyAdoption.consume(msg.sender, proof);
-        accounting.setBondCurve(nodeOperatorId, earlyAdoption.CURVE_ID());
     }
 
     function _setKeyRemovalCharge(uint256 amount) internal {
@@ -1753,6 +1733,23 @@ contract CSModule is
                 depositQueue.normalize(_nodeOperators, nodeOperatorId);
             }
         }
+    }
+
+    function _addKeysAndUpdateDepositableValidatorsCount(
+        uint256 nodeOperatorId,
+        uint256 keysCount,
+        bytes calldata publicKeys,
+        bytes calldata signatures
+    ) internal {
+        // Reverts if keysCount is 0
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
+
+        // Due to new bonded keys nonce update is required and normalize queue is required
+        _updateDepositableValidatorsCount({
+            nodeOperatorId: nodeOperatorId,
+            incrementNonceIfUpdated: true,
+            normalizeQueueIfUpdated: true
+        });
     }
 
     function _onlyNodeOperatorManager(uint256 nodeOperatorId) internal view {
