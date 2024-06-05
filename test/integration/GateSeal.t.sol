@@ -30,7 +30,7 @@ contract GateSealTest is Test, Utilities, DeploymentFixtures {
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
-        uint256 amount = accounting.getBondAmountByKeysCount(keysCount);
+        uint256 amount = accounting.getBondAmountByKeysCount(keysCount, 0);
         vm.deal(nodeOperator, amount);
         vm.prank(nodeOperator);
         csm.addNodeOperatorETH{ value: amount }(
