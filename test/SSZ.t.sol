@@ -286,7 +286,7 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_RevertIf_NoProof() public {
+    function test_verifyProof_RevertWhen_NoProof() public {
         vm.expectRevert(SSZ.InvalidProof.selector);
 
         // bytes32(0) is a valid proof for the inputs.
@@ -298,7 +298,7 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_RevertIf_ProvingRoot() public {
+    function test_verifyProof_RevertWhen_ProvingRoot() public {
         vm.expectRevert(SSZ.InvalidProof.selector);
 
         lib.verifyProof(
@@ -309,7 +309,7 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_RevertIf_InvalidProof() public {
+    function test_verifyProof_RevertWhen_InvalidProof() public {
         bytes32[] memory proof = new bytes32[](2);
 
         // prettier-ignore
@@ -328,7 +328,7 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_RevertIf_WrongGIndex() public {
+    function test_verifyProof_RevertWhen_WrongGIndex() public {
         bytes32[] memory proof = new bytes32[](2);
 
         // prettier-ignore
@@ -347,7 +347,7 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_RevertIf_BranchHasExtraItem() public {
+    function test_verifyProof_RevertWhen_BranchHasExtraItem() public {
         bytes32[] memory proof = new bytes32[](2);
 
         // prettier-ignore
@@ -366,7 +366,7 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_RevertIf_BranchHasMissingItem() public {
+    function test_verifyProof_RevertWhen_BranchHasMissingItem() public {
         bytes32[] memory proof = new bytes32[](2);
 
         // prettier-ignore

@@ -35,17 +35,17 @@ contract CSEarlyAdoptionConstructorTest is Test, Utilities {
         assertEq(earlyAdoption.MODULE(), csm);
     }
 
-    function test_constructor_revertIf_InvalidTreeRoot() public {
+    function test_constructor_RevertWhen_InvalidTreeRoot() public {
         vm.expectRevert(CSEarlyAdoption.InvalidTreeRoot.selector);
         new CSEarlyAdoption(bytes32(0), curveId, csm);
     }
 
-    function test_constructor_revertIf_InvalidCurveId() public {
+    function test_constructor_RevertWhen_InvalidCurveId() public {
         vm.expectRevert(CSEarlyAdoption.InvalidCurveId.selector);
         new CSEarlyAdoption(root, 0, csm);
     }
 
-    function test_constructor_revertIf_ZeroModuleAddress() public {
+    function test_constructor_RevertWhen_ZeroModuleAddress() public {
         vm.expectRevert(CSEarlyAdoption.ZeroModuleAddress.selector);
         new CSEarlyAdoption(root, curveId, address(0));
     }

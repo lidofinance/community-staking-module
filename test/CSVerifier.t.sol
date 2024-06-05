@@ -80,7 +80,7 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
         );
     }
 
-    function test_constructor_revertIf_InvalidChainConfig() public {
+    function test_constructor_RevertWhen_InvalidChainConfig() public {
         vm.expectRevert(CSVerifier.InvalidChainConfig.selector);
         verifier = new CSVerifier({
             locator: address(locator),
@@ -93,7 +93,7 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
         });
     }
 
-    function test_constructor_revertIf_ZeroModuleAddress() public {
+    function test_constructor_RevertWhen_ZeroModuleAddress() public {
         vm.expectRevert(CSVerifier.ZeroModuleAddress.selector);
         verifier = new CSVerifier({
             locator: address(locator),
@@ -106,7 +106,7 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
         });
     }
 
-    function test_constructor_revertIf_ZeroLocatorAddress() public {
+    function test_constructor_RevertWhen_ZeroLocatorAddress() public {
         vm.expectRevert(CSVerifier.ZeroLocatorAddress.selector);
         verifier = new CSVerifier({
             locator: address(0),
