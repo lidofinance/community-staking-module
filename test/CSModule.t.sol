@@ -417,7 +417,7 @@ contract CsmInitialize is CSMCommon {
         assertEq(address(csm.LIDO_LOCATOR()), address(locator));
     }
 
-    function test_constructor_canNotInit() public {
+    function test_constructor_RevertWhen_InitOnImpl() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
@@ -461,7 +461,7 @@ contract CsmInitialize is CSMCommon {
         assertTrue(csm.isPaused());
     }
 
-    function test_initialize_revertIf_ZeroAccountingAddress() public {
+    function test_initialize_RevertWhen_ZeroAccountingAddress() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
@@ -480,7 +480,7 @@ contract CsmInitialize is CSMCommon {
         });
     }
 
-    function test_initialize_revertIf_ZeroAdminAddress() public {
+    function test_initialize_RevertWhen_ZeroAdminAddress() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
@@ -2096,7 +2096,7 @@ contract CSMObtainDepositData is CSMCommon {
         assertEq(no.depositableValidatorsCount, 4);
     }
 
-    function test_obtainDepositData_RevertWhenNoMoreKeys() public {
+    function test_obtainDepositData_RevertWhen_NoMoreKeys() public {
         vm.expectRevert(CSModule.NotEnoughKeys.selector);
         csm.obtainDepositData(1, "");
     }
@@ -2143,12 +2143,12 @@ contract CSMClaimRewards is CSMCommon {
         csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
-    function test_claimRewardsStETH_revertWhenNoNodeOperator() public {
+    function test_claimRewardsStETH_RevertWhen_NoNodeOperator() public {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.claimRewardsStETH(0, UINT256_MAX, 0, new bytes32[](0));
     }
 
-    function test_claimRewardsStETH_revertWhenNotEligible() public {
+    function test_claimRewardsStETH_RevertWhen_NotEligible() public {
         uint256 noId = createNodeOperator();
         vm.expectRevert(CSModule.SenderIsNotEligible.selector);
         csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
@@ -2186,12 +2186,12 @@ contract CSMClaimRewards is CSMCommon {
         csm.claimRewardsWstETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
-    function test_claimRewardsWstETH_revertWhenNoNodeOperator() public {
+    function test_claimRewardsWstETH_RevertWhen_NoNodeOperator() public {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.claimRewardsWstETH(0, UINT256_MAX, 0, new bytes32[](0));
     }
 
-    function test_claimRewardsWstETH_revertWhenNotEligible() public {
+    function test_claimRewardsWstETH_RevertWhen_NotEligible() public {
         uint256 noId = createNodeOperator();
         vm.expectRevert(CSModule.SenderIsNotEligible.selector);
         csm.claimRewardsWstETH(noId, UINT256_MAX, 0, new bytes32[](0));
@@ -2229,12 +2229,12 @@ contract CSMClaimRewards is CSMCommon {
         csm.claimRewardsUnstETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
-    function test_requestRewardsETH_revertWhenNoNodeOperator() public {
+    function test_requestRewardsETH_RevertWhen_NoNodeOperator() public {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.claimRewardsUnstETH(0, UINT256_MAX, 0, new bytes32[](0));
     }
 
-    function test_requestRewardsETH_revertWhenNotEligible() public {
+    function test_requestRewardsETH_RevertWhen_NotEligible() public {
         uint256 noId = createNodeOperator();
         vm.expectRevert(CSModule.SenderIsNotEligible.selector);
         csm.claimRewardsUnstETH(noId, UINT256_MAX, 0, new bytes32[](0));
@@ -2281,14 +2281,14 @@ contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
         assertEq(no.rewardAddress, nodeOperator);
     }
 
-    function test_proposeNodeOperatorManagerAddressChange_RevertWhenNoNodeOperator()
+    function test_proposeNodeOperatorManagerAddressChange_RevertWhen_NoNodeOperator()
         public
     {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.proposeNodeOperatorManagerAddressChange(0, stranger);
     }
 
-    function test_proposeNodeOperatorManagerAddressChange_RevertWhenNotManager()
+    function test_proposeNodeOperatorManagerAddressChange_RevertWhen_NotManager()
         public
     {
         uint256 noId = createNodeOperator();
@@ -2296,7 +2296,7 @@ contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
         csm.proposeNodeOperatorManagerAddressChange(noId, stranger);
     }
 
-    function test_proposeNodeOperatorManagerAddressChange_RevertWhenAlreadyProposed()
+    function test_proposeNodeOperatorManagerAddressChange_RevertWhen_AlreadyProposed()
         public
     {
         uint256 noId = createNodeOperator();
@@ -2308,7 +2308,7 @@ contract CsmProposeNodeOperatorManagerAddressChange is CSMCommon {
         csm.proposeNodeOperatorManagerAddressChange(noId, stranger);
     }
 
-    function test_proposeNodeOperatorManagerAddressChange_RevertWhenSameAddressProposed()
+    function test_proposeNodeOperatorManagerAddressChange_RevertWhen_SameAddressProposed()
         public
     {
         uint256 noId = createNodeOperator();
@@ -2353,14 +2353,14 @@ contract CsmConfirmNodeOperatorManagerAddressChange is CSMCommon {
         assertEq(no.rewardAddress, nodeOperator);
     }
 
-    function test_confirmNodeOperatorManagerAddressChange_RevertWhenNoNodeOperator()
+    function test_confirmNodeOperatorManagerAddressChange_RevertWhen_NoNodeOperator()
         public
     {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.confirmNodeOperatorManagerAddressChange(0);
     }
 
-    function test_confirmNodeOperatorManagerAddressChange_RevertWhenNotProposed()
+    function test_confirmNodeOperatorManagerAddressChange_RevertWhen_NotProposed()
         public
     {
         uint256 noId = createNodeOperator();
@@ -2369,7 +2369,7 @@ contract CsmConfirmNodeOperatorManagerAddressChange is CSMCommon {
         csm.confirmNodeOperatorManagerAddressChange(noId);
     }
 
-    function test_confirmNodeOperatorManagerAddressChange_RevertWhenOtherProposed()
+    function test_confirmNodeOperatorManagerAddressChange_RevertWhen_OtherProposed()
         public
     {
         uint256 noId = createNodeOperator();
@@ -2422,14 +2422,14 @@ contract CsmProposeNodeOperatorRewardAddressChange is CSMCommon {
         assertEq(no.rewardAddress, nodeOperator);
     }
 
-    function test_proposeNodeOperatorRewardAddressChange_RevertWhenNoNodeOperator()
+    function test_proposeNodeOperatorRewardAddressChange_RevertWhen_NoNodeOperator()
         public
     {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.proposeNodeOperatorRewardAddressChange(0, stranger);
     }
 
-    function test_proposeNodeOperatorRewardAddressChange_RevertWhenNotRewardAddress()
+    function test_proposeNodeOperatorRewardAddressChange_RevertWhen_NotRewardAddress()
         public
     {
         uint256 noId = createNodeOperator();
@@ -2437,7 +2437,7 @@ contract CsmProposeNodeOperatorRewardAddressChange is CSMCommon {
         csm.proposeNodeOperatorRewardAddressChange(noId, stranger);
     }
 
-    function test_proposeNodeOperatorRewardAddressChange_RevertWhenAlreadyProposed()
+    function test_proposeNodeOperatorRewardAddressChange_RevertWhen_AlreadyProposed()
         public
     {
         uint256 noId = createNodeOperator();
@@ -2449,7 +2449,7 @@ contract CsmProposeNodeOperatorRewardAddressChange is CSMCommon {
         csm.proposeNodeOperatorRewardAddressChange(noId, stranger);
     }
 
-    function test_proposeNodeOperatorRewardAddressChange_RevertWhenSameAddressProposed()
+    function test_proposeNodeOperatorRewardAddressChange_RevertWhen_SameAddressProposed()
         public
     {
         uint256 noId = createNodeOperator();
@@ -2483,14 +2483,14 @@ contract CsmConfirmNodeOperatorRewardAddressChange is CSMCommon {
         assertEq(no.rewardAddress, stranger);
     }
 
-    function test_confirmNodeOperatorRewardAddressChange_RevertWhenNoNodeOperator()
+    function test_confirmNodeOperatorRewardAddressChange_RevertWhen_NoNodeOperator()
         public
     {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.confirmNodeOperatorRewardAddressChange(0);
     }
 
-    function test_confirmNodeOperatorRewardAddressChange_RevertWhenNotProposed()
+    function test_confirmNodeOperatorRewardAddressChange_RevertWhen_NotProposed()
         public
     {
         uint256 noId = createNodeOperator();
@@ -2499,7 +2499,7 @@ contract CsmConfirmNodeOperatorRewardAddressChange is CSMCommon {
         csm.confirmNodeOperatorRewardAddressChange(noId);
     }
 
-    function test_confirmNodeOperatorRewardAddressChange_RevertWhenOtherProposed()
+    function test_confirmNodeOperatorRewardAddressChange_RevertWhen_OtherProposed()
         public
     {
         uint256 noId = createNodeOperator();
@@ -2556,14 +2556,14 @@ contract CsmResetNodeOperatorManagerAddress is CSMCommon {
         csm.confirmNodeOperatorManagerAddressChange(noId);
     }
 
-    function test_resetNodeOperatorManagerAddress_RevertWhenNoNodeOperator()
+    function test_resetNodeOperatorManagerAddress_RevertWhen_NoNodeOperator()
         public
     {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.resetNodeOperatorManagerAddress(0);
     }
 
-    function test_resetNodeOperatorManagerAddress_RevertWhenNotRewardAddress()
+    function test_resetNodeOperatorManagerAddress_RevertWhen_NotRewardAddress()
         public
     {
         uint256 noId = createNodeOperator();
@@ -2572,7 +2572,9 @@ contract CsmResetNodeOperatorManagerAddress is CSMCommon {
         csm.resetNodeOperatorManagerAddress(noId);
     }
 
-    function test_resetNodeOperatorManagerAddress_RevertIfSameAddress() public {
+    function test_resetNodeOperatorManagerAddress_RevertWhen_SameAddress()
+        public
+    {
         uint256 noId = createNodeOperator();
         vm.expectRevert(NOAddresses.SameAddress.selector);
         vm.prank(nodeOperator);
@@ -2832,7 +2834,7 @@ contract CsmUnvetKeys is CSMCommon {
         assertEq(no.totalVettedKeys, 3);
     }
 
-    function test_unvetKeys_RevertIfNodeOperatorDoesntExist() public {
+    function test_unvetKeys_RevertWhen_NodeOperatorDoesntExist() public {
         createNodeOperator(); // Make sure there is at least one node operator.
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         unvetKeys(1, 0);
@@ -3214,12 +3216,12 @@ contract CsmRemoveKeys is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_removeKeys_RevertWhenNoNodeOperator() public {
+    function test_removeKeys_RevertWhen_NoNodeOperator() public {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.removeKeys({ nodeOperatorId: 0, startIndex: 0, keysCount: 1 });
     }
 
-    function test_removeKeys_RevertWhenMoreThanAdded() public {
+    function test_removeKeys_RevertWhen_MoreThanAdded() public {
         uint256 noId = createNodeOperator({
             managerAddress: address(this),
             keysCount: 1
@@ -3229,7 +3231,7 @@ contract CsmRemoveKeys is CSMCommon {
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 2 });
     }
 
-    function test_removeKeys_RevertWhenLessThanDeposited() public {
+    function test_removeKeys_RevertWhen_LessThanDeposited() public {
         uint256 noId = createNodeOperator({
             managerAddress: address(this),
             keysCount: 2
@@ -3241,7 +3243,7 @@ contract CsmRemoveKeys is CSMCommon {
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 1 });
     }
 
-    function test_removeKeys_RevertWhenNotEligible() public {
+    function test_removeKeys_RevertWhen_NotEligible() public {
         uint256 noId = createNodeOperator({
             managerAddress: address(this),
             keysCount: 1
@@ -3925,7 +3927,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         assertEq(no.totalVettedKeys, 2);
     }
 
-    function test_updateTargetValidatorsLimits_RevertWhenNoNodeOperator()
+    function test_updateTargetValidatorsLimits_RevertWhen_NoNodeOperator()
         public
     {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
@@ -4006,7 +4008,9 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
         );
     }
 
-    function test_updateStuckValidatorsCount_RevertWhenNoNodeOperator() public {
+    function test_updateStuckValidatorsCount_RevertWhen_NoNodeOperator()
+        public
+    {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.updateStuckValidatorsCount(
             bytes.concat(bytes8(0x0000000000000000)),
@@ -4014,7 +4018,7 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
         );
     }
 
-    function test_updateStuckValidatorsCount_RevertWhenCountMoreThanDeposited()
+    function test_updateStuckValidatorsCount_RevertWhen_CountMoreThanDeposited()
         public
     {
         createNodeOperator(3);
@@ -4067,7 +4071,9 @@ contract CsmUpdateExitedValidatorsCount is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_updateExitedValidatorsCount_RevertIfNoNodeOperator() public {
+    function test_updateExitedValidatorsCount_RevertWhen_NoNodeOperator()
+        public
+    {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.updateExitedValidatorsCount(
             bytes.concat(bytes8(0x0000000000000000)),
@@ -4075,7 +4081,7 @@ contract CsmUpdateExitedValidatorsCount is CSMCommon {
         );
     }
 
-    function test_updateExitedValidatorsCount_RevertIfCountMoreThanDeposited()
+    function test_updateExitedValidatorsCount_RevertWhen_CountMoreThanDeposited()
         public
     {
         createNodeOperator(1);
@@ -4087,7 +4093,7 @@ contract CsmUpdateExitedValidatorsCount is CSMCommon {
         );
     }
 
-    function test_updateExitedValidatorsCount_RevertIfExitedKeysDecrease()
+    function test_updateExitedValidatorsCount_RevertWhen_ExitedKeysDecrease()
         public
     {
         createNodeOperator(1);
@@ -4151,7 +4157,9 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_unsafeUpdateValidatorsCount_RevertIfNoNodeOperator() public {
+    function test_unsafeUpdateValidatorsCount_RevertWhen_NoNodeOperator()
+        public
+    {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: 100500,
@@ -4160,7 +4168,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         });
     }
 
-    function test_unsafeUpdateValidatorsCount_RevertIfNotStakingRouter()
+    function test_unsafeUpdateValidatorsCount_RevertWhen_NotStakingRouter()
         public
     {
         expectRoleRevert(stranger, csm.STAKING_ROUTER_ROLE());
@@ -4172,7 +4180,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         });
     }
 
-    function test_unsafeUpdateValidatorsCount_RevertIfExitedCountMoreThanDeposited()
+    function test_unsafeUpdateValidatorsCount_RevertWhen_ExitedCountMoreThanDeposited()
         public
     {
         uint256 noId = createNodeOperator(1);
@@ -4185,7 +4193,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         });
     }
 
-    function test_unsafeUpdateValidatorsCount_RevertIfStuckCountMoreThanDeposited()
+    function test_unsafeUpdateValidatorsCount_RevertWhen_StuckCountMoreThanDeposited()
         public
     {
         uint256 noId = createNodeOperator(1);
@@ -4259,7 +4267,7 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_reportELRewardsStealingPenalty_RevertWhenNoNodeOperator()
+    function test_reportELRewardsStealingPenalty_RevertWhen_NoNodeOperator()
         public
     {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
@@ -4333,7 +4341,7 @@ contract CsmCancelELRewardsStealingPenalty is CSMCommon {
         assertEq(csm.getNonce(), nonce);
     }
 
-    function test_cancelELRewardsStealingPenalty_RevertWhenNoNodeOperator()
+    function test_cancelELRewardsStealingPenalty_RevertWhen_NoNodeOperator()
         public
     {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
@@ -4739,7 +4747,7 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
         _assertQueueState(exp);
     }
 
-    function test_compensateELRewardsStealingPenalty_revertWhenNoNodeOperator()
+    function test_compensateELRewardsStealingPenalty_RevertWhen_NoNodeOperator()
         public
     {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
@@ -4840,18 +4848,18 @@ contract CsmSubmitWithdrawal is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_submitWithdrawal_RevertWhenNoNodeOperator() public {
+    function test_submitWithdrawal_RevertWhen_NoNodeOperator() public {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.submitWithdrawal(0, 0, 0);
     }
 
-    function test_submitWithdrawal_RevertWhenInvalidKeyIndexOffset() public {
+    function test_submitWithdrawal_RevertWhen_InvalidKeyIndexOffset() public {
         uint256 noId = createNodeOperator();
         vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
         csm.submitWithdrawal(noId, 0, 0);
     }
 
-    function test_submitWithdrawal_RevertWhenAlreadySubmitted() public {
+    function test_submitWithdrawal_RevertWhen_AlreadySubmitted() public {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
         uint256 depositSize = DEPOSIT_SIZE;
@@ -4940,12 +4948,12 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         csm.submitInitialSlashing(noId, keyIndex);
     }
 
-    function test_submitInitialSlashing_RevertWhenNoNodeOperator() public {
+    function test_submitInitialSlashing_RevertWhen_NoNodeOperator() public {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.submitInitialSlashing(0, 0);
     }
 
-    function test_submitInitialSlashing_RevertWhenInvalidKeyIndexOffset()
+    function test_submitInitialSlashing_RevertWhen_InvalidKeyIndexOffset()
         public
     {
         uint256 noId = createNodeOperator();
@@ -4953,7 +4961,7 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         csm.submitInitialSlashing(noId, 0);
     }
 
-    function test_submitInitialSlashing_RevertWhenAlreadySubmitted() public {
+    function test_submitInitialSlashing_RevertWhen_AlreadySubmitted() public {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
 
@@ -4962,7 +4970,7 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         csm.submitInitialSlashing(noId, 0);
     }
 
-    function test_submitInitialSlashing_RevertWhenAlreadyWithdrawn() public {
+    function test_submitInitialSlashing_RevertWhen_AlreadyWithdrawn() public {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
         csm.submitWithdrawal(noId, 0, 32 ether);
@@ -5437,7 +5445,7 @@ contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
         csm.activatePublicRelease();
     }
 
-    function test_addNodeOperatorETH_RevertWhenNoPublicReleaseYet() public {
+    function test_addNodeOperatorETH_RevertWhen_NoPublicReleaseYet() public {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -5526,7 +5534,7 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
         assertEq(curve.points[0], BOND_SIZE / 2);
     }
 
-    function test_addNodeOperator_RevertWhenMoreThanMaxSigningKeysLimit()
+    function test_addNodeOperator_RevertWhen_MoreThanMaxSigningKeysLimit()
         public
     {
         bytes32[] memory proof = merkleTree.getProof(0);
