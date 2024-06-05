@@ -59,6 +59,6 @@ contract EarlyAdoptionTest is Test, Utilities, DeploymentFixtures {
             address(0)
         );
         uint256 noId = csm.getNodeOperatorsCount() - 1;
-        assertEq(accounting.getBondCurve(noId).id, earlyAdoption.CURVE_ID());
+        assertEq(accounting.getBondCurveId(noId), earlyAdoption.CURVE_ID());
     }
 }

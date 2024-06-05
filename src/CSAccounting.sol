@@ -32,19 +32,17 @@ contract CSAccounting is
 {
     using SafeERC20 for IERC20;
 
-    bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE"); // 0x139c2898040ef16910dc9f44dc697df79363da767d8bc92f2e310312b816e46d
-    bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE"); // 0x2fc10cc8ae19568712f7a176fb4978616a610650813c9d05326c34abb62749c7
+    bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
+    bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant ACCOUNTING_MANAGER_ROLE =
-        keccak256("ACCOUNTING_MANAGER_ROLE"); // 0x40579467dba486691cc62fd8536d22c6d4dc9cdc7bc716ef2518422aa554c098
-    bytes32 public constant ADD_BOND_CURVE_ROLE =
-        keccak256("ADD_BOND_CURVE_ROLE"); // 0xd2becf7ae0eafe4edadee8d89582631d5922eccd2ac7b3fdf4afbef7595f4512
-    bytes32 public constant SET_DEFAULT_BOND_CURVE_ROLE =
-        keccak256("SET_DEFAULT_BOND_CURVE_ROLE"); // 0xb96689e168af25a79300d9b242da3d0653f6030e5c7a93192007dbd3f520875b
+        keccak256("ACCOUNTING_MANAGER_ROLE");
+    bytes32 public constant MANAGE_BOND_CURVES_ROLE =
+        keccak256("MANAGE_BOND_CURVES_ROLE");
     bytes32 public constant SET_BOND_CURVE_ROLE =
-        keccak256("SET_BOND_CURVE_ROLE"); // 0x645c9e6d2a86805cb5a28b1e4751c0dab493df7cf935070ce405489ba1a7bf72
+        keccak256("SET_BOND_CURVE_ROLE");
     bytes32 public constant RESET_BOND_CURVE_ROLE =
-        keccak256("RESET_BOND_CURVE_ROLE"); // 0xb5dffea014b759c493d63b1edaceb942631d6468998125e1b4fe427c99082134
-    bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE"); // 0xb3e25b5404b87e5a838579cb5d7481d61ad96ee284d38ec1e97c07ba64e7f6fc
+        keccak256("RESET_BOND_CURVE_ROLE");
+    bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
     ICSModule public immutable CSM;
     ICSFeeDistributor public feeDistributor;
@@ -154,18 +152,20 @@ contract CSAccounting is
 
     /// @notice Add a new bond curve
     /// @param bondCurve Bond curve definition to add
+    /// @return Id fo the added curve
     function addBondCurve(
         uint256[] memory bondCurve
-    ) external onlyRole(ADD_BOND_CURVE_ROLE) returns (uint256) {
+    ) external onlyRole(MANAGE_BOND_CURVES_ROLE) returns (uint256) {
         return CSBondCurve._addBondCurve(bondCurve);
     }
 
-    /// @notice Set default bond curve
-    /// @param curveId ID of the bond curve to set as default
-    function setDefaultBondCurve(
-        uint256 curveId
-    ) external onlyRole(SET_DEFAULT_BOND_CURVE_ROLE) {
-        CSBondCurve._setDefaultBondCurve(curveId);
+    /// @notice Add a new bond curve
+    /// @param bondCurve Bond curve definition to add
+    function updateBondCurve(
+        uint256 curveId,
+        uint256[] memory bondCurve
+    ) external onlyRole(MANAGE_BOND_CURVES_ROLE) {
+        CSBondCurve._updateBondCurve(curveId, bondCurve);
     }
 
     /// @notice Set the bond curve for the given Node Operator
@@ -504,12 +504,14 @@ contract CSAccounting is
 
     /// @notice Get the bond amount in wstETH required for the `keysCount` keys using the default bond curve
     /// @param keysCount Keys count to calculate the required bond amount
+    /// @param curveId Id of the curve to perform calculations against
     function getBondAmountByKeysCountWstETH(
-        uint256 keysCount
+        uint256 keysCount,
+        uint256 curveId
     ) public view returns (uint256) {
         return
             WSTETH.getWstETHByStETH(
-                CSBondCurve.getBondAmountByKeysCount(keysCount)
+                CSBondCurve.getBondAmountByKeysCount(keysCount, curveId)
             );
     }
 

@@ -6,7 +6,6 @@ pragma solidity 0.8.24;
 interface ICSBondCurve {
     /// @dev Bond curve structure.
     /// It contains:
-    ///  - id     |> identifier to set the default curve for the module or particular Node Operator
     ///  - points |> total bond amount for particular keys count
     ///  - trend  |> value for the next keys after described points
     ///
@@ -40,12 +39,9 @@ interface ICSBondCurve {
     ///       |          1          2          3          i
     ///
     struct BondCurve {
-        uint256 id;
         uint256[] points;
         uint256 trend;
     }
-
-    function defaultBondCurveId() external view returns (uint256);
 
     function getCurveInfo(
         uint256 curveId
@@ -55,8 +51,13 @@ interface ICSBondCurve {
         uint256 nodeOperatorId
     ) external view returns (BondCurve memory);
 
+    function getBondCurveId(
+        uint256 nodeOperatorId
+    ) external view returns (uint256);
+
     function getBondAmountByKeysCount(
-        uint256 keys
+        uint256 keys,
+        uint256 curveId
     ) external view returns (uint256);
 
     function getBondAmountByKeysCount(
@@ -65,7 +66,8 @@ interface ICSBondCurve {
     ) external view returns (uint256);
 
     function getKeysCountByBondAmount(
-        uint256 amount
+        uint256 amount,
+        uint256 curveId
     ) external view returns (uint256);
 
     function getKeysCountByBondAmount(

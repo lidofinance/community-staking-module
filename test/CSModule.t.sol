@@ -287,7 +287,10 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         earlyAdoptionCurve[0] = BOND_SIZE / 2;
 
         vm.startPrank(admin);
-        accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), address(this));
+        accounting.grantRole(
+            accounting.MANAGE_BOND_CURVES_ROLE(),
+            address(this)
+        );
         vm.stopPrank();
 
         uint256 curveId = accounting.addBondCurve(earlyAdoptionCurve);
@@ -319,7 +322,10 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
             address(this)
         );
         csm.grantRole(csm.VERIFIER_ROLE(), address(this));
-        accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), address(this));
+        accounting.grantRole(
+            accounting.MANAGE_BOND_CURVES_ROLE(),
+            address(this)
+        );
         vm.stopPrank();
 
         csm.setKeyRemovalCharge(0.05 ether);
@@ -381,7 +387,10 @@ contract CSMCommonNoRoles is CSMFixtures {
         earlyAdoptionCurve[0] = BOND_SIZE / 2;
 
         vm.startPrank(admin);
-        accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), address(this));
+        accounting.grantRole(
+            accounting.MANAGE_BOND_CURVES_ROLE(),
+            address(this)
+        );
         vm.stopPrank();
 
         uint256 curveId = accounting.addBondCurve(earlyAdoptionCurve);
@@ -4551,7 +4560,7 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         );
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
-        assertEq(accounting.getBondCurve(noId).id, 1);
+        assertEq(accounting.getBondCurveId(noId), 0);
         assertEq(csm.getNonce(), nonce);
         assertEq(accounting.getUnbondedKeysCount(noId), unbonded);
     }
@@ -4594,7 +4603,7 @@ contract CsmSettleELRewardsStealingPenalty is CSMCommon {
         );
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
-        assertEq(accounting.getBondCurve(noId).id, 1);
+        assertEq(accounting.getBondCurveId(noId), 0);
         assertEq(csm.getNonce(), nonce + 1);
         assertEq(accounting.getUnbondedKeysCount(noId), unbonded + 1);
     }

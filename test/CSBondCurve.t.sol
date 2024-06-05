@@ -19,8 +19,11 @@ contract CSBondCurveTestable is CSBondCurve(10) {
         return _addBondCurve(_bondCurve);
     }
 
-    function setDefaultBondCurve(uint256 curveId) external {
-        _setDefaultBondCurve(curveId);
+    function updateBondCurve(
+        uint256 curveId,
+        uint256[] memory _bondCurve
+    ) external {
+        _updateBondCurve(curveId, _bondCurve);
     }
 
     function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external {
@@ -58,7 +61,7 @@ contract CSBondCurveTest is Test {
 
         ICSBondCurve.BondCurve memory added = bondCurve.getCurveInfo(addedId);
 
-        assertEq(added.id, 2);
+        assertEq(addedId, 1);
         assertEq(added.points.length, 2);
         assertEq(added.points[0], 16 ether);
         assertEq(added.points[1], 32 ether);
@@ -92,37 +95,67 @@ contract CSBondCurveTest is Test {
         bondCurve.addBondCurve(curvePoints);
     }
 
-    function test_setDefaultBondCurve() public {
-        uint256[] memory curvePoints = new uint256[](1);
-        curvePoints[0] = 16 ether;
-        uint256 addedId = bondCurve.addBondCurve(curvePoints);
-        ICSBondCurve.BondCurve memory added = bondCurve.getCurveInfo(addedId);
+    function test_updateBondCurve() public {
+        uint256[] memory _bondCurve = new uint256[](2);
+        _bondCurve[0] = 16 ether;
+        _bondCurve[1] = 32 ether;
+
+        uint256 toUpdateId = 0;
 
         vm.expectEmit(true, true, true, true, address(bondCurve));
-        emit CSBondCurve.DefaultBondCurveChanged(added.id);
+        emit CSBondCurve.BondCurveUpdated(toUpdateId, _bondCurve);
 
-        uint256 idBefore = bondCurve.defaultBondCurveId();
-        bondCurve.setDefaultBondCurve(added.id);
-        uint256 idAfter = bondCurve.defaultBondCurveId();
+        bondCurve.updateBondCurve(toUpdateId, _bondCurve);
 
-        assertNotEq(idBefore, idAfter);
-        assertEq(idAfter, added.id);
+        ICSBondCurve.BondCurve memory updated = bondCurve.getCurveInfo(
+            toUpdateId
+        );
+
+        assertEq(updated.points.length, 2);
+        assertEq(updated.points[0], 16 ether);
+        assertEq(updated.points[1], 32 ether);
+        assertEq(updated.trend, 16 ether);
     }
 
-    function test_setDefaultBondCurve_RevertWhen_CurveIdIsZero() public {
-        vm.expectRevert(CSBondCurve.InvalidBondCurveId.selector);
-        bondCurve.setDefaultBondCurve(0);
+    function test_updateBondCurve_RevertWhen_LessThanMinBondCurveLength()
+        public
+    {
+        vm.expectRevert(CSBondCurve.InvalidBondCurveLength.selector);
+        bondCurve.updateBondCurve(0, new uint256[](0));
     }
 
-    function test_setDefaultBondCurve_RevertWhen_NoExistingCurveId() public {
-        vm.expectRevert(CSBondCurve.InvalidBondCurveId.selector);
-        bondCurve.setDefaultBondCurve(100500);
+    function test_updateBondCurve_RevertWhen_MoreThanMaxBondCurveLength()
+        public
+    {
+        vm.expectRevert(CSBondCurve.InvalidBondCurveLength.selector);
+        bondCurve.updateBondCurve(0, new uint256[](21));
     }
 
-    function test_setDefaultBondCurve_RevertWhen_CurveIdIsTheSame() public {
-        uint256 id = bondCurve.defaultBondCurveId();
+    function test_updateBondCurve_RevertWhen_ZeroValue() public {
+        uint256[] memory curvePoints = new uint256[](1);
+        curvePoints[0] = 0 ether;
+
+        vm.expectRevert(CSBondCurve.InvalidBondCurveValues.selector);
+        bondCurve.updateBondCurve(0, curvePoints);
+    }
+
+    function test_updateBondCurve_RevertWhen_NextValueIsLessThanPrevious()
+        public
+    {
+        uint256[] memory curvePoints = new uint256[](2);
+        curvePoints[0] = 16 ether;
+        curvePoints[1] = 8 ether;
+
+        vm.expectRevert(CSBondCurve.InvalidBondCurveValues.selector);
+        bondCurve.updateBondCurve(0, curvePoints);
+    }
+
+    function test_updateBondCurve_RevertWhen_InvalidBondCurveId() public {
+        uint256[] memory _bondCurve = new uint256[](2);
+        _bondCurve[0] = 16 ether;
+        _bondCurve[1] = 32 ether;
         vm.expectRevert(CSBondCurve.InvalidBondCurveId.selector);
-        bondCurve.setDefaultBondCurve(id);
+        bondCurve.updateBondCurve(1, _bondCurve);
     }
 
     function test_setBondCurve() public {
@@ -131,16 +164,9 @@ contract CSBondCurveTest is Test {
         curvePoints[0] = 16 ether;
         uint256 addedId = bondCurve.addBondCurve(curvePoints);
 
-        ICSBondCurve.BondCurve memory added = bondCurve.getCurveInfo(addedId);
-        bondCurve.setBondCurve(noId, added.id);
-        ICSBondCurve.BondCurve memory set = bondCurve.getBondCurve(noId);
+        bondCurve.setBondCurve(noId, addedId);
 
-        assertEq(set.id, added.id);
-    }
-
-    function test_setBondCurve_RevertWhen_ZeroCurveId() public {
-        vm.expectRevert(CSBondCurve.InvalidBondCurveId.selector);
-        bondCurve.setBondCurve(0, 0);
+        assertEq(bondCurve.getBondCurveId(noId), addedId);
     }
 
     function test_setBondCurve_RevertWhen_NoExistingCurveId() public {
@@ -148,44 +174,37 @@ contract CSBondCurveTest is Test {
         bondCurve.setBondCurve(0, 100500);
     }
 
-    function test_getBondCurve_default() public {
-        ICSBondCurve.BondCurve memory curve = bondCurve.getBondCurve(100500);
-        assertEq(curve.id, bondCurve.defaultBondCurveId());
-    }
-
     function test_resetBondCurve() public {
         uint256 noId = 0;
         uint256[] memory curvePoints = new uint256[](1);
         curvePoints[0] = 16 ether;
         uint256 addedId = bondCurve.addBondCurve(curvePoints);
-        ICSBondCurve.BondCurve memory added = bondCurve.getCurveInfo(addedId);
-        bondCurve.setBondCurve(noId, added.id);
+        bondCurve.setBondCurve(noId, addedId);
 
         vm.expectEmit(true, true, true, true, address(bondCurve));
-        emit CSBondCurve.BondCurveChanged(noId, bondCurve.defaultBondCurveId());
+        emit CSBondCurve.BondCurveChanged(noId, 0);
 
         bondCurve.resetBondCurve(noId);
-        ICSBondCurve.BondCurve memory reset = bondCurve.getBondCurve(noId);
-        assertEq(reset.id, bondCurve.defaultBondCurveId());
+        assertEq(bondCurve.getBondCurveId(noId), 0);
     }
 
     function test_getKeysCountByBondAmount_default() public {
-        assertEq(bondCurve.getKeysCountByBondAmount(0), 0);
-        assertEq(bondCurve.getKeysCountByBondAmount(1.9 ether), 0);
-        assertEq(bondCurve.getKeysCountByBondAmount(2 ether), 1);
-        assertEq(bondCurve.getKeysCountByBondAmount(2.1 ether), 1);
-        assertEq(bondCurve.getKeysCountByBondAmount(4 ether), 2);
-        assertEq(bondCurve.getKeysCountByBondAmount(5 ether), 3);
-        assertEq(bondCurve.getKeysCountByBondAmount(5.1 ether), 3);
-        assertEq(bondCurve.getKeysCountByBondAmount(6 ether), 4);
+        assertEq(bondCurve.getKeysCountByBondAmount(0, 0), 0);
+        assertEq(bondCurve.getKeysCountByBondAmount(1.9 ether, 0), 0);
+        assertEq(bondCurve.getKeysCountByBondAmount(2 ether, 0), 1);
+        assertEq(bondCurve.getKeysCountByBondAmount(2.1 ether, 0), 1);
+        assertEq(bondCurve.getKeysCountByBondAmount(4 ether, 0), 2);
+        assertEq(bondCurve.getKeysCountByBondAmount(5 ether, 0), 3);
+        assertEq(bondCurve.getKeysCountByBondAmount(5.1 ether, 0), 3);
+        assertEq(bondCurve.getKeysCountByBondAmount(6 ether, 0), 4);
     }
 
     function test_getBondAmountByKeysCount_default() public {
-        assertEq(bondCurve.getBondAmountByKeysCount(0), 0);
-        assertEq(bondCurve.getBondAmountByKeysCount(1), 2 ether);
-        assertEq(bondCurve.getBondAmountByKeysCount(2), 4 ether);
-        assertEq(bondCurve.getBondAmountByKeysCount(3), 5 ether);
-        assertEq(bondCurve.getBondAmountByKeysCount(4), 6 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(0, 0), 0);
+        assertEq(bondCurve.getBondAmountByKeysCount(1, 0), 2 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(2, 0), 4 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(3, 0), 5 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(4, 0), 6 ether);
     }
 
     function test_getKeysCountByCurveValue_individual() public {

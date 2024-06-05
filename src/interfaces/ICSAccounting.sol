@@ -27,7 +27,8 @@ interface ICSAccounting is ICSBondCore, ICSBondCurve, ICSBondLock {
     ) external view returns (uint256);
 
     function getBondAmountByKeysCountWstETH(
-        uint256 keysCount
+        uint256 keysCount,
+        uint256 curveId
     ) external view returns (uint256);
 
     function getBondAmountByKeysCountWstETH(

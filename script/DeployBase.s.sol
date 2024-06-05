@@ -168,14 +168,14 @@ abstract contract DeployBase is Script {
             });
 
             accounting.grantRole(
-                accounting.ADD_BOND_CURVE_ROLE(),
+                accounting.MANAGE_BOND_CURVES_ROLE(),
                 address(deployer)
             );
             uint256 eaCurveId = accounting.addBondCurve(
                 config.earlyAdoptionBondCurve
             );
             accounting.revokeRole(
-                accounting.ADD_BOND_CURVE_ROLE(),
+                accounting.MANAGE_BOND_CURVES_ROLE(),
                 address(deployer)
             );
 

@@ -81,8 +81,6 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         vm.expectEmit(true, false, false, true, address(accounting));
         emit CSBondCurve.BondCurveAdded(curve);
         vm.expectEmit(true, false, false, true, address(accounting));
-        emit CSBondCurve.DefaultBondCurveChanged(1);
-        vm.expectEmit(true, false, false, true, address(accounting));
         emit CSBondLock.BondLockRetentionPeriodChanged(8 weeks);
         vm.expectEmit(true, false, false, true, address(accounting));
         emit CSAccounting.ChargeRecipientSet(testChargeRecipient);
@@ -197,8 +195,7 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities, PermitTokenBase {
         accounting.grantRole(accounting.ACCOUNTING_MANAGER_ROLE(), admin);
         accounting.grantRole(accounting.PAUSE_ROLE(), admin);
         accounting.grantRole(accounting.RESUME_ROLE(), admin);
-        accounting.grantRole(accounting.ADD_BOND_CURVE_ROLE(), admin);
-        accounting.grantRole(accounting.SET_DEFAULT_BOND_CURVE_ROLE(), admin);
+        accounting.grantRole(accounting.MANAGE_BOND_CURVES_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
         vm.stopPrank();
     }
@@ -1148,24 +1145,23 @@ contract CSAccountingGetBondAmountByKeysCountWstETHTest is
     CSAccountingGetRequiredBondForKeysBaseTest
 {
     function test_default() public override {
-        assertEq(accounting.getBondAmountByKeysCountWstETH(0), 0);
+        assertEq(accounting.getBondAmountByKeysCountWstETH(0, 0), 0);
         assertEq(
-            accounting.getBondAmountByKeysCountWstETH(1),
+            accounting.getBondAmountByKeysCountWstETH(1, 0),
             wstETH.getWstETHByStETH(2 ether)
         );
         assertEq(
-            accounting.getBondAmountByKeysCountWstETH(2),
+            accounting.getBondAmountByKeysCountWstETH(2, 0),
             wstETH.getWstETHByStETH(4 ether)
         );
         assertEq(
-            accounting.getBondAmountByKeysCountWstETH(8),
+            accounting.getBondAmountByKeysCountWstETH(8, 0),
             wstETH.getWstETHByStETH(16 ether)
         );
     }
 
     function test_WithCurve() public override {
         ICSBondCurve.BondCurve memory curve = ICSBondCurve.BondCurve({
-            id: 0,
             points: defaultCurve,
             trend: 1 ether
         });
@@ -3550,10 +3546,10 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         curvePoints[1] = 4 ether;
 
         vm.prank(admin);
-        accounting.addBondCurve(curvePoints);
+        uint256 addedId = accounting.addBondCurve(curvePoints);
 
         ICSBondCurve.BondCurve memory curve = accounting.getCurveInfo({
-            curveId: 2
+            curveId: addedId
         });
 
         assertEq(curve.points[0], 2 ether);
@@ -3561,28 +3557,39 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
     }
 
     function test_addBondCurve_RevertWhen_DoesNotHaveRole() public {
-        expectRoleRevert(stranger, accounting.ADD_BOND_CURVE_ROLE());
+        expectRoleRevert(stranger, accounting.MANAGE_BOND_CURVES_ROLE());
         vm.prank(stranger);
         accounting.addBondCurve(new uint256[](0));
     }
 
-    function test_setDefaultBondCurve() public {
+    function test_updateBondCurve() public {
         uint256[] memory curvePoints = new uint256[](2);
         curvePoints[0] = 2 ether;
         curvePoints[1] = 4 ether;
 
-        vm.startPrank(admin);
-        accounting.addBondCurve(curvePoints);
-        accounting.setDefaultBondCurve(2);
-        vm.stopPrank();
+        uint256 toUpdate = 0;
 
-        assertEq(accounting.defaultBondCurveId(), 2);
+        vm.prank(admin);
+        accounting.updateBondCurve(toUpdate, curvePoints);
+
+        ICSBondCurve.BondCurve memory curve = accounting.getCurveInfo({
+            curveId: toUpdate
+        });
+
+        assertEq(curve.points[0], 2 ether);
+        assertEq(curve.points[1], 4 ether);
     }
 
-    function test_setDefaultBondCurve_RevertWhen_DoesNotHaveRole() public {
-        expectRoleRevert(stranger, accounting.SET_DEFAULT_BOND_CURVE_ROLE());
+    function test_updateBondCurve_RevertWhen_DoesNotHaveRole() public {
+        expectRoleRevert(stranger, accounting.MANAGE_BOND_CURVES_ROLE());
         vm.prank(stranger);
-        accounting.setDefaultBondCurve(2);
+        accounting.updateBondCurve(0, new uint256[](0));
+    }
+
+    function test_updateBondCurve_RevertWhen_InvalidBondCurveId() public {
+        vm.expectRevert(CSBondCurve.InvalidBondCurveId.selector);
+        vm.prank(admin);
+        accounting.updateBondCurve(1, new uint256[](0));
     }
 
     function test_setBondCurve() public {
@@ -3591,8 +3598,8 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         curvePoints[1] = 4 ether;
 
         vm.startPrank(admin);
-        accounting.addBondCurve(curvePoints);
-        accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
+        uint256 addedId = accounting.addBondCurve(curvePoints);
+        accounting.setBondCurve({ nodeOperatorId: 0, curveId: addedId });
         vm.stopPrank();
 
         ICSBondCurve.BondCurve memory curve = accounting.getBondCurve(0);
@@ -3613,15 +3620,15 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         curvePoints[1] = 2 ether;
 
         vm.startPrank(admin);
-        accounting.addBondCurve(curvePoints);
-        accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
+        uint256 addedId = accounting.addBondCurve(curvePoints);
+        accounting.setBondCurve({ nodeOperatorId: 0, curveId: addedId });
         vm.stopPrank();
         vm.prank(address(stakingModule));
         accounting.resetBondCurve({ nodeOperatorId: 0 });
 
         ICSBondCurve.BondCurve memory curve = accounting.getBondCurve(0);
 
-        uint256[] memory defaultPoints = accounting.getBondCurve(1).points;
+        uint256[] memory defaultPoints = accounting.getCurveInfo(0).points;
 
         assertEq(curve.points[0], defaultPoints[0]);
     }
