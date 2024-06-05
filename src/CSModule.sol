@@ -75,7 +75,7 @@ contract CSModule is
     mapping(uint256 noKeyIndexPacked => bool) private _isValidatorWithdrawn;
     mapping(uint256 noKeyIndexPacked => bool) private _isValidatorSlashed;
 
-    // @dev transient map used in by cleanDepositQueue method to keep track of already oserved queue batches contents
+    // @dev transient map used in by cleanDepositQueue method to keep track of already observed queue batches contents
     TransientUintUintMap private _queueLookup;
 
     uint64 private _totalDepositedValidators;
