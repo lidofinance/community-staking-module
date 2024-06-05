@@ -26,6 +26,7 @@ import { Stub } from "./helpers/mocks/Stub.sol";
 import { LidoMock } from "./helpers/mocks/LidoMock.sol";
 import { WstETHMock } from "./helpers/mocks/WstETHMock.sol";
 import { LidoLocatorMock } from "./helpers/mocks/LidoLocatorMock.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
@@ -34,6 +35,80 @@ import { ERC20Testable } from "./helpers/ERCTestable.sol";
 // TODO: non-existing node operator tests
 // TODO: bond lock permission tests
 // TODO: bond lock emit event tests
+
+contract CSAccountingBaseConstructorTest is Test, Fixtures, Utilities {
+    LidoLocatorMock internal locator;
+    WstETHMock internal wstETH;
+    LidoMock internal stETH;
+
+    CSAccounting public accounting;
+    Stub public stakingModule;
+    Stub public feeDistributor;
+
+    address internal admin;
+    address internal user;
+    address internal stranger;
+    address internal testChargeRecipient;
+
+    function setUp() public virtual {
+        admin = nextAddress("ADMIN");
+
+        user = nextAddress("USER");
+        stranger = nextAddress("STRANGER");
+        testChargeRecipient = nextAddress("CHARGERECIPIENT");
+
+        (locator, wstETH, stETH, ) = initLido();
+
+        stakingModule = new Stub();
+        feeDistributor = new Stub();
+    }
+}
+
+contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
+    function test_constructor_happyPath() public {
+        accounting = new CSAccounting(
+            address(locator),
+            address(stakingModule),
+            10,
+            4 weeks,
+            365 days
+        );
+        assertEq(address(accounting.CSM()), address(stakingModule));
+    }
+
+    function test_constructor_RevertWhen_InitOnImpl() public {
+        accounting = new CSAccounting(
+            address(locator),
+            address(stakingModule),
+            10,
+            4 weeks,
+            365 days
+        );
+
+        uint256[] memory curve = new uint256[](1);
+        curve[0] = 2 ether;
+
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        accounting.initialize(
+            curve,
+            admin,
+            address(feeDistributor),
+            8 weeks,
+            testChargeRecipient
+        );
+    }
+
+    function test_initialize_RevertWhen_ZeroModuleAddress() public {
+        vm.expectRevert(CSAccounting.ZeroModuleAddress.selector);
+        accounting = new CSAccounting(
+            address(locator),
+            address(0),
+            10,
+            4 weeks,
+            365 days
+        );
+    }
+}
 
 contract CSAccountingBaseInitTest is Test, Fixtures, Utilities {
     LidoLocatorMock internal locator;
@@ -97,7 +172,7 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         assertEq(address(accounting.feeDistributor()), address(feeDistributor));
     }
 
-    function test_initialize_revertWhen_zeroAdmin() public {
+    function test_initialize_RevertWhen_zeroAdmin() public {
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
 
@@ -113,7 +188,7 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         );
     }
 
-    function test_initialize_revertWhen_zeroFeeDistributor() public {
+    function test_initialize_RevertWhen_zeroFeeDistributor() public {
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
 
@@ -129,7 +204,7 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         );
     }
 
-    function test_initialize_revertWhen_zeroChargeRecipient() public {
+    function test_initialize_RevertWhen_zeroChargeRecipient() public {
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
 
@@ -3424,7 +3499,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
-    function test_penalize_RevertWhenSenderIsNotCSM() public {
+    function test_penalize_RevertWhen_SenderIsNotCSM() public {
         vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
         vm.prank(stranger);
         accounting.penalize(0, 20);
@@ -3457,7 +3532,7 @@ contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
-    function test_chargeFee_RevertWhenSenderIsNotCSM() public {
+    function test_chargeFee_RevertWhen_SenderIsNotCSM() public {
         vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
         vm.prank(stranger);
         accounting.chargeFee(0, 20);
@@ -3739,7 +3814,7 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
         accounting.recoverERC20(address(token), 1000);
     }
 
-    function test_recoverERC20_RevertWhenStETH() public {
+    function test_recoverERC20_RevertWhen_StETH() public {
         vm.prank(recoverer);
         vm.expectRevert(AssetRecoverer.NotAllowedToRecover.selector);
         accounting.recoverERC20(address(stETH), 1000);
