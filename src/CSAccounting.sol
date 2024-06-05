@@ -152,7 +152,7 @@ contract CSAccounting is
 
     /// @notice Add a new bond curve
     /// @param bondCurve Bond curve definition to add
-    /// @return Id fo the added curve
+    /// @return Id of the added curve
     function addBondCurve(
         uint256[] memory bondCurve
     ) external onlyRole(MANAGE_BOND_CURVES_ROLE) returns (uint256) {
