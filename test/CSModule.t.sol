@@ -3,6 +3,7 @@
 pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
+import "../src/interfaces/IStakingModule.sol";
 import "../src/CSModule.sol";
 import "../src/CSAccounting.sol";
 import "./helpers/Fixtures.sol";
@@ -628,6 +629,8 @@ contract CSMAddNodeOperatorETH is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, true, true, address(csm));
             emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, true, true, address(csm));
+            emit IStakingModule.SigningKeyAdded(0, keys);
+            vm.expectEmit(true, true, true, true, address(csm));
             emit CSModule.TotalSigningKeysCountChanged(0, 1);
         }
 
@@ -735,6 +738,8 @@ contract CSMAddNodeOperatorStETH is CSMCommon, PermitTokenBase {
         {
             vm.expectEmit(true, true, true, true, address(csm));
             emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit IStakingModule.SigningKeyAdded(0, keys);
             vm.expectEmit(true, true, true, true, address(csm));
             emit CSModule.TotalSigningKeysCountChanged(0, 1);
         }
@@ -891,6 +896,8 @@ contract CSMAddNodeOperatorWstETH is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, true, true, address(csm));
             emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, true, true, address(csm));
+            emit IStakingModule.SigningKeyAdded(0, keys);
+            vm.expectEmit(true, true, true, true, address(csm));
             emit CSModule.TotalSigningKeysCountChanged(0, 1);
         }
 
@@ -1040,7 +1047,9 @@ contract CSMAddValidatorKeys is CSMCommon, PermitTokenBase {
         uint256 nonce = csm.getNonce();
         {
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(0, 2);
+            emit IStakingModule.SigningKeyAdded(noId, keys);
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
         }
         csm.addValidatorKeysWstETH(
             noId,
@@ -1072,7 +1081,9 @@ contract CSMAddValidatorKeys is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, true, true, address(wstETH));
             emit Approval(nodeOperator, address(accounting), wstETHAmount);
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(0, 2);
+            emit IStakingModule.SigningKeyAdded(noId, keys);
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
         }
         csm.addValidatorKeysWstETH(
             noId,
@@ -1102,7 +1113,9 @@ contract CSMAddValidatorKeys is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(0, 2);
+            emit IStakingModule.SigningKeyAdded(noId, keys);
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
         }
         csm.addValidatorKeysStETH(
             noId,
@@ -1134,7 +1147,9 @@ contract CSMAddValidatorKeys is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, true, true, address(stETH));
             emit Approval(nodeOperator, address(accounting), required);
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(0, 2);
+            emit IStakingModule.SigningKeyAdded(noId, keys);
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
         }
         vm.prank(nodeOperator);
         csm.addValidatorKeysStETH(
@@ -1165,7 +1180,9 @@ contract CSMAddValidatorKeys is CSMCommon, PermitTokenBase {
         vm.prank(nodeOperator);
         {
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(0, 2);
+            emit IStakingModule.SigningKeyAdded(noId, keys);
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
         }
         csm.addValidatorKeysETH{ value: required }(noId, 1, keys, signatures);
         assertEq(csm.getNonce(), nonce + 1);
@@ -2943,8 +2960,6 @@ contract CsmGetSigningKeysWithSignatures is CSMCommon {
 }
 
 contract CsmRemoveKeys is CSMCommon {
-    event SigningKeyRemoved(uint256 indexed nodeOperatorId, bytes pubkey);
-
     bytes key0 = randomBytes(48);
     bytes key1 = randomBytes(48);
     bytes key2 = randomBytes(48);
@@ -2964,7 +2979,7 @@ contract CsmRemoveKeys is CSMCommon {
         // at the beginning
         {
             vm.expectEmit(true, true, true, true, address(csm));
-            emit SigningKeyRemoved(noId, key0);
+            emit IStakingModule.SigningKeyRemoved(noId, key0);
 
             vm.expectEmit(true, true, true, true, address(csm));
             emit CSModule.TotalSigningKeysCountChanged(noId, 4);
@@ -2980,7 +2995,7 @@ contract CsmRemoveKeys is CSMCommon {
         // in between
         {
             vm.expectEmit(true, true, true, true, address(csm));
-            emit SigningKeyRemoved(noId, key1);
+            emit IStakingModule.SigningKeyRemoved(noId, key1);
 
             vm.expectEmit(true, true, true, true, address(csm));
             emit CSModule.TotalSigningKeysCountChanged(noId, 3);
@@ -2995,7 +3010,7 @@ contract CsmRemoveKeys is CSMCommon {
         // at the end
         {
             vm.expectEmit(true, true, true, true, address(csm));
-            emit SigningKeyRemoved(noId, key2);
+            emit IStakingModule.SigningKeyRemoved(noId, key2);
 
             vm.expectEmit(true, true, true, true, address(csm));
             emit CSModule.TotalSigningKeysCountChanged(noId, 2);
@@ -3030,9 +3045,9 @@ contract CsmRemoveKeys is CSMCommon {
         {
             // NOTE: keys are being removed in reverse order to keep an original order of keys at the end of the list
             vm.expectEmit(true, true, true, true, address(csm));
-            emit SigningKeyRemoved(noId, key1);
+            emit IStakingModule.SigningKeyRemoved(noId, key1);
             vm.expectEmit(true, true, true, true, address(csm));
-            emit SigningKeyRemoved(noId, key0);
+            emit IStakingModule.SigningKeyRemoved(noId, key0);
 
             vm.expectEmit(true, true, true, true, address(csm));
             emit CSModule.TotalSigningKeysCountChanged(noId, 3);
@@ -3068,9 +3083,9 @@ contract CsmRemoveKeys is CSMCommon {
         {
             // NOTE: keys are being removed in reverse order to keep an original order of keys at the end of the list
             vm.expectEmit(true, true, true, true, address(csm));
-            emit SigningKeyRemoved(noId, key2);
+            emit IStakingModule.SigningKeyRemoved(noId, key2);
             vm.expectEmit(true, true, true, true, address(csm));
-            emit SigningKeyRemoved(noId, key1);
+            emit IStakingModule.SigningKeyRemoved(noId, key1);
 
             vm.expectEmit(true, true, true, true, address(csm));
             emit CSModule.TotalSigningKeysCountChanged(noId, 3);
@@ -3106,9 +3121,9 @@ contract CsmRemoveKeys is CSMCommon {
         {
             // NOTE: keys are being removed in reverse order to keep an original order of keys at the end of the list
             vm.expectEmit(true, true, true, true, address(csm));
-            emit SigningKeyRemoved(noId, key4);
+            emit IStakingModule.SigningKeyRemoved(noId, key4);
             vm.expectEmit(true, true, true, true, address(csm));
-            emit SigningKeyRemoved(noId, key3);
+            emit IStakingModule.SigningKeyRemoved(noId, key3);
 
             vm.expectEmit(true, true, true, true, address(csm));
             emit CSModule.TotalSigningKeysCountChanged(noId, 3);
