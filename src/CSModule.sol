@@ -754,8 +754,7 @@ contract CSModule is
                     stuckValidatorsCounts,
                     i
                 );
-            if (nodeOperatorId >= _nodeOperatorsCount)
-                revert NodeOperatorDoesNotExist();
+            _onlyExistingNodeOperator(nodeOperatorId);
             _updateStuckValidatorsCount(nodeOperatorId, stuckValidatorsCount);
         }
         _incrementModuleNonce();
@@ -783,8 +782,7 @@ contract CSModule is
                     exitedValidatorsCounts,
                     i
                 );
-            if (nodeOperatorId >= _nodeOperatorsCount)
-                revert NodeOperatorDoesNotExist();
+            _onlyExistingNodeOperator(nodeOperatorId);
 
             _updateExitedValidatorsCount({
                 nodeOperatorId: nodeOperatorId,
