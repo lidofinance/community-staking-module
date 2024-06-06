@@ -35,7 +35,7 @@
 | getLockedBondInfo                                           | 839             | 839    | 839    | 839    | 12      |
 | getRequiredBondForNextKeys                                  | 6942            | 20435  | 18989  | 31748  | 45      |
 | getRequiredBondForNextKeysWstETH                            | 22407           | 29554  | 25519  | 36214  | 20      |
-| getUnbondedKeysCount                                        | 2617            | 12169  | 7217   | 25967  | 486     |
+| getUnbondedKeysCount                                        | 2617            | 12173  | 7217   | 25967  | 486     |
 | getUnbondedKeysCountToEject                                 | 4374            | 7452   | 4945   | 14221  | 36      |
 | grantRole                                                   | 29592           | 100142 | 118680 | 118680 | 1547    |
 | initialize                                                  | 26261           | 491817 | 494094 | 494094 | 513     |
