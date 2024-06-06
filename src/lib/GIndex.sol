@@ -3,8 +3,6 @@
 
 pragma solidity 0.8.24;
 
-import { Math } from "./Math.sol";
-
 type GIndex is bytes32;
 
 using {
@@ -78,17 +76,16 @@ function shl(GIndex self, uint256 n) pure returns (GIndex) {
 
 // See https://github.com/protolambda/remerkleable/blob/91ed092d08ef0ba5ab076f0a34b0b371623db728/remerkleable/tree.py#L46
 function concat(GIndex lhs, GIndex rhs) pure returns (GIndex) {
-    uint256 lhsBitLen = Math.log2(index(lhs));
-    uint256 rhsBitLen = Math.log2(index(rhs));
+    uint256 lhsMSbIndex = fls(index(lhs));
+    uint256 rhsMSbIndex = fls(index(rhs));
 
-    // TODO: Shift operations have no overflow check. Does solidity multiplication have such a check?
-    if (lhsBitLen + rhsBitLen > 248) {
+    if (lhsMSbIndex + 1 + rhsMSbIndex > 248) {
         revert IndexOutOfRange();
     }
 
     return
         pack(
-            (index(lhs) << rhsBitLen) | (index(rhs) ^ (1 << rhsBitLen)),
+            (index(lhs) << rhsMSbIndex) | (index(rhs) ^ (1 << rhsMSbIndex)),
             pow(rhs)
         );
 }
@@ -110,4 +107,24 @@ function isParentOf(GIndex self, GIndex other) pure returns (bool) {
     }
 
     return false;
+}
+
+/// @dev From Solady LibBit, see https://github.com/Vectorized/solady/blob/main/src/utils/LibBit.sol.
+/// @dev Find last set.
+/// Returns the index of the most significant bit of `x`,
+/// counting from the least significant bit position.
+/// If `x` is zero, returns 256.
+function fls(uint256 x) pure returns (uint256 r) {
+    /// @solidity memory-safe-assembly
+    assembly {
+        // prettier-ignore
+        r := or(shl(8, iszero(x)), shl(7, lt(0xffffffffffffffffffffffffffffffff, x)))
+        r := or(r, shl(6, lt(0xffffffffffffffff, shr(r, x))))
+        r := or(r, shl(5, lt(0xffffffff, shr(r, x))))
+        r := or(r, shl(4, lt(0xffff, shr(r, x))))
+        r := or(r, shl(3, lt(0xff, shr(r, x))))
+        // prettier-ignore
+        r := or(r, byte(and(0x1f, shr(shr(r, x), 0x8421084210842108cc6318c6db6d54be)),
+                0x0706060506020504060203020504030106050205030304010505030400000000))
+    }
 }
