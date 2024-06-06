@@ -238,7 +238,7 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 toBurnShares = _sharesByEth(amount);
         uint256 burnedShares = _reduceBond(
             nodeOperatorId,
-            _sharesByEth(amount)
+            toBurnShares
         );
         IBurner(burner).requestBurnShares(address(this), burnedShares);
         emit BondBurned(
