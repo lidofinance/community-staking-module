@@ -236,10 +236,7 @@ abstract contract CSBondCore is ICSBondCore {
             LIDO.approve(burner, type(uint256).max);
         }
         uint256 toBurnShares = _sharesByEth(amount);
-        uint256 burnedShares = _reduceBond(
-            nodeOperatorId,
-            toBurnShares
-        );
+        uint256 burnedShares = _reduceBond(nodeOperatorId, toBurnShares);
         IBurner(burner).requestBurnShares(address(this), burnedShares);
         emit BondBurned(
             nodeOperatorId,
