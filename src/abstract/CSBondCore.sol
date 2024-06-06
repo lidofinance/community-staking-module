@@ -231,7 +231,7 @@ abstract contract CSBondCore is ICSBondCore {
     /// @param amount Bond amount to burn in ETH (stETH)
     function _burn(uint256 nodeOperatorId, uint256 amount) internal {
         address burner = LIDO_LOCATOR.burner();
-        // snaity check for the cases when burner address is updated
+        // sanity check for the cases when burner address is updated
         if (LIDO.allowance(address(this), burner) < amount) {
             LIDO.approve(burner, type(uint256).max);
         }
