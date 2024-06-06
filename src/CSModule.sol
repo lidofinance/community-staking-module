@@ -319,13 +319,11 @@ contract CSModule is
             eaProof
         );
 
-        {
-            uint256 amount = accounting.getBondAmountByKeysCount(
-                keysCount,
-                accounting.getBondCurve(nodeOperatorId)
-            );
-            accounting.depositStETH(msg.sender, nodeOperatorId, amount, permit);
-        }
+        uint256 amount = accounting.getBondAmountByKeysCount(
+            keysCount,
+            accounting.getBondCurve(nodeOperatorId)
+        );
+        accounting.depositStETH(msg.sender, nodeOperatorId, amount, permit);
 
         _addKeysAndUpdateDepositableValidatorsCount(
             nodeOperatorId,
@@ -364,18 +362,11 @@ contract CSModule is
             eaProof
         );
 
-        {
-            uint256 amount = accounting.getBondAmountByKeysCountWstETH(
-                keysCount,
-                accounting.getBondCurve(nodeOperatorId)
-            );
-            accounting.depositWstETH(
-                msg.sender,
-                nodeOperatorId,
-                amount,
-                permit
-            );
-        }
+        uint256 amount = accounting.getBondAmountByKeysCountWstETH(
+            keysCount,
+            accounting.getBondCurve(nodeOperatorId)
+        );
+        accounting.depositWstETH(msg.sender, nodeOperatorId, amount, permit);
 
         _addKeysAndUpdateDepositableValidatorsCount(
             nodeOperatorId,
