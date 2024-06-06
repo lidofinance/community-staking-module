@@ -282,15 +282,12 @@ contract CSModule is
 
         accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
 
-        // Reverts if keysCount is 0
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-
-        // Due to new bonded keys nonce update is required and normalize queue is required
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
-        });
+        _addKeysAndUpdateDepositableValidatorsCount(
+            nodeOperatorId,
+            keysCount,
+            publicKeys,
+            signatures
+        );
     }
 
     /// @notice Add a new Node Operator using stETH as a bond.
@@ -328,15 +325,12 @@ contract CSModule is
         );
         accounting.depositStETH(msg.sender, nodeOperatorId, amount, permit);
 
-        // Reverts if keysCount is 0
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-
-        // Due to new bonded keys nonce update is required and normalize queue is required
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
-        });
+        _addKeysAndUpdateDepositableValidatorsCount(
+            nodeOperatorId,
+            keysCount,
+            publicKeys,
+            signatures
+        );
     }
 
     /// @notice Add a new Node Operator using wstETH as a bond.
@@ -374,15 +368,12 @@ contract CSModule is
         );
         accounting.depositWstETH(msg.sender, nodeOperatorId, amount, permit);
 
-        // Reverts if keysCount is 0
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-
-        // Due to new bonded keys nonce update is required and normalize queue is required
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
-        });
+        _addKeysAndUpdateDepositableValidatorsCount(
+            nodeOperatorId,
+            keysCount,
+            publicKeys,
+            signatures
+        );
     }
 
     /// @notice Add new keys to the existing Node Operator using ETH as a bond
@@ -408,18 +399,12 @@ contract CSModule is
 
         accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
 
-        // Reverts if keysCount is 0
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-
-        // In case of stuck keys presence depositable validarors count will not change while total count will.
-        // Nonce is updated forcefully below
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: false,
-            normalizeQueueIfUpdated: true
-        });
-
-        _incrementModuleNonce();
+        _addKeysAndUpdateDepositableValidatorsCount(
+            nodeOperatorId,
+            keysCount,
+            publicKeys,
+            signatures
+        );
     }
 
     /// @notice Add new keys to the existing Node Operator using stETH as a bond
@@ -446,18 +431,12 @@ contract CSModule is
 
         accounting.depositStETH(msg.sender, nodeOperatorId, amount, permit);
 
-        // Reverts if keysCount is 0
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-
-        // In case of stuck keys presence depositable validarors count will not change while total count will.
-        // Nonce is updated forcefully below
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: false,
-            normalizeQueueIfUpdated: true
-        });
-
-        _incrementModuleNonce();
+        _addKeysAndUpdateDepositableValidatorsCount(
+            nodeOperatorId,
+            keysCount,
+            publicKeys,
+            signatures
+        );
     }
 
     /// @notice Add new keys to the existing Node Operator using wstETH as a bond
@@ -484,18 +463,12 @@ contract CSModule is
 
         accounting.depositWstETH(msg.sender, nodeOperatorId, amount, permit);
 
-        // Reverts if keysCount is 0
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-
-        // In case of stuck keys presence depositable validarors count will not change while total count will.
-        // Nonce is updated forcefully below
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: false,
-            normalizeQueueIfUpdated: true
-        });
-
-        _incrementModuleNonce();
+        _addKeysAndUpdateDepositableValidatorsCount(
+            nodeOperatorId,
+            keysCount,
+            publicKeys,
+            signatures
+        );
     }
 
     /// @notice Stake user's ETH with Lido and make a deposit in stETH to the bond of the existing Node Operator
@@ -1131,7 +1104,7 @@ contract CSModule is
         accounting.penalize(nodeOperatorId, INITIAL_SLASHING_PENALTY);
 
         // Nonce should be updated if depositableValidators change
-        // Normalize queue should not be called due to only possible decrease in depositable possible
+        // Normalize queue should not be called due to only decrease in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
@@ -1584,6 +1557,7 @@ contract CSModule is
 
         no.totalAddedKeys += uint32(keysCount);
         emit TotalSigningKeysCountChanged(nodeOperatorId, no.totalAddedKeys);
+        _incrementModuleNonce();
     }
 
     function _removeSigningKeys(
@@ -1746,6 +1720,24 @@ contract CSModule is
                 depositQueue.normalize(_nodeOperators, nodeOperatorId);
             }
         }
+    }
+
+    function _addKeysAndUpdateDepositableValidatorsCount(
+        uint256 nodeOperatorId,
+        uint256 keysCount,
+        bytes calldata publicKeys,
+        bytes calldata signatures
+    ) internal {
+        // Reverts if keysCount is 0
+        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
+
+        // Due to new bonded keys normalize queue is required
+        // Nonce is updated in _addSigningKeys
+        _updateDepositableValidatorsCount({
+            nodeOperatorId: nodeOperatorId,
+            incrementNonceIfUpdated: false,
+            normalizeQueueIfUpdated: true
+        });
     }
 
     function _onlyNodeOperatorManager(uint256 nodeOperatorId) internal view {
