@@ -227,17 +227,15 @@ abstract contract CSBondCore is ICSBondCore {
     /// @dev The method sender should be granted as `Burner.REQUEST_BURN_SHARES_ROLE` and make stETH allowance for `Burner`
     /// @param amount Bond amount to burn in ETH (stETH)
     function _burn(uint256 nodeOperatorId, uint256 amount) internal {
-        if (LIDO.allowance(address(this), LIDO_LOCATOR.burner()) < amount) {
-            LIDO.approve(LIDO_LOCATOR.burner(), type(uint256).max);
+        address burner = LIDO_LOCATOR.burner();
+        if (LIDO.allowance(address(this), burner) < amount) {
+            LIDO.approve(burner, type(uint256).max);
         }
         (uint256 toBurnShares, uint256 burnedShares) = _reduceBond(
             nodeOperatorId,
             _sharesByEth(amount)
         );
-        IBurner(LIDO_LOCATOR.burner()).requestBurnShares(
-            address(this),
-            burnedShares
-        );
+        IBurner(burner).requestBurnShares(address(this), burnedShares);
         emit BondBurned(
             nodeOperatorId,
             _ethByShares(toBurnShares),
