@@ -150,9 +150,10 @@ abstract contract CSBondCore is ICSBondCore {
     ) internal {
         if (amount == 0) return;
         WSTETH.transferFrom(from, address(this), amount);
-        uint256 stETHAmount = WSTETH.unwrap(amount);
-        uint256 shares = _sharesByEth(stETHAmount);
-        _increaseBond(nodeOperatorId, shares);
+        uint256 sharesBefore = LIDO.sharesOf(address(this));
+        WSTETH.unwrap(amount);
+        uint256 sharesAfter = LIDO.sharesOf(address(this));
+        _increaseBond(nodeOperatorId, sharesAfter - sharesBefore);
         emit BondDepositedWstETH(nodeOperatorId, from, amount);
     }
 
@@ -216,8 +217,10 @@ abstract contract CSBondCore is ICSBondCore {
             ? amountToClaim
             : claimableShares;
         if (sharesToClaim == 0) return;
+        uint256 sharesBefore = LIDO.sharesOf(address(this));
         uint256 amount = WSTETH.wrap(_ethByShares(sharesToClaim));
-        _unsafeReduceBond(nodeOperatorId, amount);
+        uint256 sharesAfter = LIDO.sharesOf(address(this));
+        _unsafeReduceBond(nodeOperatorId, sharesBefore - sharesAfter);
 
         WSTETH.transfer(to, amount);
         emit BondClaimedWstETH(nodeOperatorId, to, amount);
@@ -228,13 +231,12 @@ abstract contract CSBondCore is ICSBondCore {
     /// @param amount Bond amount to burn in ETH (stETH)
     function _burn(uint256 nodeOperatorId, uint256 amount) internal {
         address burner = LIDO_LOCATOR.burner();
+        // sanity check for the cases when burner address is updated
         if (LIDO.allowance(address(this), burner) < amount) {
             LIDO.approve(burner, type(uint256).max);
         }
-        (uint256 toBurnShares, uint256 burnedShares) = _reduceBond(
-            nodeOperatorId,
-            _sharesByEth(amount)
-        );
+        uint256 toBurnShares = _sharesByEth(amount);
+        uint256 burnedShares = _reduceBond(nodeOperatorId, toBurnShares);
         IBurner(burner).requestBurnShares(address(this), burnedShares);
         emit BondBurned(
             nodeOperatorId,
@@ -250,10 +252,8 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 amount,
         address recipient
     ) internal {
-        (uint256 toChargeShares, uint256 chargedShares) = _reduceBond(
-            nodeOperatorId,
-            _sharesByEth(amount)
-        );
+        uint256 toChargeShares = _sharesByEth(amount);
+        uint256 chargedShares = _reduceBond(nodeOperatorId, toChargeShares);
         LIDO.transferShares(recipient, chargedShares);
         emit BondCharged(
             nodeOperatorId,
@@ -293,11 +293,11 @@ abstract contract CSBondCore is ICSBondCore {
     function _reduceBond(
         uint256 nodeOperatorId,
         uint256 shares
-    ) private returns (uint256 /* shares */, uint256 reducedShares) {
+    ) private returns (uint256 reducedShares) {
         uint256 currentShares = getBondShares(nodeOperatorId);
         reducedShares = shares < currentShares ? shares : currentShares;
         _unsafeReduceBond(nodeOperatorId, reducedShares);
-        return (shares, reducedShares);
+        return reducedShares;
     }
 
     function _getCSBondCoreStorage()
