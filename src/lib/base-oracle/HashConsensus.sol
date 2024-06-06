@@ -4,7 +4,6 @@ pragma solidity 0.8.24;
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import { Math } from "../Math.sol";
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 
 /// @notice A contract that gets consensus reports (i.e. hashes) pushed to and processes them
@@ -936,7 +935,7 @@ contract HashConsensus is AccessControlEnumerableUpgradeable {
         );
         unchecked {
             return (flPastRight != 0 &&
-                Math.pointInClosedIntervalModN(
+                pointInClosedIntervalModN(
                     index,
                     flLeft,
                     flPastRight - 1,
@@ -1270,4 +1269,13 @@ contract HashConsensus is AccessControlEnumerableUpgradeable {
     function _getConsensusVersion() internal view returns (uint256) {
         return IReportAsyncProcessor(_reportProcessor).getConsensusVersion();
     }
+}
+
+function pointInClosedIntervalModN(
+    uint256 x,
+    uint256 a,
+    uint256 b,
+    uint256 n
+) pure returns (bool) {
+    return (x + n - a) % n <= (b - a) % n;
 }
