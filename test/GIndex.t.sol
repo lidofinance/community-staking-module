@@ -4,8 +4,7 @@ pragma solidity 0.8.24;
 
 import { Test } from "forge-std/Test.sol";
 
-import { GIndex, pack, IndexOutOfRange } from "../src/lib/GIndex.sol";
-import { Math } from "../src/lib/Math.sol";
+import { GIndex, pack, IndexOutOfRange, fls } from "../src/lib/GIndex.sol";
 import { SSZ } from "../src/lib/SSZ.sol";
 
 // Wrap the library internal methods to make an actual call to them.
@@ -154,14 +153,22 @@ contract GIndexTest is Test {
                 .unwrap(),
             pack(73, 4).unwrap()
         );
+
+        assertEq(ROOT.concat(MAX).unwrap(), MAX.unwrap());
     }
 
     function test_concat_RevertsIfZeroGIndex() public {
-        vm.expectRevert(Log2Undefined.selector);
+        vm.expectRevert(IndexOutOfRange.selector);
         lib.concat(ZERO, pack(1024, 1));
 
-        vm.expectRevert(Log2Undefined.selector);
+        vm.expectRevert(IndexOutOfRange.selector);
         lib.concat(pack(1024, 1), ZERO);
+    }
+
+    function test_concat_BigIndicesBorderCases() public {
+        lib.concat(pack(2 ** 9, 0), pack(2 ** 238, 0));
+        lib.concat(pack(2 ** 47, 0), pack(2 ** 200, 0));
+        lib.concat(pack(2 ** 199, 0), pack(2 ** 48, 0));
     }
 
     function test_concat_RevertsIfTooBigIndices() public {
@@ -190,7 +197,7 @@ contract GIndexTest is Test {
         // But root.concat(root) will result in a root value again, and root is not a parent for itself.
         vm.assume(rhs.index() > 1);
         // Overflow check.
-        vm.assume(Math.log2(lhs.index()) + 1 + Math.log2(rhs.index()) < 248);
+        vm.assume(fls(lhs.index()) + 1 + fls(rhs.index()) < 248);
 
         assertTrue(
             lhs.isParentOf(lhs.concat(rhs)),
@@ -287,7 +294,7 @@ contract GIndexTest is Test {
             vm.assume(rhs.width() + shift > rhs.width());
         }
         // Indices concatenation overflow protection.
-        vm.assume(Math.log2(lhs.index()) + 1 + Math.log2(rhs.index()) < 248);
+        vm.assume(fls(lhs.index()) + 1 + fls(rhs.index()) < 248);
 
         vm.expectRevert(IndexOutOfRange.selector);
         lib.shr(lhs.concat(rhs), rhs.width() + shift);
@@ -366,7 +373,7 @@ contract GIndexTest is Test {
         vm.assume(rhs.index() >= rhs.width());
         vm.assume(shift > rhs.index() % rhs.width());
         // Indices concatenation overflow protection.
-        vm.assume(Math.log2(lhs.index()) + 1 + Math.log2(rhs.index()) < 248);
+        vm.assume(fls(lhs.index()) + 1 + fls(rhs.index()) < 248);
 
         vm.expectRevert(IndexOutOfRange.selector);
         lib.shl(lhs.concat(rhs), shift);
@@ -386,5 +393,19 @@ contract GIndexTest is Test {
         vm.assume(shift < gI.width() - (gI.index() % gI.width()));
 
         assertEq(lib.shl(lib.shr(gI, shift), shift).unwrap(), gI.unwrap());
+    }
+
+    function test_fls() public {
+        for (uint256 i = 1; i < 255; i++) {
+            assertEq(fls((1 << i) - 1), i - 1);
+            assertEq(fls((1 << i)), i);
+            assertEq(fls((1 << i) + 1), i);
+        }
+
+        assertEq(fls(3), 1); // 0011
+        assertEq(fls(7), 2); // 0101
+        assertEq(fls(10), 3); // 1010
+        assertEq(fls(300), 8); // 0001 0010 1100
+        assertEq(fls(0), 256);
     }
 }
