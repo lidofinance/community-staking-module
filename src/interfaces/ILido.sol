@@ -22,4 +22,6 @@ interface ILido is IStETH {
     function removeStakingLimit() external;
 
     function kernel() external returns (address);
+
+    function sharesOf(address _account) external view returns (uint256);
 }

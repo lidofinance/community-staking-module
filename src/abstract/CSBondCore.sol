@@ -150,9 +150,10 @@ abstract contract CSBondCore is ICSBondCore {
     ) internal {
         if (amount == 0) return;
         WSTETH.transferFrom(from, address(this), amount);
-        uint256 stETHAmount = WSTETH.unwrap(amount);
-        uint256 shares = _sharesByEth(stETHAmount);
-        _increaseBond(nodeOperatorId, shares);
+        uint256 sharesBefore = LIDO.sharesOf(address(this));
+        WSTETH.unwrap(amount);
+        uint256 sharesAfter = LIDO.sharesOf(address(this));
+        _increaseBond(nodeOperatorId, sharesAfter - sharesBefore);
         emit BondDepositedWstETH(nodeOperatorId, from, amount);
     }
 
