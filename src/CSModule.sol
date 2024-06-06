@@ -55,6 +55,7 @@ contract CSModule is
         public immutable MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE;
     bytes32 private immutable MODULE_TYPE;
     ILidoLocator public immutable LIDO_LOCATOR;
+    IStETH public immutable STETH;
 
     ////////////////////////
     // State variables below
@@ -183,6 +184,7 @@ contract CSModule is
         EL_REWARDS_STEALING_FINE = elRewardsStealingFine;
         MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE = maxKeysPerOperatorEA;
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
+        STETH = IStETH(LIDO_LOCATOR.lido());
 
         _disableInitializers();
     }
@@ -706,10 +708,7 @@ contract CSModule is
     function onRewardsMinted(
         uint256 totalShares
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        IStETH(LIDO_LOCATOR.lido()).transferShares(
-            address(accounting.feeDistributor()),
-            totalShares
-        );
+        STETH.transferShares(address(accounting.feeDistributor()), totalShares);
     }
 
     /// @notice Update stuck validators count for Node Operators
@@ -1251,11 +1250,10 @@ contract CSModule is
     /// @dev There should be no stETH shares on the contract balance during regular operation
     function recoverStETHShares() external {
         _onlyRecoverer();
-        IStETH stETH = IStETH(LIDO_LOCATOR.lido());
 
         AssetRecovererLib.recoverStETHShares(
-            address(stETH),
-            stETH.sharesOf(address(this))
+            address(STETH),
+            STETH.sharesOf(address(this))
         );
     }
 
