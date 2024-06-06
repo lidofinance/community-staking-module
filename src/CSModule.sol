@@ -55,6 +55,7 @@ contract CSModule is
         public immutable MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE;
     bytes32 private immutable MODULE_TYPE;
     ILidoLocator public immutable LIDO_LOCATOR;
+    IStETH public immutable STETH;
 
     ////////////////////////
     // State variables below
@@ -183,6 +184,7 @@ contract CSModule is
         EL_REWARDS_STEALING_FINE = elRewardsStealingFine;
         MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE = maxKeysPerOperatorEA;
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
+        STETH = IStETH(LIDO_LOCATOR.lido());
 
         _disableInitializers();
     }
@@ -317,13 +319,11 @@ contract CSModule is
             eaProof
         );
 
-        {
-            uint256 amount = accounting.getBondAmountByKeysCount(
-                keysCount,
-                accounting.getBondCurve(nodeOperatorId)
-            );
-            accounting.depositStETH(msg.sender, nodeOperatorId, amount, permit);
-        }
+        uint256 amount = accounting.getBondAmountByKeysCount(
+            keysCount,
+            accounting.getBondCurve(nodeOperatorId)
+        );
+        accounting.depositStETH(msg.sender, nodeOperatorId, amount, permit);
 
         _addKeysAndUpdateDepositableValidatorsCount(
             nodeOperatorId,
@@ -362,18 +362,11 @@ contract CSModule is
             eaProof
         );
 
-        {
-            uint256 amount = accounting.getBondAmountByKeysCountWstETH(
-                keysCount,
-                accounting.getBondCurve(nodeOperatorId)
-            );
-            accounting.depositWstETH(
-                msg.sender,
-                nodeOperatorId,
-                amount,
-                permit
-            );
-        }
+        uint256 amount = accounting.getBondAmountByKeysCountWstETH(
+            keysCount,
+            accounting.getBondCurve(nodeOperatorId)
+        );
+        accounting.depositWstETH(msg.sender, nodeOperatorId, amount, permit);
 
         _addKeysAndUpdateDepositableValidatorsCount(
             nodeOperatorId,
@@ -706,10 +699,7 @@ contract CSModule is
     function onRewardsMinted(
         uint256 totalShares
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        IStETH(LIDO_LOCATOR.lido()).transferShares(
-            address(accounting.feeDistributor()),
-            totalShares
-        );
+        STETH.transferShares(address(accounting.feeDistributor()), totalShares);
     }
 
     /// @notice Update stuck validators count for Node Operators
@@ -736,7 +726,6 @@ contract CSModule is
                     stuckValidatorsCounts,
                     i
                 );
-            _onlyExistingNodeOperator(nodeOperatorId);
             _updateStuckValidatorsCount(nodeOperatorId, stuckValidatorsCount);
         }
         _incrementModuleNonce();
@@ -764,8 +753,6 @@ contract CSModule is
                     exitedValidatorsCounts,
                     i
                 );
-            _onlyExistingNodeOperator(nodeOperatorId);
-
             _updateExitedValidatorsCount({
                 nodeOperatorId: nodeOperatorId,
                 exitedValidatorsCount: exitedValidatorsCount,
@@ -853,7 +840,6 @@ contract CSModule is
         uint256 exitedValidatorsKeysCount,
         uint256 stuckValidatorsKeysCount
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        _onlyExistingNodeOperator(nodeOperatorId);
         _updateExitedValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             exitedValidatorsCount: exitedValidatorsKeysCount,
@@ -921,7 +907,6 @@ contract CSModule is
         uint256 startIndex,
         uint256 keysCount
     ) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
         _onlyNodeOperatorManager(nodeOperatorId);
         _removeSigningKeys(nodeOperatorId, startIndex, keysCount);
     }
@@ -1119,7 +1104,7 @@ contract CSModule is
         accounting.penalize(nodeOperatorId, INITIAL_SLASHING_PENALTY);
 
         // Nonce should be updated if depositableValidators change
-        // Normalize queue should not be called due to only possible decrease in depositable possible
+        // Normalize queue should not be called due to only decrease in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
@@ -1251,11 +1236,10 @@ contract CSModule is
     /// @dev There should be no stETH shares on the contract balance during regular operation
     function recoverStETHShares() external {
         _onlyRecoverer();
-        IStETH stETH = IStETH(LIDO_LOCATOR.lido());
 
         AssetRecovererLib.recoverStETHShares(
-            address(stETH),
-            stETH.sharesOf(address(this))
+            address(STETH),
+            STETH.sharesOf(address(this))
         );
     }
 
@@ -1573,6 +1557,7 @@ contract CSModule is
 
         no.totalAddedKeys += uint32(keysCount);
         emit TotalSigningKeysCountChanged(nodeOperatorId, no.totalAddedKeys);
+        _incrementModuleNonce();
     }
 
     function _removeSigningKeys(
@@ -1635,6 +1620,7 @@ contract CSModule is
         uint256 exitedValidatorsCount,
         bool allowDecrease
     ) internal {
+        _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (exitedValidatorsCount == no.totalExitedKeys) return;
         if (exitedValidatorsCount > no.totalDepositedKeys)
@@ -1657,6 +1643,7 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint256 stuckValidatorsCount
     ) internal {
+        _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (stuckValidatorsCount == no.stuckValidatorsCount) return;
         if (stuckValidatorsCount > no.totalDepositedKeys - no.totalExitedKeys)
@@ -1744,10 +1731,11 @@ contract CSModule is
         // Reverts if keysCount is 0
         _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
 
-        // Due to new bonded keys nonce update is required and normalize queue is required
+        // Due to new bonded keys normalize queue is required
+        // Nonce is updated in _addSigningKeys
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
+            incrementNonceIfUpdated: false,
             normalizeQueueIfUpdated: true
         });
     }
