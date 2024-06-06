@@ -43,12 +43,14 @@ contract DeployMainnet is DeployBase {
         config.minBondLockRetentionPeriod = 4 weeks;
         config.maxBondLockRetentionPeriod = 365 days;
         config.bondLockRetentionPeriod = 8 weeks;
+        config.setResetBondCurveAddress = address(0); // TODO: set
         // Module
         config.moduleType = "community-onchain-v1";
         config.minSlashingPenaltyQuotient = 32;
         config.elRewardsStealingFine = 0.1 ether;
         config.maxKeysPerOperatorEA = 10;
         config.keyRemovalCharge = 0.05 ether;
+        config.elRewardsStealingReporter = address(0); // TODO: set
         // EarlyAdoption
         // TODO: Set earlyAdoptionTreeRoot
         config.earlyAdoptionTreeRoot = 0x0;

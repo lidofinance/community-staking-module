@@ -46,12 +46,14 @@ struct DeployParams {
     uint256 minBondLockRetentionPeriod;
     uint256 maxBondLockRetentionPeriod;
     uint256 bondLockRetentionPeriod;
+    address setResetBondCurveAddress;
     // Module
     bytes32 moduleType;
     uint256 minSlashingPenaltyQuotient;
     uint256 elRewardsStealingFine;
     uint256 maxKeysPerOperatorEA;
     uint256 keyRemovalCharge;
+    address elRewardsStealingReporter;
     // EarlyAdoption
     bytes32 earlyAdoptionTreeRoot;
     uint256[] earlyAdoptionBondCurve;
@@ -60,6 +62,8 @@ struct DeployParams {
     address sealingCommittee;
     uint256 sealDuration;
     uint256 sealExpiryTimestamp;
+    // Devnet and Testnet stuff
+    address secondAdminAddress;
 }
 
 abstract contract DeployBase is Script {
@@ -80,6 +84,7 @@ abstract contract DeployBase is Script {
     HashConsensus public hashConsensus;
 
     error ChainIdMismatch(uint256 actual, uint256 expected);
+    error CannotBeUsedInMainnet();
 
     constructor(string memory _chainName, uint256 _chainId) {
         chainName = _chainName;
@@ -193,7 +198,7 @@ abstract contract DeployBase is Script {
             });
 
             feeDistributor.initialize({
-                admin: config.votingAddress,
+                admin: address(deployer),
                 oracle: address(oracle)
             });
 
@@ -203,12 +208,12 @@ abstract contract DeployBase is Script {
                 genesisTime: config.clGenesisTime,
                 epochsPerFrame: config.oracleReportEpochsPerFrame,
                 fastLaneLengthSlots: config.fastLaneLengthSlots,
-                admin: config.votingAddress,
+                admin: address(deployer),
                 reportProcessor: address(oracle)
             });
 
             oracle.initialize({
-                admin: config.votingAddress,
+                admin: address(deployer),
                 feeDistributorContract: address(feeDistributor),
                 consensusContract: address(hashConsensus),
                 consensusVersion: config.consensusVersion,
@@ -218,28 +223,55 @@ abstract contract DeployBase is Script {
             address gateSeal = _deployGateSeal();
 
             csm.grantRole(csm.PAUSE_ROLE(), gateSeal);
+            oracle.grantRole(oracle.PAUSE_ROLE(), gateSeal);
             accounting.grantRole(accounting.PAUSE_ROLE(), gateSeal);
+            accounting.grantRole(
+                accounting.SET_BOND_CURVE_ROLE(),
+                config.setResetBondCurveAddress
+            );
+            accounting.grantRole(
+                accounting.RESET_BOND_CURVE_ROLE(),
+                config.setResetBondCurveAddress
+            );
+
+            csm.grantRole(
+                csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(),
+                config.elRewardsStealingReporter
+            );
             csm.grantRole(
                 csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE(),
                 config.easyTrackEVMScriptExecutor
             );
 
-            csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.votingAddress);
             csm.grantRole(csm.VERIFIER_ROLE(), address(verifier));
+
+            if (config.secondAdminAddress != address(0)) {
+                _grantSecondAdmins();
+            }
+
+            csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.votingAddress);
             csm.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
+
             accounting.grantRole(
                 csm.DEFAULT_ADMIN_ROLE(),
                 config.votingAddress
             );
             accounting.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
 
-            // TODO: these roles might be granted to multisig for testing purposes
-            //            csm.grantRole(csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(), address(0)); EOA or multisig
+            hashConsensus.grantRole(
+                csm.DEFAULT_ADMIN_ROLE(),
+                config.votingAddress
+            );
+            hashConsensus.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
 
-            //            accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), address(0)); multisig
-            //            accounting.grantRole(accounting.RESET_BOND_CURVE_ROLE(), address(0)); multisig
+            oracle.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.votingAddress);
+            oracle.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
 
-            //            oracle.grantRole(oracle.PAUSE_ROLE(), address(0)); GateSeal or multisig
+            feeDistributor.grantRole(
+                csm.DEFAULT_ADMIN_ROLE(),
+                config.votingAddress
+            );
+            feeDistributor.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
 
             JsonObj memory deployJson = Json.newObj();
             deployJson.set("ChainId", chainId);
@@ -275,9 +307,10 @@ abstract contract DeployBase is Script {
         IGateSealFactory gateSealFactory = IGateSealFactory(
             config.gateSealFactory
         );
-        address[] memory sealables = new address[](2);
+        address[] memory sealables = new address[](3);
         sealables[0] = address(csm);
         sealables[1] = address(accounting);
+        sealables[2] = address(oracle);
 
         address committee = config.sealingCommittee == address(0)
             ? deployer
@@ -299,5 +332,28 @@ abstract contract DeployBase is Script {
             string(
                 abi.encodePacked(artifactDir, "deploy-", chainName, ".json")
             );
+    }
+
+    function _grantSecondAdmins() internal {
+        if (keccak256(abi.encode(chainName)) == keccak256("mainnet")) {
+            revert CannotBeUsedInMainnet();
+        }
+        csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.secondAdminAddress);
+        accounting.grantRole(
+            csm.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        oracle.grantRole(
+            oracle.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        feeDistributor.grantRole(
+            feeDistributor.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        hashConsensus.grantRole(
+            hashConsensus.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
     }
 }
