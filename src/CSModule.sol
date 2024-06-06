@@ -735,7 +735,6 @@ contract CSModule is
                     stuckValidatorsCounts,
                     i
                 );
-            _onlyExistingNodeOperator(nodeOperatorId);
             _updateStuckValidatorsCount(nodeOperatorId, stuckValidatorsCount);
         }
         _incrementModuleNonce();
@@ -763,8 +762,6 @@ contract CSModule is
                     exitedValidatorsCounts,
                     i
                 );
-            _onlyExistingNodeOperator(nodeOperatorId);
-
             _updateExitedValidatorsCount({
                 nodeOperatorId: nodeOperatorId,
                 exitedValidatorsCount: exitedValidatorsCount,
@@ -852,7 +849,6 @@ contract CSModule is
         uint256 exitedValidatorsKeysCount,
         uint256 stuckValidatorsKeysCount
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        _onlyExistingNodeOperator(nodeOperatorId);
         _updateExitedValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             exitedValidatorsCount: exitedValidatorsKeysCount,
@@ -920,7 +916,6 @@ contract CSModule is
         uint256 startIndex,
         uint256 keysCount
     ) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
         _onlyNodeOperatorManager(nodeOperatorId);
         _removeSigningKeys(nodeOperatorId, startIndex, keysCount);
     }
@@ -1633,6 +1628,7 @@ contract CSModule is
         uint256 exitedValidatorsCount,
         bool allowDecrease
     ) internal {
+        _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (exitedValidatorsCount == no.totalExitedKeys) return;
         if (exitedValidatorsCount > no.totalDepositedKeys)
@@ -1655,6 +1651,7 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint256 stuckValidatorsCount
     ) internal {
+        _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (stuckValidatorsCount == no.stuckValidatorsCount) return;
         if (stuckValidatorsCount > no.totalDepositedKeys - no.totalExitedKeys)
