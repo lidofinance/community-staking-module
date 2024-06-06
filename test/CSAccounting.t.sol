@@ -845,6 +845,52 @@ contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
         _deposit({ bond: 5.75 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 13);
     }
+
+    function test_WithCustomSmolCurve() public {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        uint256[] memory curve = new uint256[](2);
+        curve[0] = 2 ether;
+        curve[1] = 3 ether;
+        _curve(curve);
+        _deposit({ bond: 2.5 ether });
+        assertEq(accounting.getUnbondedKeysCount(0), 15);
+    }
+
+    function test_WithCustomHugeCurve_1() public {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        uint256[] memory curve = new uint256[](10);
+        curve[0] = 1 ether;
+        curve[1] = 2 ether;
+        curve[2] = 3 ether;
+        curve[3] = 4 ether;
+        curve[4] = 5 ether;
+        curve[5] = 6 ether;
+        curve[6] = 7 ether;
+        curve[7] = 8 ether;
+        curve[8] = 9 ether;
+        curve[9] = 10 ether;
+        _curve(curve);
+        _deposit({ bond: 3.5 ether });
+        assertEq(accounting.getUnbondedKeysCount(0), 13);
+    }
+
+    function test_WithCustomHugeCurve_2() public {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        uint256[] memory curve = new uint256[](10);
+        curve[0] = 1 ether;
+        curve[1] = 2 ether;
+        curve[2] = 3 ether;
+        curve[3] = 4 ether;
+        curve[4] = 5 ether;
+        curve[5] = 6 ether;
+        curve[6] = 7 ether;
+        curve[7] = 8 ether;
+        curve[8] = 9 ether;
+        curve[9] = 10 ether;
+        _curve(curve);
+        _deposit({ bond: 8.5 ether });
+        assertEq(accounting.getUnbondedKeysCount(0), 8);
+    }
 }
 
 contract CSAccountingGetUnbondedKeysCountToEjectTest is
