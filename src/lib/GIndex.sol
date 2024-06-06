@@ -109,7 +109,7 @@ function isParentOf(GIndex self, GIndex other) pure returns (bool) {
     return false;
 }
 
-/// @dev From Solady LibBit.
+/// @dev From Solady LibBit, see https://github.com/Vectorized/solady/blob/main/src/utils/LibBit.sol.
 /// @dev Find last set.
 /// Returns the index of the most significant bit of `x`,
 /// counting from the least significant bit position.
