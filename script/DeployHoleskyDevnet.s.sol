@@ -11,7 +11,8 @@ contract DeployHoleskyDevnet is DeployBase {
         // Lido addresses
         config.lidoLocatorAddress = 0x5bF85BadDac33F91B38617c18a3F829f912Ca060;
         config.votingAddress = 0xd8B7F4EFd16e913648C6E9B74772BC3C38203301;
-        config.easyTrackEVMScriptExecutor = address(0);
+        config
+            .easyTrackEVMScriptExecutor = 0xC234dBA03943C9238067cDfBC2761844133DD386; // Known EOA
 
         // Oracle
         config.secondsPerSlot = 12;
@@ -42,12 +43,16 @@ contract DeployHoleskyDevnet is DeployBase {
         config.minBondLockRetentionPeriod = 4 weeks;
         config.maxBondLockRetentionPeriod = 365 days;
         config.bondLockRetentionPeriod = 8 weeks;
+        config
+            .setResetBondCurveAddress = 0xC234dBA03943C9238067cDfBC2761844133DD386; // Known EOA
         // Module
         config.moduleType = "community-onchain-v1";
         config.minSlashingPenaltyQuotient = 32;
         config.elRewardsStealingFine = 0.1 ether;
         config.maxKeysPerOperatorEA = 10;
         config.keyRemovalCharge = 0.05 ether;
+        config
+            .elRewardsStealingReporter = 0xC234dBA03943C9238067cDfBC2761844133DD386; // Known EOA
         // EarlyAdoption
         config
             .earlyAdoptionTreeRoot = 0xa9e0f9295f169913bafcc4bc9debb38acfbd0442ed9fce55d657dd7ad75c9ec4;
@@ -61,10 +66,11 @@ contract DeployHoleskyDevnet is DeployBase {
         config.earlyAdoptionBondCurve[5] = 10 ether;
         // GateSeal
         config.gateSealFactory = 0x1134F7077055b0B3559BE52AfeF9aA22A0E1eEC2;
-        config.sealingCommittee = address(0);
+        config.sealingCommittee = 0xC234dBA03943C9238067cDfBC2761844133DD386; // Known EOA
         config.sealDuration = 6 days;
         config.sealExpiryTimestamp = block.timestamp + 365 days;
 
+        config.secondAdminAddress = 0xC234dBA03943C9238067cDfBC2761844133DD386; // Known EOA
         _setUp();
     }
 }

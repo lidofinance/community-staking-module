@@ -46,15 +46,17 @@ contract GateSealTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_sealAll() public {
-        address[] memory sealables = new address[](2);
+        address[] memory sealables = new address[](3);
         sealables[0] = address(csm);
         sealables[1] = address(accounting);
+        sealables[2] = address(oracle);
 
         vm.prank(gateSeal.get_sealing_committee());
         gateSeal.seal(sealables);
 
         assertTrue(csm.isPaused());
         assertTrue(accounting.isPaused());
+        assertTrue(oracle.isPaused());
     }
 
     function test_sealCSM() public {
@@ -74,6 +76,17 @@ contract GateSealTest is Test, Utilities, DeploymentFixtures {
         gateSeal.seal(sealables);
 
         assertTrue(accounting.isPaused());
+        assertFalse(csm.isPaused());
+    }
+
+    function test_sealOracle() public {
+        address[] memory sealables = new address[](1);
+        sealables[0] = address(oracle);
+        vm.prank(gateSeal.get_sealing_committee());
+        gateSeal.seal(sealables);
+
+        assertTrue(oracle.isPaused());
+        assertFalse(accounting.isPaused());
         assertFalse(csm.isPaused());
     }
 }
