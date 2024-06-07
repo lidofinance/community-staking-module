@@ -367,13 +367,10 @@ contract GIndexTest is Test {
         GIndex rhs,
         uint256 shift
     ) public {
-        // 0 is not a valid index.
-        vm.assume(lhs.index() > 0);
-        vm.assume(rhs.index() > 0);
-        vm.assume(rhs.index() >= rhs.width());
-        vm.assume(shift > rhs.index() % rhs.width());
         // Indices concatenation overflow protection.
         vm.assume(fls(lhs.index()) + 1 + fls(rhs.index()) < 248);
+        vm.assume(rhs.index() >= rhs.width());
+        vm.assume(shift > rhs.index() % rhs.width());
 
         vm.expectRevert(IndexOutOfRange.selector);
         lib.shl(lhs.concat(rhs), shift);
