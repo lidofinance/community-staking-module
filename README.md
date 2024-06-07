@@ -100,7 +100,7 @@ export DEPLOY_CONFIG=./artifacts/local/deploy-devnet.json
 The result of deployment is `./artifacts/local/deploy-devnet.json` deployment config, which is required for integration testing
 
 Verify deploy by running post-deployment tests.
-Note that these are meant to be run right after deployment, so they might fail on non-empty contracts
+Note that these are meant to be run only right after deployment, so they don't supposed to be green after any actions in the contracts
 
 ```bash
 just test-post-deployment
