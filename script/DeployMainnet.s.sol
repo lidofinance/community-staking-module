@@ -53,7 +53,7 @@ contract DeployMainnet is DeployBase {
         config.elRewardsStealingReporter = address(0); // TODO: set
         // EarlyAdoption
         // TODO: Set earlyAdoptionTreeRoot
-        config.earlyAdoptionTreeRoot = 0x0;
+        config.earlyAdoptionTreeRoot = keccak256(abi.encode(0));
         config.earlyAdoptionBondCurve = new uint256[](6);
         // 1.5 -> 1.9 -> 1.8 -> 1.7 -> 1.6 -> 1.5
         config.earlyAdoptionBondCurve[0] = 1.5 ether;

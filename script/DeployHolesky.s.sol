@@ -54,8 +54,8 @@ contract DeployHolesky is DeployBase {
         config
             .elRewardsStealingReporter = 0x226954CD8a6Dd241d5A13Dd525Bd7B89067b11e5; // Known EOA
         // EarlyAdoption
-        // TODO set earlyAdoptionTreeRoot
-        config.earlyAdoptionTreeRoot = bytes32(0);
+        // TODO: Set earlyAdoptionTreeRoot
+        config.earlyAdoptionTreeRoot = keccak256(abi.encode(0));
         config.earlyAdoptionBondCurve = new uint256[](6);
         // 1.5 -> 1.9 -> 1.8 -> 1.7 -> 1.6 -> 1.5
         config.earlyAdoptionBondCurve[0] = 1.5 ether;
