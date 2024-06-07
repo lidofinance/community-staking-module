@@ -37,6 +37,6 @@ fs_permissions = [
 
 [profile.ci]
 verbosity = 3
-fuzz = { runs = 5_000, max_test_rejects = 1_000_000 }
+fuzz = { runs = 10_000, max_test_rejects = 2_000_000 }
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/crates/config

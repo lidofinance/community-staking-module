@@ -289,10 +289,10 @@ contract GIndexTest is Test {
         // 0 is not a valid index.
         vm.assume(lhs.index() > 0);
         vm.assume(rhs.index() > 0);
+        vm.assume(rhs.index() < type(uint256).max / 2);
+        vm.assume(shift < type(uint256).max / 2);
         vm.assume(rhs.index() >= rhs.width());
-        unchecked {
-            vm.assume(rhs.width() + shift > rhs.width());
-        }
+        vm.assume(rhs.index() + shift > rhs.width());
         // Indices concatenation overflow protection.
         vm.assume(fls(lhs.index()) + 1 + fls(rhs.index()) < 248);
 
