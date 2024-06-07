@@ -71,4 +71,8 @@ contract DeployMainnet is DeployBase {
 
         _setUp();
     }
+
+    function run() external override {
+        revert IsNotReadyForDeployment();
+    }
 }

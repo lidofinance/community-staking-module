@@ -84,6 +84,7 @@ abstract contract DeployBase is Script {
     HashConsensus public hashConsensus;
 
     error ChainIdMismatch(uint256 actual, uint256 expected);
+    error IsNotReadyForDeployment();
     error CannotBeUsedInMainnet();
 
     constructor(string memory _chainName, uint256 _chainId) {
@@ -97,7 +98,7 @@ abstract contract DeployBase is Script {
         locator = ILidoLocator(config.lidoLocatorAddress);
     }
 
-    function run() external {
+    function run() external virtual {
         if (chainId != block.chainid) {
             revert ChainIdMismatch({
                 actual: block.chainid,
