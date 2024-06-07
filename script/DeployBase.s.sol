@@ -47,6 +47,7 @@ struct DeployParams {
     uint256 maxBondLockRetentionPeriod;
     uint256 bondLockRetentionPeriod;
     address setResetBondCurveAddress;
+    address chargeRecipient;
     // Module
     bytes32 moduleType;
     uint256 minSlashingPenaltyQuotient;
@@ -113,7 +114,6 @@ abstract contract DeployBase is Script {
 
         vm.startBroadcast(pk);
         {
-            address treasury = locator.treasury();
             CSModule csmImpl = new CSModule({
                 moduleType: config.moduleType,
                 minSlashingPenaltyQuotient: config.minSlashingPenaltyQuotient,
@@ -170,7 +170,7 @@ abstract contract DeployBase is Script {
                 admin: deployer,
                 _feeDistributor: address(feeDistributor),
                 bondLockRetentionPeriod: config.bondLockRetentionPeriod,
-                _chargeRecipient: treasury
+                _chargeRecipient: config.chargeRecipient
             });
 
             accounting.grantRole(

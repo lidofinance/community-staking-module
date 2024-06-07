@@ -110,6 +110,16 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
 
     function test_constructor() public {
         assertEq(address(accounting.CSM()), address(csm));
+        assertEq(address(accounting.LIDO_LOCATOR()), address(locator));
+        assertEq(address(accounting.LIDO()), locator.lido());
+        assertEq(
+            address(accounting.WITHDRAWAL_QUEUE()),
+            locator.withdrawalQueue()
+        );
+        assertEq(
+            address(accounting.WSTETH()),
+            IWithdrawalQueue(locator.withdrawalQueue()).WSTETH()
+        );
 
         assertEq(
             accounting.MIN_BOND_LOCK_RETENTION_PERIOD(),
@@ -119,13 +129,7 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
             accounting.MAX_BOND_LOCK_RETENTION_PERIOD(),
             deployParams.maxBondLockRetentionPeriod
         );
-
-        bytes32 role = accounting.MANAGE_BOND_CURVES_ROLE();
-        vm.prank(accounting.getRoleMember(accounting.DEFAULT_ADMIN_ROLE(), 0));
-        accounting.grantRole(role, address(this));
-        uint256[] memory curve = new uint256[](deployParams.maxCurveLength + 1);
-        vm.expectRevert(CSBondCurve.InvalidBondCurveLength.selector);
-        accounting.addBondCurve(curve);
+        assertEq(accounting.MAX_CURVE_LENGTH(), deployParams.maxCurveLength);
     }
 
     function test_initializer() public {
@@ -138,7 +142,7 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
             accounting.getBondLockRetentionPeriod(),
             deployParams.bondLockRetentionPeriod
         );
-        assertEq(accounting.chargeRecipient(), locator.treasury());
+        assertEq(accounting.chargeRecipient(), deployParams.chargeRecipient);
         assertTrue(
             accounting.hasRole(accounting.SET_BOND_CURVE_ROLE(), address(csm))
         );

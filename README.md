@@ -33,7 +33,7 @@ just
 
 ### Run tests
 
-Run all tests that possible to run without additional configurations
+Run all tests that are possible to run without additional configurations
 
 ```bash
 just test-all
