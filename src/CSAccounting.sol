@@ -159,8 +159,9 @@ contract CSAccounting is
         return CSBondCurve._addBondCurve(bondCurve);
     }
 
-    /// @notice Add a new bond curve
-    /// @param bondCurve Bond curve definition to add
+    /// @notice Update existing bond curve
+    /// @param curveId Bond curve ID to update
+    /// @param bondCurve Bond curve definition
     function updateBondCurve(
         uint256 curveId,
         uint256[] memory bondCurve
