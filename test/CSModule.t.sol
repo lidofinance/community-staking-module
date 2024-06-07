@@ -412,6 +412,34 @@ contract CSMCommonNoRoles is CSMFixtures {
     }
 }
 
+contract CsmFuzz is CSMCommon {
+    function testFuzz_CreateNodeOperator(uint32 keysCount) public {
+        vm.assume(keysCount > 0);
+        vm.assume(keysCount < 100);
+        createNodeOperator(keysCount);
+        assertEq(csm.getNodeOperatorsCount(), 1);
+        NodeOperator memory no = csm.getNodeOperator(0);
+        assertEq(no.totalAddedKeys, keysCount);
+    }
+
+    function testFuzz_CreateNodeOperators(uint32 count) public {
+        vm.assume(count < 100);
+        for (uint256 i = 0; i < count; i++) {
+            createNodeOperator(1);
+        }
+        assertEq(csm.getNodeOperatorsCount(), count);
+    }
+
+    function testFuzz_UploadKeys(uint32 keysCount) public {
+        vm.assume(keysCount > 0);
+        vm.assume(keysCount < 100);
+        createNodeOperator(1);
+        uploadMoreKeys(0, keysCount);
+        NodeOperator memory no = csm.getNodeOperator(0);
+        assertEq(no.totalAddedKeys, keysCount + 1);
+    }
+}
+
 contract CsmInitialize is CSMCommon {
     function test_constructor() public {
         CSModule csm = new CSModule({
