@@ -5,17 +5,17 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { CSModule, NodeOperator } from "../../src/CSModule.sol";
-import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
-import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
-import { IWithdrawalQueue } from "../../src/interfaces/IWithdrawalQueue.sol";
-import { CSAccounting } from "../../src/CSAccounting.sol";
-import { ILido } from "../../src/interfaces/ILido.sol";
-import { IWstETH } from "../../src/interfaces/IWstETH.sol";
-import { Utilities } from "../helpers/Utilities.sol";
-import { DeploymentFixtures } from "../helpers/Fixtures.sol";
-import { IKernel } from "../../src/interfaces/IKernel.sol";
-import { IACL } from "../../src/interfaces/IACL.sol";
+import { CSModule, NodeOperator } from "../../../src/CSModule.sol";
+import { ILidoLocator } from "../../../src/interfaces/ILidoLocator.sol";
+import { IStakingRouter } from "../../../src/interfaces/IStakingRouter.sol";
+import { IWithdrawalQueue } from "../../../src/interfaces/IWithdrawalQueue.sol";
+import { CSAccounting } from "../../../src/CSAccounting.sol";
+import { ILido } from "../../../src/interfaces/ILido.sol";
+import { IWstETH } from "../../../src/interfaces/IWstETH.sol";
+import { Utilities } from "../../helpers/Utilities.sol";
+import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
+import { IKernel } from "../../../src/interfaces/IKernel.sol";
+import { IACL } from "../../../src/interfaces/IACL.sol";
 
 contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
     address internal agent;

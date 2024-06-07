@@ -43,10 +43,16 @@ test-all:
     just test-local
 
 test-unit *args:
-    forge test --no-match-path '*test/integration*' -vvv {{args}}
+    forge test --no-match-path 'test/fork/*' -vvv {{args}}
 
 test-integration *args:
-    forge test --match-path '*test/integration*' -vvv {{args}}
+    forge test --match-path 'test/fork/integration/*' -vvv {{args}}
+
+test-post-deployment *args:
+    forge test --match-path 'test/fork/PostDeployment.t.sol' -vvv {{args}}
+
+test-fork *args:
+    forge test --match-path 'test/fork/*' -vvv {{args}}
 
 gas-report:
     #!/usr/bin/env python
@@ -142,7 +148,7 @@ test-local *args:
         just deploy --silent
     DEPLOY_CONFIG=./artifacts/local/deploy-{{chain}}.json \
     RPC_URL={{anvil_rpc_url}} \
-        just test-integration {{args}}
+        just test-fork {{args}}
     just kill-fork
 
 simulate-vote:

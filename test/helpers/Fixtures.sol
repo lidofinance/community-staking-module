@@ -23,6 +23,7 @@ import { CSFeeOracle } from "../../src/CSFeeOracle.sol";
 import { CSFeeDistributor } from "../../src/CSFeeDistributor.sol";
 import { CSVerifier } from "../../src/CSVerifier.sol";
 import { CSEarlyAdoption } from "../../src/CSEarlyAdoption.sol";
+import { DeployParams } from "../../script/DeployBase.s.sol";
 
 contract Fixtures is StdCheats, Test {
     bytes32 public constant INITIALIZABLE_STORAGE =
@@ -181,6 +182,17 @@ contract DeploymentFixtures is StdCheats, Test {
 
         deploymentConfig.gateSeal = vm.parseJsonAddress(config, ".GateSeal");
         vm.label(deploymentConfig.gateSeal, "GateSeal");
+    }
+
+    function parseDeployParams(
+        string memory deployConfigPath
+    ) internal returns (DeployParams memory) {
+        string memory config = vm.readFile(deployConfigPath);
+        return
+            abi.decode(
+                vm.parseJsonBytes(config, ".DeployParams"),
+                (DeployParams)
+            );
     }
 
     function _isEmpty(string memory s) internal pure returns (bool) {

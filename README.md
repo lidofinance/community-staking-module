@@ -39,12 +39,16 @@ just
 just test-all # run all tests that possible to run without additional configurations
 # or run specific tests
 just test-unit
-# deploy CSM to local fork and run integration tests over it
+# deploy CSM to local fork and run post-deployment and integration tests over it
 just test-local
 
 # run integration tests with specific deployment config
 # make sure that corresponding RPC_URL is set
-DEPLOYMENT_CONFIG=./config/holesky-devnet-0/deploy-holesky-devnet.json just test-integration
+DEPLOYMENT_CONFIG=/artifacts/local/deploy-devnet.json just test-integration
+
+# run post-deployment tests with specific deployment config
+# note that it only makes sense to run right after the deployment on empty contracts
+DEPLOYMENT_CONFIG=/artifacts/local/deploy-devnet.json just test-post-deployment
 ```
 
 **Note:** the CSM requires to be added to the Staking Router 1.5,

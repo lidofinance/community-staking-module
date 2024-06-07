@@ -5,9 +5,9 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { Utilities } from "../helpers/Utilities.sol";
-import { DeploymentFixtures } from "../helpers/Fixtures.sol";
-import "../helpers/MerkleTree.sol";
+import { Utilities } from "../../helpers/Utilities.sol";
+import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
+import "../../helpers/MerkleTree.sol";
 
 contract EarlyAdoptionTest is Test, Utilities, DeploymentFixtures {
     address internal nodeOperator;
