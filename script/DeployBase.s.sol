@@ -16,6 +16,7 @@ import { CSEarlyAdoption } from "../src/CSEarlyAdoption.sol";
 
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { IGateSealFactory } from "../src/interfaces/IGateSealFactory.sol";
+import { IAccountingOracle } from "../src/interfaces/IAccountingOracle.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
@@ -35,6 +36,8 @@ struct DeployParams {
     uint256 fastLaneLengthSlots;
     uint256 consensusVersion;
     uint256 avgPerfLeewayBP;
+    address[] oracleMembers;
+    uint256 hashConsensusQuorum;
     // Verifier
     GIndex gIHistoricalSummaries;
     GIndex gIFirstWithdrawal;
@@ -85,6 +88,7 @@ abstract contract DeployBase is Script {
     HashConsensus public hashConsensus;
 
     error ChainIdMismatch(uint256 actual, uint256 expected);
+    error HashConsensusMismatch();
     error IsNotReadyForDeployment();
     error CannotBeUsedInMainnet();
 
@@ -105,6 +109,21 @@ abstract contract DeployBase is Script {
                 actual: block.chainid,
                 expected: chainId
             });
+        }
+        HashConsensus accountingConsensus = HashConsensus(
+            IAccountingOracle(locator.accountingOracle()).getConsensusContract()
+        );
+        (
+            address[] memory members,
+            uint256[] memory lastReportedRefSlots
+        ) = accountingConsensus.getMembers();
+        uint256 quorum = accountingConsensus.getQuorum();
+        if (
+            keccak256(abi.encode(config.oracleMembers)) !=
+            keccak256(abi.encode(members)) ||
+            config.hashConsensusQuorum != quorum
+        ) {
+            revert HashConsensusMismatch();
         }
 
         artifactDir = vm.envOr("ARTIFACTS_DIR", string("./artifacts/local/"));
@@ -212,6 +231,20 @@ abstract contract DeployBase is Script {
                 admin: address(deployer),
                 reportProcessor: address(oracle)
             });
+            hashConsensus.grantRole(
+                hashConsensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(),
+                address(deployer)
+            );
+            for (uint256 i = 0; i < config.oracleMembers.length; i++) {
+                hashConsensus.addMember(
+                    config.oracleMembers[i],
+                    config.hashConsensusQuorum
+                );
+            }
+            hashConsensus.revokeRole(
+                hashConsensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(),
+                address(deployer)
+            );
 
             oracle.initialize({
                 admin: address(deployer),

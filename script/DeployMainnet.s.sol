@@ -21,6 +21,17 @@ contract DeployMainnet is DeployBase {
         config.fastLaneLengthSlots = 0;
         config.consensusVersion = 1;
         config.avgPerfLeewayBP = 500;
+        config.oracleMembers = new address[](9);
+        config.oracleMembers[0] = 0x140Bd8FbDc884f48dA7cb1c09bE8A2fAdfea776E;
+        config.oracleMembers[1] = 0xA7410857ABbf75043d61ea54e07D57A6EB6EF186;
+        config.oracleMembers[2] = 0x404335BcE530400a5814375E7Ec1FB55fAff3eA2;
+        config.oracleMembers[3] = 0x946D3b081ed19173dC83Cd974fC69e1e760B7d78;
+        config.oracleMembers[4] = 0x007DE4a5F7bc37E2F26c0cb2E8A95006EE9B89b5;
+        config.oracleMembers[5] = 0xEC4BfbAF681eb505B94E4a7849877DC6c600Ca3A;
+        config.oracleMembers[6] = 0x61c91ECd902EB56e314bB2D5c5C07785444Ea1c8;
+        config.oracleMembers[7] = 0x1Ca0fEC59b86F549e1F1184d97cb47794C8Af58d;
+        config.oracleMembers[8] = 0xc79F702202E3A6B0B6310B537E786B9ACAA19BAf;
+        config.hashConsensusQuorum = 5;
         // Verifier
         // NOTE: Deneb fork gIndexes. Should be updated according to `config.verifierSupportedEpoch` fork epoch if needed
         config.gIHistoricalSummaries = pack(0x3b, 5);
