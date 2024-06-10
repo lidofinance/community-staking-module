@@ -122,6 +122,7 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
         if (blocked < amount) {
             revert InvalidBondLockAmount();
         }
+        // @dev It's checked via getActualLockedBond call
         unchecked {
             _changeBondLock(
                 nodeOperatorId,
