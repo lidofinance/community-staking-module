@@ -492,7 +492,9 @@ contract CSAccounting is
 
         uint256 missing = required > current ? required - current : 0;
         if (missing > 0) {
-            return missing + requiredForNextKeys;
+            unchecked {
+                return missing + requiredForNextKeys;
+            }
         }
 
         uint256 excess = current - required;
@@ -611,7 +613,9 @@ contract CSAccounting is
         if (accountLockedBond) {
             uint256 lockedBond = CSBondLock.getActualLockedBond(nodeOperatorId);
             if (currentBond <= lockedBond) return nonWithdrawnKeys;
-            currentBond -= lockedBond;
+            unchecked {
+                currentBond -= lockedBond;
+            }
         }
         BondCurve memory bondCurve = CSBondCurve.getBondCurve(nodeOperatorId);
         uint256 bondedKeys = CSBondCurve.getKeysCountByBondAmount(
@@ -619,7 +623,9 @@ contract CSAccounting is
             bondCurve
         );
         if (bondedKeys >= nonWithdrawnKeys) return 0;
-        return nonWithdrawnKeys - bondedKeys;
+        unchecked {
+            return nonWithdrawnKeys - bondedKeys;
+        }
     }
 
     function _getExcessBondShares(

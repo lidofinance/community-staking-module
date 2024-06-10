@@ -1051,12 +1051,16 @@ contract CSModule is
         }
 
         _isValidatorWithdrawn[pointer] = true;
-        no.totalWithdrawnKeys++;
+        unchecked {
+            no.totalWithdrawnKeys++;
+        }
 
         emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount);
 
         if (_isValidatorSlashed[pointer]) {
-            amount += INITIAL_SLASHING_PENALTY;
+            unchecked {
+                amount += INITIAL_SLASHING_PENALTY;
+            }
             // Bond curve should be reset to default in case of slashing. See https://hackmd.io/@lido/SygBLW5ja
             accounting.resetBondCurve(nodeOperatorId);
         }
@@ -1543,19 +1547,20 @@ contract CSModule is
             publicKeys,
             signatures
         );
+        unchecked {
+            _totalAddedValidators += uint64(keysCount);
 
-        _totalAddedValidators += uint64(keysCount);
+            // Optimistic vetting takes place.
+            if (no.totalAddedKeys == no.totalVettedKeys) {
+                no.totalVettedKeys += uint32(keysCount);
+                emit VettedSigningKeysCountChanged(
+                    nodeOperatorId,
+                    no.totalVettedKeys
+                );
+            }
 
-        // Optimistic vetting takes place.
-        if (no.totalAddedKeys == no.totalVettedKeys) {
-            no.totalVettedKeys += uint32(keysCount);
-            emit VettedSigningKeysCountChanged(
-                nodeOperatorId,
-                no.totalVettedKeys
-            );
+            no.totalAddedKeys += uint32(keysCount);
         }
-
-        no.totalAddedKeys += uint32(keysCount);
         emit TotalSigningKeysCountChanged(nodeOperatorId, no.totalAddedKeys);
         _incrementModuleNonce();
     }
@@ -1591,7 +1596,6 @@ contract CSModule is
             accounting.chargeFee(nodeOperatorId, amountToCharge);
             emit KeyRemovalChargeApplied(nodeOperatorId, amountToCharge);
         }
-
         no.totalAddedKeys = uint32(newTotalSigningKeys);
         emit TotalSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
 
@@ -1627,10 +1631,11 @@ contract CSModule is
             revert ExitedKeysHigherThanTotalDeposited();
         if (!allowDecrease && exitedValidatorsCount < no.totalExitedKeys)
             revert ExitedKeysDecrease();
-
-        _totalExitedValidators =
-            (_totalExitedValidators - no.totalExitedKeys) +
-            uint64(exitedValidatorsCount);
+        unchecked {
+            _totalExitedValidators =
+                (_totalExitedValidators - no.totalExitedKeys) +
+                uint64(exitedValidatorsCount);
+        }
         no.totalExitedKeys = uint32(exitedValidatorsCount);
 
         emit ExitedSigningKeysCountChanged(
@@ -1657,7 +1662,9 @@ contract CSModule is
             // INFO: The only consequence of stuck keys from the on-chain perspective is suspending deposits to the
             // Node Operator. To do that, we set the depositableValidatorsCount to 0 for this Node Operator. Hence
             // we can omit the call to the _updateDepositableValidatorsCount function here to save gas.
-            _depositableValidatorsCount -= no.depositableValidatorsCount;
+            unchecked {
+                _depositableValidatorsCount -= no.depositableValidatorsCount;
+            }
             no.depositableValidatorsCount = 0;
         } else {
             // Nonce will be updated on the top level once per call
