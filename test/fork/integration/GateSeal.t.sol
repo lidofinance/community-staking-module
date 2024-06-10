@@ -5,8 +5,8 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { Utilities } from "../helpers/Utilities.sol";
-import { DeploymentFixtures } from "../helpers/Fixtures.sol";
+import { Utilities } from "../../helpers/Utilities.sol";
+import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
 
 contract GateSealTest is Test, Utilities, DeploymentFixtures {
     address internal nodeOperator;

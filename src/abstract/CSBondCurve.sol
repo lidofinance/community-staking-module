@@ -36,9 +36,9 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     bytes32 private constant CS_BOND_CURVE_STORAGE_LOCATION =
         0x8f22e270e477f5becb8793b61d439ab7ae990ed8eba045eb72061c0e6cfe1500;
 
-    uint256 internal constant MIN_CURVE_LENGTH = 1;
+    uint256 public constant MIN_CURVE_LENGTH = 1;
     uint256 public constant DEFAULT_BOND_CURVE_ID = 0;
-    uint256 internal immutable MAX_CURVE_LENGTH;
+    uint256 public immutable MAX_CURVE_LENGTH;
 
     event BondCurveAdded(uint256[] bondCurve);
     event BondCurveUpdated(uint256 indexed curveId, uint256[] bondCurve);

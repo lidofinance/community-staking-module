@@ -32,10 +32,10 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 totalBondShares;
     }
 
-    ILidoLocator internal immutable LIDO_LOCATOR;
-    ILido internal immutable LIDO;
-    IWithdrawalQueue internal immutable WITHDRAWAL_QUEUE;
-    IWstETH internal immutable WSTETH;
+    ILidoLocator public immutable LIDO_LOCATOR;
+    ILido public immutable LIDO;
+    IWithdrawalQueue public immutable WITHDRAWAL_QUEUE;
+    IWstETH public immutable WSTETH;
 
     // keccak256(abi.encode(uint256(keccak256("CSBondCore")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant CS_BOND_CORE_STORAGE_LOCATION =

@@ -47,6 +47,7 @@ struct DeployParams {
     uint256 maxBondLockRetentionPeriod;
     uint256 bondLockRetentionPeriod;
     address setResetBondCurveAddress;
+    address chargeRecipient;
     // Module
     bytes32 moduleType;
     uint256 minSlashingPenaltyQuotient;
@@ -113,7 +114,6 @@ abstract contract DeployBase is Script {
 
         vm.startBroadcast(pk);
         {
-            address treasury = locator.treasury();
             CSModule csmImpl = new CSModule({
                 moduleType: config.moduleType,
                 minSlashingPenaltyQuotient: config.minSlashingPenaltyQuotient,
@@ -170,7 +170,7 @@ abstract contract DeployBase is Script {
                 admin: deployer,
                 _feeDistributor: address(feeDistributor),
                 bondLockRetentionPeriod: config.bondLockRetentionPeriod,
-                _chargeRecipient: treasury
+                _chargeRecipient: config.chargeRecipient
             });
 
             accounting.grantRole(
@@ -254,25 +254,31 @@ abstract contract DeployBase is Script {
             csm.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
 
             accounting.grantRole(
-                csm.DEFAULT_ADMIN_ROLE(),
+                accounting.DEFAULT_ADMIN_ROLE(),
                 config.votingAddress
             );
-            accounting.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
+            accounting.revokeRole(accounting.DEFAULT_ADMIN_ROLE(), deployer);
 
             hashConsensus.grantRole(
-                csm.DEFAULT_ADMIN_ROLE(),
+                hashConsensus.DEFAULT_ADMIN_ROLE(),
                 config.votingAddress
             );
-            hashConsensus.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
+            hashConsensus.revokeRole(
+                hashConsensus.DEFAULT_ADMIN_ROLE(),
+                deployer
+            );
 
-            oracle.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.votingAddress);
-            oracle.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
+            oracle.grantRole(oracle.DEFAULT_ADMIN_ROLE(), config.votingAddress);
+            oracle.revokeRole(oracle.DEFAULT_ADMIN_ROLE(), deployer);
 
             feeDistributor.grantRole(
-                csm.DEFAULT_ADMIN_ROLE(),
+                feeDistributor.DEFAULT_ADMIN_ROLE(),
                 config.votingAddress
             );
-            feeDistributor.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
+            feeDistributor.revokeRole(
+                feeDistributor.DEFAULT_ADMIN_ROLE(),
+                deployer
+            );
 
             JsonObj memory deployJson = Json.newObj();
             deployJson.set("ChainId", chainId);
@@ -285,6 +291,7 @@ abstract contract DeployBase is Script {
             deployJson.set("CSVerifier", address(verifier));
             deployJson.set("LidoLocator", config.lidoLocatorAddress);
             deployJson.set("GateSeal", gateSeal);
+            deployJson.set("DeployParams", abi.encode(config));
             vm.writeJson(deployJson.str, _deployJsonFilename());
         }
 
@@ -336,7 +343,7 @@ abstract contract DeployBase is Script {
     }
 
     function _grantSecondAdmins() internal {
-        if (keccak256(abi.encode(chainName)) == keccak256("mainnet")) {
+        if (keccak256(abi.encodePacked(chainName)) == keccak256("mainnet")) {
             revert CannotBeUsedInMainnet();
         }
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.secondAdminAddress);

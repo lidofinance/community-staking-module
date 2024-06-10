@@ -31,20 +31,24 @@ Fill vars in the `.env` file with your own values
 just
 ```
 
-### Features
+### Run tests
 
-## Run tests
+Run all tests that are possible to run without additional configurations
 
 ```bash
-just test-all # run all tests that possible to run without additional configurations
-# or run specific tests
-just test-unit
-# deploy CSM to local fork and run integration tests over it
-just test-local
+just test-all
+```
 
-# run integration tests with specific deployment config
-# make sure that corresponding RPC_URL is set
-DEPLOYMENT_CONFIG=./config/holesky-devnet-0/deploy-holesky-devnet.json just test-integration
+Run unit tests only
+
+```bash
+just test-unit
+```
+
+Deploy CSM to local fork and run `post-deployment` and `integration` tests over it
+
+```bash
+just test-local
 ```
 
 **Note:** the CSM requires to be added to the Staking Router 1.5,
@@ -52,13 +56,13 @@ so it's impossible to run integration tests over the network with the old contra
 Technically it's possible to add the CSM to the previous Staking Router version,
 but it's supposed to be added to the new one.
 
-Please Make sure that `test-local` or `test-integration` are running against the correct protocol setup:
+Please Make sure that `test-all` or `test-local` are running against the correct protocol setup:
 
 ```bash
 export CHAIN=devnet
 ```
 
-## Make a gas report
+### Make a gas report
 
 It requires all unit tests to be green
 
@@ -66,7 +70,7 @@ It requires all unit tests to be green
 just gas-report
 ```
 
-## Add new dependencies
+### Add new dependencies
 
 Dependencies are managed using yarn. To install new dependencies, run:
 
@@ -77,31 +81,40 @@ yarn add <package-name>
 Whenever you install new libraries using yarn, make sure to update your
 `remappings.txt`.
 
-## Deploy and test using local fork
+### Deploy and test using local fork
+
+Deploy contracts to the local fork
 
 ```bash
 just deploy-local
 ```
 
-The result of deployment is `./artifacts/local/deploy-devnet.json` deployment config, which is required for integration testing
-
-Integration tests should pass either before a vote, or after
+Set up environment for the local fork
+Further test commands require the following environment variables to be set:
 
 ```bash
-just deploy-local
 export RPC_URL=http://127.0.0.1:8545
 export DEPLOY_CONFIG=./artifacts/local/deploy-devnet.json
+```
 
+The result of deployment is `./artifacts/local/deploy-devnet.json` deployment config, which is required for integration testing
+
+Verify deploy by running post-deployment tests.
+Note that these are meant to be run only right after deployment, so they don't supposed to be green after any actions in the contracts
+
+```bash
+just test-post-deployment
+```
+
+Integration tests should pass either before a vote, or after at any state of contracts
+
+```bash
 just test-integration
 ```
 
 There also fork helper scripts to prepare a fork state for e.g. UI testing purposes
 
 ```bash
-just deploy-local
-export RPC_URL=http://127.0.0.1:8545
-export DEPLOY_CONFIG=./artifacts/local/deploy-devnet.json
-
 just simulate-vote
 just test-integration
 ```
@@ -112,7 +125,7 @@ Kill fork after testing
 just kill-fork
 ```
 
-## Deploy on a chain
+### Deploy on a chain
 
 The following commands are related to the deployment process:
 

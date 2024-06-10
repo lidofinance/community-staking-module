@@ -36,6 +36,14 @@ library Json {
         obj.str = vm.serializeUint(obj.ref, key, value);
     }
 
+    function set(
+        JsonObj memory obj,
+        string memory key,
+        bytes memory value
+    ) internal {
+        obj.str = vm.serializeBytes(obj.ref, key, value);
+    }
+
     function _incrementId() private returns (uint256 count) {
         bytes32 slot = keccak256("json.id.counter");
 
