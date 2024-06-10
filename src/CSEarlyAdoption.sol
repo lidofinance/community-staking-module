@@ -61,11 +61,14 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
         address member,
         bytes32[] calldata proof
     ) public view returns (bool) {
-        return
-            MerkleProof.verifyCalldata(
-                proof,
-                TREE_ROOT,
-                keccak256(bytes.concat(keccak256(abi.encode(member))))
-            );
+        return MerkleProof.verifyCalldata(proof, TREE_ROOT, hashLeaf(member));
+    }
+
+    /// @notice Get a hash of a leaf in EA Merkle tree
+    /// @param member EA member address
+    /// @return Hash of the leaf
+    /// @dev Double hash the leaf to prevent second preimage attacks
+    function hashLeaf(address member) public pure returns (bytes32) {
+        return keccak256(bytes.concat(keccak256(abi.encode(member))));
     }
 }

@@ -200,6 +200,7 @@ contract CSFeeDistributor is
     /// @notice Get a hash of a leaf
     /// @param nodeOperatorId ID of the Node Operator
     /// @param shares Amount of stETH shares
+    /// @return Hash of the leaf
     /// @dev Double hash the leaf to prevent second preimage attacks
     function hashLeaf(
         uint256 nodeOperatorId,
