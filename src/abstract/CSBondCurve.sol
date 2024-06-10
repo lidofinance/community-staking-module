@@ -210,6 +210,18 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         emit BondCurveSet(nodeOperatorId, DEFAULT_BOND_CURVE_ID);
     }
 
+    function _checkBondCurve(uint256[] memory curvePoints) private view {
+        if (
+            curvePoints.length < MIN_CURVE_LENGTH ||
+            curvePoints.length > MAX_CURVE_LENGTH
+        ) revert InvalidBondCurveLength();
+        if (curvePoints[0] == 0) revert InvalidBondCurveValues();
+        for (uint256 i = 1; i < curvePoints.length; i++) {
+            if (curvePoints[i] <= curvePoints[i - 1])
+                revert InvalidBondCurveValues();
+        }
+    }
+
     function _searchKeysCount(
         uint256 amount,
         uint256[] memory curvePoints
@@ -242,18 +254,6 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     {
         assembly {
             $.slot := CS_BOND_CURVE_STORAGE_LOCATION
-        }
-    }
-
-    function _checkBondCurve(uint256[] memory curvePoints) private view {
-        if (
-            curvePoints.length < MIN_CURVE_LENGTH ||
-            curvePoints.length > MAX_CURVE_LENGTH
-        ) revert InvalidBondCurveLength();
-        if (curvePoints[0] == 0) revert InvalidBondCurveValues();
-        for (uint256 i = 1; i < curvePoints.length; i++) {
-            if (curvePoints[i] <= curvePoints[i - 1])
-                revert InvalidBondCurveValues();
         }
     }
 }
