@@ -22,6 +22,10 @@ contract DeployHoleskyDevnet is DeployBase {
         config.fastLaneLengthSlots = 0;
         config.consensusVersion = 1;
         config.avgPerfLeewayBP = 500;
+        config.oracleMembers = new address[](2);
+        config.oracleMembers[0] = 0xe06810d4f34b6D3AcCAA9928bFdeDF9155Fb04f5;
+        config.oracleMembers[1] = 0x4D5EdeC67Fc31EF1b56f81Aa7be3B8862Fb51C26;
+        config.hashConsensusQuorum = 2;
         // Verifier
         // NOTE: Deneb fork gIndexes. Should be updated according to `config.verifierSupportedEpoch` fork epoch if needed
         config.gIHistoricalSummaries = pack(0x3b, 5);

@@ -22,6 +22,18 @@ contract DeployHolesky is DeployBase {
         config.fastLaneLengthSlots = 0;
         config.consensusVersion = 1;
         config.avgPerfLeewayBP = 500;
+        config.oracleMembers = new address[](10);
+        config.oracleMembers[0] = 0x12A1D74F8697b9f4F1eEBb0a9d0FB6a751366399;
+        config.oracleMembers[1] = 0xD892c09b556b547c80B7d8c8cB8d75bf541B2284;
+        config.oracleMembers[2] = 0xf7aE520e99ed3C41180B5E12681d31Aa7302E4e5;
+        config.oracleMembers[3] = 0x31fa51343297FFce0CC1E67a50B2D3428057D1b1;
+        config.oracleMembers[4] = 0x81E411f1BFDa43493D7994F82fb61A415F6b8Fd4;
+        config.oracleMembers[5] = 0x4c75FA734a39f3a21C57e583c1c29942F021C6B7;
+        config.oracleMembers[6] = 0xD3b1e36A372Ca250eefF61f90E833Ca070559970;
+        config.oracleMembers[7] = 0xF0F23944EfC5A63c53632C571E7377b85d5E6B6f;
+        config.oracleMembers[8] = 0xb29dD2f6672C0DFF2d2f173087739A42877A5172;
+        config.oracleMembers[9] = 0x3799bDA7B884D33F79CEC926af21160dc47fbe05;
+        config.hashConsensusQuorum = 6;
         // Verifier
         // NOTE: Deneb fork gIndexes. Should be updated according to `config.verifierSupportedEpoch` fork epoch if needed
         config.gIHistoricalSummaries = pack(0x3b, 5);
