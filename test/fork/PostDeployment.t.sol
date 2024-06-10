@@ -16,7 +16,7 @@ import { CSBondCurve } from "../../src/abstract/CSBondCurve.sol";
 import { CSFeeDistributor } from "../../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../../src/CSFeeOracle.sol";
 import { IWithdrawalQueue } from "../../src/interfaces/IWithdrawalQueue.sol";
-import { IAccountingOracle } from "../../src/interfaces/IAccountingOracle.sol";
+import { BaseOracle } from "../../src/lib/base-oracle/BaseOracle.sol";
 import { GIndex } from "../../src/lib/GIndex.sol";
 import { Slot } from "../../src/lib/Types.sol";
 import { Versioned } from "../../src/lib/utils/Versioned.sol";
@@ -385,17 +385,14 @@ contract HashConsensusDeploymentTest is Test, Utilities, DeploymentFixtures {
 
     function test_initialState() public {
         assertEq(hashConsensus.getQuorum(), deployParams.hashConsensusQuorum);
-        (
-            address[] memory members,
-            uint256[] memory lastReportedRefSlots
-        ) = hashConsensus.getMembers();
+        (address[] memory members, ) = hashConsensus.getMembers();
         assertEq(
             keccak256(abi.encode(members)),
             keccak256(abi.encode(deployParams.oracleMembers))
         );
 
-        (members, lastReportedRefSlots) = HashConsensus(
-            IAccountingOracle(locator.accountingOracle()).getConsensusContract()
+        (members, ) = HashConsensus(
+            BaseOracle(locator.accountingOracle()).getConsensusContract()
         ).getMembers();
         assertEq(
             keccak256(abi.encode(members)),

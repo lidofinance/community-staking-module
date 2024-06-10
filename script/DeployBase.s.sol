@@ -16,7 +16,7 @@ import { CSEarlyAdoption } from "../src/CSEarlyAdoption.sol";
 
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { IGateSealFactory } from "../src/interfaces/IGateSealFactory.sol";
-import { IAccountingOracle } from "../src/interfaces/IAccountingOracle.sol";
+import { BaseOracle } from "../src/lib/base-oracle/BaseOracle.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
@@ -111,12 +111,9 @@ abstract contract DeployBase is Script {
             });
         }
         HashConsensus accountingConsensus = HashConsensus(
-            IAccountingOracle(locator.accountingOracle()).getConsensusContract()
+            BaseOracle(locator.accountingOracle()).getConsensusContract()
         );
-        (
-            address[] memory members,
-            uint256[] memory lastReportedRefSlots
-        ) = accountingConsensus.getMembers();
+        (address[] memory members, ) = accountingConsensus.getMembers();
         uint256 quorum = accountingConsensus.getQuorum();
         if (
             keccak256(abi.encode(config.oracleMembers)) !=
