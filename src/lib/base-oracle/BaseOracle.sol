@@ -35,6 +35,7 @@ interface IConsensusContract {
     function getInitialRefSlot() external view returns (uint256);
 }
 
+// solhint-disable ordering
 abstract contract BaseOracle is
     IReportAsyncProcessor,
     AccessControlEnumerableUpgradeable,
@@ -42,49 +43,6 @@ abstract contract BaseOracle is
 {
     using UnstructuredStorage for bytes32;
     using SafeCast for uint256;
-
-    error AddressCannotBeZero();
-    error AddressCannotBeSame();
-    error VersionCannotBeSame();
-    error UnexpectedChainConfig();
-    error SenderIsNotTheConsensusContract();
-    error InitialRefSlotCannotBeLessThanProcessingOne(
-        uint256 initialRefSlot,
-        uint256 processingRefSlot
-    );
-    error RefSlotMustBeGreaterThanProcessingOne(
-        uint256 refSlot,
-        uint256 processingRefSlot
-    );
-    error RefSlotCannotDecrease(uint256 refSlot, uint256 prevRefSlot);
-    error NoConsensusReportToProcess();
-    error ProcessingDeadlineMissed(uint256 deadline);
-    error RefSlotAlreadyProcessing();
-    error UnexpectedRefSlot(uint256 consensusRefSlot, uint256 dataRefSlot);
-    error UnexpectedConsensusVersion(
-        uint256 expectedVersion,
-        uint256 receivedVersion
-    );
-    error HashCannotBeZero();
-    error UnexpectedDataHash(bytes32 consensusHash, bytes32 receivedHash);
-    error SecondsPerSlotCannotBeZero();
-
-    event ConsensusHashContractSet(
-        address indexed addr,
-        address indexed prevAddr
-    );
-    event ConsensusVersionSet(
-        uint256 indexed version,
-        uint256 indexed prevVersion
-    );
-    event ReportSubmitted(
-        uint256 indexed refSlot,
-        bytes32 hash,
-        uint256 processingDeadlineTime
-    );
-    event ReportDiscarded(uint256 indexed refSlot, bytes32 hash);
-    event ProcessingStarted(uint256 indexed refSlot, bytes32 hash);
-    event WarnProcessingMissed(uint256 indexed refSlot);
 
     struct ConsensusReport {
         bytes32 hash;
@@ -120,6 +78,49 @@ abstract contract BaseOracle is
 
     uint256 public immutable SECONDS_PER_SLOT;
     uint256 public immutable GENESIS_TIME;
+
+    event ConsensusHashContractSet(
+        address indexed addr,
+        address indexed prevAddr
+    );
+    event ConsensusVersionSet(
+        uint256 indexed version,
+        uint256 indexed prevVersion
+    );
+    event ReportSubmitted(
+        uint256 indexed refSlot,
+        bytes32 hash,
+        uint256 processingDeadlineTime
+    );
+    event ReportDiscarded(uint256 indexed refSlot, bytes32 hash);
+    event ProcessingStarted(uint256 indexed refSlot, bytes32 hash);
+    event WarnProcessingMissed(uint256 indexed refSlot);
+
+    error AddressCannotBeZero();
+    error AddressCannotBeSame();
+    error VersionCannotBeSame();
+    error UnexpectedChainConfig();
+    error SenderIsNotTheConsensusContract();
+    error InitialRefSlotCannotBeLessThanProcessingOne(
+        uint256 initialRefSlot,
+        uint256 processingRefSlot
+    );
+    error RefSlotMustBeGreaterThanProcessingOne(
+        uint256 refSlot,
+        uint256 processingRefSlot
+    );
+    error RefSlotCannotDecrease(uint256 refSlot, uint256 prevRefSlot);
+    error NoConsensusReportToProcess();
+    error ProcessingDeadlineMissed(uint256 deadline);
+    error RefSlotAlreadyProcessing();
+    error UnexpectedRefSlot(uint256 consensusRefSlot, uint256 dataRefSlot);
+    error UnexpectedConsensusVersion(
+        uint256 expectedVersion,
+        uint256 receivedVersion
+    );
+    error HashCannotBeZero();
+    error UnexpectedDataHash(bytes32 consensusHash, bytes32 receivedHash);
+    error SecondsPerSlotCannotBeZero();
 
     ///
     /// Initialization & admin functions
@@ -347,7 +348,7 @@ abstract contract BaseOracle is
     ///
     function _handleConsensusReportDiscarded(
         ConsensusReport memory report
-    ) internal virtual {}
+    ) internal virtual {} // solhint-disable-line no-empty-blocks
 
     /// @notice May be called by a descendant contract to check if the received data matches
     /// the currently submitted consensus report. Reverts otherwise.

@@ -3,8 +3,9 @@
 pragma solidity 0.8.24;
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
+
+// solhint-disable ordering
 
 /// @notice A contract that gets consensus reports (i.e. hashes) pushed to and processes them
 /// asynchronously.
