@@ -18,13 +18,7 @@ contract OssifiableProxy is ERC1967Proxy {
     /// @dev Validates that proxy is not ossified and that method is called by the admin
     ///     of the proxy
     modifier onlyAdmin() {
-        address admin = ERC1967Utils.getAdmin();
-        if (admin == address(0)) {
-            revert ProxyIsOssified();
-        }
-        if (admin != msg.sender) {
-            revert NotAdmin();
-        }
+        _onlyAdmin();
         _;
     }
 
@@ -107,5 +101,15 @@ contract OssifiableProxy is ERC1967Proxy {
     // solhint-disable-next-line func-name-mixedcase
     function proxy__getIsOssified() external view returns (bool ossified) {
         ossified = ERC1967Utils.getAdmin() == address(0);
+    }
+
+    function _onlyAdmin() internal view {
+        address admin = ERC1967Utils.getAdmin();
+        if (admin == address(0)) {
+            revert ProxyIsOssified();
+        }
+        if (admin != msg.sender) {
+            revert NotAdmin();
+        }
     }
 }

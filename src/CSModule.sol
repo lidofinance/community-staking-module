@@ -1262,10 +1262,8 @@ contract CSModule is
     function isValidatorSlashed(
         uint256 nodeOperatorId,
         uint256 keyIndex
-    ) external view returns (bool isValidatorSlashed) {
-        isValidatorSlashed = _isValidatorSlashed[
-            _keyPointer(nodeOperatorId, keyIndex)
-        ];
+    ) external view returns (bool isSlashed) {
+        isSlashed = _isValidatorSlashed[_keyPointer(nodeOperatorId, keyIndex)];
     }
 
     /// @notice Check if the given Node Operator's key is reported as withdrawn
@@ -1274,8 +1272,8 @@ contract CSModule is
     function isValidatorWithdrawn(
         uint256 nodeOperatorId,
         uint256 keyIndex
-    ) external view returns (bool isValidatorWithdrawn) {
-        isValidatorWithdrawn = _isValidatorWithdrawn[
+    ) external view returns (bool isWithdrawn) {
+        isWithdrawn = _isValidatorWithdrawn[
             _keyPointer(nodeOperatorId, keyIndex)
         ];
     }
@@ -1360,8 +1358,8 @@ contract CSModule is
         );
         // Force mode enabled and unbonded
         if (
-            no.targetLimitMode == FORCED_TARGET_LIMIT_MODE_ID &&
-            totalUnbondedKeys > 0
+            totalUnbondedKeys > 0 &&
+            no.targetLimitMode == FORCED_TARGET_LIMIT_MODE_ID
         ) {
             targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
             targetValidatorsCount = Math.min(
@@ -1503,7 +1501,7 @@ contract CSModule is
             revert NotAllowedToJoinYet();
         }
 
-        uint256 id = _nodeOperatorsCount;
+        id = _nodeOperatorsCount;
         NodeOperator storage no = _nodeOperators[id];
 
         no.managerAddress = managerAddress == address(0)
