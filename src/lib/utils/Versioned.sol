@@ -18,7 +18,7 @@ contract Versioned {
 
     uint256 internal constant PETRIFIED_VERSION_MARK = type(uint256).max;
 
-    event ContractVersionSet(uint256 indexed version);
+    event ContractVersionSet(uint256 version);
 
     error NonZeroContractVersionOnInit();
     error InvalidContractVersionIncrement();

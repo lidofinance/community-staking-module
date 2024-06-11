@@ -45,7 +45,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
     event BondCurveAdded(uint256[] bondCurve);
     event BondCurveUpdated(uint256 indexed curveId, uint256[] bondCurve);
-    event BondCurveSet(uint256 indexed nodeOperatorId, uint256 indexed curveId);
+    event BondCurveSet(uint256 indexed nodeOperatorId, uint256 curveId);
 
     error InvalidBondCurveLength();
     error InvalidBondCurveValues();
@@ -60,12 +60,12 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     /// @dev Get default bond curve info if `curveId` is `0` or invalid
     /// @notice Return bond curve for the given curve id
     /// @param curveId Curve id to get bond curve for
-    /// @return info Bond curve
+    /// @return Bond curve
     function getCurveInfo(
         uint256 curveId
-    ) public view returns (BondCurve memory info) {
+    ) public view returns (BondCurve memory) {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        info = $.bondCurves[curveId];
+        return $.bondCurves[curveId];
     }
 
     /// @notice Get bond curve for the given Node Operator

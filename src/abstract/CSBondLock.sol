@@ -47,7 +47,7 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
         uint256 newAmount,
         uint256 retentionUntil
     );
-    event BondLockRetentionPeriodChanged(uint256 indexed retentionPeriod);
+    event BondLockRetentionPeriodChanged(uint256 retentionPeriod);
 
     error InvalidBondLockRetentionPeriod();
     error InvalidBondLockAmount();
@@ -76,12 +76,12 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
 
     /// @notice Get information about the locked bond for the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return lock Locked bond info
+    /// @return Locked bond info
     function getLockedBondInfo(
         uint256 nodeOperatorId
-    ) public view returns (BondLock memory lock) {
+    ) public view returns (BondLock memory) {
         CSBondLockStorage storage $ = _getCSBondLockStorage();
-        lock = $.bondLock[nodeOperatorId];
+        return $.bondLock[nodeOperatorId];
     }
 
     /// @notice Get amount of the locked bond in ETH (stETH) by the given Node Operator

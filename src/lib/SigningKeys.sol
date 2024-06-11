@@ -27,7 +27,7 @@ library SigningKeys {
     /// @param nodeOperatorId operator id
     /// @param startIndex start index
     /// @param keysCount keys count to load
-    /// @param pubkeys kes buffer to read from
+    /// @param pubkeys keys buffer to read from
     /// @param signatures signatures buffer to read from
     /// @return total new total keys count
     function saveKeysSigs(
@@ -220,9 +220,11 @@ library SigningKeys {
 
     function initKeysSigsBuf(
         uint256 count
-    ) internal pure returns (bytes memory keys, bytes memory sigs) {
-        keys = new bytes(count * PUBKEY_LENGTH);
-        sigs = new bytes(count * SIGNATURE_LENGTH);
+    ) internal pure returns (bytes memory, bytes memory) {
+        return (
+            new bytes(count * PUBKEY_LENGTH),
+            new bytes(count * SIGNATURE_LENGTH)
+        );
     }
 
     function getKeyOffset(

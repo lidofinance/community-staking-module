@@ -114,7 +114,7 @@ contract CSModule is
     );
     event TargetValidatorsCountChangedByRequest(
         uint256 indexed nodeOperatorId,
-        uint8 indexed targetLimitMode,
+        uint8 targetLimitMode,
         uint256 targetValidatorsCount
     );
     event WithdrawalSubmitted(
@@ -128,7 +128,7 @@ contract CSModule is
     );
 
     event PublicRelease();
-    event KeyRemovalChargeSet(uint256 indexed amount);
+    event KeyRemovalChargeSet(uint256 amount);
 
     event KeyRemovalChargeApplied(
         uint256 indexed nodeOperatorId,
@@ -1306,7 +1306,7 @@ contract CSModule is
 
     /// @notice Get Node Operator info
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return operator Node Operator info
+    /// @return Node Operator info
     function getNodeOperator(
         uint256 nodeOperatorId
     ) external view returns (NodeOperator memory) {
