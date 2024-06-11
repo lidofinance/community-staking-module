@@ -13,9 +13,9 @@
 | addBondCurve                                                | 24358           | 101491 | 98934  | 305606 | 349     |
 | chargeFee                                                   | 21803           | 48144  | 48144  | 74486  | 2       |
 | chargeRecipient                                             | 469             | 469    | 469    | 469    | 1       |
-| claimRewardsStETH                                           | 25075           | 79272  | 91062  | 100912 | 16      |
-| claimRewardsUnstETH                                         | 25055           | 64060  | 66737  | 76584  | 16      |
-| claimRewardsWstETH                                          | 25121           | 114821 | 152894 | 157299 | 16      |
+| claimRewardsStETH                                           | 25075           | 79096  | 90845  | 100695 | 16      |
+| claimRewardsUnstETH                                         | 25055           | 63884  | 66520  | 76367  | 16      |
+| claimRewardsWstETH                                          | 25121           | 114644 | 152676 | 157082 | 16      |
 | compensateLockedBondETH                                     | 47498           | 47498  | 47498  | 47498  | 1       |
 | depositETH                                                  | 24149           | 111255 | 113205 | 113445 | 108     |
 | depositStETH                                                | 25184           | 85511  | 103953 | 107872 | 8       |

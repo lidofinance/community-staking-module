@@ -547,7 +547,7 @@ contract CSAccounting is
     function _pullFeeRewards(
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
-        bytes32[] memory rewardsProof
+        bytes32[] calldata rewardsProof
     ) internal {
         uint256 distributed = feeDistributor.distributeFees(
             nodeOperatorId,
