@@ -20,7 +20,7 @@
     "lido-csm/interface-starts-with-i": "error",
     "lido-csm/contract-ordering": "off",
     "lido-csm/license-checker": "error",
-    "gas-calldata-parameters": "warn",
+    "gas-calldata-parameters": "error",
     "gas-custom-errors": "error",
     "gas-length-in-loops": "error",
     "gas-struct-packing": "error"
