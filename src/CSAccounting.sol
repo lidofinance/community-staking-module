@@ -476,31 +476,35 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 additionalKeys
     ) public view returns (uint256) {
-        uint256 nonWithdrawnKeys = CSM.getNodeOperatorNonWithdrawnKeys(
-            nodeOperatorId
-        );
-        (uint256 current, uint256 required) = _getBondSummary(
-            nodeOperatorId,
-            nonWithdrawnKeys
-        );
-        BondCurve memory bondCurve = CSBondCurve.getBondCurve(nodeOperatorId);
-        uint256 requiredForNextKeys = CSBondCurve.getBondAmountByKeysCount(
-            nonWithdrawnKeys + additionalKeys,
-            bondCurve
-        ) - CSBondCurve.getBondAmountByKeysCount(nonWithdrawnKeys, bondCurve);
+        unchecked {
+            uint256 nonWithdrawnKeys = CSM.getNodeOperatorNonWithdrawnKeys(
+                nodeOperatorId
+            );
+            (uint256 current, uint256 required) = _getBondSummary(
+                nodeOperatorId,
+                nonWithdrawnKeys
+            );
+            BondCurve memory bondCurve = CSBondCurve.getBondCurve(
+                nodeOperatorId
+            );
+            uint256 requiredForNextKeys = CSBondCurve.getBondAmountByKeysCount(
+                nonWithdrawnKeys + additionalKeys,
+                bondCurve
+            ) -
+                CSBondCurve.getBondAmountByKeysCount(
+                    nonWithdrawnKeys,
+                    bondCurve
+                );
 
-        uint256 missing = required > current ? required - current : 0;
-        if (missing > 0) {
-            unchecked {
+            uint256 missing = required > current ? required - current : 0;
+            if (missing > 0) {
                 return missing + requiredForNextKeys;
             }
-        }
 
-        uint256 excess = current - required;
-        if (excess >= requiredForNextKeys) {
-            return 0;
-        }
-        unchecked {
+            uint256 excess = current - required;
+            if (excess >= requiredForNextKeys) {
+                return 0;
+            }
             return requiredForNextKeys - excess;
         }
     }
@@ -585,13 +589,15 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 nonWithdrawnKeys
     ) internal view returns (uint256 current, uint256 required) {
-        current = CSBondCore.getBondShares(nodeOperatorId);
-        required = _sharesByEth(
-            CSBondCurve.getBondAmountByKeysCount(
-                nonWithdrawnKeys,
-                CSBondCurve.getBondCurve(nodeOperatorId)
-            ) + CSBondLock.getActualLockedBond(nodeOperatorId)
-        );
+        unchecked {
+            current = CSBondCore.getBondShares(nodeOperatorId);
+            required = _sharesByEth(
+                CSBondCurve.getBondAmountByKeysCount(
+                    nonWithdrawnKeys,
+                    CSBondCurve.getBondCurve(nodeOperatorId)
+                ) + CSBondLock.getActualLockedBond(nodeOperatorId)
+            );
+        }
     }
 
     /// @dev Unbonded stands for the amount of the keys not fully covered with the bond

@@ -946,11 +946,12 @@ contract CSModule is
         uint256 amount
     ) external onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
-        accounting.lockBondETH(
-            nodeOperatorId,
-            amount + EL_REWARDS_STEALING_FINE
-        );
-
+        unchecked {
+            accounting.lockBondETH(
+                nodeOperatorId,
+                amount + EL_REWARDS_STEALING_FINE
+            );
+        }
         emit ELRewardsStealingPenaltyReported(
             nodeOperatorId,
             blockHash,
@@ -1069,7 +1070,9 @@ contract CSModule is
         }
 
         if (amount < DEPOSIT_SIZE) {
-            accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - amount);
+            unchecked {
+                accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - amount);
+            }
         }
 
         // Nonce should be updated if depositableValidators change
@@ -1317,7 +1320,9 @@ contract CSModule is
         uint256 nodeOperatorId
     ) external view returns (uint256 count) {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        count = no.totalAddedKeys - no.totalWithdrawnKeys;
+        unchecked {
+            count = no.totalAddedKeys - no.totalWithdrawnKeys;
+        }
     }
 
     /// @notice Get Node Operator summary
@@ -1358,26 +1363,30 @@ contract CSModule is
         uint256 totalUnbondedKeys = accounting.getUnbondedKeysCountToEject(
             nodeOperatorId
         );
-        // Force mode enabled and unbonded
-        if (
-            totalUnbondedKeys > 0 &&
-            no.targetLimitMode == FORCED_TARGET_LIMIT_MODE_ID
-        ) {
-            targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
-            targetValidatorsCount = Math.min(
-                no.targetLimit,
-                no.totalAddedKeys - no.totalWithdrawnKeys - totalUnbondedKeys
-            );
-            // No force mode enabled but unbonded
-        } else if (totalUnbondedKeys > 0) {
-            targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
-            targetValidatorsCount =
-                no.totalAddedKeys -
-                no.totalWithdrawnKeys -
-                totalUnbondedKeys;
-        } else {
-            targetLimitMode = no.targetLimitMode;
-            targetValidatorsCount = no.targetLimit;
+        unchecked {
+            // Force mode enabled and unbonded
+            if (
+                totalUnbondedKeys > 0 &&
+                no.targetLimitMode == FORCED_TARGET_LIMIT_MODE_ID
+            ) {
+                targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
+                targetValidatorsCount = Math.min(
+                    no.targetLimit,
+                    no.totalAddedKeys -
+                        no.totalWithdrawnKeys -
+                        totalUnbondedKeys
+                );
+                // No force mode enabled but unbonded
+            } else if (totalUnbondedKeys > 0) {
+                targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
+                targetValidatorsCount =
+                    no.totalAddedKeys -
+                    no.totalWithdrawnKeys -
+                    totalUnbondedKeys;
+            } else {
+                targetLimitMode = no.targetLimitMode;
+                targetValidatorsCount = no.targetLimit;
+            }
         }
         stuckValidatorsCount = no.stuckValidatorsCount;
         // @dev unused in CSM
@@ -1537,12 +1546,14 @@ contract CSModule is
     ) internal {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         uint256 startIndex = no.totalAddedKeys;
-        if (
-            !publicRelease &&
-            startIndex + keysCount >
-            MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE
-        ) {
-            revert MaxSigningKeysCountExceeded();
+        unchecked {
+            if (
+                !publicRelease &&
+                startIndex + keysCount >
+                MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE
+            ) {
+                revert MaxSigningKeysCountExceeded();
+            }
         }
 
         // solhint-disable-next-line func-named-parameters
@@ -1581,9 +1592,10 @@ contract CSModule is
         if (startIndex < no.totalDepositedKeys) {
             revert SigningKeysInvalidOffset();
         }
-
-        if (startIndex + keysCount > no.totalAddedKeys) {
-            revert SigningKeysInvalidOffset();
+        unchecked {
+            if (startIndex + keysCount > no.totalAddedKeys) {
+                revert SigningKeysInvalidOffset();
+            }
         }
 
         // solhint-disable-next-line func-named-parameters
@@ -1657,8 +1669,12 @@ contract CSModule is
         _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (stuckValidatorsCount == no.stuckValidatorsCount) return;
-        if (stuckValidatorsCount > no.totalDepositedKeys - no.totalExitedKeys)
-            revert StuckKeysHigherThanExited();
+        unchecked {
+            if (
+                stuckValidatorsCount >
+                no.totalDepositedKeys - no.totalExitedKeys
+            ) revert StuckKeysHigherThanExited();
+        }
 
         no.stuckValidatorsCount = uint32(stuckValidatorsCount);
         emit StuckSigningKeysCountChanged(nodeOperatorId, stuckValidatorsCount);
@@ -1709,12 +1725,14 @@ contract CSModule is
         if (no.targetLimitMode > 0 && newCount > 0) {
             uint256 nonWithdrawnValidators = no.totalDepositedKeys -
                 no.totalWithdrawnKeys;
-            newCount = Math.min(
-                no.targetLimit > nonWithdrawnValidators
-                    ? no.targetLimit - nonWithdrawnValidators
-                    : 0,
-                newCount
-            );
+            unchecked {
+                newCount = Math.min(
+                    no.targetLimit > nonWithdrawnValidators
+                        ? no.targetLimit - nonWithdrawnValidators
+                        : 0,
+                    newCount
+                );
+            }
         }
 
         if (no.depositableValidatorsCount != newCount) {

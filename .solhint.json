@@ -22,11 +22,7 @@
     "lido-csm/license-checker": "error",
     "gas-calldata-parameters": "warn",
     "gas-custom-errors": "error",
-    "gas-increment-by-one": "warn",
     "gas-length-in-loops": "error",
-    "gas-struct-packing": "error",
-    "gas-strict-inequalities": "warn",
-    "gas-named-return-values": "warn",
-    "gas-indexed-events": "warn"
+    "gas-struct-packing": "error"
   }
 }

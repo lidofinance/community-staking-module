@@ -125,10 +125,12 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         if (keys <= curve.points.length) {
             return curve.points[keys - 1];
         }
-        return
-            curve.points[curve.points.length - 1] +
-            (keys - curve.points.length) *
-            curve.trend;
+        unchecked {
+            return
+                curve.points[curve.points.length - 1] +
+                (keys - curve.points.length) *
+                curve.trend;
+        }
     }
 
     /// @notice Get keys count for the given bond amount for particular bond curve.
@@ -142,8 +144,12 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         if (amount < curve.points[0]) return 0;
         uint256 maxCurveAmount = curve.points[curve.points.length - 1];
         if (amount >= maxCurveAmount) {
-            return
-                curve.points.length + (amount - maxCurveAmount) / curve.trend;
+            unchecked {
+                return
+                    curve.points.length +
+                    (amount - maxCurveAmount) /
+                    curve.trend;
+            }
         }
         return _searchKeysCount(amount, curve.points);
     }
@@ -173,7 +179,9 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             BondCurve({ points: curvePoints, trend: curveTrend })
         );
         emit BondCurveAdded(curvePoints);
-        id = $.bondCurves.length - 1;
+        unchecked {
+            id = $.bondCurves.length - 1;
+        }
     }
 
     /// @dev Update existing bond curve
@@ -230,25 +238,27 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         uint256 amount,
         uint256[] memory curvePoints
     ) private pure returns (uint256) {
-        uint256 low;
-        // @dev Curves of a length = 1 are handled in the parent method
-        uint256 high = curvePoints.length - 2;
-        uint256 mid;
-        uint256 midAmount;
-        while (low <= high) {
-            mid = (low + high) / 2;
-            midAmount = curvePoints[mid];
-            if (amount == midAmount) {
-                return mid + 1;
+        unchecked {
+            uint256 low;
+            // @dev Curves of a length = 1 are handled in the parent method
+            uint256 high = curvePoints.length - 2;
+            uint256 mid;
+            uint256 midAmount;
+            while (low <= high) {
+                mid = (low + high) / 2;
+                midAmount = curvePoints[mid];
+                if (amount == midAmount) {
+                    return mid + 1;
+                }
+                // underflow is excluded by the conditions in the parent method
+                if (amount < midAmount) {
+                    high = mid - 1;
+                } else if (amount > midAmount) {
+                    low = mid + 1;
+                }
             }
-            // underflow is excluded by the conditions in the parent method
-            if (amount < midAmount) {
-                high = mid - 1;
-            } else if (amount > midAmount) {
-                low = mid + 1;
-            }
+            return low;
         }
-        return low;
     }
 
     function _getCSBondCurveStorage()
