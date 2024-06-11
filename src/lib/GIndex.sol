@@ -102,7 +102,7 @@ function isParentOf(GIndex self, GIndex other) pure returns (bool) {
             return true;
         }
 
-        ++gI;
+        gI = gI >> 1;
     }
 
     return false;
