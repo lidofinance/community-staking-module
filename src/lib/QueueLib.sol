@@ -41,7 +41,7 @@ function next(Batch self) pure returns (uint128 n) {
     }
 }
 
-function setKeys(Batch self, uint256 keysCount) pure returns (Batch updated) {
+function setKeys(Batch self, uint256 keysCount) pure returns (Batch) {
     assembly {
         self := or(
             and(
@@ -52,10 +52,10 @@ function setKeys(Batch self, uint256 keysCount) pure returns (Batch updated) {
         ) // self.keys = keysCount
     }
 
-    updated = self;
+    return self;
 }
 
-function setNext(Batch self, Batch from) pure returns (Batch nextItem) {
+function setNext(Batch self, Batch from) pure returns (Batch) {
     assembly {
         self := or(
             and(
@@ -68,7 +68,7 @@ function setNext(Batch self, Batch from) pure returns (Batch nextItem) {
             )
         ) // self.next = from.next
     }
-    nextItem = self;
+    return self;
 }
 
 /// @dev Instantiate a new Batch to be added to the queue. The `next` field will be determined upon the enqueue.

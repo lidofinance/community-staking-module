@@ -49,7 +49,7 @@ contract CSAccounting is
     address public chargeRecipient;
 
     event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
-    event ChargeRecipientSet(address indexed chargeRecipient);
+    event ChargeRecipientSet(address chargeRecipient);
 
     error InvalidSender();
     error SenderIsNotCSM();

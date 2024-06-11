@@ -38,7 +38,7 @@
 | getUnbondedKeysCount                                        | 2568            | 11735  | 6774   | 25524  | 486     |
 | getUnbondedKeysCountToEject                                 | 4055            | 7092   | 4519   | 13905  | 36      |
 | grantRole                                                   | 29393           | 99943  | 118481 | 118481 | 1547    |
-| initialize                                                  | 25980           | 491173 | 493447 | 493447 | 513     |
+| initialize                                                  | 25980           | 491083 | 493357 | 493357 | 513     |
 | isPaused                                                    | 406             | 806    | 406    | 2406   | 5       |
 | lockBondETH                                                 | 21797           | 68483  | 70275  | 70299  | 27      |
 | pauseFor                                                    | 23962           | 45328  | 47465  | 47465  | 11      |
@@ -50,7 +50,7 @@
 | resetBondCurve                                              | 23951           | 24792  | 24792  | 25634  | 2       |
 | resume                                                      | 23792           | 26701  | 26701  | 29611  | 2       |
 | setBondCurve                                                | 24112           | 48933  | 49926  | 49926  | 26      |
-| setChargeRecipient                                          | 24066           | 26131  | 24070  | 30257  | 3       |
+| setChargeRecipient                                          | 24066           | 26103  | 24070  | 30173  | 3       |
 | setLockedBondRetentionPeriod                                | 30121           | 30121  | 30121  | 30121  | 1       |
 | settleLockedBondETH                                         | 50772           | 50772  | 50772  | 50772  | 1       |
 | totalBondShares                                             | 347             | 458    | 347    | 2347   | 54      |
