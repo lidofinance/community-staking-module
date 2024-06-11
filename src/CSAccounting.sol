@@ -48,10 +48,7 @@ contract CSAccounting is
     ICSFeeDistributor public feeDistributor;
     address public chargeRecipient;
 
-    event BondLockCompensated(
-        uint256 indexed nodeOperatorId,
-        uint256 indexed amount
-    );
+    event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
     event ChargeRecipientSet(address indexed chargeRecipient);
 
     error InvalidSender();
