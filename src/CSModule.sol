@@ -92,58 +92,58 @@ contract CSModule is
     event ReferrerSet(uint256 indexed nodeOperatorId, address indexed referrer);
     event VettedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 vettedKeysCount
+        uint256 indexed vettedKeysCount
     );
     event DepositedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 depositedKeysCount
+        uint256 indexed depositedKeysCount
     );
     event ExitedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 exitedKeysCount
+        uint256 indexed exitedKeysCount
     );
     event TotalSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 totalKeysCount
+        uint256 indexed totalKeysCount
     );
     event StuckSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 stuckKeysCount
+        uint256 indexed stuckKeysCount
     );
     event TargetValidatorsCountChangedByRequest(
         uint256 indexed nodeOperatorId,
-        uint8 targetLimitMode,
-        uint256 targetValidatorsCount
+        uint8 indexed targetLimitMode,
+        uint256 indexed targetValidatorsCount
     );
     event WithdrawalSubmitted(
         uint256 indexed nodeOperatorId,
-        uint256 keyIndex,
-        uint256 amount
+        uint256 indexed keyIndex,
+        uint256 indexed amount
     );
     event InitialSlashingSubmitted(
         uint256 indexed nodeOperatorId,
-        uint256 keyIndex
+        uint256 indexed keyIndex
     );
 
     event PublicRelease();
-    event KeyRemovalChargeSet(uint256 amount);
+    event KeyRemovalChargeSet(uint256 indexed amount);
 
     event KeyRemovalChargeApplied(
         uint256 indexed nodeOperatorId,
-        uint256 amount
+        uint256 indexed amount
     );
     event ELRewardsStealingPenaltyReported(
         uint256 indexed nodeOperatorId,
         bytes32 proposedBlockHash,
-        uint256 stolenAmount
+        uint256 indexed stolenAmount
     );
     event ELRewardsStealingPenaltyCancelled(
         uint256 indexed nodeOperatorId,
-        uint256 amount
+        uint256 indexed amount
     );
     event ELRewardsStealingPenaltySettled(
         uint256 indexed nodeOperatorId,
-        uint256 amount
+        uint256 indexed amount
     );
 
     error NodeOperatorDoesNotExist();
@@ -546,7 +546,7 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint256 stETHAmount,
         uint256 cumulativeFeeShares,
-        bytes32[] memory rewardsProof
+        bytes32[] calldata rewardsProof
     ) external {
         _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
@@ -577,7 +577,7 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
         uint256 cumulativeFeeShares,
-        bytes32[] memory rewardsProof
+        bytes32[] calldata rewardsProof
     ) external {
         _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
@@ -611,7 +611,7 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint256 stEthAmount,
         uint256 cumulativeFeeShares,
-        bytes32[] memory rewardsProof
+        bytes32[] calldata rewardsProof
     ) external {
         _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
@@ -990,9 +990,10 @@ contract CSModule is
     /// @dev SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE role is expected to be assigned to Easy Track
     /// @param nodeOperatorIds IDs of the Node Operators
     function settleELRewardsStealingPenalty(
-        uint256[] memory nodeOperatorIds
+        uint256[] calldata nodeOperatorIds
     ) external onlyRole(SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE) {
-        for (uint256 i; i < nodeOperatorIds.length; ++i) {
+        uint256 noIdCount = nodeOperatorIds.length;
+        for (uint256 i; i < noIdCount; ++i) {
             uint256 nodeOperatorId = nodeOperatorIds[i];
             _onlyExistingNodeOperator(nodeOperatorId);
             uint256 settled = accounting.settleLockedBondETH(nodeOperatorId);
@@ -1052,7 +1053,7 @@ contract CSModule is
 
         _isValidatorWithdrawn[pointer] = true;
         unchecked {
-            no.totalWithdrawnKeys++;
+            ++no.totalWithdrawnKeys;
         }
 
         emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount);
@@ -1261,8 +1262,10 @@ contract CSModule is
     function isValidatorSlashed(
         uint256 nodeOperatorId,
         uint256 keyIndex
-    ) external view returns (bool) {
-        return _isValidatorSlashed[_keyPointer(nodeOperatorId, keyIndex)];
+    ) external view returns (bool isValidatorSlashed) {
+        isValidatorSlashed = _isValidatorSlashed[
+            _keyPointer(nodeOperatorId, keyIndex)
+        ];
     }
 
     /// @notice Check if the given Node Operator's key is reported as withdrawn
@@ -1271,14 +1274,16 @@ contract CSModule is
     function isValidatorWithdrawn(
         uint256 nodeOperatorId,
         uint256 keyIndex
-    ) external view returns (bool) {
-        return _isValidatorWithdrawn[_keyPointer(nodeOperatorId, keyIndex)];
+    ) external view returns (bool isValidatorWithdrawn) {
+        isValidatorWithdrawn = _isValidatorWithdrawn[
+            _keyPointer(nodeOperatorId, keyIndex)
+        ];
     }
 
     /// @notice Get the module type
-    /// @return Module type
-    function getType() external view returns (bytes32) {
-        return MODULE_TYPE;
+    /// @return moduleType Module type
+    function getType() external view returns (bytes32 moduleType) {
+        moduleType = MODULE_TYPE;
     }
 
     /// @notice Get staking module summary
@@ -1286,35 +1291,33 @@ contract CSModule is
         external
         view
         returns (
-            uint256 /* totalExitedValidators */,
-            uint256 /* totalDepositedValidators */,
-            uint256 /* depositableValidatorsCount */
+            uint256 totalExitedValidators,
+            uint256 totalDepositedValidators,
+            uint256 depositableValidatorsCount
         )
     {
-        return (
-            _totalExitedValidators,
-            _totalDepositedValidators,
-            _depositableValidatorsCount
-        );
+        totalExitedValidators = _totalExitedValidators;
+        totalDepositedValidators = _totalDepositedValidators;
+        depositableValidatorsCount = _depositableValidatorsCount;
     }
 
     /// @notice Get Node Operator info
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return Node Operator info
+    /// @return operator Node Operator info
     function getNodeOperator(
         uint256 nodeOperatorId
-    ) external view returns (NodeOperator memory) {
-        return _nodeOperators[nodeOperatorId];
+    ) external view returns (NodeOperator memory operator) {
+        operator = _nodeOperators[nodeOperatorId];
     }
 
     /// @notice Get Node Operator non-withdrawn keys
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return Non-withdrawn keys count
+    /// @return count Non-withdrawn keys count
     function getNodeOperatorNonWithdrawnKeys(
         uint256 nodeOperatorId
-    ) external view returns (uint256) {
+    ) external view returns (uint256 count) {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        return no.totalAddedKeys - no.totalWithdrawnKeys;
+        count = no.totalAddedKeys - no.totalWithdrawnKeys;
     }
 
     /// @notice Get Node Operator summary
@@ -1390,12 +1393,12 @@ contract CSModule is
     /// @param nodeOperatorId ID of the Node Operator
     /// @param startIndex Index of the first key
     /// @param keysCount Count of keys to get
-    /// @return Signing keys
+    /// @return keys Signing keys
     function getSigningKeys(
         uint256 nodeOperatorId,
         uint256 startIndex,
         uint256 keysCount
-    ) external view returns (bytes memory) {
+    ) external view returns (bytes memory keys) {
         if (
             startIndex + keysCount >
             _nodeOperators[nodeOperatorId].totalAddedKeys
@@ -1403,7 +1406,7 @@ contract CSModule is
             revert SigningKeysInvalidOffset();
         }
 
-        return SigningKeys.loadKeys(nodeOperatorId, startIndex, keysCount);
+        keys = SigningKeys.loadKeys(nodeOperatorId, startIndex, keysCount);
     }
 
     /// @notice Get Node Operator signing keys with signatures
@@ -1438,26 +1441,30 @@ contract CSModule is
     }
 
     /// @notice Get nonce of the module
-    function getNonce() external view returns (uint256) {
-        return _nonce;
+    function getNonce() external view returns (uint256 nonce) {
+        nonce = _nonce;
     }
 
     /// @notice Get total number of Node Operators
-    function getNodeOperatorsCount() external view returns (uint256) {
-        return _nodeOperatorsCount;
+    function getNodeOperatorsCount() external view returns (uint256 count) {
+        count = _nodeOperatorsCount;
     }
 
     /// @notice Get total number of active Node Operators
-    function getActiveNodeOperatorsCount() external view returns (uint256) {
-        return _nodeOperatorsCount;
+    function getActiveNodeOperatorsCount()
+        external
+        view
+        returns (uint256 count)
+    {
+        count = _nodeOperatorsCount;
     }
 
     /// @notice Get Node Operator active status
     /// @param nodeOperatorId ID of the Node Operator
     function getNodeOperatorIsActive(
         uint256 nodeOperatorId
-    ) external view returns (bool) {
-        return nodeOperatorId < _nodeOperatorsCount;
+    ) external view returns (bool active) {
+        active = nodeOperatorId < _nodeOperatorsCount;
     }
 
     /// @notice Get IDs of Node Operators
@@ -1473,14 +1480,15 @@ contract CSModule is
             ? limit
             : nodeOperatorsCount - offset;
         nodeOperatorIds = new uint256[](idsCount);
-        for (uint256 i = 0; i < nodeOperatorIds.length; ++i) {
+        uint256 len = nodeOperatorIds.length;
+        for (uint256 i = 0; i < len; ++i) {
             nodeOperatorIds[i] = offset + i;
         }
     }
 
     function _incrementModuleNonce() internal {
         unchecked {
-            _nonce++;
+            ++_nonce;
         }
         emit NonceChanged(_nonce);
     }
@@ -1490,7 +1498,7 @@ contract CSModule is
         address rewardAddress,
         address referrer,
         bytes32[] calldata proof
-    ) internal returns (uint256) {
+    ) internal returns (uint256 id) {
         if (!publicRelease && proof.length == 0) {
             revert NotAllowedToJoinYet();
         }
@@ -1506,7 +1514,7 @@ contract CSModule is
             : rewardAddress;
 
         unchecked {
-            _nodeOperatorsCount++;
+            ++_nodeOperatorsCount;
         }
 
         emit NodeOperatorAdded(id, no.managerAddress, no.rewardAddress);
@@ -1519,8 +1527,6 @@ contract CSModule is
 
         earlyAdoption.consume(msg.sender, proof);
         accounting.setBondCurve(id, earlyAdoption.CURVE_ID());
-
-        return id;
     }
 
     function _addSigningKeys(
@@ -1775,7 +1781,7 @@ contract CSModule is
     function _keyPointer(
         uint256 nodeOperatorId,
         uint256 keyIndex
-    ) internal pure returns (uint256) {
-        return (nodeOperatorId << 128) | keyIndex;
+    ) internal pure returns (uint256 pointer) {
+        pointer = (nodeOperatorId << 128) | keyIndex;
     }
 }

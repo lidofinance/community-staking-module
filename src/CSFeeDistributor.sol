@@ -38,11 +38,14 @@ contract CSFeeDistributor is
     uint256 public totalClaimableShares;
 
     /// @dev Emitted when fees are distributed
-    event FeeDistributed(uint256 indexed nodeOperatorId, uint256 shares);
+    event FeeDistributed(
+        uint256 indexed nodeOperatorId,
+        uint256 indexed shares
+    );
 
     /// @dev Emitted when distribution data is updated
     event DistributionDataUpdated(
-        uint256 totalClaimableShares,
+        uint256 indexed totalClaimableShares,
         bytes32 treeRoot,
         string treeCid
     );
@@ -88,17 +91,13 @@ contract CSFeeDistributor is
     /// @param nodeOperatorId ID of the Node Operator
     /// @param shares Total Amount of stETH shares earned as fees
     /// @param proof Merkle proof of the leaf
-    /// @return Amount of stETH shares distributed
+    /// @return sharesToDistribute Amount of stETH shares distributed
     function distributeFees(
         uint256 nodeOperatorId,
         uint256 shares,
         bytes32[] calldata proof
-    ) external onlyAccounting returns (uint256) {
-        uint256 sharesToDistribute = getFeesToDistribute(
-            nodeOperatorId,
-            shares,
-            proof
-        );
+    ) external onlyAccounting returns (uint256 sharesToDistribute) {
+        sharesToDistribute = getFeesToDistribute(nodeOperatorId, shares, proof);
 
         if (sharesToDistribute == 0) {
             return 0;
@@ -115,8 +114,6 @@ contract CSFeeDistributor is
 
         STETH.transferShares(ACCOUNTING, sharesToDistribute);
         emit FeeDistributed(nodeOperatorId, sharesToDistribute);
-
-        return sharesToDistribute;
     }
 
     /// @notice Receive the data of the Merkle tree from the Oracle contract and process it
@@ -165,20 +162,24 @@ contract CSFeeDistributor is
     }
 
     /// @notice Get the Amount of stETH shares that are pending to be distributed
-    function pendingSharesToDistribute() external view returns (uint256) {
-        return STETH.sharesOf(address(this)) - totalClaimableShares;
+    function pendingSharesToDistribute()
+        external
+        view
+        returns (uint256 pendingShares)
+    {
+        pendingShares = STETH.sharesOf(address(this)) - totalClaimableShares;
     }
 
     /// @notice Get the Amount of stETH shares that can be distributed in favor of the Node Operator
     /// @param nodeOperatorId ID of the Node Operator
     /// @param shares Total Amount of stETH shares earned as fees
     /// @param proof Merkle proof of the leaf
-    /// @return Amount of stETH shares that can be distributed
+    /// @return sharesToDistribute Amount of stETH shares that can be distributed
     function getFeesToDistribute(
         uint256 nodeOperatorId,
         uint256 shares,
         bytes32[] calldata proof
-    ) public view returns (uint256) {
+    ) public view returns (uint256 sharesToDistribute) {
         bool isValid = MerkleProof.verifyCalldata(
             proof,
             treeRoot,
@@ -193,23 +194,22 @@ contract CSFeeDistributor is
         }
 
         unchecked {
-            return shares - _distributedShares;
+            sharesToDistribute = shares - _distributedShares;
         }
     }
 
     /// @notice Get a hash of a leaf
     /// @param nodeOperatorId ID of the Node Operator
     /// @param shares Amount of stETH shares
-    /// @return Hash of the leaf
+    /// @return leafHash Hash of the leaf
     /// @dev Double hash the leaf to prevent second preimage attacks
     function hashLeaf(
         uint256 nodeOperatorId,
         uint256 shares
-    ) public pure returns (bytes32) {
-        return
-            keccak256(
-                bytes.concat(keccak256(abi.encode(nodeOperatorId, shares)))
-            );
+    ) public pure returns (bytes32 leafHash) {
+        leafHash = keccak256(
+            bytes.concat(keccak256(abi.encode(nodeOperatorId, shares)))
+        );
     }
 
     function _onlyRecoverer() internal view override {

@@ -18,7 +18,7 @@ contract Versioned {
 
     uint256 internal constant PETRIFIED_VERSION_MARK = type(uint256).max;
 
-    event ContractVersionSet(uint256 version);
+    event ContractVersionSet(uint256 indexed version);
 
     error NonZeroContractVersionOnInit();
     error InvalidContractVersionIncrement();
@@ -30,8 +30,8 @@ contract Versioned {
     }
 
     /// @notice Returns the current contract version.
-    function getContractVersion() public view returns (uint256) {
-        return CONTRACT_VERSION_POSITION.getStorageUint256();
+    function getContractVersion() public view returns (uint256 version) {
+        version = CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
     /// @dev Sets the contract version to N. Should be called from the initialize() function.

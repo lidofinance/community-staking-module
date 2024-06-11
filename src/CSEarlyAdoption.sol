@@ -49,26 +49,26 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
 
     /// @notice Check if the address has already consumed EA access
     /// @param member Address to check
-    function isConsumed(address member) external view returns (bool) {
-        return _consumedAddresses[member];
+    function isConsumed(address member) external view returns (bool consumed) {
+        consumed = _consumedAddresses[member];
     }
 
     /// @notice Check is the address is eligible to consume EA access
     /// @param member Address to check
     /// @param proof Merkle proof of EA eligibility
-    /// @return Boolean flag if the proof is valid or not
+    /// @return valid Boolean flag if the proof is valid or not
     function verifyProof(
         address member,
         bytes32[] calldata proof
-    ) public view returns (bool) {
-        return MerkleProof.verifyCalldata(proof, TREE_ROOT, hashLeaf(member));
+    ) public view returns (bool valid) {
+        valid = MerkleProof.verifyCalldata(proof, TREE_ROOT, hashLeaf(member));
     }
 
     /// @notice Get a hash of a leaf in EA Merkle tree
     /// @param member EA member address
-    /// @return Hash of the leaf
+    /// @return leafHash Hash of the leaf
     /// @dev Double hash the leaf to prevent second preimage attacks
-    function hashLeaf(address member) public pure returns (bytes32) {
-        return keccak256(bytes.concat(keccak256(abi.encode(member))));
+    function hashLeaf(address member) public pure returns (bytes32 leafHash) {
+        leafHash = keccak256(bytes.concat(keccak256(abi.encode(member))));
     }
 }

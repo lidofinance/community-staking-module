@@ -44,10 +44,10 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
 
     event BondLockChanged(
         uint256 indexed nodeOperatorId,
-        uint256 newAmount,
-        uint256 retentionUntil
+        uint256 indexed newAmount,
+        uint256 indexed retentionUntil
     );
-    event BondLockRetentionPeriodChanged(uint256 retentionPeriod);
+    event BondLockRetentionPeriodChanged(uint256 indexed retentionPeriod);
 
     error InvalidBondLockRetentionPeriod();
     error InvalidBondLockAmount();
@@ -64,34 +64,38 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
     }
 
     /// @notice Get default bond lock retention period
-    /// @return Default bond lock retention period
-    function getBondLockRetentionPeriod() external view returns (uint256) {
+    /// @return timestamp Default bond lock retention period
+    function getBondLockRetentionPeriod()
+        external
+        view
+        returns (uint256 timestamp)
+    {
         CSBondLockStorage storage $ = _getCSBondLockStorage();
-        return $.bondLockRetentionPeriod;
+        timestamp = $.bondLockRetentionPeriod;
     }
 
     /// @notice Get information about the locked bond for the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return Locked bond info
+    /// @return lock Locked bond info
     function getLockedBondInfo(
         uint256 nodeOperatorId
-    ) public view returns (BondLock memory) {
+    ) public view returns (BondLock memory lock) {
         CSBondLockStorage storage $ = _getCSBondLockStorage();
-        return $.bondLock[nodeOperatorId];
+        lock = $.bondLock[nodeOperatorId];
     }
 
     /// @notice Get amount of the locked bond in ETH (stETH) by the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return Amount of the actual locked bond
+    /// @return locked Amount of the actual locked bond
     function getActualLockedBond(
         uint256 nodeOperatorId
-    ) public view returns (uint256) {
+    ) public view returns (uint256 locked) {
         CSBondLockStorage storage $ = _getCSBondLockStorage();
         BondLock storage bondLock = $.bondLock[nodeOperatorId];
         if (bondLock.retentionUntil < block.timestamp) {
             return 0;
         }
-        return bondLock.amount;
+        locked = bondLock.amount;
     }
 
     /// @dev Lock bond amount for the given Node Operator until the retention period.

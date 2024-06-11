@@ -55,14 +55,14 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
     uint256 public avgPerfLeewayBP;
 
     /// @dev Emitted when a new fee distributor contract is set
-    event FeeDistributorContractSet(address feeDistributorContract);
+    event FeeDistributorContractSet(address indexed feeDistributorContract);
 
-    event PerfLeewaySet(uint256 valueBP);
+    event PerfLeewaySet(uint256 indexed valueBP);
 
     /// @dev Emitted when a report is settled.
     event ReportSettled(
         uint256 indexed refSlot,
-        uint256 distributed,
+        uint256 indexed distributed,
         bytes32 treeRoot,
         string treeCid
     );

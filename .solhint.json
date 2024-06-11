@@ -10,7 +10,6 @@
     "reason-string": ["warn", { "maxLength": 64 }],
     "immutable-vars-naming": ["error", { "immutablesAsConstants": true }],
     "var-name-mixedcase": "error",
-    "gas-custom-errors": "error",
     "func-name-mixedcase": "error",
     "no-global-import": "error",
     "ordering": "warn",
@@ -20,6 +19,14 @@
     "lido-csm/interface-member-order": "error",
     "lido-csm/interface-starts-with-i": "error",
     "lido-csm/contract-ordering": "off",
-    "lido-csm/license-checker": "error"
+    "lido-csm/license-checker": "error",
+    "gas-calldata-parameters": "warn",
+    "gas-custom-errors": "error",
+    "gas-increment-by-one": "error",
+    "gas-length-in-loops": "error",
+    "gas-struct-packing": "error",
+    "gas-strict-inequalities": "warn",
+    "gas-named-return-values": "warn",
+    "gas-indexed-events": "error"
   }
 }

@@ -16,21 +16,24 @@ import { ILido } from "../interfaces/ILido.sol";
 library AssetRecovererLib {
     using SafeERC20 for IERC20;
 
-    event EtherRecovered(address indexed recipient, uint256 amount);
+    event EtherRecovered(address indexed recipient, uint256 indexed amount);
     event ERC20Recovered(
         address indexed token,
         address indexed recipient,
-        uint256 amount
+        uint256 indexed amount
     );
-    event StETHSharesRecovered(address indexed recipient, uint256 shares);
+    event StETHSharesRecovered(
+        address indexed recipient,
+        uint256 indexed shares
+    );
     event ERC721Recovered(
         address indexed token,
-        uint256 tokenId,
+        uint256 indexed tokenId,
         address indexed recipient
     );
     event ERC1155Recovered(
         address indexed token,
-        uint256 tokenId,
+        uint256 indexed tokenId,
         address indexed recipient,
         uint256 amount
     );

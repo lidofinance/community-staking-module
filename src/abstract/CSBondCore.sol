@@ -43,44 +43,44 @@ abstract contract CSBondCore is ICSBondCore {
 
     event BondDepositedETH(
         uint256 indexed nodeOperatorId,
-        address from,
-        uint256 amount
+        address indexed from,
+        uint256 indexed amount
     );
     event BondClaimedUnstETH(
         uint256 indexed nodeOperatorId,
-        address to,
+        address indexed to,
         uint256 amount,
-        uint256 requestId
+        uint256 indexed requestId
     );
     event BondDepositedWstETH(
         uint256 indexed nodeOperatorId,
-        address from,
-        uint256 amount
+        address indexed from,
+        uint256 indexed amount
     );
     event BondClaimedWstETH(
         uint256 indexed nodeOperatorId,
-        address to,
-        uint256 amount
+        address indexed to,
+        uint256 indexed amount
     );
     event BondDepositedStETH(
         uint256 indexed nodeOperatorId,
-        address from,
-        uint256 amount
+        address indexed from,
+        uint256 indexed amount
     );
     event BondClaimedStETH(
         uint256 indexed nodeOperatorId,
-        address to,
-        uint256 amount
+        address indexed to,
+        uint256 indexed amount
     );
     event BondBurned(
         uint256 indexed nodeOperatorId,
-        uint256 toBurnAmount,
-        uint256 burnedAmount
+        uint256 indexed toBurnAmount,
+        uint256 indexed burnedAmount
     );
     event BondCharged(
         uint256 indexed nodeOperatorId,
-        uint256 toChargeAmount,
-        uint256 chargedAmount
+        uint256 indexed toChargeAmount,
+        uint256 indexed chargedAmount
     );
 
     error ZeroLocatorAddress();
@@ -96,27 +96,29 @@ abstract contract CSBondCore is ICSBondCore {
     }
 
     /// @notice Get total bond shares (stETH) stored on the contract
-    /// @return Total bond shares (stETH)
-    function totalBondShares() public view returns (uint256) {
+    /// @return shares Total bond shares (stETH)
+    function totalBondShares() public view returns (uint256 shares) {
         CSBondCoreStorage storage $ = _getCSBondCoreStorage();
-        return $.totalBondShares;
+        shares = $.totalBondShares;
     }
 
     /// @notice Get bond shares (stETH) for the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return Bond in stETH shares
+    /// @return shares Bond in stETH shares
     function getBondShares(
         uint256 nodeOperatorId
-    ) public view returns (uint256) {
+    ) public view returns (uint256 shares) {
         CSBondCoreStorage storage $ = _getCSBondCoreStorage();
-        return $.bondShares[nodeOperatorId];
+        shares = $.bondShares[nodeOperatorId];
     }
 
     /// @notice Get bond amount in ETH (stETH) for the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return Bond amount in ETH (stETH)
-    function getBond(uint256 nodeOperatorId) public view returns (uint256) {
-        return _ethByShares(getBondShares(nodeOperatorId));
+    /// @return bond Bond amount in ETH (stETH)
+    function getBond(
+        uint256 nodeOperatorId
+    ) public view returns (uint256 bond) {
+        bond = _ethByShares(getBondShares(nodeOperatorId));
     }
 
     /// @dev Stake user's ETH with Lido and stores stETH shares as Node Operator's bond shares
@@ -268,19 +270,23 @@ abstract contract CSBondCore is ICSBondCore {
     /// @dev Must be overridden in case of additional restrictions on a claimable bond amount
     function _getClaimableBondShares(
         uint256 nodeOperatorId
-    ) internal view virtual returns (uint256) {
+    ) internal view virtual returns (uint256 shares) {
         CSBondCoreStorage storage $ = _getCSBondCoreStorage();
-        return $.bondShares[nodeOperatorId];
+        shares = $.bondShares[nodeOperatorId];
     }
 
     /// @dev Shortcut for Lido's getSharesByPooledEth
-    function _sharesByEth(uint256 ethAmount) internal view returns (uint256) {
-        return LIDO.getSharesByPooledEth(ethAmount);
+    function _sharesByEth(
+        uint256 ethAmount
+    ) internal view returns (uint256 shares) {
+        shares = LIDO.getSharesByPooledEth(ethAmount);
     }
 
     /// @dev Shortcut for Lido's getPooledEthByShares
-    function _ethByShares(uint256 shares) internal view returns (uint256) {
-        return LIDO.getPooledEthByShares(shares);
+    function _ethByShares(
+        uint256 shares
+    ) internal view returns (uint256 amount) {
+        amount = LIDO.getPooledEthByShares(shares);
     }
 
     /// @dev Unsafe reduce bond shares (stETH) (possible underflow). Safety checks should be done outside

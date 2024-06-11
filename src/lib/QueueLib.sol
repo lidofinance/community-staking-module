@@ -13,13 +13,13 @@ import { TransientUintUintMap } from "./TransientUintUintMapLib.sol";
 type Batch is uint256;
 
 /// @notice Batch of the operator with index 0, with no keys in it and the next Batch' index 0 is meaningless.
-function isNil(Batch self) pure returns (bool) {
-    return Batch.unwrap(self) == 0;
+function isNil(Batch self) pure returns (bool nil) {
+    nil = Batch.unwrap(self) == 0;
 }
 
 /// @dev Syntactic sugar for the type.
-function unwrap(Batch self) pure returns (uint256) {
-    return Batch.unwrap(self);
+function unwrap(Batch self) pure returns (uint256 unwrapped) {
+    unwrapped = Batch.unwrap(self);
 }
 
 function noId(Batch self) pure returns (uint64 n) {
@@ -41,7 +41,7 @@ function next(Batch self) pure returns (uint128 n) {
     }
 }
 
-function setKeys(Batch self, uint256 keysCount) pure returns (Batch) {
+function setKeys(Batch self, uint256 keysCount) pure returns (Batch updated) {
     assembly {
         self := or(
             and(
@@ -52,10 +52,10 @@ function setKeys(Batch self, uint256 keysCount) pure returns (Batch) {
         ) // self.keys = keysCount
     }
 
-    return self;
+    updated = self;
 }
 
-function setNext(Batch self, Batch from) pure returns (Batch) {
+function setNext(Batch self, Batch from) pure returns (Batch nextItem) {
     assembly {
         self := or(
             and(
@@ -68,7 +68,7 @@ function setNext(Batch self, Batch from) pure returns (Batch) {
             )
         ) // self.next = from.next
     }
-    return self;
+    nextItem = self;
 }
 
 /// @dev Instantiate a new Batch to be added to the queue. The `next` field will be determined upon the enqueue.
@@ -101,7 +101,7 @@ library QueueLib {
         mapping(uint128 => Batch) queue;
     }
 
-    event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
+    event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 indexed count);
 
     error InvalidIndex();
     error QueueIsEmpty();
@@ -187,7 +187,10 @@ library QueueLib {
     /// Internal methods
     /////
     // TODO: Consider changing to accept the batch fields as arguments.
-    function enqueue(Queue storage self, Batch item) internal returns (Batch) {
+    function enqueue(
+        Queue storage self,
+        Batch item
+    ) internal returns (Batch added) {
         uint128 length = self.length;
 
         assembly {
@@ -205,7 +208,7 @@ library QueueLib {
             ++self.length;
         }
 
-        return item;
+        added = item;
     }
 
     function dequeue(Queue storage self) internal returns (Batch item) {

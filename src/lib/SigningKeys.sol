@@ -29,14 +29,14 @@ library SigningKeys {
     /// @param keysCount keys count to load
     /// @param pubkeys kes buffer to read from
     /// @param signatures signatures buffer to read from
-    /// @return new total keys count
+    /// @return total new total keys count
     function saveKeysSigs(
         uint256 nodeOperatorId,
         uint256 startIndex,
         uint256 keysCount,
         bytes memory pubkeys,
         bytes memory signatures
-    ) internal returns (uint256) {
+    ) internal returns (uint256 total) {
         if (keysCount == 0 || startIndex + keysCount > UINT64_MAX) {
             revert InvalidKeysCount();
         }
@@ -83,7 +83,7 @@ library SigningKeys {
             }
             emit SigningKeyAdded(nodeOperatorId, tmpKey);
         }
-        return startIndex;
+        total = startIndex;
     }
 
     /// @dev remove operator keys from storage
@@ -91,13 +91,13 @@ library SigningKeys {
     /// @param startIndex start index
     /// @param keysCount keys count to load
     /// @param totalKeysCount current total keys count for operator
-    /// @return new totalKeysCount
+    /// @return total new total keys count
     function removeKeysSigs(
         uint256 nodeOperatorId,
         uint256 startIndex,
         uint256 keysCount,
         uint256 totalKeysCount
-    ) internal returns (uint256) {
+    ) internal returns (uint256 total) {
         if (
             keysCount == 0 ||
             startIndex + keysCount > totalKeysCount ||
@@ -149,7 +149,7 @@ library SigningKeys {
             }
             emit SigningKeyRemoved(nodeOperatorId, tmpKey);
         }
-        return totalKeysCount;
+        total = totalKeysCount;
     }
 
     /// @dev load operator keys and signatures from storage
@@ -213,21 +213,18 @@ library SigningKeys {
 
     function initKeysSigsBuf(
         uint256 count
-    ) internal pure returns (bytes memory, bytes memory) {
-        return (
-            new bytes(count * PUBKEY_LENGTH),
-            new bytes(count * SIGNATURE_LENGTH)
-        );
+    ) internal pure returns (bytes memory keys, bytes memory sigs) {
+        keys = new bytes(count * PUBKEY_LENGTH);
+        sigs = new bytes(count * SIGNATURE_LENGTH);
     }
 
     function getKeyOffset(
         bytes32 position,
         uint256 nodeOperatorId,
         uint256 keyIndex
-    ) internal pure returns (uint256) {
-        return
-            uint256(
-                keccak256(abi.encodePacked(position, nodeOperatorId, keyIndex))
-            );
+    ) internal pure returns (uint256 offset) {
+        offset = uint256(
+            keccak256(abi.encodePacked(position, nodeOperatorId, keyIndex))
+        );
     }
 }

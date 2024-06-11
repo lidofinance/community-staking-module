@@ -20,38 +20,38 @@ error IndexOutOfRange();
 
 /// @param gI Is a generalized index of a node in a tree.
 /// @param p Is a power of a tree level the node belongs to.
-/// @return GIndex
-function pack(uint256 gI, uint8 p) pure returns (GIndex) {
+/// @return result GIndex
+function pack(uint256 gI, uint8 p) pure returns (GIndex result) {
     if (gI > type(uint248).max) {
         revert IndexOutOfRange();
     }
 
     // NOTE: We can consider adding additional metadata like a fork version.
-    return GIndex.wrap(bytes32((gI << 8) | p));
+    result = GIndex.wrap(bytes32((gI << 8) | p));
 }
 
-function unwrap(GIndex self) pure returns (bytes32) {
-    return GIndex.unwrap(self);
+function unwrap(GIndex self) pure returns (bytes32 result) {
+    result = GIndex.unwrap(self);
 }
 
-function isRoot(GIndex self) pure returns (bool) {
-    return index(self) == 1;
+function isRoot(GIndex self) pure returns (bool result) {
+    result = index(self) == 1;
 }
 
-function index(GIndex self) pure returns (uint256) {
-    return uint256(unwrap(self)) >> 8;
+function index(GIndex self) pure returns (uint256 result) {
+    result = uint256(unwrap(self)) >> 8;
 }
 
-function width(GIndex self) pure returns (uint256) {
-    return 1 << pow(self);
+function width(GIndex self) pure returns (uint256 result) {
+    result = 1 << pow(self);
 }
 
-function pow(GIndex self) pure returns (uint8) {
-    return uint8(uint256(unwrap(self)));
+function pow(GIndex self) pure returns (uint8 result) {
+    result = uint8(uint256(unwrap(self)));
 }
 
-/// @return Generalized index of the nth neighbor of the node to the right.
-function shr(GIndex self, uint256 n) pure returns (GIndex) {
+/// @return gIndex Generalized index of the nth neighbor of the node to the right.
+function shr(GIndex self, uint256 n) pure returns (GIndex gIndex) {
     uint256 i = index(self);
     uint256 w = width(self);
 
@@ -59,11 +59,11 @@ function shr(GIndex self, uint256 n) pure returns (GIndex) {
         revert IndexOutOfRange();
     }
 
-    return pack(i + n, pow(self));
+    gIndex = pack(i + n, pow(self));
 }
 
-/// @return Generalized index of the nth neighbor of the node to the left.
-function shl(GIndex self, uint256 n) pure returns (GIndex) {
+/// @return gIndex Generalized index of the nth neighbor of the node to the left.
+function shl(GIndex self, uint256 n) pure returns (GIndex gIndex) {
     uint256 i = index(self);
     uint256 w = width(self);
 
@@ -71,11 +71,11 @@ function shl(GIndex self, uint256 n) pure returns (GIndex) {
         revert IndexOutOfRange();
     }
 
-    return pack(i - n, pow(self));
+    gIndex = pack(i - n, pow(self));
 }
 
 // See https://github.com/protolambda/remerkleable/blob/91ed092d08ef0ba5ab076f0a34b0b371623db728/remerkleable/tree.py#L46
-function concat(GIndex lhs, GIndex rhs) pure returns (GIndex) {
+function concat(GIndex lhs, GIndex rhs) pure returns (GIndex gIndex) {
     uint256 lhsMSbIndex = fls(index(lhs));
     uint256 rhsMSbIndex = fls(index(rhs));
 
@@ -83,11 +83,10 @@ function concat(GIndex lhs, GIndex rhs) pure returns (GIndex) {
         revert IndexOutOfRange();
     }
 
-    return
-        pack(
-            (index(lhs) << rhsMSbIndex) | (index(rhs) ^ (1 << rhsMSbIndex)),
-            pow(rhs)
-        );
+    gIndex = pack(
+        (index(lhs) << rhsMSbIndex) | (index(rhs) ^ (1 << rhsMSbIndex)),
+        pow(rhs)
+    );
 }
 
 function isParentOf(GIndex self, GIndex other) pure returns (bool) {
@@ -103,7 +102,7 @@ function isParentOf(GIndex self, GIndex other) pure returns (bool) {
             return true;
         }
 
-        gI = gI >> 1;
+        ++gI;
     }
 
     return false;

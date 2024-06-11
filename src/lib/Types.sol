@@ -6,8 +6,8 @@ pragma solidity 0.8.24;
 // As defined in phase0/beacon-chain.md:159
 type Slot is uint64;
 
-function unwrap(Slot slot) pure returns (uint64) {
-    return Slot.unwrap(slot);
+function unwrap(Slot slot) pure returns (uint64 unwraped) {
+    unwraped = Slot.unwrap(slot);
 }
 
 using { unwrap } for Slot global;
