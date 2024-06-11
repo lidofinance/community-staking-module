@@ -95,4 +95,13 @@ contract OssifiableProxy is ERC1967Proxy {
     function proxy__getIsOssified() external view returns (bool) {
         return ERC1967Utils.getAdmin() == address(0);
     }
+
+    /// @notice Fallback function that delegates calls to the address returned by `_implementation()`.
+    // Will run if call data is empty.
+    // The only use of this function is to suppress the solidity warning "This contract has a payable fallback function, but no receive ether function"
+    // See https://forum.openzeppelin.com/t/proxy-sol-fallback/36951/7 for details
+    // Previously it was implemented in the Proxy contract, but it was removed in the OZ 5.0
+    receive() external payable virtual {
+        _fallback();
+    }
 }

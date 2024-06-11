@@ -364,11 +364,8 @@ contract HashConsensusDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertEq(secondsPerSlot, deployParams.secondsPerSlot);
         assertEq(genesisTime, deployParams.clGenesisTime);
 
-        (
-            uint256 initialEpoch,
-            uint256 epochsPerFrame,
-            uint256 fastLaneLengthSlots
-        ) = hashConsensus.getFrameConfig();
+        (, uint256 epochsPerFrame, uint256 fastLaneLengthSlots) = hashConsensus
+            .getFrameConfig();
         assertEq(epochsPerFrame, deployParams.oracleReportEpochsPerFrame);
         assertEq(fastLaneLengthSlots, deployParams.fastLaneLengthSlots);
         assertEq(hashConsensus.getReportProcessor(), address(oracle));

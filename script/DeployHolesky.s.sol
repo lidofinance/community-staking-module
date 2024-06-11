@@ -86,7 +86,7 @@ contract DeployHolesky is DeployBase {
         _setUp();
     }
 
-    function run() external override {
+    function run() external pure override {
         revert IsNotReadyForDeployment();
     }
 }

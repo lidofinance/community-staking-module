@@ -186,7 +186,7 @@ contract DeploymentFixtures is StdCheats, Test {
 
     function parseDeployParams(
         string memory deployConfigPath
-    ) internal returns (DeployParams memory) {
+    ) internal view returns (DeployParams memory) {
         string memory config = vm.readFile(deployConfigPath);
         return
             abi.decode(
