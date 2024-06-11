@@ -16,7 +16,7 @@
 | claimRewardsStETH                                           | 25075           | 79272  | 91062  | 100912 | 16      |
 | claimRewardsUnstETH                                         | 25055           | 64060  | 66737  | 76584  | 16      |
 | claimRewardsWstETH                                          | 25121           | 114821 | 152894 | 157299 | 16      |
-| compensateLockedBondETH                                     | 47583           | 47583  | 47583  | 47583  | 1       |
+| compensateLockedBondETH                                     | 47498           | 47498  | 47498  | 47498  | 1       |
 | depositETH                                                  | 24149           | 111255 | 113205 | 113445 | 108     |
 | depositStETH                                                | 25184           | 85511  | 103953 | 107872 | 8       |
 | depositWstETH                                               | 25115           | 94406  | 120919 | 124559 | 7       |
@@ -142,7 +142,7 @@
 | claimRewardsUnstETH                                 | 25058           | 48034  | 48581  | 69916   | 4       |
 | claimRewardsWstETH                                  | 25057           | 47518  | 48066  | 68886   | 4       |
 | cleanDepositQueue                                   | 24634           | 40912  | 40872  | 61551   | 13      |
-| compensateELRewardsStealingPenalty                  | 23698           | 78771  | 94916  | 101554  | 4       |
+| compensateELRewardsStealingPenalty                  | 23698           | 78707  | 94831  | 101469  | 4       |
 | confirmNodeOperatorManagerAddressChange             | 27012           | 29370  | 29158  | 32365   | 5       |
 | confirmNodeOperatorRewardAddressChange              | 26830           | 30860  | 32161  | 32161   | 9       |
 | decreaseVettedSigningKeysCount                      | 24855           | 63504  | 77338  | 97253   | 22      |
