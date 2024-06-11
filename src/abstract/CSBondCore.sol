@@ -3,6 +3,8 @@
 
 pragma solidity 0.8.24;
 
+import { Arrays } from "@openzeppelin/contracts/utils/Arrays.sol";
+
 import { ILidoLocator } from "../interfaces/ILidoLocator.sol";
 import { ILido } from "../interfaces/ILido.sol";
 import { IBurner } from "../interfaces/IBurner.sol";
@@ -26,6 +28,8 @@ import { ICSBondCore } from "../interfaces/ICSBondCore.sol";
 ///
 /// @author vgorkavenko
 abstract contract CSBondCore is ICSBondCore {
+    using Arrays for uint256[];
+
     /// @custom:storage-location erc7201:CSAccounting.CSBondCore
     struct CSBondCoreStorage {
         mapping(uint256 nodeOperatorId => uint256 shares) bondShares;

@@ -7,6 +7,7 @@ import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { Arrays } from "@openzeppelin/contracts/utils/Arrays.sol";
 
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
@@ -31,6 +32,7 @@ contract CSModule is
     AssetRecoverer
 {
     using QueueLib for QueueLib.Queue;
+    using Arrays for uint256[];
 
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
