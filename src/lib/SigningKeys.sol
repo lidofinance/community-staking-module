@@ -36,7 +36,7 @@ library SigningKeys {
         uint256 keysCount,
         bytes memory pubkeys,
         bytes memory signatures
-    ) internal returns (uint256 total) {
+    ) internal returns (uint256) {
         unchecked {
             if (keysCount == 0 || startIndex + keysCount > UINT64_MAX) {
                 revert InvalidKeysCount();
@@ -85,7 +85,7 @@ library SigningKeys {
             }
             emit SigningKeyAdded(nodeOperatorId, tmpKey);
         }
-        total = startIndex;
+        return startIndex;
     }
 
     /// @dev remove operator keys from storage
@@ -99,7 +99,7 @@ library SigningKeys {
         uint256 startIndex,
         uint256 keysCount,
         uint256 totalKeysCount
-    ) internal returns (uint256 total) {
+    ) internal returns (uint256) {
         unchecked {
             if (
                 keysCount == 0 ||
@@ -155,7 +155,7 @@ library SigningKeys {
                 }
                 emit SigningKeyRemoved(nodeOperatorId, tmpKey);
             }
-            total = totalKeysCount;
+            return totalKeysCount;
         }
     }
 
@@ -231,9 +231,10 @@ library SigningKeys {
         bytes32 position,
         uint256 nodeOperatorId,
         uint256 keyIndex
-    ) internal pure returns (uint256 offset) {
-        offset = uint256(
-            keccak256(abi.encodePacked(position, nodeOperatorId, keyIndex))
-        );
+    ) internal pure returns (uint256) {
+        return
+            uint256(
+                keccak256(abi.encodePacked(position, nodeOperatorId, keyIndex))
+            );
     }
 }

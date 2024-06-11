@@ -30,8 +30,8 @@ contract Versioned {
     }
 
     /// @notice Returns the current contract version.
-    function getContractVersion() public view returns (uint256 version) {
-        version = CONTRACT_VERSION_POSITION.getStorageUint256();
+    function getContractVersion() public view returns (uint256) {
+        return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
     /// @dev Sets the contract version to N. Should be called from the initialize() function.

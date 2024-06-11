@@ -253,28 +253,29 @@ library SSZ {
     // Inspired by https://github.com/succinctlabs/telepathy-contracts/blob/5aa4bb7/src/libraries/SimpleSerialize.sol#L59
     function hashTreeRoot(
         Withdrawal memory withdrawal
-    ) internal pure returns (bytes32 root) {
-        root = sha256(
-            bytes.concat(
-                sha256(
-                    bytes.concat(
-                        toLittleEndian(withdrawal.index),
-                        toLittleEndian(withdrawal.validatorIndex)
-                    )
-                ),
-                sha256(
-                    bytes.concat(
-                        bytes20(withdrawal.withdrawalAddress),
-                        bytes12(0),
-                        toLittleEndian(withdrawal.amount)
+    ) internal pure returns (bytes32) {
+        return
+            sha256(
+                bytes.concat(
+                    sha256(
+                        bytes.concat(
+                            toLittleEndian(withdrawal.index),
+                            toLittleEndian(withdrawal.validatorIndex)
+                        )
+                    ),
+                    sha256(
+                        bytes.concat(
+                            bytes20(withdrawal.withdrawalAddress),
+                            bytes12(0),
+                            toLittleEndian(withdrawal.amount)
+                        )
                     )
                 )
-            )
-        );
+            );
     }
 
     // See https://github.com/succinctlabs/telepathy-contracts/blob/5aa4bb7/src/libraries/SimpleSerialize.sol#L17-L28
-    function toLittleEndian(uint256 v) internal pure returns (bytes32 result) {
+    function toLittleEndian(uint256 v) internal pure returns (bytes32) {
         v =
             ((v &
                 0xFF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00) >>
@@ -304,10 +305,10 @@ library SSZ {
                 0x0000000000000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF) <<
                 64);
         v = (v >> 128) | (v << 128);
-        result = bytes32(v);
+        return bytes32(v);
     }
 
-    function toLittleEndian(bool v) internal pure returns (bytes32 result) {
-        result = bytes32(v ? 1 << 248 : 0);
+    function toLittleEndian(bool v) internal pure returns (bytes32) {
+        return bytes32(v ? 1 << 248 : 0);
     }
 }

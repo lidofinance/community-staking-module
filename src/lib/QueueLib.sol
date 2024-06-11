@@ -13,13 +13,13 @@ import { TransientUintUintMap } from "./TransientUintUintMapLib.sol";
 type Batch is uint256;
 
 /// @notice Batch of the operator with index 0, with no keys in it and the next Batch' index 0 is meaningless.
-function isNil(Batch self) pure returns (bool nil) {
-    nil = Batch.unwrap(self) == 0;
+function isNil(Batch self) pure returns (bool) {
+    return Batch.unwrap(self) == 0;
 }
 
 /// @dev Syntactic sugar for the type.
-function unwrap(Batch self) pure returns (uint256 unwrapped) {
-    unwrapped = Batch.unwrap(self);
+function unwrap(Batch self) pure returns (uint256) {
+    return Batch.unwrap(self);
 }
 
 function noId(Batch self) pure returns (uint64 n) {
@@ -221,14 +221,14 @@ library QueueLib {
         self.head = item.next();
     }
 
-    function peek(Queue storage self) internal view returns (Batch item) {
+    function peek(Queue storage self) internal view returns (Batch) {
         return self.queue[self.head];
     }
 
     function at(
         Queue storage self,
         uint128 index
-    ) internal view returns (Batch item) {
+    ) internal view returns (Batch) {
         return self.queue[index];
     }
 }

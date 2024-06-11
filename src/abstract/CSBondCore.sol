@@ -100,20 +100,20 @@ abstract contract CSBondCore is ICSBondCore {
     }
 
     /// @notice Get total bond shares (stETH) stored on the contract
-    /// @return shares Total bond shares (stETH)
-    function totalBondShares() public view returns (uint256 shares) {
+    /// @return Total bond shares (stETH)
+    function totalBondShares() public view returns (uint256) {
         CSBondCoreStorage storage $ = _getCSBondCoreStorage();
-        shares = $.totalBondShares;
+        return $.totalBondShares;
     }
 
     /// @notice Get bond shares (stETH) for the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return shares Bond in stETH shares
+    /// @return Bond in stETH shares
     function getBondShares(
         uint256 nodeOperatorId
-    ) public view returns (uint256 shares) {
+    ) public view returns (uint256) {
         CSBondCoreStorage storage $ = _getCSBondCoreStorage();
-        shares = $.bondShares[nodeOperatorId];
+        return $.bondShares[nodeOperatorId];
     }
 
     /// @notice Get bond amount in ETH (stETH) for the given Node Operator
@@ -274,9 +274,9 @@ abstract contract CSBondCore is ICSBondCore {
     /// @dev Must be overridden in case of additional restrictions on a claimable bond amount
     function _getClaimableBondShares(
         uint256 nodeOperatorId
-    ) internal view virtual returns (uint256 shares) {
+    ) internal view virtual returns (uint256) {
         CSBondCoreStorage storage $ = _getCSBondCoreStorage();
-        shares = $.bondShares[nodeOperatorId];
+        return $.bondShares[nodeOperatorId];
     }
 
     /// @dev Shortcut for Lido's getSharesByPooledEth
@@ -310,7 +310,6 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 currentShares = getBondShares(nodeOperatorId);
         reducedShares = shares < currentShares ? shares : currentShares;
         _unsafeReduceBond(nodeOperatorId, reducedShares);
-        return reducedShares;
     }
 
     function _getCSBondCoreStorage()

@@ -64,14 +64,10 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
     }
 
     /// @notice Get default bond lock retention period
-    /// @return timestamp Default bond lock retention period
-    function getBondLockRetentionPeriod()
-        external
-        view
-        returns (uint256 timestamp)
-    {
+    /// @return Default bond lock retention period
+    function getBondLockRetentionPeriod() external view returns (uint256) {
         CSBondLockStorage storage $ = _getCSBondLockStorage();
-        timestamp = $.bondLockRetentionPeriod;
+        return $.bondLockRetentionPeriod;
     }
 
     /// @notice Get information about the locked bond for the given Node Operator

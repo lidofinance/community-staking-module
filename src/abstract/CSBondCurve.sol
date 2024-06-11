@@ -70,21 +70,21 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
     /// @notice Get bond curve for the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return curve Bond curve
+    /// @return Bond curve
     function getBondCurve(
         uint256 nodeOperatorId
-    ) public view returns (BondCurve memory curve) {
-        curve = getCurveInfo(getBondCurveId(nodeOperatorId));
+    ) public view returns (BondCurve memory) {
+        return getCurveInfo(getBondCurveId(nodeOperatorId));
     }
 
     /// @notice Get bond curve ID for the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return id Bond curve ID
+    /// @return Bond curve ID
     function getBondCurveId(
         uint256 nodeOperatorId
-    ) public view returns (uint256 id) {
+    ) public view returns (uint256) {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        id = $.operatorBondCurveId[nodeOperatorId];
+        return $.operatorBondCurveId[nodeOperatorId];
     }
 
     /// @notice Get required bond in ETH for the given number of keys for default bond curve

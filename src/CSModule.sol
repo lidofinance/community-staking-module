@@ -1255,6 +1255,7 @@ contract CSModule is
 
     /// @notice Get the deposit queue item by an index
     /// @param index Index of a queue item
+    /// @return item Deposit queue item
     function depositQueueItem(
         uint128 index
     ) external view returns (Batch item) {
@@ -1264,29 +1265,29 @@ contract CSModule is
     /// @notice Check if the given Node Operator's key is reported as slashed
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keyIndex Index of the key to check
+    /// @return Validator reported as slashed flag
     function isValidatorSlashed(
         uint256 nodeOperatorId,
         uint256 keyIndex
-    ) external view returns (bool isSlashed) {
-        isSlashed = _isValidatorSlashed[_keyPointer(nodeOperatorId, keyIndex)];
+    ) external view returns (bool) {
+        return _isValidatorSlashed[_keyPointer(nodeOperatorId, keyIndex)];
     }
 
     /// @notice Check if the given Node Operator's key is reported as withdrawn
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keyIndex index of the key to check
+    /// @return Validator reported as withdrawn flag
     function isValidatorWithdrawn(
         uint256 nodeOperatorId,
         uint256 keyIndex
-    ) external view returns (bool isWithdrawn) {
-        isWithdrawn = _isValidatorWithdrawn[
-            _keyPointer(nodeOperatorId, keyIndex)
-        ];
+    ) external view returns (bool) {
+        return _isValidatorWithdrawn[_keyPointer(nodeOperatorId, keyIndex)];
     }
 
     /// @notice Get the module type
-    /// @return moduleType Module type
-    function getType() external view returns (bytes32 moduleType) {
-        moduleType = MODULE_TYPE;
+    /// @return Module type
+    function getType() external view returns (bytes32) {
+        return MODULE_TYPE;
     }
 
     /// @notice Get staking module summary
@@ -1402,12 +1403,12 @@ contract CSModule is
     /// @param nodeOperatorId ID of the Node Operator
     /// @param startIndex Index of the first key
     /// @param keysCount Count of keys to get
-    /// @return keys Signing keys
+    /// @return Signing keys
     function getSigningKeys(
         uint256 nodeOperatorId,
         uint256 startIndex,
         uint256 keysCount
-    ) external view returns (bytes memory keys) {
+    ) external view returns (bytes memory) {
         if (
             startIndex + keysCount >
             _nodeOperators[nodeOperatorId].totalAddedKeys
@@ -1415,7 +1416,7 @@ contract CSModule is
             revert SigningKeysInvalidOffset();
         }
 
-        keys = SigningKeys.loadKeys(nodeOperatorId, startIndex, keysCount);
+        return SigningKeys.loadKeys(nodeOperatorId, startIndex, keysCount);
     }
 
     /// @notice Get Node Operator signing keys with signatures
@@ -1450,26 +1451,23 @@ contract CSModule is
     }
 
     /// @notice Get nonce of the module
-    function getNonce() external view returns (uint256 nonce) {
-        nonce = _nonce;
+    function getNonce() external view returns (uint256) {
+        return _nonce;
     }
 
     /// @notice Get total number of Node Operators
-    function getNodeOperatorsCount() external view returns (uint256 count) {
-        count = _nodeOperatorsCount;
+    function getNodeOperatorsCount() external view returns (uint256) {
+        return _nodeOperatorsCount;
     }
 
     /// @notice Get total number of active Node Operators
-    function getActiveNodeOperatorsCount()
-        external
-        view
-        returns (uint256 count)
-    {
-        count = _nodeOperatorsCount;
+    function getActiveNodeOperatorsCount() external view returns (uint256) {
+        return _nodeOperatorsCount;
     }
 
     /// @notice Get Node Operator active status
     /// @param nodeOperatorId ID of the Node Operator
+    /// @return active Operator is active flag
     function getNodeOperatorIsActive(
         uint256 nodeOperatorId
     ) external view returns (bool active) {
@@ -1479,6 +1477,7 @@ contract CSModule is
     /// @notice Get IDs of Node Operators
     /// @param offset Offset of the first Node Operator ID to get
     /// @param limit Count of Node Operator IDs to get
+    /// @return nodeOperatorIds IDs of the Node Operators
     function getNodeOperatorIds(
         uint256 offset,
         uint256 limit

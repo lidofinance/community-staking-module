@@ -83,24 +83,20 @@ contract OssifiableProxy is ERC1967Proxy {
 
     /// @notice Returns the current admin of the proxy
     // solhint-disable-next-line func-name-mixedcase
-    function proxy__getAdmin() external view returns (address admin) {
-        admin = ERC1967Utils.getAdmin();
+    function proxy__getAdmin() external view returns (address) {
+        return ERC1967Utils.getAdmin();
     }
 
     /// @notice Returns the current implementation address
     // solhint-disable-next-line func-name-mixedcase
-    function proxy__getImplementation()
-        external
-        view
-        returns (address implementation)
-    {
-        implementation = _implementation();
+    function proxy__getImplementation() external view returns (address) {
+        return _implementation();
     }
 
     /// @notice Returns whether the implementation is locked forever
     // solhint-disable-next-line func-name-mixedcase
-    function proxy__getIsOssified() external view returns (bool ossified) {
-        ossified = ERC1967Utils.getAdmin() == address(0);
+    function proxy__getIsOssified() external view returns (bool) {
+        return ERC1967Utils.getAdmin() == address(0);
     }
 
     function _onlyAdmin() internal view {

@@ -9,7 +9,7 @@ library ValidatorCountsReport {
     function safeCountOperators(
         bytes calldata ids,
         bytes calldata counts
-    ) internal pure returns (uint256 count) {
+    ) internal pure returns (uint256) {
         if (
             counts.length / 16 != ids.length / 8 ||
             ids.length % 8 != 0 ||

@@ -159,6 +159,7 @@ contract CSFeeDistributor is
     }
 
     /// @notice Get the Amount of stETH shares that are pending to be distributed
+    /// @return pendingShares Amount shares that are pending to distribute
     function pendingSharesToDistribute()
         external
         view
