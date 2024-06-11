@@ -9,8 +9,8 @@ import { pack } from "../src/lib/GIndex.sol";
 contract DeployHoleskyDevnet is DeployBase {
     constructor() DeployBase("devnet", 17000) {
         // Lido addresses
-        config.lidoLocatorAddress = 0x5bF85BadDac33F91B38617c18a3F829f912Ca060;
-        config.votingAddress = 0xd8B7F4EFd16e913648C6E9B74772BC3C38203301;
+        config.lidoLocatorAddress = 0x3F8ae3A6452DC4F7df1E391df39618a9aCF715A6;
+        config.votingAddress = 0xcC269aA6688287aA33800fC048A60f418adFcf73;
         config
             .easyTrackEVMScriptExecutor = 0xC234dBA03943C9238067cDfBC2761844133DD386; // Known EOA
 
@@ -23,8 +23,8 @@ contract DeployHoleskyDevnet is DeployBase {
         config.consensusVersion = 1;
         config.avgPerfLeewayBP = 500;
         config.oracleMembers = new address[](2);
-        config.oracleMembers[0] = 0xe06810d4f34b6D3AcCAA9928bFdeDF9155Fb04f5;
-        config.oracleMembers[1] = 0x4D5EdeC67Fc31EF1b56f81Aa7be3B8862Fb51C26;
+        config.oracleMembers[0] = 0x1581d0f5272602842d30494A03C8F0024E4fC357;
+        config.oracleMembers[1] = 0x955B047c20239f15E40194ee3c19D74B9E8623fB;
         config.hashConsensusQuorum = 2;
         // Verifier
         // NOTE: Deneb fork gIndexes. Should be updated according to `config.verifierSupportedEpoch` fork epoch if needed
@@ -49,7 +49,7 @@ contract DeployHoleskyDevnet is DeployBase {
         config.bondLockRetentionPeriod = 8 weeks;
         config
             .setResetBondCurveAddress = 0xC234dBA03943C9238067cDfBC2761844133DD386; // Known EOA
-        config.chargeRecipient = 0x83bcD5963d07C1Bb4578068a639f51dB0699DeEd; // locator.treasury()
+        config.chargeRecipient = 0x636857002fD7975c7B40c0558d4f4834c4390fc6; // locator.treasury()
         // Module
         config.moduleType = "community-onchain-v1";
         config.minSlashingPenaltyQuotient = 32;

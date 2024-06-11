@@ -125,8 +125,8 @@ deploy-prod *args:
 _deploy-prod-confirm *args:
     just _deploy-prod --broadcast --verify {{args}}
 
-deploy-prod-dry:
-    just _deploy-prod
+deploy-prod-dry *args:
+    just _deploy-prod {{args}}
 
 verify-prod *args:
     just _warn "Pass --chain=your_chain manually. e.g. --chain=holesky for devnet deployment"
