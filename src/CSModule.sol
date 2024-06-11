@@ -1235,11 +1235,9 @@ contract CSModule is
     /// @notice Clean the deposit queue from batches with no depositable keys
     /// @dev Use **eth_call** to check how many items will be removed
     /// @param maxItems How many queue items to review
-    /// @return toRemove Number of the deposit data removed from the queue
-    function cleanDepositQueue(
-        uint256 maxItems
-    ) external returns (uint256 toRemove) {
-        toRemove = depositQueue.clean(_nodeOperators, _queueLookup, maxItems);
+    /// @return Number of the deposit data removed from the queue
+    function cleanDepositQueue(uint256 maxItems) external returns (uint256) {
+        return depositQueue.clean(_nodeOperators, _queueLookup, maxItems);
     }
 
     /// @notice Recover all stETH shares from the contract
@@ -1255,11 +1253,9 @@ contract CSModule is
 
     /// @notice Get the deposit queue item by an index
     /// @param index Index of a queue item
-    /// @return item Deposit queue item
-    function depositQueueItem(
-        uint128 index
-    ) external view returns (Batch item) {
-        item = depositQueue.at(index);
+    /// @return Deposit queue item
+    function depositQueueItem(uint128 index) external view returns (Batch) {
+        return depositQueue.at(index);
     }
 
     /// @notice Check if the given Node Operator's key is reported as slashed
@@ -1316,13 +1312,13 @@ contract CSModule is
 
     /// @notice Get Node Operator non-withdrawn keys
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return count Non-withdrawn keys count
+    /// @return Non-withdrawn keys count
     function getNodeOperatorNonWithdrawnKeys(
         uint256 nodeOperatorId
-    ) external view returns (uint256 count) {
+    ) external view returns (uint256) {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         unchecked {
-            count = no.totalAddedKeys - no.totalWithdrawnKeys;
+            return no.totalAddedKeys - no.totalWithdrawnKeys;
         }
     }
 
@@ -1470,8 +1466,8 @@ contract CSModule is
     /// @return active Operator is active flag
     function getNodeOperatorIsActive(
         uint256 nodeOperatorId
-    ) external view returns (bool active) {
-        active = nodeOperatorId < _nodeOperatorsCount;
+    ) external view returns (bool) {
+        return nodeOperatorId < _nodeOperatorsCount;
     }
 
     /// @notice Get IDs of Node Operators
@@ -1797,7 +1793,7 @@ contract CSModule is
     function _keyPointer(
         uint256 nodeOperatorId,
         uint256 keyIndex
-    ) internal pure returns (uint256 pointer) {
-        pointer = (nodeOperatorId << 128) | keyIndex;
+    ) internal pure returns (uint256) {
+        return (nodeOperatorId << 128) | keyIndex;
     }
 }

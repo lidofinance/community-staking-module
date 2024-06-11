@@ -92,23 +92,23 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     ///      getBondAmountByKeysCount(newTotal) - getBondAmountByKeysCount(currentTotal)
     /// @param keys Number of keys to get required bond for
     /// @param curveId Id of the curve to perform calculations against
-    /// @return amount Amount for particular keys count
+    /// @return Amount for particular keys count
     function getBondAmountByKeysCount(
         uint256 keys,
         uint256 curveId
-    ) public view returns (uint256 amount) {
-        amount = getBondAmountByKeysCount(keys, getCurveInfo(curveId));
+    ) public view returns (uint256) {
+        return getBondAmountByKeysCount(keys, getCurveInfo(curveId));
     }
 
     /// @notice Get keys count for the given bond amount with default bond curve
     /// @param amount Bond amount in ETH (stETH)to get keys count for
     /// @param curveId Id of the curve to perform calculations against
-    /// @return count Keys count
+    /// @return Keys count
     function getKeysCountByBondAmount(
         uint256 amount,
         uint256 curveId
-    ) public view returns (uint256 count) {
-        count = getKeysCountByBondAmount(amount, getCurveInfo(curveId));
+    ) public view returns (uint256) {
+        return getKeysCountByBondAmount(amount, getCurveInfo(curveId));
     }
 
     /// @notice Get required bond in ETH for the given number of keys for particular bond curve.

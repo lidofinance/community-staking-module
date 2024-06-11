@@ -160,12 +160,8 @@ contract CSFeeDistributor is
 
     /// @notice Get the Amount of stETH shares that are pending to be distributed
     /// @return pendingShares Amount shares that are pending to distribute
-    function pendingSharesToDistribute()
-        external
-        view
-        returns (uint256 pendingShares)
-    {
-        pendingShares = STETH.sharesOf(address(this)) - totalClaimableShares;
+    function pendingSharesToDistribute() external view returns (uint256) {
+        return STETH.sharesOf(address(this)) - totalClaimableShares;
     }
 
     /// @notice Get the Amount of stETH shares that can be distributed in favor of the Node Operator
@@ -199,15 +195,16 @@ contract CSFeeDistributor is
     /// @notice Get a hash of a leaf
     /// @param nodeOperatorId ID of the Node Operator
     /// @param shares Amount of stETH shares
-    /// @return leafHash Hash of the leaf
+    /// @return Hash of the leaf
     /// @dev Double hash the leaf to prevent second preimage attacks
     function hashLeaf(
         uint256 nodeOperatorId,
         uint256 shares
-    ) public pure returns (bytes32 leafHash) {
-        leafHash = keccak256(
-            bytes.concat(keccak256(abi.encode(nodeOperatorId, shares)))
-        );
+    ) public pure returns (bytes32) {
+        return
+            keccak256(
+                bytes.concat(keccak256(abi.encode(nodeOperatorId, shares)))
+            );
     }
 
     function _onlyRecoverer() internal view override {

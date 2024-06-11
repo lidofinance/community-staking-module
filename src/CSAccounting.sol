@@ -443,26 +443,28 @@ contract CSAccounting is
 
     /// @notice Get the number of the unbonded keys
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return count Unbonded keys count
+    /// @return Unbonded keys count
     function getUnbondedKeysCount(
         uint256 nodeOperatorId
-    ) public view returns (uint256 count) {
-        count = _getUnbondedKeysCount({
-            nodeOperatorId: nodeOperatorId,
-            accountLockedBond: true
-        });
+    ) public view returns (uint256) {
+        return
+            _getUnbondedKeysCount({
+                nodeOperatorId: nodeOperatorId,
+                accountLockedBond: true
+            });
     }
 
     /// @notice Get the number of the unbonded keys to be ejected using a forcedTargetLimit
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return count Unbonded keys count
+    /// @return Unbonded keys count
     function getUnbondedKeysCountToEject(
         uint256 nodeOperatorId
-    ) public view returns (uint256 count) {
-        count = _getUnbondedKeysCount({
-            nodeOperatorId: nodeOperatorId,
-            accountLockedBond: false
-        });
+    ) public view returns (uint256) {
+        return
+            _getUnbondedKeysCount({
+                nodeOperatorId: nodeOperatorId,
+                accountLockedBond: false
+            });
     }
 
     /// @notice Get the required bond in ETH (inc. missed and excess) for the given Node Operator to upload new deposit data
@@ -507,41 +509,44 @@ contract CSAccounting is
     /// @notice Get the bond amount in wstETH required for the `keysCount` keys using the default bond curve
     /// @param keysCount Keys count to calculate the required bond amount
     /// @param curveId Id of the curve to perform calculations against
-    /// @return amount wstETH amount required for the `keysCount`
+    /// @return wstETH amount required for the `keysCount`
     function getBondAmountByKeysCountWstETH(
         uint256 keysCount,
         uint256 curveId
-    ) public view returns (uint256 amount) {
-        amount = WSTETH.getWstETHByStETH(
-            CSBondCurve.getBondAmountByKeysCount(keysCount, curveId)
-        );
+    ) public view returns (uint256) {
+        return
+            WSTETH.getWstETHByStETH(
+                CSBondCurve.getBondAmountByKeysCount(keysCount, curveId)
+            );
     }
 
     /// @notice Get the bond amount in wstETH required for the `keysCount` keys using the custom bond curve
     /// @param keysCount Keys count to calculate the required bond amount
     /// @param curve Bond curve definition.
     ///              Use CSBondCurve.getBondCurve(id) method to get the definition for the exiting curve
-    /// @return amount wstETH amount required for the `keysCount`
+    /// @return wstETH amount required for the `keysCount`
     function getBondAmountByKeysCountWstETH(
         uint256 keysCount,
         BondCurve memory curve
-    ) public view returns (uint256 amount) {
-        amount = WSTETH.getWstETHByStETH(
-            CSBondCurve.getBondAmountByKeysCount(keysCount, curve)
-        );
+    ) public view returns (uint256) {
+        return
+            WSTETH.getWstETHByStETH(
+                CSBondCurve.getBondAmountByKeysCount(keysCount, curve)
+            );
     }
 
     /// @notice Get the required bond in wstETH (inc. missed and excess) for the given Node Operator to upload new keys
     /// @param nodeOperatorId ID of the Node Operator
     /// @param additionalKeys Number of new keys to add
-    /// @return required Required bond in wstETH
+    /// @return Required bond in wstETH
     function getRequiredBondForNextKeysWstETH(
         uint256 nodeOperatorId,
         uint256 additionalKeys
-    ) public view returns (uint256 required) {
-        required = WSTETH.getWstETHByStETH(
-            getRequiredBondForNextKeys(nodeOperatorId, additionalKeys)
-        );
+    ) public view returns (uint256) {
+        return
+            WSTETH.getWstETHByStETH(
+                getRequiredBondForNextKeys(nodeOperatorId, additionalKeys)
+            );
     }
 
     function _pullFeeRewards(
@@ -560,24 +565,27 @@ contract CSAccounting is
     /// @dev Overrides the original implementation to account for a locked bond and withdrawn validators
     function _getClaimableBondShares(
         uint256 nodeOperatorId
-    ) internal view override returns (uint256 shares) {
-        shares = _getExcessBondShares(
-            nodeOperatorId,
-            CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
-        );
+    ) internal view override returns (uint256) {
+        return
+            _getExcessBondShares(
+                nodeOperatorId,
+                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
+            );
     }
 
     function _getBondSummary(
         uint256 nodeOperatorId,
         uint256 nonWithdrawnKeys
     ) internal view returns (uint256 current, uint256 required) {
-        current = CSBondCore.getBond(nodeOperatorId);
-        required =
-            CSBondCurve.getBondAmountByKeysCount(
-                nonWithdrawnKeys,
-                CSBondCurve.getBondCurve(nodeOperatorId)
-            ) +
-            CSBondLock.getActualLockedBond(nodeOperatorId);
+        unchecked {
+            current = CSBondCore.getBond(nodeOperatorId);
+            required =
+                CSBondCurve.getBondAmountByKeysCount(
+                    nonWithdrawnKeys,
+                    CSBondCurve.getBondCurve(nodeOperatorId)
+                ) +
+                CSBondLock.getActualLockedBond(nodeOperatorId);
+        }
     }
 
     function _getBondSummaryShares(
@@ -634,13 +642,13 @@ contract CSAccounting is
     function _getExcessBondShares(
         uint256 nodeOperatorId,
         uint256 nonWithdrawnKeys
-    ) internal view returns (uint256 excessShares) {
+    ) internal view returns (uint256) {
         (uint256 current, uint256 required) = _getBondSummaryShares(
             nodeOperatorId,
             nonWithdrawnKeys
         );
         unchecked {
-            excessShares = current > required ? current - required : 0;
+            return current > required ? current - required : 0;
         }
     }
 

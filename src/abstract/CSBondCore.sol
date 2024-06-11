@@ -118,11 +118,9 @@ abstract contract CSBondCore is ICSBondCore {
 
     /// @notice Get bond amount in ETH (stETH) for the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return bond Bond amount in ETH (stETH)
-    function getBond(
-        uint256 nodeOperatorId
-    ) public view returns (uint256 bond) {
-        bond = _ethByShares(getBondShares(nodeOperatorId));
+    /// @return Bond amount in ETH (stETH)
+    function getBond(uint256 nodeOperatorId) public view returns (uint256) {
+        return _ethByShares(getBondShares(nodeOperatorId));
     }
 
     /// @dev Stake user's ETH with Lido and stores stETH shares as Node Operator's bond shares
@@ -280,17 +278,13 @@ abstract contract CSBondCore is ICSBondCore {
     }
 
     /// @dev Shortcut for Lido's getSharesByPooledEth
-    function _sharesByEth(
-        uint256 ethAmount
-    ) internal view returns (uint256 shares) {
-        shares = LIDO.getSharesByPooledEth(ethAmount);
+    function _sharesByEth(uint256 ethAmount) internal view returns (uint256) {
+        return LIDO.getSharesByPooledEth(ethAmount);
     }
 
     /// @dev Shortcut for Lido's getPooledEthByShares
-    function _ethByShares(
-        uint256 shares
-    ) internal view returns (uint256 amount) {
-        amount = LIDO.getPooledEthByShares(shares);
+    function _ethByShares(uint256 shares) internal view returns (uint256) {
+        return LIDO.getPooledEthByShares(shares);
     }
 
     /// @dev Unsafe reduce bond shares (stETH) (possible underflow). Safety checks should be done outside

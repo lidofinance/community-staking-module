@@ -13,15 +13,15 @@ import { SSZ } from "./lib/SSZ.sol";
 
 /// @notice Convert withdrawal amount to wei
 /// @param withdrawal Withdrawal struct
-function amountWei(Withdrawal memory withdrawal) pure returns (uint256 result) {
-    result = gweiToWei(withdrawal.amount);
+function amountWei(Withdrawal memory withdrawal) pure returns (uint256) {
+    return gweiToWei(withdrawal.amount);
 }
 
 /// @notice Convert gwei to wei
 /// @param amount Amount in gwei
-function gweiToWei(uint64 amount) pure returns (uint256 result) {
+function gweiToWei(uint64 amount) pure returns (uint256) {
     unchecked {
-        result = uint256(amount) * 1 gwei;
+        return uint256(amount) * 1 gwei;
     }
 }
 
@@ -252,7 +252,7 @@ contract CSVerifier is ICSVerifier {
 
     function _getParentBlockRoot(
         uint64 blockTimestamp
-    ) internal view returns (bytes32 root) {
+    ) internal view returns (bytes32) {
         (bool success, bytes memory data) = BEACON_ROOTS.staticcall(
             abi.encode(blockTimestamp)
         );
@@ -261,7 +261,7 @@ contract CSVerifier is ICSVerifier {
             revert RootNotFound();
         }
 
-        root = abi.decode(data, (bytes32));
+        return abi.decode(data, (bytes32));
     }
 
     /// @dev `stateRoot` is supposed to be trusted at this point.
@@ -321,23 +321,17 @@ contract CSVerifier is ICSVerifier {
         });
     }
 
-    function _getValidatorGI(
-        uint256 offset
-    ) internal view returns (GIndex gIndex) {
-        gIndex = GI_FIRST_VALIDATOR.shr(offset);
+    function _getValidatorGI(uint256 offset) internal view returns (GIndex) {
+        return GI_FIRST_VALIDATOR.shr(offset);
     }
 
-    function _getWithdrawalGI(
-        uint256 offset
-    ) internal view returns (GIndex gIndex) {
-        gIndex = GI_FIRST_WITHDRAWAL.shr(offset);
+    function _getWithdrawalGI(uint256 offset) internal view returns (GIndex) {
+        return GI_FIRST_WITHDRAWAL.shr(offset);
     }
 
     // From HashConsensus contract.
-    function _computeEpochAtSlot(
-        uint256 slot
-    ) internal view returns (uint256 epoch) {
+    function _computeEpochAtSlot(uint256 slot) internal view returns (uint256) {
         // See: github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#compute_epoch_at_slot
-        epoch = slot / SLOTS_PER_EPOCH;
+        return slot / SLOTS_PER_EPOCH;
     }
 }
