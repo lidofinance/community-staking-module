@@ -502,10 +502,8 @@ contract CSAccounting is
             }
 
             uint256 excess = current - required;
-            if (excess >= requiredForNextKeys) {
-                return 0;
-            }
-            return requiredForNextKeys - excess;
+            return
+                excess < requiredForNextKeys ? requiredForNextKeys - excess : 0;
         }
     }
 
@@ -604,31 +602,35 @@ contract CSAccounting is
     function _getUnbondedKeysCount(
         uint256 nodeOperatorId,
         bool accountLockedBond
-    ) internal view returns (uint256 count) {
+    ) internal view returns (uint256) {
         uint256 nonWithdrawnKeys = CSM.getNodeOperatorNonWithdrawnKeys(
             nodeOperatorId
         );
         /// 10 wei added to account for possible stETH rounding errors
         /// https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205.
         /// Should be sufficient for ~ 40 years
-        uint256 currentBond = CSBondCore._ethByShares(
-            getBondShares(nodeOperatorId)
-        ) + 10 wei;
-        if (accountLockedBond) {
-            uint256 lockedBond = CSBondLock.getActualLockedBond(nodeOperatorId);
-            if (currentBond <= lockedBond) return nonWithdrawnKeys;
-            unchecked {
+        unchecked {
+            uint256 currentBond = CSBondCore._ethByShares(
+                getBondShares(nodeOperatorId)
+            ) + 10 wei;
+            if (accountLockedBond) {
+                uint256 lockedBond = CSBondLock.getActualLockedBond(
+                    nodeOperatorId
+                );
+                if (currentBond <= lockedBond) return nonWithdrawnKeys;
                 currentBond -= lockedBond;
             }
-        }
-        BondCurve memory bondCurve = CSBondCurve.getBondCurve(nodeOperatorId);
-        uint256 bondedKeys = CSBondCurve.getKeysCountByBondAmount(
-            currentBond,
-            bondCurve
-        );
-        if (bondedKeys >= nonWithdrawnKeys) return 0;
-        unchecked {
-            count = nonWithdrawnKeys - bondedKeys;
+            BondCurve memory bondCurve = CSBondCurve.getBondCurve(
+                nodeOperatorId
+            );
+            uint256 bondedKeys = CSBondCurve.getKeysCountByBondAmount(
+                currentBond,
+                bondCurve
+            );
+            return
+                bondedKeys < nonWithdrawnKeys
+                    ? nonWithdrawnKeys - bondedKeys
+                    : 0;
         }
     }
 

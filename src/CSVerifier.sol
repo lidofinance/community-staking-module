@@ -20,7 +20,9 @@ function amountWei(Withdrawal memory withdrawal) pure returns (uint256 result) {
 /// @notice Convert gwei to wei
 /// @param amount Amount in gwei
 function gweiToWei(uint64 amount) pure returns (uint256 result) {
-    result = uint256(amount) * 1 gwei;
+    unchecked {
+        result = uint256(amount) * 1 gwei;
+    }
 }
 
 contract CSVerifier is ICSVerifier {

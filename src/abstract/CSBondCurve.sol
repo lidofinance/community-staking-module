@@ -122,14 +122,13 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         BondCurve memory curve
     ) public pure returns (uint256) {
         if (keys == 0) return 0;
-        if (keys <= curve.points.length) {
-            return curve.points[keys - 1];
-        }
         unchecked {
             return
-                curve.points[curve.points.length - 1] +
-                (keys - curve.points.length) *
-                curve.trend;
+                keys > curve.points.length
+                    ? curve.points[curve.points.length - 1] +
+                        (keys - curve.points.length) *
+                        curve.trend
+                    : curve.points[keys - 1];
         }
     }
 
@@ -143,15 +142,14 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     ) public pure returns (uint256) {
         if (amount < curve.points[0]) return 0;
         uint256 maxCurveAmount = curve.points[curve.points.length - 1];
-        if (amount >= maxCurveAmount) {
-            unchecked {
-                return
-                    curve.points.length +
-                    (amount - maxCurveAmount) /
-                    curve.trend;
-            }
+        unchecked {
+            return
+                amount < maxCurveAmount
+                    ? _searchKeysCount(amount, curve.points)
+                    : curve.points.length +
+                        (amount - maxCurveAmount) /
+                        curve.trend;
         }
-        return _searchKeysCount(amount, curve.points);
     }
 
     // solhint-disable-next-line func-name-mixedcase

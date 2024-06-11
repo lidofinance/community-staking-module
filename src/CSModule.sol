@@ -1239,7 +1239,7 @@ contract CSModule is
     function cleanDepositQueue(
         uint256 maxItems
     ) external returns (uint256 toRemove) {
-        return depositQueue.clean(_nodeOperators, _queueLookup, maxItems);
+        toRemove = depositQueue.clean(_nodeOperators, _queueLookup, maxItems);
     }
 
     /// @notice Recover all stETH shares from the contract
@@ -1258,7 +1258,7 @@ contract CSModule is
     function depositQueueItem(
         uint128 index
     ) external view returns (Batch item) {
-        return depositQueue.at(index);
+        item = depositQueue.at(index);
     }
 
     /// @notice Check if the given Node Operator's key is reported as slashed
@@ -1309,8 +1309,8 @@ contract CSModule is
     /// @return operator Node Operator info
     function getNodeOperator(
         uint256 nodeOperatorId
-    ) external view returns (NodeOperator memory operator) {
-        operator = _nodeOperators[nodeOperatorId];
+    ) external view returns (NodeOperator memory) {
+        return _nodeOperators[nodeOperatorId];
     }
 
     /// @notice Get Node Operator non-withdrawn keys
@@ -1531,11 +1531,10 @@ contract CSModule is
         if (referrer != address(0)) emit ReferrerSet(id, referrer);
 
         // @dev It's possible to join with proof even after public release to get beneficial bond curve
-        if (proof.length == 0 || address(earlyAdoption) == address(0))
-            return id;
-
-        earlyAdoption.consume(msg.sender, proof);
-        accounting.setBondCurve(id, earlyAdoption.CURVE_ID());
+        if (proof.length != 0 && address(earlyAdoption) != address(0)) {
+            earlyAdoption.consume(msg.sender, proof);
+            accounting.setBondCurve(id, earlyAdoption.CURVE_ID());
+        }
     }
 
     function _addSigningKeys(
@@ -1787,8 +1786,8 @@ contract CSModule is
     }
 
     function _onlyExistingNodeOperator(uint256 nodeOperatorId) internal view {
-        if (nodeOperatorId >= _nodeOperatorsCount)
-            revert NodeOperatorDoesNotExist();
+        if (nodeOperatorId < _nodeOperatorsCount) return;
+        revert NodeOperatorDoesNotExist();
     }
 
     function _onlyRecoverer() internal view override {

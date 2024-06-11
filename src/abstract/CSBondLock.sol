@@ -86,16 +86,16 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
 
     /// @notice Get amount of the locked bond in ETH (stETH) by the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator
-    /// @return locked Amount of the actual locked bond
+    /// @return Amount of the actual locked bond
     function getActualLockedBond(
         uint256 nodeOperatorId
-    ) public view returns (uint256 locked) {
+    ) public view returns (uint256) {
         CSBondLockStorage storage $ = _getCSBondLockStorage();
         BondLock storage bondLock = $.bondLock[nodeOperatorId];
         if (bondLock.retentionUntil < block.timestamp) {
             return 0;
         }
-        locked = bondLock.amount;
+        return bondLock.amount;
     }
 
     /// @dev Lock bond amount for the given Node Operator until the retention period.
