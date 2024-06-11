@@ -48,43 +48,43 @@ abstract contract CSBondCore is ICSBondCore {
     event BondDepositedETH(
         uint256 indexed nodeOperatorId,
         address indexed from,
-        uint256 indexed amount
+        uint256 amount
     );
     event BondClaimedUnstETH(
         uint256 indexed nodeOperatorId,
         address indexed to,
         uint256 amount,
-        uint256 indexed requestId
+        uint256 requestId
     );
     event BondDepositedWstETH(
         uint256 indexed nodeOperatorId,
         address indexed from,
-        uint256 indexed amount
+        uint256 amount
     );
     event BondClaimedWstETH(
         uint256 indexed nodeOperatorId,
         address indexed to,
-        uint256 indexed amount
+        uint256 amount
     );
     event BondDepositedStETH(
         uint256 indexed nodeOperatorId,
         address indexed from,
-        uint256 indexed amount
+        uint256 amount
     );
     event BondClaimedStETH(
         uint256 indexed nodeOperatorId,
         address indexed to,
-        uint256 indexed amount
+        uint256 amount
     );
     event BondBurned(
         uint256 indexed nodeOperatorId,
-        uint256 indexed toBurnAmount,
-        uint256 indexed burnedAmount
+        uint256 toBurnAmount,
+        uint256 burnedAmount
     );
     event BondCharged(
         uint256 indexed nodeOperatorId,
-        uint256 indexed toChargeAmount,
-        uint256 indexed chargedAmount
+        uint256 toChargeAmount,
+        uint256 chargedAmount
     );
 
     error ZeroLocatorAddress();

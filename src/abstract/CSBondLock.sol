@@ -44,8 +44,8 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
 
     event BondLockChanged(
         uint256 indexed nodeOperatorId,
-        uint256 indexed newAmount,
-        uint256 indexed retentionUntil
+        uint256 newAmount,
+        uint256 retentionUntil
     );
     event BondLockRetentionPeriodChanged(uint256 indexed retentionPeriod);
 

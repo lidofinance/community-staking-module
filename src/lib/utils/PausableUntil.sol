@@ -14,7 +14,7 @@ contract PausableUntil {
     uint256 public constant PAUSE_INFINITELY = type(uint256).max;
 
     /// @notice Emitted when paused by the `pauseFor` or `pauseUntil` call
-    event Paused(uint256 indexed duration);
+    event Paused(uint256 duration);
     /// @notice Emitted when resumed by the `resume` call
     event Resumed();
 

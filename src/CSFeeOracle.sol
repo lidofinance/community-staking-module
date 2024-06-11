@@ -62,7 +62,7 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
     /// @dev Emitted when a report is settled.
     event ReportSettled(
         uint256 indexed refSlot,
-        uint256 indexed distributed,
+        uint256 distributed,
         bytes32 treeRoot,
         string treeCid
     );

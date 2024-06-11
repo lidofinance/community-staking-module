@@ -94,37 +94,37 @@ contract CSModule is
     event ReferrerSet(uint256 indexed nodeOperatorId, address indexed referrer);
     event VettedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 indexed vettedKeysCount
+        uint256 vettedKeysCount
     );
     event DepositedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 indexed depositedKeysCount
+        uint256 depositedKeysCount
     );
     event ExitedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 indexed exitedKeysCount
+        uint256 exitedKeysCount
     );
     event TotalSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 indexed totalKeysCount
+        uint256 totalKeysCount
     );
     event StuckSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
-        uint256 indexed stuckKeysCount
+        uint256 stuckKeysCount
     );
     event TargetValidatorsCountChangedByRequest(
         uint256 indexed nodeOperatorId,
         uint8 indexed targetLimitMode,
-        uint256 indexed targetValidatorsCount
+        uint256 targetValidatorsCount
     );
     event WithdrawalSubmitted(
         uint256 indexed nodeOperatorId,
-        uint256 indexed keyIndex,
-        uint256 indexed amount
+        uint256 keyIndex,
+        uint256 amount
     );
     event InitialSlashingSubmitted(
         uint256 indexed nodeOperatorId,
-        uint256 indexed keyIndex
+        uint256 keyIndex
     );
 
     event PublicRelease();
@@ -132,20 +132,20 @@ contract CSModule is
 
     event KeyRemovalChargeApplied(
         uint256 indexed nodeOperatorId,
-        uint256 indexed amount
+        uint256 amount
     );
     event ELRewardsStealingPenaltyReported(
         uint256 indexed nodeOperatorId,
         bytes32 proposedBlockHash,
-        uint256 indexed stolenAmount
+        uint256 stolenAmount
     );
     event ELRewardsStealingPenaltyCancelled(
         uint256 indexed nodeOperatorId,
-        uint256 indexed amount
+        uint256 amount
     );
     event ELRewardsStealingPenaltySettled(
         uint256 indexed nodeOperatorId,
-        uint256 indexed amount
+        uint256 amount
     );
 
     error NodeOperatorDoesNotExist();

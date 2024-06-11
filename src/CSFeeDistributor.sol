@@ -38,14 +38,11 @@ contract CSFeeDistributor is
     uint256 public totalClaimableShares;
 
     /// @dev Emitted when fees are distributed
-    event FeeDistributed(
-        uint256 indexed nodeOperatorId,
-        uint256 indexed shares
-    );
+    event FeeDistributed(uint256 indexed nodeOperatorId, uint256 shares);
 
     /// @dev Emitted when distribution data is updated
     event DistributionDataUpdated(
-        uint256 indexed totalClaimableShares,
+        uint256 totalClaimableShares,
         bytes32 treeRoot,
         string treeCid
     );

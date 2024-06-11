@@ -101,7 +101,7 @@ library QueueLib {
         mapping(uint128 => Batch) queue;
     }
 
-    event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 indexed count);
+    event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
 
     error InvalidIndex();
     error QueueIsEmpty();
