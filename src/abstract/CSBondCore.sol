@@ -47,33 +47,33 @@ abstract contract CSBondCore is ICSBondCore {
 
     event BondDepositedETH(
         uint256 indexed nodeOperatorId,
-        address indexed from,
+        address from,
         uint256 amount
     );
     event BondClaimedUnstETH(
         uint256 indexed nodeOperatorId,
-        address indexed to,
+        address to,
         uint256 amount,
         uint256 requestId
     );
     event BondDepositedWstETH(
         uint256 indexed nodeOperatorId,
-        address indexed from,
+        address from,
         uint256 amount
     );
     event BondClaimedWstETH(
         uint256 indexed nodeOperatorId,
-        address indexed to,
+        address to,
         uint256 amount
     );
     event BondDepositedStETH(
         uint256 indexed nodeOperatorId,
-        address indexed from,
+        address from,
         uint256 amount
     );
     event BondClaimedStETH(
         uint256 indexed nodeOperatorId,
-        address indexed to,
+        address to,
         uint256 amount
     );
     event BondBurned(
