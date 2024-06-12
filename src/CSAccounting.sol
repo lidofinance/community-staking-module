@@ -59,7 +59,7 @@ contract CSAccounting is
     error ZeroChargeRecipientAddress();
 
     modifier onlyCSM() {
-        _onlyCSM();
+        if (msg.sender != address(CSM)) revert SenderIsNotCSM();
         _;
     }
 
@@ -654,12 +654,6 @@ contract CSAccounting is
 
     function _onlyRecoverer() internal view override {
         _checkRole(RECOVERER_ROLE);
-    }
-
-    function _onlyCSM() internal view {
-        if (msg.sender != address(CSM)) {
-            revert SenderIsNotCSM();
-        }
     }
 
     function _setChargeRecipient(address _chargeRecipient) private {

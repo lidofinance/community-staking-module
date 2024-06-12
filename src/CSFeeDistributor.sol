@@ -61,7 +61,7 @@ contract CSFeeDistributor is
     error NotEnoughShares();
 
     modifier onlyAccounting() {
-        _onlyAccounting();
+        if (msg.sender != ACCOUNTING) revert NotAccounting();
         _;
     }
 
@@ -209,9 +209,5 @@ contract CSFeeDistributor is
 
     function _onlyRecoverer() internal view override {
         _checkRole(RECOVERER_ROLE);
-    }
-
-    function _onlyAccounting() internal view {
-        if (msg.sender != ACCOUNTING) revert NotAccounting();
     }
 }
