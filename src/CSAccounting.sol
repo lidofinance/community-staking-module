@@ -588,6 +588,7 @@ contract CSAccounting is
     ) internal view returns (uint256 current, uint256 required) {
         unchecked {
             current = CSBondCore.getBondShares(nodeOperatorId);
+            // @dev 'getActualLockedBond' is uint128, so no overflow expected in practice
             required = _sharesByEth(
                 CSBondCurve.getBondAmountByKeysCount(
                     nonWithdrawnKeys,
