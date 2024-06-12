@@ -29,7 +29,7 @@ library SigningKeys {
     /// @param keysCount keys count to load
     /// @param pubkeys keys buffer to read from
     /// @param signatures signatures buffer to read from
-    /// @return total new total keys count
+    /// @return new total keys count
     function saveKeysSigs(
         uint256 nodeOperatorId,
         uint256 startIndex,
@@ -93,7 +93,7 @@ library SigningKeys {
     /// @param startIndex start index
     /// @param keysCount keys count to load
     /// @param totalKeysCount current total keys count for operator
-    /// @return total new total keys count
+    /// @return new total keys count
     function removeKeysSigs(
         uint256 nodeOperatorId,
         uint256 startIndex,
