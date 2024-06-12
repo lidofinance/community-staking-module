@@ -4,7 +4,7 @@
 pragma solidity 0.8.24;
 
 import { DeployBase } from "./DeployBase.s.sol";
-import { pack } from "../src/lib/GIndex.sol";
+import { GIndex } from "../src/lib/GIndex.sol";
 
 contract DeployHolesky is DeployBase {
     constructor() DeployBase("holesky", 17000) {
@@ -36,9 +36,15 @@ contract DeployHolesky is DeployBase {
         config.hashConsensusQuorum = 6;
         // Verifier
         // NOTE: Deneb fork gIndexes. Should be updated according to `config.verifierSupportedEpoch` fork epoch if needed
-        config.gIHistoricalSummaries = pack(0x3b, 5);
-        config.gIFirstWithdrawal = pack(0xe1c0, 4);
-        config.gIFirstValidator = pack(0x560000000000, 40);
+        config.gIFirstWithdrawal = GIndex.wrap(
+            0x0000000000000000000000000000000000000000000000000000000000e1c004
+        );
+        config.gIFirstValidator = GIndex.wrap(
+            0x0000000000000000000000000000000000000000000000000056000000000028
+        );
+        config.gIHistoricalSummaries = GIndex.wrap(
+            0x0000000000000000000000000000000000000000000000000000000000003b00
+        );
 
         config.verifierSupportedEpoch = 29696;
         // Accounting
