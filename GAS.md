@@ -33,8 +33,8 @@
 | getBondSummaryShares                                        | 12727           | 18096  | 15959  | 24459  | 12      |
 | getCurveInfo                                                | 1637            | 1801   | 1884   | 1884   | 3       |
 | getLockedBondInfo                                           | 782             | 782    | 782    | 782    | 12      |
-| getRequiredBondForNextKeys                                  | 6298            | 19380  | 17793  | 31104  | 45      |
-| getRequiredBondForNextKeysWstETH                            | 21062           | 28306  | 24175  | 35205  | 20      |
+| getRequiredBondForNextKeys                                  | 6436            | 19518  | 17931  | 31242  | 45      |
+| getRequiredBondForNextKeysWstETH                            | 21200           | 28444  | 24313  | 35343  | 20      |
 | getUnbondedKeysCount                                        | 2618            | 11730  | 6783   | 25551  | 486     |
 | getUnbondedKeysCountToEject                                 | 4032            | 7070   | 4496   | 13882  | 36      |
 | grantRole                                                   | 29393           | 99943  | 118481 | 118481 | 1547    |
@@ -134,9 +134,9 @@
 | addNodeOperatorETH                                  | 26763           | 434096 | 381985 | 1059255 | 281     |
 | addNodeOperatorStETH                                | 27567           | 249936 | 280076 | 374493  | 8       |
 | addNodeOperatorWstETH                               | 27589           | 273074 | 311165 | 395162  | 8       |
-| addValidatorKeysETH                                 | 25657           | 165581 | 218049 | 272522  | 13      |
-| addValidatorKeysStETH                               | 26438           | 115729 | 91881  | 205734  | 6       |
-| addValidatorKeysWstETH                              | 26416           | 136058 | 135397 | 224486  | 6       |
+| addValidatorKeysETH                                 | 25657           | 165708 | 218187 | 272660  | 13      |
+| addValidatorKeysStETH                               | 26438           | 115844 | 92019  | 205872  | 6       |
+| addValidatorKeysWstETH                              | 26416           | 136173 | 135535 | 224624  | 6       |
 | cancelELRewardsStealingPenalty                      | 26343           | 64801  | 75121  | 82620   | 4       |
 | claimRewardsStETH                                   | 25035           | 48020  | 48568  | 69912   | 4       |
 | claimRewardsUnstETH                                 | 25058           | 48033  | 48581  | 69915   | 4       |
@@ -184,7 +184,7 @@
 | recoverEther                                        | 23781           | 26059  | 26059  | 28338   | 2       |
 | recoverStETHShares                                  | 55664           | 55664  | 55664  | 55664   | 1       |
 | removeKeys                                          | 24078           | 116795 | 141022 | 215568  | 17      |
-| reportELRewardsStealingPenalty                      | 24302           | 91922  | 101153 | 102014  | 36      |
+| reportELRewardsStealingPenalty                      | 24302           | 92002  | 101237 | 102098  | 36      |
 | resetNodeOperatorManagerAddress                     | 26951           | 31027  | 29385  | 36734   | 5       |
 | resume                                              | 23748           | 29549  | 29567  | 29567   | 324     |
 | revokeRole                                          | 40217           | 40217  | 40217  | 40217   | 1       |

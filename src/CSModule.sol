@@ -944,12 +944,10 @@ contract CSModule is
         uint256 amount
     ) external onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
-        unchecked {
-            accounting.lockBondETH(
-                nodeOperatorId,
-                amount + EL_REWARDS_STEALING_FINE
-            );
-        }
+        accounting.lockBondETH(
+            nodeOperatorId,
+            amount + EL_REWARDS_STEALING_FINE
+        );
         emit ELRewardsStealingPenaltyReported(
             nodeOperatorId,
             blockHash,

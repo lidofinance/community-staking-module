@@ -475,26 +475,19 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 additionalKeys
     ) public view returns (uint256) {
+        uint256 nonWithdrawnKeys = CSM.getNodeOperatorNonWithdrawnKeys(
+            nodeOperatorId
+        );
+        (uint256 current, uint256 required) = _getBondSummary(
+            nodeOperatorId,
+            nonWithdrawnKeys
+        );
+        BondCurve memory bondCurve = CSBondCurve.getBondCurve(nodeOperatorId);
+        uint256 requiredForNextKeys = CSBondCurve.getBondAmountByKeysCount(
+            nonWithdrawnKeys + additionalKeys,
+            bondCurve
+        ) - CSBondCurve.getBondAmountByKeysCount(nonWithdrawnKeys, bondCurve);
         unchecked {
-            uint256 nonWithdrawnKeys = CSM.getNodeOperatorNonWithdrawnKeys(
-                nodeOperatorId
-            );
-            (uint256 current, uint256 required) = _getBondSummary(
-                nodeOperatorId,
-                nonWithdrawnKeys
-            );
-            BondCurve memory bondCurve = CSBondCurve.getBondCurve(
-                nodeOperatorId
-            );
-            uint256 requiredForNextKeys = CSBondCurve.getBondAmountByKeysCount(
-                nonWithdrawnKeys + additionalKeys,
-                bondCurve
-            ) -
-                CSBondCurve.getBondAmountByKeysCount(
-                    nonWithdrawnKeys,
-                    bondCurve
-                );
-
             uint256 missing = required > current ? required - current : 0;
             if (missing > 0) {
                 return missing + requiredForNextKeys;
@@ -502,7 +495,7 @@ contract CSAccounting is
 
             uint256 excess = current - required;
             return
-                excess < requiredForNextKeys ? requiredForNextKeys - excess : 0;
+                requiredForNextKeys > excess ? requiredForNextKeys - excess : 0;
         }
     }
 
@@ -579,6 +572,7 @@ contract CSAccounting is
     ) internal view returns (uint256 current, uint256 required) {
         unchecked {
             current = CSBondCore.getBond(nodeOperatorId);
+            // @dev 'getActualLockedBond' is uint128, so no overflow expected in practice
             required =
                 CSBondCurve.getBondAmountByKeysCount(
                     nonWithdrawnKeys,
@@ -633,7 +627,7 @@ contract CSAccounting is
                 bondCurve
             );
             return
-                bondedKeys < nonWithdrawnKeys
+                nonWithdrawnKeys > bondedKeys
                     ? nonWithdrawnKeys - bondedKeys
                     : 0;
         }
