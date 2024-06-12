@@ -17,10 +17,7 @@ const BeaconBlock = ssz.deneb.BeaconBlock;
     Withdrawals.limit,
   );
 
-  console.log(
-    "BeaconState.latest_execution_payload_header.withdrawals[0]:",
-    `0x${gI.toString(16)}`,
-  );
+  console.log("gIFirstWithdrawal:", toBytes32String(gI));
 }
 
 {
@@ -32,12 +29,12 @@ const BeaconBlock = ssz.deneb.BeaconBlock;
     Validators.limit
   );
 
-  console.log("BeaconState.validators[0]`: ", `0x${gI.toString(16)}`);
+  console.log("gIFirstValidator: ", toBytes32String(gI));
 }
 
 {
   const gI = pack(BeaconState.getPathInfo(["historicalSummaries"]).gindex, 0); // 0 because `historicalSummaries` is a bytes32 value.
-  console.log("BeaconState.historical_summaries`: ", `0x${gI.toString(16)}`);
+  console.log("gIHistoricalSummaries: ", toBytes32String(gI));
 }
 
 // Analog of the GIndex.pack.
@@ -47,4 +44,11 @@ const BeaconBlock = ssz.deneb.BeaconBlock;
 function pack(gI, limit) {
   const width = limit ? BigInt(Math.log2(limit)) : 0n;
   return (gI << 8n) | width;
+}
+
+// Return hex-encoded representation of GIndex
+// @param {number} limit
+// @return {bigint}
+function toBytes32String(gI) {
+  return `0x${gI.toString(16).padStart(64, "0")}`;
 }
