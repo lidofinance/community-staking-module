@@ -170,9 +170,15 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
         _checkBondCurve(curvePoints);
 
-        uint256 curveTrend = curvePoints[curvePoints.length - 1] -
+        uint256 curveTrend = curvePoints.unsafeMemoryAccess(
+            curvePoints.length - 1
+        ) -
             // if the curve length is 1, then 0 is used as the previous value to calculate the trend
-            (curvePoints.length > 1 ? curvePoints[curvePoints.length - 2] : 0);
+            (
+                curvePoints.length > 1
+                    ? curvePoints.unsafeMemoryAccess(curvePoints.length - 2)
+                    : 0
+            );
         $.bondCurves.push(
             BondCurve({ points: curvePoints, trend: curveTrend })
         );
@@ -192,9 +198,15 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
         _checkBondCurve(curvePoints);
 
-        uint256 curveTrend = curvePoints[curvePoints.length - 1] -
+        uint256 curveTrend = curvePoints.unsafeMemoryAccess(
+            curvePoints.length - 1
+        ) -
             // if the curve length is 1, then 0 is used as the previous value to calculate the trend
-            (curvePoints.length > 1 ? curvePoints[curvePoints.length - 2] : 0);
+            (
+                curvePoints.length > 1
+                    ? curvePoints.unsafeMemoryAccess(curvePoints.length - 2)
+                    : 0
+            );
         $.bondCurves[curveId] = BondCurve({
             points: curvePoints,
             trend: curveTrend
@@ -224,11 +236,14 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             curvePoints.length < MIN_CURVE_LENGTH ||
             curvePoints.length > MAX_CURVE_LENGTH
         ) revert InvalidBondCurveLength();
-        if (curvePoints[0] == 0) revert InvalidBondCurveValues();
+        if (curvePoints.unsafeMemoryAccess(0) == 0)
+            revert InvalidBondCurveValues();
         uint256 len = curvePoints.length;
         for (uint256 i = 1; i < len; ++i) {
-            if (curvePoints[i] <= curvePoints[i - 1])
-                revert InvalidBondCurveValues();
+            if (
+                curvePoints.unsafeMemoryAccess(i) <=
+                curvePoints.unsafeMemoryAccess(i - 1)
+            ) revert InvalidBondCurveValues();
         }
     }
 
@@ -244,7 +259,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             uint256 midAmount;
             while (low <= high) {
                 mid = (low + high) / 2;
-                midAmount = curvePoints[mid];
+                midAmount = curvePoints.unsafeMemoryAccess(mid);
                 if (amount == midAmount) {
                     return mid + 1;
                 }

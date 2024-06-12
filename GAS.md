@@ -10,7 +10,7 @@
 | RESET_BOND_CURVE_ROLE                                       | 274             | 274    | 274    | 274    | 1       |
 | RESUME_ROLE                                                 | 340             | 340    | 340    | 340    | 187     |
 | SET_BOND_CURVE_ROLE                                         | 339             | 339    | 339    | 339    | 187     |
-| addBondCurve                                                | 24358           | 101491 | 98934  | 305606 | 349     |
+| addBondCurve                                                | 24358           | 101439 | 98887  | 305244 | 349     |
 | chargeFee                                                   | 21803           | 48145  | 48145  | 74487  | 2       |
 | chargeRecipient                                             | 469             | 469    | 469    | 469    | 1       |
 | claimRewardsStETH                                           | 25075           | 79039  | 90753  | 100603 | 16      |
@@ -38,7 +38,7 @@
 | getUnbondedKeysCount                                        | 2568            | 11735  | 6774   | 25524  | 486     |
 | getUnbondedKeysCountToEject                                 | 4055            | 7092   | 4519   | 13905  | 36      |
 | grantRole                                                   | 29393           | 99943  | 118481 | 118481 | 1547    |
-| initialize                                                  | 25980           | 491083 | 493357 | 493357 | 513     |
+| initialize                                                  | 25980           | 491036 | 493310 | 493310 | 513     |
 | isPaused                                                    | 406             | 806    | 406    | 2406   | 5       |
 | lockBondETH                                                 | 21797           | 68483  | 70275  | 70299  | 27      |
 | pauseFor                                                    | 23962           | 45328  | 47465  | 47465  | 11      |
@@ -54,7 +54,7 @@
 | setLockedBondRetentionPeriod                                | 30121           | 30121  | 30121  | 30121  | 1       |
 | settleLockedBondETH                                         | 50773           | 50773  | 50773  | 50773  | 1       |
 | totalBondShares                                             | 347             | 458    | 347    | 2347   | 54      |
-| updateBondCurve                                             | 24442           | 37984  | 26783  | 62729  | 3       |
+| updateBondCurve                                             | 24442           | 37954  | 26783  | 62639  | 3       |
 
 
 | src/CSEarlyAdoption.sol:CSEarlyAdoption contract |                 |       |        |       |         |
