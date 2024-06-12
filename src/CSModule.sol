@@ -149,7 +149,7 @@ contract CSModule is
     error NodeOperatorDoesNotExist();
     error SenderIsNotEligible();
     error InvalidVetKeysPointer();
-    error StuckKeysHigherThanExited();
+    error StuckKeysHigherThanNonExited();
     error ExitedKeysHigherThanTotalDeposited();
     error ExitedKeysDecrease();
 
@@ -1657,7 +1657,7 @@ contract CSModule is
             if (
                 stuckValidatorsCount >
                 no.totalDepositedKeys - no.totalExitedKeys
-            ) revert StuckKeysHigherThanExited();
+            ) revert StuckKeysHigherThanNonExited();
         }
 
         no.stuckValidatorsCount = uint32(stuckValidatorsCount);
