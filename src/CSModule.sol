@@ -1535,6 +1535,7 @@ contract CSModule is
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         uint256 startIndex = no.totalAddedKeys;
         unchecked {
+            // startIndex + keysCount can overflow here but will revert later in the SigningKeys.saveKeysSigs
             if (
                 !publicRelease &&
                 startIndex + keysCount >
@@ -1579,11 +1580,6 @@ contract CSModule is
 
         if (startIndex < no.totalDepositedKeys) {
             revert SigningKeysInvalidOffset();
-        }
-        unchecked {
-            if (startIndex + keysCount > no.totalAddedKeys) {
-                revert SigningKeysInvalidOffset();
-            }
         }
 
         // solhint-disable-next-line func-named-parameters

@@ -38,10 +38,10 @@ library SigningKeys {
         bytes memory pubkeys,
         bytes memory signatures
     ) internal returns (uint256) {
+        if (keysCount == 0 || startIndex + keysCount > UINT64_MAX) {
+            revert InvalidKeysCount();
+        }
         unchecked {
-            if (keysCount == 0 || startIndex + keysCount > UINT64_MAX) {
-                revert InvalidKeysCount();
-            }
             if (
                 pubkeys.length != keysCount * PUBKEY_LENGTH ||
                 signatures.length != keysCount * SIGNATURE_LENGTH
@@ -101,63 +101,62 @@ library SigningKeys {
         uint256 keysCount,
         uint256 totalKeysCount
     ) internal returns (uint256) {
-        unchecked {
-            if (
-                keysCount == 0 ||
-                startIndex + keysCount > totalKeysCount ||
-                totalKeysCount > UINT64_MAX
-            ) {
-                revert InvalidKeysCount();
-            }
+        if (
+            keysCount == 0 ||
+            startIndex + keysCount > totalKeysCount ||
+            totalKeysCount > UINT64_MAX
+        ) {
+            revert InvalidKeysCount();
+        }
 
-            uint256 curOffset;
-            uint256 lastOffset;
-            uint256 j;
-            bytes memory tmpKey = new bytes(48);
-            // removing from the last index
-            for (uint256 i = startIndex + keysCount; i > startIndex; ) {
+        uint256 curOffset;
+        uint256 lastOffset;
+        uint256 j;
+        bytes memory tmpKey = new bytes(48);
+        // removing from the last index
+        for (uint256 i = startIndex + keysCount; i > startIndex; ) {
+            unchecked {
                 curOffset = SIGNING_KEYS_POSITION.getKeyOffset(
                     nodeOperatorId,
                     i - 1
                 );
-                assembly {
-                    // read key
-                    mstore(
-                        add(tmpKey, 0x30),
-                        shr(128, sload(add(curOffset, 1)))
-                    ) // bytes 16..47
-                    mstore(add(tmpKey, 0x20), sload(curOffset)) // bytes 0..31
-                }
-                if (i < totalKeysCount) {
+            }
+            assembly {
+                // read key
+                mstore(add(tmpKey, 0x30), shr(128, sload(add(curOffset, 1)))) // bytes 16..47
+                mstore(add(tmpKey, 0x20), sload(curOffset)) // bytes 0..31
+            }
+            if (i < totalKeysCount) {
+                unchecked {
                     lastOffset = SIGNING_KEYS_POSITION.getKeyOffset(
                         nodeOperatorId,
                         totalKeysCount - 1
                     );
-                    // move last key to deleted key index
-                    for (j = 0; j < 5; ) {
-                        // load 160 bytes (5 slots) containing key and signature
-                        assembly {
-                            sstore(add(curOffset, j), sload(add(lastOffset, j)))
-                            j := add(j, 1)
-                        }
-                    }
-                    curOffset = lastOffset;
                 }
-                // clear storage
+                // move last key to deleted key index
                 for (j = 0; j < 5; ) {
+                    // load 160 bytes (5 slots) containing key and signature
                     assembly {
-                        sstore(add(curOffset, j), 0)
+                        sstore(add(curOffset, j), sload(add(lastOffset, j)))
                         j := add(j, 1)
                     }
                 }
-                assembly {
-                    totalKeysCount := sub(totalKeysCount, 1)
-                    i := sub(i, 1)
-                }
-                emit SigningKeyRemoved(nodeOperatorId, tmpKey);
+                curOffset = lastOffset;
             }
-            return totalKeysCount;
+            // clear storage
+            for (j = 0; j < 5; ) {
+                assembly {
+                    sstore(add(curOffset, j), 0)
+                    j := add(j, 1)
+                }
+            }
+            assembly {
+                totalKeysCount := sub(totalKeysCount, 1)
+                i := sub(i, 1)
+            }
+            emit SigningKeyRemoved(nodeOperatorId, tmpKey);
         }
+        return totalKeysCount;
     }
 
     /// @dev load operator keys and signatures from storage

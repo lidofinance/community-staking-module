@@ -3279,7 +3279,7 @@ contract CsmRemoveKeys is CSMCommon {
             keysCount: 1
         });
 
-        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
+        vm.expectRevert(SigningKeys.InvalidKeysCount.selector);
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 2 });
     }
 

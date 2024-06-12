@@ -131,12 +131,12 @@
 | VERIFIER_ROLE                                       | 327             | 327    | 327    | 327     | 326     |
 | accounting                                          | 426             | 426    | 426    | 426     | 1       |
 | activatePublicRelease                               | 23745           | 29587  | 29619  | 29619   | 303     |
-| addNodeOperatorETH                                  | 26763           | 434056 | 381944 | 1059214 | 281     |
-| addNodeOperatorStETH                                | 27567           | 249915 | 280055 | 374452  | 8       |
-| addNodeOperatorWstETH                               | 27589           | 273053 | 311144 | 395121  | 8       |
-| addValidatorKeysETH                                 | 25657           | 165683 | 218146 | 272619  | 13      |
-| addValidatorKeysStETH                               | 26438           | 115830 | 92019  | 205831  | 6       |
-| addValidatorKeysWstETH                              | 26416           | 136159 | 135535 | 224583  | 6       |
+| addNodeOperatorETH                                  | 26763           | 434121 | 382010 | 1059280 | 281     |
+| addNodeOperatorStETH                                | 27567           | 249965 | 280121 | 374518  | 8       |
+| addNodeOperatorWstETH                               | 27589           | 273103 | 311210 | 395187  | 8       |
+| addValidatorKeysETH                                 | 25657           | 165734 | 218212 | 272685  | 13      |
+| addValidatorKeysStETH                               | 26438           | 115874 | 92085  | 205897  | 6       |
+| addValidatorKeysWstETH                              | 26416           | 136203 | 135601 | 224649  | 6       |
 | cancelELRewardsStealingPenalty                      | 26343           | 64770  | 75080  | 82579   | 4       |
 | claimRewardsStETH                                   | 25035           | 48000  | 48547  | 69871   | 4       |
 | claimRewardsUnstETH                                 | 25058           | 48013  | 48560  | 69874   | 4       |
@@ -183,7 +183,7 @@
 | recoverERC20                                        | 58549           | 58549  | 58549  | 58549   | 1       |
 | recoverEther                                        | 23781           | 26059  | 26059  | 28338   | 2       |
 | recoverStETHShares                                  | 55664           | 55664  | 55664  | 55664   | 1       |
-| removeKeys                                          | 24078           | 116768 | 140981 | 215536  | 17      |
+| removeKeys                                          | 24078           | 116769 | 140982 | 215536  | 17      |
 | reportELRewardsStealingPenalty                      | 24302           | 91966  | 101196 | 102057  | 36      |
 | resetNodeOperatorManagerAddress                     | 26951           | 31027  | 29385  | 36734   | 5       |
 | resume                                              | 23748           | 29549  | 29567  | 29567   | 324     |
