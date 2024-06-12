@@ -10,15 +10,15 @@
 | RESET_BOND_CURVE_ROLE                                       | 274             | 274    | 274    | 274    | 1       |
 | RESUME_ROLE                                                 | 340             | 340    | 340    | 340    | 187     |
 | SET_BOND_CURVE_ROLE                                         | 339             | 339    | 339    | 339    | 187     |
-| addBondCurve                                                | 24358           | 101439 | 98887  | 305244 | 349     |
-| chargeFee                                                   | 21803           | 48145  | 48145  | 74487  | 2       |
+| addBondCurve                                                | 24358           | 101398 | 98851  | 304811 | 349     |
+| chargeFee                                                   | 21803           | 48150  | 48150  | 74498  | 2       |
 | chargeRecipient                                             | 469             | 469    | 469    | 469    | 1       |
-| claimRewardsStETH                                           | 25075           | 79039  | 90753  | 100603 | 16      |
-| claimRewardsUnstETH                                         | 25055           | 63820  | 66470  | 76266  | 16      |
-| claimRewardsWstETH                                          | 25121           | 114572 | 152560 | 156966 | 16      |
+| claimRewardsStETH                                           | 25075           | 79078  | 90802  | 100652 | 16      |
+| claimRewardsUnstETH                                         | 25055           | 63842  | 66504  | 76286  | 16      |
+| claimRewardsWstETH                                          | 25121           | 114612 | 152609 | 157015 | 16      |
 | compensateLockedBondETH                                     | 47498           | 47498  | 47498  | 47498  | 1       |
 | depositETH                                                  | 24149           | 111142 | 113090 | 113330 | 108     |
-| depositStETH                                                | 25184           | 85433  | 103849 | 107768 | 8       |
+| depositStETH                                                | 25184           | 85425  | 103838 | 107757 | 8       |
 | depositWstETH                                               | 25115           | 94333  | 120818 | 124455 | 7       |
 | feeDistributor                                              | 448             | 1781   | 2448   | 2448   | 3       |
 | getActualLockedBond                                         | 675             | 747    | 772    | 772    | 8       |
@@ -38,11 +38,11 @@
 | getUnbondedKeysCount                                        | 2568            | 11735  | 6774   | 25524  | 486     |
 | getUnbondedKeysCountToEject                                 | 4055            | 7092   | 4519   | 13905  | 36      |
 | grantRole                                                   | 29393           | 99943  | 118481 | 118481 | 1547    |
-| initialize                                                  | 25980           | 491036 | 493310 | 493310 | 513     |
+| initialize                                                  | 25980           | 491005 | 493279 | 493279 | 513     |
 | isPaused                                                    | 406             | 806    | 406    | 2406   | 5       |
 | lockBondETH                                                 | 21797           | 68483  | 70275  | 70299  | 27      |
 | pauseFor                                                    | 23962           | 45328  | 47465  | 47465  | 11      |
-| penalize                                                    | 21803           | 37928  | 37928  | 54053  | 2       |
+| penalize                                                    | 21803           | 37933  | 37933  | 54064  | 2       |
 | recoverERC20                                                | 24515           | 35898  | 24550  | 58630  | 3       |
 | recoverEther                                                | 23758           | 37362  | 28315  | 60015  | 3       |
 | recoverStETHShares                                          | 23736           | 43155  | 43155  | 62575  | 2       |
@@ -52,9 +52,9 @@
 | setBondCurve                                                | 24112           | 48933  | 49926  | 49926  | 26      |
 | setChargeRecipient                                          | 24066           | 26103  | 24070  | 30173  | 3       |
 | setLockedBondRetentionPeriod                                | 30121           | 30121  | 30121  | 30121  | 1       |
-| settleLockedBondETH                                         | 50773           | 50773  | 50773  | 50773  | 1       |
+| settleLockedBondETH                                         | 50784           | 50784  | 50784  | 50784  | 1       |
 | totalBondShares                                             | 347             | 458    | 347    | 2347   | 54      |
-| updateBondCurve                                             | 24442           | 37954  | 26783  | 62639  | 3       |
+| updateBondCurve                                             | 24442           | 37885  | 26652  | 62563  | 3       |
 
 
 | src/CSEarlyAdoption.sol:CSEarlyAdoption contract |                 |       |        |       |         |
@@ -132,10 +132,10 @@
 | accounting                                          | 426             | 426    | 426    | 426     | 1       |
 | activatePublicRelease                               | 23745           | 29587  | 29619  | 29619   | 303     |
 | addNodeOperatorETH                                  | 26763           | 434130 | 382018 | 1059291 | 281     |
-| addNodeOperatorStETH                                | 27567           | 249974 | 280124 | 374537  | 8       |
+| addNodeOperatorStETH                                | 27567           | 249966 | 280113 | 374526  | 8       |
 | addNodeOperatorWstETH                               | 27589           | 273104 | 311202 | 395195  | 8       |
 | addValidatorKeysETH                                 | 25657           | 165620 | 218089 | 272568  | 13      |
-| addValidatorKeysStETH                               | 26438           | 115775 | 91941  | 205785  | 6       |
+| addValidatorKeysStETH                               | 26438           | 115766 | 91930  | 205774  | 6       |
 | addValidatorKeysWstETH                              | 26416           | 136095 | 135446 | 224526  | 6       |
 | cancelELRewardsStealingPenalty                      | 26343           | 65343  | 76129  | 82771   | 4       |
 | claimRewardsStETH                                   | 25035           | 48021  | 48568  | 69913   | 4       |
@@ -149,7 +149,7 @@
 | depositETH                                          | 23777           | 90326  | 96069  | 118116  | 8       |
 | depositQueue                                        | 480             | 813    | 480    | 2480    | 6       |
 | depositQueueItem                                    | 645             | 1311   | 645    | 2645    | 12      |
-| depositStETH                                        | 24703           | 73755  | 79363  | 101404  | 5       |
+| depositStETH                                        | 24703           | 73746  | 79352  | 101393  | 5       |
 | depositWstETH                                       | 24729           | 89742  | 100668 | 118375  | 5       |
 | earlyAdoption                                       | 450             | 450    | 450    | 450     | 1       |
 | getActiveNodeOperatorsCount                         | 460             | 460    | 460    | 460     | 2       |
@@ -183,15 +183,15 @@
 | recoverERC20                                        | 58549           | 58549  | 58549  | 58549   | 1       |
 | recoverEther                                        | 23781           | 26059  | 26059  | 28338   | 2       |
 | recoverStETHShares                                  | 55664           | 55664  | 55664  | 55664   | 1       |
-| removeKeys                                          | 24078           | 116795 | 141026 | 215572  | 17      |
+| removeKeys                                          | 24078           | 116802 | 141037 | 215580  | 17      |
 | reportELRewardsStealingPenalty                      | 24302           | 112536 | 122968 | 123852  | 36      |
 | resetNodeOperatorManagerAddress                     | 26951           | 31027  | 29385  | 36734   | 5       |
 | resume                                              | 23748           | 29549  | 29567  | 29567   | 324     |
 | revokeRole                                          | 40217           | 40217  | 40217  | 40217   | 1       |
 | setKeyRemovalCharge                                 | 24022           | 27226  | 27235  | 30047   | 289     |
-| settleELRewardsStealingPenalty                      | 24521           | 77927  | 91471  | 118530  | 22      |
-| submitInitialSlashing                               | 24121           | 82423  | 110087 | 124747  | 14      |
-| submitWithdrawal                                    | 24324           | 89515  | 104096 | 139099  | 17      |
+| settleELRewardsStealingPenalty                      | 24521           | 77936  | 91482  | 118552  | 22      |
+| submitInitialSlashing                               | 24121           | 82430  | 110098 | 124758  | 14      |
+| submitWithdrawal                                    | 24324           | 89519  | 104107 | 139099  | 17      |
 | unsafeUpdateValidatorsCount                         | 24304           | 44173  | 39282  | 83216   | 12      |
 | updateExitedValidatorsCount                         | 24909           | 41188  | 48230  | 57983   | 11      |
 | updateRefundedValidatorsCount                       | 24101           | 24115  | 24113  | 24133   | 3       |

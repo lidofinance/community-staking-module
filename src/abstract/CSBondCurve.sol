@@ -154,7 +154,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
     // solhint-disable-next-line func-name-mixedcase
     function __CSBondCurve_init(
-        uint256[] memory defaultBondCurvePoints
+        uint256[] calldata defaultBondCurvePoints
     ) internal onlyInitializing {
         uint256 addedId = _addBondCurve(defaultBondCurvePoints);
         // TODO: Figure out how to test it
@@ -164,21 +164,15 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
     /// @dev Add a new bond curve to the array
     function _addBondCurve(
-        uint256[] memory curvePoints
+        uint256[] calldata curvePoints
     ) internal returns (uint256) {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
 
         _checkBondCurve(curvePoints);
 
-        uint256 curveTrend = curvePoints.unsafeMemoryAccess(
-            curvePoints.length - 1
-        ) -
+        uint256 curveTrend = curvePoints[curvePoints.length - 1] -
             // if the curve length is 1, then 0 is used as the previous value to calculate the trend
-            (
-                curvePoints.length > 1
-                    ? curvePoints.unsafeMemoryAccess(curvePoints.length - 2)
-                    : 0
-            );
+            (curvePoints.length > 1 ? curvePoints[curvePoints.length - 2] : 0);
         $.bondCurves.push(
             BondCurve({ points: curvePoints, trend: curveTrend })
         );
@@ -191,22 +185,16 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     /// @dev Update existing bond curve
     function _updateBondCurve(
         uint256 curveId,
-        uint256[] memory curvePoints
+        uint256[] calldata curvePoints
     ) internal {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
         if (curveId > $.bondCurves.length - 1) revert InvalidBondCurveId();
 
         _checkBondCurve(curvePoints);
 
-        uint256 curveTrend = curvePoints.unsafeMemoryAccess(
-            curvePoints.length - 1
-        ) -
+        uint256 curveTrend = curvePoints[curvePoints.length - 1] -
             // if the curve length is 1, then 0 is used as the previous value to calculate the trend
-            (
-                curvePoints.length > 1
-                    ? curvePoints.unsafeMemoryAccess(curvePoints.length - 2)
-                    : 0
-            );
+            (curvePoints.length > 1 ? curvePoints[curvePoints.length - 2] : 0);
         $.bondCurves[curveId] = BondCurve({
             points: curvePoints,
             trend: curveTrend
@@ -231,19 +219,16 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         emit BondCurveSet(nodeOperatorId, DEFAULT_BOND_CURVE_ID);
     }
 
-    function _checkBondCurve(uint256[] memory curvePoints) private view {
+    function _checkBondCurve(uint256[] calldata curvePoints) private view {
         if (
             curvePoints.length < MIN_CURVE_LENGTH ||
             curvePoints.length > MAX_CURVE_LENGTH
         ) revert InvalidBondCurveLength();
-        if (curvePoints.unsafeMemoryAccess(0) == 0)
-            revert InvalidBondCurveValues();
+        if (curvePoints[0] == 0) revert InvalidBondCurveValues();
         uint256 len = curvePoints.length;
         for (uint256 i = 1; i < len; ++i) {
-            if (
-                curvePoints.unsafeMemoryAccess(i) <=
-                curvePoints.unsafeMemoryAccess(i - 1)
-            ) revert InvalidBondCurveValues();
+            if (curvePoints[i] <= curvePoints[i - 1])
+                revert InvalidBondCurveValues();
         }
     }
 

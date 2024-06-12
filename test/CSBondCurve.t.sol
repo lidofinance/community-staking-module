@@ -9,19 +9,19 @@ import { CSBondCurve } from "../src/abstract/CSBondCurve.sol";
 import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
 contract CSBondCurveTestable is CSBondCurve(10) {
-    function initialize(uint256[] memory bondCurve) public initializer {
+    function initialize(uint256[] calldata bondCurve) public initializer {
         __CSBondCurve_init(bondCurve);
     }
 
     function addBondCurve(
-        uint256[] memory _bondCurve
+        uint256[] calldata _bondCurve
     ) external returns (uint256) {
         return _addBondCurve(_bondCurve);
     }
 
     function updateBondCurve(
         uint256 curveId,
-        uint256[] memory _bondCurve
+        uint256[] calldata _bondCurve
     ) external {
         _updateBondCurve(curveId, _bondCurve);
     }
