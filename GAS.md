@@ -35,8 +35,8 @@
 | getLockedBondInfo                                           | 782             | 782    | 782    | 782    | 12      |
 | getRequiredBondForNextKeys                                  | 6436            | 19518  | 17931  | 31242  | 45      |
 | getRequiredBondForNextKeysWstETH                            | 21200           | 28444  | 24313  | 35343  | 20      |
-| getUnbondedKeysCount                                        | 2618            | 11730  | 6783   | 25551  | 486     |
-| getUnbondedKeysCountToEject                                 | 4032            | 7070   | 4496   | 13882  | 36      |
+| getUnbondedKeysCount                                        | 2618            | 11690  | 6742   | 25510  | 486     |
+| getUnbondedKeysCountToEject                                 | 3991            | 7029   | 4455   | 13841  | 36      |
 | grantRole                                                   | 29393           | 99943  | 118481 | 118481 | 1547    |
 | initialize                                                  | 25980           | 490988 | 493262 | 493262 | 513     |
 | isPaused                                                    | 406             | 806    | 406    | 2406   | 5       |
@@ -131,33 +131,33 @@
 | VERIFIER_ROLE                                       | 327             | 327    | 327    | 327     | 326     |
 | accounting                                          | 426             | 426    | 426    | 426     | 1       |
 | activatePublicRelease                               | 23745           | 29587  | 29619  | 29619   | 303     |
-| addNodeOperatorETH                                  | 26763           | 434096 | 381985 | 1059255 | 281     |
-| addNodeOperatorStETH                                | 27567           | 249936 | 280076 | 374493  | 8       |
-| addNodeOperatorWstETH                               | 27589           | 273074 | 311165 | 395162  | 8       |
-| addValidatorKeysETH                                 | 25657           | 165708 | 218187 | 272660  | 13      |
-| addValidatorKeysStETH                               | 26438           | 115844 | 92019  | 205872  | 6       |
-| addValidatorKeysWstETH                              | 26416           | 136173 | 135535 | 224624  | 6       |
-| cancelELRewardsStealingPenalty                      | 26343           | 64801  | 75121  | 82620   | 4       |
-| claimRewardsStETH                                   | 25035           | 48020  | 48568  | 69912   | 4       |
-| claimRewardsUnstETH                                 | 25058           | 48033  | 48581  | 69915   | 4       |
-| claimRewardsWstETH                                  | 25057           | 47518  | 48065  | 68885   | 4       |
+| addNodeOperatorETH                                  | 26763           | 434056 | 381944 | 1059214 | 281     |
+| addNodeOperatorStETH                                | 27567           | 249915 | 280055 | 374452  | 8       |
+| addNodeOperatorWstETH                               | 27589           | 273053 | 311144 | 395121  | 8       |
+| addValidatorKeysETH                                 | 25657           | 165683 | 218146 | 272619  | 13      |
+| addValidatorKeysStETH                               | 26438           | 115830 | 92019  | 205831  | 6       |
+| addValidatorKeysWstETH                              | 26416           | 136159 | 135535 | 224583  | 6       |
+| cancelELRewardsStealingPenalty                      | 26343           | 64770  | 75080  | 82579   | 4       |
+| claimRewardsStETH                                   | 25035           | 48000  | 48547  | 69871   | 4       |
+| claimRewardsUnstETH                                 | 25058           | 48013  | 48560  | 69874   | 4       |
+| claimRewardsWstETH                                  | 25057           | 47497  | 48045  | 68844   | 4       |
 | cleanDepositQueue                                   | 24634           | 40912  | 40872  | 61551   | 13      |
-| compensateELRewardsStealingPenalty                  | 23698           | 78171  | 93829  | 101330  | 4       |
+| compensateELRewardsStealingPenalty                  | 23698           | 78141  | 93788  | 101289  | 4       |
 | confirmNodeOperatorManagerAddressChange             | 27012           | 29370  | 29158  | 32365   | 5       |
 | confirmNodeOperatorRewardAddressChange              | 26830           | 30860  | 32161  | 32161   | 9       |
-| decreaseVettedSigningKeysCount                      | 24855           | 63511  | 77347  | 97271   | 22      |
-| depositETH                                          | 23777           | 90065  | 96054  | 116119  | 8       |
+| decreaseVettedSigningKeysCount                      | 24855           | 63479  | 77306  | 97189   | 22      |
+| depositETH                                          | 23777           | 90029  | 96013  | 116078  | 8       |
 | depositQueue                                        | 480             | 813    | 480    | 2480    | 6       |
 | depositQueueItem                                    | 645             | 1311   | 645    | 2645    | 12      |
-| depositStETH                                        | 24703           | 73338  | 79337  | 99396   | 5       |
-| depositWstETH                                       | 24729           | 89400  | 100656 | 116703  | 5       |
+| depositStETH                                        | 24703           | 73305  | 79296  | 99355   | 5       |
+| depositWstETH                                       | 24729           | 89374  | 100623 | 116670  | 5       |
 | earlyAdoption                                       | 450             | 450    | 450    | 450     | 1       |
 | getActiveNodeOperatorsCount                         | 460             | 460    | 460    | 460     | 2       |
 | getNodeOperator                                     | 2469            | 5564   | 6469   | 12469   | 73      |
 | getNodeOperatorIds                                  | 769             | 1225   | 1174   | 1926    | 8       |
 | getNodeOperatorIsActive                             | 537             | 537    | 537    | 537     | 1       |
 | getNodeOperatorNonWithdrawnKeys                     | 614             | 721    | 614    | 2614    | 539     |
-| getNodeOperatorSummary                              | 6129            | 6252   | 6187   | 6413    | 24      |
+| getNodeOperatorSummary                              | 6088            | 6211   | 6146   | 6372    | 24      |
 | getNodeOperatorsCount                               | 416             | 416    | 416    | 416     | 274     |
 | getNonce                                            | 425             | 578    | 425    | 2425    | 78      |
 | getSigningKeys                                      | 693             | 2757   | 3098   | 3489    | 8       |
@@ -183,20 +183,20 @@
 | recoverERC20                                        | 58549           | 58549  | 58549  | 58549   | 1       |
 | recoverEther                                        | 23781           | 26059  | 26059  | 28338   | 2       |
 | recoverStETHShares                                  | 55664           | 55664  | 55664  | 55664   | 1       |
-| removeKeys                                          | 24078           | 116795 | 141022 | 215568  | 17      |
-| reportELRewardsStealingPenalty                      | 24302           | 92002  | 101237 | 102098  | 36      |
+| removeKeys                                          | 24078           | 116768 | 140981 | 215536  | 17      |
+| reportELRewardsStealingPenalty                      | 24302           | 91966  | 101196 | 102057  | 36      |
 | resetNodeOperatorManagerAddress                     | 26951           | 31027  | 29385  | 36734   | 5       |
 | resume                                              | 23748           | 29549  | 29567  | 29567   | 324     |
 | revokeRole                                          | 40217           | 40217  | 40217  | 40217   | 1       |
 | setKeyRemovalCharge                                 | 24022           | 27226  | 27235  | 30047   | 289     |
-| settleELRewardsStealingPenalty                      | 24521           | 77398  | 91399  | 118438  | 22      |
-| submitInitialSlashing                               | 24121           | 82285  | 110106 | 124743  | 14      |
-| submitWithdrawal                                    | 24324           | 89524  | 104115 | 139108  | 17      |
-| unsafeUpdateValidatorsCount                         | 24304           | 44175  | 39282  | 83225   | 12      |
+| settleELRewardsStealingPenalty                      | 24521           | 77367  | 91358  | 118356  | 22      |
+| submitInitialSlashing                               | 24121           | 82262  | 110065 | 124702  | 14      |
+| submitWithdrawal                                    | 24324           | 89493  | 104074 | 139067  | 17      |
+| unsafeUpdateValidatorsCount                         | 24304           | 44168  | 39282  | 83184   | 12      |
 | updateExitedValidatorsCount                         | 24909           | 41188  | 48230  | 57983   | 11      |
 | updateRefundedValidatorsCount                       | 24101           | 24115  | 24113  | 24133   | 3       |
-| updateStuckValidatorsCount                          | 24866           | 53298  | 48583  | 79690   | 14      |
-| updateTargetValidatorsLimits                        | 24307           | 73557  | 71907  | 114896  | 41      |
+| updateStuckValidatorsCount                          | 24866           | 53284  | 48583  | 79649   | 14      |
+| updateTargetValidatorsLimits                        | 24307           | 73520  | 71866  | 114855  | 41      |
 
 
 | src/CSVerifier.sol:CSVerifier contract |                 |       |        |        |         |
@@ -210,9 +210,9 @@
 | LOCATOR                                | 227             | 227   | 227    | 227    | 1       |
 | MODULE                                 | 205             | 205   | 205    | 205    | 1       |
 | SLOTS_PER_EPOCH                        | 259             | 259   | 259    | 259    | 1       |
-| processHistoricalWithdrawalProof       | 73146           | 88613 | 80221  | 135957 | 5       |
+| processHistoricalWithdrawalProof       | 73146           | 88655 | 80221  | 136165 | 5       |
 | processSlashingProof                   | 48722           | 61798 | 55564  | 81110  | 3       |
-| processWithdrawalProof                 | 56367           | 72760 | 69792  | 102958 | 9       |
+| processWithdrawalProof                 | 56367           | 72818 | 69792  | 103166 | 9       |
 
 
 | src/lib/AssetRecovererLib.sol:AssetRecovererLib contract |                 |       |        |       |         |

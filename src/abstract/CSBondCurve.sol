@@ -141,7 +141,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         uint256 amount,
         BondCurve memory curve
     ) public pure returns (uint256) {
-        if (amount < curve.points[0]) return 0;
+        if (amount < curve.points.unsafeMemoryAccess(0)) return 0;
         uint256 len = curve.points.length;
         uint256 maxCurveAmount = curve.points.unsafeMemoryAccess(len - 1);
         unchecked {

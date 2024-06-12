@@ -1064,7 +1064,7 @@ contract CSModule is
             accounting.resetBondCurve(nodeOperatorId);
         }
 
-        if (amount < DEPOSIT_SIZE) {
+        if (DEPOSIT_SIZE > amount) {
             unchecked {
                 accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - amount);
             }
