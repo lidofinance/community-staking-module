@@ -5,6 +5,8 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
 import { CSBondLock } from "../src/abstract/CSBondLock.sol";
 import { PermitTokenBase } from "./helpers/Permit.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
@@ -144,6 +146,18 @@ contract CSBondLockTest is Test {
     function test_lock_RevertWhen_ZeroAmount() public {
         vm.expectRevert(CSBondLock.InvalidBondLockAmount.selector);
         bondLock.lock(0, 0);
+    }
+
+    function test_lock_RevertWhen_AmountExceedsMax() public {
+        uint256 lock = uint256(type(uint128).max) + 1;
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SafeCast.SafeCastOverflowedUintDowncast.selector,
+                128,
+                lock
+            )
+        );
+        bondLock.lock(0, lock);
     }
 
     function test_reduceAmount_WhenFull() public {
