@@ -123,12 +123,13 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     ) public pure returns (uint256) {
         if (keys == 0) return 0;
         unchecked {
+            uint256 len = curve.points.length;
             return
-                keys > curve.points.length
-                    ? curve.points[curve.points.length - 1] +
-                        (keys - curve.points.length) *
+                keys > len
+                    ? curve.points.unsafeMemoryAccess(len - 1) +
+                        (keys - len) *
                         curve.trend
-                    : curve.points[keys - 1];
+                    : curve.points.unsafeMemoryAccess(keys - 1);
         }
     }
 
@@ -141,14 +142,13 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         BondCurve memory curve
     ) public pure returns (uint256) {
         if (amount < curve.points[0]) return 0;
-        uint256 maxCurveAmount = curve.points[curve.points.length - 1];
+        uint256 len = curve.points.length;
+        uint256 maxCurveAmount = curve.points.unsafeMemoryAccess(len - 1);
         unchecked {
             return
                 amount < maxCurveAmount
                     ? _searchKeysCount(amount, curve.points)
-                    : curve.points.length +
-                        (amount - maxCurveAmount) /
-                        curve.trend;
+                    : len + (amount - maxCurveAmount) / curve.trend;
         }
     }
 
