@@ -30,6 +30,7 @@ library SigningKeys {
     /// @param pubkeys keys buffer to read from
     /// @param signatures signatures buffer to read from
     /// @return new total keys count
+    // TODO: Rewrite pubkeys and signatures to calldata
     function saveKeysSigs(
         uint256 nodeOperatorId,
         uint256 startIndex,
