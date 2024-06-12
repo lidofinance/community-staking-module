@@ -91,6 +91,7 @@ function concat(GIndex lhs, GIndex rhs) pure returns (GIndex) {
 }
 
 function isParentOf(GIndex self, GIndex other) pure returns (bool) {
+    // TODO: better naming
     uint256 anchor = index(self);
     uint256 gI = index(other);
 
