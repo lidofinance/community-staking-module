@@ -170,8 +170,8 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
             return;
         }
         $.bondLock[nodeOperatorId] = BondLock({
-            amount: amount,
-            retentionUntil: retentionUntil
+            amount: uint128(amount),
+            retentionUntil: uint128(retentionUntil)
         });
         emit BondLockChanged(nodeOperatorId, amount, retentionUntil);
     }

@@ -9,8 +9,8 @@ interface ICSBondLock {
     ///  - amount         |> amount of locked bond
     ///  - retentionUntil |> timestamp until locked bond is retained
     struct BondLock {
-        uint256 amount;
-        uint256 retentionUntil;
+        uint128 amount;
+        uint128 retentionUntil;
     }
 
     function getBondLockRetentionPeriod()
