@@ -991,8 +991,7 @@ contract CSModule is
     function settleELRewardsStealingPenalty(
         uint256[] calldata nodeOperatorIds
     ) external onlyRole(SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE) {
-        uint256 noIdCount = nodeOperatorIds.length;
-        for (uint256 i; i < noIdCount; ++i) {
+        for (uint256 i; i < nodeOperatorIds.length; ++i) {
             uint256 nodeOperatorId = nodeOperatorIds[i];
             _onlyExistingNodeOperator(nodeOperatorId);
             uint256 settled = accounting.settleLockedBondETH(nodeOperatorId);
@@ -1480,8 +1479,7 @@ contract CSModule is
             ? limit
             : nodeOperatorsCount - offset;
         nodeOperatorIds = new uint256[](idsCount);
-        uint256 len = nodeOperatorIds.length;
-        for (uint256 i = 0; i < len; ++i) {
+        for (uint256 i = 0; i < nodeOperatorIds.length; ++i) {
             nodeOperatorIds[i] = offset + i;
         }
     }

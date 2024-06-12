@@ -225,8 +225,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             curvePoints.length > MAX_CURVE_LENGTH
         ) revert InvalidBondCurveLength();
         if (curvePoints[0] == 0) revert InvalidBondCurveValues();
-        uint256 len = curvePoints.length;
-        for (uint256 i = 1; i < len; ++i) {
+        for (uint256 i = 1; i < curvePoints.length; ++i) {
             if (curvePoints[i] <= curvePoints[i - 1])
                 revert InvalidBondCurveValues();
         }

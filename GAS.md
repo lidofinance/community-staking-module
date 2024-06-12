@@ -10,7 +10,7 @@
 | RESET_BOND_CURVE_ROLE                                       | 274             | 274    | 274    | 274    | 1       |
 | RESUME_ROLE                                                 | 340             | 340    | 340    | 340    | 187     |
 | SET_BOND_CURVE_ROLE                                         | 339             | 339    | 339    | 339    | 187     |
-| addBondCurve                                                | 24359           | 101386 | 98839  | 304799 | 349     |
+| addBondCurve                                                | 24359           | 101381 | 98834  | 304794 | 349     |
 | chargeFee                                                   | 21788           | 48131  | 48131  | 74474  | 2       |
 | chargeRecipient                                             | 469             | 469    | 469    | 469    | 1       |
 | claimRewardsStETH                                           | 25075           | 78813  | 90781  | 98649  | 16      |
@@ -38,7 +38,7 @@
 | getUnbondedKeysCount                                        | 2618            | 11730  | 6783   | 25551  | 486     |
 | getUnbondedKeysCountToEject                                 | 4032            | 7070   | 4496   | 13882  | 36      |
 | grantRole                                                   | 29393           | 99943  | 118481 | 118481 | 1547    |
-| initialize                                                  | 25980           | 490993 | 493267 | 493267 | 513     |
+| initialize                                                  | 25980           | 490988 | 493262 | 493262 | 513     |
 | isPaused                                                    | 406             | 806    | 406    | 2406   | 5       |
 | lockBondETH                                                 | 21782           | 47427  | 48410  | 48434  | 27      |
 | pauseFor                                                    | 23963           | 45328  | 47465  | 47465  | 11      |
@@ -54,7 +54,7 @@
 | setLockedBondRetentionPeriod                                | 30121           | 30121  | 30121  | 30121  | 1       |
 | settleLockedBondETH                                         | 50698           | 50698  | 50698  | 50698  | 1       |
 | totalBondShares                                             | 347             | 458    | 347    | 2347   | 54      |
-| updateBondCurve                                             | 24443           | 37882  | 26652  | 62551  | 3       |
+| updateBondCurve                                             | 24443           | 37880  | 26652  | 62546  | 3       |
 
 
 | src/CSEarlyAdoption.sol:CSEarlyAdoption contract |                 |       |        |       |         |
@@ -154,7 +154,7 @@
 | earlyAdoption                                       | 450             | 450    | 450    | 450     | 1       |
 | getActiveNodeOperatorsCount                         | 460             | 460    | 460    | 460     | 2       |
 | getNodeOperator                                     | 2469            | 5564   | 6469   | 12469   | 73      |
-| getNodeOperatorIds                                  | 769             | 1226   | 1175   | 1925    | 8       |
+| getNodeOperatorIds                                  | 769             | 1225   | 1174   | 1926    | 8       |
 | getNodeOperatorIsActive                             | 537             | 537    | 537    | 537     | 1       |
 | getNodeOperatorNonWithdrawnKeys                     | 614             | 721    | 614    | 2614    | 539     |
 | getNodeOperatorSummary                              | 6129            | 6252   | 6187   | 6413    | 24      |
@@ -189,7 +189,7 @@
 | resume                                              | 23748           | 29549  | 29567  | 29567   | 324     |
 | revokeRole                                          | 40217           | 40217  | 40217  | 40217   | 1       |
 | setKeyRemovalCharge                                 | 24022           | 27226  | 27235  | 30047   | 289     |
-| settleELRewardsStealingPenalty                      | 24521           | 77404  | 91405  | 118444  | 22      |
+| settleELRewardsStealingPenalty                      | 24521           | 77398  | 91399  | 118438  | 22      |
 | submitInitialSlashing                               | 24121           | 82285  | 110106 | 124743  | 14      |
 | submitWithdrawal                                    | 24324           | 89524  | 104115 | 139108  | 17      |
 | unsafeUpdateValidatorsCount                         | 24304           | 44175  | 39282  | 83225   | 12      |
