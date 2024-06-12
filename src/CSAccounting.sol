@@ -559,11 +559,13 @@ contract CSAccounting is
     function _getClaimableBondShares(
         uint256 nodeOperatorId
     ) internal view override returns (uint256) {
-        return
-            _getExcessBondShares(
-                nodeOperatorId,
-                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
-            );
+        (uint256 current, uint256 required) = _getBondSummaryShares(
+            nodeOperatorId,
+            CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
+        );
+        unchecked {
+            return current > required ? current - required : 0;
+        }
     }
 
     function _getBondSummary(
@@ -631,19 +633,6 @@ contract CSAccounting is
                 nonWithdrawnKeys > bondedKeys
                     ? nonWithdrawnKeys - bondedKeys
                     : 0;
-        }
-    }
-
-    function _getExcessBondShares(
-        uint256 nodeOperatorId,
-        uint256 nonWithdrawnKeys
-    ) internal view returns (uint256) {
-        (uint256 current, uint256 required) = _getBondSummaryShares(
-            nodeOperatorId,
-            nonWithdrawnKeys
-        );
-        unchecked {
-            return current > required ? current - required : 0;
         }
     }
 

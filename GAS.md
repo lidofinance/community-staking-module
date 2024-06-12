@@ -13,9 +13,9 @@
 | addBondCurve                                                | 24359           | 101381 | 98834  | 304794 | 349     |
 | chargeFee                                                   | 21788           | 48131  | 48131  | 74474  | 2       |
 | chargeRecipient                                             | 469             | 469    | 469    | 469    | 1       |
-| claimRewardsStETH                                           | 25075           | 78813  | 90781  | 98649  | 16      |
-| claimRewardsUnstETH                                         | 25055           | 63577  | 66415  | 74283  | 16      |
-| claimRewardsWstETH                                          | 25121           | 114346 | 152588 | 155012 | 16      |
+| claimRewardsStETH                                           | 25075           | 78774  | 90737  | 98605  | 16      |
+| claimRewardsUnstETH                                         | 25055           | 63538  | 66371  | 74239  | 16      |
+| claimRewardsWstETH                                          | 25121           | 114308 | 152544 | 154968 | 16      |
 | compensateLockedBondETH                                     | 45583           | 45583  | 45583  | 45583  | 1       |
 | depositETH                                                  | 24149           | 111119 | 113066 | 113306 | 108     |
 | depositStETH                                                | 25184           | 85404  | 103814 | 107733 | 8       |
@@ -138,9 +138,9 @@
 | addValidatorKeysStETH                               | 26438           | 115874 | 92085  | 205897  | 6       |
 | addValidatorKeysWstETH                              | 26416           | 136203 | 135601 | 224649  | 6       |
 | cancelELRewardsStealingPenalty                      | 26343           | 64770  | 75080  | 82579   | 4       |
-| claimRewardsStETH                                   | 25035           | 48000  | 48547  | 69871   | 4       |
-| claimRewardsUnstETH                                 | 25058           | 48013  | 48560  | 69874   | 4       |
-| claimRewardsWstETH                                  | 25057           | 47497  | 48045  | 68844   | 4       |
+| claimRewardsStETH                                   | 25035           | 47978  | 48525  | 69827   | 4       |
+| claimRewardsUnstETH                                 | 25058           | 47991  | 48538  | 69830   | 4       |
+| claimRewardsWstETH                                  | 25057           | 47475  | 48023  | 68800   | 4       |
 | cleanDepositQueue                                   | 24634           | 40912  | 40872  | 61551   | 13      |
 | compensateELRewardsStealingPenalty                  | 23698           | 78141  | 93788  | 101289  | 4       |
 | confirmNodeOperatorManagerAddressChange             | 27012           | 29370  | 29158  | 32365   | 5       |
