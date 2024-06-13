@@ -122,15 +122,13 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         BondCurve memory curve
     ) public pure returns (uint256) {
         if (keys == 0) return 0;
-        unchecked {
-            uint256 len = curve.points.length;
-            return
-                keys > len
-                    ? curve.points.unsafeMemoryAccess(len - 1) +
-                        (keys - len) *
-                        curve.trend
-                    : curve.points.unsafeMemoryAccess(keys - 1);
-        }
+        uint256 len = curve.points.length;
+        return
+            keys > len
+                ? curve.points.unsafeMemoryAccess(len - 1) +
+                    (keys - len) *
+                    curve.trend
+                : curve.points.unsafeMemoryAccess(keys - 1);
     }
 
     /// @notice Get keys count for the given bond amount for particular bond curve.

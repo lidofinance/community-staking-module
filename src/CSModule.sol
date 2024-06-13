@@ -1535,7 +1535,7 @@ contract CSModule is
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         uint256 startIndex = no.totalAddedKeys;
         unchecked {
-            // startIndex + keysCount can overflow here but will revert later in the SigningKeys.saveKeysSigs
+            // startIndex + keysCount can't overflow because of deposit check in the parent methods
             if (
                 !publicRelease &&
                 startIndex + keysCount >

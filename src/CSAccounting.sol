@@ -488,11 +488,9 @@ contract CSAccounting is
             bondCurve
         ) - CSBondCurve.getBondAmountByKeysCount(nonWithdrawnKeys, bondCurve);
         unchecked {
-            uint256 missing = required > current ? required - current : 0;
-            if (missing > 0) {
-                return missing + requiredForNextKeys;
+            if (required > current) {
+                return required - current + requiredForNextKeys;
             }
-
             uint256 excess = current - required;
             return
                 requiredForNextKeys > excess ? requiredForNextKeys - excess : 0;
