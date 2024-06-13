@@ -418,11 +418,16 @@ contract CSAccounting is
     function getBondSummary(
         uint256 nodeOperatorId
     ) public view returns (uint256 current, uint256 required) {
-        return
-            _getBondSummary(
-                nodeOperatorId,
-                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
-            );
+        unchecked {
+            current = CSBondCore.getBond(nodeOperatorId);
+            // @dev 'getActualLockedBond' is uint128, so no overflow expected in practice
+            required =
+                CSBondCurve.getBondAmountByKeysCount(
+                    CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
+                    CSBondCurve.getBondCurve(nodeOperatorId)
+                ) +
+                CSBondLock.getActualLockedBond(nodeOperatorId);
+        }
     }
 
     /// @notice Get current and required bond amounts in stETH shares for the given Node Operator
@@ -434,11 +439,16 @@ contract CSAccounting is
     function getBondSummaryShares(
         uint256 nodeOperatorId
     ) public view returns (uint256 current, uint256 required) {
-        return
-            _getBondSummaryShares(
-                nodeOperatorId,
-                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
+        unchecked {
+            current = CSBondCore.getBondShares(nodeOperatorId);
+            // @dev 'getActualLockedBond' is uint128, so no overflow expected in practice
+            required = _sharesByEth(
+                CSBondCurve.getBondAmountByKeysCount(
+                    CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
+                    CSBondCurve.getBondCurve(nodeOperatorId)
+                ) + CSBondLock.getActualLockedBond(nodeOperatorId)
             );
+        }
     }
 
     /// @notice Get the number of the unbonded keys
@@ -475,25 +485,16 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 additionalKeys
     ) public view returns (uint256) {
-        uint256 nonWithdrawnKeys = CSM.getNodeOperatorNonWithdrawnKeys(
-            nodeOperatorId
+        uint256 current = CSBondCore.getBond(nodeOperatorId);
+        uint256 requiredForNewTotalsKeys = CSBondCurve.getBondAmountByKeysCount(
+            CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId) +
+                additionalKeys,
+            CSBondCurve.getBondCurve(nodeOperatorId)
         );
-        (uint256 current, uint256 required) = _getBondSummary(
-            nodeOperatorId,
-            nonWithdrawnKeys
-        );
-        BondCurve memory bondCurve = CSBondCurve.getBondCurve(nodeOperatorId);
-        uint256 requiredForNextKeys = CSBondCurve.getBondAmountByKeysCount(
-            nonWithdrawnKeys + additionalKeys,
-            bondCurve
-        ) - CSBondCurve.getBondAmountByKeysCount(nonWithdrawnKeys, bondCurve);
         unchecked {
-            if (required > current) {
-                return required - current + requiredForNextKeys;
-            }
-            uint256 excess = current - required;
-            return
-                requiredForNextKeys > excess ? requiredForNextKeys - excess : 0;
+            uint256 totalRequred = requiredForNewTotalsKeys +
+                CSBondLock.getActualLockedBond(nodeOperatorId);
+            return totalRequred > current ? totalRequred - current : 0;
         }
     }
 
@@ -557,44 +558,15 @@ contract CSAccounting is
     function _getClaimableBondShares(
         uint256 nodeOperatorId
     ) internal view override returns (uint256) {
-        (uint256 current, uint256 required) = _getBondSummaryShares(
-            nodeOperatorId,
-            CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
-        );
         unchecked {
-            return current > required ? current - required : 0;
-        }
-    }
-
-    function _getBondSummary(
-        uint256 nodeOperatorId,
-        uint256 nonWithdrawnKeys
-    ) internal view returns (uint256 current, uint256 required) {
-        unchecked {
-            current = CSBondCore.getBond(nodeOperatorId);
-            // @dev 'getActualLockedBond' is uint128, so no overflow expected in practice
-            required =
+            uint256 current = CSBondCore.getBondShares(nodeOperatorId);
+            uint256 required = _sharesByEth(
                 CSBondCurve.getBondAmountByKeysCount(
-                    nonWithdrawnKeys,
-                    CSBondCurve.getBondCurve(nodeOperatorId)
-                ) +
-                CSBondLock.getActualLockedBond(nodeOperatorId);
-        }
-    }
-
-    function _getBondSummaryShares(
-        uint256 nodeOperatorId,
-        uint256 nonWithdrawnKeys
-    ) internal view returns (uint256 current, uint256 required) {
-        unchecked {
-            current = CSBondCore.getBondShares(nodeOperatorId);
-            // @dev 'getActualLockedBond' is uint128, so no overflow expected in practice
-            required = _sharesByEth(
-                CSBondCurve.getBondAmountByKeysCount(
-                    nonWithdrawnKeys,
+                    CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
                     CSBondCurve.getBondCurve(nodeOperatorId)
                 ) + CSBondLock.getActualLockedBond(nodeOperatorId)
             );
+            return current > required ? current - required : 0;
         }
     }
 
