@@ -207,8 +207,8 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
                 points: curvePoints,
                 trend: curveTrend
             });
-            emit BondCurveUpdated(curveId, curvePoints);
         }
+        emit BondCurveUpdated(curveId, curvePoints);
     }
 
     /// @dev Sets bond curve for the given Node Operator

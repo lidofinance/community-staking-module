@@ -213,6 +213,21 @@ contract CSBondCurveTest is Test {
         );
     }
 
+    function test_getKeysCountByBondAmount_noOverflowWithMinUint() public {
+        uint256[] memory curvePoints = new uint256[](1);
+        curvePoints[0] = 1 wei;
+        uint256 curveId = bondCurve.addBondCurve(curvePoints);
+
+        ICSBondCurve.BondCurve memory curve = bondCurve.getBondCurve(curveId);
+
+        uint256 amount = type(uint256).max;
+
+        assertEq(
+            bondCurve.getKeysCountByBondAmount(amount, curveId),
+            type(uint256).max
+        );
+    }
+
     function test_getBondAmountByKeysCount_default() public {
         assertEq(bondCurve.getBondAmountByKeysCount(0, 0), 0);
         assertEq(bondCurve.getBondAmountByKeysCount(1, 0), 2 ether);

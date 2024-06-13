@@ -486,15 +486,16 @@ contract CSAccounting is
         uint256 additionalKeys
     ) public view returns (uint256) {
         uint256 current = CSBondCore.getBond(nodeOperatorId);
-        uint256 requiredForNewTotalsKeys = CSBondCurve.getBondAmountByKeysCount(
+        uint256 requiredForNewTotalKeys = CSBondCurve.getBondAmountByKeysCount(
             CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId) +
                 additionalKeys,
             CSBondCurve.getBondCurve(nodeOperatorId)
         );
+        uint256 totalRequired = requiredForNewTotalKeys +
+            CSBondLock.getActualLockedBond(nodeOperatorId);
+
         unchecked {
-            uint256 totalRequred = requiredForNewTotalsKeys +
-                CSBondLock.getActualLockedBond(nodeOperatorId);
-            return totalRequred > current ? totalRequred - current : 0;
+            return totalRequired > current ? totalRequired - current : 0;
         }
     }
 

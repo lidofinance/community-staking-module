@@ -14,7 +14,7 @@ library SigningKeys {
 
     uint64 internal constant PUBKEY_LENGTH = 48;
     uint64 internal constant SIGNATURE_LENGTH = 96;
-    uint256 internal constant UINT64_MAX = 0xFFFFFFFFFFFFFFFF;
+    uint256 internal constant UINT32_MAX = type(uint32).max;
 
     event SigningKeyAdded(uint256 indexed nodeOperatorId, bytes pubkey);
     event SigningKeyRemoved(uint256 indexed nodeOperatorId, bytes pubkey);
@@ -38,7 +38,7 @@ library SigningKeys {
         bytes memory pubkeys,
         bytes memory signatures
     ) internal returns (uint256) {
-        if (keysCount == 0 || startIndex + keysCount > UINT64_MAX) {
+        if (keysCount == 0 || startIndex + keysCount > UINT32_MAX) {
             revert InvalidKeysCount();
         }
         unchecked {
@@ -104,7 +104,7 @@ library SigningKeys {
         if (
             keysCount == 0 ||
             startIndex + keysCount > totalKeysCount ||
-            totalKeysCount > UINT64_MAX
+            totalKeysCount > UINT32_MAX
         ) {
             revert InvalidKeysCount();
         }

@@ -1355,30 +1355,32 @@ contract CSModule is
         uint256 totalUnbondedKeys = accounting.getUnbondedKeysCountToEject(
             nodeOperatorId
         );
-        unchecked {
-            // Force mode enabled and unbonded
-            if (
-                totalUnbondedKeys > 0 &&
-                no.targetLimitMode == FORCED_TARGET_LIMIT_MODE_ID
-            ) {
-                targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
+        // Force mode enabled and unbonded
+        if (
+            totalUnbondedKeys > 0 &&
+            no.targetLimitMode == FORCED_TARGET_LIMIT_MODE_ID
+        ) {
+            targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
+            unchecked {
                 targetValidatorsCount = Math.min(
                     no.targetLimit,
                     no.totalAddedKeys -
                         no.totalWithdrawnKeys -
                         totalUnbondedKeys
                 );
-                // No force mode enabled but unbonded
-            } else if (totalUnbondedKeys > 0) {
-                targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
+            }
+            // No force mode enabled but unbonded
+        } else if (totalUnbondedKeys > 0) {
+            targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
+            unchecked {
                 targetValidatorsCount =
                     no.totalAddedKeys -
                     no.totalWithdrawnKeys -
                     totalUnbondedKeys;
-            } else {
-                targetLimitMode = no.targetLimitMode;
-                targetValidatorsCount = no.targetLimit;
             }
+        } else {
+            targetLimitMode = no.targetLimitMode;
+            targetValidatorsCount = no.targetLimit;
         }
         stuckValidatorsCount = no.stuckValidatorsCount;
         // @dev unused in CSM
@@ -1526,7 +1528,7 @@ contract CSModule is
         }
     }
 
-    function _addSigningKeys(
+    function _addKeysAndUpdateDepositableValidatorsCount(
         uint256 nodeOperatorId,
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -1568,6 +1570,14 @@ contract CSModule is
             no.totalAddedKeys += uint32(keysCount);
         }
         emit TotalSigningKeysCountChanged(nodeOperatorId, no.totalAddedKeys);
+
+        // Nonce is updated below since in case of stuck keys depositable keys might not change
+        // Due to new bonded keys normalize queue is required
+        _updateDepositableValidatorsCount({
+            nodeOperatorId: nodeOperatorId,
+            incrementNonceIfUpdated: false,
+            normalizeQueueIfUpdated: true
+        });
         _incrementModuleNonce();
     }
 
@@ -1735,24 +1745,6 @@ contract CSModule is
                 depositQueue.normalize(_nodeOperators, nodeOperatorId);
             }
         }
-    }
-
-    function _addKeysAndUpdateDepositableValidatorsCount(
-        uint256 nodeOperatorId,
-        uint256 keysCount,
-        bytes calldata publicKeys,
-        bytes calldata signatures
-    ) internal {
-        // Reverts if keysCount is 0
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-
-        // Due to new bonded keys normalize queue is required
-        // Nonce is updated in _addSigningKeys
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: false,
-            normalizeQueueIfUpdated: true
-        });
     }
 
     function _onlyNodeOperatorManager(uint256 nodeOperatorId) internal view {
