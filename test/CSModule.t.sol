@@ -19,6 +19,7 @@ import { AssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
 import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
 import { Batch } from "../src/lib/QueueLib.sol";
 import { SigningKeys } from "../src/lib/SigningKeys.sol";
+import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 
 abstract contract CSMFixtures is Test, Fixtures, Utilities {
     using Strings for uint256;
@@ -546,6 +547,17 @@ contract CSMPauseTest is CSMCommon {
     function test_pauseFor() public {
         csm.pauseFor(1 days);
         assertTrue(csm.isPaused());
+    }
+
+    function test_pauseFor_indefinetily() public {
+        csm.pauseFor(type(uint256).max);
+        assertTrue(csm.isPaused());
+        assertEq(csm.getResumeSinceTimestamp(), type(uint256).max);
+    }
+
+    function test_pauseFor_revertWhen_ZeroPauseDuration() public {
+        vm.expectRevert(PausableUntil.ZeroPauseDuration.selector);
+        csm.pauseFor(0);
     }
 
     function test_resume() public {

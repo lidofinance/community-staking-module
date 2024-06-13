@@ -273,6 +273,26 @@ contract CSFeeDistributorTest is Test, Fixtures, Utilities {
         });
     }
 
+    function test_distributeFees_RevertWhen_NotEnoughShares() public {
+        uint256 nodeOperatorId = 42;
+        uint256 shares = 100;
+        tree.pushLeaf(abi.encode(nodeOperatorId, shares));
+        bytes32[] memory proof = tree.getProof(0);
+        bytes32 root = tree.root();
+
+        stETH.mintShares(address(feeDistributor), shares - 1);
+        vm.prank(oracle);
+        feeDistributor.processOracleReport(root, "Qm", shares - 1);
+
+        vm.expectRevert(CSFeeDistributor.NotEnoughShares.selector);
+        vm.prank(address(accounting));
+        feeDistributor.distributeFees({
+            proof: proof,
+            nodeOperatorId: nodeOperatorId,
+            shares: shares
+        });
+    }
+
     function test_distributeFees_Returns0If_NothingToDistribute() public {
         uint256 nodeOperatorId = 42;
         uint256 shares = 100;

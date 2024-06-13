@@ -112,6 +112,12 @@ contract QueueLibTest is Test {
         q.dequeue();
         assertTrue(q.peek().isNil());
     }
+
+    function test_dequeue_revertWhen_QueueIsEmpty() public {
+        assertTrue(q.peek().isNil());
+        vm.expectRevert(QueueLib.QueueIsEmpty.selector);
+        q.dequeue();
+    }
 }
 
 function eq(Batch lhs, Batch rhs) pure returns (bool) {

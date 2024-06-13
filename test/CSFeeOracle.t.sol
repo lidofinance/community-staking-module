@@ -292,6 +292,34 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.resume();
     }
 
+    function test_pauseUntil_revertWhen_PauseUntilMustBeInFuture() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+            _seedMembers(3);
+        }
+
+        vm.expectRevert(PausableUntil.PauseUntilMustBeInFuture.selector);
+        vm.prank(ORACLE_ADMIN);
+        oracle.pauseUntil(block.timestamp - 1);
+    }
+
+    function test_pauseUntil_indefinetily() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+            _seedMembers(3);
+        }
+
+        vm.prank(ORACLE_ADMIN);
+        oracle.pauseUntil(type(uint256).max);
+        assertEq(oracle.getResumeSinceTimestamp(), type(uint256).max);
+    }
+
     function test_initialize_RevertWhen_AdminCannotBeZero() public {
         oracle = new CSFeeOracleForTest({
             secondsPerSlot: chainConfig.secondsPerSlot,
@@ -381,6 +409,21 @@ contract CSFeeOracleTest is Test, Utilities {
         vm.expectRevert(CSFeeOracle.InvalidPerfLeeway.selector);
         vm.prank(ORACLE_ADMIN);
         oracle.setPerformanceLeeway(99999);
+    }
+
+    function test_recovererRole() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+        }
+        bytes32 role = oracle.RECOVERER_ROLE();
+        vm.prank(ORACLE_ADMIN);
+        oracle.grantRole(role, address(1337));
+
+        vm.prank(address(1337));
+        oracle.recoverEther();
     }
 
     function _deployFeeOracleAndHashConsensus(

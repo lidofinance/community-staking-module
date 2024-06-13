@@ -98,12 +98,49 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
         );
     }
 
-    function test_initialize_RevertWhen_ZeroModuleAddress() public {
+    function test_constructor_RevertWhen_ZeroModuleAddress() public {
         vm.expectRevert(CSAccounting.ZeroModuleAddress.selector);
         accounting = new CSAccounting(
             address(locator),
             address(0),
             10,
+            4 weeks,
+            365 days
+        );
+    }
+
+    function test_constructor_RevertWhen_InvalidBondLockRetentionPeriod_Condition1()
+        public
+    {
+        vm.expectRevert(CSBondLock.InvalidBondLockRetentionPeriod.selector);
+        accounting = new CSAccounting(
+            address(locator),
+            address(0),
+            10,
+            4 weeks,
+            2 weeks
+        );
+    }
+
+    function test_constructor_RevertWhen_InvalidBondLockRetentionPeriod_Condition2()
+        public
+    {
+        vm.expectRevert(CSBondLock.InvalidBondLockRetentionPeriod.selector);
+        accounting = new CSAccounting(
+            address(locator),
+            address(0),
+            10,
+            4 weeks,
+            uint256(type(uint128).max) + 1
+        );
+    }
+
+    function test_constructor_RevertWhen_InvalidMaxBondCurveLength() public {
+        vm.expectRevert(CSBondCurve.InvalidBondCurveMaxLength.selector);
+        accounting = new CSAccounting(
+            address(locator),
+            address(0),
+            0,
             4 weeks,
             365 days
         );

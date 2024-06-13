@@ -35,9 +35,26 @@ contract CSBondCurveTestable is CSBondCurve(10) {
     }
 }
 
-contract CSBondCurveTest is Test {
-    // TODO: add gas-cost test for _searchKeysCount
+contract CSBondCurveInitTest is Test {
+    CSBondCurveTestable public bondCurve;
 
+    function setUp() public {
+        bondCurve = new CSBondCurveTestable();
+    }
+
+    function test_initialize_revertWhen_InvalidInitialisationCurveId() public {
+        uint256[] memory _bondCurve = new uint256[](2);
+        _bondCurve[0] = 16 ether;
+        _bondCurve[1] = 32 ether;
+
+        bondCurve.addBondCurve(_bondCurve);
+
+        vm.expectRevert(CSBondCurve.InvalidInitialisationCurveId.selector);
+        bondCurve.initialize(_bondCurve);
+    }
+}
+
+contract CSBondCurveTest is Test {
     CSBondCurveTestable public bondCurve;
 
     function setUp() public {
@@ -218,7 +235,7 @@ contract CSBondCurveTest is Test {
         curvePoints[0] = 1 wei;
         uint256 curveId = bondCurve.addBondCurve(curvePoints);
 
-        ICSBondCurve.BondCurve memory curve = bondCurve.getBondCurve(curveId);
+        bondCurve.getBondCurve(curveId);
 
         uint256 amount = type(uint256).max;
 
