@@ -10,7 +10,7 @@
 | RESET_BOND_CURVE_ROLE                                       | 274             | 274    | 274    | 274    | 1       |
 | RESUME_ROLE                                                 | 340             | 340    | 340    | 340    | 187     |
 | SET_BOND_CURVE_ROLE                                         | 339             | 339    | 339    | 339    | 187     |
-| addBondCurve                                                | 24359           | 101381 | 98834  | 304794 | 349     |
+| addBondCurve                                                | 24359           | 101233 | 98698  | 304001 | 349     |
 | chargeFee                                                   | 21788           | 48136  | 48136  | 74485  | 2       |
 | chargeRecipient                                             | 469             | 469    | 469    | 469    | 1       |
 | claimRewardsStETH                                           | 25075           | 78972  | 90968  | 98836  | 16      |
@@ -38,7 +38,7 @@
 | getUnbondedKeysCount                                        | 2629            | 11688  | 6741   | 25509  | 486     |
 | getUnbondedKeysCountToEject                                 | 3985            | 7025   | 4454   | 13840  | 36      |
 | grantRole                                                   | 29393           | 99943  | 118481 | 118481 | 1547    |
-| initialize                                                  | 25980           | 490988 | 493262 | 493262 | 513     |
+| initialize                                                  | 25980           | 490853 | 493126 | 493126 | 513     |
 | isPaused                                                    | 406             | 806    | 406    | 2406   | 5       |
 | lockBondETH                                                 | 21782           | 47427  | 48410  | 48434  | 27      |
 | pauseFor                                                    | 23963           | 45328  | 47465  | 47465  | 11      |
@@ -49,12 +49,12 @@
 | releaseLockedBondETH                                        | 21804           | 25743  | 25743  | 29682  | 2       |
 | resetBondCurve                                              | 23952           | 24793  | 24793  | 25634  | 2       |
 | resume                                                      | 23793           | 26702  | 26702  | 29611  | 2       |
-| setBondCurve                                                | 24113           | 48933  | 49926  | 49926  | 26      |
+| setBondCurve                                                | 24113           | 48865  | 49856  | 49856  | 26      |
 | setChargeRecipient                                          | 24066           | 26103  | 24071  | 30173  | 3       |
 | setLockedBondRetentionPeriod                                | 30121           | 30121  | 30121  | 30121  | 1       |
 | settleLockedBondETH                                         | 50709           | 50709  | 50709  | 50709  | 1       |
 | totalBondShares                                             | 347             | 458    | 347    | 2347   | 54      |
-| updateBondCurve                                             | 24443           | 37880  | 26652  | 62546  | 3       |
+| updateBondCurve                                             | 24443           | 37745  | 26582  | 62211  | 3       |
 
 
 | src/CSEarlyAdoption.sol:CSEarlyAdoption contract |                 |       |        |       |         |
@@ -131,7 +131,7 @@
 | VERIFIER_ROLE                                       | 327             | 327    | 327    | 327     | 326     |
 | accounting                                          | 426             | 426    | 426    | 426     | 1       |
 | activatePublicRelease                               | 23745           | 29587  | 29619  | 29619   | 303     |
-| addNodeOperatorETH                                  | 26763           | 434268 | 382085 | 1059572 | 281     |
+| addNodeOperatorETH                                  | 26763           | 434267 | 382085 | 1059572 | 281     |
 | addNodeOperatorStETH                                | 27567           | 250013 | 280186 | 374582  | 8       |
 | addNodeOperatorWstETH                               | 27589           | 273159 | 311286 | 395262  | 8       |
 | addValidatorKeysETH                                 | 25657           | 164290 | 216748 | 271171  | 13      |
