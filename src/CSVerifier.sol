@@ -171,6 +171,7 @@ contract CSVerifier is ICSVerifier {
             1
         );
 
+        // TODO: return only withdrawn amount
         Withdrawal memory withdrawal = _processWithdrawalProof({
             witness: witness,
             stateEpoch: _computeEpochAtSlot(beaconBlock.header.slot),
@@ -282,6 +283,12 @@ contract CSVerifier is ICSVerifier {
         }
 
         // See https://hackmd.io/1wM8vqeNTjqt4pC3XoCUKQ
+        // TODO: there is a posible way to bypass this check:
+        // - wait for full withdrawal & sweep
+        // - be lucky that no one provide a proof for this withdrawal
+        // - deposit 1 eth for slashed or 8 for non slashed validator
+        // - wait for sweep of this deposit
+        // - provide proof for the last withdrawal
         if (!witness.slashed && gweiToWei(witness.amount) < 8 ether) {
             revert PartialWitdrawal();
         }
