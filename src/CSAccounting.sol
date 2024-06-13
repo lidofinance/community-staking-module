@@ -578,10 +578,10 @@ contract CSAccounting is
         uint256 nonWithdrawnKeys = CSM.getNodeOperatorNonWithdrawnKeys(
             nodeOperatorId
         );
-        /// 10 wei added to account for possible stETH rounding errors
-        /// https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205.
-        /// Should be sufficient for ~ 40 years
         unchecked {
+            /// 10 wei added to account for possible stETH rounding errors
+            /// https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205.
+            /// Should be sufficient for ~ 40 years
             uint256 currentBond = CSBondCore._ethByShares(
                 getBondShares(nodeOperatorId)
             ) + 10 wei;
@@ -592,12 +592,9 @@ contract CSAccounting is
                 if (currentBond <= lockedBond) return nonWithdrawnKeys;
                 currentBond -= lockedBond;
             }
-            BondCurve memory bondCurve = CSBondCurve.getBondCurve(
-                nodeOperatorId
-            );
             uint256 bondedKeys = CSBondCurve.getKeysCountByBondAmount(
                 currentBond,
-                bondCurve
+                CSBondCurve.getBondCurve(nodeOperatorId)
             );
             return
                 nonWithdrawnKeys > bondedKeys
