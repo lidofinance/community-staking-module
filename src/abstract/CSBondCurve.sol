@@ -4,6 +4,7 @@
 pragma solidity 0.8.24;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { Arrays } from "@openzeppelin/contracts/utils/Arrays.sol";
 import { ICSBondCurve } from "../interfaces/ICSBondCurve.sol";
 
 /// @dev Bond curve mechanics abstract contract
@@ -25,6 +26,8 @@ import { ICSBondCurve } from "../interfaces/ICSBondCurve.sol";
 ///
 /// @author vgorkavenko
 abstract contract CSBondCurve is ICSBondCurve, Initializable {
+    using Arrays for uint256[];
+
     /// @custom:storage-location erc7201:CSAccounting.CSBondCurve
     struct CSBondCurveStorage {
         BondCurve[] bondCurves;
@@ -45,12 +48,14 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     event BondCurveSet(uint256 indexed nodeOperatorId, uint256 curveId);
 
     error InvalidBondCurveLength();
+    error InvalidBondCurveMaxLength();
     error InvalidBondCurveValues();
     error InvalidBondCurveId();
     error InvalidInitialisationCurveId();
 
     constructor(uint256 maxCurveLength) {
-        if (maxCurveLength < MIN_CURVE_LENGTH) revert InvalidBondCurveLength();
+        if (maxCurveLength < MIN_CURVE_LENGTH)
+            revert InvalidBondCurveMaxLength();
         MAX_CURVE_LENGTH = maxCurveLength;
     }
 
@@ -119,13 +124,13 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         BondCurve memory curve
     ) public pure returns (uint256) {
         if (keys == 0) return 0;
-        if (keys <= curve.points.length) {
-            return curve.points[keys - 1];
-        }
+        uint256 len = curve.points.length;
         return
-            curve.points[curve.points.length - 1] +
-            (keys - curve.points.length) *
-            curve.trend;
+            keys > len
+                ? curve.points.unsafeMemoryAccess(len - 1) +
+                    (keys - len) *
+                    curve.trend
+                : curve.points.unsafeMemoryAccess(keys - 1);
     }
 
     /// @notice Get keys count for the given bond amount for particular bond curve.
@@ -136,18 +141,20 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         uint256 amount,
         BondCurve memory curve
     ) public pure returns (uint256) {
-        if (amount < curve.points[0]) return 0;
-        uint256 maxCurveAmount = curve.points[curve.points.length - 1];
-        if (amount >= maxCurveAmount) {
+        if (amount < curve.points.unsafeMemoryAccess(0)) return 0;
+        uint256 len = curve.points.length;
+        uint256 maxCurveAmount = curve.points.unsafeMemoryAccess(len - 1);
+        unchecked {
             return
-                curve.points.length + (amount - maxCurveAmount) / curve.trend;
+                amount < maxCurveAmount
+                    ? _searchKeysCount(amount, curve.points)
+                    : len + (amount - maxCurveAmount) / curve.trend;
         }
-        return _searchKeysCount(amount, curve.points);
     }
 
     // solhint-disable-next-line func-name-mixedcase
     function __CSBondCurve_init(
-        uint256[] memory defaultBondCurvePoints
+        uint256[] calldata defaultBondCurvePoints
     ) internal onlyInitializing {
         uint256 addedId = _addBondCurve(defaultBondCurvePoints);
         // TODO: Figure out how to test it
@@ -157,39 +164,50 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
     /// @dev Add a new bond curve to the array
     function _addBondCurve(
-        uint256[] memory curvePoints
+        uint256[] calldata curvePoints
     ) internal returns (uint256) {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
 
         _checkBondCurve(curvePoints);
-
-        uint256 curveTrend = curvePoints[curvePoints.length - 1] -
-            // if the curve length is 1, then 0 is used as the previous value to calculate the trend
-            (curvePoints.length > 1 ? curvePoints[curvePoints.length - 2] : 0);
-        $.bondCurves.push(
-            BondCurve({ points: curvePoints, trend: curveTrend })
-        );
-        emit BondCurveAdded(curvePoints);
-        return $.bondCurves.length - 1;
+        unchecked {
+            uint256 curveTrend = curvePoints[curvePoints.length - 1] -
+                // if the curve length is 1, then 0 is used as the previous value to calculate the trend
+                (
+                    curvePoints.length > 1
+                        ? curvePoints[curvePoints.length - 2]
+                        : 0
+                );
+            $.bondCurves.push(
+                BondCurve({ points: curvePoints, trend: curveTrend })
+            );
+            emit BondCurveAdded(curvePoints);
+            return $.bondCurves.length - 1;
+        }
     }
 
     /// @dev Update existing bond curve
     function _updateBondCurve(
         uint256 curveId,
-        uint256[] memory curvePoints
+        uint256[] calldata curvePoints
     ) internal {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        if (curveId > $.bondCurves.length - 1) revert InvalidBondCurveId();
+        unchecked {
+            if (curveId > $.bondCurves.length - 1) revert InvalidBondCurveId();
 
-        _checkBondCurve(curvePoints);
+            _checkBondCurve(curvePoints);
 
-        uint256 curveTrend = curvePoints[curvePoints.length - 1] -
-            // if the curve length is 1, then 0 is used as the previous value to calculate the trend
-            (curvePoints.length > 1 ? curvePoints[curvePoints.length - 2] : 0);
-        $.bondCurves[curveId] = BondCurve({
-            points: curvePoints,
-            trend: curveTrend
-        });
+            uint256 curveTrend = curvePoints[curvePoints.length - 1] -
+                // if the curve length is 1, then 0 is used as the previous value to calculate the trend
+                (
+                    curvePoints.length > 1
+                        ? curvePoints[curvePoints.length - 2]
+                        : 0
+                );
+            $.bondCurves[curveId] = BondCurve({
+                points: curvePoints,
+                trend: curveTrend
+            });
+        }
         emit BondCurveUpdated(curveId, curvePoints);
     }
 
@@ -197,7 +215,9 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     ///      It will be used for the Node Operator instead of the previously set curve
     function _setBondCurve(uint256 nodeOperatorId, uint256 curveId) internal {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        if (curveId > $.bondCurves.length - 1) revert InvalidBondCurveId();
+        unchecked {
+            if (curveId > $.bondCurves.length - 1) revert InvalidBondCurveId();
+        }
         $.operatorBondCurveId[nodeOperatorId] = curveId;
         emit BondCurveSet(nodeOperatorId, curveId);
     }
@@ -210,15 +230,17 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         emit BondCurveSet(nodeOperatorId, DEFAULT_BOND_CURVE_ID);
     }
 
-    function _checkBondCurve(uint256[] memory curvePoints) private view {
+    function _checkBondCurve(uint256[] calldata curvePoints) private view {
         if (
             curvePoints.length < MIN_CURVE_LENGTH ||
             curvePoints.length > MAX_CURVE_LENGTH
         ) revert InvalidBondCurveLength();
         if (curvePoints[0] == 0) revert InvalidBondCurveValues();
-        for (uint256 i = 1; i < curvePoints.length; i++) {
-            if (curvePoints[i] <= curvePoints[i - 1])
-                revert InvalidBondCurveValues();
+        for (uint256 i = 1; i < curvePoints.length; ++i) {
+            unchecked {
+                if (curvePoints[i] <= curvePoints[i - 1])
+                    revert InvalidBondCurveValues();
+            }
         }
     }
 
@@ -226,25 +248,27 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         uint256 amount,
         uint256[] memory curvePoints
     ) private pure returns (uint256) {
-        uint256 low;
-        // @dev Curves of a length = 1 are handled in the parent method
-        uint256 high = curvePoints.length - 2;
-        uint256 mid;
-        uint256 midAmount;
-        while (low <= high) {
-            mid = (low + high) / 2;
-            midAmount = curvePoints[mid];
-            if (amount == midAmount) {
-                return mid + 1;
+        unchecked {
+            uint256 low;
+            // @dev Curves of a length = 1 are handled in the parent method
+            uint256 high = curvePoints.length - 2;
+            uint256 mid;
+            uint256 midAmount;
+            while (low <= high) {
+                mid = (low + high) / 2;
+                midAmount = curvePoints.unsafeMemoryAccess(mid);
+                if (amount == midAmount) {
+                    return mid + 1;
+                }
+                // underflow is excluded by the conditions in the parent method
+                if (amount < midAmount) {
+                    high = mid - 1;
+                } else if (amount > midAmount) {
+                    low = mid + 1;
+                }
             }
-            // underflow is excluded by the conditions in the parent method
-            if (amount < midAmount) {
-                high = mid - 1;
-            } else if (amount > midAmount) {
-                low = mid + 1;
-            }
+            return low;
         }
-        return low;
     }
 
     function _getCSBondCurveStorage()

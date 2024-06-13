@@ -49,6 +49,7 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
 
     /// @notice Check if the address has already consumed EA access
     /// @param member Address to check
+    /// @return Consumed flag
     function isConsumed(address member) external view returns (bool) {
         return _consumedAddresses[member];
     }

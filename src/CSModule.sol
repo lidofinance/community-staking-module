@@ -149,7 +149,7 @@ contract CSModule is
     error NodeOperatorDoesNotExist();
     error SenderIsNotEligible();
     error InvalidVetKeysPointer();
-    error StuckKeysHigherThanExited();
+    error StuckKeysHigherThanNonExited();
     error ExitedKeysHigherThanTotalDeposited();
     error ExitedKeysDecrease();
 
@@ -546,7 +546,7 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint256 stETHAmount,
         uint256 cumulativeFeeShares,
-        bytes32[] memory rewardsProof
+        bytes32[] calldata rewardsProof
     ) external {
         _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
@@ -577,7 +577,7 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
         uint256 cumulativeFeeShares,
-        bytes32[] memory rewardsProof
+        bytes32[] calldata rewardsProof
     ) external {
         _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
@@ -611,7 +611,7 @@ contract CSModule is
         uint256 nodeOperatorId,
         uint256 stEthAmount,
         uint256 cumulativeFeeShares,
-        bytes32[] memory rewardsProof
+        bytes32[] calldata rewardsProof
     ) external {
         _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
@@ -948,7 +948,6 @@ contract CSModule is
             nodeOperatorId,
             amount + EL_REWARDS_STEALING_FINE
         );
-
         emit ELRewardsStealingPenaltyReported(
             nodeOperatorId,
             blockHash,
@@ -990,7 +989,7 @@ contract CSModule is
     /// @dev SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE role is expected to be assigned to Easy Track
     /// @param nodeOperatorIds IDs of the Node Operators
     function settleELRewardsStealingPenalty(
-        uint256[] memory nodeOperatorIds
+        uint256[] calldata nodeOperatorIds
     ) external onlyRole(SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE) {
         for (uint256 i; i < nodeOperatorIds.length; ++i) {
             uint256 nodeOperatorId = nodeOperatorIds[i];
@@ -1052,7 +1051,7 @@ contract CSModule is
 
         _isValidatorWithdrawn[pointer] = true;
         unchecked {
-            no.totalWithdrawnKeys++;
+            ++no.totalWithdrawnKeys;
         }
 
         emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount);
@@ -1065,8 +1064,10 @@ contract CSModule is
             accounting.resetBondCurve(nodeOperatorId);
         }
 
-        if (amount < DEPOSIT_SIZE) {
-            accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - amount);
+        if (DEPOSIT_SIZE > amount) {
+            unchecked {
+                accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - amount);
+            }
         }
 
         // Nonce should be updated if depositableValidators change
@@ -1229,10 +1230,8 @@ contract CSModule is
     /// @notice Clean the deposit queue from batches with no depositable keys
     /// @dev Use **eth_call** to check how many items will be removed
     /// @param maxItems How many queue items to review
-    /// @return toRemove Number of the deposit data removed from the queue
-    function cleanDepositQueue(
-        uint256 maxItems
-    ) external returns (uint256 toRemove) {
+    /// @return Number of the deposit data removed from the queue
+    function cleanDepositQueue(uint256 maxItems) external returns (uint256) {
         return depositQueue.clean(_nodeOperators, _queueLookup, maxItems);
     }
 
@@ -1249,15 +1248,15 @@ contract CSModule is
 
     /// @notice Get the deposit queue item by an index
     /// @param index Index of a queue item
-    function depositQueueItem(
-        uint128 index
-    ) external view returns (Batch item) {
+    /// @return Deposit queue item
+    function depositQueueItem(uint128 index) external view returns (Batch) {
         return depositQueue.at(index);
     }
 
     /// @notice Check if the given Node Operator's key is reported as slashed
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keyIndex Index of the key to check
+    /// @return Validator reported as slashed flag
     function isValidatorSlashed(
         uint256 nodeOperatorId,
         uint256 keyIndex
@@ -1268,6 +1267,7 @@ contract CSModule is
     /// @notice Check if the given Node Operator's key is reported as withdrawn
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keyIndex index of the key to check
+    /// @return Validator reported as withdrawn flag
     function isValidatorWithdrawn(
         uint256 nodeOperatorId,
         uint256 keyIndex
@@ -1286,16 +1286,14 @@ contract CSModule is
         external
         view
         returns (
-            uint256 /* totalExitedValidators */,
-            uint256 /* totalDepositedValidators */,
-            uint256 /* depositableValidatorsCount */
+            uint256 totalExitedValidators,
+            uint256 totalDepositedValidators,
+            uint256 depositableValidatorsCount
         )
     {
-        return (
-            _totalExitedValidators,
-            _totalDepositedValidators,
-            _depositableValidatorsCount
-        );
+        totalExitedValidators = _totalExitedValidators;
+        totalDepositedValidators = _totalDepositedValidators;
+        depositableValidatorsCount = _depositableValidatorsCount;
     }
 
     /// @notice Get Node Operator info
@@ -1314,7 +1312,9 @@ contract CSModule is
         uint256 nodeOperatorId
     ) external view returns (uint256) {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        return no.totalAddedKeys - no.totalWithdrawnKeys;
+        unchecked {
+            return no.totalAddedKeys - no.totalWithdrawnKeys;
+        }
     }
 
     /// @notice Get Node Operator summary
@@ -1357,21 +1357,27 @@ contract CSModule is
         );
         // Force mode enabled and unbonded
         if (
-            no.targetLimitMode == FORCED_TARGET_LIMIT_MODE_ID &&
-            totalUnbondedKeys > 0
+            totalUnbondedKeys > 0 &&
+            no.targetLimitMode == FORCED_TARGET_LIMIT_MODE_ID
         ) {
             targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
-            targetValidatorsCount = Math.min(
-                no.targetLimit,
-                no.totalAddedKeys - no.totalWithdrawnKeys - totalUnbondedKeys
-            );
+            unchecked {
+                targetValidatorsCount = Math.min(
+                    no.targetLimit,
+                    no.totalAddedKeys -
+                        no.totalWithdrawnKeys -
+                        totalUnbondedKeys
+                );
+            }
             // No force mode enabled but unbonded
         } else if (totalUnbondedKeys > 0) {
             targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
-            targetValidatorsCount =
-                no.totalAddedKeys -
-                no.totalWithdrawnKeys -
-                totalUnbondedKeys;
+            unchecked {
+                targetValidatorsCount =
+                    no.totalAddedKeys -
+                    no.totalWithdrawnKeys -
+                    totalUnbondedKeys;
+            }
         } else {
             targetLimitMode = no.targetLimitMode;
             targetValidatorsCount = no.targetLimit;
@@ -1454,6 +1460,7 @@ contract CSModule is
 
     /// @notice Get Node Operator active status
     /// @param nodeOperatorId ID of the Node Operator
+    /// @return active Operator is active flag
     function getNodeOperatorIsActive(
         uint256 nodeOperatorId
     ) external view returns (bool) {
@@ -1463,6 +1470,7 @@ contract CSModule is
     /// @notice Get IDs of Node Operators
     /// @param offset Offset of the first Node Operator ID to get
     /// @param limit Count of Node Operator IDs to get
+    /// @return nodeOperatorIds IDs of the Node Operators
     function getNodeOperatorIds(
         uint256 offset,
         uint256 limit
@@ -1480,7 +1488,7 @@ contract CSModule is
 
     function _incrementModuleNonce() internal {
         unchecked {
-            _nonce++;
+            ++_nonce;
         }
         emit NonceChanged(_nonce);
     }
@@ -1490,12 +1498,12 @@ contract CSModule is
         address rewardAddress,
         address referrer,
         bytes32[] calldata proof
-    ) internal returns (uint256) {
+    ) internal returns (uint256 id) {
         if (!publicRelease && proof.length == 0) {
             revert NotAllowedToJoinYet();
         }
 
-        uint256 id = _nodeOperatorsCount;
+        id = _nodeOperatorsCount;
         NodeOperator storage no = _nodeOperators[id];
 
         no.managerAddress = managerAddress == address(0)
@@ -1506,7 +1514,7 @@ contract CSModule is
             : rewardAddress;
 
         unchecked {
-            _nodeOperatorsCount++;
+            ++_nodeOperatorsCount;
         }
 
         emit NodeOperatorAdded(id, no.managerAddress, no.rewardAddress);
@@ -1514,16 +1522,13 @@ contract CSModule is
         if (referrer != address(0)) emit ReferrerSet(id, referrer);
 
         // @dev It's possible to join with proof even after public release to get beneficial bond curve
-        if (proof.length == 0 || address(earlyAdoption) == address(0))
-            return id;
-
-        earlyAdoption.consume(msg.sender, proof);
-        accounting.setBondCurve(id, earlyAdoption.CURVE_ID());
-
-        return id;
+        if (proof.length != 0 && address(earlyAdoption) != address(0)) {
+            earlyAdoption.consume(msg.sender, proof);
+            accounting.setBondCurve(id, earlyAdoption.CURVE_ID());
+        }
     }
 
-    function _addSigningKeys(
+    function _addKeysAndUpdateDepositableValidatorsCount(
         uint256 nodeOperatorId,
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -1531,12 +1536,15 @@ contract CSModule is
     ) internal {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         uint256 startIndex = no.totalAddedKeys;
-        if (
-            !publicRelease &&
-            startIndex + keysCount >
-            MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE
-        ) {
-            revert MaxSigningKeysCountExceeded();
+        unchecked {
+            // startIndex + keysCount can't overflow because of deposit check in the parent methods
+            if (
+                !publicRelease &&
+                startIndex + keysCount >
+                MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE
+            ) {
+                revert MaxSigningKeysCountExceeded();
+            }
         }
 
         // solhint-disable-next-line func-named-parameters
@@ -1562,6 +1570,14 @@ contract CSModule is
             no.totalAddedKeys += uint32(keysCount);
         }
         emit TotalSigningKeysCountChanged(nodeOperatorId, no.totalAddedKeys);
+
+        // Nonce is updated below since in case of stuck keys depositable keys might not change
+        // Due to new bonded keys normalize queue is required
+        _updateDepositableValidatorsCount({
+            nodeOperatorId: nodeOperatorId,
+            incrementNonceIfUpdated: false,
+            normalizeQueueIfUpdated: true
+        });
         _incrementModuleNonce();
     }
 
@@ -1573,10 +1589,6 @@ contract CSModule is
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         if (startIndex < no.totalDepositedKeys) {
-            revert SigningKeysInvalidOffset();
-        }
-
-        if (startIndex + keysCount > no.totalAddedKeys) {
             revert SigningKeysInvalidOffset();
         }
 
@@ -1651,8 +1663,12 @@ contract CSModule is
         _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (stuckValidatorsCount == no.stuckValidatorsCount) return;
-        if (stuckValidatorsCount > no.totalDepositedKeys - no.totalExitedKeys)
-            revert StuckKeysHigherThanExited();
+        unchecked {
+            if (
+                stuckValidatorsCount >
+                no.totalDepositedKeys - no.totalExitedKeys
+            ) revert StuckKeysHigherThanNonExited();
+        }
 
         no.stuckValidatorsCount = uint32(stuckValidatorsCount);
         emit StuckSigningKeysCountChanged(nodeOperatorId, stuckValidatorsCount);
@@ -1703,12 +1719,14 @@ contract CSModule is
         if (no.targetLimitMode > 0 && newCount > 0) {
             uint256 nonWithdrawnValidators = no.totalDepositedKeys -
                 no.totalWithdrawnKeys;
-            newCount = Math.min(
-                no.targetLimit > nonWithdrawnValidators
-                    ? no.targetLimit - nonWithdrawnValidators
-                    : 0,
-                newCount
-            );
+            unchecked {
+                newCount = Math.min(
+                    no.targetLimit > nonWithdrawnValidators
+                        ? no.targetLimit - nonWithdrawnValidators
+                        : 0,
+                    newCount
+                );
+            }
         }
 
         if (no.depositableValidatorsCount != newCount) {
@@ -1729,24 +1747,6 @@ contract CSModule is
         }
     }
 
-    function _addKeysAndUpdateDepositableValidatorsCount(
-        uint256 nodeOperatorId,
-        uint256 keysCount,
-        bytes calldata publicKeys,
-        bytes calldata signatures
-    ) internal {
-        // Reverts if keysCount is 0
-        _addSigningKeys(nodeOperatorId, keysCount, publicKeys, signatures);
-
-        // Due to new bonded keys normalize queue is required
-        // Nonce is updated in _addSigningKeys
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: false,
-            normalizeQueueIfUpdated: true
-        });
-    }
-
     function _onlyNodeOperatorManager(uint256 nodeOperatorId) internal view {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (no.managerAddress == address(0)) revert NodeOperatorDoesNotExist();
@@ -1763,8 +1763,8 @@ contract CSModule is
     }
 
     function _onlyExistingNodeOperator(uint256 nodeOperatorId) internal view {
-        if (nodeOperatorId >= _nodeOperatorsCount)
-            revert NodeOperatorDoesNotExist();
+        if (nodeOperatorId < _nodeOperatorsCount) return;
+        revert NodeOperatorDoesNotExist();
     }
 
     function _onlyRecoverer() internal view override {

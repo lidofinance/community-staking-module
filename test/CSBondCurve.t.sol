@@ -9,19 +9,19 @@ import { CSBondCurve } from "../src/abstract/CSBondCurve.sol";
 import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
 contract CSBondCurveTestable is CSBondCurve(10) {
-    function initialize(uint256[] memory bondCurve) public initializer {
+    function initialize(uint256[] calldata bondCurve) public initializer {
         __CSBondCurve_init(bondCurve);
     }
 
     function addBondCurve(
-        uint256[] memory _bondCurve
+        uint256[] calldata _bondCurve
     ) external returns (uint256) {
         return _addBondCurve(_bondCurve);
     }
 
     function updateBondCurve(
         uint256 curveId,
-        uint256[] memory _bondCurve
+        uint256[] calldata _bondCurve
     ) external {
         _updateBondCurve(curveId, _bondCurve);
     }
@@ -199,6 +199,33 @@ contract CSBondCurveTest is Test {
         assertEq(bondCurve.getKeysCountByBondAmount(5 ether, 0), 3);
         assertEq(bondCurve.getKeysCountByBondAmount(5.1 ether, 0), 3);
         assertEq(bondCurve.getKeysCountByBondAmount(6 ether, 0), 4);
+    }
+
+    function test_getKeysCountByBondAmount_noOverflowWithMaxUint() public {
+        ICSBondCurve.BondCurve memory curve = bondCurve.getBondCurve(0);
+        uint256 len = curve.points.length;
+        uint256 maxCurveAmount = curve.points[len - 1];
+        uint256 amount = type(uint256).max;
+
+        assertEq(
+            bondCurve.getKeysCountByBondAmount(amount, 0),
+            len + (amount - maxCurveAmount) / curve.trend
+        );
+    }
+
+    function test_getKeysCountByBondAmount_noOverflowWithMinUint() public {
+        uint256[] memory curvePoints = new uint256[](1);
+        curvePoints[0] = 1 wei;
+        uint256 curveId = bondCurve.addBondCurve(curvePoints);
+
+        ICSBondCurve.BondCurve memory curve = bondCurve.getBondCurve(curveId);
+
+        uint256 amount = type(uint256).max;
+
+        assertEq(
+            bondCurve.getKeysCountByBondAmount(amount, curveId),
+            type(uint256).max
+        );
     }
 
     function test_getBondAmountByKeysCount_default() public {

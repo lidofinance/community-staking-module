@@ -4,6 +4,7 @@
 pragma solidity 0.8.24;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ICSBondLock } from "../interfaces/ICSBondLock.sol";
 
 /// @dev Bond lock mechanics abstract contract.
@@ -26,6 +27,8 @@ import { ICSBondLock } from "../interfaces/ICSBondLock.sol";
 ///
 /// @author vgorkavenko
 abstract contract CSBondLock is ICSBondLock, Initializable {
+    using SafeCast for uint256;
+
     /// @custom:storage-location erc7201:CSAccounting.CSBondLock
     struct CSBondLockStorage {
         /// @dev Default bond lock retention period for all locks
@@ -57,6 +60,10 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
         uint256 maxBondLockRetentionPeriod
     ) {
         if (minBondLockRetentionPeriod > maxBondLockRetentionPeriod) {
+            revert InvalidBondLockRetentionPeriod();
+        }
+        // retention period can not be more than type(uint64).max to avoid overflow when setting bond lock
+        if (maxBondLockRetentionPeriod > type(uint64).max) {
             revert InvalidBondLockRetentionPeriod();
         }
         MIN_BOND_LOCK_RETENTION_PERIOD = minBondLockRetentionPeriod;
@@ -170,8 +177,8 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
             return;
         }
         $.bondLock[nodeOperatorId] = BondLock({
-            amount: amount,
-            retentionUntil: retentionUntil
+            amount: amount.toUint128(),
+            retentionUntil: retentionUntil.toUint128()
         });
         emit BondLockChanged(nodeOperatorId, amount, retentionUntil);
     }

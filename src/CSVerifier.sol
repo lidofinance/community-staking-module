@@ -218,7 +218,10 @@ contract CSVerifier is ICSVerifier {
         }
 
         // It's up to a user to provide a valid generalized index of a historical block root in a summaries list.
-        _checkRootGIndex(oldBlock.rootGIndex);
+        // Ensuring the provided generalized index is for a node somewhere below the historical_summaries root.
+        if (!GI_HISTORICAL_SUMMARIES.isParentOf(oldBlock.rootGIndex)) {
+            revert InvalidGIndex();
+        }
         SSZ.verifyProof({
             proof: oldBlock.proof,
             root: beaconBlock.header.stateRoot,
@@ -248,7 +251,7 @@ contract CSVerifier is ICSVerifier {
 
     function _getParentBlockRoot(
         uint64 blockTimestamp
-    ) internal view returns (bytes32 root) {
+    ) internal view returns (bytes32) {
         (bool success, bytes memory data) = BEACON_ROOTS.staticcall(
             abi.encode(blockTimestamp)
         );
@@ -257,14 +260,7 @@ contract CSVerifier is ICSVerifier {
             revert RootNotFound();
         }
 
-        root = abi.decode(data, (bytes32));
-    }
-
-    function _checkRootGIndex(GIndex gI) internal view {
-        // Ensuring the provided generalized index is for a node somewhere below the historical_summaries root.
-        if (!GI_HISTORICAL_SUMMARIES.isParentOf(gI)) {
-            revert InvalidGIndex();
-        }
+        return abi.decode(data, (bytes32));
     }
 
     /// @dev `stateRoot` is supposed to be trusted at this point.
@@ -274,7 +270,10 @@ contract CSVerifier is ICSVerifier {
         bytes32 stateRoot,
         bytes memory pubkey
     ) internal view returns (Withdrawal memory withdrawal) {
-        address withdrawalAddress = _wcToAddress(witness.withdrawalCredentials);
+        // WC to address
+        address withdrawalAddress = address(
+            uint160(uint256(witness.withdrawalCredentials))
+        );
         if (withdrawalAddress != LOCATOR.withdrawalVault()) {
             revert InvalidWithdrawalAddress();
         }
@@ -339,9 +338,5 @@ contract CSVerifier is ICSVerifier {
     function _computeEpochAtSlot(uint256 slot) internal view returns (uint256) {
         // See: github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#compute_epoch_at_slot
         return slot / SLOTS_PER_EPOCH;
-    }
-
-    function _wcToAddress(bytes32 value) internal pure returns (address) {
-        return address(uint160(uint256(value)));
     }
 }

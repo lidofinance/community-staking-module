@@ -187,7 +187,10 @@ library QueueLib {
     /// Internal methods
     /////
     // TODO: Consider changing to accept the batch fields as arguments.
-    function enqueue(Queue storage self, Batch item) internal returns (Batch) {
+    function enqueue(
+        Queue storage self,
+        Batch item
+    ) internal returns (Batch added) {
         uint128 length = self.length;
 
         assembly {
@@ -205,7 +208,7 @@ library QueueLib {
             ++self.length;
         }
 
-        return item;
+        added = item;
     }
 
     function dequeue(Queue storage self) internal returns (Batch item) {
@@ -218,14 +221,14 @@ library QueueLib {
         self.head = item.next();
     }
 
-    function peek(Queue storage self) internal view returns (Batch item) {
+    function peek(Queue storage self) internal view returns (Batch) {
         return self.queue[self.head];
     }
 
     function at(
         Queue storage self,
         uint128 index
-    ) internal view returns (Batch item) {
+    ) internal view returns (Batch) {
         return self.queue[index];
     }
 }

@@ -194,7 +194,7 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
 
     function _checkMsgSenderIsAllowedToSubmitData() internal view {
         address sender = _msgSender();
-        if (!hasRole(SUBMIT_DATA_ROLE, sender) && !_isConsensusMember(sender)) {
+        if (!_isConsensusMember(sender) && !hasRole(SUBMIT_DATA_ROLE, sender)) {
             revert SenderNotAllowed();
         }
     }

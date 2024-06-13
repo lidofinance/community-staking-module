@@ -59,9 +59,7 @@ contract CSAccounting is
     error ZeroChargeRecipientAddress();
 
     modifier onlyCSM() {
-        if (msg.sender != address(CSM)) {
-            revert SenderIsNotCSM();
-        }
+        if (msg.sender != address(CSM)) revert SenderIsNotCSM();
         _;
     }
 
@@ -92,7 +90,7 @@ contract CSAccounting is
     /// @param _chargeRecipient Recipient of the charge penalty type
     /// @param _feeDistributor Fee Distributor contract address
     function initialize(
-        uint256[] memory bondCurve,
+        uint256[] calldata bondCurve,
         address admin,
         address _feeDistributor,
         uint256 bondLockRetentionPeriod,
@@ -152,11 +150,11 @@ contract CSAccounting is
 
     /// @notice Add a new bond curve
     /// @param bondCurve Bond curve definition to add
-    /// @return Id of the added curve
+    /// @return id Id of the added curve
     function addBondCurve(
-        uint256[] memory bondCurve
-    ) external onlyRole(MANAGE_BOND_CURVES_ROLE) returns (uint256) {
-        return CSBondCurve._addBondCurve(bondCurve);
+        uint256[] calldata bondCurve
+    ) external onlyRole(MANAGE_BOND_CURVES_ROLE) returns (uint256 id) {
+        id = CSBondCurve._addBondCurve(bondCurve);
     }
 
     /// @notice Update existing bond curve
@@ -164,7 +162,7 @@ contract CSAccounting is
     /// @param bondCurve Bond curve definition
     function updateBondCurve(
         uint256 curveId,
-        uint256[] memory bondCurve
+        uint256[] calldata bondCurve
     ) external onlyRole(MANAGE_BOND_CURVES_ROLE) {
         CSBondCurve._updateBondCurve(curveId, bondCurve);
     }
@@ -275,7 +273,7 @@ contract CSAccounting is
         uint256 stETHAmount,
         address rewardAddress,
         uint256 cumulativeFeeShares,
-        bytes32[] memory rewardsProof
+        bytes32[] calldata rewardsProof
     ) external whenResumed onlyCSM {
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
@@ -296,7 +294,7 @@ contract CSAccounting is
         uint256 wstETHAmount,
         address rewardAddress,
         uint256 cumulativeFeeShares,
-        bytes32[] memory rewardsProof
+        bytes32[] calldata rewardsProof
     ) external whenResumed onlyCSM {
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
@@ -318,7 +316,7 @@ contract CSAccounting is
         uint256 stEthAmount,
         address rewardAddress,
         uint256 cumulativeFeeShares,
-        bytes32[] memory rewardsProof
+        bytes32[] calldata rewardsProof
     ) external whenResumed onlyCSM {
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
@@ -420,11 +418,16 @@ contract CSAccounting is
     function getBondSummary(
         uint256 nodeOperatorId
     ) public view returns (uint256 current, uint256 required) {
-        return
-            _getBondSummary(
-                nodeOperatorId,
-                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
-            );
+        unchecked {
+            current = CSBondCore.getBond(nodeOperatorId);
+            // @dev 'getActualLockedBond' is uint128, so no overflow expected in practice
+            required =
+                CSBondCurve.getBondAmountByKeysCount(
+                    CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
+                    CSBondCurve.getBondCurve(nodeOperatorId)
+                ) +
+                CSBondLock.getActualLockedBond(nodeOperatorId);
+        }
     }
 
     /// @notice Get current and required bond amounts in stETH shares for the given Node Operator
@@ -436,11 +439,16 @@ contract CSAccounting is
     function getBondSummaryShares(
         uint256 nodeOperatorId
     ) public view returns (uint256 current, uint256 required) {
-        return
-            _getBondSummaryShares(
-                nodeOperatorId,
-                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
+        unchecked {
+            current = CSBondCore.getBondShares(nodeOperatorId);
+            // @dev 'getActualLockedBond' is uint128, so no overflow expected in practice
+            required = _sharesByEth(
+                CSBondCurve.getBondAmountByKeysCount(
+                    CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
+                    CSBondCurve.getBondCurve(nodeOperatorId)
+                ) + CSBondLock.getActualLockedBond(nodeOperatorId)
             );
+        }
     }
 
     /// @notice Get the number of the unbonded keys
@@ -477,37 +485,24 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 additionalKeys
     ) public view returns (uint256) {
-        uint256 nonWithdrawnKeys = CSM.getNodeOperatorNonWithdrawnKeys(
-            nodeOperatorId
+        uint256 current = CSBondCore.getBond(nodeOperatorId);
+        uint256 requiredForNewTotalKeys = CSBondCurve.getBondAmountByKeysCount(
+            CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId) +
+                additionalKeys,
+            CSBondCurve.getBondCurve(nodeOperatorId)
         );
-        (uint256 current, uint256 required) = _getBondSummary(
-            nodeOperatorId,
-            nonWithdrawnKeys
-        );
-        BondCurve memory bondCurve = CSBondCurve.getBondCurve(nodeOperatorId);
-        uint256 requiredForNextKeys = CSBondCurve.getBondAmountByKeysCount(
-            nonWithdrawnKeys + additionalKeys,
-            bondCurve
-        ) - CSBondCurve.getBondAmountByKeysCount(nonWithdrawnKeys, bondCurve);
+        uint256 totalRequired = requiredForNewTotalKeys +
+            CSBondLock.getActualLockedBond(nodeOperatorId);
 
-        uint256 missing = required > current ? required - current : 0;
-        if (missing > 0) {
-            unchecked {
-                return missing + requiredForNextKeys;
-            }
+        unchecked {
+            return totalRequired > current ? totalRequired - current : 0;
         }
-
-        uint256 excess = current - required;
-        if (excess >= requiredForNextKeys) {
-            return 0;
-        }
-
-        return requiredForNextKeys - excess;
     }
 
     /// @notice Get the bond amount in wstETH required for the `keysCount` keys using the default bond curve
     /// @param keysCount Keys count to calculate the required bond amount
     /// @param curveId Id of the curve to perform calculations against
+    /// @return wstETH amount required for the `keysCount`
     function getBondAmountByKeysCountWstETH(
         uint256 keysCount,
         uint256 curveId
@@ -522,6 +517,7 @@ contract CSAccounting is
     /// @param keysCount Keys count to calculate the required bond amount
     /// @param curve Bond curve definition.
     ///              Use CSBondCurve.getBondCurve(id) method to get the definition for the exiting curve
+    /// @return wstETH amount required for the `keysCount`
     function getBondAmountByKeysCountWstETH(
         uint256 keysCount,
         BondCurve memory curve
@@ -549,7 +545,7 @@ contract CSAccounting is
     function _pullFeeRewards(
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
-        bytes32[] memory rewardsProof
+        bytes32[] calldata rewardsProof
     ) internal {
         uint256 distributed = feeDistributor.distributeFees(
             nodeOperatorId,
@@ -563,37 +559,16 @@ contract CSAccounting is
     function _getClaimableBondShares(
         uint256 nodeOperatorId
     ) internal view override returns (uint256) {
-        return
-            _getExcessBondShares(
-                nodeOperatorId,
-                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId)
+        unchecked {
+            uint256 current = CSBondCore.getBondShares(nodeOperatorId);
+            uint256 required = _sharesByEth(
+                CSBondCurve.getBondAmountByKeysCount(
+                    CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
+                    CSBondCurve.getBondCurve(nodeOperatorId)
+                ) + CSBondLock.getActualLockedBond(nodeOperatorId)
             );
-    }
-
-    function _getBondSummary(
-        uint256 nodeOperatorId,
-        uint256 nonWithdrawnKeys
-    ) internal view returns (uint256 current, uint256 required) {
-        current = CSBondCore.getBond(nodeOperatorId);
-        required =
-            CSBondCurve.getBondAmountByKeysCount(
-                nonWithdrawnKeys,
-                CSBondCurve.getBondCurve(nodeOperatorId)
-            ) +
-            CSBondLock.getActualLockedBond(nodeOperatorId);
-    }
-
-    function _getBondSummaryShares(
-        uint256 nodeOperatorId,
-        uint256 nonWithdrawnKeys
-    ) internal view returns (uint256 current, uint256 required) {
-        current = CSBondCore.getBondShares(nodeOperatorId);
-        required = _sharesByEth(
-            CSBondCurve.getBondAmountByKeysCount(
-                nonWithdrawnKeys,
-                CSBondCurve.getBondCurve(nodeOperatorId)
-            ) + CSBondLock.getActualLockedBond(nodeOperatorId)
-        );
+            return current > required ? current - required : 0;
+        }
     }
 
     /// @dev Unbonded stands for the amount of the keys not fully covered with the bond
@@ -604,39 +579,29 @@ contract CSAccounting is
         uint256 nonWithdrawnKeys = CSM.getNodeOperatorNonWithdrawnKeys(
             nodeOperatorId
         );
-        /// 10 wei added to account for possible stETH rounding errors
-        /// https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205.
-        /// Should be sufficient for ~ 40 years
-        uint256 currentBond = CSBondCore._ethByShares(
-            getBondShares(nodeOperatorId)
-        ) + 10 wei;
-        if (accountLockedBond) {
-            uint256 lockedBond = CSBondLock.getActualLockedBond(nodeOperatorId);
-            if (currentBond <= lockedBond) return nonWithdrawnKeys;
-            unchecked {
+        unchecked {
+            /// 10 wei added to account for possible stETH rounding errors
+            /// https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205.
+            /// Should be sufficient for ~ 40 years
+            uint256 currentBond = CSBondCore._ethByShares(
+                getBondShares(nodeOperatorId)
+            ) + 10 wei;
+            if (accountLockedBond) {
+                uint256 lockedBond = CSBondLock.getActualLockedBond(
+                    nodeOperatorId
+                );
+                if (currentBond <= lockedBond) return nonWithdrawnKeys;
                 currentBond -= lockedBond;
             }
+            uint256 bondedKeys = CSBondCurve.getKeysCountByBondAmount(
+                currentBond,
+                CSBondCurve.getBondCurve(nodeOperatorId)
+            );
+            return
+                nonWithdrawnKeys > bondedKeys
+                    ? nonWithdrawnKeys - bondedKeys
+                    : 0;
         }
-        BondCurve memory bondCurve = CSBondCurve.getBondCurve(nodeOperatorId);
-        uint256 bondedKeys = CSBondCurve.getKeysCountByBondAmount(
-            currentBond,
-            bondCurve
-        );
-        if (bondedKeys >= nonWithdrawnKeys) return 0;
-        unchecked {
-            return nonWithdrawnKeys - bondedKeys;
-        }
-    }
-
-    function _getExcessBondShares(
-        uint256 nodeOperatorId,
-        uint256 nonWithdrawnKeys
-    ) internal view returns (uint256) {
-        (uint256 current, uint256 required) = _getBondSummaryShares(
-            nodeOperatorId,
-            nonWithdrawnKeys
-        );
-        return current > required ? current - required : 0;
     }
 
     function _onlyRecoverer() internal view override {

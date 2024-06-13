@@ -300,7 +300,6 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 currentShares = getBondShares(nodeOperatorId);
         reducedShares = shares < currentShares ? shares : currentShares;
         _unsafeReduceBond(nodeOperatorId, reducedShares);
-        return reducedShares;
     }
 
     function _getCSBondCoreStorage()

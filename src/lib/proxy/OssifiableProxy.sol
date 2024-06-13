@@ -82,7 +82,7 @@ contract OssifiableProxy is ERC1967Proxy {
     // solhint-disable-next-line func-name-mixedcase
     function proxy__upgradeToAndCall(
         address newImplementation_,
-        bytes memory setupCalldata_
+        bytes calldata setupCalldata_
     ) external onlyAdmin {
         ERC1967Utils.upgradeToAndCall(newImplementation_, setupCalldata_);
     }

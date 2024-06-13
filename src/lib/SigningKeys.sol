@@ -14,7 +14,7 @@ library SigningKeys {
 
     uint64 internal constant PUBKEY_LENGTH = 48;
     uint64 internal constant SIGNATURE_LENGTH = 96;
-    uint256 internal constant UINT64_MAX = 0xFFFFFFFFFFFFFFFF;
+    uint256 internal constant UINT32_MAX = type(uint32).max;
 
     event SigningKeyAdded(uint256 indexed nodeOperatorId, bytes pubkey);
     event SigningKeyRemoved(uint256 indexed nodeOperatorId, bytes pubkey);
@@ -27,9 +27,10 @@ library SigningKeys {
     /// @param nodeOperatorId operator id
     /// @param startIndex start index
     /// @param keysCount keys count to load
-    /// @param pubkeys kes buffer to read from
+    /// @param pubkeys keys buffer to read from
     /// @param signatures signatures buffer to read from
     /// @return new total keys count
+    // TODO: Rewrite pubkeys and signatures to calldata
     function saveKeysSigs(
         uint256 nodeOperatorId,
         uint256 startIndex,
@@ -37,14 +38,16 @@ library SigningKeys {
         bytes memory pubkeys,
         bytes memory signatures
     ) internal returns (uint256) {
-        if (keysCount == 0 || startIndex + keysCount > UINT64_MAX) {
+        if (keysCount == 0 || startIndex + keysCount > UINT32_MAX) {
             revert InvalidKeysCount();
         }
-        if (
-            pubkeys.length != keysCount * PUBKEY_LENGTH ||
-            signatures.length != keysCount * SIGNATURE_LENGTH
-        ) {
-            revert InvalidLength();
+        unchecked {
+            if (
+                pubkeys.length != keysCount * PUBKEY_LENGTH ||
+                signatures.length != keysCount * SIGNATURE_LENGTH
+            ) {
+                revert InvalidLength();
+            }
         }
 
         uint256 curOffset;
@@ -91,7 +94,7 @@ library SigningKeys {
     /// @param startIndex start index
     /// @param keysCount keys count to load
     /// @param totalKeysCount current total keys count for operator
-    /// @return new totalKeysCount
+    /// @return new total keys count
     function removeKeysSigs(
         uint256 nodeOperatorId,
         uint256 startIndex,
@@ -101,7 +104,7 @@ library SigningKeys {
         if (
             keysCount == 0 ||
             startIndex + keysCount > totalKeysCount ||
-            totalKeysCount > UINT64_MAX
+            totalKeysCount > UINT32_MAX
         ) {
             revert InvalidKeysCount();
         }
@@ -112,20 +115,24 @@ library SigningKeys {
         bytes memory tmpKey = new bytes(48);
         // removing from the last index
         for (uint256 i = startIndex + keysCount; i > startIndex; ) {
-            curOffset = SIGNING_KEYS_POSITION.getKeyOffset(
-                nodeOperatorId,
-                i - 1
-            );
+            unchecked {
+                curOffset = SIGNING_KEYS_POSITION.getKeyOffset(
+                    nodeOperatorId,
+                    i - 1
+                );
+            }
             assembly {
                 // read key
                 mstore(add(tmpKey, 0x30), shr(128, sload(add(curOffset, 1)))) // bytes 16..47
                 mstore(add(tmpKey, 0x20), sload(curOffset)) // bytes 0..31
             }
             if (i < totalKeysCount) {
-                lastOffset = SIGNING_KEYS_POSITION.getKeyOffset(
-                    nodeOperatorId,
-                    totalKeysCount - 1
-                );
+                unchecked {
+                    lastOffset = SIGNING_KEYS_POSITION.getKeyOffset(
+                        nodeOperatorId,
+                        totalKeysCount - 1
+                    );
+                }
                 // move last key to deleted key index
                 for (j = 0; j < 5; ) {
                     // load 160 bytes (5 slots) containing key and signature
