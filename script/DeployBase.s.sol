@@ -162,7 +162,8 @@ abstract contract DeployBase is Script {
 
             CSFeeDistributor feeDistributorImpl = new CSFeeDistributor({
                 stETH: locator.lido(),
-                accounting: address(accounting)
+                accounting: address(accounting),
+                oracle: address(oracle)
             });
             feeDistributor = CSFeeDistributor(
                 _deployProxy(config.votingAddress, address(feeDistributorImpl))
@@ -214,10 +215,7 @@ abstract contract DeployBase is Script {
                 admin: deployer
             });
 
-            feeDistributor.initialize({
-                admin: address(deployer),
-                oracle: address(oracle)
-            });
+            feeDistributor.initialize({ admin: address(deployer) });
 
             hashConsensus = new HashConsensus({
                 slotsPerEpoch: config.slotsPerEpoch,
