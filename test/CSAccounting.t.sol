@@ -122,7 +122,7 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
         );
     }
 
-    function test_constructor_RevertWhen_InvalidBondLockRetentionPeriod_Condition2()
+    function test_constructor_RevertWhen_InvalidBondLockRetentionPeriod_MaxTooBig()
         public
     {
         vm.expectRevert(CSBondLock.InvalidBondLockRetentionPeriod.selector);
