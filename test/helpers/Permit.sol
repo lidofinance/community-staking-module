@@ -6,33 +6,6 @@ pragma solidity 0.8.24;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract PermitTokenBase {
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 value
-    );
-
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 /* deadline */,
-        uint8 /* v */,
-        bytes32 /* r */,
-        bytes32 /* s */
-    ) external {
-        emit Approval(owner, spender, value);
-    }
-
-    function allowance(
-        address /* _owner */,
-        address /* _spender */
-    ) external pure returns (uint256) {
-        return 0;
-    }
-}
-
 // https://eips.ethereum.org/EIPS/eip-2612
 contract PermitHelper {
     using ECDSA for bytes32;

@@ -89,14 +89,6 @@ contract CSEarlyAdoptionTest is Test, Utilities {
         earlyAdoption.consume(nodeOperator, proof);
     }
 
-    function test_isConsumed() public {
-        bytes32[] memory proof = merkleTree.getProof(0);
-
-        vm.prank(csm);
-        earlyAdoption.consume(nodeOperator, proof);
-        assertTrue(earlyAdoption.isConsumed(nodeOperator));
-    }
-
     function test_consume_revert_onlyModule() public {
         bytes32[] memory proof = merkleTree.getProof(0);
 
@@ -130,5 +122,28 @@ contract CSEarlyAdoptionTest is Test, Utilities {
         vm.prank(csm);
         vm.expectRevert(CSEarlyAdoption.InvalidProof.selector);
         earlyAdoption.consume(nodeOperator, proof);
+    }
+
+    function test_isConsumed() public {
+        bytes32[] memory proof = merkleTree.getProof(0);
+
+        vm.prank(csm);
+        earlyAdoption.consume(nodeOperator, proof);
+        assertTrue(earlyAdoption.isConsumed(nodeOperator));
+    }
+
+    function test_hashLeaf() public {
+        // keccak256(bytes.concat(keccak256(abi.encode(address(154))))) = 0x0f7ac7a58332324fa3de7b7a4a05de303436d846e292fa579646a7496f0c2c1a
+        assertEq(
+            earlyAdoption.hashLeaf(address(154)),
+            0x0f7ac7a58332324fa3de7b7a4a05de303436d846e292fa579646a7496f0c2c1a
+        );
+    }
+
+    function testFuzz_hashLeaf(address addr) public {
+        assertEq(
+            earlyAdoption.hashLeaf(addr),
+            keccak256(bytes.concat(keccak256(abi.encode(addr))))
+        );
     }
 }

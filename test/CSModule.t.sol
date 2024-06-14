@@ -329,6 +329,81 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
     }
 }
 
+contract CSMCommonNoPublicReleaseNoEA is CSMFixtures {
+    function setUp() public virtual {
+        nodeOperator = nextAddress("NODE_OPERATOR");
+        stranger = nextAddress("STRANGER");
+        strangerNumberTwo = nextAddress("STRANGER_TWO");
+        admin = nextAddress("ADMIN");
+        testChargeRecipient = nextAddress("CHARGERECIPIENT");
+
+        (locator, wstETH, stETH, ) = initLido();
+
+        feeDistributor = new Stub();
+
+        csm = new CSModule({
+            moduleType: "community-staking-module",
+            minSlashingPenaltyQuotient: 32,
+            elRewardsStealingFine: 0.1 ether,
+            maxKeysPerOperatorEA: 10,
+            lidoLocator: address(locator)
+        });
+        uint256[] memory curve = new uint256[](1);
+        curve[0] = BOND_SIZE;
+        accounting = new CSAccounting(
+            address(locator),
+            address(csm),
+            10,
+            4 weeks,
+            365 days
+        );
+
+        _enableInitializers(address(accounting));
+
+        accounting.initialize(
+            curve,
+            admin,
+            address(feeDistributor),
+            8 weeks,
+            testChargeRecipient
+        );
+
+        merkleTree = new MerkleTree();
+        merkleTree.pushLeaf(abi.encode(nodeOperator));
+
+        _enableInitializers(address(csm));
+        csm.initialize({
+            _accounting: address(accounting),
+            _earlyAdoption: address(0),
+            _keyRemovalCharge: 0.05 ether,
+            admin: admin
+        });
+
+        vm.startPrank(admin);
+        csm.grantRole(csm.PAUSE_ROLE(), address(this));
+        csm.grantRole(csm.RESUME_ROLE(), address(this));
+        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
+        csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(this));
+        csm.grantRole(
+            csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE(),
+            address(this)
+        );
+        csm.grantRole(
+            csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(),
+            address(this)
+        );
+        csm.grantRole(csm.VERIFIER_ROLE(), address(this));
+        accounting.grantRole(
+            accounting.MANAGE_BOND_CURVES_ROLE(),
+            address(this)
+        );
+        vm.stopPrank();
+
+        csm.setKeyRemovalCharge(0.05 ether);
+        csm.resume();
+    }
+}
+
 contract CSMCommon is CSMCommonNoPublicRelease {
     function setUp() public virtual override {
         super.setUp();
@@ -588,7 +663,7 @@ contract CSMPauseTest is CSMCommon {
     }
 }
 
-contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
+contract CSMPauseAffectingTest is CSMCommon {
     function test_addNodeOperatorETH_RevertWhen_Paused() public {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
@@ -715,7 +790,7 @@ contract CSMPauseAffectingTest is CSMCommon, PermitTokenBase {
     }
 }
 
-contract CSMAddNodeOperatorETH is CSMCommon, PermitTokenBase {
+contract CSMAddNodeOperatorETH is CSMCommon {
     function test_AddNodeOperatorETH() public {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
@@ -822,7 +897,7 @@ contract CSMAddNodeOperatorETH is CSMCommon, PermitTokenBase {
     }
 }
 
-contract CSMAddNodeOperatorStETH is CSMCommon, PermitTokenBase {
+contract CSMAddNodeOperatorStETH is CSMCommon {
     function test_AddNodeOperatorStETH() public {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
@@ -851,7 +926,7 @@ contract CSMAddNodeOperatorStETH is CSMCommon, PermitTokenBase {
             address(0),
             address(0),
             ICSAccounting.PermitInput({
-                value: 0,
+                value: BOND_SIZE,
                 deadline: 0,
                 v: 0,
                 r: 0,
@@ -886,7 +961,7 @@ contract CSMAddNodeOperatorStETH is CSMCommon, PermitTokenBase {
             manager,
             reward,
             ICSAccounting.PermitInput({
-                value: 0,
+                value: BOND_SIZE,
                 deadline: 0,
                 v: 0,
                 r: 0,
@@ -925,7 +1000,7 @@ contract CSMAddNodeOperatorStETH is CSMCommon, PermitTokenBase {
             address(0),
             address(0),
             ICSAccounting.PermitInput({
-                value: 0,
+                value: BOND_SIZE,
                 deadline: 0,
                 v: 0,
                 r: 0,
@@ -951,7 +1026,11 @@ contract CSMAddNodeOperatorStETH is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, true, true, address(csm));
             emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, true, true, address(stETH));
-            emit Approval(nodeOperator, address(accounting), BOND_SIZE);
+            emit StETHMock.Approval(
+                nodeOperator,
+                address(accounting),
+                BOND_SIZE
+            );
             vm.expectEmit(true, true, true, true, address(csm));
             emit CSModule.TotalSigningKeysCountChanged(0, 1);
         }
@@ -979,7 +1058,7 @@ contract CSMAddNodeOperatorStETH is CSMCommon, PermitTokenBase {
     }
 }
 
-contract CSMAddNodeOperatorWstETH is CSMCommon, PermitTokenBase {
+contract CSMAddNodeOperatorWstETH is CSMCommon {
     function test_AddNodeOperatorWstETH() public {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
@@ -988,6 +1067,7 @@ contract CSMAddNodeOperatorWstETH is CSMCommon, PermitTokenBase {
         vm.deal(nodeOperator, BOND_SIZE + 1 wei);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
         wstETH.wrap(BOND_SIZE + 1 wei);
         uint256 nonce = csm.getNonce();
 
@@ -1028,6 +1108,7 @@ contract CSMAddNodeOperatorWstETH is CSMCommon, PermitTokenBase {
         vm.deal(nodeOperator, BOND_SIZE + 1 wei);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
         wstETH.wrap(BOND_SIZE + 1 wei);
 
         address manager = address(154);
@@ -1065,6 +1146,7 @@ contract CSMAddNodeOperatorWstETH is CSMCommon, PermitTokenBase {
         vm.deal(nodeOperator, BOND_SIZE + 1 wei);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
         wstETH.wrap(BOND_SIZE + 1 wei);
 
         {
@@ -1100,6 +1182,7 @@ contract CSMAddNodeOperatorWstETH is CSMCommon, PermitTokenBase {
         vm.deal(nodeOperator, BOND_SIZE + 1 wei);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(BOND_SIZE);
         uint256 nonce = csm.getNonce();
 
@@ -1107,7 +1190,11 @@ contract CSMAddNodeOperatorWstETH is CSMCommon, PermitTokenBase {
             vm.expectEmit(true, true, true, true, address(csm));
             emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, true, true, address(wstETH));
-            emit Approval(nodeOperator, address(accounting), wstETHAmount);
+            emit WstETHMock.Approval(
+                nodeOperator,
+                address(accounting),
+                wstETHAmount
+            );
             vm.expectEmit(true, true, true, true, address(csm));
             emit CSModule.TotalSigningKeysCountChanged(0, 1);
         }
@@ -1134,13 +1221,14 @@ contract CSMAddNodeOperatorWstETH is CSMCommon, PermitTokenBase {
     }
 }
 
-contract CSMAddValidatorKeys is CSMCommon, PermitTokenBase {
+contract CSMAddValidatorKeys is CSMCommon {
     function test_AddValidatorKeysWstETH() public {
         uint256 noId = createNodeOperator();
         uint256 toWrap = BOND_SIZE + 1 wei;
         vm.deal(nodeOperator, toWrap);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: toWrap }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
         wstETH.wrap(toWrap);
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
         uint256 nonce = csm.getNonce();
@@ -1174,11 +1262,16 @@ contract CSMAddValidatorKeys is CSMCommon, PermitTokenBase {
         vm.deal(nodeOperator, toWrap);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: toWrap }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(toWrap);
         uint256 nonce = csm.getNonce();
         {
             vm.expectEmit(true, true, true, true, address(wstETH));
-            emit Approval(nodeOperator, address(accounting), wstETHAmount);
+            emit WstETHMock.Approval(
+                nodeOperator,
+                address(accounting),
+                wstETHAmount
+            );
             vm.expectEmit(true, true, true, true, address(csm));
             emit IStakingModule.SigningKeyAdded(noId, keys);
             vm.expectEmit(true, true, true, true, address(csm));
@@ -1222,7 +1315,7 @@ contract CSMAddValidatorKeys is CSMCommon, PermitTokenBase {
             keys,
             signatures,
             ICSAccounting.PermitInput({
-                value: 0,
+                value: BOND_SIZE,
                 deadline: 0,
                 v: 0,
                 r: 0,
@@ -1244,7 +1337,11 @@ contract CSMAddValidatorKeys is CSMCommon, PermitTokenBase {
 
         {
             vm.expectEmit(true, true, true, true, address(stETH));
-            emit Approval(nodeOperator, address(accounting), required);
+            emit StETHMock.Approval(
+                nodeOperator,
+                address(accounting),
+                required
+            );
             vm.expectEmit(true, true, true, true, address(csm));
             emit IStakingModule.SigningKeyAdded(noId, keys);
             vm.expectEmit(true, true, true, true, address(csm));
@@ -1305,7 +1402,7 @@ contract CSMAddValidatorKeys is CSMCommon, PermitTokenBase {
     }
 }
 
-contract CSMAddNodeOperatorNegative is CSMCommon, PermitTokenBase {
+contract CSMAddNodeOperatorNegative is CSMCommon {
     function test_addNodeOperatorETH_RevertWhen_NoKeys() public {
         vm.expectRevert(SigningKeys.InvalidKeysCount.selector);
         csm.addNodeOperatorETH(
@@ -1457,7 +1554,7 @@ contract CSMAddNodeOperatorNegative is CSMCommon, PermitTokenBase {
             address(0),
             address(0),
             ICSAccounting.PermitInput({
-                value: 0,
+                value: BOND_SIZE,
                 deadline: 0,
                 v: 0,
                 r: 0,
@@ -1487,7 +1584,7 @@ contract CSMAddNodeOperatorNegative is CSMCommon, PermitTokenBase {
             address(0),
             address(0),
             ICSAccounting.PermitInput({
-                value: 0,
+                value: BOND_SIZE,
                 deadline: 0,
                 v: 0,
                 r: 0,
@@ -1539,7 +1636,7 @@ contract CSMAddNodeOperatorNegative is CSMCommon, PermitTokenBase {
             keys,
             new bytes(0),
             ICSAccounting.PermitInput({
-                value: 0,
+                value: BOND_SIZE,
                 deadline: 0,
                 v: 0,
                 r: 0,
@@ -1567,7 +1664,7 @@ contract CSMAddNodeOperatorNegative is CSMCommon, PermitTokenBase {
             keys,
             signatures,
             ICSAccounting.PermitInput({
-                value: 0,
+                value: BOND_SIZE,
                 deadline: 0,
                 v: 0,
                 r: 0,
@@ -1580,6 +1677,7 @@ contract CSMAddNodeOperatorNegative is CSMCommon, PermitTokenBase {
         vm.deal(nodeOperator, BOND_SIZE + 1 wei);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
         wstETH.wrap(BOND_SIZE + 1 wei);
 
         vm.expectRevert(SigningKeys.InvalidKeysCount.selector);
@@ -1609,6 +1707,7 @@ contract CSMAddNodeOperatorNegative is CSMCommon, PermitTokenBase {
         vm.deal(nodeOperator, BOND_SIZE + 1 wei);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
         wstETH.wrap(BOND_SIZE + 1 wei);
 
         vm.expectRevert(SigningKeys.InvalidLength.selector);
@@ -1639,6 +1738,7 @@ contract CSMAddNodeOperatorNegative is CSMCommon, PermitTokenBase {
         vm.deal(nodeOperator, BOND_SIZE + 1 wei);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
         wstETH.wrap(BOND_SIZE + 1 wei);
 
         vm.expectRevert(SigningKeys.EmptyKey.selector);
@@ -1666,6 +1766,7 @@ contract CSMAddNodeOperatorNegative is CSMCommon, PermitTokenBase {
         vm.deal(nodeOperator, toWrap);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: toWrap }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
         wstETH.wrap(toWrap);
 
         vm.expectRevert(SigningKeys.InvalidKeysCount.selector);
@@ -1693,6 +1794,7 @@ contract CSMAddNodeOperatorNegative is CSMCommon, PermitTokenBase {
         vm.deal(nodeOperator, toWrap);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: toWrap }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
         wstETH.wrap(toWrap);
         (bytes memory keys, ) = keysSignatures(keysCount);
 
@@ -1719,6 +1821,7 @@ contract CSMAddNodeOperatorNegative is CSMCommon, PermitTokenBase {
         vm.deal(nodeOperator, toWrap);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: toWrap }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
         wstETH.wrap(toWrap);
         (
             bytes memory keys,
@@ -1742,7 +1845,7 @@ contract CSMAddNodeOperatorNegative is CSMCommon, PermitTokenBase {
     }
 }
 
-contract CSMDeposit is CSMCommon, PermitTokenBase {
+contract CSMDepositETH is CSMCommon {
     function test_DepositETH() public {
         uint256 noId = createNodeOperator();
         uint256 preShares = accounting.getBondShares(noId);
@@ -1802,7 +1905,9 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
 
         assertEq(csm.getNonce(), nonce);
     }
+}
 
+contract CSMDepositStETH is CSMCommon {
     function test_DepositStETH() public {
         uint256 noId = createNodeOperator();
         uint256 preShares = accounting.getBondShares(noId);
@@ -1815,7 +1920,7 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
             noId,
             32 ether,
             ICSAccounting.PermitInput({
-                value: 0,
+                value: 32 ether,
                 deadline: 0,
                 v: 0,
                 r: 0,
@@ -1864,7 +1969,7 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
         });
 
         vm.expectEmit(true, true, true, true, address(stETH));
-        emit Approval(nodeOperator, address(accounting), 32 ether);
+        emit StETHMock.Approval(nodeOperator, address(accounting), 32 ether);
 
         csm.depositStETH(
             noId,
@@ -1909,7 +2014,7 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
             0,
             32 ether,
             ICSAccounting.PermitInput({
-                value: 0,
+                value: 32 ether,
                 deadline: 0,
                 v: 0,
                 r: 0,
@@ -1932,7 +2037,7 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
             noId,
             32 ether,
             ICSAccounting.PermitInput({
-                value: 0,
+                value: 32 ether,
                 deadline: 0,
                 v: 0,
                 r: 0,
@@ -1942,13 +2047,16 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
 
         assertEq(csm.getNonce(), nonce);
     }
+}
 
+contract CSMDepositWstETH is CSMCommon {
     function test_DepositWstETH() public {
         uint256 noId = createNodeOperator();
         uint256 preShares = accounting.getBondShares(noId);
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         uint256 sharesToDeposit = stETH.getSharesByPooledEth(
             wstETH.getStETHByWstETH(wstETHAmount)
@@ -1983,6 +2091,7 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.depositWstETH(
@@ -2004,13 +2113,14 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         uint256 sharesToDeposit = stETH.getSharesByPooledEth(
             wstETH.getStETHByWstETH(wstETHAmount)
         );
 
         vm.expectEmit(true, true, true, true, address(wstETH));
-        emit Approval(nodeOperator, address(accounting), 32 ether);
+        emit WstETHMock.Approval(nodeOperator, address(accounting), 32 ether);
 
         csm.depositWstETH(
             noId,
@@ -2051,6 +2161,7 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
 
         csm.depositWstETH(
@@ -2076,6 +2187,7 @@ contract CSMDeposit is CSMCommon, PermitTokenBase {
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
 
         csm.depositWstETH(
@@ -4554,6 +4666,56 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         assertEq(secondLock.retentionUntil, 0);
     }
 
+    function test_settleELRewardsStealingPenalty_multipleNOs_oneWithNoLock()
+        public
+    {
+        uint256 firstNoId = createNodeOperator();
+        uint256 secondNoId = createNodeOperator();
+        uint256[] memory idsToSettle = new uint256[](2);
+        idsToSettle[0] = firstNoId;
+        idsToSettle[1] = secondNoId;
+
+        csm.reportELRewardsStealingPenalty(
+            secondNoId,
+            blockhash(block.number),
+            1 ether
+        );
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.ELRewardsStealingPenaltySettled(firstNoId, 0);
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.ELRewardsStealingPenaltySettled(
+            secondNoId,
+            1 ether + csm.EL_REWARDS_STEALING_FINE()
+        );
+        expectNoCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.resetBondCurve.selector,
+                firstNoId
+            )
+        );
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.resetBondCurve.selector,
+                secondNoId
+            )
+        );
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        CSBondLock.BondLock memory firstLock = accounting.getLockedBondInfo(
+            firstNoId
+        );
+        assertEq(firstLock.amount, 0 ether);
+        assertEq(firstLock.retentionUntil, 0);
+        CSBondLock.BondLock memory secondLock = accounting.getLockedBondInfo(
+            secondNoId
+        );
+        assertEq(secondLock.amount, 0 ether);
+        assertEq(secondLock.retentionUntil, 0);
+    }
+
     function test_settleELRewardsStealingPenalty_RevertWhen_NoExistingNodeOperator()
         public
     {
@@ -5547,8 +5709,9 @@ contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
 }
 
 contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
-    function test_addNodeOperator_earlyAdoptionProof() public {
-        csm.activatePublicRelease();
+    function test_addNodeOperator_whenNoPublicRelease_earlyAdoptionProof()
+        public
+    {
         bytes32[] memory proof = merkleTree.getProof(0);
 
         uint16 keysCount = 1;
@@ -5573,7 +5736,29 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
         assertEq(curve.points[0], BOND_SIZE / 2);
     }
 
-    function test_addNodeOperator_WhenPublicReleaseWithProof() public {
+    function test_addNodeOperator_whenNoPublicRelease_revertWhen_noEarlyAdoptionProof()
+        public
+    {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+
+        vm.deal(nodeOperator, BOND_SIZE / 2);
+        vm.prank(nodeOperator);
+        vm.expectRevert(CSModule.NotAllowedToJoinYet.selector);
+        csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
+            keysCount,
+            keys,
+            signatures,
+            address(0),
+            address(0),
+            new bytes32[](0),
+            address(0)
+        );
+    }
+
+    function test_addNodeOperator_WhenPublicRelease_WithProof() public {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -5596,6 +5781,30 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
         );
         CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
         assertEq(curve.points[0], BOND_SIZE / 2);
+    }
+
+    function test_addNodeOperator_WhenPublicRelease_WithoutProof() public {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        csm.activatePublicRelease();
+
+        vm.deal(nodeOperator, BOND_SIZE);
+        vm.prank(nodeOperator);
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+        csm.addNodeOperatorETH{ value: (BOND_SIZE) * keysCount }(
+            keysCount,
+            keys,
+            signatures,
+            address(0),
+            address(0),
+            new bytes32[](0),
+            address(0)
+        );
+        CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
+        assertEq(curve.points[0], BOND_SIZE);
     }
 
     function test_addNodeOperator_RevertWhen_MoreThanMaxSigningKeysLimit()
@@ -5621,6 +5830,103 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
             proof,
             address(0)
         );
+    }
+}
+
+contract CSMEarlyAdoptionTestNoEA is CSMCommonNoPublicReleaseNoEA {
+    function test_addNodeOperator_whenNoPublicRelease_earlyAdoptionProof()
+        public
+    {
+        bytes32[] memory proof = merkleTree.getProof(0);
+
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+
+        vm.deal(nodeOperator, BOND_SIZE / 2);
+        vm.prank(nodeOperator);
+        vm.expectRevert(CSModule.NotAllowedToJoinYet.selector);
+        csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
+            keysCount,
+            keys,
+            signatures,
+            address(0),
+            address(0),
+            proof,
+            address(0)
+        );
+    }
+
+    function test_addNodeOperator_whenNoPublicRelease_revertWhen_noEarlyAdoptionProof()
+        public
+    {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+
+        vm.deal(nodeOperator, BOND_SIZE / 2);
+        vm.prank(nodeOperator);
+        vm.expectRevert(CSModule.NotAllowedToJoinYet.selector);
+        csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
+            keysCount,
+            keys,
+            signatures,
+            address(0),
+            address(0),
+            new bytes32[](0),
+            address(0)
+        );
+    }
+
+    function test_addNodeOperator_WhenPublicRelease_WithProof() public {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        csm.activatePublicRelease();
+
+        bytes32[] memory proof = merkleTree.getProof(0);
+        vm.deal(nodeOperator, BOND_SIZE);
+        vm.prank(nodeOperator);
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+        csm.addNodeOperatorETH{ value: (BOND_SIZE) * keysCount }(
+            keysCount,
+            keys,
+            signatures,
+            address(0),
+            address(0),
+            proof,
+            address(0)
+        );
+        CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
+        assertEq(curve.points[0], BOND_SIZE);
+    }
+
+    function test_addNodeOperator_WhenPublicRelease_WithoutProof() public {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        csm.activatePublicRelease();
+
+        vm.deal(nodeOperator, BOND_SIZE);
+        vm.prank(nodeOperator);
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+        csm.addNodeOperatorETH{ value: (BOND_SIZE) * keysCount }(
+            keysCount,
+            keys,
+            signatures,
+            address(0),
+            address(0),
+            new bytes32[](0),
+            address(0)
+        );
+        CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
+        assertEq(curve.points[0], BOND_SIZE);
     }
 }
 

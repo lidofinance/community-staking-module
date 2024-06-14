@@ -4,15 +4,22 @@
 pragma solidity 0.8.24;
 
 import { IStETH } from "../../../src/interfaces/IStETH.sol";
-import { PermitTokenBase } from "../Permit.sol";
 
-contract WstETHMock is PermitTokenBase {
+contract WstETHMock {
     IStETH public stETH;
 
     mapping(address => uint256) public _balance;
+    mapping(address account => mapping(address spender => uint256))
+        private _allowances;
     uint256 public _totalSupply;
 
     error NotEnoughBalance(uint256 balance);
+
+    event Approval(
+        address indexed owner,
+        address indexed spender,
+        uint256 value
+    );
 
     /**
      * @param _stETH address of the StETH token to wrap
@@ -91,5 +98,33 @@ contract WstETHMock is PermitTokenBase {
     function _burn(address _account, uint256 _amount) internal {
         _totalSupply -= _amount;
         _balance[_account] -= _amount;
+    }
+
+    function approve(
+        address spender,
+        uint256 value
+    ) public virtual returns (bool) {
+        _allowances[msg.sender][spender] = value;
+        return true;
+    }
+
+    function allowance(
+        address _owner,
+        address _spender
+    ) external view returns (uint256) {
+        return _allowances[_owner][_spender];
+    }
+
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 /* deadline */,
+        uint8 /* v */,
+        bytes32 /* r */,
+        bytes32 /* s */
+    ) external {
+        _allowances[owner][spender] = value;
+        emit Approval(owner, spender, value);
     }
 }

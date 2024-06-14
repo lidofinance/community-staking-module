@@ -56,26 +56,139 @@ contract Library {
         uint256 nodeOperatorId,
         uint256 startIndex,
         uint256 keysCount,
-        bytes memory pubkeys,
-        bytes memory signatures,
         uint256 bufOffset
-    ) external view {
+    ) external view returns (bytes memory keys, bytes memory sigs) {
+        (keys, sigs) = SigningKeys.initKeysSigsBuf(keysCount + bufOffset);
         SigningKeys.loadKeysSigs(
             nodeOperatorId,
             startIndex,
             keysCount,
-            pubkeys,
-            signatures,
+            keys,
+            sigs,
             bufOffset
         );
     }
 }
 
-contract SigningKeysTest is Test, Utilities {
+contract SigningKeysTestBase is Test, Utilities {
+    uint64 internal constant PUBKEY_LENGTH = 48;
+    uint64 internal constant SIGNATURE_LENGTH = 96;
+
     Library signingKeys;
 
     function setUp() public {
         signingKeys = new Library();
+    }
+}
+
+contract SigningKeysSaveTest is SigningKeysTestBase {
+    function test_saveKeysSigs() public {
+        uint256 keysCount = 1;
+        uint16 startIndex = 2;
+        uint256 nodeOperatorId = 154;
+        (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
+            keysCount,
+            startIndex
+        );
+        vm.expectEmit(true, true, true, true, address(signingKeys));
+        emit SigningKeys.SigningKeyAdded(nodeOperatorId, pubkeys);
+        uint256 newKeysCount = signingKeys.saveKeysSigs(
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            pubkeys,
+            signatures
+        );
+
+        assertEq(newKeysCount, startIndex + keysCount);
+    }
+
+    function test_saveKeysSigs_revertWhen_zeroKeys() public {
+        uint256 keysCount = 0;
+        uint16 startIndex = 2;
+        uint256 nodeOperatorId = 154;
+        (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
+            keysCount,
+            startIndex
+        );
+
+        vm.expectRevert(SigningKeys.InvalidKeysCount.selector);
+        signingKeys.saveKeysSigs(
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            pubkeys,
+            signatures
+        );
+    }
+
+    function test_saveKeysSigs_revertWhen_toManyKeys() public {
+        uint256 keysCount = type(uint32).max;
+        uint16 startIndex = 2;
+        uint256 nodeOperatorId = 154;
+
+        (bytes memory pubkeys, bytes memory signatures) = (
+            new bytes(0),
+            new bytes(0)
+        );
+
+        vm.expectRevert(SigningKeys.InvalidKeysCount.selector);
+        signingKeys.saveKeysSigs(
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            pubkeys,
+            signatures
+        );
+    }
+
+    function test_saveKeysSigs_revertWhen_invalidSigsLen() public {
+        uint256 keysCount = 10;
+        uint16 startIndex = 2;
+        uint256 nodeOperatorId = 154;
+        (bytes memory pubkeys, ) = keysSignatures(keysCount, startIndex);
+        vm.expectRevert(SigningKeys.InvalidLength.selector);
+        signingKeys.saveKeysSigs(
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            pubkeys,
+            new bytes(0)
+        );
+    }
+
+    function test_saveKeysSigs_revertWhen_invalidPubkeysLen() public {
+        uint256 keysCount = 10;
+        uint16 startIndex = 2;
+        uint256 nodeOperatorId = 154;
+        (, bytes memory signatures) = keysSignatures(keysCount, startIndex);
+        vm.expectRevert(SigningKeys.InvalidLength.selector);
+        signingKeys.saveKeysSigs(
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            new bytes(0),
+            signatures
+        );
+    }
+
+    function test_saveKeysSigs_revertWhen_EmptyKey() public {
+        uint256 keysCount = 10;
+        uint16 startIndex = 2;
+        uint256 nodeOperatorId = 154;
+        (
+            bytes memory pubkeys,
+            bytes memory signatures
+        ) = keysSignaturesWithZeroKey(keysCount, startIndex, 3);
+
+        vm.expectRevert(SigningKeys.EmptyKey.selector);
+        signingKeys.saveKeysSigs(
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            pubkeys,
+            signatures
+        );
     }
 
     function testFuzz_saveKeysSigs(
@@ -131,6 +244,97 @@ contract SigningKeysTest is Test, Utilities {
             keysCount,
             pubkeys,
             signatures
+        );
+    }
+}
+
+contract SigningKeysRemoveTest is SigningKeysTestBase {
+    function test_removeKeysSigs() public {
+        uint256 keysCount = 1;
+        uint16 startIndex = 2;
+        uint256 nodeOperatorId = 154;
+        (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        uint256 totalKeysCount = signingKeys.saveKeysSigs(
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            pubkeys,
+            signatures
+        );
+
+        vm.expectEmit(true, true, true, true, address(signingKeys));
+        emit SigningKeys.SigningKeyRemoved(nodeOperatorId, pubkeys);
+        uint256 newTotalKeysCount = signingKeys.removeKeysSigs(
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            totalKeysCount
+        );
+
+        assertEq(newTotalKeysCount, totalKeysCount - keysCount);
+    }
+
+    function test_removeKeysSigs_noKeysAdded() public {
+        uint256 keysCount = 10;
+        uint16 startIndex = 2;
+        uint256 nodeOperatorId = 154;
+
+        vm.expectEmit(true, true, true, true, address(signingKeys));
+        emit SigningKeys.SigningKeyRemoved(
+            nodeOperatorId,
+            new bytes(PUBKEY_LENGTH)
+        );
+        signingKeys.removeKeysSigs(
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            startIndex + keysCount
+        );
+    }
+
+    function test_removeKeysSigs_revertWhen_zeroKeys() public {
+        uint256 keysCount = 1;
+        uint16 startIndex = 2;
+        uint256 nodeOperatorId = 154;
+
+        vm.expectRevert(SigningKeys.InvalidKeysCount.selector);
+        signingKeys.removeKeysSigs(
+            nodeOperatorId,
+            startIndex,
+            0,
+            keysCount + startIndex
+        );
+    }
+
+    function test_removeKeysSigs_revertWhen_keysPlusStartHigherThanTotal()
+        public
+    {
+        uint256 keysCount = 1;
+        uint16 startIndex = 2;
+        uint256 nodeOperatorId = 154;
+
+        vm.expectRevert(SigningKeys.InvalidKeysCount.selector);
+        signingKeys.removeKeysSigs(
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            startIndex + keysCount - 1
+        );
+    }
+
+    function test_removeKeysSigs_revertWhen_totalKeysToHigh() public {
+        uint256 keysCount = 1;
+        uint16 startIndex = 2;
+        uint256 nodeOperatorId = 154;
+
+        vm.expectRevert(SigningKeys.InvalidKeysCount.selector);
+        signingKeys.removeKeysSigs(
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            uint256(type(uint32).max) + 1
         );
     }
 
@@ -228,6 +432,33 @@ contract SigningKeysTest is Test, Utilities {
 
         assertEq(newTotalKeysCount, totalKeysCount - keysCount);
     }
+}
+
+contract SigningKeysLoadTest is SigningKeysTestBase {
+    function test_loadKeys() public {
+        uint256 keysCount = 10;
+        uint16 startIndex = 2;
+        uint256 nodeOperatorId = 154;
+        (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
+            keysCount,
+            startIndex
+        );
+        signingKeys.saveKeysSigs(
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            pubkeys,
+            signatures
+        );
+
+        bytes memory loadedPubkeys = signingKeys.loadKeys(
+            nodeOperatorId,
+            startIndex,
+            keysCount
+        );
+
+        assertEq(loadedPubkeys, pubkeys);
+    }
 
     function testFuzz_loadKeys(
         uint256 nodeOperatorId,
@@ -259,7 +490,7 @@ contract SigningKeysTest is Test, Utilities {
             keysCount
         );
 
-        assertEq(loadedPubkeys.length, keysCount * 48);
+        assertEq(loadedPubkeys.length, keysCount * PUBKEY_LENGTH);
     }
 
     function testFuzz_loadKeys_empty(
@@ -280,7 +511,31 @@ contract SigningKeysTest is Test, Utilities {
             keysCount
         );
 
-        assertEq(loadedPubkeys.length, keysCount * 48);
+        assertEq(loadedPubkeys.length, keysCount * PUBKEY_LENGTH);
+    }
+
+    function test_loadKeysSigs() public {
+        uint256 keysCount = 10;
+        uint16 startIndex = 2;
+        uint256 nodeOperatorId = 154;
+
+        (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
+            keysCount,
+            startIndex
+        );
+        signingKeys.saveKeysSigs(
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            pubkeys,
+            signatures
+        );
+
+        (bytes memory loadedKeys, bytes memory loadedSigs) = signingKeys
+            .loadKeysSigs(nodeOperatorId, startIndex, keysCount, 0);
+
+        assertEq(loadedKeys, pubkeys);
+        assertEq(loadedSigs, signatures);
     }
 
     function testFuzz_loadKeysSigs(
@@ -309,17 +564,11 @@ contract SigningKeysTest is Test, Utilities {
             sigs
         );
 
-        (bytes memory publicKeys, bytes memory signatures) = SigningKeys
-            .initKeysSigsBuf(offset + keysCount);
+        (bytes memory loadedKeys, bytes memory loadedSigs) = signingKeys
+            .loadKeysSigs(nodeOperatorId, startIndex, keysCount, offset);
 
-        signingKeys.loadKeysSigs(
-            nodeOperatorId,
-            startIndex,
-            keysCount,
-            publicKeys,
-            signatures,
-            offset
-        );
+        assertEq(loadedKeys.length, (offset + keysCount) * PUBKEY_LENGTH);
+        assertEq(loadedSigs.length, (offset + keysCount) * SIGNATURE_LENGTH);
     }
 
     function testFuzz_loadKeysSigs_empty(
@@ -327,7 +576,7 @@ contract SigningKeysTest is Test, Utilities {
         uint256 startIndex,
         uint256 keysCount,
         uint256 offset
-    ) public view {
+    ) public {
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 200);
         vm.assume(offset < 100);
@@ -336,16 +585,10 @@ contract SigningKeysTest is Test, Utilities {
         }
         vm.assume(startIndex + keysCount < type(uint32).max);
 
-        (bytes memory publicKeys, bytes memory signatures) = SigningKeys
-            .initKeysSigsBuf(offset + keysCount);
+        (bytes memory loadedKeys, bytes memory loadedSigs) = signingKeys
+            .loadKeysSigs(nodeOperatorId, startIndex, keysCount, offset);
 
-        signingKeys.loadKeysSigs(
-            nodeOperatorId,
-            startIndex,
-            keysCount,
-            publicKeys,
-            signatures,
-            offset
-        );
+        assertEq(loadedKeys.length, (offset + keysCount) * PUBKEY_LENGTH);
+        assertEq(loadedSigs.length, (offset + keysCount) * SIGNATURE_LENGTH);
     }
 }
