@@ -131,7 +131,7 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
             address(0),
             10,
             4 weeks,
-            uint256(type(uint128).max) + 1
+            uint256(type(uint64).max) + 1
         );
     }
 
