@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -21,9 +21,9 @@ import { CSBondLock } from "../src/abstract/CSBondLock.sol";
 import { CSBondCurve } from "../src/abstract/CSBondCurve.sol";
 import { AssetRecoverer } from "../src/abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
-import { PermitTokenBase } from "./helpers/Permit.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 import { LidoMock } from "./helpers/mocks/LidoMock.sol";
+import { StETHMock } from "./helpers/mocks/StETHMock.sol";
 import { WstETHMock } from "./helpers/mocks/WstETHMock.sol";
 import { LidoLocatorMock } from "./helpers/mocks/LidoLocatorMock.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -98,12 +98,49 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
         );
     }
 
-    function test_initialize_RevertWhen_ZeroModuleAddress() public {
+    function test_constructor_RevertWhen_ZeroModuleAddress() public {
         vm.expectRevert(CSAccounting.ZeroModuleAddress.selector);
         accounting = new CSAccounting(
             address(locator),
             address(0),
             10,
+            4 weeks,
+            365 days
+        );
+    }
+
+    function test_constructor_RevertWhen_InvalidBondLockRetentionPeriod_MinMoreThanMax()
+        public
+    {
+        vm.expectRevert(CSBondLock.InvalidBondLockRetentionPeriod.selector);
+        accounting = new CSAccounting(
+            address(locator),
+            address(0),
+            10,
+            4 weeks,
+            2 weeks
+        );
+    }
+
+    function test_constructor_RevertWhen_InvalidBondLockRetentionPeriod_MaxTooBig()
+        public
+    {
+        vm.expectRevert(CSBondLock.InvalidBondLockRetentionPeriod.selector);
+        accounting = new CSAccounting(
+            address(locator),
+            address(0),
+            10,
+            4 weeks,
+            uint256(type(uint64).max) + 1
+        );
+    }
+
+    function test_constructor_RevertWhen_InvalidMaxBondCurveLength() public {
+        vm.expectRevert(CSBondCurve.InvalidBondCurveMaxLength.selector);
+        accounting = new CSAccounting(
+            address(locator),
+            address(0),
+            0,
             4 weeks,
             365 days
         );
@@ -219,7 +256,7 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     }
 }
 
-contract CSAccountingBaseTest is Test, Fixtures, Utilities, PermitTokenBase {
+contract CSAccountingBaseTest is Test, Fixtures, Utilities {
     LidoLocatorMock internal locator;
     WstETHMock internal wstETH;
     LidoMock internal stETH;
@@ -2966,7 +3003,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
     }
 }
 
-contract CSAccountingDepositsTest is CSAccountingBaseTest {
+contract CSAccountingDepositEthTest is CSAccountingBaseTest {
     function setUp() public override {
         super.setUp();
         mock_getNodeOperatorNonWithdrawnKeys(0);
@@ -3019,6 +3056,14 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         );
         assertEq(accounting.totalBondShares(), 0);
     }
+}
+
+contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
+    function setUp() public override {
+        super.setUp();
+        mock_getNodeOperatorNonWithdrawnKeys(0);
+        mock_getNodeOperatorsCount(1);
+    }
 
     function test_depositStETH() public {
         vm.deal(user, 32 ether);
@@ -3033,7 +3078,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
             0,
             32 ether,
             ICSAccounting.PermitInput({
-                value: 0,
+                value: 32 ether,
                 deadline: 0,
                 v: 0,
                 r: 0,
@@ -3092,10 +3137,200 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), 0);
     }
 
+    function test_depositStETH_withoutPermitButWithAllowance() public {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
+            _referal: address(0)
+        });
+        stETH.approve(address(accounting), type(uint256).max);
+        vm.stopPrank();
+
+        vm.prank(address(stakingModule));
+        accounting.depositStETH(
+            user,
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            stETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            sharesToDeposit,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            sharesToDeposit,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
+    }
+
+    function test_depositStETH_withPermit() public {
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
+            _referal: address(0)
+        });
+
+        vm.prank(address(stakingModule));
+        vm.expectEmit(true, true, true, true, address(stETH));
+        emit StETHMock.Approval(user, address(accounting), 32 ether);
+
+        accounting.depositStETH(
+            user,
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            stETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            sharesToDeposit,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            sharesToDeposit,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
+    }
+
+    function test_depositStETH_withPermit_AlreadyPermittedWithLess() public {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.approve(address(accounting), 1 ether);
+        vm.stopPrank();
+
+        vm.expectEmit(true, true, true, true, address(stETH));
+        emit StETHMock.Approval(user, address(accounting), 32 ether);
+
+        vm.recordLogs();
+
+        vm.prank(address(stakingModule));
+        accounting.depositStETH(
+            user,
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            2,
+            "should emit only one event about approve and deposit"
+        );
+    }
+
+    function test_depositStETH_withPermit_AlreadyPermittedWithInf() public {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.approve(address(accounting), UINT256_MAX);
+        vm.stopPrank();
+
+        vm.prank(address(stakingModule));
+
+        vm.recordLogs();
+
+        accounting.depositStETH(
+            user,
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            1,
+            "should emit only one event about deposit"
+        );
+    }
+
+    function test_depositStETH_withPermit_AlreadyPermittedWithTheSame() public {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.approve(address(accounting), 32 ether);
+        vm.stopPrank();
+
+        vm.recordLogs();
+
+        vm.prank(address(stakingModule));
+        accounting.depositStETH(
+            user,
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            1,
+            "should emit only one event about deposit"
+        );
+    }
+}
+
+contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
+    function setUp() public override {
+        super.setUp();
+        mock_getNodeOperatorNonWithdrawnKeys(0);
+        mock_getNodeOperatorsCount(1);
+    }
+
     function test_depositWstETH() public {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         uint256 sharesToDeposit = stETH.getSharesByPooledEth(
             wstETH.getStETHByWstETH(wstETHAmount)
@@ -3167,25 +3402,26 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), 0);
     }
 
-    function test_depositStETH_withPermit() public {
+    function test_depositWstETH_withoutPermitButWithAllowance() public {
         vm.deal(user, 32 ether);
-        vm.prank(user);
-        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
-            _referal: address(0)
-        });
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.approve(address(wstETH), UINT256_MAX);
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        uint256 sharesToDeposit = stETH.getSharesByPooledEth(
+            wstETH.getStETHByWstETH(wstETHAmount)
+        );
+        wstETH.approve(address(accounting), UINT256_MAX);
+        vm.stopPrank();
 
         vm.prank(address(stakingModule));
-        vm.expectEmit(true, true, true, true, address(stETH));
-        emit Approval(user, address(accounting), 32 ether);
-
-        accounting.depositStETH(
+        accounting.depositWstETH(
             user,
             0,
-            32 ether,
+            wstETHAmount,
             ICSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: type(uint256).max,
-                // mock permit signature
+                value: 0,
+                deadline: 0,
                 v: 0,
                 r: 0,
                 s: 0
@@ -3193,7 +3429,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         );
 
         assertEq(
-            stETH.balanceOf(user),
+            wstETH.balanceOf(user),
             0,
             "user balance should be 0 after deposit"
         );
@@ -3210,131 +3446,11 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), sharesToDeposit);
     }
 
-    function test_depositStETH_withPermit_AlreadyPermittedWithLess() public {
-        vm.deal(user, 32 ether);
-        vm.prank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
-
-        vm.mockCall(
-            address(stETH),
-            abi.encodeWithSelector(
-                stETH.allowance.selector,
-                user,
-                address(accounting)
-            ),
-            abi.encode(1 ether)
-        );
-
-        vm.expectEmit(true, true, true, true, address(stETH));
-        emit Approval(user, address(accounting), 32 ether);
-
-        vm.recordLogs();
-
-        vm.prank(address(stakingModule));
-        accounting.depositStETH(
-            user,
-            0,
-            32 ether,
-            ICSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: type(uint256).max,
-                // mock permit signature
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(
-            vm.getRecordedLogs().length,
-            2,
-            "should emit only one event about approve and deposit"
-        );
-    }
-
-    function test_depositStETH_withPermit_AlreadyPermittedWithInf() public {
-        vm.deal(user, 32 ether);
-        vm.prank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
-
-        vm.mockCall(
-            address(stETH),
-            abi.encodeWithSelector(
-                stETH.allowance.selector,
-                user,
-                address(accounting)
-            ),
-            abi.encode(UINT256_MAX)
-        );
-
-        vm.prank(address(stakingModule));
-
-        vm.recordLogs();
-
-        accounting.depositStETH(
-            user,
-            0,
-            32 ether,
-            ICSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: type(uint256).max,
-                // mock permit signature
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(
-            vm.getRecordedLogs().length,
-            1,
-            "should emit only one event about deposit"
-        );
-    }
-
-    function test_depositStETH_withPermit_AlreadyPermittedWithTheSame() public {
-        vm.deal(user, 32 ether);
-        vm.prank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
-
-        vm.mockCall(
-            address(stETH),
-            abi.encodeWithSelector(
-                stETH.allowance.selector,
-                user,
-                address(accounting)
-            ),
-            abi.encode(32 ether)
-        );
-
-        vm.recordLogs();
-
-        vm.prank(address(stakingModule));
-        accounting.depositStETH(
-            user,
-            0,
-            32 ether,
-            ICSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: type(uint256).max,
-                // mock permit signature
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(
-            vm.getRecordedLogs().length,
-            1,
-            "should emit only one event about deposit"
-        );
-    }
-
     function test_depositWstETH_withPermit() public {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         uint256 sharesToDeposit = stETH.getSharesByPooledEth(
             wstETH.getStETHByWstETH(wstETHAmount)
@@ -3342,7 +3458,7 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         vm.stopPrank();
 
         vm.expectEmit(true, true, true, true, address(wstETH));
-        emit Approval(user, address(accounting), 32 ether);
+        emit WstETHMock.Approval(user, address(accounting), 32 ether);
 
         vm.prank(address(stakingModule));
         accounting.depositWstETH(
@@ -3381,21 +3497,13 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
+        wstETH.approve(address(accounting), 1 ether);
         vm.stopPrank();
 
-        vm.mockCall(
-            address(wstETH),
-            abi.encodeWithSelector(
-                wstETH.allowance.selector,
-                user,
-                address(accounting)
-            ),
-            abi.encode(1 ether)
-        );
-
         vm.expectEmit(true, true, true, true, address(wstETH));
-        emit Approval(user, address(accounting), 32 ether);
+        emit WstETHMock.Approval(user, address(accounting), 32 ether);
 
         vm.recordLogs();
 
@@ -3425,18 +3533,10 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
+        wstETH.approve(address(accounting), UINT256_MAX);
         vm.stopPrank();
-
-        vm.mockCall(
-            address(wstETH),
-            abi.encodeWithSelector(
-                wstETH.allowance.selector,
-                user,
-                address(accounting)
-            ),
-            abi.encode(UINT256_MAX)
-        );
 
         vm.recordLogs();
 
@@ -3468,18 +3568,10 @@ contract CSAccountingDepositsTest is CSAccountingBaseTest {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
+        wstETH.approve(address(accounting), 32 ether);
         vm.stopPrank();
-
-        vm.mockCall(
-            address(wstETH),
-            abi.encodeWithSelector(
-                wstETH.allowance.selector,
-                user,
-                address(accounting)
-            ),
-            abi.encode(32 ether)
-        );
 
         vm.recordLogs();
 
@@ -3656,6 +3748,14 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         vm.prank(address(stakingModule));
         uint256 settled = accounting.settleLockedBondETH(0);
         assertEq(settled, 1 ether);
+        assertEq(accounting.getActualLockedBond(0), 0);
+    }
+
+    function test_settleLockedBondETH_noLocked() public {
+        mock_getNodeOperatorsCount(1);
+        vm.prank(address(stakingModule));
+        uint256 settled = accounting.settleLockedBondETH(0);
+        assertEq(settled, 0 ether);
         assertEq(accounting.getActualLockedBond(0), 0);
     }
 }
@@ -3884,7 +3984,7 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
             0,
             1 ether,
             ICSAccounting.PermitInput({
-                value: 0,
+                value: 1 ether,
                 deadline: 0,
                 v: 0,
                 r: 0,

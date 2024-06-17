@@ -1,15 +1,23 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
 
-import { PermitTokenBase } from "../Permit.sol";
-
-contract StETHMock is PermitTokenBase {
+contract StETHMock {
     uint256 public totalPooledEther;
     uint256 public totalShares;
     mapping(address => uint256) public shares;
+    mapping(address account => mapping(address spender => uint256))
+        private _allowances;
+
     error NotEnoughShares(uint256 balance);
+    error AllowanceExceded(address owner, address spender);
+
+    event Approval(
+        address indexed owner,
+        address indexed spender,
+        uint256 value
+    );
 
     constructor(uint256 _totalPooledEther) {
         totalPooledEther = _totalPooledEther;
@@ -72,6 +80,9 @@ contract StETHMock is PermitTokenBase {
         address _recipient,
         uint256 _amount
     ) public returns (bool) {
+        if (_allowances[_sender][_recipient] < _amount) {
+            revert AllowanceExceded(_sender, _recipient);
+        }
         uint256 _sharesToTransfer = getSharesByPooledEth(_amount);
         transferSharesFrom(_sender, _recipient, _sharesToTransfer);
         return true;
@@ -90,7 +101,9 @@ contract StETHMock is PermitTokenBase {
         address _recipient,
         uint256 _sharesAmount
     ) public returns (uint256) {
-        require(shares[msg.sender] >= _sharesAmount, "not enough shares");
+        if (shares[msg.sender] < _sharesAmount) {
+            revert NotEnoughShares(shares[msg.sender]);
+        }
         shares[msg.sender] -= _sharesAmount;
         shares[_recipient] += _sharesAmount;
         return _sharesAmount;
@@ -104,6 +117,12 @@ contract StETHMock is PermitTokenBase {
         address _recipient,
         uint256 _sharesAmount
     ) public returns (uint256) {
+        if (
+            _allowances[_sender][_recipient] <
+            getPooledEthByShares(_sharesAmount)
+        ) {
+            revert AllowanceExceded(_sender, _recipient);
+        }
         if (shares[_sender] < _sharesAmount) {
             revert NotEnoughShares(shares[_sender]);
         }
@@ -113,9 +132,30 @@ contract StETHMock is PermitTokenBase {
     }
 
     function approve(
-        address /* spender */,
-        uint256 /* value */
+        address spender,
+        uint256 value
     ) public virtual returns (bool) {
+        _allowances[msg.sender][spender] = value;
         return true;
+    }
+
+    function allowance(
+        address _owner,
+        address _spender
+    ) external view returns (uint256) {
+        return _allowances[_owner][_spender];
+    }
+
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 /* deadline */,
+        uint8 /* v */,
+        bytes32 /* r */,
+        bytes32 /* s */
+    ) external {
+        _allowances[owner][spender] = value;
+        emit Approval(owner, spender, value);
     }
 }

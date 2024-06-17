@@ -88,12 +88,12 @@ gas-report:
             if to_print:
                 fh.write(line + '\n')
 
-coverage:
-    forge coverage
+coverage *args:
+    forge coverage --no-match-path 'test/fork/*' {{args}}
 
 # Run coverage and save the report in LCOV file.
-coverage-lcov:
-    forge coverage --report lcov
+coverage-lcov *args:
+    forge coverage --no-match-path 'test/fork/*' --report lcov {{args}}
 
 abis:
     just build --ast

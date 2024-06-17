@@ -208,6 +208,7 @@ contract CSAccounting is
         uint256 stETHAmount,
         PermitInput calldata permit
     ) external whenResumed onlyCSM {
+        // @dev for some reason foundry coverage consider this if as not fully covered. Check tests to see it is covered indeed
         // preventing revert for already used permit or avoid permit usage in case of value == 0
         if (
             permit.value > 0 &&
@@ -240,6 +241,7 @@ contract CSAccounting is
         uint256 wstETHAmount,
         PermitInput calldata permit
     ) external whenResumed onlyCSM {
+        // @dev for some reason foundry coverage consider this if as not fully covered. Check tests to see it is covered indeed
         // preventing revert for already used permit or avoid permit usage in case of value == 0
         if (
             permit.value > 0 &&
