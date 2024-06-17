@@ -43,31 +43,39 @@ contract CSFeeDistributorConstructorTest is Test, Fixtures, Utilities {
     function test_constructor_happyPath() public {
         feeDistributor = new CSFeeDistributor(
             address(stETH),
-            address(accounting)
+            address(accounting),
+            oracle
         );
 
         assertEq(feeDistributor.ACCOUNTING(), address(accounting));
         assertEq(address(feeDistributor.STETH()), address(stETH));
+        assertEq(feeDistributor.ORACLE(), oracle);
     }
 
     function test_constructor_RevertWhen_InitOnImpl() public {
         feeDistributor = new CSFeeDistributor(
             address(stETH),
-            address(accounting)
+            address(accounting),
+            oracle
         );
 
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        feeDistributor.initialize(address(this), oracle);
+        feeDistributor.initialize(address(this));
     }
 
     function test_initialize_RevertWhen_ZeroAccountingAddress() public {
         vm.expectRevert(CSFeeDistributor.ZeroAccountingAddress.selector);
-        new CSFeeDistributor(address(stETH), address(0));
+        new CSFeeDistributor(address(stETH), address(0), oracle);
     }
 
     function test_initialize_RevertWhen_ZeroStEthAddress() public {
         vm.expectRevert(CSFeeDistributor.ZeroStEthAddress.selector);
-        new CSFeeDistributor(address(0), address(accounting));
+        new CSFeeDistributor(address(0), address(accounting), oracle);
+    }
+
+    function test_initialize_RevertWhen_ZeroOracleAddress() public {
+        vm.expectRevert(CSFeeDistributor.ZeroOracleAddress.selector);
+        new CSFeeDistributor(address(stETH), address(accounting), address(0));
     }
 }
 
@@ -93,7 +101,8 @@ contract CSFeeDistributorInitTest is Test, Fixtures, Utilities {
 
         feeDistributor = new CSFeeDistributor(
             address(stETH),
-            address(accounting)
+            address(accounting),
+            oracle
         );
     }
 
@@ -101,14 +110,7 @@ contract CSFeeDistributorInitTest is Test, Fixtures, Utilities {
         _enableInitializers(address(feeDistributor));
 
         vm.expectRevert(CSFeeDistributor.ZeroAdminAddress.selector);
-        feeDistributor.initialize(address(0), oracle);
-    }
-
-    function test_initialize_RevertWhen_zeroOracle() public {
-        _enableInitializers(address(feeDistributor));
-
-        vm.expectRevert(CSFeeDistributor.ZeroOracleAddress.selector);
-        feeDistributor.initialize(address(this), address(0));
+        feeDistributor.initialize(address(0));
     }
 }
 
@@ -134,11 +136,12 @@ contract CSFeeDistributorTest is Test, Fixtures, Utilities {
 
         feeDistributor = new CSFeeDistributor(
             address(stETH),
-            address(accounting)
+            address(accounting),
+            oracle
         );
 
         _enableInitializers(address(feeDistributor));
-        feeDistributor.initialize(address(this), oracle);
+        feeDistributor.initialize(address(this));
 
         tree = new MerkleTree();
 
@@ -472,12 +475,13 @@ contract CSFeeDistributorAssetRecovererTest is Test, Fixtures, Utilities {
 
         feeDistributor = new CSFeeDistributor(
             address(stETH),
-            address(accounting)
+            address(accounting),
+            nextAddress("ORACLE")
         );
 
         _enableInitializers(address(feeDistributor));
 
-        feeDistributor.initialize(address(this), nextAddress("ORACLE"));
+        feeDistributor.initialize(address(this));
 
         feeDistributor.grantRole(feeDistributor.RECOVERER_ROLE(), recoverer);
     }

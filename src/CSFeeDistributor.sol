@@ -19,11 +19,11 @@ contract CSFeeDistributor is
     AccessControlEnumerableUpgradeable,
     AssetRecoverer
 {
-    bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
     IStETH public immutable STETH;
     address public immutable ACCOUNTING;
+    address public immutable ORACLE;
 
     /// @notice Merkle Tree root
     bytes32 public treeRoot;
@@ -52,6 +52,7 @@ contract CSFeeDistributor is
     error ZeroAdminAddress();
     error ZeroOracleAddress();
     error NotAccounting();
+    error NotOracle();
 
     error InvalidTreeRoot();
     error InvalidTreeCID();
@@ -65,23 +66,28 @@ contract CSFeeDistributor is
         _;
     }
 
-    constructor(address stETH, address accounting) {
+    modifier onlyOracle() {
+        if (msg.sender != ORACLE) revert NotOracle();
+        _;
+    }
+
+    constructor(address stETH, address accounting, address oracle) {
         if (accounting == address(0)) revert ZeroAccountingAddress();
+        if (oracle == address(0)) revert ZeroOracleAddress();
         if (stETH == address(0)) revert ZeroStEthAddress();
 
         ACCOUNTING = accounting;
         STETH = IStETH(stETH);
+        ORACLE = oracle;
 
         _disableInitializers();
     }
 
-    function initialize(address admin, address oracle) external initializer {
+    function initialize(address admin) external initializer {
         __AccessControlEnumerable_init();
         if (admin == address(0)) revert ZeroAdminAddress();
-        if (oracle == address(0)) revert ZeroOracleAddress();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
-        _grantRole(ORACLE_ROLE, oracle);
     }
 
     /// @notice Distribute fees to the Accounting in favor of the Node Operator
@@ -118,7 +124,7 @@ contract CSFeeDistributor is
         bytes32 _treeRoot,
         string calldata _treeCid,
         uint256 distributed
-    ) external onlyRole(ORACLE_ROLE) {
+    ) external onlyOracle {
         if (
             totalClaimableShares + distributed > STETH.sharesOf(address(this))
         ) {

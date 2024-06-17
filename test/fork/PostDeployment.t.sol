@@ -232,13 +232,7 @@ contract CSFeeDistributorDeploymentTest is Test, Utilities, DeploymentFixtures {
     function test_constructor() public {
         assertEq(address(feeDistributor.STETH()), address(lido));
         assertEq(feeDistributor.ACCOUNTING(), address(accounting));
-    }
-
-    function test_initializer() public {
-        assertEq(
-            feeDistributor.getRoleMember(feeDistributor.ORACLE_ROLE(), 0),
-            address(oracle)
-        );
+        assertEq(feeDistributor.ORACLE(), address(oracle));
     }
 
     function test_roles() public {
@@ -271,10 +265,7 @@ contract CSFeeDistributorDeploymentTest is Test, Utilities, DeploymentFixtures {
             proxy.proxy__getImplementation()
         );
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        distributorImpl.initialize({
-            admin: deployParams.votingAddress,
-            oracle: address(oracle)
-        });
+        distributorImpl.initialize({ admin: deployParams.votingAddress });
     }
 }
 

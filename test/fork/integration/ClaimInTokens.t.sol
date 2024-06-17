@@ -41,12 +41,6 @@ contract ClaimIntegrationTest is
         if (csm.isPaused()) csm.resume();
         if (!csm.publicRelease()) csm.activatePublicRelease();
 
-        vm.startPrank(
-            feeDistributor.getRoleMember(feeDistributor.DEFAULT_ADMIN_ROLE(), 0)
-        );
-        feeDistributor.grantRole(feeDistributor.ORACLE_ROLE(), address(this));
-        vm.stopPrank();
-
         user = nextAddress("User");
         stranger = nextAddress("stranger");
         nodeOperator = nextAddress("NodeOperator");
@@ -202,6 +196,7 @@ contract ClaimIntegrationTest is
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
 
+        vm.prank(feeDistributor.ORACLE());
         feeDistributor.processOracleReport(root, "Qm", shares);
 
         vm.prank(nodeOperator);
@@ -233,6 +228,7 @@ contract ClaimIntegrationTest is
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
 
+        vm.prank(feeDistributor.ORACLE());
         feeDistributor.processOracleReport(root, "Qm", shares);
 
         vm.prank(nodeOperator);
@@ -269,6 +265,7 @@ contract ClaimIntegrationTest is
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
 
+        vm.prank(feeDistributor.ORACLE());
         feeDistributor.processOracleReport(root, "Qm", shares);
 
         vm.prank(nodeOperator);
