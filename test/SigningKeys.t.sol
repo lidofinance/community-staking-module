@@ -192,11 +192,10 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
     }
 
     function testFuzz_saveKeysSigs(
-        uint256 nodeOperatorId,
-        uint256 startIndex,
-        uint256 keysCount
+        uint64 nodeOperatorId,
+        uint32 startIndex,
+        uint32 keysCount
     ) public {
-        vm.assume(nodeOperatorId < type(uint64).max);
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 100);
         unchecked {
@@ -220,12 +219,11 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
     }
 
     function testFuzz_saveKeysSigs_reverWhen_EmptyKey(
-        uint256 nodeOperatorId,
-        uint256 startIndex,
-        uint256 keysCount,
+        uint64 nodeOperatorId,
+        uint32 startIndex,
+        uint32 keysCount,
         uint8 offset
     ) public {
-        vm.assume(nodeOperatorId < type(uint64).max);
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 100);
         vm.assume(offset < keysCount);
@@ -341,12 +339,11 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
     }
 
     function testFuzz_removeKeysSigs_offsetRigth(
-        uint256 nodeOperatorId,
-        uint256 startIndex,
-        uint256 keysCount,
+        uint64 nodeOperatorId,
+        uint32 startIndex,
+        uint32 keysCount,
         uint8 offset
     ) public {
-        vm.assume(nodeOperatorId < type(uint64).max);
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 100);
         vm.assume(offset < keysCount);
@@ -377,12 +374,11 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
     }
 
     function testFuzz_removeKeysSigs_offsetLeft(
-        uint256 nodeOperatorId,
-        uint256 startIndex,
-        uint256 keysCount,
+        uint64 nodeOperatorId,
+        uint32 startIndex,
+        uint32 keysCount,
         uint8 offset
     ) public {
-        vm.assume(nodeOperatorId < type(uint64).max);
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 100);
         vm.assume(offset < keysCount);
@@ -414,11 +410,10 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
     }
 
     function testFuzz_removeKeysSigs_NoKeysAdded(
-        uint256 nodeOperatorId,
-        uint256 startIndex,
-        uint256 keysCount
+        uint64 nodeOperatorId,
+        uint32 startIndex,
+        uint32 keysCount
     ) public {
-        vm.assume(nodeOperatorId < type(uint64).max);
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 200);
         unchecked {
@@ -466,11 +461,10 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
     }
 
     function testFuzz_loadKeys(
-        uint256 nodeOperatorId,
-        uint256 startIndex,
-        uint256 keysCount
+        uint64 nodeOperatorId,
+        uint32 startIndex,
+        uint32 keysCount
     ) public {
-        vm.assume(nodeOperatorId < type(uint64).max);
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 100);
         unchecked {
@@ -500,11 +494,10 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
     }
 
     function testFuzz_loadKeys_empty(
-        uint256 nodeOperatorId,
-        uint256 startIndex,
-        uint256 keysCount
+        uint64 nodeOperatorId,
+        uint32 startIndex,
+        uint32 keysCount
     ) public {
-        vm.assume(nodeOperatorId < type(uint64).max);
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 500);
         unchecked {
@@ -546,12 +539,11 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
     }
 
     function testFuzz_loadKeysSigs(
-        uint256 nodeOperatorId,
-        uint256 startIndex,
-        uint256 keysCount,
+        uint64 nodeOperatorId,
+        uint32 startIndex,
+        uint32 keysCount,
         uint256 offset
     ) public {
-        vm.assume(nodeOperatorId < type(uint64).max);
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 100);
         vm.assume(offset < 100);
@@ -580,12 +572,11 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
     }
 
     function testFuzz_loadKeysSigs_empty(
-        uint256 nodeOperatorId,
-        uint256 startIndex,
-        uint256 keysCount,
+        uint64 nodeOperatorId,
+        uint32 startIndex,
+        uint32 keysCount,
         uint256 offset
     ) public {
-        vm.assume(nodeOperatorId < type(uint64).max);
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 200);
         vm.assume(offset < 100);
