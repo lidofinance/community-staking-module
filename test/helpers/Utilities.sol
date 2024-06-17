@@ -76,7 +76,7 @@ contract Utilities is CommonBase {
                 new bytes(48 - index.length),
                 index
             );
-            if (i == startIndex + zeroKeyIndex) {
+            if (i == uint32(startIndex) + uint32(zeroKeyIndex)) {
                 key = new bytes(48);
             }
             bytes memory sign = bytes.concat(
