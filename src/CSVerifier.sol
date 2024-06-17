@@ -293,7 +293,7 @@ contract CSVerifier is ICSVerifier {
         // Given no losses for the protocol,
         // significant cost of attack (1 or 8 ETH),
         // and lack of feasible ways to mitigate it in the smart contract's code,
-        // it is proposed to accnowleadge possibility ot the attack
+        // it is proposed to acknowledge possibility of the attack
         // and be ready to propose a corresponding vote to the DAO if it will ever happen
         if (!witness.slashed && gweiToWei(witness.amount) < 8 ether) {
             revert PartialWitdrawal();
