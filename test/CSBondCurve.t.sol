@@ -235,8 +235,6 @@ contract CSBondCurveTest is Test {
         curvePoints[0] = 1 wei;
         uint256 curveId = bondCurve.addBondCurve(curvePoints);
 
-        bondCurve.getBondCurve(curveId);
-
         uint256 amount = type(uint256).max;
 
         assertEq(

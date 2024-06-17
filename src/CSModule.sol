@@ -1668,7 +1668,6 @@ contract CSModule is
         no.stuckValidatorsCount = uint32(stuckValidatorsCount);
         emit StuckSigningKeysCountChanged(nodeOperatorId, stuckValidatorsCount);
 
-        // TODO: think about reforge the condition: is `no.depositableValidatorsCount > 0` required?
         if (stuckValidatorsCount > 0 && no.depositableValidatorsCount > 0) {
             // INFO: The only consequence of stuck keys from the on-chain perspective is suspending deposits to the
             // Node Operator. To do that, we set the depositableValidatorsCount to 0 for this Node Operator. Hence
