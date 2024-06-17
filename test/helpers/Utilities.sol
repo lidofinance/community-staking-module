@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
@@ -40,7 +40,7 @@ contract Utilities is CommonBase {
     ) public pure returns (bytes memory, bytes memory) {
         bytes memory keys;
         bytes memory signatures;
-        for (uint16 i = startIndex; i < startIndex + keysCount; i++) {
+        for (uint256 i = startIndex; i < startIndex + keysCount; i++) {
             bytes memory index = abi.encodePacked(i + 1);
             bytes memory key = bytes.concat(
                 new bytes(48 - index.length),
@@ -60,18 +60,28 @@ contract Utilities is CommonBase {
         uint256 keysCount,
         uint16 startIndex
     ) public pure returns (bytes memory, bytes memory) {
+        return keysSignaturesWithZeroKey(keysCount, startIndex, 0);
+    }
+
+    function keysSignaturesWithZeroKey(
+        uint256 keysCount,
+        uint16 startIndex,
+        uint16 zeroKeyIndex
+    ) public pure returns (bytes memory, bytes memory) {
         bytes memory keys;
         bytes memory signatures;
-        for (uint16 i = startIndex; i < startIndex + keysCount; i++) {
-            bytes memory keyIndex = abi.encodePacked(i);
-            bytes memory sigIndex = abi.encodePacked(i + 1);
+        for (uint256 i = startIndex; i < startIndex + keysCount; i++) {
+            bytes memory index = abi.encodePacked(i + 1);
             bytes memory key = bytes.concat(
-                new bytes(48 - keyIndex.length),
-                keyIndex
+                new bytes(48 - index.length),
+                index
             );
+            if (i == uint32(startIndex) + uint32(zeroKeyIndex)) {
+                key = new bytes(48);
+            }
             bytes memory sign = bytes.concat(
-                new bytes(96 - sigIndex.length),
-                sigIndex
+                new bytes(96 - index.length),
+                index
             );
             keys = bytes.concat(keys, key);
             signatures = bytes.concat(signatures, sign);

@@ -822,6 +822,7 @@ contract CSModule is
     /// @notice Called when exited and stuck validators counts updated.
     ///         This method is not used in CSM, hence it is empty
     /// @dev Called by StakingRouter
+    // @dev for some reason foundry coverage consider this function as not fully covered. Check tests to see it is covered indeed
     function onExitedAndStuckValidatorsCountsUpdated()
         external
         onlyRole(STAKING_ROUTER_ROLE)
@@ -908,7 +909,42 @@ contract CSModule is
         uint256 keysCount
     ) external {
         _onlyNodeOperatorManager(nodeOperatorId);
-        _removeSigningKeys(nodeOperatorId, startIndex, keysCount);
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        if (startIndex < no.totalDepositedKeys) {
+            revert SigningKeysInvalidOffset();
+        }
+
+        // solhint-disable-next-line func-named-parameters
+        uint256 newTotalSigningKeys = SigningKeys.removeKeysSigs(
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            no.totalAddedKeys
+        );
+
+        // The Node Operator is charged for the every removed key. It's motivated by the fact that the DAO should cleanup
+        // the queue from the empty batches related to the Node Operator. It's possible to have multiple batches with only one
+        // key in it, so it means the DAO should be able to cover removal costs for as much batches as keys removed in this case.
+        uint256 amountToCharge = keyRemovalCharge * keysCount;
+        if (amountToCharge != 0) {
+            accounting.chargeFee(nodeOperatorId, amountToCharge);
+            emit KeyRemovalChargeApplied(nodeOperatorId, amountToCharge);
+        }
+        no.totalAddedKeys = uint32(newTotalSigningKeys);
+        emit TotalSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
+
+        no.totalVettedKeys = uint32(newTotalSigningKeys);
+        emit VettedSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
+
+        // Nonce is updated below due to keys state change
+        // Normalize queue should be called due to possible increase in depositable possible
+        _updateDepositableValidatorsCount({
+            nodeOperatorId: nodeOperatorId,
+            incrementNonceIfUpdated: false,
+            normalizeQueueIfUpdated: true
+        });
+        _incrementModuleNonce();
     }
 
     // @notice CSM will go live before EIP-7002
@@ -1499,8 +1535,10 @@ contract CSModule is
         address referrer,
         bytes32[] calldata proof
     ) internal returns (uint256 id) {
-        if (!publicRelease && proof.length == 0) {
-            revert NotAllowedToJoinYet();
+        if (!publicRelease) {
+            if (proof.length == 0 || address(earlyAdoption) == address(0)) {
+                revert NotAllowedToJoinYet();
+            }
         }
 
         id = _nodeOperatorsCount;
@@ -1573,49 +1611,6 @@ contract CSModule is
 
         // Nonce is updated below since in case of stuck keys depositable keys might not change
         // Due to new bonded keys normalize queue is required
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: false,
-            normalizeQueueIfUpdated: true
-        });
-        _incrementModuleNonce();
-    }
-
-    function _removeSigningKeys(
-        uint256 nodeOperatorId,
-        uint256 startIndex,
-        uint256 keysCount
-    ) internal {
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-
-        if (startIndex < no.totalDepositedKeys) {
-            revert SigningKeysInvalidOffset();
-        }
-
-        // solhint-disable-next-line func-named-parameters
-        uint256 newTotalSigningKeys = SigningKeys.removeKeysSigs(
-            nodeOperatorId,
-            startIndex,
-            keysCount,
-            no.totalAddedKeys
-        );
-
-        // The Node Operator is charged for the every removed key. It's motivated by the fact that the DAO should cleanup
-        // the queue from the empty batches related to the Node Operator. It's possible to have multiple batches with only one
-        // key in it, so it means the DAO should be able to cover removal costs for as much batches as keys removed in this case.
-        uint256 amountToCharge = keyRemovalCharge * keysCount;
-        if (amountToCharge != 0) {
-            accounting.chargeFee(nodeOperatorId, amountToCharge);
-            emit KeyRemovalChargeApplied(nodeOperatorId, amountToCharge);
-        }
-        no.totalAddedKeys = uint32(newTotalSigningKeys);
-        emit TotalSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
-
-        no.totalVettedKeys = uint32(newTotalSigningKeys);
-        emit VettedSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
-
-        // Nonce is updated below due to keys state change
-        // Normalize queue should be called due to possible increase in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: false,

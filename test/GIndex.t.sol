@@ -165,7 +165,7 @@ contract GIndexTest is Test {
         lib.concat(pack(1024, 1), ZERO);
     }
 
-    function test_concat_BigIndicesBorderCases() public {
+    function test_concat_BigIndicesBorderCases() public view {
         lib.concat(pack(2 ** 9, 0), pack(2 ** 238, 0));
         lib.concat(pack(2 ** 47, 0), pack(2 ** 200, 0));
         lib.concat(pack(2 ** 199, 0), pack(2 ** 48, 0));

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -105,6 +105,11 @@ abstract contract CSBondCoreTestBase is Test, Fixtures, Utilities {
         testChargeRecipient = nextAddress("CHARGERECIPIENT");
 
         bondCore = new CSBondCoreTestable(address(locator));
+
+        vm.startPrank(address(bondCore));
+        stETH.approve(address(burner), UINT256_MAX);
+        stETH.approve(address(wstETH), UINT256_MAX);
+        vm.stopPrank();
     }
 
     uint256[] public mockedRequestIds = [1];
@@ -275,8 +280,10 @@ contract CSBondCoreETHTest is CSBondCoreTestBase {
 contract CSBondCoreStETHTest is CSBondCoreTestBase {
     function test_depositStETH() public {
         vm.deal(user, 1 ether);
-        vm.prank(user);
+        vm.startPrank(user);
         stETH.submit{ value: 1 ether }(address(0));
+        stETH.approve(address(bondCore), 1 ether);
+        vm.stopPrank();
 
         vm.expectEmit(true, true, true, true, address(bondCore));
         emit CSBondCore.BondDepositedStETH(0, user, 1 ether);
@@ -394,6 +401,7 @@ contract CSBondCoreWstETHTest is CSBondCoreTestBase {
         vm.deal(user, 1 ether);
         vm.startPrank(user);
         stETH.submit{ value: 1 ether }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(1 ether);
         vm.stopPrank();
 
@@ -584,6 +592,45 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
                 IBurner.requestBurnShares.selector,
                 address(bondCore),
                 shares
+            )
+        );
+
+        bondCore.burn(0, 32 ether);
+
+        assertEq(
+            bondCore.getBondShares(0),
+            0,
+            "bond shares should be 0 after burning"
+        );
+        assertEq(bondCore.totalBondShares(), 0);
+    }
+
+    function test_burn_NoApproveToBurner() public {
+        _deposit(32 ether);
+
+        vm.prank(address(bondCore));
+        stETH.approve(address(burner), 0);
+
+        uint256 shares = stETH.getSharesByPooledEth(32 ether);
+        uint256 burned = stETH.getPooledEthByShares(shares);
+        vm.expectEmit(true, true, true, true, address(bondCore));
+        emit CSBondCore.BondBurned(0, burned, burned);
+
+        vm.expectCall(
+            locator.burner(),
+            abi.encodeWithSelector(
+                IBurner.requestBurnShares.selector,
+                address(bondCore),
+                shares
+            )
+        );
+
+        vm.expectCall(
+            address(stETH),
+            abi.encodeWithSelector(
+                stETH.approve.selector,
+                address(address(burner)),
+                UINT256_MAX
             )
         );
 
