@@ -324,7 +324,7 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
         );
     }
 
-    function test_removeKeysSigs_revertWhen_totalKeysToHigh() public {
+    function test_removeKeysSigs_revertWhen_totalKeysTooHigh() public {
         uint256 keysCount = 1;
         uint16 startIndex = 2;
         uint256 nodeOperatorId = 154;
