@@ -101,6 +101,13 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
         );
 
         assertEq(newKeysCount, startIndex + keysCount);
+        bytes memory loadedPubkeys = signingKeys.loadKeys(
+            nodeOperatorId,
+            startIndex,
+            keysCount
+        );
+
+        assertEq(loadedPubkeys, pubkeys);
     }
 
     function test_saveKeysSigs_revertWhen_zeroKeys() public {
@@ -201,7 +208,6 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
         }
-        vm.assume(startIndex + keysCount < type(uint32).max);
 
         (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
             keysCount,
@@ -216,6 +222,13 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
         );
 
         assertEq(newKeysCount, startIndex + keysCount);
+        bytes memory loadedPubkeys = signingKeys.loadKeys(
+            nodeOperatorId,
+            startIndex,
+            keysCount
+        );
+
+        assertEq(loadedPubkeys, pubkeys);
     }
 
     function testFuzz_saveKeysSigs_reverWhen_EmptyKey(
@@ -230,7 +243,6 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
         }
-        vm.assume(startIndex + keysCount < type(uint32).max);
 
         (
             bytes memory pubkeys,
@@ -350,7 +362,6 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
         }
-        vm.assume(startIndex + keysCount < type(uint32).max);
 
         (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -386,7 +397,6 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
         }
-        vm.assume(startIndex + keysCount < type(uint32).max);
 
         (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -419,7 +429,6 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
         }
-        vm.assume(startIndex + keysCount < type(uint32).max);
 
         uint256 totalKeysCount = startIndex + keysCount;
 
@@ -470,7 +479,6 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
         }
-        vm.assume(startIndex + keysCount < type(uint32).max);
 
         (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
             keysCount,
@@ -503,7 +511,6 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
         }
-        vm.assume(startIndex + keysCount < type(uint32).max);
 
         bytes memory loadedPubkeys = signingKeys.loadKeys(
             nodeOperatorId,
@@ -550,7 +557,6 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
         }
-        vm.assume(startIndex + keysCount < type(uint32).max);
 
         (bytes memory pubkeys, bytes memory sigs) = keysSignatures(
             keysCount,
@@ -583,7 +589,6 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
         }
-        vm.assume(startIndex + keysCount < type(uint32).max);
 
         (bytes memory loadedKeys, bytes memory loadedSigs) = signingKeys
             .loadKeysSigs(nodeOperatorId, startIndex, keysCount, offset);
