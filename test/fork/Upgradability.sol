@@ -37,10 +37,11 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
 
     function test_CSAccountingUpgradeTo() public {
         OssifiableProxy proxy = OssifiableProxy(payable(address(accounting)));
+        uint256 currentMaxCurveLength = accounting.MAX_CURVE_LENGTH();
         CSAccounting newAccounting = new CSAccounting({
             lidoLocator: address(accounting.LIDO_LOCATOR()),
             communityStakingModule: address(csm),
-            maxCurveLength: 20,
+            maxCurveLength: currentMaxCurveLength + 10,
             minBondLockRetentionPeriod: accounting
                 .MIN_BOND_LOCK_RETENTION_PERIOD(),
             maxBondLockRetentionPeriod: accounting
@@ -48,7 +49,7 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
         });
         vm.prank(proxy.proxy__getAdmin());
         proxy.proxy__upgradeTo(address(newAccounting));
-        assertEq(accounting.MAX_CURVE_LENGTH(), 20);
+        assertEq(accounting.MAX_CURVE_LENGTH(), currentMaxCurveLength + 10);
     }
 
     function test_CSFeeOracleUpgradeTo() public {
