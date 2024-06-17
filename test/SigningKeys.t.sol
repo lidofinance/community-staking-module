@@ -196,6 +196,7 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
         uint256 startIndex,
         uint256 keysCount
     ) public {
+        vm.assume(nodeOperatorId < type(uint64).max);
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 100);
         unchecked {
@@ -224,6 +225,7 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
         uint256 keysCount,
         uint8 offset
     ) public {
+        vm.assume(nodeOperatorId < type(uint64).max);
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 100);
         vm.assume(offset < keysCount);
@@ -344,6 +346,7 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
         uint256 keysCount,
         uint8 offset
     ) public {
+        vm.assume(nodeOperatorId < type(uint64).max);
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 100);
         vm.assume(offset < keysCount);
@@ -379,6 +382,7 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
         uint256 keysCount,
         uint8 offset
     ) public {
+        vm.assume(nodeOperatorId < type(uint64).max);
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 100);
         vm.assume(offset < keysCount);
@@ -414,6 +418,7 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
         uint256 startIndex,
         uint256 keysCount
     ) public {
+        vm.assume(nodeOperatorId < type(uint64).max);
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 200);
         unchecked {
@@ -465,6 +470,7 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
         uint256 startIndex,
         uint256 keysCount
     ) public {
+        vm.assume(nodeOperatorId < type(uint64).max);
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 100);
         unchecked {
@@ -498,6 +504,7 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
         uint256 startIndex,
         uint256 keysCount
     ) public {
+        vm.assume(nodeOperatorId < type(uint64).max);
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 500);
         unchecked {
@@ -544,6 +551,7 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
         uint256 keysCount,
         uint256 offset
     ) public {
+        vm.assume(nodeOperatorId < type(uint64).max);
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 100);
         vm.assume(offset < 100);
@@ -577,6 +585,7 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
         uint256 keysCount,
         uint256 offset
     ) public {
+        vm.assume(nodeOperatorId < type(uint64).max);
         vm.assume(keysCount > 0);
         vm.assume(keysCount < 200);
         vm.assume(offset < 100);
