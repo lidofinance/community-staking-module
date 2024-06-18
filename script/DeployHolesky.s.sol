@@ -62,7 +62,7 @@ contract DeployHolesky is DeployBase {
         config.maxBondLockRetentionPeriod = 365 days;
         config.bondLockRetentionPeriod = 8 weeks;
         config
-            .setResetBondCurveAddress = 0x226954CD8a6Dd241d5A13Dd525Bd7B89067b11e5; // Known EOA
+            .setResetBondCurveAddress = 0x226954CD8a6Dd241d5A13Dd525Bd7B89067b11e5; // Dev team EOA
         // Module
         config.moduleType = "community-onchain-v1";
         config.minSlashingPenaltyQuotient = 32;
@@ -70,7 +70,7 @@ contract DeployHolesky is DeployBase {
         config.maxKeysPerOperatorEA = 10;
         config.keyRemovalCharge = 0.05 ether;
         config
-            .elRewardsStealingReporter = 0x226954CD8a6Dd241d5A13Dd525Bd7B89067b11e5; // Known EOA
+            .elRewardsStealingReporter = 0x226954CD8a6Dd241d5A13Dd525Bd7B89067b11e5; // Dev team EOA
         config.chargeRecipient = 0xE92329EC7ddB11D25e25b3c21eeBf11f15eB325d; // locator.treasury()
         // EarlyAdoption
         // TODO: Set earlyAdoptionTreeRoot
@@ -85,7 +85,7 @@ contract DeployHolesky is DeployBase {
         config.earlyAdoptionBondCurve[5] = 10 ether;
         // GateSeal
         config.gateSealFactory = 0x1134F7077055b0B3559BE52AfeF9aA22A0E1eEC2;
-        config.sealingCommittee = 0x226954CD8a6Dd241d5A13Dd525Bd7B89067b11e5; // Known EOA
+        config.sealingCommittee = 0x226954CD8a6Dd241d5A13Dd525Bd7B89067b11e5; // Dev team EOA
         config.sealDuration = 6 days;
         config.sealExpiryTimestamp = block.timestamp + 365 days;
 
