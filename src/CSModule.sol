@@ -152,7 +152,9 @@ contract CSModule is
     error StuckKeysHigherThanNonExited();
     error ExitedKeysHigherThanTotalDeposited();
     error ExitedKeysDecrease();
+    error VettedKeysLowerThanTotalDeposited();
 
+    error InvalidInput();
     error NotEnoughKeys();
 
     error SigningKeysInvalidOffset();
@@ -789,6 +791,12 @@ contract CSModule is
     ) external onlyRole(STAKING_ROUTER_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (targetLimitMode > type(uint8).max) {
+            revert InvalidInput();
+        }
+        if (targetLimit > type(uint32).max) {
+            revert InvalidInput();
+        }
 
         if (
             no.targetLimitMode == targetLimitMode &&
@@ -796,16 +804,18 @@ contract CSModule is
         ) return;
 
         if (no.targetLimitMode != targetLimitMode) {
+            // @dev No need to safe cast due to conditions above
             no.targetLimitMode = uint8(targetLimitMode);
         }
 
         if (no.targetLimit != targetLimit) {
+            // @dev No need to safe cast due to conditions above
             no.targetLimit = uint32(targetLimit);
         }
 
         emit TargetValidatorsCountChangedByRequest(
             nodeOperatorId,
-            uint8(targetLimitMode),
+            targetLimitMode,
             targetLimit
         );
 
@@ -881,6 +891,10 @@ contract CSModule is
                 revert InvalidVetKeysPointer();
             }
 
+            if (vettedSigningKeysCount < no.totalDepositedKeys) {
+                revert VettedKeysLowerThanTotalDeposited();
+            }
+            // @dev No need to safe cast due to conditions above
             no.totalVettedKeys = uint32(vettedSigningKeysCount);
             emit VettedSigningKeysCountChanged(
                 nodeOperatorId,
@@ -931,9 +945,12 @@ contract CSModule is
             accounting.chargeFee(nodeOperatorId, amountToCharge);
             emit KeyRemovalChargeApplied(nodeOperatorId, amountToCharge);
         }
+
+        // @dev No need to safe cast due to checks in the func above
         no.totalAddedKeys = uint32(newTotalSigningKeys);
         emit TotalSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
 
+        // @dev No need to safe cast due to checks in the func above
         no.totalVettedKeys = uint32(newTotalSigningKeys);
         emit VettedSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
 
@@ -1191,7 +1208,6 @@ contract CSModule is
             item = depositQueue.peek()
         ) {
             // NOTE: see the `enqueuedCount` note below.
-            // TODO: write invariant test for that.
             unchecked {
                 uint256 noId = item.noId();
                 uint256 keysInBatch = item.keys();
@@ -1205,12 +1221,14 @@ contract CSModule is
                 // covers the case when no depositable keys on the Node Operator have been left.
                 if (depositsLeft > keysCount || keysCount == keysInBatch) {
                     // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
+                    // @dev No need to safe cast due to internal logic
                     no.enqueuedCount -= uint32(keysInBatch);
                     // We've consumed all the keys in the batch, so we dequeue it.
                     depositQueue.dequeue();
                 } else {
                     // This branch covers the case when we stop in the middle of the batch.
                     // We release the amount of keys consumed only, the rest will be kept.
+                    // @dev No need to safe cast due to internal logic
                     no.enqueuedCount -= uint32(keysCount);
                     // NOTE: `keysInBatch` can't be less than `keysCount` at this point.
                     // We update the batch with the remaining keys.
@@ -1235,6 +1253,7 @@ contract CSModule is
 
                 // It's impossible in practice to reach the limit of these variables.
                 loadedKeysCount += keysCount;
+                // @dev No need to safe cast due to internal logic
                 no.totalDepositedKeys += uint32(keysCount);
 
                 emit DepositedSigningKeysCountChanged(
@@ -1244,6 +1263,7 @@ contract CSModule is
 
                 // No need for `_updateDepositableValidatorsCount` call since we update the number directly.
                 // `keysCount` is min of `depositableValidatorsCount` and `depositsLeft`.
+                // @dev No need to safe cast due to internal logic
                 no.depositableValidatorsCount -= uint32(keysCount);
                 depositsLeft -= keysCount;
                 if (depositsLeft == 0) {
@@ -1598,6 +1618,7 @@ contract CSModule is
 
             // Optimistic vetting takes place.
             if (no.totalAddedKeys == no.totalVettedKeys) {
+                // @dev No need to safe cast due to internal logic
                 no.totalVettedKeys += uint32(keysCount);
                 emit VettedSigningKeysCountChanged(
                     nodeOperatorId,
@@ -1605,6 +1626,7 @@ contract CSModule is
                 );
             }
 
+            // @dev No need to safe cast due to internal logic
             no.totalAddedKeys += uint32(keysCount);
         }
         emit TotalSigningKeysCountChanged(nodeOperatorId, no.totalAddedKeys);
@@ -1639,10 +1661,12 @@ contract CSModule is
         if (!allowDecrease && exitedValidatorsCount < no.totalExitedKeys)
             revert ExitedKeysDecrease();
         unchecked {
+            // @dev No need to safe cast due to conditions above
             _totalExitedValidators =
                 (_totalExitedValidators - no.totalExitedKeys) +
                 uint64(exitedValidatorsCount);
         }
+        // @dev No need to safe cast due to conditions above
         no.totalExitedKeys = uint32(exitedValidatorsCount);
 
         emit ExitedSigningKeysCountChanged(
@@ -1665,6 +1689,7 @@ contract CSModule is
             ) revert StuckKeysHigherThanNonExited();
         }
 
+        // @dev No need to safe cast due to conditions above
         no.stuckValidatorsCount = uint32(stuckValidatorsCount);
         emit StuckSigningKeysCountChanged(nodeOperatorId, stuckValidatorsCount);
 
@@ -1725,12 +1750,14 @@ contract CSModule is
 
         if (no.depositableValidatorsCount != newCount) {
             // Updating the global counter.
+            // @dev No need to safe cast due to internal logic
             unchecked {
                 _depositableValidatorsCount =
                     _depositableValidatorsCount -
                     no.depositableValidatorsCount +
                     uint32(newCount);
             }
+            // @dev No need to safe cast due to internal logic
             no.depositableValidatorsCount = uint32(newCount);
             if (incrementNonceIfUpdated) {
                 _incrementModuleNonce();

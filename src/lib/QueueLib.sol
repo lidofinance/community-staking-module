@@ -77,6 +77,7 @@ function createBatch(
     uint256 nodeOperatorId,
     uint256 keysCount
 ) pure returns (Batch item) {
+    // @dev No need to safe cast due to internal logic
     nodeOperatorId = uint64(nodeOperatorId);
     keysCount = uint64(keysCount);
 
@@ -168,6 +169,7 @@ library QueueLib {
 
                 unchecked {
                     // We assume that the invariant `enqueuedCount` >= `keys` is kept.
+                    // @dev No need to safe cast due to internal logic
                     no.enqueuedCount -= uint32(item.keys());
                     ++toRemove;
                 }
