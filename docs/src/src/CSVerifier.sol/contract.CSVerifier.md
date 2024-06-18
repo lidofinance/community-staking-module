@@ -1,6 +1,6 @@
 # CSVerifier
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/5d5ee8e87614e268bb3181747a86b3f5fe7a75e2/src/CSVerifier.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/ef5c94eed5211bf6c350512cf569895da670f26c/src/CSVerifier.sol)
 
 **Inherits:**
 [ICSVerifier](/src/interfaces/ICSVerifier.sol/interface.ICSVerifier.md)
@@ -167,7 +167,7 @@ function _processWithdrawalProof(
   uint256 stateEpoch,
   bytes32 stateRoot,
   bytes memory pubkey
-) internal view returns (Withdrawal memory withdrawal);
+) internal view returns (uint256 withdrawalAmount);
 ```
 
 ### \_getValidatorGI

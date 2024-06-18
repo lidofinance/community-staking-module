@@ -1,6 +1,6 @@
 # CSFeeOracle
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/5d5ee8e87614e268bb3181747a86b3f5fe7a75e2/src/CSFeeOracle.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/ef5c94eed5211bf6c350512cf569895da670f26c/src/CSFeeOracle.sol)
 
 **Inherits:**
 [BaseOracle](/src/lib/base-oracle/BaseOracle.sol/abstract.BaseOracle.md), [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -235,12 +235,6 @@ event ReportSettled(uint256 indexed refSlot, uint256 distributed, bytes32 treeRo
 ```
 
 ## Errors
-
-### InvalidPerfThreshold
-
-```solidity
-error InvalidPerfThreshold();
-```
 
 ### ZeroAdminAddress
 
