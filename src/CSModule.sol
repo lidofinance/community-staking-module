@@ -112,7 +112,7 @@ contract CSModule is
     );
     event TargetValidatorsCountChangedByRequest(
         uint256 indexed nodeOperatorId,
-        uint8 targetLimitMode,
+        uint256 targetLimitMode,
         uint256 targetValidatorsCount
     );
     event WithdrawalSubmitted(
