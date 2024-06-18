@@ -789,14 +789,14 @@ contract CSModule is
         uint256 targetLimitMode,
         uint256 targetLimit
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (targetLimitMode > type(uint8).max) {
             revert InvalidInput();
         }
         if (targetLimit > type(uint32).max) {
             revert InvalidInput();
         }
+        _onlyExistingNodeOperator(nodeOperatorId);
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         if (
             no.targetLimitMode == targetLimitMode &&
