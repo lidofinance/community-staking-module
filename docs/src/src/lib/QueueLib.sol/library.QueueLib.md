@@ -1,5 +1,5 @@
 # QueueLib
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/5d5ee8e87614e268bb3181747a86b3f5fe7a75e2/src/lib/QueueLib.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/ef5c94eed5211bf6c350512cf569895da670f26c/src/lib/QueueLib.sol)
 
 **Author:**
 madlabman
@@ -34,7 +34,7 @@ Internal methods
 
 
 ```solidity
-function enqueue(Queue storage self, Batch item) internal returns (Batch added);
+function enqueue(Queue storage self, uint256 nodeOperatorId, uint256 keysCount) internal returns (Batch added);
 ```
 
 ### dequeue

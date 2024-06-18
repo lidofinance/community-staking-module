@@ -1,6 +1,6 @@
 # CSAccounting
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/5d5ee8e87614e268bb3181747a86b3f5fe7a75e2/src/CSAccounting.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/ef5c94eed5211bf6c350512cf569895da670f26c/src/CSAccounting.sol)
 
 **Inherits:**
 [ICSAccounting](/src/interfaces/ICSAccounting.sol/interface.ICSAccounting.md), [CSBondCore](/src/abstract/CSBondCore.sol/abstract.CSBondCore.md), [CSBondCurve](/src/abstract/CSBondCurve.sol/abstract.CSBondCurve.md), [CSBondLock](/src/abstract/CSBondLock.sol/abstract.CSBondLock.md), [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), AccessControlEnumerableUpgradeable, [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -499,6 +499,28 @@ function chargeFee(uint256 nodeOperatorId, uint256 amount) external onlyCSM;
 | ---------------- | --------- | ------------------------------- |
 | `nodeOperatorId` | `uint256` | ID of the Node Operator         |
 | `amount`         | `uint256` | Amount to charge in ETH (stETH) |
+
+### pullFeeRewards
+
+Pull fees from CSFeeDistributor to the Node Operator's bond
+
+_Permissionless method. Can be called before penalty application to ensure that rewards are also penalized_
+
+```solidity
+function pullFeeRewards(
+  uint256 nodeOperatorId,
+  uint256 cumulativeFeeShares,
+  bytes32[] calldata rewardsProof
+) external;
+```
+
+**Parameters**
+
+| Name                  | Type        | Description                                       |
+| --------------------- | ----------- | ------------------------------------------------- |
+| `nodeOperatorId`      | `uint256`   | ID of the Node Operator                           |
+| `cumulativeFeeShares` | `uint256`   | Cumulative fee stETH shares for the Node Operator |
+| `rewardsProof`        | `bytes32[]` | Merkle proof of the rewards                       |
 
 ### recoverERC20
 
