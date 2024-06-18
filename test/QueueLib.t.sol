@@ -23,8 +23,11 @@ contract Library {
         return q.head;
     }
 
-    function enqueue(Batch item) public returns (Batch) {
-        return q.enqueue(item);
+    function enqueue(
+        uint256 nodeOperatorId,
+        uint256 keysCount
+    ) public returns (Batch) {
+        return q.enqueue(nodeOperatorId, keysCount);
     }
 
     function dequeue() public returns (Batch) {
@@ -73,8 +76,8 @@ contract QueueLibTest is Test {
     function testFuzz_enqueue(uint64 a, uint64 b, uint64 c, uint64 d) public {
         assertTrue(q.peek().isNil());
 
-        Batch p0 = q.enqueue(createBatch(a, b));
-        Batch p1 = q.enqueue(createBatch(c, d));
+        Batch p0 = q.enqueue(a, b);
+        Batch p1 = q.enqueue(c, d);
 
         assertTrue(q.peek().eq(p0));
         assertTrue(q.at(1).eq(p1));
@@ -95,9 +98,9 @@ contract QueueLibTest is Test {
     ) public {
         assertTrue(q.peek().isNil());
 
-        Batch p0 = q.enqueue(createBatch(a, b));
-        Batch p1 = q.enqueue(createBatch(c, d));
-        Batch p2 = q.enqueue(createBatch(e, f));
+        Batch p0 = q.enqueue(a, b);
+        Batch p1 = q.enqueue(c, d);
+        Batch p2 = q.enqueue(e, f);
 
         assertFalse(q.peek().isNil());
 

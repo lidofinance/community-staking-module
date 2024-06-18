@@ -2286,6 +2286,61 @@ contract CSMObtainDepositData is CSMCommon {
         csm.obtainDepositData(1, "");
         assertEq(csm.getNonce(), nonce + 1);
     }
+
+    function testFuzz_obtainDepositData(uint8 batchCount, uint8 random) public {
+        vm.assume(batchCount > 0);
+        vm.assume(batchCount < 20);
+        vm.assume(random > 0);
+        vm.assume(batchCount > random);
+        uint256 totalKeys;
+        for (uint16 i = 1; i < batchCount + 1; ++i) {
+            uint16 keys = i / random + 1;
+            createNodeOperator(keys);
+            totalKeys += keys;
+        }
+
+        csm.obtainDepositData(totalKeys - random, "");
+
+        (
+            ,
+            uint256 totalDepositedValidators,
+            uint256 depositableValidatorsCount
+        ) = csm.getStakingModuleSummary();
+        assertEq(totalDepositedValidators, totalKeys - random);
+        assertEq(depositableValidatorsCount, random);
+    }
+
+    function testFuzz_obtainDepositData_oneOperator(
+        uint8 batchCount,
+        uint8 random
+    ) public {
+        vm.assume(batchCount > 0);
+        vm.assume(batchCount < 20);
+        vm.assume(random > 0);
+        vm.assume(batchCount > random);
+        uint256 totalKeys = 1;
+        createNodeOperator(1);
+        for (uint16 i = 1; i < batchCount + 1; ++i) {
+            uint16 keys = i / random + 1;
+            uploadMoreKeys(0, keys);
+            totalKeys += keys;
+        }
+
+        csm.obtainDepositData(totalKeys - random, "");
+
+        (
+            ,
+            uint256 totalDepositedValidators,
+            uint256 depositableValidatorsCount
+        ) = csm.getStakingModuleSummary();
+        assertEq(totalDepositedValidators, totalKeys - random);
+        assertEq(depositableValidatorsCount, random);
+
+        NodeOperator memory no = csm.getNodeOperator(0);
+        assertEq(no.enqueuedCount, random);
+        assertEq(no.totalDepositedKeys, totalKeys - random);
+        assertEq(no.depositableValidatorsCount, random);
+    }
 }
 
 contract CSMClaimRewards is CSMCommon {
@@ -3510,8 +3565,6 @@ contract CsmGetNodeOperatorNonWithdrawnKeys is CSMCommon {
 }
 
 contract CsmGetNodeOperatorSummary is CSMCommon {
-    // TODO add more tests here. There might be fuzz tests
-
     function test_getNodeOperatorSummary_defaultValues() public {
         uint256 noId = createNodeOperator(1);
 

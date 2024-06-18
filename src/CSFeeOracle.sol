@@ -68,7 +68,6 @@ contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
         string treeCid
     );
 
-    error InvalidPerfThreshold();
     error ZeroAdminAddress();
     error ZeroFeeDistributorAddress();
     error InvalidPerfLeeway();
