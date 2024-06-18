@@ -392,6 +392,19 @@ contract CSAccounting is
         CSBondCore._charge(nodeOperatorId, amount, chargeRecipient);
     }
 
+    /// @notice Pull fees from CSFeeDistributor to the Node Operator's bond
+    /// @dev Permissionless method. Can be called before penalty application to ensure that rewards are also penalized
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
+    /// @param rewardsProof Merkle proof of the rewards
+    function pullFeeRewards(
+        uint256 nodeOperatorId,
+        uint256 cumulativeFeeShares,
+        bytes32[] calldata rewardsProof
+    ) external {
+        _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
+    }
+
     /// @notice Recover ERC20 tokens from the contract
     /// @param token Address of the ERC20 token to recover
     /// @param amount Amount of the ERC20 token to recover

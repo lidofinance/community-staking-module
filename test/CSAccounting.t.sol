@@ -4008,3 +4008,36 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
         accounting.recoverStETHShares();
     }
 }
+
+contract CSAccountingPullFeeRewardsTest is CSAccountingBaseTest {
+    function test_pullFeeRewards() public {
+        uint256 feeShares = 1 ether;
+        mock_distributeFees(feeShares);
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        uint256 totalBondSharesBefore = accounting.totalBondShares();
+
+        accounting.pullFeeRewards(0, feeShares, new bytes32[](0));
+
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+        uint256 totalBondSharesAfter = accounting.totalBondShares();
+
+        assertEq(bondSharesAfter, bondSharesBefore + feeShares);
+        assertEq(totalBondSharesAfter, totalBondSharesBefore + feeShares);
+    }
+
+    function test_pullFeeRewards_zeroAmount() public {
+        mock_distributeFees(0);
+
+        uint256 bondSharesBefore = accounting.getBondShares(0);
+        uint256 totalBondSharesBefore = accounting.totalBondShares();
+
+        accounting.pullFeeRewards(0, 0, new bytes32[](0));
+
+        uint256 bondSharesAfter = accounting.getBondShares(0);
+        uint256 totalBondSharesAfter = accounting.totalBondShares();
+
+        assertEq(bondSharesAfter, bondSharesBefore);
+        assertEq(totalBondSharesAfter, totalBondSharesBefore);
+    }
+}
