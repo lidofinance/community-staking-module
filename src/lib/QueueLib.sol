@@ -91,7 +91,6 @@ using QueueLib for QueueLib.Queue;
 
 /// @author madlabman
 library QueueLib {
-    // TODO: Is it possible to get the advantage of zeroing storage variables and do not waste the storage?
     struct Queue {
         // Pointer to the item to be dequeued.
         uint128 head;
@@ -124,9 +123,8 @@ library QueueLib {
             unchecked {
                 count = depositable - enqueued;
             }
-            Batch item = createBatch(nodeOperatorId, count);
             no.enqueuedCount = depositable;
-            self.enqueue(item);
+            self.enqueue(nodeOperatorId, count);
             emit BatchEnqueued(nodeOperatorId, count);
         }
     }
@@ -186,12 +184,13 @@ library QueueLib {
     /////
     /// Internal methods
     /////
-    // TODO: Consider changing to accept the batch fields as arguments.
     function enqueue(
         Queue storage self,
-        Batch item
+        uint256 nodeOperatorId,
+        uint256 keysCount
     ) internal returns (Batch added) {
         uint128 length = self.length;
+        Batch item = createBatch(nodeOperatorId, keysCount);
 
         assembly {
             item := or(

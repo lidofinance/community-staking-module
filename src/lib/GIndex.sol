@@ -90,21 +90,20 @@ function concat(GIndex lhs, GIndex rhs) pure returns (GIndex) {
         );
 }
 
-function isParentOf(GIndex self, GIndex other) pure returns (bool) {
-    // TODO: better naming
-    uint256 anchor = index(self);
-    uint256 gI = index(other);
+function isParentOf(GIndex self, GIndex child) pure returns (bool) {
+    uint256 parentIndex = index(self);
+    uint256 childIndex = index(child);
 
-    if (anchor >= gI) {
+    if (parentIndex >= childIndex) {
         return false;
     }
 
-    while (gI > 0) {
-        if (gI == anchor) {
+    while (childIndex > 0) {
+        if (childIndex == parentIndex) {
             return true;
         }
 
-        gI = gI >> 1;
+        childIndex = childIndex >> 1;
     }
 
     return false;

@@ -171,19 +171,14 @@ contract CSVerifier is ICSVerifier {
             1
         );
 
-        // TODO: return only withdrawn amount
-        Withdrawal memory withdrawal = _processWithdrawalProof({
+        uint256 withdrawalAmount = _processWithdrawalProof({
             witness: witness,
             stateEpoch: _computeEpochAtSlot(beaconBlock.header.slot),
             stateRoot: beaconBlock.header.stateRoot,
             pubkey: pubkey
         });
 
-        MODULE.submitWithdrawal(
-            nodeOperatorId,
-            keyIndex,
-            withdrawal.amountWei()
-        );
+        MODULE.submitWithdrawal(nodeOperatorId, keyIndex, withdrawalAmount);
     }
 
     /// @notice Verify withdrawal proof against historical summaries data and report withdrawal to the module for valid proofs
@@ -235,18 +230,14 @@ contract CSVerifier is ICSVerifier {
             1
         );
 
-        Withdrawal memory withdrawal = _processWithdrawalProof({
+        uint256 withdrawalAmount = _processWithdrawalProof({
             witness: witness,
             stateEpoch: _computeEpochAtSlot(oldBlock.header.slot),
             stateRoot: oldBlock.header.stateRoot,
             pubkey: pubkey
         });
 
-        MODULE.submitWithdrawal(
-            nodeOperatorId,
-            keyIndex,
-            withdrawal.amountWei()
-        );
+        MODULE.submitWithdrawal(nodeOperatorId, keyIndex, withdrawalAmount);
     }
 
     function _getParentBlockRoot(
@@ -269,7 +260,7 @@ contract CSVerifier is ICSVerifier {
         uint256 stateEpoch,
         bytes32 stateRoot,
         bytes memory pubkey
-    ) internal view returns (Withdrawal memory withdrawal) {
+    ) internal view returns (uint256 withdrawalAmount) {
         // WC to address
         address withdrawalAddress = address(
             uint160(uint256(witness.withdrawalCredentials))
@@ -283,12 +274,27 @@ contract CSVerifier is ICSVerifier {
         }
 
         // See https://hackmd.io/1wM8vqeNTjqt4pC3XoCUKQ
-        // TODO: there is a posible way to bypass this check:
+        //
+        // ISSUE:
+        // There is a possible way to bypass this check:
         // - wait for full withdrawal & sweep
-        // - be lucky that no one provide a proof for this withdrawal
-        // - deposit 1 eth for slashed or 8 for non slashed validator
-        // - wait for sweep of this deposit
-        // - provide proof for the last withdrawal
+        // - be lucky enough that no one provides proof for this withdrawal for at least 1 sweep cycle
+        //  (~8 days with the network of 1M active validators)
+        // - deposit 1 ETH for slashed or 8 ETH for non-slashed validator
+        // - wait for a sweep of this deposit
+        // - provide proof of the last withdrawal
+        // As a result, the Node Operator's bond will be penalized for 32 ETH - additional deposit value
+        // However, all ETH involved,
+        // including 1 or 8 ETH deposited by the attacker will remain in the Lido on Ethereum protocol
+        // Hence, the only consequence of the attack is an inconsistency in the bond accounting that can be resolved
+        // through the bond deposit approved by the corresponding DAO decision
+        //
+        // Resolution:
+        // Given no losses for the protocol,
+        // significant cost of attack (1 or 8 ETH),
+        // and lack of feasible ways to mitigate it in the smart contract's code,
+        // it is proposed to acknowledge possibility of the attack
+        // and be ready to propose a corresponding vote to the DAO if it will ever happen
         if (!witness.slashed && gweiToWei(witness.amount) < 8 ether) {
             revert PartialWitdrawal();
         }
@@ -311,7 +317,7 @@ contract CSVerifier is ICSVerifier {
             gI: _getValidatorGI(witness.validatorIndex)
         });
 
-        withdrawal = Withdrawal({
+        Withdrawal memory withdrawal = Withdrawal({
             index: witness.withdrawalIndex,
             validatorIndex: witness.validatorIndex,
             withdrawalAddress: withdrawalAddress,
@@ -324,6 +330,8 @@ contract CSVerifier is ICSVerifier {
             leaf: withdrawal.hashTreeRoot(),
             gI: _getWithdrawalGI(witness.withdrawalOffset)
         });
+
+        return withdrawal.amountWei();
     }
 
     function _getValidatorGI(uint256 offset) internal view returns (GIndex) {

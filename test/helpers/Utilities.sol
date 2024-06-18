@@ -123,7 +123,6 @@ contract Utilities is CommonBase {
     }
 
     function expectRoleRevert(address account, bytes32 neededRole) internal {
-        // TODO: improve error message if possible
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector,

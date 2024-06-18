@@ -32,10 +32,6 @@ import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
 
-// TODO: non-existing node operator tests
-// TODO: bond lock permission tests
-// TODO: bond lock emit event tests
-
 contract CSAccountingBaseConstructorTest is Test, Fixtures, Utilities {
     LidoLocatorMock internal locator;
     WstETHMock internal wstETH;

@@ -157,7 +157,6 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         uint256[] calldata defaultBondCurvePoints
     ) internal onlyInitializing {
         uint256 addedId = _addBondCurve(defaultBondCurvePoints);
-        // TODO: Figure out how to test it
         if (addedId != DEFAULT_BOND_CURVE_ID)
             revert InvalidInitialisationCurveId();
     }
