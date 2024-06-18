@@ -87,6 +87,7 @@ interface IReportAsyncProcessor {
 /// given that oracle reports sometimes have to contain diffs instead of the full state which
 /// might be impractical or even impossible to transmit and process.
 ///
+/// @custom:oz-upgrades-unsafe-allow state-variable-immutable constructor
 contract HashConsensus is AccessControlEnumerableUpgradeable {
     using SafeCast for uint256;
 

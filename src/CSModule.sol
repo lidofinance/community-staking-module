@@ -23,6 +23,7 @@ import { SigningKeys } from "./lib/SigningKeys.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
+/// @custom:oz-upgrades-unsafe-allow external-library-linking state-variable-immutable constructor
 contract CSModule is
     ICSModule,
     Initializable,

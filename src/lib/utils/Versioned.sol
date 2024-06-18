@@ -4,6 +4,7 @@ pragma solidity 0.8.24;
 
 import { UnstructuredStorage } from "../UnstructuredStorage.sol";
 
+/// @custom:oz-upgrades-unsafe-allow constructor
 contract Versioned {
     using UnstructuredStorage for bytes32;
 

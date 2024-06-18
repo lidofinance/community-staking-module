@@ -25,6 +25,7 @@ import { ICSBondCore } from "../interfaces/ICSBondCore.sol";
 /// Internal non-view methods should be used in Module contract with additional requirements (if any).
 ///
 /// @author vgorkavenko
+/// @custom:oz-upgrades-unsafe-allow state-variable-immutable constructor
 abstract contract CSBondCore is ICSBondCore {
     /// @custom:storage-location erc7201:CSAccounting.CSBondCore
     struct CSBondCoreStorage {

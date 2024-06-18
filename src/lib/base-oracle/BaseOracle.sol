@@ -36,6 +36,7 @@ interface IConsensusContract {
 }
 
 // solhint-disable ordering
+/// @custom:oz-upgrades-unsafe-allow state-variable-immutable constructor
 abstract contract BaseOracle is
     IReportAsyncProcessor,
     AccessControlEnumerableUpgradeable,

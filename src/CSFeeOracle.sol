@@ -9,6 +9,7 @@ import { BaseOracle } from "./lib/base-oracle/BaseOracle.sol";
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 
+/// @custom:oz-upgrades-unsafe-allow external-library-linking constructor
 contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
     /// @notice No assets are stored in the contract
 

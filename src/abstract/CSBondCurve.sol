@@ -25,6 +25,7 @@ import { ICSBondCurve } from "../interfaces/ICSBondCurve.sol";
 /// Internal non-view methods should be used in the Module contract with additional requirements (if any).
 ///
 /// @author vgorkavenko
+/// @custom:oz-upgrades-unsafe-allow state-variable-immutable constructor
 abstract contract CSBondCurve is ICSBondCurve, Initializable {
     using Arrays for uint256[];
 

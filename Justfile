@@ -35,6 +35,11 @@ lint-solhint:
 lint-fix:
     yarn lint:fix
 
+lint-upgrades:
+    forge clean
+    forge build --skip=test --extra-output=storageLayout --build-info
+    npx @openzeppelin/upgrades-core validate
+
 lint:
     yarn lint:check
 

@@ -26,6 +26,7 @@ import { ICSBondLock } from "../interfaces/ICSBondLock.sol";
 /// Internal non-view methods should be used in the Module contract with additional requirements (if any).
 ///
 /// @author vgorkavenko
+/// @custom:oz-upgrades-unsafe-allow state-variable-immutable constructor
 abstract contract CSBondLock is ICSBondLock, Initializable {
     using SafeCast for uint256;
 

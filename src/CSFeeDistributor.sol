@@ -13,6 +13,7 @@ import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
 /// @author madlabman
+/// @custom:oz-upgrades-unsafe-allow external-library-linking state-variable-immutable constructor
 contract CSFeeDistributor is
     ICSFeeDistributor,
     Initializable,

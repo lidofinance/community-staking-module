@@ -21,6 +21,7 @@ import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 /// @author vgorkavenko
 /// @notice This contract stores the Node Operators' bonds in the form of stETH shares,
 ///         so it should be considered in the recovery process
+/// @custom:oz-upgrades-unsafe-allow external-library-linking state-variable-immutable constructor
 contract CSAccounting is
     ICSAccounting,
     CSBondCore,

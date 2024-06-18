@@ -109,6 +109,9 @@ jobs:
       - name: Build
         run: just build --sizes
 
+      - name: Upgrades check
+        run: just lint-upgrades
+
       - name: Run unit-tests
         run: just test-unit
 
