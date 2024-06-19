@@ -1275,6 +1275,7 @@ contract CSModule is
         }
 
         unchecked {
+            // @dev depositsCount can not overflow in practice due to memory and gas limits
             _depositableValidatorsCount -= uint64(depositsCount);
             _totalDepositedValidators += uint64(depositsCount);
         }
