@@ -84,6 +84,7 @@ abstract contract CSBondCore is ICSBondCore {
     );
 
     error ZeroLocatorAddress();
+    error NothingToClaim();
 
     constructor(address lidoLocator) {
         if (lidoLocator == address(0)) {
@@ -179,7 +180,7 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 sharesToClaim = amountToClaim < _ethByShares(claimableShares)
             ? _sharesByEth(amountToClaim)
             : claimableShares;
-        if (sharesToClaim == 0) return;
+        if (sharesToClaim == 0) revert NothingToClaim();
         _unsafeReduceBond(nodeOperatorId, sharesToClaim);
 
         uint256[] memory amounts = new uint256[](1);
@@ -201,7 +202,7 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 sharesToClaim = amountToClaim < _ethByShares(claimableShares)
             ? _sharesByEth(amountToClaim)
             : claimableShares;
-        if (sharesToClaim == 0) return;
+        if (sharesToClaim == 0) revert NothingToClaim();
         _unsafeReduceBond(nodeOperatorId, sharesToClaim);
 
         LIDO.transferShares(to, sharesToClaim);
@@ -218,7 +219,7 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 sharesToClaim = amountToClaim < claimableShares
             ? amountToClaim
             : claimableShares;
-        if (sharesToClaim == 0) return;
+        if (sharesToClaim == 0) revert NothingToClaim();
         uint256 sharesBefore = LIDO.sharesOf(address(this));
         uint256 amount = WSTETH.wrap(_ethByShares(sharesToClaim));
         uint256 sharesAfter = LIDO.sharesOf(address(this));
