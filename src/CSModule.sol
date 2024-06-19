@@ -152,7 +152,6 @@ contract CSModule is
     error StuckKeysHigherThanNonExited();
     error ExitedKeysHigherThanTotalDeposited();
     error ExitedKeysDecrease();
-    error VettedKeysLowerThanTotalDeposited();
 
     error InvalidInput();
     error NotEnoughKeys();
@@ -162,7 +161,7 @@ contract CSModule is
     error AlreadySubmitted();
     error AlreadyWithdrawn();
 
-    error AlreadySet();
+    error AlreadyActivated();
     error InvalidAmount();
     error NotAllowedToJoinYet();
     error MaxSigningKeysCountExceeded();
@@ -231,7 +230,7 @@ contract CSModule is
     ///         Remove the keys limit for the Node Operators
     function activatePublicRelease() external onlyRole(MODULE_MANAGER_ROLE) {
         if (publicRelease) {
-            revert AlreadySet();
+            revert AlreadyActivated();
         }
         publicRelease = true;
         emit PublicRelease();
@@ -892,7 +891,7 @@ contract CSModule is
             }
 
             if (vettedSigningKeysCount < no.totalDepositedKeys) {
-                revert VettedKeysLowerThanTotalDeposited();
+                revert InvalidVetKeysPointer();
             }
             // @dev No need to safe cast due to conditions above
             no.totalVettedKeys = uint32(vettedSigningKeysCount);
@@ -1458,12 +1457,7 @@ contract CSModule is
         uint256 startIndex,
         uint256 keysCount
     ) external view returns (bytes memory) {
-        if (
-            startIndex + keysCount >
-            _nodeOperators[nodeOperatorId].totalAddedKeys
-        ) {
-            revert SigningKeysInvalidOffset();
-        }
+        _onlyValidIndexRange(nodeOperatorId, startIndex, keysCount);
 
         return SigningKeys.loadKeys(nodeOperatorId, startIndex, keysCount);
     }
@@ -1480,12 +1474,7 @@ contract CSModule is
         uint256 startIndex,
         uint256 keysCount
     ) external view returns (bytes memory keys, bytes memory signatures) {
-        if (
-            startIndex + keysCount >
-            _nodeOperators[nodeOperatorId].totalAddedKeys
-        ) {
-            revert SigningKeysInvalidOffset();
-        }
+        _onlyValidIndexRange(nodeOperatorId, startIndex, keysCount);
 
         (keys, signatures) = SigningKeys.initKeysSigsBuf(keysCount);
         // solhint-disable-next-line func-named-parameters
@@ -1614,6 +1603,7 @@ contract CSModule is
             signatures
         );
         unchecked {
+            // @dev No need to safe cast due to internal logic
             _totalAddedValidators += uint64(keysCount);
 
             // Optimistic vetting takes place.
@@ -1786,6 +1776,19 @@ contract CSModule is
     function _onlyExistingNodeOperator(uint256 nodeOperatorId) internal view {
         if (nodeOperatorId < _nodeOperatorsCount) return;
         revert NodeOperatorDoesNotExist();
+    }
+
+    function _onlyValidIndexRange(
+        uint256 nodeOperatorId,
+        uint256 startIndex,
+        uint256 keysCount
+    ) internal view {
+        if (
+            startIndex + keysCount >
+            _nodeOperators[nodeOperatorId].totalAddedKeys
+        ) {
+            revert SigningKeysInvalidOffset();
+        }
     }
 
     function _onlyRecoverer() internal view override {

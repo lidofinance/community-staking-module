@@ -5733,10 +5733,10 @@ contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
         assertTrue(csm.publicRelease());
     }
 
-    function test_activatePublicRelease_RevertWhen_AlreadySet() public {
+    function test_activatePublicRelease_RevertWhen_AlreadyActivated() public {
         csm.activatePublicRelease();
 
-        vm.expectRevert(CSModule.AlreadySet.selector);
+        vm.expectRevert(CSModule.AlreadyActivated.selector);
         csm.activatePublicRelease();
     }
 
@@ -6453,7 +6453,7 @@ contract CSMMisc is CSMCommon {
         csm.obtainDepositData(5, "");
         uint256 newVetted = 4;
 
-        vm.expectRevert(CSModule.VettedKeysLowerThanTotalDeposited.selector);
+        vm.expectRevert(CSModule.InvalidVetKeysPointer.selector);
         unvetKeys(noId, newVetted);
     }
 
