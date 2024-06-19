@@ -34,6 +34,7 @@ library AssetRecovererLib {
         address indexed recipient,
         uint256 amount
     );
+
     error FailedToSendEther();
 
     /**
