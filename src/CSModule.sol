@@ -16,7 +16,6 @@ import { ICSModule, NodeOperator } from "./interfaces/ICSModule.sol";
 
 import { QueueLib, Batch } from "./lib/QueueLib.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
-import { TransientUintUintMap } from "./lib/TransientUintUintMapLib.sol";
 import { NOAddresses } from "./lib/NOAddresses.sol";
 
 import { SigningKeys } from "./lib/SigningKeys.sol";
@@ -76,8 +75,8 @@ contract CSModule is
     mapping(uint256 noKeyIndexPacked => bool) private _isValidatorWithdrawn;
     mapping(uint256 noKeyIndexPacked => bool) private _isValidatorSlashed;
 
-    // @dev transient map used in by cleanDepositQueue method to keep track of already observed queue batches contents
-    TransientUintUintMap private _queueLookup;
+    // FIXME: Remove the variable before testnet deploy (kept as a placeholder to not to break devnet).
+    uint256 private _removeMeBeforeTestnetDeploy;
 
     uint64 private _totalDepositedValidators;
     uint64 private _totalExitedValidators;
@@ -1286,7 +1285,7 @@ contract CSModule is
     /// @param maxItems How many queue items to review
     /// @return Number of the deposit data removed from the queue
     function cleanDepositQueue(uint256 maxItems) external returns (uint256) {
-        return depositQueue.clean(_nodeOperators, _queueLookup, maxItems);
+        return depositQueue.clean(_nodeOperators, maxItems);
     }
 
     /// @notice Recover all stETH shares from the contract

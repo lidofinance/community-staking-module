@@ -3,32 +3,33 @@
 
 pragma solidity 0.8.24;
 
-struct TransientUintUintMap {
-    // solhint-disable-next-line lido-csm/vars-with-underscore
-    bytes32 __ptr; // Basically to get a unique storage slot.
-}
+type TransientUintUintMap is uint256;
 
 using TransientUintUintMapLib for TransientUintUintMap global;
 
 library TransientUintUintMapLib {
-    function clear(TransientUintUintMap storage self) internal {
-        /// @solidity memory-safe-assembly
-        assembly {
-            let salt := tload(self.slot)
-            mstore(0x00, self.slot) // Load the slot into the scratch space. Can be used to differ to different instances.
-            mstore(0x20, salt) // Load the salt into the scratch space.
-            tstore(self.slot, keccak256(0x00, 0x40)) // Compute the new salt as the hash of slot and old salt.
+    function create() internal returns (TransientUintUintMap self) {
+        // keccak256(abi.encode(uint256(keccak256("TransientUintUintMap")) - 1)) & ~bytes32(uint256(0xff))
+        uint256 anchor = 0x6e38e7eaa4307e6ee6c66720337876ca65012869fbef035f57219354c1728400;
+
+        // `anchor` slot in the transient storage tracks the "address" of the last created object.
+        // The next address is being computed as keccak256(`anchor` . `prev`).
+        assembly ("memory-safe") {
+            let prev := tload(anchor)
+            mstore(0x00, anchor)
+            mstore(0x20, prev)
+            self := keccak256(0x00, 0x40)
+            tstore(anchor, self)
         }
     }
 
     function add(
-        TransientUintUintMap storage self,
+        TransientUintUintMap self,
         uint256 key,
         uint256 value
     ) internal {
         uint256 slot = _slot(self, key);
-        /// @solidity memory-safe-assembly
-        assembly {
+        assembly ("memory-safe") {
             let v := tload(slot)
             // NOTE: Here's no overflow check.
             v := add(v, value)
@@ -37,24 +38,23 @@ library TransientUintUintMapLib {
     }
 
     function get(
-        TransientUintUintMap storage self,
+        TransientUintUintMap self,
         uint256 key
     ) internal view returns (uint256 v) {
         uint256 slot = _slot(self, key);
-        /// @solidity memory-safe-assembly
-        assembly {
+        assembly ("memory-safe") {
             v := tload(slot)
         }
     }
 
     function _slot(
-        TransientUintUintMap storage self,
+        TransientUintUintMap self,
         uint256 key
-    ) internal view returns (uint256 slot) {
+    ) internal pure returns (uint256 slot) {
         // Compute an address in the transient storage in the same manner it works for storage mappings.
-        /// @solidity memory-safe-assembly
-        assembly {
-            mstore(0x00, tload(self.slot))
+        // `slot` = keccak256(`self` . `key`)
+        assembly ("memory-safe") {
+            mstore(0x00, self)
             mstore(0x20, key)
             slot := keccak256(0x00, 0x40)
         }
