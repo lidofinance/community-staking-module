@@ -1746,7 +1746,7 @@ contract CSModule is
                 _depositableValidatorsCount =
                     _depositableValidatorsCount -
                     no.depositableValidatorsCount +
-                    uint32(newCount);
+                    uint64(newCount);
             }
             // @dev No need to safe cast due to internal logic
             no.depositableValidatorsCount = uint32(newCount);
