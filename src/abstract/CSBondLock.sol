@@ -95,7 +95,10 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
     ) public view returns (uint256) {
         CSBondLockStorage storage $ = _getCSBondLockStorage();
         BondLock storage bondLock = $.bondLock[nodeOperatorId];
-        return bondLock.retentionUntil < block.timestamp ? 0 : bondLock.amount;
+        if (bondLock.retentionUntil < block.timestamp) {
+            return 0;
+        }
+        return bondLock.amount;
     }
 
     /// @dev Lock bond amount for the given Node Operator until the retention period.
@@ -126,10 +129,11 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
         if (blocked < amount) {
             revert InvalidBondLockAmount();
         }
+        // @dev It's checked via getActualLockedBond call
         unchecked {
             _changeBondLock(
                 nodeOperatorId,
-                blocked - amount,
+                $.bondLock[nodeOperatorId].amount - amount,
                 $.bondLock[nodeOperatorId].retentionUntil
             );
         }
