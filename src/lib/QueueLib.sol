@@ -41,6 +41,7 @@ function next(Batch self) pure returns (uint128 n) {
     }
 }
 
+// TODO: add notice that keys count cast is unsafe
 function setKeys(Batch self, uint256 keysCount) pure returns (Batch) {
     assembly {
         self := or(
@@ -55,6 +56,7 @@ function setKeys(Batch self, uint256 keysCount) pure returns (Batch) {
     return self;
 }
 
+// TODO: can be unsafe if the From batch is previous to the self
 function setNext(Batch self, Batch from) pure returns (Batch) {
     assembly {
         self := or(
@@ -101,6 +103,7 @@ library QueueLib {
         mapping(uint128 => Batch) queue;
     }
 
+    // TODO: consider adding a full batch info
     event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
 
     error InvalidIndex();
@@ -170,6 +173,7 @@ library QueueLib {
                 unchecked {
                     // We assume that the invariant `enqueuedCount` >= `keys` is kept.
                     // @dev No need to safe cast due to internal logic
+                    // TODO: consider move enqueuedCount update from unchecked
                     no.enqueuedCount -= uint32(item.keys());
                     ++toRemove;
                 }
@@ -190,9 +194,10 @@ library QueueLib {
         Queue storage self,
         uint256 nodeOperatorId,
         uint256 keysCount
-    ) internal returns (Batch added) {
+    ) internal returns (Batch item) {
+        // TODO: consider better naming for `length`
         uint128 length = self.length;
-        Batch item = createBatch(nodeOperatorId, keysCount);
+        item = createBatch(nodeOperatorId, keysCount);
 
         assembly {
             item := or(
@@ -208,10 +213,9 @@ library QueueLib {
         unchecked {
             ++self.length;
         }
-
-        added = item;
     }
 
+    // TODO: consider emiting an event here
     function dequeue(Queue storage self) internal returns (Batch item) {
         item = peek(self);
 
