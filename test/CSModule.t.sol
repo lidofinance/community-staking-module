@@ -4162,6 +4162,22 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         csm.updateTargetValidatorsLimits(0, 1, 1);
     }
+
+    function test_updateTargetValidatorsLimits_RevertWhen_TargetLimitExceedsUint32()
+        public
+    {
+        uint256 noId = createNodeOperator(1);
+        vm.expectRevert(CSModule.InvalidInput.selector);
+        csm.updateTargetValidatorsLimits(0, 1, uint256(type(uint32).max) + 1);
+    }
+
+    function test_updateTargetValidatorsLimits_RevertWhen_TargetLimitModeExceedsUint8()
+        public
+    {
+        uint256 noId = createNodeOperator(1);
+        vm.expectRevert(CSModule.InvalidInput.selector);
+        csm.updateTargetValidatorsLimits(0, uint256(type(uint8).max) + 1, 1);
+    }
 }
 
 contract CsmUpdateStuckValidatorsCount is CSMCommon {
@@ -5717,10 +5733,10 @@ contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
         assertTrue(csm.publicRelease());
     }
 
-    function test_activatePublicRelease_RevertWhen_AlreadySet() public {
+    function test_activatePublicRelease_RevertWhen_AlreadyActivated() public {
         csm.activatePublicRelease();
 
-        vm.expectRevert(CSModule.AlreadySet.selector);
+        vm.expectRevert(CSModule.AlreadyActivated.selector);
         csm.activatePublicRelease();
     }
 
@@ -6425,6 +6441,17 @@ contract CSMMisc is CSMCommon {
     {
         uint256 noId = createNodeOperator(10);
         uint256 newVetted = 15;
+
+        vm.expectRevert(CSModule.InvalidVetKeysPointer.selector);
+        unvetKeys(noId, newVetted);
+    }
+
+    function test_decreaseVettedSigningKeysCount_RevertWhen_NewVettedLowerTotalDeposited()
+        public
+    {
+        uint256 noId = createNodeOperator(10);
+        csm.obtainDepositData(5, "");
+        uint256 newVetted = 4;
 
         vm.expectRevert(CSModule.InvalidVetKeysPointer.selector);
         unvetKeys(noId, newVetted);
