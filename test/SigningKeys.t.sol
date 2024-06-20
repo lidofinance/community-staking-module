@@ -16,8 +16,8 @@ contract Library {
         uint256 nodeOperatorId,
         uint256 startIndex,
         uint256 keysCount,
-        bytes memory pubkeys,
-        bytes memory signatures
+        bytes calldata pubkeys,
+        bytes calldata signatures
     ) external returns (uint256) {
         return
             SigningKeys.saveKeysSigs(
