@@ -179,7 +179,7 @@
 | isValidatorWithdrawn                                | 662             | 662    | 662    | 662     | 1       |
 | keyRemovalCharge                                    | 383             | 1049   | 383    | 2383    | 3       |
 | normalizeQueue                                      | 29509           | 45533  | 45533  | 61557   | 2       |
-| obtainDepositData                                   | 24584           | 78419  | 70086  | 143233  | 67      |
+| obtainDepositData                                   | 24584           | 78416  | 70083  | 143227  | 67      |
 | onExitedAndStuckValidatorsCountsUpdated             | 23705           | 23741  | 23741  | 23777   | 2       |
 | onRewardsMinted                                     | 24005           | 42108  | 39792  | 62528   | 3       |
 | onWithdrawalCredentialsChanged                      | 23779           | 24593  | 25001  | 25001   | 3       |
