@@ -86,7 +86,7 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
 
     function test_proxy() public {
         OssifiableProxy proxy = OssifiableProxy(payable(address(csm)));
-        assertEq(proxy.proxy__getAdmin(), address(deployParams.votingAddress));
+        assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
         assertFalse(proxy.proxy__getIsOssified());
 
         CSModule csmImpl = CSModule(proxy.proxy__getImplementation());
@@ -202,7 +202,7 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
 
     function test_proxy() public {
         OssifiableProxy proxy = OssifiableProxy(payable(address(accounting)));
-        assertEq(proxy.proxy__getAdmin(), address(deployParams.votingAddress));
+        assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
         assertFalse(proxy.proxy__getIsOssified());
 
         CSAccounting accountingImpl = CSAccounting(
@@ -258,7 +258,7 @@ contract CSFeeDistributorDeploymentTest is Test, Utilities, DeploymentFixtures {
         OssifiableProxy proxy = OssifiableProxy(
             payable(address(feeDistributor))
         );
-        assertEq(proxy.proxy__getAdmin(), address(deployParams.votingAddress));
+        assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
         assertFalse(proxy.proxy__getIsOssified());
 
         CSFeeDistributor distributorImpl = CSFeeDistributor(
@@ -320,7 +320,7 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
 
     function test_proxy() public {
         OssifiableProxy proxy = OssifiableProxy(payable(address(oracle)));
-        assertEq(proxy.proxy__getAdmin(), address(deployParams.votingAddress));
+        assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
         assertFalse(proxy.proxy__getIsOssified());
 
         CSFeeOracle oracleImpl = CSFeeOracle(proxy.proxy__getImplementation());
