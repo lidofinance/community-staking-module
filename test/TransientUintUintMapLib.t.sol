@@ -4,13 +4,11 @@ pragma solidity 0.8.24;
 
 import { Test } from "forge-std/Test.sol";
 
-import { TransientUintUintMap } from "../src/lib/TransientUintUintMapLib.sol";
+import { TransientUintUintMap, TransientUintUintMapLib } from "../src/lib/TransientUintUintMapLib.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 contract TransientUintUintMapLibTest is Test {
     using Strings for uint256;
-
-    TransientUintUintMap private dict;
 
     function testFuzz_dictAddAndGetValue(
         uint256 k,
@@ -18,11 +16,14 @@ contract TransientUintUintMapLibTest is Test {
         uint256 s
     ) public {
         // There's no overflow check in the `add` function.
-        vm.assume(v < type(uint128).max);
-        vm.assume(s < type(uint128).max);
+        unchecked {
+            vm.assume(v + s > v);
+        }
 
         uint256 sum = v + s;
         uint256 r;
+
+        TransientUintUintMap dict = TransientUintUintMapLib.create();
 
         // Adding to the same key should increment the value.
         dict.add(k, v);
@@ -43,21 +44,20 @@ contract TransientUintUintMapLibTest is Test {
         );
     }
 
-    function testFuzz_dictClear(uint256 a, uint256 b) public {
-        // Doesn't make sense to check 0 values to become 0.
-        vm.assume(a > 0);
-        vm.assume(b > 0);
+    function testFuzz_noIntersections(uint256 a, uint256 b) public {
+        vm.assume(a != b);
+
+        TransientUintUintMap dict1 = TransientUintUintMapLib.create();
+        TransientUintUintMap dict2 = TransientUintUintMapLib.create();
 
         uint256 r;
 
-        dict.add(1, a);
-        dict.add(2, b);
+        dict1.add(a, 1);
+        dict2.add(b, 1);
 
-        dict.clear();
-
-        r = dict.get(1);
+        r = dict1.get(b);
         assertEq(r, 0, string.concat("expected=0 actual=", r.toString()));
-        r = dict.get(2);
+        r = dict2.get(a);
         assertEq(r, 0, string.concat("expected=0 actual=", r.toString()));
     }
 }

@@ -3,7 +3,7 @@
 pragma solidity 0.8.24;
 
 import { NodeOperator } from "../interfaces/ICSModule.sol";
-import { TransientUintUintMap } from "./TransientUintUintMapLib.sol";
+import { TransientUintUintMap, TransientUintUintMapLib } from "./TransientUintUintMapLib.sol";
 
 // Batch is an uint256 as it's the internal data type used by solidity.
 // Batch is a packed value, consisting of the following fields:
@@ -136,7 +136,6 @@ library QueueLib {
     function clean(
         Queue storage self,
         mapping(uint256 => NodeOperator) storage nodeOperators,
-        TransientUintUintMap storage queueLookup,
         uint256 maxItems
     ) external returns (uint256 toRemove) {
         if (maxItems == 0) revert QueueLookupNoLimit();
@@ -147,8 +146,7 @@ library QueueLib {
         uint128 head = self.head;
         uint128 curr = head;
 
-        // Make sure we don't have any leftovers from the previous call.
-        queueLookup.clear();
+        TransientUintUintMap queueLookup = TransientUintUintMapLib.create();
 
         for (uint256 i; i < maxItems; ++i) {
             Batch item = self.queue[curr];
