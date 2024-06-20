@@ -131,10 +131,7 @@ contract CSModule is
     event PublicRelease();
     event KeyRemovalChargeSet(uint256 amount);
 
-    event KeyRemovalChargeApplied(
-        uint256 indexed nodeOperatorId,
-        uint256 amount
-    );
+    event KeyRemovalChargeApplied(uint256 indexed nodeOperatorId);
     event ELRewardsStealingPenaltyReported(
         uint256 indexed nodeOperatorId,
         bytes32 proposedBlockHash,
@@ -943,7 +940,7 @@ contract CSModule is
         uint256 amountToCharge = keyRemovalCharge * keysCount;
         if (amountToCharge != 0) {
             accounting.chargeFee(nodeOperatorId, amountToCharge);
-            emit KeyRemovalChargeApplied(nodeOperatorId, amountToCharge);
+            emit KeyRemovalChargeApplied(nodeOperatorId);
         }
 
         // @dev No need to safe cast due to checks in the func above

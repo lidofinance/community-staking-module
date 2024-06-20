@@ -190,7 +190,7 @@
 | recoverERC20                                        | 58549           | 58549  | 58549  | 58549   | 1       |
 | recoverEther                                        | 23781           | 26059  | 26059  | 28338   | 2       |
 | recoverStETHShares                                  | 55664           | 55664  | 55664  | 55664   | 1       |
-| removeKeys                                          | 24078           | 117656 | 142334 | 216618  | 17      |
+| removeKeys                                          | 24078           | 117478 | 142038 | 216381  | 17      |
 | reportELRewardsStealingPenalty                      | 24302           | 93351  | 102512 | 103373  | 37      |
 | resetNodeOperatorManagerAddress                     | 26951           | 31027  | 29385  | 36734   | 5       |
 | resume                                              | 23748           | 29549  | 29567  | 29567   | 336     |

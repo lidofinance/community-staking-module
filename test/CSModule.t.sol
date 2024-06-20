@@ -3556,7 +3556,7 @@ contract CsmRemoveKeys is CSMCommon {
         );
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.KeyRemovalChargeApplied(noId, amountToCharge);
+        emit CSModule.KeyRemovalChargeApplied(noId);
 
         vm.prank(nodeOperator);
         csm.removeKeys(noId, 1, 2);
