@@ -4607,10 +4607,7 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         );
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(
-            noId,
-            amount + csm.EL_REWARDS_STEALING_FINE()
-        );
+        emit CSModule.ELRewardsStealingPenaltySettled(noId);
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
@@ -4640,15 +4637,9 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         );
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(
-            firstNoId,
-            1 ether + csm.EL_REWARDS_STEALING_FINE()
-        );
+        emit CSModule.ELRewardsStealingPenaltySettled(firstNoId);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(
-            secondNoId,
-            BOND_SIZE + csm.EL_REWARDS_STEALING_FINE()
-        );
+        emit CSModule.ELRewardsStealingPenaltySettled(secondNoId);
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
@@ -4684,7 +4675,7 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         idsToSettle[0] = noId;
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(noId, 0);
+        emit CSModule.ELRewardsStealingPenaltySettled(noId);
         expectNoCall(
             address(accounting),
             abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
@@ -4704,9 +4695,9 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         idsToSettle[1] = secondNoId;
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(firstNoId, 0);
+        emit CSModule.ELRewardsStealingPenaltySettled(firstNoId);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(secondNoId, 0);
+        emit CSModule.ELRewardsStealingPenaltySettled(secondNoId);
         expectNoCall(
             address(accounting),
             abi.encodeWithSelector(
@@ -4751,12 +4742,9 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         );
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(firstNoId, 0);
+        emit CSModule.ELRewardsStealingPenaltySettled(firstNoId);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(
-            secondNoId,
-            1 ether + csm.EL_REWARDS_STEALING_FINE()
-        );
+        emit CSModule.ELRewardsStealingPenaltySettled(secondNoId);
         expectNoCall(
             address(accounting),
             abi.encodeWithSelector(
@@ -4830,8 +4818,8 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
         public
     {
         uint256 retentionPeriod = accounting.getBondLockRetentionPeriod();
-        uint256 firstNoId = createNodeOperator();
-        uint256 secondNoId = createNodeOperator();
+        uint256 firstNoId = createNodeOperator(2);
+        uint256 secondNoId = createNodeOperator(2);
         uint256[] memory idsToSettle = new uint256[](2);
         idsToSettle[0] = firstNoId;
         idsToSettle[1] = secondNoId;
@@ -4848,12 +4836,9 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
         );
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(firstNoId, 0);
+        emit CSModule.ELRewardsStealingPenaltySettled(firstNoId);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(
-            secondNoId,
-            BOND_SIZE + csm.EL_REWARDS_STEALING_FINE()
-        );
+        emit CSModule.ELRewardsStealingPenaltySettled(secondNoId);
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(

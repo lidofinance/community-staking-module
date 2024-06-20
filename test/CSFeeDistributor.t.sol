@@ -454,6 +454,12 @@ contract CSFeeDistributorTest is Test, Fixtures, Utilities {
         vm.prank(oracle);
         feeDistributor.processOracleReport(someBytes32(), "Qn", 1);
     }
+
+    function test_processOracleReport_RevertWhen_NotOracle() public {
+        vm.expectRevert(CSFeeDistributor.NotOracle.selector);
+        vm.prank(stranger);
+        feeDistributor.processOracleReport(someBytes32(), "Qn", 1);
+    }
 }
 
 contract CSFeeDistributorAssetRecovererTest is Test, Fixtures, Utilities {

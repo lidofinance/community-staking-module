@@ -232,7 +232,10 @@ abstract contract CSBondCore is ICSBondCore {
     /// @dev Burn Node Operator's bond shares (stETH). Shares will be burned on the next stETH rebase
     /// @dev The method sender should be granted as `Burner.REQUEST_BURN_SHARES_ROLE` and make stETH allowance for `Burner`
     /// @param amount Bond amount to burn in ETH (stETH)
-    function _burn(uint256 nodeOperatorId, uint256 amount) internal {
+    function _burn(
+        uint256 nodeOperatorId,
+        uint256 amount
+    ) internal returns (uint256 burned) {
         address burner = LIDO_LOCATOR.burner();
         // sanity check for the cases when burner address is updated
         if (LIDO.allowance(address(this), burner) < amount) {
@@ -241,11 +244,8 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 toBurnShares = _sharesByEth(amount);
         uint256 burnedShares = _reduceBond(nodeOperatorId, toBurnShares);
         IBurner(burner).requestBurnShares(address(this), burnedShares);
-        emit BondBurned(
-            nodeOperatorId,
-            _ethByShares(toBurnShares),
-            _ethByShares(burnedShares)
-        );
+        burned = _ethByShares(burnedShares);
+        emit BondBurned(nodeOperatorId, _ethByShares(toBurnShares), burned);
     }
 
     /// @dev Transfer Node Operator's bond shares (stETH) to charge recipient to pay some fee
@@ -254,9 +254,9 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 nodeOperatorId,
         uint256 amount,
         address recipient
-    ) internal {
+    ) internal returns (uint256 chargedShares) {
         uint256 toChargeShares = _sharesByEth(amount);
-        uint256 chargedShares = _reduceBond(nodeOperatorId, toChargeShares);
+        chargedShares = _reduceBond(nodeOperatorId, toChargeShares);
         LIDO.transferShares(recipient, chargedShares);
         emit BondCharged(
             nodeOperatorId,

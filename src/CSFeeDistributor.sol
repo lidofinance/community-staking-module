@@ -61,16 +61,6 @@ contract CSFeeDistributor is
     error FeeSharesDecrease();
     error NotEnoughShares();
 
-    modifier onlyAccounting() {
-        if (msg.sender != ACCOUNTING) revert NotAccounting();
-        _;
-    }
-
-    modifier onlyOracle() {
-        if (msg.sender != ORACLE) revert NotOracle();
-        _;
-    }
-
     constructor(address stETH, address accounting, address oracle) {
         if (accounting == address(0)) revert ZeroAccountingAddress();
         if (oracle == address(0)) revert ZeroOracleAddress();
@@ -99,7 +89,8 @@ contract CSFeeDistributor is
         uint256 nodeOperatorId,
         uint256 shares,
         bytes32[] calldata proof
-    ) external onlyAccounting returns (uint256 sharesToDistribute) {
+    ) external returns (uint256 sharesToDistribute) {
+        if (msg.sender != ACCOUNTING) revert NotAccounting();
         sharesToDistribute = getFeesToDistribute(nodeOperatorId, shares, proof);
 
         if (sharesToDistribute == 0) {
@@ -124,7 +115,8 @@ contract CSFeeDistributor is
         bytes32 _treeRoot,
         string calldata _treeCid,
         uint256 distributed
-    ) external onlyOracle {
+    ) external {
+        if (msg.sender != ORACLE) revert NotOracle();
         if (
             totalClaimableShares + distributed > STETH.sharesOf(address(this))
         ) {
