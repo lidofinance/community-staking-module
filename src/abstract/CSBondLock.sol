@@ -73,8 +73,7 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
     /// @notice Get default bond lock retention period
     /// @return Default bond lock retention period
     function getBondLockRetentionPeriod() external view returns (uint256) {
-        CSBondLockStorage storage $ = _getCSBondLockStorage();
-        return $.bondLockRetentionPeriod;
+        return _getCSBondLockStorage().bondLockRetentionPeriod;
     }
 
     /// @notice Get information about the locked bond for the given Node Operator
@@ -83,8 +82,7 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
     function getLockedBondInfo(
         uint256 nodeOperatorId
     ) public view returns (BondLock memory) {
-        CSBondLockStorage storage $ = _getCSBondLockStorage();
-        return $.bondLock[nodeOperatorId];
+        return _getCSBondLockStorage().bondLock[nodeOperatorId];
     }
 
     /// @notice Get amount of the locked bond in ETH (stETH) by the given Node Operator
@@ -93,12 +91,10 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
     function getActualLockedBond(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
-        CSBondLockStorage storage $ = _getCSBondLockStorage();
-        BondLock storage bondLock = $.bondLock[nodeOperatorId];
-        if (bondLock.retentionUntil < block.timestamp) {
-            return 0;
-        }
-        return bondLock.amount;
+        BondLock storage bondLock = _getCSBondLockStorage().bondLock[
+            nodeOperatorId
+        ];
+        return bondLock.retentionUntil < block.timestamp ? 0 : bondLock.amount;
     }
 
     /// @dev Lock bond amount for the given Node Operator until the retention period.
@@ -121,7 +117,6 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
 
     /// @dev Reduce locked bond amount for the given Node Operator without changing retention period
     function _reduceAmount(uint256 nodeOperatorId, uint256 amount) internal {
-        CSBondLockStorage storage $ = _getCSBondLockStorage();
         uint256 blocked = getActualLockedBond(nodeOperatorId);
         if (amount == 0) {
             revert InvalidBondLockAmount();
@@ -129,20 +124,18 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
         if (blocked < amount) {
             revert InvalidBondLockAmount();
         }
-        // @dev It's checked via getActualLockedBond call
         unchecked {
             _changeBondLock(
                 nodeOperatorId,
-                $.bondLock[nodeOperatorId].amount - amount,
-                $.bondLock[nodeOperatorId].retentionUntil
+                blocked - amount,
+                _getCSBondLockStorage().bondLock[nodeOperatorId].retentionUntil
             );
         }
     }
 
     /// @dev Remove bond lock for the given Node Operator
     function _remove(uint256 nodeOperatorId) internal {
-        CSBondLockStorage storage $ = _getCSBondLockStorage();
-        delete $.bondLock[nodeOperatorId];
+        delete _getCSBondLockStorage().bondLock[nodeOperatorId];
         emit BondLockChanged(nodeOperatorId, 0, 0);
     }
 
@@ -155,14 +148,13 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
 
     /// @dev Set default bond lock retention period. That period will be sum with the current block timestamp of lock tx
     function _setBondLockRetentionPeriod(uint256 retentionPeriod) internal {
-        CSBondLockStorage storage $ = _getCSBondLockStorage();
         if (
             retentionPeriod < MIN_BOND_LOCK_RETENTION_PERIOD ||
             retentionPeriod > MAX_BOND_LOCK_RETENTION_PERIOD
         ) {
             revert InvalidBondLockRetentionPeriod();
         }
-        $.bondLockRetentionPeriod = retentionPeriod;
+        _getCSBondLockStorage().bondLockRetentionPeriod = retentionPeriod;
         emit BondLockRetentionPeriodChanged(retentionPeriod);
     }
 
@@ -171,12 +163,11 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
         uint256 amount,
         uint256 retentionUntil
     ) private {
-        CSBondLockStorage storage $ = _getCSBondLockStorage();
         if (amount == 0) {
             _remove(nodeOperatorId);
             return;
         }
-        $.bondLock[nodeOperatorId] = BondLock({
+        _getCSBondLockStorage().bondLock[nodeOperatorId] = BondLock({
             amount: amount.toUint128(),
             retentionUntil: retentionUntil.toUint128()
         });
