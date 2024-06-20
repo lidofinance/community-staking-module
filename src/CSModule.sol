@@ -97,6 +97,10 @@ contract CSModule is
         uint256 indexed nodeOperatorId,
         uint256 depositedKeysCount
     );
+    event DepositableSigningKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 depositableKeysCount
+    );
     event ExitedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
         uint256 exitedKeysCount
@@ -1044,7 +1048,6 @@ contract CSModule is
             uint256 nodeOperatorId = nodeOperatorIds[i];
             _onlyExistingNodeOperator(nodeOperatorId);
             uint256 settled = accounting.settleLockedBondETH(nodeOperatorId);
-            emit ELRewardsStealingPenaltySettled(nodeOperatorId);
             if (settled > 0) {
                 // Bond curve should be reset to default in case of confirmed MEV stealing. See https://hackmd.io/@lido/SygBLW5ja
                 accounting.resetBondCurve(nodeOperatorId);
@@ -1056,6 +1059,7 @@ contract CSModule is
                     normalizeQueueIfUpdated: false
                 });
             }
+            emit ELRewardsStealingPenaltySettled(nodeOperatorId);
         }
     }
 
@@ -1261,6 +1265,10 @@ contract CSModule is
                 // `keysCount` is min of `depositableValidatorsCount` and `depositsLeft`.
                 // @dev No need to safe cast due to internal logic
                 no.depositableValidatorsCount -= uint32(keysCount);
+                emit DepositableSigningKeysCountChanged(
+                    noId,
+                    no.depositableValidatorsCount
+                );
                 depositsLeft -= keysCount;
                 if (depositsLeft == 0) {
                     break;
@@ -1689,6 +1697,7 @@ contract CSModule is
                 _depositableValidatorsCount -= no.depositableValidatorsCount;
             }
             no.depositableValidatorsCount = 0;
+            emit DepositableSigningKeysCountChanged(nodeOperatorId, 0);
         } else {
             // Nonce will be updated on the top level once per call
             // Node Operator should normalize queue himself in case of unstuck
@@ -1747,6 +1756,7 @@ contract CSModule is
             }
             // @dev No need to safe cast due to internal logic
             no.depositableValidatorsCount = uint32(newCount);
+            emit DepositableSigningKeysCountChanged(nodeOperatorId, newCount);
             if (incrementNonceIfUpdated) {
                 _incrementModuleNonce();
             }
