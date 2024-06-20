@@ -1465,7 +1465,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
         _lock({ id: 0, amount: 1 ether });
 
-        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.expectRevert(CSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
@@ -1473,29 +1473,6 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             address(user),
             leaf.shares,
             leaf.proof
-        );
-        uint256 bondSharesAfter = accounting.getBondShares(0);
-
-        assertEq(
-            stETH.balanceOf(address(user)),
-            0,
-            "user balance should be equal to zero"
-        );
-        assertApproxEqAbs(
-            bondSharesAfter,
-            bondSharesBefore + sharesAsFee,
-            1 wei,
-            "bond shares after claim should be equal to before plus fee shares"
-        );
-        assertEq(
-            stETH.sharesOf(address(accounting)),
-            bondSharesAfter,
-            "bond manager after claim should be equal to after"
-        );
-        assertEq(
-            accounting.totalBondShares(),
-            bondSharesAfter,
-            "total bond shares after claim should be equal to after"
         );
     }
 
@@ -1742,7 +1719,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.expectRevert(CSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
@@ -1750,28 +1727,6 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             address(user),
             leaf.shares,
             leaf.proof
-        );
-        uint256 bondSharesAfter = accounting.getBondShares(0);
-
-        assertEq(
-            stETH.balanceOf(address(user)),
-            0,
-            "user balance should be equal to zero"
-        );
-        assertEq(
-            bondSharesAfter,
-            bondSharesBefore + sharesAsFee,
-            "bond shares after claim should be equal to before plus fee shares"
-        );
-        assertEq(
-            stETH.sharesOf(address(accounting)),
-            bondSharesAfter,
-            "bond manager after claim should be equal to after"
-        );
-        assertEq(
-            accounting.totalBondShares(),
-            bondSharesAfter,
-            "total bond shares after claim should be equal to after"
         );
     }
 
@@ -1780,7 +1735,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.expectRevert(CSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
@@ -1788,28 +1743,6 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             address(user),
             leaf.shares,
             leaf.proof
-        );
-        uint256 bondSharesAfter = accounting.getBondShares(0);
-
-        assertEq(
-            stETH.balanceOf(address(user)),
-            0,
-            "user balance should be equal to zero"
-        );
-        assertEq(
-            bondSharesAfter,
-            bondSharesBefore + sharesAsFee,
-            "bond shares after claim should be equal to before plus fee shares"
-        );
-        assertEq(
-            stETH.sharesOf(address(accounting)),
-            bondSharesAfter,
-            "bond manager after claim should be equal to after"
-        );
-        assertEq(
-            accounting.totalBondShares(),
-            bondSharesAfter,
-            "total bond shares after claim should be equal to after"
         );
     }
 
@@ -1855,7 +1788,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
 
-        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.expectRevert(CSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
@@ -1863,18 +1796,6 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             address(user),
             leaf.shares,
             leaf.proof
-        );
-        uint256 bondSharesAfter = accounting.getBondShares(0);
-
-        assertEq(
-            bondSharesAfter,
-            bondSharesBefore + leaf.shares,
-            "bond shares should be equal to before plus rewards shares"
-        );
-        assertEq(
-            accounting.totalBondShares(),
-            bondSharesAfter,
-            "total bond shares should be equal to after"
         );
     }
 
@@ -2022,7 +1943,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
         _lock({ id: 0, amount: 1 ether });
 
-        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.expectRevert(CSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
@@ -2030,34 +1951,6 @@ contract CSAccountingClaimWstETHRewardsTest is
             address(user),
             leaf.shares,
             leaf.proof
-        );
-        uint256 bondSharesAfter = accounting.getBondShares(0);
-
-        assertEq(
-            wstETH.balanceOf(address(user)),
-            0,
-            "user balance should be equal to zero"
-        );
-        assertApproxEqAbs(
-            bondSharesAfter,
-            bondSharesBefore + sharesAsFee,
-            1 wei,
-            "bond shares after claim should be equal to before plus fee shares"
-        );
-        assertEq(
-            wstETH.balanceOf(address(accounting)),
-            0,
-            "bond manager wstETH balance should be 0"
-        );
-        assertEq(
-            stETH.sharesOf(address(accounting)),
-            bondSharesAfter,
-            "bond manager after claim should be equal to bond shares after"
-        );
-        assertEq(
-            accounting.totalBondShares(),
-            bondSharesAfter,
-            "total bond shares after claim should be equal to bond shares after"
         );
     }
 
@@ -2337,7 +2230,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.expectRevert(CSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
@@ -2345,33 +2238,6 @@ contract CSAccountingClaimWstETHRewardsTest is
             address(user),
             leaf.shares,
             leaf.proof
-        );
-        uint256 bondSharesAfter = accounting.getBondShares(0);
-
-        assertEq(
-            wstETH.balanceOf(address(user)),
-            0,
-            "user balance should be equal to zero"
-        );
-        assertEq(
-            bondSharesAfter,
-            bondSharesBefore + sharesAsFee,
-            "bond shares after claim should be equal to before plus fee shares"
-        );
-        assertEq(
-            wstETH.balanceOf(address(accounting)),
-            0,
-            "bond manager wstETH balance should be 0"
-        );
-        assertEq(
-            stETH.sharesOf(address(accounting)),
-            bondSharesAfter,
-            "bond manager after claim should be equal to bond shares after"
-        );
-        assertEq(
-            accounting.totalBondShares(),
-            bondSharesAfter,
-            "total bond shares after claim should be equal to bond shares after"
         );
     }
 
@@ -2380,7 +2246,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.expectRevert(CSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
@@ -2388,33 +2254,6 @@ contract CSAccountingClaimWstETHRewardsTest is
             address(user),
             leaf.shares,
             leaf.proof
-        );
-        uint256 bondSharesAfter = accounting.getBondShares(0);
-
-        assertEq(
-            wstETH.balanceOf(address(user)),
-            0,
-            "user balance should be equal to zero"
-        );
-        assertEq(
-            bondSharesAfter,
-            bondSharesBefore + sharesAsFee,
-            "bond shares after claim should be equal to before plus fee shares"
-        );
-        assertEq(
-            wstETH.balanceOf(address(accounting)),
-            0,
-            "bond manager wstETH balance should be 0"
-        );
-        assertEq(
-            stETH.sharesOf(address(accounting)),
-            bondSharesAfter,
-            "bond manager after claim should be equal to bond shares after"
-        );
-        assertEq(
-            accounting.totalBondShares(),
-            bondSharesAfter,
-            "total bond shares after claim should be equal to bond shares after"
         );
     }
 
@@ -2472,7 +2311,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
 
-        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.expectRevert(CSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
@@ -2480,18 +2319,6 @@ contract CSAccountingClaimWstETHRewardsTest is
             address(user),
             leaf.shares,
             leaf.proof
-        );
-        uint256 bondSharesAfter = accounting.getBondShares(0);
-
-        assertEq(
-            bondSharesAfter,
-            bondSharesBefore + leaf.shares,
-            "bond shares should be equal to before plus rewards shares"
-        );
-        assertEq(
-            accounting.totalBondShares(),
-            bondSharesAfter,
-            "total bond shares should be equal to after"
         );
     }
 
@@ -2617,7 +2444,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         _rewards({ fee: 0.1 ether });
         _lock({ id: 0, amount: 1 ether });
 
-        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.expectRevert(CSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
@@ -2625,19 +2452,6 @@ contract CSAccountingclaimRewardsUnstETHTest is
             address(user),
             leaf.shares,
             leaf.proof
-        );
-        uint256 bondSharesAfter = accounting.getBondShares(0);
-
-        assertEq(
-            bondSharesAfter,
-            bondSharesBefore + sharesAsFee,
-            "bond shares should be equal to before plus fee shares"
-        );
-        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
-        assertEq(
-            accounting.totalBondShares(),
-            bondSharesAfter,
-            "total bond shares should be equal to after"
         );
     }
 
@@ -2837,8 +2651,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        uint256 bondSharesBefore = accounting.getBondShares(0);
-
+        vm.expectRevert(CSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
@@ -2846,20 +2659,6 @@ contract CSAccountingclaimRewardsUnstETHTest is
             address(user),
             leaf.shares,
             leaf.proof
-        );
-
-        uint256 bondSharesAfter = accounting.getBondShares(0);
-
-        assertEq(
-            bondSharesAfter,
-            bondSharesBefore + sharesAsFee,
-            "bond shares should be equal to before plus fee shares"
-        );
-        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
-        assertEq(
-            accounting.totalBondShares(),
-            bondSharesAfter,
-            "total bond shares should be equal to after"
         );
     }
 
@@ -2868,8 +2667,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        uint256 bondSharesBefore = accounting.getBondShares(0);
-
+        vm.expectRevert(CSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
@@ -2877,20 +2675,6 @@ contract CSAccountingclaimRewardsUnstETHTest is
             address(user),
             leaf.shares,
             leaf.proof
-        );
-
-        uint256 bondSharesAfter = accounting.getBondShares(0);
-
-        assertEq(
-            bondSharesAfter,
-            bondSharesBefore + sharesAsFee,
-            "bond shares should be equal to before plus fee shares"
-        );
-        assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
-        assertEq(
-            accounting.totalBondShares(),
-            bondSharesAfter,
-            "total bond shares should be equal to after"
         );
     }
 
@@ -2930,7 +2714,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
 
-        uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.expectRevert(CSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
@@ -2938,18 +2722,6 @@ contract CSAccountingclaimRewardsUnstETHTest is
             address(user),
             leaf.shares,
             leaf.proof
-        );
-        uint256 bondSharesAfter = accounting.getBondShares(0);
-
-        assertEq(
-            bondSharesAfter,
-            bondSharesBefore + leaf.shares,
-            "bond shares should be equal to before plus rewards shares"
-        );
-        assertEq(
-            accounting.totalBondShares(),
-            bondSharesAfter,
-            "total bond shares should be equal to after"
         );
     }
 

@@ -235,6 +235,16 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities {
         );
         csm.settleELRewardsStealingPenalty(UintArr(noId));
     }
+
+    function mock_requestWithdrawals(uint256[] memory returnValue) internal {
+        vm.mockCall(
+            address(locator.withdrawalQueue()),
+            abi.encodeWithSelector(
+                IWithdrawalQueue.requestWithdrawals.selector
+            ),
+            abi.encode(returnValue)
+        );
+    }
 }
 
 contract CSMCommonNoPublicRelease is CSMFixtures {
@@ -2344,9 +2354,21 @@ contract CSMObtainDepositData is CSMCommon {
 }
 
 contract CSMClaimRewards is CSMCommon {
+    uint256[] public mockedRequestIds = [1];
+
+    function setUp() public override {
+        super.setUp();
+        mock_requestWithdrawals(mockedRequestIds);
+    }
+
     function test_claimRewardsStETH() public {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
+
+        vm.deal(nodeOperator, 1 ether);
+        vm.prank(nodeOperator);
+        csm.depositETH{ value: 1 ether }(noId);
+
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
@@ -2368,11 +2390,16 @@ contract CSMClaimRewards is CSMCommon {
         address rewardAddress = nextAddress("rewardAddress");
         csm.obtainDepositData(1, "");
 
+        vm.deal(nodeOperator, 1 ether);
+        vm.prank(nodeOperator);
+        csm.depositETH{ value: 1 ether }(noId);
+
         vm.prank(nodeOperator);
         csm.proposeNodeOperatorRewardAddressChange(noId, rewardAddress);
 
         vm.startPrank(rewardAddress);
         csm.confirmNodeOperatorRewardAddressChange(noId);
+
         csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
@@ -2390,6 +2417,11 @@ contract CSMClaimRewards is CSMCommon {
     function test_claimRewardsWstETH() public {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
+
+        vm.deal(nodeOperator, 1 ether);
+        vm.prank(nodeOperator);
+        csm.depositETH{ value: 1 ether }(noId);
+
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
@@ -2410,6 +2442,10 @@ contract CSMClaimRewards is CSMCommon {
         uint256 noId = createNodeOperator();
         address rewardAddress = nextAddress("rewardAddress");
         csm.obtainDepositData(1, "");
+
+        vm.deal(nodeOperator, 1 ether);
+        vm.prank(nodeOperator);
+        csm.depositETH{ value: 1 ether }(noId);
 
         vm.prank(nodeOperator);
         csm.proposeNodeOperatorRewardAddressChange(noId, rewardAddress);
@@ -2433,6 +2469,11 @@ contract CSMClaimRewards is CSMCommon {
     function test_requestRewardsETH() public {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
+
+        vm.deal(nodeOperator, 1 ether);
+        vm.prank(nodeOperator);
+        csm.depositETH{ value: 1 ether }(noId);
+
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
@@ -2453,6 +2494,10 @@ contract CSMClaimRewards is CSMCommon {
         uint256 noId = createNodeOperator();
         address rewardAddress = nextAddress("rewardAddress");
         csm.obtainDepositData(1, "");
+
+        vm.deal(nodeOperator, 1 ether);
+        vm.prank(nodeOperator);
+        csm.depositETH{ value: 1 ether }(noId);
 
         vm.prank(nodeOperator);
         csm.proposeNodeOperatorRewardAddressChange(noId, rewardAddress);
@@ -4166,7 +4211,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
     function test_updateTargetValidatorsLimits_RevertWhen_TargetLimitExceedsUint32()
         public
     {
-        uint256 noId = createNodeOperator(1);
+        createNodeOperator(1);
         vm.expectRevert(CSModule.InvalidInput.selector);
         csm.updateTargetValidatorsLimits(0, 1, uint256(type(uint32).max) + 1);
     }
@@ -4174,7 +4219,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
     function test_updateTargetValidatorsLimits_RevertWhen_TargetLimitModeExceedsUint8()
         public
     {
-        uint256 noId = createNodeOperator(1);
+        createNodeOperator(1);
         vm.expectRevert(CSModule.InvalidInput.selector);
         csm.updateTargetValidatorsLimits(0, uint256(type(uint8).max) + 1, 1);
     }

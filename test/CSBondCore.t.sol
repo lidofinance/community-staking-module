@@ -158,7 +158,7 @@ contract CSBondCoreETHTest is CSBondCoreTestBase {
         assertEq(stETH.sharesOf(address(bondCore)), shares);
     }
 
-    function test_requestETH() public {
+    function test_claimUnstETH() public {
         mock_requestWithdrawals(mockedRequestIds);
         _deposit(1 ether);
 
@@ -183,28 +183,21 @@ contract CSBondCoreETHTest is CSBondCoreTestBase {
         );
     }
 
-    function test_requestETH_WhenClaimableIsZero() public {
-        mock_requestWithdrawals(mockedRequestIds);
+    function test_claimUnstETH_WhenClaimableIsZero() public {
+        assertEq(bondCore.getBondShares(0), 0);
 
-        uint256 bondSharesBefore = bondCore.getBondShares(0);
-        bondCore.claimUnstETH(0, 0, user);
-
-        assertEq(bondCore.getBondShares(0), bondSharesBefore);
-        assertEq(bondCore.totalBondShares(), bondSharesBefore);
+        vm.expectRevert(CSBondCore.NothingToClaim.selector);
+        bondCore.claimUnstETH(0, 100, user);
     }
 
-    function test_requestETH_WhenToClaimIsZero() public {
-        mock_requestWithdrawals(mockedRequestIds);
+    function test_claimUnstETH_WhenToClaimIsZero() public {
         _deposit(2 ether);
 
-        uint256 bondSharesBefore = bondCore.getBondShares(0);
+        vm.expectRevert(CSBondCore.NothingToClaim.selector);
         bondCore.claimUnstETH(0, 0, user);
-
-        assertEq(bondCore.getBondShares(0), bondSharesBefore);
-        assertEq(bondCore.totalBondShares(), bondSharesBefore);
     }
 
-    function test_requestETH_WhenToClaimIsMoreThanClaimable() public {
+    function test_claimUnstETH_WhenToClaimIsMoreThanClaimable() public {
         mock_requestWithdrawals(mockedRequestIds);
         _deposit(1 ether);
 
@@ -229,7 +222,7 @@ contract CSBondCoreETHTest is CSBondCoreTestBase {
         );
     }
 
-    function test_requestETH_WhenToClaimIsEqualToClaimable() public {
+    function test_claimUnstETH_WhenToClaimIsEqualToClaimable() public {
         mock_requestWithdrawals(mockedRequestIds);
         _deposit(1 ether);
 
@@ -254,7 +247,7 @@ contract CSBondCoreETHTest is CSBondCoreTestBase {
         );
     }
 
-    function test_requestETH_WhenToClaimIsLessThanClaimable() public {
+    function test_claimUnstETH_WhenToClaimIsLessThanClaimable() public {
         mock_requestWithdrawals(mockedRequestIds);
         _deposit(1 ether);
 
@@ -317,25 +310,17 @@ contract CSBondCoreStETHTest is CSBondCoreTestBase {
     }
 
     function test_claimStETH_WhenClaimableIsZero() public {
-        _deposit(1 ether);
+        assertEq(bondCore.getBondShares(0), 0);
 
-        uint256 bondSharesBefore = bondCore.getBondShares(0);
-        bondCore.claimStETH(0, 0, user);
-
-        assertEq(bondCore.getBondShares(0), bondSharesBefore);
-        assertEq(bondCore.totalBondShares(), bondSharesBefore);
-        assertEq(stETH.sharesOf(user), 0);
+        vm.expectRevert(CSBondCore.NothingToClaim.selector);
+        bondCore.claimStETH(0, 100, user);
     }
 
     function test_claimStETH_WhenToClaimIsZero() public {
         _deposit(2 ether);
 
-        uint256 bondSharesBefore = bondCore.getBondShares(0);
+        vm.expectRevert(CSBondCore.NothingToClaim.selector);
         bondCore.claimStETH(0, 0, user);
-
-        assertEq(bondCore.getBondShares(0), bondSharesBefore);
-        assertEq(bondCore.totalBondShares(), bondSharesBefore);
-        assertEq(stETH.sharesOf(user), 0);
     }
 
     function test_claimStETH_WhenToClaimIsMoreThanClaimable() public {
@@ -439,25 +424,17 @@ contract CSBondCoreWstETHTest is CSBondCoreTestBase {
     }
 
     function test_claimWstETH_WhenClaimableIsZero() public {
-        _deposit(1 ether);
+        assertEq(bondCore.getBondShares(0), 0);
 
-        uint256 bondSharesBefore = bondCore.getBondShares(0);
-        bondCore.claimWstETH(0, 0, user);
-
-        assertEq(bondCore.getBondShares(0), bondSharesBefore);
-        assertEq(bondCore.totalBondShares(), bondSharesBefore);
-        assertEq(wstETH.balanceOf(user), 0);
+        vm.expectRevert(CSBondCore.NothingToClaim.selector);
+        bondCore.claimWstETH(0, 100, user);
     }
 
     function test_claimWstETH_WhenToClaimIsZero() public {
         _deposit(2 ether);
 
-        uint256 bondSharesBefore = bondCore.getBondShares(0);
+        vm.expectRevert(CSBondCore.NothingToClaim.selector);
         bondCore.claimWstETH(0, 0, user);
-
-        assertEq(bondCore.getBondShares(0), bondSharesBefore);
-        assertEq(bondCore.totalBondShares(), bondSharesBefore);
-        assertEq(wstETH.balanceOf(user), 0);
     }
 
     function test_claimWstETH_WhenToClaimIsMoreThanClaimable() public {
