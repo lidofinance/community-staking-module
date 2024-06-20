@@ -2240,6 +2240,20 @@ contract CSMObtainDepositData is CSMCommon {
         assertEq(obtainedSignatures, signatures);
     }
 
+    function test_obtainDepositData_MultipleOperators() public {
+        uint256 firstId = createNodeOperator(2);
+        uint256 secondId = createNodeOperator(3);
+        uint256 thirdId = createNodeOperator(1);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.DepositableSigningKeysCountChanged(firstId, 0);
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.DepositableSigningKeysCountChanged(secondId, 0);
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.DepositableSigningKeysCountChanged(thirdId, 0);
+        csm.obtainDepositData(6, "");
+    }
+
     function test_obtainDepositData_counters() public {
         uint256 noId = createNodeOperator();
 
