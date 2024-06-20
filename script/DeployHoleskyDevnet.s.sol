@@ -50,7 +50,7 @@ contract DeployHoleskyDevnet is DeployBase {
         config.bondCurve[4] = 9 ether;
         config.bondCurve[5] = 10.5 ether;
 
-        config.minBondLockRetentionPeriod = 4 weeks;
+        config.minBondLockRetentionPeriod = 0;
         config.maxBondLockRetentionPeriod = 365 days;
         config.bondLockRetentionPeriod = 8 weeks;
         config
