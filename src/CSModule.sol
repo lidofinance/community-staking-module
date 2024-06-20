@@ -141,10 +141,7 @@ contract CSModule is
         uint256 indexed nodeOperatorId,
         uint256 amount
     );
-    event ELRewardsStealingPenaltySettled(
-        uint256 indexed nodeOperatorId,
-        uint256 amount
-    );
+    event ELRewardsStealingPenaltySettled(uint256 indexed nodeOperatorId);
 
     error NodeOperatorDoesNotExist();
     error SenderIsNotEligible();
@@ -202,6 +199,7 @@ contract CSModule is
         __AccessControlEnumerable_init();
 
         accounting = ICSAccounting(_accounting);
+        // it is possible to deploy module without EA contract
         earlyAdoption = ICSEarlyAdoption(_earlyAdoption);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -1047,7 +1045,7 @@ contract CSModule is
             uint256 nodeOperatorId = nodeOperatorIds[i];
             _onlyExistingNodeOperator(nodeOperatorId);
             uint256 settled = accounting.settleLockedBondETH(nodeOperatorId);
-            emit ELRewardsStealingPenaltySettled(nodeOperatorId, settled);
+            emit ELRewardsStealingPenaltySettled(nodeOperatorId);
             if (settled > 0) {
                 // Bond curve should be reset to default in case of confirmed MEV stealing. See https://hackmd.io/@lido/SygBLW5ja
                 accounting.resetBondCurve(nodeOperatorId);

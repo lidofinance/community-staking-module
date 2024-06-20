@@ -358,6 +358,12 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities {
             abi.encode(returnValue)
         );
     }
+
+    function addBond(uint256 nodeOperatorId, uint256 amount) internal {
+        vm.deal(address(stakingModule), amount);
+        vm.prank(address(stakingModule));
+        accounting.depositETH{ value: amount }(user, nodeOperatorId);
+    }
 }
 
 contract CSAccountingPauseTest is CSAccountingBaseTest {
@@ -3508,15 +3514,18 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
 
     function test_settleLockedBondETH() public {
         mock_getNodeOperatorsCount(1);
+        uint256 noId = 0;
+        uint256 amount = 1 ether;
+        addBond(noId, amount);
 
         vm.prank(address(stakingModule));
-        accounting.lockBondETH(0, 1 ether);
-        assertEq(accounting.getActualLockedBond(0), 1 ether);
+        accounting.lockBondETH(noId, amount);
+        assertEq(accounting.getActualLockedBond(noId), amount);
 
         vm.prank(address(stakingModule));
-        uint256 settled = accounting.settleLockedBondETH(0);
-        assertEq(settled, 1 ether);
-        assertEq(accounting.getActualLockedBond(0), 0);
+        uint256 settled = accounting.settleLockedBondETH(noId);
+        assertApproxEqAbs(settled, amount, 1 wei);
+        assertEq(accounting.getActualLockedBond(noId), 0);
     }
 
     function test_settleLockedBondETH_noLocked() public {
