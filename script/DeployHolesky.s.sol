@@ -18,7 +18,7 @@ contract DeployHolesky is DeployBase {
         config.secondsPerSlot = 12;
         config.slotsPerEpoch = 32;
         config.clGenesisTime = 1695902400;
-        config.oracleReportEpochsPerFrame = 225 * 28; // 28 days
+        config.oracleReportEpochsPerFrame = 225 * 7; // 7 days
         config.fastLaneLengthSlots = 0;
         config.consensusVersion = 1;
         config.avgPerfLeewayBP = 500;
