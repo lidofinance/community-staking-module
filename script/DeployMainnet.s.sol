@@ -13,6 +13,8 @@ contract DeployMainnet is DeployBase {
         config.votingAddress = 0x2e59A20f205bB85a89C53f1936454680651E618e;
         config
             .easyTrackEVMScriptExecutor = 0xFE5986E06210aC1eCC1aDCafc0cc7f8D63B3F977;
+        config.proxyAdmin = 0x2e59A20f205bB85a89C53f1936454680651E618e;
+
         // Oracle
         config.secondsPerSlot = 12;
         config.slotsPerEpoch = 32;
