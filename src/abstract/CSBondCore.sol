@@ -99,8 +99,7 @@ abstract contract CSBondCore is ICSBondCore {
     /// @notice Get total bond shares (stETH) stored on the contract
     /// @return Total bond shares (stETH)
     function totalBondShares() public view returns (uint256) {
-        CSBondCoreStorage storage $ = _getCSBondCoreStorage();
-        return $.totalBondShares;
+        return _getCSBondCoreStorage().totalBondShares;
     }
 
     /// @notice Get bond shares (stETH) for the given Node Operator
@@ -109,8 +108,7 @@ abstract contract CSBondCore is ICSBondCore {
     function getBondShares(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
-        CSBondCoreStorage storage $ = _getCSBondCoreStorage();
-        return $.bondShares[nodeOperatorId];
+        return _getCSBondCoreStorage().bondShares[nodeOperatorId];
     }
 
     /// @notice Get bond amount in ETH (stETH) for the given Node Operator
@@ -270,8 +268,7 @@ abstract contract CSBondCore is ICSBondCore {
     function _getClaimableBondShares(
         uint256 nodeOperatorId
     ) internal view virtual returns (uint256) {
-        CSBondCoreStorage storage $ = _getCSBondCoreStorage();
-        return $.bondShares[nodeOperatorId];
+        return _getCSBondCoreStorage().bondShares[nodeOperatorId];
     }
 
     /// @dev Shortcut for Lido's getSharesByPooledEth
