@@ -89,6 +89,10 @@ contract CSModule is
         address indexed rewardAddress
     );
     event ReferrerSet(uint256 indexed nodeOperatorId, address indexed referrer);
+    event DepositableSigningKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 depositableKeysCount
+    );
     event VettedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
         uint256 vettedKeysCount
@@ -97,21 +101,17 @@ contract CSModule is
         uint256 indexed nodeOperatorId,
         uint256 depositedKeysCount
     );
-    event DepositableSigningKeysCountChanged(
-        uint256 indexed nodeOperatorId,
-        uint256 depositableKeysCount
-    );
     event ExitedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
         uint256 exitedKeysCount
     );
-    event TotalSigningKeysCountChanged(
-        uint256 indexed nodeOperatorId,
-        uint256 totalKeysCount
-    );
     event StuckSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
         uint256 stuckKeysCount
+    );
+    event TotalSigningKeysCountChanged(
+        uint256 indexed nodeOperatorId,
+        uint256 totalKeysCount
     );
     event TargetValidatorsCountChangedByRequest(
         uint256 indexed nodeOperatorId,
