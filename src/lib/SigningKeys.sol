@@ -29,13 +29,12 @@ library SigningKeys {
     /// @param pubkeys keys buffer to read from
     /// @param signatures signatures buffer to read from
     /// @return new total keys count
-    // TODO: Rewrite pubkeys and signatures to calldata
     function saveKeysSigs(
         uint256 nodeOperatorId,
         uint256 startIndex,
         uint256 keysCount,
-        bytes memory pubkeys,
-        bytes memory signatures
+        bytes calldata pubkeys,
+        bytes calldata signatures
     ) internal returns (uint256) {
         if (keysCount == 0 || startIndex + keysCount > type(uint32).max) {
             revert InvalidKeysCount();
@@ -59,9 +58,9 @@ library SigningKeys {
                 startIndex
             );
             assembly {
-                let _ofs := add(add(pubkeys, 0x20), mul(i, 48)) //PUBKEY_LENGTH = 48
-                let _part1 := mload(_ofs) // bytes 0..31
-                let _part2 := mload(add(_ofs, 0x10)) // bytes 16..47
+                let _ofs := add(pubkeys.offset, mul(i, 48)) //PUBKEY_LENGTH = 48
+                let _part1 := calldataload(_ofs) // bytes 0..31
+                let _part2 := calldataload(add(_ofs, 0x10)) // bytes 16..47
                 isEmpty := iszero(or(_part1, _part2))
                 mstore(add(tmpKey, 0x30), _part2) // store 2nd part first
                 mstore(add(tmpKey, 0x20), _part1) // store 1st part with overwrite bytes 16-31
@@ -76,10 +75,10 @@ library SigningKeys {
                 sstore(curOffset, mload(add(tmpKey, 0x20))) // store bytes 0..31
                 sstore(add(curOffset, 1), shl(128, mload(add(tmpKey, 0x30)))) // store bytes 32..47
                 // store signature
-                let _ofs := add(add(signatures, 0x20), mul(i, 96)) //SIGNATURE_LENGTH = 96
-                sstore(add(curOffset, 2), mload(_ofs))
-                sstore(add(curOffset, 3), mload(add(_ofs, 0x20)))
-                sstore(add(curOffset, 4), mload(add(_ofs, 0x40)))
+                let _ofs := add(signatures.offset, mul(i, 96)) //SIGNATURE_LENGTH = 96
+                sstore(add(curOffset, 2), calldataload(_ofs))
+                sstore(add(curOffset, 3), calldataload(add(_ofs, 0x20)))
+                sstore(add(curOffset, 4), calldataload(add(_ofs, 0x40)))
                 i := add(i, 1)
                 startIndex := add(startIndex, 1)
             }

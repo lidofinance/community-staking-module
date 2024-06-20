@@ -66,8 +66,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     function getCurveInfo(
         uint256 curveId
     ) public view returns (BondCurve memory) {
-        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        return $.bondCurves[curveId];
+        return _getCSBondCurveStorage().bondCurves[curveId];
     }
 
     /// @notice Get bond curve for the given Node Operator
@@ -85,8 +84,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     function getBondCurveId(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
-        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        return $.operatorBondCurveId[nodeOperatorId];
+        return _getCSBondCurveStorage().operatorBondCurveId[nodeOperatorId];
     }
 
     /// @notice Get required bond in ETH for the given number of keys for default bond curve
@@ -224,8 +222,9 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     /// @dev Reset bond curve for the given Node Operator to default.
     ///      (for example, because of breaking the rules by Node Operator)
     function _resetBondCurve(uint256 nodeOperatorId) internal {
-        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        $.operatorBondCurveId[nodeOperatorId] = DEFAULT_BOND_CURVE_ID;
+        _getCSBondCurveStorage().operatorBondCurveId[
+            nodeOperatorId
+        ] = DEFAULT_BOND_CURVE_ID;
         emit BondCurveSet(nodeOperatorId, DEFAULT_BOND_CURVE_ID);
     }
 
