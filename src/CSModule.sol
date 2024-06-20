@@ -75,9 +75,6 @@ contract CSModule is
     mapping(uint256 noKeyIndexPacked => bool) private _isValidatorWithdrawn;
     mapping(uint256 noKeyIndexPacked => bool) private _isValidatorSlashed;
 
-    // FIXME: Remove the variable before testnet deploy (kept as a placeholder to not to break devnet).
-    uint256 private _removeMeBeforeTestnetDeploy;
-
     uint64 private _totalDepositedValidators;
     uint64 private _totalExitedValidators;
     uint64 private _totalAddedValidators;

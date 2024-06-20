@@ -13,12 +13,12 @@ Source: https://github.com/Stake-Cat/Solo-Stakers/blob/6f03dad1bbe5bf8ea60bf8bc7
 ## Obol Techne credentials
 
 Source: https://arbiscan.io/token/0x3cbbcc4381e0812f89175798ae7be2f47bc22021#balances  
-At: block 217889706
+At: 20th of June 2024
 
 ## Participants of Galxe's Lido Space campaigns with >5 points
 
 Source: https://app.galxe.com/quest/lido/leaderboard  
-At: 3rd of June 2024
+At: 20th of June 2024
 
 ## How to build
 

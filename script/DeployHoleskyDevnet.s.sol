@@ -13,6 +13,7 @@ contract DeployHoleskyDevnet is DeployBase {
         config.votingAddress = 0xcC269aA6688287aA33800fC048A60f418adFcf73;
         config
             .easyTrackEVMScriptExecutor = 0xf992Cc926e7337ECAAaBA8ccECAa6e4a16C9dcC3;
+        config.proxyAdmin = 0xC234dBA03943C9238067cDfBC2761844133DD386;
 
         // Oracle
         config.secondsPerSlot = 12;
