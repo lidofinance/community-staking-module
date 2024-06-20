@@ -1261,8 +1261,9 @@ contract CSModule is
                 // No need for `_updateDepositableValidatorsCount` call since we update the number directly.
                 // `keysCount` is min of `depositableValidatorsCount` and `depositsLeft`.
                 // @dev No need to safe cast due to internal logic
-                newCount = no.depositableValidatorsCount - uint32(keysCount);
-                no.depositableValidatorsCount = newCount
+                uint32 newCount = no.depositableValidatorsCount -
+                    uint32(keysCount);
+                no.depositableValidatorsCount = newCount;
                 emit DepositableSigningKeysCountChanged(noId, newCount);
                 depositsLeft -= keysCount;
                 if (depositsLeft == 0) {
