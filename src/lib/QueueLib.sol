@@ -106,7 +106,6 @@ library QueueLib {
     // TODO: consider adding a full batch info
     event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
 
-    error InvalidIndex();
     error QueueIsEmpty();
     error QueueLookupNoLimit();
 

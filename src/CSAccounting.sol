@@ -51,7 +51,6 @@ contract CSAccounting is
     event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
     event ChargeRecipientSet(address chargeRecipient);
 
-    error InvalidSender();
     error SenderIsNotCSM();
     error ZeroModuleAddress();
     error ZeroAdminAddress();
