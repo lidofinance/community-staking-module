@@ -197,7 +197,7 @@ contract CSBondLockTest is Test {
         bondLock.lock(noId, amount);
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit CSBondLock.BondLockChanged(noId, 0, 0);
+        emit CSBondLock.BondLockRemoved(noId);
 
         bondLock.reduceAmount(noId, amount);
 
@@ -251,7 +251,7 @@ contract CSBondLockTest is Test {
         bondLock.lock(noId, amount);
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit CSBondLock.BondLockChanged(noId, 0, 0);
+        emit CSBondLock.BondLockRemoved(noId);
 
         bondLock.remove(noId);
 

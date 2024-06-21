@@ -50,6 +50,8 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
         uint256 newAmount,
         uint256 retentionUntil
     );
+    event BondLockRemoved(uint256 indexed nodeOperatorId);
+
     event BondLockRetentionPeriodChanged(uint256 retentionPeriod);
 
     error InvalidBondLockRetentionPeriod();
@@ -136,7 +138,7 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
     /// @dev Remove bond lock for the given Node Operator
     function _remove(uint256 nodeOperatorId) internal {
         delete _getCSBondLockStorage().bondLock[nodeOperatorId];
-        emit BondLockChanged(nodeOperatorId, 0, 0);
+        emit BondLockRemoved(nodeOperatorId);
     }
 
     // solhint-disable-next-line func-name-mixedcase
