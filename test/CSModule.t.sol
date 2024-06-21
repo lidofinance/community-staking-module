@@ -4118,7 +4118,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChangedByRequest(noId, 1, 1);
+        emit CSModule.TargetValidatorsCountChanged(noId, 1, 1);
         csm.updateTargetValidatorsLimits(noId, 1, 1);
         assertEq(csm.getNonce(), nonce + 1);
     }
@@ -4127,7 +4127,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         uint256 noId = createNodeOperator();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChangedByRequest(noId, 1, 1);
+        emit CSModule.TargetValidatorsCountChanged(noId, 1, 1);
         csm.updateTargetValidatorsLimits(noId, 1, 1);
 
         // expectNoEmit hack
@@ -4143,7 +4143,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
     function test_updateTargetValidatorsLimits_limitIsZero() public {
         uint256 noId = createNodeOperator();
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChangedByRequest(noId, 1, 0);
+        emit CSModule.TargetValidatorsCountChanged(noId, 1, 0);
         csm.updateTargetValidatorsLimits(noId, 1, 0);
     }
 
@@ -4152,7 +4152,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 0, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChangedByRequest(noId, 1, 10);
+        emit CSModule.TargetValidatorsCountChanged(noId, 1, 10);
         csm.updateTargetValidatorsLimits(noId, 1, 10);
     }
 
@@ -4161,7 +4161,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 0, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChangedByRequest(noId, 2, 10);
+        emit CSModule.TargetValidatorsCountChanged(noId, 2, 10);
         csm.updateTargetValidatorsLimits(noId, 2, 10);
     }
 
@@ -4170,7 +4170,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 1, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChangedByRequest(noId, 0, 10);
+        emit CSModule.TargetValidatorsCountChanged(noId, 0, 10);
         csm.updateTargetValidatorsLimits(noId, 0, 10);
     }
 
@@ -4179,7 +4179,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 2, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChangedByRequest(noId, 0, 10);
+        emit CSModule.TargetValidatorsCountChanged(noId, 0, 10);
         csm.updateTargetValidatorsLimits(noId, 0, 10);
     }
 
@@ -4190,7 +4190,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 2, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChangedByRequest(noId, 1, 5);
+        emit CSModule.TargetValidatorsCountChanged(noId, 1, 5);
         csm.updateTargetValidatorsLimits(noId, 1, 5);
     }
 
@@ -4201,7 +4201,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 1, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChangedByRequest(noId, 2, 5);
+        emit CSModule.TargetValidatorsCountChanged(noId, 2, 5);
         csm.updateTargetValidatorsLimits(noId, 2, 5);
     }
 

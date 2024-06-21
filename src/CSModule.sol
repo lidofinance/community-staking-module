@@ -110,7 +110,7 @@ contract CSModule is
         uint256 indexed nodeOperatorId,
         uint256 totalKeysCount
     );
-    event TargetValidatorsCountChangedByRequest(
+    event TargetValidatorsCountChanged(
         uint256 indexed nodeOperatorId,
         uint256 targetLimitMode,
         uint256 targetValidatorsCount
@@ -807,7 +807,7 @@ contract CSModule is
             no.targetLimit = uint32(targetLimit);
         }
 
-        emit TargetValidatorsCountChangedByRequest(
+        emit TargetValidatorsCountChanged(
             nodeOperatorId,
             targetLimitMode,
             targetLimit
