@@ -83,6 +83,18 @@ contract CSBondLockTest is Test {
         assertEq(value, amount);
     }
 
+    function test_getActualLockedBond_WhenOnRetentionUntil() public {
+        uint256 noId = 0;
+        uint256 amount = 1 ether;
+        bondLock.lock(noId, amount);
+
+        CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
+        vm.warp(lock.retentionUntil);
+
+        uint256 value = bondLock.getActualLockedBond(noId);
+        assertEq(value, amount);
+    }
+
     function test_getActualLockedBond_WhenRetentionPeriodIsPassed() public {
         uint256 retentionPeriod = bondLock.getBondLockRetentionPeriod();
         uint256 noId = 0;
@@ -126,7 +138,26 @@ contract CSBondLockTest is Test {
         assertEq(lock.retentionUntil, lockBefore.retentionUntil + 1 hours);
     }
 
-    function test_lock_secondLockAfterFirstExpired() public {
+    function test_lock_WhenSecondLockOnRetentionUntil() public {
+        uint256 noId = 0;
+        uint256 retentionPeriod = bondLock.getBondLockRetentionPeriod();
+
+        bondLock.lock(noId, 1 ether);
+        CSBondLock.BondLock memory lockBefore = bondLock.getLockedBondInfo(
+            noId
+        );
+        vm.warp(lockBefore.retentionUntil);
+
+        bondLock.lock(noId, 1 ether);
+        CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
+        assertEq(lock.amount, 2 ether);
+        assertEq(
+            lock.retentionUntil,
+            lockBefore.retentionUntil + retentionPeriod
+        );
+    }
+
+    function test_lock_WhenSecondLockAfterFirstExpired() public {
         uint256 noId = 0;
         uint256 retentionPeriod = bondLock.getBondLockRetentionPeriod();
 
