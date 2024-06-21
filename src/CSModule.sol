@@ -1726,9 +1726,9 @@ contract CSModule is
         }
 
         if (no.targetLimitMode > 0 && newCount > 0) {
-            uint256 nonWithdrawnValidators = no.totalDepositedKeys -
-                no.totalWithdrawnKeys;
             unchecked {
+                uint256 nonWithdrawnValidators = no.totalDepositedKeys -
+                    no.totalWithdrawnKeys;
                 newCount = Math.min(
                     no.targetLimit > nonWithdrawnValidators
                         ? no.targetLimit - nonWithdrawnValidators
