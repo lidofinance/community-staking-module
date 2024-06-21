@@ -104,7 +104,7 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
             revert InvalidBondLockAmount();
         }
         unchecked {
-            if (block.timestamp < $.bondLock[nodeOperatorId].retentionUntil) {
+            if (block.timestamp <= $.bondLock[nodeOperatorId].retentionUntil) {
                 amount += $.bondLock[nodeOperatorId].amount;
             }
             _changeBondLock({
