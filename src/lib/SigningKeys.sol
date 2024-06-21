@@ -112,47 +112,48 @@ library SigningKeys {
         uint256 j;
         bytes memory tmpKey = new bytes(48);
         // removing from the last index
-        for (uint256 i = startIndex + keysCount; i > startIndex; ) {
-            unchecked {
+        unchecked {
+            for (uint256 i = startIndex + keysCount; i > startIndex; ) {
                 curOffset = SIGNING_KEYS_POSITION.getKeyOffset(
                     nodeOperatorId,
                     i - 1
                 );
-            }
-            assembly {
-                // read key
-                mstore(add(tmpKey, 0x30), shr(128, sload(add(curOffset, 1)))) // bytes 16..47
-                mstore(add(tmpKey, 0x20), sload(curOffset)) // bytes 0..31
-            }
-            if (i < totalKeysCount) {
-                unchecked {
+                assembly {
+                    // read key
+                    mstore(
+                        add(tmpKey, 0x30),
+                        shr(128, sload(add(curOffset, 1)))
+                    ) // bytes 16..47
+                    mstore(add(tmpKey, 0x20), sload(curOffset)) // bytes 0..31
+                }
+                if (i < totalKeysCount) {
                     lastOffset = SIGNING_KEYS_POSITION.getKeyOffset(
                         nodeOperatorId,
                         totalKeysCount - 1
                     );
+                    // move last key to deleted key index
+                    for (j = 0; j < 5; ) {
+                        // load 160 bytes (5 slots) containing key and signature
+                        assembly {
+                            sstore(add(curOffset, j), sload(add(lastOffset, j)))
+                            j := add(j, 1)
+                        }
+                    }
+                    curOffset = lastOffset;
                 }
-                // move last key to deleted key index
+                // clear storage
                 for (j = 0; j < 5; ) {
-                    // load 160 bytes (5 slots) containing key and signature
                     assembly {
-                        sstore(add(curOffset, j), sload(add(lastOffset, j)))
+                        sstore(add(curOffset, j), 0)
                         j := add(j, 1)
                     }
                 }
-                curOffset = lastOffset;
-            }
-            // clear storage
-            for (j = 0; j < 5; ) {
                 assembly {
-                    sstore(add(curOffset, j), 0)
-                    j := add(j, 1)
+                    totalKeysCount := sub(totalKeysCount, 1)
+                    i := sub(i, 1)
                 }
+                emit SigningKeyRemoved(nodeOperatorId, tmpKey);
             }
-            assembly {
-                totalKeysCount := sub(totalKeysCount, 1)
-                i := sub(i, 1)
-            }
-            emit SigningKeyRemoved(nodeOperatorId, tmpKey);
         }
         return totalKeysCount;
     }
