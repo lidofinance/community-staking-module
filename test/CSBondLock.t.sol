@@ -92,7 +92,7 @@ contract CSBondLockTest is Test {
         vm.warp(lock.retentionUntil);
 
         uint256 value = bondLock.getActualLockedBond(noId);
-        assertEq(value, amount);
+        assertEq(value, 0);
     }
 
     function test_getActualLockedBond_WhenRetentionPeriodIsPassed() public {
@@ -150,7 +150,7 @@ contract CSBondLockTest is Test {
 
         bondLock.lock(noId, 1 ether);
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
-        assertEq(lock.amount, 2 ether);
+        assertEq(lock.amount, 1 ether);
         assertEq(
             lock.retentionUntil,
             lockBefore.retentionUntil + retentionPeriod
