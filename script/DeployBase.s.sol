@@ -28,6 +28,7 @@ struct DeployParams {
     address lidoLocatorAddress;
     address votingAddress;
     address easyTrackEVMScriptExecutor;
+    address proxyAdmin;
     // Oracle
     uint256 secondsPerSlot;
     uint256 slotsPerEpoch;
@@ -137,9 +138,7 @@ abstract contract DeployBase is Script {
                 maxKeysPerOperatorEA: config.maxKeysPerOperatorEA,
                 lidoLocator: config.lidoLocatorAddress
             });
-            csm = CSModule(
-                _deployProxy(config.votingAddress, address(csmImpl))
-            );
+            csm = CSModule(_deployProxy(config.proxyAdmin, address(csmImpl)));
 
             CSAccounting accountingImpl = new CSAccounting({
                 lidoLocator: config.lidoLocatorAddress,
@@ -149,7 +148,7 @@ abstract contract DeployBase is Script {
                 maxBondLockRetentionPeriod: config.maxBondLockRetentionPeriod
             });
             accounting = CSAccounting(
-                _deployProxy(config.votingAddress, address(accountingImpl))
+                _deployProxy(config.proxyAdmin, address(accountingImpl))
             );
 
             CSFeeOracle oracleImpl = new CSFeeOracle({
@@ -157,7 +156,7 @@ abstract contract DeployBase is Script {
                 genesisTime: config.clGenesisTime
             });
             oracle = CSFeeOracle(
-                _deployProxy(config.votingAddress, address(oracleImpl))
+                _deployProxy(config.proxyAdmin, address(oracleImpl))
             );
 
             CSFeeDistributor feeDistributorImpl = new CSFeeDistributor({
@@ -166,7 +165,7 @@ abstract contract DeployBase is Script {
                 oracle: address(oracle)
             });
             feeDistributor = CSFeeDistributor(
-                _deployProxy(config.votingAddress, address(feeDistributorImpl))
+                _deployProxy(config.proxyAdmin, address(feeDistributorImpl))
             );
 
             verifier = new CSVerifier({

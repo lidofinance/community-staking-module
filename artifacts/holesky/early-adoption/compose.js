@@ -68,7 +68,7 @@ function buildCsvContent(addresses) {
   const content = buildCsvContent(addresses);
 
   fs.writeFileSync("sources.csv", content);
-  fs.writeFileSync("addresses.json", JSON.stringify(Object.keys(addresses)));
+  fs.writeFileSync("addresses.json", JSON.stringify(Object.keys(addresses), null, 2));
   fs.writeFileSync("merkle-tree.json", JSON.stringify(tree.dump()));
   fs.writeFileSync("merkle-proofs.json", JSON.stringify(proofs));
   console.log("Merkle tree and proofs have been written to files.");
