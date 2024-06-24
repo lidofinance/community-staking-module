@@ -10,10 +10,10 @@ contract DeployHoleskyDevnet is DeployBase {
     constructor() DeployBase("devnet", 17000) {
         // Lido addresses
         config.lidoLocatorAddress = 0x3F8ae3A6452DC4F7df1E391df39618a9aCF715A6;
-        config.votingAddress = 0xcC269aA6688287aA33800fC048A60f418adFcf73;
+        config.aragonAgent = 0x636857002fD7975c7B40c0558d4f4834c4390fc6;
         config
             .easyTrackEVMScriptExecutor = 0xf992Cc926e7337ECAAaBA8ccECAa6e4a16C9dcC3;
-        config.proxyAdmin = 0xC234dBA03943C9238067cDfBC2761844133DD386;
+        config.proxyAdmin = 0xC234dBA03943C9238067cDfBC2761844133DD386; // Dev team EOA
 
         // Oracle
         config.secondsPerSlot = 12;

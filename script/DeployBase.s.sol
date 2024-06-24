@@ -26,7 +26,7 @@ import { MerkleTree } from "../test/helpers/MerkleTree.sol";
 struct DeployParams {
     // Lido addresses
     address lidoLocatorAddress;
-    address votingAddress;
+    address aragonAgent;
     address easyTrackEVMScriptExecutor;
     address proxyAdmin;
     // Oracle
@@ -99,8 +99,9 @@ abstract contract DeployBase is Script {
     }
 
     function _setUp() internal {
-        vm.label(config.votingAddress, "VOTING_ADDRESS");
+        vm.label(config.aragonAgent, "ARAGON_AGENT_ADDRESS");
         vm.label(config.lidoLocatorAddress, "LIDO_LOCATOR");
+        vm.label(config.easyTrackEVMScriptExecutor, "EVM_SCRIPT_EXECUTOR");
         locator = ILidoLocator(config.lidoLocatorAddress);
     }
 
@@ -277,30 +278,30 @@ abstract contract DeployBase is Script {
                 _grantSecondAdmins();
             }
 
-            csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.votingAddress);
+            csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
             csm.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
 
             accounting.grantRole(
                 accounting.DEFAULT_ADMIN_ROLE(),
-                config.votingAddress
+                config.aragonAgent
             );
             accounting.revokeRole(accounting.DEFAULT_ADMIN_ROLE(), deployer);
 
             hashConsensus.grantRole(
                 hashConsensus.DEFAULT_ADMIN_ROLE(),
-                config.votingAddress
+                config.aragonAgent
             );
             hashConsensus.revokeRole(
                 hashConsensus.DEFAULT_ADMIN_ROLE(),
                 deployer
             );
 
-            oracle.grantRole(oracle.DEFAULT_ADMIN_ROLE(), config.votingAddress);
+            oracle.grantRole(oracle.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
             oracle.revokeRole(oracle.DEFAULT_ADMIN_ROLE(), deployer);
 
             feeDistributor.grantRole(
                 feeDistributor.DEFAULT_ADMIN_ROLE(),
-                config.votingAddress
+                config.aragonAgent
             );
             feeDistributor.revokeRole(
                 feeDistributor.DEFAULT_ADMIN_ROLE(),

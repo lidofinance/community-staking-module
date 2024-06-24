@@ -60,7 +60,7 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
 
     function test_roles() public {
         assertTrue(
-            csm.hasRole(csm.DEFAULT_ADMIN_ROLE(), deployParams.votingAddress)
+            csm.hasRole(csm.DEFAULT_ADMIN_ROLE(), deployParams.aragonAgent)
         );
         assertTrue(csm.hasRole(csm.PAUSE_ROLE(), address(gateSeal)));
         assertTrue(
@@ -95,7 +95,7 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
             _accounting: address(accounting),
             _earlyAdoption: address(earlyAdoption),
             _keyRemovalCharge: deployParams.keyRemovalCharge,
-            admin: deployParams.votingAddress
+            admin: deployParams.aragonAgent
         });
     }
 }
@@ -171,7 +171,7 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertTrue(
             accounting.hasRole(
                 accounting.DEFAULT_ADMIN_ROLE(),
-                deployParams.votingAddress
+                deployParams.aragonAgent
             )
         );
         assertTrue(
@@ -211,7 +211,7 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         accountingImpl.initialize({
             bondCurve: deployParams.bondCurve,
-            admin: address(deployParams.votingAddress),
+            admin: address(deployParams.aragonAgent),
             _feeDistributor: address(feeDistributor),
             bondLockRetentionPeriod: deployParams.bondLockRetentionPeriod,
             _chargeRecipient: address(0)
@@ -239,7 +239,7 @@ contract CSFeeDistributorDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertTrue(
             feeDistributor.hasRole(
                 feeDistributor.DEFAULT_ADMIN_ROLE(),
-                deployParams.votingAddress
+                deployParams.aragonAgent
             )
         );
     }
@@ -265,7 +265,7 @@ contract CSFeeDistributorDeploymentTest is Test, Utilities, DeploymentFixtures {
             proxy.proxy__getImplementation()
         );
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        distributorImpl.initialize({ admin: deployParams.votingAddress });
+        distributorImpl.initialize({ admin: deployParams.aragonAgent });
     }
 }
 
@@ -297,7 +297,7 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertTrue(
             oracle.hasRole(
                 oracle.DEFAULT_ADMIN_ROLE(),
-                deployParams.votingAddress
+                deployParams.aragonAgent
             )
         );
         assertTrue(oracle.hasRole(oracle.PAUSE_ROLE(), address(gateSeal)));
@@ -326,7 +326,7 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
         CSFeeOracle oracleImpl = CSFeeOracle(proxy.proxy__getImplementation());
         vm.expectRevert(Versioned.NonZeroContractVersionOnInit.selector);
         oracleImpl.initialize({
-            admin: address(deployParams.votingAddress),
+            admin: address(deployParams.aragonAgent),
             feeDistributorContract: address(feeDistributor),
             consensusContract: address(hashConsensus),
             consensusVersion: deployParams.consensusVersion,
@@ -366,7 +366,7 @@ contract HashConsensusDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertTrue(
             hashConsensus.hasRole(
                 hashConsensus.DEFAULT_ADMIN_ROLE(),
-                deployParams.votingAddress
+                deployParams.aragonAgent
             )
         );
     }
