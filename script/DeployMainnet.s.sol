@@ -10,10 +10,10 @@ contract DeployMainnet is DeployBase {
     constructor() DeployBase("mainnet", 1) {
         // Lido addresses
         config.lidoLocatorAddress = 0xC1d0b3DE6792Bf6b4b37EccdcC24e45978Cfd2Eb;
-        config.votingAddress = 0x2e59A20f205bB85a89C53f1936454680651E618e;
+        config.aragonAgent = 0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c;
         config
             .easyTrackEVMScriptExecutor = 0xFE5986E06210aC1eCC1aDCafc0cc7f8D63B3F977;
-        config.proxyAdmin = 0x2e59A20f205bB85a89C53f1936454680651E618e;
+        config.proxyAdmin = config.aragonAgent;
 
         // Oracle
         config.secondsPerSlot = 12;
