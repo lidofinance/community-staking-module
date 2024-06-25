@@ -37,7 +37,7 @@ contract CSFeeDistributorConstructorTest is Test, Fixtures, Utilities {
         csm = new Stub();
         accounting = new Stub();
 
-        (, , stETH, ) = initLido();
+        (, , stETH, , ) = initLido();
     }
 
     function test_constructor_happyPath() public {
@@ -97,7 +97,7 @@ contract CSFeeDistributorInitTest is Test, Fixtures, Utilities {
         csm = new Stub();
         accounting = new Stub();
 
-        (, , stETH, ) = initLido();
+        (, , stETH, , ) = initLido();
 
         feeDistributor = new CSFeeDistributor(
             address(stETH),
@@ -132,7 +132,7 @@ contract CSFeeDistributorTest is Test, Fixtures, Utilities {
         csm = new Stub();
         accounting = new Stub();
 
-        (, , stETH, ) = initLido();
+        (, , stETH, , ) = initLido();
 
         feeDistributor = new CSFeeDistributor(
             address(stETH),
@@ -473,7 +473,7 @@ contract CSFeeDistributorAssetRecovererTest is Test, Fixtures, Utilities {
     function setUp() public {
         Stub accounting = new Stub();
 
-        (, , stETH, ) = initLido();
+        (, , stETH, , ) = initLido();
         vm.label(address(stETH), "STETH");
 
         recoverer = nextAddress("RECOVERER");
