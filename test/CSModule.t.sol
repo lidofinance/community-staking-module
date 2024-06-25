@@ -324,7 +324,6 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         );
         vm.stopPrank();
 
-        csm.setKeyRemovalCharge(0.05 ether);
         csm.resume();
     }
 }
