@@ -232,7 +232,7 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
         assertEq(loadedPubkeys, pubkeys);
     }
 
-    function testFuzz_saveKeysSigs_reverWhen_EmptyKey(
+    function testFuzz_saveKeysSigs_revertWhen_EmptyKey(
         uint64 nodeOperatorId,
         uint32 startIndex,
         uint32 keysCount,
@@ -351,7 +351,7 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
         );
     }
 
-    function testFuzz_removeKeysSigs_offsetRigth(
+    function testFuzz_removeKeysSigs_offsetRight(
         uint64 nodeOperatorId,
         uint32 startIndex,
         uint32 keysCount,
