@@ -5,21 +5,21 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { Utilities } from "../helpers/Utilities.sol";
-import { DeploymentFixtures } from "../helpers/Fixtures.sol";
-import { DeployParams } from "../../script/DeployBase.s.sol";
-import { OssifiableProxy } from "../../src/lib/proxy/OssifiableProxy.sol";
-import { CSModule } from "../../src/CSModule.sol";
-import { CSAccounting } from "../../src/CSAccounting.sol";
-import { HashConsensus } from "../../src/lib/base-oracle/HashConsensus.sol";
-import { CSBondCurve } from "../../src/abstract/CSBondCurve.sol";
-import { CSFeeDistributor } from "../../src/CSFeeDistributor.sol";
-import { CSFeeOracle } from "../../src/CSFeeOracle.sol";
-import { IWithdrawalQueue } from "../../src/interfaces/IWithdrawalQueue.sol";
-import { BaseOracle } from "../../src/lib/base-oracle/BaseOracle.sol";
-import { GIndex } from "../../src/lib/GIndex.sol";
-import { Slot } from "../../src/lib/Types.sol";
-import { Versioned } from "../../src/lib/utils/Versioned.sol";
+import { Utilities } from "../../helpers/Utilities.sol";
+import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
+import { DeployParams } from "../../../script/DeployBase.s.sol";
+import { OssifiableProxy } from "../../../src/lib/proxy/OssifiableProxy.sol";
+import { CSModule } from "../../../src/CSModule.sol";
+import { CSAccounting } from "../../../src/CSAccounting.sol";
+import { HashConsensus } from "../../../src/lib/base-oracle/HashConsensus.sol";
+import { CSBondCurve } from "../../../src/abstract/CSBondCurve.sol";
+import { CSFeeDistributor } from "../../../src/CSFeeDistributor.sol";
+import { CSFeeOracle } from "../../../src/CSFeeOracle.sol";
+import { IWithdrawalQueue } from "../../../src/interfaces/IWithdrawalQueue.sol";
+import { BaseOracle } from "../../../src/lib/base-oracle/BaseOracle.sol";
+import { GIndex } from "../../../src/lib/GIndex.sol";
+import { Slot } from "../../../src/lib/Types.sol";
+import { Versioned } from "../../../src/lib/utils/Versioned.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
