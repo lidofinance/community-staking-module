@@ -4,6 +4,8 @@
 // See contracts/COMPILERS.md
 pragma solidity 0.8.24;
 
+import { IStakingModule } from "../interfaces/IStakingModule.sol";
+
 /// @title Library for manage operator keys in storage
 /// @author KRogLA
 library SigningKeys {
@@ -14,9 +16,6 @@ library SigningKeys {
 
     uint64 internal constant PUBKEY_LENGTH = 48;
     uint64 internal constant SIGNATURE_LENGTH = 96;
-
-    event SigningKeyAdded(uint256 indexed nodeOperatorId, bytes pubkey);
-    event SigningKeyRemoved(uint256 indexed nodeOperatorId, bytes pubkey);
 
     error InvalidKeysCount();
     error InvalidLength();
@@ -82,7 +81,7 @@ library SigningKeys {
                 i := add(i, 1)
                 startIndex := add(startIndex, 1)
             }
-            emit SigningKeyAdded(nodeOperatorId, tmpKey);
+            emit IStakingModule.SigningKeyAdded(nodeOperatorId, tmpKey);
         }
         return startIndex;
     }
@@ -152,7 +151,7 @@ library SigningKeys {
                     totalKeysCount := sub(totalKeysCount, 1)
                     i := sub(i, 1)
                 }
-                emit SigningKeyRemoved(nodeOperatorId, tmpKey);
+                emit IStakingModule.SigningKeyRemoved(nodeOperatorId, tmpKey);
             }
         }
         return totalKeysCount;
