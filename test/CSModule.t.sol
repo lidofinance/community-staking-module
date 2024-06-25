@@ -235,16 +235,6 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities {
         );
         csm.settleELRewardsStealingPenalty(UintArr(noId));
     }
-
-    function mock_requestWithdrawals(uint256[] memory returnValue) internal {
-        vm.mockCall(
-            address(locator.withdrawalQueue()),
-            abi.encodeWithSelector(
-                IWithdrawalQueue.requestWithdrawals.selector
-            ),
-            abi.encode(returnValue)
-        );
-    }
 }
 
 contract CSMCommonNoPublicRelease is CSMFixtures {
@@ -2368,13 +2358,6 @@ contract CSMObtainDepositData is CSMCommon {
 }
 
 contract CSMClaimRewards is CSMCommon {
-    uint256[] public mockedRequestIds = [1];
-
-    function setUp() public override {
-        super.setUp();
-        mock_requestWithdrawals(mockedRequestIds);
-    }
-
     function test_claimRewardsStETH() public {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
