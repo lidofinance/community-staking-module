@@ -33,29 +33,29 @@ just
 
 ### Run tests
 
-Make sure that the following variables are set in the `.env` file:
-
-```bash
-export CHAIN=devnet
-export RPC_URL=
-```
-
-Run all tests (`unit`, `integration`, `deployment`)
-
-```bash
-just test-all
-```
-
 Run unit tests only
 
 ```bash
 just test-unit
 ```
 
+For the following tests, make sure that the following variables are set in the `.env` file:
+
+```bash
+export CHAIN=devnet
+export RPC_URL=
+```
+
 Deploy CSM to the fork and run `deployment` and `integration` tests over it
 
 ```bash
 just test-local
+```
+
+Run all tests in one (`unit`, `deployment`, `integration`)
+
+```bash
+just test-all
 ```
 
 ### Make a gas report
