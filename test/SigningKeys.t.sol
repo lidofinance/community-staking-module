@@ -5,6 +5,7 @@ pragma solidity 0.8.24;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
+import { IStakingModule } from "../src/interfaces/IStakingModule.sol";
 import { SigningKeys } from "../src/lib/SigningKeys.sol";
 import { Utilities } from "./helpers/Utilities.sol";
 
@@ -91,7 +92,7 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
             startIndex
         );
         vm.expectEmit(true, true, true, true, address(signingKeys));
-        emit SigningKeys.SigningKeyAdded(nodeOperatorId, pubkeys);
+        emit IStakingModule.SigningKeyAdded(nodeOperatorId, pubkeys);
         uint256 newKeysCount = signingKeys.saveKeysSigs(
             nodeOperatorId,
             startIndex,
@@ -277,7 +278,7 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
         );
 
         vm.expectEmit(true, true, true, true, address(signingKeys));
-        emit SigningKeys.SigningKeyRemoved(nodeOperatorId, pubkeys);
+        emit IStakingModule.SigningKeyRemoved(nodeOperatorId, pubkeys);
         uint256 newTotalKeysCount = signingKeys.removeKeysSigs(
             nodeOperatorId,
             startIndex,
@@ -294,7 +295,7 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
         uint256 nodeOperatorId = 154;
 
         vm.expectEmit(true, true, true, true, address(signingKeys));
-        emit SigningKeys.SigningKeyRemoved(
+        emit IStakingModule.SigningKeyRemoved(
             nodeOperatorId,
             new bytes(PUBKEY_LENGTH)
         );
