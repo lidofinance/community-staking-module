@@ -35,7 +35,8 @@ contract Fixtures is StdCheats, Test {
             LidoLocatorMock locator,
             WstETHMock wstETH,
             LidoMock stETH,
-            BurnerMock burner
+            BurnerMock burner,
+            WithdrawalQueueMock wq
         )
     {
         stETH = new LidoMock({ _totalPooledEther: 8013386371917025835991984 });
@@ -46,7 +47,7 @@ contract Fixtures is StdCheats, Test {
         burner = new BurnerMock();
         Stub elVault = new Stub();
         wstETH = new WstETHMock(address(stETH));
-        WithdrawalQueueMock wq = new WithdrawalQueueMock(address(wstETH));
+        wq = new WithdrawalQueueMock(address(wstETH), address(stETH));
         Stub treasury = new Stub();
         Stub stakingRouter = new Stub();
         locator = new LidoLocatorMock(

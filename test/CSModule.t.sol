@@ -255,7 +255,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         admin = nextAddress("ADMIN");
         testChargeRecipient = nextAddress("CHARGERECIPIENT");
 
-        (locator, wstETH, stETH, ) = initLido();
+        (locator, wstETH, stETH, , ) = initLido();
 
         feeDistributor = new Stub();
 
@@ -347,7 +347,7 @@ contract CSMCommonNoPublicReleaseNoEA is CSMFixtures {
         admin = nextAddress("ADMIN");
         testChargeRecipient = nextAddress("CHARGERECIPIENT");
 
-        (locator, wstETH, stETH, ) = initLido();
+        (locator, wstETH, stETH, , ) = initLido();
 
         feeDistributor = new Stub();
 
@@ -431,7 +431,7 @@ contract CSMCommonNoRoles is CSMFixtures {
         actor = nextAddress("ACTOR");
         testChargeRecipient = nextAddress("CHARGERECIPIENT");
 
-        (locator, wstETH, stETH, ) = initLido();
+        (locator, wstETH, stETH, , ) = initLido();
 
         feeDistributor = new Stub();
         csm = new CSModule({

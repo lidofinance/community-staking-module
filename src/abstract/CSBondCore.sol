@@ -179,14 +179,18 @@ abstract contract CSBondCore is ICSBondCore {
             ? _sharesByEth(amountToClaim)
             : claimableShares;
         if (sharesToClaim == 0) revert NothingToClaim();
-        _unsafeReduceBond(nodeOperatorId, sharesToClaim);
 
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = _ethByShares(sharesToClaim);
+        uint256 sharesBefore = LIDO.sharesOf(address(this));
         uint256[] memory requestIds = WITHDRAWAL_QUEUE.requestWithdrawals(
             amounts,
             to
         );
+        uint256 sharesAfter = LIDO.sharesOf(address(this));
+        unchecked {
+            _unsafeReduceBond(nodeOperatorId, sharesBefore - sharesAfter);
+        }
         emit BondClaimedUnstETH(nodeOperatorId, to, amounts[0], requestIds[0]);
     }
 

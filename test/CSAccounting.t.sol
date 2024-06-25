@@ -53,7 +53,7 @@ contract CSAccountingBaseConstructorTest is Test, Fixtures, Utilities {
         stranger = nextAddress("STRANGER");
         testChargeRecipient = nextAddress("CHARGERECIPIENT");
 
-        (locator, wstETH, stETH, ) = initLido();
+        (locator, wstETH, stETH, , ) = initLido();
 
         stakingModule = new Stub();
         feeDistributor = new Stub();
@@ -164,7 +164,7 @@ contract CSAccountingBaseInitTest is Test, Fixtures, Utilities {
         stranger = nextAddress("STRANGER");
         testChargeRecipient = nextAddress("CHARGERECIPIENT");
 
-        (locator, wstETH, stETH, ) = initLido();
+        (locator, wstETH, stETH, , ) = initLido();
 
         stakingModule = new Stub();
         feeDistributor = new Stub();
@@ -273,7 +273,7 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities {
         stranger = nextAddress("STRANGER");
         testChargeRecipient = nextAddress("CHARGERECIPIENT");
 
-        (locator, wstETH, stETH, ) = initLido();
+        (locator, wstETH, stETH, , ) = initLido();
 
         stakingModule = new Stub();
         feeDistributor = new Stub();
@@ -326,16 +326,6 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities {
             abi.encodeWithSelector(
                 ICSModule.getNodeOperatorNonWithdrawnKeys.selector,
                 0
-            ),
-            abi.encode(returnValue)
-        );
-    }
-
-    function mock_requestWithdrawals(uint256[] memory returnValue) internal {
-        vm.mockCall(
-            address(locator.withdrawalQueue()),
-            abi.encodeWithSelector(
-                IWithdrawalQueue.requestWithdrawals.selector
             ),
             abi.encode(returnValue)
         );
@@ -2377,13 +2367,6 @@ contract CSAccountingClaimWstETHRewardsTest is
 contract CSAccountingclaimRewardsUnstETHTest is
     CSAccountingClaimRewardsBaseTest
 {
-    uint256[] public mockedRequestIds = [1];
-
-    function setUp() public override {
-        super.setUp();
-        mock_requestWithdrawals(mockedRequestIds);
-    }
-
     function test_default() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
@@ -2400,10 +2383,11 @@ contract CSAccountingclaimRewardsUnstETHTest is
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertEq(
+        assertApproxEqAbs(
             bondSharesAfter,
             bondSharesBefore,
-            "bond shares should not change after request"
+            1 wei,
+            "bond shares after claim should be equal to before"
         );
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
         assertEq(
@@ -2543,10 +2527,11 @@ contract CSAccountingclaimRewardsUnstETHTest is
 
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertEq(
+        assertApproxEqAbs(
             bondSharesAfter,
             bondSharesBefore,
-            "bond shares should not change after request"
+            1 wei,
+            "bond shares after claim should be equal to before"
         );
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
         assertEq(
@@ -2702,9 +2687,10 @@ contract CSAccountingclaimRewardsUnstETHTest is
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertEq(
+        assertApproxEqAbs(
             bondSharesAfter,
             bondSharesBefore + sharesAsFee - sharesToRequest,
+            1 wei,
             "bond shares should be equal to before plus fee shares minus requested shares"
         );
         assertEq(stETH.sharesOf(address(user)), 0, "user shares should be 0");
