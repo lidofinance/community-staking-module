@@ -6527,4 +6527,9 @@ contract CSMMisc is CSMCommon {
         vm.expectRevert(CSModule.NodeOperatorDoesNotExist.selector);
         unvetKeys(noId + 1, newVetted);
     }
+
+    function test_setKeyRemovalCharge() public {
+        csm.setKeyRemovalCharge(1 ether);
+        assertEq(csm.keyRemovalCharge(), 1 ether);
+    }
 }
