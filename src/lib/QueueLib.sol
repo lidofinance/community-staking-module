@@ -41,7 +41,7 @@ function next(Batch self) pure returns (uint128 n) {
     }
 }
 
-// @dev keys count cast is unsafe
+/// @dev keys count cast is unsafe
 function setKeys(Batch self, uint256 keysCount) pure returns (Batch) {
     assembly {
         self := or(
@@ -56,7 +56,7 @@ function setKeys(Batch self, uint256 keysCount) pure returns (Batch) {
     return self;
 }
 
-// @dev can be unsafe if the From batch is previous to the self
+/// @dev can be unsafe if the From batch is previous to the self
 function setNext(Batch self, Batch from) pure returns (Batch) {
     assembly {
         self := or(
@@ -79,7 +79,7 @@ function createBatch(
     uint256 nodeOperatorId,
     uint256 keysCount
 ) pure returns (Batch item) {
-    // @dev No need to safe cast due to internal logic
+    // NOTE: No need to safe cast due to internal logic.
     nodeOperatorId = uint64(nodeOperatorId);
     keysCount = uint64(keysCount);
 
@@ -166,7 +166,7 @@ library QueueLib {
                 }
 
                 // We assume that the invariant `enqueuedCount` >= `keys` is kept.
-                // @dev No need to safe cast due to internal logic
+                // NOTE: No need to safe cast due to internal logic.
                 no.enqueuedCount -= uint32(item.keys());
 
                 unchecked {
