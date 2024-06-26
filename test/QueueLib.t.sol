@@ -16,7 +16,7 @@ contract Library {
     QueueLib.Queue internal q;
 
     function length() public view returns (uint128) {
-        return q.length;
+        return q.totalHistoricalLength;
     }
 
     function head() public view returns (uint128) {
