@@ -98,7 +98,7 @@ library QueueLib {
         // Pointer to the item to be dequeued.
         uint128 head;
         // Tracks the total number of batches ever enqueued.
-        uint128 totalHistoricalLength;
+        uint128 tail;
         // Mapping saves a little in costs and allows easily fallback to a zeroed batch on out-of-bounds access.
         mapping(uint128 => Batch) queue;
     }
@@ -190,7 +190,7 @@ library QueueLib {
         uint256 nodeOperatorId,
         uint256 keysCount
     ) internal returns (Batch item) {
-        uint128 length = self.totalHistoricalLength;
+        uint128 tail = self.tail;
         item = createBatch(nodeOperatorId, keysCount);
 
         assembly {
@@ -199,13 +199,13 @@ library QueueLib {
                     item,
                     0xffffffffffffffffffffffffffffffff00000000000000000000000000000000
                 ),
-                add(length, 1)
-            ) // item.next = self.totalHistoricalLength + 1;
+                add(tail, 1)
+            ) // item.next = self.tail + 1;
         }
 
-        self.queue[length] = item;
+        self.queue[tail] = item;
         unchecked {
-            ++self.totalHistoricalLength;
+            ++self.tail;
         }
         emit BatchEnqueued(nodeOperatorId, keysCount);
     }
