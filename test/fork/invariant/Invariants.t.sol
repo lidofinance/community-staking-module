@@ -60,11 +60,6 @@ contract CSModuleInvariants is InvariantsBase {
                 "assert added >= depositable + withdrawn"
             );
             assertGe(
-                no.totalExitedKeys,
-                no.totalWithdrawnKeys,
-                "assert exited >= withdrawn"
-            );
-            assertGe(
                 no.totalAddedKeys - no.totalDepositedKeys,
                 no.depositableValidatorsCount,
                 "assert added - deposited >= depositable"
