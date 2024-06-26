@@ -41,7 +41,7 @@ function next(Batch self) pure returns (uint128 n) {
     }
 }
 
-// TODO: add notice that keys count cast is unsafe
+// @dev keys count cast is unsafe
 function setKeys(Batch self, uint256 keysCount) pure returns (Batch) {
     assembly {
         self := or(
@@ -56,7 +56,7 @@ function setKeys(Batch self, uint256 keysCount) pure returns (Batch) {
     return self;
 }
 
-// TODO: can be unsafe if the From batch is previous to the self
+// @dev can be unsafe if the From batch is previous to the self
 function setNext(Batch self, Batch from) pure returns (Batch) {
     assembly {
         self := or(
@@ -97,8 +97,8 @@ library QueueLib {
     struct Queue {
         // Pointer to the item to be dequeued.
         uint128 head;
-        // Tracks the total number of batches enqueued.
-        uint128 length;
+        // Tracks the total number of batches ever enqueued.
+        uint128 totalHistoricalLength;
         // Mapping saves a little in costs and allows easily fallback to a zeroed batch on out-of-bounds access.
         mapping(uint128 => Batch) queue;
     }
@@ -165,11 +165,11 @@ library QueueLib {
                     self.queue[indexOfPrev] = prev;
                 }
 
+                // We assume that the invariant `enqueuedCount` >= `keys` is kept.
+                // @dev No need to safe cast due to internal logic
+                no.enqueuedCount -= uint32(item.keys());
+
                 unchecked {
-                    // We assume that the invariant `enqueuedCount` >= `keys` is kept.
-                    // @dev No need to safe cast due to internal logic
-                    // TODO: consider move enqueuedCount update from unchecked
-                    no.enqueuedCount -= uint32(item.keys());
                     ++toRemove;
                 }
             } else {
@@ -190,8 +190,7 @@ library QueueLib {
         uint256 nodeOperatorId,
         uint256 keysCount
     ) internal returns (Batch item) {
-        // TODO: consider better naming for `length`
-        uint128 length = self.length;
+        uint128 length = self.totalHistoricalLength;
         item = createBatch(nodeOperatorId, keysCount);
 
         assembly {
@@ -201,12 +200,12 @@ library QueueLib {
                     0xffffffffffffffffffffffffffffffff00000000000000000000000000000000
                 ),
                 add(length, 1)
-            ) // item.next = self.length+1;
+            ) // item.next = self.totalHistoricalLength + 1;
         }
 
         self.queue[length] = item;
         unchecked {
-            ++self.length;
+            ++self.totalHistoricalLength;
         }
         emit BatchEnqueued(nodeOperatorId, keysCount);
     }
