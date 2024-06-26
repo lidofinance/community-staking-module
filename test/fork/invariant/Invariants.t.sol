@@ -93,9 +93,21 @@ contract CSModuleInvariants is InvariantsBase {
             uint256 _totalDepositedValidators,
             uint256 _depositableValidatorsCount
         ) = csm.getStakingModuleSummary();
-        assertTrue(totalExitedValidators <= _totalExitedValidators);
-        assertTrue(totalDepositedValidators <= _totalDepositedValidators);
-        assertTrue(totalDepositableValidators <= _depositableValidatorsCount);
+        assertEq(
+            totalExitedValidators,
+            _totalExitedValidators,
+            "assert total exited"
+        );
+        assertEq(
+            totalDepositedValidators,
+            _totalDepositedValidators,
+            "assert total deposited"
+        );
+        assertEq(
+            totalDepositableValidators,
+            _depositableValidatorsCount,
+            "assert depositable"
+        );
     }
 
     mapping(uint256 => uint256) batchKeys;
@@ -110,19 +122,14 @@ contract CSModuleInvariants is InvariantsBase {
             queueIndex = head + i;
             Batch item = csm.depositQueueItem(queueIndex);
             batchKeys[item.noId()] += item.keys();
-            assertLe(
-                no.enqueuedCount,
-                item.keys(),
-                "assert enqueued <= batch keys"
-            );
         }
 
         for (uint256 noId = 0; noId < noCount; noId++) {
             no = csm.getNodeOperator(noId);
-            assertGe(
+            assertEq(
                 no.enqueuedCount,
                 batchKeys[noId],
-                "assert enqueued >= batch keys"
+                "assert enqueued == batch keys"
             );
         }
     }
