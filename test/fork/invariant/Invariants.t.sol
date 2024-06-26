@@ -111,11 +111,9 @@ contract CSModuleInvariants is InvariantsBase {
         uint256 noCount = csm.getNodeOperatorsCount();
         NodeOperator memory no;
 
-        uint128 queueIndex;
         (uint128 head, uint128 length) = csm.depositQueue();
-        for (uint128 i = 0; i < length; i++) {
-            queueIndex = head + i;
-            Batch item = csm.depositQueueItem(queueIndex);
+        for (uint128 i = head; i < length; i++) {
+            Batch item = csm.depositQueueItem(i);
             batchKeys[item.noId()] += item.keys();
         }
 
