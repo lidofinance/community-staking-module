@@ -219,7 +219,7 @@ contract CSVerifierTest is CSVerifierTestBase {
         );
     }
 
-    function test_processWithdrawalProof_ZeroWithrawalIndex() public {
+    function test_processWithdrawalProof_ZeroWithdrawalIndex() public {
         WithdrawalFixture memory fixture = abi.decode(
             _readFixture("withdrawal_zero_index.json"),
             (WithdrawalFixture)
