@@ -5128,7 +5128,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
         bool withdrawn = csm.isValidatorWithdrawn(noId, keyIndex);
         assertTrue(withdrawn);
 
-        // no chages in depositable keys or keys in general
+        // no changes in depositable keys or keys in general
         assertEq(csm.getNonce(), nonce);
     }
 

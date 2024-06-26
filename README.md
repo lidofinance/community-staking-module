@@ -114,7 +114,7 @@ There also fork helper scripts to prepare a fork state for e.g. UI testing purpo
 just simulate-vote
 ```
 
-After a vote, you can test the contracts in the new state. It includes both `intergration` and `post-voting` tests
+After a vote, you can test the contracts in the new state. It includes both `integration` and `post-voting` tests
 
 ```bash
 just test-post-voting
@@ -145,7 +145,7 @@ just deploy-prod
 ```
 
 After that there should be artifacts in the `./artifacts/latest` directory,
-which is might be moved to the particular directory and commited
+which is might be moved to the particular directory and committed
 
 ```bash
 mv ./artifacts/latest ./artifacts/$CHAIN
