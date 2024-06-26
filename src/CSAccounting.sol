@@ -363,10 +363,10 @@ contract CSAccounting is
     /// @param nodeOperatorId ID of the Node Operator
     function settleLockedBondETH(
         uint256 nodeOperatorId
-    ) external onlyCSM returns (uint256 settledAmmount) {
+    ) external onlyCSM returns (uint256 settledAmount) {
         uint256 lockedAmount = CSBondLock.getActualLockedBond(nodeOperatorId);
         if (lockedAmount > 0) {
-            settledAmmount = CSBondCore._burn(nodeOperatorId, lockedAmount);
+            settledAmount = CSBondCore._burn(nodeOperatorId, lockedAmount);
         }
         // reduce all locked bond even if bond isn't covered lock fully
         CSBondLock._remove(nodeOperatorId);

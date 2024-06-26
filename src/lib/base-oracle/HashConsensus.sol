@@ -906,7 +906,7 @@ contract HashConsensus is AccessControlEnumerableUpgradeable {
         }
     }
 
-    /// @dev Returns start and past-end incides (mod totalMembers) of the fast lane members subset.
+    /// @dev Returns start and past-end indices (mod totalMembers) of the fast lane members subset.
     ///
     function _getFastLaneSubset(
         uint256 frameIndex,
