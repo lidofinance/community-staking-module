@@ -59,15 +59,15 @@ contract CSModuleInvariants is InvariantsBase {
                 no.depositableValidatorsCount + no.totalWithdrawnKeys,
                 "assert added >= depositable + withdrawn"
             );
-            assertLe(
-                no.totalWithdrawnKeys,
+            assertGe(
                 no.totalExitedKeys,
-                "assert withdrawn <= exited"
+                no.totalWithdrawnKeys,
+                "assert exited >= withdrawn"
             );
-            assertLe(
-                no.depositableValidatorsCount,
+            assertGe(
                 no.totalAddedKeys - no.totalDepositedKeys,
-                "assert depositable <= added - deposited"
+                no.depositableValidatorsCount,
+                "assert added - deposited >= depositable"
             );
 
             assertNotEq(
