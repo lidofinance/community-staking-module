@@ -103,7 +103,6 @@ library QueueLib {
         mapping(uint128 => Batch) queue;
     }
 
-    // TODO: consider adding a full batch info
     event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
 
     error QueueIsEmpty();
@@ -128,7 +127,6 @@ library QueueLib {
             }
             no.enqueuedCount = depositable;
             self.enqueue(nodeOperatorId, count);
-            emit BatchEnqueued(nodeOperatorId, count);
         }
     }
 
@@ -210,6 +208,7 @@ library QueueLib {
         unchecked {
             ++self.length;
         }
+        emit BatchEnqueued(nodeOperatorId, keysCount);
     }
 
     // TODO: consider emitting an event here
