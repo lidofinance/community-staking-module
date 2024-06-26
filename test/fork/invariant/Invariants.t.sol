@@ -135,9 +135,9 @@ contract CSModuleInvariants is InvariantsBase {
         for (uint256 noId = 0; noId < noCount; noId++) {
             no = csm.getNodeOperator(noId);
 
-            assertTrue(
-                no.totalAddedKeys <=
-                    csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE()
+            assertGe(
+                csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(),
+                no.totalAddedKeys
             );
         }
     }
