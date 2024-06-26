@@ -67,7 +67,6 @@ contract CSModule is
 
     ICSEarlyAdoption public earlyAdoption;
     bool public publicRelease;
-    uint64 private _nodeOperatorsCount;
 
     uint256 private _nonce;
     mapping(uint256 => NodeOperator) private _nodeOperators;
@@ -77,8 +76,8 @@ contract CSModule is
 
     uint64 private _totalDepositedValidators;
     uint64 private _totalExitedValidators;
-    uint64 private _totalAddedValidators;
     uint64 private _depositableValidatorsCount;
+    uint64 private _nodeOperatorsCount;
 
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
@@ -1602,9 +1601,6 @@ contract CSModule is
             signatures
         );
         unchecked {
-            // @dev No need to safe cast due to internal logic
-            _totalAddedValidators += uint64(keysCount);
-
             // Optimistic vetting takes place.
             if (no.totalAddedKeys == no.totalVettedKeys) {
                 // @dev No need to safe cast due to internal logic
