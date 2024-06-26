@@ -680,7 +680,7 @@ function _setFastLaneLengthSlots(uint256 fastLaneLengthSlots) internal;
 
 ### _getFastLaneSubset
 
-*Returns start and past-end incides (mod totalMembers) of the fast lane members subset.*
+*Returns start and past-end indices (mod totalMembers) of the fast lane members subset.*
 
 
 ```solidity

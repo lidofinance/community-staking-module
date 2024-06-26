@@ -212,7 +212,7 @@ library QueueLib {
         }
     }
 
-    // TODO: consider emiting an event here
+    // TODO: consider emitting an event here
     function dequeue(Queue storage self) internal returns (Batch item) {
         item = peek(self);
 

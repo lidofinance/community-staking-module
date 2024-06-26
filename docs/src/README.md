@@ -144,7 +144,7 @@ just deploy-prod
 ```
 
 After that there should be artifacts in the `./artifacts/latest` directory,
-which is might be moved to the particular directory and commited
+which is might be moved to the particular directory and committed
 
 ```bash
 mv ./artifacts/latest ./artifacts/$CHAIN

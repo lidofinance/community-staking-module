@@ -11,7 +11,7 @@ contract StETHMock {
         private _allowances;
 
     error NotEnoughShares(uint256 balance);
-    error AllowanceExceded(address owner, address spender);
+    error AllowanceExceeded(address owner, address spender);
 
     event Approval(
         address indexed owner,
@@ -81,7 +81,7 @@ contract StETHMock {
         uint256 _amount
     ) public returns (bool) {
         if (_allowances[_sender][_recipient] < _amount) {
-            revert AllowanceExceded(_sender, _recipient);
+            revert AllowanceExceeded(_sender, _recipient);
         }
         uint256 _sharesToTransfer = getSharesByPooledEth(_amount);
         transferSharesFrom(_sender, _recipient, _sharesToTransfer);
@@ -121,7 +121,7 @@ contract StETHMock {
             _allowances[_sender][_recipient] <
             getPooledEthByShares(_sharesAmount)
         ) {
-            revert AllowanceExceded(_sender, _recipient);
+            revert AllowanceExceeded(_sender, _recipient);
         }
         if (shares[_sender] < _sharesAmount) {
             revert NotEnoughShares(shares[_sender]);
