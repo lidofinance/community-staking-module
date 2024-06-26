@@ -210,7 +210,6 @@ library QueueLib {
         emit BatchEnqueued(nodeOperatorId, keysCount);
     }
 
-    // TODO: consider emitting an event here
     function dequeue(Queue storage self) internal returns (Batch item) {
         item = peek(self);
 
