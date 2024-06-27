@@ -338,7 +338,13 @@ contract ClaimIntegrationTest is
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             defaultNoId
         );
-        assertEq(current, required, "NO bond shares should be equal required");
+        // Approx due to wstETH claim mechanics shares -> stETH -> wstETH
+        assertApproxEqAbs(
+            current,
+            required,
+            1 wei,
+            "NO bond shares should be equal required"
+        );
         assertEq(
             accounting.totalBondShares(),
             accountingSharesAfter,
@@ -407,7 +413,13 @@ contract ClaimIntegrationTest is
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             defaultNoId
         );
-        assertEq(current, required, "NO bond shares should be equal required");
+        // Approx due to unstETH claim mechanics shares -> stETH -> unstETH
+        assertApproxEqAbs(
+            current,
+            required,
+            1 wei,
+            "NO bond shares should be equal required"
+        );
         assertEq(
             accounting.totalBondShares(),
             accountingSharesAfter,
