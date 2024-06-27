@@ -15,8 +15,8 @@ contract Library {
 
     QueueLib.Queue internal q;
 
-    function length() public view returns (uint128) {
-        return q.length;
+    function tail() public view returns (uint128) {
+        return q.tail;
     }
 
     function head() public view returns (uint128) {
@@ -86,6 +86,8 @@ contract QueueLibTest is Test {
         assertEq(p0.keys(), b);
         assertEq(p1.noId(), c);
         assertEq(p1.keys(), d);
+
+        assertEq(q.tail(), 2);
     }
 
     function testFuzz_dequeue(
@@ -102,18 +104,23 @@ contract QueueLibTest is Test {
         Batch p1 = q.enqueue(c, d);
         Batch p2 = q.enqueue(e, f);
 
+        uint128 tail = q.tail();
+
         assertFalse(q.peek().isNil());
 
         buf = q.dequeue();
         assertTrue(buf.eq(p0));
         assertTrue(q.peek().eq(p1));
+        assertEq(q.tail(), tail);
 
         buf = q.dequeue();
         assertTrue(buf.eq(p1));
         assertTrue(q.peek().eq(p2));
+        assertEq(q.tail(), tail);
 
         q.dequeue();
         assertTrue(q.peek().isNil());
+        assertEq(q.tail(), tail);
     }
 
     function test_dequeue_revertWhen_QueueIsEmpty() public {
