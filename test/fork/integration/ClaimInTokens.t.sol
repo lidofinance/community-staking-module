@@ -252,6 +252,7 @@ contract ClaimIntegrationTest is
 
     function test_claimRewardsStETH() public {
         uint256 noSharesBefore = lido.sharesOf(nodeOperator);
+        uint256 accountingSharesBefore = lido.sharesOf(address(accounting));
         uint256 accountingNOBondSharesBefore = accounting.getBondShares(
             defaultNoId
         );
@@ -280,14 +281,14 @@ contract ClaimIntegrationTest is
         uint256 accountingSharesAfter = lido.sharesOf(address(accounting));
         assertEq(
             noSharesAfter,
-            noSharesBefore + shares,
+            noSharesBefore +
+                (accountingSharesBefore + shares - accountingSharesAfter),
             "Node Operator stETH shares should be increased by real shares"
         );
-        assertEq(
-            accounting.getBondShares(defaultNoId),
-            accountingNOBondSharesBefore,
-            "NO bond shares should not be changed"
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            defaultNoId
         );
+        assertEq(current, required, "NO bond shares should be equal required");
         assertEq(
             accounting.totalBondShares(),
             accountingSharesAfter,
@@ -297,6 +298,7 @@ contract ClaimIntegrationTest is
 
     function test_claimRewardsWstETH() public {
         uint256 balanceBefore = wstETH.balanceOf(nodeOperator);
+        uint256 accountingSharesBefore = lido.sharesOf(address(accounting));
         uint256 accountingNOBondSharesBefore = accounting.getBondShares(
             defaultNoId
         );
@@ -326,18 +328,17 @@ contract ClaimIntegrationTest is
         csm.claimRewardsWstETH(defaultNoId, type(uint256).max, shares, proof);
 
         uint256 accountingSharesAfter = lido.sharesOf(address(accounting));
+
         assertEq(
             wstETH.balanceOf(nodeOperator),
-            balanceBefore + rewardsWstETH,
+            balanceBefore +
+                (accountingSharesBefore + shares - accountingSharesAfter),
             "Node Operator wstETH balance should be increased by real rewards"
         );
-        // Not strict due to stETH conversion rounding errors
-        assertApproxEqAbs(
-            accounting.getBondShares(defaultNoId),
-            accountingNOBondSharesBefore,
-            1 wei,
-            "NO bond shares should not be changed"
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            defaultNoId
         );
+        assertEq(current, required, "NO bond shares should be equal required");
         assertEq(
             accounting.totalBondShares(),
             accountingSharesAfter,
@@ -395,16 +396,13 @@ contract ClaimIntegrationTest is
         uint256 accountingSharesAfter = lido.sharesOf(address(accounting));
         assertEq(
             statuses[0].amountOfStETH,
-            lido.getPooledEthByShares(shares),
+            amount,
             "Withdrawal request should be equal to real rewards"
         );
-        // Not strict due to stETH conversion rounding errors
-        assertApproxEqAbs(
-            accounting.getBondShares(defaultNoId),
-            accountingNOBondSharesBefore,
-            1 wei,
-            "NO bond shares should not be changed"
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            defaultNoId
         );
+        assertEq(current, required, "NO bond shares should be equal required");
         assertEq(
             accounting.totalBondShares(),
             accountingSharesAfter,
