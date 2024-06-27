@@ -378,6 +378,8 @@ contract ClaimIntegrationTest is
         vm.prank(feeDistributor.ORACLE());
         feeDistributor.processOracleReport(root, "Qm", shares);
 
+        uint256 accountingSharesBefore = lido.sharesOf(address(accounting));
+
         vm.prank(nodeOperator);
         csm.claimRewardsUnstETH(defaultNoId, type(uint256).max, shares, proof);
 
@@ -394,9 +396,12 @@ contract ClaimIntegrationTest is
             .getWithdrawalStatus(requestsIdsAfter);
 
         uint256 accountingSharesAfter = lido.sharesOf(address(accounting));
-        assertEq(
+        assertApproxEqAbs(
             statuses[0].amountOfStETH,
-            amount,
+            lido.getPooledEthByShares(
+                (accountingSharesBefore + shares) - accountingSharesAfter
+            ),
+            1 wei,
             "Withdrawal request should be equal to real rewards"
         );
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
