@@ -54,6 +54,9 @@ test-deployment *args:
 test-post-voting *args:
     forge test --match-path 'test/fork/*' --no-match-path='test/fork/deployment/*' -vvv {{args}}
 
+test-invariant *args:
+    forge test --match-path 'test/fork/invariant/*' -vvv {{args}}
+
 gas-report:
     #!/usr/bin/env python
 
