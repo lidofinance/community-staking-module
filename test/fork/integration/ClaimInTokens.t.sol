@@ -253,9 +253,6 @@ contract ClaimIntegrationTest is
     function test_claimRewardsStETH() public {
         uint256 noSharesBefore = lido.sharesOf(nodeOperator);
         uint256 accountingSharesBefore = lido.sharesOf(address(accounting));
-        uint256 accountingNOBondSharesBefore = accounting.getBondShares(
-            defaultNoId
-        );
         uint256 amount = 1 ether;
 
         // Supply funds to feeDistributor
@@ -299,9 +296,6 @@ contract ClaimIntegrationTest is
     function test_claimRewardsWstETH() public {
         uint256 balanceBefore = wstETH.balanceOf(nodeOperator);
         uint256 accountingSharesBefore = lido.sharesOf(address(accounting));
-        uint256 accountingNOBondSharesBefore = accounting.getBondShares(
-            defaultNoId
-        );
         uint256 amount = 1 ether;
 
         // Supply funds to feeDistributor
@@ -310,10 +304,6 @@ contract ClaimIntegrationTest is
         uint256 shares = lido.submit{ value: amount }({ _referal: address(0) });
         lido.transferShares(address(feeDistributor), shares);
         vm.stopPrank();
-
-        uint256 rewardsWstETH = wstETH.getWstETHByStETH(
-            lido.getPooledEthByShares(shares)
-        );
 
         // Prepare and submit report data
         MerkleTree tree = new MerkleTree();
@@ -361,9 +351,6 @@ contract ClaimIntegrationTest is
             requestsIdsBefore.length,
             0,
             "should be no wd requests for the Node Operator"
-        );
-        uint256 accountingNOBondSharesBefore = accounting.getBondShares(
-            defaultNoId
         );
 
         uint256 amount = 1 ether;
