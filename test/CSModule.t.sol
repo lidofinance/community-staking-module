@@ -2395,6 +2395,10 @@ contract CSMClaimRewards is CSMCommon {
             noSharesAfter,
             noSharesBefore + stETH.getSharesByPooledEth(amount)
         );
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            noId
+        );
+        assertEq(current, required, "NO bond shares should be equal required");
     }
 
     function test_claimRewardsStETH_fromRewardAddress() public {
@@ -2465,6 +2469,17 @@ contract CSMClaimRewards is CSMCommon {
                     )
                 )
         );
+
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            noId
+        );
+        // Approx due to wstETH claim mechanics shares -> stETH -> wstETH
+        assertApproxEqAbs(
+            current,
+            required,
+            1 wei,
+            "NO bond shares should be equal required"
+        );
     }
 
     function test_claimRewardsWstETH_fromRewardAddress() public {
@@ -2517,6 +2532,17 @@ contract CSMClaimRewards is CSMCommon {
         );
         vm.prank(nodeOperator);
         csm.claimRewardsUnstETH(noId, UINT256_MAX, 0, new bytes32[](0));
+
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            noId
+        );
+        // Approx due to unstETH claim mechanics shares -> stETH -> unstETH
+        assertApproxEqAbs(
+            current,
+            required,
+            1 wei,
+            "NO bond shares should be equal required"
+        );
     }
 
     function test_requestRewardsETH_fromRewardAddress() public {

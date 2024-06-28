@@ -115,7 +115,7 @@ jobs:
       - name: Run local integration tests
         run: just test-local
         env:
-          CHAIN: devnet
+          CHAIN: holesky
           RPC_URL: ${{ secrets.RPC_URL_HOLESKY }}
 
       # TODO: Enable later
