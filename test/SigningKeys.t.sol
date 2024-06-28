@@ -199,20 +199,19 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
         );
     }
 
-    function testFuzz_saveKeysSigs(
+    function testFuzz_saveKeysSigs_HappyPath(
         uint64 nodeOperatorId,
         uint32 startIndex,
         uint32 keysCount
     ) public {
-        vm.assume(keysCount > 0);
-        vm.assume(keysCount < 100);
+        keysCount = uint32(bound(keysCount, 1, 100));
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
         }
 
         (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
             keysCount,
-            uint16(startIndex)
+            startIndex
         );
         uint256 newKeysCount = signingKeys.saveKeysSigs(
             nodeOperatorId,
@@ -238,8 +237,7 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
         uint32 keysCount,
         uint8 offset
     ) public {
-        vm.assume(keysCount > 0);
-        vm.assume(keysCount < 100);
+        keysCount = uint32(bound(keysCount, 1, 100));
         vm.assume(offset < keysCount);
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
@@ -357,8 +355,7 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
         uint32 keysCount,
         uint8 offset
     ) public {
-        vm.assume(keysCount > 0);
-        vm.assume(keysCount < 100);
+        keysCount = uint32(bound(keysCount, 1, 100));
         vm.assume(offset < keysCount);
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
@@ -391,10 +388,10 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
         uint32 keysCount,
         uint8 offset
     ) public {
-        vm.assume(keysCount > 0);
-        vm.assume(keysCount < 100);
+        startIndex = uint32(bound(startIndex, 0, 99));
+        keysCount = uint32(bound(keysCount, 1, 100));
+        vm.assume(offset < startIndex);
         vm.assume(offset < keysCount);
-        vm.assume(startIndex > offset);
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
         }
@@ -425,8 +422,7 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
         uint32 startIndex,
         uint32 keysCount
     ) public {
-        vm.assume(keysCount > 0);
-        vm.assume(keysCount < 200);
+        keysCount = uint32(bound(keysCount, 1, 200));
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
         }
@@ -447,7 +443,7 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
 contract SigningKeysLoadTest is SigningKeysTestBase {
     function test_loadKeys() public {
         uint256 keysCount = 10;
-        uint16 startIndex = 2;
+        uint256 startIndex = 2;
         uint256 nodeOperatorId = 154;
         (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
             keysCount,
@@ -475,15 +471,14 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
         uint32 startIndex,
         uint32 keysCount
     ) public {
-        vm.assume(keysCount > 0);
-        vm.assume(keysCount < 100);
+        keysCount = uint32(bound(keysCount, 1, 100));
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
         }
 
         (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
             keysCount,
-            uint16(startIndex)
+            startIndex
         );
         signingKeys.saveKeysSigs(
             nodeOperatorId,
@@ -502,13 +497,12 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
         assertEq(loadedPubkeys.length, keysCount * PUBKEY_LENGTH);
     }
 
-    function testFuzz_loadKeys_empty(
+    function testFuzz_loadKeys_FromEmptyStorage(
         uint64 nodeOperatorId,
         uint32 startIndex,
         uint32 keysCount
     ) public {
-        vm.assume(keysCount > 0);
-        vm.assume(keysCount < 500);
+        keysCount = uint32(bound(keysCount, 1, 500));
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
         }
@@ -549,19 +543,16 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
     function testFuzz_loadKeysSigs(
         uint64 nodeOperatorId,
         uint32 startIndex,
-        uint32 keysCount,
-        uint256 offset
+        uint32 keysCount
     ) public {
-        vm.assume(keysCount > 0);
-        vm.assume(keysCount < 100);
-        vm.assume(offset < 100);
+        keysCount = uint32(bound(keysCount, 1, 100));
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
         }
 
         (bytes memory pubkeys, bytes memory sigs) = keysSignatures(
             keysCount,
-            uint16(startIndex)
+            startIndex
         );
         signingKeys.saveKeysSigs(
             nodeOperatorId,
@@ -572,29 +563,26 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
         );
 
         (bytes memory loadedKeys, bytes memory loadedSigs) = signingKeys
-            .loadKeysSigs(nodeOperatorId, startIndex, keysCount, offset);
+            .loadKeysSigs(nodeOperatorId, startIndex, keysCount, 0);
 
-        assertEq(loadedKeys.length, (offset + keysCount) * PUBKEY_LENGTH);
-        assertEq(loadedSigs.length, (offset + keysCount) * SIGNATURE_LENGTH);
+        assertEq(loadedKeys.length, keysCount * PUBKEY_LENGTH);
+        assertEq(loadedSigs.length, keysCount * SIGNATURE_LENGTH);
     }
 
-    function testFuzz_loadKeysSigs_empty(
+    function testFuzz_loadKeysSigs_FromEmptyLocation(
         uint64 nodeOperatorId,
         uint32 startIndex,
-        uint32 keysCount,
-        uint256 offset
+        uint32 keysCount
     ) public {
-        vm.assume(keysCount > 0);
-        vm.assume(keysCount < 200);
-        vm.assume(offset < 100);
+        keysCount = uint32(bound(keysCount, 1, 200));
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
         }
 
         (bytes memory loadedKeys, bytes memory loadedSigs) = signingKeys
-            .loadKeysSigs(nodeOperatorId, startIndex, keysCount, offset);
+            .loadKeysSigs(nodeOperatorId, startIndex, keysCount, 0);
 
-        assertEq(loadedKeys.length, (offset + keysCount) * PUBKEY_LENGTH);
-        assertEq(loadedSigs.length, (offset + keysCount) * SIGNATURE_LENGTH);
+        assertEq(loadedKeys.length, keysCount * PUBKEY_LENGTH);
+        assertEq(loadedSigs.length, keysCount * SIGNATURE_LENGTH);
     }
 }

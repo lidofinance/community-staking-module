@@ -157,13 +157,14 @@ library SigningKeys {
         return totalKeysCount;
     }
 
-    /// @dev load operator keys and signatures from storage
+    /// @dev Load operator's keys and signatures from the storage to the given in-memory arrays.
+    /// @dev The function doesn't check for `pubkeys` and `signatures` out of boundaries access.
     /// @param nodeOperatorId operator id
     /// @param startIndex start index
     /// @param keysCount keys count to load
     /// @param pubkeys preallocated kes buffer to read in
     /// @param signatures preallocated signatures buffer to read in
-    /// @param bufOffset start offset in `_pubkeys`/`_signatures` buffer to place values (in number of keys)
+    /// @param bufOffset start offset in `pubkeys`/`signatures` buffer to place values (in number of keys)
     function loadKeysSigs(
         uint256 nodeOperatorId,
         uint256 startIndex,
