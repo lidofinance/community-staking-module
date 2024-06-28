@@ -239,14 +239,12 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 nodeOperatorId,
         uint256 amount
     ) internal returns (uint256 burned) {
-        address burner = LIDO_LOCATOR.burner();
-        // sanity check for the cases when burner address is updated
-        if (LIDO.allowance(address(this), burner) < amount) {
-            LIDO.approve(burner, type(uint256).max);
-        }
         uint256 toBurnShares = _sharesByEth(amount);
         uint256 burnedShares = _reduceBond(nodeOperatorId, toBurnShares);
-        IBurner(burner).requestBurnShares(address(this), burnedShares);
+        IBurner(LIDO_LOCATOR.burner()).requestBurnShares(
+            address(this),
+            burnedShares
+        );
         burned = _ethByShares(burnedShares);
         emit BondBurned(nodeOperatorId, _ethByShares(toBurnShares), burned);
     }

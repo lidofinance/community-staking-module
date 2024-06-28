@@ -423,6 +423,11 @@ contract CSAccounting is
         AssetRecovererLib.recoverStETHShares(address(LIDO), shares);
     }
 
+    /// @notice Service method to update allowance to Burner in case it has changed
+    function renewBurnerAllowance() external {
+        LIDO.approve(LIDO_LOCATOR.burner(), type(uint256).max);
+    }
+
     /// @notice Get current and required bond amounts in ETH (stETH) for the given Node Operator
     /// @dev To calculate excess bond amount subtract `required` from `current` value.
     ///      To calculate missed bond amount subtract `current` from `required` value
