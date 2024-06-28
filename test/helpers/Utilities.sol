@@ -36,7 +36,7 @@ contract Utilities is CommonBase {
 
     function keysSignatures(
         uint256 keysCount,
-        uint16 startIndex
+        uint256 startIndex
     ) public pure returns (bytes memory, bytes memory) {
         bytes memory keys;
         bytes memory signatures;
