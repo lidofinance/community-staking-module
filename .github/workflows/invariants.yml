@@ -50,7 +50,7 @@ jobs:
         if: steps.get-cache.outputs.cache-hit != 'true'
 
       - name: Install forge & anvil
-        run: cargo install --git https://github.com/foundry-rs/foundry --rev "$FORGE_REV" --profile local forge anvil
+        run: cargo install --git https://github.com/foundry-rs/foundry --rev "$FORGE_REV" forge anvil
         if: steps.get-cache.outputs.cache-hit != 'true'
 
   test:
