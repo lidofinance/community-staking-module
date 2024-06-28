@@ -354,6 +354,10 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities {
         vm.prank(address(stakingModule));
         accounting.depositETH{ value: amount }(user, nodeOperatorId);
     }
+
+    function ethToSharesToEth(uint256 amount) internal returns (uint256) {
+        return stETH.getPooledEthByShares(stETH.getSharesByPooledEth(amount));
+    }
 }
 
 contract CSAccountingPauseTest is CSAccountingBaseTest {
@@ -607,48 +611,48 @@ contract CSAccountingGetBondSummaryTest is CSAccountingBondStateBaseTest {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
-        assertApproxEqAbs(current, 32 ether, 1 wei);
-        assertApproxEqAbs(required, 32 ether, 1 wei);
+        assertEq(current, ethToSharesToEth(32 ether));
+        assertEq(required, 32 ether);
     }
 
     function test_WithBondAndOneWithdrawnValidator() public override {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 32 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
-        assertApproxEqAbs(current, 32 ether, 1 wei);
-        assertApproxEqAbs(required, 30 ether, 1 wei);
+        assertEq(current, ethToSharesToEth(32 ether));
+        assertEq(required, 30 ether);
     }
 
     function test_WithExcessBond() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 33 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
-        assertApproxEqAbs(current, 33 ether, 1 wei);
-        assertApproxEqAbs(required, 32 ether, 1 wei);
+        assertEq(current, ethToSharesToEth(33 ether));
+        assertEq(required, 32 ether);
     }
 
     function test_WithExcessBondAndOneWithdrawnValidator() public override {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 33 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
-        assertApproxEqAbs(current, 33 ether, 1 wei);
-        assertApproxEqAbs(required, 30 ether, 1 wei);
+        assertEq(current, ethToSharesToEth(33 ether));
+        assertEq(required, 30 ether);
     }
 
     function test_WithMissingBond() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 29 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
-        assertApproxEqAbs(current, 29 ether, 1 wei);
-        assertApproxEqAbs(required, 32 ether, 1 wei);
+        assertEq(current, ethToSharesToEth(29 ether));
+        assertEq(required, 32 ether);
     }
 
     function test_WithMissingBondAndOneWithdrawnValidator() public override {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 29 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
-        assertApproxEqAbs(current, 29 ether, 1 wei);
-        assertApproxEqAbs(required, 30 ether, 1 wei);
+        assertEq(current, ethToSharesToEth(29 ether));
+        assertEq(required, 30 ether);
     }
 }
 
@@ -718,12 +722,8 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             0
         );
-        assertApproxEqAbs(current, stETH.getSharesByPooledEth(32 ether), 1 wei);
-        assertApproxEqAbs(
-            required,
-            stETH.getSharesByPooledEth(32 ether),
-            1 wei
-        );
+        assertEq(current, stETH.getSharesByPooledEth(32 ether));
+        assertEq(required, stETH.getSharesByPooledEth(32 ether));
     }
 
     function test_WithBondAndOneWithdrawnValidator() public override {
@@ -732,12 +732,8 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             0
         );
-        assertApproxEqAbs(current, stETH.getSharesByPooledEth(32 ether), 1 wei);
-        assertApproxEqAbs(
-            required,
-            stETH.getSharesByPooledEth(30 ether),
-            1 wei
-        );
+        assertEq(current, stETH.getSharesByPooledEth(32 ether));
+        assertEq(required, stETH.getSharesByPooledEth(30 ether));
     }
 
     function test_WithExcessBond() public override {
@@ -746,12 +742,8 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             0
         );
-        assertApproxEqAbs(current, stETH.getSharesByPooledEth(33 ether), 1 wei);
-        assertApproxEqAbs(
-            required,
-            stETH.getSharesByPooledEth(32 ether),
-            1 wei
-        );
+        assertEq(current, stETH.getSharesByPooledEth(33 ether));
+        assertEq(required, stETH.getSharesByPooledEth(32 ether));
     }
 
     function test_WithExcessBondAndOneWithdrawnValidator() public override {
@@ -760,12 +752,8 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             0
         );
-        assertApproxEqAbs(current, stETH.getSharesByPooledEth(33 ether), 1 wei);
-        assertApproxEqAbs(
-            required,
-            stETH.getSharesByPooledEth(30 ether),
-            1 wei
-        );
+        assertEq(current, stETH.getSharesByPooledEth(33 ether));
+        assertEq(required, stETH.getSharesByPooledEth(30 ether));
     }
 
     function test_WithMissingBond() public override {
@@ -774,12 +762,8 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             0
         );
-        assertApproxEqAbs(current, stETH.getSharesByPooledEth(29 ether), 1 wei);
-        assertApproxEqAbs(
-            required,
-            stETH.getSharesByPooledEth(32 ether),
-            1 wei
-        );
+        assertEq(current, stETH.getSharesByPooledEth(29 ether));
+        assertEq(required, stETH.getSharesByPooledEth(32 ether));
     }
 
     function test_WithMissingBondAndOneWithdrawnValidator() public override {
@@ -788,12 +772,8 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             0
         );
-        assertApproxEqAbs(current, stETH.getSharesByPooledEth(29 ether), 1 wei);
-        assertApproxEqAbs(
-            required,
-            stETH.getSharesByPooledEth(30 ether),
-            1 wei
-        );
+        assertEq(current, stETH.getSharesByPooledEth(29 ether));
+        assertEq(required, stETH.getSharesByPooledEth(30 ether));
     }
 }
 
@@ -1059,10 +1039,10 @@ contract CSAccountingGetRequiredETHBondTest is
     function test_WithBond() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
-        assertApproxEqAbs(
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertEq(
             accounting.getRequiredBondForNextKeys(0, 0),
-            0,
-            1 wei
+            required - current
         );
     }
 
@@ -1078,7 +1058,11 @@ contract CSAccountingGetRequiredETHBondTest is
     {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 32 ether });
-        assertApproxEqAbs(accounting.getRequiredBondForNextKeys(0, 1), 0, 1);
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertEq(
+            accounting.getRequiredBondForNextKeys(0, 1),
+            2 ether - (current - required)
+        );
     }
 
     function test_WithExcessBond() public override {
@@ -1105,20 +1089,20 @@ contract CSAccountingGetRequiredETHBondTest is
     function test_WithMissingBond() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 16 ether });
-        assertApproxEqAbs(
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertEq(
             accounting.getRequiredBondForNextKeys(0, 0),
-            16 ether,
-            1 wei
+            required - current
         );
     }
 
     function test_WithMissingBondAndOneWithdrawnValidator() public override {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 16 ether });
-        assertApproxEqAbs(
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertEq(
             accounting.getRequiredBondForNextKeys(0, 0),
-            14 ether,
-            1 wei
+            required - current
         );
     }
 
@@ -1128,10 +1112,10 @@ contract CSAccountingGetRequiredETHBondTest is
     {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 16 ether });
-        assertApproxEqAbs(
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertEq(
             accounting.getRequiredBondForNextKeys(0, 1),
-            16 ether,
-            1 wei
+            required - current + 2 ether
         );
     }
 }
@@ -1141,27 +1125,30 @@ contract CSAccountingGetRequiredWstETHBondTest is
 {
     function test_default() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(
             accounting.getRequiredBondForNextKeysWstETH(0, 0),
-            stETH.getSharesByPooledEth(32 ether)
+            wstETH.getWstETHByStETH(required - current)
         );
     }
 
     function test_WithCurve() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _curve(defaultCurve);
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(
             accounting.getRequiredBondForNextKeysWstETH(0, 0),
-            stETH.getSharesByPooledEth(17 ether)
+            wstETH.getWstETHByStETH(required - current)
         );
     }
 
     function test_WithLocked() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _lock({ id: 0, amount: 1 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(
             accounting.getRequiredBondForNextKeysWstETH(0, 0),
-            stETH.getSharesByPooledEth(33 ether)
+            wstETH.getWstETHByStETH(required - current)
         );
     }
 
@@ -1169,35 +1156,38 @@ contract CSAccountingGetRequiredWstETHBondTest is
         _operator({ ongoing: 16, withdrawn: 0 });
         _curve(defaultCurve);
         _lock({ id: 0, amount: 1 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(
             accounting.getRequiredBondForNextKeysWstETH(0, 0),
-            stETH.getSharesByPooledEth(18 ether)
+            wstETH.getWstETHByStETH(required - current)
         );
     }
 
     function test_WithOneWithdrawnValidator() public override {
         _operator({ ongoing: 16, withdrawn: 1 });
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(
             accounting.getRequiredBondForNextKeysWstETH(0, 0),
-            stETH.getSharesByPooledEth(30 ether)
+            wstETH.getWstETHByStETH(required - current)
         );
     }
 
     function test_OneWithdrawnOneAddedValidator() public override {
         _operator({ ongoing: 16, withdrawn: 1 });
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(
             accounting.getRequiredBondForNextKeysWstETH(0, 1),
-            stETH.getSharesByPooledEth(32 ether)
+            wstETH.getWstETHByStETH(required - current + 2 ether)
         );
     }
 
     function test_WithBond() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
-        assertApproxEqAbs(
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertEq(
             accounting.getRequiredBondForNextKeysWstETH(0, 0),
-            0,
-            1 wei
+            wstETH.getWstETHByStETH(required - current)
         );
     }
 
@@ -1213,11 +1203,7 @@ contract CSAccountingGetRequiredWstETHBondTest is
     {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 32 ether });
-        assertApproxEqAbs(
-            accounting.getRequiredBondForNextKeysWstETH(0, 1),
-            0,
-            1
-        );
+        assertEq(accounting.getRequiredBondForNextKeysWstETH(0, 1), 0);
     }
 
     function test_WithExcessBond() public override {
@@ -1244,19 +1230,20 @@ contract CSAccountingGetRequiredWstETHBondTest is
     function test_WithMissingBond() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 16 ether });
-        assertApproxEqAbs(
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertEq(
             accounting.getRequiredBondForNextKeysWstETH(0, 0),
-            stETH.getSharesByPooledEth(16 ether),
-            1 wei
+            wstETH.getWstETHByStETH(required - current)
         );
     }
 
     function test_WithMissingBondAndOneWithdrawnValidator() public override {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 16 ether });
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(
             accounting.getRequiredBondForNextKeysWstETH(0, 0),
-            stETH.getSharesByPooledEth(14 ether)
+            wstETH.getWstETHByStETH(required - current)
         );
     }
 
@@ -1266,10 +1253,10 @@ contract CSAccountingGetRequiredWstETHBondTest is
     {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 16 ether });
-        assertApproxEqAbs(
+        (uint256 current, uint256 required) = accounting.getBondSummary(0);
+        assertEq(
             accounting.getRequiredBondForNextKeysWstETH(0, 1),
-            stETH.getSharesByPooledEth(16 ether),
-            1 wei
+            wstETH.getWstETHByStETH(required - current + 2 ether)
         );
     }
 }
@@ -1432,9 +1419,10 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertEq(
+        assertApproxEqAbs(
             stETH.balanceOf(address(user)),
             stETHAsFee + 15 ether,
+            1 wei,
             "user balance should be equal to fee reward plus excess bond after curve"
         );
         assertApproxEqAbs(
@@ -1494,13 +1482,13 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             stETH.balanceOf(address(user)),
             stETHAsFee + 14 ether,
             1 wei,
-            "user balance should be equal to fee reward plus excess bond after curve minus locked"
+            "user balance should be equal to fee reward plus excess bond after curve"
         );
         assertApproxEqAbs(
             bondSharesAfter,
             bondSharesBefore - stETH.getSharesByPooledEth(14 ether),
             1 wei,
-            "bond shares after claim should be equal to before minus excess bond after curve minus locked"
+            "bond shares after claim should be equal to before minus excess bond after curve"
         );
         assertEq(
             stETH.sharesOf(address(accounting)),
@@ -1534,13 +1522,13 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             stETH.balanceOf(address(user)),
             stETHAsFee + 2 ether,
             1 wei,
-            "user balance should be equal to fee reward plus excess bond after one validator withdrawn"
+            "user balance should be equal to fee reward plus excess bond after curve"
         );
         assertApproxEqAbs(
             bondSharesAfter,
             bondSharesBefore - stETH.getSharesByPooledEth(2 ether),
             1 wei,
-            "bond shares after claim should be equal to before minus excess bond after one validator withdrawn"
+            "bond shares after claim should be equal to before minus excess bond after curve"
         );
         assertEq(
             stETH.sharesOf(address(accounting)),
@@ -1570,15 +1558,17 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertEq(
+        assertApproxEqAbs(
             stETH.balanceOf(address(user)),
             stETHAsFee,
-            "user balance should be equal to fee reward"
+            1 wei,
+            "user balance should be equal to fee reward plus excess bond after curve"
         );
-        assertEq(
+        assertApproxEqAbs(
             bondSharesAfter,
             bondSharesBefore,
-            "bond shares after claim should be equal to before"
+            1 wei,
+            "bond shares after claim should be equal to before minus excess bond after curve"
         );
         assertEq(
             stETH.sharesOf(address(accounting)),
@@ -1608,16 +1598,17 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertEq(
+        assertApproxEqAbs(
             stETH.balanceOf(address(user)),
             stETHAsFee + 2 ether,
-            "user balance should be equal to fee reward plus excess bond after one validator withdrawn"
+            1 wei,
+            "user balance should be equal to fee reward plus excess bond after curve"
         );
         assertApproxEqAbs(
             bondSharesAfter,
             bondSharesBefore - stETH.getSharesByPooledEth(2 ether),
             1 wei,
-            "bond shares after claim should be equal to before minus excess bond after one validator withdrawn"
+            "bond shares after claim should be equal to before minus excess bond after curve"
         );
         assertEq(
             stETH.sharesOf(address(accounting)),
@@ -1647,16 +1638,17 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertEq(
+        assertApproxEqAbs(
             stETH.balanceOf(address(user)),
             stETHAsFee + 1 ether,
-            "user balance should be equal to fee reward plus excess bond"
+            1 wei,
+            "user balance should be equal to fee reward plus excess bond after curve"
         );
         assertApproxEqAbs(
             bondSharesAfter,
             bondSharesBefore - stETH.getSharesByPooledEth(1 ether),
             1 wei,
-            "bond shares after claim should be equal to before minus excess bond"
+            "bond shares after claim should be equal to before minus excess bond after curve"
         );
         assertEq(
             stETH.sharesOf(address(accounting)),
@@ -1690,13 +1682,13 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             stETH.balanceOf(address(user)),
             stETHAsFee + 3 ether,
             1 wei,
-            "user balance should be equal to fee reward plus excess bond after one validator withdrawn"
+            "user balance should be equal to fee reward plus excess bond after curve"
         );
         assertApproxEqAbs(
             bondSharesAfter,
             bondSharesBefore - stETH.getSharesByPooledEth(3 ether),
             1 wei,
-            "bond shares after claim should be equal to before minus excess bond after one validator withdrawn"
+            "bond shares after claim should be equal to before minus excess bond after curve"
         );
         assertEq(
             stETH.sharesOf(address(accounting)),
@@ -1860,9 +1852,10 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertEq(
+        assertApproxEqAbs(
             wstETH.balanceOf(address(user)),
             wstETHAsFee,
+            1 wei,
             "user balance should be equal to fee reward"
         );
         assertApproxEqAbs(
@@ -1905,9 +1898,10 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertEq(
+        assertApproxEqAbs(
             wstETH.balanceOf(address(user)),
             wstETH.getWstETHByStETH(stETHAsFee + 15 ether),
+            1 wei,
             "user balance should be equal to fee reward plus excess bond after curve"
         );
         assertApproxEqAbs(
@@ -2058,9 +2052,10 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertEq(
+        assertApproxEqAbs(
             wstETH.balanceOf(address(user)),
             wstETHAsFee,
+            1 wei,
             "user balance should be equal to fee reward"
         );
         assertApproxEqAbs(
@@ -2274,9 +2269,10 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
         uint256 bondSharesAfter = accounting.getBondShares(0);
 
-        assertEq(
+        assertApproxEqAbs(
             wstETH.balanceOf(address(user)),
             wstETHToClaim,
+            1 wei,
             "user balance should be equal to claimed"
         );
         assertApproxEqAbs(
@@ -3510,7 +3506,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
 
         vm.prank(address(stakingModule));
         uint256 settled = accounting.settleLockedBondETH(noId);
-        assertApproxEqAbs(settled, amount, 1 wei);
+        assertEq(settled, ethToSharesToEth(amount));
         assertEq(accounting.getActualLockedBond(noId), 0);
     }
 

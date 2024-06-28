@@ -119,6 +119,14 @@ abstract contract CSBondCoreTestBase is Test, Fixtures, Utilities {
         vm.deal(user, bond);
         bondCore.depositETH{ value: bond }(user, 0);
     }
+
+    function ethToSharesToEth(uint256 amount) internal returns (uint256) {
+        return stETH.getPooledEthByShares(stETH.getSharesByPooledEth(amount));
+    }
+
+    function sharesToEthToShares(uint256 amount) internal returns (uint256) {
+        return stETH.getSharesByPooledEth(stETH.getPooledEthByShares(amount));
+    }
 }
 
 contract CSBondCoreBondGettersTest is CSBondCoreTestBase {
@@ -132,7 +140,7 @@ contract CSBondCoreBondGettersTest is CSBondCoreTestBase {
 
     function test_getBond() public {
         _deposit(1 ether);
-        assertApproxEqAbs(bondCore.getBond(0), 1 ether, 1 wei);
+        assertEq(bondCore.getBond(0), ethToSharesToEth(1 ether));
     }
 }
 
@@ -159,17 +167,15 @@ contract CSBondCoreETHTest is CSBondCoreTestBase {
         emit CSBondCore.BondClaimedUnstETH(0, user, claimedETH, 0);
 
         uint256 bondSharesBefore = bondCore.getBondShares(0);
-        bondCore.claimUnstETH(0, claimedETH, user);
+        bondCore.claimUnstETH(0, claimedETH + 1, user);
 
-        assertApproxEqAbs(
+        assertEq(
             bondCore.getBondShares(0),
-            bondSharesBefore - claimableShares,
-            1 wei
+            bondSharesBefore - sharesToEthToShares(claimableShares)
         );
-        assertApproxEqAbs(
+        assertEq(
             bondCore.totalBondShares(),
-            bondSharesBefore - claimableShares,
-            1 wei
+            bondSharesBefore - sharesToEthToShares(claimableShares)
         );
     }
 
@@ -199,39 +205,13 @@ contract CSBondCoreETHTest is CSBondCoreTestBase {
         uint256 bondSharesBefore = bondCore.getBondShares(0);
         bondCore.claimUnstETH(0, 2 ether, user);
 
-        assertApproxEqAbs(
+        assertEq(
             bondCore.getBondShares(0),
-            bondSharesBefore - claimableShares,
-            1 wei
+            bondSharesBefore - sharesToEthToShares(claimableShares)
         );
-        assertApproxEqAbs(
+        assertEq(
             bondCore.totalBondShares(),
-            bondSharesBefore - claimableShares,
-            1 wei
-        );
-    }
-
-    function test_claimUnstETH_WhenToClaimIsEqualToClaimable() public {
-        _deposit(1 ether);
-
-        uint256 claimableShares = bondCore.getClaimableBondShares(0);
-        uint256 claimedETH = stETH.getPooledEthByShares(claimableShares);
-
-        vm.expectEmit(true, true, true, true, address(bondCore));
-        emit CSBondCore.BondClaimedUnstETH(0, user, claimedETH, 0);
-
-        uint256 bondSharesBefore = bondCore.getBondShares(0);
-        bondCore.claimUnstETH(0, 1 ether, user);
-
-        assertApproxEqAbs(
-            bondCore.getBondShares(0),
-            bondSharesBefore - claimableShares,
-            1 wei
-        );
-        assertApproxEqAbs(
-            bondCore.totalBondShares(),
-            bondSharesBefore - claimableShares,
-            1 wei
+            bondSharesBefore - sharesToEthToShares(claimableShares)
         );
     }
 
@@ -247,15 +227,13 @@ contract CSBondCoreETHTest is CSBondCoreTestBase {
         uint256 bondSharesBefore = bondCore.getBondShares(0);
         bondCore.claimUnstETH(0, 0.25 ether, user);
 
-        assertApproxEqAbs(
+        assertEq(
             bondCore.getBondShares(0),
-            bondSharesBefore - claimedShares,
-            1 wei
+            bondSharesBefore - sharesToEthToShares(claimedShares)
         );
-        assertApproxEqAbs(
+        assertEq(
             bondCore.totalBondShares(),
-            bondSharesBefore - claimedShares,
-            1 wei
+            bondSharesBefore - sharesToEthToShares(claimedShares)
         );
     }
 }
@@ -385,13 +363,12 @@ contract CSBondCoreWstETHTest is CSBondCoreTestBase {
 
         bondCore.depositWstETH(user, 0, wstETHAmount);
 
-        assertApproxEqAbs(bondCore.getBondShares(0), wstETHAmount, 1 wei);
-        assertApproxEqAbs(bondCore.totalBondShares(), wstETHAmount, 1 wei);
-        assertApproxEqAbs(
-            stETH.sharesOf(address(bondCore)),
-            wstETHAmount,
-            1 wei
+        uint256 shares = stETH.getSharesByPooledEth(
+            wstETH.getStETHByWstETH(wstETHAmount)
         );
+        assertEq(bondCore.getBondShares(0), shares);
+        assertEq(bondCore.totalBondShares(), shares);
+        assertEq(stETH.sharesOf(address(bondCore)), shares);
     }
 
     function test_claimWstETH() public {

@@ -487,26 +487,24 @@ contract CSMCommonNoRoles is CSMFixtures {
 }
 
 contract CsmFuzz is CSMCommon {
-    function testFuzz_CreateNodeOperator(uint32 keysCount) public {
-        vm.assume(keysCount > 0);
-        vm.assume(keysCount < 100);
+    function testFuzz_CreateNodeOperator(uint256 keysCount) public {
+        keysCount = bound(keysCount, 1, 99);
         createNodeOperator(keysCount);
         assertEq(csm.getNodeOperatorsCount(), 1);
         NodeOperator memory no = csm.getNodeOperator(0);
         assertEq(no.totalAddedKeys, keysCount);
     }
 
-    function testFuzz_CreateNodeOperators(uint32 count) public {
-        vm.assume(count < 100);
+    function testFuzz_CreateMultipleNodeOperators(uint256 count) public {
+        count = bound(count, 1, 100);
         for (uint256 i = 0; i < count; i++) {
             createNodeOperator(1);
         }
         assertEq(csm.getNodeOperatorsCount(), count);
     }
 
-    function testFuzz_UploadKeys(uint32 keysCount) public {
-        vm.assume(keysCount > 0);
-        vm.assume(keysCount < 100);
+    function testFuzz_UploadKeys(uint256 keysCount) public {
+        keysCount = bound(keysCount, 1, 99);
         createNodeOperator(1);
         uploadMoreKeys(0, keysCount);
         NodeOperator memory no = csm.getNodeOperator(0);
@@ -2304,14 +2302,17 @@ contract CSMObtainDepositData is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function testFuzz_obtainDepositData(uint8 batchCount, uint8 random) public {
-        vm.assume(batchCount > 0);
-        vm.assume(batchCount < 20);
-        vm.assume(random > 0);
+    function testFuzz_obtainDepositData_MultipleOperators(
+        uint256 batchCount,
+        uint256 random
+    ) public {
+        batchCount = bound(batchCount, 1, 20);
+        random = bound(random, 1, 20);
         vm.assume(batchCount > random);
+
         uint256 totalKeys;
-        for (uint16 i = 1; i < batchCount + 1; ++i) {
-            uint16 keys = i / random + 1;
+        for (uint256 i = 1; i < batchCount + 1; ++i) {
+            uint256 keys = i / random + 1;
             createNodeOperator(keys);
             totalKeys += keys;
         }
@@ -2327,18 +2328,18 @@ contract CSMObtainDepositData is CSMCommon {
         assertEq(depositableValidatorsCount, random);
     }
 
-    function testFuzz_obtainDepositData_oneOperator(
-        uint8 batchCount,
-        uint8 random
+    function testFuzz_obtainDepositData_OneOperator(
+        uint256 batchCount,
+        uint256 random
     ) public {
-        vm.assume(batchCount > 0);
-        vm.assume(batchCount < 20);
-        vm.assume(random > 0);
+        batchCount = bound(batchCount, 1, 20);
+        random = bound(random, 1, 20);
         vm.assume(batchCount > random);
+
         uint256 totalKeys = 1;
         createNodeOperator(1);
-        for (uint16 i = 1; i < batchCount + 1; ++i) {
-            uint16 keys = i / random + 1;
+        for (uint256 i = 1; i < batchCount + 1; ++i) {
+            uint256 keys = i / random + 1;
             uploadMoreKeys(0, keys);
             totalKeys += keys;
         }
@@ -2394,6 +2395,10 @@ contract CSMClaimRewards is CSMCommon {
             noSharesAfter,
             noSharesBefore + stETH.getSharesByPooledEth(amount)
         );
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            noId
+        );
+        assertEq(current, required, "NO bond shares should be equal required");
     }
 
     function test_claimRewardsStETH_fromRewardAddress() public {
@@ -2464,6 +2469,17 @@ contract CSMClaimRewards is CSMCommon {
                     )
                 )
         );
+
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            noId
+        );
+        // Approx due to wstETH claim mechanics shares -> stETH -> wstETH
+        assertApproxEqAbs(
+            current,
+            required,
+            1 wei,
+            "NO bond shares should be equal required"
+        );
     }
 
     function test_claimRewardsWstETH_fromRewardAddress() public {
@@ -2516,6 +2532,17 @@ contract CSMClaimRewards is CSMCommon {
         );
         vm.prank(nodeOperator);
         csm.claimRewardsUnstETH(noId, UINT256_MAX, 0, new bytes32[](0));
+
+        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
+            noId
+        );
+        // Approx due to unstETH claim mechanics shares -> stETH -> unstETH
+        assertApproxEqAbs(
+            current,
+            required,
+            1 wei,
+            "NO bond shares should be equal required"
+        );
     }
 
     function test_requestRewardsETH_fromRewardAddress() public {
