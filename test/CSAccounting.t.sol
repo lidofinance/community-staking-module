@@ -26,6 +26,7 @@ import { LidoMock } from "./helpers/mocks/LidoMock.sol";
 import { StETHMock } from "./helpers/mocks/StETHMock.sol";
 import { WstETHMock } from "./helpers/mocks/WstETHMock.sol";
 import { LidoLocatorMock } from "./helpers/mocks/LidoLocatorMock.sol";
+import { BurnerMock } from "./helpers/mocks/BurnerMock.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import { Utilities } from "./helpers/Utilities.sol";
@@ -256,6 +257,7 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities {
     LidoLocatorMock internal locator;
     WstETHMock internal wstETH;
     LidoMock internal stETH;
+    BurnerMock internal burner;
 
     CSAccounting public accounting;
     Stub public stakingModule;
@@ -273,7 +275,7 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities {
         stranger = nextAddress("STRANGER");
         testChargeRecipient = nextAddress("CHARGERECIPIENT");
 
-        (locator, wstETH, stETH, , ) = initLido();
+        (locator, wstETH, stETH, burner, ) = initLido();
 
         stakingModule = new Stub();
         feeDistributor = new Stub();
@@ -355,7 +357,7 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities {
         accounting.depositETH{ value: amount }(user, nodeOperatorId);
     }
 
-    function ethToSharesToEth(uint256 amount) internal returns (uint256) {
+    function ethToSharesToEth(uint256 amount) internal view returns (uint256) {
         return stETH.getPooledEthByShares(stETH.getSharesByPooledEth(amount));
     }
 }
@@ -3659,6 +3661,20 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
         accounting.setLockedBondRetentionPeriod(retention);
         uint256 actualRetention = accounting.getBondLockRetentionPeriod();
         assertEq(actualRetention, retention);
+    }
+
+    function test_renewBurnerAllowance() public {
+        vm.prank(address(accounting));
+        stETH.approve(address(burner), 0);
+
+        assertEq(stETH.allowance(address(accounting), address(burner)), 0);
+
+        accounting.renewBurnerAllowance();
+
+        assertEq(
+            stETH.allowance(address(accounting), address(burner)),
+            type(uint256).max
+        );
     }
 }
 
