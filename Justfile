@@ -8,7 +8,7 @@ deploy_script_name := if chain == "mainnet" {
 } else if chain == "devnet" {
     "DeployHoleskyDevnet"
 } else {
-    error("Unsupported chain " + chain)
+    error("Unsupported chain" + " " + chain)
 }
 
 deploy_script_path := "script" / deploy_script_name + ".s.sol:" + deploy_script_name
@@ -131,14 +131,10 @@ deploy-prod *args:
 
 [confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]
 _deploy-prod-confirm *args:
-    just _deploy-prod --broadcast --verify {{args}}
+    just _deploy-prod --broadcast {{args}}
 
 deploy-prod-dry *args:
     just _deploy-prod {{args}}
-
-verify-prod *args:
-    just _warn "Pass --chain=your_chain manually. e.g. --chain=holesky for devnet deployment"
-    forge script {{deploy_script_path}} --rpc-url ${RPC_URL} --verify {{args}} --unlocked
 
 _deploy-prod *args:
     forge script {{deploy_script_path}} --force --rpc-url ${RPC_URL} {{args}}
@@ -148,6 +144,37 @@ deploy-local:
     @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
     just deploy
     just _warn "anvil is kept running in the background: {{anvil_rpc_url}}"
+
+verify arg:
+    #!/usr/bin/env python
+
+    import subprocess
+    import os
+    import sys
+    import json
+
+    dirs = os.listdir("artifacts")
+
+    arg = "{{ arg }}"
+    if arg not in dirs:
+        print(f"Artifact {arg} not found. possible artifacts: {', '.join(dirs)}")
+        sys.exit(1)
+
+    with open(f"artifacts/{arg}/transactions.json", "r") as f:
+        data = json.load(f)
+
+    libraries = ["--libraries=" + library for library in data.get("libraries", [])]
+
+    contracts = {}
+    for tx in data["transactions"]:
+        if tx["transactionType"] in ["CREATE", "CREATE2"]:
+            contracts[tx["contractAddress"]] = tx["contractName"]
+
+    for address, contract in contracts.items():
+        print(f"Verifying {contract} at {address}...")
+        subprocess.call(["forge", "verify-contract", address, contract, *libraries,
+                        "--chain", os.getenv("CHAIN"), "--guess-constructor-args",
+                        "--rpc-url", os.getenv("RPC_URL")])
 
 test-local *args:
     just make-fork --silent &
