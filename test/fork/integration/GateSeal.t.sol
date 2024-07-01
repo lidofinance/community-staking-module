@@ -9,9 +9,6 @@ import { Utilities } from "../../helpers/Utilities.sol";
 import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
 
 contract GateSealTest is Test, Utilities, DeploymentFixtures {
-    address internal nodeOperator;
-    uint256 internal defaultNoId;
-
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
@@ -23,26 +20,6 @@ contract GateSealTest is Test, Utilities, DeploymentFixtures {
         vm.stopPrank();
         if (csm.isPaused()) csm.resume();
         if (!csm.publicRelease()) csm.activatePublicRelease();
-
-        nodeOperator = nextAddress("NodeOperator");
-
-        uint256 keysCount = 5;
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        uint256 amount = accounting.getBondAmountByKeysCount(keysCount, 0);
-        vm.deal(nodeOperator, amount);
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: amount }(
-            keysCount,
-            keys,
-            signatures,
-            address(0),
-            address(0),
-            new bytes32[](0),
-            address(0)
-        );
-        defaultNoId = csm.getNodeOperatorsCount() - 1;
     }
 
     function test_sealAll() public {
