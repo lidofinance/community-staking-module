@@ -160,9 +160,9 @@ contract OssifiableProxyTest is Test, Utilities {
 
     function test_fallback() public {
         vm.prank(admin);
-        (, bytes memory data) = address(proxy).call(
-            abi.encodeWithSignature("version()")
-        );
-        assertEq(abi.decode(data, (uint256)), 0);
+        uint256 version = InitializableImplementationStub(
+            payable(address(proxy))
+        ).version();
+        assertEq(version, 0);
     }
 }
