@@ -24,6 +24,8 @@ import { CSFeeDistributor } from "../../src/CSFeeDistributor.sol";
 import { CSVerifier } from "../../src/CSVerifier.sol";
 import { CSEarlyAdoption } from "../../src/CSEarlyAdoption.sol";
 import { DeployParams } from "../../script/DeployBase.s.sol";
+import { IACL } from "../../src/interfaces/IACL.sol";
+import { IKernel } from "../../src/interfaces/IKernel.sol";
 
 contract Fixtures is StdCheats, Test {
     bytes32 public constant INITIALIZABLE_STORAGE =
@@ -194,6 +196,28 @@ contract DeploymentFixtures is StdCheats, Test {
                 vm.parseJsonBytes(config, ".DeployParams"),
                 (DeployParams)
             );
+    }
+
+    function handleStakingLimit() public {
+        address agent = stakingRouter.getRoleMember(
+            stakingRouter.DEFAULT_ADMIN_ROLE(),
+            0
+        );
+        IACL acl = IACL(IKernel(lido.kernel()).acl());
+        bytes32 role = lido.STAKING_CONTROL_ROLE();
+        vm.prank(acl.getPermissionManager(address(lido), role));
+        acl.grantPermission(agent, address(lido), role);
+
+        vm.prank(agent);
+        lido.removeStakingLimit();
+    }
+
+    function handleBunkerMode() public {
+        IWithdrawalQueue wq = IWithdrawalQueue(locator.withdrawalQueue());
+        if (wq.isBunkerModeActive()) {
+            vm.prank(wq.getRoleMember(wq.ORACLE_ROLE(), 0));
+            wq.onOracleReport(false, 0, 0);
+        }
     }
 
     function _isEmpty(string memory s) internal pure returns (bool) {

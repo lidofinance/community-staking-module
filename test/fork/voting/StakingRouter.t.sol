@@ -106,20 +106,11 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
     }
 
     function hugeDeposit() internal {
-        IACL acl = IACL(IKernel(lido.kernel()).acl());
-        bytes32 role = lido.STAKING_CONTROL_ROLE();
-        vm.prank(acl.getPermissionManager(address(lido), role));
-        acl.grantPermission(agent, address(lido), role);
-
-        vm.prank(agent);
-        lido.removeStakingLimit();
-        IWithdrawalQueue wq = IWithdrawalQueue(locator.withdrawalQueue());
-        if (wq.isBunkerModeActive()) {
-            vm.prank(wq.getRoleMember(wq.ORACLE_ROLE(), 0));
-            wq.onOracleReport(false, 0, 0);
-        }
         // It's impossible to process deposits if withdrawal requests amount is more than the buffered ether,
         // so we need to make sure that the buffered ether is enough by submitting this tremendous amount.
+        handleStakingLimit();
+        handleBunkerMode();
+
         address whale = nextAddress();
         vm.prank(whale);
         vm.deal(whale, 1e7 ether);

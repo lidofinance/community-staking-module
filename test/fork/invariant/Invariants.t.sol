@@ -163,6 +163,14 @@ contract CSAccountingInvariants is InvariantsBase {
             "assert balance >= total shares"
         );
     }
+
+    function test_burnerApproval() public {
+        assertGe(
+            lido.allowance(address(accounting), address(locator.burner())),
+            type(uint128).max,
+            "assert allowance"
+        );
+    }
 }
 
 contract CSFeeDistributorInvariants is InvariantsBase {
