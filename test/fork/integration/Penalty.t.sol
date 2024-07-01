@@ -48,6 +48,9 @@ contract PenaltyIntegrationTest is
         if (csm.isPaused()) csm.resume();
         if (!csm.publicRelease()) csm.activatePublicRelease();
 
+        handleStakingLimit();
+        handleBunkerMode();
+
         user = nextAddress("User");
         stranger = nextAddress("stranger");
         nodeOperator = nextAddress("NodeOperator");

@@ -40,6 +40,9 @@ contract DepositIntegrationTest is
         if (csm.isPaused()) csm.resume();
         if (!csm.publicRelease()) csm.activatePublicRelease();
 
+        handleStakingLimit();
+        handleBunkerMode();
+
         userPrivateKey = 0xa11ce;
         user = vm.addr(userPrivateKey);
         strangerPrivateKey = 0x517a4637;
