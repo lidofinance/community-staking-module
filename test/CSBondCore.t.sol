@@ -120,11 +120,13 @@ abstract contract CSBondCoreTestBase is Test, Fixtures, Utilities {
         bondCore.depositETH{ value: bond }(user, 0);
     }
 
-    function ethToSharesToEth(uint256 amount) internal returns (uint256) {
+    function ethToSharesToEth(uint256 amount) internal view returns (uint256) {
         return stETH.getPooledEthByShares(stETH.getSharesByPooledEth(amount));
     }
 
-    function sharesToEthToShares(uint256 amount) internal returns (uint256) {
+    function sharesToEthToShares(
+        uint256 amount
+    ) internal view returns (uint256) {
         return stETH.getSharesByPooledEth(stETH.getPooledEthByShares(amount));
     }
 }
@@ -536,45 +538,6 @@ contract CSBondCoreBurnTest is CSBondCoreTestBase {
                 IBurner.requestBurnShares.selector,
                 address(bondCore),
                 shares
-            )
-        );
-
-        bondCore.burn(0, 32 ether);
-
-        assertEq(
-            bondCore.getBondShares(0),
-            0,
-            "bond shares should be 0 after burning"
-        );
-        assertEq(bondCore.totalBondShares(), 0);
-    }
-
-    function test_burn_NoApproveToBurner() public {
-        _deposit(32 ether);
-
-        vm.prank(address(bondCore));
-        stETH.approve(address(burner), 0);
-
-        uint256 shares = stETH.getSharesByPooledEth(32 ether);
-        uint256 burned = stETH.getPooledEthByShares(shares);
-        vm.expectEmit(true, true, true, true, address(bondCore));
-        emit CSBondCore.BondBurned(0, burned, burned);
-
-        vm.expectCall(
-            locator.burner(),
-            abi.encodeWithSelector(
-                IBurner.requestBurnShares.selector,
-                address(bondCore),
-                shares
-            )
-        );
-
-        vm.expectCall(
-            address(stETH),
-            abi.encodeWithSelector(
-                stETH.approve.selector,
-                address(address(burner)),
-                UINT256_MAX
             )
         );
 

@@ -40,6 +40,9 @@ contract RecoverIntegrationTest is
         vm.stopPrank();
         if (csm.isPaused()) csm.resume();
 
+        handleStakingLimit();
+        handleBunkerMode();
+
         vm.startPrank(
             accounting.getRoleMember(accounting.DEFAULT_ADMIN_ROLE(), 0)
         );
