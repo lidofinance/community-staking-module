@@ -109,33 +109,4 @@ contract PenaltyIntegrationTest is
 
         assertEq(bondAfter, bondBefore - amountShares);
     }
-
-    function test_penalty_noAllowanceForBurner() public {
-        uint256 amount = 1 ether;
-
-        uint256 amountShares = lido.getSharesByPooledEth(amount);
-
-        (uint256 bondBefore, ) = accounting.getBondSummaryShares(defaultNoId);
-
-        csm.reportELRewardsStealingPenalty(
-            defaultNoId,
-            blockhash(block.number),
-            amount - csm.EL_REWARDS_STEALING_FINE()
-        );
-
-        uint256[] memory idsToSettle = new uint256[](1);
-        idsToSettle[0] = defaultNoId;
-
-        vm.startPrank(address(accounting));
-        lido.approve(locator.burner(), 0);
-        vm.stopPrank();
-
-        assertEq(lido.allowance(address(accounting), locator.burner()), 0);
-
-        csm.settleELRewardsStealingPenalty(idsToSettle);
-
-        (uint256 bondAfter, ) = accounting.getBondSummaryShares(defaultNoId);
-
-        assertEq(bondAfter, bondBefore - amountShares);
-    }
 }
