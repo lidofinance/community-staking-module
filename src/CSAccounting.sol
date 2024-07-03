@@ -18,6 +18,8 @@ import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
+// @todo: check if node operator id exists in all functions that accept it
+
 /// @author vgorkavenko
 /// @notice This contract stores the Node Operators' bonds in the form of stETH shares,
 ///         so it should be considered in the recovery process
@@ -46,6 +48,7 @@ contract CSAccounting is
 
     ICSModule public immutable CSM;
     ICSFeeDistributor public feeDistributor;
+    // @todo: think about a more descriptive name
     address public chargeRecipient;
 
     event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
@@ -62,6 +65,7 @@ contract CSAccounting is
         _;
     }
 
+    // @todo: complete natspec
     /// @param lidoLocator Lido locator contract address
     /// @param communityStakingModule Community Staking Module contract address
     constructor(
@@ -83,6 +87,7 @@ contract CSAccounting is
         _disableInitializers();
     }
 
+    // @todo: correct order of args in natspec
     /// @param bondCurve Initial bond curve
     /// @param admin Admin role member address
     /// @param bondLockRetentionPeriod Retention period for locked bond in seconds
@@ -124,6 +129,7 @@ contract CSAccounting is
         _resume();
     }
 
+    // @todo: mention in natspec that passing MAX_UINT_256 as `duration` pauses indefinitely
     /// @notice Pause reward claims and deposits for `duration` seconds
     /// @dev Must be called together with `CSModule.pauseFor`
     /// @param duration Duration of the pause in seconds
