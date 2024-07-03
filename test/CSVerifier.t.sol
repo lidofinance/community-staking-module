@@ -17,6 +17,14 @@ import { GIndex } from "../src/lib/GIndex.sol";
 
 import { Stub } from "./helpers/mocks/Stub.sol";
 
+function dec(Slot self) pure returns (Slot slot) {
+    assembly ("memory-safe") {
+        slot := sub(self, 1)
+    }
+}
+
+using { dec } for Slot;
+
 contract CSVerifierTestBase is Test {
     struct WithdrawalFixture {
         bytes32 _blockRoot;
@@ -162,9 +170,7 @@ contract CSVerifierTest is CSVerifierTestBase {
 
         _setMocksSlashing(fixture);
 
-        fixture.beaconBlock.header.slot =
-            verifier.FIRST_SUPPORTED_SLOT().unwrap() -
-            1;
+        fixture.beaconBlock.header.slot = verifier.FIRST_SUPPORTED_SLOT().dec();
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -243,9 +249,7 @@ contract CSVerifierTest is CSVerifierTestBase {
 
         _setMocksWithdrawal(fixture);
 
-        fixture.beaconBlock.header.slot =
-            verifier.FIRST_SUPPORTED_SLOT().unwrap() -
-            1;
+        fixture.beaconBlock.header.slot = verifier.FIRST_SUPPORTED_SLOT().dec();
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -404,7 +408,7 @@ contract CSVerifierTest is CSVerifierTestBase {
         _setMocksWithdrawal(fixture);
 
         fixture.witness.withdrawableEpoch =
-            fixture.beaconBlock.header.slot /
+            fixture.beaconBlock.header.slot.unwrap() /
             32 +
             154;
 

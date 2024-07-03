@@ -7,6 +7,7 @@ import { Test } from "forge-std/Test.sol";
 import { BeaconBlockHeader, Validator, Withdrawal } from "../src/lib/Types.sol";
 import { GIndex, pack } from "../src/lib/GIndex.sol";
 import { Utilities } from "./helpers/Utilities.sol";
+import { Slot } from "../src/lib/Types.sol";
 import { SSZ } from "../src/lib/SSZ.sol";
 
 // Wrap the library internal methods to make an actual call to them.
@@ -184,7 +185,7 @@ contract SSZTest is Utilities, Test {
     function test_BeaconBlockHeaderRoot() public {
         // Can be obtained via /eth/v1/beacon/headers/{block_id}.
         BeaconBlockHeader memory h = BeaconBlockHeader({
-            slot: 7472518,
+            slot: Slot.wrap(7472518),
             proposerIndex: 152834,
             parentRoot: 0x4916af1ff31b06f1b27125d2d20cd26e123c425a4b34ebd414e5f0120537e78d,
             stateRoot: 0x76ca64f3732754bc02c7966271fb6356a9464fe5fce85be8e7abc403c8c7b56b,
@@ -198,7 +199,7 @@ contract SSZTest is Utilities, Test {
 
     function test_BeaconBlockHeaderRoot_AllZeroes() public {
         BeaconBlockHeader memory h = BeaconBlockHeader({
-            slot: 0,
+            slot: Slot.wrap(0),
             proposerIndex: 0,
             parentRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
             stateRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
@@ -212,7 +213,7 @@ contract SSZTest is Utilities, Test {
 
     function test_BeaconBlockHeaderRoot_AllOnes() public {
         BeaconBlockHeader memory h = BeaconBlockHeader({
-            slot: type(uint64).max,
+            slot: Slot.wrap(type(uint64).max),
             proposerIndex: type(uint64).max,
             parentRoot: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff,
             stateRoot: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff,

@@ -10,7 +10,15 @@ function unwrap(Slot slot) pure returns (uint64) {
     return Slot.unwrap(slot);
 }
 
-using { unwrap } for Slot global;
+function gt(Slot lhs, Slot rhs) pure returns (bool) {
+    return lhs.unwrap() > rhs.unwrap();
+}
+
+function lt(Slot lhs, Slot rhs) pure returns (bool) {
+    return lhs.unwrap() < rhs.unwrap();
+}
+
+using { unwrap, lt as <, gt as > } for Slot global;
 
 // As defined in capella/beacon-chain.md:99
 struct Withdrawal {
@@ -34,7 +42,7 @@ struct Validator {
 
 // As defined in phase0/beacon-chain.md:436
 struct BeaconBlockHeader {
-    uint64 slot;
+    Slot slot;
     uint64 proposerIndex;
     bytes32 parentRoot;
     bytes32 stateRoot;
