@@ -200,6 +200,10 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
                         ? curvePoints[curvePoints.length - 2]
                         : 0
                 );
+            // @todo: test storage if updated to a shorter curve
+            // @todo: test gas consumption when updating the struct fields instead of initializing a new struct, i.e.
+            //        $.bondCurves[curveId].points = curvePoints;
+            //        $.bondCurves[curveId].trend = curveTrend;
             $.bondCurves[curveId] = BondCurve({
                 points: curvePoints,
                 trend: curveTrend

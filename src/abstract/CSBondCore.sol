@@ -167,6 +167,7 @@ abstract contract CSBondCore is ICSBondCore {
         }
     }
 
+    // @todo: amountToClaim is slightly misleading, so consider renaming to maxAmountToClaim or something like that
     /// @dev Claim Node Operator's excess bond shares (stETH) in ETH by requesting withdrawal from the protocol
     ///      As a usual withdrawal request, this claim might be processed on the next stETH rebase
     function _claimUnstETH(
@@ -194,6 +195,7 @@ abstract contract CSBondCore is ICSBondCore {
         emit BondClaimedUnstETH(nodeOperatorId, to, amounts[0], requestIds[0]);
     }
 
+    // @todo: amountToClaim is slightly misleading, so consider renaming to maxAmountToClaim or something like that
     /// @dev Claim Node Operator's excess bond shares (stETH) in stETH by transferring shares from the contract
     function _claimStETH(
         uint256 nodeOperatorId,
@@ -211,6 +213,7 @@ abstract contract CSBondCore is ICSBondCore {
         emit BondClaimedStETH(nodeOperatorId, to, _ethByShares(sharesToClaim));
     }
 
+    // @todo: amountToClaim is slightly misleading, so consider renaming to maxAmountToClaim or something like that
     /// @dev Claim Node Operator's excess bond shares (stETH) in wstETH by wrapping stETH from the contract and transferring wstETH
     function _claimWstETH(
         uint256 nodeOperatorId,

@@ -1,5 +1,5 @@
 ---
-name: Check invariants
+name: Regular tests
 
 on:
   workflow_dispatch:
@@ -54,7 +54,7 @@ jobs:
         if: steps.get-cache.outputs.cache-hit != 'true'
 
   test:
-    name: Invariant tests
+    name: Integration & Invariant tests
     runs-on: ubuntu-latest
     needs: bootstrap
     steps:
@@ -80,8 +80,8 @@ jobs:
       - name: Build
         run: just build --sizes
 
-      - name: Run invariant tests
-        run: just test-invariant
+      - name: Run integration & invariant tests
+        run: just test-post-voting
         env:
           CHAIN: holesky
           DEPLOY_CONFIG: ./artifacts/holesky/deploy-holesky.json
@@ -92,7 +92,7 @@ jobs:
           EMBEDS=$(cat <<EOF
           [
             {
-              "title": "Invariant tests are failed! :scream:",
+              "title": "Regular tests are failed! :scream:",
               "url": "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID",
               "description": "Check the logs for more information."
             }
