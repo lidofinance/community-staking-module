@@ -80,15 +80,8 @@ jobs:
       - name: Build
         run: just build --sizes
 
-      - name: Run integration tests
-        run: just test-integration
-        env:
-          CHAIN: holesky
-          DEPLOY_CONFIG: ./artifacts/holesky/deploy-holesky.json
-          RPC_URL: ${{ secrets.RPC_URL_HOLESKY }}
-
-      - name: Run invariant tests
-        run: just test-invariant
+      - name: Run integration & invariant tests
+        run: just test-post-voting
         env:
           CHAIN: holesky
           DEPLOY_CONFIG: ./artifacts/holesky/deploy-holesky.json
