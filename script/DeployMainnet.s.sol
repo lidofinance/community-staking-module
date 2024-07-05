@@ -73,7 +73,8 @@ contract DeployMainnet is DeployBase {
         config.elRewardsStealingReporter = address(0); // TODO: set
         // EarlyAdoption
         // TODO: Set earlyAdoptionTreeRoot
-        config.earlyAdoptionTreeRoot = 0x00;
+        config
+            .earlyAdoptionTreeRoot = 0xc9a9c1576cf4f3213ad9075b72a1f1b147914a252ad927fa4ca3460ff0723ca9;
         config.earlyAdoptionBondCurve = new uint256[](6);
         // 1.5 -> 1.9 -> 1.8 -> 1.7 -> 1.6 -> 1.5
         config.earlyAdoptionBondCurve[0] = 1.5 ether;
@@ -90,9 +91,5 @@ contract DeployMainnet is DeployBase {
         config.sealExpiryTimestamp = block.timestamp + 365 days;
 
         _setUp();
-    }
-
-    function run() external pure override {
-        revert IsNotReadyForDeployment();
     }
 }
