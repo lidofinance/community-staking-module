@@ -48,26 +48,28 @@ contract CSAccounting is
 
     ICSModule public immutable CSM;
     ICSFeeDistributor public feeDistributor;
-    // @todo: think about a more descriptive name
-    address public chargeRecipient;
+    address public chargePenaltyRecipient;
 
     event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
-    event ChargeRecipientSet(address chargeRecipient);
+    event ChargePenaltyRecipientSet(address chargePenaltyRecipient);
 
     error SenderIsNotCSM();
     error ZeroModuleAddress();
     error ZeroAdminAddress();
     error ZeroFeeDistributorAddress();
-    error ZeroChargeRecipientAddress();
+    error ZeroChargePenaltyRecipientAddress();
+    error NodeOperatorDoesNotExist();
 
     modifier onlyCSM() {
         if (msg.sender != address(CSM)) revert SenderIsNotCSM();
         _;
     }
 
-    // @todo: complete natspec
     /// @param lidoLocator Lido locator contract address
     /// @param communityStakingModule Community Staking Module contract address
+    /// @param maxCurveLength Max nuber of the points in the bond curves
+    /// @param minBondLockRetentionPeriod Min time in seconds for the bondLock retention period
+    /// @param maxBondLockRetentionPeriod Max time in seconds for the bondLock retention period
     constructor(
         address lidoLocator,
         address communityStakingModule,
@@ -87,18 +89,17 @@ contract CSAccounting is
         _disableInitializers();
     }
 
-    // @todo: correct order of args in natspec
     /// @param bondCurve Initial bond curve
     /// @param admin Admin role member address
-    /// @param bondLockRetentionPeriod Retention period for locked bond in seconds
-    /// @param _chargeRecipient Recipient of the charge penalty type
     /// @param _feeDistributor Fee Distributor contract address
+    /// @param bondLockRetentionPeriod Retention period for locked bond in seconds
+    /// @param _chargePenaltyRecipient Recipient of the charge penalty type
     function initialize(
         uint256[] calldata bondCurve,
         address admin,
         address _feeDistributor,
         uint256 bondLockRetentionPeriod,
-        address _chargeRecipient
+        address _chargePenaltyRecipient
     ) external initializer {
         __AccessControlEnumerable_init();
         __CSBondCurve_init(bondCurve);
@@ -117,7 +118,7 @@ contract CSAccounting is
 
         feeDistributor = ICSFeeDistributor(_feeDistributor);
 
-        _setChargeRecipient(_chargeRecipient);
+        _setChargeRecipient(_chargePenaltyRecipient);
 
         LIDO.approve(address(WSTETH), type(uint256).max);
         LIDO.approve(address(WITHDRAWAL_QUEUE), type(uint256).max);
@@ -129,20 +130,20 @@ contract CSAccounting is
         _resume();
     }
 
-    // @todo: mention in natspec that passing MAX_UINT_256 as `duration` pauses indefinitely
     /// @notice Pause reward claims and deposits for `duration` seconds
     /// @dev Must be called together with `CSModule.pauseFor`
+    /// @dev Passing MAX_UINT_256 as `duration` pauses indefinitely
     /// @param duration Duration of the pause in seconds
     function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
         _pauseFor(duration);
     }
 
     /// @notice Set charge recipient address
-    /// @param _chargeRecipient Charge recipient address
+    /// @param _chargePenaltyRecipient Charge recipient address
     function setChargeRecipient(
-        address _chargeRecipient
+        address _chargePenaltyRecipient
     ) external onlyRole(ACCOUNTING_MANAGER_ROLE) {
-        _setChargeRecipient(_chargeRecipient);
+        _setChargeRecipient(_chargePenaltyRecipient);
     }
 
     /// @notice Set bond lock retention period
@@ -179,6 +180,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 curveId
     ) external onlyRole(SET_BOND_CURVE_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
         CSBondCurve._setBondCurve(nodeOperatorId, curveId);
     }
 
@@ -187,6 +189,7 @@ contract CSAccounting is
     function resetBondCurve(
         uint256 nodeOperatorId
     ) external onlyRole(RESET_BOND_CURVE_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
         CSBondCurve._resetBondCurve(nodeOperatorId);
     }
 
@@ -394,7 +397,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 amount
     ) external onlyCSM {
-        CSBondCore._charge(nodeOperatorId, amount, chargeRecipient);
+        CSBondCore._charge(nodeOperatorId, amount, chargePenaltyRecipient);
     }
 
     /// @notice Pull fees from CSFeeDistributor to the Node Operator's bond
@@ -407,6 +410,7 @@ contract CSAccounting is
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
     ) external {
+        _onlyExistingNodeOperator(nodeOperatorId);
         _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
     }
 
@@ -633,11 +637,16 @@ contract CSAccounting is
         _checkRole(RECOVERER_ROLE);
     }
 
-    function _setChargeRecipient(address _chargeRecipient) private {
-        if (_chargeRecipient == address(0)) {
-            revert ZeroChargeRecipientAddress();
+    function _onlyExistingNodeOperator(uint256 nodeOperatorId) internal view {
+        if (nodeOperatorId < CSM.getNodeOperatorsCount()) return;
+        revert NodeOperatorDoesNotExist();
+    }
+
+    function _setChargeRecipient(address _chargePenaltyRecipient) private {
+        if (_chargePenaltyRecipient == address(0)) {
+            revert ZeroChargePenaltyRecipientAddress();
         }
-        chargeRecipient = _chargeRecipient;
-        emit ChargeRecipientSet(_chargeRecipient);
+        chargePenaltyRecipient = _chargePenaltyRecipient;
+        emit ChargePenaltyRecipientSet(_chargePenaltyRecipient);
     }
 }

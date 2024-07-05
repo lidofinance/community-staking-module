@@ -144,7 +144,10 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
             accounting.getBondLockRetentionPeriod(),
             deployParams.bondLockRetentionPeriod
         );
-        assertEq(accounting.chargeRecipient(), deployParams.chargeRecipient);
+        assertEq(
+            accounting.chargePenaltyRecipient(),
+            deployParams.chargePenaltyRecipient
+        );
         assertTrue(
             accounting.hasRole(accounting.SET_BOND_CURVE_ROLE(), address(csm))
         );
@@ -214,7 +217,7 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
             admin: address(deployParams.aragonAgent),
             _feeDistributor: address(feeDistributor),
             bondLockRetentionPeriod: deployParams.bondLockRetentionPeriod,
-            _chargeRecipient: address(0)
+            _chargePenaltyRecipient: address(0)
         });
     }
 }
