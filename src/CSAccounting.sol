@@ -118,7 +118,7 @@ contract CSAccounting is
 
         feeDistributor = ICSFeeDistributor(_feeDistributor);
 
-        _setChargeRecipient(_chargePenaltyRecipient);
+        _setChargePenaltyRecipient(_chargePenaltyRecipient);
 
         LIDO.approve(address(WSTETH), type(uint256).max);
         LIDO.approve(address(WITHDRAWAL_QUEUE), type(uint256).max);
@@ -140,10 +140,10 @@ contract CSAccounting is
 
     /// @notice Set charge recipient address
     /// @param _chargePenaltyRecipient Charge recipient address
-    function setChargeRecipient(
+    function setChargePenaltyRecipient(
         address _chargePenaltyRecipient
     ) external onlyRole(ACCOUNTING_MANAGER_ROLE) {
-        _setChargeRecipient(_chargePenaltyRecipient);
+        _setChargePenaltyRecipient(_chargePenaltyRecipient);
     }
 
     /// @notice Set bond lock retention period
@@ -642,7 +642,9 @@ contract CSAccounting is
         revert NodeOperatorDoesNotExist();
     }
 
-    function _setChargeRecipient(address _chargePenaltyRecipient) private {
+    function _setChargePenaltyRecipient(
+        address _chargePenaltyRecipient
+    ) private {
         if (_chargePenaltyRecipient == address(0)) {
             revert ZeroChargePenaltyRecipientAddress();
         }

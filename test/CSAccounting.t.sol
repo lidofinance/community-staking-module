@@ -3655,24 +3655,26 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), totalDepositedShares);
     }
 
-    function test_setChargeRecipient() public {
+    function test_setChargePenaltyRecipient() public {
         vm.prank(admin);
         vm.expectEmit(true, false, false, true, address(accounting));
         emit CSAccounting.ChargePenaltyRecipientSet(address(1337));
-        accounting.setChargeRecipient(address(1337));
+        accounting.setChargePenaltyRecipient(address(1337));
         assertEq(accounting.chargePenaltyRecipient(), address(1337));
     }
 
-    function test_setChargeRecipient_RevertWhen_DoesNotHaveRole() public {
+    function test_setChargePenaltyRecipient_RevertWhen_DoesNotHaveRole()
+        public
+    {
         expectRoleRevert(stranger, accounting.ACCOUNTING_MANAGER_ROLE());
         vm.prank(stranger);
-        accounting.setChargeRecipient(address(1337));
+        accounting.setChargePenaltyRecipient(address(1337));
     }
 
-    function test_setChargeRecipient_RevertWhen_Zero() public {
+    function test_setChargePenaltyRecipient_RevertWhen_Zero() public {
         vm.expectRevert();
         vm.prank(admin);
-        accounting.setChargeRecipient(address(0));
+        accounting.setChargePenaltyRecipient(address(0));
     }
 
     function test_setLockedBondRetentionPeriod() public {
@@ -3845,9 +3847,6 @@ contract CSAccountingPullFeeRewardsTest is CSAccountingBaseTest {
     function test_pullFeeRewards_revertWhen_operatorDoesNotEsits() public {
         mock_distributeFees(0);
         mock_getNodeOperatorsCount(0);
-
-        uint256 bondSharesBefore = accounting.getBondShares(0);
-        uint256 totalBondSharesBefore = accounting.totalBondShares();
 
         vm.expectRevert(CSAccounting.NodeOperatorDoesNotExist.selector);
         accounting.pullFeeRewards(0, 0, new bytes32[](0));
