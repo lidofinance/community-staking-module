@@ -67,7 +67,7 @@ contract CSAccounting is
 
     /// @param lidoLocator Lido locator contract address
     /// @param communityStakingModule Community Staking Module contract address
-    /// @param maxCurveLength Max nuber of the points in the bond curves
+    /// @param maxCurveLength Max number of the points in the bond curves
     /// @param minBondLockRetentionPeriod Min time in seconds for the bondLock retention period
     /// @param maxBondLockRetentionPeriod Max time in seconds for the bondLock retention period
     constructor(
