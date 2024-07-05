@@ -1,6 +1,6 @@
 # ICSAccounting
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/ef5c94eed5211bf6c350512cf569895da670f26c/src/interfaces/ICSAccounting.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/49f6937ff74cffecb74206f771c12be0e9e28448/src/interfaces/ICSAccounting.sol)
 
 **Inherits:**
 [ICSBondCore](/src/interfaces/ICSBondCore.sol/interface.ICSBondCore.md), [ICSBondCurve](/src/interfaces/ICSBondCurve.sol/interface.ICSBondCurve.md), [ICSBondLock](/src/interfaces/ICSBondLock.sol/interface.ICSBondLock.md)
@@ -13,10 +13,10 @@
 function feeDistributor() external view returns (ICSFeeDistributor);
 ```
 
-### chargeRecipient
+### chargePenaltyRecipient
 
 ```solidity
-function chargeRecipient() external view returns (address);
+function chargePenaltyRecipient() external view returns (address);
 ```
 
 ### getRequiredBondForNextKeys

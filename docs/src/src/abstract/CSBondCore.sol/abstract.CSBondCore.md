@@ -1,6 +1,6 @@
 # CSBondCore
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/ef5c94eed5211bf6c350512cf569895da670f26c/src/abstract/CSBondCore.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/49f6937ff74cffecb74206f771c12be0e9e28448/src/abstract/CSBondCore.sol)
 
 **Inherits:**
 [ICSBondCore](/src/interfaces/ICSBondCore.sol/interface.ICSBondCore.md)
@@ -151,7 +151,7 @@ _Claim Node Operator's excess bond shares (stETH) in ETH by requesting withdrawa
 As a usual withdrawal request, this claim might be processed on the next stETH rebase_
 
 ```solidity
-function _claimUnstETH(uint256 nodeOperatorId, uint256 amountToClaim, address to) internal;
+function _claimUnstETH(uint256 nodeOperatorId, uint256 requestedAmountToClaim, address to) internal;
 ```
 
 ### \_claimStETH
@@ -159,7 +159,7 @@ function _claimUnstETH(uint256 nodeOperatorId, uint256 amountToClaim, address to
 _Claim Node Operator's excess bond shares (stETH) in stETH by transferring shares from the contract_
 
 ```solidity
-function _claimStETH(uint256 nodeOperatorId, uint256 amountToClaim, address to) internal;
+function _claimStETH(uint256 nodeOperatorId, uint256 requestedAmountToClaim, address to) internal;
 ```
 
 ### \_claimWstETH
@@ -167,7 +167,7 @@ function _claimStETH(uint256 nodeOperatorId, uint256 amountToClaim, address to) 
 _Claim Node Operator's excess bond shares (stETH) in wstETH by wrapping stETH from the contract and transferring wstETH_
 
 ```solidity
-function _claimWstETH(uint256 nodeOperatorId, uint256 amountToClaim, address to) internal;
+function _claimWstETH(uint256 nodeOperatorId, uint256 requestedAmountToClaim, address to) internal;
 ```
 
 ### \_burn
@@ -177,7 +177,7 @@ _Burn Node Operator's bond shares (stETH). Shares will be burned on the next stE
 _The method sender should be granted as `Burner.REQUEST_BURN_SHARES_ROLE` and make stETH allowance for `Burner`_
 
 ```solidity
-function _burn(uint256 nodeOperatorId, uint256 amount) internal;
+function _burn(uint256 nodeOperatorId, uint256 amount) internal returns (uint256 burned);
 ```
 
 **Parameters**
@@ -192,7 +192,11 @@ function _burn(uint256 nodeOperatorId, uint256 amount) internal;
 _Transfer Node Operator's bond shares (stETH) to charge recipient to pay some fee_
 
 ```solidity
-function _charge(uint256 nodeOperatorId, uint256 amount, address recipient) internal;
+function _charge(
+  uint256 nodeOperatorId,
+  uint256 amount,
+  address recipient
+) internal returns (uint256 chargedShares);
 ```
 
 **Parameters**
@@ -260,6 +264,18 @@ function _getCSBondCoreStorage() private pure returns (CSBondCoreStorage storage
 event BondDepositedETH(uint256 indexed nodeOperatorId, address from, uint256 amount);
 ```
 
+### BondDepositedStETH
+
+```solidity
+event BondDepositedStETH(uint256 indexed nodeOperatorId, address from, uint256 amount);
+```
+
+### BondDepositedWstETH
+
+```solidity
+event BondDepositedWstETH(uint256 indexed nodeOperatorId, address from, uint256 amount);
+```
+
 ### BondClaimedUnstETH
 
 ```solidity
@@ -271,28 +287,16 @@ event BondClaimedUnstETH(
 );
 ```
 
-### BondDepositedWstETH
+### BondClaimedStETH
 
 ```solidity
-event BondDepositedWstETH(uint256 indexed nodeOperatorId, address from, uint256 amount);
+event BondClaimedStETH(uint256 indexed nodeOperatorId, address to, uint256 amount);
 ```
 
 ### BondClaimedWstETH
 
 ```solidity
 event BondClaimedWstETH(uint256 indexed nodeOperatorId, address to, uint256 amount);
-```
-
-### BondDepositedStETH
-
-```solidity
-event BondDepositedStETH(uint256 indexed nodeOperatorId, address from, uint256 amount);
-```
-
-### BondClaimedStETH
-
-```solidity
-event BondClaimedStETH(uint256 indexed nodeOperatorId, address to, uint256 amount);
 ```
 
 ### BondBurned
@@ -313,6 +317,12 @@ event BondCharged(uint256 indexed nodeOperatorId, uint256 toChargeAmount, uint25
 
 ```solidity
 error ZeroLocatorAddress();
+```
+
+### NothingToClaim
+
+```solidity
+error NothingToClaim();
 ```
 
 ## Structs

@@ -1,5 +1,5 @@
 # NOAddresses
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/ef5c94eed5211bf6c350512cf569895da670f26c/src/lib/NOAddresses.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/49f6937ff74cffecb74206f771c12be0e9e28448/src/lib/NOAddresses.sol)
 
 Library for changing and reset node operator's manager and reward addresses
 
@@ -124,18 +124,18 @@ event NodeOperatorRewardAddressChangeProposed(
 );
 ```
 
-### NodeOperatorRewardAddressChanged
-
-```solidity
-event NodeOperatorRewardAddressChanged(
-    uint256 indexed nodeOperatorId, address indexed oldAddress, address indexed newAddress
-);
-```
-
 ### NodeOperatorManagerAddressChanged
 
 ```solidity
 event NodeOperatorManagerAddressChanged(
+    uint256 indexed nodeOperatorId, address indexed oldAddress, address indexed newAddress
+);
+```
+
+### NodeOperatorRewardAddressChanged
+
+```solidity
+event NodeOperatorRewardAddressChanged(
     uint256 indexed nodeOperatorId, address indexed oldAddress, address indexed newAddress
 );
 ```

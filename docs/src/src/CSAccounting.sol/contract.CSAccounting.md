@@ -1,6 +1,6 @@
 # CSAccounting
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/ef5c94eed5211bf6c350512cf569895da670f26c/src/CSAccounting.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/49f6937ff74cffecb74206f771c12be0e9e28448/src/CSAccounting.sol)
 
 **Inherits:**
 [ICSAccounting](/src/interfaces/ICSAccounting.sol/interface.ICSAccounting.md), [CSBondCore](/src/abstract/CSBondCore.sol/abstract.CSBondCore.md), [CSBondCurve](/src/abstract/CSBondCurve.sol/abstract.CSBondCurve.md), [CSBondLock](/src/abstract/CSBondLock.sol/abstract.CSBondLock.md), [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), AccessControlEnumerableUpgradeable, [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -67,10 +67,10 @@ ICSModule public immutable CSM;
 ICSFeeDistributor public feeDistributor;
 ```
 
-### chargeRecipient
+### chargePenaltyRecipient
 
 ```solidity
-address public chargeRecipient;
+address public chargePenaltyRecipient;
 ```
 
 ## Functions
@@ -98,13 +98,13 @@ constructor(
 
 **Parameters**
 
-| Name                         | Type      | Description                               |
-| ---------------------------- | --------- | ----------------------------------------- |
-| `lidoLocator`                | `address` | Lido locator contract address             |
-| `communityStakingModule`     | `address` | Community Staking Module contract address |
-| `maxCurveLength`             | `uint256` |                                           |
-| `minBondLockRetentionPeriod` | `uint256` |                                           |
-| `maxBondLockRetentionPeriod` | `uint256` |                                           |
+| Name                         | Type      | Description                                           |
+| ---------------------------- | --------- | ----------------------------------------------------- |
+| `lidoLocator`                | `address` | Lido locator contract address                         |
+| `communityStakingModule`     | `address` | Community Staking Module contract address             |
+| `maxCurveLength`             | `uint256` | Max nuber of the points in the bond curves            |
+| `minBondLockRetentionPeriod` | `uint256` | Min time in seconds for the bondLock retention period |
+| `maxBondLockRetentionPeriod` | `uint256` | Max time in seconds for the bondLock retention period |
 
 ### initialize
 
@@ -114,7 +114,7 @@ function initialize(
   address admin,
   address _feeDistributor,
   uint256 bondLockRetentionPeriod,
-  address _chargeRecipient
+  address _chargePenaltyRecipient
 ) external initializer;
 ```
 
@@ -126,7 +126,7 @@ function initialize(
 | `admin`                   | `address`   | Admin role member address                   |
 | `_feeDistributor`         | `address`   | Fee Distributor contract address            |
 | `bondLockRetentionPeriod` | `uint256`   | Retention period for locked bond in seconds |
-| `_chargeRecipient`        | `address`   | Recipient of the charge penalty type        |
+| `_chargePenaltyRecipient` | `address`   | Recipient of the charge penalty type        |
 
 ### resume
 
@@ -141,6 +141,8 @@ function resume() external onlyRole(RESUME_ROLE);
 Pause reward claims and deposits for `duration` seconds
 
 _Must be called together with `CSModule.pauseFor`_
+
+_Passing MAX_UINT_256 as `duration` pauses indefinitely_
 
 ```solidity
 function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE);
@@ -157,14 +159,16 @@ function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE);
 Set charge recipient address
 
 ```solidity
-function setChargeRecipient(address _chargeRecipient) external onlyRole(ACCOUNTING_MANAGER_ROLE);
+function setChargeRecipient(
+  address _chargePenaltyRecipient
+) external onlyRole(ACCOUNTING_MANAGER_ROLE);
 ```
 
 **Parameters**
 
-| Name               | Type      | Description              |
-| ------------------ | --------- | ------------------------ |
-| `_chargeRecipient` | `address` | Charge recipient address |
+| Name                      | Type      | Description              |
+| ------------------------- | --------- | ------------------------ |
+| `_chargePenaltyRecipient` | `address` | Charge recipient address |
 
 ### setLockedBondRetentionPeriod
 
@@ -457,7 +461,7 @@ _Called by CSM exclusively_
 ```solidity
 function settleLockedBondETH(
   uint256 nodeOperatorId
-) external onlyCSM returns (uint256 lockedAmount);
+) external onlyCSM returns (uint256 settledAmount);
 ```
 
 **Parameters**
@@ -545,6 +549,14 @@ _Accounts for the bond funds stored during recovery_
 
 ```solidity
 function recoverStETHShares() external;
+```
+
+### renewBurnerAllowance
+
+Service method to update allowance to Burner in case it has changed
+
+```solidity
+function renewBurnerAllowance() external;
 ```
 
 ### getBondSummary
@@ -774,10 +786,16 @@ Should be sufficient for ~ 40 years
 function _onlyRecoverer() internal view override;
 ```
 
+### \_onlyExistingNodeOperator
+
+```solidity
+function _onlyExistingNodeOperator(uint256 nodeOperatorId) internal view;
+```
+
 ### \_setChargeRecipient
 
 ```solidity
-function _setChargeRecipient(address _chargeRecipient) private;
+function _setChargeRecipient(address _chargePenaltyRecipient) private;
 ```
 
 ## Events
@@ -788,19 +806,13 @@ function _setChargeRecipient(address _chargeRecipient) private;
 event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
 ```
 
-### ChargeRecipientSet
+### ChargePenaltyRecipientSet
 
 ```solidity
-event ChargeRecipientSet(address chargeRecipient);
+event ChargePenaltyRecipientSet(address chargePenaltyRecipient);
 ```
 
 ## Errors
-
-### InvalidSender
-
-```solidity
-error InvalidSender();
-```
 
 ### SenderIsNotCSM
 
@@ -826,8 +838,14 @@ error ZeroAdminAddress();
 error ZeroFeeDistributorAddress();
 ```
 
-### ZeroChargeRecipientAddress
+### ZeroChargePenaltyRecipientAddress
 
 ```solidity
-error ZeroChargeRecipientAddress();
+error ZeroChargePenaltyRecipientAddress();
+```
+
+### NodeOperatorDoesNotExist
+
+```solidity
+error NodeOperatorDoesNotExist();
 ```

@@ -1,6 +1,6 @@
 # CSFeeDistributor
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/ef5c94eed5211bf6c350512cf569895da670f26c/src/CSFeeDistributor.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/49f6937ff74cffecb74206f771c12be0e9e28448/src/CSFeeDistributor.sol)
 
 **Inherits:**
 [ICSFeeDistributor](/src/interfaces/ICSFeeDistributor.sol/interface.ICSFeeDistributor.md), Initializable, AccessControlEnumerableUpgradeable, [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -68,18 +68,6 @@ uint256 public totalClaimableShares;
 
 ## Functions
 
-### onlyAccounting
-
-```solidity
-modifier onlyAccounting();
-```
-
-### onlyOracle
-
-```solidity
-modifier onlyOracle();
-```
-
 ### constructor
 
 ```solidity
@@ -101,7 +89,7 @@ function distributeFees(
   uint256 nodeOperatorId,
   uint256 shares,
   bytes32[] calldata proof
-) external onlyAccounting returns (uint256 sharesToDistribute);
+) external returns (uint256 sharesToDistribute);
 ```
 
 **Parameters**
@@ -127,7 +115,7 @@ function processOracleReport(
   bytes32 _treeRoot,
   string calldata _treeCid,
   uint256 distributed
-) external onlyOracle;
+) external;
 ```
 
 ### recoverERC20

@@ -1,5 +1,5 @@
 # QueueLib
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/ef5c94eed5211bf6c350512cf569895da670f26c/src/lib/QueueLib.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/49f6937ff74cffecb74206f771c12be0e9e28448/src/lib/QueueLib.sol)
 
 **Author:**
 madlabman
@@ -20,12 +20,9 @@ function normalize(Queue storage self, mapping(uint256 => NodeOperator) storage 
 
 
 ```solidity
-function clean(
-    Queue storage self,
-    mapping(uint256 => NodeOperator) storage nodeOperators,
-    TransientUintUintMap storage queueLookup,
-    uint256 maxItems
-) external returns (uint256 toRemove);
+function clean(Queue storage self, mapping(uint256 => NodeOperator) storage nodeOperators, uint256 maxItems)
+    external
+    returns (uint256 toRemove);
 ```
 
 ### enqueue
@@ -34,7 +31,7 @@ Internal methods
 
 
 ```solidity
-function enqueue(Queue storage self, uint256 nodeOperatorId, uint256 keysCount) internal returns (Batch added);
+function enqueue(Queue storage self, uint256 nodeOperatorId, uint256 keysCount) internal returns (Batch item);
 ```
 
 ### dequeue
@@ -66,12 +63,6 @@ event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
 ```
 
 ## Errors
-### InvalidIndex
-
-```solidity
-error InvalidIndex();
-```
-
 ### QueueIsEmpty
 
 ```solidity
@@ -90,7 +81,7 @@ error QueueLookupNoLimit();
 ```solidity
 struct Queue {
     uint128 head;
-    uint128 length;
+    uint128 tail;
     mapping(uint128 => Batch) queue;
 }
 ```

@@ -1,6 +1,6 @@
 # CSBondLock
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/ef5c94eed5211bf6c350512cf569895da670f26c/src/abstract/CSBondLock.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/49f6937ff74cffecb74206f771c12be0e9e28448/src/abstract/CSBondLock.sol)
 
 **Inherits:**
 [ICSBondLock](/src/interfaces/ICSBondLock.sol/interface.ICSBondLock.md), Initializable
@@ -163,6 +163,12 @@ function _getCSBondLockStorage() private pure returns (CSBondLockStorage storage
 
 ```solidity
 event BondLockChanged(uint256 indexed nodeOperatorId, uint256 newAmount, uint256 retentionUntil);
+```
+
+### BondLockRemoved
+
+```solidity
+event BondLockRemoved(uint256 indexed nodeOperatorId);
 ```
 
 ### BondLockRetentionPeriodChanged
