@@ -1,6 +1,6 @@
 # CSAccounting
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/49f6937ff74cffecb74206f771c12be0e9e28448/src/CSAccounting.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d66a4396f737199bcc2932e5dd1066d022d333e0/src/CSAccounting.sol)
 
 **Inherits:**
 [ICSAccounting](/src/interfaces/ICSAccounting.sol/interface.ICSAccounting.md), [CSBondCore](/src/abstract/CSBondCore.sol/abstract.CSBondCore.md), [CSBondCurve](/src/abstract/CSBondCurve.sol/abstract.CSBondCurve.md), [CSBondLock](/src/abstract/CSBondLock.sol/abstract.CSBondLock.md), [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), AccessControlEnumerableUpgradeable, [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -154,12 +154,12 @@ function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE);
 | ---------- | --------- | -------------------------------- |
 | `duration` | `uint256` | Duration of the pause in seconds |
 
-### setChargeRecipient
+### setChargePenaltyRecipient
 
 Set charge recipient address
 
 ```solidity
-function setChargeRecipient(
+function setChargePenaltyRecipient(
   address _chargePenaltyRecipient
 ) external onlyRole(ACCOUNTING_MANAGER_ROLE);
 ```
@@ -792,10 +792,10 @@ function _onlyRecoverer() internal view override;
 function _onlyExistingNodeOperator(uint256 nodeOperatorId) internal view;
 ```
 
-### \_setChargeRecipient
+### \_setChargePenaltyRecipient
 
 ```solidity
-function _setChargeRecipient(address _chargePenaltyRecipient) private;
+function _setChargePenaltyRecipient(address _chargePenaltyRecipient) private;
 ```
 
 ## Events

@@ -1,5 +1,5 @@
 # fls
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/49f6937ff74cffecb74206f771c12be0e9e28448/src/lib/GIndex.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d66a4396f737199bcc2932e5dd1066d022d333e0/src/lib/GIndex.sol)
 
 *From Solady LibBit, see https://github.com/Vectorized/solady/blob/main/src/utils/LibBit.sol.*
 
