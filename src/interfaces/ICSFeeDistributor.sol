@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
+import { IAssetRecovererLib } from "../lib/AssetRecovererLib.sol";
+
 pragma solidity 0.8.24;
 
-interface ICSFeeDistributor {
+interface ICSFeeDistributor is IAssetRecovererLib {
     function getFeesToDistribute(
         uint256 nodeOperatorId,
         uint256 shares,

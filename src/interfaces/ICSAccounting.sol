@@ -7,8 +7,14 @@ import { ICSBondCore } from "./ICSBondCore.sol";
 import { ICSBondCurve } from "./ICSBondCurve.sol";
 import { ICSBondLock } from "./ICSBondLock.sol";
 import { ICSFeeDistributor } from "./ICSFeeDistributor.sol";
+import { IAssetRecovererLib } from "../lib/AssetRecovererLib.sol";
 
-interface ICSAccounting is ICSBondCore, ICSBondCurve, ICSBondLock {
+interface ICSAccounting is
+    ICSBondCore,
+    ICSBondCurve,
+    ICSBondLock,
+    IAssetRecovererLib
+{
     struct PermitInput {
         uint256 value;
         uint256 deadline;

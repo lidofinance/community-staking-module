@@ -19,8 +19,7 @@ import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSBondCore } from "../src/abstract/CSBondCore.sol";
 import { CSBondLock } from "../src/abstract/CSBondLock.sol";
 import { CSBondCurve } from "../src/abstract/CSBondCurve.sol";
-import { AssetRecoverer } from "../src/abstract/AssetRecoverer.sol";
-import { AssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
+import { IAssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 import { LidoMock } from "./helpers/mocks/LidoMock.sol";
 import { StETHMock } from "./helpers/mocks/StETHMock.sol";
@@ -3711,7 +3710,7 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
         vm.deal(address(accounting), amount);
 
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit AssetRecovererLib.EtherRecovered(recoverer, amount);
+        emit IAssetRecovererLib.EtherRecovered(recoverer, amount);
 
         vm.prank(recoverer);
         accounting.recoverEther();
@@ -3726,7 +3725,7 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
 
         vm.prank(recoverer);
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit AssetRecovererLib.ERC20Recovered(address(token), recoverer, 1000);
+        emit IAssetRecovererLib.ERC20Recovered(address(token), recoverer, 1000);
         accounting.recoverERC20(address(token), 1000);
 
         assertEq(token.balanceOf(address(accounting)), 0);
@@ -3744,7 +3743,7 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
 
     function test_recoverERC20_RevertWhen_StETH() public {
         vm.prank(recoverer);
-        vm.expectRevert(AssetRecoverer.NotAllowedToRecover.selector);
+        vm.expectRevert(IAssetRecovererLib.NotAllowedToRecover.selector);
         accounting.recoverERC20(address(stETH), 1000);
     }
 
@@ -3774,7 +3773,10 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
 
         vm.prank(recoverer);
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit AssetRecovererLib.StETHSharesRecovered(recoverer, sharesToRecover);
+        emit IAssetRecovererLib.StETHSharesRecovered(
+            recoverer,
+            sharesToRecover
+        );
         accounting.recoverStETHShares();
 
         assertEq(stETH.sharesOf(address(accounting)), sharesBefore);

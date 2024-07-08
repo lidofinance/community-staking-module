@@ -92,6 +92,13 @@ function createBatch(
 using { noId, keys, setKeys, setNext, next, isNil, unwrap } for Batch global;
 using QueueLib for QueueLib.Queue;
 
+interface IQueueLib {
+    event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
+
+    error QueueIsEmpty();
+    error QueueLookupNoLimit();
+}
+
 /// @author madlabman
 library QueueLib {
     struct Queue {
@@ -102,11 +109,6 @@ library QueueLib {
         // Mapping saves a little in costs and allows easily fallback to a zeroed batch on out-of-bounds access.
         mapping(uint128 => Batch) queue;
     }
-
-    event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
-
-    error QueueIsEmpty();
-    error QueueLookupNoLimit();
 
     //////
     /// External methods
@@ -135,7 +137,7 @@ library QueueLib {
         mapping(uint256 => NodeOperator) storage nodeOperators,
         uint256 maxItems
     ) external returns (uint256 toRemove) {
-        if (maxItems == 0) revert QueueLookupNoLimit();
+        if (maxItems == 0) revert IQueueLib.QueueLookupNoLimit();
 
         Batch prev;
         uint128 indexOfPrev;
@@ -207,14 +209,14 @@ library QueueLib {
         unchecked {
             ++self.tail;
         }
-        emit BatchEnqueued(nodeOperatorId, keysCount);
+        emit IQueueLib.BatchEnqueued(nodeOperatorId, keysCount);
     }
 
     function dequeue(Queue storage self) internal returns (Batch item) {
         item = peek(self);
 
         if (item.isNil()) {
-            revert QueueIsEmpty();
+            revert IQueueLib.QueueIsEmpty();
         }
 
         self.head = item.next();
