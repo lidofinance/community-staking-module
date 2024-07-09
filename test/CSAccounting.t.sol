@@ -44,14 +44,14 @@ contract CSAccountingBaseConstructorTest is Test, Fixtures, Utilities {
     address internal admin;
     address internal user;
     address internal stranger;
-    address internal testChargeRecipient;
+    address internal testChargePenaltyRecipient;
 
     function setUp() public virtual {
         admin = nextAddress("ADMIN");
 
         user = nextAddress("USER");
         stranger = nextAddress("STRANGER");
-        testChargeRecipient = nextAddress("CHARGERECIPIENT");
+        testChargePenaltyRecipient = nextAddress("CHARGERECIPIENT");
 
         (locator, wstETH, stETH, , ) = initLido();
 
@@ -90,7 +90,7 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
             admin,
             address(feeDistributor),
             8 weeks,
-            testChargeRecipient
+            testChargePenaltyRecipient
         );
     }
 
@@ -155,14 +155,14 @@ contract CSAccountingBaseInitTest is Test, Fixtures, Utilities {
     address internal admin;
     address internal user;
     address internal stranger;
-    address internal testChargeRecipient;
+    address internal testChargePenaltyRecipient;
 
     function setUp() public virtual {
         admin = nextAddress("ADMIN");
 
         user = nextAddress("USER");
         stranger = nextAddress("STRANGER");
-        testChargeRecipient = nextAddress("CHARGERECIPIENT");
+        testChargePenaltyRecipient = nextAddress("CHARGERECIPIENT");
 
         (locator, wstETH, stETH, , ) = initLido();
 
@@ -191,13 +191,13 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         vm.expectEmit(true, false, false, true, address(accounting));
         emit CSBondLock.BondLockRetentionPeriodChanged(8 weeks);
         vm.expectEmit(true, false, false, true, address(accounting));
-        emit CSAccounting.ChargeRecipientSet(testChargeRecipient);
+        emit CSAccounting.ChargePenaltyRecipientSet(testChargePenaltyRecipient);
         accounting.initialize(
             curve,
             admin,
             address(feeDistributor),
             8 weeks,
-            testChargeRecipient
+            testChargePenaltyRecipient
         );
 
         assertEq(address(accounting.feeDistributor()), address(feeDistributor));
@@ -215,7 +215,7 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
             address(0),
             address(feeDistributor),
             8 weeks,
-            testChargeRecipient
+            testChargePenaltyRecipient
         );
     }
 
@@ -231,17 +231,19 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
             admin,
             address(0),
             8 weeks,
-            testChargeRecipient
+            testChargePenaltyRecipient
         );
     }
 
-    function test_initialize_RevertWhen_zeroChargeRecipient() public {
+    function test_initialize_RevertWhen_zeroChargePenaltyRecipient() public {
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
 
         _enableInitializers(address(accounting));
 
-        vm.expectRevert(CSAccounting.ZeroChargeRecipientAddress.selector);
+        vm.expectRevert(
+            CSAccounting.ZeroChargePenaltyRecipientAddress.selector
+        );
         accounting.initialize(
             curve,
             admin,
@@ -265,14 +267,14 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities {
     address internal admin;
     address internal user;
     address internal stranger;
-    address internal testChargeRecipient;
+    address internal testChargePenaltyRecipient;
 
     function setUp() public virtual {
         admin = nextAddress("ADMIN");
 
         user = nextAddress("USER");
         stranger = nextAddress("STRANGER");
-        testChargeRecipient = nextAddress("CHARGERECIPIENT");
+        testChargePenaltyRecipient = nextAddress("CHARGERECIPIENT");
 
         (locator, wstETH, stETH, burner, ) = initLido();
 
@@ -296,7 +298,7 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities {
             admin,
             address(feeDistributor),
             8 weeks,
-            testChargeRecipient
+            testChargePenaltyRecipient
         );
 
         vm.startPrank(admin);
@@ -3578,6 +3580,8 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         curvePoints[0] = 2 ether;
         curvePoints[1] = 4 ether;
 
+        mock_getNodeOperatorsCount(1);
+
         vm.startPrank(admin);
         uint256 addedId = accounting.addBondCurve(curvePoints);
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: addedId });
@@ -3587,6 +3591,13 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
 
         assertEq(curve.points[0], 2 ether);
         assertEq(curve.points[1], 4 ether);
+    }
+
+    function test_setBondCurve_RevertWhen_OperatorDoesNotExist() public {
+        mock_getNodeOperatorsCount(0);
+        vm.expectRevert(CSAccounting.NodeOperatorDoesNotExist.selector);
+        vm.prank(admin);
+        accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
     }
 
     function test_setBondCurve_RevertWhen_DoesNotHaveRole() public {
@@ -3600,6 +3611,8 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         curvePoints[0] = 1 ether;
         curvePoints[1] = 2 ether;
 
+        mock_getNodeOperatorsCount(1);
+
         vm.startPrank(admin);
         uint256 addedId = accounting.addBondCurve(curvePoints);
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: addedId });
@@ -3612,6 +3625,13 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         uint256[] memory defaultPoints = accounting.getCurveInfo(0).points;
 
         assertEq(curve.points[0], defaultPoints[0]);
+    }
+
+    function test_resetBondCurve_RevertWhen_OperatorDoesNotExist() public {
+        mock_getNodeOperatorsCount(0);
+        vm.expectRevert(CSAccounting.NodeOperatorDoesNotExist.selector);
+        vm.prank(address(stakingModule));
+        accounting.resetBondCurve({ nodeOperatorId: 0 });
     }
 
     function test_resetBondCurve_RevertWhen_DoesNotHaveRole() public {
@@ -3634,24 +3654,26 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), totalDepositedShares);
     }
 
-    function test_setChargeRecipient() public {
+    function test_setChargePenaltyRecipient() public {
         vm.prank(admin);
         vm.expectEmit(true, false, false, true, address(accounting));
-        emit CSAccounting.ChargeRecipientSet(address(1337));
-        accounting.setChargeRecipient(address(1337));
-        assertEq(accounting.chargeRecipient(), address(1337));
+        emit CSAccounting.ChargePenaltyRecipientSet(address(1337));
+        accounting.setChargePenaltyRecipient(address(1337));
+        assertEq(accounting.chargePenaltyRecipient(), address(1337));
     }
 
-    function test_setChargeRecipient_RevertWhen_DoesNotHaveRole() public {
+    function test_setChargePenaltyRecipient_RevertWhen_DoesNotHaveRole()
+        public
+    {
         expectRoleRevert(stranger, accounting.ACCOUNTING_MANAGER_ROLE());
         vm.prank(stranger);
-        accounting.setChargeRecipient(address(1337));
+        accounting.setChargePenaltyRecipient(address(1337));
     }
 
-    function test_setChargeRecipient_RevertWhen_Zero() public {
+    function test_setChargePenaltyRecipient_RevertWhen_Zero() public {
         vm.expectRevert();
         vm.prank(admin);
-        accounting.setChargeRecipient(address(0));
+        accounting.setChargePenaltyRecipient(address(0));
     }
 
     function test_setLockedBondRetentionPeriod() public {
@@ -3794,6 +3816,7 @@ contract CSAccountingPullFeeRewardsTest is CSAccountingBaseTest {
     function test_pullFeeRewards() public {
         uint256 feeShares = 1 ether;
         mock_distributeFees(feeShares);
+        mock_getNodeOperatorsCount(1);
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         uint256 totalBondSharesBefore = accounting.totalBondShares();
@@ -3809,6 +3832,7 @@ contract CSAccountingPullFeeRewardsTest is CSAccountingBaseTest {
 
     function test_pullFeeRewards_zeroAmount() public {
         mock_distributeFees(0);
+        mock_getNodeOperatorsCount(1);
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         uint256 totalBondSharesBefore = accounting.totalBondShares();
@@ -3820,5 +3844,13 @@ contract CSAccountingPullFeeRewardsTest is CSAccountingBaseTest {
 
         assertEq(bondSharesAfter, bondSharesBefore);
         assertEq(totalBondSharesAfter, totalBondSharesBefore);
+    }
+
+    function test_pullFeeRewards_revertWhen_operatorDoesNotEsits() public {
+        mock_distributeFees(0);
+        mock_getNodeOperatorsCount(0);
+
+        vm.expectRevert(CSAccounting.NodeOperatorDoesNotExist.selector);
+        accounting.pullFeeRewards(0, 0, new bytes32[](0));
     }
 }

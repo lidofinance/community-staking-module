@@ -25,7 +25,7 @@ interface ICSAccounting is
 
     function feeDistributor() external view returns (ICSFeeDistributor);
 
-    function chargeRecipient() external view returns (address);
+    function chargePenaltyRecipient() external view returns (address);
 
     function getRequiredBondForNextKeys(
         uint256 nodeOperatorId,
