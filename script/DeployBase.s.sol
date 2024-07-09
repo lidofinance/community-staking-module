@@ -51,7 +51,7 @@ struct DeployParams {
     uint256 maxBondLockRetentionPeriod;
     uint256 bondLockRetentionPeriod;
     address setResetBondCurveAddress;
-    address chargeRecipient;
+    address chargePenaltyRecipient;
     // Module
     bytes32 moduleType;
     uint256 minSlashingPenaltyQuotient;
@@ -188,7 +188,7 @@ abstract contract DeployBase is Script {
                 admin: deployer,
                 _feeDistributor: address(feeDistributor),
                 bondLockRetentionPeriod: config.bondLockRetentionPeriod,
-                _chargeRecipient: config.chargeRecipient
+                _chargePenaltyRecipient: config.chargePenaltyRecipient
             });
 
             accounting.grantRole(

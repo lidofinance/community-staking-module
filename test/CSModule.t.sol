@@ -44,7 +44,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities {
     address internal stranger;
     address internal strangerNumberTwo;
     address internal nodeOperator;
-    address internal testChargeRecipient;
+    address internal testChargePenaltyRecipient;
 
     MerkleTree internal merkleTree;
 
@@ -243,7 +243,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         stranger = nextAddress("STRANGER");
         strangerNumberTwo = nextAddress("STRANGER_TWO");
         admin = nextAddress("ADMIN");
-        testChargeRecipient = nextAddress("CHARGERECIPIENT");
+        testChargePenaltyRecipient = nextAddress("CHARGERECIPIENT");
 
         (locator, wstETH, stETH, , ) = initLido();
 
@@ -273,7 +273,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
             admin,
             address(feeDistributor),
             8 weeks,
-            testChargeRecipient
+            testChargePenaltyRecipient
         );
 
         merkleTree = new MerkleTree();
@@ -334,7 +334,7 @@ contract CSMCommonNoPublicReleaseNoEA is CSMFixtures {
         stranger = nextAddress("STRANGER");
         strangerNumberTwo = nextAddress("STRANGER_TWO");
         admin = nextAddress("ADMIN");
-        testChargeRecipient = nextAddress("CHARGERECIPIENT");
+        testChargePenaltyRecipient = nextAddress("CHARGERECIPIENT");
 
         (locator, wstETH, stETH, , ) = initLido();
 
@@ -364,7 +364,7 @@ contract CSMCommonNoPublicReleaseNoEA is CSMFixtures {
             admin,
             address(feeDistributor),
             8 weeks,
-            testChargeRecipient
+            testChargePenaltyRecipient
         );
 
         merkleTree = new MerkleTree();
@@ -417,7 +417,7 @@ contract CSMCommonNoRoles is CSMFixtures {
         stranger = nextAddress("STRANGER");
         admin = nextAddress("ADMIN");
         actor = nextAddress("ACTOR");
-        testChargeRecipient = nextAddress("CHARGERECIPIENT");
+        testChargePenaltyRecipient = nextAddress("CHARGERECIPIENT");
 
         (locator, wstETH, stETH, , ) = initLido();
 
@@ -446,7 +446,7 @@ contract CSMCommonNoRoles is CSMFixtures {
             admin,
             address(feeDistributor),
             8 weeks,
-            testChargeRecipient
+            testChargePenaltyRecipient
         );
 
         merkleTree = new MerkleTree();
