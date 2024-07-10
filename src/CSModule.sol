@@ -1192,6 +1192,8 @@ contract CSModule is
         returns (bytes memory publicKeys, bytes memory signatures)
     {
         (publicKeys, signatures) = SigningKeys.initKeysSigsBuf(depositsCount);
+        if (depositsCount == 0) return (publicKeys, signatures);
+
         uint256 depositsLeft = depositsCount;
         uint256 loadedKeysCount = 0;
 
