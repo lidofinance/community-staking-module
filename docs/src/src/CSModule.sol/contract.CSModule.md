@@ -1,6 +1,6 @@
 # CSModule
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/ef5c94eed5211bf6c350512cf569895da670f26c/src/CSModule.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d66a4396f737199bcc2932e5dd1066d022d333e0/src/CSModule.sol)
 
 **Inherits:**
 [ICSModule](/src/interfaces/ICSModule.sol/interface.ICSModule.md), Initializable, AccessControlEnumerableUpgradeable, [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -133,12 +133,6 @@ ICSEarlyAdoption public earlyAdoption;
 bool public publicRelease;
 ```
 
-### \_nodeOperatorsCount
-
-```solidity
-uint64 private _nodeOperatorsCount;
-```
-
 ### \_nonce
 
 ```solidity
@@ -163,12 +157,6 @@ mapping(uint256 noKeyIndexPacked => bool) private _isValidatorWithdrawn;
 mapping(uint256 noKeyIndexPacked => bool) private _isValidatorSlashed;
 ```
 
-### \_queueLookup
-
-```solidity
-TransientUintUintMap private _queueLookup;
-```
-
 ### \_totalDepositedValidators
 
 ```solidity
@@ -181,16 +169,16 @@ uint64 private _totalDepositedValidators;
 uint64 private _totalExitedValidators;
 ```
 
-### \_totalAddedValidators
-
-```solidity
-uint64 private _totalAddedValidators;
-```
-
 ### \_depositableValidatorsCount
 
 ```solidity
 uint64 private _depositableValidatorsCount;
+```
+
+### \_nodeOperatorsCount
+
+```solidity
+uint64 private _nodeOperatorsCount;
 ```
 
 ## Functions
@@ -1417,6 +1405,16 @@ function _onlyNodeOperatorManagerOrRewardAddresses(uint256 nodeOperatorId) inter
 function _onlyExistingNodeOperator(uint256 nodeOperatorId) internal view;
 ```
 
+### \_onlyValidIndexRange
+
+```solidity
+function _onlyValidIndexRange(
+  uint256 nodeOperatorId,
+  uint256 startIndex,
+  uint256 keysCount
+) internal view;
+```
+
 ### \_onlyRecoverer
 
 ```solidity
@@ -1449,6 +1447,15 @@ event NodeOperatorAdded(
 event ReferrerSet(uint256 indexed nodeOperatorId, address indexed referrer);
 ```
 
+### DepositableSigningKeysCountChanged
+
+```solidity
+event DepositableSigningKeysCountChanged(
+  uint256 indexed nodeOperatorId,
+  uint256 depositableKeysCount
+);
+```
+
 ### VettedSigningKeysCountChanged
 
 ```solidity
@@ -1467,24 +1474,24 @@ event DepositedSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 d
 event ExitedSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 exitedKeysCount);
 ```
 
-### TotalSigningKeysCountChanged
-
-```solidity
-event TotalSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 totalKeysCount);
-```
-
 ### StuckSigningKeysCountChanged
 
 ```solidity
 event StuckSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 stuckKeysCount);
 ```
 
-### TargetValidatorsCountChangedByRequest
+### TotalSigningKeysCountChanged
 
 ```solidity
-event TargetValidatorsCountChangedByRequest(
+event TotalSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 totalKeysCount);
+```
+
+### TargetValidatorsCountChanged
+
+```solidity
+event TargetValidatorsCountChanged(
   uint256 indexed nodeOperatorId,
-  uint8 targetLimitMode,
+  uint256 targetLimitMode,
   uint256 targetValidatorsCount
 );
 ```
@@ -1516,7 +1523,7 @@ event KeyRemovalChargeSet(uint256 amount);
 ### KeyRemovalChargeApplied
 
 ```solidity
-event KeyRemovalChargeApplied(uint256 indexed nodeOperatorId, uint256 amount);
+event KeyRemovalChargeApplied(uint256 indexed nodeOperatorId);
 ```
 
 ### ELRewardsStealingPenaltyReported
@@ -1538,7 +1545,7 @@ event ELRewardsStealingPenaltyCancelled(uint256 indexed nodeOperatorId, uint256 
 ### ELRewardsStealingPenaltySettled
 
 ```solidity
-event ELRewardsStealingPenaltySettled(uint256 indexed nodeOperatorId, uint256 amount);
+event ELRewardsStealingPenaltySettled(uint256 indexed nodeOperatorId);
 ```
 
 ## Errors
@@ -1579,6 +1586,12 @@ error ExitedKeysHigherThanTotalDeposited();
 error ExitedKeysDecrease();
 ```
 
+### InvalidInput
+
+```solidity
+error InvalidInput();
+```
+
 ### NotEnoughKeys
 
 ```solidity
@@ -1603,10 +1616,10 @@ error AlreadySubmitted();
 error AlreadyWithdrawn();
 ```
 
-### AlreadySet
+### AlreadyActivated
 
 ```solidity
-error AlreadySet();
+error AlreadyActivated();
 ```
 
 ### InvalidAmount

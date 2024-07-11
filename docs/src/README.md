@@ -33,33 +33,29 @@ just
 
 ### Run tests
 
-Run all tests that are possible to run without additional configurations
-
-```bash
-just test-all
-```
-
 Run unit tests only
 
 ```bash
 just test-unit
 ```
 
-Deploy CSM to local fork and run `post-deployment` and `integration` tests over it
+For the following tests, make sure that the following variables are set in the `.env` file:
+
+```bash
+export CHAIN=devnet
+export RPC_URL=
+```
+
+Deploy CSM to the fork and run `deployment` and `integration` tests over it
 
 ```bash
 just test-local
 ```
 
-**Note:** the CSM requires to be added to the Staking Router 1.5,
-so it's impossible to run integration tests over the network with the old contracts.
-Technically it's possible to add the CSM to the previous Staking Router version,
-but it's supposed to be added to the new one.
-
-Please Make sure that `test-all` or `test-local` are running against the correct protocol setup:
+Run all tests in one (`unit`, `deployment`, `integration`)
 
 ```bash
-export CHAIN=devnet
+just test-all
 ```
 
 ### Make a gas report
@@ -81,7 +77,7 @@ yarn add <package-name>
 Whenever you install new libraries using yarn, make sure to update your
 `remappings.txt`.
 
-### Deploy and test using local fork
+### Advanced testing scenarios using local fork
 
 Deploy contracts to the local fork
 
@@ -99,11 +95,11 @@ export DEPLOY_CONFIG=./artifacts/local/deploy-devnet.json
 
 The result of deployment is `./artifacts/local/deploy-devnet.json` deployment config, which is required for integration testing
 
-Verify deploy by running post-deployment tests.
+Verify deploy by running `deployment` tests.
 Note that these are meant to be run only right after deployment, so they don't supposed to be green after any actions in the contracts
 
 ```bash
-just test-post-deployment
+just test-deployment
 ```
 
 Integration tests should pass either before a vote, or after at any state of contracts
@@ -116,7 +112,12 @@ There also fork helper scripts to prepare a fork state for e.g. UI testing purpo
 
 ```bash
 just simulate-vote
-just test-integration
+```
+
+After a vote, you can test the contracts in the new state. It includes both `integration` and `post-voting` tests
+
+```bash
+just test-post-voting
 ```
 
 Kill fork after testing

@@ -98,13 +98,13 @@ abstract contract CSBondCoreTestBase is Test, Fixtures, Utilities {
     CSBondCoreTestable public bondCore;
 
     address internal user;
-    address internal testChargeRecipient;
+    address internal testChargePenaltyRecipient;
 
     function setUp() public {
         (locator, wstETH, stETH, burner, wq) = initLido();
 
         user = nextAddress("USER");
-        testChargeRecipient = nextAddress("CHARGERECIPIENT");
+        testChargePenaltyRecipient = nextAddress("CHARGERECIPIENT");
 
         bondCore = new CSBondCoreTestable(address(locator));
 
@@ -566,11 +566,11 @@ contract CSBondCoreChargeTest is CSBondCoreTestBase {
             locator.lido(),
             abi.encodeWithSelector(
                 IStETH.transferShares.selector,
-                testChargeRecipient,
+                testChargePenaltyRecipient,
                 shares
             )
         );
-        bondCore.charge(0, 1 ether, testChargeRecipient);
+        bondCore.charge(0, 1 ether, testChargePenaltyRecipient);
         uint256 bondSharesAfter = bondCore.getBondShares(0);
 
         assertEq(
@@ -597,11 +597,11 @@ contract CSBondCoreChargeTest is CSBondCoreTestBase {
             locator.lido(),
             abi.encodeWithSelector(
                 IStETH.transferShares.selector,
-                testChargeRecipient,
+                testChargePenaltyRecipient,
                 stETH.getSharesByPooledEth(32 ether)
             )
         );
-        bondCore.charge(0, 33 ether, testChargeRecipient);
+        bondCore.charge(0, 33 ether, testChargePenaltyRecipient);
 
         assertEq(
             bondCore.getBondShares(0),
@@ -623,12 +623,12 @@ contract CSBondCoreChargeTest is CSBondCoreTestBase {
             locator.lido(),
             abi.encodeWithSelector(
                 IStETH.transferShares.selector,
-                testChargeRecipient,
+                testChargePenaltyRecipient,
                 shares
             )
         );
 
-        bondCore.charge(0, 32 ether, testChargeRecipient);
+        bondCore.charge(0, 32 ether, testChargePenaltyRecipient);
 
         assertEq(
             bondCore.getBondShares(0),

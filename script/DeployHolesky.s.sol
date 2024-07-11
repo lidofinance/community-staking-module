@@ -72,9 +72,9 @@ contract DeployHolesky is DeployBase {
         config.keyRemovalCharge = 0.05 ether;
         config
             .elRewardsStealingReporter = 0xc4DAB3a3ef68C6DFd8614a870D64D475bA44F164; // Dev team EOA
-        config.chargeRecipient = 0xE92329EC7ddB11D25e25b3c21eeBf11f15eB325d; // locator.treasury()
+        config
+            .chargePenaltyRecipient = 0xE92329EC7ddB11D25e25b3c21eeBf11f15eB325d; // locator.treasury()
         // EarlyAdoption
-        // TODO: Set earlyAdoptionTreeRoot
         config
             .earlyAdoptionTreeRoot = 0xc9a9c1576cf4f3213ad9075b72a1f1b147914a252ad927fa4ca3460ff0723ca9;
         config.earlyAdoptionBondCurve = new uint256[](6);
