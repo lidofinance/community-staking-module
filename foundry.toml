@@ -35,6 +35,8 @@ fs_permissions = [
     { access = "read", path = "./localhost.json" },
 ]
 
+ignored_warnings_from = ["src/lib/base-oracle/HashConsensus.sol", "test/helpers/mocks/LidoMock.sol"]
+
 [profile.ci]
 verbosity = 3
 fuzz = { runs = 10_000, max_test_rejects = 2_000_000 }
