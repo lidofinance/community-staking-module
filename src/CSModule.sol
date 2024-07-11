@@ -1079,10 +1079,12 @@ contract CSModule is
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keyIndex Index of the withdrawn key in the Node Operator's keys storage
     /// @param amount Amount of withdrawn ETH in wei
+    /// @param isSlashed Validator is slashed or not
     function submitWithdrawal(
         uint256 nodeOperatorId,
         uint256 keyIndex,
-        uint256 amount
+        uint256 amount,
+        bool isSlashed
     ) external onlyRole(VERIFIER_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
@@ -1102,9 +1104,15 @@ contract CSModule is
 
         emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount);
 
-        if (_isValidatorSlashed[pointer]) {
-            unchecked {
-                amount += INITIAL_SLASHING_PENALTY;
+        if (isSlashed) {
+            if (_isValidatorSlashed[pointer]) {
+                // Account already burned value
+                unchecked {
+                    amount += INITIAL_SLASHING_PENALTY;
+                }
+            } else {
+                _isValidatorSlashed[pointer] = true;
+                emit InitialSlashingSubmitted(nodeOperatorId, keyIndex);
             }
             // Bond curve should be reset to default in case of slashing. See https://hackmd.io/@lido/SygBLW5ja
             accounting.resetBondCurve(nodeOperatorId);
@@ -1142,13 +1150,10 @@ contract CSModule is
 
         uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
 
-        if (_isValidatorWithdrawn[pointer]) {
-            revert AlreadyWithdrawn();
-        }
-
         if (_isValidatorSlashed[pointer]) {
             revert AlreadySubmitted();
         }
+
         _isValidatorSlashed[pointer] = true;
         emit InitialSlashingSubmitted(nodeOperatorId, keyIndex);
 

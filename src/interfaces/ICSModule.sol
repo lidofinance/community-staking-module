@@ -74,10 +74,12 @@ interface ICSModule is IStakingModule {
     /// @param nodeOperatorId Operator ID in the module.
     /// @param keyIndex Index of the withdrawn key in the node operator's keys.
     /// @param amount Amount of withdrawn ETH in wei.
+    /// @param isSlashed Validator is slashed or not
     function submitWithdrawal(
         uint256 nodeOperatorId,
         uint256 keyIndex,
-        uint256 amount
+        uint256 amount,
+        bool isSlashed
     ) external;
 
     function depositWstETH(
