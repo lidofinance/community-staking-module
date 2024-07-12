@@ -2206,6 +2206,8 @@ contract CSMDepositWstETH is CSMCommon {
 }
 
 contract CSMObtainDepositData is CSMCommon {
+    // TODO: test with near to real values
+
     function test_obtainDepositData() public {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
