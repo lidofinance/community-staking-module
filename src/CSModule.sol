@@ -1112,7 +1112,6 @@ contract CSModule is
                 }
             } else {
                 _isValidatorSlashed[pointer] = true;
-                emit InitialSlashingSubmitted(nodeOperatorId, keyIndex);
             }
             // Bond curve should be reset to default in case of slashing. See https://hackmd.io/@lido/SygBLW5ja
             accounting.resetBondCurve(nodeOperatorId);
