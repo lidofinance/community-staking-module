@@ -1,5 +1,5 @@
 # UnstructuredStorage
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/ef5c94eed5211bf6c350512cf569895da670f26c/src/lib/UnstructuredStorage.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d66a4396f737199bcc2932e5dd1066d022d333e0/src/lib/UnstructuredStorage.sol)
 
 Aragon Unstructured Storage library
 

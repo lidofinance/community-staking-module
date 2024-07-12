@@ -1,5 +1,5 @@
 # SigningKeys
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/ef5c94eed5211bf6c350512cf569895da670f26c/src/lib/SigningKeys.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d66a4396f737199bcc2932e5dd1066d022d333e0/src/lib/SigningKeys.sol)
 
 **Author:**
 KRogLA
@@ -27,13 +27,6 @@ uint64 internal constant SIGNATURE_LENGTH = 96;
 ```
 
 
-### UINT32_MAX
-
-```solidity
-uint256 internal constant UINT32_MAX = type(uint32).max;
-```
-
-
 ## Functions
 ### saveKeysSigs
 
@@ -45,8 +38,8 @@ function saveKeysSigs(
     uint256 nodeOperatorId,
     uint256 startIndex,
     uint256 keysCount,
-    bytes memory pubkeys,
-    bytes memory signatures
+    bytes calldata pubkeys,
+    bytes calldata signatures
 ) internal returns (uint256);
 ```
 **Parameters**
@@ -94,7 +87,9 @@ function removeKeysSigs(uint256 nodeOperatorId, uint256 startIndex, uint256 keys
 
 ### loadKeysSigs
 
-*load operator keys and signatures from storage*
+*Load operator's keys and signatures from the storage to the given in-memory arrays.*
+
+*The function doesn't check for `pubkeys` and `signatures` out of boundaries access.*
 
 
 ```solidity
@@ -116,7 +111,7 @@ function loadKeysSigs(
 |`keysCount`|`uint256`|keys count to load|
 |`pubkeys`|`bytes`|preallocated kes buffer to read in|
 |`signatures`|`bytes`|preallocated signatures buffer to read in|
-|`bufOffset`|`uint256`|start offset in `_pubkeys`/`_signatures` buffer to place values (in number of keys)|
+|`bufOffset`|`uint256`|start offset in `pubkeys`/`signatures` buffer to place values (in number of keys)|
 
 
 ### loadKeys
@@ -141,19 +136,6 @@ function initKeysSigsBuf(uint256 count) internal pure returns (bytes memory, byt
 
 ```solidity
 function getKeyOffset(bytes32 position, uint256 nodeOperatorId, uint256 keyIndex) internal pure returns (uint256);
-```
-
-## Events
-### SigningKeyAdded
-
-```solidity
-event SigningKeyAdded(uint256 indexed nodeOperatorId, bytes pubkey);
-```
-
-### SigningKeyRemoved
-
-```solidity
-event SigningKeyRemoved(uint256 indexed nodeOperatorId, bytes pubkey);
 ```
 
 ## Errors

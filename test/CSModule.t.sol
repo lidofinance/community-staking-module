@@ -44,7 +44,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities {
     address internal stranger;
     address internal strangerNumberTwo;
     address internal nodeOperator;
-    address internal testChargeRecipient;
+    address internal testChargePenaltyRecipient;
 
     MerkleTree internal merkleTree;
 
@@ -243,7 +243,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         stranger = nextAddress("STRANGER");
         strangerNumberTwo = nextAddress("STRANGER_TWO");
         admin = nextAddress("ADMIN");
-        testChargeRecipient = nextAddress("CHARGERECIPIENT");
+        testChargePenaltyRecipient = nextAddress("CHARGERECIPIENT");
 
         (locator, wstETH, stETH, , ) = initLido();
 
@@ -273,7 +273,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
             admin,
             address(feeDistributor),
             8 weeks,
-            testChargeRecipient
+            testChargePenaltyRecipient
         );
 
         merkleTree = new MerkleTree();
@@ -334,7 +334,7 @@ contract CSMCommonNoPublicReleaseNoEA is CSMFixtures {
         stranger = nextAddress("STRANGER");
         strangerNumberTwo = nextAddress("STRANGER_TWO");
         admin = nextAddress("ADMIN");
-        testChargeRecipient = nextAddress("CHARGERECIPIENT");
+        testChargePenaltyRecipient = nextAddress("CHARGERECIPIENT");
 
         (locator, wstETH, stETH, , ) = initLido();
 
@@ -364,7 +364,7 @@ contract CSMCommonNoPublicReleaseNoEA is CSMFixtures {
             admin,
             address(feeDistributor),
             8 weeks,
-            testChargeRecipient
+            testChargePenaltyRecipient
         );
 
         merkleTree = new MerkleTree();
@@ -417,7 +417,7 @@ contract CSMCommonNoRoles is CSMFixtures {
         stranger = nextAddress("STRANGER");
         admin = nextAddress("ADMIN");
         actor = nextAddress("ACTOR");
-        testChargeRecipient = nextAddress("CHARGERECIPIENT");
+        testChargePenaltyRecipient = nextAddress("CHARGERECIPIENT");
 
         (locator, wstETH, stETH, , ) = initLido();
 
@@ -446,7 +446,7 @@ contract CSMCommonNoRoles is CSMFixtures {
             admin,
             address(feeDistributor),
             8 weeks,
-            testChargeRecipient
+            testChargePenaltyRecipient
         );
 
         merkleTree = new MerkleTree();
@@ -2246,16 +2246,44 @@ contract CSMObtainDepositData is CSMCommon {
     }
 
     function test_obtainDepositData_counters() public {
-        uint256 noId = createNodeOperator();
+        uint256 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        uint256 noId = createNodeOperator(
+            nodeOperator,
+            keysCount,
+            keys,
+            signatures
+        );
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.DepositedSigningKeysCountChanged(noId, 1);
-        csm.obtainDepositData(1, "");
+        emit CSModule.DepositedSigningKeysCountChanged(noId, keysCount);
+        (bytes memory depositedKeys, bytes memory depositedSignatures) = csm
+            .obtainDepositData(keysCount, "");
+
+        assertEq(keys, depositedKeys);
+        assertEq(signatures, depositedSignatures);
 
         NodeOperator memory no = csm.getNodeOperator(noId);
         assertEq(no.enqueuedCount, 0);
         assertEq(no.totalDepositedKeys, 1);
         assertEq(no.depositableValidatorsCount, 0);
+    }
+
+    function test_obtainDepositData_zeroDeposits() public {
+        uint256 noId = createNodeOperator();
+
+        (bytes memory publicKeys, bytes memory signatures) = csm
+            .obtainDepositData(0, "");
+
+        assertEq(publicKeys.length, 0);
+        assertEq(signatures.length, 0);
+
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.enqueuedCount, 1);
+        assertEq(no.totalDepositedKeys, 0);
+        assertEq(no.depositableValidatorsCount, 1);
     }
 
     function test_obtainDepositData_unvettedKeys() public {
