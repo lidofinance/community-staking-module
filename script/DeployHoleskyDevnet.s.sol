@@ -56,7 +56,8 @@ contract DeployHoleskyDevnet is DeployBase {
         config.bondLockRetentionPeriod = 8 weeks;
         config
             .setResetBondCurveAddress = 0xC234dBA03943C9238067cDfBC2761844133DD386; // Known EOA
-        config.chargeRecipient = 0x636857002fD7975c7B40c0558d4f4834c4390fc6; // locator.treasury()
+        config
+            .chargePenaltyRecipient = 0x636857002fD7975c7B40c0558d4f4834c4390fc6; // locator.treasury()
         // Module
         config.moduleType = "community-onchain-v1";
         config.minSlashingPenaltyQuotient = 32;

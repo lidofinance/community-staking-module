@@ -117,6 +117,15 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         lido.submit{ value: 1e7 ether }(address(0));
     }
 
+    function lidoDepositWithNoGasMetering(uint256 keysCount) internal {
+        // @dev: depositing keys without gas metering in case of huge queue
+        vm.startPrank(locator.depositSecurityModule());
+        vm.pauseGasMetering();
+        lido.deposit(keysCount, moduleId, "");
+        vm.resumeGasMetering();
+        vm.stopPrank();
+    }
+
     function test_connectCSMToRouter() public {
         IStakingRouter.StakingModule memory module = stakingRouter
             .getStakingModule(moduleId);
@@ -129,8 +138,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
         hugeDeposit();
 
-        vm.prank(locator.depositSecurityModule());
-        lido.deposit(totalDepositableKeys, moduleId, "");
+        lidoDepositWithNoGasMetering(totalDepositableKeys);
         NodeOperator memory no = csm.getNodeOperator(noId);
         assertEq(no.totalDepositedKeys, 1);
     }
@@ -204,8 +212,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         hugeDeposit();
 
         (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
-        vm.prank(locator.depositSecurityModule());
-        lido.deposit(totalDepositableKeys - 2, moduleId, "");
+        lidoDepositWithNoGasMetering(totalDepositableKeys - 2);
 
         uint256 exited = 1;
         vm.prank(agent);
@@ -228,8 +235,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         hugeDeposit();
 
         (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
-        vm.prank(locator.depositSecurityModule());
-        lido.deposit(totalDepositableKeys - 2, moduleId, "");
+        lidoDepositWithNoGasMetering(totalDepositableKeys - 2);
 
         uint256 stuck = 1;
         vm.prank(agent);
@@ -255,8 +261,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
 
         (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
         uint256 keysToDeposit = totalDepositableKeys - 2;
-        vm.prank(locator.depositSecurityModule());
-        lido.deposit(keysToDeposit, moduleId, "");
+        lidoDepositWithNoGasMetering(keysToDeposit);
 
         uint256 exited = 1;
         vm.prank(agent);
@@ -291,8 +296,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
 
         (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
         uint256 keysToDeposit = totalDepositableKeys - 2;
-        vm.prank(locator.depositSecurityModule());
-        lido.deposit(keysToDeposit, moduleId, "");
+        lidoDepositWithNoGasMetering(keysToDeposit);
 
         uint256 exited = 1;
         vm.prank(agent);
@@ -329,8 +333,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         hugeDeposit();
 
         (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
-        vm.prank(locator.depositSecurityModule());
-        lido.deposit(totalDepositableKeys - 4, moduleId, "");
+        lidoDepositWithNoGasMetering(totalDepositableKeys - 4);
 
         uint256 exited = 2;
         vm.prank(agent);

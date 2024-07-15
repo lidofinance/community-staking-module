@@ -171,12 +171,13 @@ abstract contract CSBondCore is ICSBondCore {
     ///      As a usual withdrawal request, this claim might be processed on the next stETH rebase
     function _claimUnstETH(
         uint256 nodeOperatorId,
-        uint256 amountToClaim,
+        uint256 requestedAmountToClaim,
         address to
     ) internal {
         uint256 claimableShares = _getClaimableBondShares(nodeOperatorId);
-        uint256 sharesToClaim = amountToClaim < _ethByShares(claimableShares)
-            ? _sharesByEth(amountToClaim)
+        uint256 sharesToClaim = requestedAmountToClaim <
+            _ethByShares(claimableShares)
+            ? _sharesByEth(requestedAmountToClaim)
             : claimableShares;
         if (sharesToClaim == 0) revert NothingToClaim();
 
@@ -197,12 +198,13 @@ abstract contract CSBondCore is ICSBondCore {
     /// @dev Claim Node Operator's excess bond shares (stETH) in stETH by transferring shares from the contract
     function _claimStETH(
         uint256 nodeOperatorId,
-        uint256 amountToClaim,
+        uint256 requestedAmountToClaim,
         address to
     ) internal {
         uint256 claimableShares = _getClaimableBondShares(nodeOperatorId);
-        uint256 sharesToClaim = amountToClaim < _ethByShares(claimableShares)
-            ? _sharesByEth(amountToClaim)
+        uint256 sharesToClaim = requestedAmountToClaim <
+            _ethByShares(claimableShares)
+            ? _sharesByEth(requestedAmountToClaim)
             : claimableShares;
         if (sharesToClaim == 0) revert NothingToClaim();
         _unsafeReduceBond(nodeOperatorId, sharesToClaim);
@@ -214,12 +216,12 @@ abstract contract CSBondCore is ICSBondCore {
     /// @dev Claim Node Operator's excess bond shares (stETH) in wstETH by wrapping stETH from the contract and transferring wstETH
     function _claimWstETH(
         uint256 nodeOperatorId,
-        uint256 amountToClaim,
+        uint256 requestedAmountToClaim,
         address to
     ) internal {
         uint256 claimableShares = _getClaimableBondShares(nodeOperatorId);
-        uint256 sharesToClaim = amountToClaim < claimableShares
-            ? amountToClaim
+        uint256 sharesToClaim = requestedAmountToClaim < claimableShares
+            ? requestedAmountToClaim
             : claimableShares;
         if (sharesToClaim == 0) revert NothingToClaim();
         uint256 sharesBefore = LIDO.sharesOf(address(this));
