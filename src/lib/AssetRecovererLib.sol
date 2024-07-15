@@ -8,14 +8,7 @@ import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { ILido } from "../interfaces/ILido.sol";
 
-/*
- * @title AssetRecovererLib
- * @dev Library providing mechanisms for recovering various asset types (ETH, ERC20, ERC721, ERC1155).
- * This library is designed to be used by a contract that implements the AssetRecoverer interface.
- */
-library AssetRecovererLib {
-    using SafeERC20 for IERC20;
-
+interface IAssetRecovererLib {
     event EtherRecovered(address indexed recipient, uint256 amount);
     event ERC20Recovered(
         address indexed token,
@@ -36,6 +29,16 @@ library AssetRecovererLib {
     );
 
     error FailedToSendEther();
+    error NotAllowedToRecover();
+}
+
+/*
+ * @title AssetRecovererLib
+ * @dev Library providing mechanisms for recovering various asset types (ETH, ERC20, ERC721, ERC1155).
+ * This library is designed to be used by a contract that implements the AssetRecoverer interface.
+ */
+library AssetRecovererLib {
+    using SafeERC20 for IERC20;
 
     /**
      * @dev Allows the sender to recover Ether held by the contract.
@@ -44,8 +47,8 @@ library AssetRecovererLib {
     function recoverEther() external {
         uint256 amount = address(this).balance;
         (bool success, ) = msg.sender.call{ value: amount }("");
-        if (!success) revert FailedToSendEther();
-        emit EtherRecovered(msg.sender, amount);
+        if (!success) revert IAssetRecovererLib.FailedToSendEther();
+        emit IAssetRecovererLib.EtherRecovered(msg.sender, amount);
     }
 
     /**
@@ -56,7 +59,7 @@ library AssetRecovererLib {
      */
     function recoverERC20(address token, uint256 amount) external {
         IERC20(token).safeTransfer(msg.sender, amount);
-        emit ERC20Recovered(token, msg.sender, amount);
+        emit IAssetRecovererLib.ERC20Recovered(token, msg.sender, amount);
     }
 
     /**
@@ -68,7 +71,7 @@ library AssetRecovererLib {
      */
     function recoverStETHShares(address lido, uint256 shares) external {
         ILido(lido).transferShares(msg.sender, shares);
-        emit StETHSharesRecovered(msg.sender, shares);
+        emit IAssetRecovererLib.StETHSharesRecovered(msg.sender, shares);
     }
 
     /**
@@ -79,7 +82,7 @@ library AssetRecovererLib {
      */
     function recoverERC721(address token, uint256 tokenId) external {
         IERC721(token).safeTransferFrom(address(this), msg.sender, tokenId);
-        emit ERC721Recovered(token, tokenId, msg.sender);
+        emit IAssetRecovererLib.ERC721Recovered(token, tokenId, msg.sender);
     }
 
     /**
@@ -97,6 +100,11 @@ library AssetRecovererLib {
             value: amount,
             data: ""
         });
-        emit ERC1155Recovered(token, tokenId, msg.sender, amount);
+        emit IAssetRecovererLib.ERC1155Recovered(
+            token,
+            tokenId,
+            msg.sender,
+            amount
+        );
     }
 }

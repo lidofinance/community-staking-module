@@ -98,15 +98,6 @@ coverage *args:
 coverage-lcov *args:
     forge coverage --no-match-path 'test/fork/*' --report lcov {{args}}
 
-abis:
-    just build --ast
-    yarn generate:abis
-
-interfaces pragma="^0.8.0":
-    [ -d ./out/abis ] || just abis
-    find ./out/abis -name '*.json' -exec basename {} .json \; |\
-        xargs -I% cast interface ./out/abis/%.json --name=I% --pragma={{pragma}} --output=./out/interfaces/I%.sol
-
 diffyscan-contracts *args:
     yarn generate:diffyscan {{args}}
 

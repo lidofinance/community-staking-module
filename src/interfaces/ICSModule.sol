@@ -5,6 +5,9 @@ pragma solidity 0.8.24;
 
 import { IStakingModule } from "./IStakingModule.sol";
 import { ICSAccounting } from "./ICSAccounting.sol";
+import { IQueueLib } from "../lib/QueueLib.sol";
+import { INOAddresses } from "../lib/NOAddresses.sol";
+import { IAssetRecovererLib } from "../lib/AssetRecovererLib.sol";
 
 struct NodeOperator {
     // All the counters below are used together e.g. in the _updateDepositableValidatorsCount
@@ -25,7 +28,14 @@ struct NodeOperator {
 }
 
 /// @title Lido's Community Staking Module interface
-interface ICSModule is IStakingModule {
+interface ICSModule is
+    IStakingModule,
+    IQueueLib,
+    INOAddresses,
+    IAssetRecovererLib
+{
+    error NodeOperatorDoesNotExist();
+
     /// @notice Gets node operator non-withdrawn keys
     /// @param nodeOperatorId ID of the node operator
     /// @return Non-withdrawn keys count
