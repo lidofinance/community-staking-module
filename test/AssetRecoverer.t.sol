@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import { Test } from "forge-std/Test.sol";
 import { AssetRecoverer } from "../src/abstract/AssetRecoverer.sol";
-import { AssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
+import { AssetRecovererLib, IAssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
 import { Utilities } from "./helpers/Utilities.sol";
 import { ERC1155Holder } from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import { ERC20Testable, ERC721Testable, ERC1155Testable } from "./helpers/ERCTestable.sol";
@@ -40,7 +40,7 @@ contract AssetRecovererTest is Test, Utilities {
 
         vm.prank(actor);
         vm.expectEmit(true, true, true, true, address(recoverer));
-        emit AssetRecovererLib.EtherRecovered(actor, 1 ether);
+        emit IAssetRecovererLib.EtherRecovered(actor, 1 ether);
         recoverer.recoverEther();
 
         assertEq(address(recoverer).balance, 0);
@@ -59,7 +59,7 @@ contract AssetRecovererTest is Test, Utilities {
 
         vm.prank(actor);
         vm.expectEmit(true, true, true, true, address(recoverer));
-        emit AssetRecovererLib.ERC20Recovered(address(token), actor, 1000);
+        emit IAssetRecovererLib.ERC20Recovered(address(token), actor, 1000);
         recoverer.recoverERC20(address(token), 1000);
 
         assertEq(token.balanceOf(address(recoverer)), 0);
@@ -81,7 +81,7 @@ contract AssetRecovererTest is Test, Utilities {
 
         vm.prank(actor);
         vm.expectEmit(true, true, true, true, address(recoverer));
-        emit AssetRecovererLib.ERC721Recovered(address(token), 0, actor);
+        emit IAssetRecovererLib.ERC721Recovered(address(token), 0, actor);
         recoverer.recoverERC721(address(token), 0);
 
         assertEq(token.ownerOf(0), actor);
@@ -102,7 +102,7 @@ contract AssetRecovererTest is Test, Utilities {
 
         vm.prank(actor);
         vm.expectEmit(true, true, true, true, address(recoverer));
-        emit AssetRecovererLib.ERC1155Recovered(address(token), 0, actor, 10);
+        emit IAssetRecovererLib.ERC1155Recovered(address(token), 0, actor, 10);
         recoverer.recoverERC1155(address(token), 0);
 
         assertEq(token.balanceOf(actor, 0), 10);

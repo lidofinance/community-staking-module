@@ -8,8 +8,14 @@ import { BaseOracle } from "./lib/base-oracle/BaseOracle.sol";
 
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
+import { IAssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
-contract CSFeeOracle is BaseOracle, PausableUntil, AssetRecoverer {
+contract CSFeeOracle is
+    BaseOracle,
+    PausableUntil,
+    AssetRecoverer,
+    IAssetRecovererLib
+{
     /// @notice No assets are stored in the contract
 
     struct ReportData {

@@ -6,8 +6,7 @@ import "forge-std/Test.sol";
 
 import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
-import { AssetRecoverer } from "../src/abstract/AssetRecoverer.sol";
-import { AssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
+import { IAssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import { IStETH } from "../src/interfaces/IStETH.sol";
@@ -497,7 +496,7 @@ contract CSFeeDistributorAssetRecovererTest is Test, Fixtures, Utilities {
         vm.deal(address(feeDistributor), amount);
 
         vm.expectEmit(true, true, true, true, address(feeDistributor));
-        emit AssetRecovererLib.EtherRecovered(recoverer, amount);
+        emit IAssetRecovererLib.EtherRecovered(recoverer, amount);
 
         vm.prank(recoverer);
         feeDistributor.recoverEther();
@@ -518,7 +517,7 @@ contract CSFeeDistributorAssetRecovererTest is Test, Fixtures, Utilities {
 
         vm.prank(recoverer);
         vm.expectEmit(true, true, true, true, address(feeDistributor));
-        emit AssetRecovererLib.ERC20Recovered(address(token), recoverer, 1000);
+        emit IAssetRecovererLib.ERC20Recovered(address(token), recoverer, 1000);
         feeDistributor.recoverERC20(address(token), 1000);
 
         assertEq(token.balanceOf(address(feeDistributor)), 0);
@@ -536,7 +535,7 @@ contract CSFeeDistributorAssetRecovererTest is Test, Fixtures, Utilities {
 
     function test_recoverERC20_RevertWhen_StETH() public {
         vm.prank(recoverer);
-        vm.expectRevert(AssetRecoverer.NotAllowedToRecover.selector);
+        vm.expectRevert(IAssetRecovererLib.NotAllowedToRecover.selector);
         feeDistributor.recoverERC20(address(stETH), 1000);
     }
 }

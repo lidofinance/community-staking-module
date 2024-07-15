@@ -93,6 +93,7 @@ contract CSModule is
         uint256 indexed nodeOperatorId,
         uint256 vettedKeysCount
     );
+    event VettedSigningKeysCountDecreased(uint256 indexed nodeOperatorId);
     event DepositedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
         uint256 depositedKeysCount
@@ -139,7 +140,6 @@ contract CSModule is
     );
     event ELRewardsStealingPenaltySettled(uint256 indexed nodeOperatorId);
 
-    error NodeOperatorDoesNotExist();
     error SenderIsNotEligible();
     error InvalidVetKeysPointer();
     error StuckKeysHigherThanNonExited();
@@ -887,12 +887,16 @@ contract CSModule is
             if (vettedSigningKeysCount < no.totalDepositedKeys) {
                 revert InvalidVetKeysPointer();
             }
+
             // @dev No need to safe cast due to conditions above
             no.totalVettedKeys = uint32(vettedSigningKeysCount);
             emit VettedSigningKeysCountChanged(
                 nodeOperatorId,
                 vettedSigningKeysCount
             );
+
+            // @dev separate event for intentional decrease from Staking Router
+            emit VettedSigningKeysCountDecreased(nodeOperatorId);
 
             // Nonce will be updated below once
             // No need to normalize queue due to vetted decrease

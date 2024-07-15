@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
-import { NodeOperator } from "../interfaces/ICSModule.sol";
+import { NodeOperator, ICSModule } from "../interfaces/ICSModule.sol";
 
 /// Library for changing and reset node operator's manager and reward addresses
 /// @dev the only use of this to be a library is to save CSModule contract size via delegatecalls
-library NOAddresses {
+interface INOAddresses {
     event NodeOperatorManagerAddressChangeProposed(
         uint256 indexed nodeOperatorId,
         address indexed oldProposedAddress,
@@ -34,8 +34,9 @@ library NOAddresses {
     error SenderIsNotManagerAddress();
     error SenderIsNotRewardAddress();
     error SenderIsNotProposedAddress();
-    error NodeOperatorDoesNotExist();
+}
 
+library NOAddresses {
     /// @notice Propose a new manager address for the Node Operator
     /// @param nodeOperatorId ID of the Node Operator
     /// @param proposedAddress Proposed manager address
@@ -45,15 +46,18 @@ library NOAddresses {
         address proposedAddress
     ) external {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
-        if (no.managerAddress == address(0)) revert NodeOperatorDoesNotExist();
-        if (no.managerAddress != msg.sender) revert SenderIsNotManagerAddress();
-        if (no.managerAddress == proposedAddress) revert SameAddress();
+        if (no.managerAddress == address(0))
+            revert ICSModule.NodeOperatorDoesNotExist();
+        if (no.managerAddress != msg.sender)
+            revert INOAddresses.SenderIsNotManagerAddress();
+        if (no.managerAddress == proposedAddress)
+            revert INOAddresses.SameAddress();
         if (no.proposedManagerAddress == proposedAddress)
-            revert AlreadyProposed();
+            revert INOAddresses.AlreadyProposed();
 
         address oldProposedAddress = no.proposedManagerAddress;
         no.proposedManagerAddress = proposedAddress;
-        emit NodeOperatorManagerAddressChangeProposed(
+        emit INOAddresses.NodeOperatorManagerAddressChangeProposed(
             nodeOperatorId,
             oldProposedAddress,
             proposedAddress
@@ -68,14 +72,15 @@ library NOAddresses {
         uint256 nodeOperatorId
     ) external {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
-        if (no.managerAddress == address(0)) revert NodeOperatorDoesNotExist();
+        if (no.managerAddress == address(0))
+            revert ICSModule.NodeOperatorDoesNotExist();
         if (no.proposedManagerAddress != msg.sender)
-            revert SenderIsNotProposedAddress();
+            revert INOAddresses.SenderIsNotProposedAddress();
         address oldAddress = no.managerAddress;
         no.managerAddress = msg.sender;
         delete no.proposedManagerAddress;
 
-        emit NodeOperatorManagerAddressChanged(
+        emit INOAddresses.NodeOperatorManagerAddressChanged(
             nodeOperatorId,
             oldAddress,
             msg.sender
@@ -91,15 +96,18 @@ library NOAddresses {
         address proposedAddress
     ) external {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
-        if (no.rewardAddress == address(0)) revert NodeOperatorDoesNotExist();
-        if (no.rewardAddress != msg.sender) revert SenderIsNotRewardAddress();
-        if (no.rewardAddress == proposedAddress) revert SameAddress();
+        if (no.rewardAddress == address(0))
+            revert ICSModule.NodeOperatorDoesNotExist();
+        if (no.rewardAddress != msg.sender)
+            revert INOAddresses.SenderIsNotRewardAddress();
+        if (no.rewardAddress == proposedAddress)
+            revert INOAddresses.SameAddress();
         if (no.proposedRewardAddress == proposedAddress)
-            revert AlreadyProposed();
+            revert INOAddresses.AlreadyProposed();
 
         address oldProposedAddress = no.proposedRewardAddress;
         no.proposedRewardAddress = proposedAddress;
-        emit NodeOperatorRewardAddressChangeProposed(
+        emit INOAddresses.NodeOperatorRewardAddressChangeProposed(
             nodeOperatorId,
             oldProposedAddress,
             proposedAddress
@@ -114,14 +122,15 @@ library NOAddresses {
         uint256 nodeOperatorId
     ) external {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
-        if (no.rewardAddress == address(0)) revert NodeOperatorDoesNotExist();
+        if (no.rewardAddress == address(0))
+            revert ICSModule.NodeOperatorDoesNotExist();
         if (no.proposedRewardAddress != msg.sender)
-            revert SenderIsNotProposedAddress();
+            revert INOAddresses.SenderIsNotProposedAddress();
         address oldAddress = no.rewardAddress;
         no.rewardAddress = msg.sender;
         delete no.proposedRewardAddress;
 
-        emit NodeOperatorRewardAddressChanged(
+        emit INOAddresses.NodeOperatorRewardAddressChanged(
             nodeOperatorId,
             oldAddress,
             msg.sender
@@ -136,9 +145,12 @@ library NOAddresses {
         uint256 nodeOperatorId
     ) external {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
-        if (no.rewardAddress == address(0)) revert NodeOperatorDoesNotExist();
-        if (no.rewardAddress != msg.sender) revert SenderIsNotRewardAddress();
-        if (no.managerAddress == no.rewardAddress) revert SameAddress();
+        if (no.rewardAddress == address(0))
+            revert ICSModule.NodeOperatorDoesNotExist();
+        if (no.rewardAddress != msg.sender)
+            revert INOAddresses.SenderIsNotRewardAddress();
+        if (no.managerAddress == no.rewardAddress)
+            revert INOAddresses.SameAddress();
         address previousManagerAddress = no.managerAddress;
 
         no.managerAddress = no.rewardAddress;
@@ -146,7 +158,7 @@ library NOAddresses {
         if (no.proposedManagerAddress != address(0))
             delete no.proposedManagerAddress;
 
-        emit NodeOperatorManagerAddressChanged(
+        emit INOAddresses.NodeOperatorManagerAddressChanged(
             nodeOperatorId,
             previousManagerAddress,
             no.rewardAddress

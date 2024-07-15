@@ -5,7 +5,7 @@ pragma solidity 0.8.24;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import { Batch, createBatch, QueueLib } from "../src/lib/QueueLib.sol";
+import { Batch, createBatch, QueueLib, IQueueLib } from "../src/lib/QueueLib.sol";
 
 // Wrap the library internal methods to make an actual call to them.
 // Supposed to be used with `expectRevert` cheatcode and to pass
@@ -125,7 +125,7 @@ contract QueueLibTest is Test {
 
     function test_dequeue_revertWhen_QueueIsEmpty() public {
         assertTrue(q.peek().isNil());
-        vm.expectRevert(QueueLib.QueueIsEmpty.selector);
+        vm.expectRevert(IQueueLib.QueueIsEmpty.selector);
         q.dequeue();
     }
 }
