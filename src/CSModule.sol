@@ -1588,7 +1588,8 @@ contract CSModule is
         no.rewardAddress = rewardAddress == address(0)
             ? msg.sender
             : rewardAddress;
-        no.allowUltraManager = allowUltraManager;
+        if (allowUltraManager)
+            no.allowUltraManager = allowUltraManager;
 
         unchecked {
             ++_nodeOperatorsCount;
