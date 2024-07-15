@@ -433,13 +433,22 @@ contract CSVerifierDeploymentTest is Test, Utilities, DeploymentFixtures {
             GIndex.unwrap(deployParams.gIHistoricalSummaries)
         );
         assertEq(
-            GIndex.unwrap(verifier.GI_FIRST_WITHDRAWAL()),
+            GIndex.unwrap(verifier.GI_FIRST_WITHDRAWAL_PREV()),
             GIndex.unwrap(deployParams.gIFirstWithdrawal)
         );
         assertEq(
-            GIndex.unwrap(verifier.GI_FIRST_VALIDATOR()),
+            GIndex.unwrap(verifier.GI_FIRST_WITHDRAWAL_CURR()),
+            GIndex.unwrap(deployParams.gIFirstWithdrawal)
+        );
+        assertEq(
+            GIndex.unwrap(verifier.GI_FIRST_VALIDATOR_PREV()),
             GIndex.unwrap(deployParams.gIFirstValidator)
         );
+        assertEq(
+            GIndex.unwrap(verifier.GI_FIRST_VALIDATOR_CURR()),
+            GIndex.unwrap(deployParams.gIFirstValidator)
+        );
+
         assertEq(
             Slot.unwrap(verifier.FIRST_SUPPORTED_SLOT()),
             deployParams.verifierSupportedEpoch * deployParams.slotsPerEpoch

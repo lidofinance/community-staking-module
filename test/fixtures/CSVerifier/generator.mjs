@@ -2,23 +2,33 @@ import fs from "fs";
 import { ssz } from "@lodestar/types";
 import { concatGindices, createProof, ProofType } from "@chainsafe/persistent-merkle-tree";
 
-const BeaconBlock = ssz.deneb.BeaconBlock;
-const BeaconState = ssz.deneb.BeaconState;
+// main({
+//   validatorIndex: 673610,
+//   withdrawalOffset: 1,
+//   amount: 31997502795n,
+//   address: "b3e29c46ee1745724417c0c51eb2351a1c01cf36",
+//   slashed: false,
+//   activationEligibilityEpoch: 21860,
+//   activationEpoch: 21866,
+//   exitEpoch: 41672,
+//   withdrawableEpoch: 41928,
+// }).catch();
 
-const Withdrawal = BeaconBlock.getPathInfo(["body", "executionPayload", "withdrawals", 0]).type;
-const Validator = BeaconState.getPathInfo(["validators", 0]).type;
-
-main({
-  validatorIndex: 673610,
-  withdrawalOffset: 1,
-  amount: 31997502795n,
-  address: "b3e29c46ee1745724417c0c51eb2351a1c01cf36",
-  slashed: false,
-  activationEligibilityEpoch: 21860,
-  activationEpoch: 21866,
-  exitEpoch: 41672,
-  withdrawableEpoch: 41928,
-}).catch();
+main(
+  {
+    validatorIndex: 673610,
+    withdrawalOffset: 1,
+    amount: 31997502795n,
+    address: "b3e29c46ee1745724417c0c51eb2351a1c01cf36",
+    slashed: false,
+    activationEligibilityEpoch: 21860,
+    activationEpoch: 21866,
+    exitEpoch: 28736,
+    withdrawableEpoch: 28961,
+  },
+  ssz.capella,
+  ssz.deneb,
+).catch();
 
 /**
  * @param {Object} opts
@@ -32,12 +42,20 @@ main({
  * @param {number} opts.exitEpoch,
  * @param {number} opts.withdrawableEpoch,
  */
-async function main(opts) {
+async function main(opts, PrevFork = ssz.deneb, NextFork = ssz.deneb) {
+  const Withdrawal = PrevFork.BeaconBlock.getPathInfo([
+    "body",
+    "executionPayload",
+    "withdrawals",
+    0,
+  ]).type;
+  const Validator = PrevFork.BeaconState.getPathInfo(["validators", 0]).type;
+
   // http -d $CL_URL/eth/v2/debug/beacon/states/finalized Accept:application/octet-stream
   // Phase 0. Think of it as of a seed value for our fixture.
 
   const r = await readBinaryState("finalized.bin");
-  const state = BeaconState.deserializeToView(r);
+  const state = PrevFork.BeaconState.deserializeToView(r);
 
   // Phase 1. Pathching a validator.
 
@@ -64,7 +82,7 @@ async function main(opts) {
 
   // Phase 3. Constructing a beacon block.
 
-  const block = BeaconBlock.defaultView();
+  const block = PrevFork.BeaconBlock.defaultView();
   [...Array(16).keys()].forEach(() =>
     block.body.executionPayload.withdrawals.push(Withdrawal.defaultView()),
   );
@@ -84,7 +102,7 @@ async function main(opts) {
 
   // Phase 5. Creating a state for the future block.
 
-  const stateInFuture = BeaconState.defaultView();
+  const stateInFuture = NextFork.BeaconState.defaultView();
   stateInFuture.historicalSummaries.push(stateInFuture.historicalSummaries.type.defaultView());
   // HACK: Simplify a little bit and store our block's root as `blockSummaryRoot`.
   stateInFuture.historicalSummaries.get(0).blockSummaryRoot = block.hashTreeRoot();
@@ -97,7 +115,7 @@ async function main(opts) {
   const proofs = {};
 
   {
-    const { gindex } = BeaconState.getPathInfo(["validators", opts.validatorIndex]);
+    const { gindex } = PrevFork.BeaconState.getPathInfo(["validators", opts.validatorIndex]);
     proofs.validator = createProof(state.node, {
       type: ProofType.single,
       gindex: gindex,
@@ -120,7 +138,11 @@ async function main(opts) {
   }
 
   {
-    const { gindex } = BeaconState.getPathInfo(["historicalSummaries", 0, "blockSummaryRoot"]);
+    const { gindex } = NextFork.BeaconState.getPathInfo([
+      "historicalSummaries",
+      0,
+      "blockSummaryRoot",
+    ]);
     proofs.historicalRoot = createProof(stateInFuture.node, {
       type: ProofType.single,
       gindex,

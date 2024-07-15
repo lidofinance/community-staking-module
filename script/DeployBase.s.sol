@@ -21,7 +21,6 @@ import { BaseOracle } from "../src/lib/base-oracle/BaseOracle.sol";
 import { JsonObj, Json } from "./utils/Json.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
-import { MerkleTree } from "../test/helpers/MerkleTree.sol";
 
 struct DeployParams {
     // Lido addresses
@@ -174,11 +173,15 @@ abstract contract DeployBase is Script {
                 locator: address(locator),
                 module: address(csm),
                 slotsPerEpoch: uint64(config.slotsPerEpoch),
-                // NOTE: Deneb fork gIndexes. Should be updated according to `config.verifierSupportedEpoch` fork epoch if needed
+                gIFirstWithdrawalPrev: config.gIFirstWithdrawal,
+                gIFirstWithdrawalCurr: config.gIFirstWithdrawal,
+                gIFirstValidatorPrev: config.gIFirstValidator,
+                gIFirstValidatorCurr: config.gIFirstValidator,
                 gIHistoricalSummaries: config.gIHistoricalSummaries,
-                gIFirstWithdrawal: config.gIFirstWithdrawal,
-                gIFirstValidator: config.gIFirstValidator,
                 firstSupportedSlot: Slot.wrap(
+                    uint64(config.verifierSupportedEpoch * config.slotsPerEpoch)
+                ),
+                pivotSlot: Slot.wrap(
                     uint64(config.verifierSupportedEpoch * config.slotsPerEpoch)
                 )
             });

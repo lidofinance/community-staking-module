@@ -25,7 +25,130 @@ function dec(Slot self) pure returns (Slot slot) {
 
 using { dec } for Slot;
 
-contract CSVerifierHistoricalTest is Test {
+contract CSVerifierBiForkTestConstructor is Test {
+    CSVerifier verifier;
+
+    Stub locator;
+    Stub module;
+
+    function setUp() public {
+        locator = new Stub();
+        module = new Stub();
+    }
+
+    function test_constructor_HappyPath() public {
+        verifier = new CSVerifier({
+            locator: address(locator),
+            module: address(module),
+            slotsPerEpoch: 32,
+            gIFirstWithdrawalPrev: pack(0x71c0, 4),
+            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+            gIFirstValidatorPrev: pack(0x560000000000, 40),
+            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            gIHistoricalSummaries: pack(0x3b, 0),
+            firstSupportedSlot: Slot.wrap(8_192),
+            pivotSlot: Slot.wrap(950_272)
+        });
+
+        assertEq(address(verifier.MODULE()), address(module));
+        assertEq(address(verifier.LOCATOR()), address(locator));
+        assertEq(verifier.SLOTS_PER_EPOCH(), 32);
+        assertEq(
+            GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES()),
+            GIndex.unwrap(pack(0x3b, 0))
+        );
+        assertEq(
+            GIndex.unwrap(verifier.GI_FIRST_WITHDRAWAL_PREV()),
+            GIndex.unwrap(pack(0x71c0, 4))
+        );
+        assertEq(
+            GIndex.unwrap(verifier.GI_FIRST_WITHDRAWAL_CURR()),
+            GIndex.unwrap(pack(0xe1c0, 4))
+        );
+        assertEq(
+            GIndex.unwrap(verifier.GI_FIRST_VALIDATOR_PREV()),
+            GIndex.unwrap(pack(0x560000000000, 40))
+        );
+        assertEq(
+            GIndex.unwrap(verifier.GI_FIRST_VALIDATOR_CURR()),
+            GIndex.unwrap(pack(0x560000000000, 40))
+        );
+        assertEq(
+            Slot.unwrap(verifier.FIRST_SUPPORTED_SLOT()),
+            Slot.unwrap(Slot.wrap(8_192))
+        );
+        assertEq(
+            Slot.unwrap(verifier.PIVOT_SLOT()),
+            Slot.unwrap(Slot.wrap(950_272))
+        );
+    }
+
+    function test_constructor_RevertWhen_InvalidChainConfig() public {
+        vm.expectRevert(CSVerifier.InvalidChainConfig.selector);
+        verifier = new CSVerifier({
+            locator: address(locator),
+            module: address(module),
+            slotsPerEpoch: 0, // <--
+            gIFirstWithdrawalPrev: pack(0x71c0, 4),
+            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+            gIFirstValidatorPrev: pack(0x560000000000, 40),
+            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            gIHistoricalSummaries: pack(0x3b, 0),
+            firstSupportedSlot: Slot.wrap(8_192),
+            pivotSlot: Slot.wrap(950_272)
+        });
+    }
+
+    function test_constructor_RevertWhen_ZeroModuleAddress() public {
+        vm.expectRevert(CSVerifier.ZeroModuleAddress.selector);
+        verifier = new CSVerifier({
+            locator: address(locator),
+            module: address(0), // <--
+            slotsPerEpoch: 32,
+            gIFirstWithdrawalPrev: pack(0x71c0, 4),
+            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+            gIFirstValidatorPrev: pack(0x560000000000, 40),
+            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            gIHistoricalSummaries: pack(0x3b, 0),
+            firstSupportedSlot: Slot.wrap(8_192),
+            pivotSlot: Slot.wrap(950_272)
+        });
+    }
+
+    function test_constructor_RevertWhen_ZeroLocatorAddress() public {
+        vm.expectRevert(CSVerifier.ZeroLocatorAddress.selector);
+        verifier = new CSVerifier({
+            locator: address(0), // <--
+            module: address(module),
+            slotsPerEpoch: 32,
+            gIFirstWithdrawalPrev: pack(0x71c0, 4),
+            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+            gIFirstValidatorPrev: pack(0x560000000000, 40),
+            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            gIHistoricalSummaries: pack(0x3b, 0),
+            firstSupportedSlot: Slot.wrap(8_192),
+            pivotSlot: Slot.wrap(950_272)
+        });
+    }
+
+    function test_constructor_RevertWhen_InvalidPivotSlot() public {
+        vm.expectRevert(CSVerifier.InvalidPivotSlot.selector);
+        verifier = new CSVerifier({
+            locator: address(locator),
+            module: address(module),
+            slotsPerEpoch: 32,
+            gIFirstWithdrawalPrev: pack(0x71c0, 4),
+            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+            gIFirstValidatorPrev: pack(0x560000000000, 40),
+            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            gIHistoricalSummaries: pack(0x3b, 0),
+            firstSupportedSlot: Slot.wrap(200),
+            pivotSlot: Slot.wrap(100)
+        });
+    }
+}
+
+contract CSVerifierBiForkHistoricalTest is Test {
     using stdJson for string;
 
     struct HistoricalWithdrawalFixture {
@@ -50,13 +173,13 @@ contract CSVerifierHistoricalTest is Test {
             locator: address(locator),
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummaries: pack(0x3b, 0),
-            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+            gIFirstWithdrawalPrev: pack(0x71c0, 4),
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
             gIFirstValidatorCurr: pack(0x560000000000, 40),
-            firstSupportedSlot: Slot.wrap(100_500), // Any value less than the slots from the fixtures.
-            pivotSlot: Slot.wrap(100_500)
+            gIHistoricalSummaries: pack(0x3b, 0),
+            firstSupportedSlot: Slot.wrap(8_192),
+            pivotSlot: Slot.wrap(950_272)
         });
     }
 
@@ -64,7 +187,7 @@ contract CSVerifierHistoricalTest is Test {
         string memory root = vm.projectRoot();
         string memory path = string.concat(
             root,
-            "/test/fixtures/CSVerifier/historicalWithdrawal.json"
+            "/test/fixtures/CSVerifier/historicalCrossForksWithdrawal.json"
         );
         string memory json = vm.readFile(path);
         bytes memory data = json.parseRaw("$");

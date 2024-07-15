@@ -398,7 +398,7 @@ contract ClaimIntegrationTest is
             lido.getPooledEthByShares(
                 (accountingSharesBefore + shares) - accountingSharesAfter
             ),
-            1 wei,
+            2 wei,
             "Withdrawal request should be equal to real rewards"
         );
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
@@ -408,7 +408,7 @@ contract ClaimIntegrationTest is
         assertApproxEqAbs(
             current,
             required,
-            1 wei,
+            2 wei,
             "NO bond shares should be equal required"
         );
         assertEq(

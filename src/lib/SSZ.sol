@@ -15,7 +15,7 @@ library SSZ {
         BeaconBlockHeader memory header
     ) internal view returns (bytes32 root) {
         bytes32[8] memory nodes = [
-            toLittleEndian(header.slot),
+            toLittleEndian(header.slot.unwrap()),
             toLittleEndian(header.proposerIndex),
             header.parentRoot,
             header.stateRoot,
