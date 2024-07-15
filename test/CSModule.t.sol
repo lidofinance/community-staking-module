@@ -3161,7 +3161,7 @@ contract CsmQueueOps is CSMCommon {
 
         vm.expectEmit(true, true, true, true, address(csm));
         emit IQueueLib.BatchEnqueued(noId, 1);
-        csm.submitWithdrawal(noId, 0, DEPOSIT_SIZE);
+        csm.submitWithdrawal(noId, 0, DEPOSIT_SIZE, false);
     }
 }
 
@@ -3757,7 +3757,7 @@ contract CsmGetNodeOperatorNonWithdrawnKeys is CSMCommon {
     function test_getNodeOperatorNonWithdrawnKeys_WithdrawnKeys() public {
         uint256 noId = createNodeOperator(3);
         csm.obtainDepositData(3, "");
-        csm.submitWithdrawal(noId, 0, DEPOSIT_SIZE);
+        csm.submitWithdrawal(noId, 0, DEPOSIT_SIZE, false);
         uint256 keys = csm.getNodeOperatorNonWithdrawnKeys(noId);
         assertEq(keys, 2);
     }
@@ -5251,7 +5251,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
 
         vm.expectEmit(true, true, true, true, address(csm));
         emit CSModule.WithdrawalSubmitted(noId, keyIndex, DEPOSIT_SIZE);
-        csm.submitWithdrawal(noId, keyIndex, DEPOSIT_SIZE);
+        csm.submitWithdrawal(noId, keyIndex, DEPOSIT_SIZE, false);
 
         NodeOperator memory no = csm.getNodeOperator(noId);
         assertEq(no.totalWithdrawnKeys, 1);
@@ -5278,7 +5278,8 @@ contract CsmSubmitWithdrawal is CSMCommon {
         csm.submitWithdrawal(
             noId,
             keyIndex,
-            DEPOSIT_SIZE - BOND_SIZE - 1 ether
+            DEPOSIT_SIZE - BOND_SIZE - 1 ether,
+            false
         );
 
         NodeOperator memory no = csm.getNodeOperator(noId);
@@ -5297,15 +5298,16 @@ contract CsmSubmitWithdrawal is CSMCommon {
             address(accounting),
             abi.encodeWithSelector(accounting.penalize.selector, noId, 1 ether)
         );
-        csm.submitWithdrawal(noId, keyIndex, depositSize - 1 ether);
+        csm.submitWithdrawal(noId, keyIndex, depositSize - 1 ether, false);
     }
 
-    function test_submitWithdrawal_alreadySlashed() public {
+    function test_submitWithdrawal_slashedReported() public {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
 
         csm.submitInitialSlashing(noId, 0);
+        assertTrue(csm.isValidatorSlashed(noId, keyIndex));
 
         uint256 exitBalance = DEPOSIT_SIZE - csm.INITIAL_SLASHING_PENALTY();
 
@@ -5321,7 +5323,32 @@ contract CsmSubmitWithdrawal is CSMCommon {
             address(accounting),
             abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
         );
-        csm.submitWithdrawal(noId, keyIndex, exitBalance - 0.05 ether);
+        csm.submitWithdrawal(noId, keyIndex, exitBalance - 0.05 ether, true);
+    }
+
+    function test_submitWithdrawal_slashedIsNotReported() public {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+
+        assertFalse(csm.isValidatorSlashed(noId, keyIndex));
+
+        uint256 exitBalance = DEPOSIT_SIZE - csm.INITIAL_SLASHING_PENALTY();
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.penalize.selector,
+                noId,
+                csm.INITIAL_SLASHING_PENALTY() + 0.05 ether
+            )
+        );
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
+        );
+        csm.submitWithdrawal(noId, keyIndex, exitBalance - 0.05 ether, true);
+        assertTrue(csm.isValidatorSlashed(noId, keyIndex));
     }
 
     function test_submitWithdrawal_unbondedKeys() public {
@@ -5330,19 +5357,19 @@ contract CsmSubmitWithdrawal is CSMCommon {
         csm.obtainDepositData(1, "");
         uint256 nonce = csm.getNonce();
 
-        csm.submitWithdrawal(noId, keyIndex, 1 ether);
+        csm.submitWithdrawal(noId, keyIndex, 1 ether, false);
         assertEq(csm.getNonce(), nonce + 1);
     }
 
     function test_submitWithdrawal_RevertWhen_NoNodeOperator() public {
         vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        csm.submitWithdrawal(0, 0, 0);
+        csm.submitWithdrawal(0, 0, 0, false);
     }
 
     function test_submitWithdrawal_RevertWhen_InvalidKeyIndexOffset() public {
         uint256 noId = createNodeOperator();
         vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
-        csm.submitWithdrawal(noId, 0, 0);
+        csm.submitWithdrawal(noId, 0, 0, false);
     }
 
     function test_submitWithdrawal_RevertWhen_AlreadySubmitted() public {
@@ -5350,9 +5377,9 @@ contract CsmSubmitWithdrawal is CSMCommon {
         csm.obtainDepositData(1, "");
         uint256 depositSize = DEPOSIT_SIZE;
 
-        csm.submitWithdrawal(noId, 0, depositSize);
+        csm.submitWithdrawal(noId, 0, depositSize, false);
         vm.expectRevert(CSModule.AlreadySubmitted.selector);
-        csm.submitWithdrawal(noId, 0, depositSize);
+        csm.submitWithdrawal(noId, 0, depositSize, false);
     }
 }
 
@@ -5453,15 +5480,6 @@ contract CsmSubmitInitialSlashing is CSMCommon {
 
         csm.submitInitialSlashing(noId, 0);
         vm.expectRevert(CSModule.AlreadySubmitted.selector);
-        csm.submitInitialSlashing(noId, 0);
-    }
-
-    function test_submitInitialSlashing_RevertWhen_AlreadyWithdrawn() public {
-        uint256 noId = createNodeOperator();
-        csm.obtainDepositData(1, "");
-        csm.submitWithdrawal(noId, 0, 32 ether);
-
-        vm.expectRevert(CSModule.AlreadyWithdrawn.selector);
         csm.submitInitialSlashing(noId, 0);
     }
 }
@@ -5859,7 +5877,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
         vm.stopPrank();
 
         vm.prank(actor);
-        csm.submitWithdrawal(noId, 0, 1 ether);
+        csm.submitWithdrawal(noId, 0, 1 ether, false);
     }
 
     function test_verifierRole_submitWithdrawal_revert() public {
@@ -5869,7 +5887,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
-        csm.submitWithdrawal(noId, 0, 1 ether);
+        csm.submitWithdrawal(noId, 0, 1 ether, false);
     }
 
     function test_verifierRole_submitInitialSlashing() public {
@@ -6276,11 +6294,11 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         penalize(noId, BOND_SIZE * 3);
 
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 0);
-        csm.submitWithdrawal(noId, 0, DEPOSIT_SIZE);
+        csm.submitWithdrawal(noId, 0, DEPOSIT_SIZE, false);
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 1);
-        csm.submitWithdrawal(noId, 1, DEPOSIT_SIZE);
+        csm.submitWithdrawal(noId, 1, DEPOSIT_SIZE, false);
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 2);
-        csm.submitWithdrawal(noId, 2, DEPOSIT_SIZE - BOND_SIZE); // Large CL balance drop, that doesn't change the unbonded count.
+        csm.submitWithdrawal(noId, 2, DEPOSIT_SIZE - BOND_SIZE, false); // Large CL balance drop, that doesn't change the unbonded count.
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 2);
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 2);
     }
