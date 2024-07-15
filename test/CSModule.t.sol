@@ -99,7 +99,8 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities {
             address(0),
             address(0),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
         return csm.getNodeOperatorsCount() - 1;
     }
@@ -677,7 +678,8 @@ contract CSMPauseAffectingTest is CSMCommon {
             address(0),
             address(0),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
     }
 
@@ -703,7 +705,8 @@ contract CSMPauseAffectingTest is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
     }
 
@@ -729,7 +732,8 @@ contract CSMPauseAffectingTest is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
     }
 
@@ -814,7 +818,8 @@ contract CSMAddNodeOperatorETH is CSMCommon {
             address(0),
             address(0),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
@@ -840,7 +845,8 @@ contract CSMAddNodeOperatorETH is CSMCommon {
             manager,
             reward,
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
 
         NodeOperator memory no = csm.getNodeOperator(0);
@@ -870,7 +876,8 @@ contract CSMAddNodeOperatorETH is CSMCommon {
             address(0),
             address(0),
             new bytes32[](0),
-            address(154)
+            address(154),
+            false
         );
     }
 
@@ -890,7 +897,8 @@ contract CSMAddNodeOperatorETH is CSMCommon {
             address(0),
             address(0),
             new bytes32[](0),
-            address(154)
+            address(154),
+            false
         );
     }
 }
@@ -931,7 +939,8 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
@@ -966,7 +975,8 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
 
         NodeOperator memory no = csm.getNodeOperator(0);
@@ -1005,7 +1015,8 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(154)
+            address(154),
+            false
         );
     }
 
@@ -1049,7 +1060,8 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
@@ -1092,7 +1104,8 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
@@ -1128,7 +1141,8 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
 
         NodeOperator memory no = csm.getNodeOperator(0);
@@ -1168,7 +1182,8 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(154)
+            address(154),
+            false
         );
     }
 
@@ -1212,7 +1227,8 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
@@ -1410,7 +1426,8 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
             address(0),
             address(0),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
     }
 
@@ -1430,7 +1447,8 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
             address(0),
             address(0),
             new bytes32[](0),
-            address(154)
+            address(154),
+            false
         );
     }
 
@@ -1451,7 +1469,8 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
             address(0),
             address(0),
             new bytes32[](0),
-            address(154)
+            address(154),
+            false
         );
     }
 
@@ -1475,7 +1494,8 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(154)
+            address(154),
+            false
         );
     }
 
@@ -1504,7 +1524,8 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(154)
+            address(154),
+            false
         );
     }
 
@@ -1534,7 +1555,8 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(154)
+            address(154),
+            false
         );
     }
 
@@ -1560,7 +1582,8 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(154)
+            address(154),
+            false
         );
     }
 
@@ -1590,7 +1613,8 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(154)
+            address(154),
+            false
         );
     }
 
@@ -1621,7 +1645,8 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(154)
+            address(154),
+            false
         );
     }
 }
@@ -2223,7 +2248,8 @@ contract CSMObtainDepositData is CSMCommon {
             address(0),
             address(0),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
 
         vm.expectEmit(true, true, true, true, address(csm));
@@ -5963,7 +5989,8 @@ contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
             address(0),
             address(0),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
     }
 
@@ -5981,7 +6008,8 @@ contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
             address(0),
             address(0),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
     }
 }
@@ -6008,7 +6036,8 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
             address(0),
             address(0),
             proof,
-            address(0)
+            address(0),
+            false
         );
         CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
         assertEq(curve.points[0], BOND_SIZE / 2);
@@ -6032,7 +6061,8 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
             address(0),
             address(0),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
     }
 
@@ -6055,7 +6085,8 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
             address(0),
             address(0),
             proof,
-            address(0)
+            address(0),
+            false
         );
         CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
         assertEq(curve.points[0], BOND_SIZE / 2);
@@ -6079,7 +6110,8 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
             address(0),
             address(0),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
         CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
         assertEq(curve.points[0], BOND_SIZE);
@@ -6106,7 +6138,8 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
             address(0),
             address(0),
             proof,
-            address(0)
+            address(0),
+            false
         );
     }
 }
@@ -6132,7 +6165,8 @@ contract CSMEarlyAdoptionTestNoEA is CSMCommonNoPublicReleaseNoEA {
             address(0),
             address(0),
             proof,
-            address(0)
+            address(0),
+            false
         );
     }
 
@@ -6154,7 +6188,8 @@ contract CSMEarlyAdoptionTestNoEA is CSMCommonNoPublicReleaseNoEA {
             address(0),
             address(0),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
     }
 
@@ -6177,7 +6212,8 @@ contract CSMEarlyAdoptionTestNoEA is CSMCommonNoPublicReleaseNoEA {
             address(0),
             address(0),
             proof,
-            address(0)
+            address(0),
+            false
         );
         CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
         assertEq(curve.points[0], BOND_SIZE);
@@ -6201,7 +6237,8 @@ contract CSMEarlyAdoptionTestNoEA is CSMCommonNoPublicReleaseNoEA {
             address(0),
             address(0),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
         CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
         assertEq(curve.points[0], BOND_SIZE);

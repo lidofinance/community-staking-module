@@ -62,7 +62,8 @@ contract ClaimIntegrationTest is
             address(0),
             address(0),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
         defaultNoId = csm.getNodeOperatorsCount() - 1;
     }

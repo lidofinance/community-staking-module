@@ -100,7 +100,8 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
             address(0),
             address(0),
             new bytes32[](0),
-            address(0)
+            address(0),
+            false
         );
         return csm.getNodeOperatorsCount() - 1;
     }

@@ -249,6 +249,8 @@ contract CSModule is
     /// @param rewardAddress Optional. Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
+    /// @param extendedManagerPermissions Optional. Flag indicating that managerAddress will be able to change rewardAddress.
+    ///                                   If set to true `resetNodeOperatorManagerAddress` method will be disabled.
     function addNodeOperatorETH(
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -257,15 +259,15 @@ contract CSModule is
         address rewardAddress,
         bytes32[] calldata eaProof,
         address referrer,
-        bool allowUltraManager
+        bool extendedManagerPermissions
     ) external payable whenResumed {
-        uint256 nodeOperatorId = _createNodeOperator(
-            managerAddress,
-            rewardAddress,
-            referrer,
-            eaProof,
-            allowUltraManager
-        );
+        uint256 nodeOperatorId = _createNodeOperator({
+            managerAddress: managerAddress,
+            rewardAddress: rewardAddress,
+            referrer: referrer,
+            proof: eaProof,
+            extendedManagerPermissions: extendedManagerPermissions
+        });
 
         if (
             msg.value !=
@@ -299,6 +301,8 @@ contract CSModule is
     /// @param permit Optional. Permit to use stETH as bond
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
+    /// @param extendedManagerPermissions Optional. Flag indicating that managerAddress will be able to change rewardAddress.
+    ///                                   If set to true `resetNodeOperatorManagerAddress` method will be disabled.
     function addNodeOperatorStETH(
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -308,15 +312,15 @@ contract CSModule is
         ICSAccounting.PermitInput calldata permit,
         bytes32[] calldata eaProof,
         address referrer,
-        bool allowUltraManager
+        bool extendedManagerPermissions
     ) external whenResumed {
-        uint256 nodeOperatorId = _createNodeOperator(
-            managerAddress,
-            rewardAddress,
-            referrer,
-            eaProof,
-            allowUltraManager
-        );
+        uint256 nodeOperatorId = _createNodeOperator({
+            managerAddress: managerAddress,
+            rewardAddress: rewardAddress,
+            referrer: referrer,
+            proof: eaProof,
+            extendedManagerPermissions: extendedManagerPermissions
+        });
 
         uint256 amount = accounting.getBondAmountByKeysCount(
             keysCount,
@@ -344,6 +348,8 @@ contract CSModule is
     /// @param permit Optional. Permit to use wstETH as bond
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
+    /// @param extendedManagerPermissions Optional. Flag indicating that managerAddress will be able to change rewardAddress.
+    ///                                   If set to true `resetNodeOperatorManagerAddress` method will be disabled.
     function addNodeOperatorWstETH(
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -353,15 +359,15 @@ contract CSModule is
         ICSAccounting.PermitInput calldata permit,
         bytes32[] calldata eaProof,
         address referrer,
-        bool allowUltraManager
+        bool extendedManagerPermissions
     ) external whenResumed {
-        uint256 nodeOperatorId = _createNodeOperator(
-            managerAddress,
-            rewardAddress,
-            referrer,
-            eaProof,
-            allowUltraManager
-        );
+        uint256 nodeOperatorId = _createNodeOperator({
+            managerAddress: managerAddress,
+            rewardAddress: rewardAddress,
+            referrer: referrer,
+            proof: eaProof,
+            extendedManagerPermissions: extendedManagerPermissions
+        });
 
         uint256 amount = accounting.getBondAmountByKeysCountWstETH(
             keysCount,
@@ -694,7 +700,7 @@ contract CSModule is
         );
     }
 
-    /// @notice Change rewardAddress if allowUltraManager is enabled for the Node Operator
+    /// @notice Change rewardAddress if extendedManagerPermissions is enabled for the Node Operator
     /// @param nodeOperatorId ID of the Node Operator
     /// @param newAddress Proposed reward address
     function changeNodeOperatorRewardAddress(
@@ -1571,7 +1577,7 @@ contract CSModule is
         address rewardAddress,
         address referrer,
         bytes32[] calldata proof,
-        bool allowUltraManager
+        bool extendedManagerPermissions
     ) internal returns (uint256 id) {
         if (!publicRelease) {
             if (proof.length == 0 || address(earlyAdoption) == address(0)) {
@@ -1588,8 +1594,8 @@ contract CSModule is
         no.rewardAddress = rewardAddress == address(0)
             ? msg.sender
             : rewardAddress;
-        if (allowUltraManager)
-            no.allowUltraManager = allowUltraManager;
+        if (extendedManagerPermissions)
+            no.extendedManagerPermissions = extendedManagerPermissions;
 
         unchecked {
             ++_nodeOperatorsCount;
