@@ -3,38 +3,46 @@
 import { concatGindices } from "@chainsafe/persistent-merkle-tree";
 import { ssz } from "@lodestar/types";
 
-const BeaconState = ssz.deneb.BeaconState;
-const BeaconBlock = ssz.deneb.BeaconBlock;
+for (const fork of ["capella", "deneb"]) {
+  /** @type (ssz.capella|ssz.deneb) */
+  const Fork = ssz[fork];
 
-{
-  const Withdrawals = BeaconBlock.getPathInfo(["body", "executionPayload", "withdrawals"]).type;
+  {
+    const gI = pack(Fork.BeaconState.getPathInfo(["historicalSummaries"]).gindex, 0); // 0 because `historicalSummaries` is a bytes32 value.
+    console.log(`${fork}::gIHistoricalSummaries: `, toBytes32String(gI));
+  }
 
-  const gI = pack(
-    concatGindices([
-      BeaconState.getPathInfo(["latestExecutionPayloadHeader", "withdrawalsRoot"]).gindex,
-      Withdrawals.getPropertyGindex(0),
-    ]),
-    Withdrawals.limit,
-  );
+  {
+    const Withdrawals = Fork.BeaconBlock.getPathInfo([
+      "body",
+      "executionPayload",
+      "withdrawals",
+    ]).type;
 
-  console.log("gIFirstWithdrawal:", toBytes32String(gI));
-}
+    const gI = pack(
+      concatGindices([
+        Fork.BeaconState.getPathInfo(["latestExecutionPayloadHeader", "withdrawalsRoot"]).gindex,
+        Withdrawals.getPropertyGindex(0),
+      ]),
+      Withdrawals.limit,
+    );
 
-{
-  const Validators = BeaconState.getPathInfo(["validators"]).type;
+    console.log(`${fork}::gIFirstWithdrawal:`, toBytes32String(gI));
+  }
 
-  // prettier-ignore
-  const gI = pack(
-    BeaconState.getPathInfo(["validators", 0]).gindex,
+  {
+    const Validators = Fork.BeaconState.getPathInfo(["validators"]).type;
+
+    // prettier-ignore
+    const gI = pack(
+    Fork.BeaconState.getPathInfo(["validators", 0]).gindex,
     Validators.limit
   );
 
-  console.log("gIFirstValidator: ", toBytes32String(gI));
-}
+    console.log(`${fork}::gIFirstValidator: `, toBytes32String(gI));
+  }
 
-{
-  const gI = pack(BeaconState.getPathInfo(["historicalSummaries"]).gindex, 0); // 0 because `historicalSummaries` is a bytes32 value.
-  console.log("gIHistoricalSummaries: ", toBytes32String(gI));
+  console.log();
 }
 
 // Analog of the GIndex.pack.

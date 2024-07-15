@@ -17,6 +17,14 @@ import { GIndex } from "../src/lib/GIndex.sol";
 
 import { Stub } from "./helpers/mocks/Stub.sol";
 
+function dec(Slot self) pure returns (Slot slot) {
+    assembly ("memory-safe") {
+        slot := sub(self, 1)
+    }
+}
+
+using { dec } for Slot;
+
 contract CSVerifierTestBase is Test {
     struct WithdrawalFixture {
         bytes32 _blockRoot;
@@ -54,9 +62,12 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             module: address(module),
             slotsPerEpoch: 32,
             gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
-            gIFirstWithdrawal: pack(0xe1c0, 4),
-            gIFirstValidator: pack(0x560000000000, 40),
-            firstSupportedSlot: firstSupportedSlot // Any value less than the slots from the fixtures.
+            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+            gIFirstValidatorPrev: pack(0x560000000000, 40),
+            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
+            pivotSlot: firstSupportedSlot
         });
 
         assertEq(address(verifier.MODULE()), address(module));
@@ -67,15 +78,27 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             GIndex.unwrap(pack(0x0, 0))
         );
         assertEq(
-            GIndex.unwrap(verifier.GI_FIRST_WITHDRAWAL()),
+            GIndex.unwrap(verifier.GI_FIRST_WITHDRAWAL_PREV()),
             GIndex.unwrap(pack(0xe1c0, 4))
         );
         assertEq(
-            GIndex.unwrap(verifier.GI_FIRST_VALIDATOR()),
+            GIndex.unwrap(verifier.GI_FIRST_WITHDRAWAL_CURR()),
+            GIndex.unwrap(pack(0xe1c0, 4))
+        );
+        assertEq(
+            GIndex.unwrap(verifier.GI_FIRST_VALIDATOR_PREV()),
+            GIndex.unwrap(pack(0x560000000000, 40))
+        );
+        assertEq(
+            GIndex.unwrap(verifier.GI_FIRST_VALIDATOR_CURR()),
             GIndex.unwrap(pack(0x560000000000, 40))
         );
         assertEq(
             Slot.unwrap(verifier.FIRST_SUPPORTED_SLOT()),
+            Slot.unwrap(firstSupportedSlot)
+        );
+        assertEq(
+            Slot.unwrap(verifier.PIVOT_SLOT()),
             Slot.unwrap(firstSupportedSlot)
         );
     }
@@ -87,9 +110,12 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             module: address(module),
             slotsPerEpoch: 0,
             gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
-            gIFirstWithdrawal: pack(0xe1c0, 4),
-            gIFirstValidator: pack(0x560000000000, 40),
-            firstSupportedSlot: firstSupportedSlot // Any value less than the slots from the fixtures.
+            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+            gIFirstValidatorPrev: pack(0x560000000000, 40),
+            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
+            pivotSlot: firstSupportedSlot
         });
     }
 
@@ -100,9 +126,12 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             module: address(0),
             slotsPerEpoch: 32,
             gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
-            gIFirstWithdrawal: pack(0xe1c0, 4),
-            gIFirstValidator: pack(0x560000000000, 40),
-            firstSupportedSlot: firstSupportedSlot // Any value less than the slots from the fixtures.
+            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+            gIFirstValidatorPrev: pack(0x560000000000, 40),
+            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
+            pivotSlot: firstSupportedSlot
         });
     }
 
@@ -113,9 +142,12 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             module: address(module),
             slotsPerEpoch: 32,
             gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
-            gIFirstWithdrawal: pack(0xe1c0, 4),
-            gIFirstValidator: pack(0x560000000000, 40),
-            firstSupportedSlot: firstSupportedSlot // Any value less than the slots from the fixtures.
+            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+            gIFirstValidatorPrev: pack(0x560000000000, 40),
+            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
+            pivotSlot: firstSupportedSlot
         });
     }
 }
@@ -132,9 +164,12 @@ contract CSVerifierTest is CSVerifierTestBase {
             module: address(module),
             slotsPerEpoch: 32,
             gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
-            gIFirstWithdrawal: pack(0xe1c0, 4),
-            gIFirstValidator: pack(0x560000000000, 40),
-            firstSupportedSlot: Slot.wrap(100_500) // Any value less than the slots from the fixtures.
+            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+            gIFirstValidatorPrev: pack(0x560000000000, 40),
+            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            firstSupportedSlot: Slot.wrap(100_500), // Any value less than the slots from the fixtures.
+            pivotSlot: Slot.wrap(100_500)
         });
     }
 
@@ -162,9 +197,7 @@ contract CSVerifierTest is CSVerifierTestBase {
 
         _setMocksSlashing(fixture);
 
-        fixture.beaconBlock.header.slot =
-            verifier.FIRST_SUPPORTED_SLOT().unwrap() -
-            1;
+        fixture.beaconBlock.header.slot = verifier.FIRST_SUPPORTED_SLOT().dec();
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -243,9 +276,7 @@ contract CSVerifierTest is CSVerifierTestBase {
 
         _setMocksWithdrawal(fixture);
 
-        fixture.beaconBlock.header.slot =
-            verifier.FIRST_SUPPORTED_SLOT().unwrap() -
-            1;
+        fixture.beaconBlock.header.slot = verifier.FIRST_SUPPORTED_SLOT().dec();
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -404,7 +435,7 @@ contract CSVerifierTest is CSVerifierTestBase {
         _setMocksWithdrawal(fixture);
 
         fixture.witness.withdrawableEpoch =
-            fixture.beaconBlock.header.slot /
+            fixture.beaconBlock.header.slot.unwrap() /
             32 +
             154;
 
