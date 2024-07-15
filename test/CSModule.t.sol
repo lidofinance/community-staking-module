@@ -105,6 +105,25 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities {
         return csm.getNodeOperatorsCount() - 1;
     }
 
+    function createNodeOperator(
+        bool extendedManagerPermissions
+    ) internal returns (uint256) {
+        vm.deal(nodeOperator, BOND_SIZE);
+        vm.prank(nodeOperator);
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1);
+        csm.addNodeOperatorETH{ value: BOND_SIZE }(
+            1,
+            keys,
+            signatures,
+            address(0),
+            address(0),
+            new bytes32[](0),
+            address(0),
+            extendedManagerPermissions
+        );
+        return csm.getNodeOperatorsCount() - 1;
+    }
+
     function uploadMoreKeys(uint256 noId, uint256 keysCount) internal {
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -2958,6 +2977,74 @@ contract CsmResetNodeOperatorManagerAddress is CSMCommon {
         vm.expectRevert(INOAddresses.SameAddress.selector);
         vm.prank(nodeOperator);
         csm.resetNodeOperatorManagerAddress(noId);
+    }
+
+    function test_resetNodeOperatorManagerAddress_RevertWhen_ExtendedPermissions()
+        public
+    {
+        uint256 noId = createNodeOperator(true);
+        vm.expectRevert(INOAddresses.MethodCallIsNotAllowed.selector);
+        vm.prank(nodeOperator);
+        csm.resetNodeOperatorManagerAddress(noId);
+    }
+}
+
+contract CsmChangeNodeOperatorRewardAddress is CSMCommon {
+    function test_changeNodeOperatorRewardAddress() public {
+        uint256 noId = createNodeOperator(true);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit INOAddresses.NodeOperatorRewardAddressChanged(
+            noId,
+            nodeOperator,
+            stranger
+        );
+        vm.prank(nodeOperator);
+        csm.changeNodeOperatorRewardAddress(noId, stranger);
+
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.managerAddress, nodeOperator);
+        assertEq(no.rewardAddress, stranger);
+    }
+
+    function test_changeNodeOperatorRewardAddress_RevertWhen_NoNodeOperator()
+        public
+    {
+        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
+        vm.prank(nodeOperator);
+        csm.changeNodeOperatorRewardAddress(0, stranger);
+    }
+
+    function test_changeNodeOperatorRewardAddress_RevertWhen_NotManagerAddress()
+        public
+    {
+        uint256 noId = createNodeOperator(true);
+        vm.expectRevert(INOAddresses.SenderIsNotManagerAddress.selector);
+        vm.prank(stranger);
+        csm.changeNodeOperatorRewardAddress(0, stranger);
+    }
+
+    function test_changeNodeOperatorRewardAddress_RevertWhen_SenderIsRewardAddress()
+        public
+    {
+        uint256 noId = createNodeOperator(true);
+        vm.prank(nodeOperator);
+        csm.proposeNodeOperatorRewardAddressChange(noId, stranger);
+        vm.prank(stranger);
+        csm.confirmNodeOperatorRewardAddressChange(noId);
+
+        vm.expectRevert(INOAddresses.SenderIsNotManagerAddress.selector);
+        vm.prank(stranger);
+        csm.changeNodeOperatorRewardAddress(0, stranger);
+    }
+
+    function test_changeNodeOperatorRewardAddress_RevertWhen_NoExtendedPermissions()
+        public
+    {
+        uint256 noId = createNodeOperator(false);
+        vm.expectRevert(INOAddresses.MethodCallIsNotAllowed.selector);
+        vm.prank(nodeOperator);
+        csm.changeNodeOperatorRewardAddress(0, stranger);
     }
 }
 
