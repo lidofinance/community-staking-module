@@ -54,6 +54,9 @@ cancel-stealing noId amount:
 settle-stealing noId:
     just _impersonate-script NodeOperators --sig="settleStealing\(uint256\)" -- {{noId}}
 
+compensate-stealing noId amount:
+    just _impersonate-script NodeOperators --sig="compensateStealing\(uint256,uint256\)" -- {{noId}} {{amount}}
+
 exit-request noId validatorIndex validatorPubKey:
     just _impersonate-script NodeOperators --sig="exitRequest\(uint256,uint256,bytes\)" -vvv -- {{noId}} {{validatorIndex}} {{validatorPubKey}}
 

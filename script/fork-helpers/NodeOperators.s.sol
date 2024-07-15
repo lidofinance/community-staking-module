@@ -8,6 +8,8 @@ import { DeploymentFixtures } from "test/helpers/Fixtures.sol";
 import { ForkHelpersCommon } from "./Common.sol";
 import "../../src/interfaces/IVEBO.sol";
 import { Utilities } from "../../test/helpers/Utilities.sol";
+import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
+import { NodeOperator } from "../../src/interfaces/ICSModule.sol";
 
 contract NodeOperators is
     Script,
@@ -21,7 +23,7 @@ contract NodeOperators is
             csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(),
             0
         );
-        _setBalance(penaltyReporter, "1000000000000000000");
+        _setBalance(penaltyReporter);
         vm.startBroadcast(penaltyReporter);
         _;
         vm.stopBroadcast();
@@ -33,7 +35,7 @@ contract NodeOperators is
             csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE(),
             0
         );
-        _setBalance(penaltySettler, "1000000000000000000");
+        _setBalance(penaltySettler);
         vm.startBroadcast(penaltySettler);
         _;
         vm.stopBroadcast();
@@ -41,7 +43,7 @@ contract NodeOperators is
 
     modifier broadcastVerifier() {
         _setUp();
-        _setBalance(address(verifier), "1000000000000000000");
+        _setBalance(address(verifier));
         vm.startBroadcast(address(verifier));
         _;
         vm.stopBroadcast();
@@ -49,8 +51,17 @@ contract NodeOperators is
 
     modifier broadcastStakingRouter() {
         _setUp();
-        _setBalance(address(stakingRouter), "1000000000000000000");
+        _setBalance(address(stakingRouter));
         vm.startBroadcast(address(stakingRouter));
+        _;
+        vm.stopBroadcast();
+    }
+
+    modifier broadcastStranger() {
+        _setUp();
+        address stranger = nextAddress("stranger");
+        _setBalance(stranger);
+        vm.startBroadcast(stranger);
         _;
         vm.stopBroadcast();
     }
@@ -61,7 +72,16 @@ contract NodeOperators is
         if (depositCount > depositableValidatorsCount) {
             depositCount = depositableValidatorsCount;
         }
+        (, uint256 totalDepositedValidators, ) = csm.getStakingModuleSummary();
+
         csm.obtainDepositData(depositCount, "");
+
+        (, uint256 totalDepositedValidatorsAfter, ) = csm
+            .getStakingModuleSummary();
+        assertEq(
+            totalDepositedValidatorsAfter,
+            totalDepositedValidators + depositCount
+        );
     }
 
     function unvet(
@@ -72,6 +92,8 @@ contract NodeOperators is
             bytes.concat(bytes8(uint64(noId))),
             bytes.concat(bytes16(uint128(vettedKeysCount)))
         );
+
+        assertEq(csm.getNodeOperator(noId).totalVettedKeys, vettedKeysCount);
     }
 
     function exit(
@@ -82,6 +104,8 @@ contract NodeOperators is
             bytes.concat(bytes8(uint64(noId))),
             bytes.concat(bytes16(uint128(exitedKeysCount)))
         );
+
+        assertEq(csm.getNodeOperator(noId).totalExitedKeys, exitedKeysCount);
     }
 
     function stuck(
@@ -92,6 +116,11 @@ contract NodeOperators is
             bytes.concat(bytes8(uint64(noId))),
             bytes.concat(bytes16(uint128(stuckKeysCount)))
         );
+
+        assertEq(
+            csm.getNodeOperator(noId).stuckValidatorsCount,
+            stuckKeysCount
+        );
     }
 
     function withdraw(
@@ -99,11 +128,20 @@ contract NodeOperators is
         uint256 keyIndex,
         uint256 amount
     ) external broadcastVerifier {
-        csm.submitWithdrawal(noId, keyIndex, amount);
+        uint256 withdrawnBefore = csm.getNodeOperator(noId).totalWithdrawnKeys;
+
+        csm.submitWithdrawal(noId, keyIndex, amount, false);
+
+        assertTrue(csm.isValidatorWithdrawn(noId, keyIndex));
+        assertEq(
+            csm.getNodeOperator(noId).totalWithdrawnKeys,
+            withdrawnBefore + 1
+        );
     }
 
     function slash(uint256 noId, uint256 keyIndex) external broadcastVerifier {
         csm.submitInitialSlashing(noId, keyIndex);
+        assertTrue(csm.isValidatorSlashed(noId, keyIndex));
     }
 
     function targetLimit(
@@ -112,26 +150,60 @@ contract NodeOperators is
         uint256 limit
     ) external broadcastStakingRouter {
         csm.updateTargetValidatorsLimits(noId, targetLimitMode, limit);
+
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.targetLimit, limit);
+        assertEq(no.targetLimitMode, targetLimitMode);
     }
 
     function reportStealing(
         uint256 noId,
         uint256 amount
     ) external broadcastPenaltyReporter {
-        csm.reportELRewardsStealingPenalty(noId, "", amount);
+        uint256 lockedBefore = accounting.getActualLockedBond(noId);
+
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            amount
+        );
+
+        uint256 lockedAfter = accounting.getActualLockedBond(noId);
+        assertEq(
+            lockedAfter,
+            lockedBefore + amount + csm.EL_REWARDS_STEALING_FINE()
+        );
     }
 
     function cancelStealing(
         uint256 noId,
         uint256 amount
     ) external broadcastPenaltyReporter {
+        uint256 lockedBefore = accounting.getActualLockedBond(noId);
+
         csm.cancelELRewardsStealingPenalty(noId, amount);
+
+        uint256 lockedAfter = accounting.getActualLockedBond(noId);
+        assertEq(lockedAfter, lockedBefore - amount);
     }
 
     function settleStealing(uint256 noId) external broadcastPenaltySettler {
         uint256[] memory noIds = new uint256[](1);
         noIds[0] = noId;
         csm.settleELRewardsStealingPenalty(noIds);
+
+        assertEq(accounting.getActualLockedBond(noId), 0);
+    }
+
+    function compensateStealing(
+        uint256 noId,
+        uint256 amount
+    ) external broadcastStranger {
+        uint256 lockedBefore = accounting.getActualLockedBond(noId);
+
+        csm.compensateELRewardsStealingPenalty{ value: amount }(noId);
+
+        assertEq(accounting.getActualLockedBond(noId), lockedBefore - amount);
     }
 
     function exitRequest(
@@ -143,7 +215,7 @@ contract NodeOperators is
         IVEBO vebo = IVEBO(locator.validatorsExitBusOracle());
         bytes memory data;
 
-        bytes3 moduleId = bytes3(uint24(4));
+        bytes3 moduleId = bytes3(uint24(_getCSMId()));
         bytes5 nodeOpId = bytes5(uint40(noId));
         bytes8 validatorIndex = bytes8(uint64(validatorIndex));
 
@@ -165,7 +237,7 @@ contract NodeOperators is
         });
 
         address consensus = vebo.getConsensusContract();
-        _setBalance(consensus, "1000000000000000000");
+        _setBalance(consensus);
 
         vm.startBroadcast(consensus);
         vebo.submitConsensusReport(
@@ -191,6 +263,20 @@ contract NodeOperators is
         vebo.grantRole(vebo.SUBMIT_DATA_ROLE(), address(veboSubmitter));
         vm.stopBroadcast();
 
-        _setBalance(address(veboSubmitter), "1000000000000000000");
+        _setBalance(address(veboSubmitter));
+    }
+
+    error CSMNotFound();
+
+    function _getCSMId() internal view returns (uint256) {
+        uint256[] memory ids = stakingRouter.getStakingModuleIds();
+        for (uint256 i = ids.length - 1; i > 0; i--) {
+            IStakingRouter.StakingModule memory module = stakingRouter
+                .getStakingModule(ids[i]);
+            if (module.stakingModuleAddress == address(csm)) {
+                return ids[i];
+            }
+        }
+        revert CSMNotFound();
     }
 }

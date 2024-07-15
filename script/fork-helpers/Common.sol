@@ -25,13 +25,18 @@ contract ForkHelpersCommon is Script, DeploymentFixtures {
                 0
             )
         );
-        _setBalance(admin, "1000000000000000000");
+        _setBalance(admin);
     }
 
-    function _setBalance(address account, string memory balance) internal {
+    function _setBalance(address account) internal {
         vm.rpc(
             "anvil_setBalance",
-            string.concat('["', vm.toString(account), '", ', balance, "]")
+            string.concat(
+                '["',
+                vm.toString(account),
+                '", ',
+                "1000000000000000000]"
+            )
         );
     }
 }
