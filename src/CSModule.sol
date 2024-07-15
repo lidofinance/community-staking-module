@@ -256,13 +256,15 @@ contract CSModule is
         address managerAddress,
         address rewardAddress,
         bytes32[] calldata eaProof,
-        address referrer
+        address referrer,
+        bool allowUltraManager
     ) external payable whenResumed {
         uint256 nodeOperatorId = _createNodeOperator(
             managerAddress,
             rewardAddress,
             referrer,
-            eaProof
+            eaProof,
+            allowUltraManager
         );
 
         if (
@@ -305,13 +307,15 @@ contract CSModule is
         address rewardAddress,
         ICSAccounting.PermitInput calldata permit,
         bytes32[] calldata eaProof,
-        address referrer
+        address referrer,
+        bool allowUltraManager
     ) external whenResumed {
         uint256 nodeOperatorId = _createNodeOperator(
             managerAddress,
             rewardAddress,
             referrer,
-            eaProof
+            eaProof,
+            allowUltraManager
         );
 
         uint256 amount = accounting.getBondAmountByKeysCount(
@@ -348,13 +352,15 @@ contract CSModule is
         address rewardAddress,
         ICSAccounting.PermitInput calldata permit,
         bytes32[] calldata eaProof,
-        address referrer
+        address referrer,
+        bool allowUltraManager
     ) external whenResumed {
         uint256 nodeOperatorId = _createNodeOperator(
             managerAddress,
             rewardAddress,
             referrer,
-            eaProof
+            eaProof,
+            allowUltraManager
         );
 
         uint256 amount = accounting.getBondAmountByKeysCountWstETH(
@@ -685,6 +691,20 @@ contract CSModule is
         NOAddresses.resetNodeOperatorManagerAddress(
             _nodeOperators,
             nodeOperatorId
+        );
+    }
+
+    /// @notice Change rewardAddress if allowUltraManager is enabled for the Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param newAddress Proposed reward address
+    function changeNodeOperatorRewardAddress(
+        uint256 nodeOperatorId,
+        address newAddress
+    ) external {
+        NOAddresses.changeNodeOperatorRewardAddress(
+            _nodeOperators,
+            nodeOperatorId,
+            newAddress
         );
     }
 
@@ -1550,7 +1570,8 @@ contract CSModule is
         address managerAddress,
         address rewardAddress,
         address referrer,
-        bytes32[] calldata proof
+        bytes32[] calldata proof,
+        bool allowUltraManager
     ) internal returns (uint256 id) {
         if (!publicRelease) {
             if (proof.length == 0 || address(earlyAdoption) == address(0)) {
@@ -1567,6 +1588,7 @@ contract CSModule is
         no.rewardAddress = rewardAddress == address(0)
             ? msg.sender
             : rewardAddress;
+        no.allowUltraManager = allowUltraManager;
 
         unchecked {
             ++_nodeOperatorsCount;

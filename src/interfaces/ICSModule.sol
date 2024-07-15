@@ -25,6 +25,7 @@ struct NodeOperator {
     /* 3 */ address proposedManagerAddress;
     /* 4 */ address rewardAddress;
     /* 5 */ address proposedRewardAddress;
+    /* 5 */ bool allowUltraManager;
 }
 
 /// @title Lido's Community Staking Module interface

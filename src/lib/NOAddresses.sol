@@ -34,6 +34,7 @@ interface INOAddresses {
     error SenderIsNotManagerAddress();
     error SenderIsNotRewardAddress();
     error SenderIsNotProposedAddress();
+    error MethodCallIsNotAllowed();
 }
 
 library NOAddresses {
@@ -162,6 +163,33 @@ library NOAddresses {
             nodeOperatorId,
             previousManagerAddress,
             no.rewardAddress
+        );
+    }
+
+    /// @notice Change rewardAddress if allowUltraManager is enabled for the Node Operator.
+    ///         Should be called from the current manager address
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param newAddress New reward address
+    function changeNodeOperatorRewardAddress(
+        mapping(uint256 => NodeOperator) storage nodeOperators,
+        uint256 nodeOperatorId,
+        address newAddress
+    ) external {
+        NodeOperator storage no = nodeOperators[nodeOperatorId];
+        if (no.managerAddress == address(0))
+            revert ICSModule.NodeOperatorDoesNotExist();
+        if (!no.allowUltraManager)
+            revert INOAddresses.MethodCallIsNotAllowed();
+        if (no.managerAddress != msg.sender)
+            revert INOAddresses.SenderIsNotManagerAddress();
+        address oldAddress = no.rewardAddress;
+        no.rewardAddress = newAddress;
+        delete no.proposedRewardAddress;
+
+        emit INOAddresses.NodeOperatorRewardAddressChanged(
+            nodeOperatorId,
+            oldAddress,
+            newAddress
         );
     }
 }
