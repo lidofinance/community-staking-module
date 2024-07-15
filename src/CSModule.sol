@@ -139,7 +139,6 @@ contract CSModule is
     );
     event ELRewardsStealingPenaltySettled(uint256 indexed nodeOperatorId);
 
-    error NodeOperatorDoesNotExist();
     error SenderIsNotEligible();
     error InvalidVetKeysPointer();
     error StuckKeysHigherThanNonExited();
