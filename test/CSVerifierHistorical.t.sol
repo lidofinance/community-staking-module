@@ -51,9 +51,12 @@ contract CSVerifierHistoricalTest is Test {
             module: address(module),
             slotsPerEpoch: 32,
             gIHistoricalSummaries: pack(0x3b, 0),
-            gIFirstWithdrawal: pack(0xe1c0, 4),
-            gIFirstValidator: pack(0x560000000000, 40),
-            firstSupportedSlot: Slot.wrap(100_500) // Any value less than the slots from the fixtures.
+            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+            gIFirstValidatorPrev: pack(0x560000000000, 40),
+            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            firstSupportedSlot: Slot.wrap(100_500), // Any value less than the slots from the fixtures.
+            pivotSlot: Slot.wrap(100_500)
         });
     }
 

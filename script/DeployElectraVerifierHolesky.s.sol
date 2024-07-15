@@ -6,7 +6,7 @@ pragma solidity 0.8.24;
 import { console } from "forge-std/console.sol";
 import { Script } from "forge-std/Script.sol";
 
-import { CSVerifierBiFork } from "../src/CSVerifierBiFork.sol";
+import { CSVerifier } from "../src/CSVerifier.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 
 contract DeployElectraVerifierHolesky is Script {
@@ -29,7 +29,7 @@ contract DeployElectraVerifierHolesky is Script {
         vm.startBroadcast(pk);
         {
             // FIXME: Fill in the Electra's indices as soon as they will be finalized.
-            // CSVerifierBiFork verifier = new CSVerifierBiFork({
+            // CSVerifier verifier = new CSVerifier({
             //     locator: 0x28FAB2059C713A7F9D8c86Db49f9bb0e96Af1ef8,
             //     module: 0x4562c3e63c2e586cD1651B958C22F88135aCAd4f,
             //     slotsPerEpoch: 32,

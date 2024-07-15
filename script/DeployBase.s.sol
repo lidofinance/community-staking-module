@@ -173,10 +173,15 @@ abstract contract DeployBase is Script {
                 locator: address(locator),
                 module: address(csm),
                 slotsPerEpoch: uint64(config.slotsPerEpoch),
+                gIFirstWithdrawalPrev: config.gIFirstWithdrawal,
+                gIFirstWithdrawalCurr: config.gIFirstWithdrawal,
+                gIFirstValidatorPrev: config.gIFirstValidator,
+                gIFirstValidatorCurr: config.gIFirstValidator,
                 gIHistoricalSummaries: config.gIHistoricalSummaries,
-                gIFirstWithdrawal: config.gIFirstWithdrawal,
-                gIFirstValidator: config.gIFirstValidator,
                 firstSupportedSlot: Slot.wrap(
+                    uint64(config.verifierSupportedEpoch * config.slotsPerEpoch)
+                ),
+                pivotSlot: Slot.wrap(
                     uint64(config.verifierSupportedEpoch * config.slotsPerEpoch)
                 )
             });

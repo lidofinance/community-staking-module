@@ -11,7 +11,7 @@ import { ICSModule } from "../src/interfaces/ICSModule.sol";
 
 import { GIndex } from "../src/lib/GIndex.sol";
 
-import { CSVerifierBiFork as CSVerifier } from "../src/CSVerifierBiFork.sol";
+import { CSVerifier } from "../src/CSVerifier.sol";
 import { pack } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 

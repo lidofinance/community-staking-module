@@ -36,17 +36,26 @@ contract CSVerifier is ICSVerifier {
 
     uint64 public immutable SLOTS_PER_EPOCH;
 
+    /// @dev This index is relative to a state like: `BeaconState.latest_execution_payload_header.withdrawals[0]`.
+    GIndex public immutable GI_FIRST_WITHDRAWAL_PREV;
+
+    /// @dev This index is relative to a state like: `BeaconState.latest_execution_payload_header.withdrawals[0]`.
+    GIndex public immutable GI_FIRST_WITHDRAWAL_CURR;
+
+    /// @dev This index is relative to a state like: `BeaconState.validators[0]`.
+    GIndex public immutable GI_FIRST_VALIDATOR_PREV;
+
+    /// @dev This index is relative to a state like: `BeaconState.validators[0]`.
+    GIndex public immutable GI_FIRST_VALIDATOR_CURR;
+
     /// @dev This index is relative to a state like: `BeaconState.historical_summaries`.
     GIndex public immutable GI_HISTORICAL_SUMMARIES;
 
-    /// @dev This index is relative to a state like: `BeaconState.latest_execution_payload_header.withdrawals[0]`.
-    GIndex public immutable GI_FIRST_WITHDRAWAL;
-
-    /// @dev This index is relative to a state like: `BeaconState.validators[0]`.
-    GIndex public immutable GI_FIRST_VALIDATOR;
-
     /// @dev The very first slot the verifier is supposed to accept proofs for.
     Slot public immutable FIRST_SUPPORTED_SLOT;
+
+    /// @dev The first slot of the currently compatible fork.
+    Slot public immutable PIVOT_SLOT;
 
     /// @dev Lido Locator contract
     ILidoLocator public immutable LOCATOR;
@@ -61,33 +70,46 @@ contract CSVerifier is ICSVerifier {
     error PartialWitdrawal();
     error ValidatorNotWithdrawn();
     error InvalidWithdrawalAddress();
-    error UnsupportedSlot(Slot);
+    error UnsupportedSlot(Slot slot);
     error ZeroLocatorAddress();
     error ZeroModuleAddress();
+    error InvalidPivotSlot();
 
+    /// @dev The previous and current forks can be essentially the same.
     constructor(
         address locator,
         address module,
         uint64 slotsPerEpoch,
+        GIndex gIFirstWithdrawalPrev,
+        GIndex gIFirstWithdrawalCurr,
+        GIndex gIFirstValidatorPrev,
+        GIndex gIFirstValidatorCurr,
         GIndex gIHistoricalSummaries,
-        GIndex gIFirstWithdrawal,
-        GIndex gIFirstValidator,
-        Slot firstSupportedSlot
+        Slot firstSupportedSlot,
+        Slot pivotSlot
     ) {
         if (slotsPerEpoch == 0) revert InvalidChainConfig();
         if (module == address(0)) revert ZeroModuleAddress();
         if (locator == address(0)) revert ZeroLocatorAddress();
+        if (firstSupportedSlot > pivotSlot) {
+            revert InvalidPivotSlot();
+        }
 
         MODULE = ICSModule(module);
         LOCATOR = ILidoLocator(locator);
 
         SLOTS_PER_EPOCH = slotsPerEpoch;
 
+        GI_FIRST_WITHDRAWAL_PREV = gIFirstWithdrawalPrev;
+        GI_FIRST_WITHDRAWAL_CURR = gIFirstWithdrawalCurr;
+
+        GI_FIRST_VALIDATOR_PREV = gIFirstValidatorPrev;
+        GI_FIRST_VALIDATOR_CURR = gIFirstValidatorCurr;
+
         GI_HISTORICAL_SUMMARIES = gIHistoricalSummaries;
-        GI_FIRST_WITHDRAWAL = gIFirstWithdrawal;
-        GI_FIRST_VALIDATOR = gIFirstValidator;
 
         FIRST_SUPPORTED_SLOT = firstSupportedSlot;
+        PIVOT_SLOT = pivotSlot;
     }
 
     /// @notice Verify slashing proof and report slashing to the module for valid proofs
@@ -135,7 +157,7 @@ contract CSVerifier is ICSVerifier {
             proof: witness.validatorProof,
             root: beaconBlock.header.stateRoot,
             leaf: validator.hashTreeRoot(),
-            gI: _getValidatorGI(witness.validatorIndex)
+            gI: _getValidatorGI(witness.validatorIndex, beaconBlock.header.slot)
         });
 
         MODULE.submitInitialSlashing(nodeOperatorId, keyIndex);
@@ -173,7 +195,7 @@ contract CSVerifier is ICSVerifier {
 
         uint256 withdrawalAmount = _processWithdrawalProof({
             witness: witness,
-            stateEpoch: _computeEpochAtSlot(beaconBlock.header.slot),
+            stateSlot: beaconBlock.header.slot,
             stateRoot: beaconBlock.header.stateRoot,
             pubkey: pubkey
         });
@@ -217,6 +239,7 @@ contract CSVerifier is ICSVerifier {
         if (!GI_HISTORICAL_SUMMARIES.isParentOf(oldBlock.rootGIndex)) {
             revert InvalidGIndex();
         }
+
         SSZ.verifyProof({
             proof: oldBlock.proof,
             root: beaconBlock.header.stateRoot,
@@ -232,7 +255,7 @@ contract CSVerifier is ICSVerifier {
 
         uint256 withdrawalAmount = _processWithdrawalProof({
             witness: witness,
-            stateEpoch: _computeEpochAtSlot(oldBlock.header.slot),
+            stateSlot: oldBlock.header.slot,
             stateRoot: oldBlock.header.stateRoot,
             pubkey: pubkey
         });
@@ -257,7 +280,7 @@ contract CSVerifier is ICSVerifier {
     /// @dev `stateRoot` is supposed to be trusted at this point.
     function _processWithdrawalProof(
         WithdrawalWitness calldata witness,
-        uint256 stateEpoch,
+        Slot stateSlot,
         bytes32 stateRoot,
         bytes memory pubkey
     ) internal view returns (uint256 withdrawalAmount) {
@@ -269,7 +292,7 @@ contract CSVerifier is ICSVerifier {
             revert InvalidWithdrawalAddress();
         }
 
-        if (stateEpoch < witness.withdrawableEpoch) {
+        if (_computeEpochAtSlot(stateSlot) < witness.withdrawableEpoch) {
             revert ValidatorNotWithdrawn();
         }
 
@@ -314,7 +337,7 @@ contract CSVerifier is ICSVerifier {
             proof: witness.validatorProof,
             root: stateRoot,
             leaf: validator.hashTreeRoot(),
-            gI: _getValidatorGI(witness.validatorIndex)
+            gI: _getValidatorGI(witness.validatorIndex, stateSlot)
         });
 
         Withdrawal memory withdrawal = Withdrawal({
@@ -328,18 +351,30 @@ contract CSVerifier is ICSVerifier {
             proof: witness.withdrawalProof,
             root: stateRoot,
             leaf: withdrawal.hashTreeRoot(),
-            gI: _getWithdrawalGI(witness.withdrawalOffset)
+            gI: _getWithdrawalGI(witness.withdrawalOffset, stateSlot)
         });
 
         return withdrawal.amountWei();
     }
 
-    function _getValidatorGI(uint256 offset) internal view returns (GIndex) {
-        return GI_FIRST_VALIDATOR.shr(offset);
+    function _getValidatorGI(
+        uint256 offset,
+        Slot stateSlot
+    ) internal view returns (GIndex) {
+        GIndex gI = stateSlot < PIVOT_SLOT
+            ? GI_FIRST_VALIDATOR_PREV
+            : GI_FIRST_VALIDATOR_CURR;
+        return gI.shr(offset);
     }
 
-    function _getWithdrawalGI(uint256 offset) internal view returns (GIndex) {
-        return GI_FIRST_WITHDRAWAL.shr(offset);
+    function _getWithdrawalGI(
+        uint256 offset,
+        Slot stateSlot
+    ) internal view returns (GIndex) {
+        GIndex gI = stateSlot < PIVOT_SLOT
+            ? GI_FIRST_WITHDRAWAL_PREV
+            : GI_FIRST_WITHDRAWAL_CURR;
+        return gI.shr(offset);
     }
 
     // From HashConsensus contract.
