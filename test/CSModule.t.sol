@@ -3165,13 +3165,15 @@ contract CsmQueueOps is CSMCommon {
     }
 }
 
-contract CsmUnvetKeys is CSMCommon {
-    function test_unvetKeys_counters() public {
+contract CsmDecreaseVettedSigningKeysCount is CSMCommon {
+    function test_decreaseVettedSigningKeysCount_counters() public {
         uint256 noId = createNodeOperator(3);
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
         emit CSModule.VettedSigningKeysCountChanged(noId, 1);
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.VettedSigningKeysCountDecreased(noId);
         unvetKeys({ noId: noId, to: 1 });
 
         NodeOperator memory no = csm.getNodeOperator(noId);
@@ -3180,31 +3182,101 @@ contract CsmUnvetKeys is CSMCommon {
         assertEq(no.depositableValidatorsCount, 1);
     }
 
-    function test_unvetKeys_MultipleOperators() public {
-        uint256 noIdOne = createNodeOperator(3);
-        uint256 noIdTwo = createNodeOperator(7);
-        uint256 nonce = csm.getNonce();
+    function test_decreaseVettedSigningKeysCount_MultipleOperators() public {
+        uint256 firstNoId = createNodeOperator(10);
+        uint256 secondNoId = createNodeOperator(7);
+        uint256 thirdNoId = createNodeOperator(15);
+        uint256 newVettedFirst = 5;
+        uint256 newVettedSecond = 3;
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountChanged(noIdOne, 2);
-        emit CSModule.VettedSigningKeysCountChanged(noIdTwo, 3);
+        emit CSModule.VettedSigningKeysCountChanged(firstNoId, newVettedFirst);
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.VettedSigningKeysCountDecreased(firstNoId);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.VettedSigningKeysCountChanged(
+            secondNoId,
+            newVettedSecond
+        );
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.VettedSigningKeysCountDecreased(secondNoId);
+
         csm.decreaseVettedSigningKeysCount(
-            bytes.concat(bytes8(uint64(noIdOne)), bytes8(uint64(noIdTwo))),
-            bytes.concat(bytes16(uint128(2)), bytes16(uint128(3)))
+            bytes.concat(bytes8(uint64(firstNoId)), bytes8(uint64(secondNoId))),
+            bytes.concat(
+                bytes16(uint128(newVettedFirst)),
+                bytes16(uint128(newVettedSecond))
+            )
         );
 
-        assertEq(csm.getNonce(), nonce + 1);
-        NodeOperator memory no;
-        no = csm.getNodeOperator(noIdOne);
-        assertEq(no.totalVettedKeys, 2);
-        no = csm.getNodeOperator(noIdTwo);
-        assertEq(no.totalVettedKeys, 3);
+        uint256 actualVettedFirst = csm
+            .getNodeOperator(firstNoId)
+            .totalVettedKeys;
+        uint256 actualVettedSecond = csm
+            .getNodeOperator(secondNoId)
+            .totalVettedKeys;
+        uint256 actualVettedThird = csm
+            .getNodeOperator(thirdNoId)
+            .totalVettedKeys;
+        assertEq(actualVettedFirst, newVettedFirst);
+        assertEq(actualVettedSecond, newVettedSecond);
+        assertEq(actualVettedThird, 15);
     }
 
-    function test_unvetKeys_RevertWhen_NodeOperatorDoesntExist() public {
-        createNodeOperator(); // Make sure there is at least one node operator.
+    function test_decreaseVettedSigningKeysCount_RevertWhen_MissingVettedData()
+        public
+    {
+        uint256 firstNoId = createNodeOperator(10);
+        uint256 secondNoId = createNodeOperator(7);
+        uint256 newVettedFirst = 5;
+
+        vm.expectRevert();
+        csm.decreaseVettedSigningKeysCount(
+            bytes.concat(bytes8(uint64(firstNoId)), bytes8(uint64(secondNoId))),
+            bytes.concat(bytes16(uint128(newVettedFirst)))
+        );
+    }
+
+    function test_decreaseVettedSigningKeysCount_RevertWhen_NewVettedEqOld()
+        public
+    {
+        uint256 noId = createNodeOperator(10);
+        uint256 newVetted = 10;
+
+        vm.expectRevert(CSModule.InvalidVetKeysPointer.selector);
+        unvetKeys(noId, newVetted);
+    }
+
+    function test_decreaseVettedSigningKeysCount_RevertWhen_NewVettedGreaterOld()
+        public
+    {
+        uint256 noId = createNodeOperator(10);
+        uint256 newVetted = 15;
+
+        vm.expectRevert(CSModule.InvalidVetKeysPointer.selector);
+        unvetKeys(noId, newVetted);
+    }
+
+    function test_decreaseVettedSigningKeysCount_RevertWhen_NewVettedLowerTotalDeposited()
+        public
+    {
+        uint256 noId = createNodeOperator(10);
+        csm.obtainDepositData(5, "");
+        uint256 newVetted = 4;
+
+        vm.expectRevert(CSModule.InvalidVetKeysPointer.selector);
+        unvetKeys(noId, newVetted);
+    }
+
+    function test_decreaseVettedSigningKeysCount_RevertWhen_NodeOperatorDoesNotExist()
+        public
+    {
+        uint256 noId = createNodeOperator(10);
+        uint256 newVetted = 15;
+
         vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        unvetKeys(1, 0);
+        unvetKeys(noId + 1, newVetted);
     }
 }
 
@@ -6499,109 +6571,6 @@ contract CSMMisc is CSMCommon {
         uint256 activeCount = csm.getActiveNodeOperatorsCount();
 
         assertEq(activeCount, 3);
-    }
-
-    function test_decreaseVettedSigningKeysCount_OneOperator() public {
-        uint256 noId = createNodeOperator(10);
-        uint256 newVetted = 5;
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountChanged(noId, newVetted);
-        unvetKeys(noId, newVetted);
-
-        uint256 actualVetted = csm.getNodeOperator(noId).totalVettedKeys;
-        assertEq(actualVetted, newVetted);
-    }
-
-    function test_decreaseVettedSigningKeysCount_MultipleOperators() public {
-        uint256 firstNoId = createNodeOperator(10);
-        uint256 secondNoId = createNodeOperator(7);
-        uint256 thirdNoId = createNodeOperator(15);
-        uint256 newVettedFirst = 5;
-        uint256 newVettedSecond = 3;
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountChanged(firstNoId, newVettedFirst);
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountChanged(
-            secondNoId,
-            newVettedSecond
-        );
-        csm.decreaseVettedSigningKeysCount(
-            bytes.concat(bytes8(uint64(firstNoId)), bytes8(uint64(secondNoId))),
-            bytes.concat(
-                bytes16(uint128(newVettedFirst)),
-                bytes16(uint128(newVettedSecond))
-            )
-        );
-
-        uint256 actualVettedFirst = csm
-            .getNodeOperator(firstNoId)
-            .totalVettedKeys;
-        uint256 actualVettedSecond = csm
-            .getNodeOperator(secondNoId)
-            .totalVettedKeys;
-        uint256 actualVettedThird = csm
-            .getNodeOperator(thirdNoId)
-            .totalVettedKeys;
-        assertEq(actualVettedFirst, newVettedFirst);
-        assertEq(actualVettedSecond, newVettedSecond);
-        assertEq(actualVettedThird, 15);
-    }
-
-    function test_decreaseVettedSigningKeysCount_RevertWhen_MissingVettedData()
-        public
-    {
-        uint256 firstNoId = createNodeOperator(10);
-        uint256 secondNoId = createNodeOperator(7);
-        uint256 newVettedFirst = 5;
-
-        vm.expectRevert();
-        csm.decreaseVettedSigningKeysCount(
-            bytes.concat(bytes8(uint64(firstNoId)), bytes8(uint64(secondNoId))),
-            bytes.concat(bytes16(uint128(newVettedFirst)))
-        );
-    }
-
-    function test_decreaseVettedSigningKeysCount_RevertWhen_NewVettedEqOld()
-        public
-    {
-        uint256 noId = createNodeOperator(10);
-        uint256 newVetted = 10;
-
-        vm.expectRevert(CSModule.InvalidVetKeysPointer.selector);
-        unvetKeys(noId, newVetted);
-    }
-
-    function test_decreaseVettedSigningKeysCount_RevertWhen_NewVettedGreaterOld()
-        public
-    {
-        uint256 noId = createNodeOperator(10);
-        uint256 newVetted = 15;
-
-        vm.expectRevert(CSModule.InvalidVetKeysPointer.selector);
-        unvetKeys(noId, newVetted);
-    }
-
-    function test_decreaseVettedSigningKeysCount_RevertWhen_NewVettedLowerTotalDeposited()
-        public
-    {
-        uint256 noId = createNodeOperator(10);
-        csm.obtainDepositData(5, "");
-        uint256 newVetted = 4;
-
-        vm.expectRevert(CSModule.InvalidVetKeysPointer.selector);
-        unvetKeys(noId, newVetted);
-    }
-
-    function test_decreaseVettedSigningKeysCount_RevertWhen_NodeOperatorDoesNotExist()
-        public
-    {
-        uint256 noId = createNodeOperator(10);
-        uint256 newVetted = 15;
-
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        unvetKeys(noId + 1, newVetted);
     }
 
     function test_setKeyRemovalCharge() public {
