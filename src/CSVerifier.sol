@@ -178,7 +178,12 @@ contract CSVerifier is ICSVerifier {
             pubkey: pubkey
         });
 
-        MODULE.submitWithdrawal(nodeOperatorId, keyIndex, withdrawalAmount);
+        MODULE.submitWithdrawal(
+            nodeOperatorId,
+            keyIndex,
+            withdrawalAmount,
+            witness.slashed
+        );
     }
 
     /// @notice Verify withdrawal proof against historical summaries data and report withdrawal to the module for valid proofs
@@ -237,7 +242,12 @@ contract CSVerifier is ICSVerifier {
             pubkey: pubkey
         });
 
-        MODULE.submitWithdrawal(nodeOperatorId, keyIndex, withdrawalAmount);
+        MODULE.submitWithdrawal(
+            nodeOperatorId,
+            keyIndex,
+            withdrawalAmount,
+            witness.slashed
+        );
     }
 
     function _getParentBlockRoot(
