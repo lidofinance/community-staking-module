@@ -45,7 +45,8 @@ contract CSVerifierBiForkTestConstructor is Test {
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
             gIFirstValidatorCurr: pack(0x560000000000, 40),
-            gIHistoricalSummaries: pack(0x3b, 0),
+            gIHistoricalSummariesPrev: pack(0x3b, 0),
+            gIHistoricalSummariesCurr: pack(0x3b, 0),
             firstSupportedSlot: Slot.wrap(8_192),
             pivotSlot: Slot.wrap(950_272)
         });
@@ -54,7 +55,11 @@ contract CSVerifierBiForkTestConstructor is Test {
         assertEq(address(verifier.LOCATOR()), address(locator));
         assertEq(verifier.SLOTS_PER_EPOCH(), 32);
         assertEq(
-            GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES()),
+            GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES_PREV()),
+            GIndex.unwrap(pack(0x3b, 0))
+        );
+        assertEq(
+            GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES_CURR()),
             GIndex.unwrap(pack(0x3b, 0))
         );
         assertEq(
@@ -93,7 +98,8 @@ contract CSVerifierBiForkTestConstructor is Test {
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
             gIFirstValidatorCurr: pack(0x560000000000, 40),
-            gIHistoricalSummaries: pack(0x3b, 0),
+            gIHistoricalSummariesPrev: pack(0x3b, 0),
+            gIHistoricalSummariesCurr: pack(0x3b, 0),
             firstSupportedSlot: Slot.wrap(8_192),
             pivotSlot: Slot.wrap(950_272)
         });
@@ -109,7 +115,8 @@ contract CSVerifierBiForkTestConstructor is Test {
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
             gIFirstValidatorCurr: pack(0x560000000000, 40),
-            gIHistoricalSummaries: pack(0x3b, 0),
+            gIHistoricalSummariesPrev: pack(0x3b, 0),
+            gIHistoricalSummariesCurr: pack(0x3b, 0),
             firstSupportedSlot: Slot.wrap(8_192),
             pivotSlot: Slot.wrap(950_272)
         });
@@ -125,7 +132,8 @@ contract CSVerifierBiForkTestConstructor is Test {
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
             gIFirstValidatorCurr: pack(0x560000000000, 40),
-            gIHistoricalSummaries: pack(0x3b, 0),
+            gIHistoricalSummariesPrev: pack(0x3b, 0),
+            gIHistoricalSummariesCurr: pack(0x3b, 0),
             firstSupportedSlot: Slot.wrap(8_192),
             pivotSlot: Slot.wrap(950_272)
         });
@@ -141,7 +149,8 @@ contract CSVerifierBiForkTestConstructor is Test {
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
             gIFirstValidatorCurr: pack(0x560000000000, 40),
-            gIHistoricalSummaries: pack(0x3b, 0),
+            gIHistoricalSummariesPrev: pack(0x3b, 0),
+            gIHistoricalSummariesCurr: pack(0x3b, 0),
             firstSupportedSlot: Slot.wrap(200),
             pivotSlot: Slot.wrap(100)
         });
@@ -177,7 +186,8 @@ contract CSVerifierBiForkHistoricalTest is Test {
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
             gIFirstValidatorCurr: pack(0x560000000000, 40),
-            gIHistoricalSummaries: pack(0x3b, 0),
+            gIHistoricalSummariesPrev: pack(0x3b, 0),
+            gIHistoricalSummariesCurr: pack(0x3b, 0),
             firstSupportedSlot: Slot.wrap(8_192),
             pivotSlot: Slot.wrap(950_272)
         });
