@@ -91,6 +91,8 @@ gas-report:
             if to_print:
                 fh.write(line + '\n')
 
+    print(f"Done. Gas report saved to {filename}")
+
 coverage *args:
     forge coverage --no-match-path 'test/fork/*' {{args}}
 
