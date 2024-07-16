@@ -29,7 +29,11 @@ jobs:
     env:
       FORGE_REV: 844caa8
       JUST_TAG: 1.24.0
+      RUST_TOOLCHAIN_VERSION: 1.76.0
     steps:
+      - name: Install specific version of Rust
+        run: rustup install ${{env.RUST_TOOLCHAIN_VERSION}} && rustup default ${{env.RUST_TOOLCHAIN_VERSION}}
+
       - name: Build cache params
         id: cache
         run: |
