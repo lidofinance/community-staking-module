@@ -429,7 +429,11 @@ contract CSVerifierDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertEq(address(verifier.MODULE()), address(csm));
         assertEq(verifier.SLOTS_PER_EPOCH(), deployParams.slotsPerEpoch);
         assertEq(
-            GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES()),
+            GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES_PREV()),
+            GIndex.unwrap(deployParams.gIHistoricalSummaries)
+        );
+        assertEq(
+            GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES_CURR()),
             GIndex.unwrap(deployParams.gIHistoricalSummaries)
         );
         assertEq(
