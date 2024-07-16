@@ -5,6 +5,8 @@
 vote:
     just _impersonate-script SimulateVote
 
+public-release:
+    just _impersonate-script PauseResume --sig="publicRelease"
 pause-csm:
     just _impersonate-script PauseResume --sig="pauseCSM"
 
