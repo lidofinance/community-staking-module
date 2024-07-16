@@ -3835,7 +3835,9 @@ contract CsmRemoveKeys is CSMCommon {
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 1 });
         assertEq(csm.getNonce(), nonce + 1);
     }
+}
 
+contract CSMRemoveKeysChargeFee is CSMCommon {
     function test_removeKeys_chargeFee() public {
         uint256 noId = createNodeOperator(3);
 
