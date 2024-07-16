@@ -2821,6 +2821,14 @@ contract CSAccountingDepositEthTest is CSAccountingBaseTest {
         );
         assertEq(accounting.totalBondShares(), 0);
     }
+
+    function test_depositETH_revertWhen_SenderIsNotCSM() public {
+        vm.deal(stranger, 32 ether);
+        vm.prank(stranger);
+
+        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+        accounting.depositETH{ value: 32 ether }(stranger, 0);
+    }
 }
 
 contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
@@ -3080,6 +3088,24 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
             vm.getRecordedLogs().length,
             1,
             "should emit only one event about deposit"
+        );
+    }
+
+    function test_depositStETH_revertWhen_SenderIsNotCSM() public {
+        vm.prank(stranger);
+
+        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+        accounting.depositStETH(
+            stranger,
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                v: 0,
+                r: 0,
+                s: 0
+            })
         );
     }
 }
@@ -3361,6 +3387,23 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
             "should emit only one event about deposit"
         );
     }
+
+    function test_depositWstETH_revertWhen_SenderIsNotCSM() public {
+        vm.prank(stranger);
+        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+        accounting.depositWstETH(
+            stranger,
+            0,
+            100,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
 }
 
 contract CSAccountingPenalizeTest is CSAccountingBaseTest {
@@ -3519,6 +3562,18 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         vm.prank(address(stakingModule));
         vm.expectRevert(CSAccounting.ElRewardsVaultReceiveFailed.selector);
         accounting.compensateLockedBondETH{ value: 0.4 ether }(0);
+    }
+
+    function test_compensateLockedBondETH_RevertWhen_SenderIsNotCSM() public {
+        mock_getNodeOperatorsCount(1);
+        vm.deal(stranger, 1 ether);
+
+        vm.prank(address(stakingModule));
+        accounting.lockBondETH(0, 1 ether);
+
+        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+        vm.prank(stranger);
+        accounting.compensateLockedBondETH{ value: 1 ether }(0);
     }
 
     function test_settleLockedBondETH() public {
