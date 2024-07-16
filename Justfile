@@ -1,4 +1,5 @@
 set dotenv-load
+import "fork.just"
 
 chain := env_var_or_default("CHAIN", "mainnet")
 deploy_script_name := if chain == "mainnet" {
@@ -149,12 +150,6 @@ test-local *args:
     RPC_URL={{anvil_rpc_url}} \
         just test-deployment {{args}}
     just kill-fork
-
-simulate-vote:
-    cast rpc --rpc-url={{anvil_rpc_url}} anvil_autoImpersonateAccount true
-    forge script script/fork-helpers/SimulateVote.sol --rpc-url={{anvil_rpc_url}} -vvv \
-        --broadcast --slow --unlocked --sender=`cat localhost.json | jq -r ".available_accounts[0]"`
-    cast rpc --rpc-url={{anvil_rpc_url}} anvil_autoImpersonateAccount false
 
 _warn message:
     @tput setaf 3 && printf "[WARNING]" && tput sgr0 && echo " {{message}}"
