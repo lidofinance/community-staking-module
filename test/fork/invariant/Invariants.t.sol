@@ -8,7 +8,7 @@ import "forge-std/Test.sol";
 import { Utilities } from "../../helpers/Utilities.sol";
 import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
 import { NodeOperator } from "../../../src/interfaces/ICSModule.sol";
-import "../../../src/lib/QueueLib.sol";
+import { QueueLib, Batch } from "../../../src/lib/QueueLib.sol";
 
 contract InvariantsBase is Test, Utilities, DeploymentFixtures {
     function setUp() public {

@@ -34,7 +34,7 @@ fs_permissions = [
     { access = "read", path = "./test/fixtures" },
 ]
 
-ignored_warnings_from = ["src/lib/base-oracle/HashConsensus.sol", "test/helpers/mocks/LidoMock.sol"]
+ignored_warnings_from = ["src/lib/base-oracle/HashConsensus.sol", "test/helpers/mocks/LidoMock.sol", "test/OssifiableProxy.t.sol"]
 
 [profile.ci]
 verbosity = 3
