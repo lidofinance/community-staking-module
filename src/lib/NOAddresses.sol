@@ -34,6 +34,7 @@ interface INOAddresses {
     error SenderIsNotManagerAddress();
     error SenderIsNotRewardAddress();
     error SenderIsNotProposedAddress();
+    error MethodCallIsNotAllowed();
 }
 
 library NOAddresses {
@@ -57,6 +58,7 @@ library NOAddresses {
 
         address oldProposedAddress = no.proposedManagerAddress;
         no.proposedManagerAddress = proposedAddress;
+
         emit INOAddresses.NodeOperatorManagerAddressChangeProposed(
             nodeOperatorId,
             oldProposedAddress,
@@ -76,6 +78,7 @@ library NOAddresses {
             revert ICSModule.NodeOperatorDoesNotExist();
         if (no.proposedManagerAddress != msg.sender)
             revert INOAddresses.SenderIsNotProposedAddress();
+
         address oldAddress = no.managerAddress;
         no.managerAddress = msg.sender;
         delete no.proposedManagerAddress;
@@ -107,6 +110,7 @@ library NOAddresses {
 
         address oldProposedAddress = no.proposedRewardAddress;
         no.proposedRewardAddress = proposedAddress;
+
         emit INOAddresses.NodeOperatorRewardAddressChangeProposed(
             nodeOperatorId,
             oldProposedAddress,
@@ -126,6 +130,7 @@ library NOAddresses {
             revert ICSModule.NodeOperatorDoesNotExist();
         if (no.proposedRewardAddress != msg.sender)
             revert INOAddresses.SenderIsNotProposedAddress();
+
         address oldAddress = no.rewardAddress;
         no.rewardAddress = msg.sender;
         delete no.proposedRewardAddress;
@@ -147,6 +152,8 @@ library NOAddresses {
         NodeOperator storage no = nodeOperators[nodeOperatorId];
         if (no.rewardAddress == address(0))
             revert ICSModule.NodeOperatorDoesNotExist();
+        if (no.extendedManagerPermissions)
+            revert INOAddresses.MethodCallIsNotAllowed();
         if (no.rewardAddress != msg.sender)
             revert INOAddresses.SenderIsNotRewardAddress();
         if (no.managerAddress == no.rewardAddress)
@@ -162,6 +169,36 @@ library NOAddresses {
             nodeOperatorId,
             previousManagerAddress,
             no.rewardAddress
+        );
+    }
+
+    /// @notice Change rewardAddress if extendedManagerPermissions is enabled for the Node Operator.
+    ///         Should be called from the current manager address
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param newAddress New reward address
+    function changeNodeOperatorRewardAddress(
+        mapping(uint256 => NodeOperator) storage nodeOperators,
+        uint256 nodeOperatorId,
+        address newAddress
+    ) external {
+        NodeOperator storage no = nodeOperators[nodeOperatorId];
+        if (no.managerAddress == address(0))
+            revert ICSModule.NodeOperatorDoesNotExist();
+        if (!no.extendedManagerPermissions)
+            revert INOAddresses.MethodCallIsNotAllowed();
+        if (no.managerAddress != msg.sender)
+            revert INOAddresses.SenderIsNotManagerAddress();
+
+        address oldAddress = no.rewardAddress;
+        no.rewardAddress = newAddress;
+        // @dev Gas golfing
+        if (no.proposedRewardAddress != address(0))
+            delete no.proposedRewardAddress;
+
+        emit INOAddresses.NodeOperatorRewardAddressChanged(
+            nodeOperatorId,
+            oldAddress,
+            newAddress
         );
     }
 }

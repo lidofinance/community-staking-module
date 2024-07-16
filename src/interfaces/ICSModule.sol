@@ -25,6 +25,13 @@ struct NodeOperator {
     /* 3 */ address proposedManagerAddress;
     /* 4 */ address rewardAddress;
     /* 5 */ address proposedRewardAddress;
+    /* 5 */ bool extendedManagerPermissions;
+}
+
+struct NodeOperatorManagementProperties {
+    address managerAddress;
+    address rewardAddress;
+    bool extendedManagerPermissions;
 }
 
 /// @title Lido's Community Staking Module interface

@@ -5,6 +5,7 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
+import { NodeOperatorManagementProperties } from "../../../src/interfaces/ICSModule.sol";
 import { CSModule } from "../../../src/CSModule.sol";
 import { CSAccounting } from "../../../src/CSAccounting.sol";
 import { IWstETH } from "../../../src/interfaces/IWstETH.sol";
@@ -57,8 +58,11 @@ contract DepositIntegrationTest is
             2,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             new bytes32[](0),
             address(0)
         );
