@@ -29,11 +29,7 @@ jobs:
     env:
       FORGE_REV: 844caa8
       JUST_TAG: 1.24.0
-      RUST_TOOLCHAIN_VERSION: 1.76.0
     steps:
-      - name: Install specific version of Rust
-        run: rustup install ${{env.RUST_TOOLCHAIN_VERSION}} && rustup default ${{env.RUST_TOOLCHAIN_VERSION}}
-
       - name: Build cache params
         id: cache
         run: |
@@ -57,7 +53,7 @@ jobs:
         if: steps.get-cache.outputs.cache-hit != 'true'
 
       - name: Install forge & anvil
-        run: cargo install --git https://github.com/foundry-rs/foundry --rev "$FORGE_REV" --profile local forge anvil
+        run: cargo install --git https://github.com/foundry-rs/foundry --rev "$FORGE_REV" --profile release --locked forge anvil
         if: steps.get-cache.outputs.cache-hit != 'true'
 
   linters:
