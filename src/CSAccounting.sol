@@ -18,8 +18,6 @@ import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
-// @todo: check if node operator id exists in all functions that accept it
-
 /// @author vgorkavenko
 /// @notice This contract stores the Node Operators' bonds in the form of stETH shares,
 ///         so it should be considered in the recovery process

@@ -337,13 +337,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@openzeppelin/contracts-v4.4@npm:@openzeppelin/contracts@4.4.1":
-  version: 4.4.1
-  resolution: "@openzeppelin/contracts@npm:4.4.1"
-  checksum: 10c0/cbff5f130deaa17fade3de7c97a2e755dcc556a97bfc821e04db05f8698c2e5bab109563c1c239211d4fabe96603859ac15ef207f87f648d4c3f1bd3ad645078
-  languageName: node
-  linkType: hard
-
 "@openzeppelin/contracts@npm:5.0.2":
   version: 5.0.2
   resolution: "@openzeppelin/contracts@npm:5.0.2"
@@ -765,7 +758,6 @@ __metadata:
     "@lodestar/types": "npm:^1.18.1"
     "@openzeppelin/contracts": "npm:5.0.2"
     "@openzeppelin/contracts-upgradeable": "npm:5.0.2"
-    "@openzeppelin/contracts-v4.4": "npm:@openzeppelin/contracts@4.4.1"
     "@openzeppelin/merkle-tree": "npm:^1.0.6"
     ds-test: "https://github.com/dapphub/ds-test"
     forge-std: "https://github.com/foundry-rs/forge-std.git#v1.7.6"
