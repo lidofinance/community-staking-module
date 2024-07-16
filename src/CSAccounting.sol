@@ -57,6 +57,7 @@ contract CSAccounting is
     error ZeroFeeDistributorAddress();
     error ZeroChargePenaltyRecipientAddress();
     error NodeOperatorDoesNotExist();
+    error ElRewardsVaultReceiveFailed();
 
     modifier onlyCSM() {
         if (msg.sender != address(CSM)) revert SenderIsNotCSM();
@@ -360,7 +361,10 @@ contract CSAccounting is
     function compensateLockedBondETH(
         uint256 nodeOperatorId
     ) external payable onlyCSM {
-        payable(LIDO_LOCATOR.elRewardsVault()).transfer(msg.value);
+        (bool success, ) = LIDO_LOCATOR.elRewardsVault().call{
+            value: msg.value
+        }("");
+        if (!success) revert ElRewardsVaultReceiveFailed();
         CSBondLock._reduceAmount(nodeOperatorId, msg.value);
         emit BondLockCompensated(nodeOperatorId, msg.value);
     }
