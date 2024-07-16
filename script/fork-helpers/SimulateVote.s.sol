@@ -7,11 +7,11 @@ import "forge-std/Script.sol";
 import { DeploymentFixtures } from "test/helpers/Fixtures.sol";
 import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
 import { IBurner } from "../../src/interfaces/IBurner.sol";
+import { ForkHelpersCommon } from "./Common.sol";
 
-contract SimulateVote is Script, DeploymentFixtures {
+contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
     function run() external {
-        Env memory env = envVars();
-        initializeFromDeployment(env.DEPLOY_CONFIG);
+        _setUp();
 
         IStakingRouter stakingRouter = IStakingRouter(locator.stakingRouter());
         IBurner burner = IBurner(locator.burner());
@@ -22,18 +22,8 @@ contract SimulateVote is Script, DeploymentFixtures {
         );
         vm.label(agent, "agent");
 
-        address csmAdmin = payable(
-            csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0)
-        );
-        vm.label(csmAdmin, "csmAdmin");
-
-        address burnerAdmin = payable(
-            burner.getRoleMember(burner.DEFAULT_ADMIN_ROLE(), 0)
-        );
-        vm.label(burnerAdmin, "burnerAdmin");
-
-        _setBalance(csmAdmin, "1000000000000000000");
-        _setBalance(burnerAdmin, "1000000000000000000");
+        address csmAdmin = _prepareAdmin(address(csm));
+        address burnerAdmin = _prepareAdmin(address(burner));
 
         vm.startBroadcast(csmAdmin);
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), agent);
@@ -72,12 +62,5 @@ contract SimulateVote is Script, DeploymentFixtures {
         csm.revokeRole(csm.RESUME_ROLE(), agent);
         // 7. Update initial epoch
         hashConsensus.updateInitialEpoch(47480);
-    }
-
-    function _setBalance(address account, string memory balance) internal {
-        vm.rpc(
-            "anvil_setBalance",
-            string.concat('["', vm.toString(account), '", ', balance, "]")
-        );
     }
 }

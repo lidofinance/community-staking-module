@@ -108,10 +108,11 @@ Integration tests should pass either before a vote, or after at any state of con
 just test-integration
 ```
 
-There also fork helper scripts to prepare a fork state for e.g. UI testing purposes
+There also fork helper scripts to prepare a fork state for e.g. UI testing purposes, 
+see [fork.just](./fork.just) to get all available commands
 
 ```bash
-just simulate-vote
+just vote
 ```
 
 After a vote, you can test the contracts in the new state. It includes both `integration` and `post-voting` tests
