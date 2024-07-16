@@ -49,7 +49,10 @@ contract CSVerifier is ICSVerifier {
     GIndex public immutable GI_FIRST_VALIDATOR_CURR;
 
     /// @dev This index is relative to a state like: `BeaconState.historical_summaries`.
-    GIndex public immutable GI_HISTORICAL_SUMMARIES;
+    GIndex public immutable GI_HISTORICAL_SUMMARIES_PREV;
+
+    /// @dev This index is relative to a state like: `BeaconState.historical_summaries`.
+    GIndex public immutable GI_HISTORICAL_SUMMARIES_CURR;
 
     /// @dev The very first slot the verifier is supposed to accept proofs for.
     Slot public immutable FIRST_SUPPORTED_SLOT;
@@ -84,7 +87,8 @@ contract CSVerifier is ICSVerifier {
         GIndex gIFirstWithdrawalCurr,
         GIndex gIFirstValidatorPrev,
         GIndex gIFirstValidatorCurr,
-        GIndex gIHistoricalSummaries,
+        GIndex gIHistoricalSummariesPrev,
+        GIndex gIHistoricalSummariesCurr,
         Slot firstSupportedSlot,
         Slot pivotSlot
     ) {
@@ -106,7 +110,8 @@ contract CSVerifier is ICSVerifier {
         GI_FIRST_VALIDATOR_PREV = gIFirstValidatorPrev;
         GI_FIRST_VALIDATOR_CURR = gIFirstValidatorCurr;
 
-        GI_HISTORICAL_SUMMARIES = gIHistoricalSummaries;
+        GI_HISTORICAL_SUMMARIES_PREV = gIHistoricalSummariesPrev;
+        GI_HISTORICAL_SUMMARIES_CURR = gIHistoricalSummariesCurr;
 
         FIRST_SUPPORTED_SLOT = firstSupportedSlot;
         PIVOT_SLOT = pivotSlot;
@@ -241,7 +246,11 @@ contract CSVerifier is ICSVerifier {
 
         // It's up to a user to provide a valid generalized index of a historical block root in a summaries list.
         // Ensuring the provided generalized index is for a node somewhere below the historical_summaries root.
-        if (!GI_HISTORICAL_SUMMARIES.isParentOf(oldBlock.rootGIndex)) {
+        if (
+            !_getHistoricalSummariesGI(beaconBlock.header.slot).isParentOf(
+                oldBlock.rootGIndex
+            )
+        ) {
             revert InvalidGIndex();
         }
 
@@ -385,6 +394,15 @@ contract CSVerifier is ICSVerifier {
             ? GI_FIRST_WITHDRAWAL_PREV
             : GI_FIRST_WITHDRAWAL_CURR;
         return gI.shr(offset);
+    }
+
+    function _getHistoricalSummariesGI(
+        Slot stateSlot
+    ) internal view returns (GIndex) {
+        return
+            stateSlot < PIVOT_SLOT
+                ? GI_HISTORICAL_SUMMARIES_PREV
+                : GI_HISTORICAL_SUMMARIES_CURR;
     }
 
     // From HashConsensus contract.

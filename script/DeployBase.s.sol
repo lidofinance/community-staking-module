@@ -177,7 +177,8 @@ abstract contract DeployBase is Script {
                 gIFirstWithdrawalCurr: config.gIFirstWithdrawal,
                 gIFirstValidatorPrev: config.gIFirstValidator,
                 gIFirstValidatorCurr: config.gIFirstValidator,
-                gIHistoricalSummaries: config.gIHistoricalSummaries,
+                gIHistoricalSummariesPrev: config.gIHistoricalSummaries,
+                gIHistoricalSummariesCurr: config.gIHistoricalSummaries,
                 firstSupportedSlot: Slot.wrap(
                     uint64(config.verifierSupportedEpoch * config.slotsPerEpoch)
                 ),
