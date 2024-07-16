@@ -3075,7 +3075,7 @@ contract CsmChangeNodeOperatorRewardAddress is CSMCommon {
         uint256 noId = createNodeOperator(true);
         vm.expectRevert(INOAddresses.SenderIsNotManagerAddress.selector);
         vm.prank(stranger);
-        csm.changeNodeOperatorRewardAddress(0, stranger);
+        csm.changeNodeOperatorRewardAddress(noId, stranger);
     }
 
     function test_changeNodeOperatorRewardAddress_RevertWhen_SenderIsRewardAddress()
@@ -3098,7 +3098,7 @@ contract CsmChangeNodeOperatorRewardAddress is CSMCommon {
         uint256 noId = createNodeOperator(false);
         vm.expectRevert(INOAddresses.MethodCallIsNotAllowed.selector);
         vm.prank(nodeOperator);
-        csm.changeNodeOperatorRewardAddress(0, stranger);
+        csm.changeNodeOperatorRewardAddress(noId, stranger);
     }
 }
 
