@@ -5,6 +5,7 @@ pragma solidity 0.8.24;
 import "forge-std/Test.sol";
 import "../src/lib/proxy/OssifiableProxy.sol";
 import { Utilities } from "./helpers/Utilities.sol";
+import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 
 contract InitializableImplementationStub {
     uint256 public version;
@@ -39,6 +40,16 @@ contract OssifiableProxyTest is Test, Utilities {
         nextImpl = new InitializableImplementationStub();
 
         proxy = new OssifiableProxy(address(currentImpl), admin, "0x");
+    }
+
+    function test_constructor_revertWhenZeroAdmin() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ERC1967Utils.ERC1967InvalidAdmin.selector,
+                address(0)
+            )
+        );
+        new OssifiableProxy(address(currentImpl), address(0), "0x");
     }
 
     function test_getAdmin() public {

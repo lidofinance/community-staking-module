@@ -3061,6 +3061,22 @@ contract CsmChangeNodeOperatorRewardAddress is CSMCommon {
         assertEq(no.rewardAddress, stranger);
     }
 
+    function test_changeNodeOperatorRewardAddress_proposedRewardAddressReset()
+        public
+    {
+        uint256 noId = createNodeOperator(true);
+
+        vm.startPrank(nodeOperator);
+        csm.proposeNodeOperatorRewardAddressChange(noId, nextAddress());
+        csm.changeNodeOperatorRewardAddress(noId, stranger);
+        vm.stopPrank();
+
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.managerAddress, nodeOperator);
+        assertEq(no.rewardAddress, stranger);
+        assertEq(no.proposedRewardAddress, address(0));
+    }
+
     function test_changeNodeOperatorRewardAddress_RevertWhen_NoNodeOperator()
         public
     {
@@ -3820,6 +3836,59 @@ contract CsmRemoveKeys is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
+    function test_removeKeys_chargeFee() public {
+        uint256 noId = createNodeOperator(3);
+
+        uint256 amountToCharge = csm.keyRemovalCharge() * 2;
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                amountToCharge
+            ),
+            1
+        );
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.KeyRemovalChargeApplied(noId);
+
+        vm.prank(nodeOperator);
+        csm.removeKeys(noId, 1, 2);
+    }
+
+    function test_removeKeys_withNoFee() public {
+        bytes32 role = csm.MODULE_MANAGER_ROLE();
+        vm.prank(admin);
+        csm.grantRole(role, admin);
+        vm.prank(admin);
+        csm.setKeyRemovalCharge(0);
+
+        uint256 noId = createNodeOperator(3);
+
+        vm.recordLogs();
+
+        vm.prank(nodeOperator);
+        csm.removeKeys(noId, 1, 2);
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        for (uint256 i = 0; i < entries.length; i++) {
+            assertNotEq(
+                entries[i].topics[0],
+                CSModule.KeyRemovalChargeApplied.selector
+            );
+        }
+    }
+}
+
+contract CSMRemoveKeysReverts is CSMCommon {
+    bytes key0 = randomBytes(48);
+    bytes key1 = randomBytes(48);
+    bytes key2 = randomBytes(48);
+    bytes key3 = randomBytes(48);
+    bytes key4 = randomBytes(48);
+
     function test_removeKeys_RevertWhen_NoNodeOperator() public {
         vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
         csm.removeKeys({ nodeOperatorId: 0, startIndex: 0, keysCount: 1 });
@@ -3866,51 +3935,6 @@ contract CsmRemoveKeys is CSMCommon {
 
         vm.expectRevert(SigningKeys.InvalidKeysCount.selector);
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 0 });
-    }
-
-    function test_removeKeys_chargeFee() public {
-        uint256 noId = createNodeOperator(3);
-
-        uint256 amountToCharge = csm.keyRemovalCharge() * 2;
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.chargeFee.selector,
-                noId,
-                amountToCharge
-            ),
-            1
-        );
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.KeyRemovalChargeApplied(noId);
-
-        vm.prank(nodeOperator);
-        csm.removeKeys(noId, 1, 2);
-    }
-
-    function test_removeKeys_withNoFee() public {
-        bytes32 role = csm.MODULE_MANAGER_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, admin);
-        vm.prank(admin);
-        csm.setKeyRemovalCharge(0);
-
-        uint256 noId = createNodeOperator(3);
-
-        vm.recordLogs();
-
-        vm.prank(nodeOperator);
-        csm.removeKeys(noId, 1, 2);
-
-        Vm.Log[] memory entries = vm.getRecordedLogs();
-        for (uint256 i = 0; i < entries.length; i++) {
-            assertNotEq(
-                entries[i].topics[0],
-                CSModule.KeyRemovalChargeApplied.selector
-            );
-        }
     }
 }
 
@@ -5781,6 +5805,125 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.activatePublicRelease();
     }
 
+    function test_reportELRewardsStealingPenaltyRole() public {
+        csm.activatePublicRelease();
+        uint256 noId = createNodeOperator();
+        bytes32 role = csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE();
+        vm.prank(admin);
+        csm.grantRole(role, actor);
+
+        vm.prank(actor);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            1 ether
+        );
+    }
+
+    function test_reportELRewardsStealingPenaltyRole_revert() public {
+        csm.activatePublicRelease();
+        uint256 noId = createNodeOperator();
+        bytes32 role = csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE();
+
+        vm.prank(stranger);
+        expectRoleRevert(stranger, role);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            1 ether
+        );
+    }
+
+    function test_settleELRewardsStealingPenaltyRole() public {
+        csm.activatePublicRelease();
+        uint256 noId = createNodeOperator();
+        bytes32 role = csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE();
+        vm.prank(admin);
+        csm.grantRole(role, actor);
+
+        vm.prank(actor);
+        csm.settleELRewardsStealingPenalty(UintArr(noId));
+    }
+
+    function test_settleELRewardsStealingPenaltyRole_revert() public {
+        csm.activatePublicRelease();
+        uint256 noId = createNodeOperator();
+        bytes32 role = csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE();
+
+        vm.prank(stranger);
+        expectRoleRevert(stranger, role);
+        csm.settleELRewardsStealingPenalty(UintArr(noId));
+    }
+
+    function test_verifierRole_submitWithdrawal() public {
+        csm.activatePublicRelease();
+        uint256 noId = createNodeOperator();
+        bytes32 role = csm.VERIFIER_ROLE();
+
+        vm.startPrank(admin);
+        csm.grantRole(role, actor);
+        csm.grantRole(csm.STAKING_ROUTER_ROLE(), admin);
+        csm.obtainDepositData(1, "");
+        vm.stopPrank();
+
+        vm.prank(actor);
+        csm.submitWithdrawal(noId, 0, 1 ether, false);
+    }
+
+    function test_verifierRole_submitWithdrawal_revert() public {
+        csm.activatePublicRelease();
+        uint256 noId = createNodeOperator();
+        bytes32 role = csm.VERIFIER_ROLE();
+
+        vm.prank(stranger);
+        expectRoleRevert(stranger, role);
+        csm.submitWithdrawal(noId, 0, 1 ether, false);
+    }
+
+    function test_verifierRole_submitInitialSlashing() public {
+        csm.activatePublicRelease();
+        uint256 noId = createNodeOperator();
+        bytes32 role = csm.VERIFIER_ROLE();
+
+        vm.startPrank(admin);
+        csm.grantRole(role, actor);
+        csm.grantRole(csm.STAKING_ROUTER_ROLE(), admin);
+        csm.obtainDepositData(1, "");
+        vm.stopPrank();
+
+        vm.prank(actor);
+        csm.submitInitialSlashing(noId, 0);
+    }
+
+    function test_verifierRole_submitInitialSlashing_revert() public {
+        csm.activatePublicRelease();
+        uint256 noId = createNodeOperator();
+        bytes32 role = csm.VERIFIER_ROLE();
+
+        vm.prank(stranger);
+        expectRoleRevert(stranger, role);
+        csm.submitInitialSlashing(noId, 0);
+    }
+
+    function test_recovererRole() public {
+        bytes32 role = csm.RECOVERER_ROLE();
+        vm.prank(admin);
+        csm.grantRole(role, actor);
+
+        vm.prank(actor);
+        csm.recoverEther();
+    }
+
+    function test_recovererRole_revert() public {
+        bytes32 role = csm.RECOVERER_ROLE();
+
+        vm.prank(stranger);
+        expectRoleRevert(stranger, role);
+        csm.recoverEther();
+    }
+}
+
+contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
     function test_stakingRouterRole_onRewardsMinted() public {
         bytes32 role = csm.STAKING_ROUTER_ROLE();
         vm.prank(admin);
@@ -5980,123 +6123,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
         csm.decreaseVettedSigningKeysCount(new bytes(0), new bytes(0));
-    }
-
-    function test_reportELRewardsStealingPenaltyRole() public {
-        csm.activatePublicRelease();
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.prank(actor);
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            1 ether
-        );
-    }
-
-    function test_reportELRewardsStealingPenaltyRole_revert() public {
-        csm.activatePublicRelease();
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            1 ether
-        );
-    }
-
-    function test_settleELRewardsStealingPenaltyRole() public {
-        csm.activatePublicRelease();
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.prank(actor);
-        csm.settleELRewardsStealingPenalty(UintArr(noId));
-    }
-
-    function test_settleELRewardsStealingPenaltyRole_revert() public {
-        csm.activatePublicRelease();
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.settleELRewardsStealingPenalty(UintArr(noId));
-    }
-
-    function test_verifierRole_submitWithdrawal() public {
-        csm.activatePublicRelease();
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.VERIFIER_ROLE();
-
-        vm.startPrank(admin);
-        csm.grantRole(role, actor);
-        csm.grantRole(csm.STAKING_ROUTER_ROLE(), admin);
-        csm.obtainDepositData(1, "");
-        vm.stopPrank();
-
-        vm.prank(actor);
-        csm.submitWithdrawal(noId, 0, 1 ether, false);
-    }
-
-    function test_verifierRole_submitWithdrawal_revert() public {
-        csm.activatePublicRelease();
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.VERIFIER_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.submitWithdrawal(noId, 0, 1 ether, false);
-    }
-
-    function test_verifierRole_submitInitialSlashing() public {
-        csm.activatePublicRelease();
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.VERIFIER_ROLE();
-
-        vm.startPrank(admin);
-        csm.grantRole(role, actor);
-        csm.grantRole(csm.STAKING_ROUTER_ROLE(), admin);
-        csm.obtainDepositData(1, "");
-        vm.stopPrank();
-
-        vm.prank(actor);
-        csm.submitInitialSlashing(noId, 0);
-    }
-
-    function test_verifierRole_submitInitialSlashing_revert() public {
-        csm.activatePublicRelease();
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.VERIFIER_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.submitInitialSlashing(noId, 0);
-    }
-
-    function test_recovererRole() public {
-        bytes32 role = csm.RECOVERER_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.prank(actor);
-        csm.recoverEther();
-    }
-
-    function test_recovererRole_revert() public {
-        bytes32 role = csm.RECOVERER_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.recoverEther();
     }
 }
 
