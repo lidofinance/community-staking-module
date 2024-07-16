@@ -3883,12 +3883,6 @@ contract CsmRemoveKeys is CSMCommon {
 }
 
 contract CSMRemoveKeysReverts is CSMCommon {
-    bytes key0 = randomBytes(48);
-    bytes key1 = randomBytes(48);
-    bytes key2 = randomBytes(48);
-    bytes key3 = randomBytes(48);
-    bytes key4 = randomBytes(48);
-
     function test_removeKeys_RevertWhen_NoNodeOperator() public {
         vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
         csm.removeKeys({ nodeOperatorId: 0, startIndex: 0, keysCount: 1 });
