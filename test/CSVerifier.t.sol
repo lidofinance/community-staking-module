@@ -467,7 +467,7 @@ contract CSVerifierTest is CSVerifierTestBase {
 
         fixture.witness.amount = 154;
 
-        vm.expectRevert(CSVerifier.PartialWitdrawal.selector);
+        vm.expectRevert(CSVerifier.PartialWithdrawal.selector);
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,

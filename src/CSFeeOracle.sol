@@ -55,7 +55,7 @@ contract CSFeeOracle is
 
     ICSFeeDistributor public feeDistributor;
 
-    /// @notice Leeway in basis points used to determine the underperforming validators threshold.
+    /// @notice Leeway in basis points is used to determine the under-performing validators threshold.
     /// `threshold` = `avgPerfBP` - `avgPerfLeewayBP`, where `avgPerfBP` is an average
     /// performance over the network computed by the off-chain oracle.
     uint256 public avgPerfLeewayBP;

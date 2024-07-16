@@ -37,7 +37,7 @@ interface IReportAsyncProcessor {
         uint256 deadline
     ) external;
 
-    /// @notice Notifies that the report for the given ref. slot is not a conensus report anymore
+    /// @notice Notifies that the report for the given ref. slot is not a consensus report anymore
     /// and should be discarded. This can happen when a member changes their report, is removed
     /// from the set, or when the quorum value gets increased.
     ///

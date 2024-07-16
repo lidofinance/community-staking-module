@@ -1387,7 +1387,7 @@ contract CSModule is
     ///      - totalExitedKeys
     ///      - targetLimitMode
     ///      - targetValidatorsCount
-    ///      - totalunbondedKeys
+    ///      - totalUnbondedKeys
     ///      - totalStuckKeys
     /// @param nodeOperatorId ID of the Node Operator
     /// @return targetLimitMode Target limit mode
