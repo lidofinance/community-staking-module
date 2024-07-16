@@ -61,21 +61,26 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             locator: address(locator),
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
+            gIHistoricalSummariesPrev: pack(0xfff0, 4),
+            gIHistoricalSummariesCurr: pack(0xffff, 4),
             gIFirstWithdrawalPrev: pack(0xe1c0, 4),
-            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+            gIFirstWithdrawalCurr: pack(0xe1c1, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
-            gIFirstValidatorCurr: pack(0x560000000000, 40),
-            firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
-            pivotSlot: firstSupportedSlot
+            gIFirstValidatorCurr: pack(0x560000000001, 40),
+            firstSupportedSlot: firstSupportedSlot,
+            pivotSlot: Slot.wrap(100_501)
         });
 
         assertEq(address(verifier.MODULE()), address(module));
         assertEq(address(verifier.LOCATOR()), address(locator));
         assertEq(verifier.SLOTS_PER_EPOCH(), 32);
         assertEq(
-            GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES()),
-            GIndex.unwrap(pack(0x0, 0))
+            GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES_PREV()),
+            GIndex.unwrap(pack(0xfff0, 4))
+        );
+        assertEq(
+            GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES_CURR()),
+            GIndex.unwrap(pack(0xffff, 4))
         );
         assertEq(
             GIndex.unwrap(verifier.GI_FIRST_WITHDRAWAL_PREV()),
@@ -83,7 +88,7 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
         );
         assertEq(
             GIndex.unwrap(verifier.GI_FIRST_WITHDRAWAL_CURR()),
-            GIndex.unwrap(pack(0xe1c0, 4))
+            GIndex.unwrap(pack(0xe1c1, 4))
         );
         assertEq(
             GIndex.unwrap(verifier.GI_FIRST_VALIDATOR_PREV()),
@@ -91,7 +96,7 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
         );
         assertEq(
             GIndex.unwrap(verifier.GI_FIRST_VALIDATOR_CURR()),
-            GIndex.unwrap(pack(0x560000000000, 40))
+            GIndex.unwrap(pack(0x560000000001, 40))
         );
         assertEq(
             Slot.unwrap(verifier.FIRST_SUPPORTED_SLOT()),
@@ -99,7 +104,7 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
         );
         assertEq(
             Slot.unwrap(verifier.PIVOT_SLOT()),
-            Slot.unwrap(firstSupportedSlot)
+            Slot.unwrap(Slot.wrap(100_501))
         );
     }
 
@@ -109,7 +114,8 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             locator: address(locator),
             module: address(module),
             slotsPerEpoch: 0,
-            gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
+            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
+            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
             gIFirstWithdrawalPrev: pack(0xe1c0, 4),
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
@@ -125,7 +131,8 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             locator: address(locator),
             module: address(0),
             slotsPerEpoch: 32,
-            gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
+            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
+            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
             gIFirstWithdrawalPrev: pack(0xe1c0, 4),
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
@@ -141,7 +148,8 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             locator: address(0),
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
+            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
+            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
             gIFirstWithdrawalPrev: pack(0xe1c0, 4),
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
@@ -163,7 +171,8 @@ contract CSVerifierTest is CSVerifierTestBase {
             locator: address(locator),
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummaries: pack(0x0, 0), // We don't care of the value for this test.
+            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
+            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
             gIFirstWithdrawalPrev: pack(0xe1c0, 4),
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
