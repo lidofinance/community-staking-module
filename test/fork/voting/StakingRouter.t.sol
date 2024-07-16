@@ -5,7 +5,7 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { CSModule, NodeOperator } from "../../../src/CSModule.sol";
+import { CSModule, NodeOperator, NodeOperatorManagementProperties } from "../../../src/CSModule.sol";
 import { ILidoLocator } from "../../../src/interfaces/ILidoLocator.sol";
 import { IStakingRouter } from "../../../src/interfaces/IStakingRouter.sol";
 import { IWithdrawalQueue } from "../../../src/interfaces/IWithdrawalQueue.sol";
@@ -97,8 +97,11 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             new bytes32[](0),
             address(0)
         );
