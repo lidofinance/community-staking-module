@@ -96,11 +96,13 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
         return csm.getNodeOperatorsCount() - 1;
     }
@@ -115,11 +117,13 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities {
             1,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: extendedManagerPermissions
+            }),
             new bytes32[](0),
-            address(0),
-            extendedManagerPermissions
+            address(0)
         );
         return csm.getNodeOperatorsCount() - 1;
     }
@@ -694,11 +698,13 @@ contract CSMPauseAffectingTest is CSMCommon {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
     }
 
@@ -714,8 +720,11 @@ contract CSMPauseAffectingTest is CSMCommon {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
@@ -724,8 +733,7 @@ contract CSMPauseAffectingTest is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
     }
 
@@ -741,8 +749,11 @@ contract CSMPauseAffectingTest is CSMCommon {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
@@ -751,8 +762,7 @@ contract CSMPauseAffectingTest is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
     }
 
@@ -834,11 +844,13 @@ contract CSMAddNodeOperatorETH is CSMCommon {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
@@ -861,11 +873,13 @@ contract CSMAddNodeOperatorETH is CSMCommon {
             keysCount,
             keys,
             signatures,
-            manager,
-            reward,
+            NodeOperatorManagementProperties({
+                managerAddress: manager,
+                rewardAddress: reward,
+                extendedManagerPermissions: false
+            }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
 
         NodeOperator memory no = csm.getNodeOperator(0);
@@ -892,11 +906,13 @@ contract CSMAddNodeOperatorETH is CSMCommon {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             new bytes32[](0),
-            address(154),
-            false
+            address(154)
         );
     }
 
@@ -913,11 +929,13 @@ contract CSMAddNodeOperatorETH is CSMCommon {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             new bytes32[](0),
-            address(154),
-            false
+            address(154)
         );
     }
 }
@@ -948,8 +966,11 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
             1,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             ICSAccounting.PermitInput({
                 value: BOND_SIZE,
                 deadline: 0,
@@ -958,8 +979,7 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
@@ -984,8 +1004,11 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
             1,
             keys,
             signatures,
-            manager,
-            reward,
+            NodeOperatorManagementProperties({
+                managerAddress: manager,
+                rewardAddress: reward,
+                extendedManagerPermissions: false
+            }),
             ICSAccounting.PermitInput({
                 value: BOND_SIZE,
                 deadline: 0,
@@ -994,8 +1017,7 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
 
         NodeOperator memory no = csm.getNodeOperator(0);
@@ -1024,8 +1046,11 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
             1,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             ICSAccounting.PermitInput({
                 value: BOND_SIZE,
                 deadline: 0,
@@ -1034,8 +1059,7 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(154),
-            false
+            address(154)
         );
     }
 
@@ -1068,8 +1092,11 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
             1,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             ICSAccounting.PermitInput({
                 value: BOND_SIZE,
                 deadline: type(uint256).max,
@@ -1079,8 +1106,7 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
@@ -1113,8 +1139,11 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
@@ -1123,8 +1152,7 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
@@ -1150,8 +1178,11 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
             keysCount,
             keys,
             signatures,
-            manager,
-            reward,
+            NodeOperatorManagementProperties({
+                managerAddress: manager,
+                rewardAddress: reward,
+                extendedManagerPermissions: false
+            }),
             ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
@@ -1160,8 +1191,7 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
 
         NodeOperator memory no = csm.getNodeOperator(0);
@@ -1191,8 +1221,11 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
@@ -1201,8 +1234,7 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(154),
-            false
+            address(154)
         );
     }
 
@@ -1235,8 +1267,11 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
             1,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             ICSAccounting.PermitInput({
                 value: wstETHAmount,
                 deadline: type(uint256).max,
@@ -1246,8 +1281,7 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
@@ -1442,11 +1476,13 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
             0,
             new bytes(0),
             new bytes(0),
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
     }
 
@@ -1463,11 +1499,13 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
             keysCount,
             keys,
             new bytes(0),
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             new bytes32[](0),
-            address(154),
-            false
+            address(154)
         );
     }
 
@@ -1485,11 +1523,13 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             new bytes32[](0),
-            address(154),
-            false
+            address(154)
         );
     }
 
@@ -1503,8 +1543,11 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
             0,
             new bytes(0),
             new bytes(0),
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
@@ -1513,8 +1556,7 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(154),
-            false
+            address(154)
         );
     }
 
@@ -1533,8 +1575,11 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
             keysCount,
             keys,
             new bytes(0),
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             ICSAccounting.PermitInput({
                 value: BOND_SIZE,
                 deadline: 0,
@@ -1543,8 +1588,7 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(154),
-            false
+            address(154)
         );
     }
 
@@ -1564,8 +1608,11 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             ICSAccounting.PermitInput({
                 value: BOND_SIZE,
                 deadline: 0,
@@ -1574,8 +1621,7 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(154),
-            false
+            address(154)
         );
     }
 
@@ -1591,8 +1637,11 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
             0,
             new bytes(0),
             new bytes(0),
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
@@ -1601,8 +1650,7 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(154),
-            false
+            address(154)
         );
     }
 
@@ -1622,8 +1670,11 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
             keysCount,
             keys,
             new bytes(0),
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
@@ -1632,8 +1683,7 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(154),
-            false
+            address(154)
         );
     }
 
@@ -1654,8 +1704,11 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             ICSAccounting.PermitInput({
                 value: 0,
                 deadline: 0,
@@ -1664,8 +1717,7 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
                 s: 0
             }),
             new bytes32[](0),
-            address(154),
-            false
+            address(154)
         );
     }
 }
@@ -2264,11 +2316,13 @@ contract CSMObtainDepositData is CSMCommon {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
 
         vm.expectEmit(true, true, true, true, address(csm));
@@ -6073,11 +6127,13 @@ contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
     }
 
@@ -6092,11 +6148,13 @@ contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
     }
 }
@@ -6120,11 +6178,13 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             proof,
-            address(0),
-            false
+            address(0)
         );
         CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
         assertEq(curve.points[0], BOND_SIZE / 2);
@@ -6145,11 +6205,13 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
     }
 
@@ -6169,11 +6231,13 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             proof,
-            address(0),
-            false
+            address(0)
         );
         CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
         assertEq(curve.points[0], BOND_SIZE / 2);
@@ -6194,11 +6258,13 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
         CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
         assertEq(curve.points[0], BOND_SIZE);
@@ -6222,11 +6288,13 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             proof,
-            address(0),
-            false
+            address(0)
         );
     }
 }
@@ -6249,11 +6317,13 @@ contract CSMEarlyAdoptionTestNoEA is CSMCommonNoPublicReleaseNoEA {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             proof,
-            address(0),
-            false
+            address(0)
         );
     }
 
@@ -6272,11 +6342,13 @@ contract CSMEarlyAdoptionTestNoEA is CSMCommonNoPublicReleaseNoEA {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
     }
 
@@ -6296,11 +6368,13 @@ contract CSMEarlyAdoptionTestNoEA is CSMCommonNoPublicReleaseNoEA {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             proof,
-            address(0),
-            false
+            address(0)
         );
         CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
         assertEq(curve.points[0], BOND_SIZE);
@@ -6321,11 +6395,13 @@ contract CSMEarlyAdoptionTestNoEA is CSMCommonNoPublicReleaseNoEA {
             keysCount,
             keys,
             signatures,
-            address(0),
-            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
             new bytes32[](0),
-            address(0),
-            false
+            address(0)
         );
         CSAccounting.BondCurve memory curve = accounting.getBondCurve(0);
         assertEq(curve.points[0], BOND_SIZE);

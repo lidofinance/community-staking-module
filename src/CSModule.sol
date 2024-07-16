@@ -12,7 +12,7 @@ import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSEarlyAdoption } from "./interfaces/ICSEarlyAdoption.sol";
-import { ICSModule, NodeOperator } from "./interfaces/ICSModule.sol";
+import { ICSModule, NodeOperator, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
 
 import { QueueLib, Batch } from "./lib/QueueLib.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
@@ -245,29 +245,27 @@ contract CSModule is
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of `(deposit_message_root, domain)` tuples
     ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
-    /// @param managerAddress Optional. Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used
-    /// @param rewardAddress Optional. Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used
+    /// @param managementProperties Optional. Management properties to be used for the Node Operator.
+    ///                             managerAddress: Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used.
+    ///                             rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used.
+    ///                             extendedManagerPermissions: Flag indicating that managerAddress will be able to change rewardAddress.
+    ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
-    /// @param extendedManagerPermissions Optional. Flag indicating that managerAddress will be able to change rewardAddress.
-    ///                                   If set to true `resetNodeOperatorManagerAddress` method will be disabled.
+
     function addNodeOperatorETH(
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
-        address managerAddress,
-        address rewardAddress,
+        NodeOperatorManagementProperties calldata managementProperties,
         bytes32[] calldata eaProof,
-        address referrer,
-        bool extendedManagerPermissions
+        address referrer
     ) external payable whenResumed {
-        uint256 nodeOperatorId = _createNodeOperator({
-            managerAddress: managerAddress,
-            rewardAddress: rewardAddress,
-            referrer: referrer,
-            proof: eaProof,
-            extendedManagerPermissions: extendedManagerPermissions
-        });
+        uint256 nodeOperatorId = _createNodeOperator(
+            managementProperties,
+            referrer,
+            eaProof
+        );
 
         if (
             msg.value !=
@@ -296,31 +294,28 @@ contract CSModule is
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of `(deposit_message_root, domain)` tuples
     ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
-    /// @param managerAddress Optional. Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used
-    /// @param rewardAddress Optional. Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used
+    /// @param managementProperties Optional. Management properties to be used for the Node Operator.
+    ///                             managerAddress: Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used.
+    ///                             rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used.
+    ///                             extendedManagerPermissions: Flag indicating that managerAddress will be able to change rewardAddress.
+    ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
     /// @param permit Optional. Permit to use stETH as bond
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
-    /// @param extendedManagerPermissions Optional. Flag indicating that managerAddress will be able to change rewardAddress.
-    ///                                   If set to true `resetNodeOperatorManagerAddress` method will be disabled.
     function addNodeOperatorStETH(
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
-        address managerAddress,
-        address rewardAddress,
+        NodeOperatorManagementProperties calldata managementProperties,
         ICSAccounting.PermitInput calldata permit,
         bytes32[] calldata eaProof,
-        address referrer,
-        bool extendedManagerPermissions
+        address referrer
     ) external whenResumed {
-        uint256 nodeOperatorId = _createNodeOperator({
-            managerAddress: managerAddress,
-            rewardAddress: rewardAddress,
-            referrer: referrer,
-            proof: eaProof,
-            extendedManagerPermissions: extendedManagerPermissions
-        });
+        uint256 nodeOperatorId = _createNodeOperator(
+            managementProperties,
+            referrer,
+            eaProof
+        );
 
         uint256 amount = accounting.getBondAmountByKeysCount(
             keysCount,
@@ -343,31 +338,28 @@ contract CSModule is
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of `(deposit_message_root, domain)` tuples
     ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
-    /// @param managerAddress Optional. Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used
-    /// @param rewardAddress Optional. Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used
+    /// @param managementProperties Optional. Management properties to be used for the Node Operator.
+    ///                             managerAddress: Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used.
+    ///                             rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used.
+    ///                             extendedManagerPermissions: Flag indicating that managerAddress will be able to change rewardAddress.
+    ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
     /// @param permit Optional. Permit to use wstETH as bond
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
-    /// @param extendedManagerPermissions Optional. Flag indicating that managerAddress will be able to change rewardAddress.
-    ///                                   If set to true `resetNodeOperatorManagerAddress` method will be disabled.
     function addNodeOperatorWstETH(
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
-        address managerAddress,
-        address rewardAddress,
+        NodeOperatorManagementProperties calldata managementProperties,
         ICSAccounting.PermitInput calldata permit,
         bytes32[] calldata eaProof,
-        address referrer,
-        bool extendedManagerPermissions
+        address referrer
     ) external whenResumed {
-        uint256 nodeOperatorId = _createNodeOperator({
-            managerAddress: managerAddress,
-            rewardAddress: rewardAddress,
-            referrer: referrer,
-            proof: eaProof,
-            extendedManagerPermissions: extendedManagerPermissions
-        });
+        uint256 nodeOperatorId = _createNodeOperator(
+            managementProperties,
+            referrer,
+            eaProof
+        );
 
         uint256 amount = accounting.getBondAmountByKeysCountWstETH(
             keysCount,
@@ -1573,11 +1565,9 @@ contract CSModule is
     }
 
     function _createNodeOperator(
-        address managerAddress,
-        address rewardAddress,
+        NodeOperatorManagementProperties calldata managementProperties,
         address referrer,
-        bytes32[] calldata proof,
-        bool extendedManagerPermissions
+        bytes32[] calldata proof
     ) internal returns (uint256 id) {
         if (!publicRelease) {
             if (proof.length == 0 || address(earlyAdoption) == address(0)) {
@@ -1588,14 +1578,15 @@ contract CSModule is
         id = _nodeOperatorsCount;
         NodeOperator storage no = _nodeOperators[id];
 
-        no.managerAddress = managerAddress == address(0)
+        no.managerAddress = managementProperties.managerAddress == address(0)
             ? msg.sender
-            : managerAddress;
-        no.rewardAddress = rewardAddress == address(0)
+            : managementProperties.managerAddress;
+        no.rewardAddress = managementProperties.rewardAddress == address(0)
             ? msg.sender
-            : rewardAddress;
-        if (extendedManagerPermissions)
-            no.extendedManagerPermissions = extendedManagerPermissions;
+            : managementProperties.rewardAddress;
+        if (managementProperties.extendedManagerPermissions)
+            no.extendedManagerPermissions = managementProperties
+                .extendedManagerPermissions;
 
         unchecked {
             ++_nodeOperatorsCount;

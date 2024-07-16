@@ -28,6 +28,12 @@ struct NodeOperator {
     /* 5 */ bool extendedManagerPermissions;
 }
 
+struct NodeOperatorManagementProperties {
+    address managerAddress;
+    address rewardAddress;
+    bool extendedManagerPermissions;
+}
+
 /// @title Lido's Community Staking Module interface
 interface ICSModule is
     IStakingModule,
