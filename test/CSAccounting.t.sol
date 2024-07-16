@@ -32,6 +32,12 @@ import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
 
+contract FailedReceiverStub {
+    receive() external payable {
+        revert("receive failed");
+    }
+}
+
 contract CSAccountingBaseConstructorTest is Test, Fixtures, Utilities {
     LidoLocatorMock internal locator;
     WstETHMock internal wstETH;
@@ -3495,6 +3501,24 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         accounting.compensateLockedBondETH{ value: 0.4 ether }(0);
 
         assertEq(accounting.getActualLockedBond(0), 0.6 ether);
+    }
+
+    function test_compensateLockedBondETH_RevertWhen_ReceiveFailed() public {
+        mock_getNodeOperatorsCount(1);
+        FailedReceiverStub failedReceiver = new FailedReceiverStub();
+        vm.mockCall(
+            address(locator),
+            abi.encodeWithSelector(locator.elRewardsVault.selector),
+            abi.encode(address(failedReceiver))
+        );
+
+        vm.prank(address(stakingModule));
+        accounting.lockBondETH(0, 1 ether);
+
+        vm.deal(address(stakingModule), 0.4 ether);
+        vm.prank(address(stakingModule));
+        vm.expectRevert(CSAccounting.ElRewardsVaultReceiveFailed.selector);
+        accounting.compensateLockedBondETH{ value: 0.4 ether }(0);
     }
 
     function test_settleLockedBondETH() public {
