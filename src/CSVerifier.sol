@@ -67,7 +67,7 @@ contract CSVerifier is ICSVerifier {
     error InvalidGIndex();
     error InvalidBlockHeader();
     error InvalidChainConfig();
-    error PartialWitdrawal();
+    error PartialWithdrawal();
     error ValidatorNotWithdrawn();
     error InvalidWithdrawalAddress();
     error UnsupportedSlot(Slot slot);
@@ -329,7 +329,7 @@ contract CSVerifier is ICSVerifier {
         // it is proposed to acknowledge possibility of the attack
         // and be ready to propose a corresponding vote to the DAO if it will ever happen
         if (!witness.slashed && gweiToWei(witness.amount) < 8 ether) {
-            revert PartialWitdrawal();
+            revert PartialWithdrawal();
         }
 
         Validator memory validator = Validator({
