@@ -1,6 +1,6 @@
 # CSModule
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d66a4396f737199bcc2932e5dd1066d022d333e0/src/CSModule.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/CSModule.sol)
 
 **Inherits:**
 [ICSModule](/src/interfaces/ICSModule.sol/interface.ICSModule.md), Initializable, AccessControlEnumerableUpgradeable, [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -265,8 +265,7 @@ function addNodeOperatorETH(
   uint256 keysCount,
   bytes calldata publicKeys,
   bytes calldata signatures,
-  address managerAddress,
-  address rewardAddress,
+  NodeOperatorManagementProperties calldata managementProperties,
   bytes32[] calldata eaProof,
   address referrer
 ) external payable whenResumed;
@@ -274,15 +273,14 @@ function addNodeOperatorETH(
 
 **Parameters**
 
-| Name             | Type        | Description                                                                                                                                            |
-| ---------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `keysCount`      | `uint256`   | Signing keys count                                                                                                                                     |
-| `publicKeys`     | `bytes`     | Public keys to submit                                                                                                                                  |
-| `signatures`     | `bytes`     | Signatures of `(deposit_message_root, domain)` tuples https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata |
-| `managerAddress` | `address`   | Optional. Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used                                                      |
-| `rewardAddress`  | `address`   | Optional. Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used                                                       |
-| `eaProof`        | `bytes32[]` | Optional. Merkle proof of the sender being eligible for the Early Adoption                                                                             |
-| `referrer`       | `address`   | Optional. Referrer address. Should be passed when Node Operator is created using partners integration                                                  |
+| Name                   | Type                               | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ---------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keysCount`            | `uint256`                          | Signing keys count                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `publicKeys`           | `bytes`                            | Public keys to submit                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `signatures`           | `bytes`                            | Signatures of `(deposit_message_root, domain)` tuples https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata                                                                                                                                                                                                                                                                                                           |
+| `managementProperties` | `NodeOperatorManagementProperties` | Optional. Management properties to be used for the Node Operator. managerAddress: Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used. rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used. extendedManagerPermissions: Flag indicating that managerAddress will be able to change rewardAddress. If set to true `resetNodeOperatorManagerAddress` method will be disabled |
+| `eaProof`              | `bytes32[]`                        | Optional. Merkle proof of the sender being eligible for the Early Adoption                                                                                                                                                                                                                                                                                                                                                                                       |
+| `referrer`             | `address`                          | Optional. Referrer address. Should be passed when Node Operator is created using partners integration                                                                                                                                                                                                                                                                                                                                                            |
 
 ### addNodeOperatorStETH
 
@@ -296,8 +294,7 @@ function addNodeOperatorStETH(
   uint256 keysCount,
   bytes calldata publicKeys,
   bytes calldata signatures,
-  address managerAddress,
-  address rewardAddress,
+  NodeOperatorManagementProperties calldata managementProperties,
   ICSAccounting.PermitInput calldata permit,
   bytes32[] calldata eaProof,
   address referrer
@@ -306,16 +303,15 @@ function addNodeOperatorStETH(
 
 **Parameters**
 
-| Name             | Type                        | Description                                                                                                                                            |
-| ---------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `keysCount`      | `uint256`                   | Signing keys count                                                                                                                                     |
-| `publicKeys`     | `bytes`                     | Public keys to submit                                                                                                                                  |
-| `signatures`     | `bytes`                     | Signatures of `(deposit_message_root, domain)` tuples https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata |
-| `managerAddress` | `address`                   | Optional. Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used                                                      |
-| `rewardAddress`  | `address`                   | Optional. Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used                                                       |
-| `permit`         | `ICSAccounting.PermitInput` | Optional. Permit to use stETH as bond                                                                                                                  |
-| `eaProof`        | `bytes32[]`                 | Optional. Merkle proof of the sender being eligible for the Early Adoption                                                                             |
-| `referrer`       | `address`                   | Optional. Referrer address. Should be passed when Node Operator is created using partners integration                                                  |
+| Name                   | Type                               | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ---------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keysCount`            | `uint256`                          | Signing keys count                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `publicKeys`           | `bytes`                            | Public keys to submit                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `signatures`           | `bytes`                            | Signatures of `(deposit_message_root, domain)` tuples https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata                                                                                                                                                                                                                                                                                                           |
+| `managementProperties` | `NodeOperatorManagementProperties` | Optional. Management properties to be used for the Node Operator. managerAddress: Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used. rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used. extendedManagerPermissions: Flag indicating that managerAddress will be able to change rewardAddress. If set to true `resetNodeOperatorManagerAddress` method will be disabled |
+| `permit`               | `ICSAccounting.PermitInput`        | Optional. Permit to use stETH as bond                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `eaProof`              | `bytes32[]`                        | Optional. Merkle proof of the sender being eligible for the Early Adoption                                                                                                                                                                                                                                                                                                                                                                                       |
+| `referrer`             | `address`                          | Optional. Referrer address. Should be passed when Node Operator is created using partners integration                                                                                                                                                                                                                                                                                                                                                            |
 
 ### addNodeOperatorWstETH
 
@@ -329,8 +325,7 @@ function addNodeOperatorWstETH(
   uint256 keysCount,
   bytes calldata publicKeys,
   bytes calldata signatures,
-  address managerAddress,
-  address rewardAddress,
+  NodeOperatorManagementProperties calldata managementProperties,
   ICSAccounting.PermitInput calldata permit,
   bytes32[] calldata eaProof,
   address referrer
@@ -339,16 +334,15 @@ function addNodeOperatorWstETH(
 
 **Parameters**
 
-| Name             | Type                        | Description                                                                                                                                            |
-| ---------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `keysCount`      | `uint256`                   | Signing keys count                                                                                                                                     |
-| `publicKeys`     | `bytes`                     | Public keys to submit                                                                                                                                  |
-| `signatures`     | `bytes`                     | Signatures of `(deposit_message_root, domain)` tuples https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata |
-| `managerAddress` | `address`                   | Optional. Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used                                                      |
-| `rewardAddress`  | `address`                   | Optional. Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used                                                       |
-| `permit`         | `ICSAccounting.PermitInput` | Optional. Permit to use wstETH as bond                                                                                                                 |
-| `eaProof`        | `bytes32[]`                 | Optional. Merkle proof of the sender being eligible for the Early Adoption                                                                             |
-| `referrer`       | `address`                   | Optional. Referrer address. Should be passed when Node Operator is created using partners integration                                                  |
+| Name                   | Type                               | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ---------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keysCount`            | `uint256`                          | Signing keys count                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `publicKeys`           | `bytes`                            | Public keys to submit                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `signatures`           | `bytes`                            | Signatures of `(deposit_message_root, domain)` tuples https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata                                                                                                                                                                                                                                                                                                           |
+| `managementProperties` | `NodeOperatorManagementProperties` | Optional. Management properties to be used for the Node Operator. managerAddress: Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used. rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used. extendedManagerPermissions: Flag indicating that managerAddress will be able to change rewardAddress. If set to true `resetNodeOperatorManagerAddress` method will be disabled |
+| `permit`               | `ICSAccounting.PermitInput`        | Optional. Permit to use wstETH as bond                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `eaProof`              | `bytes32[]`                        | Optional. Merkle proof of the sender being eligible for the Early Adoption                                                                                                                                                                                                                                                                                                                                                                                       |
+| `referrer`             | `address`                          | Optional. Referrer address. Should be passed when Node Operator is created using partners integration                                                                                                                                                                                                                                                                                                                                                            |
 
 ### addValidatorKeysETH
 
@@ -643,6 +637,21 @@ function resetNodeOperatorManagerAddress(uint256 nodeOperatorId) external;
 | ---------------- | --------- | ----------------------- |
 | `nodeOperatorId` | `uint256` | ID of the Node Operator |
 
+### changeNodeOperatorRewardAddress
+
+Change rewardAddress if extendedManagerPermissions is enabled for the Node Operator
+
+```solidity
+function changeNodeOperatorRewardAddress(uint256 nodeOperatorId, address newAddress) external;
+```
+
+**Parameters**
+
+| Name             | Type      | Description             |
+| ---------------- | --------- | ----------------------- |
+| `nodeOperatorId` | `uint256` | ID of the Node Operator |
+| `newAddress`     | `address` | Proposed reward address |
+
 ### onRewardsMinted
 
 Called when rewards are minted for the module
@@ -907,7 +916,8 @@ See `CSVerifier.processWithdrawalProof` to use this method permissionless
 function submitWithdrawal(
   uint256 nodeOperatorId,
   uint256 keyIndex,
-  uint256 amount
+  uint256 amount,
+  bool isSlashed
 ) external onlyRole(VERIFIER_ROLE);
 ```
 
@@ -918,6 +928,7 @@ function submitWithdrawal(
 | `nodeOperatorId` | `uint256` | ID of the Node Operator                                        |
 | `keyIndex`       | `uint256` | Index of the withdrawn key in the Node Operator's keys storage |
 | `amount`         | `uint256` | Amount of withdrawn ETH in wei                                 |
+| `isSlashed`      | `bool`    | Validator is slashed or not                                    |
 
 ### submitInitialSlashing
 
@@ -1162,7 +1173,7 @@ depositableValidatorsCount depends on:
 - totalExitedKeys
 - targetLimitMode
 - targetValidatorsCount
-- totalunbondedKeys
+- totalUnbondedKeys
 - totalStuckKeys
 
 ```solidity
@@ -1333,8 +1344,7 @@ function _incrementModuleNonce() internal;
 
 ```solidity
 function _createNodeOperator(
-  address managerAddress,
-  address rewardAddress,
+  NodeOperatorManagementProperties calldata managementProperties,
   address referrer,
   bytes32[] calldata proof
 ) internal returns (uint256 id);
@@ -1462,6 +1472,12 @@ event DepositableSigningKeysCountChanged(
 event VettedSigningKeysCountChanged(uint256 indexed nodeOperatorId, uint256 vettedKeysCount);
 ```
 
+### VettedSigningKeysCountDecreased
+
+```solidity
+event VettedSigningKeysCountDecreased(uint256 indexed nodeOperatorId);
+```
+
 ### DepositedSigningKeysCountChanged
 
 ```solidity
@@ -1549,12 +1565,6 @@ event ELRewardsStealingPenaltySettled(uint256 indexed nodeOperatorId);
 ```
 
 ## Errors
-
-### NodeOperatorDoesNotExist
-
-```solidity
-error NodeOperatorDoesNotExist();
-```
 
 ### SenderIsNotEligible
 

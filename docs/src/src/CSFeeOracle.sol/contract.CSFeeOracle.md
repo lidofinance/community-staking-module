@@ -1,9 +1,9 @@
 # CSFeeOracle
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d66a4396f737199bcc2932e5dd1066d022d333e0/src/CSFeeOracle.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/CSFeeOracle.sol)
 
 **Inherits:**
-[BaseOracle](/src/lib/base-oracle/BaseOracle.sol/abstract.BaseOracle.md), [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
+[BaseOracle](/src/lib/base-oracle/BaseOracle.sol/abstract.BaseOracle.md), [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md), [IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md)
 
 ## State Variables
 
@@ -61,7 +61,7 @@ ICSFeeDistributor public feeDistributor;
 
 ### avgPerfLeewayBP
 
-Leeway in basis points used to determine the underperforming validators threshold.
+Leeway in basis points is used to determine the under-performing validators threshold.
 `threshold` = `avgPerfBP` - `avgPerfLeewayBP`, where `avgPerfBP` is an average
 performance over the network computed by the off-chain oracle.
 
