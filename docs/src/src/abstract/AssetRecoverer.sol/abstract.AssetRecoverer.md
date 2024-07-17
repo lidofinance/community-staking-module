@@ -1,6 +1,6 @@
 # AssetRecoverer
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d66a4396f737199bcc2932e5dd1066d022d333e0/src/abstract/AssetRecoverer.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/abstract/AssetRecoverer.sol)
 
 Assets can be sent only to the `msg.sender`
 
@@ -70,12 +70,4 @@ Should be implemented by the inheriting contract_
 
 ```solidity
 function _onlyRecoverer() internal view virtual;
-```
-
-## Errors
-
-### NotAllowedToRecover
-
-```solidity
-error NotAllowedToRecover();
 ```

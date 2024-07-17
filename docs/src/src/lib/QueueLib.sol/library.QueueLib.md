@@ -1,5 +1,5 @@
 # QueueLib
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d66a4396f737199bcc2932e5dd1066d022d333e0/src/lib/QueueLib.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/lib/QueueLib.sol)
 
 **Author:**
 madlabman
@@ -53,26 +53,6 @@ function peek(Queue storage self) internal view returns (Batch);
 
 ```solidity
 function at(Queue storage self, uint128 index) internal view returns (Batch);
-```
-
-## Events
-### BatchEnqueued
-
-```solidity
-event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
-```
-
-## Errors
-### QueueIsEmpty
-
-```solidity
-error QueueIsEmpty();
-```
-
-### QueueLookupNoLimit
-
-```solidity
-error QueueLookupNoLimit();
 ```
 
 ## Structs

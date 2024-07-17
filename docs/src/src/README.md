@@ -9,5 +9,5 @@
 - [CSFeeOracle](CSFeeOracle.sol/contract.CSFeeOracle.md)
 - [CSModule](CSModule.sol/contract.CSModule.md)
 - [CSVerifier](CSVerifier.sol/contract.CSVerifier.md)
-- [gweiToWei](CSVerifier.sol/function.gweiToWei.md)
 - [amountWei](CSVerifier.sol/function.amountWei.md)
+- [gweiToWei](CSVerifier.sol/function.gweiToWei.md)

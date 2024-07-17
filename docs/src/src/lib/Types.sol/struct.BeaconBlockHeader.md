@@ -1,10 +1,10 @@
 # BeaconBlockHeader
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d66a4396f737199bcc2932e5dd1066d022d333e0/src/lib/Types.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/lib/Types.sol)
 
 
 ```solidity
 struct BeaconBlockHeader {
-    uint64 slot;
+    Slot slot;
     uint64 proposerIndex;
     bytes32 parentRoot;
     bytes32 stateRoot;

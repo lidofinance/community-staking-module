@@ -1,5 +1,5 @@
 # IReportAsyncProcessor
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d66a4396f737199bcc2932e5dd1066d022d333e0/src/lib/base-oracle/HashConsensus.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/lib/base-oracle/HashConsensus.sol)
 
 A contract that gets consensus reports (i.e. hashes) pushed to and processes them
 asynchronously.
@@ -31,7 +31,7 @@ function submitConsensusReport(bytes32 report, uint256 refSlot, uint256 deadline
 
 ### discardConsensusReport
 
-Notifies that the report for the given ref. slot is not a conensus report anymore
+Notifies that the report for the given ref. slot is not a consensus report anymore
 and should be discarded. This can happen when a member changes their report, is removed
 from the set, or when the quorum value gets increased.
 Only called when, for the given reference slot:

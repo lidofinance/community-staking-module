@@ -1,9 +1,5 @@
 # NOAddresses
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d66a4396f737199bcc2932e5dd1066d022d333e0/src/lib/NOAddresses.sol)
-
-Library for changing and reset node operator's manager and reward addresses
-
-*the only use of this to be a library is to save CSModule contract size via delegatecalls*
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/lib/NOAddresses.sol)
 
 
 ## Functions
@@ -107,73 +103,25 @@ function resetNodeOperatorManagerAddress(mapping(uint256 => NodeOperator) storag
 |`nodeOperatorId`|`uint256`|ID of the Node Operator|
 
 
-## Events
-### NodeOperatorManagerAddressChangeProposed
+### changeNodeOperatorRewardAddress
+
+Change rewardAddress if extendedManagerPermissions is enabled for the Node Operator.
+Should be called from the current manager address
+
 
 ```solidity
-event NodeOperatorManagerAddressChangeProposed(
-    uint256 indexed nodeOperatorId, address indexed oldProposedAddress, address indexed newProposedAddress
-);
+function changeNodeOperatorRewardAddress(
+    mapping(uint256 => NodeOperator) storage nodeOperators,
+    uint256 nodeOperatorId,
+    address newAddress
+) external;
 ```
+**Parameters**
 
-### NodeOperatorRewardAddressChangeProposed
+|Name|Type|Description|
+|----|----|-----------|
+|`nodeOperators`|`mapping(uint256 => NodeOperator)`||
+|`nodeOperatorId`|`uint256`|ID of the Node Operator|
+|`newAddress`|`address`|New reward address|
 
-```solidity
-event NodeOperatorRewardAddressChangeProposed(
-    uint256 indexed nodeOperatorId, address indexed oldProposedAddress, address indexed newProposedAddress
-);
-```
-
-### NodeOperatorManagerAddressChanged
-
-```solidity
-event NodeOperatorManagerAddressChanged(
-    uint256 indexed nodeOperatorId, address indexed oldAddress, address indexed newAddress
-);
-```
-
-### NodeOperatorRewardAddressChanged
-
-```solidity
-event NodeOperatorRewardAddressChanged(
-    uint256 indexed nodeOperatorId, address indexed oldAddress, address indexed newAddress
-);
-```
-
-## Errors
-### AlreadyProposed
-
-```solidity
-error AlreadyProposed();
-```
-
-### SameAddress
-
-```solidity
-error SameAddress();
-```
-
-### SenderIsNotManagerAddress
-
-```solidity
-error SenderIsNotManagerAddress();
-```
-
-### SenderIsNotRewardAddress
-
-```solidity
-error SenderIsNotRewardAddress();
-```
-
-### SenderIsNotProposedAddress
-
-```solidity
-error SenderIsNotProposedAddress();
-```
-
-### NodeOperatorDoesNotExist
-
-```solidity
-error NodeOperatorDoesNotExist();
-```
 
