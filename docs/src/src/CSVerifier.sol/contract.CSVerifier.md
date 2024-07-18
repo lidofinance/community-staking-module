@@ -1,6 +1,6 @@
 # CSVerifier
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d66a4396f737199bcc2932e5dd1066d022d333e0/src/CSVerifier.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/CSVerifier.sol)
 
 **Inherits:**
 [ICSVerifier](/src/interfaces/ICSVerifier.sol/interface.ICSVerifier.md)
@@ -19,28 +19,52 @@ address public constant BEACON_ROOTS = 0x000F3df6D732807Ef1319fB7B8bB8522d0Beac0
 uint64 public immutable SLOTS_PER_EPOCH;
 ```
 
-### GI_HISTORICAL_SUMMARIES
-
-_This index is relative to a state like: `BeaconState.historical_summaries`._
-
-```solidity
-GIndex public immutable GI_HISTORICAL_SUMMARIES;
-```
-
-### GI_FIRST_WITHDRAWAL
+### GI_FIRST_WITHDRAWAL_PREV
 
 _This index is relative to a state like: `BeaconState.latest_execution_payload_header.withdrawals[0]`._
 
 ```solidity
-GIndex public immutable GI_FIRST_WITHDRAWAL;
+GIndex public immutable GI_FIRST_WITHDRAWAL_PREV;
 ```
 
-### GI_FIRST_VALIDATOR
+### GI_FIRST_WITHDRAWAL_CURR
+
+_This index is relative to a state like: `BeaconState.latest_execution_payload_header.withdrawals[0]`._
+
+```solidity
+GIndex public immutable GI_FIRST_WITHDRAWAL_CURR;
+```
+
+### GI_FIRST_VALIDATOR_PREV
 
 _This index is relative to a state like: `BeaconState.validators[0]`._
 
 ```solidity
-GIndex public immutable GI_FIRST_VALIDATOR;
+GIndex public immutable GI_FIRST_VALIDATOR_PREV;
+```
+
+### GI_FIRST_VALIDATOR_CURR
+
+_This index is relative to a state like: `BeaconState.validators[0]`._
+
+```solidity
+GIndex public immutable GI_FIRST_VALIDATOR_CURR;
+```
+
+### GI_HISTORICAL_SUMMARIES_PREV
+
+_This index is relative to a state like: `BeaconState.historical_summaries`._
+
+```solidity
+GIndex public immutable GI_HISTORICAL_SUMMARIES_PREV;
+```
+
+### GI_HISTORICAL_SUMMARIES_CURR
+
+_This index is relative to a state like: `BeaconState.historical_summaries`._
+
+```solidity
+GIndex public immutable GI_HISTORICAL_SUMMARIES_CURR;
 ```
 
 ### FIRST_SUPPORTED_SLOT
@@ -49,6 +73,14 @@ _The very first slot the verifier is supposed to accept proofs for._
 
 ```solidity
 Slot public immutable FIRST_SUPPORTED_SLOT;
+```
+
+### PIVOT_SLOT
+
+_The first slot of the currently compatible fork._
+
+```solidity
+Slot public immutable PIVOT_SLOT;
 ```
 
 ### LOCATOR
@@ -71,15 +103,21 @@ ICSModule public immutable MODULE;
 
 ### constructor
 
+_The previous and current forks can be essentially the same._
+
 ```solidity
 constructor(
   address locator,
   address module,
   uint64 slotsPerEpoch,
-  GIndex gIHistoricalSummaries,
-  GIndex gIFirstWithdrawal,
-  GIndex gIFirstValidator,
-  Slot firstSupportedSlot
+  GIndex gIFirstWithdrawalPrev,
+  GIndex gIFirstWithdrawalCurr,
+  GIndex gIFirstValidatorPrev,
+  GIndex gIFirstValidatorCurr,
+  GIndex gIHistoricalSummariesPrev,
+  GIndex gIHistoricalSummariesCurr,
+  Slot firstSupportedSlot,
+  Slot pivotSlot
 );
 ```
 
@@ -164,7 +202,7 @@ _`stateRoot` is supposed to be trusted at this point._
 ```solidity
 function _processWithdrawalProof(
   WithdrawalWitness calldata witness,
-  uint256 stateEpoch,
+  Slot stateSlot,
   bytes32 stateRoot,
   bytes memory pubkey
 ) internal view returns (uint256 withdrawalAmount);
@@ -173,19 +211,25 @@ function _processWithdrawalProof(
 ### \_getValidatorGI
 
 ```solidity
-function _getValidatorGI(uint256 offset) internal view returns (GIndex);
+function _getValidatorGI(uint256 offset, Slot stateSlot) internal view returns (GIndex);
 ```
 
 ### \_getWithdrawalGI
 
 ```solidity
-function _getWithdrawalGI(uint256 offset) internal view returns (GIndex);
+function _getWithdrawalGI(uint256 offset, Slot stateSlot) internal view returns (GIndex);
+```
+
+### \_getHistoricalSummariesGI
+
+```solidity
+function _getHistoricalSummariesGI(Slot stateSlot) internal view returns (GIndex);
 ```
 
 ### \_computeEpochAtSlot
 
 ```solidity
-function _computeEpochAtSlot(uint256 slot) internal view returns (uint256);
+function _computeEpochAtSlot(Slot slot) internal view returns (uint256);
 ```
 
 ## Errors
@@ -214,10 +258,10 @@ error InvalidBlockHeader();
 error InvalidChainConfig();
 ```
 
-### PartialWitdrawal
+### PartialWithdrawal
 
 ```solidity
-error PartialWitdrawal();
+error PartialWithdrawal();
 ```
 
 ### ValidatorNotWithdrawn
@@ -235,7 +279,7 @@ error InvalidWithdrawalAddress();
 ### UnsupportedSlot
 
 ```solidity
-error UnsupportedSlot(uint256 slot);
+error UnsupportedSlot(Slot slot);
 ```
 
 ### ZeroLocatorAddress
@@ -248,4 +292,10 @@ error ZeroLocatorAddress();
 
 ```solidity
 error ZeroModuleAddress();
+```
+
+### InvalidPivotSlot
+
+```solidity
+error InvalidPivotSlot();
 ```

@@ -1,6 +1,6 @@
 # CSAccounting
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d66a4396f737199bcc2932e5dd1066d022d333e0/src/CSAccounting.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/CSAccounting.sol)
 
 **Inherits:**
 [ICSAccounting](/src/interfaces/ICSAccounting.sol/interface.ICSAccounting.md), [CSBondCore](/src/abstract/CSBondCore.sol/abstract.CSBondCore.md), [CSBondCurve](/src/abstract/CSBondCurve.sol/abstract.CSBondCurve.md), [CSBondLock](/src/abstract/CSBondLock.sol/abstract.CSBondLock.md), [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), AccessControlEnumerableUpgradeable, [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -102,7 +102,7 @@ constructor(
 | ---------------------------- | --------- | ----------------------------------------------------- |
 | `lidoLocator`                | `address` | Lido locator contract address                         |
 | `communityStakingModule`     | `address` | Community Staking Module contract address             |
-| `maxCurveLength`             | `uint256` | Max nuber of the points in the bond curves            |
+| `maxCurveLength`             | `uint256` | Max number of the points in the bond curves           |
 | `minBondLockRetentionPeriod` | `uint256` | Min time in seconds for the bondLock retention period |
 | `maxBondLockRetentionPeriod` | `uint256` | Max time in seconds for the bondLock retention period |
 
@@ -848,4 +848,10 @@ error ZeroChargePenaltyRecipientAddress();
 
 ```solidity
 error NodeOperatorDoesNotExist();
+```
+
+### ElRewardsVaultReceiveFailed
+
+```solidity
+error ElRewardsVaultReceiveFailed();
 ```
