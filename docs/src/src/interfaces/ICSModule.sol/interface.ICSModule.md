@@ -1,9 +1,9 @@
 # ICSModule
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/d66a4396f737199bcc2932e5dd1066d022d333e0/src/interfaces/ICSModule.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/interfaces/ICSModule.sol)
 
 **Inherits:**
-[IStakingModule](/src/interfaces/IStakingModule.sol/interface.IStakingModule.md)
+[IStakingModule](/src/interfaces/IStakingModule.sol/interface.IStakingModule.md), [IQueueLib](/src/lib/QueueLib.sol/interface.IQueueLib.md), [INOAddresses](/src/lib/NOAddresses.sol/interface.INOAddresses.md), [IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md)
 
 ## Functions
 
@@ -114,7 +114,12 @@ function submitInitialSlashing(uint256 nodeOperatorId, uint256 keyIndex) externa
 Report node operator's key as withdrawn and settle withdrawn amount.
 
 ```solidity
-function submitWithdrawal(uint256 nodeOperatorId, uint256 keyIndex, uint256 amount) external;
+function submitWithdrawal(
+  uint256 nodeOperatorId,
+  uint256 keyIndex,
+  uint256 amount,
+  bool isSlashed
+) external;
 ```
 
 **Parameters**
@@ -124,6 +129,7 @@ function submitWithdrawal(uint256 nodeOperatorId, uint256 keyIndex, uint256 amou
 | `nodeOperatorId` | `uint256` | Operator ID in the module.                              |
 | `keyIndex`       | `uint256` | Index of the withdrawn key in the node operator's keys. |
 | `amount`         | `uint256` | Amount of withdrawn ETH in wei.                         |
+| `isSlashed`      | `bool`    | Validator is slashed or not                             |
 
 ### depositWstETH
 
@@ -149,4 +155,12 @@ function depositStETH(
 
 ```solidity
 function depositETH(uint256 nodeOperatorId) external payable;
+```
+
+## Errors
+
+### NodeOperatorDoesNotExist
+
+```solidity
+error NodeOperatorDoesNotExist();
 ```
