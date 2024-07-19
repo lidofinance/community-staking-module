@@ -50,7 +50,7 @@ jobs:
         if: steps.get-cache.outputs.cache-hit != 'true'
 
       - name: Install forge & anvil
-        run: cargo install --git https://github.com/foundry-rs/foundry --rev "$FORGE_REV" --profile local forge anvil
+        run: cargo install --git https://github.com/foundry-rs/foundry --rev "$FORGE_REV" --profile release --locked forge anvil
         if: steps.get-cache.outputs.cache-hit != 'true'
 
   test:
@@ -81,7 +81,9 @@ jobs:
         run: just build --sizes
 
       - name: Run integration & invariant tests
-        run: just test-post-voting
+        #        run: just test-post-voting
+        # TODO: Uncomment the line above when the testnet is updated
+        run: just test-invariant
         env:
           CHAIN: holesky
           DEPLOY_CONFIG: ./artifacts/holesky/deploy-holesky.json
