@@ -31,6 +31,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
+import { InvariantAsserts } from "./helpers/InvariantAsserts.sol";
 
 contract FailedReceiverStub {
     receive() external payable {
@@ -38,7 +39,7 @@ contract FailedReceiverStub {
     }
 }
 
-contract CSAccountingBaseConstructorTest is Test, Fixtures, Utilities {
+contract CSAccountingFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     LidoLocatorMock internal locator;
     WstETHMock internal wstETH;
     LidoMock internal stETH;
@@ -46,12 +47,79 @@ contract CSAccountingBaseConstructorTest is Test, Fixtures, Utilities {
     CSAccounting public accounting;
     Stub public stakingModule;
     Stub public feeDistributor;
+    BurnerMock internal burner;
 
     address internal admin;
     address internal user;
     address internal stranger;
     address internal testChargePenaltyRecipient;
 
+    uint256 internal nodeOperatorsCount;
+
+    modifier assertInvariants() {
+        _;
+        assertAccountingTotalBondShares(nodeOperatorsCount, stETH, accounting);
+        assertAccountingBurnerApproval(
+            stETH,
+            address(accounting),
+            address(burner)
+        );
+    }
+
+    function mock_getNodeOperatorsCount(uint256 returnValue) internal {
+        vm.mockCall(
+            address(stakingModule),
+            abi.encodeWithSelector(
+                IStakingModule.getNodeOperatorsCount.selector
+            ),
+            abi.encode(returnValue)
+        );
+        nodeOperatorsCount = returnValue;
+    }
+
+    function mock_getNodeOperatorNonWithdrawnKeys(
+        uint256 returnValue
+    ) internal {
+        vm.mockCall(
+            address(stakingModule),
+            abi.encodeWithSelector(
+                ICSModule.getNodeOperatorNonWithdrawnKeys.selector,
+                0
+            ),
+            abi.encode(returnValue)
+        );
+    }
+
+    function mock_getFeesToDistribute(uint256 returnValue) internal {
+        vm.mockCall(
+            address(feeDistributor),
+            abi.encodeWithSelector(
+                ICSFeeDistributor.getFeesToDistribute.selector
+            ),
+            abi.encode(returnValue)
+        );
+    }
+
+    function mock_distributeFees(uint256 returnValue) internal {
+        vm.mockCall(
+            address(feeDistributor),
+            abi.encodeWithSelector(ICSFeeDistributor.distributeFees.selector),
+            abi.encode(returnValue)
+        );
+    }
+
+    function addBond(uint256 nodeOperatorId, uint256 amount) internal {
+        vm.deal(address(stakingModule), amount);
+        vm.prank(address(stakingModule));
+        accounting.depositETH{ value: amount }(user, nodeOperatorId);
+    }
+
+    function ethToSharesToEth(uint256 amount) internal view returns (uint256) {
+        return stETH.getPooledEthByShares(stETH.getSharesByPooledEth(amount));
+    }
+}
+
+contract CSAccountingBaseConstructorTest is CSAccountingFixtures {
     function setUp() public virtual {
         admin = nextAddress("ADMIN");
 
@@ -149,20 +217,7 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
     }
 }
 
-contract CSAccountingBaseInitTest is Test, Fixtures, Utilities {
-    LidoLocatorMock internal locator;
-    WstETHMock internal wstETH;
-    LidoMock internal stETH;
-
-    CSAccounting public accounting;
-    Stub public stakingModule;
-    Stub public feeDistributor;
-
-    address internal admin;
-    address internal user;
-    address internal stranger;
-    address internal testChargePenaltyRecipient;
-
+contract CSAccountingBaseInitTest is CSAccountingFixtures {
     function setUp() public virtual {
         admin = nextAddress("ADMIN");
 
@@ -170,7 +225,7 @@ contract CSAccountingBaseInitTest is Test, Fixtures, Utilities {
         stranger = nextAddress("STRANGER");
         testChargePenaltyRecipient = nextAddress("CHARGERECIPIENT");
 
-        (locator, wstETH, stETH, , ) = initLido();
+        (locator, wstETH, stETH, burner, ) = initLido();
 
         stakingModule = new Stub();
         feeDistributor = new Stub();
@@ -186,7 +241,7 @@ contract CSAccountingBaseInitTest is Test, Fixtures, Utilities {
 }
 
 contract CSAccountingInitTest is CSAccountingBaseInitTest {
-    function test_initialize_happyPath() public {
+    function test_initialize_happyPath() public assertInvariants {
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
 
@@ -260,21 +315,7 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     }
 }
 
-contract CSAccountingBaseTest is Test, Fixtures, Utilities {
-    LidoLocatorMock internal locator;
-    WstETHMock internal wstETH;
-    LidoMock internal stETH;
-    BurnerMock internal burner;
-
-    CSAccounting public accounting;
-    Stub public stakingModule;
-    Stub public feeDistributor;
-
-    address internal admin;
-    address internal user;
-    address internal stranger;
-    address internal testChargePenaltyRecipient;
-
+contract CSAccountingBaseTest is CSAccountingFixtures {
     function setUp() public virtual {
         admin = nextAddress("ADMIN");
 
@@ -315,57 +356,6 @@ contract CSAccountingBaseTest is Test, Fixtures, Utilities {
         accounting.grantRole(accounting.MANAGE_BOND_CURVES_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
         vm.stopPrank();
-    }
-
-    function mock_getNodeOperatorsCount(uint256 returnValue) internal {
-        vm.mockCall(
-            address(stakingModule),
-            abi.encodeWithSelector(
-                IStakingModule.getNodeOperatorsCount.selector
-            ),
-            abi.encode(returnValue)
-        );
-    }
-
-    function mock_getNodeOperatorNonWithdrawnKeys(
-        uint256 returnValue
-    ) internal {
-        vm.mockCall(
-            address(stakingModule),
-            abi.encodeWithSelector(
-                ICSModule.getNodeOperatorNonWithdrawnKeys.selector,
-                0
-            ),
-            abi.encode(returnValue)
-        );
-    }
-
-    function mock_getFeesToDistribute(uint256 returnValue) internal {
-        vm.mockCall(
-            address(feeDistributor),
-            abi.encodeWithSelector(
-                ICSFeeDistributor.getFeesToDistribute.selector
-            ),
-            abi.encode(returnValue)
-        );
-    }
-
-    function mock_distributeFees(uint256 returnValue) internal {
-        vm.mockCall(
-            address(feeDistributor),
-            abi.encodeWithSelector(ICSFeeDistributor.distributeFees.selector),
-            abi.encode(returnValue)
-        );
-    }
-
-    function addBond(uint256 nodeOperatorId, uint256 amount) internal {
-        vm.deal(address(stakingModule), amount);
-        vm.prank(address(stakingModule));
-        accounting.depositETH{ value: amount }(user, nodeOperatorId);
-    }
-
-    function ethToSharesToEth(uint256 amount) internal view returns (uint256) {
-        return stETH.getPooledEthByShares(stETH.getSharesByPooledEth(amount));
     }
 }
 
@@ -569,14 +559,14 @@ abstract contract CSAccountingBondStateBaseTest is
 }
 
 contract CSAccountingGetBondSummaryTest is CSAccountingBondStateBaseTest {
-    function test_default() public override {
+    function test_default() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(current, 0 ether);
         assertEq(required, 32 ether);
     }
 
-    function test_WithCurve() public override {
+    function test_WithCurve() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _curve(defaultCurve);
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
@@ -584,7 +574,7 @@ contract CSAccountingGetBondSummaryTest is CSAccountingBondStateBaseTest {
         assertEq(required, 17 ether);
     }
 
-    function test_WithLocked() public override {
+    function test_WithLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _lock({ id: 0, amount: 1 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
@@ -592,7 +582,7 @@ contract CSAccountingGetBondSummaryTest is CSAccountingBondStateBaseTest {
         assertEq(required, 33 ether);
     }
 
-    function test_WithLocked_MoreThanBond() public {
+    function test_WithLocked_MoreThanBond() public assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _lock({ id: 0, amount: 100500 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
@@ -600,7 +590,7 @@ contract CSAccountingGetBondSummaryTest is CSAccountingBondStateBaseTest {
         assertEq(required, 100532 ether);
     }
 
-    function test_WithCurveAndLocked() public override {
+    function test_WithCurveAndLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _curve(defaultCurve);
         _lock({ id: 0, amount: 1 ether });
@@ -609,14 +599,14 @@ contract CSAccountingGetBondSummaryTest is CSAccountingBondStateBaseTest {
         assertEq(required, 18 ether);
     }
 
-    function test_WithOneWithdrawnValidator() public override {
+    function test_WithOneWithdrawnValidator() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 1 });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(current, 0 ether);
         assertEq(required, 30 ether);
     }
 
-    function test_WithBond() public override {
+    function test_WithBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
@@ -624,7 +614,11 @@ contract CSAccountingGetBondSummaryTest is CSAccountingBondStateBaseTest {
         assertEq(required, 32 ether);
     }
 
-    function test_WithBondAndOneWithdrawnValidator() public override {
+    function test_WithBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 32 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
@@ -632,7 +626,7 @@ contract CSAccountingGetBondSummaryTest is CSAccountingBondStateBaseTest {
         assertEq(required, 30 ether);
     }
 
-    function test_WithExcessBond() public override {
+    function test_WithExcessBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 33 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
@@ -640,7 +634,11 @@ contract CSAccountingGetBondSummaryTest is CSAccountingBondStateBaseTest {
         assertEq(required, 32 ether);
     }
 
-    function test_WithExcessBondAndOneWithdrawnValidator() public override {
+    function test_WithExcessBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 33 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
@@ -648,7 +646,7 @@ contract CSAccountingGetBondSummaryTest is CSAccountingBondStateBaseTest {
         assertEq(required, 30 ether);
     }
 
-    function test_WithMissingBond() public override {
+    function test_WithMissingBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 29 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
@@ -656,7 +654,11 @@ contract CSAccountingGetBondSummaryTest is CSAccountingBondStateBaseTest {
         assertEq(required, 32 ether);
     }
 
-    function test_WithMissingBondAndOneWithdrawnValidator() public override {
+    function test_WithMissingBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 29 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
@@ -666,7 +668,7 @@ contract CSAccountingGetBondSummaryTest is CSAccountingBondStateBaseTest {
 }
 
 contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
-    function test_default() public override {
+    function test_default() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             0
@@ -675,7 +677,7 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         assertEq(required, stETH.getSharesByPooledEth(32 ether));
     }
 
-    function test_WithCurve() public override {
+    function test_WithCurve() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _curve(defaultCurve);
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
@@ -685,7 +687,7 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         assertEq(required, stETH.getSharesByPooledEth(17 ether));
     }
 
-    function test_WithLocked() public override {
+    function test_WithLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _lock({ id: 0, amount: 1 ether });
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
@@ -695,7 +697,7 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         assertEq(required, stETH.getSharesByPooledEth(33 ether));
     }
 
-    function test_WithLocked_MoreThanBond() public {
+    function test_WithLocked_MoreThanBond() public assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _lock({ id: 0, amount: 100500 ether });
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
@@ -705,7 +707,7 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         assertEq(required, stETH.getSharesByPooledEth(100532 ether));
     }
 
-    function test_WithCurveAndLocked() public override {
+    function test_WithCurveAndLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _curve(defaultCurve);
         _lock({ id: 0, amount: 1 ether });
@@ -716,7 +718,7 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         assertEq(required, stETH.getSharesByPooledEth(18 ether));
     }
 
-    function test_WithOneWithdrawnValidator() public override {
+    function test_WithOneWithdrawnValidator() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 1 });
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
             0
@@ -725,7 +727,7 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         assertEq(required, stETH.getSharesByPooledEth(30 ether));
     }
 
-    function test_WithBond() public override {
+    function test_WithBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
@@ -735,7 +737,11 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         assertEq(required, stETH.getSharesByPooledEth(32 ether));
     }
 
-    function test_WithBondAndOneWithdrawnValidator() public override {
+    function test_WithBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 32 ether });
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
@@ -745,7 +751,7 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         assertEq(required, stETH.getSharesByPooledEth(30 ether));
     }
 
-    function test_WithExcessBond() public override {
+    function test_WithExcessBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 33 ether });
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
@@ -755,7 +761,11 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         assertEq(required, stETH.getSharesByPooledEth(32 ether));
     }
 
-    function test_WithExcessBondAndOneWithdrawnValidator() public override {
+    function test_WithExcessBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 33 ether });
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
@@ -765,7 +775,7 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         assertEq(required, stETH.getSharesByPooledEth(30 ether));
     }
 
-    function test_WithMissingBond() public override {
+    function test_WithMissingBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 29 ether });
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
@@ -775,7 +785,11 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
         assertEq(required, stETH.getSharesByPooledEth(32 ether));
     }
 
-    function test_WithMissingBondAndOneWithdrawnValidator() public override {
+    function test_WithMissingBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 29 ether });
         (uint256 current, uint256 required) = accounting.getBondSummaryShares(
@@ -787,34 +801,34 @@ contract CSAccountingGetBondSummarySharesTest is CSAccountingBondStateBaseTest {
 }
 
 contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
-    function test_default() public override {
+    function test_default() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 11);
     }
 
-    function test_WithCurve() public override {
+    function test_WithCurve() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
         _curve(defaultCurve);
         assertEq(accounting.getUnbondedKeysCount(0), 6);
     }
 
-    function test_WithLocked() public override {
+    function test_WithLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
         _lock({ id: 0, amount: 1 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 11);
     }
 
-    function test_WithLocked_MoreThanBond() public {
+    function test_WithLocked_MoreThanBond() public assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
         _lock({ id: 0, amount: 100500 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 16);
     }
 
-    function test_WithCurveAndLocked() public override {
+    function test_WithCurveAndLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
         _curve(defaultCurve);
@@ -822,49 +836,61 @@ contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
         assertEq(accounting.getUnbondedKeysCount(0), 7);
     }
 
-    function test_WithOneWithdrawnValidator() public override {
+    function test_WithOneWithdrawnValidator() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 11.5 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 10);
     }
 
-    function test_WithBond() public override {
+    function test_WithBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 12.5 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 10);
     }
 
-    function test_WithBondAndOneWithdrawnValidator() public override {
+    function test_WithBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 11.5 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 10);
     }
 
-    function test_WithExcessBond() public override {
+    function test_WithExcessBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 33 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 0);
     }
 
-    function test_WithExcessBondAndOneWithdrawnValidator() public override {
+    function test_WithExcessBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 33 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 0);
     }
 
-    function test_WithMissingBond() public override {
+    function test_WithMissingBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 5.75 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 14);
     }
 
-    function test_WithMissingBondAndOneWithdrawnValidator() public override {
+    function test_WithMissingBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 5.75 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 13);
     }
 
-    function test_WithCustomSmolCurve() public {
+    function test_WithCustomSmolCurve() public assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         uint256[] memory curve = new uint256[](2);
         curve[0] = 2 ether;
@@ -874,7 +900,7 @@ contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
         assertEq(accounting.getUnbondedKeysCount(0), 15);
     }
 
-    function test_WithCustomHugeCurve_1() public {
+    function test_WithCustomHugeCurve_1() public assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         uint256[] memory curve = new uint256[](10);
         curve[0] = 1 ether;
@@ -892,7 +918,7 @@ contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
         assertEq(accounting.getUnbondedKeysCount(0), 13);
     }
 
-    function test_WithCustomHugeCurve_2() public {
+    function test_WithCustomHugeCurve_2() public assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         uint256[] memory curve = new uint256[](10);
         curve[0] = 1 ether;
@@ -914,34 +940,34 @@ contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
 contract CSAccountingGetUnbondedKeysCountToEjectTest is
     CSAccountingBondStateBaseTest
 {
-    function test_default() public override {
+    function test_default() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 30 ether });
         assertEq(accounting.getUnbondedKeysCountToEject(0), 1);
     }
 
-    function test_WithCurve() public override {
+    function test_WithCurve() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
         _curve(defaultCurve);
         assertEq(accounting.getUnbondedKeysCountToEject(0), 6);
     }
 
-    function test_WithLocked() public override {
+    function test_WithLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 30 ether });
         _lock({ id: 0, amount: 2 ether });
         assertEq(accounting.getUnbondedKeysCountToEject(0), 1);
     }
 
-    function test_WithLocked_MoreThanBond() public {
+    function test_WithLocked_MoreThanBond() public assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 30 ether });
         _lock({ id: 0, amount: 100500 ether });
         assertEq(accounting.getUnbondedKeysCountToEject(0), 1);
     }
 
-    function test_WithCurveAndLocked() public override {
+    function test_WithCurveAndLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
         _curve(defaultCurve);
@@ -949,43 +975,55 @@ contract CSAccountingGetUnbondedKeysCountToEjectTest is
         assertEq(accounting.getUnbondedKeysCountToEject(0), 6);
     }
 
-    function test_WithOneWithdrawnValidator() public override {
+    function test_WithOneWithdrawnValidator() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 11.5 ether });
         assertEq(accounting.getUnbondedKeysCountToEject(0), 10);
     }
 
-    function test_WithBond() public override {
+    function test_WithBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 11.5 ether });
         assertEq(accounting.getUnbondedKeysCountToEject(0), 11);
     }
 
-    function test_WithBondAndOneWithdrawnValidator() public override {
+    function test_WithBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 11.5 ether });
         assertEq(accounting.getUnbondedKeysCountToEject(0), 10);
     }
 
-    function test_WithExcessBond() public override {
+    function test_WithExcessBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 33 ether });
         assertEq(accounting.getUnbondedKeysCountToEject(0), 0);
     }
 
-    function test_WithExcessBondAndOneWithdrawnValidator() public override {
+    function test_WithExcessBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 33 ether });
         assertEq(accounting.getUnbondedKeysCountToEject(0), 0);
     }
 
-    function test_WithMissingBond() public override {
+    function test_WithMissingBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 5.75 ether });
         assertEq(accounting.getUnbondedKeysCountToEject(0), 14);
     }
 
-    function test_WithMissingBondAndOneWithdrawnValidator() public override {
+    function test_WithMissingBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 5.75 ether });
         assertEq(accounting.getUnbondedKeysCountToEject(0), 13);
@@ -1011,41 +1049,45 @@ abstract contract CSAccountingGetRequiredBondBaseTest is
 contract CSAccountingGetRequiredETHBondTest is
     CSAccountingGetRequiredBondBaseTest
 {
-    function test_default() public override {
+    function test_default() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         assertEq(accounting.getRequiredBondForNextKeys(0, 0), 32 ether);
     }
 
-    function test_WithCurve() public override {
+    function test_WithCurve() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _curve(defaultCurve);
         assertEq(accounting.getRequiredBondForNextKeys(0, 0), 17 ether);
     }
 
-    function test_WithLocked() public override {
+    function test_WithLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _lock({ id: 0, amount: 1 ether });
         assertEq(accounting.getRequiredBondForNextKeys(0, 0), 33 ether);
     }
 
-    function test_WithCurveAndLocked() public override {
+    function test_WithCurveAndLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _curve(defaultCurve);
         _lock({ id: 0, amount: 1 ether });
         assertEq(accounting.getRequiredBondForNextKeys(0, 0), 18 ether);
     }
 
-    function test_WithOneWithdrawnValidator() public override {
+    function test_WithOneWithdrawnValidator() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 1 });
         assertEq(accounting.getRequiredBondForNextKeys(0, 0), 30 ether);
     }
 
-    function test_OneWithdrawnOneAddedValidator() public override {
+    function test_OneWithdrawnOneAddedValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         assertEq(accounting.getRequiredBondForNextKeys(0, 1), 32 ether);
     }
 
-    function test_WithBond() public override {
+    function test_WithBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
@@ -1055,7 +1097,11 @@ contract CSAccountingGetRequiredETHBondTest is
         );
     }
 
-    function test_WithBondAndOneWithdrawnValidator() public override {
+    function test_WithBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 32 ether });
         assertEq(accounting.getRequiredBondForNextKeys(0, 0), 0);
@@ -1074,13 +1120,17 @@ contract CSAccountingGetRequiredETHBondTest is
         );
     }
 
-    function test_WithExcessBond() public override {
+    function test_WithExcessBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 33 ether });
         assertEq(accounting.getRequiredBondForNextKeys(0, 0), 0);
     }
 
-    function test_WithExcessBondAndOneWithdrawnValidator() public override {
+    function test_WithExcessBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 33 ether });
         assertEq(accounting.getRequiredBondForNextKeys(0, 0), 0);
@@ -1095,7 +1145,7 @@ contract CSAccountingGetRequiredETHBondTest is
         assertEq(accounting.getRequiredBondForNextKeys(0, 1), 0);
     }
 
-    function test_WithMissingBond() public override {
+    function test_WithMissingBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 16 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
@@ -1105,7 +1155,11 @@ contract CSAccountingGetRequiredETHBondTest is
         );
     }
 
-    function test_WithMissingBondAndOneWithdrawnValidator() public override {
+    function test_WithMissingBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 16 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
@@ -1132,7 +1186,7 @@ contract CSAccountingGetRequiredETHBondTest is
 contract CSAccountingGetRequiredWstETHBondTest is
     CSAccountingGetRequiredBondBaseTest
 {
-    function test_default() public override {
+    function test_default() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(
@@ -1141,7 +1195,7 @@ contract CSAccountingGetRequiredWstETHBondTest is
         );
     }
 
-    function test_WithCurve() public override {
+    function test_WithCurve() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _curve(defaultCurve);
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
@@ -1151,7 +1205,7 @@ contract CSAccountingGetRequiredWstETHBondTest is
         );
     }
 
-    function test_WithLocked() public override {
+    function test_WithLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _lock({ id: 0, amount: 1 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
@@ -1161,7 +1215,7 @@ contract CSAccountingGetRequiredWstETHBondTest is
         );
     }
 
-    function test_WithCurveAndLocked() public override {
+    function test_WithCurveAndLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _curve(defaultCurve);
         _lock({ id: 0, amount: 1 ether });
@@ -1172,7 +1226,7 @@ contract CSAccountingGetRequiredWstETHBondTest is
         );
     }
 
-    function test_WithOneWithdrawnValidator() public override {
+    function test_WithOneWithdrawnValidator() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 1 });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(
@@ -1181,7 +1235,11 @@ contract CSAccountingGetRequiredWstETHBondTest is
         );
     }
 
-    function test_OneWithdrawnOneAddedValidator() public override {
+    function test_OneWithdrawnOneAddedValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
         assertEq(
@@ -1190,7 +1248,7 @@ contract CSAccountingGetRequiredWstETHBondTest is
         );
     }
 
-    function test_WithBond() public override {
+    function test_WithBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
@@ -1200,7 +1258,11 @@ contract CSAccountingGetRequiredWstETHBondTest is
         );
     }
 
-    function test_WithBondAndOneWithdrawnValidator() public override {
+    function test_WithBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 32 ether });
         assertEq(accounting.getRequiredBondForNextKeysWstETH(0, 0), 0);
@@ -1215,13 +1277,17 @@ contract CSAccountingGetRequiredWstETHBondTest is
         assertEq(accounting.getRequiredBondForNextKeysWstETH(0, 1), 0);
     }
 
-    function test_WithExcessBond() public override {
+    function test_WithExcessBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 33 ether });
         assertEq(accounting.getRequiredBondForNextKeysWstETH(0, 0), 0);
     }
 
-    function test_WithExcessBondAndOneWithdrawnValidator() public override {
+    function test_WithExcessBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 33 ether });
         assertEq(accounting.getRequiredBondForNextKeysWstETH(0, 0), 0);
@@ -1236,7 +1302,7 @@ contract CSAccountingGetRequiredWstETHBondTest is
         assertEq(accounting.getRequiredBondForNextKeysWstETH(0, 1), 0);
     }
 
-    function test_WithMissingBond() public override {
+    function test_WithMissingBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 16 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
@@ -1246,7 +1312,11 @@ contract CSAccountingGetRequiredWstETHBondTest is
         );
     }
 
-    function test_WithMissingBondAndOneWithdrawnValidator() public override {
+    function test_WithMissingBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 16 ether });
         (uint256 current, uint256 required) = accounting.getBondSummary(0);
@@ -1290,7 +1360,7 @@ abstract contract CSAccountingGetRequiredBondForKeysBaseTest is
 contract CSAccountingGetBondAmountByKeysCountWstETHTest is
     CSAccountingGetRequiredBondForKeysBaseTest
 {
-    function test_default() public override {
+    function test_default() public override assertInvariants {
         assertEq(accounting.getBondAmountByKeysCountWstETH(0, 0), 0);
         assertEq(
             accounting.getBondAmountByKeysCountWstETH(1, 0),
@@ -1306,7 +1376,7 @@ contract CSAccountingGetBondAmountByKeysCountWstETHTest is
         );
     }
 
-    function test_WithCurve() public override {
+    function test_WithCurve() public override assertInvariants {
         ICSBondCurve.BondCurve memory curve = ICSBondCurve.BondCurve({
             points: defaultCurve,
             trend: 1 ether
@@ -1373,7 +1443,7 @@ abstract contract CSAccountingClaimRewardsBaseTest is
 }
 
 contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
-    function test_default() public override {
+    function test_default() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -1411,7 +1481,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
     }
 
-    function test_WithCurve() public override {
+    function test_WithCurve() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -1452,7 +1522,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
     }
 
-    function test_WithLocked() public override {
+    function test_WithLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -1469,7 +1539,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
     }
 
-    function test_WithCurveAndLocked() public override {
+    function test_WithCurveAndLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -1511,7 +1581,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
     }
 
-    function test_WithOneWithdrawnValidator() public override {
+    function test_WithOneWithdrawnValidator() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -1551,7 +1621,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
     }
 
-    function test_WithBond() public override {
+    function test_WithBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -1591,7 +1661,11 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
     }
 
-    function test_WithBondAndOneWithdrawnValidator() public override {
+    function test_WithBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -1631,7 +1705,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
     }
 
-    function test_WithExcessBond() public override {
+    function test_WithExcessBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 33 ether });
         _rewards({ fee: 0.1 ether });
@@ -1671,7 +1745,11 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
     }
 
-    function test_WithExcessBondAndOneWithdrawnValidator() public override {
+    function test_WithExcessBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 33 ether });
         _rewards({ fee: 0.1 ether });
@@ -1711,7 +1789,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
     }
 
-    function test_WithMissingBond() public override {
+    function test_WithMissingBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
@@ -1727,7 +1805,11 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
     }
 
-    function test_WithMissingBondAndOneWithdrawnValidator() public override {
+    function test_WithMissingBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
@@ -1743,7 +1825,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
     }
 
-    function test_WithDesirableValue() public override {
+    function test_WithDesirableValue() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -1780,7 +1862,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
-    function test_WithZeroValue() public override {
+    function test_WithZeroValue() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -1796,7 +1878,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         );
     }
 
-    function test_ExcessBondWithoutProof() public override {
+    function test_ExcessBondWithoutProof() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 33 ether });
         _rewards({ fee: 0.1 ether });
@@ -1845,7 +1927,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
 contract CSAccountingClaimWstETHRewardsTest is
     CSAccountingClaimRewardsBaseTest
 {
-    function test_default() public override {
+    function test_default() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -1890,7 +1972,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
     }
 
-    function test_WithCurve() public override {
+    function test_WithCurve() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -1936,7 +2018,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
     }
 
-    function test_WithLocked() public override {
+    function test_WithLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -1953,7 +2035,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
     }
 
-    function test_WithCurveAndLocked() public override {
+    function test_WithCurveAndLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2000,7 +2082,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
     }
 
-    function test_WithOneWithdrawnValidator() public override {
+    function test_WithOneWithdrawnValidator() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2045,7 +2127,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
     }
 
-    function test_WithBond() public override {
+    function test_WithBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2090,7 +2172,11 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
     }
 
-    function test_WithBondAndOneWithdrawnValidator() public override {
+    function test_WithBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2135,7 +2221,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
     }
 
-    function test_WithExcessBond() public override {
+    function test_WithExcessBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 33 ether });
         _rewards({ fee: 0.1 ether });
@@ -2180,7 +2266,11 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
     }
 
-    function test_WithExcessBondAndOneWithdrawnValidator() public override {
+    function test_WithExcessBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 33 ether });
         _rewards({ fee: 0.1 ether });
@@ -2225,7 +2315,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
     }
 
-    function test_WithMissingBond() public override {
+    function test_WithMissingBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
@@ -2241,7 +2331,11 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
     }
 
-    function test_WithMissingBondAndOneWithdrawnValidator() public override {
+    function test_WithMissingBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
@@ -2257,7 +2351,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
     }
 
-    function test_WithDesirableValue() public override {
+    function test_WithDesirableValue() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2307,7 +2401,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
     }
 
-    function test_WithZeroValue() public override {
+    function test_WithZeroValue() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2323,7 +2417,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         );
     }
 
-    function test_ExcessBondWithoutProof() public override {
+    function test_ExcessBondWithoutProof() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 33 ether });
         _rewards({ fee: 0.1 ether });
@@ -2372,7 +2466,7 @@ contract CSAccountingClaimWstETHRewardsTest is
 contract CSAccountingclaimRewardsUnstETHTest is
     CSAccountingClaimRewardsBaseTest
 {
-    function test_default() public override {
+    function test_default() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2402,7 +2496,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         );
     }
 
-    function test_WithCurve() public override {
+    function test_WithCurve() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2433,7 +2527,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         );
     }
 
-    function test_WithLocked() public override {
+    function test_WithLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2450,7 +2544,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         );
     }
 
-    function test_WithCurveAndLocked() public override {
+    function test_WithCurveAndLocked() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2482,7 +2576,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         );
     }
 
-    function test_WithOneWithdrawnValidator() public override {
+    function test_WithOneWithdrawnValidator() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2514,7 +2608,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         );
     }
 
-    function test_WithBond() public override {
+    function test_WithBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2546,7 +2640,11 @@ contract CSAccountingclaimRewardsUnstETHTest is
         );
     }
 
-    function test_WithBondAndOneWithdrawnValidator() public override {
+    function test_WithBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2578,7 +2676,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         );
     }
 
-    function test_WithExcessBond() public override {
+    function test_WithExcessBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 33 ether });
         _rewards({ fee: 0.1 ether });
@@ -2610,7 +2708,11 @@ contract CSAccountingclaimRewardsUnstETHTest is
         );
     }
 
-    function test_WithExcessBondAndOneWithdrawnValidator() public override {
+    function test_WithExcessBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 33 ether });
         _rewards({ fee: 0.1 ether });
@@ -2642,7 +2744,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         );
     }
 
-    function test_WithMissingBond() public override {
+    function test_WithMissingBond() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
@@ -2658,7 +2760,11 @@ contract CSAccountingclaimRewardsUnstETHTest is
         );
     }
 
-    function test_WithMissingBondAndOneWithdrawnValidator() public override {
+    function test_WithMissingBondAndOneWithdrawnValidator()
+        public
+        override
+        assertInvariants
+    {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
@@ -2674,7 +2780,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         );
     }
 
-    function test_WithDesirableValue() public override {
+    function test_WithDesirableValue() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2706,7 +2812,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         );
     }
 
-    function test_WithZeroValue() public override {
+    function test_WithZeroValue() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2722,7 +2828,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         );
     }
 
-    function test_ExcessBondWithoutProof() public override {
+    function test_ExcessBondWithoutProof() public override assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 33 ether });
         _rewards({ fee: 0.1 ether });
@@ -2775,7 +2881,7 @@ contract CSAccountingDepositEthTest is CSAccountingBaseTest {
         mock_getNodeOperatorsCount(1);
     }
 
-    function test_depositETH() public {
+    function test_depositETH() public assertInvariants {
         vm.deal(address(stakingModule), 32 ether);
         uint256 sharesToDeposit = stETH.getSharesByPooledEth(32 ether);
 
@@ -2800,7 +2906,7 @@ contract CSAccountingDepositEthTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), sharesToDeposit);
     }
 
-    function test_depositETH_zeroAmount() public {
+    function test_depositETH_zeroAmount() public assertInvariants {
         vm.prank(address(stakingModule));
         accounting.depositETH{ value: 0 ether }(user, 0);
 
@@ -2838,7 +2944,7 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
         mock_getNodeOperatorsCount(1);
     }
 
-    function test_depositStETH() public {
+    function test_depositStETH() public assertInvariants {
         vm.deal(user, 32 ether);
         vm.prank(user);
         uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
@@ -2877,7 +2983,7 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), sharesToDeposit);
     }
 
-    function test_depositStETH_zeroAmount() public {
+    function test_depositStETH_zeroAmount() public assertInvariants {
         vm.prank(address(stakingModule));
         accounting.depositStETH(
             user,
@@ -2910,7 +3016,10 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), 0);
     }
 
-    function test_depositStETH_withoutPermitButWithAllowance() public {
+    function test_depositStETH_withoutPermitButWithAllowance()
+        public
+        assertInvariants
+    {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
@@ -2951,7 +3060,7 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), sharesToDeposit);
     }
 
-    function test_depositStETH_withPermit() public {
+    function test_depositStETH_withPermit() public assertInvariants {
         vm.deal(user, 32 ether);
         vm.prank(user);
         uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
@@ -2994,7 +3103,10 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), sharesToDeposit);
     }
 
-    function test_depositStETH_withPermit_AlreadyPermittedWithLess() public {
+    function test_depositStETH_withPermit_AlreadyPermittedWithLess()
+        public
+        assertInvariants
+    {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
@@ -3028,7 +3140,10 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
         );
     }
 
-    function test_depositStETH_withPermit_AlreadyPermittedWithInf() public {
+    function test_depositStETH_withPermit_AlreadyPermittedWithInf()
+        public
+        assertInvariants
+    {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
@@ -3060,7 +3175,10 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
         );
     }
 
-    function test_depositStETH_withPermit_AlreadyPermittedWithTheSame() public {
+    function test_depositStETH_withPermit_AlreadyPermittedWithTheSame()
+        public
+        assertInvariants
+    {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
@@ -3117,7 +3235,7 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
         mock_getNodeOperatorsCount(1);
     }
 
-    function test_depositWstETH() public {
+    function test_depositWstETH() public assertInvariants {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
@@ -3160,7 +3278,7 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), sharesToDeposit);
     }
 
-    function test_depositWstETH_zeroAmount() public {
+    function test_depositWstETH_zeroAmount() public assertInvariants {
         vm.prank(address(stakingModule));
         accounting.depositWstETH(
             user,
@@ -3193,7 +3311,10 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), 0);
     }
 
-    function test_depositWstETH_withoutPermitButWithAllowance() public {
+    function test_depositWstETH_withoutPermitButWithAllowance()
+        public
+        assertInvariants
+    {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
@@ -3237,7 +3358,7 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), sharesToDeposit);
     }
 
-    function test_depositWstETH_withPermit() public {
+    function test_depositWstETH_withPermit() public assertInvariants {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
@@ -3284,7 +3405,10 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), sharesToDeposit);
     }
 
-    function test_depositWstETH_withPermit_AlreadyPermittedWithLess() public {
+    function test_depositWstETH_withPermit_AlreadyPermittedWithLess()
+        public
+        assertInvariants
+    {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
@@ -3320,7 +3444,10 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
         );
     }
 
-    function test_depositWstETH_withPermit_AlreadyPermittedWithInf() public {
+    function test_depositWstETH_withPermit_AlreadyPermittedWithInf()
+        public
+        assertInvariants
+    {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
         stETH.submit{ value: 32 ether }({ _referal: address(0) });
@@ -3416,7 +3543,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
         accounting.depositETH{ value: 32 ether }(user, 0);
     }
 
-    function test_penalize() public {
+    function test_penalize() public assertInvariants {
         uint256 shares = stETH.getSharesByPooledEth(1 ether);
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
@@ -3458,7 +3585,7 @@ contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
         accounting.depositETH{ value: 32 ether }(user, 0);
     }
 
-    function test_chargeFee() public {
+    function test_chargeFee() public assertInvariants {
         uint256 shares = stETH.getSharesByPooledEth(1 ether);
         uint256 bondSharesBefore = accounting.getBondShares(0);
 
@@ -3494,7 +3621,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         accounting.setLockedBondRetentionPeriod(200 days);
     }
 
-    function test_lockBondETH() public {
+    function test_lockBondETH() public assertInvariants {
         mock_getNodeOperatorsCount(1);
 
         vm.prank(address(stakingModule));
@@ -3510,7 +3637,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         accounting.lockBondETH(0, 1 ether);
     }
 
-    function test_releaseLockedBondETH() public {
+    function test_releaseLockedBondETH() public assertInvariants {
         mock_getNodeOperatorsCount(1);
 
         vm.prank(address(stakingModule));
@@ -3530,7 +3657,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         accounting.releaseLockedBondETH(0, 1 ether);
     }
 
-    function test_compensateLockedBondETH() public {
+    function test_compensateLockedBondETH() public assertInvariants {
         mock_getNodeOperatorsCount(1);
 
         vm.prank(address(stakingModule));
@@ -3546,7 +3673,10 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         assertEq(accounting.getActualLockedBond(0), 0.6 ether);
     }
 
-    function test_compensateLockedBondETH_RevertWhen_ReceiveFailed() public {
+    function test_compensateLockedBondETH_RevertWhen_ReceiveFailed()
+        public
+        assertInvariants
+    {
         mock_getNodeOperatorsCount(1);
         FailedReceiverStub failedReceiver = new FailedReceiverStub();
         vm.mockCall(
@@ -3576,7 +3706,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         accounting.compensateLockedBondETH{ value: 1 ether }(0);
     }
 
-    function test_settleLockedBondETH() public {
+    function test_settleLockedBondETH() public assertInvariants {
         mock_getNodeOperatorsCount(1);
         uint256 noId = 0;
         uint256 amount = 1 ether;
@@ -3592,7 +3722,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         assertEq(accounting.getActualLockedBond(noId), 0);
     }
 
-    function test_settleLockedBondETH_noLocked() public {
+    function test_settleLockedBondETH_noLocked() public assertInvariants {
         mock_getNodeOperatorsCount(1);
         vm.prank(address(stakingModule));
         uint256 settled = accounting.settleLockedBondETH(0);
@@ -3624,7 +3754,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         accounting.addBondCurve(new uint256[](0));
     }
 
-    function test_updateBondCurve() public {
+    function test_updateBondCurve() public assertInvariants {
         uint256[] memory curvePoints = new uint256[](2);
         curvePoints[0] = 2 ether;
         curvePoints[1] = 4 ether;
@@ -3654,7 +3784,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         accounting.updateBondCurve(1, new uint256[](0));
     }
 
-    function test_setBondCurve() public {
+    function test_setBondCurve() public assertInvariants {
         uint256[] memory curvePoints = new uint256[](2);
         curvePoints[0] = 2 ether;
         curvePoints[1] = 4 ether;
@@ -3685,7 +3815,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
     }
 
-    function test_resetBondCurve() public {
+    function test_resetBondCurve() public assertInvariants {
         uint256[] memory curvePoints = new uint256[](2);
         curvePoints[0] = 1 ether;
         curvePoints[1] = 2 ether;
@@ -3721,7 +3851,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
 }
 
 contract CSAccountingMiscTest is CSAccountingBaseTest {
-    function test_totalBondShares() public {
+    function test_totalBondShares() public assertInvariants {
         mock_getNodeOperatorsCount(2);
         vm.deal(address(stakingModule), 64 ether);
         vm.startPrank(address(stakingModule));
@@ -3755,7 +3885,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
         accounting.setChargePenaltyRecipient(address(0));
     }
 
-    function test_setLockedBondRetentionPeriod() public {
+    function test_setLockedBondRetentionPeriod() public assertInvariants {
         uint256 retention = accounting.MIN_BOND_LOCK_RETENTION_PERIOD() + 1;
         vm.prank(admin);
         accounting.setLockedBondRetentionPeriod(retention);
@@ -3763,7 +3893,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
         assertEq(actualRetention, retention);
     }
 
-    function test_renewBurnerAllowance() public {
+    function test_renewBurnerAllowance() public assertInvariants {
         vm.prank(address(accounting));
         stETH.approve(address(burner), 0);
 
@@ -3806,7 +3936,7 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
         accounting.recoverEther();
     }
 
-    function test_recoverEtherHappyPath() public {
+    function test_recoverEtherHappyPath() public assertInvariants {
         uint256 amount = 42 ether;
         vm.deal(address(accounting), amount);
 
@@ -3820,7 +3950,7 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
         assertEq(address(recoverer).balance, amount);
     }
 
-    function test_recoverERC20HappyPath() public {
+    function test_recoverERC20HappyPath() public assertInvariants {
         ERC20Testable token = new ERC20Testable();
         token.mint(address(accounting), 1000);
 
@@ -3848,7 +3978,7 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
         accounting.recoverERC20(address(stETH), 1000);
     }
 
-    function test_recoverStETHShares() public {
+    function test_recoverStETHShares() public assertInvariants {
         mock_getNodeOperatorsCount(1);
 
         vm.deal(address(stakingModule), 2 ether);
@@ -3892,7 +4022,7 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
 }
 
 contract CSAccountingPullFeeRewardsTest is CSAccountingBaseTest {
-    function test_pullFeeRewards() public {
+    function test_pullFeeRewards() public assertInvariants {
         uint256 feeShares = 1 ether;
         mock_distributeFees(feeShares);
         mock_getNodeOperatorsCount(1);
@@ -3907,9 +4037,13 @@ contract CSAccountingPullFeeRewardsTest is CSAccountingBaseTest {
 
         assertEq(bondSharesAfter, bondSharesBefore + feeShares);
         assertEq(totalBondSharesAfter, totalBondSharesBefore + feeShares);
+
+        // mock call to avoid invariant failure
+        // this not distributed because of feeDistributor mock
+        stETH.mintShares(address(accounting), feeShares);
     }
 
-    function test_pullFeeRewards_zeroAmount() public {
+    function test_pullFeeRewards_zeroAmount() public assertInvariants {
         mock_distributeFees(0);
         mock_getNodeOperatorsCount(1);
 
@@ -3925,7 +4059,7 @@ contract CSAccountingPullFeeRewardsTest is CSAccountingBaseTest {
         assertEq(totalBondSharesAfter, totalBondSharesBefore);
     }
 
-    function test_pullFeeRewards_revertWhen_operatorDoesNotEsits() public {
+    function test_pullFeeRewards_revertWhen_operatorDoesNotExits() public {
         mock_distributeFees(0);
         mock_getNodeOperatorsCount(0);
 

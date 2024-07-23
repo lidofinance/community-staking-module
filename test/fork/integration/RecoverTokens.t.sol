@@ -16,15 +16,33 @@ import { Utilities } from "../../helpers/Utilities.sol";
 import { PermitHelper } from "../../helpers/Permit.sol";
 import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
 import { MerkleTree } from "../../helpers/MerkleTree.sol";
+import { InvariantAsserts } from "../../helpers/InvariantAsserts.sol";
 
 contract RecoverIntegrationTest is
     Test,
     Utilities,
     PermitHelper,
-    DeploymentFixtures
+    DeploymentFixtures,
+    InvariantAsserts
 {
     address internal user;
     address internal recoverer;
+
+    modifier assertInvariants() {
+        _;
+        uint256 noCount = csm.getNodeOperatorsCount();
+        assertCSMKeys(csm);
+        assertCSMEnqueuedCount(csm);
+        assertCSMEarlyAdoptionMaxKeys(csm);
+        assertAccountingTotalBondShares(noCount, lido, accounting);
+        assertAccountingBurnerApproval(
+            lido,
+            address(accounting),
+            locator.burner()
+        );
+        assertFeeDistributorClaimableShares(lido, feeDistributor);
+        assertFeeDistributorTree(feeDistributor);
+    }
 
     function setUp() public {
         Env memory env = envVars();
@@ -60,7 +78,7 @@ contract RecoverIntegrationTest is
         vm.stopPrank();
     }
 
-    function test_recoverStETH_fromCSM() public {
+    function test_recoverStETH_fromCSM() public assertInvariants {
         assertEq(lido.sharesOf(recoverer), 0);
 
         uint256 amount = 1 ether;
@@ -76,7 +94,7 @@ contract RecoverIntegrationTest is
         assertEq(lido.sharesOf(recoverer), shares);
     }
 
-    function test_recoverETH_fromCSM() public {
+    function test_recoverETH_fromCSM() public assertInvariants {
         assertEq(recoverer.balance, 0);
 
         uint256 contractBalance = address(csm).balance;
@@ -90,7 +108,7 @@ contract RecoverIntegrationTest is
         assertEq(recoverer.balance, contractBalance + amount);
     }
 
-    function test_recoverWstETH_fromCSM() public {
+    function test_recoverWstETH_fromCSM() public assertInvariants {
         assertEq(wstETH.balanceOf(recoverer), 0);
 
         uint256 amount = 1 ether;
@@ -108,7 +126,7 @@ contract RecoverIntegrationTest is
         assertEq(wstETH.balanceOf(recoverer), amountWstETH);
     }
 
-    function test_recoverStETH_fromAccounting() public {
+    function test_recoverStETH_fromAccounting() public assertInvariants {
         assertEq(lido.sharesOf(recoverer), 0);
 
         uint256 amount = 1 ether;
@@ -124,7 +142,7 @@ contract RecoverIntegrationTest is
         assertEq(lido.sharesOf(recoverer), shares);
     }
 
-    function test_recoverETH_fromAccounting() public {
+    function test_recoverETH_fromAccounting() public assertInvariants {
         assertEq(recoverer.balance, 0);
 
         uint256 contractBalance = address(accounting).balance;
@@ -138,7 +156,7 @@ contract RecoverIntegrationTest is
         assertEq(recoverer.balance, contractBalance + amount);
     }
 
-    function test_recoverWstETH_fromAccounting() public {
+    function test_recoverWstETH_fromAccounting() public assertInvariants {
         assertEq(wstETH.balanceOf(recoverer), 0);
 
         uint256 amount = 1 ether;
@@ -156,7 +174,7 @@ contract RecoverIntegrationTest is
         assertEq(wstETH.balanceOf(recoverer), amountWstETH);
     }
 
-    function test_recoverETH_fromFeeDistributor() public {
+    function test_recoverETH_fromFeeDistributor() public assertInvariants {
         assertEq(recoverer.balance, 0);
 
         uint256 contractBalance = address(feeDistributor).balance;
@@ -170,7 +188,7 @@ contract RecoverIntegrationTest is
         assertEq(recoverer.balance, contractBalance + amount);
     }
 
-    function test_recoverWstETH_fromFeeDistributor() public {
+    function test_recoverWstETH_fromFeeDistributor() public assertInvariants {
         assertEq(wstETH.balanceOf(recoverer), 0);
 
         uint256 amount = 1 ether;
@@ -188,7 +206,7 @@ contract RecoverIntegrationTest is
         assertEq(wstETH.balanceOf(recoverer), amountWstETH);
     }
 
-    function test_recoverETH_fromOracle() public {
+    function test_recoverETH_fromOracle() public assertInvariants {
         assertEq(recoverer.balance, 0);
 
         uint256 contractBalance = address(oracle).balance;
@@ -202,7 +220,7 @@ contract RecoverIntegrationTest is
         assertEq(recoverer.balance, contractBalance + amount);
     }
 
-    function test_recoverWstETH_fromOracle() public {
+    function test_recoverWstETH_fromOracle() public assertInvariants {
         assertEq(wstETH.balanceOf(recoverer), 0);
 
         uint256 amount = 1 ether;
