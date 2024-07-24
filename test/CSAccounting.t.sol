@@ -32,6 +32,7 @@ import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
 import { InvariantAsserts } from "./helpers/InvariantAsserts.sol";
+import { DistributorMock } from "./helpers/mocks/DistributorMock.sol";
 
 contract FailedReceiverStub {
     receive() external payable {
@@ -46,7 +47,7 @@ contract CSAccountingFixtures is Test, Fixtures, Utilities, InvariantAsserts {
 
     CSAccounting public accounting;
     Stub public stakingModule;
-    Stub public feeDistributor;
+    DistributorMock public feeDistributor;
     BurnerMock internal burner;
 
     address internal admin;
@@ -56,8 +57,11 @@ contract CSAccountingFixtures is Test, Fixtures, Utilities, InvariantAsserts {
 
     uint256 internal nodeOperatorsCount;
 
+    event AssertInvariants();
+
     modifier assertInvariants() {
         _;
+        emit AssertInvariants();
         assertAccountingTotalBondShares(nodeOperatorsCount, stETH, accounting);
         assertAccountingBurnerApproval(
             stETH,
@@ -90,24 +94,6 @@ contract CSAccountingFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         );
     }
 
-    function mock_getFeesToDistribute(uint256 returnValue) internal {
-        vm.mockCall(
-            address(feeDistributor),
-            abi.encodeWithSelector(
-                ICSFeeDistributor.getFeesToDistribute.selector
-            ),
-            abi.encode(returnValue)
-        );
-    }
-
-    function mock_distributeFees(uint256 returnValue) internal {
-        vm.mockCall(
-            address(feeDistributor),
-            abi.encodeWithSelector(ICSFeeDistributor.distributeFees.selector),
-            abi.encode(returnValue)
-        );
-    }
-
     function addBond(uint256 nodeOperatorId, uint256 amount) internal {
         vm.deal(address(stakingModule), amount);
         vm.prank(address(stakingModule));
@@ -130,7 +116,7 @@ contract CSAccountingBaseConstructorTest is CSAccountingFixtures {
         (locator, wstETH, stETH, , ) = initLido();
 
         stakingModule = new Stub();
-        feeDistributor = new Stub();
+        feeDistributor = new DistributorMock(address(stETH), address(0));
     }
 }
 
@@ -228,7 +214,6 @@ contract CSAccountingBaseInitTest is CSAccountingFixtures {
         (locator, wstETH, stETH, burner, ) = initLido();
 
         stakingModule = new Stub();
-        feeDistributor = new Stub();
 
         accounting = new CSAccounting(
             address(locator),
@@ -236,6 +221,10 @@ contract CSAccountingBaseInitTest is CSAccountingFixtures {
             10,
             4 weeks,
             365 days
+        );
+        feeDistributor = new DistributorMock(
+            address(stETH),
+            address(accounting)
         );
     }
 }
@@ -326,7 +315,6 @@ contract CSAccountingBaseTest is CSAccountingFixtures {
         (locator, wstETH, stETH, burner, ) = initLido();
 
         stakingModule = new Stub();
-        feeDistributor = new Stub();
 
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
@@ -336,6 +324,11 @@ contract CSAccountingBaseTest is CSAccountingFixtures {
             10,
             4 weeks,
             365 days
+        );
+
+        feeDistributor = new DistributorMock(
+            address(stETH),
+            address(accounting)
         );
 
         _enableInitializers(address(accounting));
@@ -1413,11 +1406,9 @@ abstract contract CSAccountingRewardsBaseTest is CSAccountingBondStateBaseTest {
     uint256 unstETHSharesAsFee;
 
     function _rewards(uint256 fee) internal {
-        vm.deal(address(accounting), fee);
-        vm.prank(address(accounting));
+        vm.deal(address(feeDistributor), fee);
+        vm.prank(address(feeDistributor));
         sharesAsFee = stETH.submit{ value: fee }(address(0));
-        mock_getFeesToDistribute(sharesAsFee);
-        mock_distributeFees(sharesAsFee);
         stETHAsFee = stETH.getPooledEthByShares(sharesAsFee);
         wstETHAsFee = wstETH.getWstETHByStETH(stETHAsFee);
         unstETHAsFee = stETH.getPooledEthByShares(sharesAsFee);
@@ -4024,7 +4015,7 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
 contract CSAccountingPullFeeRewardsTest is CSAccountingBaseTest {
     function test_pullFeeRewards() public assertInvariants {
         uint256 feeShares = 1 ether;
-        mock_distributeFees(feeShares);
+        stETH.mintShares(address(feeDistributor), feeShares);
         mock_getNodeOperatorsCount(1);
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
@@ -4037,14 +4028,9 @@ contract CSAccountingPullFeeRewardsTest is CSAccountingBaseTest {
 
         assertEq(bondSharesAfter, bondSharesBefore + feeShares);
         assertEq(totalBondSharesAfter, totalBondSharesBefore + feeShares);
-
-        // mock call to avoid invariant failure
-        // this not distributed because of feeDistributor mock
-        stETH.mintShares(address(accounting), feeShares);
     }
 
     function test_pullFeeRewards_zeroAmount() public assertInvariants {
-        mock_distributeFees(0);
         mock_getNodeOperatorsCount(1);
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
@@ -4060,7 +4046,6 @@ contract CSAccountingPullFeeRewardsTest is CSAccountingBaseTest {
     }
 
     function test_pullFeeRewards_revertWhen_operatorDoesNotExits() public {
-        mock_distributeFees(0);
         mock_getNodeOperatorsCount(0);
 
         vm.expectRevert(CSAccounting.NodeOperatorDoesNotExist.selector);
