@@ -336,7 +336,10 @@ contract CSFeeOracleTest is Test, Utilities {
             reportProcessor: address(oracle)
         });
 
-        DistributorMock distributor = new DistributorMock();
+        DistributorMock distributor = new DistributorMock(
+            address(0),
+            address(0)
+        );
         vm.expectRevert(CSFeeOracle.ZeroAdminAddress.selector);
         oracle.initialize(
             address(0),
@@ -446,7 +449,7 @@ contract CSFeeOracleTest is Test, Utilities {
 
         oracle.initialize(
             ORACLE_ADMIN,
-            address(new DistributorMock()),
+            address(new DistributorMock(address(0), address(0))),
             address(consensus),
             CONSENSUS_VERSION,
             PERF_LEEWAY

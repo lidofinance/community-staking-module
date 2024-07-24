@@ -21,8 +21,9 @@ import { Batch, IQueueLib } from "../src/lib/QueueLib.sol";
 import { SigningKeys } from "../src/lib/SigningKeys.sol";
 import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 import { INOAddresses } from "../src/lib/NOAddresses.sol";
+import { InvariantAsserts } from "./helpers/InvariantAsserts.sol";
 
-abstract contract CSMFixtures is Test, Fixtures, Utilities {
+abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     using Strings for uint256;
 
     struct BatchInfo {
@@ -64,6 +65,13 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities {
         uint256 totalExitedValidators;
         uint256 totalDepositedValidators;
         uint256 depositableValidatorsCount;
+    }
+
+    modifier assertInvariants() {
+        _;
+        assertCSMEarlyAdoptionMaxKeys(csm);
+        assertCSMEnqueuedCount(csm);
+        assertCSMKeys(csm);
     }
 
     function createNodeOperator() internal returns (uint256) {
@@ -512,7 +520,9 @@ contract CSMCommonNoRoles is CSMFixtures {
 }
 
 contract CsmFuzz is CSMCommon {
-    function testFuzz_CreateNodeOperator(uint256 keysCount) public {
+    function testFuzz_CreateNodeOperator(
+        uint256 keysCount
+    ) public assertInvariants {
         keysCount = bound(keysCount, 1, 99);
         createNodeOperator(keysCount);
         assertEq(csm.getNodeOperatorsCount(), 1);
@@ -520,7 +530,9 @@ contract CsmFuzz is CSMCommon {
         assertEq(no.totalAddedKeys, keysCount);
     }
 
-    function testFuzz_CreateMultipleNodeOperators(uint256 count) public {
+    function testFuzz_CreateMultipleNodeOperators(
+        uint256 count
+    ) public assertInvariants {
         count = bound(count, 1, 100);
         for (uint256 i = 0; i < count; i++) {
             createNodeOperator(1);
@@ -528,7 +540,7 @@ contract CsmFuzz is CSMCommon {
         assertEq(csm.getNodeOperatorsCount(), count);
     }
 
-    function testFuzz_UploadKeys(uint256 keysCount) public {
+    function testFuzz_UploadKeys(uint256 keysCount) public assertInvariants {
         keysCount = bound(keysCount, 1, 99);
         createNodeOperator(1);
         uploadMoreKeys(0, keysCount);
@@ -822,7 +834,7 @@ contract CSMPauseAffectingTest is CSMCommon {
 }
 
 contract CSMAddNodeOperatorETH is CSMCommon {
-    function test_AddNodeOperatorETH() public {
+    function test_AddNodeOperatorETH() public assertInvariants {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -856,7 +868,10 @@ contract CSMAddNodeOperatorETH is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_AddNodeOperatorETH_withCustomAddresses() public {
+    function test_AddNodeOperatorETH_withCustomAddresses()
+        public
+        assertInvariants
+    {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -887,7 +902,7 @@ contract CSMAddNodeOperatorETH is CSMCommon {
         assertEq(no.rewardAddress, reward);
     }
 
-    function test_AddNodeOperatorETH_withReferrer() public {
+    function test_AddNodeOperatorETH_withReferrer() public assertInvariants {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -916,7 +931,10 @@ contract CSMAddNodeOperatorETH is CSMCommon {
         );
     }
 
-    function test_AddNodeOperatorETH_RevertWhen_InvalidAmount() public {
+    function test_AddNodeOperatorETH_RevertWhen_InvalidAmount()
+        public
+        assertInvariants
+    {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -941,7 +959,7 @@ contract CSMAddNodeOperatorETH is CSMCommon {
 }
 
 contract CSMAddNodeOperatorStETH is CSMCommon {
-    function test_AddNodeOperatorStETH() public {
+    function test_AddNodeOperatorStETH() public assertInvariants {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -985,7 +1003,10 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_AddNodeOperatorStETH_withCustomAddresses() public {
+    function test_AddNodeOperatorStETH_withCustomAddresses()
+        public
+        assertInvariants
+    {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -1025,7 +1046,7 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
         assertEq(no.rewardAddress, reward);
     }
 
-    function test_AddNodeOperatorStETH_withReferrer() public {
+    function test_AddNodeOperatorStETH_withReferrer() public assertInvariants {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -1063,7 +1084,7 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
         );
     }
 
-    function test_AddNodeOperatorStETH_withPermit() public {
+    function test_AddNodeOperatorStETH_withPermit() public assertInvariants {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -1114,7 +1135,7 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
 }
 
 contract CSMAddNodeOperatorWstETH is CSMCommon {
-    function test_AddNodeOperatorWstETH() public {
+    function test_AddNodeOperatorWstETH() public assertInvariants {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -1158,7 +1179,10 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_AddNodeOperatorWstETH_withCustomAddresses() public {
+    function test_AddNodeOperatorWstETH_withCustomAddresses()
+        public
+        assertInvariants
+    {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -1199,7 +1223,7 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
         assertEq(no.rewardAddress, reward);
     }
 
-    function test_AddNodeOperatorWstETH_withReferrer() public {
+    function test_AddNodeOperatorWstETH_withReferrer() public assertInvariants {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -1238,7 +1262,7 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
         );
     }
 
-    function test_AddNodeOperatorWstETH_withPermit() public {
+    function test_AddNodeOperatorWstETH_withPermit() public assertInvariants {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -1289,7 +1313,7 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
 }
 
 contract CSMAddValidatorKeys is CSMCommon {
-    function test_AddValidatorKeysWstETH() public {
+    function test_AddValidatorKeysWstETH() public assertInvariants {
         uint256 noId = createNodeOperator();
         uint256 toWrap = BOND_SIZE + 1 wei;
         vm.deal(nodeOperator, toWrap);
@@ -1321,7 +1345,7 @@ contract CSMAddValidatorKeys is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_AddValidatorKeysWstETH_withPermit() public {
+    function test_AddValidatorKeysWstETH_withPermit() public assertInvariants {
         uint256 noId = createNodeOperator();
         uint256 toWrap = BOND_SIZE + 1 wei;
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
@@ -1361,7 +1385,7 @@ contract CSMAddValidatorKeys is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_AddValidatorKeysStETH() public {
+    function test_AddValidatorKeysStETH() public assertInvariants {
         uint256 noId = createNodeOperator();
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
 
@@ -1392,7 +1416,7 @@ contract CSMAddValidatorKeys is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_AddValidatorKeysStETH_withPermit() public {
+    function test_AddValidatorKeysStETH_withPermit() public assertInvariants {
         uint256 noId = createNodeOperator();
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
 
@@ -1432,7 +1456,7 @@ contract CSMAddValidatorKeys is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_AddValidatorKeysETH() public {
+    function test_AddValidatorKeysETH() public assertInvariants {
         uint256 noId = createNodeOperator();
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
 
@@ -1451,7 +1475,10 @@ contract CSMAddValidatorKeys is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_AddValidatorKeysETH_RevertWhen_InvalidAmount() public {
+    function test_AddValidatorKeysETH_RevertWhen_InvalidAmount()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
 
@@ -1470,7 +1497,10 @@ contract CSMAddValidatorKeys is CSMCommon {
 }
 
 contract CSMAddNodeOperatorNegative is CSMCommon {
-    function test_addNodeOperatorETH_RevertWhen_NoKeys() public {
+    function test_addNodeOperatorETH_RevertWhen_NoKeys()
+        public
+        assertInvariants
+    {
         vm.expectRevert(SigningKeys.InvalidKeysCount.selector);
         csm.addNodeOperatorETH(
             0,
@@ -1488,6 +1518,7 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
 
     function test_AddNodeOperatorETH_RevertWhen_KeysAndSigsLengthMismatch()
         public
+        assertInvariants
     {
         uint16 keysCount = 1;
         (bytes memory keys, ) = keysSignatures(keysCount);
@@ -1509,7 +1540,10 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
         );
     }
 
-    function test_AddNodeOperatorETH_RevertWhen_ZeroKey() public {
+    function test_AddNodeOperatorETH_RevertWhen_ZeroKey()
+        public
+        assertInvariants
+    {
         uint16 keysCount = 1;
         (
             bytes memory keys,
@@ -1533,7 +1567,10 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
         );
     }
 
-    function test_AddNodeOperatorStETH_RevertWhen_NoKeys() public {
+    function test_AddNodeOperatorStETH_RevertWhen_NoKeys()
+        public
+        assertInvariants
+    {
         vm.deal(nodeOperator, BOND_SIZE + 1 wei);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
@@ -1592,7 +1629,10 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
         );
     }
 
-    function test_AddNodeOperatorStETH_RevertWhen_ZeroKey() public {
+    function test_AddNodeOperatorStETH_RevertWhen_ZeroKey()
+        public
+        assertInvariants
+    {
         uint16 keysCount = 1;
         (
             bytes memory keys,
@@ -1625,7 +1665,10 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
         );
     }
 
-    function test_AddNodeOperatorWstETH_RevertWhen_NoKeys() public {
+    function test_AddNodeOperatorWstETH_RevertWhen_NoKeys()
+        public
+        assertInvariants
+    {
         vm.deal(nodeOperator, BOND_SIZE + 1 wei);
         vm.startPrank(nodeOperator);
         stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
@@ -1687,7 +1730,10 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
         );
     }
 
-    function test_AddNodeOperatorWstETH_RevertWhen_ZeroKey() public {
+    function test_AddNodeOperatorWstETH_RevertWhen_ZeroKey()
+        public
+        assertInvariants
+    {
         uint16 keysCount = 1;
         (
             bytes memory keys,
@@ -1723,7 +1769,10 @@ contract CSMAddNodeOperatorNegative is CSMCommon {
 }
 
 contract CSMAddValidatorKeysNegative is CSMCommon {
-    function test_AddValidatorKeysETH_RevertWhen_NoKeys() public {
+    function test_AddValidatorKeysETH_RevertWhen_NoKeys()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         uint256 required = accounting.getRequiredBondForNextKeys(0, 0);
         vm.deal(nodeOperator, required);
@@ -1757,7 +1806,10 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
         );
     }
 
-    function test_AddValidatorKeysETH_RevertWhen_ZeroKey() public {
+    function test_AddValidatorKeysETH_RevertWhen_ZeroKey()
+        public
+        assertInvariants
+    {
         uint16 keysCount = 1;
         uint256 noId = createNodeOperator();
         (
@@ -1778,7 +1830,10 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
         );
     }
 
-    function test_AddValidatorKeysStETH_RevertWhen_NoKeys() public {
+    function test_AddValidatorKeysStETH_RevertWhen_NoKeys()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
 
         vm.deal(nodeOperator, BOND_SIZE + 1 wei);
@@ -1828,7 +1883,10 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
         );
     }
 
-    function test_AddValidatorKeysStETH_RevertWhen_ZeroKey() public {
+    function test_AddValidatorKeysStETH_RevertWhen_ZeroKey()
+        public
+        assertInvariants
+    {
         uint16 keysCount = 1;
         uint256 noId = createNodeOperator();
         (
@@ -1856,7 +1914,10 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
         );
     }
 
-    function test_AddValidatorKeysWstETH_RevertWhen_NoKeys() public {
+    function test_AddValidatorKeysWstETH_RevertWhen_NoKeys()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         uint256 toWrap = BOND_SIZE + 1 wei;
         vm.deal(nodeOperator, toWrap);
@@ -1910,7 +1971,10 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
         );
     }
 
-    function test_AddValidatorKeysWstETH_RevertWhen_ZeroKey() public {
+    function test_AddValidatorKeysWstETH_RevertWhen_ZeroKey()
+        public
+        assertInvariants
+    {
         uint16 keysCount = 1;
         uint256 noId = createNodeOperator();
         uint256 toWrap = BOND_SIZE + 1 wei;
@@ -1942,7 +2006,7 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
 }
 
 contract CSMDepositETH is CSMCommon {
-    function test_DepositETH() public {
+    function test_DepositETH() public assertInvariants {
         uint256 noId = createNodeOperator();
         uint256 preShares = accounting.getBondShares(noId);
         vm.deal(nodeOperator, 32 ether);
@@ -1963,7 +2027,7 @@ contract CSMDepositETH is CSMCommon {
         );
     }
 
-    function test_DepositETH_NotExistingNodeOperator() public {
+    function test_DepositETH_NotExistingNodeOperator() public assertInvariants {
         uint256 noId = createNodeOperator();
         vm.deal(nodeOperator, 32 ether);
 
@@ -1972,7 +2036,7 @@ contract CSMDepositETH is CSMCommon {
         csm.depositETH{ value: 32 ether }(noId + 1);
     }
 
-    function test_DepositETH_NonceShouldChange() public {
+    function test_DepositETH_NonceShouldChange() public assertInvariants {
         uint256 noId = createNodeOperator();
 
         csm.reportELRewardsStealingPenalty(
@@ -1990,7 +2054,7 @@ contract CSMDepositETH is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_DepositETH_NonceShouldNotChange() public {
+    function test_DepositETH_NonceShouldNotChange() public assertInvariants {
         uint256 noId = createNodeOperator();
 
         uint256 nonce = csm.getNonce();
@@ -2004,7 +2068,7 @@ contract CSMDepositETH is CSMCommon {
 }
 
 contract CSMDepositStETH is CSMCommon {
-    function test_DepositStETH() public {
+    function test_DepositStETH() public assertInvariants {
         uint256 noId = createNodeOperator();
         uint256 preShares = accounting.getBondShares(noId);
         vm.deal(nodeOperator, 32 ether);
@@ -2036,7 +2100,10 @@ contract CSMDepositStETH is CSMCommon {
         );
     }
 
-    function test_DepositStETH_NotExistingNodeOperator() public {
+    function test_DepositStETH_NotExistingNodeOperator()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
@@ -2055,7 +2122,7 @@ contract CSMDepositStETH is CSMCommon {
         );
     }
 
-    function test_DepositStETH_withPermit() public {
+    function test_DepositStETH_withPermit() public assertInvariants {
         uint256 noId = createNodeOperator();
         uint256 preShares = accounting.getBondShares(noId);
         vm.deal(nodeOperator, 32 ether);
@@ -2092,7 +2159,7 @@ contract CSMDepositStETH is CSMCommon {
         );
     }
 
-    function test_DepositStETH_NonceShouldChange() public {
+    function test_DepositStETH_NonceShouldChange() public assertInvariants {
         uint256 noId = createNodeOperator();
 
         csm.reportELRewardsStealingPenalty(
@@ -2121,7 +2188,7 @@ contract CSMDepositStETH is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_DepositStETH_NonceShouldNotChange() public {
+    function test_DepositStETH_NonceShouldNotChange() public assertInvariants {
         uint256 noId = createNodeOperator();
 
         uint256 nonce = csm.getNonce();
@@ -2146,7 +2213,7 @@ contract CSMDepositStETH is CSMCommon {
 }
 
 contract CSMDepositWstETH is CSMCommon {
-    function test_DepositWstETH() public {
+    function test_DepositWstETH() public assertInvariants {
         uint256 noId = createNodeOperator();
         uint256 preShares = accounting.getBondShares(noId);
         vm.deal(nodeOperator, 32 ether);
@@ -2182,7 +2249,10 @@ contract CSMDepositWstETH is CSMCommon {
         );
     }
 
-    function test_DepositWstETH_NotExistingNodeOperator() public {
+    function test_DepositWstETH_NotExistingNodeOperator()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
@@ -2203,7 +2273,7 @@ contract CSMDepositWstETH is CSMCommon {
         );
     }
 
-    function test_DepositWstETH_withPermit() public {
+    function test_DepositWstETH_withPermit() public assertInvariants {
         uint256 noId = createNodeOperator();
         uint256 preShares = accounting.getBondShares(noId);
         vm.deal(nodeOperator, 32 ether);
@@ -2243,7 +2313,7 @@ contract CSMDepositWstETH is CSMCommon {
         );
     }
 
-    function test_DepositWstETH_NonceShouldChange() public {
+    function test_DepositWstETH_NonceShouldChange() public assertInvariants {
         uint256 noId = createNodeOperator();
 
         csm.reportELRewardsStealingPenalty(
@@ -2275,7 +2345,7 @@ contract CSMDepositWstETH is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_DepositWstETH_NonceShouldNotChange() public {
+    function test_DepositWstETH_NonceShouldNotChange() public assertInvariants {
         uint256 noId = createNodeOperator();
 
         uint256 nonce = csm.getNonce();
@@ -2305,7 +2375,7 @@ contract CSMDepositWstETH is CSMCommon {
 contract CSMObtainDepositData is CSMCommon {
     // TODO: test with near to real values
 
-    function test_obtainDepositData() public {
+    function test_obtainDepositData() public assertInvariants {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -2333,7 +2403,10 @@ contract CSMObtainDepositData is CSMCommon {
         assertEq(obtainedSignatures, signatures);
     }
 
-    function test_obtainDepositData_MultipleOperators() public {
+    function test_obtainDepositData_MultipleOperators()
+        public
+        assertInvariants
+    {
         uint256 firstId = createNodeOperator(2);
         uint256 secondId = createNodeOperator(3);
         uint256 thirdId = createNodeOperator(1);
@@ -2347,7 +2420,7 @@ contract CSMObtainDepositData is CSMCommon {
         csm.obtainDepositData(6, "");
     }
 
-    function test_obtainDepositData_counters() public {
+    function test_obtainDepositData_counters() public assertInvariants {
         uint256 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -2373,7 +2446,7 @@ contract CSMObtainDepositData is CSMCommon {
         assertEq(no.depositableValidatorsCount, 0);
     }
 
-    function test_obtainDepositData_zeroDeposits() public {
+    function test_obtainDepositData_zeroDeposits() public assertInvariants {
         uint256 noId = createNodeOperator();
 
         (bytes memory publicKeys, bytes memory signatures) = csm
@@ -2388,7 +2461,7 @@ contract CSMObtainDepositData is CSMCommon {
         assertEq(no.depositableValidatorsCount, 1);
     }
 
-    function test_obtainDepositData_unvettedKeys() public {
+    function test_obtainDepositData_unvettedKeys() public assertInvariants {
         createNodeOperator(2);
         uint256 secondNoId = createNodeOperator(1);
         createNodeOperator(3);
@@ -2406,7 +2479,10 @@ contract CSMObtainDepositData is CSMCommon {
         assertEq(depositableValidatorsCount, 0);
     }
 
-    function test_obtainDepositData_counters_WhenLessThanLastBatch() public {
+    function test_obtainDepositData_counters_WhenLessThanLastBatch()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(7);
 
         vm.expectEmit(true, true, true, true, address(csm));
@@ -2419,12 +2495,15 @@ contract CSMObtainDepositData is CSMCommon {
         assertEq(no.depositableValidatorsCount, 4);
     }
 
-    function test_obtainDepositData_RevertWhen_NoMoreKeys() public {
+    function test_obtainDepositData_RevertWhen_NoMoreKeys()
+        public
+        assertInvariants
+    {
         vm.expectRevert(CSModule.NotEnoughKeys.selector);
         csm.obtainDepositData(1, "");
     }
 
-    function test_obtainDepositData_nonceChanged() public {
+    function test_obtainDepositData_nonceChanged() public assertInvariants {
         createNodeOperator();
         uint256 nonce = csm.getNonce();
 
@@ -2435,7 +2514,7 @@ contract CSMObtainDepositData is CSMCommon {
     function testFuzz_obtainDepositData_MultipleOperators(
         uint256 batchCount,
         uint256 random
-    ) public {
+    ) public assertInvariants {
         batchCount = bound(batchCount, 1, 20);
         random = bound(random, 1, 20);
         vm.assume(batchCount > random);
@@ -2461,7 +2540,7 @@ contract CSMObtainDepositData is CSMCommon {
     function testFuzz_obtainDepositData_OneOperator(
         uint256 batchCount,
         uint256 random
-    ) public {
+    ) public assertInvariants {
         batchCount = bound(batchCount, 1, 20);
         random = bound(random, 1, 20);
         vm.assume(batchCount > random);
@@ -2492,7 +2571,7 @@ contract CSMObtainDepositData is CSMCommon {
 }
 
 contract CSMClaimRewards is CSMCommon {
-    function test_claimRewardsStETH() public {
+    function test_claimRewardsStETH() public assertInvariants {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
 
@@ -2531,7 +2610,10 @@ contract CSMClaimRewards is CSMCommon {
         assertEq(current, required, "NO bond shares should be equal required");
     }
 
-    function test_claimRewardsStETH_fromRewardAddress() public {
+    function test_claimRewardsStETH_fromRewardAddress()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         address rewardAddress = nextAddress("rewardAddress");
         csm.obtainDepositData(1, "");
@@ -2549,18 +2631,24 @@ contract CSMClaimRewards is CSMCommon {
         csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
-    function test_claimRewardsStETH_RevertWhen_NoNodeOperator() public {
+    function test_claimRewardsStETH_RevertWhen_NoNodeOperator()
+        public
+        assertInvariants
+    {
         vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
         csm.claimRewardsStETH(0, UINT256_MAX, 0, new bytes32[](0));
     }
 
-    function test_claimRewardsStETH_RevertWhen_NotEligible() public {
+    function test_claimRewardsStETH_RevertWhen_NotEligible()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         vm.expectRevert(CSModule.SenderIsNotEligible.selector);
         csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
-    function test_claimRewardsWstETH() public {
+    function test_claimRewardsWstETH() public assertInvariants {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
 
@@ -2612,7 +2700,10 @@ contract CSMClaimRewards is CSMCommon {
         );
     }
 
-    function test_claimRewardsWstETH_fromRewardAddress() public {
+    function test_claimRewardsWstETH_fromRewardAddress()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         address rewardAddress = nextAddress("rewardAddress");
         csm.obtainDepositData(1, "");
@@ -2629,18 +2720,24 @@ contract CSMClaimRewards is CSMCommon {
         csm.claimRewardsWstETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
-    function test_claimRewardsWstETH_RevertWhen_NoNodeOperator() public {
+    function test_claimRewardsWstETH_RevertWhen_NoNodeOperator()
+        public
+        assertInvariants
+    {
         vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
         csm.claimRewardsWstETH(0, UINT256_MAX, 0, new bytes32[](0));
     }
 
-    function test_claimRewardsWstETH_RevertWhen_NotEligible() public {
+    function test_claimRewardsWstETH_RevertWhen_NotEligible()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         vm.expectRevert(CSModule.SenderIsNotEligible.selector);
         csm.claimRewardsWstETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
-    function test_requestRewardsETH() public {
+    function test_requestRewardsETH() public assertInvariants {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
 
@@ -2675,7 +2772,10 @@ contract CSMClaimRewards is CSMCommon {
         );
     }
 
-    function test_requestRewardsETH_fromRewardAddress() public {
+    function test_requestRewardsETH_fromRewardAddress()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         address rewardAddress = nextAddress("rewardAddress");
         csm.obtainDepositData(1, "");
@@ -2692,12 +2792,18 @@ contract CSMClaimRewards is CSMCommon {
         csm.claimRewardsUnstETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
-    function test_requestRewardsETH_RevertWhen_NoNodeOperator() public {
+    function test_requestRewardsETH_RevertWhen_NoNodeOperator()
+        public
+        assertInvariants
+    {
         vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
         csm.claimRewardsUnstETH(0, UINT256_MAX, 0, new bytes32[](0));
     }
 
-    function test_requestRewardsETH_RevertWhen_NotEligible() public {
+    function test_requestRewardsETH_RevertWhen_NotEligible()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         vm.expectRevert(CSModule.SenderIsNotEligible.selector);
         csm.claimRewardsUnstETH(noId, UINT256_MAX, 0, new bytes32[](0));
@@ -3119,7 +3225,7 @@ contract CsmChangeNodeOperatorRewardAddress is CSMCommon {
 }
 
 contract CsmOnWithdrawalCredentialsChanged is CSMCommon {
-    function test_onWithdrawalCredentialsChanged() public {
+    function test_onWithdrawalCredentialsChanged() public assertInvariants {
         vm.expectEmit(true, true, true, true, address(csm));
         emit CSModule.KeyRemovalChargeSet(0 ether);
         csm.onWithdrawalCredentialsChanged();
@@ -3129,7 +3235,7 @@ contract CsmOnWithdrawalCredentialsChanged is CSMCommon {
 }
 
 contract CsmVetKeys is CSMCommon {
-    function test_vetKeys_OnCreateOperator() public {
+    function test_vetKeys_OnCreateOperator() public assertInvariants {
         uint256 noId = 0;
         uint256 keys = 7;
 
@@ -3144,7 +3250,7 @@ contract CsmVetKeys is CSMCommon {
         _assertQueueState(exp);
     }
 
-    function test_vetKeys_OnUploadKeys() public {
+    function test_vetKeys_OnUploadKeys() public assertInvariants {
         uint256 noId = createNodeOperator(2);
 
         vm.expectEmit(true, true, true, true, address(csm));
@@ -3162,7 +3268,7 @@ contract CsmVetKeys is CSMCommon {
         _assertQueueState(exp);
     }
 
-    function test_vetKeys_Counters() public {
+    function test_vetKeys_Counters() public assertInvariants {
         uint256 nonce = csm.getNonce();
         uint256 noId = createNodeOperator(1);
 
@@ -3172,7 +3278,7 @@ contract CsmVetKeys is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_vetKeys_VettedBackViaRemoveKey() public {
+    function test_vetKeys_VettedBackViaRemoveKey() public assertInvariants {
         uint256 noId = createNodeOperator(7);
         NodeOperator memory no = csm.getNodeOperator(noId);
         assertEq(no.totalVettedKeys, 7);
@@ -3202,12 +3308,15 @@ contract CsmQueueOps is CSMCommon {
         return toRemove > 0;
     }
 
-    function test_emptyQueueIsClean() public {
+    function test_emptyQueueIsClean() public assertInvariants {
         bool isDirty = _isQueueDirty(LOOKUP_DEPTH);
         assertFalse(isDirty, "queue should be clean");
     }
 
-    function test_queueIsDirty_WhenHasBatchOfNonDepositableOperator() public {
+    function test_queueIsDirty_WhenHasBatchOfNonDepositableOperator()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator({ keysCount: 2 });
         unvetKeys({ noId: noId, to: 0 }); // One of the ways to set `depositableValidatorsCount` to 0.
 
@@ -3215,7 +3324,10 @@ contract CsmQueueOps is CSMCommon {
         assertTrue(isDirty, "queue should be dirty");
     }
 
-    function test_queueIsDirty_WhenHasBatchWithNoDepositableKeys() public {
+    function test_queueIsDirty_WhenHasBatchWithNoDepositableKeys()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator({ keysCount: 2 });
         uploadMoreKeys(noId, 1);
         unvetKeys({ noId: noId, to: 2 });
@@ -3223,7 +3335,7 @@ contract CsmQueueOps is CSMCommon {
         assertTrue(isDirty, "queue should be dirty");
     }
 
-    function test_queueIsClean_AfterCleanup() public {
+    function test_queueIsClean_AfterCleanup() public assertInvariants {
         uint256 noId = createNodeOperator({ keysCount: 2 });
         uploadMoreKeys(noId, 1);
         unvetKeys({ noId: noId, to: 2 });
@@ -3235,19 +3347,22 @@ contract CsmQueueOps is CSMCommon {
         assertFalse(isDirty, "queue should be clean");
     }
 
-    function test_cleanup_emptyQueue() public {
+    function test_cleanup_emptyQueue() public assertInvariants {
         _assertQueueIsEmpty();
 
         uint256 toRemove = csm.cleanDepositQueue(LOOKUP_DEPTH);
         assertEq(toRemove, 0, "queue should be clean");
     }
 
-    function test_cleanup_RevertWhen_zeroDepth() public {
+    function test_cleanup_RevertWhen_zeroDepth() public assertInvariants {
         vm.expectRevert(IQueueLib.QueueLookupNoLimit.selector);
         csm.cleanDepositQueue(0);
     }
 
-    function test_cleanup_WhenMultipleInvalidBatchesInRow() public {
+    function test_cleanup_WhenMultipleInvalidBatchesInRow()
+        public
+        assertInvariants
+    {
         createNodeOperator({ keysCount: 3 });
         createNodeOperator({ keysCount: 5 });
         createNodeOperator({ keysCount: 1 });
@@ -3274,7 +3389,7 @@ contract CsmQueueOps is CSMCommon {
         assertEq(toRemove, 0, "queue should be clean");
     }
 
-    function test_cleanup_WhenAllBatchesInvalid() public {
+    function test_cleanup_WhenAllBatchesInvalid() public assertInvariants {
         createNodeOperator({ keysCount: 2 });
         createNodeOperator({ keysCount: 2 });
         unvetKeys({ noId: 0, to: 0 });
@@ -3286,7 +3401,7 @@ contract CsmQueueOps is CSMCommon {
         _assertQueueIsEmpty();
     }
 
-    function test_normalizeQueue_NothingToDo() public {
+    function test_normalizeQueue_NothingToDo() public assertInvariants {
         // `normalizeQueue` will be called on creating a node operator and uploading a key.
         uint256 noId = createNodeOperator();
 
@@ -3297,7 +3412,10 @@ contract CsmQueueOps is CSMCommon {
         assertEq(logs.length, 0);
     }
 
-    function test_normalizeQueue_OnSkippedKeys_WhenStuckKeys() public {
+    function test_normalizeQueue_OnSkippedKeys_WhenStuckKeys()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(7);
         csm.obtainDepositData(3, "");
         setStuck(noId, 1);
@@ -3332,7 +3450,10 @@ contract CsmQueueOps is CSMCommon {
         });
     }
 
-    function test_queueNormalized_WhenWithdrawalChangesDepositable() public {
+    function test_queueNormalized_WhenWithdrawalChangesDepositable()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(7);
         csm.updateTargetValidatorsLimits({
             nodeOperatorId: noId,
@@ -3349,7 +3470,10 @@ contract CsmQueueOps is CSMCommon {
 }
 
 contract CsmDecreaseVettedSigningKeysCount is CSMCommon {
-    function test_decreaseVettedSigningKeysCount_counters() public {
+    function test_decreaseVettedSigningKeysCount_counters()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(3);
         uint256 nonce = csm.getNonce();
 
@@ -3365,7 +3489,10 @@ contract CsmDecreaseVettedSigningKeysCount is CSMCommon {
         assertEq(no.depositableValidatorsCount, 1);
     }
 
-    function test_decreaseVettedSigningKeysCount_MultipleOperators() public {
+    function test_decreaseVettedSigningKeysCount_MultipleOperators()
+        public
+        assertInvariants
+    {
         uint256 firstNoId = createNodeOperator(10);
         uint256 secondNoId = createNodeOperator(7);
         uint256 thirdNoId = createNodeOperator(15);
@@ -3464,7 +3591,7 @@ contract CsmDecreaseVettedSigningKeysCount is CSMCommon {
 }
 
 contract CsmGetSigningKeys is CSMCommon {
-    function test_getSigningKeys() public {
+    function test_getSigningKeys() public assertInvariants {
         bytes memory keys = randomBytes(48 * 3);
 
         uint256 noId = createNodeOperator({
@@ -3483,7 +3610,7 @@ contract CsmGetSigningKeys is CSMCommon {
         assertEq(obtainedKeys, keys, "unexpected keys");
     }
 
-    function test_getSigningKeys_getNonExistingKeys() public {
+    function test_getSigningKeys_getNonExistingKeys() public assertInvariants {
         bytes memory keys = randomBytes(48);
 
         uint256 noId = createNodeOperator({
@@ -3501,7 +3628,7 @@ contract CsmGetSigningKeys is CSMCommon {
         });
     }
 
-    function test_getSigningKeys_getKeysFromOffset() public {
+    function test_getSigningKeys_getKeysFromOffset() public assertInvariants {
         bytes memory wantedKey = randomBytes(48);
         bytes memory keys = bytes.concat(
             randomBytes(48),
@@ -3525,14 +3652,14 @@ contract CsmGetSigningKeys is CSMCommon {
         assertEq(obtainedKeys, wantedKey, "unexpected key at position 1");
     }
 
-    function test_getSigningKeys_WhenNoNodeOperator() public {
+    function test_getSigningKeys_WhenNoNodeOperator() public assertInvariants {
         vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
         csm.getSigningKeys(0, 0, 1);
     }
 }
 
 contract CsmGetSigningKeysWithSignatures is CSMCommon {
-    function test_getSigningKeysWithSignatures() public {
+    function test_getSigningKeysWithSignatures() public assertInvariants {
         bytes memory keys = randomBytes(48 * 3);
         bytes memory signatures = randomBytes(96 * 3);
 
@@ -3554,7 +3681,10 @@ contract CsmGetSigningKeysWithSignatures is CSMCommon {
         assertEq(obtainedSignatures, signatures, "unexpected signatures");
     }
 
-    function test_getSigningKeysWithSignatures_getNonExistingKeys() public {
+    function test_getSigningKeysWithSignatures_getNonExistingKeys()
+        public
+        assertInvariants
+    {
         bytes memory keys = randomBytes(48);
         bytes memory signatures = randomBytes(96);
 
@@ -3573,7 +3703,10 @@ contract CsmGetSigningKeysWithSignatures is CSMCommon {
         });
     }
 
-    function test_getSigningKeysWithSignatures_getKeysFromOffset() public {
+    function test_getSigningKeysWithSignatures_getKeysFromOffset()
+        public
+        assertInvariants
+    {
         bytes memory wantedKey = randomBytes(48);
         bytes memory wantedSignature = randomBytes(96);
         bytes memory keys = bytes.concat(
@@ -3609,7 +3742,10 @@ contract CsmGetSigningKeysWithSignatures is CSMCommon {
         );
     }
 
-    function test_getSigningKeysWithSignatures_WhenNoNodeOperator() public {
+    function test_getSigningKeysWithSignatures_WhenNoNodeOperator()
+        public
+        assertInvariants
+    {
         vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
         csm.getSigningKeysWithSignatures(0, 0, 1);
     }
@@ -3622,7 +3758,7 @@ contract CsmRemoveKeys is CSMCommon {
     bytes key3 = randomBytes(48);
     bytes key4 = randomBytes(48);
 
-    function test_singleKeyRemoval() public {
+    function test_singleKeyRemoval() public assertInvariants {
         bytes memory keys = bytes.concat(key0, key1, key2, key3, key4);
 
         uint256 noId = createNodeOperator({
@@ -3688,7 +3824,7 @@ contract CsmRemoveKeys is CSMCommon {
         assertEq(no.totalAddedKeys, 2);
     }
 
-    function test_multipleKeysRemovalFromStart() public {
+    function test_multipleKeysRemovalFromStart() public assertInvariants {
         bytes memory keys = bytes.concat(key0, key1, key2, key3, key4);
 
         uint256 noId = createNodeOperator({
@@ -3726,7 +3862,7 @@ contract CsmRemoveKeys is CSMCommon {
         assertEq(no.totalAddedKeys, 3);
     }
 
-    function test_multipleKeysRemovalInBetween() public {
+    function test_multipleKeysRemovalInBetween() public assertInvariants {
         bytes memory keys = bytes.concat(key0, key1, key2, key3, key4);
 
         uint256 noId = createNodeOperator({
@@ -3764,7 +3900,7 @@ contract CsmRemoveKeys is CSMCommon {
         assertEq(no.totalAddedKeys, 3);
     }
 
-    function test_multipleKeysRemovalFromEnd() public {
+    function test_multipleKeysRemovalFromEnd() public assertInvariants {
         bytes memory keys = bytes.concat(key0, key1, key2, key3, key4);
 
         uint256 noId = createNodeOperator({
@@ -3802,7 +3938,7 @@ contract CsmRemoveKeys is CSMCommon {
         assertEq(no.totalAddedKeys, 3);
     }
 
-    function test_removeAllKeys() public {
+    function test_removeAllKeys() public assertInvariants {
         uint256 noId = createNodeOperator({
             managerAddress: address(this),
             keysCount: 5,
@@ -3821,7 +3957,7 @@ contract CsmRemoveKeys is CSMCommon {
         assertEq(no.totalAddedKeys, 0);
     }
 
-    function test_removeKeys_nonceChanged() public {
+    function test_removeKeys_nonceChanged() public assertInvariants {
         bytes memory keys = bytes.concat(key0);
 
         uint256 noId = createNodeOperator({
@@ -3838,7 +3974,7 @@ contract CsmRemoveKeys is CSMCommon {
 }
 
 contract CSMRemoveKeysChargeFee is CSMCommon {
-    function test_removeKeys_chargeFee() public {
+    function test_removeKeys_chargeFee() public assertInvariants {
         uint256 noId = createNodeOperator(3);
 
         uint256 amountToCharge = csm.keyRemovalCharge() * 2;
@@ -3860,7 +3996,7 @@ contract CSMRemoveKeysChargeFee is CSMCommon {
         csm.removeKeys(noId, 1, 2);
     }
 
-    function test_removeKeys_withNoFee() public {
+    function test_removeKeys_withNoFee() public assertInvariants {
         bytes32 role = csm.MODULE_MANAGER_ROLE();
         vm.prank(admin);
         csm.grantRole(role, admin);
@@ -3885,12 +4021,18 @@ contract CSMRemoveKeysChargeFee is CSMCommon {
 }
 
 contract CSMRemoveKeysReverts is CSMCommon {
-    function test_removeKeys_RevertWhen_NoNodeOperator() public {
+    function test_removeKeys_RevertWhen_NoNodeOperator()
+        public
+        assertInvariants
+    {
         vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
         csm.removeKeys({ nodeOperatorId: 0, startIndex: 0, keysCount: 1 });
     }
 
-    function test_removeKeys_RevertWhen_MoreThanAdded() public {
+    function test_removeKeys_RevertWhen_MoreThanAdded()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator({
             managerAddress: address(this),
             keysCount: 1
@@ -3900,7 +4042,10 @@ contract CSMRemoveKeysReverts is CSMCommon {
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 2 });
     }
 
-    function test_removeKeys_RevertWhen_LessThanDeposited() public {
+    function test_removeKeys_RevertWhen_LessThanDeposited()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator({
             managerAddress: address(this),
             keysCount: 2
@@ -3912,7 +4057,7 @@ contract CSMRemoveKeysReverts is CSMCommon {
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 1 });
     }
 
-    function test_removeKeys_RevertWhen_NotEligible() public {
+    function test_removeKeys_RevertWhen_NotEligible() public assertInvariants {
         uint256 noId = createNodeOperator({
             managerAddress: address(this),
             keysCount: 1
@@ -3923,7 +4068,7 @@ contract CSMRemoveKeysReverts is CSMCommon {
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 1 });
     }
 
-    function test_removeKeys_RevertWhen_NoKeys() public {
+    function test_removeKeys_RevertWhen_NoKeys() public assertInvariants {
         uint256 noId = createNodeOperator({
             managerAddress: address(this),
             keysCount: 1
@@ -3935,13 +4080,16 @@ contract CSMRemoveKeysReverts is CSMCommon {
 }
 
 contract CsmGetNodeOperatorNonWithdrawnKeys is CSMCommon {
-    function test_getNodeOperatorNonWithdrawnKeys() public {
+    function test_getNodeOperatorNonWithdrawnKeys() public assertInvariants {
         uint256 noId = createNodeOperator(3);
         uint256 keys = csm.getNodeOperatorNonWithdrawnKeys(noId);
         assertEq(keys, 3);
     }
 
-    function test_getNodeOperatorNonWithdrawnKeys_WithdrawnKeys() public {
+    function test_getNodeOperatorNonWithdrawnKeys_WithdrawnKeys()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(3);
         csm.obtainDepositData(3, "");
         csm.submitWithdrawal(noId, 0, DEPOSIT_SIZE, false);
@@ -3958,7 +4106,10 @@ contract CsmGetNodeOperatorNonWithdrawnKeys is CSMCommon {
 }
 
 contract CsmGetNodeOperatorSummary is CSMCommon {
-    function test_getNodeOperatorSummary_defaultValues() public {
+    function test_getNodeOperatorSummary_defaultValues()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(1);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
@@ -3972,7 +4123,10 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         assertEq(summary.depositableValidatorsCount, 1);
     }
 
-    function test_getNodeOperatorSummary_depositedKey() public {
+    function test_getNodeOperatorSummary_depositedKey()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(2);
 
         csm.obtainDepositData(1, "");
@@ -3982,7 +4136,10 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         assertEq(summary.totalDepositedValidators, 1);
     }
 
-    function test_getNodeOperatorSummary_softTargetLimit() public {
+    function test_getNodeOperatorSummary_softTargetLimit()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(3);
 
         csm.updateTargetValidatorsLimits(noId, 1, 1);
@@ -4001,7 +4158,10 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         );
     }
 
-    function test_getNodeOperatorSummary_softTargetLimitAndDeposited() public {
+    function test_getNodeOperatorSummary_softTargetLimitAndDeposited()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(3);
 
         csm.obtainDepositData(1, "");
@@ -4043,7 +4203,10 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         );
     }
 
-    function test_getNodeOperatorSummary_hardTargetLimit() public {
+    function test_getNodeOperatorSummary_hardTargetLimit()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(3);
 
         csm.updateTargetValidatorsLimits(noId, 2, 1);
@@ -4062,7 +4225,10 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         );
     }
 
-    function test_getNodeOperatorSummary_hardTargetLimitAndDeposited() public {
+    function test_getNodeOperatorSummary_hardTargetLimitAndDeposited()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(3);
 
         csm.obtainDepositData(1, "");
@@ -4195,7 +4361,10 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         );
     }
 
-    function test_getNodeOperatorSummary_noTargetLimitDueToLockedBond() public {
+    function test_getNodeOperatorSummary_noTargetLimitDueToLockedBond()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(3);
 
         csm.obtainDepositData(3, "");
@@ -4251,7 +4420,10 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         );
     }
 
-    function test_getNodeOperatorSummary_targetLimitDueToAllUnbonded() public {
+    function test_getNodeOperatorSummary_targetLimitDueToAllUnbonded()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(3);
 
         csm.obtainDepositData(2, "");
@@ -4338,7 +4510,10 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         );
     }
 
-    function test_getNodeOperatorSummary_hardTargetLimitEqualUnbonded() public {
+    function test_getNodeOperatorSummary_hardTargetLimitEqualUnbonded()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(5);
 
         csm.updateTargetValidatorsLimits(noId, 2, 4);
@@ -4432,14 +4607,14 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
 }
 
 contract CsmGetNodeOperator is CSMCommon {
-    function test_getNodeOperator() public {
+    function test_getNodeOperator() public assertInvariants {
         uint256 noId = createNodeOperator();
         NodeOperator memory no = csm.getNodeOperator(noId);
         assertEq(no.managerAddress, nodeOperator);
         assertEq(no.rewardAddress, nodeOperator);
     }
 
-    function test_getNodeOperator_WhenNoNodeOperator() public {
+    function test_getNodeOperator_WhenNoNodeOperator() public assertInvariants {
         NodeOperator memory no = csm.getNodeOperator(0);
         assertEq(no.managerAddress, address(0));
         assertEq(no.rewardAddress, address(0));
@@ -4447,7 +4622,7 @@ contract CsmGetNodeOperator is CSMCommon {
 }
 
 contract CsmUpdateTargetValidatorsLimits is CSMCommon {
-    function test_updateTargetValidatorsLimits() public {
+    function test_updateTargetValidatorsLimits() public assertInvariants {
         uint256 noId = createNodeOperator();
         uint256 nonce = csm.getNonce();
 
@@ -4457,7 +4632,10 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_updateTargetValidatorsLimits_sameValues() public {
+    function test_updateTargetValidatorsLimits_sameValues()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
 
         vm.expectEmit(true, true, true, true, address(csm));
@@ -4474,14 +4652,20 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         assertEq(summary.targetValidatorsCount, 1);
     }
 
-    function test_updateTargetValidatorsLimits_limitIsZero() public {
+    function test_updateTargetValidatorsLimits_limitIsZero()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         vm.expectEmit(true, true, true, true, address(csm));
         emit CSModule.TargetValidatorsCountChanged(noId, 1, 0);
         csm.updateTargetValidatorsLimits(noId, 1, 0);
     }
 
-    function test_updateTargetValidatorsLimits_enableSoftLimit() public {
+    function test_updateTargetValidatorsLimits_enableSoftLimit()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         csm.updateTargetValidatorsLimits(noId, 0, 10);
 
@@ -4490,7 +4674,10 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 1, 10);
     }
 
-    function test_updateTargetValidatorsLimits_enableHardLimit() public {
+    function test_updateTargetValidatorsLimits_enableHardLimit()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         csm.updateTargetValidatorsLimits(noId, 0, 10);
 
@@ -4499,7 +4686,10 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 2, 10);
     }
 
-    function test_updateTargetValidatorsLimits_disableSoftLimit() public {
+    function test_updateTargetValidatorsLimits_disableSoftLimit()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         csm.updateTargetValidatorsLimits(noId, 1, 10);
 
@@ -4508,7 +4698,10 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 0, 10);
     }
 
-    function test_updateTargetValidatorsLimits_disableHardLimit() public {
+    function test_updateTargetValidatorsLimits_disableHardLimit()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         csm.updateTargetValidatorsLimits(noId, 2, 10);
 
@@ -4574,7 +4767,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
 }
 
 contract CsmUpdateStuckValidatorsCount is CSMCommon {
-    function test_updateStuckValidatorsCount_NonZero() public {
+    function test_updateStuckValidatorsCount_NonZero() public assertInvariants {
         uint256 noId = createNodeOperator(3);
         csm.obtainDepositData(1, "");
         uint256 nonce = csm.getNonce();
@@ -4623,7 +4816,7 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
         );
     }
 
-    function test_updateStuckValidatorsCount_Unstuck() public {
+    function test_updateStuckValidatorsCount_Unstuck() public assertInvariants {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
 
@@ -4691,7 +4884,10 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
 }
 
 contract CsmUpdateExitedValidatorsCount is CSMCommon {
-    function test_updateExitedValidatorsCount_NonZero() public {
+    function test_updateExitedValidatorsCount_NonZero()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(1);
         csm.obtainDepositData(1, "");
         uint256 nonce = csm.getNonce();
@@ -4749,7 +4945,10 @@ contract CsmUpdateExitedValidatorsCount is CSMCommon {
         );
     }
 
-    function test_updateExitedValidatorsCount_NoEventIfSameValue() public {
+    function test_updateExitedValidatorsCount_NoEventIfSameValue()
+        public
+        assertInvariants
+    {
         createNodeOperator(1);
         csm.obtainDepositData(1, "");
 
@@ -4770,7 +4969,10 @@ contract CsmUpdateExitedValidatorsCount is CSMCommon {
 }
 
 contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
-    function test_unsafeUpdateValidatorsCount_NonZero() public {
+    function test_unsafeUpdateValidatorsCount_NonZero()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(5);
         csm.obtainDepositData(5, "");
         uint256 nonce = csm.getNonce();
@@ -4845,7 +5047,10 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         });
     }
 
-    function test_unsafeUpdateValidatorsCount_DecreaseExitedKeys() public {
+    function test_unsafeUpdateValidatorsCount_DecreaseExitedKeys()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(1);
         csm.obtainDepositData(1, "");
 
@@ -4861,7 +5066,10 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         assertEq(no.totalExitedKeys, 0, "totalExitedKeys should be zero");
     }
 
-    function test_unsafeUpdateValidatorsCount_NoEventIfSameValue() public {
+    function test_unsafeUpdateValidatorsCount_NoEventIfSameValue()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(2);
         csm.obtainDepositData(2, "");
 
@@ -4884,7 +5092,10 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
 }
 
 contract CsmReportELRewardsStealingPenalty is CSMCommon {
-    function test_reportELRewardsStealingPenalty_HappyPath() public {
+    function test_reportELRewardsStealingPenalty_HappyPath()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         uint256 nonce = csm.getNonce();
 
@@ -4912,7 +5123,10 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         csm.reportELRewardsStealingPenalty(0, blockhash(block.number), 1 ether);
     }
 
-    function test_reportELRewardsStealingPenalty_NoNonceChange() public {
+    function test_reportELRewardsStealingPenalty_NoNonceChange()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
 
         vm.deal(nodeOperator, 32 ether);
@@ -4932,7 +5146,10 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
 }
 
 contract CsmCancelELRewardsStealingPenalty is CSMCommon {
-    function test_cancelELRewardsStealingPenalty_HappyPath() public {
+    function test_cancelELRewardsStealingPenalty_HappyPath()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
 
         csm.reportELRewardsStealingPenalty(
@@ -4958,7 +5175,10 @@ contract CsmCancelELRewardsStealingPenalty is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_cancelELRewardsStealingPenalty_Partial() public {
+    function test_cancelELRewardsStealingPenalty_Partial()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
 
         csm.reportELRewardsStealingPenalty(
@@ -4988,7 +5208,7 @@ contract CsmCancelELRewardsStealingPenalty is CSMCommon {
 }
 
 contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
-    function test_settleELRewardsStealingPenalty() public {
+    function test_settleELRewardsStealingPenalty() public assertInvariants {
         uint256 noId = createNodeOperator();
         uint256 amount = 1 ether;
         uint256[] memory idsToSettle = new uint256[](1);
@@ -5012,7 +5232,10 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         assertEq(lock.retentionUntil, 0);
     }
 
-    function test_settleELRewardsStealingPenalty_multipleNOs() public {
+    function test_settleELRewardsStealingPenalty_multipleNOs()
+        public
+        assertInvariants
+    {
         uint256 firstNoId = createNodeOperator();
         uint256 secondNoId = createNodeOperator();
         uint256[] memory idsToSettle = new uint256[](2);
@@ -5062,7 +5285,10 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         assertEq(lock.retentionUntil, 0);
     }
 
-    function test_settleELRewardsStealingPenalty_NoLock() public {
+    function test_settleELRewardsStealingPenalty_NoLock()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
@@ -5080,7 +5306,10 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         assertEq(lock.retentionUntil, 0);
     }
 
-    function test_settleELRewardsStealingPenalty_multipleNOs_NoLock() public {
+    function test_settleELRewardsStealingPenalty_multipleNOs_NoLock()
+        public
+        assertInvariants
+    {
         uint256 firstNoId = createNodeOperator();
         uint256 secondNoId = createNodeOperator();
         uint256[] memory idsToSettle = new uint256[](2);
@@ -5341,7 +5570,7 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
 }
 
 contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
-    function test_compensateELRewardsStealingPenalty() public {
+    function test_compensateELRewardsStealingPenalty() public assertInvariants {
         uint256 noId = createNodeOperator();
         uint256 amount = 1 ether;
         uint256 fine = csm.EL_REWARDS_STEALING_FINE();
@@ -5367,7 +5596,10 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_compensateELRewardsStealingPenalty_Partial() public {
+    function test_compensateELRewardsStealingPenalty_Partial()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         uint256 amount = 1 ether;
         uint256 fine = csm.EL_REWARDS_STEALING_FINE();
@@ -5429,7 +5661,7 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
 }
 
 contract CsmSubmitWithdrawal is CSMCommon {
-    function test_submitWithdrawal() public {
+    function test_submitWithdrawal() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
@@ -5449,7 +5681,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
         assertEq(csm.getNonce(), nonce);
     }
 
-    function test_submitWithdrawal_changeNonce() public {
+    function test_submitWithdrawal_changeNonce() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator(2);
         csm.obtainDepositData(1, "");
@@ -5475,7 +5707,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_submitWithdrawal_lowExitBalance() public {
+    function test_submitWithdrawal_lowExitBalance() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
         uint256 depositSize = DEPOSIT_SIZE;
@@ -5488,7 +5720,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
         csm.submitWithdrawal(noId, keyIndex, depositSize - 1 ether, false);
     }
 
-    function test_submitWithdrawal_slashedReported() public {
+    function test_submitWithdrawal_slashedReported() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
@@ -5513,7 +5745,10 @@ contract CsmSubmitWithdrawal is CSMCommon {
         csm.submitWithdrawal(noId, keyIndex, exitBalance - 0.05 ether, true);
     }
 
-    function test_submitWithdrawal_slashedIsNotReported() public {
+    function test_submitWithdrawal_slashedIsNotReported()
+        public
+        assertInvariants
+    {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
@@ -5538,7 +5773,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
         assertTrue(csm.isValidatorSlashed(noId, keyIndex));
     }
 
-    function test_submitWithdrawal_unbondedKeys() public {
+    function test_submitWithdrawal_unbondedKeys() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator(2);
         csm.obtainDepositData(1, "");
@@ -5548,18 +5783,27 @@ contract CsmSubmitWithdrawal is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_submitWithdrawal_RevertWhen_NoNodeOperator() public {
+    function test_submitWithdrawal_RevertWhen_NoNodeOperator()
+        public
+        assertInvariants
+    {
         vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
         csm.submitWithdrawal(0, 0, 0, false);
     }
 
-    function test_submitWithdrawal_RevertWhen_InvalidKeyIndexOffset() public {
+    function test_submitWithdrawal_RevertWhen_InvalidKeyIndexOffset()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
         csm.submitWithdrawal(noId, 0, 0, false);
     }
 
-    function test_submitWithdrawal_RevertWhen_AlreadySubmitted() public {
+    function test_submitWithdrawal_RevertWhen_AlreadySubmitted()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
         uint256 depositSize = DEPOSIT_SIZE;
@@ -5571,7 +5815,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
 }
 
 contract CsmSubmitInitialSlashing is CSMCommon {
-    function test_submitInitialSlashing() public {
+    function test_submitInitialSlashing() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator(2);
         csm.obtainDepositData(1, "");
@@ -5597,7 +5841,7 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_submitInitialSlashing_Overbonded() public {
+    function test_submitInitialSlashing_Overbonded() public assertInvariants {
         uint256 noId = createNodeOperator(2);
         vm.deal(nodeOperator, 32 ether);
         vm.prank(nodeOperator);
@@ -5622,7 +5866,10 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         assertEq(csm.getNonce(), nonce);
     }
 
-    function test_submitInitialSlashing_differentKeys() public {
+    function test_submitInitialSlashing_differentKeys()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(2);
         csm.obtainDepositData(2, "");
 
@@ -5635,7 +5882,7 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         csm.submitInitialSlashing(noId, 1);
     }
 
-    function test_submitInitialSlashing_outOfBond() public {
+    function test_submitInitialSlashing_outOfBond() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
@@ -5648,7 +5895,10 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         csm.submitInitialSlashing(noId, keyIndex);
     }
 
-    function test_submitInitialSlashing_RevertWhen_NoNodeOperator() public {
+    function test_submitInitialSlashing_RevertWhen_NoNodeOperator()
+        public
+        assertInvariants
+    {
         vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
         csm.submitInitialSlashing(0, 0);
     }
@@ -5661,7 +5911,10 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         csm.submitInitialSlashing(noId, 0);
     }
 
-    function test_submitInitialSlashing_RevertWhen_AlreadySubmitted() public {
+    function test_submitInitialSlashing_RevertWhen_AlreadySubmitted()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
 
@@ -5672,7 +5925,10 @@ contract CsmSubmitInitialSlashing is CSMCommon {
 }
 
 contract CsmGetStakingModuleSummary is CSMCommon {
-    function test_getStakingModuleSummary_depositableValidators() public {
+    function test_getStakingModuleSummary_depositableValidators()
+        public
+        assertInvariants
+    {
         uint256 first = createNodeOperator(1);
         uint256 second = createNodeOperator(2);
         StakingModuleSummary memory summary = getStakingModuleSummary();
@@ -5684,7 +5940,10 @@ contract CsmGetStakingModuleSummary is CSMCommon {
         assertEq(summary.depositableValidatorsCount, 3);
     }
 
-    function test_getStakingModuleSummary_depositedValidators() public {
+    function test_getStakingModuleSummary_depositedValidators()
+        public
+        assertInvariants
+    {
         uint256 first = createNodeOperator(1);
         uint256 second = createNodeOperator(2);
         StakingModuleSummary memory summary = getStakingModuleSummary();
@@ -5701,7 +5960,10 @@ contract CsmGetStakingModuleSummary is CSMCommon {
         assertEq(summary.totalDepositedValidators, 3);
     }
 
-    function test_getStakingModuleSummary_exitedValidators() public {
+    function test_getStakingModuleSummary_exitedValidators()
+        public
+        assertInvariants
+    {
         uint256 first = createNodeOperator(2);
         uint256 second = createNodeOperator(2);
         csm.obtainDepositData(4, "");
@@ -6123,7 +6385,7 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
 }
 
 contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
-    function test_activatePublicRelease() public {
+    function test_activatePublicRelease() public assertInvariants {
         vm.expectEmit(true, true, true, true, address(csm));
         emit CSModule.PublicRelease();
         csm.activatePublicRelease();
@@ -6131,14 +6393,20 @@ contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
         assertTrue(csm.publicRelease());
     }
 
-    function test_activatePublicRelease_RevertWhen_AlreadyActivated() public {
+    function test_activatePublicRelease_RevertWhen_AlreadyActivated()
+        public
+        assertInvariants
+    {
         csm.activatePublicRelease();
 
         vm.expectRevert(CSModule.AlreadyActivated.selector);
         csm.activatePublicRelease();
     }
 
-    function test_addNodeOperatorETH_RevertWhen_NoPublicReleaseYet() public {
+    function test_addNodeOperatorETH_RevertWhen_NoPublicReleaseYet()
+        public
+        assertInvariants
+    {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -6159,7 +6427,10 @@ contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
         );
     }
 
-    function test_addNodeOperatorETH_WhenPublicRelease() public {
+    function test_addNodeOperatorETH_WhenPublicRelease()
+        public
+        assertInvariants
+    {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -6237,7 +6508,10 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
         );
     }
 
-    function test_addNodeOperator_WhenPublicRelease_WithProof() public {
+    function test_addNodeOperator_WhenPublicRelease_WithProof()
+        public
+        assertInvariants
+    {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -6265,7 +6539,10 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
         assertEq(curve.points[0], BOND_SIZE / 2);
     }
 
-    function test_addNodeOperator_WhenPublicRelease_WithoutProof() public {
+    function test_addNodeOperator_WhenPublicRelease_WithoutProof()
+        public
+        assertInvariants
+    {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -6374,7 +6651,10 @@ contract CSMEarlyAdoptionTestNoEA is CSMCommonNoPublicReleaseNoEA {
         );
     }
 
-    function test_addNodeOperator_WhenPublicRelease_WithProof() public {
+    function test_addNodeOperator_WhenPublicRelease_WithProof()
+        public
+        assertInvariants
+    {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -6402,7 +6682,10 @@ contract CSMEarlyAdoptionTestNoEA is CSMCommonNoPublicReleaseNoEA {
         assertEq(curve.points[0], BOND_SIZE);
     }
 
-    function test_addNodeOperator_WhenPublicRelease_WithoutProof() public {
+    function test_addNodeOperator_WhenPublicRelease_WithoutProof()
+        public
+        assertInvariants
+    {
         uint16 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -6431,7 +6714,10 @@ contract CSMEarlyAdoptionTestNoEA is CSMCommonNoPublicReleaseNoEA {
 }
 
 contract CSMDepositableValidatorsCount is CSMCommon {
-    function test_depositableValidatorsCountChanges_OnDeposit() public {
+    function test_depositableValidatorsCountChanges_OnDeposit()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(7);
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 7);
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 7);
@@ -6440,7 +6726,10 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 4);
     }
 
-    function test_depositableValidatorsCountChanges_OnStuck() public {
+    function test_depositableValidatorsCountChanges_OnStuck()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(7);
         createNodeOperator(2);
         csm.obtainDepositData(4, "");
@@ -6488,7 +6777,10 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 2);
     }
 
-    function test_depositableValidatorsCountChanges_OnUnvetKeys() public {
+    function test_depositableValidatorsCountChanges_OnUnvetKeys()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(7);
         uint256 nonce = csm.getNonce();
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 7);
@@ -6498,7 +6790,10 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_depositableValidatorsCountChanges_OnInitialSlashing() public {
+    function test_depositableValidatorsCountChanges_OnInitialSlashing()
+        public
+        assertInvariants
+    {
         // 1 key becomes unbonded till withdrawal.
         uint256 noId = createNodeOperator(2);
         csm.obtainDepositData(1, "");
@@ -6508,7 +6803,10 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 0);
     }
 
-    function test_depositableValidatorsCountChanges_OnWithdrawal() public {
+    function test_depositableValidatorsCountChanges_OnWithdrawal()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(7);
         csm.obtainDepositData(4, "");
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 3);
@@ -6525,7 +6823,10 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 2);
     }
 
-    function test_depositableValidatorsCountChanges_OnReportStealing() public {
+    function test_depositableValidatorsCountChanges_OnReportStealing()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(7);
         csm.obtainDepositData(4, "");
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 3);
@@ -6558,7 +6859,10 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 3);
     }
 
-    function test_depositableValidatorsCountChanges_OnRemoveUnvetted() public {
+    function test_depositableValidatorsCountChanges_OnRemoveUnvetted()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(7);
         unvetKeys(noId, 3);
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 3);
@@ -6580,7 +6884,7 @@ contract CSMOnRewardsMinted is CSMCommon {
         vm.stopPrank();
     }
 
-    function test_onRewardsMinted() public {
+    function test_onRewardsMinted() public assertInvariants {
         uint256 reportShares = 100000;
         uint256 someDustShares = 100;
 
@@ -6596,7 +6900,7 @@ contract CSMOnRewardsMinted is CSMCommon {
 }
 
 contract CSMRecoverERC20 is CSMCommon {
-    function test_recoverERC20() public {
+    function test_recoverERC20() public assertInvariants {
         vm.startPrank(admin);
         csm.grantRole(csm.RECOVERER_ROLE(), stranger);
         vm.stopPrank();
@@ -6613,7 +6917,7 @@ contract CSMRecoverERC20 is CSMCommon {
         assertEq(token.balanceOf(stranger), 1000);
     }
 
-    function test_recoverStETHShares() public {
+    function test_recoverStETHShares() public assertInvariants {
         vm.startPrank(admin);
         csm.grantRole(csm.RECOVERER_ROLE(), stranger);
         vm.stopPrank();
@@ -6632,20 +6936,26 @@ contract CSMRecoverERC20 is CSMCommon {
 }
 
 contract CSMMisc is CSMCommon {
-    function test_updateRefundedValidatorsCount() public {
+    function test_updateRefundedValidatorsCount() public assertInvariants {
         uint256 noId = createNodeOperator();
         uint256 refunded = 1;
         vm.expectRevert(CSModule.NotSupported.selector);
         csm.updateRefundedValidatorsCount(noId, refunded);
     }
 
-    function test_getActiveNodeOperatorsCount_OneOperator() public {
+    function test_getActiveNodeOperatorsCount_OneOperator()
+        public
+        assertInvariants
+    {
         createNodeOperator();
         uint256 noCount = csm.getNodeOperatorsCount();
         assertEq(noCount, 1);
     }
 
-    function test_getActiveNodeOperatorsCount_MultipleOperators() public {
+    function test_getActiveNodeOperatorsCount_MultipleOperators()
+        public
+        assertInvariants
+    {
         createNodeOperator();
         createNodeOperator();
         createNodeOperator();
@@ -6653,13 +6963,13 @@ contract CSMMisc is CSMCommon {
         assertEq(noCount, 3);
     }
 
-    function test_getNodeOperatorIsActive() public {
+    function test_getNodeOperatorIsActive() public assertInvariants {
         uint256 noId = createNodeOperator();
         bool active = csm.getNodeOperatorIsActive(noId);
         assertTrue(active);
     }
 
-    function test_getNodeOperatorIds() public {
+    function test_getNodeOperatorIds() public assertInvariants {
         uint256 firstNoId = createNodeOperator();
         uint256 secondNoId = createNodeOperator();
         uint256 thirdNoId = createNodeOperator();
@@ -6675,7 +6985,7 @@ contract CSMMisc is CSMCommon {
         assertEq(noIdsActual, noIds);
     }
 
-    function test_getNodeOperatorIds_Offset() public {
+    function test_getNodeOperatorIds_Offset() public assertInvariants {
         createNodeOperator();
         uint256 secondNoId = createNodeOperator();
         uint256 thirdNoId = createNodeOperator();
@@ -6690,7 +7000,10 @@ contract CSMMisc is CSMCommon {
         assertEq(noIdsActual, noIds);
     }
 
-    function test_getNodeOperatorIds_OffsetEqualsnNodeOperatorsCount() public {
+    function test_getNodeOperatorIds_OffsetEqualsNodeOperatorsCount()
+        public
+        assertInvariants
+    {
         createNodeOperator();
         createNodeOperator();
         createNodeOperator();
@@ -6718,7 +7031,7 @@ contract CSMMisc is CSMCommon {
         assertEq(noIdsActual, noIds);
     }
 
-    function test_getNodeOperatorIds_ZeroLimit() public {
+    function test_getNodeOperatorIds_ZeroLimit() public assertInvariants {
         createNodeOperator();
         createNodeOperator();
         createNodeOperator();
@@ -6746,7 +7059,7 @@ contract CSMMisc is CSMCommon {
         assertEq(noIdsActual, noIds);
     }
 
-    function test_getNodeOperatorIds_Limit() public {
+    function test_getNodeOperatorIds_Limit() public assertInvariants {
         uint256 firstNoId = createNodeOperator();
         uint256 secondNoId = createNodeOperator();
         createNodeOperator();
@@ -6761,7 +7074,7 @@ contract CSMMisc is CSMCommon {
         assertEq(noIdsActual, noIds);
     }
 
-    function test_getNodeOperatorIds_LimitAndOffset() public {
+    function test_getNodeOperatorIds_LimitAndOffset() public assertInvariants {
         createNodeOperator();
         uint256 secondNoId = createNodeOperator();
         uint256 thirdNoId = createNodeOperator();
@@ -6777,7 +7090,7 @@ contract CSMMisc is CSMCommon {
         assertEq(noIdsActual, noIds);
     }
 
-    function test_getActiveNodeOperatorsCount_One() public {
+    function test_getActiveNodeOperatorsCount_One() public assertInvariants {
         createNodeOperator();
 
         uint256 activeCount = csm.getActiveNodeOperatorsCount();
@@ -6785,7 +7098,10 @@ contract CSMMisc is CSMCommon {
         assertEq(activeCount, 1);
     }
 
-    function test_getActiveNodeOperatorsCount_Multiple() public {
+    function test_getActiveNodeOperatorsCount_Multiple()
+        public
+        assertInvariants
+    {
         createNodeOperator();
         createNodeOperator();
         createNodeOperator();
@@ -6795,7 +7111,7 @@ contract CSMMisc is CSMCommon {
         assertEq(activeCount, 3);
     }
 
-    function test_setKeyRemovalCharge() public {
+    function test_setKeyRemovalCharge() public assertInvariants {
         csm.setKeyRemovalCharge(1 ether);
         assertEq(csm.keyRemovalCharge(), 1 ether);
     }

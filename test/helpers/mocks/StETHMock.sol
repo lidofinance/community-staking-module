@@ -3,7 +3,9 @@
 
 pragma solidity 0.8.24;
 
-contract StETHMock {
+import { IStETH } from "../../../src/interfaces/IStETH.sol";
+
+contract StETHMock is IStETH {
     uint256 public totalPooledEther;
     uint256 public totalShares;
     mapping(address => uint256) public shares;

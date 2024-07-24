@@ -15,18 +15,36 @@ import { ICSAccounting } from "../../../src/interfaces/ICSAccounting.sol";
 import { Utilities } from "../../helpers/Utilities.sol";
 import { PermitHelper } from "../../helpers/Permit.sol";
 import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
+import { InvariantAsserts } from "../../helpers/InvariantAsserts.sol";
 
 contract DepositIntegrationTest is
     Test,
     Utilities,
     PermitHelper,
-    DeploymentFixtures
+    DeploymentFixtures,
+    InvariantAsserts
 {
     address internal user;
     address internal stranger;
     uint256 internal defaultNoId;
     uint256 internal userPrivateKey;
     uint256 internal strangerPrivateKey;
+
+    modifier assertInvariants() {
+        _;
+        uint256 noCount = csm.getNodeOperatorsCount();
+        assertCSMKeys(csm);
+        assertCSMEnqueuedCount(csm);
+        assertCSMEarlyAdoptionMaxKeys(csm);
+        assertAccountingTotalBondShares(noCount, lido, accounting);
+        assertAccountingBurnerApproval(
+            lido,
+            address(accounting),
+            locator.burner()
+        );
+        assertFeeDistributorClaimableShares(lido, feeDistributor);
+        assertFeeDistributorTree(feeDistributor);
+    }
 
     function setUp() public {
         Env memory env = envVars();
@@ -69,7 +87,7 @@ contract DepositIntegrationTest is
         defaultNoId = csm.getNodeOperatorsCount() - 1;
     }
 
-    function test_depositStETH() public {
+    function test_depositStETH() public assertInvariants {
         vm.startPrank(user);
         vm.deal(user, 32 ether);
         uint256 shares = lido.submit{ value: 32 ether }({
@@ -97,7 +115,7 @@ contract DepositIntegrationTest is
         assertEq(accounting.totalBondShares(), shares + preTotalShares);
     }
 
-    function test_depositETH() public {
+    function test_depositETH() public assertInvariants {
         vm.startPrank(user);
         vm.deal(user, 32 ether);
 
@@ -112,7 +130,7 @@ contract DepositIntegrationTest is
         assertEq(accounting.totalBondShares(), shares + preTotalShares);
     }
 
-    function test_depositWstETH() public {
+    function test_depositWstETH() public assertInvariants {
         vm.startPrank(user);
         vm.deal(user, 32 ether);
         lido.submit{ value: 32 ether }({ _referal: address(0) });
@@ -144,7 +162,7 @@ contract DepositIntegrationTest is
         assertEq(accounting.totalBondShares(), shares + preTotalShares);
     }
 
-    function test_depositStETHWithPermit() public {
+    function test_depositStETHWithPermit() public assertInvariants {
         bytes32 digest = stETHPermitDigest(
             user,
             address(accounting),
@@ -181,7 +199,7 @@ contract DepositIntegrationTest is
         assertEq(accounting.totalBondShares(), shares + preTotalShares);
     }
 
-    function test_depositWstETHWithPermit() public {
+    function test_depositWstETHWithPermit() public assertInvariants {
         bytes32 digest = wstETHPermitDigest(
             user,
             address(accounting),
