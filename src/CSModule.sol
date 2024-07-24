@@ -1062,8 +1062,15 @@ contract CSModule is
         for (uint256 i; i < nodeOperatorIds.length; ++i) {
             uint256 nodeOperatorId = nodeOperatorIds[i];
             _onlyExistingNodeOperator(nodeOperatorId);
-            uint256 settled = accounting.settleLockedBondETH(nodeOperatorId);
-            if (settled > 0) {
+            uint256 lockedBondBefore = accounting.getActualLockedBond(
+                nodeOperatorId
+            );
+
+            accounting.settleLockedBondETH(nodeOperatorId);
+
+            // settled amount might be zero either if the lock expired, or the bond is zero
+            // so we need to check actual locked bond before to determine if the penalty was settled
+            if (lockedBondBefore > 0) {
                 // Bond curve should be reset to default in case of confirmed MEV stealing. See https://hackmd.io/@lido/SygBLW5ja
                 accounting.resetBondCurve(nodeOperatorId);
                 // Nonce should be updated if depositableValidators change

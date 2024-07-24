@@ -237,17 +237,17 @@ abstract contract CSBondCore is ICSBondCore {
     /// @dev Burn Node Operator's bond shares (stETH). Shares will be burned on the next stETH rebase
     /// @dev The method sender should be granted as `Burner.REQUEST_BURN_SHARES_ROLE` and make stETH allowance for `Burner`
     /// @param amount Bond amount to burn in ETH (stETH)
-    function _burn(
-        uint256 nodeOperatorId,
-        uint256 amount
-    ) internal returns (uint256 burned) {
+    function _burn(uint256 nodeOperatorId, uint256 amount) internal {
         uint256 toBurnShares = _sharesByEth(amount);
         uint256 burnedShares = _reduceBond(nodeOperatorId, toBurnShares);
+        // If no bond already
+        if (burnedShares == 0) return;
+
         IBurner(LIDO_LOCATOR.burner()).requestBurnShares(
             address(this),
             burnedShares
         );
-        burned = _ethByShares(burnedShares);
+        uint256 burned = _ethByShares(burnedShares);
         emit BondBurned(nodeOperatorId, _ethByShares(toBurnShares), burned);
     }
 
