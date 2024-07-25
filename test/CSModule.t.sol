@@ -5567,6 +5567,39 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
         assertEq(accounting.getUnbondedKeysCount(noId), unbonded + 1);
     }
+
+    function test_settleELRewardsStealingPenalty_NoBond()
+        public
+        assertInvariants
+    {
+        uint256 noId = createNodeOperator();
+        uint256[] memory idsToSettle = new uint256[](1);
+        idsToSettle[0] = noId;
+        uint256 amount = accounting.getBond(noId) + 1 ether;
+
+        // settle all current bond to make and edge case when there is no bond but a new lock is applied
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            amount
+        );
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        accounting.getBond(noId);
+
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            amount
+        );
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.ELRewardsStealingPenaltySettled(noId);
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
+        );
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+    }
 }
 
 contract CSMCompensateELRewardsStealingPenalty is CSMCommon {

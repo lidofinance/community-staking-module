@@ -3725,6 +3725,25 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         assertEq(accounting.getActualLockedBond(noId), 0);
         assertEq(accounting.getBondShares(noId), bond);
     }
+
+    function test_settleLockedBondETH_noBond() public assertInvariants {
+        mock_getNodeOperatorsCount(1);
+        uint256 noId = 0;
+        uint256 amount = 1 ether;
+
+        vm.startPrank(address(stakingModule));
+        accounting.lockBondETH(noId, amount);
+
+        expectNoCall(
+            address(burner),
+            abi.encodeWithSelector(IBurner.requestBurnShares.selector)
+        );
+        accounting.settleLockedBondETH(noId);
+        vm.stopPrank();
+
+        assertEq(accounting.getActualLockedBond(noId), 0);
+        assertEq(accounting.getBondShares(noId), 0);
+    }
 }
 
 contract CSAccountingBondCurveTest is CSAccountingBaseTest {

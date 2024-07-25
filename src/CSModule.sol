@@ -1053,7 +1053,7 @@ contract CSModule is
         });
     }
 
-    /// @notice Settle blocked bond for the given Node Operators
+    /// @notice Settle locked bond for the given Node Operators
     /// @dev SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE role is expected to be assigned to Easy Track
     /// @param nodeOperatorIds IDs of the Node Operators
     function settleELRewardsStealingPenalty(
