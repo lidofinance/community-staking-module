@@ -108,7 +108,7 @@ contract StETHMock is IStETH {
         }
         shares[msg.sender] -= _sharesAmount;
         shares[_recipient] += _sharesAmount;
-        return _sharesAmount;
+        return getPooledEthByShares(_sharesAmount);
     }
 
     /**
