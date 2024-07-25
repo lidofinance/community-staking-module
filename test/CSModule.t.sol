@@ -5577,15 +5577,9 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
         idsToSettle[0] = noId;
         uint256 amount = accounting.getBond(noId) + 1 ether;
 
-        // settle all current bond to make and edge case when there is no bond but a new lock is applied
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            amount
-        );
-        csm.settleELRewardsStealingPenalty(idsToSettle);
-
-        accounting.getBond(noId);
+        // penalize all current bond to make an edge case when there is no bond but a new lock is applied
+        vm.prank(address(csm));
+        accounting.penalize(noId, amount);
 
         csm.reportELRewardsStealingPenalty(
             noId,
