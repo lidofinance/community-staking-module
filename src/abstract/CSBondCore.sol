@@ -247,8 +247,11 @@ abstract contract CSBondCore is ICSBondCore {
             address(this),
             burnedShares
         );
-        uint256 burned = _ethByShares(burnedShares);
-        emit BondBurned(nodeOperatorId, _ethByShares(toBurnShares), burned);
+        emit BondBurned(
+            nodeOperatorId,
+            _ethByShares(toBurnShares),
+            _ethByShares(burnedShares)
+        );
     }
 
     /// @dev Transfer Node Operator's bond shares (stETH) to charge recipient to pay some fee
