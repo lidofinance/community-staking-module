@@ -46,7 +46,7 @@ contract Fixtures is StdCheats, Test {
             _account: address(stETH),
             _sharesAmount: 7059313073779349112833523
         });
-        burner = new BurnerMock();
+        burner = new BurnerMock(address(stETH));
         Stub elVault = new Stub();
         wstETH = new WstETHMock(address(stETH));
         wq = new WithdrawalQueueMock(address(wstETH), address(stETH));

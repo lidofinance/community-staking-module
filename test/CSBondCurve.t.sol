@@ -207,6 +207,17 @@ contract CSBondCurveTest is Test {
         assertEq(bondCurve.getBondCurveId(noId), 0);
     }
 
+    function test_resetBondCurve_nothingToChange() public {
+        uint256 noId = 0;
+        assertEq(bondCurve.getBondCurveId(noId), 0);
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+
+        bondCurve.resetBondCurve(noId);
+
+        assertEq(entries.length, 0);
+        assertEq(bondCurve.getBondCurveId(noId), 0);
+    }
+
     function test_getKeysCountByBondAmount_default() public {
         assertEq(bondCurve.getKeysCountByBondAmount(0, 0), 0);
         assertEq(bondCurve.getKeysCountByBondAmount(1.9 ether, 0), 0);
