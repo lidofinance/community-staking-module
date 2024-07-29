@@ -3708,17 +3708,41 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         assertEq(accounting.getActualLockedBond(noId), amount);
 
         vm.prank(address(stakingModule));
-        uint256 settled = accounting.settleLockedBondETH(noId);
-        assertEq(settled, ethToSharesToEth(amount));
+        accounting.settleLockedBondETH(noId);
         assertEq(accounting.getActualLockedBond(noId), 0);
     }
 
     function test_settleLockedBondETH_noLocked() public assertInvariants {
         mock_getNodeOperatorsCount(1);
+        uint256 noId = 0;
+        vm.deal(address(stakingModule), 32 ether);
         vm.prank(address(stakingModule));
-        uint256 settled = accounting.settleLockedBondETH(0);
-        assertEq(settled, 0 ether);
-        assertEq(accounting.getActualLockedBond(0), 0);
+        accounting.depositETH{ value: 32 ether }(user, noId);
+        uint256 bond = accounting.getBondShares(noId);
+
+        vm.prank(address(stakingModule));
+        accounting.settleLockedBondETH(noId);
+        assertEq(accounting.getActualLockedBond(noId), 0);
+        assertEq(accounting.getBondShares(noId), bond);
+    }
+
+    function test_settleLockedBondETH_noBond() public assertInvariants {
+        mock_getNodeOperatorsCount(1);
+        uint256 noId = 0;
+        uint256 amount = 1 ether;
+
+        vm.startPrank(address(stakingModule));
+        accounting.lockBondETH(noId, amount);
+
+        expectNoCall(
+            address(burner),
+            abi.encodeWithSelector(IBurner.requestBurnShares.selector)
+        );
+        accounting.settleLockedBondETH(noId);
+        vm.stopPrank();
+
+        assertEq(accounting.getActualLockedBond(noId), 0);
+        assertEq(accounting.getBondShares(noId), 0);
     }
 }
 

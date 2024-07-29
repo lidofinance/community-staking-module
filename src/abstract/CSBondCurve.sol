@@ -222,9 +222,11 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     /// @dev Reset bond curve for the given Node Operator to default.
     ///      (for example, because of breaking the rules by Node Operator)
     function _resetBondCurve(uint256 nodeOperatorId) internal {
-        _getCSBondCurveStorage().operatorBondCurveId[
-            nodeOperatorId
-        ] = DEFAULT_BOND_CURVE_ID;
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
+        if ($.operatorBondCurveId[nodeOperatorId] == DEFAULT_BOND_CURVE_ID)
+            return;
+
+        $.operatorBondCurveId[nodeOperatorId] = DEFAULT_BOND_CURVE_ID;
         emit BondCurveSet(nodeOperatorId, DEFAULT_BOND_CURVE_ID);
     }
 
