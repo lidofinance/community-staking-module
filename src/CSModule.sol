@@ -699,6 +699,10 @@ contract CSModule is
         uint256 nodeOperatorId,
         address newAddress
     ) external {
+        if (newAddress == address(0)) {
+            revert ZeroRewardAddress();
+        }
+
         NOAddresses.changeNodeOperatorRewardAddress(
             _nodeOperators,
             nodeOperatorId,
