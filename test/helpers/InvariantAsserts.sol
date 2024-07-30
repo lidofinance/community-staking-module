@@ -67,7 +67,8 @@ contract InvariantAsserts is Test {
                 "assert proposed != reward"
             );
             assertNotEq(no.managerAddress, address(0), "assert manager != 0");
-            assertNotEq(no.rewardAddress, address(0), "assert reward != 0");
+            // FIXME: Uncomment after #297 being deployed to the testnet.
+            // assertNotEq(no.rewardAddress, address(0), "assert reward != 0");
 
             totalExitedValidators += no.totalExitedKeys;
             totalDepositedValidators += no.totalDepositedKeys;
