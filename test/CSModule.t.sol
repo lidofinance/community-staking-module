@@ -3191,6 +3191,15 @@ contract CsmChangeNodeOperatorRewardAddress is CSMCommon {
         csm.changeNodeOperatorRewardAddress(0, stranger);
     }
 
+    function test_changeNodeOperatorRewardAddress_RevertWhen_ZeroRewardAddress()
+        public
+    {
+        uint256 noId = createNodeOperator(true);
+        vm.expectRevert(ICSModule.ZeroRewardAddress.selector);
+        vm.prank(nodeOperator);
+        csm.changeNodeOperatorRewardAddress(noId, address(0));
+    }
+
     function test_changeNodeOperatorRewardAddress_RevertWhen_NotManagerAddress()
         public
     {
