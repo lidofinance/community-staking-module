@@ -998,6 +998,11 @@ contract CSModule is
     /// @param nodeOperatorId ID of the Node Operator
     function normalizeQueue(uint256 nodeOperatorId) external {
         _onlyNodeOperatorManager(nodeOperatorId);
+        _updateDepositableValidatorsCount({
+            nodeOperatorId: nodeOperatorId,
+            incrementNonceIfUpdated: true,
+            normalizeQueueIfUpdated: false
+        });
         depositQueue.normalize(_nodeOperators, nodeOperatorId);
     }
 
