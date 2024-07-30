@@ -42,6 +42,7 @@ interface ICSModule is
     IAssetRecovererLib
 {
     error NodeOperatorDoesNotExist();
+    error ZeroRewardAddress();
 
     /// @notice Gets node operator non-withdrawn keys
     /// @param nodeOperatorId ID of the node operator
