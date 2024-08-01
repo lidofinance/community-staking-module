@@ -44,7 +44,7 @@ contract CSModuleInvariants is InvariantsBase {
     function test_roles() public {
         assertEq(
             csm.getRoleMemberCount(csm.DEFAULT_ADMIN_ROLE()),
-            1,
+            2,
             "default admin"
         );
         assertEq(csm.getRoleMemberCount(csm.PAUSE_ROLE()), 1, "pause");
@@ -105,7 +105,7 @@ contract CSAccountingInvariants is InvariantsBase {
     function test_roles() public {
         assertEq(
             accounting.getRoleMemberCount(accounting.DEFAULT_ADMIN_ROLE()),
-            1,
+            2,
             "default admin"
         );
         assertEq(
@@ -176,7 +176,7 @@ contract CSFeeDistributorInvariants is InvariantsBase {
             feeDistributor.getRoleMemberCount(
                 feeDistributor.DEFAULT_ADMIN_ROLE()
             ),
-            1
+            2
         );
         assertEq(
             feeDistributor.getRoleMemberCount(feeDistributor.RECOVERER_ROLE()),
@@ -189,7 +189,7 @@ contract CSFeeOracleInvariant is InvariantsBase {
     function test_roles() public {
         assertEq(
             oracle.getRoleMemberCount(oracle.DEFAULT_ADMIN_ROLE()),
-            1,
+            2,
             "default admin"
         );
         assertEq(
