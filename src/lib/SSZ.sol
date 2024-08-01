@@ -89,6 +89,8 @@ library SSZ {
         assembly {
             // Dynamic data types such as bytes are stored at the specified offset.
             let offset := mload(validator)
+            // Clear the last 16 bytes of the pubkey, so offset = 32+48 = 80.
+            mcopy(add(offset, 80), 0x60, 16)
             // Call sha256 precompile with the pubkey pointer
             let result := staticcall(
                 gas(),
