@@ -91,6 +91,7 @@ contract DeployHolesky is DeployBase {
         config.sealDuration = 6 days;
         config.sealExpiryTimestamp = block.timestamp + 365 days;
 
+        config.secondAdminAddress = 0xc4DAB3a3ef68C6DFd8614a870D64D475bA44F164; // Dev team EOA
         _setUp();
     }
 }
