@@ -425,7 +425,7 @@ contract CSVerifierDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_constructor() public {
-        assertEq(address(verifier.LOCATOR()), address(locator));
+        assertEq(verifier.WITHDRAW_TO(), locator.withdrawalVault());
         assertEq(address(verifier.MODULE()), address(csm));
         assertEq(verifier.SLOTS_PER_EPOCH(), deployParams.slotsPerEpoch);
         assertEq(

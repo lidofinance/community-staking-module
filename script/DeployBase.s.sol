@@ -170,7 +170,7 @@ abstract contract DeployBase is Script {
             );
 
             verifier = new CSVerifier({
-                locator: address(locator),
+                withdrawTo: locator.withdrawalVault(),
                 module: address(csm),
                 slotsPerEpoch: uint64(config.slotsPerEpoch),
                 gIFirstWithdrawalPrev: config.gIFirstWithdrawal,

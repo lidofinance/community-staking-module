@@ -5,7 +5,6 @@ pragma solidity 0.8.24;
 import "forge-std/Test.sol";
 import { stdJson } from "forge-std/StdJson.sol";
 
-import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { ICSModule } from "../src/interfaces/ICSModule.sol";
 
@@ -28,17 +27,15 @@ using { dec } for Slot;
 contract CSVerifierBiForkTestConstructor is Test {
     CSVerifier verifier;
 
-    Stub locator;
     Stub module;
 
     function setUp() public {
-        locator = new Stub();
         module = new Stub();
     }
 
     function test_constructor_HappyPath() public {
         verifier = new CSVerifier({
-            locator: address(locator),
+            withdrawTo: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
             gIFirstWithdrawalPrev: pack(0x71c0, 4),
@@ -51,8 +48,11 @@ contract CSVerifierBiForkTestConstructor is Test {
             pivotSlot: Slot.wrap(950_272)
         });
 
+        assertEq(
+            verifier.WITHDRAW_TO(),
+            0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36
+        );
         assertEq(address(verifier.MODULE()), address(module));
-        assertEq(address(verifier.LOCATOR()), address(locator));
         assertEq(verifier.SLOTS_PER_EPOCH(), 32);
         assertEq(
             GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES_PREV()),
@@ -91,7 +91,7 @@ contract CSVerifierBiForkTestConstructor is Test {
     function test_constructor_RevertWhen_InvalidChainConfig() public {
         vm.expectRevert(CSVerifier.InvalidChainConfig.selector);
         verifier = new CSVerifier({
-            locator: address(locator),
+            withdrawTo: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 0, // <--
             gIFirstWithdrawalPrev: pack(0x71c0, 4),
@@ -108,7 +108,7 @@ contract CSVerifierBiForkTestConstructor is Test {
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
         vm.expectRevert(CSVerifier.ZeroModuleAddress.selector);
         verifier = new CSVerifier({
-            locator: address(locator),
+            withdrawTo: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(0), // <--
             slotsPerEpoch: 32,
             gIFirstWithdrawalPrev: pack(0x71c0, 4),
@@ -122,10 +122,10 @@ contract CSVerifierBiForkTestConstructor is Test {
         });
     }
 
-    function test_constructor_RevertWhen_ZeroLocatorAddress() public {
-        vm.expectRevert(CSVerifier.ZeroLocatorAddress.selector);
+    function test_constructor_RevertWhen_ZeroWithdrawalAddress() public {
+        vm.expectRevert(CSVerifier.ZeroWithdrawalAddress.selector);
         verifier = new CSVerifier({
-            locator: address(0), // <--
+            withdrawTo: address(0),
             module: address(module),
             slotsPerEpoch: 32,
             gIFirstWithdrawalPrev: pack(0x71c0, 4),
@@ -142,7 +142,7 @@ contract CSVerifierBiForkTestConstructor is Test {
     function test_constructor_RevertWhen_InvalidPivotSlot() public {
         vm.expectRevert(CSVerifier.InvalidPivotSlot.selector);
         verifier = new CSVerifier({
-            locator: address(locator),
+            withdrawTo: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
             gIFirstWithdrawalPrev: pack(0x71c0, 4),
@@ -163,23 +163,20 @@ contract CSVerifierBiForkHistoricalTest is Test {
     struct HistoricalWithdrawalFixture {
         bytes32 _blockRoot;
         bytes _pubkey;
-        address _withdrawalAddress;
         ICSVerifier.ProvableBeaconBlockHeader beaconBlock;
         ICSVerifier.HistoricalHeaderWitness oldBlock;
         ICSVerifier.WithdrawalWitness witness;
     }
 
     CSVerifier public verifier;
-    Stub public locator;
     Stub public module;
 
     HistoricalWithdrawalFixture public fixture;
 
     function setUp() public {
-        locator = new Stub();
         module = new Stub();
         verifier = new CSVerifier({
-            locator: address(locator),
+            withdrawTo: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
             gIFirstWithdrawalPrev: pack(0x71c0, 4),
@@ -319,12 +316,6 @@ contract CSVerifierBiForkHistoricalTest is Test {
             address(module),
             abi.encodeWithSelector(ICSModule.getSigningKeys.selector, 0, 0),
             abi.encode(_fixture._pubkey)
-        );
-
-        vm.mockCall(
-            address(locator),
-            abi.encodeWithSelector(ILidoLocator.withdrawalVault.selector),
-            abi.encode(_fixture._withdrawalAddress)
         );
 
         vm.mockCall(

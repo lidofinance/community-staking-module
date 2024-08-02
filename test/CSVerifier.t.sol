@@ -5,7 +5,6 @@ pragma solidity 0.8.24;
 import "forge-std/Test.sol";
 import { stdJson } from "forge-std/StdJson.sol";
 
-import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { ICSModule } from "../src/interfaces/ICSModule.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -15,6 +14,7 @@ import { pack } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 
+import { Utilities } from "./helpers/Utilities.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 
 function dec(Slot self) pure returns (Slot slot) {
@@ -25,11 +25,12 @@ function dec(Slot self) pure returns (Slot slot) {
 
 using { dec } for Slot;
 
-contract CSVerifierTestBase is Test {
+contract CSVerifierTestBase is Test, Utilities {
+    using stdJson for string;
+
     struct WithdrawalFixture {
         bytes32 _blockRoot;
         bytes _pubkey;
-        address _withdrawalAddress;
         ICSVerifier.ProvableBeaconBlockHeader beaconBlock;
         ICSVerifier.WithdrawalWitness witness;
     }
@@ -42,23 +43,31 @@ contract CSVerifierTestBase is Test {
     }
 
     CSVerifier public verifier;
-    Stub public locator;
     Stub public module;
     Slot public firstSupportedSlot;
 
     string internal fixturesPath = "./test/fixtures/CSVerifier/";
+
+    function _readFixture(
+        string memory filename
+    ) internal noGasMetering returns (bytes memory data) {
+        string memory path = string.concat(fixturesPath, filename);
+        string memory json = vm.readFile(path);
+        data = json.parseRaw("$");
+    }
 }
 
 contract CSVerifierTestConstructor is CSVerifierTestBase {
     function setUp() public {
-        locator = new Stub();
         module = new Stub();
         firstSupportedSlot = Slot.wrap(100_500);
     }
 
     function test_constructor() public {
+        address withdrawTo = nextAddress("WITHDRAW_TO");
+
         verifier = new CSVerifier({
-            locator: address(locator),
+            withdrawTo: withdrawTo,
             module: address(module),
             slotsPerEpoch: 32,
             gIHistoricalSummariesPrev: pack(0xfff0, 4),
@@ -71,8 +80,8 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             pivotSlot: Slot.wrap(100_501)
         });
 
+        assertEq(address(verifier.WITHDRAW_TO()), withdrawTo);
         assertEq(address(verifier.MODULE()), address(module));
-        assertEq(address(verifier.LOCATOR()), address(locator));
         assertEq(verifier.SLOTS_PER_EPOCH(), 32);
         assertEq(
             GIndex.unwrap(verifier.GI_HISTORICAL_SUMMARIES_PREV()),
@@ -111,7 +120,7 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
     function test_constructor_RevertWhen_InvalidChainConfig() public {
         vm.expectRevert(CSVerifier.InvalidChainConfig.selector);
         verifier = new CSVerifier({
-            locator: address(locator),
+            withdrawTo: nextAddress(),
             module: address(module),
             slotsPerEpoch: 0,
             gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
@@ -128,7 +137,7 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
         vm.expectRevert(CSVerifier.ZeroModuleAddress.selector);
         verifier = new CSVerifier({
-            locator: address(locator),
+            withdrawTo: nextAddress(),
             module: address(0),
             slotsPerEpoch: 32,
             gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
@@ -142,10 +151,10 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
         });
     }
 
-    function test_constructor_RevertWhen_ZeroLocatorAddress() public {
-        vm.expectRevert(CSVerifier.ZeroLocatorAddress.selector);
+    function test_constructor_RevertWhen_ZeroWithdrawalAddress() public {
+        vm.expectRevert(CSVerifier.ZeroWithdrawalAddress.selector);
         verifier = new CSVerifier({
-            locator: address(0),
+            withdrawTo: address(0),
             module: address(module),
             slotsPerEpoch: 32,
             gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
@@ -160,15 +169,12 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
     }
 }
 
-contract CSVerifierTest is CSVerifierTestBase {
-    using stdJson for string;
-
+contract CSVerifierSlashingTest is CSVerifierTestBase {
     function setUp() public {
-        locator = new Stub();
         module = new Stub();
 
         verifier = new CSVerifier({
-            locator: address(locator),
+            withdrawTo: nextAddress("WITHDRAW_TO"),
             module: address(module),
             slotsPerEpoch: 32,
             gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
@@ -243,6 +249,46 @@ contract CSVerifierTest is CSVerifierTestBase {
             0,
             0
         );
+    }
+
+    function _setMocksSlashing(SlashingFixture memory fixture) internal {
+        vm.mockCall(
+            verifier.BEACON_ROOTS(),
+            abi.encode(fixture.beaconBlock.rootsTimestamp),
+            abi.encode(fixture._blockRoot)
+        );
+
+        vm.mockCall(
+            address(module),
+            abi.encodeWithSelector(ICSModule.getSigningKeys.selector, 0, 0),
+            abi.encode(fixture._pubkey)
+        );
+
+        vm.mockCall(
+            address(module),
+            abi.encodeWithSelector(ICSModule.submitInitialSlashing.selector),
+            ""
+        );
+    }
+}
+
+contract CSVerifierWithdrawalTest is CSVerifierTestBase {
+    function setUp() public {
+        module = new Stub();
+
+        verifier = new CSVerifier({
+            withdrawTo: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
+            module: address(module),
+            slotsPerEpoch: 32,
+            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
+            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
+            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+            gIFirstValidatorPrev: pack(0x560000000000, 40),
+            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            firstSupportedSlot: Slot.wrap(100_500), // Any value less than the slots from the fixtures.
+            pivotSlot: Slot.wrap(100_500)
+        });
     }
 
     function test_processWithdrawalProof() public {
@@ -339,12 +385,6 @@ contract CSVerifierTest is CSVerifierTestBase {
         );
 
         vm.mockCall(
-            address(locator),
-            abi.encodeWithSelector(ILidoLocator.withdrawalVault.selector),
-            abi.encode(fixture._withdrawalAddress)
-        );
-
-        vm.mockCall(
             address(module),
             abi.encodeWithSelector(ICSModule.submitWithdrawal.selector),
             ""
@@ -381,34 +421,6 @@ contract CSVerifierTest is CSVerifierTestBase {
             fixture.witness,
             0,
             0
-        );
-    }
-
-    function _readFixture(
-        string memory filename
-    ) internal noGasMetering returns (bytes memory data) {
-        string memory path = string.concat(fixturesPath, filename);
-        string memory json = vm.readFile(path);
-        data = json.parseRaw("$");
-    }
-
-    function _setMocksSlashing(SlashingFixture memory fixture) internal {
-        vm.mockCall(
-            verifier.BEACON_ROOTS(),
-            abi.encode(fixture.beaconBlock.rootsTimestamp),
-            abi.encode(fixture._blockRoot)
-        );
-
-        vm.mockCall(
-            address(module),
-            abi.encodeWithSelector(ICSModule.getSigningKeys.selector, 0, 0),
-            abi.encode(fixture._pubkey)
-        );
-
-        vm.mockCall(
-            address(module),
-            abi.encodeWithSelector(ICSModule.submitInitialSlashing.selector),
-            ""
         );
     }
 
@@ -487,12 +499,6 @@ contract CSVerifierTest is CSVerifierTestBase {
             address(module),
             abi.encodeWithSelector(ICSModule.getSigningKeys.selector, 0, 0),
             abi.encode(fixture._pubkey)
-        );
-
-        vm.mockCall(
-            address(locator),
-            abi.encodeWithSelector(ILidoLocator.withdrawalVault.selector),
-            abi.encode(fixture._withdrawalAddress)
         );
 
         vm.mockCall(

@@ -5,7 +5,6 @@ pragma solidity 0.8.24;
 import "forge-std/Test.sol";
 import { stdJson } from "forge-std/StdJson.sol";
 
-import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { ICSModule } from "../src/interfaces/ICSModule.sol";
 
@@ -31,23 +30,20 @@ contract CSVerifierHistoricalTest is Test {
     struct HistoricalWithdrawalFixture {
         bytes32 _blockRoot;
         bytes _pubkey;
-        address _withdrawalAddress;
         ICSVerifier.ProvableBeaconBlockHeader beaconBlock;
         ICSVerifier.HistoricalHeaderWitness oldBlock;
         ICSVerifier.WithdrawalWitness witness;
     }
 
     CSVerifier public verifier;
-    Stub public locator;
     Stub public module;
 
     HistoricalWithdrawalFixture public fixture;
 
     function setUp() public {
-        locator = new Stub();
         module = new Stub();
         verifier = new CSVerifier({
-            locator: address(locator),
+            withdrawTo: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
             gIHistoricalSummariesPrev: pack(0x3b, 0),
@@ -187,12 +183,6 @@ contract CSVerifierHistoricalTest is Test {
             address(module),
             abi.encodeWithSelector(ICSModule.getSigningKeys.selector, 0, 0),
             abi.encode(_fixture._pubkey)
-        );
-
-        vm.mockCall(
-            address(locator),
-            abi.encodeWithSelector(ILidoLocator.withdrawalVault.selector),
-            abi.encode(_fixture._withdrawalAddress)
         );
 
         vm.mockCall(

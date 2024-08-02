@@ -1,7 +1,6 @@
 {
   "_blockRoot": "0x5e5bca0e0484302cdaeae14d4d183b1b58e329633ca74b3930980e039322971c",
   "_pubkey": "0xa6e2ebcef8e8aa149ee3a0d4cfafdfb0e592914038c38d81b174cab83ba3f9c3dcf4d10776cd8c25e7729204db5f145f",
-  "_withdrawalAddress": "0xb3e29c46ee1745724417c0c51eb2351a1c01cf36",
   "beaconBlock": {
     "blockHeader": {
       "00__slot": 1743359,
