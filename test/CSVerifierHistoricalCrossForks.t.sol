@@ -14,6 +14,7 @@ import { CSVerifier } from "../src/CSVerifier.sol";
 import { pack } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 
+import { Utilities } from "./helpers/Utilities.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 
 function dec(Slot self) pure returns (Slot slot) {
@@ -24,7 +25,7 @@ function dec(Slot self) pure returns (Slot slot) {
 
 using { dec } for Slot;
 
-contract CSVerifierBiForkTestConstructor is Test {
+contract CSVerifierBiForkTestConstructor is Test, Utilities {
     CSVerifier verifier;
 
     Stub module;
@@ -35,7 +36,7 @@ contract CSVerifierBiForkTestConstructor is Test {
 
     function test_constructor_HappyPath() public {
         verifier = new CSVerifier({
-            withdrawTo: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
+            withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
             gIFirstWithdrawalPrev: pack(0x71c0, 4),
@@ -49,7 +50,7 @@ contract CSVerifierBiForkTestConstructor is Test {
         });
 
         assertEq(
-            verifier.WITHDRAW_TO(),
+            verifier.WITHDRAWAL_ADDRESS(),
             0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36
         );
         assertEq(address(verifier.MODULE()), address(module));
@@ -91,7 +92,7 @@ contract CSVerifierBiForkTestConstructor is Test {
     function test_constructor_RevertWhen_InvalidChainConfig() public {
         vm.expectRevert(CSVerifier.InvalidChainConfig.selector);
         verifier = new CSVerifier({
-            withdrawTo: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
+            withdrawalAddress: nextAddress(),
             module: address(module),
             slotsPerEpoch: 0, // <--
             gIFirstWithdrawalPrev: pack(0x71c0, 4),
@@ -108,7 +109,7 @@ contract CSVerifierBiForkTestConstructor is Test {
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
         vm.expectRevert(CSVerifier.ZeroModuleAddress.selector);
         verifier = new CSVerifier({
-            withdrawTo: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
+            withdrawalAddress: nextAddress(),
             module: address(0), // <--
             slotsPerEpoch: 32,
             gIFirstWithdrawalPrev: pack(0x71c0, 4),
@@ -125,7 +126,7 @@ contract CSVerifierBiForkTestConstructor is Test {
     function test_constructor_RevertWhen_ZeroWithdrawalAddress() public {
         vm.expectRevert(CSVerifier.ZeroWithdrawalAddress.selector);
         verifier = new CSVerifier({
-            withdrawTo: address(0),
+            withdrawalAddress: address(0),
             module: address(module),
             slotsPerEpoch: 32,
             gIFirstWithdrawalPrev: pack(0x71c0, 4),
@@ -142,7 +143,7 @@ contract CSVerifierBiForkTestConstructor is Test {
     function test_constructor_RevertWhen_InvalidPivotSlot() public {
         vm.expectRevert(CSVerifier.InvalidPivotSlot.selector);
         verifier = new CSVerifier({
-            withdrawTo: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
+            withdrawalAddress: nextAddress(),
             module: address(module),
             slotsPerEpoch: 32,
             gIFirstWithdrawalPrev: pack(0x71c0, 4),
@@ -176,7 +177,7 @@ contract CSVerifierBiForkHistoricalTest is Test {
     function setUp() public {
         module = new Stub();
         verifier = new CSVerifier({
-            withdrawTo: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
+            withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
             gIFirstWithdrawalPrev: pack(0x71c0, 4),

@@ -64,10 +64,10 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
     }
 
     function test_constructor() public {
-        address withdrawTo = nextAddress("WITHDRAW_TO");
+        address withdrawalAddress = nextAddress("WITHDRAWAL_ADDRESS");
 
         verifier = new CSVerifier({
-            withdrawTo: withdrawTo,
+            withdrawalAddress: withdrawalAddress,
             module: address(module),
             slotsPerEpoch: 32,
             gIHistoricalSummariesPrev: pack(0xfff0, 4),
@@ -80,7 +80,7 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             pivotSlot: Slot.wrap(100_501)
         });
 
-        assertEq(address(verifier.WITHDRAW_TO()), withdrawTo);
+        assertEq(address(verifier.WITHDRAWAL_ADDRESS()), withdrawalAddress);
         assertEq(address(verifier.MODULE()), address(module));
         assertEq(verifier.SLOTS_PER_EPOCH(), 32);
         assertEq(
@@ -120,7 +120,7 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
     function test_constructor_RevertWhen_InvalidChainConfig() public {
         vm.expectRevert(CSVerifier.InvalidChainConfig.selector);
         verifier = new CSVerifier({
-            withdrawTo: nextAddress(),
+            withdrawalAddress: nextAddress(),
             module: address(module),
             slotsPerEpoch: 0,
             gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
@@ -137,7 +137,7 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
         vm.expectRevert(CSVerifier.ZeroModuleAddress.selector);
         verifier = new CSVerifier({
-            withdrawTo: nextAddress(),
+            withdrawalAddress: nextAddress(),
             module: address(0),
             slotsPerEpoch: 32,
             gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
@@ -154,7 +154,7 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
     function test_constructor_RevertWhen_ZeroWithdrawalAddress() public {
         vm.expectRevert(CSVerifier.ZeroWithdrawalAddress.selector);
         verifier = new CSVerifier({
-            withdrawTo: address(0),
+            withdrawalAddress: address(0),
             module: address(module),
             slotsPerEpoch: 32,
             gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
@@ -174,7 +174,7 @@ contract CSVerifierSlashingTest is CSVerifierTestBase {
         module = new Stub();
 
         verifier = new CSVerifier({
-            withdrawTo: nextAddress("WITHDRAW_TO"),
+            withdrawalAddress: nextAddress("WITHDRAWAL_ADDRESS"),
             module: address(module),
             slotsPerEpoch: 32,
             gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
@@ -277,7 +277,7 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
         module = new Stub();
 
         verifier = new CSVerifier({
-            withdrawTo: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
+            withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
             gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.

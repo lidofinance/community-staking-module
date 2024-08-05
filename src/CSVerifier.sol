@@ -60,7 +60,7 @@ contract CSVerifier is ICSVerifier {
     Slot public immutable PIVOT_SLOT;
 
     /// @dev An address withdrawals are supposed to happen to (Lido withdrawal credentials).
-    address public immutable WITHDRAW_TO;
+    address public immutable WITHDRAWAL_ADDRESS;
 
     /// @dev Staking module contract
     ICSModule public immutable MODULE;
@@ -79,7 +79,7 @@ contract CSVerifier is ICSVerifier {
 
     /// @dev The previous and current forks can be essentially the same.
     constructor(
-        address withdrawTo,
+        address withdrawalAddress,
         address module,
         uint64 slotsPerEpoch,
         GIndex gIFirstWithdrawalPrev,
@@ -91,13 +91,13 @@ contract CSVerifier is ICSVerifier {
         Slot firstSupportedSlot,
         Slot pivotSlot
     ) {
-        if (withdrawTo == address(0)) revert ZeroWithdrawalAddress();
+        if (withdrawalAddress == address(0)) revert ZeroWithdrawalAddress();
         if (module == address(0)) revert ZeroModuleAddress();
 
         if (slotsPerEpoch == 0) revert InvalidChainConfig();
         if (firstSupportedSlot > pivotSlot) revert InvalidPivotSlot();
 
-        WITHDRAW_TO = withdrawTo;
+        WITHDRAWAL_ADDRESS = withdrawalAddress;
         MODULE = ICSModule(module);
 
         SLOTS_PER_EPOCH = slotsPerEpoch;
@@ -305,7 +305,7 @@ contract CSVerifier is ICSVerifier {
         address withdrawalAddress = address(
             uint160(uint256(witness.withdrawalCredentials))
         );
-        if (withdrawalAddress != WITHDRAW_TO) {
+        if (withdrawalAddress != WITHDRAWAL_ADDRESS) {
             revert InvalidWithdrawalAddress();
         }
 

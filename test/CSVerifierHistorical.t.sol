@@ -43,7 +43,7 @@ contract CSVerifierHistoricalTest is Test {
     function setUp() public {
         module = new Stub();
         verifier = new CSVerifier({
-            withdrawTo: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
+            withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
             gIHistoricalSummariesPrev: pack(0x3b, 0),
