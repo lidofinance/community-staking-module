@@ -997,7 +997,6 @@ contract CSModule is
     /// @notice Normalization stands for adding vetted but not enqueued keys to the queue
     /// @param nodeOperatorId ID of the Node Operator
     function normalizeQueue(uint256 nodeOperatorId) external {
-        _onlyNodeOperatorManager(nodeOperatorId);
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
