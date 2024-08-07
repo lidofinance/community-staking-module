@@ -4613,6 +4613,91 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
             "depositableValidatorsCount mismatch"
         );
     }
+
+    function test_getNodeOperatorSummary_unbondedGreaterThanTotalMinusDeposited()
+        public
+    {
+        uint256 noId = createNodeOperator(5);
+
+        csm.obtainDepositData(3, "");
+
+        penalize(noId, BOND_SIZE * 3);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.depositableValidatorsCount,
+            0,
+            "depositableValidatorsCount mismatch"
+        );
+    }
+
+    function test_getNodeOperatorSummary_unbondedEqualToTotalMinusDeposited()
+        public
+    {
+        uint256 noId = createNodeOperator(5);
+
+        csm.obtainDepositData(3, "");
+
+        penalize(noId, BOND_SIZE * 2);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.depositableValidatorsCount,
+            0,
+            "depositableValidatorsCount mismatch"
+        );
+    }
+
+    function test_getNodeOperatorSummary_unbondedGreaterThanTotalMinusVetted()
+        public
+    {
+        uint256 noId = createNodeOperator(5);
+
+        unvetKeys(noId, 4);
+
+        penalize(noId, BOND_SIZE * 2);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.depositableValidatorsCount,
+            3,
+            "depositableValidatorsCount mismatch"
+        );
+    }
+
+    function test_getNodeOperatorSummary_unbondedEqualToTotalMinusVetted()
+        public
+    {
+        uint256 noId = createNodeOperator(5);
+
+        unvetKeys(noId, 4);
+
+        penalize(noId, BOND_SIZE);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.depositableValidatorsCount,
+            4,
+            "depositableValidatorsCount mismatch"
+        );
+    }
+
+    function test_getNodeOperatorSummary_unbondedLessThanTotalMinusVetted()
+        public
+    {
+        uint256 noId = createNodeOperator(5);
+
+        unvetKeys(noId, 3);
+
+        penalize(noId, BOND_SIZE);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.depositableValidatorsCount,
+            3,
+            "depositableValidatorsCount mismatch"
+        );
+    }
 }
 
 contract CsmGetNodeOperator is CSMCommon {

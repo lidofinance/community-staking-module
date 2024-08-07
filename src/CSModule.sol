@@ -1752,13 +1752,14 @@ contract CSModule is
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         uint256 newCount = no.totalVettedKeys - no.totalDepositedKeys;
-
         uint256 unbondedKeys = accounting.getUnbondedKeysCount(nodeOperatorId);
-        if (unbondedKeys > newCount) {
-            newCount = 0;
-        } else {
-            unchecked {
-                newCount -= unbondedKeys;
+
+        {
+            uint256 nonDeposited = no.totalAddedKeys - no.totalDepositedKeys;
+            if (unbondedKeys >= nonDeposited) {
+                newCount = 0;
+            } else if (unbondedKeys > no.totalAddedKeys - no.totalVettedKeys) {
+                newCount = nonDeposited - unbondedKeys;
             }
         }
 
