@@ -290,7 +290,7 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_OneItem() public view {
+    function test_verifyProof_OneItem() public view brutalizeMemory {
         bytes32[] memory proof = new bytes32[](1);
 
         // prettier-ignore
@@ -304,7 +304,7 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_RevertWhen_NoProof() public {
+    function test_verifyProof_RevertWhen_NoProof() public brutalizeMemory {
         vm.expectRevert(SSZ.InvalidProof.selector);
 
         // bytes32(0) is a valid proof for the inputs.
@@ -316,7 +316,7 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_RevertWhen_ProvingRoot() public {
+    function test_verifyProof_RevertWhen_ProvingRoot() public brutalizeMemory {
         vm.expectRevert(SSZ.InvalidProof.selector);
 
         lib.verifyProof(
@@ -327,7 +327,7 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_RevertWhen_InvalidProof() public {
+    function test_verifyProof_RevertWhen_InvalidProof() public brutalizeMemory {
         bytes32[] memory proof = new bytes32[](2);
 
         // prettier-ignore
@@ -346,7 +346,7 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_RevertWhen_WrongGIndex() public {
+    function test_verifyProof_RevertWhen_WrongGIndex() public brutalizeMemory {
         bytes32[] memory proof = new bytes32[](2);
 
         // prettier-ignore
@@ -365,7 +365,10 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_RevertWhen_BranchHasExtraItem() public {
+    function test_verifyProof_RevertWhen_BranchHasExtraItem()
+        public
+        brutalizeMemory
+    {
         bytes32[] memory proof = new bytes32[](2);
 
         // prettier-ignore
@@ -384,7 +387,10 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_RevertWhen_BranchHasMissingItem() public {
+    function test_verifyProof_RevertWhen_BranchHasMissingItem()
+        public
+        brutalizeMemory
+    {
         bytes32[] memory proof = new bytes32[](2);
 
         // prettier-ignore
