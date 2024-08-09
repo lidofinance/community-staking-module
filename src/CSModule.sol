@@ -1323,7 +1323,7 @@ contract CSModule is
     /// @dev Use **eth_call** to check how many items will be removed
     /// @param maxItems How many queue items to review
     /// @return removed Count of batches to be removed by visiting `maxItems` batches
-    /// @return lastRemovedAtDepth The value to use as `maxItems` to remove `removed` batches
+    /// @return lastRemovedAtDepth The value to use as `maxItems` to remove `removed` batches if the static call of the method was used
     function cleanDepositQueue(
         uint256 maxItems
     ) external returns (uint256 removed, uint256 lastRemovedAtDepth) {
