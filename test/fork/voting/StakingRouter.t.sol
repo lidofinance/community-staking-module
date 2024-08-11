@@ -29,6 +29,7 @@ contract StakingRouterIntegrationTest is
 
     modifier assertInvariants() {
         _;
+        vm.pauseGasMetering();
         uint256 noCount = csm.getNodeOperatorsCount();
         assertCSMKeys(csm);
         assertCSMEnqueuedCount(csm);
@@ -41,6 +42,7 @@ contract StakingRouterIntegrationTest is
         );
         assertFeeDistributorClaimableShares(lido, feeDistributor);
         assertFeeDistributorTree(feeDistributor);
+        vm.resumeGasMetering();
     }
 
     function setUp() public {
