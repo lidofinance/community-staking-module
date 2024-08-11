@@ -38,8 +38,10 @@ contract CSFeeDistributorTestBase is
 
     modifier assertInvariants() {
         _;
+        vm.pauseGasMetering();
         assertFeeDistributorClaimableShares(stETH, feeDistributor);
         assertFeeDistributorTree(feeDistributor);
+        vm.resumeGasMetering();
     }
 }
 
