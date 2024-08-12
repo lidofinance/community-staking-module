@@ -27,7 +27,7 @@ contract InvariantsBase is
 using QueueLib for QueueLib.Queue;
 
 contract CSModuleInvariants is InvariantsBase {
-    function test_keys() public {
+    function test_keys() public noGasMetering {
         assertCSMKeys(csm);
     }
 
