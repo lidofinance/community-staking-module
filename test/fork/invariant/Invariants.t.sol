@@ -27,15 +27,15 @@ contract InvariantsBase is
 using QueueLib for QueueLib.Queue;
 
 contract CSModuleInvariants is InvariantsBase {
-    function test_keys() public {
+    function test_keys() public noGasMetering {
         assertCSMKeys(csm);
     }
 
-    function test_enqueuedCount() public {
+    function test_enqueuedCount() public noGasMetering {
         assertCSMEnqueuedCount(csm);
     }
 
-    function test_earlyAdoptionMaxKeys() public {
+    function test_earlyAdoptionMaxKeys() public noGasMetering {
         vm.skip(csm.publicRelease());
 
         assertCSMEarlyAdoptionMaxKeys(csm);
@@ -44,7 +44,7 @@ contract CSModuleInvariants is InvariantsBase {
     function test_roles() public {
         assertEq(
             csm.getRoleMemberCount(csm.DEFAULT_ADMIN_ROLE()),
-            1,
+            2,
             "default admin"
         );
         assertEq(csm.getRoleMemberCount(csm.PAUSE_ROLE()), 1, "pause");
@@ -89,7 +89,7 @@ contract CSModuleInvariants is InvariantsBase {
 }
 
 contract CSAccountingInvariants is InvariantsBase {
-    function test_sharesAccounting() public {
+    function test_sharesAccounting() public noGasMetering {
         uint256 noCount = csm.getNodeOperatorsCount();
         assertAccountingTotalBondShares(noCount, lido, accounting);
     }
@@ -105,7 +105,7 @@ contract CSAccountingInvariants is InvariantsBase {
     function test_roles() public {
         assertEq(
             accounting.getRoleMemberCount(accounting.DEFAULT_ADMIN_ROLE()),
-            1,
+            2,
             "default admin"
         );
         assertEq(
@@ -176,7 +176,7 @@ contract CSFeeDistributorInvariants is InvariantsBase {
             feeDistributor.getRoleMemberCount(
                 feeDistributor.DEFAULT_ADMIN_ROLE()
             ),
-            1
+            2
         );
         assertEq(
             feeDistributor.getRoleMemberCount(feeDistributor.RECOVERER_ROLE()),
@@ -189,7 +189,7 @@ contract CSFeeOracleInvariant is InvariantsBase {
     function test_roles() public {
         assertEq(
             oracle.getRoleMemberCount(oracle.DEFAULT_ADMIN_ROLE()),
-            1,
+            2,
             "default admin"
         );
         assertEq(

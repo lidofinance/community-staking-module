@@ -261,18 +261,14 @@ contract CSModule is
         bytes32[] calldata eaProof,
         address referrer
     ) external payable whenResumed {
-        uint256 nodeOperatorId = _createNodeOperator(
+        (uint256 nodeOperatorId, uint256 curveId) = _createNodeOperator(
             managementProperties,
             referrer,
             eaProof
         );
 
         if (
-            msg.value !=
-            accounting.getBondAmountByKeysCount(
-                keysCount,
-                accounting.getBondCurve(nodeOperatorId)
-            )
+            msg.value != accounting.getBondAmountByKeysCount(keysCount, curveId)
         ) {
             revert InvalidAmount();
         }
@@ -311,7 +307,7 @@ contract CSModule is
         bytes32[] calldata eaProof,
         address referrer
     ) external whenResumed {
-        uint256 nodeOperatorId = _createNodeOperator(
+        (uint256 nodeOperatorId, uint256 curveId) = _createNodeOperator(
             managementProperties,
             referrer,
             eaProof
@@ -319,7 +315,7 @@ contract CSModule is
 
         uint256 amount = accounting.getBondAmountByKeysCount(
             keysCount,
-            accounting.getBondCurve(nodeOperatorId)
+            curveId
         );
         accounting.depositStETH(msg.sender, nodeOperatorId, amount, permit);
 
@@ -355,7 +351,7 @@ contract CSModule is
         bytes32[] calldata eaProof,
         address referrer
     ) external whenResumed {
-        uint256 nodeOperatorId = _createNodeOperator(
+        (uint256 nodeOperatorId, uint256 curveId) = _createNodeOperator(
             managementProperties,
             referrer,
             eaProof
@@ -363,7 +359,7 @@ contract CSModule is
 
         uint256 amount = accounting.getBondAmountByKeysCountWstETH(
             keysCount,
-            accounting.getBondCurve(nodeOperatorId)
+            curveId
         );
         accounting.depositWstETH(msg.sender, nodeOperatorId, amount, permit);
 
@@ -699,6 +695,10 @@ contract CSModule is
         uint256 nodeOperatorId,
         address newAddress
     ) external {
+        if (newAddress == address(0)) {
+            revert ZeroRewardAddress();
+        }
+
         NOAddresses.changeNodeOperatorRewardAddress(
             _nodeOperators,
             nodeOperatorId,
@@ -997,7 +997,6 @@ contract CSModule is
     /// @notice Normalization stands for adding vetted but not enqueued keys to the queue
     /// @param nodeOperatorId ID of the Node Operator
     function normalizeQueue(uint256 nodeOperatorId) external {
-        _onlyNodeOperatorManager(nodeOperatorId);
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true,
@@ -1323,9 +1322,15 @@ contract CSModule is
     /// @notice Clean the deposit queue from batches with no depositable keys
     /// @dev Use **eth_call** to check how many items will be removed
     /// @param maxItems How many queue items to review
-    /// @return Number of the deposit data removed from the queue
-    function cleanDepositQueue(uint256 maxItems) external returns (uint256) {
-        return depositQueue.clean(_nodeOperators, maxItems);
+    /// @return removed Count of batches to be removed by visiting `maxItems` batches
+    /// @return lastRemovedAtDepth The value to use as `maxItems` to remove `removed` batches if the static call of the method was used
+    function cleanDepositQueue(
+        uint256 maxItems
+    ) external returns (uint256 removed, uint256 lastRemovedAtDepth) {
+        (removed, lastRemovedAtDepth) = depositQueue.clean(
+            _nodeOperators,
+            maxItems
+        );
     }
 
     /// @notice Recover all stETH shares from the contract
@@ -1580,15 +1585,15 @@ contract CSModule is
         NodeOperatorManagementProperties calldata managementProperties,
         address referrer,
         bytes32[] calldata proof
-    ) internal returns (uint256 id) {
+    ) internal returns (uint256 noId, uint256 curveId) {
         if (!publicRelease) {
             if (proof.length == 0 || address(earlyAdoption) == address(0)) {
                 revert NotAllowedToJoinYet();
             }
         }
 
-        id = _nodeOperatorsCount;
-        NodeOperator storage no = _nodeOperators[id];
+        noId = _nodeOperatorsCount;
+        NodeOperator storage no = _nodeOperators[noId];
 
         no.managerAddress = managementProperties.managerAddress == address(0)
             ? msg.sender
@@ -1604,14 +1609,17 @@ contract CSModule is
             ++_nodeOperatorsCount;
         }
 
-        emit NodeOperatorAdded(id, no.managerAddress, no.rewardAddress);
+        emit NodeOperatorAdded(noId, no.managerAddress, no.rewardAddress);
 
-        if (referrer != address(0)) emit ReferrerSet(id, referrer);
+        if (referrer != address(0)) emit ReferrerSet(noId, referrer);
 
         // @dev It's possible to join with proof even after public release to get beneficial bond curve
         if (proof.length != 0 && address(earlyAdoption) != address(0)) {
             earlyAdoption.consume(msg.sender, proof);
-            accounting.setBondCurve(id, earlyAdoption.CURVE_ID());
+            curveId = earlyAdoption.CURVE_ID();
+            accounting.setBondCurve(noId, curveId);
+        } else {
+            curveId = accounting.DEFAULT_BOND_CURVE_ID();
         }
     }
 
@@ -1749,13 +1757,14 @@ contract CSModule is
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         uint256 newCount = no.totalVettedKeys - no.totalDepositedKeys;
-
         uint256 unbondedKeys = accounting.getUnbondedKeysCount(nodeOperatorId);
-        if (unbondedKeys > newCount) {
-            newCount = 0;
-        } else {
-            unchecked {
-                newCount -= unbondedKeys;
+
+        {
+            uint256 nonDeposited = no.totalAddedKeys - no.totalDepositedKeys;
+            if (unbondedKeys >= nonDeposited) {
+                newCount = 0;
+            } else if (unbondedKeys > no.totalAddedKeys - no.totalVettedKeys) {
+                newCount = nonDeposited - unbondedKeys;
             }
         }
 
