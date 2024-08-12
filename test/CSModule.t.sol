@@ -69,9 +69,11 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
 
     modifier assertInvariants() {
         _;
+        vm.pauseGasMetering();
         assertCSMEarlyAdoptionMaxKeys(csm);
         assertCSMEnqueuedCount(csm);
         assertCSMKeys(csm);
+        vm.resumeGasMetering();
     }
 
     function createNodeOperator() internal returns (uint256) {

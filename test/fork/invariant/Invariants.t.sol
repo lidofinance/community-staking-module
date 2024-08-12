@@ -31,11 +31,11 @@ contract CSModuleInvariants is InvariantsBase {
         assertCSMKeys(csm);
     }
 
-    function test_enqueuedCount() public {
+    function test_enqueuedCount() public noGasMetering {
         assertCSMEnqueuedCount(csm);
     }
 
-    function test_earlyAdoptionMaxKeys() public {
+    function test_earlyAdoptionMaxKeys() public noGasMetering {
         vm.skip(csm.publicRelease());
 
         assertCSMEarlyAdoptionMaxKeys(csm);
@@ -89,7 +89,7 @@ contract CSModuleInvariants is InvariantsBase {
 }
 
 contract CSAccountingInvariants is InvariantsBase {
-    function test_sharesAccounting() public {
+    function test_sharesAccounting() public noGasMetering {
         uint256 noCount = csm.getNodeOperatorsCount();
         assertAccountingTotalBondShares(noCount, lido, accounting);
     }
