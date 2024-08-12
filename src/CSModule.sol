@@ -1322,9 +1322,15 @@ contract CSModule is
     /// @notice Clean the deposit queue from batches with no depositable keys
     /// @dev Use **eth_call** to check how many items will be removed
     /// @param maxItems How many queue items to review
-    /// @return Number of the deposit data removed from the queue
-    function cleanDepositQueue(uint256 maxItems) external returns (uint256) {
-        return depositQueue.clean(_nodeOperators, maxItems);
+    /// @return removed Count of batches to be removed by visiting `maxItems` batches
+    /// @return lastRemovedAtDepth The value to use as `maxItems` to remove `removed` batches if the static call of the method was used
+    function cleanDepositQueue(
+        uint256 maxItems
+    ) external returns (uint256 removed, uint256 lastRemovedAtDepth) {
+        (removed, lastRemovedAtDepth) = depositQueue.clean(
+            _nodeOperators,
+            maxItems
+        );
     }
 
     /// @notice Recover all stETH shares from the contract
