@@ -3335,7 +3335,7 @@ contract CsmQueueOps is CSMCommon {
     function _isQueueDirty(uint256 maxItems) internal returns (bool) {
         // XXX: Mimic a **eth_call** to avoid state changes.
         uint256 snapshot = vm.snapshot();
-        uint256 toRemove = csm.cleanDepositQueue(maxItems);
+        (uint256 toRemove, ) = csm.cleanDepositQueue(maxItems);
         vm.revertTo(snapshot);
         return toRemove > 0;
     }
@@ -3372,7 +3372,7 @@ contract CsmQueueOps is CSMCommon {
         uploadMoreKeys(noId, 1);
         unvetKeys({ noId: noId, to: 2 });
 
-        uint256 toRemove = csm.cleanDepositQueue(LOOKUP_DEPTH);
+        (uint256 toRemove, ) = csm.cleanDepositQueue(LOOKUP_DEPTH);
         assertEq(toRemove, 1, "should remove 1 batch");
 
         bool isDirty = _isQueueDirty(LOOKUP_DEPTH);
@@ -3382,7 +3382,7 @@ contract CsmQueueOps is CSMCommon {
     function test_cleanup_emptyQueue() public assertInvariants {
         _assertQueueIsEmpty();
 
-        uint256 toRemove = csm.cleanDepositQueue(LOOKUP_DEPTH);
+        (uint256 toRemove, ) = csm.cleanDepositQueue(LOOKUP_DEPTH);
         assertEq(toRemove, 0, "queue should be clean");
     }
 
@@ -3408,7 +3408,7 @@ contract CsmQueueOps is CSMCommon {
 
         // Operator noId=1 has 1 dangling batch after unvetting.
         // Operator noId=2 is unvetted.
-        toRemove = csm.cleanDepositQueue(LOOKUP_DEPTH);
+        (toRemove, ) = csm.cleanDepositQueue(LOOKUP_DEPTH);
         assertEq(toRemove, 2, "should remove 2 batch");
 
         // let's check the state of the queue
@@ -3417,7 +3417,7 @@ contract CsmQueueOps is CSMCommon {
         exp[1] = BatchInfo({ nodeOperatorId: 1, count: 5 });
         _assertQueueState(exp);
 
-        toRemove = csm.cleanDepositQueue(LOOKUP_DEPTH);
+        (toRemove, ) = csm.cleanDepositQueue(LOOKUP_DEPTH);
         assertEq(toRemove, 0, "queue should be clean");
     }
 
@@ -3427,10 +3427,48 @@ contract CsmQueueOps is CSMCommon {
         unvetKeys({ noId: 0, to: 0 });
         unvetKeys({ noId: 1, to: 0 });
 
-        uint256 toRemove = csm.cleanDepositQueue(LOOKUP_DEPTH);
+        (uint256 toRemove, ) = csm.cleanDepositQueue(LOOKUP_DEPTH);
         assertEq(toRemove, 2, "should remove all batches");
 
         _assertQueueIsEmpty();
+    }
+
+    function test_cleanup_ToVisitCounterIsCorrect() public {
+        createNodeOperator({ keysCount: 3 }); // noId: 0
+        createNodeOperator({ keysCount: 5 }); // noId: 1
+        createNodeOperator({ keysCount: 1 }); // noId: 2
+        createNodeOperator({ keysCount: 4 }); // noId: 3
+        createNodeOperator({ keysCount: 2 }); // noId: 4
+
+        uploadMoreKeys({ noId: 1, keysCount: 2 });
+        uploadMoreKeys({ noId: 3, keysCount: 2 });
+        uploadMoreKeys({ noId: 4, keysCount: 2 });
+
+        unvetKeys({ noId: 1, to: 2 });
+        unvetKeys({ noId: 2, to: 0 });
+
+        // Items marked with * below are supposed to be removed.
+        // (0;3) (1;5) *(2;1) (3;4) (4;2) *(1;2) (3;2) (4;2)
+
+        uint256 snapshot = vm.snapshot();
+
+        {
+            (uint256 toRemove, uint256 toVisit) = csm.cleanDepositQueue({
+                maxItems: 10
+            });
+            assertEq(toRemove, 2, "toRemove != 2");
+            assertEq(toVisit, 6, "toVisit != 6");
+        }
+
+        vm.revertTo(snapshot);
+
+        {
+            (uint256 toRemove, uint256 toVisit) = csm.cleanDepositQueue({
+                maxItems: 6
+            });
+            assertEq(toRemove, 2, "toRemove != 2");
+            assertEq(toVisit, 6, "toVisit != 6");
+        }
     }
 
     function test_normalizeQueue_NothingToDo() public assertInvariants {

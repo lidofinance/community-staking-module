@@ -136,7 +136,7 @@ library QueueLib {
         Queue storage self,
         mapping(uint256 => NodeOperator) storage nodeOperators,
         uint256 maxItems
-    ) external returns (uint256 toRemove) {
+    ) external returns (uint256 removed, uint256 lastRemovedAtDepth) {
         if (maxItems == 0) revert IQueueLib.QueueLookupNoLimit();
 
         Batch prev;
@@ -150,7 +150,7 @@ library QueueLib {
         for (uint256 i; i < maxItems; ++i) {
             Batch item = self.queue[curr];
             if (item.isNil()) {
-                return toRemove;
+                break;
             }
 
             NodeOperator storage no = nodeOperators[item.noId()];
@@ -172,7 +172,8 @@ library QueueLib {
                 no.enqueuedCount -= uint32(item.keys());
 
                 unchecked {
-                    ++toRemove;
+                    lastRemovedAtDepth = i + 1;
+                    ++removed;
                 }
             } else {
                 queueLookup.add(item.noId(), item.keys());
