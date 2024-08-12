@@ -142,6 +142,23 @@ contract SSZTest is Utilities, Test {
         assertEq(actual, expected);
     }
 
+    function test_ValidatorRootExtraBytesInPubkey() public {
+        Validator memory v = Validator({
+            pubkey: hex"8fb78536e82bcec34e98fff85c907f0a8e6f4b1ccdbf1e8ace26b59eb5a06d16f34e50837f6c490e2ad6a255db8d543bDEADBEEFDEADBEEFDEADBEEFDEADBEEF",
+            withdrawalCredentials: 0x0023b9d00bf66e7f8071208a85afde59b3148dea046ee3db5d79244880734881,
+            effectiveBalance: 32000000000,
+            slashed: false,
+            activationEligibilityEpoch: 2593,
+            activationEpoch: 5890,
+            exitEpoch: type(uint64).max,
+            withdrawableEpoch: type(uint64).max
+        });
+
+        bytes32 expected = 0x60fb91184416404ddfc62bef6df9e9a52c910751daddd47ea426aabaf19dfa09;
+        bytes32 actual = SSZ.hashTreeRoot(v);
+        assertEq(actual, expected);
+    }
+
     function test_ValidatorRoot_AllZeroes() public {
         Validator memory v = Validator({
             pubkey: hex"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
@@ -273,7 +290,7 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_OneItem() public view {
+    function test_verifyProof_OneItem() public view brutalizeMemory {
         bytes32[] memory proof = new bytes32[](1);
 
         // prettier-ignore
@@ -287,7 +304,7 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_RevertWhen_NoProof() public {
+    function test_verifyProof_RevertWhen_NoProof() public brutalizeMemory {
         vm.expectRevert(SSZ.InvalidProof.selector);
 
         // bytes32(0) is a valid proof for the inputs.
@@ -299,7 +316,7 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_RevertWhen_ProvingRoot() public {
+    function test_verifyProof_RevertWhen_ProvingRoot() public brutalizeMemory {
         vm.expectRevert(SSZ.InvalidProof.selector);
 
         lib.verifyProof(
@@ -310,7 +327,7 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_RevertWhen_InvalidProof() public {
+    function test_verifyProof_RevertWhen_InvalidProof() public brutalizeMemory {
         bytes32[] memory proof = new bytes32[](2);
 
         // prettier-ignore
@@ -329,7 +346,7 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_RevertWhen_WrongGIndex() public {
+    function test_verifyProof_RevertWhen_WrongGIndex() public brutalizeMemory {
         bytes32[] memory proof = new bytes32[](2);
 
         // prettier-ignore
@@ -348,7 +365,10 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_RevertWhen_BranchHasExtraItem() public {
+    function test_verifyProof_RevertWhen_BranchHasExtraItem()
+        public
+        brutalizeMemory
+    {
         bytes32[] memory proof = new bytes32[](2);
 
         // prettier-ignore
@@ -367,7 +387,10 @@ contract SSZTest is Utilities, Test {
         );
     }
 
-    function test_verifyProof_RevertWhen_BranchHasMissingItem() public {
+    function test_verifyProof_RevertWhen_BranchHasMissingItem()
+        public
+        brutalizeMemory
+    {
         bytes32[] memory proof = new bytes32[](2);
 
         // prettier-ignore

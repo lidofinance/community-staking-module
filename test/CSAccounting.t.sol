@@ -61,6 +61,7 @@ contract CSAccountingFixtures is Test, Fixtures, Utilities, InvariantAsserts {
 
     modifier assertInvariants() {
         _;
+        vm.pauseGasMetering();
         emit AssertInvariants();
         assertAccountingTotalBondShares(nodeOperatorsCount, stETH, accounting);
         assertAccountingBurnerApproval(
@@ -68,6 +69,7 @@ contract CSAccountingFixtures is Test, Fixtures, Utilities, InvariantAsserts {
             address(accounting),
             address(burner)
         );
+        vm.resumeGasMetering();
     }
 
     function mock_getNodeOperatorsCount(uint256 returnValue) internal {

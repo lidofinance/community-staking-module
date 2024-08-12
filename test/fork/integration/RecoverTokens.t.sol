@@ -30,6 +30,7 @@ contract RecoverIntegrationTest is
 
     modifier assertInvariants() {
         _;
+        vm.pauseGasMetering();
         uint256 noCount = csm.getNodeOperatorsCount();
         assertCSMKeys(csm);
         assertCSMEnqueuedCount(csm);
@@ -42,6 +43,7 @@ contract RecoverIntegrationTest is
         );
         assertFeeDistributorClaimableShares(lido, feeDistributor);
         assertFeeDistributorTree(feeDistributor);
+        vm.resumeGasMetering();
     }
 
     function setUp() public {

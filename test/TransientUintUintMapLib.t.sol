@@ -7,14 +7,16 @@ import { Test } from "forge-std/Test.sol";
 import { TransientUintUintMap, TransientUintUintMapLib } from "../src/lib/TransientUintUintMapLib.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
-contract TransientUintUintMapLibTest is Test {
+import { Utilities } from "./helpers/Utilities.sol";
+
+contract TransientUintUintMapLibTest is Test, Utilities {
     using Strings for uint256;
 
     function testFuzz_dictAddAndGetValue(
         uint256 k,
         uint256 v,
         uint256 s
-    ) public {
+    ) public brutalizeMemory {
         // There's no overflow check in the `add` function.
         unchecked {
             vm.assume(v + s > v);
@@ -44,7 +46,10 @@ contract TransientUintUintMapLibTest is Test {
         );
     }
 
-    function testFuzz_noIntersections(uint256 a, uint256 b) public {
+    function testFuzz_noIntersections(
+        uint256 a,
+        uint256 b
+    ) public brutalizeMemory {
         vm.assume(a != b);
 
         TransientUintUintMap dict1 = TransientUintUintMapLib.create();

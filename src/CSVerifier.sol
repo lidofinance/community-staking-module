@@ -3,7 +3,6 @@
 
 pragma solidity 0.8.24;
 
-import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { ICSVerifier } from "./interfaces/ICSVerifier.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
 
@@ -60,8 +59,8 @@ contract CSVerifier is ICSVerifier {
     /// @dev The first slot of the currently compatible fork.
     Slot public immutable PIVOT_SLOT;
 
-    /// @dev Lido Locator contract
-    ILidoLocator public immutable LOCATOR;
+    /// @dev An address withdrawals are supposed to happen to (Lido withdrawal credentials).
+    address public immutable WITHDRAWAL_ADDRESS;
 
     /// @dev Staking module contract
     ICSModule public immutable MODULE;
@@ -74,13 +73,13 @@ contract CSVerifier is ICSVerifier {
     error ValidatorNotWithdrawn();
     error InvalidWithdrawalAddress();
     error UnsupportedSlot(Slot slot);
-    error ZeroLocatorAddress();
     error ZeroModuleAddress();
+    error ZeroWithdrawalAddress();
     error InvalidPivotSlot();
 
     /// @dev The previous and current forks can be essentially the same.
     constructor(
-        address locator,
+        address withdrawalAddress,
         address module,
         uint64 slotsPerEpoch,
         GIndex gIFirstWithdrawalPrev,
@@ -92,15 +91,14 @@ contract CSVerifier is ICSVerifier {
         Slot firstSupportedSlot,
         Slot pivotSlot
     ) {
-        if (slotsPerEpoch == 0) revert InvalidChainConfig();
+        if (withdrawalAddress == address(0)) revert ZeroWithdrawalAddress();
         if (module == address(0)) revert ZeroModuleAddress();
-        if (locator == address(0)) revert ZeroLocatorAddress();
-        if (firstSupportedSlot > pivotSlot) {
-            revert InvalidPivotSlot();
-        }
 
+        if (slotsPerEpoch == 0) revert InvalidChainConfig();
+        if (firstSupportedSlot > pivotSlot) revert InvalidPivotSlot();
+
+        WITHDRAWAL_ADDRESS = withdrawalAddress;
         MODULE = ICSModule(module);
-        LOCATOR = ILidoLocator(locator);
 
         SLOTS_PER_EPOCH = slotsPerEpoch;
 
@@ -307,7 +305,7 @@ contract CSVerifier is ICSVerifier {
         address withdrawalAddress = address(
             uint160(uint256(witness.withdrawalCredentials))
         );
-        if (withdrawalAddress != LOCATOR.withdrawalVault()) {
+        if (withdrawalAddress != WITHDRAWAL_ADDRESS) {
             revert InvalidWithdrawalAddress();
         }
 

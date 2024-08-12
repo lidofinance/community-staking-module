@@ -43,6 +43,9 @@ interface ICSBondCurve {
         uint256 trend;
     }
 
+    // solhint-disable-next-line
+    function DEFAULT_BOND_CURVE_ID() external view returns (uint256);
+
     function getCurveInfo(
         uint256 curveId
     ) external view returns (BondCurve memory);
