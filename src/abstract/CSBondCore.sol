@@ -280,11 +280,13 @@ abstract contract CSBondCore is ICSBondCore {
 
     /// @dev Shortcut for Lido's getSharesByPooledEth
     function _sharesByEth(uint256 ethAmount) internal view returns (uint256) {
+        if (ethAmount == 0) return 0;
         return LIDO.getSharesByPooledEth(ethAmount);
     }
 
     /// @dev Shortcut for Lido's getPooledEthByShares
     function _ethByShares(uint256 shares) internal view returns (uint256) {
+        if (shares == 0) return 0;
         return LIDO.getPooledEthByShares(shares);
     }
 
