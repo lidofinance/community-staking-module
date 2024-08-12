@@ -209,8 +209,8 @@ abstract contract CSBondCore is ICSBondCore {
         if (sharesToClaim == 0) revert NothingToClaim();
         _unsafeReduceBond(nodeOperatorId, sharesToClaim);
 
-        LIDO.transferShares(to, sharesToClaim);
-        emit BondClaimedStETH(nodeOperatorId, to, _ethByShares(sharesToClaim));
+        uint256 ethAmount = LIDO.transferShares(to, sharesToClaim);
+        emit BondClaimedStETH(nodeOperatorId, to, ethAmount);
     }
 
     /// @dev Claim Node Operator's excess bond shares (stETH) in wstETH by wrapping stETH from the contract and transferring wstETH
@@ -263,11 +263,11 @@ abstract contract CSBondCore is ICSBondCore {
     ) internal returns (uint256 chargedShares) {
         uint256 toChargeShares = _sharesByEth(amount);
         chargedShares = _reduceBond(nodeOperatorId, toChargeShares);
-        LIDO.transferShares(recipient, chargedShares);
+        uint256 chargedEth = LIDO.transferShares(recipient, chargedShares);
         emit BondCharged(
             nodeOperatorId,
             _ethByShares(toChargeShares),
-            _ethByShares(chargedShares)
+            chargedEth
         );
     }
 
