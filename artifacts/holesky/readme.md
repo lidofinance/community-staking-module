@@ -1,4 +1,4 @@
 
 # Holesky
 
-Current deployed commit: 8ce9441dce1001c93d75d065f051013ad5908976
+Current deployed commit: b7ac032c7dd7511fa899f97a2561003c1941120f

@@ -72,13 +72,13 @@ struct DeployParams {
 
 abstract contract DeployBase is Script {
     DeployParams internal config;
-    string private artifactDir;
-    string private chainName;
-    uint256 private chainId;
-    ILidoLocator private locator;
+    string internal artifactDir;
+    string internal chainName;
+    uint256 internal chainId;
+    ILidoLocator internal locator;
 
-    address private deployer;
-    uint256 private pk;
+    address internal deployer;
+    uint256 internal pk;
     CSModule public csm;
     CSAccounting public accounting;
     CSFeeOracle public oracle;

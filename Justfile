@@ -12,7 +12,18 @@ deploy_script_name := if chain == "mainnet" {
     error("Unsupported chain " + chain)
 }
 
+deploy_implementations_script_name := if chain == "mainnet" {
+    "undefined"
+} else if chain == "holesky" {
+    "DeployHoleskyImplementations"
+} else if chain == "devnet" {
+      "undefined"
+} else {
+    error("Unsupported chain " + chain)
+}
+
 deploy_script_path := "script" / deploy_script_name + ".s.sol:" + deploy_script_name
+deploy_impls_script_path := "script" / deploy_implementations_script_name + ".s.sol:" + deploy_implementations_script_name
 
 anvil_host := env_var_or_default("ANVIL_IP_ADDR", "127.0.0.1")
 anvil_port := "8545"
@@ -136,6 +147,13 @@ verify-prod *args:
 
 _deploy-prod *args:
     forge script {{deploy_script_path}} --force --rpc-url ${RPC_URL} {{args}}
+
+[confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]
+deploy-impl *args:
+    ARTIFACTS_DIR=./artifacts/latest/ just deploy-impl-dry --broadcast --verify {{args}}
+
+deploy-impl-dry *args:
+    forge script {{deploy_impls_script_path}} --force --rpc-url ${RPC_URL} {{args}}
 
 deploy-local:
     just make-fork &
