@@ -125,6 +125,8 @@ contract CSFeeDistributor is
 
         if (distributed > 0) {
             if (bytes(_treeCid).length == 0) revert InvalidTreeCID();
+            if (keccak256(bytes(_treeCid)) == keccak256(bytes(treeCid)))
+                revert InvalidTreeCID();
             if (_treeRoot == bytes32(0)) revert InvalidTreeRoot();
             if (_treeRoot == treeRoot) revert InvalidTreeRoot();
 
