@@ -152,7 +152,6 @@ contract CSModule is
     error SigningKeysInvalidOffset();
 
     error AlreadySubmitted();
-    error AlreadyWithdrawn();
 
     error AlreadyActivated();
     error InvalidAmount();
