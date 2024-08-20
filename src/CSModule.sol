@@ -20,7 +20,6 @@ import { NOAddresses } from "./lib/NOAddresses.sol";
 
 import { SigningKeys } from "./lib/SigningKeys.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
-import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
 contract CSModule is
     ICSModule,
@@ -1329,17 +1328,6 @@ contract CSModule is
         (removed, lastRemovedAtDepth) = depositQueue.clean(
             _nodeOperators,
             maxItems
-        );
-    }
-
-    /// @notice Recover all stETH shares from the contract
-    /// @dev There should be no stETH shares on the contract balance during regular operation
-    function recoverStETHShares() external {
-        _onlyRecoverer();
-
-        AssetRecovererLib.recoverStETHShares(
-            address(STETH),
-            STETH.sharesOf(address(this))
         );
     }
 

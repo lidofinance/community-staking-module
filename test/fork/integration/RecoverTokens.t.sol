@@ -87,13 +87,14 @@ contract RecoverIntegrationTest is
         vm.startPrank(user);
         vm.deal(user, amount);
         uint256 shares = lido.submit{ value: amount }({ _referal: address(0) });
-        lido.transferShares(address(csm), shares);
+        uint256 amountStETH = lido.getPooledEthByShares(shares);
+        lido.transfer(address(csm), amountStETH);
         vm.stopPrank();
 
         vm.prank(recoverer);
-        csm.recoverStETHShares();
+        csm.recoverERC20(address(lido), amountStETH);
 
-        assertEq(lido.sharesOf(recoverer), shares);
+        assertApproxEqAbs(lido.balanceOf(recoverer), amountStETH, 1 wei);
     }
 
     function test_recoverETH_fromCSM() public assertInvariants {
