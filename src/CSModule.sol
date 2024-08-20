@@ -266,7 +266,7 @@ contract CSModule is
         );
 
         if (
-            msg.value != accounting.getBondAmountByKeysCount(keysCount, curveId)
+            msg.value < accounting.getBondAmountByKeysCount(keysCount, curveId)
         ) {
             revert InvalidAmount();
         }
@@ -384,7 +384,7 @@ contract CSModule is
         _onlyNodeOperatorManager(nodeOperatorId);
 
         if (
-            msg.value !=
+            msg.value <
             accounting.getRequiredBondForNextKeys(nodeOperatorId, keysCount)
         ) {
             revert InvalidAmount();
