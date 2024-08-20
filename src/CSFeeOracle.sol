@@ -136,7 +136,7 @@ contract CSFeeOracle is
     }
 
     /// @notice Resume accepting oracle reports
-    function resume() external whenPaused onlyRole(RESUME_ROLE) {
+    function resume() external onlyRole(RESUME_ROLE) {
         _resume();
     }
 
