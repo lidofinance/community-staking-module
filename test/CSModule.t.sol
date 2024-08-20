@@ -870,6 +870,44 @@ contract CSMAddNodeOperatorETH is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
+    function test_AddNodeOperatorETH_withMoreEthThanRequired()
+        public
+        assertInvariants
+    {
+        uint16 keysCount = 1;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        uint256 deposit = BOND_SIZE + 1 ether;
+        vm.deal(nodeOperator, deposit);
+        uint256 nonce = csm.getNonce();
+
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit IStakingModule.SigningKeyAdded(0, keys);
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit CSModule.TotalSigningKeysCountChanged(0, 1);
+        }
+
+        vm.prank(nodeOperator);
+        csm.addNodeOperatorETH{ value: deposit }(
+            keysCount,
+            keys,
+            signatures,
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            new bytes32[](0),
+            address(0)
+        );
+        assertEq(csm.getNodeOperatorsCount(), 1);
+        assertEq(csm.getNonce(), nonce + 1);
+    }
+
     function test_AddNodeOperatorETH_withCustomAddresses()
         public
         assertInvariants
@@ -1494,6 +1532,30 @@ contract CSMAddValidatorKeys is CSMCommon {
             emit CSModule.TotalSigningKeysCountChanged(noId, 2);
         }
         csm.addValidatorKeysETH{ value: required }(noId, 1, keys, signatures);
+        assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_AddValidatorKeysETH_withMoreEthThanRequired()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        uint256 noId = createNodeOperator();
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
+        uint256 deposit = required + 1 ether;
+        vm.deal(nodeOperator, deposit);
+        uint256 nonce = csm.getNonce();
+
+        vm.prank(nodeOperator);
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit IStakingModule.SigningKeyAdded(noId, keys);
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
+        }
+        csm.addValidatorKeysETH{ value: deposit }(noId, 1, keys, signatures);
         assertEq(csm.getNonce(), nonce + 1);
     }
 
