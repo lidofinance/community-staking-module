@@ -5309,6 +5309,18 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         csm.reportELRewardsStealingPenalty(0, blockhash(block.number), 1 ether);
     }
 
+    function test_reportELRewardsStealingPenalty_RevertWhen_ZeroAmount()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(CSModule.InvalidAmount.selector);
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            0 ether
+        );
+    }
+
     function test_reportELRewardsStealingPenalty_NoNonceChange()
         public
         assertInvariants
