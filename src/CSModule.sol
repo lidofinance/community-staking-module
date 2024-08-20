@@ -202,7 +202,7 @@ contract CSModule is
 
         _setKeyRemovalCharge(_keyRemovalCharge);
         // CSM is on pause initially and should be resumed during the vote
-        _pauseFor(type(uint256).max);
+        _pauseFor(PausableUntil.PAUSE_INFINITELY);
     }
 
     /// @notice Resume creation of the Node Operators and keys upload
