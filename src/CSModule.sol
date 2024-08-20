@@ -1089,12 +1089,12 @@ contract CSModule is
     }
 
     /// @notice Compensate EL rewards stealing penalty for the given Node Operator to prevent further validator exits
-    /// @dev Expected to be called by the Node Operator, but can be called by anyone
+    /// @dev Can only be called by the Node Operator manager
     /// @param nodeOperatorId ID of the Node Operator
     function compensateELRewardsStealingPenalty(
         uint256 nodeOperatorId
     ) external payable {
-        _onlyExistingNodeOperator(nodeOperatorId);
+        _onlyNodeOperatorManager(nodeOperatorId);
         accounting.compensateLockedBondETH{ value: msg.value }(nodeOperatorId);
         // Nonce should be updated if depositableValidators change
         // Normalize queue should be called due to only increase in depositable possible

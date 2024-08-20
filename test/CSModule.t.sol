@@ -5866,6 +5866,8 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
                 noId
             )
         );
+        vm.deal(nodeOperator, amount + fine);
+        vm.prank(nodeOperator);
         csm.compensateELRewardsStealingPenalty{ value: amount + fine }(noId);
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
@@ -5895,6 +5897,8 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
                 noId
             )
         );
+        vm.deal(nodeOperator, amount);
+        vm.prank(nodeOperator);
         csm.compensateELRewardsStealingPenalty{ value: amount }(noId);
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
@@ -5918,6 +5922,8 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
             .getNodeOperator(noId)
             .depositableValidatorsCount;
 
+        vm.deal(nodeOperator, amount + fine);
+        vm.prank(nodeOperator);
         csm.compensateELRewardsStealingPenalty{ value: amount + fine }(noId);
         uint256 depositableAfter = csm
             .getNodeOperator(noId)
@@ -5934,6 +5940,14 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
     {
         vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
         csm.compensateELRewardsStealingPenalty{ value: 1 ether }(0);
+    }
+
+    function test_compensateELRewardsStealingPenalty_RevertWhen_NotManager()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(CSModule.SenderIsNotEligible.selector);
+        csm.compensateELRewardsStealingPenalty{ value: 1 ether }(noId);
     }
 }
 
