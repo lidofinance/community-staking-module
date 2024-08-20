@@ -3630,6 +3630,18 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         accounting.lockBondETH(0, 1 ether);
     }
 
+    function test_lockBondETH_RevertWhen_LockOverflow() public {
+        mock_getNodeOperatorsCount(1);
+
+        vm.prank(address(stakingModule));
+        accounting.lockBondETH(0, 1 ether);
+        assertEq(accounting.getActualLockedBond(0), 1 ether);
+
+        vm.expectRevert();
+        vm.prank(address(stakingModule));
+        accounting.lockBondETH(0, type(uint256).max);
+    }
+
     function test_releaseLockedBondETH() public assertInvariants {
         mock_getNodeOperatorsCount(1);
 
