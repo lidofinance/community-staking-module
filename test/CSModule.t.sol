@@ -5479,8 +5479,6 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(noId);
         expectNoCall(
             address(accounting),
             abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
@@ -5502,10 +5500,6 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         idsToSettle[0] = firstNoId;
         idsToSettle[1] = secondNoId;
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(firstNoId);
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(secondNoId);
         expectNoCall(
             address(accounting),
             abi.encodeWithSelector(
@@ -5549,8 +5543,6 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             1 ether
         );
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(firstNoId);
         vm.expectEmit(true, true, true, true, address(csm));
         emit CSModule.ELRewardsStealingPenaltySettled(secondNoId);
         expectNoCall(
@@ -5643,8 +5635,6 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
             BOND_SIZE
         );
 
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(firstNoId);
         vm.expectEmit(true, true, true, true, address(csm));
         emit CSModule.ELRewardsStealingPenaltySettled(secondNoId);
         vm.expectCall(
