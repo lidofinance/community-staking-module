@@ -7129,23 +7129,6 @@ contract CSMRecoverERC20 is CSMCommon {
         assertEq(token.balanceOf(address(csm)), 0);
         assertEq(token.balanceOf(stranger), 1000);
     }
-
-    function test_recoverStETHShares() public assertInvariants {
-        vm.startPrank(admin);
-        csm.grantRole(csm.RECOVERER_ROLE(), stranger);
-        vm.stopPrank();
-
-        uint256 sharesToRecover = stETH.getSharesByPooledEth(1 ether);
-        stETH.mintShares(address(csm), sharesToRecover);
-
-        vm.prank(stranger);
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit IAssetRecovererLib.StETHSharesRecovered(stranger, sharesToRecover);
-        csm.recoverStETHShares();
-
-        assertEq(stETH.sharesOf(address(csm)), 0);
-        assertEq(stETH.sharesOf(stranger), sharesToRecover);
-    }
 }
 
 contract CSMMisc is CSMCommon {
