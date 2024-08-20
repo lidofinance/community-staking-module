@@ -1014,6 +1014,7 @@ contract CSModule is
         uint256 amount
     ) external onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
+        if (amount == 0) revert InvalidAmount();
         accounting.lockBondETH(
             nodeOperatorId,
             amount + EL_REWARDS_STEALING_FINE
