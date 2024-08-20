@@ -1082,8 +1082,8 @@ contract CSModule is
                     incrementNonceIfUpdated: true,
                     normalizeQueueIfUpdated: false
                 });
+                emit ELRewardsStealingPenaltySettled(nodeOperatorId);
             }
-            emit ELRewardsStealingPenaltySettled(nodeOperatorId);
         }
     }
 
