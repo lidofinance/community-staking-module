@@ -461,6 +461,27 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         feeDistributor.processOracleReport(someBytes32(), "", shares);
     }
 
+    function test_processOracleReport_RevertWhen_SameCidNonZeroShares()
+        public
+        assertInvariants
+    {
+        uint256 shares = 1_000_000;
+
+        // Deliver initial report.
+        {
+            stETH.mintShares(address(feeDistributor), shares);
+
+            vm.prank(oracle);
+            feeDistributor.processOracleReport(someBytes32(), "Qm", shares);
+        }
+
+        stETH.mintShares(address(feeDistributor), shares);
+
+        vm.expectRevert(CSFeeDistributor.InvalidTreeCID.selector);
+        vm.prank(oracle);
+        feeDistributor.processOracleReport(someBytes32(), "Qm", shares);
+    }
+
     function test_processOracleReport_RevertWhen_MoreSharesThanBalance()
         public
         assertInvariants
