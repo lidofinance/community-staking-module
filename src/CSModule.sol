@@ -1441,9 +1441,11 @@ contract CSModule is
         uint256 totalUnbondedKeys = accounting.getUnbondedKeysCountToEject(
             nodeOperatorId
         );
-        // Force mode enabled and unbonded
+        uint256 totalNonDepositedKeys = no.totalAddedKeys -
+            no.totalDepositedKeys;
+        // Force mode enabled and unbonded deposited keys
         if (
-            totalUnbondedKeys > 0 &&
+            totalUnbondedKeys > totalNonDepositedKeys &&
             no.targetLimitMode == FORCED_TARGET_LIMIT_MODE_ID
         ) {
             targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
@@ -1455,8 +1457,8 @@ contract CSModule is
                         totalUnbondedKeys
                 );
             }
-            // No force mode enabled but unbonded
-        } else if (totalUnbondedKeys > 0) {
+            // No force mode enabled but unbonded deposited keys
+        } else if (totalUnbondedKeys > totalNonDepositedKeys) {
             targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
             unchecked {
                 targetValidatorsCount =
