@@ -4565,7 +4565,7 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         );
     }
 
-    function test_getNodeOperatorSummary_targetLimitDueToUnbondedNonDeposited()
+    function test_getNodeOperatorSummary_noTargetLimitDueToUnbondedNonDeposited()
         public
     {
         uint256 noId = createNodeOperator(3);
@@ -4575,10 +4575,10 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         penalize(noId, BOND_SIZE / 2);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
-        assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
+        assertEq(summary.targetLimitMode, 0, "targetLimitMode mismatch");
         assertEq(
             summary.targetValidatorsCount,
-            2,
+            0,
             "targetValidatorsCount mismatch"
         );
     }
@@ -4650,10 +4650,35 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         );
     }
 
-    function test_getNodeOperatorSummary_hardTargetLimitGreaterThanUnbonded()
+    function test_getNodeOperatorSummary_hardTargetLimitGreaterThanUnbondedNonDeposited()
         public
     {
         uint256 noId = createNodeOperator(5);
+
+        csm.updateTargetValidatorsLimits(noId, 2, 4);
+
+        penalize(noId, BOND_SIZE + 100 wei);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.targetValidatorsCount,
+            4,
+            "targetValidatorsCount mismatch"
+        );
+        assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
+        assertEq(
+            summary.depositableValidatorsCount,
+            3,
+            "depositableValidatorsCount mismatch"
+        );
+    }
+
+    function test_getNodeOperatorSummary_hardTargetLimitGreaterThanUnbondedDeposited()
+        public
+    {
+        uint256 noId = createNodeOperator(5);
+
+        csm.obtainDepositData(4, "");
 
         csm.updateTargetValidatorsLimits(noId, 2, 4);
 
@@ -4668,7 +4693,7 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
         assertEq(
             summary.depositableValidatorsCount,
-            3,
+            0,
             "depositableValidatorsCount mismatch"
         );
     }
@@ -4697,10 +4722,35 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         );
     }
 
-    function test_getNodeOperatorSummary_softTargetLimitLowerThanUnbonded()
+    function test_getNodeOperatorSummary_softTargetLimitLowerThanUnbondedNonDeposited()
         public
     {
         uint256 noId = createNodeOperator(5);
+
+        csm.updateTargetValidatorsLimits(noId, 1, 1);
+
+        penalize(noId, BOND_SIZE / 2);
+
+        NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
+        assertEq(
+            summary.targetValidatorsCount,
+            1,
+            "targetValidatorsCount mismatch"
+        );
+        assertEq(summary.targetLimitMode, 1, "targetLimitMode mismatch");
+        assertEq(
+            summary.depositableValidatorsCount,
+            1,
+            "depositableValidatorsCount mismatch"
+        );
+    }
+
+    function test_getNodeOperatorSummary_softTargetLimitLowerThanUnbondedDeposited()
+        public
+    {
+        uint256 noId = createNodeOperator(5);
+
+        csm.obtainDepositData(5, "");
 
         csm.updateTargetValidatorsLimits(noId, 1, 1);
 
@@ -4715,21 +4765,19 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
         assertEq(
             summary.depositableValidatorsCount,
-            1,
+            0,
             "depositableValidatorsCount mismatch"
         );
     }
 
-    function test_getNodeOperatorSummary_softTargetLimitLowerThanUnbonded_deposited()
+    function test_getNodeOperatorSummary_softTargetLimitGreaterThanUnbondedNonDeposited()
         public
     {
         uint256 noId = createNodeOperator(5);
 
-        csm.obtainDepositData(1, "");
+        csm.updateTargetValidatorsLimits(noId, 1, 4);
 
-        csm.updateTargetValidatorsLimits(noId, 1, 2);
-
-        penalize(noId, BOND_SIZE / 2);
+        penalize(noId, BOND_SIZE + 100 wei);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
         assertEq(
@@ -4737,18 +4785,20 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
             4,
             "targetValidatorsCount mismatch"
         );
-        assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
+        assertEq(summary.targetLimitMode, 1, "targetLimitMode mismatch");
         assertEq(
             summary.depositableValidatorsCount,
-            1,
+            3,
             "depositableValidatorsCount mismatch"
         );
     }
 
-    function test_getNodeOperatorSummary_softTargetLimitGreaterThanUnbonded()
+    function test_getNodeOperatorSummary_softTargetLimitGreaterThanUnbondedDeposited()
         public
     {
         uint256 noId = createNodeOperator(5);
+
+        csm.obtainDepositData(4, "");
 
         csm.updateTargetValidatorsLimits(noId, 1, 4);
 
@@ -4763,7 +4813,7 @@ contract CsmGetNodeOperatorSummary is CSMCommon {
         assertEq(summary.targetLimitMode, 2, "targetLimitMode mismatch");
         assertEq(
             summary.depositableValidatorsCount,
-            3,
+            0,
             "depositableValidatorsCount mismatch"
         );
     }
