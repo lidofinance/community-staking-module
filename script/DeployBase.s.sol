@@ -56,6 +56,7 @@ struct DeployParams {
     uint256 minSlashingPenaltyQuotient;
     uint256 elRewardsStealingFine;
     uint256 maxKeysPerOperatorEA;
+    uint256 maxKeyRemovalCharge;
     uint256 keyRemovalCharge;
     address elRewardsStealingReporter;
     // EarlyAdoption
@@ -137,6 +138,7 @@ abstract contract DeployBase is Script {
                 minSlashingPenaltyQuotient: config.minSlashingPenaltyQuotient,
                 elRewardsStealingFine: config.elRewardsStealingFine,
                 maxKeysPerOperatorEA: config.maxKeysPerOperatorEA,
+                maxKeyRemovalCharge: config.maxKeyRemovalCharge,
                 lidoLocator: config.lidoLocatorAddress
             });
             csm = CSModule(_deployProxy(config.proxyAdmin, address(csmImpl)));

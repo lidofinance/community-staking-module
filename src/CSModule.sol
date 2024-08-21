@@ -51,6 +51,7 @@ contract CSModule is
     uint256 public immutable EL_REWARDS_STEALING_FINE;
     uint256
         public immutable MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE;
+    uint256 public immutable MAX_KEY_REMOVAL_CHARGE;
     bytes32 private immutable MODULE_TYPE;
     ILidoLocator public immutable LIDO_LOCATOR;
     IStETH public immutable STETH;
@@ -167,6 +168,7 @@ contract CSModule is
         uint256 minSlashingPenaltyQuotient,
         uint256 elRewardsStealingFine,
         uint256 maxKeysPerOperatorEA,
+        uint256 maxKeyRemovalCharge,
         address lidoLocator
     ) {
         if (lidoLocator == address(0)) revert ZeroLocatorAddress();
@@ -175,6 +177,7 @@ contract CSModule is
         INITIAL_SLASHING_PENALTY = DEPOSIT_SIZE / minSlashingPenaltyQuotient;
         EL_REWARDS_STEALING_FINE = elRewardsStealingFine;
         MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE = maxKeysPerOperatorEA;
+        MAX_KEY_REMOVAL_CHARGE = maxKeyRemovalCharge;
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
         STETH = IStETH(LIDO_LOCATOR.lido());
 
@@ -221,9 +224,7 @@ contract CSModule is
     ///         Enable permissionless creation of the Node Operators
     ///         Remove the keys limit for the Node Operators
     function activatePublicRelease() external onlyRole(MODULE_MANAGER_ROLE) {
-        if (publicRelease) {
-            revert AlreadyActivated();
-        }
+        if (publicRelease) revert AlreadyActivated();
         publicRelease = true;
         emit PublicRelease();
     }
@@ -1667,6 +1668,7 @@ contract CSModule is
     }
 
     function _setKeyRemovalCharge(uint256 amount) internal {
+        if (amount > MAX_KEY_REMOVAL_CHARGE) revert InvalidInput();
         keyRemovalCharge = amount;
         emit KeyRemovalChargeSet(amount);
     }

@@ -63,6 +63,7 @@ contract DeployHoleskyDevnet is DeployBase {
         config.minSlashingPenaltyQuotient = 32;
         config.elRewardsStealingFine = 0.1 ether;
         config.maxKeysPerOperatorEA = 10;
+        config.maxKeyRemovalCharge = 0.1 ether;
         config.keyRemovalCharge = 0.05 ether;
         config
             .elRewardsStealingReporter = 0xC234dBA03943C9238067cDfBC2761844133DD386; // Known EOA

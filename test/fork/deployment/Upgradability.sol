@@ -28,6 +28,7 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
             elRewardsStealingFine: csm.EL_REWARDS_STEALING_FINE(),
             maxKeysPerOperatorEA: csm
                 .MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(),
+            maxKeyRemovalCharge: csm.MAX_KEY_REMOVAL_CHARGE(),
             lidoLocator: address(csm.LIDO_LOCATOR())
         });
         vm.prank(proxy.proxy__getAdmin());
