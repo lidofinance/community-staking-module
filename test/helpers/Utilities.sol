@@ -154,6 +154,17 @@ contract Utilities is CommonBase {
         return arr;
     }
 
+    function slice(
+        bytes memory subject,
+        uint256 offset,
+        uint256 length
+    ) public pure returns (bytes memory slice) {
+        slice = new bytes(length);
+        for (uint i; i < length; ++i) {
+            slice[i] = subject[offset + i];
+        }
+    }
+
     /// See https://github.com/Vectorized/solady - MIT licensed.
     /// @dev Fills the memory with junk, for more robust testing of inline assembly
     /// which reads/write to the memory.

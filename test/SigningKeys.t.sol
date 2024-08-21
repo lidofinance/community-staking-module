@@ -72,6 +72,8 @@ contract Library {
 }
 
 contract SigningKeysTestBase is Test, Utilities {
+    using stdError for *;
+
     uint64 internal constant PUBKEY_LENGTH = 48;
     uint64 internal constant SIGNATURE_LENGTH = 96;
 
@@ -83,9 +85,37 @@ contract SigningKeysTestBase is Test, Utilities {
 }
 
 contract SigningKeysSaveTest is SigningKeysTestBase {
-    function test_saveKeysSigs() public {
+    function test_saveKeysSigs_HappyPath() public {
         uint256 keysCount = 1;
         uint16 startIndex = 2;
+        uint256 nodeOperatorId = 154;
+        (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
+            keysCount,
+            startIndex
+        );
+        vm.expectEmit(true, true, true, true, address(signingKeys));
+        emit IStakingModule.SigningKeyAdded(nodeOperatorId, pubkeys);
+        uint256 newKeysCount = signingKeys.saveKeysSigs(
+            nodeOperatorId,
+            startIndex,
+            keysCount,
+            pubkeys,
+            signatures
+        );
+
+        assertEq(newKeysCount, startIndex + keysCount);
+        bytes memory loadedPubkeys = signingKeys.loadKeys(
+            nodeOperatorId,
+            startIndex,
+            keysCount
+        );
+
+        assertEq(loadedPubkeys, pubkeys);
+    }
+
+    function test_saveKeysSigs_LastKeyForOperator() public {
+        uint256 keysCount = 1;
+        uint256 startIndex = type(uint32).max - 1;
         uint256 nodeOperatorId = 154;
         (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
             keysCount,
@@ -130,7 +160,7 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
         );
     }
 
-    function test_saveKeysSigs_revertWhen_toManyKeys() public {
+    function test_saveKeysSigs_revertWhen_tooManyKeys() public {
         uint256 keysCount = type(uint32).max;
         uint16 startIndex = 2;
         uint256 nodeOperatorId = 154;
@@ -148,6 +178,31 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
             pubkeys,
             signatures
         );
+    }
+
+    function test_saveKeysSigs_revertWhen_startIndexTooBig() public {
+        (bytes memory pubkeys, bytes memory signatures) = (
+            new bytes(0),
+            new bytes(0)
+        );
+
+        vm.expectRevert(SigningKeys.InvalidKeysCount.selector);
+        signingKeys.saveKeysSigs({
+            nodeOperatorId: 154,
+            startIndex: type(uint32).max,
+            keysCount: 1,
+            pubkeys: pubkeys,
+            signatures: signatures
+        });
+
+        vm.expectRevert(stdError.arithmeticError);
+        signingKeys.saveKeysSigs({
+            nodeOperatorId: 154,
+            startIndex: type(uint256).max,
+            keysCount: 1,
+            pubkeys: pubkeys,
+            signatures: signatures
+        });
     }
 
     function test_saveKeysSigs_revertWhen_invalidSigsLen() public {
@@ -176,6 +231,25 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
             startIndex,
             keysCount,
             new bytes(0),
+            signatures
+        );
+    }
+
+    function test_saveKeysSigs_revertWhen_pubkeysAndSignaturesUnaligned()
+        public
+    {
+        uint256 nodeOperatorId = 154;
+        uint256 startIndex = 12;
+
+        (bytes memory pubkeys, ) = keysSignatures(10, startIndex);
+        (, bytes memory signatures) = keysSignatures(11, startIndex);
+
+        vm.expectRevert(SigningKeys.InvalidLength.selector);
+        signingKeys.saveKeysSigs(
+            nodeOperatorId,
+            startIndex,
+            10,
+            pubkeys,
             signatures
         );
     }
@@ -260,31 +334,42 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
 }
 
 contract SigningKeysRemoveTest is SigningKeysTestBase {
-    function test_removeKeysSigs() public {
-        uint256 keysCount = 1;
-        uint16 startIndex = 2;
+    function test_removeKeysSigs_HappyPath() public {
         uint256 nodeOperatorId = 154;
-        (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        uint256 totalKeysCount = signingKeys.saveKeysSigs(
-            nodeOperatorId,
-            startIndex,
-            keysCount,
-            pubkeys,
-            signatures
-        );
 
+        (bytes memory pubkeys, bytes memory signatures) = keysSignatures(3);
+        uint256 totalKeysCount = signingKeys.saveKeysSigs({
+            nodeOperatorId: nodeOperatorId,
+            startIndex: 0,
+            keysCount: 3,
+            pubkeys: pubkeys,
+            signatures: signatures
+        });
+
+        bytes memory removedKey = slice(pubkeys, PUBKEY_LENGTH, PUBKEY_LENGTH);
         vm.expectEmit(true, true, true, true, address(signingKeys));
-        emit IStakingModule.SigningKeyRemoved(nodeOperatorId, pubkeys);
-        uint256 newTotalKeysCount = signingKeys.removeKeysSigs(
-            nodeOperatorId,
-            startIndex,
-            keysCount,
-            totalKeysCount
-        );
+        emit IStakingModule.SigningKeyRemoved(nodeOperatorId, removedKey);
+        uint256 newTotalKeysCount = signingKeys.removeKeysSigs({
+            nodeOperatorId: nodeOperatorId,
+            startIndex: 1,
+            keysCount: 1,
+            totalKeysCount: 3
+        });
 
-        assertEq(newTotalKeysCount, totalKeysCount - keysCount);
+        assertEq(newTotalKeysCount, 2);
+
+        bytes memory lastAddedKey = slice(
+            pubkeys,
+            PUBKEY_LENGTH * 2,
+            PUBKEY_LENGTH
+        );
+        bytes memory keyInPlaceOfRemoved = signingKeys.loadKeys({
+            nodeOperatorId: nodeOperatorId,
+            startIndex: 1,
+            keysCount: 1
+        });
+
+        assertEq(keyInPlaceOfRemoved, lastAddedKey);
     }
 
     function test_removeKeysSigs_noKeysAdded() public {
@@ -441,6 +526,38 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
 }
 
 contract SigningKeysLoadTest is SigningKeysTestBase {
+    using SigningKeys for bytes32;
+
+    function test_getKeyOffset() public {
+        assertEq(
+            uint256(
+                0xc7224de16f166822b4efb83b0e3edb78754345751aa6411448d7bf241a1dd403
+            ),
+            SigningKeys.SIGNING_KEYS_POSITION.getKeyOffset({
+                nodeOperatorId: 1,
+                keyIndex: 0
+            })
+        );
+        assertEq(
+            uint256(
+                0xd5b4059fcaec08c6b5ebefcaa178a5297fb8f60f7a096c6362bda9f5de3b2b2d
+            ),
+            SigningKeys.SIGNING_KEYS_POSITION.getKeyOffset({
+                nodeOperatorId: 2,
+                keyIndex: 0
+            })
+        );
+        assertEq(
+            uint256(
+                0x371c76b82d811a2203237a0d71bebb72f52de0f28f3c1f6efd70d326ffe58b66
+            ),
+            SigningKeys.SIGNING_KEYS_POSITION.getKeyOffset({
+                nodeOperatorId: 2,
+                keyIndex: 1
+            })
+        );
+    }
+
     function test_loadKeys() public {
         uint256 keysCount = 10;
         uint256 startIndex = 2;
