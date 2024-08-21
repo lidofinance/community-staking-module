@@ -289,6 +289,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
             minSlashingPenaltyQuotient: 32,
             elRewardsStealingFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
+            maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
         });
         uint256[] memory curve = new uint256[](1);
@@ -380,6 +381,7 @@ contract CSMCommonNoPublicReleaseNoEA is CSMFixtures {
             minSlashingPenaltyQuotient: 32,
             elRewardsStealingFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
+            maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
         });
         uint256[] memory curve = new uint256[](1);
@@ -462,6 +464,7 @@ contract CSMCommonNoRoles is CSMFixtures {
             minSlashingPenaltyQuotient: 32,
             elRewardsStealingFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
+            maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
         });
 
@@ -558,6 +561,7 @@ contract CsmInitialize is CSMCommon {
             minSlashingPenaltyQuotient: 32,
             elRewardsStealingFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
+            maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
         });
         assertEq(csm.getType(), "community-staking-module");
@@ -572,6 +576,7 @@ contract CsmInitialize is CSMCommon {
             minSlashingPenaltyQuotient: 32,
             elRewardsStealingFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
+            maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
         });
 
@@ -590,6 +595,7 @@ contract CsmInitialize is CSMCommon {
             minSlashingPenaltyQuotient: 32,
             elRewardsStealingFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
+            maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
         });
 
@@ -616,6 +622,7 @@ contract CsmInitialize is CSMCommon {
             minSlashingPenaltyQuotient: 32,
             elRewardsStealingFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
+            maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
         });
 
@@ -635,6 +642,7 @@ contract CsmInitialize is CSMCommon {
             minSlashingPenaltyQuotient: 32,
             elRewardsStealingFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
+            maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
         });
 
@@ -6339,6 +6347,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
             minSlashingPenaltyQuotient: 32,
             elRewardsStealingFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
+            maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
         });
         _enableInitializers(address(csm));
@@ -6360,6 +6369,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
             minSlashingPenaltyQuotient: 32,
             elRewardsStealingFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
+            maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
         });
         bytes32 role = csm.MODULE_MANAGER_ROLE();
@@ -7436,7 +7446,15 @@ contract CSMMisc is CSMCommon {
     }
 
     function test_setKeyRemovalCharge() public assertInvariants {
+        csm.setKeyRemovalCharge(0.05 ether);
+        assertEq(csm.keyRemovalCharge(), 0.05 ether);
+    }
+
+    function test_setKeyRemovalCharge_revertWhenMoreThanMax()
+        public
+        assertInvariants
+    {
+        vm.expectRevert(CSModule.InvalidInput.selector);
         csm.setKeyRemovalCharge(1 ether);
-        assertEq(csm.keyRemovalCharge(), 1 ether);
     }
 }
