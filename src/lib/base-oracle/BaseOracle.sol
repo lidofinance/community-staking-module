@@ -405,14 +405,6 @@ abstract contract BaseOracle is
         return prevProcessingRefSlot;
     }
 
-    /// @notice Reverts if the processing deadline for the current consensus report is missed.
-    ///
-    function _checkProcessingDeadline() internal view {
-        _checkProcessingDeadline(
-            _storageConsensusReport().value.processingDeadlineTime
-        );
-    }
-
     function _checkProcessingDeadline(uint256 deadlineTime) internal view {
         if (_getTime() > deadlineTime)
             revert ProcessingDeadlineMissed(deadlineTime);
