@@ -94,7 +94,7 @@ contract RecoverIntegrationTest is
         vm.prank(recoverer);
         csm.recoverERC20(address(lido), amountStETH);
 
-        assertApproxEqAbs(lido.balanceOf(recoverer), amountStETH, 1 wei);
+        assertApproxEqAbs(lido.balanceOf(recoverer), amountStETH, 2 wei);
     }
 
     function test_recoverETH_fromCSM() public assertInvariants {

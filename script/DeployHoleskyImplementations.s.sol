@@ -42,6 +42,7 @@ contract DeployHoleskyImplementations is DeployHolesky {
                 minSlashingPenaltyQuotient: config.minSlashingPenaltyQuotient,
                 elRewardsStealingFine: config.elRewardsStealingFine,
                 maxKeysPerOperatorEA: config.maxKeysPerOperatorEA,
+                maxKeyRemovalCharge: config.maxKeyRemovalCharge,
                 lidoLocator: config.lidoLocatorAddress
             });
 

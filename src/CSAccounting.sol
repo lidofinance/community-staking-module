@@ -537,7 +537,7 @@ contract CSAccounting is
         uint256 curveId
     ) public view returns (uint256) {
         return
-            WSTETH.getWstETHByStETH(
+            _sharesByEth(
                 CSBondCurve.getBondAmountByKeysCount(keysCount, curveId)
             );
     }
@@ -552,7 +552,7 @@ contract CSAccounting is
         BondCurve memory curve
     ) public view returns (uint256) {
         return
-            WSTETH.getWstETHByStETH(
+            _sharesByEth(
                 CSBondCurve.getBondAmountByKeysCount(keysCount, curve)
             );
     }
@@ -566,7 +566,7 @@ contract CSAccounting is
         uint256 additionalKeys
     ) public view returns (uint256) {
         return
-            WSTETH.getWstETHByStETH(
+            _sharesByEth(
                 getRequiredBondForNextKeys(nodeOperatorId, additionalKeys)
             );
     }
