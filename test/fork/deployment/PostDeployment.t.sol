@@ -46,6 +46,10 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
             csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(),
             deployParams.maxKeysPerOperatorEA
         );
+        assertEq(
+            csm.MAX_KEY_REMOVAL_CHARGE(),
+            deployParams.maxKeyRemovalCharge
+        );
         assertEq(address(csm.LIDO_LOCATOR()), deployParams.lidoLocatorAddress);
     }
 
