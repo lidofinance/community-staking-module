@@ -66,6 +66,83 @@ contract NodeOperators is
         vm.stopBroadcast();
     }
 
+    modifier broadcastManager(uint256 noId) {
+        _setUp();
+        address nodeOperator = csm.getNodeOperator(noId).managerAddress;
+        _setBalance(nodeOperator);
+        vm.startBroadcast(nodeOperator);
+        _;
+        vm.stopBroadcast();
+    }
+
+    modifier broadcastProposedManager(uint256 noId) {
+        _setUp();
+        address nodeOperator = csm.getNodeOperator(noId).proposedManagerAddress;
+        _setBalance(nodeOperator);
+        vm.startBroadcast(nodeOperator);
+        _;
+        vm.stopBroadcast();
+    }
+
+    modifier broadcastReward(uint256 noId) {
+        _setUp();
+        address nodeOperator = csm.getNodeOperator(noId).managerAddress;
+        _setBalance(nodeOperator);
+        vm.startBroadcast(nodeOperator);
+        _;
+        vm.stopBroadcast();
+    }
+
+    modifier broadcastProposedReward(uint256 noId) {
+        _setUp();
+        address nodeOperator = csm.getNodeOperator(noId).proposedRewardAddress;
+        _setBalance(nodeOperator);
+        vm.startBroadcast(nodeOperator);
+        _;
+        vm.stopBroadcast();
+    }
+
+    function proposeManagerAddress(
+        uint256 noId,
+        address managerAddress
+    ) external broadcastManager(noId) {
+        csm.proposeNodeOperatorManagerAddressChange(noId, managerAddress);
+    }
+
+    function proposeRewardAddress(
+        uint256 noId,
+        address rewardAddress
+    ) external broadcastReward(noId) {
+        csm.proposeNodeOperatorRewardAddressChange(noId, rewardAddress);
+    }
+
+    function confirmManagerAddress(
+        uint256 noId
+    ) external broadcastProposedManager(noId) {
+        csm.confirmNodeOperatorManagerAddressChange(noId);
+    }
+
+    function confirmRewardAddress(
+        uint256 noId
+    ) external broadcastProposedReward(noId) {
+        csm.confirmNodeOperatorRewardAddressChange(noId);
+    }
+
+    function addKeys(
+        uint256 noId,
+        uint256 keysCount
+    ) external broadcastManager(noId) {
+        uint256 amount = accounting.getRequiredBondForNextKeys(noId, keysCount);
+        bytes memory keys = randomBytes(48 * keysCount);
+        bytes memory signatures = randomBytes(96 * keysCount);
+        csm.addValidatorKeysETH{ value: amount }(
+            noId,
+            keysCount,
+            keys,
+            signatures
+        );
+    }
+
     function deposit(uint256 depositCount) external broadcastStakingRouter {
         (, , uint256 depositableValidatorsCount) = csm
             .getStakingModuleSummary();
@@ -82,6 +159,13 @@ contract NodeOperators is
             totalDepositedValidatorsAfter,
             totalDepositedValidators + depositCount
         );
+    }
+
+    function removeKey(
+        uint256 noId,
+        uint256 keyIndex
+    ) external broadcastManager(noId) {
+        csm.removeKeys(noId, keyIndex, 1);
     }
 
     function unvet(
@@ -112,7 +196,7 @@ contract NodeOperators is
         uint256 noId,
         uint256 stuckKeysCount
     ) external broadcastStakingRouter {
-        csm.updateExitedValidatorsCount(
+        csm.updateStuckValidatorsCount(
             bytes.concat(bytes8(uint64(noId))),
             bytes.concat(bytes16(uint128(stuckKeysCount)))
         );
