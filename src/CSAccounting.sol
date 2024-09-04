@@ -163,6 +163,8 @@ contract CSAccounting is
     }
 
     /// @notice Update existing bond curve
+    /// @dev If the curve is updated to a curve with higher values for any point,
+    ///      Extensive checks should be performed to avoid inconsistency in the keys accounting
     /// @param curveId Bond curve ID to update
     /// @param bondCurve Bond curve definition
     function updateBondCurve(
@@ -173,6 +175,8 @@ contract CSAccounting is
     }
 
     /// @notice Set the bond curve for the given Node Operator
+    /// @dev If called externally, the `normalizeQueue` method from CSModule.sol should be called after
+    ///      to ensure key pointers consistency
     /// @param nodeOperatorId ID of the Node Operator
     /// @param curveId ID of the bond curve to set
     function setBondCurve(
@@ -184,6 +188,8 @@ contract CSAccounting is
     }
 
     /// @notice Reset bond curve to the default one for the given Node Operator
+    /// @dev If called externally, the `normalizeQueue` method from CSModule.sol should be called after
+    ///      to ensure key pointers consistency
     /// @param nodeOperatorId ID of the Node Operator
     function resetBondCurve(
         uint256 nodeOperatorId
