@@ -7,6 +7,7 @@ vote:
 
 public-release:
     just _impersonate-script PauseResume --sig="publicRelease"
+
 pause-csm:
     just _impersonate-script PauseResume --sig="pauseCSM"
 
@@ -18,6 +19,21 @@ pause-accounting:
 
 resume-accounting:
     just _impersonate-script PauseResume --sig="resumeAccounting"
+
+propose-reward noId address:
+    just _impersonate-script NodeOperators --sig="proposeRewardAddress\(uint256,address\)" -- {{noId}} {{address}}
+
+propose-manager noId address:
+    just _impersonate-script NodeOperators --sig="proposeManagerAddress\(uint256,address\)" -- {{noId}} {{address}}
+
+confirm-reward noId:
+    just _impersonate-script NodeOperators --sig="confirmRewardAddress\(uint256\)" -- {{noId}}
+
+confirm-manager noId:
+    just _impersonate-script NodeOperators --sig="confirmManagerAddress\(uint256\)" -- {{noId}}
+
+add-keys noId keysCount:
+    just _impersonate-script NodeOperators --sig="addKeys\(uint256,uint256\)" -- {{noId}} {{keysCount}}
 
 unvet-keys noId vettedKeysCount:
     just _impersonate-script NodeOperators --sig="unvet\(uint256,uint256\)" -- {{noId}} {{vettedKeysCount}}
@@ -34,6 +50,9 @@ withdraw-key noId keyIndex amount=defaultAmount:
 
 slash-key noId keyIndex:
     just _impersonate-script NodeOperators --sig="slash\(uint256,uint256\)" -- {{noId}} {{keyIndex}}
+
+remove-key noId keyIndex:
+    just _impersonate-script NodeOperators --sig="removeKey\(uint256,uint256\)" -- {{noId}} {{keyIndex}}
 
 deposit-keys depositsCount:
     just _impersonate-script NodeOperators --sig="deposit\(uint256\)" -- {{depositsCount}}
