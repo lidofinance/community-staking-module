@@ -116,6 +116,11 @@ contract InvariantAsserts is Test {
                 batchKeys[noId],
                 "assert enqueued == batch keys"
             );
+            assertGe(
+                no.enqueuedCount,
+                no.depositableValidatorsCount,
+                "assert enqueued >= depositable"
+            );
         }
     }
 

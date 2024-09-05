@@ -474,8 +474,7 @@ contract CSModule is
         // Due to new bond nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -499,8 +498,7 @@ contract CSModule is
         // Due to new bond nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -524,8 +522,7 @@ contract CSModule is
         // Due to new bond nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -555,8 +552,7 @@ contract CSModule is
         // Due to possible missing bond compensation nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -586,8 +582,7 @@ contract CSModule is
         // Due to possible missing bond compensation nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -620,8 +615,7 @@ contract CSModule is
         // Due to possible missing bond compensation nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -830,11 +824,9 @@ contract CSModule is
         );
 
         // Nonce will be updated below even if depositable count was not changed
-        // In case of targetLimit removal queue should be normalised
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: false,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: false
         });
         _incrementModuleNonce();
     }
@@ -916,11 +908,9 @@ contract CSModule is
             emit VettedSigningKeysCountDecreased(nodeOperatorId);
 
             // Nonce will be updated below once
-            // No need to normalize queue due to vetted decrease
             _updateDepositableValidatorsCount({
                 nodeOperatorId: nodeOperatorId,
-                incrementNonceIfUpdated: false,
-                normalizeQueueIfUpdated: false
+                incrementNonceIfUpdated: false
             });
         }
 
@@ -969,11 +959,9 @@ contract CSModule is
         emit VettedSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
 
         // Nonce is updated below due to keys state change
-        // Normalize queue should be called due to possible increase in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: false,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: false
         });
         _incrementModuleNonce();
     }
@@ -998,9 +986,9 @@ contract CSModule is
     function normalizeQueue(uint256 nodeOperatorId) external {
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: false
+            incrementNonceIfUpdated: true
         });
+        // Direct call of `normalize` if depositable is not changed
         depositQueue.normalize(_nodeOperators, nodeOperatorId);
     }
 
@@ -1027,11 +1015,9 @@ contract CSModule is
         );
 
         // Nonce should be updated if depositableValidators change
-        // No need to normalize queue due to only decrease in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: false
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -1049,11 +1035,9 @@ contract CSModule is
         emit ELRewardsStealingPenaltyCancelled(nodeOperatorId, amount);
 
         // Nonce should be updated if depositableValidators change
-        // Normalize queue should be called due to only increase in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -1078,11 +1062,9 @@ contract CSModule is
                 // Bond curve should be reset to default in case of confirmed MEV stealing. See https://hackmd.io/@lido/SygBLW5ja
                 accounting.resetBondCurve(nodeOperatorId);
                 // Nonce should be updated if depositableValidators change
-                // No need to normalize queue due to only decrease in depositable possible
                 _updateDepositableValidatorsCount({
                     nodeOperatorId: nodeOperatorId,
-                    incrementNonceIfUpdated: true,
-                    normalizeQueueIfUpdated: false
+                    incrementNonceIfUpdated: true
                 });
                 emit ELRewardsStealingPenaltySettled(nodeOperatorId);
             }
@@ -1098,11 +1080,9 @@ contract CSModule is
         _onlyNodeOperatorManager(nodeOperatorId);
         accounting.compensateLockedBondETH{ value: msg.value }(nodeOperatorId);
         // Nonce should be updated if depositableValidators change
-        // Normalize queue should be called due to only increase in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -1157,11 +1137,9 @@ contract CSModule is
         }
 
         // Nonce should be updated if depositableValidators change
-        // Normalize queue should be called due to possible increase in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -1192,11 +1170,9 @@ contract CSModule is
         accounting.penalize(nodeOperatorId, INITIAL_SLASHING_PENALTY);
 
         // Nonce should be updated if depositableValidators change
-        // Normalize queue should not be called due to only decrease in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: false
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -1658,11 +1634,9 @@ contract CSModule is
         emit TotalSigningKeysCountChanged(nodeOperatorId, no.totalAddedKeys);
 
         // Nonce is updated below since in case of stuck keys depositable keys might not change
-        // Due to new bonded keys normalize queue is required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: false,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: false
         });
         _incrementModuleNonce();
     }
@@ -1731,20 +1705,16 @@ contract CSModule is
             emit DepositableSigningKeysCountChanged(nodeOperatorId, 0);
         } else {
             // Nonce will be updated on the top level once per call
-            // Node Operator should normalize queue himself in case of unstuck
-            // @dev remind on UI to normalize queue after unstuck
             _updateDepositableValidatorsCount({
                 nodeOperatorId: nodeOperatorId,
-                incrementNonceIfUpdated: false,
-                normalizeQueueIfUpdated: false
+                incrementNonceIfUpdated: false
             });
         }
     }
 
     function _updateDepositableValidatorsCount(
         uint256 nodeOperatorId,
-        bool incrementNonceIfUpdated,
-        bool normalizeQueueIfUpdated
+        bool incrementNonceIfUpdated
     ) internal {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
@@ -1792,9 +1762,7 @@ contract CSModule is
             if (incrementNonceIfUpdated) {
                 _incrementModuleNonce();
             }
-            if (normalizeQueueIfUpdated) {
-                depositQueue.normalize(_nodeOperators, nodeOperatorId);
-            }
+            depositQueue.normalize(_nodeOperators, nodeOperatorId);
         }
     }
 
