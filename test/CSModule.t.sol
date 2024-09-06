@@ -7240,44 +7240,64 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
     function test_depositedOnly_UpdateToBetterCurve() public {
         uint256 noId = createNodeOperator(7);
         csm.obtainDepositData(7, "");
-        uint256 depositableBefore = csm
-            .getNodeOperator(noId)
-            .depositableValidatorsCount;
 
-        assertEq(depositableBefore, 0);
-
+        (, uint256 requiredBefore) = accounting.getBondSummary(noId);
         updateToBetterCurve();
+        (, uint256 requiredAfter) = accounting.getBondSummary(noId);
+
+        assertGt(
+            requiredBefore,
+            requiredAfter,
+            "Required bond should decrease"
+        );
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore
+            0,
+            "Depositables should not change after curve update"
+        );
+        assertEq(
+            accounting.getUnbondedKeysCount(noId),
+            0,
+            "Should be no unbonded keys"
         );
 
         csm.normalizeQueue(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore
+            0,
+            "Depositables should not change after normalization"
         );
     }
 
     function test_depositedOnly_UpdateToWorseCurve() public {
         uint256 noId = createNodeOperator(7);
         csm.obtainDepositData(7, "");
-        uint256 depositableBefore = csm
-            .getNodeOperator(noId)
-            .depositableValidatorsCount;
 
-        assertEq(depositableBefore, 0);
-
+        (, uint256 requiredBefore) = accounting.getBondSummary(noId);
         updateToWorseCurve();
+        (, uint256 requiredAfter) = accounting.getBondSummary(noId);
+
+        assertGt(
+            requiredAfter,
+            requiredBefore,
+            "Required bond should increase"
+        );
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore
+            0,
+            "Depositables should not change after curve update"
+        );
+        assertEq(
+            accounting.getUnbondedKeysCountToEject(noId),
+            2,
+            "Should be unbonded keys"
         );
 
         csm.normalizeQueue(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore
+            0,
+            "Depositables should not change after normalization"
         );
     }
 
@@ -7287,102 +7307,145 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             .getNodeOperator(noId)
             .depositableValidatorsCount;
 
-        assertEq(depositableBefore, 7);
-
+        (, uint256 requiredBefore) = accounting.getBondSummary(noId);
         updateToBetterCurve();
+        (, uint256 requiredAfter) = accounting.getBondSummary(noId);
+
+        assertGt(
+            requiredBefore,
+            requiredAfter,
+            "Required bond should decrease"
+        );
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore
+            depositableBefore,
+            "Depositables should not change after curve update"
+        );
+        assertEq(
+            accounting.getUnbondedKeysCountToEject(noId),
+            0,
+            "Should be no unbonded keys"
         );
 
         csm.normalizeQueue(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore
+            depositableBefore,
+            "Depositables should not change after normalization"
         );
     }
 
     function test_depositableOnly_UpdateToWorseCurve() public {
         uint256 noId = createNodeOperator(7);
-
         uint256 depositableBefore = csm
             .getNodeOperator(noId)
             .depositableValidatorsCount;
 
-        assertEq(depositableBefore, 7);
-
+        (, uint256 requiredBefore) = accounting.getBondSummary(noId);
         updateToWorseCurve();
+        (, uint256 requiredAfter) = accounting.getBondSummary(noId);
+
+        assertGt(
+            requiredAfter,
+            requiredBefore,
+            "Required bond should increase"
+        );
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore
+            depositableBefore,
+            "Depositables should not change after curve update"
+        );
+        assertEq(
+            accounting.getUnbondedKeysCountToEject(noId),
+            2,
+            "Should be unbonded keys"
         );
 
         csm.normalizeQueue(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore - 2
+            depositableBefore - 2,
+            "Depositables should decrease after normalization"
         );
     }
 
     function test_partiallyUnbondedDepositedOnly_UpdateToBetterCurve() public {
         uint256 noId = createNodeOperator(7);
         csm.obtainDepositData(7, "");
-        uint256 depositableBefore = csm
-            .getNodeOperator(noId)
-            .depositableValidatorsCount;
-        assertEq(depositableBefore, 0);
 
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            1 ether
-        );
+        penalize(noId, 1 ether);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore
+            0,
+            "Depositables should not change after penalization"
+        );
+        assertEq(
+            accounting.getUnbondedKeysCount(noId),
+            1,
+            "Should be unbonded keys after penalization"
         );
 
+        (, uint256 requiredBefore) = accounting.getBondSummary(noId);
         updateToBetterCurve();
+        (, uint256 requiredAfter) = accounting.getBondSummary(noId);
+
+        assertGt(
+            requiredBefore,
+            requiredAfter,
+            "Required bond should decrease"
+        );
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore
+            0,
+            "Depositables should not change after curve update"
         );
+        assertEq(accounting.getUnbondedKeysCount(noId), 0);
 
         csm.normalizeQueue(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore
+            0,
+            "Depositables should not change after normalization"
         );
     }
 
     function test_partiallyUnbondedDepositedOnly_UpdateToWorseCurve() public {
         uint256 noId = createNodeOperator(7);
         csm.obtainDepositData(7, "");
-        uint256 depositableBefore = csm
-            .getNodeOperator(noId)
-            .depositableValidatorsCount;
-        assertEq(depositableBefore, 0);
 
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            1 ether
-        );
+        penalize(noId, 1 ether);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore
+            0,
+            "Depositables should not change after penalization"
+        );
+        assertEq(
+            accounting.getUnbondedKeysCount(noId),
+            1,
+            "Should be unbonded keys after penalization"
         );
 
+        (, uint256 requiredBefore) = accounting.getBondSummary(noId);
         updateToWorseCurve();
+        (, uint256 requiredAfter) = accounting.getBondSummary(noId);
+
+        assertGt(
+            requiredAfter,
+            requiredBefore,
+            "Required bond should increase"
+        );
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore
+            0,
+            "Depositables should not change after curve update"
         );
+        assertEq(accounting.getUnbondedKeysCount(noId), 2);
 
         csm.normalizeQueue(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore
+            0,
+            "Depositables should not change after normalization"
         );
     }
 
@@ -7393,28 +7456,44 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
         uint256 depositableBefore = csm
             .getNodeOperator(noId)
             .depositableValidatorsCount;
-        assertEq(depositableBefore, 7);
 
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            1 ether
-        );
+        penalize(noId, 1 ether);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore - 1
+            depositableBefore - 1,
+            "Depositables should decrease after penalization"
+        );
+        assertEq(
+            accounting.getUnbondedKeysCount(noId),
+            1,
+            "Should be unbonded keys after penalization"
         );
 
+        (, uint256 requiredBefore) = accounting.getBondSummary(noId);
         updateToBetterCurve();
+        (, uint256 requiredAfter) = accounting.getBondSummary(noId);
+
+        assertGt(
+            requiredBefore,
+            requiredAfter,
+            "Required bond should decrease"
+        );
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore - 1
+            depositableBefore - 1,
+            "Depositables should not change after curve update"
+        );
+        assertEq(
+            accounting.getUnbondedKeysCount(noId),
+            0,
+            "Should be no unbonded keys after curve update"
         );
 
         csm.normalizeQueue(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore
+            depositableBefore,
+            "Depositables should be increased after normalization"
         );
     }
 
@@ -7423,28 +7502,44 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
         uint256 depositableBefore = csm
             .getNodeOperator(noId)
             .depositableValidatorsCount;
-        assertEq(depositableBefore, 7);
 
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            1 ether
-        );
+        penalize(noId, 1 ether);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore - 1
+            depositableBefore - 1,
+            "Depositables should decrease after penalization"
+        );
+        assertEq(
+            accounting.getUnbondedKeysCount(noId),
+            1,
+            "Should be unbonded keys after penalization"
         );
 
+        (, uint256 requiredBefore) = accounting.getBondSummary(noId);
         updateToWorseCurve();
+        (, uint256 requiredAfter) = accounting.getBondSummary(noId);
+
+        assertGt(
+            requiredAfter,
+            requiredBefore,
+            "Required bond should increase"
+        );
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore - 1
+            depositableBefore - 1,
+            "Depositables should not change after curve update"
+        );
+        assertEq(
+            accounting.getUnbondedKeysCount(noId),
+            2,
+            "Should be unbonded keys after curve update"
         );
 
         csm.normalizeQueue(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore - 2
+            depositableBefore - 2,
+            "Depositables should decrease after normalization"
         );
     }
 
@@ -7456,28 +7551,44 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
         uint256 depositableBefore = csm
             .getNodeOperator(noId)
             .depositableValidatorsCount;
-        assertEq(depositableBefore, 3);
 
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            1 ether
-        );
+        penalize(noId, 1 ether);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore - 1
+            depositableBefore - 1,
+            "Depositables should decrease after penalization"
+        );
+        assertEq(
+            accounting.getUnbondedKeysCount(noId),
+            1,
+            "Should be unbonded keys after penalization"
         );
 
+        (, uint256 requiredBefore) = accounting.getBondSummary(noId);
         updateToBetterCurve();
+        (, uint256 requiredAfter) = accounting.getBondSummary(noId);
+
+        assertGt(
+            requiredBefore,
+            requiredAfter,
+            "Required bond should decrease"
+        );
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore - 1
+            depositableBefore - 1,
+            "Depositables should not change after curve update"
+        );
+        assertEq(
+            accounting.getUnbondedKeysCount(noId),
+            0,
+            "Should be no unbonded keys after curve update"
         );
 
         csm.normalizeQueue(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore
+            depositableBefore,
+            "Depositables should be increased after normalization"
         );
     }
 
@@ -7489,28 +7600,44 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
         uint256 depositableBefore = csm
             .getNodeOperator(noId)
             .depositableValidatorsCount;
-        assertEq(depositableBefore, 3);
 
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            1 ether
-        );
+        penalize(noId, 1 ether);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore - 1
+            depositableBefore - 1,
+            "Depositables should decrease after penalization"
+        );
+        assertEq(
+            accounting.getUnbondedKeysCount(noId),
+            1,
+            "Should be unbonded keys after penalization"
         );
 
+        (, uint256 requiredBefore) = accounting.getBondSummary(noId);
         updateToWorseCurve();
+        (, uint256 requiredAfter) = accounting.getBondSummary(noId);
+
+        assertGt(
+            requiredAfter,
+            requiredBefore,
+            "Required bond should increase"
+        );
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore - 1
+            depositableBefore - 1,
+            "Depositables should not change after curve update"
+        );
+        assertEq(
+            accounting.getUnbondedKeysCount(noId),
+            2,
+            "Should be unbonded keys after curve update"
         );
 
         csm.normalizeQueue(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
-            depositableBefore - 2
+            depositableBefore - 2,
+            "Depositables should decrease after normalization"
         );
     }
 }
