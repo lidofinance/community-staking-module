@@ -7224,6 +7224,297 @@ contract CSMDepositableValidatorsCount is CSMCommon {
     }
 }
 
+contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
+    function updateToBetterCurve() public {
+        uint256[] memory newCurve = new uint256[](1);
+        newCurve[0] = BOND_SIZE - 0.5 ether;
+        accounting.updateBondCurve(0, newCurve);
+    }
+
+    function updateToWorseCurve() public {
+        uint256[] memory newCurve = new uint256[](1);
+        newCurve[0] = BOND_SIZE + 0.5 ether;
+        accounting.updateBondCurve(0, newCurve);
+    }
+
+    function test_depositedOnly_UpdateToBetterCurve() public {
+        uint256 noId = createNodeOperator(7);
+        csm.obtainDepositData(7, "");
+        uint256 depositableBefore = csm
+            .getNodeOperator(noId)
+            .depositableValidatorsCount;
+
+        assertEq(depositableBefore, 0);
+
+        updateToBetterCurve();
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore
+        );
+
+        csm.normalizeQueue(noId);
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore
+        );
+    }
+
+    function test_depositedOnly_UpdateToWorseCurve() public {
+        uint256 noId = createNodeOperator(7);
+        csm.obtainDepositData(7, "");
+        uint256 depositableBefore = csm
+            .getNodeOperator(noId)
+            .depositableValidatorsCount;
+
+        assertEq(depositableBefore, 0);
+
+        updateToWorseCurve();
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore
+        );
+
+        csm.normalizeQueue(noId);
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore
+        );
+    }
+
+    function test_depositableOnly_UpdateToBetterCurve() public {
+        uint256 noId = createNodeOperator(7);
+        uint256 depositableBefore = csm
+            .getNodeOperator(noId)
+            .depositableValidatorsCount;
+
+        assertEq(depositableBefore, 7);
+
+        updateToBetterCurve();
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore
+        );
+
+        csm.normalizeQueue(noId);
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore
+        );
+    }
+
+    function test_depositableOnly_UpdateToWorseCurve() public {
+        uint256 noId = createNodeOperator(7);
+
+        uint256 depositableBefore = csm
+            .getNodeOperator(noId)
+            .depositableValidatorsCount;
+
+        assertEq(depositableBefore, 7);
+
+        updateToWorseCurve();
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore
+        );
+
+        csm.normalizeQueue(noId);
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore - 2
+        );
+    }
+
+    function test_partiallyUnbondedDepositedOnly_UpdateToBetterCurve() public {
+        uint256 noId = createNodeOperator(7);
+        csm.obtainDepositData(7, "");
+        uint256 depositableBefore = csm
+            .getNodeOperator(noId)
+            .depositableValidatorsCount;
+        assertEq(depositableBefore, 0);
+
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            1 ether
+        );
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore
+        );
+
+        updateToBetterCurve();
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore
+        );
+
+        csm.normalizeQueue(noId);
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore
+        );
+    }
+
+    function test_partiallyUnbondedDepositedOnly_UpdateToWorseCurve() public {
+        uint256 noId = createNodeOperator(7);
+        csm.obtainDepositData(7, "");
+        uint256 depositableBefore = csm
+            .getNodeOperator(noId)
+            .depositableValidatorsCount;
+        assertEq(depositableBefore, 0);
+
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            1 ether
+        );
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore
+        );
+
+        updateToWorseCurve();
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore
+        );
+
+        csm.normalizeQueue(noId);
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore
+        );
+    }
+
+    function test_partiallyUnbondedDepositableOnly_UpdateToBetterCurve()
+        public
+    {
+        uint256 noId = createNodeOperator(7);
+        uint256 depositableBefore = csm
+            .getNodeOperator(noId)
+            .depositableValidatorsCount;
+        assertEq(depositableBefore, 7);
+
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            1 ether
+        );
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore - 1
+        );
+
+        updateToBetterCurve();
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore - 1
+        );
+
+        csm.normalizeQueue(noId);
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore
+        );
+    }
+
+    function test_partiallyUnbondedDepositableOnly_UpdateToWorseCurve() public {
+        uint256 noId = createNodeOperator(7);
+        uint256 depositableBefore = csm
+            .getNodeOperator(noId)
+            .depositableValidatorsCount;
+        assertEq(depositableBefore, 7);
+
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            1 ether
+        );
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore - 1
+        );
+
+        updateToWorseCurve();
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore - 1
+        );
+
+        csm.normalizeQueue(noId);
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore - 2
+        );
+    }
+
+    function test_partiallyUnbondedPartiallyDeposited_UpdateToBetterCurve()
+        public
+    {
+        uint256 noId = createNodeOperator(7);
+        csm.obtainDepositData(4, "");
+        uint256 depositableBefore = csm
+            .getNodeOperator(noId)
+            .depositableValidatorsCount;
+        assertEq(depositableBefore, 3);
+
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            1 ether
+        );
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore - 1
+        );
+
+        updateToBetterCurve();
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore - 1
+        );
+
+        csm.normalizeQueue(noId);
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore
+        );
+    }
+
+    function test_partiallyUnbondedPartiallyDeposited_UpdateToWorseCurve()
+        public
+    {
+        uint256 noId = createNodeOperator(7);
+        csm.obtainDepositData(4, "");
+        uint256 depositableBefore = csm
+            .getNodeOperator(noId)
+            .depositableValidatorsCount;
+        assertEq(depositableBefore, 3);
+
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            1 ether
+        );
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore - 1
+        );
+
+        updateToWorseCurve();
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore - 1
+        );
+
+        csm.normalizeQueue(noId);
+        assertEq(
+            csm.getNodeOperator(noId).depositableValidatorsCount,
+            depositableBefore - 2
+        );
+    }
+}
+
 contract CSMOnRewardsMinted is CSMCommon {
     address public stakingRouter;
 
