@@ -7237,7 +7237,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
         accounting.updateBondCurve(0, newCurve);
     }
 
-    function test_depositedOnly_UpdateToBetterCurve() public {
+    function test_depositedOnly_UpdateToBetterCurve() public assertInvariants {
         uint256 noId = createNodeOperator(7);
         csm.obtainDepositData(7, "");
 
@@ -7269,7 +7269,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
         );
     }
 
-    function test_depositedOnly_UpdateToWorseCurve() public {
+    function test_depositedOnly_UpdateToWorseCurve() public assertInvariants {
         uint256 noId = createNodeOperator(7);
         csm.obtainDepositData(7, "");
 
@@ -7288,7 +7288,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Depositables should not change after curve update"
         );
         assertEq(
-            accounting.getUnbondedKeysCountToEject(noId),
+            accounting.getUnbondedKeysCount(noId),
             2,
             "Should be unbonded keys"
         );
@@ -7301,7 +7301,10 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
         );
     }
 
-    function test_depositableOnly_UpdateToBetterCurve() public {
+    function test_depositableOnly_UpdateToBetterCurve()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(7);
         uint256 depositableBefore = csm
             .getNodeOperator(noId)
@@ -7322,7 +7325,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Depositables should not change after curve update"
         );
         assertEq(
-            accounting.getUnbondedKeysCountToEject(noId),
+            accounting.getUnbondedKeysCount(noId),
             0,
             "Should be no unbonded keys"
         );
@@ -7335,7 +7338,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
         );
     }
 
-    function test_depositableOnly_UpdateToWorseCurve() public {
+    function test_depositableOnly_UpdateToWorseCurve() public assertInvariants {
         uint256 noId = createNodeOperator(7);
         uint256 depositableBefore = csm
             .getNodeOperator(noId)
@@ -7356,7 +7359,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Depositables should not change after curve update"
         );
         assertEq(
-            accounting.getUnbondedKeysCountToEject(noId),
+            accounting.getUnbondedKeysCount(noId),
             2,
             "Should be unbonded keys"
         );
@@ -7369,7 +7372,10 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
         );
     }
 
-    function test_partiallyUnbondedDepositedOnly_UpdateToBetterCurve() public {
+    function test_partiallyUnbondedDepositedOnly_UpdateToBetterCurve()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(7);
         csm.obtainDepositData(7, "");
 
@@ -7409,7 +7415,10 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
         );
     }
 
-    function test_partiallyUnbondedDepositedOnly_UpdateToWorseCurve() public {
+    function test_partiallyUnbondedDepositedOnly_UpdateToWorseCurve()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(7);
         csm.obtainDepositData(7, "");
 
@@ -7451,6 +7460,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
 
     function test_partiallyUnbondedDepositableOnly_UpdateToBetterCurve()
         public
+        assertInvariants
     {
         uint256 noId = createNodeOperator(7);
         uint256 depositableBefore = csm
@@ -7497,7 +7507,10 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
         );
     }
 
-    function test_partiallyUnbondedDepositableOnly_UpdateToWorseCurve() public {
+    function test_partiallyUnbondedDepositableOnly_UpdateToWorseCurve()
+        public
+        assertInvariants
+    {
         uint256 noId = createNodeOperator(7);
         uint256 depositableBefore = csm
             .getNodeOperator(noId)
@@ -7545,6 +7558,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
 
     function test_partiallyUnbondedPartiallyDeposited_UpdateToBetterCurve()
         public
+        assertInvariants
     {
         uint256 noId = createNodeOperator(7);
         csm.obtainDepositData(4, "");
@@ -7594,6 +7608,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
 
     function test_partiallyUnbondedPartiallyDeposited_UpdateToWorseCurve()
         public
+        assertInvariants
     {
         uint256 noId = createNodeOperator(7);
         csm.obtainDepositData(4, "");
