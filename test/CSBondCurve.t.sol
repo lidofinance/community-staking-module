@@ -66,6 +66,21 @@ contract CSBondCurveTest is Test {
         bondCurve.initialize(_bondCurve);
     }
 
+    function test_getCurveInfo() public {
+        ICSBondCurve.BondCurve memory curve = bondCurve.getCurveInfo(0);
+
+        assertEq(curve.points.length, 3);
+        assertEq(curve.points[0], 2 ether);
+        assertEq(curve.points[1], 4 ether);
+        assertEq(curve.points[2], 5 ether);
+        assertEq(curve.trend, 1 ether);
+    }
+
+    function test_getCurveInfo_RevertWhen_InvalidBondCurveId() public {
+        vm.expectRevert(CSBondCurve.InvalidBondCurveId.selector);
+        bondCurve.getCurveInfo(1337);
+    }
+
     function test_addBondCurve() public {
         uint256[] memory _bondCurve = new uint256[](2);
         _bondCurve[0] = 16 ether;

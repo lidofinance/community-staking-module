@@ -66,7 +66,9 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     function getCurveInfo(
         uint256 curveId
     ) public view returns (BondCurve memory) {
-        return _getCSBondCurveStorage().bondCurves[curveId];
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
+        if (curveId > $.bondCurves.length - 1) revert InvalidBondCurveId();
+        return $.bondCurves[curveId];
     }
 
     /// @notice Get bond curve for the given Node Operator
