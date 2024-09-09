@@ -205,6 +205,6 @@ contract CSFeeOracle is
     }
 
     function _onlyRecoverer() internal view override {
-        _checkRole(RECOVERER_ROLE, msg.sender);
+        _checkRole(RECOVERER_ROLE);
     }
 }
