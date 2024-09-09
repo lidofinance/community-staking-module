@@ -5046,12 +5046,12 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(0, 1, uint256(type(uint32).max) + 1);
     }
 
-    function test_updateTargetValidatorsLimits_RevertWhen_TargetLimitModeExceedsUint8()
+    function test_updateTargetValidatorsLimits_RevertWhen_TargetLimitModeExceedsMax()
         public
     {
         createNodeOperator(1);
         vm.expectRevert(CSModule.InvalidInput.selector);
-        csm.updateTargetValidatorsLimits(0, uint256(type(uint8).max) + 1, 1);
+        csm.updateTargetValidatorsLimits(0, 3, 1);
     }
 }
 
