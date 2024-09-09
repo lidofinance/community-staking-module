@@ -3552,23 +3552,6 @@ contract CsmQueueOps is CSMCommon {
         assertEq(logs.length, 0);
     }
 
-    function test_normalizeQueue_OnSkippedKeys_WhenStuckKeys()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator(7);
-        csm.obtainDepositData(3, "");
-        setStuck(noId, 1);
-        csm.cleanDepositQueue(1);
-        setStuck(noId, 0);
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit IQueueLib.BatchEnqueued(noId, 4);
-
-        vm.prank(nodeOperator);
-        csm.normalizeQueue(noId);
-    }
-
     function test_queueNormalized_WhenSkippedKeysAndTargetValidatorsLimitRaised()
         public
     {
@@ -5123,7 +5106,7 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
     }
 
     function test_updateStuckValidatorsCount_Unstuck() public assertInvariants {
-        uint256 noId = createNodeOperator();
+        uint256 noId = createNodeOperator(2);
         csm.obtainDepositData(1, "");
 
         csm.updateStuckValidatorsCount(
@@ -5133,6 +5116,7 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
 
         vm.expectEmit(true, true, true, true, address(csm));
         emit CSModule.StuckSigningKeysCountChanged(noId, 0);
+        emit IQueueLib.BatchEnqueued(noId, 1);
         csm.updateStuckValidatorsCount(
             bytes.concat(bytes8(0x0000000000000000)),
             bytes.concat(bytes16(0x00000000000000000000000000000000))
