@@ -37,7 +37,8 @@ function keys(Batch self) pure returns (uint64 n) {
 
 function next(Batch self) pure returns (uint128 n) {
     assembly {
-        n := self // uint128(self)
+        n := shl(128, self)
+        n := shr(128, n)
     }
 }
 
