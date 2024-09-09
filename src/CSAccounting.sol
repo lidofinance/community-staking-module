@@ -279,6 +279,8 @@ contract CSAccounting is
     /// @param rewardAddress Reward address of the node operator
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
+    /// @dev It's impossible to use single-leaf proof via this method, so this case should be treated carefully by
+    /// off-chain tooling, e.g. to make sure a tree has at least 2 leafs.
     function claimRewardsStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount,
@@ -300,6 +302,8 @@ contract CSAccounting is
     /// @param rewardAddress Reward address of the node operator
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
+    /// @dev It's impossible to use single-leaf proof via this method, so this case should be treated carefully by
+    /// off-chain tooling, e.g. to make sure a tree has at least 2 leafs.
     function claimRewardsWstETH(
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
@@ -322,6 +326,8 @@ contract CSAccounting is
     /// @param rewardAddress Reward address of the node operator
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
+    /// @dev It's impossible to use single-leaf proof via this method, so this case should be treated carefully by
+    /// off-chain tooling, e.g. to make sure a tree has at least 2 leafs.
     function claimRewardsUnstETH(
         uint256 nodeOperatorId,
         uint256 stEthAmount,
