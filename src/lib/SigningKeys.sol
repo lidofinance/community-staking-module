@@ -57,7 +57,7 @@ library SigningKeys {
                 startIndex
             );
             assembly {
-                let _ofs := add(pubkeys.offset, mul(i, 48)) //PUBKEY_LENGTH = 48
+                let _ofs := add(pubkeys.offset, mul(i, 48)) // PUBKEY_LENGTH = 48
                 let _part1 := calldataload(_ofs) // bytes 0..31
                 let _part2 := calldataload(add(_ofs, 0x10)) // bytes 16..47
                 isEmpty := iszero(or(_part1, _part2))
@@ -74,7 +74,7 @@ library SigningKeys {
                 sstore(curOffset, mload(add(tmpKey, 0x20))) // store bytes 0..31
                 sstore(add(curOffset, 1), shl(128, mload(add(tmpKey, 0x30)))) // store bytes 32..47
                 // store signature
-                let _ofs := add(signatures.offset, mul(i, 96)) //SIGNATURE_LENGTH = 96
+                let _ofs := add(signatures.offset, mul(i, 96)) // SIGNATURE_LENGTH = 96
                 sstore(add(curOffset, 2), calldataload(_ofs))
                 sstore(add(curOffset, 3), calldataload(add(_ofs, 0x20)))
                 sstore(add(curOffset, 4), calldataload(add(_ofs, 0x40)))
