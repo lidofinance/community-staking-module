@@ -19,10 +19,5 @@ interface IConsensusContract {
             uint256 genesisTime
         );
 
-    function getFrameConfig()
-        external
-        view
-        returns (uint256 initialEpoch, uint256 epochsPerFrame);
-
     function getInitialRefSlot() external view returns (uint256);
 }
