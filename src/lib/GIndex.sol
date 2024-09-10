@@ -13,7 +13,8 @@ using {
     shr,
     shl,
     concat,
-    unwrap
+    unwrap,
+    pow
 } for GIndex global;
 
 error IndexOutOfRange();
