@@ -152,9 +152,7 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 sharesBefore = LIDO.sharesOf(address(this));
         WSTETH.unwrap(amount);
         uint256 sharesAfter = LIDO.sharesOf(address(this));
-        unchecked {
-            _increaseBond(nodeOperatorId, sharesAfter - sharesBefore);
-        }
+        _increaseBond(nodeOperatorId, sharesAfter - sharesBefore);
         emit BondDepositedWstETH(nodeOperatorId, from, amount);
     }
 
@@ -189,9 +187,7 @@ abstract contract CSBondCore is ICSBondCore {
             to
         );
         uint256 sharesAfter = LIDO.sharesOf(address(this));
-        unchecked {
-            _unsafeReduceBond(nodeOperatorId, sharesBefore - sharesAfter);
-        }
+        _unsafeReduceBond(nodeOperatorId, sharesBefore - sharesAfter);
         emit BondClaimedUnstETH(nodeOperatorId, to, amounts[0], requestIds[0]);
     }
 
@@ -227,9 +223,7 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 sharesBefore = LIDO.sharesOf(address(this));
         uint256 amount = WSTETH.wrap(_ethByShares(sharesToClaim));
         uint256 sharesAfter = LIDO.sharesOf(address(this));
-        unchecked {
-            _unsafeReduceBond(nodeOperatorId, sharesBefore - sharesAfter);
-        }
+        _unsafeReduceBond(nodeOperatorId, sharesBefore - sharesAfter);
         WSTETH.transfer(to, amount);
         emit BondClaimedWstETH(nodeOperatorId, to, amount);
     }
