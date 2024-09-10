@@ -389,14 +389,6 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         feeDistributor.processOracleReport(root, "Test", shares + 1);
     }
 
-    function test_processOracleReport_EmptyReport() public {
-        vm.prank(oracle);
-        feeDistributor.processOracleReport(bytes32(0), "", 0);
-
-        assertEq(feeDistributor.treeRoot(), bytes32(0));
-        assertEq(feeDistributor.treeCid(), "");
-    }
-
     function test_processOracleReport_RevertWhen_TreeRootEmpty()
         public
         assertInvariants
