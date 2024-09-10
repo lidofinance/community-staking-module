@@ -415,16 +415,6 @@ abstract contract BaseOracle is
             revert ProcessingDeadlineMissed(deadlineTime);
     }
 
-    /// @notice Returns the reference slot for the current frame.
-    ///
-    function _getCurrentRefSlot() internal view returns (uint256) {
-        address consensusContract = CONSENSUS_CONTRACT_POSITION
-            .getStorageAddress();
-        (uint256 refSlot, ) = IConsensusContract(consensusContract)
-            .getCurrentFrame();
-        return refSlot;
-    }
-
     ///
     /// Implementation & helpers
     ///

@@ -21,6 +21,7 @@ contract Versioned {
     event ContractVersionSet(uint256 version);
 
     error NonZeroContractVersionOnInit();
+    error InvalidContractVersion();
     error InvalidContractVersionIncrement();
     error UnexpectedContractVersion(uint256 expected, uint256 received);
 
@@ -36,6 +37,7 @@ contract Versioned {
 
     /// @dev Sets the contract version to N. Should be called from the initialize() function.
     function _initializeContractVersionTo(uint256 version) internal {
+        if (version == 0) revert InvalidContractVersion();
         if (getContractVersion() != 0) revert NonZeroContractVersionOnInit();
         _setContractVersion(version);
     }

@@ -793,7 +793,7 @@ contract CSModule is
         uint256 targetLimitMode,
         uint256 targetLimit
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        if (targetLimitMode > type(uint8).max) {
+        if (targetLimitMode > FORCED_TARGET_LIMIT_MODE_ID) {
             revert InvalidInput();
         }
         if (targetLimit > type(uint32).max) {
@@ -810,6 +810,10 @@ contract CSModule is
         if (no.targetLimitMode != targetLimitMode) {
             // @dev No need to safe cast due to conditions above
             no.targetLimitMode = uint8(targetLimitMode);
+        }
+
+        if (targetLimitMode == 0) {
+            targetLimit = 0;
         }
 
         if (no.targetLimit != targetLimit) {
