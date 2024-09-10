@@ -6,6 +6,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 
 import { IReportAsyncProcessor } from "./interfaces/IReportAsyncProcessor.sol";
+import { IConsensusContract } from "./interfaces/IConsensusContract.sol";
 
 /// @notice A contract managing oracle members committee and allowing the members to reach
 /// consensus on a hash for each reporting frame.
@@ -25,7 +26,10 @@ import { IReportAsyncProcessor } from "./interfaces/IReportAsyncProcessor.sol";
 /// might be impractical or even impossible to transmit and process.
 ///
 // solhint-disable ordering
-contract HashConsensus is AccessControlEnumerableUpgradeable {
+contract HashConsensus is
+    IConsensusContract,
+    AccessControlEnumerableUpgradeable
+{
     using SafeCast for uint256;
 
     struct FrameConfig {
