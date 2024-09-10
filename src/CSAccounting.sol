@@ -5,8 +5,6 @@ pragma solidity 0.8.24;
 
 import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import { CSBondCore } from "./abstract/CSBondCore.sol";
 import { CSBondCurve } from "./abstract/CSBondCurve.sol";
@@ -30,8 +28,6 @@ contract CSAccounting is
     AccessControlEnumerableUpgradeable,
     AssetRecoverer
 {
-    using SafeERC20 for IERC20;
-
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant ACCOUNTING_MANAGER_ROLE =
