@@ -5925,6 +5925,9 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
 
         uint256 nonce = csm.getNonce();
 
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.ELRewardsStealingPenaltyCompensated(noId, amount + fine);
+
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
@@ -5955,6 +5958,9 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
         );
 
         uint256 nonce = csm.getNonce();
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.ELRewardsStealingPenaltyCompensated(noId, amount);
 
         vm.expectCall(
             address(accounting),
