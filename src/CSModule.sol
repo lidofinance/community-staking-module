@@ -138,6 +138,10 @@ contract CSModule is
         uint256 indexed nodeOperatorId,
         uint256 amount
     );
+    event ELRewardsStealingPenaltyCompensated(
+        uint256 indexed nodeOperatorId,
+        uint256 amount
+    );
     event ELRewardsStealingPenaltySettled(uint256 indexed nodeOperatorId);
 
     error SenderIsNotEligible();
@@ -1089,6 +1093,7 @@ contract CSModule is
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true
         });
+        emit ELRewardsStealingPenaltyCompensated(nodeOperatorId, msg.value);
     }
 
     /// @notice Report Node Operator's key as withdrawn and settle withdrawn amount
