@@ -288,7 +288,12 @@ abstract contract BaseOracle is
             revert RefSlotAlreadyProcessing();
         }
 
-        _storageConsensusReport().value.hash = bytes32(0);
+        ConsensusReport memory report = ConsensusReport({
+            hash: bytes32(0),
+            refSlot: 0,
+            processingDeadlineTime: 0
+        });
+        _storageConsensusReport().value = report;
         _handleConsensusReportDiscarded(submittedReport);
 
         emit ReportDiscarded(submittedReport.refSlot, submittedReport.hash);
