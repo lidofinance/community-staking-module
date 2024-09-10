@@ -1051,20 +1051,21 @@ contract CSModule is
     function settleELRewardsStealingPenalty(
         uint256[] calldata nodeOperatorIds
     ) external onlyRole(SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE) {
+        ICSAccounting _accounting = accounting;
         for (uint256 i; i < nodeOperatorIds.length; ++i) {
             uint256 nodeOperatorId = nodeOperatorIds[i];
             _onlyExistingNodeOperator(nodeOperatorId);
-            uint256 lockedBondBefore = accounting.getActualLockedBond(
+            uint256 lockedBondBefore = _accounting.getActualLockedBond(
                 nodeOperatorId
             );
 
-            accounting.settleLockedBondETH(nodeOperatorId);
+            _accounting.settleLockedBondETH(nodeOperatorId);
 
             // settled amount might be zero either if the lock expired, or the bond is zero
             // so we need to check actual locked bond before to determine if the penalty was settled
             if (lockedBondBefore > 0) {
                 // Bond curve should be reset to default in case of confirmed MEV stealing. See https://hackmd.io/@lido/SygBLW5ja
-                accounting.resetBondCurve(nodeOperatorId);
+                _accounting.resetBondCurve(nodeOperatorId);
                 // Nonce should be updated if depositableValidators change
                 _updateDepositableValidatorsCount({
                     nodeOperatorId: nodeOperatorId,
