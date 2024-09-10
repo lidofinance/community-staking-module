@@ -4975,7 +4975,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 2, 10);
     }
 
-    function test_updateTargetValidatorsLimits_disableSoftLimit()
+    function test_updateTargetValidatorsLimits_disableSoftLimit_withNonZeroTargetLimit()
         public
         assertInvariants
     {
@@ -4983,11 +4983,23 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 1, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 0, 10);
+        emit CSModule.TargetValidatorsCountChanged(noId, 0, 0);
         csm.updateTargetValidatorsLimits(noId, 0, 10);
     }
 
-    function test_updateTargetValidatorsLimits_disableHardLimit()
+    function test_updateTargetValidatorsLimits_disableSoftLimit_withZeroTargetLimit()
+        public
+        assertInvariants
+    {
+        uint256 noId = createNodeOperator();
+        csm.updateTargetValidatorsLimits(noId, 1, 10);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.TargetValidatorsCountChanged(noId, 0, 0);
+        csm.updateTargetValidatorsLimits(noId, 0, 0);
+    }
+
+    function test_updateTargetValidatorsLimits_disableHardLimit_withNonZeroTargetLimit()
         public
         assertInvariants
     {
@@ -4995,8 +5007,20 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 2, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 0, 10);
+        emit CSModule.TargetValidatorsCountChanged(noId, 0, 0);
         csm.updateTargetValidatorsLimits(noId, 0, 10);
+    }
+
+    function test_updateTargetValidatorsLimits_disableHardLimit_withZeroTargetLimit()
+        public
+        assertInvariants
+    {
+        uint256 noId = createNodeOperator();
+        csm.updateTargetValidatorsLimits(noId, 2, 10);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.TargetValidatorsCountChanged(noId, 0, 0);
+        csm.updateTargetValidatorsLimits(noId, 0, 0);
     }
 
     function test_updateTargetValidatorsLimits_switchFromHardToSoftLimit()

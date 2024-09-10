@@ -812,6 +812,10 @@ contract CSModule is
             no.targetLimitMode = uint8(targetLimitMode);
         }
 
+        if (targetLimitMode == 0) {
+            targetLimit = 0;
+        }
+
         if (no.targetLimit != targetLimit) {
             // @dev No need to safe cast due to conditions above
             no.targetLimit = uint32(targetLimit);
