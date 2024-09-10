@@ -98,7 +98,7 @@ abstract contract BaseOracle is
 
     error AddressCannotBeZero();
     error AddressCannotBeSame();
-    error VersionCannotBeSame();
+    error InvalidConsensusVersionIncrement();
     error UnexpectedChainConfig();
     error SenderIsNotTheConsensusContract();
     error InitialRefSlotCannotBeLessThanProcessingOne(
@@ -426,7 +426,8 @@ abstract contract BaseOracle is
 
     function _setConsensusVersion(uint256 version) internal {
         uint256 prevVersion = CONSENSUS_VERSION_POSITION.getStorageUint256();
-        if (version == prevVersion) revert VersionCannotBeSame();
+        if (version != prevVersion + 1)
+            revert InvalidConsensusVersionIncrement();
         CONSENSUS_VERSION_POSITION.setStorageUint256(version);
         emit ConsensusVersionSet(version, prevVersion);
     }
