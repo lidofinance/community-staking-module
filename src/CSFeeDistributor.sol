@@ -134,12 +134,16 @@ contract CSFeeDistributor is
             unchecked {
                 totalClaimableShares += distributed;
             }
+
+            treeRoot = _treeRoot;
+            treeCid = _treeCid;
+
+            emit DistributionDataUpdated(
+                totalClaimableShares,
+                _treeRoot,
+                _treeCid
+            );
         }
-
-        treeRoot = _treeRoot;
-        treeCid = _treeCid;
-
-        emit DistributionDataUpdated(totalClaimableShares, _treeRoot, _treeCid);
     }
 
     /// @notice Recover ERC20 tokens (except for stETH) from the contract
