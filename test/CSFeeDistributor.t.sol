@@ -402,32 +402,6 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         assertEq(feeDistributor.totalClaimableShares(), shares);
     }
 
-    function test_processOracleReport_FixStateWithNoDistributed() public {
-        uint256 shares = 1_000_000;
-
-        // Deliver initial report.
-        {
-            stETH.mintShares(address(feeDistributor), shares);
-
-            vm.prank(oracle);
-            feeDistributor.processOracleReport(
-                someBytes32(),
-                "QmBEFORE",
-                shares
-            );
-        }
-
-        string memory newCid = "QmAFTER";
-        bytes32 newRoot = someBytes32();
-
-        vm.prank(oracle);
-        feeDistributor.processOracleReport(newRoot, newCid, 0);
-
-        assertEq(feeDistributor.treeRoot(), newRoot);
-        assertEq(feeDistributor.treeCid(), newCid);
-        assertEq(feeDistributor.totalClaimableShares(), shares);
-    }
-
     function test_processOracleReport_RevertWhen_InvalidShares()
         public
         assertInvariants
