@@ -123,21 +123,27 @@ contract CSFeeDistributor is
             revert InvalidShares();
         }
 
-        if (bytes(_treeCid).length == 0) revert InvalidTreeCID();
-        if (keccak256(bytes(_treeCid)) == keccak256(bytes(treeCid)))
-            revert InvalidTreeCID();
-        if (_treeRoot == bytes32(0)) revert InvalidTreeRoot();
-        if (distributed > 0 && _treeRoot == treeRoot) revert InvalidTreeRoot();
+        if (distributed > 0) {
+            if (bytes(_treeCid).length == 0) revert InvalidTreeCID();
+            if (keccak256(bytes(_treeCid)) == keccak256(bytes(treeCid)))
+                revert InvalidTreeCID();
+            if (_treeRoot == bytes32(0)) revert InvalidTreeRoot();
+            if (_treeRoot == treeRoot) revert InvalidTreeRoot();
 
-        // Doesn't overflow because of the very first check.
-        unchecked {
-            totalClaimableShares += distributed;
+            // Doesn't overflow because of the very first check.
+            unchecked {
+                totalClaimableShares += distributed;
+            }
+
+            treeRoot = _treeRoot;
+            treeCid = _treeCid;
+
+            emit DistributionDataUpdated(
+                totalClaimableShares,
+                _treeRoot,
+                _treeCid
+            );
         }
-
-        treeRoot = _treeRoot;
-        treeCid = _treeCid;
-
-        emit DistributionDataUpdated(totalClaimableShares, _treeRoot, _treeCid);
     }
 
     /// @notice Recover ERC20 tokens (except for stETH) from the contract
