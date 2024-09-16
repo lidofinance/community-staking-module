@@ -17,6 +17,7 @@ contract DistributorMock {
     function processOracleReport(
         bytes32 /* treeRoot */,
         string calldata /* treeCid */,
+        string calldata /* logCid */,
         uint256 /* distributedShares */
     ) external {
         // do nothing

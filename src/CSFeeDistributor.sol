@@ -31,6 +31,9 @@ contract CSFeeDistributor is
     /// @notice CID of the published Merkle tree
     string public treeCid;
 
+    /// @notice CID of the file with log of the last frame reported
+    string public logCid;
+
     /// @notice Amount of stETH shares sent to the Accounting in favor of the NO
     mapping(uint256 => uint256) public distributedShares;
 
@@ -47,6 +50,9 @@ contract CSFeeDistributor is
         string treeCid
     );
 
+    /// @dev Emitted when distribution log is updated
+    event DistributionLogUpdated(string logCid);
+
     error ZeroAccountingAddress();
     error ZeroStEthAddress();
     error ZeroAdminAddress();
@@ -56,6 +62,7 @@ contract CSFeeDistributor is
 
     error InvalidTreeRoot();
     error InvalidTreeCID();
+    error InvalidLogCID();
     error InvalidShares();
     error InvalidProof();
     error FeeSharesDecrease();
@@ -114,6 +121,7 @@ contract CSFeeDistributor is
     function processOracleReport(
         bytes32 _treeRoot,
         string calldata _treeCid,
+        string calldata _logCid,
         uint256 distributed
     ) external {
         if (msg.sender != ORACLE) revert NotOracle();
@@ -144,6 +152,15 @@ contract CSFeeDistributor is
                 _treeCid
             );
         }
+
+        // NOTE: Make sure off-chain tooling provides a distinct CID of a log even for empty reports, e.g. by mixing
+        // in a frame identifier such as reference slot to a file.
+        if (bytes(_logCid).length == 0) revert InvalidLogCID();
+        if (keccak256(bytes(_logCid)) == keccak256(bytes(logCid)))
+            revert InvalidLogCID();
+
+        logCid = _logCid;
+        emit DistributionLogUpdated(_logCid);
     }
 
     /// @notice Recover ERC20 tokens (except for stETH) from the contract

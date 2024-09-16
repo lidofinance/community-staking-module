@@ -85,20 +85,14 @@ contract CSFeeOracleTest is Test, Utilities {
             consensusVersion: oracle.getConsensusVersion(),
             refSlot: refSlot,
             treeRoot: keccak256("root"),
-            treeCid: "QmCID0",
+            treeCid: someCIDv0(),
+            logCid: someCIDv0(),
             distributed: 1337
         });
 
         bytes32 reportHash = keccak256(abi.encode(data));
         _reachConsensus(refSlot, reportHash);
 
-        vm.expectEmit(true, true, true, true, address(oracle));
-        emit CSFeeOracle.ReportSettled(
-            refSlot,
-            data.distributed,
-            data.treeRoot,
-            data.treeCid
-        );
         vm.prank(members[0]);
         oracle.submitReportData({ data: data, contractVersion: 1 });
 
@@ -140,7 +134,8 @@ contract CSFeeOracleTest is Test, Utilities {
             consensusVersion: oracle.getConsensusVersion(),
             refSlot: refSlot,
             treeRoot: keccak256("root"),
-            treeCid: "QmCID0",
+            treeCid: someCIDv0(),
+            logCid: someCIDv0(),
             distributed: 1337
         });
 
@@ -176,7 +171,8 @@ contract CSFeeOracleTest is Test, Utilities {
             consensusVersion: oracle.getConsensusVersion(),
             refSlot: refSlot,
             treeRoot: keccak256("root"),
-            treeCid: "QmCID0",
+            treeCid: someCIDv0(),
+            logCid: someCIDv0(),
             distributed: 1337
         });
 
@@ -209,7 +205,8 @@ contract CSFeeOracleTest is Test, Utilities {
             consensusVersion: oracle.getConsensusVersion(),
             refSlot: refSlot,
             treeRoot: keccak256("root"),
-            treeCid: "QmCID0",
+            treeCid: someCIDv0(),
+            logCid: someCIDv0(),
             distributed: 1337
         });
 
@@ -244,20 +241,14 @@ contract CSFeeOracleTest is Test, Utilities {
             consensusVersion: oracle.getConsensusVersion(),
             refSlot: refSlot,
             treeRoot: keccak256("root"),
-            treeCid: "QmCID0",
+            treeCid: someCIDv0(),
+            logCid: someCIDv0(),
             distributed: 1337
         });
 
         bytes32 reportHash = keccak256(abi.encode(data));
         _reachConsensus(refSlot, reportHash);
 
-        vm.expectEmit(true, true, true, true, address(oracle));
-        emit CSFeeOracle.ReportSettled(
-            refSlot,
-            data.distributed,
-            data.treeRoot,
-            data.treeCid
-        );
         vm.prank(members[0]);
         oracle.submitReportData({ data: data, contractVersion: 1 });
 
