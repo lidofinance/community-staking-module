@@ -11,8 +11,8 @@ import { HashConsensus } from "../src/lib/base-oracle/HashConsensus.sol";
 import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 import { BaseOracle } from "../src/lib/base-oracle/BaseOracle.sol";
 import { DistributorMock } from "./helpers/mocks/DistributorMock.sol";
+import { Utilities, hasLog } from "./helpers/Utilities.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
-import { Utilities } from "./helpers/Utilities.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 
 contract CSFeeOracleForTest is CSFeeOracle {
@@ -51,6 +51,8 @@ contract CSFeeOracleTest is Test, Utilities {
     address[] public members;
     address public stranger;
     uint256 public quorum;
+
+    using { hasLog } for Vm.Log[];
 
     function setUp() public {
         chainConfig = ChainConfig({
@@ -147,7 +149,7 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.submitReportData({ data: data, contractVersion: 1 });
     }
 
-    function test_submitReport_RevertWhen_PausedFor() public {
+    function test_submitReportData_RevertWhen_PausedFor() public {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
             _grantAllRolesToAdmin();
@@ -181,7 +183,7 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.submitReportData({ data: data, contractVersion: 1 });
     }
 
-    function test_submitReport_RevertWhen_PausedUntil() public {
+    function test_submitReportData_RevertWhen_PausedUntil() public {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
             _grantAllRolesToAdmin();
@@ -420,6 +422,219 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.recoverEther();
     }
 
+    function test_submitReportAndLoseConsensus_NoPrevReport() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+            _seedMembers(2);
+        }
+
+        (uint256 refSlot, ) = consensus.getCurrentFrame();
+        bytes32 variant0 = someBytes32();
+        bytes32 variant1 = someBytes32();
+
+        // Reach initial consensus.
+        {
+            vm.recordLogs();
+            _reachConsensus(refSlot, variant0);
+            Vm.Log[] memory logs = vm.getRecordedLogs();
+            assertFalse(
+                logs.hasLog(BaseOracle.WarnProcessingMissed.selector),
+                "Unexpected WarnProcessingMissed event was emitted"
+            );
+        }
+
+        // Lose consensus by sending another variant from a previously reported member.
+        {
+            vm.expectEmit(true, true, true, true, address(consensus));
+            emit HashConsensus.ConsensusLost(refSlot);
+
+            vm.expectEmit(true, true, true, true, address(oracle));
+            emit BaseOracle.ReportDiscarded(refSlot, variant0);
+
+            vm.prank(members[1]);
+            consensus.submitReport(refSlot, variant1, CONSENSUS_VERSION);
+        }
+
+        // Reach consensus back.
+        {
+            vm.recordLogs();
+
+            vm.prank(members[0]);
+            consensus.submitReport(refSlot, variant1, CONSENSUS_VERSION);
+
+            Vm.Log[] memory logs = vm.getRecordedLogs();
+            assertFalse(
+                logs.hasLog(BaseOracle.WarnProcessingMissed.selector),
+                "Unexpected WarnProcessingMissed event was emitted"
+            );
+        }
+    }
+
+    function test_submitReportAndLoseConsensus_PrevFrameProcessed() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+            _seedMembers(2);
+            _makeReport({ skipProcessing: false });
+        }
+
+        (uint256 refSlot, ) = consensus.getCurrentFrame();
+        bytes32 variant0 = someBytes32();
+        bytes32 variant1 = someBytes32();
+
+        // Reach initial consensus.
+        {
+            vm.recordLogs();
+            // Reach initial consensus.
+            _reachConsensus(refSlot, variant0);
+            Vm.Log[] memory logs = vm.getRecordedLogs();
+            assertFalse(
+                logs.hasLog(BaseOracle.WarnProcessingMissed.selector),
+                "Unexpected WarnProcessingMissed event was emitted"
+            );
+        }
+
+        // Lose consensus by sending another variant from a previously reported member.
+        {
+            vm.expectEmit(true, true, true, true, address(consensus));
+            emit HashConsensus.ConsensusLost(refSlot);
+
+            vm.expectEmit(true, true, true, true, address(oracle));
+            emit BaseOracle.ReportDiscarded(refSlot, variant0);
+
+            vm.prank(members[1]);
+            consensus.submitReport(refSlot, variant1, CONSENSUS_VERSION);
+        }
+
+        // Reach consensus back.
+        {
+            vm.recordLogs();
+
+            vm.prank(members[0]);
+            consensus.submitReport(refSlot, variant1, CONSENSUS_VERSION);
+
+            Vm.Log[] memory logs = vm.getRecordedLogs();
+            assertFalse(
+                logs.hasLog(BaseOracle.WarnProcessingMissed.selector),
+                "Unexpected WarnProcessingMissed event was emitted"
+            );
+        }
+    }
+
+    function test_submitReportAndLoseConsensus_SkippedProccessing() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+            _seedMembers(2);
+        }
+
+        _makeReport({ skipProcessing: false });
+        _makeReport({ skipProcessing: true });
+
+        (, uint256 prevRefSlot, , ) = oracle.getConsensusReport();
+        (uint256 refSlot, ) = consensus.getCurrentFrame();
+        bytes32 variant0 = someBytes32();
+        bytes32 variant1 = someBytes32();
+
+        // Reach initial consensus.
+        {
+            vm.prank(members[0]);
+            consensus.submitReport(refSlot, variant0, CONSENSUS_VERSION);
+
+            vm.expectEmit(true, true, true, true, address(oracle));
+            emit BaseOracle.WarnProcessingMissed(prevRefSlot);
+
+            vm.prank(members[1]);
+            consensus.submitReport(refSlot, variant0, CONSENSUS_VERSION);
+        }
+
+        // Lose consensus by sending another variant from a previously reported member.
+        {
+            vm.expectEmit(true, true, true, true, address(consensus));
+            emit HashConsensus.ConsensusLost(refSlot);
+
+            vm.expectEmit(true, true, true, true, address(oracle));
+            emit BaseOracle.ReportDiscarded(refSlot, variant0);
+
+            vm.prank(members[1]);
+            consensus.submitReport(refSlot, variant1, CONSENSUS_VERSION);
+        }
+
+        // Reach consensus back.
+        {
+            vm.recordLogs();
+
+            vm.prank(members[0]);
+            consensus.submitReport(refSlot, variant1, CONSENSUS_VERSION);
+
+            Vm.Log[] memory logs = vm.getRecordedLogs();
+            assertFalse(
+                logs.hasLog(BaseOracle.WarnProcessingMissed.selector),
+                "Unexpected WarnProcessingMissed event was emitted"
+            );
+        }
+    }
+
+    function test_submitReportAndLoseConsensus_NoPrevProccessing() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+            _seedMembers(2);
+        }
+
+        _makeReport({ skipProcessing: true });
+
+        (uint256 refSlot, ) = consensus.getCurrentFrame();
+        bytes32 variant0 = someBytes32();
+        bytes32 variant1 = someBytes32();
+
+        {
+            vm.recordLogs();
+            // Reach initial consensus.
+            _reachConsensus(refSlot, variant0);
+            Vm.Log[] memory logs = vm.getRecordedLogs();
+            assertTrue(
+                logs.hasLog(BaseOracle.WarnProcessingMissed.selector),
+                "WarnProcessingMissed event was not found"
+            );
+        }
+
+        // Lose consensus by sending another variant from a previously reported member.
+        {
+            vm.expectEmit(true, true, true, true, address(consensus));
+            emit HashConsensus.ConsensusLost(refSlot);
+
+            vm.expectEmit(true, true, true, true, address(oracle));
+            emit BaseOracle.ReportDiscarded(refSlot, variant0);
+
+            vm.prank(members[1]);
+            consensus.submitReport(refSlot, variant1, CONSENSUS_VERSION);
+        }
+
+        // Reach consensus back.
+        {
+            vm.recordLogs();
+
+            vm.prank(members[0]);
+            consensus.submitReport(refSlot, variant1, CONSENSUS_VERSION);
+
+            Vm.Log[] memory logs = vm.getRecordedLogs();
+            assertFalse(
+                logs.hasLog(BaseOracle.WarnProcessingMissed.selector),
+                "Unexpected WarnProcessingMissed event was emitted"
+            );
+        }
+    }
+
     function _deployFeeOracleAndHashConsensus(
         uint256 /* lastProcessingRefSlot */
     ) internal {
@@ -485,13 +700,13 @@ contract CSFeeOracleTest is Test, Utilities {
     function _assertNoReportOnInit() internal {
         (
             bytes32 hash, // refSlot
-            ,
+            uint256 prevRefSlot,
             uint256 processingDeadlineTime,
             bool processingStarted
         ) = oracle.getConsensusReport();
 
-        // Skips the check for refSlot, see test_reportFrame
         assertEq(hash, bytes32(0));
+        assertEq(prevRefSlot, 0);
         assertEq(processingDeadlineTime, 0);
         assertEq(processingStarted, false);
     }
@@ -499,6 +714,31 @@ contract CSFeeOracleTest is Test, Utilities {
     function _setInitialEpoch() internal {
         vm.prank(ORACLE_ADMIN);
         consensus.updateInitialEpoch(INITIAL_EPOCH);
+    }
+
+    function _makeReport(bool skipProcessing) internal {
+        (uint256 refSlot, ) = consensus.getCurrentFrame();
+
+        CSFeeOracle.ReportData memory data = CSFeeOracle.ReportData({
+            consensusVersion: oracle.getConsensusVersion(),
+            refSlot: refSlot,
+            treeRoot: someBytes32(),
+            treeCid: someCIDv0(),
+            logCid: someCIDv0(),
+            distributed: 1337
+        });
+
+        bytes32 reportHash = keccak256(abi.encode(data));
+        _reachConsensus(refSlot, reportHash);
+
+        if (!skipProcessing) {
+            vm.prank(members[0]);
+            oracle.submitReportData({ data: data, contractVersion: 1 });
+        }
+
+        // Advance block.timestamp to move to another frame.
+        (, uint256 epochsPerFrame, ) = consensus.getFrameConfig();
+        _vmSetEpoch(refSlot / chainConfig.slotsPerEpoch + epochsPerFrame + 1);
     }
 
     function _reachConsensus(uint256 refSlot, bytes32 hash) internal {
