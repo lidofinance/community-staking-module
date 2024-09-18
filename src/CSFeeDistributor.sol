@@ -191,6 +191,7 @@ contract CSFeeDistributor is
         uint256 shares,
         bytes32[] calldata proof
     ) public view returns (uint256 sharesToDistribute) {
+        if (proof.length == 0) revert InvalidProof();
         bool isValid = MerkleProof.verifyCalldata(
             proof,
             treeRoot,
