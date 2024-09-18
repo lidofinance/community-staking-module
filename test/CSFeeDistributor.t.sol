@@ -235,6 +235,24 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         assertEq(sharesToDistribute, 0);
     }
 
+    function test_getFeesToDistribute_RevertWhenEmptyProof() public {
+        uint256 shares = 1337;
+        uint256 noId = 42;
+
+        // Put a vulnerable `treeRoot` to make sure we provided the valid, but empty proof.
+        stdstore
+            .target(address(feeDistributor))
+            .sig("treeRoot()")
+            .checked_write(feeDistributor.hashLeaf(noId, shares));
+
+        vm.expectRevert(CSFeeDistributor.InvalidProof.selector);
+        feeDistributor.getFeesToDistribute({
+            proof: new bytes32[](0),
+            nodeOperatorId: noId,
+            shares: shares
+        });
+    }
+
     function test_hashLeaf() public assertInvariants {
         //  keccak256(bytes.concat(keccak256(abi.encode(1, 1000)))) == 0xe2ad525aaaf1fb7709959cc06e210437a97f34a5833e3a5c90d2099c5373116a
         assertEq(
