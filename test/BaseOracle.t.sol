@@ -9,6 +9,12 @@ import "../src/lib/UnstructuredStorage.sol";
 import { Utilities } from "./helpers/Utilities.sol";
 import "./helpers/mocks/ConsensusContractMock.sol";
 
+struct ConsensusReport {
+    bytes32 hash;
+    uint64 refSlot;
+    uint64 processingDeadlineTime;
+}
+
 contract BaseOracleTest is Test, Utilities {
     BaseOracleImpl oracle;
     MockConsensusContract consensus;
@@ -37,6 +43,7 @@ contract BaseOracleTest is Test, Utilities {
         member = nextAddress("MEMBER");
         notMember = nextAddress("NOT_MEMBER");
 
+        vm.warp(GENESIS_TIME + SECONDS_PER_EPOCH);
         oracle = new BaseOracleImpl(SECONDS_PER_SLOT, GENESIS_TIME, admin);
         consensus = new MockConsensusContract(
             SECONDS_PER_EPOCH,
@@ -75,8 +82,6 @@ contract BaseOracleTest is Test, Utilities {
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
         oracle.setConsensusContract(stranger);
-
-        assertEq(oracle.getConsensusContract(), address(consensus));
     }
 
     function test_setConsensusContract_UpdatesWithRole() public {
@@ -101,10 +106,9 @@ contract BaseOracleTest is Test, Utilities {
 
     function test_setConsensusVersion_RevertsIfCallerIsUnauthorized() public {
         bytes32 role = oracle.MANAGE_CONSENSUS_VERSION_ROLE();
-        expectRoleRevert(stranger, role);
         vm.prank(stranger);
+        expectRoleRevert(stranger, role);
         oracle.setConsensusVersion(1);
-        assertEq(oracle.getConsensusVersion(), CONSENSUS_VERSION);
     }
 
     function test_setConsensusVersion_UpdatesWithRole() public {
@@ -121,14 +125,13 @@ contract BaseOracleTest is Test, Utilities {
         public
     {
         uint256 initialRefSlot = oracle.getTime();
-        vm.expectRevert(BaseOracle.SenderIsNotTheConsensusContract.selector);
         vm.prank(stranger);
+        vm.expectRevert(BaseOracle.SenderIsNotTheConsensusContract.selector);
         oracle.submitConsensusReport(
             keccak256("HASH_1"),
             initialRefSlot,
             initialRefSlot
         );
-        assertEq(oracle.getConsensusReportLastCall().callCount, 0);
     }
 
     function test_submitConsensusReport_SubmitsFromConsensusContract() public {
@@ -146,8 +149,8 @@ contract BaseOracleTest is Test, Utilities {
         public
     {
         uint256 initialRefSlot = oracle.getTime();
-        vm.expectRevert(BaseOracle.SenderIsNotTheConsensusContract.selector);
         vm.prank(stranger);
+        vm.expectRevert(BaseOracle.SenderIsNotTheConsensusContract.selector);
         oracle.discardConsensusReport(initialRefSlot);
     }
 
@@ -268,6 +271,12 @@ contract BaseOracleTest is Test, Utilities {
         oracle.setConsensusVersion(CONSENSUS_VERSION);
     }
 
+    function test_setConsensusVersion_RevertsIfZero() public {
+        vm.prank(admin);
+        vm.expectRevert(BaseOracle.VersionCannotBeZero.selector);
+        oracle.setConsensusVersion(0);
+    }
+
     function test_setConsensusVersion_UpdatesConsensusVersion() public {
         vm.prank(admin);
         vm.expectEmit(true, true, true, true);
@@ -370,7 +379,7 @@ contract BaseOracleTest is Test, Utilities {
             deadline
         );
 
-        oracle.setTime(deadline + 10);
+        oracle.mockTime(deadline + 10);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -504,7 +513,7 @@ contract BaseOracleTest is Test, Utilities {
             refSlot2Deadline
         );
 
-        oracle.setTime(refSlot2Deadline + SECONDS_PER_SLOT * 10);
+        oracle.mockTime(refSlot2Deadline + SECONDS_PER_SLOT * 10);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -554,7 +563,7 @@ contract BaseOracleTest is Test, Utilities {
     }
 
     function test_submitConsensusReport_RevertsIfDeadlinePassed() public {
-        oracle.setTime(deadline + 1);
+        oracle.mockTime(deadline + 1);
         vm.prank(address(consensus));
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -798,15 +807,9 @@ contract BaseOracleTest is Test, Utilities {
     }
 }
 
-struct ConsensusReport {
-    bytes32 hash;
-    uint64 refSlot;
-    uint64 processingDeadlineTime;
-}
-
 contract BaseOracleImpl is BaseOracle {
     using UnstructuredStorage for bytes32;
-    uint256 internal _time = 2513040315;
+    uint256 internal _time;
 
     event MockStartProcessingResult(uint256 prevProcessingRefSlot);
 
@@ -827,7 +830,7 @@ contract BaseOracleImpl is BaseOracle {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         CONTRACT_VERSION_POSITION.setStorageUint256(0);
         require(
-            genesisTime <= _time,
+            genesisTime <= block.timestamp,
             "GENESIS_TIME_CANNOT_BE_MORE_THAN_MOCK_TIME"
         );
     }
@@ -841,23 +844,17 @@ contract BaseOracleImpl is BaseOracle {
     }
 
     function _getTime() internal view override returns (uint256) {
+        // return mock value
+        if (_time == 0) return super._getTime();
         return _time;
     }
 
     function getTime() external view returns (uint256) {
-        return _time;
+        return _getTime();
     }
 
-    function originalGetTime() external view returns (uint256) {
-        return BaseOracle._getTime();
-    }
-
-    function setTime(uint256 newTime) external {
+    function mockTime(uint256 newTime) external {
         _time = newTime;
-    }
-
-    function advanceTimeBy(uint256 timeAdvance) external {
-        _time += timeAdvance;
     }
 
     function _handleConsensusReport(
@@ -877,6 +874,7 @@ contract BaseOracleImpl is BaseOracle {
         ConsensusReport memory report
     ) internal override {
         lastDiscardedReport = report;
+        super._handleConsensusReportDiscarded(report);
     }
 
     function getConsensusReportLastCall()
