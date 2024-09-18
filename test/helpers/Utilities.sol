@@ -10,6 +10,9 @@ import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.so
 contract Utilities is CommonBase {
     using Strings for uint256;
 
+    bytes constant BASE58ALPHABET =
+        bytes("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz");
+
     bytes32 internal seed = keccak256("seed sEed seEd");
 
     error FreeMemoryPointerOverflowed();
@@ -110,6 +113,20 @@ contract Utilities is CommonBase {
         bytes32 buf = keccak256(abi.encodePacked(seed));
         seed = buf;
         return buf;
+    }
+
+    function someCIDv0() public returns (string memory result) {
+        bytes memory seed = randomBytes(46);
+
+        seed[0] = "Q";
+        seed[1] = "m";
+
+        for (uint256 i = 2; i < seed.length; ++i) {
+            uint256 symIndex = uint8(seed[i]) % 58;
+            seed[i] = BASE58ALPHABET[symIndex];
+        }
+
+        result = string(seed);
     }
 
     function checkChainId(uint256 chainId) public view {
