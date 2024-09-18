@@ -21,6 +21,7 @@ interface ICSFeeDistributor is IAssetRecovererLib {
     function processOracleReport(
         bytes32 _treeRoot,
         string calldata _treeCid,
+        string calldata _logCid,
         uint256 _distributedShares
     ) external;
 

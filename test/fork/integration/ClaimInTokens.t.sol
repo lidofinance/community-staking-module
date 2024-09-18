@@ -296,7 +296,12 @@ contract ClaimIntegrationTest is
         bytes32 root = tree.root();
 
         vm.prank(feeDistributor.ORACLE());
-        feeDistributor.processOracleReport(root, "Qm", shares);
+        feeDistributor.processOracleReport(
+            root,
+            someCIDv0(),
+            someCIDv0(),
+            shares
+        );
 
         vm.prank(nodeOperator);
         csm.claimRewardsStETH(defaultNoId, type(uint256).max, shares, proof);
@@ -339,7 +344,12 @@ contract ClaimIntegrationTest is
         bytes32 root = tree.root();
 
         vm.prank(feeDistributor.ORACLE());
-        feeDistributor.processOracleReport(root, "Qm", shares);
+        feeDistributor.processOracleReport(
+            root,
+            someCIDv0(),
+            someCIDv0(),
+            shares
+        );
 
         vm.prank(nodeOperator);
         csm.claimRewardsWstETH(defaultNoId, type(uint256).max, shares, proof);
@@ -396,7 +406,12 @@ contract ClaimIntegrationTest is
         bytes32 root = tree.root();
 
         vm.prank(feeDistributor.ORACLE());
-        feeDistributor.processOracleReport(root, "Qm", shares);
+        feeDistributor.processOracleReport(
+            root,
+            someCIDv0(),
+            someCIDv0(),
+            shares
+        );
 
         uint256 accountingSharesBefore = lido.sharesOf(address(accounting));
 
