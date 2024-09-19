@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
-import { CommonBase } from "forge-std/Base.sol";
+import { CommonBase, Vm } from "forge-std/Base.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
 
@@ -266,4 +266,14 @@ contract Utilities is CommonBase {
         _;
         _checkMemory();
     }
+}
+
+function hasLog(Vm.Log[] memory self, bytes32 topic) pure returns (bool) {
+    for (uint i = 0; i < self.length; ++i) {
+        if (self[i].topics[0] == topic) {
+            return true;
+        }
+    }
+
+    return false;
 }

@@ -6,7 +6,7 @@ pragma solidity 0.8.24;
 import "forge-std/Test.sol";
 import "../src/lib/base-oracle/BaseOracle.sol";
 import "../src/lib/UnstructuredStorage.sol";
-import { Utilities } from "./helpers/Utilities.sol";
+import { Utilities, hasLog } from "./helpers/Utilities.sol";
 import "./helpers/mocks/ConsensusContractMock.sol";
 
 struct ConsensusReport {
@@ -16,6 +16,8 @@ struct ConsensusReport {
 }
 
 contract BaseOracleTest is Test, Utilities {
+    using { hasLog } for Vm.Log[];
+
     BaseOracleImpl oracle;
     MockConsensusContract consensus;
     address admin;
@@ -866,6 +868,149 @@ contract BaseOracleTest is Test, Utilities {
             bool processingStarted
         ) = oracle.getConsensusReport();
         assertEq(hash, keccak256("HASH_2"));
+    }
+
+    function test_discardConsensusReport_NoPrevReport() public {
+        vm.startPrank(address(consensus));
+
+        vm.recordLogs();
+        oracle.submitConsensusReport(
+            keccak256("HASH_1"),
+            initialRefSlot,
+            deadline
+        );
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        assertFalse(
+            entries.hasLog(BaseOracle.WarnProcessingMissed.selector),
+            "Unexpected WarnProcessingMissed event was emitted"
+        );
+
+        oracle.discardConsensusReport(initialRefSlot);
+
+        vm.recordLogs();
+        oracle.submitConsensusReport(
+            keccak256("HASH_2"),
+            initialRefSlot,
+            deadline
+        );
+        entries = vm.getRecordedLogs();
+        assertFalse(
+            entries.hasLog(BaseOracle.WarnProcessingMissed.selector),
+            "Unexpected WarnProcessingMissed event was emitted"
+        );
+    }
+
+    function test_discardConsensusReport_PrevFrameProcessed() public {
+        uint256 nextRefSlot = initialRefSlot + SLOTS_PER_EPOCH;
+        uint256 nextRefSlotDeadline = deadline + SECONDS_PER_EPOCH;
+        // initial report
+        vm.startPrank(address(consensus));
+        oracle.submitConsensusReport(
+            keccak256("HASH_1"),
+            initialRefSlot,
+            deadline
+        );
+        oracle.startProcessing();
+
+        vm.recordLogs();
+        oracle.submitConsensusReport(
+            keccak256("HASH_2"),
+            nextRefSlot,
+            nextRefSlotDeadline
+        );
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        assertFalse(
+            entries.hasLog(BaseOracle.WarnProcessingMissed.selector),
+            "Unexpected WarnProcessingMissed event was emitted"
+        );
+
+        oracle.discardConsensusReport(nextRefSlot);
+
+        vm.recordLogs();
+        oracle.submitConsensusReport(
+            keccak256("HASH_2"),
+            nextRefSlot,
+            nextRefSlotDeadline
+        );
+        entries = vm.getRecordedLogs();
+        assertFalse(
+            entries.hasLog(BaseOracle.WarnProcessingMissed.selector),
+            "Unexpected WarnProcessingMissed event was emitted"
+        );
+    }
+
+    function test_discardConsensusReport_SkippedProcessing() public {
+        uint256 nextRefSlot = initialRefSlot + SLOTS_PER_EPOCH * 2;
+        uint256 nextRefSlotDeadline = deadline + SECONDS_PER_EPOCH * 2;
+        // initial report
+        vm.startPrank(address(consensus));
+        oracle.submitConsensusReport(
+            keccak256("HASH_1"),
+            initialRefSlot,
+            deadline
+        );
+        oracle.startProcessing();
+        oracle.submitConsensusReport(
+            keccak256("HASH_2"),
+            initialRefSlot + SLOTS_PER_EPOCH,
+            deadline + SECONDS_PER_EPOCH
+        );
+
+        vm.expectEmit(true, true, true, true, address(oracle));
+        emit BaseOracle.WarnProcessingMissed(initialRefSlot + SLOTS_PER_EPOCH);
+        oracle.submitConsensusReport(
+            keccak256("HASH_3"),
+            nextRefSlot,
+            nextRefSlotDeadline
+        );
+
+        oracle.discardConsensusReport(nextRefSlot);
+
+        vm.recordLogs();
+        oracle.submitConsensusReport(
+            keccak256("HASH_3"),
+            nextRefSlot,
+            nextRefSlotDeadline
+        );
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        assertFalse(
+            entries.hasLog(BaseOracle.WarnProcessingMissed.selector),
+            "Unexpected WarnProcessingMissed event was emitted"
+        );
+    }
+
+    function test_discardConsensusReport_NoPrevProcessing() public {
+        uint256 nextRefSlot = initialRefSlot + SLOTS_PER_EPOCH;
+        uint256 nextRefSlotDeadline = deadline + SECONDS_PER_EPOCH;
+        // initial report
+        vm.startPrank(address(consensus));
+        oracle.submitConsensusReport(
+            keccak256("HASH_1"),
+            initialRefSlot,
+            deadline
+        );
+
+        vm.expectEmit(true, true, true, true);
+        emit BaseOracle.WarnProcessingMissed(initialRefSlot);
+        oracle.submitConsensusReport(
+            keccak256("HASH_2"),
+            nextRefSlot,
+            nextRefSlotDeadline
+        );
+
+        oracle.discardConsensusReport(nextRefSlot);
+
+        vm.recordLogs();
+        oracle.submitConsensusReport(
+            keccak256("HASH_2"),
+            nextRefSlot,
+            nextRefSlotDeadline
+        );
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        assertFalse(
+            entries.hasLog(BaseOracle.WarnProcessingMissed.selector),
+            "Unexpected WarnProcessingMissed event was emitted"
+        );
     }
 }
 
