@@ -4931,9 +4931,9 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         emit CSModule.TargetValidatorsCountChanged(noId, 1, 1);
         csm.updateTargetValidatorsLimits(noId, 1, 1);
 
-        // expectNoEmit hack
-        Vm.Log[] memory entries = vm.getRecordedLogs();
+        vm.recordLogs();
         csm.updateTargetValidatorsLimits(noId, 1, 1);
+        Vm.Log[] memory entries = vm.getRecordedLogs();
         assertEq(entries.length, 0);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
