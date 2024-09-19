@@ -106,11 +106,11 @@ gas-report:
     print(f"Done. Gas report saved to {filename}")
 
 coverage *args:
-    forge coverage --no-match-path 'test/fork/*' {{args}}
+    forge coverage --no-match-path 'test/fork/*' --block-gas-limit=60000000 {{args}}
 
 # Run coverage and save the report in LCOV file.
 coverage-lcov *args:
-    forge coverage --no-match-path 'test/fork/*' --report lcov {{args}}
+    forge coverage --no-match-path 'test/fork/*' --block-gas-limit=60000000 --report lcov {{args}}
 
 diffyscan-contracts *args:
     yarn generate:diffyscan {{args}}
