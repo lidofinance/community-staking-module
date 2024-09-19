@@ -148,7 +148,7 @@ abstract contract BaseOracle is
     ///
 
     /// @notice Returns the last consensus report hash and metadata.
-    ///
+    /// @dev Zero hash means that either there have been no reports yet, or the report for `refSlot` was discarded.
     function getConsensusReport()
         external
         view
@@ -241,9 +241,9 @@ abstract contract BaseOracle is
     /// Only called when, for the given reference slot:
     ///
     ///   1. there previously was a consensus report; AND
-    ///   1. processing of the consensus report hasn't started yet; AND
-    ///   2. report processing deadline is not expired yet; AND
-    ///   3. there's no consensus report now (otherwise, `submitConsensusReport` is called instead).
+    ///   2. processing of the consensus report hasn't started yet; AND
+    ///   3. report processing deadline is not expired yet (enforced by HashConsensus); AND
+    ///   4. there's no consensus report now (otherwise, `submitConsensusReport` is called instead) (enforced by HashConsensus).
     ///
     /// Can be called even when there's no submitted non-discarded consensus report for the current
     /// reference slot, i.e. can be called multiple times in succession.
@@ -265,12 +265,7 @@ abstract contract BaseOracle is
             revert RefSlotAlreadyProcessing();
         }
 
-        ConsensusReport memory report = ConsensusReport({
-            hash: bytes32(0),
-            refSlot: 0,
-            processingDeadlineTime: 0
-        });
-        _storageConsensusReport().value = report;
+        _storageConsensusReport().value.hash = bytes32(0);
         _handleConsensusReportDiscarded(submittedReport);
 
         emit ReportDiscarded(submittedReport.refSlot, submittedReport.hash);
