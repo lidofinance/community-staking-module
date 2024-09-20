@@ -570,6 +570,18 @@ contract CsmInitialize is CSMCommon {
         assertEq(address(csm.LIDO_LOCATOR()), address(locator));
     }
 
+    function test_constructor_RevertWhen_ZeroLocator() public {
+        vm.expectRevert(CSModule.ZeroLocatorAddress.selector);
+        new CSModule({
+            moduleType: "community-staking-module",
+            minSlashingPenaltyQuotient: 32,
+            elRewardsStealingFine: 0.1 ether,
+            maxKeysPerOperatorEA: 10,
+            maxKeyRemovalCharge: 0.1 ether,
+            lidoLocator: address(0)
+        });
+    }
+
     function test_constructor_RevertWhen_InitOnImpl() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",

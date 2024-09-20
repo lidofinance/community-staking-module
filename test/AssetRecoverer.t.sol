@@ -24,6 +24,14 @@ contract AssetRecovererTestable is AssetRecoverer, ERC1155Holder {
     }
 }
 
+contract EtherRefuser {
+    error RefuseEther();
+
+    receive() external payable {
+        revert RefuseEther();
+    }
+}
+
 contract AssetRecovererTest is Test, Utilities {
     AssetRecovererTestable internal recoverer;
     address internal actor;
@@ -45,6 +53,16 @@ contract AssetRecovererTest is Test, Utilities {
 
         assertEq(address(recoverer).balance, 0);
         assertEq(actor.balance, 1 ether);
+    }
+
+    function test_recoverETH_RevertWhen_FailedToSendEther() public {
+        EtherRefuser refuser = new EtherRefuser();
+        recoverer = new AssetRecovererTestable(address(refuser));
+        vm.deal(address(recoverer), 1 ether);
+
+        vm.prank(address(refuser));
+        vm.expectRevert(IAssetRecovererLib.FailedToSendEther.selector);
+        recoverer.recoverEther();
     }
 
     function test_recoverETH_RevertWhen_NoRole() public {
