@@ -225,10 +225,11 @@ contract CSBondCurveTest is Test {
     function test_resetBondCurve_nothingToChange() public {
         uint256 noId = 0;
         assertEq(bondCurve.getBondCurveId(noId), 0);
-        Vm.Log[] memory entries = vm.getRecordedLogs();
 
+        vm.recordLogs();
         bondCurve.resetBondCurve(noId);
 
+        Vm.Log[] memory entries = vm.getRecordedLogs();
         assertEq(entries.length, 0);
         assertEq(bondCurve.getBondCurveId(noId), 0);
     }
