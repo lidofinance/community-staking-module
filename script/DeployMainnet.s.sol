@@ -82,7 +82,7 @@ contract DeployMainnet is DeployBase {
         // GateSeal
         config.gateSealFactory = 0x6C82877cAC5a7A739f16Ca0A89c0A328B8764A24;
         // TODO: Reconsider before the mainnet launch
-        config.sealingCommittee = address(0);
+        config.sealingCommittee = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
         config.sealDuration = 6 days;
         config.sealExpiryTimestamp = block.timestamp + 365 days;
 
