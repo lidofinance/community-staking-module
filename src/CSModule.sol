@@ -118,11 +118,13 @@ contract CSModule is
     event WithdrawalSubmitted(
         uint256 indexed nodeOperatorId,
         uint256 keyIndex,
-        uint256 amount
+        uint256 amount,
+        bytes pubkey
     );
     event InitialSlashingSubmitted(
         uint256 indexed nodeOperatorId,
-        uint256 keyIndex
+        uint256 keyIndex,
+        bytes pubkey
     );
 
     event PublicRelease();
@@ -1125,7 +1127,8 @@ contract CSModule is
             ++no.totalWithdrawnKeys;
         }
 
-        emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount);
+        bytes memory pubkey = SigningKeys.loadKeys(nodeOperatorId, keyIndex, 1);
+        emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount, pubkey);
 
         if (isSlashed) {
             if (_isValidatorSlashed[pointer]) {
@@ -1175,7 +1178,9 @@ contract CSModule is
         }
 
         _isValidatorSlashed[pointer] = true;
-        emit InitialSlashingSubmitted(nodeOperatorId, keyIndex);
+
+        bytes memory pubkey = SigningKeys.loadKeys(nodeOperatorId, keyIndex, 1);
+        emit InitialSlashingSubmitted(nodeOperatorId, keyIndex, pubkey);
 
         accounting.penalize(nodeOperatorId, INITIAL_SLASHING_PENALTY);
 

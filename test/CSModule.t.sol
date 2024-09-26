@@ -6039,12 +6039,12 @@ contract CsmSubmitWithdrawal is CSMCommon {
     function test_submitWithdrawal() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
-        csm.obtainDepositData(1, "");
+        (bytes memory pubkey, ) = csm.obtainDepositData(1, "");
 
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.WithdrawalSubmitted(noId, keyIndex, DEPOSIT_SIZE);
+        emit CSModule.WithdrawalSubmitted(noId, keyIndex, DEPOSIT_SIZE, pubkey);
         csm.submitWithdrawal(noId, keyIndex, DEPOSIT_SIZE, false);
 
         NodeOperator memory no = csm.getNodeOperator(noId);
@@ -6059,7 +6059,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
     function test_submitWithdrawal_changeNonce() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator(2);
-        csm.obtainDepositData(1, "");
+        (bytes memory pubkey, ) = csm.obtainDepositData(1, "");
 
         uint256 nonce = csm.getNonce();
 
@@ -6067,7 +6067,8 @@ contract CsmSubmitWithdrawal is CSMCommon {
         emit CSModule.WithdrawalSubmitted(
             noId,
             keyIndex,
-            DEPOSIT_SIZE - BOND_SIZE - 1 ether
+            DEPOSIT_SIZE - BOND_SIZE - 1 ether,
+            pubkey
         );
         csm.submitWithdrawal(
             noId,
@@ -6193,13 +6194,12 @@ contract CsmSubmitInitialSlashing is CSMCommon {
     function test_submitInitialSlashing() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator(2);
-        csm.obtainDepositData(1, "");
+        (bytes memory pubkey, ) = csm.obtainDepositData(1, "");
         uint256 penaltyAmount = csm.INITIAL_SLASHING_PENALTY();
-
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.InitialSlashingSubmitted(noId, keyIndex);
+        emit CSModule.InitialSlashingSubmitted(noId, keyIndex, pubkey);
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
@@ -6221,13 +6221,13 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         vm.deal(nodeOperator, 32 ether);
         vm.prank(nodeOperator);
         csm.depositETH{ value: 32 ether }(0);
-        csm.obtainDepositData(1, "");
+        (bytes memory pubkey, ) = csm.obtainDepositData(1, "");
         uint256 penaltyAmount = csm.INITIAL_SLASHING_PENALTY();
 
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.InitialSlashingSubmitted(noId, 0);
+        emit CSModule.InitialSlashingSubmitted(noId, 0, pubkey);
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
@@ -6246,14 +6246,17 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         assertInvariants
     {
         uint256 noId = createNodeOperator(2);
-        csm.obtainDepositData(2, "");
+        (bytes memory pubkeys, ) = csm.obtainDepositData(2, "");
+
+        bytes memory pubkey0 = slice(pubkeys, 0, 48);
+        bytes memory pubkey1 = slice(pubkeys, 48, 48);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.InitialSlashingSubmitted(noId, 0);
+        emit CSModule.InitialSlashingSubmitted(noId, 0, pubkey0);
         csm.submitInitialSlashing(noId, 0);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.InitialSlashingSubmitted(noId, 1);
+        emit CSModule.InitialSlashingSubmitted(noId, 1, pubkey1);
         csm.submitInitialSlashing(noId, 1);
     }
 
