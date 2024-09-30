@@ -5780,9 +5780,7 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
         );
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
-        CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
-        assertEq(lock.amount, 0 ether);
-        assertEq(lock.retentionUntil, 0);
+        assertEq(accounting.getActualLockedBond(noId), 0);
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs_oneExpired()
@@ -5818,13 +5816,11 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
         );
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
-        CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(
-            firstNoId
-        );
-        assertEq(lock.amount, 0 ether);
-        assertEq(lock.retentionUntil, 0);
+        assertEq(accounting.getActualLockedBond(firstNoId), 0);
 
-        lock = accounting.getLockedBondInfo(secondNoId);
+        CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(
+            secondNoId
+        );
         assertEq(lock.amount, 0 ether);
         assertEq(lock.retentionUntil, 0);
     }
