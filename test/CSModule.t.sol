@@ -4963,6 +4963,25 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 1, 0);
     }
 
+    function test_updateTargetValidatorsLimits_FromDisabledToDisabled_withNonZeroTargetLimit()
+        public
+        assertInvariants
+    {
+        uint256 noId = createNodeOperator();
+        csm.updateTargetValidatorsLimits(noId, 2, 10);
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.TargetValidatorsCountChanged(noId, 0, 0);
+        csm.updateTargetValidatorsLimits(noId, 0, 0);
+
+        vm.recordLogs();
+        csm.updateTargetValidatorsLimits(noId, 0, 8);
+        assertEq(vm.getRecordedLogs().length, 0);
+
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.targetLimit, 0);
+    }
+
     function test_updateTargetValidatorsLimits_enableSoftLimit()
         public
         assertInvariants

@@ -808,6 +808,10 @@ contract CSModule is
         _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
+        if (targetLimitMode == 0) {
+            targetLimit = 0;
+        }
+
         if (
             no.targetLimitMode == targetLimitMode &&
             no.targetLimit == targetLimit
@@ -816,10 +820,6 @@ contract CSModule is
         if (no.targetLimitMode != targetLimitMode) {
             // @dev No need to safe cast due to conditions above
             no.targetLimitMode = uint8(targetLimitMode);
-        }
-
-        if (targetLimitMode == 0) {
-            targetLimit = 0;
         }
 
         if (no.targetLimit != targetLimit) {
