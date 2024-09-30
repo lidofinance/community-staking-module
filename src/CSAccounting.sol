@@ -384,9 +384,9 @@ contract CSAccounting is
         uint256 lockedAmount = CSBondLock.getActualLockedBond(nodeOperatorId);
         if (lockedAmount > 0) {
             CSBondCore._burn(nodeOperatorId, lockedAmount);
+            // reduce all locked bond even if bond isn't covered lock fully
+            CSBondLock._remove(nodeOperatorId);
         }
-        // reduce all locked bond even if bond isn't covered lock fully
-        CSBondLock._remove(nodeOperatorId);
     }
 
     /// @notice Penalize bond by burning stETH shares of the given Node Operator
