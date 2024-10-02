@@ -18,6 +18,8 @@ const performersCsvFiles = [
     "sources/csm-testnet-good-performers.csv"
 ]
 
+const allCsvFiles = [...csvFiles, ...performersCsvFiles];
+
 const csvFilesToExclude = [
     "sources/exclude/ever-slashed.csv",
     "sources/exclude/pro-node-operators.csv",
@@ -58,10 +60,10 @@ function buildMerkleTree(addresses) {
 }
 
 function buildCsvContent(addresses) {
-  const header = ["address", ...csvFiles.map((file) => file.split("/").pop().split(".")[0])];
+  const header = ["address", ...allCsvFiles.map((file) => file.split("/").pop().split(".")[0])];
   let content = header.join(",") + "\n";
   for (const address in addresses) {
-    content += `${address},${csvFiles.map((file) => (addresses[address].sources.includes(file) ? "X" : "")).join(",")}\n`;
+    content += `${address},${allCsvFiles.map((file) => (addresses[address].sources.includes(file) ? "X" : "")).join(",")}\n`;
   }
   return content;
 }
@@ -118,7 +120,7 @@ function buildExclusionCsvContent(addresses, excludeAddresses) {
   console.log("Merkle tree and proofs have been written to files.");
 
   const sources = {};
-  for (const source of [...csvFiles, ...performersCsvFiles]) {
+  for (const source of allCsvFiles) {
     sources[source] = { total: 0, unique: 0, duplicate: 0 };
   }
 
