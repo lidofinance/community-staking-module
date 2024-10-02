@@ -68,11 +68,11 @@ function buildCsvContent(addresses) {
   return content;
 }
 
-function buildExclusionCsvContent(addresses, excludeAddresses) {
+function buildExclusionCsvContent(addresses, excludeAddresses, goodPerformers) {
   const header = ["address", "exclusion_reason", "sources"];
   let content = header.join(",") + "\n";
   for (const address in excludeAddresses) {
-    if (Object.keys(addresses).includes(address)) {
+    if (Object.keys(addresses).includes(address) && !Object.keys(goodPerformers).includes(address)) {
       content += `${address},${excludeAddresses[address].sources.join(";")},${addresses[address].sources.join(";")}\n`;
     }
   }
@@ -100,7 +100,6 @@ function buildExclusionCsvContent(addresses, excludeAddresses) {
   console.log("Total addresses:", Object.keys(allAddresses).length);
   console.log("Total excluded:", Object.keys(excludeAddresses).length);
 
-
   const { tree } = buildMerkleTree(Object.keys(addresses));
   console.log("Merkle Root:", tree.root);
 
@@ -110,7 +109,8 @@ function buildExclusionCsvContent(addresses, excludeAddresses) {
   }
 
   const content = buildCsvContent(addresses);
-  const exclusionContent = buildExclusionCsvContent(allAddresses, excludeAddresses);
+  // we do not report as excluded addresses that are in good performers list
+  const exclusionContent = buildExclusionCsvContent(allAddresses, excludeAddresses, goodPerformers);
 
   fs.writeFileSync("sources.csv", content);
   fs.writeFileSync("addresses.json", JSON.stringify(Object.keys(addresses), null, 2));

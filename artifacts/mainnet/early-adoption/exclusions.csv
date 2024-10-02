@@ -117,7 +117,6 @@ address,exclusion_reason,sources
 0x5bc5ec5130f66f13d5c21ac6811a7e624ed3c7c6,sources/exclude/pro-node-operators.csv,sources/stake-cat-rocketpool-solo-stakers.csv
 0x765c6a8f20c842e8c826b0d9425015784f982afc,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
 0x4f75b66cdc60d8550e176d112275e5338b413fc3,sources/exclude/pro-node-operators.csv;sources/exclude/pro-node-operators.csv,sources/galxe-lido-point-holders.csv;sources/obol-techne-credentials-silver.csv
-0x49df3cca2670eb0d591146b16359fe336e476f29,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
 0x3fbf669c9a72f06c125032c6dd7aa1d1d51c5eb8,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
 0x14c5d9756a2443aed4c5dbe05ce39e1f1a27818a,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
 0xb23bbd9aa7f2dc7e8f2bf93cc4e6ac728b1dcf17,sources/exclude/pro-node-operators.csv,sources/galxe-lido-point-holders.csv;sources/obol-techne-credentials-silver.csv
@@ -147,7 +146,6 @@ address,exclusion_reason,sources
 0xd629cd5bb273ac1a43ec82b8b4e60aa1e91b954f,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
 0xfe003428a2c67bfd3b51b6c8d9a0b28fdfd3b8bf,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv;sources/rated-solo-staker.csv;sources/stake-cat-solo-stakers-B.csv
 0xdda66164a8385625f3ad469b369a2382e1ec27e0,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
-0x6c7c332a090c8d2085857cf3220ea01c6d45a723,sources/exclude/pro-node-operators.csv,sources/galxe-lido-point-holders.csv;sources/obol-techne-credentials-silver.csv
 0x60aa666bcef5e9a3393c6b203690abc2ea76f06b,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
 0x3106c024b3e1d77ac8708befd003d230c9a51e31,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
 0x4eeb252ea907a972688ec0bba7d68327e9869285,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
@@ -166,17 +164,14 @@ address,exclusion_reason,sources
 0x67b4c5e1340ca71420acb018663bb434ddc13d7b,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
 0x8e6013ee35b01c9f0d4555898301971ce024e02f,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
 0xf37fef00fe67956e9870114815c42f0cc18373ce,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
-0xe930779472c04dd97af5b8b83d9ec95abda38dce,sources/exclude/pro-node-operators.csv,sources/galxe-lido-point-holders.csv
 0xfea66cb7571e251c4fc000beaf0ef771d5c78793,sources/exclude/pro-node-operators.csv,sources/stake-cat-solo-stakers-B.csv
 0x462f0560e473e1545fd4d0680c02c499aaf01711,sources/exclude/pro-node-operators.csv,sources/galxe-lido-point-holders.csv;sources/obol-techne-credentials-silver.csv;sources/stake-cat-solo-stakers-B.csv
 0xb4084f25dfcb2c1bf6636b420b59eda807953769,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
 0x82907132791365aa7b50d7ba6bdd2d1d931b121f,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
 0xb1d235e8bb2ebe158e41d39fd33c1397cec42bed,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
 0xafbd66706f90bc56d29c39a260930b34b2757ed8,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
-0x8b529ef78046008f9d1fbc91c7407030de96ee32,sources/exclude/pro-node-operators.csv,sources/galxe-lido-point-holders.csv;sources/obol-techne-credentials-base.csv
 0x18ee60706ed150f6e21d020c1cede55e4267f409,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv;sources/stake-cat-gnosischain-solo-stakers.csv
 0x548ca64e4b0aa42ea59adbdd84495a4a16c2a234,sources/exclude/pro-node-operators.csv,sources/galxe-lido-point-holders.csv
-0x5aeeb064e6210a96d13fe88eedde1beb43f069f9,sources/exclude/pro-node-operators.csv;sources/exclude/pro-node-operators.csv,sources/galxe-lido-point-holders.csv;sources/obol-techne-credentials-silver.csv
 0x7b1660682078fe0efd9310e8efe32cb93a0417bc,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
 0xc252bbac966a9a0e6001f135c104b9bb19fd9311,sources/exclude/pro-node-operators.csv,sources/galxe-lido-point-holders.csv
 0x55cb1c7241a937deb0057331e3d57f0e439293bf,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
@@ -186,12 +181,9 @@ address,exclusion_reason,sources
 0x6c49d0790afbbaabb5cb8ab8a52d36bc9cdf67b7,sources/exclude/pro-node-operators.csv;sources/exclude/csm-testnet-bad-performers.csv,sources/galxe-lido-point-holders.csv;sources/obol-techne-credentials-silver.csv
 0xe3023dae714d827f2452442fccfdc2bcd684de13,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
 0xecbb058fc429941124a2b8d0984354c3132f536f,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
-0x48ab8492ff201c8eae9f89b17143ded620b3bd06,sources/exclude/pro-node-operators.csv,sources/galxe-lido-point-holders.csv;sources/obol-techne-credentials-silver.csv
-0x5b59f275679f3cb4b0b4272adb5c5727d7efb5e7,sources/exclude/pro-node-operators.csv,sources/galxe-lido-point-holders.csv;sources/obol-techne-credentials-silver.csv
 0x690a8f37ddd2f05ef48875cf865af36b727a664a,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
 0xd0e5ebb9161df30b2b8926320cd45432a6f2027e,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
 0xafbe28a3e5a057120737eae5a204680fc0ce60f5,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv;sources/stake-cat-solo-stakers-B.csv
-0xe72a34aff3ebf66c321ab96438e232526c648531,sources/exclude/pro-node-operators.csv,sources/galxe-lido-point-holders.csv;sources/obol-techne-credentials-silver.csv
 0x910045ec23c6055ee5fb827a4c6713c848b7c48f,sources/exclude/pro-node-operators.csv,sources/obol-techne-credentials-silver.csv
 0x8f1ab729e65aca5e3ad1ab34a8acf018b405c9d9,sources/exclude/pro-node-operators.csv,sources/galxe-lido-point-holders.csv
 0x090687799d0616b91a2f7da50623c4a1dc702600,sources/exclude/csm-testnet-bad-performers.csv,sources/galxe-lido-point-holders.csv
