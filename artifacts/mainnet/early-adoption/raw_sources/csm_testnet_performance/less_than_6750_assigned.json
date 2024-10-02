@@ -1,0 +1,1380 @@
+{
+  "4": {
+    "validators": 1,
+    "unique_assigned": 4268,
+    "total_perf": 0.0,
+    "total_assigned": 4268,
+    "total_included": 0,
+    "manager_address": "0xed1Fc097b5B9B007d40502e08aa0cddF477AaeaA",
+    "used_addresses": [
+      "0xbA99F374C20A3475De737B466ee68Ad9C38c26AF",
+      "0xed1Fc097b5B9B007d40502e08aa0cddF477AaeaA"
+    ],
+    "testnet_ea_member": true,
+    "el_rewards_stealer": true
+  },
+  "39": {
+    "validators": 10,
+    "unique_assigned": 5010,
+    "total_perf": 0.9792089075225953,
+    "total_assigned": 29099,
+    "total_included": 28494,
+    "manager_address": "0x0B6726d84B553351E8b85b21a37F2b69A0801732",
+    "used_addresses": [
+      "0x0B6726d84B553351E8b85b21a37F2b69A0801732"
+    ],
+    "testnet_ea_member": true
+  },
+  "50": {
+    "validators": 500,
+    "unique_assigned": 4475,
+    "total_perf": 0.9987974851515956,
+    "total_assigned": 546355,
+    "total_included": 545698,
+    "manager_address": "0x06aa9774ce8e263E4371bBAC5CF0097587aB740D",
+    "used_addresses": [
+      "0x06aa9774ce8e263E4371bBAC5CF0097587aB740D"
+    ],
+    "testnet_ea_member": true
+  },
+  "69": {
+    "validators": 1,
+    "unique_assigned": 3836,
+    "total_perf": 0.9593220338983051,
+    "total_assigned": 3835,
+    "total_included": 3679,
+    "manager_address": "0x53Eb6daB46E3F3f5808171B79e982cE923655eA1",
+    "used_addresses": [
+      "0x53Eb6daB46E3F3f5808171B79e982cE923655eA1"
+    ],
+    "testnet_ea_member": true
+  },
+  "86": {
+    "validators": 2500,
+    "unique_assigned": 3199,
+    "total_perf": 0.9989465582685921,
+    "total_assigned": 1296702,
+    "total_included": 1295336,
+    "manager_address": "0x12F828eD7C4F918b46797F302296F15AABd951e4",
+    "used_addresses": [
+      "0x12F828eD7C4F918b46797F302296F15AABd951e4"
+    ]
+  },
+  "99": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x71c1B6562556B2b7fC9929cB1D4c949248036320",
+    "used_addresses": [
+      "0x71c1B6562556B2b7fC9929cB1D4c949248036320"
+    ]
+  },
+  "123": {
+    "validators": 10,
+    "unique_assigned": 6001,
+    "total_perf": 0.9994998582931831,
+    "total_assigned": 59983,
+    "total_included": 59953,
+    "manager_address": "0xfb7B3c898968abD98A9F0BF33A45aA4f3cb5eC01",
+    "used_addresses": [
+      "0x63E3B82798AD78062b88eb4605D520e328FE38b8",
+      "0xfb7B3c898968abD98A9F0BF33A45aA4f3cb5eC01"
+    ]
+  },
+  "195": {
+    "validators": 1,
+    "unique_assigned": 3817,
+    "total_perf": 0.9992138364779874,
+    "total_assigned": 3816,
+    "total_included": 3813,
+    "manager_address": "0xA50E3Ae607BbB8CAD01850868DE8B7742cabd9b0",
+    "used_addresses": [
+      "0xA50E3Ae607BbB8CAD01850868DE8B7742cabd9b0"
+    ]
+  },
+  "204": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x4Da7B4f3E9F1c7f408ed61daf784D306f95E0d15",
+    "used_addresses": [
+      "0x0000000000000000000000000000000000000000",
+      "0x0000000000000000000000000000000000000001",
+      "0x033dFdaFe652568d71e0aA92Fe102d311E488786",
+      "0x4Da7B4f3E9F1c7f408ed61daf784D306f95E0d15"
+    ],
+    "testnet_ea_member": true
+  },
+  "221": {
+    "validators": 1,
+    "unique_assigned": 4919,
+    "total_perf": 0.9938999593330622,
+    "total_assigned": 4918,
+    "total_included": 4888,
+    "manager_address": "0xEEAB375F1D46842Df7934dd648B63858E3a442F3",
+    "used_addresses": [
+      "0xEEAB375F1D46842Df7934dd648B63858E3a442F3"
+    ]
+  },
+  "274": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0xfDbdBE295683b52561eBbEAB940c7Fab0F4f8a2c",
+    "used_addresses": [
+      "0xfDbdBE295683b52561eBbEAB940c7Fab0F4f8a2c"
+    ]
+  },
+  "1510": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x3628740857547844B7078100C1D4Fc7A182CCC82",
+    "used_addresses": [
+      "0x3628740857547844B7078100C1D4Fc7A182CCC82"
+    ]
+  },
+  "1511": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0xaA8ca5b135ddA835F8F51daD640897e0025B8C44",
+    "used_addresses": [
+      "0xaA8ca5b135ddA835F8F51daD640897e0025B8C44"
+    ]
+  },
+  "2525": {
+    "validators": 1,
+    "unique_assigned": 4213,
+    "total_perf": 0.8226495726495726,
+    "total_assigned": 4212,
+    "total_included": 3465,
+    "manager_address": "0xFF25e66c3B230569d791fE24D748934418926ce8",
+    "used_addresses": [
+      "0xFF25e66c3B230569d791fE24D748934418926ce8"
+    ]
+  },
+  "2528": {
+    "validators": 1,
+    "unique_assigned": 1003,
+    "total_perf": 0.3463073852295409,
+    "total_assigned": 1002,
+    "total_included": 347,
+    "manager_address": "0x005E687c58e498bF6E6068868Fa6c03D9E806C2C",
+    "used_addresses": [
+      "0x005E687c58e498bF6E6068868Fa6c03D9E806C2C"
+    ]
+  },
+  "2530": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x0425d3ABeca47A15d69D097d9dA530DdD67cD777",
+    "used_addresses": [
+      "0x0425d3ABeca47A15d69D097d9dA530DdD67cD777"
+    ]
+  },
+  "2531": {
+    "validators": 1,
+    "unique_assigned": 306,
+    "total_perf": 0.9967213114754099,
+    "total_assigned": 305,
+    "total_included": 304,
+    "manager_address": "0xC94258Ec11bc813416Fdd4f182335d47874f516b",
+    "used_addresses": [
+      "0xC94258Ec11bc813416Fdd4f182335d47874f516b"
+    ]
+  },
+  "2533": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0xE12f7770bf400a4F10073b6f8E7e1eA1A9F4549a",
+    "used_addresses": [
+      "0xE12f7770bf400a4F10073b6f8E7e1eA1A9F4549a"
+    ]
+  },
+  "2537": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0xFcd803460346A5A5610F54E013f60568765BAD3d",
+    "used_addresses": [
+      "0xFcd803460346A5A5610F54E013f60568765BAD3d"
+    ]
+  },
+  "2539": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x4Da7B4f3E9F1c7f408ed61daf784D306f95E0d15",
+    "used_addresses": [
+      "0x4Da7B4f3E9F1c7f408ed61daf784D306f95E0d15"
+    ]
+  },
+  "2544": {
+    "validators": 1,
+    "unique_assigned": 1817,
+    "total_perf": 0.6585903083700441,
+    "total_assigned": 1816,
+    "total_included": 1196,
+    "manager_address": "0x960BEed56b89Ca2Ea264D3EDdBE052b7744cAC39",
+    "used_addresses": [
+      "0x960BEed56b89Ca2Ea264D3EDdBE052b7744cAC39"
+    ]
+  },
+  "2545": {
+    "validators": 4,
+    "unique_assigned": 390,
+    "total_perf": 0.9371941272430668,
+    "total_assigned": 1226,
+    "total_included": 1149,
+    "manager_address": "0xDAFE9DeB42ea762B1948827bA358D9BAf3c968ea",
+    "used_addresses": [
+      "0xDAFE9DeB42ea762B1948827bA358D9BAf3c968ea"
+    ]
+  },
+  "2547": {
+    "validators": 10,
+    "unique_assigned": 6704,
+    "total_perf": 0.9088553112165255,
+    "total_assigned": 65983,
+    "total_included": 59969,
+    "manager_address": "0x9ca77683A86Dc698fe7b3f708Cff477E1c16F170",
+    "used_addresses": [
+      "0x9ca77683A86Dc698fe7b3f708Cff477E1c16F170"
+    ],
+    "testnet_ea_member": true
+  },
+  "2548": {
+    "validators": 1,
+    "unique_assigned": 6327,
+    "total_perf": 0.9853010905642484,
+    "total_assigned": 6327,
+    "total_included": 6234,
+    "manager_address": "0x47ab19Ad14Faf69e67bCa1E79370D808a3b9525f",
+    "used_addresses": [
+      "0x47ab19Ad14Faf69e67bCa1E79370D808a3b9525f"
+    ],
+    "testnet_ea_member": true
+  },
+  "2549": {
+    "validators": 5,
+    "unique_assigned": 6260,
+    "total_perf": 0.999135612754514,
+    "total_assigned": 31236,
+    "total_included": 31209,
+    "manager_address": "0x2c96aa0Cf144FA7679080193DAE490c2F1E4a20C",
+    "used_addresses": [
+      "0x2c96aa0Cf144FA7679080193DAE490c2F1E4a20C"
+    ]
+  },
+  "2550": {
+    "validators": 1,
+    "unique_assigned": 6196,
+    "total_perf": 0.9983860555196902,
+    "total_assigned": 6196,
+    "total_included": 6186,
+    "manager_address": "0xE80efD4bA1E683DcB681715EEfDFA741B99828e8",
+    "used_addresses": [
+      "0xE80efD4bA1E683DcB681715EEfDFA741B99828e8"
+    ]
+  },
+  "2551": {
+    "validators": 2,
+    "unique_assigned": 5941,
+    "total_perf": 0.0,
+    "total_assigned": 11881,
+    "total_included": 0,
+    "manager_address": "0x9bC81369888A78e839158b50CAE9de5B114a58D6",
+    "used_addresses": [
+      "0x9bC81369888A78e839158b50CAE9de5B114a58D6"
+    ]
+  },
+  "2552": {
+    "validators": 1,
+    "unique_assigned": 6069,
+    "total_perf": 0.9943977591036415,
+    "total_assigned": 6069,
+    "total_included": 6035,
+    "manager_address": "0xf02e5c51a0131A95A96adc764000C688C550A5A7",
+    "used_addresses": [
+      "0xf02e5c51a0131A95A96adc764000C688C550A5A7"
+    ]
+  },
+  "2553": {
+    "validators": 1,
+    "unique_assigned": 5994,
+    "total_perf": 0.9936603269936604,
+    "total_assigned": 5994,
+    "total_included": 5956,
+    "manager_address": "0x4e0eB6DD099A41fC372110B5953345839E8d371e",
+    "used_addresses": [
+      "0x4e0eB6DD099A41fC372110B5953345839E8d371e"
+    ]
+  },
+  "2554": {
+    "validators": 1,
+    "unique_assigned": 5940,
+    "total_perf": 0.9893939393939394,
+    "total_assigned": 5940,
+    "total_included": 5877,
+    "manager_address": "0x274829C52bba894d62A4931b46B76cFE0606Ac26",
+    "used_addresses": [
+      "0x274829C52bba894d62A4931b46B76cFE0606Ac26"
+    ]
+  },
+  "2555": {
+    "validators": 10,
+    "unique_assigned": 5940,
+    "total_perf": 0.8370934069634319,
+    "total_assigned": 59396,
+    "total_included": 49720,
+    "manager_address": "0x1d002BE8be310056497d41FA36175B0000000088",
+    "used_addresses": [
+      "0x1d002BE8be310056497d41FA36175B0000000088"
+    ]
+  },
+  "2556": {
+    "validators": 1,
+    "unique_assigned": 5750,
+    "total_perf": 0.9763478260869565,
+    "total_assigned": 5750,
+    "total_included": 5614,
+    "manager_address": "0x3b8FCcC2e86dba329397508C084A663f77F5F6e2",
+    "used_addresses": [
+      "0x3b8FCcC2e86dba329397508C084A663f77F5F6e2"
+    ]
+  },
+  "2557": {
+    "validators": 1,
+    "unique_assigned": 5750,
+    "total_perf": 0.9662608695652174,
+    "total_assigned": 5750,
+    "total_included": 5556,
+    "manager_address": "0xEC1e924ca5b291f5f2fb11e082C24BC52551C7B7",
+    "used_addresses": [
+      "0xEC1e924ca5b291f5f2fb11e082C24BC52551C7B7"
+    ]
+  },
+  "2558": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x724E5a016d206f6A42aFdCCFEA9529F1a535854C",
+    "used_addresses": [
+      "0x724E5a016d206f6A42aFdCCFEA9529F1a535854C"
+    ]
+  },
+  "2559": {
+    "validators": 1,
+    "unique_assigned": 1218,
+    "total_perf": 0.9991783073130649,
+    "total_assigned": 1217,
+    "total_included": 1216,
+    "manager_address": "0xe8512Ac0ACDfFe9Cc50e6F83020760B9715a7fe4",
+    "used_addresses": [
+      "0xe8512Ac0ACDfFe9Cc50e6F83020760B9715a7fe4"
+    ]
+  },
+  "2560": {
+    "validators": 1,
+    "unique_assigned": 5624,
+    "total_perf": 0.8870910384068279,
+    "total_assigned": 5624,
+    "total_included": 4989,
+    "manager_address": "0x27d6Fdb86F16A55a1D24B72dD9301906d023fe4a",
+    "used_addresses": [
+      "0x27d6Fdb86F16A55a1D24B72dD9301906d023fe4a"
+    ]
+  },
+  "2561": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0xd3bCf7DCe3C296eef3d9dEe7991c2eA62e4e438A",
+    "used_addresses": [
+      "0xd3bCf7DCe3C296eef3d9dEe7991c2eA62e4e438A"
+    ]
+  },
+  "2562": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0xbE161b15C165DB22329F4C4c853D25bfBf7FC4e8",
+    "used_addresses": [
+      "0xbE161b15C165DB22329F4C4c853D25bfBf7FC4e8"
+    ]
+  },
+  "2563": {
+    "validators": 1,
+    "unique_assigned": 5623,
+    "total_perf": 0.9987551129290414,
+    "total_assigned": 5623,
+    "total_included": 5616,
+    "manager_address": "0xe8bd730E6f69D064194313480A4ad95DBF7f3E58",
+    "used_addresses": [
+      "0xe8bd730E6f69D064194313480A4ad95DBF7f3E58"
+    ],
+    "testnet_ea_member": true
+  },
+  "2564": {
+    "validators": 1,
+    "unique_assigned": 5332,
+    "total_perf": 0.9497374343585896,
+    "total_assigned": 5332,
+    "total_included": 5064,
+    "manager_address": "0x4Aa04fbD18749DB8b95664A87ebF1E7FC9016dEF",
+    "used_addresses": [
+      "0x4Aa04fbD18749DB8b95664A87ebF1E7FC9016dEF"
+    ]
+  },
+  "2565": {
+    "validators": 1,
+    "unique_assigned": 5332,
+    "total_perf": 0.9484246061515379,
+    "total_assigned": 5332,
+    "total_included": 5057,
+    "manager_address": "0x43911b1ec824F138aA7dE1A220aE4BA659bdaCB5",
+    "used_addresses": [
+      "0x43911b1ec824F138aA7dE1A220aE4BA659bdaCB5"
+    ]
+  },
+  "2566": {
+    "validators": 1,
+    "unique_assigned": 5332,
+    "total_perf": 0.9503000750187547,
+    "total_assigned": 5332,
+    "total_included": 5067,
+    "manager_address": "0x7FdD71abD895D0fb035C8c47B54d057D9324C55d",
+    "used_addresses": [
+      "0x7FdD71abD895D0fb035C8c47B54d057D9324C55d"
+    ]
+  },
+  "2567": {
+    "validators": 1,
+    "unique_assigned": 5331,
+    "total_perf": 0.9489776777340087,
+    "total_assigned": 5331,
+    "total_included": 5059,
+    "manager_address": "0x056A5867805EfA5337967bAf967555aCF766EE78",
+    "used_addresses": [
+      "0x056A5867805EfA5337967bAf967555aCF766EE78"
+    ]
+  },
+  "2568": {
+    "validators": 1,
+    "unique_assigned": 5331,
+    "total_perf": 0.9519789908084787,
+    "total_assigned": 5331,
+    "total_included": 5075,
+    "manager_address": "0x95Dec2f80632ccedF5b0b7daFc6e518E5684AC71",
+    "used_addresses": [
+      "0x95Dec2f80632ccedF5b0b7daFc6e518E5684AC71"
+    ]
+  },
+  "2569": {
+    "validators": 1,
+    "unique_assigned": 5331,
+    "total_perf": 0.9497280060026262,
+    "total_assigned": 5331,
+    "total_included": 5063,
+    "manager_address": "0x1f522fC94F902aD02Bc74721C5932251AF3CE48C",
+    "used_addresses": [
+      "0x1f522fC94F902aD02Bc74721C5932251AF3CE48C"
+    ]
+  },
+  "2570": {
+    "validators": 1,
+    "unique_assigned": 5331,
+    "total_perf": 0.9501031701369349,
+    "total_assigned": 5331,
+    "total_included": 5065,
+    "manager_address": "0x5214b5B6e73f39Df3aa41f3eE9E6C897f3Aa82e4",
+    "used_addresses": [
+      "0x5214b5B6e73f39Df3aa41f3eE9E6C897f3Aa82e4"
+    ]
+  },
+  "2571": {
+    "validators": 1,
+    "unique_assigned": 5331,
+    "total_perf": 0.9495404239354718,
+    "total_assigned": 5331,
+    "total_included": 5062,
+    "manager_address": "0x2535C01457cCCf0BBa0a1C372452d9A605d8Dc8f",
+    "used_addresses": [
+      "0x2535C01457cCCf0BBa0a1C372452d9A605d8Dc8f"
+    ]
+  },
+  "2572": {
+    "validators": 1,
+    "unique_assigned": 5331,
+    "total_perf": 0.9489776777340087,
+    "total_assigned": 5331,
+    "total_included": 5059,
+    "manager_address": "0x4cE1dfaa643BA0CCece08e0234743dCa628D4EdE",
+    "used_addresses": [
+      "0x4cE1dfaa643BA0CCece08e0234743dCa628D4EdE"
+    ]
+  },
+  "2573": {
+    "validators": 1,
+    "unique_assigned": 5331,
+    "total_perf": 0.9519789908084787,
+    "total_assigned": 5331,
+    "total_included": 5075,
+    "manager_address": "0x7a4736e9aDEb49Ba4126B1DEF331f38d1B0F9c1a",
+    "used_addresses": [
+      "0x7a4736e9aDEb49Ba4126B1DEF331f38d1B0F9c1a"
+    ]
+  },
+  "2574": {
+    "validators": 1,
+    "unique_assigned": 5330,
+    "total_perf": 0.949906191369606,
+    "total_assigned": 5330,
+    "total_included": 5063,
+    "manager_address": "0xCF8C5525a4BA0375627147f7f02F0976F2f826b2",
+    "used_addresses": [
+      "0xCF8C5525a4BA0375627147f7f02F0976F2f826b2"
+    ]
+  },
+  "2575": {
+    "validators": 1,
+    "unique_assigned": 5330,
+    "total_perf": 0.948780487804878,
+    "total_assigned": 5330,
+    "total_included": 5057,
+    "manager_address": "0xc378E459A151D03f8d3c9ED7cD6826F200086692",
+    "used_addresses": [
+      "0xc378E459A151D03f8d3c9ED7cD6826F200086692"
+    ]
+  },
+  "2576": {
+    "validators": 1,
+    "unique_assigned": 5330,
+    "total_perf": 0.999812382739212,
+    "total_assigned": 5330,
+    "total_included": 5329,
+    "manager_address": "0x068c62664DdE208dd99A42F444F003135620e089",
+    "used_addresses": [
+      "0x068c62664DdE208dd99A42F444F003135620e089"
+    ]
+  },
+  "2577": {
+    "validators": 1,
+    "unique_assigned": 5330,
+    "total_perf": 0.0,
+    "total_assigned": 5330,
+    "total_included": 0,
+    "manager_address": "0xF9c3896814AaDe6C9F3B309c7aACa4E261Bfb2a3",
+    "used_addresses": [
+      "0xF9c3896814AaDe6C9F3B309c7aACa4E261Bfb2a3"
+    ]
+  },
+  "2578": {
+    "validators": 1,
+    "unique_assigned": 5330,
+    "total_perf": 0.9962476547842402,
+    "total_assigned": 5330,
+    "total_included": 5310,
+    "manager_address": "0xDD55B772944B5dE14C7Ff52E31dE5aa943D18194",
+    "used_addresses": [
+      "0xDD55B772944B5dE14C7Ff52E31dE5aa943D18194"
+    ]
+  },
+  "2579": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x0F5d8dEAd62D6bE1b75B42F6eDA656F120A214Cf",
+    "used_addresses": [
+      "0x0F5d8dEAd62D6bE1b75B42F6eDA656F120A214Cf"
+    ]
+  },
+  "2580": {
+    "validators": 1,
+    "unique_assigned": 1846,
+    "total_perf": 0.9989159891598915,
+    "total_assigned": 1845,
+    "total_included": 1843,
+    "manager_address": "0x91eC68005D3114771F158F87224825965230a974",
+    "used_addresses": [
+      "0x91eC68005D3114771F158F87224825965230a974"
+    ],
+    "testnet_ea_member": true
+  },
+  "2581": {
+    "validators": 1,
+    "unique_assigned": 4334,
+    "total_perf": 0.8959390862944162,
+    "total_assigned": 4334,
+    "total_included": 3883,
+    "manager_address": "0xa0E1C233e1Dc195aEC608F050E85e2c8000acf11",
+    "used_addresses": [
+      "0xa0E1C233e1Dc195aEC608F050E85e2c8000acf11"
+    ]
+  },
+  "2582": {
+    "validators": 2,
+    "unique_assigned": 4270,
+    "total_perf": 0.9916861826697893,
+    "total_assigned": 8540,
+    "total_included": 8469,
+    "manager_address": "0x1CEd8b9675B0e1A0732A39870B4af086A8502222",
+    "used_addresses": [
+      "0x1CEd8b9675B0e1A0732A39870B4af086A8502222"
+    ]
+  },
+  "2583": {
+    "validators": 10,
+    "unique_assigned": 4270,
+    "total_perf": 0.9994378337861894,
+    "total_assigned": 42692,
+    "total_included": 42668,
+    "manager_address": "0xFb323682E0fF055EE9d1Eaa463a9E67B1cB3d45d",
+    "used_addresses": [
+      "0xFb323682E0fF055EE9d1Eaa463a9E67B1cB3d45d"
+    ]
+  },
+  "2584": {
+    "validators": 1,
+    "unique_assigned": 4268,
+    "total_perf": 0.9995313964386129,
+    "total_assigned": 4268,
+    "total_included": 4266,
+    "manager_address": "0xf7Ad1b25736d8fe9Fc5B8e2E70684E01440bDDf0",
+    "used_addresses": [
+      "0xBb7362c7d06A9a6CD008ef7D8d9a45fa2942c750",
+      "0xf7Ad1b25736d8fe9Fc5B8e2E70684E01440bDDf0"
+    ]
+  },
+  "2585": {
+    "validators": 1,
+    "unique_assigned": 4268,
+    "total_perf": 0.0,
+    "total_assigned": 4268,
+    "total_included": 0,
+    "manager_address": "0xdA1d0f6685349281F9C22a330005602D8c5f9689",
+    "used_addresses": [
+      "0xdA1d0f6685349281F9C22a330005602D8c5f9689"
+    ]
+  },
+  "2586": {
+    "validators": 11,
+    "unique_assigned": 4240,
+    "total_perf": 0.9681321037958396,
+    "total_assigned": 23315,
+    "total_included": 22572,
+    "manager_address": "0x3e9C08C4ED1573FF6611b3EFD6be8806AC5d9380",
+    "used_addresses": [
+      "0x3e9C08C4ED1573FF6611b3EFD6be8806AC5d9380"
+    ]
+  },
+  "2587": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0xD909724B732626F32f1443B547508695Bba29828",
+    "used_addresses": [
+      "0x06fdBb8A46Bf0A12447DeB765C025bB7CABD9bd2",
+      "0xD909724B732626F32f1443B547508695Bba29828"
+    ]
+  },
+  "2588": {
+    "validators": 1,
+    "unique_assigned": 1648,
+    "total_perf": 0.8306010928961749,
+    "total_assigned": 1647,
+    "total_included": 1368,
+    "manager_address": "0xD68A6715B66BEb0Fd4288732CC7c65A9F82C2A87",
+    "used_addresses": [
+      "0xD68A6715B66BEb0Fd4288732CC7c65A9F82C2A87"
+    ]
+  },
+  "2589": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x58da8d4600c4f1Ab184b1fd81e4E8955D321F2f9",
+    "used_addresses": [
+      "0x58da8d4600c4f1Ab184b1fd81e4E8955D321F2f9"
+    ]
+  },
+  "2590": {
+    "validators": 1,
+    "unique_assigned": 4022,
+    "total_perf": 0.8488314271506713,
+    "total_assigned": 4022,
+    "total_included": 3414,
+    "manager_address": "0x58da8d4600c4f1Ab184b1fd81e4E8955D321F2f9",
+    "used_addresses": [
+      "0x58da8d4600c4f1Ab184b1fd81e4E8955D321F2f9"
+    ]
+  },
+  "2591": {
+    "validators": 10,
+    "unique_assigned": 4022,
+    "total_perf": 0.9878486816965991,
+    "total_assigned": 39255,
+    "total_included": 38778,
+    "manager_address": "0x86064C1B290AC99dd606Bb56B3f0D76eC64021c9",
+    "used_addresses": [
+      "0x86064C1B290AC99dd606Bb56B3f0D76eC64021c9"
+    ]
+  },
+  "2592": {
+    "validators": 1,
+    "unique_assigned": 3831,
+    "total_perf": 0.9973897154789872,
+    "total_assigned": 3831,
+    "total_included": 3821,
+    "manager_address": "0x5499B0fCf17CcD2af0D851D2fF78Fabcc2C93De0",
+    "used_addresses": [
+      "0x5499B0fCf17CcD2af0D851D2fF78Fabcc2C93De0",
+      "0xde89C62e2BAFe11F8ebaFA07be2fDf88B32Ed756"
+    ]
+  },
+  "2593": {
+    "validators": 1,
+    "unique_assigned": 3163,
+    "total_perf": 0.9200126462219412,
+    "total_assigned": 3163,
+    "total_included": 2910,
+    "manager_address": "0x1Ee0B973C8cf92ABe02119Ae6A193BC84a720A1E",
+    "used_addresses": [
+      "0x1Ee0B973C8cf92ABe02119Ae6A193BC84a720A1E"
+    ]
+  },
+  "2594": {
+    "validators": 2,
+    "unique_assigned": 3161,
+    "total_perf": 0.9387851945586839,
+    "total_assigned": 6322,
+    "total_included": 5935,
+    "manager_address": "0x8b7EfB25028c6DB03e6c602a7C3c864FDA1537f0",
+    "used_addresses": [
+      "0x8b7EfB25028c6DB03e6c602a7C3c864FDA1537f0"
+    ]
+  },
+  "2595": {
+    "validators": 10,
+    "unique_assigned": 3161,
+    "total_perf": 0.990285424973103,
+    "total_assigned": 31602,
+    "total_included": 31295,
+    "manager_address": "0x32cFb8768a369333b75e013e3e0E7A139fE2123C",
+    "used_addresses": [
+      "0x32cFb8768a369333b75e013e3e0E7A139fE2123C"
+    ]
+  },
+  "2596": {
+    "validators": 1,
+    "unique_assigned": 3133,
+    "total_perf": 0.981487392275774,
+    "total_assigned": 3133,
+    "total_included": 3075,
+    "manager_address": "0x403D6286841eF002d0b4b2Ac731f331b0c1CC7F1",
+    "used_addresses": [
+      "0x403D6286841eF002d0b4b2Ac731f331b0c1CC7F1"
+    ]
+  },
+  "2597": {
+    "validators": 1,
+    "unique_assigned": 2996,
+    "total_perf": 0.9979973297730307,
+    "total_assigned": 2996,
+    "total_included": 2990,
+    "manager_address": "0x2aFefDd2cb0cb941b90c451998578A5d1DEeDfE8",
+    "used_addresses": [
+      "0x2aFefDd2cb0cb941b90c451998578A5d1DEeDfE8"
+    ]
+  },
+  "2598": {
+    "validators": 1,
+    "unique_assigned": 2934,
+    "total_perf": 0.9976141785957737,
+    "total_assigned": 2934,
+    "total_included": 2927,
+    "manager_address": "0xc7dDB83C1AAB91C2feC498E6912B388283Da5449",
+    "used_addresses": [
+      "0xc7dDB83C1AAB91C2feC498E6912B388283Da5449"
+    ]
+  },
+  "2599": {
+    "validators": 1,
+    "unique_assigned": 2934,
+    "total_perf": 0.9976141785957737,
+    "total_assigned": 2934,
+    "total_included": 2927,
+    "manager_address": "0x2A9212fc9e60872F32561C0D2E1fdE5Ea32666d9",
+    "used_addresses": [
+      "0x2A9212fc9e60872F32561C0D2E1fdE5Ea32666d9"
+    ]
+  },
+  "2600": {
+    "validators": 1,
+    "unique_assigned": 2934,
+    "total_perf": 0.9976141785957737,
+    "total_assigned": 2934,
+    "total_included": 2927,
+    "manager_address": "0x9e9b391344917d88D3eeb9144089dc8f72f42583",
+    "used_addresses": [
+      "0x9e9b391344917d88D3eeb9144089dc8f72f42583"
+    ]
+  },
+  "2601": {
+    "validators": 1,
+    "unique_assigned": 2934,
+    "total_perf": 0.9976141785957737,
+    "total_assigned": 2934,
+    "total_included": 2927,
+    "manager_address": "0x261F436676cFA456a8F086a850160E97550AEA9C",
+    "used_addresses": [
+      "0x261F436676cFA456a8F086a850160E97550AEA9C"
+    ],
+    "testnet_ea_member": true
+  },
+  "2602": {
+    "validators": 1,
+    "unique_assigned": 2934,
+    "total_perf": 0.9969325153374233,
+    "total_assigned": 2934,
+    "total_included": 2925,
+    "manager_address": "0x6210477B3025BF5ea50A35D39e7D2875dC11661c",
+    "used_addresses": [
+      "0x6210477B3025BF5ea50A35D39e7D2875dC11661c"
+    ],
+    "testnet_ea_member": true
+  },
+  "2603": {
+    "validators": 3,
+    "unique_assigned": 2929,
+    "total_perf": 0.9963582565153067,
+    "total_assigned": 8787,
+    "total_included": 8755,
+    "manager_address": "0x91eC68005D3114771F158F87224825965230a974",
+    "used_addresses": [
+      "0x91eC68005D3114771F158F87224825965230a974"
+    ]
+  },
+  "2604": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x2f893352dF2415Fb85F95335c39cE557Fd2EA39f",
+    "used_addresses": [
+      "0x2f893352dF2415Fb85F95335c39cE557Fd2EA39f"
+    ]
+  },
+  "2605": {
+    "validators": 1,
+    "unique_assigned": 2669,
+    "total_perf": 0.9936305732484076,
+    "total_assigned": 2669,
+    "total_included": 2652,
+    "manager_address": "0x2f893352dF2415Fb85F95335c39cE557Fd2EA39f",
+    "used_addresses": [
+      "0x2f893352dF2415Fb85F95335c39cE557Fd2EA39f"
+    ]
+  },
+  "2606": {
+    "validators": 10,
+    "unique_assigned": 2669,
+    "total_perf": 0.4738242458309912,
+    "total_assigned": 26685,
+    "total_included": 12644,
+    "manager_address": "0x32f5660665a7A903D8c4B7983B36b973e0F67fcd",
+    "used_addresses": [
+      "0x32f5660665a7A903D8c4B7983B36b973e0F67fcd"
+    ]
+  },
+  "2607": {
+    "validators": 2,
+    "unique_assigned": 2668,
+    "total_perf": 0.0,
+    "total_assigned": 5091,
+    "total_included": 0,
+    "manager_address": "0x0cb25A140c452fbD47F3FF363E8cF0bAb8603b55",
+    "used_addresses": [
+      "0x0cb25A140c452fbD47F3FF363E8cF0bAb8603b55"
+    ]
+  },
+  "2608": {
+    "validators": 2,
+    "unique_assigned": 2668,
+    "total_perf": 0.0,
+    "total_assigned": 5336,
+    "total_included": 0,
+    "manager_address": "0x9C6584B2b01A9069976Cb21534F1D60483157f89",
+    "used_addresses": [
+      "0x9C6584B2b01A9069976Cb21534F1D60483157f89"
+    ]
+  },
+  "2609": {
+    "validators": 1,
+    "unique_assigned": 2486,
+    "total_perf": 0.998793242156074,
+    "total_assigned": 2486,
+    "total_included": 2483,
+    "manager_address": "0x450E6eac6aE354AD25b1b3ab579970eA1ffdE1BE",
+    "used_addresses": [
+      "0x450E6eac6aE354AD25b1b3ab579970eA1ffdE1BE"
+    ],
+    "testnet_ea_member": true
+  },
+  "2610": {
+    "validators": 1,
+    "unique_assigned": 2422,
+    "total_perf": 0.0,
+    "total_assigned": 2422,
+    "total_included": 0,
+    "manager_address": "0x8fa84759562491B2b92fA649971a236054f5C413",
+    "used_addresses": [
+      "0x8fa84759562491B2b92fA649971a236054f5C413"
+    ]
+  },
+  "2611": {
+    "validators": 10,
+    "unique_assigned": 1907,
+    "total_perf": 0.9991606777527147,
+    "total_assigned": 19063,
+    "total_included": 19047,
+    "manager_address": "0xa4dDE78906b73133296D43f23Ca4b41009059123",
+    "used_addresses": [
+      "0x57810cBDc52191605Bc64eF03e26335dc2F055a6",
+      "0xa4dDE78906b73133296D43f23Ca4b41009059123"
+    ],
+    "testnet_ea_member": true
+  },
+  "2612": {
+    "validators": 10,
+    "unique_assigned": 1720,
+    "total_perf": 0.9840683893530212,
+    "total_assigned": 15441,
+    "total_included": 15195,
+    "manager_address": "0x339019eb2F6890107B3A6565a37059152f08eDaB",
+    "used_addresses": [
+      "0x339019eb2F6890107B3A6565a37059152f08eDaB"
+    ]
+  },
+  "2613": {
+    "validators": 1,
+    "unique_assigned": 1524,
+    "total_perf": 0.20406824146981628,
+    "total_assigned": 1524,
+    "total_included": 311,
+    "manager_address": "0xB170fB581932eBb1bF91C01708847dF2eE6C9DB3",
+    "used_addresses": [
+      "0xB170fB581932eBb1bF91C01708847dF2eE6C9DB3"
+    ]
+  },
+  "2614": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x226954CD8a6Dd241d5A13Dd525Bd7B89067b11e5",
+    "used_addresses": [
+      "0x226954CD8a6Dd241d5A13Dd525Bd7B89067b11e5"
+    ]
+  },
+  "2616": {
+    "validators": 8,
+    "unique_assigned": 952,
+    "total_perf": 0.9858250869216368,
+    "total_assigned": 7478,
+    "total_included": 7372,
+    "manager_address": "0x8CFA9cb53f8C0E3E50B955a8D2dAE8df4F3daaDf",
+    "used_addresses": [
+      "0x8CFA9cb53f8C0E3E50B955a8D2dAE8df4F3daaDf"
+    ]
+  },
+  "2617": {
+    "validators": 1,
+    "unique_assigned": 952,
+    "total_perf": 0.0,
+    "total_assigned": 952,
+    "total_included": 0,
+    "manager_address": "0x728D4Be7A4bb03973f6ae638785AaD9BECea7bFc",
+    "used_addresses": [
+      "0x728D4Be7A4bb03973f6ae638785AaD9BECea7bFc"
+    ]
+  },
+  "2618": {
+    "validators": 10,
+    "unique_assigned": 952,
+    "total_perf": 0.7296047098402019,
+    "total_assigned": 9512,
+    "total_included": 6940,
+    "manager_address": "0x2D1E7B6E6284409e16991dE76d2A82847a7d61C5",
+    "used_addresses": [
+      "0x2D1E7B6E6284409e16991dE76d2A82847a7d61C5"
+    ],
+    "testnet_ea_member": true
+  },
+  "2619": {
+    "validators": 3,
+    "unique_assigned": 950,
+    "total_perf": 0.46511627906976744,
+    "total_assigned": 1634,
+    "total_included": 760,
+    "manager_address": "0x99dD6519ae8B8fDC550Fcf9914526Ffb9b004e6A",
+    "used_addresses": [
+      "0x99dD6519ae8B8fDC550Fcf9914526Ffb9b004e6A"
+    ]
+  },
+  "2620": {
+    "validators": 1,
+    "unique_assigned": 647,
+    "total_perf": 0.0,
+    "total_assigned": 647,
+    "total_included": 0,
+    "manager_address": "0x6cbb8ba9e93a295F6fa0f8eCa0000EA9Db083059",
+    "used_addresses": [
+      "0x6cbb8ba9e93a295F6fa0f8eCa0000EA9Db083059"
+    ]
+  },
+  "2621": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x6cbb8ba9e93a295F6fa0f8eCa0000EA9Db083059",
+    "used_addresses": [
+      "0x6cbb8ba9e93a295F6fa0f8eCa0000EA9Db083059"
+    ]
+  },
+  "2622": {
+    "validators": 2,
+    "unique_assigned": 683,
+    "total_perf": 0.5714285714285714,
+    "total_assigned": 1365,
+    "total_included": 780,
+    "manager_address": "0xdeA3c06EEe614bF84e74d505173822236c8Ad135",
+    "used_addresses": [
+      "0xdeA3c06EEe614bF84e74d505173822236c8Ad135"
+    ]
+  },
+  "2623": {
+    "validators": 1,
+    "unique_assigned": 1142,
+    "total_perf": 0.9649737302977233,
+    "total_assigned": 1142,
+    "total_included": 1102,
+    "manager_address": "0xdeA3c06EEe614bF84e74d505173822236c8Ad135",
+    "used_addresses": [
+      "0xdeA3c06EEe614bF84e74d505173822236c8Ad135"
+    ]
+  },
+  "2624": {
+    "validators": 10,
+    "unique_assigned": 682,
+    "total_perf": 0.9955992372011149,
+    "total_assigned": 6817,
+    "total_included": 6787,
+    "manager_address": "0x28c42De479E57cc0c90B8A3EcEb406dc173aD7cC",
+    "used_addresses": [
+      "0x28c42De479E57cc0c90B8A3EcEb406dc173aD7cC"
+    ]
+  },
+  "2625": {
+    "validators": 1,
+    "unique_assigned": 681,
+    "total_perf": 0.0,
+    "total_assigned": 681,
+    "total_included": 0,
+    "manager_address": "0x85a3C880ff7b12CE34a2B98855379c1b438C4e27",
+    "used_addresses": [
+      "0x85a3C880ff7b12CE34a2B98855379c1b438C4e27"
+    ]
+  },
+  "2626": {
+    "validators": 1,
+    "unique_assigned": 681,
+    "total_perf": 0.0,
+    "total_assigned": 681,
+    "total_included": 0,
+    "manager_address": "0xa7BCffaac76E2e9CD44A7900a6d49540F2258865",
+    "used_addresses": [
+      "0xa7BCffaac76E2e9CD44A7900a6d49540F2258865"
+    ]
+  },
+  "2627": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x17C86603c0344eF19187cE21fBDd745026301f26",
+    "used_addresses": [
+      "0x17C86603c0344eF19187cE21fBDd745026301f26"
+    ]
+  },
+  "2628": {
+    "validators": 1,
+    "unique_assigned": 681,
+    "total_perf": 0.9133627019089574,
+    "total_assigned": 681,
+    "total_included": 622,
+    "manager_address": "0x9c20c712DB620E11FCC7594351644ca3389204B8",
+    "used_addresses": [
+      "0x9c20c712DB620E11FCC7594351644ca3389204B8"
+    ]
+  },
+  "2629": {
+    "validators": 1,
+    "unique_assigned": 681,
+    "total_perf": 0.0,
+    "total_assigned": 681,
+    "total_included": 0,
+    "manager_address": "0xaD422F1E5e84968a5Af3261Dd85b081c295fAA3b",
+    "used_addresses": [
+      "0xaD422F1E5e84968a5Af3261Dd85b081c295fAA3b"
+    ]
+  },
+  "2630": {
+    "validators": 3,
+    "unique_assigned": 681,
+    "total_perf": 1.0,
+    "total_assigned": 1285,
+    "total_included": 1285,
+    "manager_address": "0x2404D0170536A843D7FD024c10A4059EE4293915",
+    "used_addresses": [
+      "0x2404D0170536A843D7FD024c10A4059EE4293915"
+    ]
+  },
+  "2631": {
+    "validators": 1,
+    "unique_assigned": 680,
+    "total_perf": 0.9955882352941177,
+    "total_assigned": 680,
+    "total_included": 677,
+    "manager_address": "0x395f6F109bbb8da21027D1F81448186B1Dd7d9b3",
+    "used_addresses": [
+      "0x395f6F109bbb8da21027D1F81448186B1Dd7d9b3"
+    ]
+  },
+  "2632": {
+    "validators": 2,
+    "unique_assigned": 178,
+    "total_perf": 0.9606741573033708,
+    "total_assigned": 356,
+    "total_included": 342,
+    "manager_address": "0x3A658Aa38b34924DeEdE08Ce2c6C83810a5e2f17",
+    "used_addresses": [
+      "0x3A658Aa38b34924DeEdE08Ce2c6C83810a5e2f17"
+    ]
+  },
+  "2633": {
+    "validators": 1,
+    "unique_assigned": 178,
+    "total_perf": 0.9887640449438202,
+    "total_assigned": 178,
+    "total_included": 176,
+    "manager_address": "0x470bEF432c5E28233098658C12887816023B9dC3",
+    "used_addresses": [
+      "0x470bEF432c5E28233098658C12887816023B9dC3"
+    ]
+  },
+  "2634": {
+    "validators": 1,
+    "unique_assigned": 54,
+    "total_perf": 0.9814814814814815,
+    "total_assigned": 54,
+    "total_included": 53,
+    "manager_address": "0x0139527982445069321f7E74d268Ae11d2aD39D0",
+    "used_addresses": [
+      "0x0139527982445069321f7E74d268Ae11d2aD39D0"
+    ]
+  },
+  "2635": {
+    "validators": 1,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0xefe20ED19f4De87d68d19Ec9a935Bcb29B88A83c",
+    "used_addresses": [
+      "0xefe20ED19f4De87d68d19Ec9a935Bcb29B88A83c"
+    ]
+  },
+  "2636": {
+    "validators": 1,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x20DF962D2aB9adE7A1535b4e2654e44205DF2c1e",
+    "used_addresses": [
+      "0x20DF962D2aB9adE7A1535b4e2654e44205DF2c1e"
+    ]
+  },
+  "2637": {
+    "validators": 1,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x2b5ea9f63d9E3d7039d5789dABa842d7ED207032",
+    "used_addresses": [
+      "0x2b5ea9f63d9E3d7039d5789dABa842d7ED207032"
+    ]
+  },
+  "2638": {
+    "validators": 1,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x3a088254c441187afC05C739d6275Fc5eBe18716",
+    "used_addresses": [
+      "0x3a088254c441187afC05C739d6275Fc5eBe18716"
+    ]
+  },
+  "2639": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x629422D83ffc5436DD9Be2925E68242aA0E6Db47",
+    "used_addresses": [
+      "0x629422D83ffc5436DD9Be2925E68242aA0E6Db47"
+    ]
+  },
+  "2640": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x394070A6D1cB8E1848321cF20b7b7A640D39A5FC",
+    "used_addresses": [
+      "0x394070A6D1cB8E1848321cF20b7b7A640D39A5FC"
+    ],
+    "testnet_ea_member": true
+  },
+  "2641": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0xeD2a91Cd9496F6599D8159C903F9328E3f0f4500",
+    "used_addresses": [
+      "0xeD2a91Cd9496F6599D8159C903F9328E3f0f4500"
+    ]
+  },
+  "2642": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x6A78b18F5EEBDF9B2b13A1c930Ea41f8f90D2b67",
+    "used_addresses": [
+      "0x6A78b18F5EEBDF9B2b13A1c930Ea41f8f90D2b67"
+    ]
+  },
+  "2643": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x07a2A35b44CAfaC0ad21F1EBEDee7A007260b64D",
+    "used_addresses": [
+      "0x07a2A35b44CAfaC0ad21F1EBEDee7A007260b64D"
+    ]
+  },
+  "2644": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x068d13f6847450FC5762f2501776F41318D2A1D2",
+    "used_addresses": [
+      "0x068d13f6847450FC5762f2501776F41318D2A1D2"
+    ]
+  },
+  "2645": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x9336876114e5D802eA0770e940b1EDfBa9AF7240",
+    "used_addresses": [
+      "0x9336876114e5D802eA0770e940b1EDfBa9AF7240"
+    ]
+  },
+  "2646": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0xe5a802314602d45ce8734Df30701a45F7875759A",
+    "used_addresses": [
+      "0xe5a802314602d45ce8734Df30701a45F7875759A"
+    ]
+  },
+  "2647": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0x22ee763B2F817D4a5c62aE32DD77664643ddF63E",
+    "used_addresses": [
+      "0x22ee763B2F817D4a5c62aE32DD77664643ddF63E"
+    ]
+  },
+  "2648": {
+    "validators": 0,
+    "unique_assigned": 0,
+    "total_perf": 0,
+    "total_assigned": 0,
+    "total_included": 0,
+    "manager_address": "0xF4c1b69A65F3fDbAFCAe0786C5fb02DaD3E0F353",
+    "used_addresses": [
+      "0xF4c1b69A65F3fDbAFCAe0786C5fb02DaD3E0F353"
+    ]
+  }
+}
