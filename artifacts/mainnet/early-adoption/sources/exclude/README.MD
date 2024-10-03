@@ -11,3 +11,12 @@ Addresses associated with the slashed Ethereum validators on the Ethereum Mainne
 ## [pro-node-operators.csv](pro-node-operators.csv)
 
 Addresses associated with the Professional Node Operators. Complied from [raw sources](../../raw_sources/pro_operators/README.MD).
+
+## [rocketpool-solo-stakers-deposit-addresses.csv](rocketpool-solo-stakers-deposit-addresses.csv)
+
+To ensure single entry of the RP solo stakers deposit addresses should be excluded from the other lists since Withdrawal Addresses are used instead
+
+## [rated-solo-wc-addresses.csv](rated-solo-wc-addresses.csv)
+
+To ensure single entry of the Rated solo stakers WC addresses should be excluded from the other lists since deposit addresses are used instead.
+Rocket Pool withdrawal addresses were not included into the file due to their inclusion instead of deposit addresses.

@@ -24,9 +24,9 @@ Buyers of [Lido-branded DAppNodes](https://dappnode.com/collections/frontpage/pr
 
 [Obol Techne Credentials Silver](https://etherscan.io/token/0xfdb3986f0c97c3c92af3c318d7d2742d8f7ed8cc) holders. Data fetched using https://etherscan.io/ as of September 30.
 
-## [rated-solo-staker.csv](rated-solo-staker.csv)
+## [rated-solo-stakers.csv](rated-solo-stakers.csv)
 
-Latest Rated's list of solo-stakers. Source file will be published by [Rated Network](https://www.rated.network/) shortly at [GitHub](https://github.com/rated-network/solo-stakers).
+Latest Rated's list of solo-stakers deposit addresses. Source file will be published by [Rated Network](https://www.rated.network/) shortly at [GitHub](https://github.com/rated-network/solo-stakers).
 
 ## [stake-cat-gnosischain-solo-stakers.csv)](stake-cat-gnosischain-solo-stakers.csv)
 

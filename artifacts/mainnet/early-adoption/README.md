@@ -17,3 +17,5 @@ node compose.js
 - `addresses.json` - plain list of unique addresses
 - `merkle-tree.json` - Merkle tree of the list
 - `merkle-proofs.json` - Merkle proofs for each address
+- `exclusions.csv` - List of excluded addresses
+- `sources.csv` - Detailed info about sources of inclusion
