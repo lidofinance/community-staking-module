@@ -1,6 +1,6 @@
 # Solo stakers from the lists compiled by StakeCat
 
-Commit reference - [`36fe3648c226231031409280fac0a42cd91030b8`](https://github.com/Stake-Cat/Solo-Stakers/commit/36fe3648c226231031409280fac0a42cd91030b8)
+Commit reference - [`1e3d7140b589d3da017820dcdde5a4e6563ade31`](https://github.com/Stake-Cat/Solo-Stakers/commit/1e3d7140b589d3da017820dcdde5a4e6563ade31)
 
 ## [Gnosischain-Solo-Stakers.csv](Gnosischain-Solo-Stakers.csv)
 

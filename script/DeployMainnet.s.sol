@@ -72,7 +72,7 @@ contract DeployMainnet is DeployBase {
             .elRewardsStealingReporter = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
         // EarlyAdoption
         config
-            .earlyAdoptionTreeRoot = 0x7004dc59ad47c2abc8476816344cd0309ed37e2deb5b29b6059d0054511374b1;
+            .earlyAdoptionTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2;
         config.earlyAdoptionBondCurve = new uint256[](2);
         // 1.5 -> 1.3
         config.earlyAdoptionBondCurve[0] = 1.5 ether;

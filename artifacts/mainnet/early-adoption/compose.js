@@ -8,7 +8,7 @@ const csvFiles = [
   "sources/obol-techne-credentials-base.csv",
   "sources/obol-techne-credentials-bronze.csv",
   "sources/obol-techne-credentials-silver.csv",
-  "sources/rated-solo-staker.csv",
+  "sources/rated-solo-stakers.csv",
   "sources/stake-cat-gnosischain-solo-stakers.csv",
   "sources/stake-cat-rocketpool-solo-stakers.csv",
   "sources/stake-cat-solo-stakers-B.csv",
@@ -24,6 +24,8 @@ const csvFilesToExclude = [
     "sources/exclude/ever-slashed.csv",
     "sources/exclude/pro-node-operators.csv",
     "sources/exclude/csm-testnet-bad-performers.csv",
+    "sources/exclude/rated-solo-wc-addresses.csv",
+    "sources/exclude/rocketpool-solo-stakers-deposit-addresses.csv",
 ]
 
 
