@@ -71,9 +71,8 @@ contract DeployMainnet is DeployBase {
         config
             .elRewardsStealingReporter = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
         // EarlyAdoption
-        // TODO: Set earlyAdoptionTreeRoot
         config
-            .earlyAdoptionTreeRoot = 0xc9a9c1576cf4f3213ad9075b72a1f1b147914a252ad927fa4ca3460ff0723ca9;
+            .earlyAdoptionTreeRoot = 0x7004dc59ad47c2abc8476816344cd0309ed37e2deb5b29b6059d0054511374b1;
         config.earlyAdoptionBondCurve = new uint256[](2);
         // 1.5 -> 1.3
         config.earlyAdoptionBondCurve[0] = 1.5 ether;
@@ -81,7 +80,6 @@ contract DeployMainnet is DeployBase {
 
         // GateSeal
         config.gateSealFactory = 0x6C82877cAC5a7A739f16Ca0A89c0A328B8764A24;
-        // TODO: Reconsider before the mainnet launch
         config.sealingCommittee = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
         config.sealDuration = 6 days;
         config.sealExpiryTimestamp = block.timestamp + 365 days;
