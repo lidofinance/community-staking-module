@@ -13,6 +13,9 @@ env:
   FOUNDRY_PROFILE: ci
   TERM: ansi
 
+permissions:
+  security-events: write
+
 jobs:
   security:
     uses: lidofinance/linters/.github/workflows/security.yml@master
