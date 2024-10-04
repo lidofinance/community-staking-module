@@ -39,9 +39,9 @@ interface IReportAsyncProcessor {
     /// Only called when, for the given reference slot:
     ///
     ///   1. there previously was a consensus report; AND
-    ///   1. processing of the consensus report hasn't started yet; AND
-    ///   2. report processing deadline is not expired yet; AND
-    ///   3. there's no consensus report now (otherwise, `submitConsensusReport` is called instead).
+    ///   2. processing of the consensus report hasn't started yet; AND
+    ///   3. report processing deadline is not expired yet; AND
+    ///   4. there's no consensus report now (otherwise, `submitConsensusReport` is called instead).
     ///
     /// Can be called even when there's no submitted non-discarded consensus report for the current
     /// reference slot, i.e. can be called multiple times in succession.
