@@ -16,26 +16,27 @@ contract DeployMainnet is DeployBase {
         config.proxyAdmin = config.aragonAgent;
 
         // Oracle
-        config.secondsPerSlot = 12;
-        config.slotsPerEpoch = 32;
-        config.clGenesisTime = 1606824023;
+        config.secondsPerSlot = 12; // https://github.com/eth-clients/mainnet/blob/f6b7882618a5ad2c1d2731ae35e5d16a660d5bb7/metadata/config.yaml#L58
+        config.slotsPerEpoch = 32; // https://github.com/ethereum/consensus-specs/blob/7df1ce30384b13d01617f8ddf930f4035da0f689/specs/phase0/beacon-chain.md?plain=1#L246
+        config.clGenesisTime = 1606824023; // https://github.com/eth-clients/mainnet/blob/f6b7882618a5ad2c1d2731ae35e5d16a660d5bb7/README.md?plain=1#L10
         config.oracleReportEpochsPerFrame = 225 * 28; // 28 days
         config.fastLaneLengthSlots = 1800;
         config.consensusVersion = 1;
         config.avgPerfLeewayBP = 500;
         config.oracleMembers = new address[](9);
-        config.oracleMembers[0] = 0x140Bd8FbDc884f48dA7cb1c09bE8A2fAdfea776E;
-        config.oracleMembers[1] = 0xA7410857ABbf75043d61ea54e07D57A6EB6EF186;
-        config.oracleMembers[2] = 0x404335BcE530400a5814375E7Ec1FB55fAff3eA2;
-        config.oracleMembers[3] = 0x946D3b081ed19173dC83Cd974fC69e1e760B7d78;
-        config.oracleMembers[4] = 0x007DE4a5F7bc37E2F26c0cb2E8A95006EE9B89b5;
-        config.oracleMembers[5] = 0xe57B3792aDCc5da47EF4fF588883F0ee0c9835C9;
-        config.oracleMembers[6] = 0x61c91ECd902EB56e314bB2D5c5C07785444Ea1c8;
-        config.oracleMembers[7] = 0x1Ca0fEC59b86F549e1F1184d97cb47794C8Af58d;
-        config.oracleMembers[8] = 0xc79F702202E3A6B0B6310B537E786B9ACAA19BAf;
+        config.oracleMembers[0] = 0x140Bd8FbDc884f48dA7cb1c09bE8A2fAdfea776E; // Chorus One
+        config.oracleMembers[1] = 0xA7410857ABbf75043d61ea54e07D57A6EB6EF186; // Kyber Network
+        config.oracleMembers[2] = 0x404335BcE530400a5814375E7Ec1FB55fAff3eA2; // Staking Facilities
+        config.oracleMembers[3] = 0x946D3b081ed19173dC83Cd974fC69e1e760B7d78; // Stakefish
+        config.oracleMembers[4] = 0x007DE4a5F7bc37E2F26c0cb2E8A95006EE9B89b5; // P2P
+        config.oracleMembers[5] = 0xe57B3792aDCc5da47EF4fF588883F0ee0c9835C9; // MatrixedLink
+        config.oracleMembers[6] = 0x61c91ECd902EB56e314bB2D5c5C07785444Ea1c8; // bloXroute
+        config.oracleMembers[7] = 0x1Ca0fEC59b86F549e1F1184d97cb47794C8Af58d; // Instadapp
+        config.oracleMembers[8] = 0xc79F702202E3A6B0B6310B537E786B9ACAA19BAf; // Chainlayer
         config.hashConsensusQuorum = 5;
         // Verifier
         // NOTE: Deneb fork gIndexes. Should be updated according to `config.verifierSupportedEpoch` fork epoch if needed
+        // Check using `yarn run gindex`
         config.gIFirstWithdrawal = GIndex.wrap(
             0x0000000000000000000000000000000000000000000000000000000000e1c004
         );
@@ -62,7 +63,7 @@ contract DeployMainnet is DeployBase {
         config
             .chargePenaltyRecipient = 0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c; // locator.treasury()
         // Module
-        config.moduleType = "community-onchain-v1";
+        config.moduleType = "community-onchain-v1"; // Just a unique type name to be used by the off-chain tooling
         config.minSlashingPenaltyQuotient = 32;
         config.elRewardsStealingFine = 0.1 ether;
         config.maxKeysPerOperatorEA = 12; // 12 EA vals will result in approx 16 ETH worth of bond
@@ -72,7 +73,7 @@ contract DeployMainnet is DeployBase {
             .elRewardsStealingReporter = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
         // EarlyAdoption
         config
-            .earlyAdoptionTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2;
+            .earlyAdoptionTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
         config.earlyAdoptionBondCurve = new uint256[](2);
         // 1.5 -> 1.3
         config.earlyAdoptionBondCurve[0] = 1.5 ether;
