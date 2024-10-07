@@ -17,10 +17,13 @@ contract InvariantsBase is
     DeploymentFixtures,
     InvariantAsserts
 {
+    uint256 adminsCount;
+
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment(env.DEPLOY_CONFIG);
+        adminsCount = block.chainid == 1 ? 1 : 2;
     }
 }
 
@@ -44,7 +47,7 @@ contract CSModuleInvariants is InvariantsBase {
     function test_roles() public {
         assertEq(
             csm.getRoleMemberCount(csm.DEFAULT_ADMIN_ROLE()),
-            2,
+            adminsCount,
             "default admin"
         );
         assertEq(csm.getRoleMemberCount(csm.PAUSE_ROLE()), 1, "pause");
@@ -105,7 +108,7 @@ contract CSAccountingInvariants is InvariantsBase {
     function test_roles() public {
         assertEq(
             accounting.getRoleMemberCount(accounting.DEFAULT_ADMIN_ROLE()),
-            2,
+            adminsCount,
             "default admin"
         );
         assertEq(
@@ -176,7 +179,7 @@ contract CSFeeDistributorInvariants is InvariantsBase {
             feeDistributor.getRoleMemberCount(
                 feeDistributor.DEFAULT_ADMIN_ROLE()
             ),
-            2
+            adminsCount
         );
         assertEq(
             feeDistributor.getRoleMemberCount(feeDistributor.RECOVERER_ROLE()),
@@ -189,7 +192,7 @@ contract CSFeeOracleInvariant is InvariantsBase {
     function test_roles() public {
         assertEq(
             oracle.getRoleMemberCount(oracle.DEFAULT_ADMIN_ROLE()),
-            2,
+            adminsCount,
             "default admin"
         );
         assertEq(
