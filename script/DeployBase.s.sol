@@ -117,15 +117,15 @@ abstract contract DeployBase is Script {
         );
         (address[] memory members, ) = accountingConsensus.getMembers();
         uint256 quorum = accountingConsensus.getQuorum();
-        // FIXME Commented to avoid fail due to changes in Holesky AO config
-        // if (
-        //     keccak256(abi.encode(config.oracleMembers)) !=
-        //     keccak256(abi.encode(members)) ||
-        //     config.hashConsensusQuorum != quorum
-        // ) {
-        //     revert HashConsensusMismatch();
-        // }
-
+        if (block.chainid == 1) {
+            if (
+                keccak256(abi.encode(config.oracleMembers)) !=
+                keccak256(abi.encode(members)) ||
+                config.hashConsensusQuorum != quorum
+            ) {
+                revert HashConsensusMismatch();
+            }
+        }
         artifactDir = vm.envOr("ARTIFACTS_DIR", string("./artifacts/local/"));
         pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
         deployer = vm.addr(pk);

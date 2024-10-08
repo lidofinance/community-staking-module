@@ -29,10 +29,10 @@ contract DeployMainnet is DeployBase {
         config.oracleMembers[2] = 0x404335BcE530400a5814375E7Ec1FB55fAff3eA2; // Staking Facilities
         config.oracleMembers[3] = 0x946D3b081ed19173dC83Cd974fC69e1e760B7d78; // Stakefish
         config.oracleMembers[4] = 0x007DE4a5F7bc37E2F26c0cb2E8A95006EE9B89b5; // P2P
-        config.oracleMembers[5] = 0xe57B3792aDCc5da47EF4fF588883F0ee0c9835C9; // MatrixedLink
+        config.oracleMembers[5] = 0xc79F702202E3A6B0B6310B537E786B9ACAA19BAf; // Chainlayer
         config.oracleMembers[6] = 0x61c91ECd902EB56e314bB2D5c5C07785444Ea1c8; // bloXroute
         config.oracleMembers[7] = 0x1Ca0fEC59b86F549e1F1184d97cb47794C8Af58d; // Instadapp
-        config.oracleMembers[8] = 0xc79F702202E3A6B0B6310B537E786B9ACAA19BAf; // Chainlayer
+        config.oracleMembers[8] = 0xe57B3792aDCc5da47EF4fF588883F0ee0c9835C9; // MatrixedLink
         config.hashConsensusQuorum = 5;
         // Verifier
         // NOTE: Deneb fork gIndexes. Should be updated according to `config.verifierSupportedEpoch` fork epoch if needed
