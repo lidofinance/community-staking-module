@@ -179,11 +179,13 @@ contract CSFeeDistributorInvariants is InvariantsBase {
             feeDistributor.getRoleMemberCount(
                 feeDistributor.DEFAULT_ADMIN_ROLE()
             ),
-            adminsCount
+            adminsCount,
+            "default admin"
         );
         assertEq(
             feeDistributor.getRoleMemberCount(feeDistributor.RECOVERER_ROLE()),
-            0
+            0,
+            "recoverer"
         );
     }
 }
@@ -216,6 +218,16 @@ contract CSFeeOracleInvariant is InvariantsBase {
             oracle.getRoleMemberCount(oracle.RECOVERER_ROLE()),
             0,
             "recoverer"
+        );
+    }
+}
+
+contract HasConsensusInvariant is InvariantsBase {
+    function test_roles() public {
+        assertEq(
+            oracle.getRoleMemberCount(oracle.DEFAULT_ADMIN_ROLE()),
+            adminsCount,
+            "default admin"
         );
     }
 }

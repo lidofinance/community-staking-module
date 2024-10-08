@@ -24,12 +24,14 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 
 contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
     DeployParams private deployParams;
+    uint256 adminsCount;
 
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment(env.DEPLOY_CONFIG);
         deployParams = parseDeployParams(env.DEPLOY_CONFIG);
+        adminsCount = block.chainid == 1 ? 1 : 2;
     }
 
     function test_constructor() public {
@@ -60,18 +62,30 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertTrue(
             csm.hasRole(csm.STAKING_ROUTER_ROLE(), locator.stakingRouter())
         );
+        assertTrue(csm.getRoleMemberCount(csm.STAKING_ROUTER_ROLE()) == 1);
     }
 
     function test_roles() public {
         assertTrue(
             csm.hasRole(csm.DEFAULT_ADMIN_ROLE(), deployParams.aragonAgent)
         );
+        assertTrue(
+            csm.getRoleMemberCount(csm.DEFAULT_ADMIN_ROLE()) == adminsCount
+        );
         assertTrue(csm.hasRole(csm.PAUSE_ROLE(), address(gateSeal)));
+        assertEq(csm.getRoleMemberCount(csm.PAUSE_ROLE()), 1);
+        assertEq(csm.getRoleMemberCount(csm.RESUME_ROLE()), 0);
         assertTrue(
             csm.hasRole(
                 csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(),
                 address(deployParams.elRewardsStealingReporter)
             )
+        );
+        assertEq(
+            csm.getRoleMemberCount(
+                csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE()
+            ),
+            1
         );
         assertTrue(
             csm.hasRole(
@@ -79,7 +93,16 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
                 address(deployParams.easyTrackEVMScriptExecutor)
             )
         );
+        assertEq(
+            csm.getRoleMemberCount(
+                csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE()
+            ),
+            1
+        );
         assertTrue(csm.hasRole(csm.VERIFIER_ROLE(), address(verifier)));
+        assertEq(csm.getRoleMemberCount(csm.VERIFIER_ROLE()), 1);
+        assertEq(csm.getRoleMemberCount(csm.MODULE_MANAGER_ROLE()), 0);
+        assertEq(csm.getRoleMemberCount(csm.RECOVERER_ROLE()), 0);
     }
 
     function test_initialState() public {
@@ -106,12 +129,14 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
 
 contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
     DeployParams private deployParams;
+    uint256 adminsCount;
 
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment(env.DEPLOY_CONFIG);
         deployParams = parseDeployParams(env.DEPLOY_CONFIG);
+        adminsCount = block.chainid == 1 ? 1 : 2;
     }
 
     function test_constructor() public {
@@ -181,14 +206,25 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
                 deployParams.aragonAgent
             )
         );
+        assertEq(
+            accounting.getRoleMemberCount(accounting.DEFAULT_ADMIN_ROLE()),
+            adminsCount
+        );
+
         assertTrue(
             accounting.hasRole(accounting.PAUSE_ROLE(), address(gateSeal))
         );
+        assertEq(accounting.getRoleMemberCount(accounting.PAUSE_ROLE()), 1);
+
         assertTrue(
             accounting.hasRole(
                 accounting.SET_BOND_CURVE_ROLE(),
                 deployParams.setResetBondCurveAddress
             )
+        );
+        assertEq(
+            accounting.getRoleMemberCount(accounting.SET_BOND_CURVE_ROLE()),
+            2
         );
         assertTrue(
             accounting.hasRole(
@@ -196,6 +232,20 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
                 deployParams.setResetBondCurveAddress
             )
         );
+        assertEq(
+            accounting.getRoleMemberCount(accounting.RESET_BOND_CURVE_ROLE()),
+            2
+        );
+        assertEq(accounting.getRoleMemberCount(accounting.RESUME_ROLE()), 0);
+        assertEq(
+            accounting.getRoleMemberCount(accounting.ACCOUNTING_MANAGER_ROLE()),
+            0
+        );
+        assertEq(
+            accounting.getRoleMemberCount(accounting.MANAGE_BOND_CURVES_ROLE()),
+            0
+        );
+        assertEq(accounting.getRoleMemberCount(accounting.RECOVERER_ROLE()), 0);
     }
 
     function test_initialState() public {
@@ -228,12 +278,14 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
 
 contract CSFeeDistributorDeploymentTest is Test, Utilities, DeploymentFixtures {
     DeployParams private deployParams;
+    uint256 adminsCount;
 
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment(env.DEPLOY_CONFIG);
         deployParams = parseDeployParams(env.DEPLOY_CONFIG);
+        adminsCount = block.chainid == 1 ? 1 : 2;
     }
 
     function test_constructor() public {
@@ -248,6 +300,15 @@ contract CSFeeDistributorDeploymentTest is Test, Utilities, DeploymentFixtures {
                 feeDistributor.DEFAULT_ADMIN_ROLE(),
                 deployParams.aragonAgent
             )
+        );
+        assertTrue(
+            feeDistributor.getRoleMemberCount(
+                feeDistributor.DEFAULT_ADMIN_ROLE()
+            ) == adminsCount
+        );
+        assertEq(
+            feeDistributor.getRoleMemberCount(feeDistributor.RECOVERER_ROLE()),
+            0
         );
     }
 
@@ -278,12 +339,14 @@ contract CSFeeDistributorDeploymentTest is Test, Utilities, DeploymentFixtures {
 
 contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
     DeployParams private deployParams;
+    uint256 adminsCount;
 
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment(env.DEPLOY_CONFIG);
         deployParams = parseDeployParams(env.DEPLOY_CONFIG);
+        adminsCount = block.chainid == 1 ? 1 : 2;
     }
 
     function test_constructor() public {
@@ -307,7 +370,16 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
                 deployParams.aragonAgent
             )
         );
+        assertEq(
+            oracle.getRoleMemberCount(oracle.DEFAULT_ADMIN_ROLE()),
+            adminsCount
+        );
         assertTrue(oracle.hasRole(oracle.PAUSE_ROLE(), address(gateSeal)));
+        assertEq(oracle.getRoleMemberCount(oracle.PAUSE_ROLE()), 1);
+        assertEq(oracle.getRoleMemberCount(oracle.RESUME_ROLE()), 0);
+        assertEq(oracle.getRoleMemberCount(oracle.CONTRACT_MANAGER_ROLE()), 0);
+        assertEq(oracle.getRoleMemberCount(oracle.SUBMIT_DATA_ROLE()), 0);
+        assertEq(oracle.getRoleMemberCount(oracle.RECOVERER_ROLE()), 0);
     }
 
     function test_initialState() public {
@@ -344,12 +416,14 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
 
 contract HashConsensusDeploymentTest is Test, Utilities, DeploymentFixtures {
     DeployParams private deployParams;
+    uint256 adminsCount;
 
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment(env.DEPLOY_CONFIG);
         deployParams = parseDeployParams(env.DEPLOY_CONFIG);
+        adminsCount = block.chainid == 1 ? 1 : 2;
     }
 
     function test_constructor() public {
@@ -376,11 +450,47 @@ contract HashConsensusDeploymentTest is Test, Utilities, DeploymentFixtures {
                 deployParams.aragonAgent
             )
         );
+        assertEq(
+            hashConsensus.getRoleMemberCount(
+                hashConsensus.DEFAULT_ADMIN_ROLE()
+            ),
+            adminsCount
+        );
+
+        assertEq(
+            hashConsensus.getRoleMemberCount(
+                hashConsensus.MANAGE_MEMBERS_AND_QUORUM_ROLE()
+            ),
+            0
+        );
+        assertEq(
+            hashConsensus.getRoleMemberCount(
+                hashConsensus.DISABLE_CONSENSUS_ROLE()
+            ),
+            0
+        );
+        assertEq(
+            hashConsensus.getRoleMemberCount(
+                hashConsensus.MANAGE_FRAME_CONFIG_ROLE()
+            ),
+            0
+        );
+        assertEq(
+            hashConsensus.getRoleMemberCount(
+                hashConsensus.MANAGE_FAST_LANE_CONFIG_ROLE()
+            ),
+            0
+        );
+        assertEq(
+            hashConsensus.getRoleMemberCount(
+                hashConsensus.MANAGE_REPORT_PROCESSOR_ROLE()
+            ),
+            0
+        );
     }
 
     function test_initialState() public {
-        // FIXME Skip due to changes in quorum on Holesky
-        vm.skip(true);
+        vm.skip(block.chainid != 1);
         assertEq(hashConsensus.getQuorum(), deployParams.hashConsensusQuorum);
         (address[] memory members, ) = hashConsensus.getMembers();
         assertEq(
@@ -456,9 +566,12 @@ contract CSVerifierDeploymentTest is Test, Utilities, DeploymentFixtures {
             GIndex.unwrap(verifier.GI_FIRST_VALIDATOR_CURR()),
             GIndex.unwrap(deployParams.gIFirstValidator)
         );
-
         assertEq(
             Slot.unwrap(verifier.FIRST_SUPPORTED_SLOT()),
+            deployParams.verifierSupportedEpoch * deployParams.slotsPerEpoch
+        );
+        assertEq(
+            Slot.unwrap(verifier.PIVOT_SLOT()),
             deployParams.verifierSupportedEpoch * deployParams.slotsPerEpoch
         );
     }
