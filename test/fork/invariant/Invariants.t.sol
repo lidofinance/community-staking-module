@@ -222,7 +222,7 @@ contract CSFeeOracleInvariant is InvariantsBase {
     }
 }
 
-contract HasConsensusInvariant is InvariantsBase {
+contract HashConsensusInvariant is InvariantsBase {
     function test_roles() public {
         assertEq(
             oracle.getRoleMemberCount(oracle.DEFAULT_ADMIN_ROLE()),
