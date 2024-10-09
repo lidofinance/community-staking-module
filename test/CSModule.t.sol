@@ -5746,37 +5746,39 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
 
     function test_settleELRewardsStealingPenalty_withDuplicates() public {
         uint256 firstNoId = createNodeOperator();
+        uint256 secondNoId = createNodeOperator();
         uint256[] memory idsToSettle = new uint256[](3);
         idsToSettle[0] = firstNoId;
-        idsToSettle[2] = firstNoId;
+        idsToSettle[1] = secondNoId;
+        idsToSettle[2] = secondNoId;
 
-        uint256 bondBalanceBefore = accounting.getBond(firstNoId);
+        uint256 bondBalanceBefore = accounting.getBond(secondNoId);
 
         uint256 lockAmount = 1 ether;
         csm.reportELRewardsStealingPenalty(
-            firstNoId,
+            secondNoId,
             blockhash(block.number),
             lockAmount
         );
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(firstNoId);
+        emit CSModule.ELRewardsStealingPenaltySettled(secondNoId);
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
                 accounting.resetBondCurve.selector,
-                firstNoId
+                secondNoId
             )
         );
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
-        uint256 bondBalanceAfter = accounting.getBond(firstNoId);
+        uint256 bondBalanceAfter = accounting.getBond(secondNoId);
 
-        CSBondLock.BondLock memory firstLock = accounting.getLockedBondInfo(
-            firstNoId
+        CSBondLock.BondLock memory currentLock = accounting.getLockedBondInfo(
+            secondNoId
         );
-        assertEq(firstLock.amount, 0 ether);
-        assertEq(firstLock.retentionUntil, 0);
+        assertEq(currentLock.amount, 0 ether);
+        assertEq(currentLock.retentionUntil, 0);
         assertEq(
             bondBalanceAfter,
             bondBalanceBefore - lockAmount - csm.EL_REWARDS_STEALING_FINE()
