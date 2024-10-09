@@ -8,6 +8,8 @@ deploy_script_name := if chain == "mainnet" {
     "DeployHolesky"
 } else if chain == "devnet" {
     "DeployHoleskyDevnet"
+} else if chain == "devnet3" {
+    "DeployHoleskyDevnet3"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -17,6 +19,8 @@ deploy_implementations_script_name := if chain == "mainnet" {
 } else if chain == "holesky" {
     "DeployHoleskyImplementations"
 } else if chain == "devnet" {
+      "undefined"
+} else if chain == "devnet3" {
       "undefined"
 } else {
     error("Unsupported chain " + chain)
