@@ -5744,6 +5744,47 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         assertEq(secondLock.retentionUntil, 0);
     }
 
+    function test_settleELRewardsStealingPenalty_withDuplicates() public {
+        uint256 firstNoId = createNodeOperator();
+        uint256 secondNoId = createNodeOperator();
+        uint256[] memory idsToSettle = new uint256[](3);
+        idsToSettle[0] = firstNoId;
+        idsToSettle[1] = secondNoId;
+        idsToSettle[2] = secondNoId;
+
+        uint256 bondBalanceBefore = accounting.getBond(secondNoId);
+
+        uint256 lockAmount = 1 ether;
+        csm.reportELRewardsStealingPenalty(
+            secondNoId,
+            blockhash(block.number),
+            lockAmount
+        );
+
+        vm.expectEmit(true, true, true, true, address(csm));
+        emit CSModule.ELRewardsStealingPenaltySettled(secondNoId);
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.resetBondCurve.selector,
+                secondNoId
+            )
+        );
+        csm.settleELRewardsStealingPenalty(idsToSettle);
+
+        uint256 bondBalanceAfter = accounting.getBond(secondNoId);
+
+        CSBondLock.BondLock memory currentLock = accounting.getLockedBondInfo(
+            secondNoId
+        );
+        assertEq(currentLock.amount, 0 ether);
+        assertEq(currentLock.retentionUntil, 0);
+        assertEq(
+            bondBalanceAfter,
+            bondBalanceBefore - lockAmount - csm.EL_REWARDS_STEALING_FINE()
+        );
+    }
+
     function test_settleELRewardsStealingPenalty_RevertWhen_NoExistingNodeOperator()
         public
     {
