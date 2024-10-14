@@ -67,7 +67,7 @@ struct DeployParams {
     address sealingCommittee;
     uint256 sealDuration;
     uint256 sealExpiryTimestamp;
-    // Devnet and Testnet stuff
+    // Testnet stuff
     address secondAdminAddress;
 }
 

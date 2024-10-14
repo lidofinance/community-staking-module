@@ -6,8 +6,6 @@ deploy_script_name := if chain == "mainnet" {
     "DeployMainnet"
 } else if chain == "holesky" {
     "DeployHolesky"
-} else if chain == "devnet" {
-    "DeployHoleskyDevnet"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -16,8 +14,6 @@ deploy_implementations_script_name := if chain == "mainnet" {
     "undefined"
 } else if chain == "holesky" {
     "DeployHoleskyImplementations"
-} else if chain == "devnet" {
-      "undefined"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -142,7 +138,7 @@ deploy-prod-dry *args:
     just _deploy-prod {{args}}
 
 verify-prod *args:
-    just _warn "Pass --chain=your_chain manually. e.g. --chain=holesky for devnet deployment"
+    just _warn "Pass --chain=your_chain manually. e.g. --chain=holesky for testnet deployment"
     forge script {{deploy_script_path}} --rpc-url ${RPC_URL} --verify {{args}} --unlocked
 
 _deploy-prod *args:
