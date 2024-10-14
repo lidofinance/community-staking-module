@@ -219,6 +219,16 @@ contract CSFeeOracleInvariant is InvariantsBase {
             0,
             "recoverer"
         );
+        assertEq(
+            oracle.getRoleMemberCount(oracle.MANAGE_CONSENSUS_CONTRACT_ROLE()),
+            0,
+            "manage_consensus_contract"
+        );
+        assertEq(
+            oracle.getRoleMemberCount(oracle.MANAGE_CONSENSUS_VERSION_ROLE()),
+            0,
+            "manage_consensus_version"
+        );
     }
 }
 
