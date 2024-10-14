@@ -380,6 +380,14 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertEq(oracle.getRoleMemberCount(oracle.CONTRACT_MANAGER_ROLE()), 0);
         assertEq(oracle.getRoleMemberCount(oracle.SUBMIT_DATA_ROLE()), 0);
         assertEq(oracle.getRoleMemberCount(oracle.RECOVERER_ROLE()), 0);
+        assertEq(
+            oracle.getRoleMemberCount(oracle.MANAGE_CONSENSUS_CONTRACT_ROLE()),
+            0
+        );
+        assertEq(
+            oracle.getRoleMemberCount(oracle.MANAGE_CONSENSUS_VERSION_ROLE()),
+            0
+        );
     }
 
     function test_initialState() public {
