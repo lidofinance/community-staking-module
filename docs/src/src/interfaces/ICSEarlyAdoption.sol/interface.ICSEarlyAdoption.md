@@ -1,6 +1,6 @@
 # ICSEarlyAdoption
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/interfaces/ICSEarlyAdoption.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/ed13582ed87bf90a004e225eef6ca845b31d396d/src/interfaces/ICSEarlyAdoption.sol)
 
 ## Functions
 

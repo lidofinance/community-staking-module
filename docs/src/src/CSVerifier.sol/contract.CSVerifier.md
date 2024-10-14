@@ -1,6 +1,6 @@
 # CSVerifier
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/CSVerifier.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/ed13582ed87bf90a004e225eef6ca845b31d396d/src/CSVerifier.sol)
 
 **Inherits:**
 [ICSVerifier](/src/interfaces/ICSVerifier.sol/interface.ICSVerifier.md)
@@ -83,12 +83,12 @@ _The first slot of the currently compatible fork._
 Slot public immutable PIVOT_SLOT;
 ```
 
-### LOCATOR
+### WITHDRAWAL_ADDRESS
 
-_Lido Locator contract_
+_An address withdrawals are supposed to happen to (Lido withdrawal credentials)._
 
 ```solidity
-ILidoLocator public immutable LOCATOR;
+address public immutable WITHDRAWAL_ADDRESS;
 ```
 
 ### MODULE
@@ -107,7 +107,7 @@ _The previous and current forks can be essentially the same._
 
 ```solidity
 constructor(
-  address locator,
+  address withdrawalAddress,
   address module,
   uint64 slotsPerEpoch,
   GIndex gIFirstWithdrawalPrev,
@@ -282,16 +282,16 @@ error InvalidWithdrawalAddress();
 error UnsupportedSlot(Slot slot);
 ```
 
-### ZeroLocatorAddress
-
-```solidity
-error ZeroLocatorAddress();
-```
-
 ### ZeroModuleAddress
 
 ```solidity
 error ZeroModuleAddress();
+```
+
+### ZeroWithdrawalAddress
+
+```solidity
+error ZeroWithdrawalAddress();
 ```
 
 ### InvalidPivotSlot

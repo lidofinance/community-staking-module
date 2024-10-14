@@ -1,8 +1,8 @@
 # HashConsensus
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/lib/base-oracle/HashConsensus.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/ed13582ed87bf90a004e225eef6ca845b31d396d/src/lib/base-oracle/HashConsensus.sol)
 
 **Inherits:**
-AccessControlEnumerableUpgradeable
+[IConsensusContract](/src/lib/base-oracle/interfaces/IConsensusContract.sol/interface.IConsensusContract.md), AccessControlEnumerableUpgradeable
 
 A contract managing oracle members committee and allowing the members to reach
 consensus on a hash for each reporting frame.
