@@ -16,10 +16,34 @@ import { Utilities } from "../../helpers/Utilities.sol";
 import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
 import { IKernel } from "../../../src/interfaces/IKernel.sol";
 import { IACL } from "../../../src/interfaces/IACL.sol";
+import { InvariantAsserts } from "../../helpers/InvariantAsserts.sol";
 
-contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
+contract StakingRouterIntegrationTest is
+    Test,
+    Utilities,
+    DeploymentFixtures,
+    InvariantAsserts
+{
     address internal agent;
     uint256 internal moduleId;
+
+    modifier assertInvariants() {
+        _;
+        vm.pauseGasMetering();
+        uint256 noCount = csm.getNodeOperatorsCount();
+        assertCSMKeys(csm);
+        assertCSMEnqueuedCount(csm);
+        assertCSMEarlyAdoptionMaxKeys(csm);
+        assertAccountingTotalBondShares(noCount, lido, accounting);
+        assertAccountingBurnerApproval(
+            lido,
+            address(accounting),
+            locator.burner()
+        );
+        assertFeeDistributorClaimableShares(lido, feeDistributor);
+        assertFeeDistributorTree(feeDistributor);
+        vm.resumeGasMetering();
+    }
 
     function setUp() public {
         Env memory env = envVars();
@@ -135,7 +159,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         assertTrue(module.stakingModuleAddress == address(csm));
     }
 
-    function test_RouterDeposit() public {
+    function test_RouterDeposit() public assertInvariants {
         address nodeOperatorManager = nextAddress();
         uint256 noId = addNodeOperator(nodeOperatorManager, 1);
         (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
@@ -146,7 +170,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         assertEq(no.totalDepositedKeys, 1);
     }
 
-    function test_routerReportRewardsMinted() public {
+    function test_routerReportRewardsMinted() public assertInvariants {
         uint256 prevShares = lido.sharesOf(address(feeDistributor));
 
         uint256 ethToStake = 1 ether;
@@ -176,7 +200,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         );
     }
 
-    function test_updateTargetValidatorsLimits() public {
+    function test_updateTargetValidatorsLimits() public assertInvariants {
         address nodeOperatorManager = nextAddress();
         uint256 noId = addNodeOperator(nodeOperatorManager, 5);
 
@@ -197,7 +221,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         assertEq(targetValidatorsCount, 2);
     }
 
-    function test_updateRefundedValidatorsCount() public {
+    function test_updateRefundedValidatorsCount() public assertInvariants {
         address nodeOperatorManager = nextAddress();
         uint256 noId = addNodeOperator(nodeOperatorManager, 5);
 
@@ -208,6 +232,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
 
     function test_reportStakingModuleExitedValidatorsCountByNodeOperator()
         public
+        assertInvariants
     {
         address nodeOperatorManager = nextAddress();
         uint256 noId = addNodeOperator(nodeOperatorManager, 5);
@@ -231,6 +256,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
 
     function test_reportStakingModuleStuckValidatorsCountByNodeOperator()
         public
+        assertInvariants
     {
         address nodeOperatorManager = nextAddress();
         uint256 noId = addNodeOperator(nodeOperatorManager, 5);
@@ -252,7 +278,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         assertEq(no.stuckValidatorsCount, stuck);
     }
 
-    function test_getStakingModuleSummary() public {
+    function test_getStakingModuleSummary() public assertInvariants {
         IStakingRouter.StakingModuleSummary memory summaryOld = stakingRouter
             .getStakingModuleSummary(moduleId);
 
@@ -290,7 +316,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         );
     }
 
-    function test_getNodeOperatorSummary() public {
+    function test_getNodeOperatorSummary() public assertInvariants {
         address nodeOperatorManager = nextAddress();
         uint256 keysCount = 5;
         uint256 noId = addNodeOperator(nodeOperatorManager, keysCount);
@@ -329,7 +355,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         assertEq(summary.depositableValidatorsCount, 0); // due to stuck != 0
     }
 
-    function test_unsafeSetExitedValidatorsCount() public {
+    function test_unsafeSetExitedValidatorsCount() public assertInvariants {
         address nodeOperatorManager = nextAddress();
         uint256 noId = addNodeOperator(nodeOperatorManager, 10);
 
@@ -385,7 +411,7 @@ contract StakingRouterIntegrationTest is Test, Utilities, DeploymentFixtures {
         assertEq(no.totalExitedKeys, unsafeExited);
     }
 
-    function test_decreaseVettedSigningKeysCount() public {
+    function test_decreaseVettedSigningKeysCount() public assertInvariants {
         address nodeOperatorManager = nextAddress();
         uint256 totalKeys = 10;
         uint256 newVetted = 2;

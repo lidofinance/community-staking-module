@@ -102,9 +102,7 @@ interface ICSAccounting is
         uint256 amount
     ) external;
 
-    function settleLockedBondETH(
-        uint256 nodeOperatorId
-    ) external returns (uint256);
+    function settleLockedBondETH(uint256 nodeOperatorId) external;
 
     function compensateLockedBondETH(uint256 nodeOperatorId) external payable;
 

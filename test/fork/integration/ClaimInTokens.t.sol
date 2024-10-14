@@ -17,17 +17,37 @@ import { Utilities } from "../../helpers/Utilities.sol";
 import { PermitHelper } from "../../helpers/Permit.sol";
 import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
 import { MerkleTree } from "../../helpers/MerkleTree.sol";
+import { InvariantAsserts } from "../../helpers/InvariantAsserts.sol";
 
 contract ClaimIntegrationTest is
     Test,
     Utilities,
     PermitHelper,
-    DeploymentFixtures
+    DeploymentFixtures,
+    InvariantAsserts
 {
     address internal user;
     address internal stranger;
     address internal nodeOperator;
     uint256 internal defaultNoId;
+
+    modifier assertInvariants() {
+        _;
+        vm.pauseGasMetering();
+        uint256 noCount = csm.getNodeOperatorsCount();
+        assertCSMKeys(csm);
+        assertCSMEnqueuedCount(csm);
+        assertCSMEarlyAdoptionMaxKeys(csm);
+        assertAccountingTotalBondShares(noCount, lido, accounting);
+        assertAccountingBurnerApproval(
+            lido,
+            address(accounting),
+            locator.burner()
+        );
+        assertFeeDistributorClaimableShares(lido, feeDistributor);
+        assertFeeDistributorTree(feeDistributor);
+        vm.resumeGasMetering();
+    }
 
     function setUp() public {
         Env memory env = envVars();
@@ -71,7 +91,7 @@ contract ClaimIntegrationTest is
         defaultNoId = csm.getNodeOperatorsCount() - 1;
     }
 
-    function test_claimExcessBondStETH() public {
+    function test_claimExcessBondStETH() public assertInvariants {
         uint256 amount = 1 ether;
         vm.startPrank(user);
         vm.deal(user, amount);
@@ -125,7 +145,7 @@ contract ClaimIntegrationTest is
         );
     }
 
-    function test_claimExcessBondWstETH() public {
+    function test_claimExcessBondWstETH() public assertInvariants {
         uint256 amount = 1 ether;
         vm.startPrank(user);
         vm.deal(user, amount);
@@ -183,7 +203,7 @@ contract ClaimIntegrationTest is
         );
     }
 
-    function test_requestExcessBondETH() public {
+    function test_requestExcessBondETH() public assertInvariants {
         IWithdrawalQueue wq = IWithdrawalQueue(locator.withdrawalQueue());
         uint256[] memory requestsIdsBefore = wq.getWithdrawalRequests(
             nodeOperator
@@ -257,7 +277,7 @@ contract ClaimIntegrationTest is
         );
     }
 
-    function test_claimRewardsStETH() public {
+    function test_claimRewardsStETH() public assertInvariants {
         uint256 noSharesBefore = lido.sharesOf(nodeOperator);
         uint256 accountingSharesBefore = lido.sharesOf(address(accounting));
         uint256 amount = 1 ether;
@@ -276,7 +296,12 @@ contract ClaimIntegrationTest is
         bytes32 root = tree.root();
 
         vm.prank(feeDistributor.ORACLE());
-        feeDistributor.processOracleReport(root, "Qm", shares);
+        feeDistributor.processOracleReport(
+            root,
+            someCIDv0(),
+            someCIDv0(),
+            shares
+        );
 
         vm.prank(nodeOperator);
         csm.claimRewardsStETH(defaultNoId, type(uint256).max, shares, proof);
@@ -300,7 +325,7 @@ contract ClaimIntegrationTest is
         );
     }
 
-    function test_claimRewardsWstETH() public {
+    function test_claimRewardsWstETH() public assertInvariants {
         uint256 balanceBefore = wstETH.balanceOf(nodeOperator);
         uint256 accountingSharesBefore = lido.sharesOf(address(accounting));
         uint256 amount = 1 ether;
@@ -319,7 +344,12 @@ contract ClaimIntegrationTest is
         bytes32 root = tree.root();
 
         vm.prank(feeDistributor.ORACLE());
-        feeDistributor.processOracleReport(root, "Qm", shares);
+        feeDistributor.processOracleReport(
+            root,
+            someCIDv0(),
+            someCIDv0(),
+            shares
+        );
 
         vm.prank(nodeOperator);
         csm.claimRewardsWstETH(defaultNoId, type(uint256).max, shares, proof);
@@ -349,7 +379,7 @@ contract ClaimIntegrationTest is
         );
     }
 
-    function test_requestRewardsETH() public {
+    function test_requestRewardsETH() public assertInvariants {
         IWithdrawalQueue wq = IWithdrawalQueue(locator.withdrawalQueue());
         uint256[] memory requestsIdsBefore = wq.getWithdrawalRequests(
             nodeOperator
@@ -376,7 +406,12 @@ contract ClaimIntegrationTest is
         bytes32 root = tree.root();
 
         vm.prank(feeDistributor.ORACLE());
-        feeDistributor.processOracleReport(root, "Qm", shares);
+        feeDistributor.processOracleReport(
+            root,
+            someCIDv0(),
+            someCIDv0(),
+            shares
+        );
 
         uint256 accountingSharesBefore = lido.sharesOf(address(accounting));
 

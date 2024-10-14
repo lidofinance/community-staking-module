@@ -28,11 +28,37 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
             elRewardsStealingFine: csm.EL_REWARDS_STEALING_FINE(),
             maxKeysPerOperatorEA: csm
                 .MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(),
+            maxKeyRemovalCharge: csm.MAX_KEY_REMOVAL_CHARGE(),
             lidoLocator: address(csm.LIDO_LOCATOR())
         });
         vm.prank(proxy.proxy__getAdmin());
         proxy.proxy__upgradeTo(address(newModule));
         assertEq(csm.getType(), "CSMv2");
+    }
+
+    function test_CSModuleUpgradeToAndCall() public {
+        OssifiableProxy proxy = OssifiableProxy(payable(address(csm)));
+        CSModule newModule = new CSModule({
+            moduleType: "CSMv2",
+            minSlashingPenaltyQuotient: 32,
+            elRewardsStealingFine: csm.EL_REWARDS_STEALING_FINE(),
+            maxKeysPerOperatorEA: csm
+                .MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(),
+            maxKeyRemovalCharge: csm.MAX_KEY_REMOVAL_CHARGE(),
+            lidoLocator: address(csm.LIDO_LOCATOR())
+        });
+        address contractAdmin = csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0);
+        vm.startPrank(contractAdmin);
+        csm.grantRole(csm.RESUME_ROLE(), address(proxy.proxy__getAdmin()));
+        vm.stopPrank();
+        assertTrue(csm.isPaused());
+        vm.prank(proxy.proxy__getAdmin());
+        proxy.proxy__upgradeToAndCall(
+            address(newModule),
+            abi.encodeWithSelector(newModule.resume.selector, 1)
+        );
+        assertEq(csm.getType(), "CSMv2");
+        assertFalse(csm.isPaused());
     }
 
     function test_CSAccountingUpgradeTo() public {
@@ -52,6 +78,38 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
         assertEq(accounting.MAX_CURVE_LENGTH(), currentMaxCurveLength + 10);
     }
 
+    function test_CSAccountingUpgradeToAndCall() public {
+        OssifiableProxy proxy = OssifiableProxy(payable(address(accounting)));
+        uint256 currentMaxCurveLength = accounting.MAX_CURVE_LENGTH();
+        CSAccounting newAccounting = new CSAccounting({
+            lidoLocator: address(accounting.LIDO_LOCATOR()),
+            communityStakingModule: address(csm),
+            maxCurveLength: currentMaxCurveLength + 10,
+            minBondLockRetentionPeriod: accounting
+                .MIN_BOND_LOCK_RETENTION_PERIOD(),
+            maxBondLockRetentionPeriod: accounting
+                .MAX_BOND_LOCK_RETENTION_PERIOD()
+        });
+        address contractAdmin = accounting.getRoleMember(
+            accounting.DEFAULT_ADMIN_ROLE(),
+            0
+        );
+        vm.startPrank(contractAdmin);
+        accounting.grantRole(
+            accounting.PAUSE_ROLE(),
+            address(proxy.proxy__getAdmin())
+        );
+        vm.stopPrank();
+        assertFalse(accounting.isPaused());
+        vm.prank(proxy.proxy__getAdmin());
+        proxy.proxy__upgradeToAndCall(
+            address(newAccounting),
+            abi.encodeWithSelector(newAccounting.pauseFor.selector, 100500)
+        );
+        assertEq(accounting.MAX_CURVE_LENGTH(), currentMaxCurveLength + 10);
+        assertTrue(accounting.isPaused());
+    }
+
     function test_CSFeeOracleUpgradeTo() public {
         OssifiableProxy proxy = OssifiableProxy(payable(address(oracle)));
         CSFeeOracle newFeeOracle = new CSFeeOracle({
@@ -61,6 +119,29 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
         vm.prank(proxy.proxy__getAdmin());
         proxy.proxy__upgradeTo(address(newFeeOracle));
         assertEq(oracle.GENESIS_TIME(), block.timestamp);
+    }
+
+    function test_CSFeeOracleUpgradeToAndCall() public {
+        OssifiableProxy proxy = OssifiableProxy(payable(address(oracle)));
+        CSFeeOracle newFeeOracle = new CSFeeOracle({
+            secondsPerSlot: oracle.SECONDS_PER_SLOT(),
+            genesisTime: block.timestamp
+        });
+        address contractAdmin = oracle.getRoleMember(
+            oracle.DEFAULT_ADMIN_ROLE(),
+            0
+        );
+        vm.startPrank(contractAdmin);
+        oracle.grantRole(oracle.PAUSE_ROLE(), address(proxy.proxy__getAdmin()));
+        vm.stopPrank();
+        assertFalse(oracle.isPaused());
+        vm.prank(proxy.proxy__getAdmin());
+        proxy.proxy__upgradeToAndCall(
+            address(newFeeOracle),
+            abi.encodeWithSelector(newFeeOracle.pauseFor.selector, 100500)
+        );
+        assertEq(oracle.GENESIS_TIME(), block.timestamp);
+        assertTrue(oracle.isPaused());
     }
 
     function test_CSFeeDistributorUpgradeTo() public {
@@ -76,4 +157,6 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
         proxy.proxy__upgradeTo(address(newFeeDistributor));
         assertEq(feeDistributor.ACCOUNTING(), address(1337));
     }
+
+    // upgradeToAndCall test seems useless for CSFeeDistributor
 }

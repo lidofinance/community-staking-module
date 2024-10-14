@@ -20,7 +20,6 @@ import { NOAddresses } from "./lib/NOAddresses.sol";
 
 import { SigningKeys } from "./lib/SigningKeys.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
-import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
 contract CSModule is
     ICSModule,
@@ -52,6 +51,7 @@ contract CSModule is
     uint256 public immutable EL_REWARDS_STEALING_FINE;
     uint256
         public immutable MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE;
+    uint256 public immutable MAX_KEY_REMOVAL_CHARGE;
     bytes32 private immutable MODULE_TYPE;
     ILidoLocator public immutable LIDO_LOCATOR;
     IStETH public immutable STETH;
@@ -118,11 +118,13 @@ contract CSModule is
     event WithdrawalSubmitted(
         uint256 indexed nodeOperatorId,
         uint256 keyIndex,
-        uint256 amount
+        uint256 amount,
+        bytes pubkey
     );
     event InitialSlashingSubmitted(
         uint256 indexed nodeOperatorId,
-        uint256 keyIndex
+        uint256 keyIndex,
+        bytes pubkey
     );
 
     event PublicRelease();
@@ -135,6 +137,10 @@ contract CSModule is
         uint256 stolenAmount
     );
     event ELRewardsStealingPenaltyCancelled(
+        uint256 indexed nodeOperatorId,
+        uint256 amount
+    );
+    event ELRewardsStealingPenaltyCompensated(
         uint256 indexed nodeOperatorId,
         uint256 amount
     );
@@ -152,7 +158,6 @@ contract CSModule is
     error SigningKeysInvalidOffset();
 
     error AlreadySubmitted();
-    error AlreadyWithdrawn();
 
     error AlreadyActivated();
     error InvalidAmount();
@@ -169,6 +174,7 @@ contract CSModule is
         uint256 minSlashingPenaltyQuotient,
         uint256 elRewardsStealingFine,
         uint256 maxKeysPerOperatorEA,
+        uint256 maxKeyRemovalCharge,
         address lidoLocator
     ) {
         if (lidoLocator == address(0)) revert ZeroLocatorAddress();
@@ -177,6 +183,7 @@ contract CSModule is
         INITIAL_SLASHING_PENALTY = DEPOSIT_SIZE / minSlashingPenaltyQuotient;
         EL_REWARDS_STEALING_FINE = elRewardsStealingFine;
         MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE = maxKeysPerOperatorEA;
+        MAX_KEY_REMOVAL_CHARGE = maxKeyRemovalCharge;
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
         STETH = IStETH(LIDO_LOCATOR.lido());
 
@@ -203,7 +210,7 @@ contract CSModule is
 
         _setKeyRemovalCharge(_keyRemovalCharge);
         // CSM is on pause initially and should be resumed during the vote
-        _pauseFor(type(uint256).max);
+        _pauseFor(PausableUntil.PAUSE_INFINITELY);
     }
 
     /// @notice Resume creation of the Node Operators and keys upload
@@ -223,9 +230,7 @@ contract CSModule is
     ///         Enable permissionless creation of the Node Operators
     ///         Remove the keys limit for the Node Operators
     function activatePublicRelease() external onlyRole(MODULE_MANAGER_ROLE) {
-        if (publicRelease) {
-            revert AlreadyActivated();
-        }
+        if (publicRelease) revert AlreadyActivated();
         publicRelease = true;
         emit PublicRelease();
     }
@@ -261,18 +266,14 @@ contract CSModule is
         bytes32[] calldata eaProof,
         address referrer
     ) external payable whenResumed {
-        uint256 nodeOperatorId = _createNodeOperator(
+        (uint256 nodeOperatorId, uint256 curveId) = _createNodeOperator(
             managementProperties,
             referrer,
             eaProof
         );
 
         if (
-            msg.value !=
-            accounting.getBondAmountByKeysCount(
-                keysCount,
-                accounting.getBondCurve(nodeOperatorId)
-            )
+            msg.value < accounting.getBondAmountByKeysCount(keysCount, curveId)
         ) {
             revert InvalidAmount();
         }
@@ -311,7 +312,7 @@ contract CSModule is
         bytes32[] calldata eaProof,
         address referrer
     ) external whenResumed {
-        uint256 nodeOperatorId = _createNodeOperator(
+        (uint256 nodeOperatorId, uint256 curveId) = _createNodeOperator(
             managementProperties,
             referrer,
             eaProof
@@ -319,7 +320,7 @@ contract CSModule is
 
         uint256 amount = accounting.getBondAmountByKeysCount(
             keysCount,
-            accounting.getBondCurve(nodeOperatorId)
+            curveId
         );
         accounting.depositStETH(msg.sender, nodeOperatorId, amount, permit);
 
@@ -355,7 +356,7 @@ contract CSModule is
         bytes32[] calldata eaProof,
         address referrer
     ) external whenResumed {
-        uint256 nodeOperatorId = _createNodeOperator(
+        (uint256 nodeOperatorId, uint256 curveId) = _createNodeOperator(
             managementProperties,
             referrer,
             eaProof
@@ -363,7 +364,7 @@ contract CSModule is
 
         uint256 amount = accounting.getBondAmountByKeysCountWstETH(
             keysCount,
-            accounting.getBondCurve(nodeOperatorId)
+            curveId
         );
         accounting.depositWstETH(msg.sender, nodeOperatorId, amount, permit);
 
@@ -390,7 +391,7 @@ contract CSModule is
         _onlyNodeOperatorManager(nodeOperatorId);
 
         if (
-            msg.value !=
+            msg.value <
             accounting.getRequiredBondForNextKeys(nodeOperatorId, keysCount)
         ) {
             revert InvalidAmount();
@@ -479,8 +480,7 @@ contract CSModule is
         // Due to new bond nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -504,8 +504,7 @@ contract CSModule is
         // Due to new bond nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -529,8 +528,7 @@ contract CSModule is
         // Due to new bond nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -560,8 +558,7 @@ contract CSModule is
         // Due to possible missing bond compensation nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -591,8 +588,7 @@ contract CSModule is
         // Due to possible missing bond compensation nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -625,8 +621,7 @@ contract CSModule is
         // Due to possible missing bond compensation nonce update might be required and normalize queue might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -699,6 +694,10 @@ contract CSModule is
         uint256 nodeOperatorId,
         address newAddress
     ) external {
+        if (newAddress == address(0)) {
+            revert ZeroRewardAddress();
+        }
+
         NOAddresses.changeNodeOperatorRewardAddress(
             _nodeOperators,
             nodeOperatorId,
@@ -800,7 +799,7 @@ contract CSModule is
         uint256 targetLimitMode,
         uint256 targetLimit
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        if (targetLimitMode > type(uint8).max) {
+        if (targetLimitMode > FORCED_TARGET_LIMIT_MODE_ID) {
             revert InvalidInput();
         }
         if (targetLimit > type(uint32).max) {
@@ -808,6 +807,10 @@ contract CSModule is
         }
         _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        if (targetLimitMode == 0) {
+            targetLimit = 0;
+        }
 
         if (
             no.targetLimitMode == targetLimitMode &&
@@ -831,11 +834,9 @@ contract CSModule is
         );
 
         // Nonce will be updated below even if depositable count was not changed
-        // In case of targetLimit removal queue should be normalised
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: false,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: false
         });
         _incrementModuleNonce();
     }
@@ -917,11 +918,9 @@ contract CSModule is
             emit VettedSigningKeysCountDecreased(nodeOperatorId);
 
             // Nonce will be updated below once
-            // No need to normalize queue due to vetted decrease
             _updateDepositableValidatorsCount({
                 nodeOperatorId: nodeOperatorId,
-                incrementNonceIfUpdated: false,
-                normalizeQueueIfUpdated: false
+                incrementNonceIfUpdated: false
             });
         }
 
@@ -970,11 +969,9 @@ contract CSModule is
         emit VettedSigningKeysCountChanged(nodeOperatorId, newTotalSigningKeys);
 
         // Nonce is updated below due to keys state change
-        // Normalize queue should be called due to possible increase in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: false,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: false
         });
         _incrementModuleNonce();
     }
@@ -997,7 +994,11 @@ contract CSModule is
     /// @notice Normalization stands for adding vetted but not enqueued keys to the queue
     /// @param nodeOperatorId ID of the Node Operator
     function normalizeQueue(uint256 nodeOperatorId) external {
-        _onlyNodeOperatorManager(nodeOperatorId);
+        _updateDepositableValidatorsCount({
+            nodeOperatorId: nodeOperatorId,
+            incrementNonceIfUpdated: true
+        });
+        // Direct call of `normalize` if depositable is not changed
         depositQueue.normalize(_nodeOperators, nodeOperatorId);
     }
 
@@ -1012,6 +1013,7 @@ contract CSModule is
         uint256 amount
     ) external onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
+        if (amount == 0) revert InvalidAmount();
         accounting.lockBondETH(
             nodeOperatorId,
             amount + EL_REWARDS_STEALING_FINE
@@ -1023,11 +1025,9 @@ contract CSModule is
         );
 
         // Nonce should be updated if depositableValidators change
-        // No need to normalize queue due to only decrease in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: false
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -1045,54 +1045,57 @@ contract CSModule is
         emit ELRewardsStealingPenaltyCancelled(nodeOperatorId, amount);
 
         // Nonce should be updated if depositableValidators change
-        // Normalize queue should be called due to only increase in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: true
         });
     }
 
-    /// @notice Settle blocked bond for the given Node Operators
+    /// @notice Settle locked bond for the given Node Operators
     /// @dev SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE role is expected to be assigned to Easy Track
     /// @param nodeOperatorIds IDs of the Node Operators
     function settleELRewardsStealingPenalty(
         uint256[] calldata nodeOperatorIds
     ) external onlyRole(SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE) {
+        ICSAccounting _accounting = accounting;
         for (uint256 i; i < nodeOperatorIds.length; ++i) {
             uint256 nodeOperatorId = nodeOperatorIds[i];
             _onlyExistingNodeOperator(nodeOperatorId);
-            uint256 settled = accounting.settleLockedBondETH(nodeOperatorId);
-            if (settled > 0) {
+            uint256 lockedBondBefore = _accounting.getActualLockedBond(
+                nodeOperatorId
+            );
+
+            _accounting.settleLockedBondETH(nodeOperatorId);
+
+            // settled amount might be zero either if the lock expired, or the bond is zero
+            // so we need to check actual locked bond before to determine if the penalty was settled
+            if (lockedBondBefore > 0) {
                 // Bond curve should be reset to default in case of confirmed MEV stealing. See https://hackmd.io/@lido/SygBLW5ja
-                accounting.resetBondCurve(nodeOperatorId);
+                _accounting.resetBondCurve(nodeOperatorId);
                 // Nonce should be updated if depositableValidators change
-                // No need to normalize queue due to only decrease in depositable possible
                 _updateDepositableValidatorsCount({
                     nodeOperatorId: nodeOperatorId,
-                    incrementNonceIfUpdated: true,
-                    normalizeQueueIfUpdated: false
+                    incrementNonceIfUpdated: true
                 });
+                emit ELRewardsStealingPenaltySettled(nodeOperatorId);
             }
-            emit ELRewardsStealingPenaltySettled(nodeOperatorId);
         }
     }
 
     /// @notice Compensate EL rewards stealing penalty for the given Node Operator to prevent further validator exits
-    /// @dev Expected to be called by the Node Operator, but can be called by anyone
+    /// @dev Can only be called by the Node Operator manager
     /// @param nodeOperatorId ID of the Node Operator
     function compensateELRewardsStealingPenalty(
         uint256 nodeOperatorId
     ) external payable {
-        _onlyExistingNodeOperator(nodeOperatorId);
+        _onlyNodeOperatorManager(nodeOperatorId);
         accounting.compensateLockedBondETH{ value: msg.value }(nodeOperatorId);
         // Nonce should be updated if depositableValidators change
-        // Normalize queue should be called due to only increase in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: true
         });
+        emit ELRewardsStealingPenaltyCompensated(nodeOperatorId, msg.value);
     }
 
     /// @notice Report Node Operator's key as withdrawn and settle withdrawn amount
@@ -1124,7 +1127,8 @@ contract CSModule is
             ++no.totalWithdrawnKeys;
         }
 
-        emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount);
+        bytes memory pubkey = SigningKeys.loadKeys(nodeOperatorId, keyIndex, 1);
+        emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount, pubkey);
 
         if (isSlashed) {
             if (_isValidatorSlashed[pointer]) {
@@ -1146,11 +1150,9 @@ contract CSModule is
         }
 
         // Nonce should be updated if depositableValidators change
-        // Normalize queue should be called due to possible increase in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -1176,16 +1178,16 @@ contract CSModule is
         }
 
         _isValidatorSlashed[pointer] = true;
-        emit InitialSlashingSubmitted(nodeOperatorId, keyIndex);
+
+        bytes memory pubkey = SigningKeys.loadKeys(nodeOperatorId, keyIndex, 1);
+        emit InitialSlashingSubmitted(nodeOperatorId, keyIndex, pubkey);
 
         accounting.penalize(nodeOperatorId, INITIAL_SLASHING_PENALTY);
 
         // Nonce should be updated if depositableValidators change
-        // Normalize queue should not be called due to only decrease in depositable possible
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true,
-            normalizeQueueIfUpdated: false
+            incrementNonceIfUpdated: true
         });
     }
 
@@ -1311,19 +1313,14 @@ contract CSModule is
     /// @notice Clean the deposit queue from batches with no depositable keys
     /// @dev Use **eth_call** to check how many items will be removed
     /// @param maxItems How many queue items to review
-    /// @return Number of the deposit data removed from the queue
-    function cleanDepositQueue(uint256 maxItems) external returns (uint256) {
-        return depositQueue.clean(_nodeOperators, maxItems);
-    }
-
-    /// @notice Recover all stETH shares from the contract
-    /// @dev There should be no stETH shares on the contract balance during regular operation
-    function recoverStETHShares() external {
-        _onlyRecoverer();
-
-        AssetRecovererLib.recoverStETHShares(
-            address(STETH),
-            STETH.sharesOf(address(this))
+    /// @return removed Count of batches to be removed by visiting `maxItems` batches
+    /// @return lastRemovedAtDepth The value to use as `maxItems` to remove `removed` batches if the static call of the method was used
+    function cleanDepositQueue(
+        uint256 maxItems
+    ) external returns (uint256 removed, uint256 lastRemovedAtDepth) {
+        (removed, lastRemovedAtDepth) = depositQueue.clean(
+            _nodeOperators,
+            maxItems
         );
     }
 
@@ -1436,9 +1433,11 @@ contract CSModule is
         uint256 totalUnbondedKeys = accounting.getUnbondedKeysCountToEject(
             nodeOperatorId
         );
-        // Force mode enabled and unbonded
+        uint256 totalNonDepositedKeys = no.totalAddedKeys -
+            no.totalDepositedKeys;
+        // Force mode enabled and unbonded deposited keys
         if (
-            totalUnbondedKeys > 0 &&
+            totalUnbondedKeys > totalNonDepositedKeys &&
             no.targetLimitMode == FORCED_TARGET_LIMIT_MODE_ID
         ) {
             targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
@@ -1450,8 +1449,8 @@ contract CSModule is
                         totalUnbondedKeys
                 );
             }
-            // No force mode enabled but unbonded
-        } else if (totalUnbondedKeys > 0) {
+            // No force mode enabled but unbonded deposited keys
+        } else if (totalUnbondedKeys > totalNonDepositedKeys) {
             targetLimitMode = FORCED_TARGET_LIMIT_MODE_ID;
             unchecked {
                 targetValidatorsCount =
@@ -1568,15 +1567,15 @@ contract CSModule is
         NodeOperatorManagementProperties calldata managementProperties,
         address referrer,
         bytes32[] calldata proof
-    ) internal returns (uint256 id) {
+    ) internal returns (uint256 noId, uint256 curveId) {
         if (!publicRelease) {
             if (proof.length == 0 || address(earlyAdoption) == address(0)) {
                 revert NotAllowedToJoinYet();
             }
         }
 
-        id = _nodeOperatorsCount;
-        NodeOperator storage no = _nodeOperators[id];
+        noId = _nodeOperatorsCount;
+        NodeOperator storage no = _nodeOperators[noId];
 
         no.managerAddress = managementProperties.managerAddress == address(0)
             ? msg.sender
@@ -1592,14 +1591,17 @@ contract CSModule is
             ++_nodeOperatorsCount;
         }
 
-        emit NodeOperatorAdded(id, no.managerAddress, no.rewardAddress);
+        emit NodeOperatorAdded(noId, no.managerAddress, no.rewardAddress);
 
-        if (referrer != address(0)) emit ReferrerSet(id, referrer);
+        if (referrer != address(0)) emit ReferrerSet(noId, referrer);
 
         // @dev It's possible to join with proof even after public release to get beneficial bond curve
         if (proof.length != 0 && address(earlyAdoption) != address(0)) {
             earlyAdoption.consume(msg.sender, proof);
-            accounting.setBondCurve(id, earlyAdoption.CURVE_ID());
+            curveId = earlyAdoption.CURVE_ID();
+            accounting.setBondCurve(noId, curveId);
+        } else {
+            curveId = accounting.DEFAULT_BOND_CURVE_ID();
         }
     }
 
@@ -1647,16 +1649,15 @@ contract CSModule is
         emit TotalSigningKeysCountChanged(nodeOperatorId, no.totalAddedKeys);
 
         // Nonce is updated below since in case of stuck keys depositable keys might not change
-        // Due to new bonded keys normalize queue is required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: false,
-            normalizeQueueIfUpdated: true
+            incrementNonceIfUpdated: false
         });
         _incrementModuleNonce();
     }
 
     function _setKeyRemovalCharge(uint256 amount) internal {
+        if (amount > MAX_KEY_REMOVAL_CHARGE) revert InvalidInput();
         keyRemovalCharge = amount;
         emit KeyRemovalChargeSet(amount);
     }
@@ -1719,31 +1720,28 @@ contract CSModule is
             emit DepositableSigningKeysCountChanged(nodeOperatorId, 0);
         } else {
             // Nonce will be updated on the top level once per call
-            // Node Operator should normalize queue himself in case of unstuck
-            // @dev remind on UI to normalize queue after unstuck
             _updateDepositableValidatorsCount({
                 nodeOperatorId: nodeOperatorId,
-                incrementNonceIfUpdated: false,
-                normalizeQueueIfUpdated: false
+                incrementNonceIfUpdated: false
             });
         }
     }
 
     function _updateDepositableValidatorsCount(
         uint256 nodeOperatorId,
-        bool incrementNonceIfUpdated,
-        bool normalizeQueueIfUpdated
+        bool incrementNonceIfUpdated
     ) internal {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         uint256 newCount = no.totalVettedKeys - no.totalDepositedKeys;
-
         uint256 unbondedKeys = accounting.getUnbondedKeysCount(nodeOperatorId);
-        if (unbondedKeys > newCount) {
-            newCount = 0;
-        } else {
-            unchecked {
-                newCount -= unbondedKeys;
+
+        {
+            uint256 nonDeposited = no.totalAddedKeys - no.totalDepositedKeys;
+            if (unbondedKeys >= nonDeposited) {
+                newCount = 0;
+            } else if (unbondedKeys > no.totalAddedKeys - no.totalVettedKeys) {
+                newCount = nonDeposited - unbondedKeys;
             }
         }
 
@@ -1779,9 +1777,7 @@ contract CSModule is
             if (incrementNonceIfUpdated) {
                 _incrementModuleNonce();
             }
-            if (normalizeQueueIfUpdated) {
-                depositQueue.normalize(_nodeOperators, nodeOperatorId);
-            }
+            depositQueue.normalize(_nodeOperators, nodeOperatorId);
         }
     }
 

@@ -131,6 +131,20 @@ abstract contract CSBondCoreTestBase is Test, Fixtures, Utilities {
     }
 }
 
+contract CSBondCoreConstructorTest is CSBondCoreTestBase {
+    function test_constructor() public {
+        assertEq(address(bondCore.LIDO_LOCATOR()), address(locator));
+        assertEq(address(bondCore.LIDO()), locator.lido());
+        assertEq(address(bondCore.WSTETH()), address(wstETH));
+        assertEq(address(bondCore.WITHDRAWAL_QUEUE()), address(wq));
+    }
+
+    function test_constructor_RevertIf_ZeroLocator() public {
+        vm.expectRevert(CSBondCore.ZeroLocatorAddress.selector);
+        new CSBondCoreTestable(address(0));
+    }
+}
+
 contract CSBondCoreBondGettersTest is CSBondCoreTestBase {
     function test_getBondShares() public {
         _deposit(1 ether);

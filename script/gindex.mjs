@@ -3,12 +3,12 @@
 import { concatGindices } from "@chainsafe/persistent-merkle-tree";
 import { ssz } from "@lodestar/types";
 
-for (const fork of ["capella", "deneb"]) {
-  /** @type (ssz.capella|ssz.deneb) */
+for (const fork of ["deneb"]) {
+  /** @type ssz.deneb */
   const Fork = ssz[fork];
 
   {
-    const gI = pack(Fork.BeaconState.getPathInfo(["historicalSummaries"]).gindex, 0); // 0 because `historicalSummaries` is a bytes32 value.
+    const gI = pack(Fork.BeaconState.getPathInfo(["historicalSummaries"]).gindex, 0); // limit = 0 because `historicalSummaries` is a singular bytes32 value and not a list.
     console.log(`${fork}::gIHistoricalSummaries: `, toBytes32String(gI));
   }
 
@@ -33,11 +33,7 @@ for (const fork of ["capella", "deneb"]) {
   {
     const Validators = Fork.BeaconState.getPathInfo(["validators"]).type;
 
-    // prettier-ignore
-    const gI = pack(
-    Fork.BeaconState.getPathInfo(["validators", 0]).gindex,
-    Validators.limit
-  );
+    const gI = pack(Fork.BeaconState.getPathInfo(["validators", 0]).gindex, Validators.limit);
 
     console.log(`${fork}::gIFirstValidator: `, toBytes32String(gI));
   }
@@ -45,7 +41,7 @@ for (const fork of ["capella", "deneb"]) {
   console.log();
 }
 
-// Analog of the GIndex.pack.
+// Analog of the GIndex.pack (lib used in CSVerifier)
 // @param {bigint} gI
 // @param {number} limit
 // @return {bigint}
@@ -55,8 +51,8 @@ function pack(gI, limit) {
 }
 
 // Return hex-encoded representation of GIndex
-// @param {number} limit
-// @return {bigint}
+// @param {bigint} gI
+// @return {string}
 function toBytes32String(gI) {
   return `0x${gI.toString(16).padStart(64, "0")}`;
 }

@@ -56,6 +56,7 @@ struct DeployParams {
     uint256 minSlashingPenaltyQuotient;
     uint256 elRewardsStealingFine;
     uint256 maxKeysPerOperatorEA;
+    uint256 maxKeyRemovalCharge;
     uint256 keyRemovalCharge;
     address elRewardsStealingReporter;
     // EarlyAdoption
@@ -66,19 +67,19 @@ struct DeployParams {
     address sealingCommittee;
     uint256 sealDuration;
     uint256 sealExpiryTimestamp;
-    // Devnet and Testnet stuff
+    // Testnet stuff
     address secondAdminAddress;
 }
 
 abstract contract DeployBase is Script {
     DeployParams internal config;
-    string private artifactDir;
-    string private chainName;
-    uint256 private chainId;
-    ILidoLocator private locator;
+    string internal artifactDir;
+    string internal chainName;
+    uint256 internal chainId;
+    ILidoLocator internal locator;
 
-    address private deployer;
-    uint256 private pk;
+    address internal deployer;
+    uint256 internal pk;
     CSModule public csm;
     CSAccounting public accounting;
     CSFeeOracle public oracle;
@@ -116,15 +117,15 @@ abstract contract DeployBase is Script {
         );
         (address[] memory members, ) = accountingConsensus.getMembers();
         uint256 quorum = accountingConsensus.getQuorum();
-        // FIXME Commented to avoid fail due to changes in Holesky AO config
-        // if (
-        //     keccak256(abi.encode(config.oracleMembers)) !=
-        //     keccak256(abi.encode(members)) ||
-        //     config.hashConsensusQuorum != quorum
-        // ) {
-        //     revert HashConsensusMismatch();
-        // }
-
+        if (block.chainid == 1) {
+            if (
+                keccak256(abi.encode(config.oracleMembers)) !=
+                keccak256(abi.encode(members)) ||
+                config.hashConsensusQuorum != quorum
+            ) {
+                revert HashConsensusMismatch();
+            }
+        }
         artifactDir = vm.envOr("ARTIFACTS_DIR", string("./artifacts/local/"));
         pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
         deployer = vm.addr(pk);
@@ -137,6 +138,7 @@ abstract contract DeployBase is Script {
                 minSlashingPenaltyQuotient: config.minSlashingPenaltyQuotient,
                 elRewardsStealingFine: config.elRewardsStealingFine,
                 maxKeysPerOperatorEA: config.maxKeysPerOperatorEA,
+                maxKeyRemovalCharge: config.maxKeyRemovalCharge,
                 lidoLocator: config.lidoLocatorAddress
             });
             csm = CSModule(_deployProxy(config.proxyAdmin, address(csmImpl)));
@@ -170,7 +172,7 @@ abstract contract DeployBase is Script {
             );
 
             verifier = new CSVerifier({
-                locator: address(locator),
+                withdrawalAddress: locator.withdrawalVault(),
                 module: address(csm),
                 slotsPerEpoch: uint64(config.slotsPerEpoch),
                 gIFirstWithdrawalPrev: config.gIFirstWithdrawal,

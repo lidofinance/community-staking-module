@@ -17,17 +17,37 @@ import { ICSAccounting } from "../../../src/interfaces/ICSAccounting.sol";
 import { Utilities } from "../../helpers/Utilities.sol";
 import { PermitHelper } from "../../helpers/Permit.sol";
 import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
+import { InvariantAsserts } from "../../helpers/InvariantAsserts.sol";
 
 contract PenaltyIntegrationTest is
     Test,
     Utilities,
     PermitHelper,
-    DeploymentFixtures
+    DeploymentFixtures,
+    InvariantAsserts
 {
     address internal user;
     address internal stranger;
     address internal nodeOperator;
     uint256 internal defaultNoId;
+
+    modifier assertInvariants() {
+        _;
+        vm.pauseGasMetering();
+        uint256 noCount = csm.getNodeOperatorsCount();
+        assertCSMKeys(csm);
+        assertCSMEnqueuedCount(csm);
+        assertCSMEarlyAdoptionMaxKeys(csm);
+        assertAccountingTotalBondShares(noCount, lido, accounting);
+        assertAccountingBurnerApproval(
+            lido,
+            address(accounting),
+            locator.burner()
+        );
+        assertFeeDistributorClaimableShares(lido, feeDistributor);
+        assertFeeDistributorTree(feeDistributor);
+        vm.resumeGasMetering();
+    }
 
     function setUp() public {
         Env memory env = envVars();
@@ -94,7 +114,7 @@ contract PenaltyIntegrationTest is
         }
     }
 
-    function test_penalty() public {
+    function test_penalty() public assertInvariants {
         uint256 amount = 1 ether;
 
         uint256 amountShares = lido.getSharesByPooledEth(amount);

@@ -2,13 +2,16 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
-import { CommonBase } from "forge-std/Base.sol";
+import { CommonBase, Vm } from "forge-std/Base.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 /// @author madlabman
 contract Utilities is CommonBase {
     using Strings for uint256;
+
+    bytes constant BASE58ALPHABET =
+        bytes("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz");
 
     bytes32 internal seed = keccak256("seed sEed seEd");
 
@@ -112,6 +115,20 @@ contract Utilities is CommonBase {
         return buf;
     }
 
+    function someCIDv0() public returns (string memory result) {
+        bytes memory seed = randomBytes(46);
+
+        seed[0] = "Q";
+        seed[1] = "m";
+
+        for (uint256 i = 2; i < seed.length; ++i) {
+            uint256 symIndex = uint8(seed[i]) % 58;
+            seed[i] = BASE58ALPHABET[symIndex];
+        }
+
+        result = string(seed);
+    }
+
     function checkChainId(uint256 chainId) public view {
         if (chainId != block.chainid) {
             revert("wrong chain id");
@@ -152,6 +169,17 @@ contract Utilities is CommonBase {
         arr[0] = e0;
         arr[1] = e1;
         return arr;
+    }
+
+    function slice(
+        bytes memory subject,
+        uint256 offset,
+        uint256 length
+    ) public pure returns (bytes memory slice) {
+        slice = new bytes(length);
+        for (uint i; i < length; ++i) {
+            slice[i] = subject[offset + i];
+        }
     }
 
     /// See https://github.com/Vectorized/solady - MIT licensed.
@@ -238,4 +266,14 @@ contract Utilities is CommonBase {
         _;
         _checkMemory();
     }
+}
+
+function hasLog(Vm.Log[] memory self, bytes32 topic) pure returns (bool) {
+    for (uint i = 0; i < self.length; ++i) {
+        if (self[i].topics[0] == topic) {
+            return true;
+        }
+    }
+
+    return false;
 }

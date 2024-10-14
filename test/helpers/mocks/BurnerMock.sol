@@ -2,10 +2,25 @@
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
+import "../../../src/interfaces/IStETH.sol";
 
 contract BurnerMock {
+    address public STETH;
+    error ZeroBurnAmount();
+
+    constructor(address _stETH) {
+        STETH = _stETH;
+    }
+
     function requestBurnShares(
         address _from,
         uint256 _sharesAmountToBurn
-    ) external {}
+    ) external {
+        IStETH(STETH).transferSharesFrom(
+            _from,
+            address(this),
+            _sharesAmountToBurn
+        );
+        if (_sharesAmountToBurn == 0) revert ZeroBurnAmount();
+    }
 }

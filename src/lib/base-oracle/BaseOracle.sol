@@ -8,32 +8,8 @@ import { UnstructuredStorage } from "../UnstructuredStorage.sol";
 import { Versioned } from "../utils/Versioned.sol";
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 
-import { IReportAsyncProcessor } from "./HashConsensus.sol";
-
-interface IConsensusContract {
-    function getIsMember(address addr) external view returns (bool);
-
-    function getCurrentFrame()
-        external
-        view
-        returns (uint256 refSlot, uint256 reportProcessingDeadlineSlot);
-
-    function getChainConfig()
-        external
-        view
-        returns (
-            uint256 slotsPerEpoch,
-            uint256 secondsPerSlot,
-            uint256 genesisTime
-        );
-
-    function getFrameConfig()
-        external
-        view
-        returns (uint256 initialEpoch, uint256 epochsPerFrame);
-
-    function getInitialRefSlot() external view returns (uint256);
-}
+import { IReportAsyncProcessor } from "./interfaces/IReportAsyncProcessor.sol";
+import { IConsensusContract } from "./interfaces/IConsensusContract.sol";
 
 // solhint-disable ordering
 abstract contract BaseOracle is
@@ -99,6 +75,7 @@ abstract contract BaseOracle is
     error AddressCannotBeZero();
     error AddressCannotBeSame();
     error VersionCannotBeSame();
+    error VersionCannotBeZero();
     error UnexpectedChainConfig();
     error SenderIsNotTheConsensusContract();
     error InitialRefSlotCannotBeLessThanProcessingOne(
@@ -171,7 +148,7 @@ abstract contract BaseOracle is
     ///
 
     /// @notice Returns the last consensus report hash and metadata.
-    ///
+    /// @dev Zero hash means that either there have been no reports yet, or the report for `refSlot` was discarded.
     function getConsensusReport()
         external
         view
@@ -264,9 +241,9 @@ abstract contract BaseOracle is
     /// Only called when, for the given reference slot:
     ///
     ///   1. there previously was a consensus report; AND
-    ///   1. processing of the consensus report hasn't started yet; AND
-    ///   2. report processing deadline is not expired yet; AND
-    ///   3. there's no consensus report now (otherwise, `submitConsensusReport` is called instead).
+    ///   2. processing of the consensus report hasn't started yet; AND
+    ///   3. report processing deadline is not expired yet (enforced by HashConsensus); AND
+    ///   4. there's no consensus report now (otherwise, `submitConsensusReport` is called instead) (enforced by HashConsensus).
     ///
     /// Can be called even when there's no submitted non-discarded consensus report for the current
     /// reference slot, i.e. can be called multiple times in succession.
@@ -405,27 +382,9 @@ abstract contract BaseOracle is
         return prevProcessingRefSlot;
     }
 
-    /// @notice Reverts if the processing deadline for the current consensus report is missed.
-    ///
-    function _checkProcessingDeadline() internal view {
-        _checkProcessingDeadline(
-            _storageConsensusReport().value.processingDeadlineTime
-        );
-    }
-
     function _checkProcessingDeadline(uint256 deadlineTime) internal view {
         if (_getTime() > deadlineTime)
             revert ProcessingDeadlineMissed(deadlineTime);
-    }
-
-    /// @notice Returns the reference slot for the current frame.
-    ///
-    function _getCurrentRefSlot() internal view returns (uint256) {
-        address consensusContract = CONSENSUS_CONTRACT_POSITION
-            .getStorageAddress();
-        (uint256 refSlot, ) = IConsensusContract(consensusContract)
-            .getCurrentFrame();
-        return refSlot;
     }
 
     ///
@@ -435,6 +394,7 @@ abstract contract BaseOracle is
     function _setConsensusVersion(uint256 version) internal {
         uint256 prevVersion = CONSENSUS_VERSION_POSITION.getStorageUint256();
         if (version == prevVersion) revert VersionCannotBeSame();
+        if (version == 0) revert VersionCannotBeZero();
         CONSENSUS_VERSION_POSITION.setStorageUint256(version);
         emit ConsensusVersionSet(version, prevVersion);
     }

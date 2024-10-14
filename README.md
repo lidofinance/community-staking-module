@@ -42,7 +42,7 @@ just test-unit
 For the following tests, make sure that the following variables are set in the `.env` file:
 
 ```bash
-export CHAIN=devnet
+export CHAIN=holesky
 export RPC_URL=
 ```
 
@@ -90,10 +90,10 @@ Further test commands require the following environment variables to be set:
 
 ```bash
 export RPC_URL=http://127.0.0.1:8545
-export DEPLOY_CONFIG=./artifacts/local/deploy-devnet.json
+export DEPLOY_CONFIG=./artifacts/local/deploy-holesky.json
 ```
 
-The result of deployment is `./artifacts/local/deploy-devnet.json` deployment config, which is required for integration testing
+The result of deployment is `./artifacts/local/deploy-holesky.json` deployment config, which is required for integration testing
 
 Verify deploy by running `deployment` tests.
 Note that these are meant to be run only right after deployment, so they don't supposed to be green after any actions in the contracts
@@ -108,7 +108,7 @@ Integration tests should pass either before a vote, or after at any state of con
 just test-integration
 ```
 
-There also fork helper scripts to prepare a fork state for e.g. UI testing purposes, 
+There also fork helper scripts to prepare a fork state for e.g. UI testing purposes,
 see [fork.just](./fork.just) to get all available commands
 
 ```bash

@@ -77,8 +77,7 @@ contract OssifiableProxy is ERC1967Proxy {
     /// @notice Upgrades the proxy to a new implementation, optionally performing an additional
     ///     setup call.
     /// @param newImplementation_ Address of the new implementation
-    /// @param setupCalldata_ Data for the setup call. The call is skipped if setupCalldata_ is
-    ///     empty and forceCall_ is false
+    /// @param setupCalldata_ Data for the setup call. The call is skipped if setupCalldata_ is empty
     // solhint-disable-next-line func-name-mixedcase
     function proxy__upgradeToAndCall(
         address newImplementation_,

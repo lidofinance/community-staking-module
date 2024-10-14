@@ -31,6 +31,8 @@ contract CSFeeOracle is
         bytes32 treeRoot;
         /// @notice CID of the published Merkle tree.
         string treeCid;
+        /// @notice CID of the file with log of the last frame reported.
+        string logCid;
         /// @notice Total amount of fees distributed in the report.
         uint256 distributed;
     }
@@ -64,14 +66,6 @@ contract CSFeeOracle is
     event FeeDistributorContractSet(address feeDistributorContract);
 
     event PerfLeewaySet(uint256 valueBP);
-
-    /// @dev Emitted when a report is settled.
-    event ReportSettled(
-        uint256 indexed refSlot,
-        uint256 distributed,
-        bytes32 treeRoot,
-        string treeCid
-    );
 
     error ZeroAdminAddress();
     error ZeroFeeDistributorAddress();
@@ -136,7 +130,7 @@ contract CSFeeOracle is
     }
 
     /// @notice Resume accepting oracle reports
-    function resume() external whenPaused onlyRole(RESUME_ROLE) {
+    function resume() external onlyRole(RESUME_ROLE) {
         _resume();
     }
 
@@ -186,14 +180,8 @@ contract CSFeeOracle is
         feeDistributor.processOracleReport(
             data.treeRoot,
             data.treeCid,
+            data.logCid,
             data.distributed
-        );
-
-        emit ReportSettled(
-            data.refSlot,
-            data.distributed,
-            data.treeRoot,
-            data.treeCid
         );
     }
 
@@ -205,6 +193,6 @@ contract CSFeeOracle is
     }
 
     function _onlyRecoverer() internal view override {
-        _checkRole(RECOVERER_ROLE, msg.sender);
+        _checkRole(RECOVERER_ROLE);
     }
 }

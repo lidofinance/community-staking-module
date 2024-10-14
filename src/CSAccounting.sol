@@ -5,8 +5,6 @@ pragma solidity 0.8.24;
 
 import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import { CSBondCore } from "./abstract/CSBondCore.sol";
 import { CSBondCurve } from "./abstract/CSBondCurve.sol";
@@ -30,8 +28,6 @@ contract CSAccounting is
     AccessControlEnumerableUpgradeable,
     AssetRecoverer
 {
-    using SafeERC20 for IERC20;
-
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant ACCOUNTING_MANAGER_ROLE =
@@ -163,6 +159,8 @@ contract CSAccounting is
     }
 
     /// @notice Update existing bond curve
+    /// @dev If the curve is updated to a curve with higher values for any point,
+    ///      Extensive checks should be performed to avoid inconsistency in the keys accounting
     /// @param curveId Bond curve ID to update
     /// @param bondCurve Bond curve definition
     function updateBondCurve(
@@ -173,6 +171,8 @@ contract CSAccounting is
     }
 
     /// @notice Set the bond curve for the given Node Operator
+    /// @dev If called externally, the `normalizeQueue` method from CSModule.sol should be called after
+    ///      to ensure key pointers consistency
     /// @param nodeOperatorId ID of the Node Operator
     /// @param curveId ID of the bond curve to set
     function setBondCurve(
@@ -184,6 +184,8 @@ contract CSAccounting is
     }
 
     /// @notice Reset bond curve to the default one for the given Node Operator
+    /// @dev If called externally, the `normalizeQueue` method from CSModule.sol should be called after
+    ///      to ensure key pointers consistency
     /// @param nodeOperatorId ID of the Node Operator
     function resetBondCurve(
         uint256 nodeOperatorId
@@ -277,6 +279,8 @@ contract CSAccounting is
     /// @param rewardAddress Reward address of the node operator
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
+    /// @dev It's impossible to use single-leaf proof via this method, so this case should be treated carefully by
+    /// off-chain tooling, e.g. to make sure a tree has at least 2 leafs.
     function claimRewardsStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount,
@@ -298,6 +302,8 @@ contract CSAccounting is
     /// @param rewardAddress Reward address of the node operator
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
+    /// @dev It's impossible to use single-leaf proof via this method, so this case should be treated carefully by
+    /// off-chain tooling, e.g. to make sure a tree has at least 2 leafs.
     function claimRewardsWstETH(
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
@@ -320,6 +326,8 @@ contract CSAccounting is
     /// @param rewardAddress Reward address of the node operator
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
+    /// @dev It's impossible to use single-leaf proof via this method, so this case should be treated carefully by
+    /// off-chain tooling, e.g. to make sure a tree has at least 2 leafs.
     function claimRewardsUnstETH(
         uint256 nodeOperatorId,
         uint256 stEthAmount,
@@ -372,15 +380,13 @@ contract CSAccounting is
     /// @notice Settle locked bond ETH for the given Node Operator
     /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
-    function settleLockedBondETH(
-        uint256 nodeOperatorId
-    ) external onlyCSM returns (uint256 settledAmount) {
+    function settleLockedBondETH(uint256 nodeOperatorId) external onlyCSM {
         uint256 lockedAmount = CSBondLock.getActualLockedBond(nodeOperatorId);
         if (lockedAmount > 0) {
-            settledAmount = CSBondCore._burn(nodeOperatorId, lockedAmount);
+            CSBondCore._burn(nodeOperatorId, lockedAmount);
+            // reduce all locked bond even if bond isn't covered lock fully
+            CSBondLock._remove(nodeOperatorId);
         }
-        // reduce all locked bond even if bond isn't covered lock fully
-        CSBondLock._remove(nodeOperatorId);
     }
 
     /// @notice Penalize bond by burning stETH shares of the given Node Operator
@@ -539,7 +545,7 @@ contract CSAccounting is
         uint256 curveId
     ) public view returns (uint256) {
         return
-            WSTETH.getWstETHByStETH(
+            _sharesByEth(
                 CSBondCurve.getBondAmountByKeysCount(keysCount, curveId)
             );
     }
@@ -554,7 +560,7 @@ contract CSAccounting is
         BondCurve memory curve
     ) public view returns (uint256) {
         return
-            WSTETH.getWstETHByStETH(
+            _sharesByEth(
                 CSBondCurve.getBondAmountByKeysCount(keysCount, curve)
             );
     }
@@ -568,7 +574,7 @@ contract CSAccounting is
         uint256 additionalKeys
     ) public view returns (uint256) {
         return
-            WSTETH.getWstETHByStETH(
+            _sharesByEth(
                 getRequiredBondForNextKeys(nodeOperatorId, additionalKeys)
             );
     }
