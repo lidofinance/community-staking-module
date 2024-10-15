@@ -1,5 +1,5 @@
 # QueueLib
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/lib/QueueLib.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/ed13582ed87bf90a004e225eef6ca845b31d396d/src/lib/QueueLib.sol)
 
 **Author:**
 madlabman
@@ -22,7 +22,7 @@ function normalize(Queue storage self, mapping(uint256 => NodeOperator) storage 
 ```solidity
 function clean(Queue storage self, mapping(uint256 => NodeOperator) storage nodeOperators, uint256 maxItems)
     external
-    returns (uint256 toRemove);
+    returns (uint256 removed, uint256 lastRemovedAtDepth);
 ```
 
 ### enqueue

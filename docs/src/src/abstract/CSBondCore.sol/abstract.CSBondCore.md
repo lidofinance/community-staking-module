@@ -1,6 +1,6 @@
 # CSBondCore
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/abstract/CSBondCore.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/ed13582ed87bf90a004e225eef6ca845b31d396d/src/abstract/CSBondCore.sol)
 
 **Inherits:**
 [ICSBondCore](/src/interfaces/ICSBondCore.sol/interface.ICSBondCore.md)
@@ -177,7 +177,7 @@ _Burn Node Operator's bond shares (stETH). Shares will be burned on the next stE
 _The method sender should be granted as `Burner.REQUEST_BURN_SHARES_ROLE` and make stETH allowance for `Burner`_
 
 ```solidity
-function _burn(uint256 nodeOperatorId, uint256 amount) internal returns (uint256 burned);
+function _burn(uint256 nodeOperatorId, uint256 amount) internal;
 ```
 
 **Parameters**
