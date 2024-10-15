@@ -32,12 +32,12 @@ def main():
         conn.request("POST", rpc_url.path, payload, headers)
         response = conn.getresponse()
         data = response.read().decode()
-        assert data.endswith('01"}'), f"Check failed. Address: {addr}, Data: {data}"
+        assert data.endswith('01"}'), f"🚨 Check failed. Address: {addr}, Data: {data}"
         current += 1
         if current % 1000 == 0:
-            print(f"Processed {current} of {addr_length} addresses")
+            print(f"Processed {current} of {addr_length} addresses ⏳")
     conn.close()
-    print("All checks passed")
+    print("All checks passed ✅")
 
 
 if __name__ == "__main__":
