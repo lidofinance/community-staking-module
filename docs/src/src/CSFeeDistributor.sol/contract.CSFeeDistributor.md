@@ -1,6 +1,6 @@
 # CSFeeDistributor
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/CSFeeDistributor.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/ed13582ed87bf90a004e225eef6ca845b31d396d/src/CSFeeDistributor.sol)
 
 **Inherits:**
 [ICSFeeDistributor](/src/interfaces/ICSFeeDistributor.sol/interface.ICSFeeDistributor.md), Initializable, AccessControlEnumerableUpgradeable, [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -48,6 +48,14 @@ CID of the published Merkle tree
 
 ```solidity
 string public treeCid;
+```
+
+### logCid
+
+CID of the file with log of the last frame reported
+
+```solidity
+string public logCid;
 ```
 
 ### distributedShares
@@ -114,6 +122,7 @@ Receive the data of the Merkle tree from the Oracle contract and process it
 function processOracleReport(
   bytes32 _treeRoot,
   string calldata _treeCid,
+  string calldata _logCid,
   uint256 distributed
 ) external;
 ```
@@ -222,6 +231,14 @@ _Emitted when distribution data is updated_
 event DistributionDataUpdated(uint256 totalClaimableShares, bytes32 treeRoot, string treeCid);
 ```
 
+### DistributionLogUpdated
+
+_Emitted when distribution log is updated_
+
+```solidity
+event DistributionLogUpdated(string logCid);
+```
+
 ## Errors
 
 ### ZeroAccountingAddress
@@ -270,6 +287,12 @@ error InvalidTreeRoot();
 
 ```solidity
 error InvalidTreeCID();
+```
+
+### InvalidLogCID
+
+```solidity
+error InvalidLogCID();
 ```
 
 ### InvalidShares

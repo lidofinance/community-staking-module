@@ -1,5 +1,5 @@
 # OssifiableProxy
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/lib/proxy/OssifiableProxy.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/ed13582ed87bf90a004e225eef6ca845b31d396d/src/lib/proxy/OssifiableProxy.sol)
 
 **Inherits:**
 ERC1967Proxy
@@ -99,7 +99,7 @@ function proxy__upgradeToAndCall(address newImplementation_, bytes calldata setu
 |Name|Type|Description|
 |----|----|-----------|
 |`newImplementation_`|`address`|Address of the new implementation|
-|`setupCalldata_`|`bytes`|Data for the setup call. The call is skipped if setupCalldata_ is empty and forceCall_ is false|
+|`setupCalldata_`|`bytes`|Data for the setup call. The call is skipped if setupCalldata_ is empty|
 
 
 ### proxy__getAdmin

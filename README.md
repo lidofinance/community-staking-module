@@ -3,9 +3,13 @@
 </p>
 <h1 align="center"> Lido Community Staking Module </h1>
 
-> **This project is under heavy development. Do not consider any code as final.**
+## Intro
 
-### Getting Started
+Lido Community Staking Module (CSM) is a permissionless module allowing community stakers to operate Ethereum validators with lower entry costs. Stakers provide stETH bonds, serving as security collateral, and receive rewards in the form of bond rebase and staking rewards (including execution layer rewards), which are socialized across Lido’s staking modules.
+
+More on CSM in the [docs](https://docs.lido.fi/staking-modules/csm/intro).
+
+## Getting Started
 
 - Install [Foundry tools](https://book.getfoundry.sh/getting-started/installation)
 
@@ -31,7 +35,7 @@ Fill vars in the `.env` file with your own values
 just
 ```
 
-### Run tests
+## Run tests
 
 Run unit tests only
 
@@ -43,7 +47,7 @@ For the following tests, make sure that the following variables are set in the `
 
 ```bash
 export CHAIN=holesky
-export RPC_URL=
+export RPC_URL=<PUT_YOUR_URL_HERE>
 ```
 
 Deploy CSM to the fork and run `deployment` and `integration` tests over it
@@ -58,7 +62,7 @@ Run all tests in one (`unit`, `deployment`, `integration`)
 just test-all
 ```
 
-### Make a gas report
+## Make a gas report
 
 It requires all unit tests to be green
 
@@ -66,7 +70,7 @@ It requires all unit tests to be green
 just gas-report
 ```
 
-### Add new dependencies
+## Add new dependencies
 
 Dependencies are managed using yarn. To install new dependencies, run:
 
@@ -77,7 +81,7 @@ yarn add <package-name>
 Whenever you install new libraries using yarn, make sure to update your
 `remappings.txt`.
 
-### Advanced testing scenarios using local fork
+## Advanced testing scenarios using local fork
 
 Deploy contracts to the local fork
 
@@ -127,7 +131,7 @@ Kill fork after testing
 just kill-fork
 ```
 
-### Deploy on a chain
+## Deploy on a chain
 
 The following commands are related to the deployment process:
 

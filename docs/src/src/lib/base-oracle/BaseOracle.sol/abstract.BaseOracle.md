@@ -1,8 +1,8 @@
 # BaseOracle
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/lib/base-oracle/BaseOracle.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/ed13582ed87bf90a004e225eef6ca845b31d396d/src/lib/base-oracle/BaseOracle.sol)
 
 **Inherits:**
-[IReportAsyncProcessor](/src/lib/base-oracle/HashConsensus.sol/interface.IReportAsyncProcessor.md), AccessControlEnumerableUpgradeable, [Versioned](/src/lib/utils/Versioned.sol/contract.Versioned.md)
+[IReportAsyncProcessor](/src/lib/base-oracle/interfaces/IReportAsyncProcessor.sol/interface.IReportAsyncProcessor.md), AccessControlEnumerableUpgradeable, [Versioned](/src/lib/utils/Versioned.sol/contract.Versioned.md)
 
 
 ## State Variables
@@ -132,6 +132,8 @@ Data provider interface
 
 Returns the last consensus report hash and metadata.
 
+*Zero hash means that either there have been no reports yet, or the report for `refSlot` was discarded.*
+
 
 ```solidity
 function getConsensusReport()
@@ -164,9 +166,9 @@ is not a consensus report anymore and should be discarded. This can happen when 
 changes their report, is removed from the set, or when the quorum value gets increased.
 Only called when, for the given reference slot:
 1. there previously was a consensus report; AND
-1. processing of the consensus report hasn't started yet; AND
-2. report processing deadline is not expired yet; AND
-3. there's no consensus report now (otherwise, `submitConsensusReport` is called instead).
+2. processing of the consensus report hasn't started yet; AND
+3. report processing deadline is not expired yet (enforced by HashConsensus); AND
+4. there's no consensus report now (otherwise, `submitConsensusReport` is called instead) (enforced by HashConsensus).
 Can be called even when there's no submitted non-discarded consensus report for the current
 reference slot, i.e. can be called multiple times in succession.
 
@@ -262,27 +264,9 @@ function _startProcessing() internal returns (uint256);
 
 ### _checkProcessingDeadline
 
-Reverts if the processing deadline for the current consensus report is missed.
-
-
-```solidity
-function _checkProcessingDeadline() internal view;
-```
-
-### _checkProcessingDeadline
-
 
 ```solidity
 function _checkProcessingDeadline(uint256 deadlineTime) internal view;
-```
-
-### _getCurrentRefSlot
-
-Returns the reference slot for the current frame.
-
-
-```solidity
-function _getCurrentRefSlot() internal view returns (uint256);
 ```
 
 ### _setConsensusVersion
@@ -377,6 +361,12 @@ error AddressCannotBeSame();
 
 ```solidity
 error VersionCannotBeSame();
+```
+
+### VersionCannotBeZero
+
+```solidity
+error VersionCannotBeZero();
 ```
 
 ### UnexpectedChainConfig

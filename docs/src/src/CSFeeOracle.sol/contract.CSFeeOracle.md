@@ -1,6 +1,6 @@
 # CSFeeOracle
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/CSFeeOracle.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/ed13582ed87bf90a004e225eef6ca845b31d396d/src/CSFeeOracle.sol)
 
 **Inherits:**
 [BaseOracle](/src/lib/base-oracle/BaseOracle.sol/abstract.BaseOracle.md), [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md), [IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md)
@@ -141,7 +141,7 @@ function submitReportData(ReportData calldata data, uint256 contractVersion) ext
 Resume accepting oracle reports
 
 ```solidity
-function resume() external whenPaused onlyRole(RESUME_ROLE);
+function resume() external onlyRole(RESUME_ROLE);
 ```
 
 ### pauseFor
@@ -226,14 +226,6 @@ event FeeDistributorContractSet(address feeDistributorContract);
 event PerfLeewaySet(uint256 valueBP);
 ```
 
-### ReportSettled
-
-_Emitted when a report is settled._
-
-```solidity
-event ReportSettled(uint256 indexed refSlot, uint256 distributed, bytes32 treeRoot, string treeCid);
-```
-
 ## Errors
 
 ### ZeroAdminAddress
@@ -272,6 +264,7 @@ struct ReportData {
   uint256 refSlot;
   bytes32 treeRoot;
   string treeCid;
+  string logCid;
   uint256 distributed;
 }
 ```

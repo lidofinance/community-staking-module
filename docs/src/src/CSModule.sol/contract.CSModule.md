@@ -1,6 +1,6 @@
 # CSModule
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/CSModule.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/ed13582ed87bf90a004e225eef6ca845b31d396d/src/CSModule.sol)
 
 **Inherits:**
 [ICSModule](/src/interfaces/ICSModule.sol/interface.ICSModule.md), Initializable, AccessControlEnumerableUpgradeable, [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -83,6 +83,12 @@ uint256 public immutable EL_REWARDS_STEALING_FINE;
 
 ```solidity
 uint256 public immutable MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE;
+```
+
+### MAX_KEY_REMOVAL_CHARGE
+
+```solidity
+uint256 public immutable MAX_KEY_REMOVAL_CHARGE;
 ```
 
 ### MODULE_TYPE
@@ -191,6 +197,7 @@ constructor(
   uint256 minSlashingPenaltyQuotient,
   uint256 elRewardsStealingFine,
   uint256 maxKeysPerOperatorEA,
+  uint256 maxKeyRemovalCharge,
   address lidoLocator
 );
 ```
@@ -873,7 +880,7 @@ function cancelELRewardsStealingPenalty(
 
 ### settleELRewardsStealingPenalty
 
-Settle blocked bond for the given Node Operators
+Settle locked bond for the given Node Operators
 
 _SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE role is expected to be assigned to Easy Track_
 
@@ -893,7 +900,7 @@ function settleELRewardsStealingPenalty(
 
 Compensate EL rewards stealing penalty for the given Node Operator to prevent further validator exits
 
-_Expected to be called by the Node Operator, but can be called by anyone_
+_Can only be called by the Node Operator manager_
 
 ```solidity
 function compensateELRewardsStealingPenalty(uint256 nodeOperatorId) external payable;
@@ -1003,7 +1010,9 @@ Clean the deposit queue from batches with no depositable keys
 _Use **eth_call** to check how many items will be removed_
 
 ```solidity
-function cleanDepositQueue(uint256 maxItems) external returns (uint256);
+function cleanDepositQueue(
+  uint256 maxItems
+) external returns (uint256 removed, uint256 lastRemovedAtDepth);
 ```
 
 **Parameters**
@@ -1014,19 +1023,10 @@ function cleanDepositQueue(uint256 maxItems) external returns (uint256);
 
 **Returns**
 
-| Name     | Type      | Description                                       |
-| -------- | --------- | ------------------------------------------------- |
-| `<none>` | `uint256` | Number of the deposit data removed from the queue |
-
-### recoverStETHShares
-
-Recover all stETH shares from the contract
-
-_There should be no stETH shares on the contract balance during regular operation_
-
-```solidity
-function recoverStETHShares() external;
-```
+| Name                 | Type      | Description                                                                                          |
+| -------------------- | --------- | ---------------------------------------------------------------------------------------------------- |
+| `removed`            | `uint256` | Count of batches to be removed by visiting `maxItems` batches                                        |
+| `lastRemovedAtDepth` | `uint256` | The value to use as `maxItems` to remove `removed` batches if the static call of the method was used |
 
 ### depositQueueItem
 
@@ -1347,7 +1347,7 @@ function _createNodeOperator(
   NodeOperatorManagementProperties calldata managementProperties,
   address referrer,
   bytes32[] calldata proof
-) internal returns (uint256 id);
+) internal returns (uint256 noId, uint256 curveId);
 ```
 
 ### \_addKeysAndUpdateDepositableValidatorsCount
@@ -1392,8 +1392,7 @@ function _updateStuckValidatorsCount(uint256 nodeOperatorId, uint256 stuckValida
 ```solidity
 function _updateDepositableValidatorsCount(
   uint256 nodeOperatorId,
-  bool incrementNonceIfUpdated,
-  bool normalizeQueueIfUpdated
+  bool incrementNonceIfUpdated
 ) internal;
 ```
 
@@ -1515,13 +1514,18 @@ event TargetValidatorsCountChanged(
 ### WithdrawalSubmitted
 
 ```solidity
-event WithdrawalSubmitted(uint256 indexed nodeOperatorId, uint256 keyIndex, uint256 amount);
+event WithdrawalSubmitted(
+  uint256 indexed nodeOperatorId,
+  uint256 keyIndex,
+  uint256 amount,
+  bytes pubkey
+);
 ```
 
 ### InitialSlashingSubmitted
 
 ```solidity
-event InitialSlashingSubmitted(uint256 indexed nodeOperatorId, uint256 keyIndex);
+event InitialSlashingSubmitted(uint256 indexed nodeOperatorId, uint256 keyIndex, bytes pubkey);
 ```
 
 ### PublicRelease
@@ -1556,6 +1560,12 @@ event ELRewardsStealingPenaltyReported(
 
 ```solidity
 event ELRewardsStealingPenaltyCancelled(uint256 indexed nodeOperatorId, uint256 amount);
+```
+
+### ELRewardsStealingPenaltyCompensated
+
+```solidity
+event ELRewardsStealingPenaltyCompensated(uint256 indexed nodeOperatorId, uint256 amount);
 ```
 
 ### ELRewardsStealingPenaltySettled
@@ -1618,12 +1628,6 @@ error SigningKeysInvalidOffset();
 
 ```solidity
 error AlreadySubmitted();
-```
-
-### AlreadyWithdrawn
-
-```solidity
-error AlreadyWithdrawn();
 ```
 
 ### AlreadyActivated

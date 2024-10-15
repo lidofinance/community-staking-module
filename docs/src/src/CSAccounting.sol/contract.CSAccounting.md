@@ -1,6 +1,6 @@
 # CSAccounting
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/8ce9441dce1001c93d75d065f051013ad5908976/src/CSAccounting.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/ed13582ed87bf90a004e225eef6ca845b31d396d/src/CSAccounting.sol)
 
 **Inherits:**
 [ICSAccounting](/src/interfaces/ICSAccounting.sol/interface.ICSAccounting.md), [CSBondCore](/src/abstract/CSBondCore.sol/abstract.CSBondCore.md), [CSBondCurve](/src/abstract/CSBondCurve.sol/abstract.CSBondCurve.md), [CSBondLock](/src/abstract/CSBondLock.sol/abstract.CSBondLock.md), [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), AccessControlEnumerableUpgradeable, [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -210,6 +210,9 @@ function addBondCurve(
 
 Update existing bond curve
 
+_If the curve is updated to a curve with higher values for any point,
+Extensive checks should be performed to avoid inconsistency in the keys accounting_
+
 ```solidity
 function updateBondCurve(
   uint256 curveId,
@@ -228,6 +231,9 @@ function updateBondCurve(
 
 Set the bond curve for the given Node Operator
 
+_If called externally, the `normalizeQueue` method from CSModule.sol should be called after
+to ensure key pointers consistency_
+
 ```solidity
 function setBondCurve(
   uint256 nodeOperatorId,
@@ -245,6 +251,9 @@ function setBondCurve(
 ### resetBondCurve
 
 Reset bond curve to the default one for the given Node Operator
+
+_If called externally, the `normalizeQueue` method from CSModule.sol should be called after
+to ensure key pointers consistency_
 
 ```solidity
 function resetBondCurve(uint256 nodeOperatorId) external onlyRole(RESET_BOND_CURVE_ROLE);
@@ -328,6 +337,9 @@ Claim full reward (fee + bond) in stETH for the given Node Operator with desirab
 
 _Called by CSM exclusively_
 
+_It's impossible to use single-leaf proof via this method, so this case should be treated carefully by
+off-chain tooling, e.g. to make sure a tree has at least 2 leafs._
+
 ```solidity
 function claimRewardsStETH(
   uint256 nodeOperatorId,
@@ -354,6 +366,9 @@ Claim full reward (fee + bond) in wstETH for the given Node Operator available f
 `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond
 
 _Called by CSM exclusively_
+
+_It's impossible to use single-leaf proof via this method, so this case should be treated carefully by
+off-chain tooling, e.g. to make sure a tree has at least 2 leafs._
 
 ```solidity
 function claimRewardsWstETH(
@@ -383,6 +398,9 @@ Request full reward (fee + bond) in Withdrawal NFT (unstETH) for the given Node 
 _Reverts if amount isn't between `MIN_STETH_WITHDRAWAL_AMOUNT` and `MAX_STETH_WITHDRAWAL_AMOUNT`_
 
 _Called by CSM exclusively_
+
+_It's impossible to use single-leaf proof via this method, so this case should be treated carefully by
+off-chain tooling, e.g. to make sure a tree has at least 2 leafs._
 
 ```solidity
 function claimRewardsUnstETH(
@@ -459,9 +477,7 @@ Settle locked bond ETH for the given Node Operator
 _Called by CSM exclusively_
 
 ```solidity
-function settleLockedBondETH(
-  uint256 nodeOperatorId
-) external onlyCSM returns (uint256 settledAmount);
+function settleLockedBondETH(uint256 nodeOperatorId) external onlyCSM;
 ```
 
 **Parameters**
