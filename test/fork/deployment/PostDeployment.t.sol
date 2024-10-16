@@ -106,6 +106,8 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_initialState() public {
+        Env memory env = envVars();
+        vm.skip(!_isEmpty(env.POST_VOTE));
         assertTrue(csm.isPaused());
         assertFalse(csm.publicRelease());
         assertEq(csm.getNodeOperatorsCount(), 0);
@@ -249,6 +251,8 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_initialState() public {
+        Env memory env = envVars();
+        vm.skip(!_isEmpty(env.POST_VOTE));
         assertFalse(accounting.isPaused());
         assertEq(accounting.totalBondShares(), 0);
         assertEq(
@@ -313,6 +317,8 @@ contract CSFeeDistributorDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_initialState() public {
+        Env memory env = envVars();
+        vm.skip(!_isEmpty(env.POST_VOTE));
         assertEq(feeDistributor.totalClaimableShares(), 0);
         assertEq(feeDistributor.pendingSharesToDistribute(), 0);
         assertEq(feeDistributor.treeRoot(), bytes32(0));
@@ -391,6 +397,8 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_initialState() public {
+        Env memory env = envVars();
+        vm.skip(!_isEmpty(env.POST_VOTE));
         assertFalse(oracle.isPaused());
 
         (
@@ -498,6 +506,8 @@ contract HashConsensusDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_initialState() public {
+        Env memory env = envVars();
+        vm.skip(!_isEmpty(env.POST_VOTE));
         vm.skip(block.chainid != 1);
         assertEq(hashConsensus.getQuorum(), deployParams.hashConsensusQuorum);
         (address[] memory members, ) = hashConsensus.getMembers();

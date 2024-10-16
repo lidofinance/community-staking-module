@@ -93,6 +93,7 @@ contract DeploymentFixtures is StdCheats, Test {
     struct Env {
         string RPC_URL;
         string DEPLOY_CONFIG;
+        string POST_VOTE;
     }
 
     struct DeploymentConfig {
@@ -111,7 +112,8 @@ contract DeploymentFixtures is StdCheats, Test {
     function envVars() public returns (Env memory) {
         Env memory env = Env(
             vm.envOr("RPC_URL", string("")),
-            vm.envOr("DEPLOY_CONFIG", string(""))
+            vm.envOr("DEPLOY_CONFIG", string("")),
+            vm.envOr("POST_VOTE", string(""))
         );
         vm.skip(_isEmpty(env.RPC_URL));
         vm.skip(_isEmpty(env.DEPLOY_CONFIG));

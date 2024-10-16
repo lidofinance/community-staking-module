@@ -37,6 +37,8 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_CSModuleUpgradeToAndCall() public {
+        Env memory env = envVars();
+        vm.skip(!_isEmpty(env.POST_VOTE));
         OssifiableProxy proxy = OssifiableProxy(payable(address(csm)));
         CSModule newModule = new CSModule({
             moduleType: "CSMv2",
@@ -79,6 +81,8 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_CSAccountingUpgradeToAndCall() public {
+        Env memory env = envVars();
+        vm.skip(!_isEmpty(env.POST_VOTE));
         OssifiableProxy proxy = OssifiableProxy(payable(address(accounting)));
         uint256 currentMaxCurveLength = accounting.MAX_CURVE_LENGTH();
         CSAccounting newAccounting = new CSAccounting({
