@@ -37,8 +37,6 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_CSModuleUpgradeToAndCall() public {
-        Env memory env = envVars();
-        vm.skip(!_isEmpty(env.POST_VOTE));
         OssifiableProxy proxy = OssifiableProxy(payable(address(csm)));
         CSModule newModule = new CSModule({
             moduleType: "CSMv2",
@@ -52,7 +50,12 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
         address contractAdmin = csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0);
         vm.startPrank(contractAdmin);
         csm.grantRole(csm.RESUME_ROLE(), address(proxy.proxy__getAdmin()));
+        csm.grantRole(csm.PAUSE_ROLE(), address(proxy.proxy__getAdmin()));
         vm.stopPrank();
+        if (!csm.isPaused()) {
+            vm.prank(proxy.proxy__getAdmin());
+            csm.pauseFor(100500);
+        }
         assertTrue(csm.isPaused());
         vm.prank(proxy.proxy__getAdmin());
         proxy.proxy__upgradeToAndCall(
@@ -81,8 +84,6 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_CSAccountingUpgradeToAndCall() public {
-        Env memory env = envVars();
-        vm.skip(!_isEmpty(env.POST_VOTE));
         OssifiableProxy proxy = OssifiableProxy(payable(address(accounting)));
         uint256 currentMaxCurveLength = accounting.MAX_CURVE_LENGTH();
         CSAccounting newAccounting = new CSAccounting({
