@@ -60,7 +60,7 @@ test-deployment *args:
     forge test --match-path 'test/fork/*' --no-match-path='test/fork/voting/*' -vvv {{args}}
 
 test-post-voting *args:
-    forge test --match-path 'test/fork/*' --no-match-path='test/fork/deployment/*' -vvv {{args}}
+    forge test --match-path 'test/fork/*' --no-match-path='test/fork/deployment/InitialState.t.sol' -vvv {{args}}
 
 test-invariant *args:
     forge test --match-path 'test/fork/invariant/*' -vvv {{args}}

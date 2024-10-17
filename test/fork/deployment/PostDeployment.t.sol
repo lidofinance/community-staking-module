@@ -105,12 +105,6 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertEq(csm.getRoleMemberCount(csm.RECOVERER_ROLE()), 0);
     }
 
-    function test_initialState() public {
-        assertTrue(csm.isPaused());
-        assertFalse(csm.publicRelease());
-        assertEq(csm.getNodeOperatorsCount(), 0);
-    }
-
     function test_proxy() public {
         OssifiableProxy proxy = OssifiableProxy(payable(address(csm)));
         assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
@@ -248,15 +242,6 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertEq(accounting.getRoleMemberCount(accounting.RECOVERER_ROLE()), 0);
     }
 
-    function test_initialState() public {
-        assertFalse(accounting.isPaused());
-        assertEq(accounting.totalBondShares(), 0);
-        assertEq(
-            accounting.getCurveInfo(earlyAdoption.CURVE_ID()).points,
-            deployParams.earlyAdoptionBondCurve
-        );
-    }
-
     function test_proxy() public {
         OssifiableProxy proxy = OssifiableProxy(payable(address(accounting)));
         assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
@@ -309,16 +294,6 @@ contract CSFeeDistributorDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertEq(
             feeDistributor.getRoleMemberCount(feeDistributor.RECOVERER_ROLE()),
             0
-        );
-    }
-
-    function test_initialState() public {
-        assertEq(feeDistributor.totalClaimableShares(), 0);
-        assertEq(feeDistributor.pendingSharesToDistribute(), 0);
-        assertEq(feeDistributor.treeRoot(), bytes32(0));
-        assertEq(
-            keccak256(abi.encodePacked(feeDistributor.treeCid())),
-            keccak256("")
         );
     }
 
@@ -388,21 +363,6 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
             oracle.getRoleMemberCount(oracle.MANAGE_CONSENSUS_VERSION_ROLE()),
             0
         );
-    }
-
-    function test_initialState() public {
-        assertFalse(oracle.isPaused());
-
-        (
-            bytes32 hash,
-            uint256 refSlot,
-            uint256 processingDeadlineTime,
-            bool processingStarted
-        ) = oracle.getConsensusReport();
-        assertEq(hash, bytes32(0));
-        assertEq(refSlot, 0);
-        assertEq(processingDeadlineTime, 0);
-        assertFalse(processingStarted);
     }
 
     function test_proxy() public {
@@ -494,24 +454,6 @@ contract HashConsensusDeploymentTest is Test, Utilities, DeploymentFixtures {
                 hashConsensus.MANAGE_REPORT_PROCESSOR_ROLE()
             ),
             0
-        );
-    }
-
-    function test_initialState() public {
-        vm.skip(block.chainid != 1);
-        assertEq(hashConsensus.getQuorum(), deployParams.hashConsensusQuorum);
-        (address[] memory members, ) = hashConsensus.getMembers();
-        assertEq(
-            keccak256(abi.encode(members)),
-            keccak256(abi.encode(deployParams.oracleMembers))
-        );
-
-        (members, ) = HashConsensus(
-            BaseOracle(locator.accountingOracle()).getConsensusContract()
-        ).getMembers();
-        assertEq(
-            keccak256(abi.encode(members)),
-            keccak256(abi.encode(deployParams.oracleMembers))
         );
     }
 }

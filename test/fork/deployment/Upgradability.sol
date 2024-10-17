@@ -50,7 +50,12 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
         address contractAdmin = csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0);
         vm.startPrank(contractAdmin);
         csm.grantRole(csm.RESUME_ROLE(), address(proxy.proxy__getAdmin()));
+        csm.grantRole(csm.PAUSE_ROLE(), address(proxy.proxy__getAdmin()));
         vm.stopPrank();
+        if (!csm.isPaused()) {
+            vm.prank(proxy.proxy__getAdmin());
+            csm.pauseFor(100500);
+        }
         assertTrue(csm.isPaused());
         vm.prank(proxy.proxy__getAdmin());
         proxy.proxy__upgradeToAndCall(
