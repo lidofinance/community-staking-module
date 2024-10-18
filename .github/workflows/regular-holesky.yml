@@ -1,5 +1,5 @@
 ---
-name: Regular tests
+name: Regular holesky tests
 
 on:
   workflow_dispatch:
@@ -81,7 +81,7 @@ jobs:
         run: just build --sizes
 
       - name: Run integration & invariant tests
-        run: just test-post-voting
+        run: forge test --match-path 'test/fork/*' --no-match-path='{test/fork/deployment/*,test/fork/voting/*}' -vvv
         env:
           CHAIN: holesky
           DEPLOY_CONFIG: ./artifacts/holesky/deploy-holesky.json
@@ -107,5 +107,5 @@ jobs:
         if: ${{ failure() && (github.event_name == 'schedule' || inputs.notify) }}
         uses: lidofinance/action-discord@0.3.2
         env:
-          DISCORD_WEBHOOK: ${{ secrets.INVARIANTS_CHECK_DISCORD_WEBHOOK }}
+          DISCORD_WEBHOOK: ${{ secrets.INVARIANTS_CHECK_DISCORD_WEBHOOK_HOLESKY }}
           DISCORD_EMBEDS: ${{ env.EMBEDS }}
