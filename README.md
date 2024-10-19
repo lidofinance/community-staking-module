@@ -15,6 +15,8 @@ More on CSM in the [docs](https://docs.lido.fi/staking-modules/csm/intro).
 
 - Install [Just](https://github.com/casey/just)
 
+> Some Linux distributions (like Arch Linux) might require additional install of [netcat (nc)](https://netcat.sourceforge.net/)
+
 - Install project dependencies
 
 ```bash
