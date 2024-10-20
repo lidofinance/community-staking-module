@@ -15,7 +15,7 @@ More on CSM in the [docs](https://docs.lido.fi/staking-modules/csm/intro).
 
 - Install [Just](https://github.com/casey/just)
 
-> Some Linux distributions (like Arch Linux) might require additional install of [netcat (nc)](https://netcat.sourceforge.net/)
+> Some Linux distributions (like Arch Linux) might require additional install of [netcat (nc)](https://en.wikipedia.org/wiki/Netcat). The preferred version is OpenBSD.
 
 - Install project dependencies
 
