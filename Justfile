@@ -35,7 +35,10 @@ clean:
     rm -rf cache broadcast out node_modules
 
 deps:
-    yarn install --immutable
+    yarn workspaces focus --all --production
+
+deps-dev:
+    yarn workspaces focus --all && npx husky install
 
 lint-solhint:
     yarn lint:solhint

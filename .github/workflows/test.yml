@@ -81,7 +81,7 @@ jobs:
           cache-dependency-path: "**/yarn.lock"
 
       - name: Install dependencies
-        run: just deps
+        run: just deps-dev
 
       - name: Linters check
         run: just lint
