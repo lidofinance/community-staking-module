@@ -80,8 +80,8 @@ jobs:
       - name: Build
         run: just build --sizes
 
-      - name: Run deployment tests
-        run: just test-deployment
+      - name: Run post-vote tests
+        run: just test-post-voting
         env:
           CHAIN: mainnet
           DEPLOY_CONFIG: ./artifacts/mainnet/deploy-mainnet.json
