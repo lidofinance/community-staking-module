@@ -126,7 +126,10 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         assertEq(accounting.getRoleMemberCount(accounting.RECOVERER_ROLE()), 0);
     }
 
-    function test_feeDistirbutor_state() public {
+    function test_feeDistributor_state() public {
+        // The conditions below are true just after the vote, but can be broken afterward.
+        vm.skip(true);
+
         assertEq(feeDistributor.totalClaimableShares(), 0);
         assertEq(feeDistributor.pendingSharesToDistribute(), 0);
         assertEq(feeDistributor.treeRoot(), bytes32(0));
@@ -136,7 +139,7 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         );
     }
 
-    function test_feeDistirbutor_roles() public {
+    function test_feeDistributor_roles() public {
         assertTrue(
             feeDistributor.hasRole(
                 feeDistributor.DEFAULT_ADMIN_ROLE(),
