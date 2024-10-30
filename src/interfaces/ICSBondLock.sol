@@ -7,16 +7,13 @@ interface ICSBondLock {
     /// @dev Bond lock structure.
     /// It contains:
     ///  - amount         |> amount of locked bond
-    ///  - retentionUntil |> timestamp until locked bond is retained
+    ///  - freezeUntil |> timestamp until locked bond is retained
     struct BondLock {
         uint128 amount;
-        uint128 retentionUntil;
+        uint128 freezeUntil;
     }
 
-    function getBondLockRetentionPeriod()
-        external
-        view
-        returns (uint256 retention);
+    function getBondLockFreezePeriod() external view returns (uint256 freeze);
 
     function getLockedBondInfo(
         uint256 nodeOperatorId

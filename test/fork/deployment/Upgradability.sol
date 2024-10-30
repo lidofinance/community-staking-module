@@ -73,10 +73,8 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
             lidoLocator: address(accounting.LIDO_LOCATOR()),
             communityStakingModule: address(csm),
             maxCurveLength: currentMaxCurveLength + 10,
-            minBondLockRetentionPeriod: accounting
-                .MIN_BOND_LOCK_RETENTION_PERIOD(),
-            maxBondLockRetentionPeriod: accounting
-                .MAX_BOND_LOCK_RETENTION_PERIOD()
+            minBondLockFreezePeriod: accounting.MIN_BOND_LOCK_FREEZE_PERIOD(),
+            maxBondLockFreezePeriod: accounting.MAX_BOND_LOCK_FREEZE_PERIOD()
         });
         vm.prank(proxy.proxy__getAdmin());
         proxy.proxy__upgradeTo(address(newAccounting));
@@ -90,10 +88,8 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
             lidoLocator: address(accounting.LIDO_LOCATOR()),
             communityStakingModule: address(csm),
             maxCurveLength: currentMaxCurveLength + 10,
-            minBondLockRetentionPeriod: accounting
-                .MIN_BOND_LOCK_RETENTION_PERIOD(),
-            maxBondLockRetentionPeriod: accounting
-                .MAX_BOND_LOCK_RETENTION_PERIOD()
+            minBondLockFreezePeriod: accounting.MIN_BOND_LOCK_FREEZE_PERIOD(),
+            maxBondLockFreezePeriod: accounting.MAX_BOND_LOCK_FREEZE_PERIOD()
         });
         address contractAdmin = accounting.getRoleMember(
             accounting.DEFAULT_ADMIN_ROLE(),

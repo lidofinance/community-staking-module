@@ -17,12 +17,12 @@ import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 
 contract CSBondLockTestable is CSBondLock(4 weeks, 365 days) {
-    function initialize(uint256 retentionPeriod) public initializer {
-        CSBondLock.__CSBondLock_init(retentionPeriod);
+    function initialize(uint256 freezePeriod) public initializer {
+        CSBondLock.__CSBondLock_init(freezePeriod);
     }
 
-    function setBondLockRetentionPeriod(uint256 retention) external {
-        _setBondLockRetentionPeriod(retention);
+    function setBondLockFreezePeriod(uint256 freeze) external {
+        _setBondLockFreezePeriod(freeze);
     }
 
     function lock(uint256 nodeOperatorId, uint256 amount) external {
@@ -46,32 +46,32 @@ contract CSBondLockTest is Test {
         bondLock.initialize(8 weeks);
     }
 
-    function test_setBondLockRetentionPeriod() public {
-        uint256 retention = 4 weeks;
+    function test_setBondLockFreezePeriod() public {
+        uint256 freeze = 4 weeks;
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit CSBondLock.BondLockRetentionPeriodChanged(retention);
+        emit CSBondLock.BondLockFreezePeriodChanged(freeze);
 
-        bondLock.setBondLockRetentionPeriod(retention);
+        bondLock.setBondLockFreezePeriod(freeze);
 
-        uint256 _retention = bondLock.getBondLockRetentionPeriod();
-        assertEq(_retention, retention);
+        uint256 _freeze = bondLock.getBondLockFreezePeriod();
+        assertEq(_freeze, freeze);
     }
 
-    function test_setBondLockRetentionPeriod_RevertWhen_RetentionLessThanMin()
+    function test_setBondLockFreezePeriod_RevertWhen_FreezeLessThanMin()
         public
     {
-        uint256 minRetention = bondLock.MIN_BOND_LOCK_RETENTION_PERIOD();
-        vm.expectRevert(CSBondLock.InvalidBondLockRetentionPeriod.selector);
-        bondLock.setBondLockRetentionPeriod(minRetention - 1 seconds);
+        uint256 minFreeze = bondLock.MIN_BOND_LOCK_FREEZE_PERIOD();
+        vm.expectRevert(CSBondLock.InvalidBondLockFreezePeriod.selector);
+        bondLock.setBondLockFreezePeriod(minFreeze - 1 seconds);
     }
 
-    function test_setBondLockRetentionPeriod_RevertWhen_RetentionGreaterThanMax()
+    function test_setBondLockFreezePeriod_RevertWhen_FreezeGreaterThanMax()
         public
     {
-        uint256 maxRetention = bondLock.MAX_BOND_LOCK_RETENTION_PERIOD();
-        vm.expectRevert(CSBondLock.InvalidBondLockRetentionPeriod.selector);
-        bondLock.setBondLockRetentionPeriod(maxRetention + 1 seconds);
+        uint256 maxFreeze = bondLock.MAX_BOND_LOCK_FREEZE_PERIOD();
+        vm.expectRevert(CSBondLock.InvalidBondLockFreezePeriod.selector);
+        bondLock.setBondLockFreezePeriod(maxFreeze + 1 seconds);
     }
 
     function test_getActualLockedBond() public {
@@ -83,44 +83,44 @@ contract CSBondLockTest is Test {
         assertEq(value, amount);
     }
 
-    function test_getActualLockedBond_WhenOnRetentionUntil() public {
+    function test_getActualLockedBond_WhenOnFreezeUntil() public {
         uint256 noId = 0;
         uint256 amount = 1 ether;
         bondLock.lock(noId, amount);
 
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
-        vm.warp(lock.retentionUntil);
+        vm.warp(lock.freezeUntil);
 
         uint256 value = bondLock.getActualLockedBond(noId);
         assertEq(value, 0);
     }
 
-    function test_getActualLockedBond_WhenRetentionPeriodIsPassed() public {
-        uint256 retentionPeriod = bondLock.getBondLockRetentionPeriod();
+    function test_getActualLockedBond_WhenFreezePeriodIsPassed() public {
+        uint256 freezePeriod = bondLock.getBondLockFreezePeriod();
         uint256 noId = 0;
         uint256 amount = 1 ether;
         bondLock.lock(noId, amount);
 
-        vm.warp(block.timestamp + retentionPeriod + 1 seconds);
+        vm.warp(block.timestamp + freezePeriod + 1 seconds);
 
         uint256 value = bondLock.getActualLockedBond(noId);
         assertEq(value, 0);
     }
 
     function test_lock() public {
-        uint256 retentionPeriod = bondLock.getBondLockRetentionPeriod();
+        uint256 freezePeriod = bondLock.getBondLockFreezePeriod();
         uint256 noId = 0;
         uint256 amount = 1 ether;
-        uint256 retentionUntil = block.timestamp + retentionPeriod;
+        uint256 freezeUntil = block.timestamp + freezePeriod;
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit CSBondLock.BondLockChanged(noId, amount, retentionUntil);
+        emit CSBondLock.BondLockChanged(noId, amount, freezeUntil);
 
         bondLock.lock(noId, amount);
 
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
         assertEq(lock.amount, amount);
-        assertEq(lock.retentionUntil, retentionUntil);
+        assertEq(lock.freezeUntil, freezeUntil);
     }
 
     function test_lock_secondLock() public {
@@ -135,42 +135,39 @@ contract CSBondLockTest is Test {
         bondLock.lock(noId, 1 ether);
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
         assertEq(lock.amount, 2 ether);
-        assertEq(lock.retentionUntil, lockBefore.retentionUntil + 1 hours);
+        assertEq(lock.freezeUntil, lockBefore.freezeUntil + 1 hours);
     }
 
-    function test_lock_WhenSecondLockOnRetentionUntil() public {
+    function test_lock_WhenSecondLockOnFreezeUntil() public {
         uint256 noId = 0;
-        uint256 retentionPeriod = bondLock.getBondLockRetentionPeriod();
+        uint256 freezePeriod = bondLock.getBondLockFreezePeriod();
 
         bondLock.lock(noId, 1 ether);
         CSBondLock.BondLock memory lockBefore = bondLock.getLockedBondInfo(
             noId
         );
-        vm.warp(lockBefore.retentionUntil);
+        vm.warp(lockBefore.freezeUntil);
 
         bondLock.lock(noId, 1 ether);
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
         assertEq(lock.amount, 1 ether);
-        assertEq(
-            lock.retentionUntil,
-            lockBefore.retentionUntil + retentionPeriod
-        );
+        assertEq(lock.freezeUntil, lockBefore.freezeUntil + freezePeriod);
     }
 
     function test_lock_WhenSecondLockAfterFirstExpired() public {
         uint256 noId = 0;
-        uint256 retentionPeriod = bondLock.getBondLockRetentionPeriod();
+        uint256 freezePeriod = bondLock.getBondLockFreezePeriod();
 
         bondLock.lock(noId, 1 ether);
         CSBondLock.BondLock memory lockBefore = bondLock.getLockedBondInfo(
             noId
         );
-        vm.warp(lockBefore.retentionUntil + 1 hours);
+        vm.warp(lockBefore.freezeUntil + 1 hours);
 
         bondLock.lock(noId, 1 ether);
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
         assertEq(lock.amount, 1 ether);
-        assertEq(lock.retentionUntil, block.timestamp + retentionPeriod);
+        assertEq(lock.freezeUntil, block.timestamp + freezePeriod);
     }
 
     function test_lock_RevertWhen_ZeroAmount() public {
@@ -203,16 +200,16 @@ contract CSBondLockTest is Test {
 
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(0);
         assertEq(lock.amount, 0);
-        assertEq(lock.retentionUntil, 0);
+        assertEq(lock.freezeUntil, 0);
     }
 
     function test_reduceAmount_WhenPartial() public {
-        uint256 retentionPeriod = bondLock.getBondLockRetentionPeriod();
+        uint256 freezePeriod = bondLock.getBondLockFreezePeriod();
         uint256 noId = 0;
         uint256 amount = 100 ether;
 
         bondLock.lock(noId, amount);
-        uint256 retentionPeriodWhenLock = block.timestamp + retentionPeriod;
+        uint256 freezePeriodWhenLock = block.timestamp + freezePeriod;
 
         uint256 toRelease = 10 ether;
         uint256 rest = amount - toRelease;
@@ -220,13 +217,13 @@ contract CSBondLockTest is Test {
         vm.warp(block.timestamp + 1 seconds);
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit CSBondLock.BondLockChanged(noId, rest, retentionPeriodWhenLock);
+        emit CSBondLock.BondLockChanged(noId, rest, freezePeriodWhenLock);
 
         bondLock.reduceAmount(noId, toRelease);
 
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(0);
         assertEq(lock.amount, rest);
-        assertEq(lock.retentionUntil, retentionPeriodWhenLock);
+        assertEq(lock.freezeUntil, freezePeriodWhenLock);
     }
 
     function test_reduceAmount_RevertWhen_ZeroAmount() public {
@@ -257,6 +254,6 @@ contract CSBondLockTest is Test {
 
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(0);
         assertEq(lock.amount, 0);
-        assertEq(lock.retentionUntil, 0);
+        assertEq(lock.freezeUntil, 0);
     }
 }

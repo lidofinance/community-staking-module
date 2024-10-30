@@ -49,8 +49,8 @@ abstract contract DeployImplementationsBase is DeployBase {
                 lidoLocator: config.lidoLocatorAddress,
                 communityStakingModule: address(csm),
                 maxCurveLength: config.maxCurveLength,
-                minBondLockRetentionPeriod: config.minBondLockRetentionPeriod,
-                maxBondLockRetentionPeriod: config.maxBondLockRetentionPeriod
+                minBondLockFreezePeriod: config.minBondLockFreezePeriod,
+                maxBondLockFreezePeriod: config.maxBondLockFreezePeriod
             });
 
             CSFeeOracle oracleImpl = new CSFeeOracle({

@@ -14,8 +14,8 @@ import { ICSBondLock } from "../interfaces/ICSBondLock.sol";
 /// After that period, the lock is removed, and the bond amount is considered unlocked.
 ///
 /// The contract contains:
-///  - set default bond lock retention period
-///  - get default bond lock retention period
+///  - set default bond lock freeze period
+///  - get default bond lock freeze period
 ///  - lock bond
 ///  - get locked bond info
 ///  - get actual locked bond amount
@@ -31,9 +31,9 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
 
     /// @custom:storage-location erc7201:CSAccounting.CSBondLock
     struct CSBondLockStorage {
-        /// @dev Default bond lock retention period for all locks
+        /// @dev Default bond lock freeze period for all locks
         ///      After this period the bond lock is removed and no longer valid
-        uint256 bondLockRetentionPeriod;
+        uint256 bondLockFreezePeriod;
         /// @dev Mapping of the Node Operator id to the bond lock
         mapping(uint256 nodeOperatorId => BondLock) bondLock;
     }
@@ -42,40 +42,40 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
     bytes32 private constant CS_BOND_LOCK_STORAGE_LOCATION =
         0x78c5a36767279da056404c09083fca30cf3ea61c442cfaba6669f76a37393f00;
 
-    uint256 public immutable MIN_BOND_LOCK_RETENTION_PERIOD;
-    uint256 public immutable MAX_BOND_LOCK_RETENTION_PERIOD;
+    uint256 public immutable MIN_BOND_LOCK_FREEZE_PERIOD;
+    uint256 public immutable MAX_BOND_LOCK_FREEZE_PERIOD;
 
     event BondLockChanged(
         uint256 indexed nodeOperatorId,
         uint256 newAmount,
-        uint256 retentionUntil
+        uint256 freezeUntil
     );
     event BondLockRemoved(uint256 indexed nodeOperatorId);
 
-    event BondLockRetentionPeriodChanged(uint256 retentionPeriod);
+    event BondLockFreezePeriodChanged(uint256 freezePeriod);
 
-    error InvalidBondLockRetentionPeriod();
+    error InvalidBondLockFreezePeriod();
     error InvalidBondLockAmount();
 
     constructor(
-        uint256 minBondLockRetentionPeriod,
-        uint256 maxBondLockRetentionPeriod
+        uint256 minBondLockFreezePeriod,
+        uint256 maxBondLockFreezePeriod
     ) {
-        if (minBondLockRetentionPeriod > maxBondLockRetentionPeriod) {
-            revert InvalidBondLockRetentionPeriod();
+        if (minBondLockFreezePeriod > maxBondLockFreezePeriod) {
+            revert InvalidBondLockFreezePeriod();
         }
-        // retention period can not be more than type(uint64).max to avoid overflow when setting bond lock
-        if (maxBondLockRetentionPeriod > type(uint64).max) {
-            revert InvalidBondLockRetentionPeriod();
+        // freeze period can not be more than type(uint64).max to avoid overflow when setting bond lock
+        if (maxBondLockFreezePeriod > type(uint64).max) {
+            revert InvalidBondLockFreezePeriod();
         }
-        MIN_BOND_LOCK_RETENTION_PERIOD = minBondLockRetentionPeriod;
-        MAX_BOND_LOCK_RETENTION_PERIOD = maxBondLockRetentionPeriod;
+        MIN_BOND_LOCK_FREEZE_PERIOD = minBondLockFreezePeriod;
+        MAX_BOND_LOCK_FREEZE_PERIOD = maxBondLockFreezePeriod;
     }
 
-    /// @notice Get default bond lock retention period
-    /// @return Default bond lock retention period
-    function getBondLockRetentionPeriod() external view returns (uint256) {
-        return _getCSBondLockStorage().bondLockRetentionPeriod;
+    /// @notice Get default bond lock freeze period
+    /// @return Default bond lock freeze period
+    function getBondLockFreezePeriod() external view returns (uint256) {
+        return _getCSBondLockStorage().bondLockFreezePeriod;
     }
 
     /// @notice Get information about the locked bond for the given Node Operator
@@ -96,26 +96,26 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
         BondLock storage bondLock = _getCSBondLockStorage().bondLock[
             nodeOperatorId
         ];
-        return bondLock.retentionUntil > block.timestamp ? bondLock.amount : 0;
+        return bondLock.freezeUntil > block.timestamp ? bondLock.amount : 0;
     }
 
-    /// @dev Lock bond amount for the given Node Operator until the retention period.
+    /// @dev Lock bond amount for the given Node Operator until the freeze period.
     function _lock(uint256 nodeOperatorId, uint256 amount) internal {
         CSBondLockStorage storage $ = _getCSBondLockStorage();
         if (amount == 0) {
             revert InvalidBondLockAmount();
         }
-        if ($.bondLock[nodeOperatorId].retentionUntil > block.timestamp) {
+        if ($.bondLock[nodeOperatorId].freezeUntil > block.timestamp) {
             amount += $.bondLock[nodeOperatorId].amount;
         }
         _changeBondLock({
             nodeOperatorId: nodeOperatorId,
             amount: amount,
-            retentionUntil: block.timestamp + $.bondLockRetentionPeriod
+            freezeUntil: block.timestamp + $.bondLockFreezePeriod
         });
     }
 
-    /// @dev Reduce locked bond amount for the given Node Operator without changing retention period
+    /// @dev Reduce locked bond amount for the given Node Operator without changing freeze period
     function _reduceAmount(uint256 nodeOperatorId, uint256 amount) internal {
         uint256 blocked = getActualLockedBond(nodeOperatorId);
         if (amount == 0) {
@@ -128,7 +128,7 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
             _changeBondLock(
                 nodeOperatorId,
                 blocked - amount,
-                _getCSBondLockStorage().bondLock[nodeOperatorId].retentionUntil
+                _getCSBondLockStorage().bondLock[nodeOperatorId].freezeUntil
             );
         }
     }
@@ -140,28 +140,26 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function __CSBondLock_init(
-        uint256 retentionPeriod
-    ) internal onlyInitializing {
-        _setBondLockRetentionPeriod(retentionPeriod);
+    function __CSBondLock_init(uint256 freezePeriod) internal onlyInitializing {
+        _setBondLockFreezePeriod(freezePeriod);
     }
 
-    /// @dev Set default bond lock retention period. That period will be sum with the current block timestamp of lock tx
-    function _setBondLockRetentionPeriod(uint256 retentionPeriod) internal {
+    /// @dev Set default bond lock freeze period. That period will be sum with the current block timestamp of lock tx
+    function _setBondLockFreezePeriod(uint256 freezePeriod) internal {
         if (
-            retentionPeriod < MIN_BOND_LOCK_RETENTION_PERIOD ||
-            retentionPeriod > MAX_BOND_LOCK_RETENTION_PERIOD
+            freezePeriod < MIN_BOND_LOCK_FREEZE_PERIOD ||
+            freezePeriod > MAX_BOND_LOCK_FREEZE_PERIOD
         ) {
-            revert InvalidBondLockRetentionPeriod();
+            revert InvalidBondLockFreezePeriod();
         }
-        _getCSBondLockStorage().bondLockRetentionPeriod = retentionPeriod;
-        emit BondLockRetentionPeriodChanged(retentionPeriod);
+        _getCSBondLockStorage().bondLockFreezePeriod = freezePeriod;
+        emit BondLockFreezePeriodChanged(freezePeriod);
     }
 
     function _changeBondLock(
         uint256 nodeOperatorId,
         uint256 amount,
-        uint256 retentionUntil
+        uint256 freezeUntil
     ) private {
         if (amount == 0) {
             _remove(nodeOperatorId);
@@ -169,9 +167,9 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
         }
         _getCSBondLockStorage().bondLock[nodeOperatorId] = BondLock({
             amount: amount.toUint128(),
-            retentionUntil: retentionUntil.toUint128()
+            freezeUntil: freezeUntil.toUint128()
         });
-        emit BondLockChanged(nodeOperatorId, amount, retentionUntil);
+        emit BondLockChanged(nodeOperatorId, amount, freezeUntil);
     }
 
     function _getCSBondLockStorage()

@@ -55,9 +55,9 @@ contract DeployMainnet is DeployBase {
         config.bondCurve[0] = 2.4 ether;
         config.bondCurve[1] = 3.7 ether;
 
-        config.minBondLockRetentionPeriod = 4 weeks;
-        config.maxBondLockRetentionPeriod = 365 days;
-        config.bondLockRetentionPeriod = 8 weeks;
+        config.minBondLockFreezePeriod = 4 weeks;
+        config.maxBondLockFreezePeriod = 365 days;
+        config.bondLockFreezePeriod = 8 weeks;
         config
             .setResetBondCurveAddress = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
         config

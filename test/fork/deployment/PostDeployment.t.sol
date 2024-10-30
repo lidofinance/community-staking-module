@@ -147,12 +147,12 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
         );
 
         assertEq(
-            accounting.MIN_BOND_LOCK_RETENTION_PERIOD(),
-            deployParams.minBondLockRetentionPeriod
+            accounting.MIN_BOND_LOCK_FREEZE_PERIOD(),
+            deployParams.minBondLockFreezePeriod
         );
         assertEq(
-            accounting.MAX_BOND_LOCK_RETENTION_PERIOD(),
-            deployParams.maxBondLockRetentionPeriod
+            accounting.MAX_BOND_LOCK_FREEZE_PERIOD(),
+            deployParams.maxBondLockFreezePeriod
         );
         assertEq(accounting.MAX_CURVE_LENGTH(), deployParams.maxCurveLength);
     }
@@ -164,8 +164,8 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
         );
         assertEq(address(accounting.feeDistributor()), address(feeDistributor));
         assertEq(
-            accounting.getBondLockRetentionPeriod(),
-            deployParams.bondLockRetentionPeriod
+            accounting.getBondLockFreezePeriod(),
+            deployParams.bondLockFreezePeriod
         );
         assertEq(
             accounting.chargePenaltyRecipient(),
@@ -255,7 +255,7 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
             bondCurve: deployParams.bondCurve,
             admin: address(deployParams.aragonAgent),
             _feeDistributor: address(feeDistributor),
-            bondLockRetentionPeriod: deployParams.bondLockRetentionPeriod,
+            bondLockFreezePeriod: deployParams.bondLockFreezePeriod,
             _chargePenaltyRecipient: address(0)
         });
     }

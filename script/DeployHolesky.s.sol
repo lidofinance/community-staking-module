@@ -59,9 +59,9 @@ contract DeployHolesky is DeployBase {
         config.bondCurve[4] = 9 ether;
         config.bondCurve[5] = 10.5 ether;
 
-        config.minBondLockRetentionPeriod = 0;
-        config.maxBondLockRetentionPeriod = 365 days;
-        config.bondLockRetentionPeriod = 8 weeks;
+        config.minBondLockFreezePeriod = 0;
+        config.maxBondLockFreezePeriod = 365 days;
+        config.bondLockFreezePeriod = 8 weeks;
         config
             .setResetBondCurveAddress = 0xc4DAB3a3ef68C6DFd8614a870D64D475bA44F164; // Dev team EOA
         // Module
