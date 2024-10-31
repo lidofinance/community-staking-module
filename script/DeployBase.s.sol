@@ -46,9 +46,9 @@ struct DeployParams {
     // Accounting
     uint256 maxCurveLength;
     uint256[] bondCurve;
-    uint256 minBondLockFreezePeriod;
-    uint256 maxBondLockFreezePeriod;
-    uint256 bondLockFreezePeriod;
+    uint256 minBondLockPeriod;
+    uint256 maxBondLockPeriod;
+    uint256 bondLockPeriod;
     address setResetBondCurveAddress;
     address chargePenaltyRecipient;
     // Module
@@ -150,8 +150,8 @@ abstract contract DeployBase is Script {
                 lidoLocator: config.lidoLocatorAddress,
                 communityStakingModule: address(csm),
                 maxCurveLength: config.maxCurveLength,
-                minBondLockFreezePeriod: config.minBondLockFreezePeriod,
-                maxBondLockFreezePeriod: config.maxBondLockFreezePeriod
+                minBondLockPeriod: config.minBondLockPeriod,
+                maxBondLockPeriod: config.maxBondLockPeriod
             });
             accounting = CSAccounting(
                 _deployProxy(config.proxyAdmin, address(accountingImpl))
@@ -196,7 +196,7 @@ abstract contract DeployBase is Script {
                 bondCurve: config.bondCurve,
                 admin: deployer,
                 _feeDistributor: address(feeDistributor),
-                bondLockFreezePeriod: config.bondLockFreezePeriod,
+                bondLockPeriod: config.bondLockPeriod,
                 _chargePenaltyRecipient: config.chargePenaltyRecipient
             });
 

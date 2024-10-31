@@ -167,10 +167,10 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
         );
     }
 
-    function test_constructor_RevertWhen_InvalidBondLockFreezePeriod_MinMoreThanMax()
+    function test_constructor_RevertWhen_InvalidBondLockPeriod_MinMoreThanMax()
         public
     {
-        vm.expectRevert(CSBondLock.InvalidBondLockFreezePeriod.selector);
+        vm.expectRevert(CSBondLock.InvalidBondLockPeriod.selector);
         accounting = new CSAccounting(
             address(locator),
             address(0),
@@ -180,10 +180,10 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
         );
     }
 
-    function test_constructor_RevertWhen_InvalidBondLockFreezePeriod_MaxTooBig()
+    function test_constructor_RevertWhen_InvalidBondLockPeriod_MaxTooBig()
         public
     {
-        vm.expectRevert(CSBondLock.InvalidBondLockFreezePeriod.selector);
+        vm.expectRevert(CSBondLock.InvalidBondLockPeriod.selector);
         accounting = new CSAccounting(
             address(locator),
             address(0),
@@ -241,7 +241,7 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         vm.expectEmit(true, false, false, true, address(accounting));
         emit CSBondCurve.BondCurveAdded(curve);
         vm.expectEmit(true, false, false, true, address(accounting));
-        emit CSBondLock.BondLockFreezePeriodChanged(8 weeks);
+        emit CSBondLock.BondLockPeriodChanged(8 weeks);
         vm.expectEmit(true, false, false, true, address(accounting));
         emit CSAccounting.ChargePenaltyRecipientSet(testChargePenaltyRecipient);
         accounting.initialize(
@@ -3602,16 +3602,16 @@ contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
 }
 
 contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
-    function setLockedBondFreezePeriod() public {
+    function setLockedBondPeriod() public {
         vm.prank(admin);
-        accounting.setLockedBondFreezePeriod(200 days);
-        assertEq(accounting.getBondLockFreezePeriod(), 200 days);
+        accounting.setLockedBondPeriod(200 days);
+        assertEq(accounting.getBondLockPeriod(), 200 days);
     }
 
-    function setLockedBondFreezePeriod_RevertWhen_DoesNotHaveRole() public {
+    function setLockedBondPeriod_RevertWhen_DoesNotHaveRole() public {
         expectRoleRevert(stranger, accounting.ACCOUNTING_MANAGER_ROLE());
         vm.prank(stranger);
-        accounting.setLockedBondFreezePeriod(200 days);
+        accounting.setLockedBondPeriod(200 days);
     }
 
     function test_lockBondETH() public assertInvariants {
@@ -3914,12 +3914,12 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
         accounting.setChargePenaltyRecipient(address(0));
     }
 
-    function test_setLockedBondFreezePeriod() public assertInvariants {
-        uint256 freeze = accounting.MIN_BOND_LOCK_FREEZE_PERIOD() + 1;
+    function test_setLockedBondPeriod() public assertInvariants {
+        uint256 period = accounting.MIN_BOND_LOCK_PERIOD() + 1;
         vm.prank(admin);
-        accounting.setLockedBondFreezePeriod(freeze);
-        uint256 actualFreeze = accounting.getBondLockFreezePeriod();
-        assertEq(actualFreeze, freeze);
+        accounting.setLockedBondPeriod(period);
+        uint256 actual = accounting.getBondLockPeriod();
+        assertEq(actual, period);
     }
 
     function test_renewBurnerAllowance() public assertInvariants {

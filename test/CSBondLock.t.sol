@@ -17,12 +17,12 @@ import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 
 contract CSBondLockTestable is CSBondLock(4 weeks, 365 days) {
-    function initialize(uint256 freezePeriod) public initializer {
-        CSBondLock.__CSBondLock_init(freezePeriod);
+    function initialize(uint256 period) public initializer {
+        CSBondLock.__CSBondLock_init(period);
     }
 
-    function setBondLockFreezePeriod(uint256 freeze) external {
-        _setBondLockFreezePeriod(freeze);
+    function setBondLockPeriod(uint256 period) external {
+        _setBondLockPeriod(period);
     }
 
     function lock(uint256 nodeOperatorId, uint256 amount) external {
@@ -46,32 +46,28 @@ contract CSBondLockTest is Test {
         bondLock.initialize(8 weeks);
     }
 
-    function test_setBondLockFreezePeriod() public {
-        uint256 freeze = 4 weeks;
+    function test_setBondLockPeriod() public {
+        uint256 period = 4 weeks;
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit CSBondLock.BondLockFreezePeriodChanged(freeze);
+        emit CSBondLock.BondLockPeriodChanged(period);
 
-        bondLock.setBondLockFreezePeriod(freeze);
+        bondLock.setBondLockPeriod(period);
 
-        uint256 _freeze = bondLock.getBondLockFreezePeriod();
-        assertEq(_freeze, freeze);
+        uint256 _period = bondLock.getBondLockPeriod();
+        assertEq(_period, period);
     }
 
-    function test_setBondLockFreezePeriod_RevertWhen_FreezeLessThanMin()
-        public
-    {
-        uint256 minFreeze = bondLock.MIN_BOND_LOCK_FREEZE_PERIOD();
-        vm.expectRevert(CSBondLock.InvalidBondLockFreezePeriod.selector);
-        bondLock.setBondLockFreezePeriod(minFreeze - 1 seconds);
+    function test_setBondLockPeriod_RevertWhen_LessThanMin() public {
+        uint256 min = bondLock.MIN_BOND_LOCK_PERIOD();
+        vm.expectRevert(CSBondLock.InvalidBondLockPeriod.selector);
+        bondLock.setBondLockPeriod(min - 1 seconds);
     }
 
-    function test_setBondLockFreezePeriod_RevertWhen_FreezeGreaterThanMax()
-        public
-    {
-        uint256 maxFreeze = bondLock.MAX_BOND_LOCK_FREEZE_PERIOD();
-        vm.expectRevert(CSBondLock.InvalidBondLockFreezePeriod.selector);
-        bondLock.setBondLockFreezePeriod(maxFreeze + 1 seconds);
+    function test_setBondLockPeriod_RevertWhen_GreaterThanMax() public {
+        uint256 max = bondLock.MAX_BOND_LOCK_PERIOD();
+        vm.expectRevert(CSBondLock.InvalidBondLockPeriod.selector);
+        bondLock.setBondLockPeriod(max + 1 seconds);
     }
 
     function test_getActualLockedBond() public {
@@ -83,44 +79,44 @@ contract CSBondLockTest is Test {
         assertEq(value, amount);
     }
 
-    function test_getActualLockedBond_WhenOnFreezeUntil() public {
+    function test_getActualLockedBond_WhenOnUntil() public {
         uint256 noId = 0;
         uint256 amount = 1 ether;
         bondLock.lock(noId, amount);
 
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
-        vm.warp(lock.freezeUntil);
+        vm.warp(lock.until);
 
         uint256 value = bondLock.getActualLockedBond(noId);
         assertEq(value, 0);
     }
 
-    function test_getActualLockedBond_WhenFreezePeriodIsPassed() public {
-        uint256 freezePeriod = bondLock.getBondLockFreezePeriod();
+    function test_getActualLockedBond_WhenPeriodIsPassed() public {
+        uint256 period = bondLock.getBondLockPeriod();
         uint256 noId = 0;
         uint256 amount = 1 ether;
         bondLock.lock(noId, amount);
 
-        vm.warp(block.timestamp + freezePeriod + 1 seconds);
+        vm.warp(block.timestamp + period + 1 seconds);
 
         uint256 value = bondLock.getActualLockedBond(noId);
         assertEq(value, 0);
     }
 
     function test_lock() public {
-        uint256 freezePeriod = bondLock.getBondLockFreezePeriod();
+        uint256 period = bondLock.getBondLockPeriod();
         uint256 noId = 0;
         uint256 amount = 1 ether;
-        uint256 freezeUntil = block.timestamp + freezePeriod;
+        uint256 until = block.timestamp + period;
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit CSBondLock.BondLockChanged(noId, amount, freezeUntil);
+        emit CSBondLock.BondLockChanged(noId, amount, until);
 
         bondLock.lock(noId, amount);
 
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
         assertEq(lock.amount, amount);
-        assertEq(lock.freezeUntil, freezeUntil);
+        assertEq(lock.until, until);
     }
 
     function test_lock_secondLock() public {
@@ -135,39 +131,39 @@ contract CSBondLockTest is Test {
         bondLock.lock(noId, 1 ether);
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
         assertEq(lock.amount, 2 ether);
-        assertEq(lock.freezeUntil, lockBefore.freezeUntil + 1 hours);
+        assertEq(lock.until, lockBefore.until + 1 hours);
     }
 
-    function test_lock_WhenSecondLockOnFreezeUntil() public {
+    function test_lock_WhenSecondLockOnUntil() public {
         uint256 noId = 0;
-        uint256 freezePeriod = bondLock.getBondLockFreezePeriod();
+        uint256 period = bondLock.getBondLockPeriod();
 
         bondLock.lock(noId, 1 ether);
         CSBondLock.BondLock memory lockBefore = bondLock.getLockedBondInfo(
             noId
         );
-        vm.warp(lockBefore.freezeUntil);
+        vm.warp(lockBefore.until);
 
         bondLock.lock(noId, 1 ether);
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
         assertEq(lock.amount, 1 ether);
-        assertEq(lock.freezeUntil, lockBefore.freezeUntil + freezePeriod);
+        assertEq(lock.until, lockBefore.until + period);
     }
 
     function test_lock_WhenSecondLockAfterFirstExpired() public {
         uint256 noId = 0;
-        uint256 freezePeriod = bondLock.getBondLockFreezePeriod();
+        uint256 period = bondLock.getBondLockPeriod();
 
         bondLock.lock(noId, 1 ether);
         CSBondLock.BondLock memory lockBefore = bondLock.getLockedBondInfo(
             noId
         );
-        vm.warp(lockBefore.freezeUntil + 1 hours);
+        vm.warp(lockBefore.until + 1 hours);
 
         bondLock.lock(noId, 1 ether);
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
         assertEq(lock.amount, 1 ether);
-        assertEq(lock.freezeUntil, block.timestamp + freezePeriod);
+        assertEq(lock.until, block.timestamp + period);
     }
 
     function test_lock_RevertWhen_ZeroAmount() public {
@@ -200,16 +196,16 @@ contract CSBondLockTest is Test {
 
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(0);
         assertEq(lock.amount, 0);
-        assertEq(lock.freezeUntil, 0);
+        assertEq(lock.until, 0);
     }
 
     function test_reduceAmount_WhenPartial() public {
-        uint256 freezePeriod = bondLock.getBondLockFreezePeriod();
+        uint256 period = bondLock.getBondLockPeriod();
         uint256 noId = 0;
         uint256 amount = 100 ether;
 
         bondLock.lock(noId, amount);
-        uint256 freezePeriodWhenLock = block.timestamp + freezePeriod;
+        uint256 periodWhenLock = block.timestamp + period;
 
         uint256 toRelease = 10 ether;
         uint256 rest = amount - toRelease;
@@ -217,13 +213,13 @@ contract CSBondLockTest is Test {
         vm.warp(block.timestamp + 1 seconds);
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit CSBondLock.BondLockChanged(noId, rest, freezePeriodWhenLock);
+        emit CSBondLock.BondLockChanged(noId, rest, periodWhenLock);
 
         bondLock.reduceAmount(noId, toRelease);
 
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(0);
         assertEq(lock.amount, rest);
-        assertEq(lock.freezeUntil, freezePeriodWhenLock);
+        assertEq(lock.until, periodWhenLock);
     }
 
     function test_reduceAmount_RevertWhen_ZeroAmount() public {
@@ -254,6 +250,6 @@ contract CSBondLockTest is Test {
 
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(0);
         assertEq(lock.amount, 0);
-        assertEq(lock.freezeUntil, 0);
+        assertEq(lock.until, 0);
     }
 }

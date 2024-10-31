@@ -5589,7 +5589,7 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.freezeUntil, 0);
+        assertEq(lock.until, 0);
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs()
@@ -5638,11 +5638,11 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             firstNoId
         );
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.freezeUntil, 0);
+        assertEq(lock.until, 0);
 
         lock = accounting.getLockedBondInfo(secondNoId);
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.freezeUntil, 0);
+        assertEq(lock.until, 0);
     }
 
     function test_settleELRewardsStealingPenalty_NoLock()
@@ -5661,7 +5661,7 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.freezeUntil, 0);
+        assertEq(lock.until, 0);
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs_NoLock()
@@ -5694,12 +5694,12 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             firstNoId
         );
         assertEq(firstLock.amount, 0 ether);
-        assertEq(firstLock.freezeUntil, 0);
+        assertEq(firstLock.until, 0);
         CSBondLock.BondLock memory secondLock = accounting.getLockedBondInfo(
             secondNoId
         );
         assertEq(secondLock.amount, 0 ether);
-        assertEq(secondLock.freezeUntil, 0);
+        assertEq(secondLock.until, 0);
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs_oneWithNoLock()
@@ -5739,12 +5739,12 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             firstNoId
         );
         assertEq(firstLock.amount, 0 ether);
-        assertEq(firstLock.freezeUntil, 0);
+        assertEq(firstLock.until, 0);
         CSBondLock.BondLock memory secondLock = accounting.getLockedBondInfo(
             secondNoId
         );
         assertEq(secondLock.amount, 0 ether);
-        assertEq(secondLock.freezeUntil, 0);
+        assertEq(secondLock.until, 0);
     }
 
     function test_settleELRewardsStealingPenalty_withDuplicates() public {
@@ -5781,7 +5781,7 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             secondNoId
         );
         assertEq(currentLock.amount, 0 ether);
-        assertEq(currentLock.freezeUntil, 0);
+        assertEq(currentLock.until, 0);
         assertEq(
             bondBalanceAfter,
             bondBalanceBefore -
@@ -5803,11 +5803,9 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
 }
 
 contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
-    function test_settleELRewardsStealingPenalty_FreezePeriodIsExpired()
-        public
-    {
+    function test_settleELRewardsStealingPenalty_PeriodIsExpired() public {
         uint256 noId = createNodeOperator();
-        uint256 freezePeriod = accounting.getBondLockFreezePeriod();
+        uint256 period = accounting.getBondLockPeriod();
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
         uint256 amount = 1 ether;
@@ -5818,7 +5816,7 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
             amount
         );
 
-        vm.warp(block.timestamp + freezePeriod + 1 seconds);
+        vm.warp(block.timestamp + period + 1 seconds);
 
         expectNoCall(
             address(accounting),
@@ -5832,7 +5830,7 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
     function test_settleELRewardsStealingPenalty_multipleNOs_oneExpired()
         public
     {
-        uint256 freezePeriod = accounting.getBondLockFreezePeriod();
+        uint256 period = accounting.getBondLockPeriod();
         uint256 firstNoId = createNodeOperator(2);
         uint256 secondNoId = createNodeOperator(2);
         uint256[] memory idsToSettle = new uint256[](2);
@@ -5843,7 +5841,7 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
             blockhash(block.number),
             1 ether
         );
-        vm.warp(block.timestamp + freezePeriod + 1 seconds);
+        vm.warp(block.timestamp + period + 1 seconds);
         csm.reportELRewardsStealingPenalty(
             secondNoId,
             blockhash(block.number),
@@ -5868,7 +5866,7 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
             secondNoId
         );
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.freezeUntil, 0);
+        assertEq(lock.until, 0);
     }
 
     function test_settleELRewardsStealingPenalty_CurveReset_NoNewUnbonded()
