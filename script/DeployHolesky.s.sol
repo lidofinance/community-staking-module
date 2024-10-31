@@ -67,7 +67,7 @@ contract DeployHolesky is DeployBase {
         // Module
         config.moduleType = "community-onchain-v1";
         config.minSlashingPenaltyQuotient = 32;
-        config.elRewardsStealingFine = 0.1 ether;
+        config.elRewardsStealingAdditionalFine = 0.1 ether;
         config.maxKeysPerOperatorEA = 10;
         config.maxKeyRemovalCharge = 0.1 ether;
         config.keyRemovalCharge = 0.05 ether;

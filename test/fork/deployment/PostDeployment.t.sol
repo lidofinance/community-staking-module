@@ -41,8 +41,8 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
             32 ether / deployParams.minSlashingPenaltyQuotient
         );
         assertEq(
-            csm.EL_REWARDS_STEALING_FINE(),
-            deployParams.elRewardsStealingFine
+            csm.EL_REWARDS_STEALING_ADDITIONAL_FINE(),
+            deployParams.elRewardsStealingAdditionalFine
         );
         assertEq(
             csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(),

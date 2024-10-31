@@ -65,7 +65,7 @@ contract DeployMainnet is DeployBase {
         // Module
         config.moduleType = "community-onchain-v1"; // Just a unique type name to be used by the off-chain tooling
         config.minSlashingPenaltyQuotient = 32;
-        config.elRewardsStealingFine = 0.1 ether;
+        config.elRewardsStealingAdditionalFine = 0.1 ether;
         config.maxKeysPerOperatorEA = 12; // 12 EA vals will result in approx 16 ETH worth of bond
         config.maxKeyRemovalCharge = 0.1 ether;
         config.keyRemovalCharge = 0.05 ether;

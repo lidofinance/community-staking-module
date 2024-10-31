@@ -124,7 +124,7 @@ contract PenaltyIntegrationTest is
         csm.reportELRewardsStealingPenalty(
             defaultNoId,
             blockhash(block.number),
-            amount - csm.EL_REWARDS_STEALING_FINE()
+            amount - csm.EL_REWARDS_STEALING_ADDITIONAL_FINE()
         );
 
         uint256[] memory idsToSettle = new uint256[](1);

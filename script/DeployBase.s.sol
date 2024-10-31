@@ -54,7 +54,7 @@ struct DeployParams {
     // Module
     bytes32 moduleType;
     uint256 minSlashingPenaltyQuotient;
-    uint256 elRewardsStealingFine;
+    uint256 elRewardsStealingAdditionalFine;
     uint256 maxKeysPerOperatorEA;
     uint256 maxKeyRemovalCharge;
     uint256 keyRemovalCharge;
@@ -138,7 +138,8 @@ abstract contract DeployBase is Script {
             CSModule csmImpl = new CSModule({
                 moduleType: config.moduleType,
                 minSlashingPenaltyQuotient: config.minSlashingPenaltyQuotient,
-                elRewardsStealingFine: config.elRewardsStealingFine,
+                elRewardsStealingAdditionalFine: config
+                    .elRewardsStealingAdditionalFine,
                 maxKeysPerOperatorEA: config.maxKeysPerOperatorEA,
                 maxKeyRemovalCharge: config.maxKeyRemovalCharge,
                 lidoLocator: config.lidoLocatorAddress

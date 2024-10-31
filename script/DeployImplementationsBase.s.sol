@@ -39,7 +39,8 @@ abstract contract DeployImplementationsBase is DeployBase {
             CSModule csmImpl = new CSModule({
                 moduleType: config.moduleType,
                 minSlashingPenaltyQuotient: config.minSlashingPenaltyQuotient,
-                elRewardsStealingFine: config.elRewardsStealingFine,
+                elRewardsStealingAdditionalFine: config
+                    .elRewardsStealingAdditionalFine,
                 maxKeysPerOperatorEA: config.maxKeysPerOperatorEA,
                 maxKeyRemovalCharge: config.maxKeyRemovalCharge,
                 lidoLocator: config.lidoLocatorAddress
