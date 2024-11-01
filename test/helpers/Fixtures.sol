@@ -93,6 +93,7 @@ contract DeploymentFixtures is StdCheats, Test {
     struct Env {
         string RPC_URL;
         string DEPLOY_CONFIG;
+        string UPGRADE_CONFIG;
     }
 
     struct DeploymentConfig {
@@ -108,18 +109,30 @@ contract DeploymentFixtures is StdCheats, Test {
         address gateSeal;
     }
 
+    struct UpgradeConfig {
+        address csmImpl;
+        address accountingImpl;
+        address oracleImpl;
+        address feeDistributorImpl;
+        address verifier;
+        address earlyAdoption;
+        address hashConsensus;
+    }
+
     function envVars() public returns (Env memory) {
         Env memory env = Env(
             vm.envOr("RPC_URL", string("")),
-            vm.envOr("DEPLOY_CONFIG", string(""))
+            vm.envOr("DEPLOY_CONFIG", string("")),
+            vm.envOr("UPGRADE_CONFIG", string(""))
         );
         vm.skip(_isEmpty(env.RPC_URL));
         vm.skip(_isEmpty(env.DEPLOY_CONFIG));
         return env;
     }
 
-    function initializeFromDeployment(string memory deployConfigPath) public {
-        string memory config = vm.readFile(deployConfigPath);
+    function initializeFromDeployment() public {
+        Env memory env = envVars();
+        string memory config = vm.readFile(env.DEPLOY_CONFIG);
         DeploymentConfig memory deploymentConfig = parseDeploymentConfig(
             config
         );
@@ -137,6 +150,15 @@ contract DeploymentFixtures is StdCheats, Test {
         stakingRouter = IStakingRouter(locator.stakingRouter());
         wstETH = IWstETH(IWithdrawalQueue(locator.withdrawalQueue()).WSTETH());
         gateSeal = IGateSeal(deploymentConfig.gateSeal);
+
+        if (!_isEmpty(env.UPGRADE_CONFIG)) {
+            UpgradeConfig memory upgradeConfig = parseUpgradeConfig(
+                vm.readFile(env.UPGRADE_CONFIG)
+            );
+            earlyAdoption = CSEarlyAdoption(upgradeConfig.earlyAdoption);
+            verifier = CSVerifier(upgradeConfig.verifier);
+            hashConsensus = HashConsensus(upgradeConfig.hashConsensus);
+        }
     }
 
     function parseDeploymentConfig(
@@ -185,6 +207,33 @@ contract DeploymentFixtures is StdCheats, Test {
 
         deploymentConfig.gateSeal = vm.parseJsonAddress(config, ".GateSeal");
         vm.label(deploymentConfig.gateSeal, "GateSeal");
+    }
+
+    function parseUpgradeConfig(
+        string memory config
+    ) internal view returns (UpgradeConfig memory upgradeConfig) {
+        upgradeConfig.csmImpl = vm.parseJsonAddress(config, ".CSModuleImpl");
+        upgradeConfig.accountingImpl = vm.parseJsonAddress(
+            config,
+            ".CSAccountingImpl"
+        );
+        upgradeConfig.oracleImpl = vm.parseJsonAddress(
+            config,
+            ".CSFeeOracleImpl"
+        );
+        upgradeConfig.feeDistributorImpl = vm.parseJsonAddress(
+            config,
+            ".CSFeeDistributorImpl"
+        );
+        upgradeConfig.verifier = vm.parseJsonAddress(config, ".CSVerifier");
+        upgradeConfig.earlyAdoption = vm.parseJsonAddress(
+            config,
+            ".CSEarlyAdoption"
+        );
+        upgradeConfig.hashConsensus = vm.parseJsonAddress(
+            config,
+            ".HashConsensus"
+        );
     }
 
     function parseDeployParams(

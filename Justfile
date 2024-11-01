@@ -11,9 +11,9 @@ deploy_script_name := if chain == "mainnet" {
 }
 
 deploy_implementations_script_name := if chain == "mainnet" {
-    "undefined"
+    "DeployImplementationsMainnet"
 } else if chain == "holesky" {
-    "DeployHoleskyImplementations"
+    "DeployImplementationsHolesky"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -147,18 +147,38 @@ verify-prod *args:
 _deploy-prod *args:
     forge script {{deploy_script_path}} --force --rpc-url ${RPC_URL} {{args}}
 
-[confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]
 deploy-impl *args:
+    forge script {{deploy_impls_script_path}} --sig="deploy_implementations()" --rpc-url {{anvil_rpc_url}} --broadcast --slow {{args}}
+
+[confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]
+deploy-impl-prod *args:
     ARTIFACTS_DIR=./artifacts/latest/ just deploy-impl-dry --broadcast --verify {{args}}
 
 deploy-impl-dry *args:
-    forge script {{deploy_impls_script_path}} --force --rpc-url ${RPC_URL} {{args}}
+    forge script {{deploy_impls_script_path}} --sig="deploy_implementations()" --force --rpc-url ${RPC_URL} {{args}}
 
 deploy-local:
     just make-fork &
     @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
     just deploy
     just _warn "anvil is kept running in the background: {{anvil_rpc_url}}"
+
+test-upgrade *args:
+    just make-fork --silent &
+    @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
+    DEPLOYER_PRIVATE_KEY=`cat localhost.json | jq -r ".private_keys[0]"` \
+        just deploy-impl
+
+    DEPLOY_CONFIG=./artifacts/{{chain}}/deploy-{{chain}}.json \
+    UPGRADE_CONFIG=./artifacts/local/upgrade-{{chain}}.json \
+    RPC_URL={{anvil_rpc_url}} \
+        just vote-upgrade
+
+    DEPLOY_CONFIG=./artifacts/{{chain}}/deploy-{{chain}}.json \
+    UPGRADE_CONFIG=./artifacts/local/upgrade-{{chain}}.json \
+    RPC_URL={{anvil_rpc_url}} \
+       just test-post-voting {{args}}
+    just kill-fork
 
 test-local *args:
     just make-fork --silent &

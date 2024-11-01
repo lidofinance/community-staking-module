@@ -87,13 +87,20 @@ jobs:
           DEPLOY_CONFIG: ./artifacts/mainnet/deploy-mainnet.json
           RPC_URL: ${{ secrets.RPC_URL_MAINNET }}
 
+      - name: Run post-vote tests after upgrade
+        run: just test-upgrade
+        env:
+          CHAIN: mainnet
+          DEPLOY_CONFIG: ./artifacts/mainnet/deploy-mainnet.json
+          RPC_URL: ${{ secrets.RPC_URL_MAINNET }}
+
       - name: Echo embeds to the env variable
         if: ${{ failure() && (github.event_name == 'schedule' || inputs.notify) }}
         run: |
           EMBEDS=$(cat <<EOF
           [
             {
-              "title": "Regular tests are failed! :scream:",
+              "title": "Failed mainnet tests! :scream:",
               "url": "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID",
               "description": "Check the logs for more information."
             }

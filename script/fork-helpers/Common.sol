@@ -9,8 +9,7 @@ import { DeploymentFixtures } from "test/helpers/Fixtures.sol";
 
 contract ForkHelpersCommon is Script, DeploymentFixtures {
     function _setUp() internal {
-        Env memory env = envVars();
-        initializeFromDeployment(env.DEPLOY_CONFIG);
+        initializeFromDeployment();
     }
 
     function _prepareAdmin(

@@ -29,7 +29,7 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment(env.DEPLOY_CONFIG);
+        initializeFromDeployment();
         deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
@@ -128,7 +128,7 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment(env.DEPLOY_CONFIG);
+        initializeFromDeployment();
         deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
@@ -268,7 +268,7 @@ contract CSFeeDistributorDeploymentTest is Test, Utilities, DeploymentFixtures {
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment(env.DEPLOY_CONFIG);
+        initializeFromDeployment();
         deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
@@ -319,7 +319,7 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment(env.DEPLOY_CONFIG);
+        initializeFromDeployment();
         deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
@@ -389,7 +389,7 @@ contract HashConsensusDeploymentTest is Test, Utilities, DeploymentFixtures {
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment(env.DEPLOY_CONFIG);
+        initializeFromDeployment();
         deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
@@ -464,7 +464,7 @@ contract CSEarlyAdoptionDeploymentTest is Test, Utilities, DeploymentFixtures {
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment(env.DEPLOY_CONFIG);
+        initializeFromDeployment();
         deployParams = parseDeployParams(env.DEPLOY_CONFIG);
     }
 
@@ -484,7 +484,7 @@ contract CSVerifierDeploymentTest is Test, Utilities, DeploymentFixtures {
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment(env.DEPLOY_CONFIG);
+        initializeFromDeployment();
         deployParams = parseDeployParams(env.DEPLOY_CONFIG);
     }
 
