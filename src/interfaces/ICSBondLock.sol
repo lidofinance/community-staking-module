@@ -13,6 +13,12 @@ interface ICSBondLock {
         uint128 until;
     }
 
+    /// @dev DEPRECATED: Use `getBondLockPeriod` instead
+    function getBondLockRetentionPeriod()
+        external
+        view
+        returns (uint256 retention);
+
     function getBondLockPeriod() external view returns (uint256 period);
 
     function getLockedBondInfo(

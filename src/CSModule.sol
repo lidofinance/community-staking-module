@@ -1359,6 +1359,12 @@ contract CSModule is
         return MODULE_TYPE;
     }
 
+    /// @dev DEPRECATED. Use `EL_REWARDS_STEALING_ADDITIONAL_FINE` instead
+    // solhint-disable func-name-mixedcase
+    function EL_REWARDS_STEALING_FINE() external view returns (uint256) {
+        return EL_REWARDS_STEALING_ADDITIONAL_FINE;
+    }
+
     /// @notice Get staking module summary
     function getStakingModuleSummary()
         external

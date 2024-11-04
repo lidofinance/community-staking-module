@@ -69,6 +69,25 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
         MAX_BOND_LOCK_PERIOD = maxBondLockPeriod;
     }
 
+    /// @dev DEPRECATED. Use `MIN_BOND_LOCK_PERIOD` instead
+    // solhint-disable func-name-mixedcase
+    function MIN_BOND_LOCK_RETENTION_PERIOD() external view returns (uint256) {
+        return MIN_BOND_LOCK_PERIOD;
+    }
+
+    /// @dev DEPRECATED. Use `MAX_BOND_LOCK_PERIOD` instead
+    // solhint-disable func-name-mixedcase
+    function MAX_BOND_LOCK_RETENTION_PERIOD() external view returns (uint256) {
+        return MAX_BOND_LOCK_PERIOD;
+    }
+
+    /// @dev DEPRECATED. Use `getBondLockPeriod` instead
+    /// @notice Get default bond lock retention period
+    /// @return Default bond lock retention period
+    function getBondLockRetentionPeriod() external view returns (uint256) {
+        return _getCSBondLockStorage().bondLockPeriod;
+    }
+
     /// @notice Get default bond lock period
     /// @return Default bond lock period
     function getBondLockPeriod() external view returns (uint256) {

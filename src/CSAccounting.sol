@@ -141,6 +141,15 @@ contract CSAccounting is
         _setChargePenaltyRecipient(_chargePenaltyRecipient);
     }
 
+    /// @dev DEPRECATED. Use `setLockedBondPeriod` instead
+    /// @notice Set bond lock retention period
+    /// @param retention Period in seconds to retain bond lock
+    function setLockedBondRetentionPeriod(
+        uint256 retention
+    ) external onlyRole(ACCOUNTING_MANAGER_ROLE) {
+        CSBondLock._setBondLockPeriod(retention);
+    }
+
     /// @notice Set bond lock period
     /// @param period Period in seconds to retain bond lock
     function setLockedBondPeriod(
