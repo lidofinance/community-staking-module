@@ -6,11 +6,11 @@ pragma solidity 0.8.24;
 interface ICSBondLock {
     /// @dev Bond lock structure.
     /// It contains:
-    ///  - amount   |> amount of locked bond
-    ///  - until    |> timestamp until locked bond is retained
+    ///  - amount       |> amount of locked bond
+    ///  - lockUntil    |> timestamp until locked bond is retained
     struct BondLock {
         uint128 amount;
-        uint128 until;
+        uint128 lockUntil;
     }
 
     /// @dev DEPRECATED: Use `getBondLockPeriod` instead

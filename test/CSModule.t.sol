@@ -5589,7 +5589,7 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.until, 0);
+        assertEq(lock.lockUntil, 0);
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs()
@@ -5638,11 +5638,11 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             firstNoId
         );
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.until, 0);
+        assertEq(lock.lockUntil, 0);
 
         lock = accounting.getLockedBondInfo(secondNoId);
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.until, 0);
+        assertEq(lock.lockUntil, 0);
     }
 
     function test_settleELRewardsStealingPenalty_NoLock()
@@ -5661,7 +5661,7 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.until, 0);
+        assertEq(lock.lockUntil, 0);
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs_NoLock()
@@ -5694,12 +5694,12 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             firstNoId
         );
         assertEq(firstLock.amount, 0 ether);
-        assertEq(firstLock.until, 0);
+        assertEq(firstLock.lockUntil, 0);
         CSBondLock.BondLock memory secondLock = accounting.getLockedBondInfo(
             secondNoId
         );
         assertEq(secondLock.amount, 0 ether);
-        assertEq(secondLock.until, 0);
+        assertEq(secondLock.lockUntil, 0);
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs_oneWithNoLock()
@@ -5739,12 +5739,12 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             firstNoId
         );
         assertEq(firstLock.amount, 0 ether);
-        assertEq(firstLock.until, 0);
+        assertEq(firstLock.lockUntil, 0);
         CSBondLock.BondLock memory secondLock = accounting.getLockedBondInfo(
             secondNoId
         );
         assertEq(secondLock.amount, 0 ether);
-        assertEq(secondLock.until, 0);
+        assertEq(secondLock.lockUntil, 0);
     }
 
     function test_settleELRewardsStealingPenalty_withDuplicates() public {
@@ -5781,7 +5781,7 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             secondNoId
         );
         assertEq(currentLock.amount, 0 ether);
-        assertEq(currentLock.until, 0);
+        assertEq(currentLock.lockUntil, 0);
         assertEq(
             bondBalanceAfter,
             bondBalanceBefore -
@@ -5866,7 +5866,7 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
             secondNoId
         );
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.until, 0);
+        assertEq(lock.lockUntil, 0);
     }
 
     function test_settleELRewardsStealingPenalty_CurveReset_NoNewUnbonded()

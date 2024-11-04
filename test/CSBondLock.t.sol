@@ -85,7 +85,7 @@ contract CSBondLockTest is Test {
         bondLock.lock(noId, amount);
 
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
-        vm.warp(lock.until);
+        vm.warp(lock.lockUntil);
 
         uint256 value = bondLock.getActualLockedBond(noId);
         assertEq(value, 0);
@@ -116,7 +116,7 @@ contract CSBondLockTest is Test {
 
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
         assertEq(lock.amount, amount);
-        assertEq(lock.until, until);
+        assertEq(lock.lockUntil, until);
     }
 
     function test_lock_secondLock() public {
@@ -131,7 +131,7 @@ contract CSBondLockTest is Test {
         bondLock.lock(noId, 1 ether);
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
         assertEq(lock.amount, 2 ether);
-        assertEq(lock.until, lockBefore.until + 1 hours);
+        assertEq(lock.lockUntil, lockBefore.lockUntil + 1 hours);
     }
 
     function test_lock_WhenSecondLockOnUntil() public {
@@ -142,12 +142,12 @@ contract CSBondLockTest is Test {
         CSBondLock.BondLock memory lockBefore = bondLock.getLockedBondInfo(
             noId
         );
-        vm.warp(lockBefore.until);
+        vm.warp(lockBefore.lockUntil);
 
         bondLock.lock(noId, 1 ether);
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
         assertEq(lock.amount, 1 ether);
-        assertEq(lock.until, lockBefore.until + period);
+        assertEq(lock.lockUntil, lockBefore.lockUntil + period);
     }
 
     function test_lock_WhenSecondLockAfterFirstExpired() public {
@@ -158,12 +158,12 @@ contract CSBondLockTest is Test {
         CSBondLock.BondLock memory lockBefore = bondLock.getLockedBondInfo(
             noId
         );
-        vm.warp(lockBefore.until + 1 hours);
+        vm.warp(lockBefore.lockUntil + 1 hours);
 
         bondLock.lock(noId, 1 ether);
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(noId);
         assertEq(lock.amount, 1 ether);
-        assertEq(lock.until, block.timestamp + period);
+        assertEq(lock.lockUntil, block.timestamp + period);
     }
 
     function test_lock_RevertWhen_ZeroAmount() public {
@@ -196,7 +196,7 @@ contract CSBondLockTest is Test {
 
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(0);
         assertEq(lock.amount, 0);
-        assertEq(lock.until, 0);
+        assertEq(lock.lockUntil, 0);
     }
 
     function test_reduceAmount_WhenPartial() public {
@@ -219,7 +219,7 @@ contract CSBondLockTest is Test {
 
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(0);
         assertEq(lock.amount, rest);
-        assertEq(lock.until, periodWhenLock);
+        assertEq(lock.lockUntil, periodWhenLock);
     }
 
     function test_reduceAmount_RevertWhen_ZeroAmount() public {
@@ -250,6 +250,6 @@ contract CSBondLockTest is Test {
 
         CSBondLock.BondLock memory lock = bondLock.getLockedBondInfo(0);
         assertEq(lock.amount, 0);
-        assertEq(lock.until, 0);
+        assertEq(lock.lockUntil, 0);
     }
 }
