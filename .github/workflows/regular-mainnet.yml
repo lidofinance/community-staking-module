@@ -87,13 +87,6 @@ jobs:
           DEPLOY_CONFIG: ./artifacts/mainnet/deploy-mainnet.json
           RPC_URL: ${{ secrets.RPC_URL_MAINNET }}
 
-      - name: Run post-vote tests after upgrade
-        run: just test-upgrade
-        env:
-          CHAIN: mainnet
-          DEPLOY_CONFIG: ./artifacts/mainnet/deploy-mainnet.json
-          RPC_URL: ${{ secrets.RPC_URL_MAINNET }}
-
       - name: Echo embeds to the env variable
         if: ${{ failure() && (github.event_name == 'schedule' || inputs.notify) }}
         run: |

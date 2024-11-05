@@ -76,21 +76,29 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         UpgradeConfig memory upgradeConfig = parseUpgradeConfig(
             upgradeConfigContent
         );
-        OssifiableProxy proxy = OssifiableProxy(payable(deploymentConfig.csm));
-        vm.broadcast(proxy.proxy__getAdmin());
-        proxy.proxy__upgradeTo(upgradeConfig.csmImpl);
+        OssifiableProxy csmProxy = OssifiableProxy(
+            payable(deploymentConfig.csm)
+        );
+        vm.broadcast(csmProxy.proxy__getAdmin());
+        csmProxy.proxy__upgradeTo(upgradeConfig.csmImpl);
 
-        proxy = OssifiableProxy(payable(deploymentConfig.accounting));
-        vm.broadcast(proxy.proxy__getAdmin());
-        proxy.proxy__upgradeTo(upgradeConfig.accountingImpl);
+        OssifiableProxy accountingProxy = OssifiableProxy(
+            payable(deploymentConfig.accounting)
+        );
+        vm.broadcast(accountingProxy.proxy__getAdmin());
+        accountingProxy.proxy__upgradeTo(upgradeConfig.accountingImpl);
 
-        proxy = OssifiableProxy(payable(deploymentConfig.oracle));
-        vm.broadcast(proxy.proxy__getAdmin());
-        proxy.proxy__upgradeTo(upgradeConfig.oracleImpl);
+        OssifiableProxy oracleProxy = OssifiableProxy(
+            payable(deploymentConfig.oracle)
+        );
+        vm.broadcast(oracleProxy.proxy__getAdmin());
+        oracleProxy.proxy__upgradeTo(upgradeConfig.oracleImpl);
 
-        proxy = OssifiableProxy(payable(deploymentConfig.feeDistributor));
-        vm.broadcast(proxy.proxy__getAdmin());
-        proxy.proxy__upgradeTo(upgradeConfig.feeDistributorImpl);
+        OssifiableProxy feeDistributorProxy = OssifiableProxy(
+            payable(deploymentConfig.feeDistributor)
+        );
+        vm.broadcast(feeDistributorProxy.proxy__getAdmin());
+        feeDistributorProxy.proxy__upgradeTo(upgradeConfig.feeDistributorImpl);
 
         address admin = _prepareAdmin(deploymentConfig.csm);
         csm = CSModule(deploymentConfig.csm);
