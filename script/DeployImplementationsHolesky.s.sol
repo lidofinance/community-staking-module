@@ -14,24 +14,29 @@ import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
 import { CSEarlyAdoption } from "../src/CSEarlyAdoption.sol";
+import { DeploymentHelpers } from "../test/helpers/Fixtures.sol";
 
 contract DeployImplementationsHolesky is
     DeployImplementationsBase,
-    DeployHolesky
+    DeployHolesky,
+    DeploymentHelpers
 {
-    constructor() DeployHolesky() {
-        csm = CSModule(0x4562c3e63c2e586cD1651B958C22F88135aCAd4f);
-        earlyAdoption = CSEarlyAdoption(
-            0x71E92eA77C198a770d9f33A03277DbeB99989660
+    function deploy(string memory deploymentConfigPath) external {
+        string memory deploymentConfigContent = vm.readFile(
+            deploymentConfigPath
         );
-        accounting = CSAccounting(0xc093e53e8F4b55A223c18A2Da6fA00e60DD5EFE1);
-        oracle = CSFeeOracle(0xaF57326C7d513085051b50912D51809ECC5d98Ee);
-        feeDistributor = CSFeeDistributor(
-            0xD7ba648C8F72669C6aE649648B516ec03D07c8ED
+        DeploymentConfig memory deploymentConfig = parseDeploymentConfig(
+            deploymentConfigContent
         );
-        hashConsensus = HashConsensus(
-            0xbF38618Ea09B503c1dED867156A0ea276Ca1AE37
-        );
-        gateSeal = 0x41F2677fae0222cF1f08Cd1c0AAa607B469654Ce;
+
+        csm = CSModule(deploymentConfig.csm);
+        earlyAdoption = CSEarlyAdoption(deploymentConfig.earlyAdoption);
+        accounting = CSAccounting(deploymentConfig.accounting);
+        oracle = CSFeeOracle(deploymentConfig.oracle);
+        feeDistributor = CSFeeDistributor(deploymentConfig.feeDistributor);
+        hashConsensus = HashConsensus(deploymentConfig.hashConsensus);
+        gateSeal = deploymentConfig.gateSeal;
+
+        _deploy();
     }
 }

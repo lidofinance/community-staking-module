@@ -76,20 +76,7 @@ contract Fixtures is StdCheats, Test {
     }
 }
 
-contract DeploymentFixtures is StdCheats, Test {
-    CSModule public csm;
-    CSEarlyAdoption earlyAdoption;
-    CSAccounting public accounting;
-    CSFeeOracle public oracle;
-    CSFeeDistributor public feeDistributor;
-    CSVerifier public verifier;
-    HashConsensus public hashConsensus;
-    ILidoLocator public locator;
-    IWstETH public wstETH;
-    IStakingRouter public stakingRouter;
-    ILido public lido;
-    IGateSeal public gateSeal;
-
+contract DeploymentHelpers is Test {
     struct Env {
         string RPC_URL;
         string DEPLOY_CONFIG;
@@ -128,37 +115,6 @@ contract DeploymentFixtures is StdCheats, Test {
         vm.skip(_isEmpty(env.RPC_URL));
         vm.skip(_isEmpty(env.DEPLOY_CONFIG));
         return env;
-    }
-
-    function initializeFromDeployment() public {
-        Env memory env = envVars();
-        string memory config = vm.readFile(env.DEPLOY_CONFIG);
-        DeploymentConfig memory deploymentConfig = parseDeploymentConfig(
-            config
-        );
-        assertEq(deploymentConfig.chainId, block.chainid, "ChainId mismatch");
-
-        csm = CSModule(deploymentConfig.csm);
-        earlyAdoption = CSEarlyAdoption(deploymentConfig.earlyAdoption);
-        accounting = CSAccounting(deploymentConfig.accounting);
-        oracle = CSFeeOracle(deploymentConfig.oracle);
-        feeDistributor = CSFeeDistributor(deploymentConfig.feeDistributor);
-        verifier = CSVerifier(deploymentConfig.verifier);
-        hashConsensus = HashConsensus(deploymentConfig.hashConsensus);
-        locator = ILidoLocator(deploymentConfig.lidoLocator);
-        lido = ILido(locator.lido());
-        stakingRouter = IStakingRouter(locator.stakingRouter());
-        wstETH = IWstETH(IWithdrawalQueue(locator.withdrawalQueue()).WSTETH());
-        gateSeal = IGateSeal(deploymentConfig.gateSeal);
-
-        if (!_isEmpty(env.UPGRADE_CONFIG)) {
-            UpgradeConfig memory upgradeConfig = parseUpgradeConfig(
-                vm.readFile(env.UPGRADE_CONFIG)
-            );
-            earlyAdoption = CSEarlyAdoption(upgradeConfig.earlyAdoption);
-            verifier = CSVerifier(upgradeConfig.verifier);
-            hashConsensus = HashConsensus(upgradeConfig.hashConsensus);
-        }
     }
 
     function parseDeploymentConfig(
@@ -247,6 +203,57 @@ contract DeploymentFixtures is StdCheats, Test {
             );
     }
 
+    function _isEmpty(string memory s) internal pure returns (bool) {
+        return
+            keccak256(abi.encodePacked(s)) == keccak256(abi.encodePacked(""));
+    }
+}
+
+contract DeploymentFixtures is StdCheats, DeploymentHelpers {
+    CSModule public csm;
+    CSEarlyAdoption earlyAdoption;
+    CSAccounting public accounting;
+    CSFeeOracle public oracle;
+    CSFeeDistributor public feeDistributor;
+    CSVerifier public verifier;
+    HashConsensus public hashConsensus;
+    ILidoLocator public locator;
+    IWstETH public wstETH;
+    IStakingRouter public stakingRouter;
+    ILido public lido;
+    IGateSeal public gateSeal;
+
+    function initializeFromDeployment() public {
+        Env memory env = envVars();
+        string memory config = vm.readFile(env.DEPLOY_CONFIG);
+        DeploymentConfig memory deploymentConfig = parseDeploymentConfig(
+            config
+        );
+        assertEq(deploymentConfig.chainId, block.chainid, "ChainId mismatch");
+
+        csm = CSModule(deploymentConfig.csm);
+        earlyAdoption = CSEarlyAdoption(deploymentConfig.earlyAdoption);
+        accounting = CSAccounting(deploymentConfig.accounting);
+        oracle = CSFeeOracle(deploymentConfig.oracle);
+        feeDistributor = CSFeeDistributor(deploymentConfig.feeDistributor);
+        verifier = CSVerifier(deploymentConfig.verifier);
+        hashConsensus = HashConsensus(deploymentConfig.hashConsensus);
+        locator = ILidoLocator(deploymentConfig.lidoLocator);
+        lido = ILido(locator.lido());
+        stakingRouter = IStakingRouter(locator.stakingRouter());
+        wstETH = IWstETH(IWithdrawalQueue(locator.withdrawalQueue()).WSTETH());
+        gateSeal = IGateSeal(deploymentConfig.gateSeal);
+
+        if (!_isEmpty(env.UPGRADE_CONFIG)) {
+            UpgradeConfig memory upgradeConfig = parseUpgradeConfig(
+                vm.readFile(env.UPGRADE_CONFIG)
+            );
+            earlyAdoption = CSEarlyAdoption(upgradeConfig.earlyAdoption);
+            verifier = CSVerifier(upgradeConfig.verifier);
+            hashConsensus = HashConsensus(upgradeConfig.hashConsensus);
+        }
+    }
+
     function handleStakingLimit() public {
         address agent = stakingRouter.getRoleMember(
             stakingRouter.DEFAULT_ADMIN_ROLE(),
@@ -267,10 +274,5 @@ contract DeploymentFixtures is StdCheats, Test {
             vm.prank(wq.getRoleMember(wq.ORACLE_ROLE(), 0));
             wq.onOracleReport(false, 0, 0);
         }
-    }
-
-    function _isEmpty(string memory s) internal pure returns (bool) {
-        return
-            keccak256(abi.encodePacked(s)) == keccak256(abi.encodePacked(""));
     }
 }

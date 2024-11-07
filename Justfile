@@ -18,6 +18,14 @@ deploy_implementations_script_name := if chain == "mainnet" {
     error("Unsupported chain " + chain)
 }
 
+deploy_config_path := if chain == "mainnet" {
+    "artifacts/mainnet/deploy-mainnet.json"
+} else if chain == "holesky" {
+    "artifacts/holesky/deploy-holesky.json"
+} else {
+    error("Unsupported chain " + chain)
+}
+
 deploy_script_path := "script" / deploy_script_name + ".s.sol:" + deploy_script_name
 deploy_impls_script_path := "script" / deploy_implementations_script_name + ".s.sol:" + deploy_implementations_script_name
 
@@ -148,7 +156,9 @@ _deploy-prod *args:
     forge script {{deploy_script_path}} --force --rpc-url ${RPC_URL} {{args}}
 
 deploy-impl *args:
-    forge script {{deploy_impls_script_path}} --sig="deploy_implementations()" --rpc-url {{anvil_rpc_url}} --broadcast --slow {{args}}
+    forge script {{deploy_impls_script_path}} --sig="deploy(string)" \
+        --rpc-url {{anvil_rpc_url}} --broadcast --slow {{args}} \
+        -- {{deploy_config_path}}
 
 [confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]
 deploy-impl-prod *args:

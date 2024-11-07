@@ -22,7 +22,7 @@ import "./DeployBase.s.sol";
 abstract contract DeployImplementationsBase is DeployBase {
     address gateSeal;
 
-    function deploy_implementations() external {
+    function _deploy() internal {
         if (chainId != block.chainid) {
             revert ChainIdMismatch({
                 actual: block.chainid,
