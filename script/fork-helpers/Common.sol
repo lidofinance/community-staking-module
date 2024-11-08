@@ -6,6 +6,7 @@ pragma solidity 0.8.24;
 import "forge-std/Script.sol";
 import "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { DeploymentFixtures } from "test/helpers/Fixtures.sol";
+import { OssifiableProxy } from "../../src/lib/proxy/OssifiableProxy.sol";
 
 contract ForkHelpersCommon is Script, DeploymentFixtures {
     function _setUp() internal {
@@ -27,15 +28,27 @@ contract ForkHelpersCommon is Script, DeploymentFixtures {
         _setBalance(admin);
     }
 
+    function _prepareProxyAdmin(
+        address proxyAddress
+    ) internal returns (address admin) {
+        OssifiableProxy proxy = OssifiableProxy(payable(proxyAddress));
+        admin = payable(proxy.proxy__getAdmin());
+        _setBalance(admin);
+    }
+
     function _setBalance(address account) internal {
-        vm.rpc(
-            "anvil_setBalance",
-            string.concat(
-                '["',
-                vm.toString(account),
-                '", ',
-                "1000000000000000000]"
-            )
-        );
+        uint256 expectedBalance = 1 ether;
+        if (account.balance < expectedBalance) {
+            vm.rpc(
+                "anvil_setBalance",
+                string.concat(
+                    '["',
+                    vm.toString(account),
+                    '", ',
+                    vm.toString(expectedBalance),
+                    "]"
+                )
+            );
+        }
     }
 }

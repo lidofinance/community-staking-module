@@ -155,17 +155,17 @@ verify-prod *args:
 _deploy-prod *args:
     forge script {{deploy_script_path}} --force --rpc-url ${RPC_URL} {{args}}
 
-deploy-impl *args:
+_deploy-impl *args:
     forge script {{deploy_impls_script_path}} --sig="deploy(string)" \
-        --rpc-url {{anvil_rpc_url}} --broadcast --slow {{args}} \
+        --rpc-url {{anvil_rpc_url}} --slow {{args}} \
         -- {{deploy_config_path}}
 
 [confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]
 deploy-impl-prod *args:
-    ARTIFACTS_DIR=./artifacts/latest/ just deploy-impl-dry --broadcast --verify {{args}}
+    ARTIFACTS_DIR=./artifacts/latest/ just _deploy-impl --broadcast --verify {{args}}
 
 deploy-impl-dry *args:
-    forge script {{deploy_impls_script_path}} --sig="deploy_implementations()" --force --rpc-url ${RPC_URL} {{args}}
+    just _deploy-impl {{args}}
 
 deploy-local:
     just make-fork &
@@ -177,7 +177,7 @@ test-upgrade *args:
     just make-fork --silent &
     @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
     DEPLOYER_PRIVATE_KEY=`cat localhost.json | jq -r ".private_keys[0]"` \
-        just deploy-impl
+        just _deploy-impl --broadcast
 
     DEPLOY_CONFIG=./artifacts/{{chain}}/deploy-{{chain}}.json \
     UPGRADE_CONFIG=./artifacts/local/upgrade-{{chain}}.json \

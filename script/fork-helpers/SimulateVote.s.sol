@@ -79,25 +79,25 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         OssifiableProxy csmProxy = OssifiableProxy(
             payable(deploymentConfig.csm)
         );
-        vm.broadcast(csmProxy.proxy__getAdmin());
+        vm.broadcast(_prepareProxyAdmin(address(csmProxy)));
         csmProxy.proxy__upgradeTo(upgradeConfig.csmImpl);
 
         OssifiableProxy accountingProxy = OssifiableProxy(
             payable(deploymentConfig.accounting)
         );
-        vm.broadcast(accountingProxy.proxy__getAdmin());
+        vm.broadcast(_prepareProxyAdmin(address(accountingProxy)));
         accountingProxy.proxy__upgradeTo(upgradeConfig.accountingImpl);
 
         OssifiableProxy oracleProxy = OssifiableProxy(
             payable(deploymentConfig.oracle)
         );
-        vm.broadcast(oracleProxy.proxy__getAdmin());
+        vm.broadcast(_prepareProxyAdmin(address(oracleProxy)));
         oracleProxy.proxy__upgradeTo(upgradeConfig.oracleImpl);
 
         OssifiableProxy feeDistributorProxy = OssifiableProxy(
             payable(deploymentConfig.feeDistributor)
         );
-        vm.broadcast(feeDistributorProxy.proxy__getAdmin());
+        vm.broadcast(_prepareProxyAdmin(address(feeDistributorProxy)));
         feeDistributorProxy.proxy__upgradeTo(upgradeConfig.feeDistributorImpl);
 
         address admin = _prepareAdmin(deploymentConfig.csm);
