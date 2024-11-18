@@ -72,6 +72,7 @@ struct DeployParams {
 }
 
 abstract contract DeployBase is Script {
+    string internal gitRef;
     DeployParams internal config;
     string internal artifactDir;
     string internal chainName;
@@ -105,7 +106,8 @@ abstract contract DeployBase is Script {
         locator = ILidoLocator(config.lidoLocatorAddress);
     }
 
-    function run() external virtual {
+    function run(string memory _gitRef) external virtual {
+        gitRef = _gitRef;
         if (chainId != block.chainid) {
             revert ChainIdMismatch({
                 actual: block.chainid,
@@ -327,6 +329,7 @@ abstract contract DeployBase is Script {
             deployJson.set("LidoLocator", config.lidoLocatorAddress);
             deployJson.set("GateSeal", gateSeal);
             deployJson.set("DeployParams", abi.encode(config));
+            deployJson.set("git-ref", gitRef);
             vm.writeJson(deployJson.str, _deployJsonFilename());
         }
 

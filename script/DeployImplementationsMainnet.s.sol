@@ -21,7 +21,11 @@ contract DeployImplementationsMainnet is
     DeployMainnet,
     DeploymentHelpers
 {
-    function deploy(string memory deploymentConfigPath) external {
+    function deploy(
+        string memory deploymentConfigPath,
+        string memory _gitRef
+    ) external {
+        gitRef = _gitRef;
         string memory deploymentConfigContent = vm.readFile(
             deploymentConfigPath
         );

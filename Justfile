@@ -132,7 +132,7 @@ kill-fork:
     @-pkill anvil && just _warn "anvil process is killed"
 
 deploy *args:
-    forge script {{deploy_script_path}} --rpc-url {{anvil_rpc_url}} --broadcast --slow {{args}}
+    forge script {{deploy_script_path}} --sig="run(string)" --rpc-url {{anvil_rpc_url}} --broadcast --slow {{args}} -- `git rev-parse HEAD`
 
 deploy-prod *args:
     just _warn "The current `tput bold`chain={{chain}}`tput sgr0` with the following rpc url: $RPC_URL"
@@ -150,15 +150,15 @@ deploy-prod-dry *args:
 
 verify-prod *args:
     just _warn "Pass --chain=your_chain manually. e.g. --chain=holesky for testnet deployment"
-    forge script {{deploy_script_path}} --rpc-url ${RPC_URL} --verify {{args}} --unlocked
+    forge script {{deploy_script_path}} --sig="run(string)" --rpc-url ${RPC_URL} --verify {{args}} --unlocked -- `git rev-parse HEAD`
 
 _deploy-prod *args:
-    forge script {{deploy_script_path}} --force --rpc-url ${RPC_URL} {{args}}
+    forge script {{deploy_script_path}} --sig="run(string)" --force --rpc-url ${RPC_URL} {{args}} -- `git rev-parse HEAD`
 
 _deploy-impl *args:
-    forge script {{deploy_impls_script_path}} --sig="deploy(string)" \
+    forge script {{deploy_impls_script_path}} --sig="deploy(string,string)" \
         --rpc-url {{anvil_rpc_url}} --slow {{args}} \
-        -- {{deploy_config_path}}
+        -- {{deploy_config_path}} `git rev-parse HEAD`
 
 [confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]
 deploy-impl-prod *args:

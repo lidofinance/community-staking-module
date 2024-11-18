@@ -90,6 +90,7 @@ abstract contract DeployImplementationsBase is DeployBase {
             deployJson.set("CSVerifier", address(verifier));
             deployJson.set("CSEarlyAdoption", address(earlyAdoption));
             deployJson.set("HashConsensus", address(hashConsensus));
+            deployJson.set("git-ref", gitRef);
             vm.writeJson(
                 deployJson.str,
                 string(
