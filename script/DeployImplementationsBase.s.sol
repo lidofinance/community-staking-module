@@ -17,7 +17,7 @@ import { CSEarlyAdoption } from "../src/CSEarlyAdoption.sol";
 import { JsonObj, Json } from "./utils/Json.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
-import "./DeployBase.s.sol";
+import { DeployBase } from "./DeployBase.s.sol";
 
 abstract contract DeployImplementationsBase is DeployBase {
     address gateSeal;

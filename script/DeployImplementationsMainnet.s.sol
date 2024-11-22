@@ -6,7 +6,7 @@ pragma solidity 0.8.24;
 import { DeployBase } from "./DeployBase.s.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { DeployImplementationsBase } from "./DeployImplementationsBase.s.sol";
-import "./DeployMainnet.s.sol";
+import { DeployMainnet } from "./DeployMainnet.s.sol";
 import { HashConsensus } from "../src/lib/base-oracle/HashConsensus.sol";
 import { CSModule } from "../src/CSModule.sol";
 import { CSAccounting } from "../src/CSAccounting.sol";
