@@ -5,7 +5,6 @@ pragma solidity 0.8.24;
 
 import { DeployBase } from "./DeployBase.s.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
-import { DeployHolesky } from "./DeployHolesky.s.sol";
 
 import { HashConsensus } from "../src/lib/base-oracle/HashConsensus.sol";
 import { CSModule } from "../src/CSModule.sol";
@@ -18,11 +17,12 @@ import { CSEarlyAdoption } from "../src/CSEarlyAdoption.sol";
 import { JsonObj, Json } from "./utils/Json.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
+import { DeployBase } from "./DeployBase.s.sol";
 
-contract DeployHoleskyImplementations is DeployHolesky {
+abstract contract DeployImplementationsBase is DeployBase {
     address gateSeal;
 
-    function run() external virtual override {
+    function _deploy() internal {
         if (chainId != block.chainid) {
             revert ChainIdMismatch({
                 actual: block.chainid,
@@ -33,7 +33,6 @@ contract DeployHoleskyImplementations is DeployHolesky {
         pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
         deployer = vm.addr(pk);
         vm.label(deployer, "DEPLOYER");
-        parseDeploymentConfig();
 
         vm.startBroadcast(pk);
         {
@@ -54,17 +53,16 @@ contract DeployHoleskyImplementations is DeployHolesky {
                 maxBondLockRetentionPeriod: config.maxBondLockRetentionPeriod
             });
 
-            // No changes in these contracts. Uncomment if any
-            //            CSFeeOracle oracleImpl = new CSFeeOracle({
-            //                secondsPerSlot: config.secondsPerSlot,
-            //                genesisTime: config.clGenesisTime
-            //            });
+            CSFeeOracle oracleImpl = new CSFeeOracle({
+                secondsPerSlot: config.secondsPerSlot,
+                genesisTime: config.clGenesisTime
+            });
 
-            //            CSFeeDistributor feeDistributorImpl = new CSFeeDistributor({
-            //                stETH: locator.lido(),
-            //                accounting: address(accounting),
-            //                oracle: address(oracle)
-            //            });
+            CSFeeDistributor feeDistributorImpl = new CSFeeDistributor({
+                stETH: locator.lido(),
+                accounting: address(accounting),
+                oracle: address(oracle)
+            });
 
             verifier = new CSVerifier({
                 withdrawalAddress: locator.withdrawalVault(),
@@ -87,38 +85,25 @@ contract DeployHoleskyImplementations is DeployHolesky {
             JsonObj memory deployJson = Json.newObj();
             deployJson.set("CSModuleImpl", address(csmImpl));
             deployJson.set("CSAccountingImpl", address(accountingImpl));
-            // deployJson.set("CSFeeOracleImpl", address(oracle));
-            // deployJson.set("CSFeeDistributor", address(feeDistributor));
+            deployJson.set("CSFeeOracleImpl", address(oracleImpl));
+            deployJson.set("CSFeeDistributorImpl", address(feeDistributorImpl));
             deployJson.set("CSVerifier", address(verifier));
+            deployJson.set("CSEarlyAdoption", address(earlyAdoption));
+            deployJson.set("HashConsensus", address(hashConsensus));
+            deployJson.set("git-ref", gitRef);
             vm.writeJson(
                 deployJson.str,
                 string(
-                    abi.encodePacked(artifactDir, "update-", chainName, ".json")
+                    abi.encodePacked(
+                        artifactDir,
+                        "upgrade-",
+                        chainName,
+                        ".json"
+                    )
                 )
             );
         }
 
         vm.stopBroadcast();
-    }
-
-    function parseDeploymentConfig() internal {
-        string memory deployConfig = vm.readFile(
-            vm.envOr("DEPLOY_CONFIG", string(""))
-        );
-        csm = CSModule(vm.parseJsonAddress(deployConfig, ".CSModule"));
-        earlyAdoption = CSEarlyAdoption(
-            vm.parseJsonAddress(deployConfig, ".CSEarlyAdoption")
-        );
-        accounting = CSAccounting(
-            vm.parseJsonAddress(deployConfig, ".CSAccounting")
-        );
-        oracle = CSFeeOracle(vm.parseJsonAddress(deployConfig, ".CSFeeOracle"));
-        feeDistributor = CSFeeDistributor(
-            vm.parseJsonAddress(deployConfig, ".CSFeeDistributor")
-        );
-        hashConsensus = HashConsensus(
-            vm.parseJsonAddress(deployConfig, ".HashConsensus")
-        );
-        gateSeal = vm.parseJsonAddress(deployConfig, ".GateSeal");
     }
 }

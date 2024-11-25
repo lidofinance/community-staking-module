@@ -19,17 +19,17 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment(env.DEPLOY_CONFIG);
+        initializeFromDeployment();
         deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
 
-    function test_module_state() public {
+    function test_moduleState() public {
         assertFalse(csm.isPaused());
         assertFalse(csm.publicRelease());
     }
 
-    function test_module_roles() public {
+    function test_moduleRoles() public {
         assertTrue(
             csm.hasRole(csm.DEFAULT_ADMIN_ROLE(), deployParams.aragonAgent)
         );
@@ -69,7 +69,7 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         assertEq(csm.getRoleMemberCount(csm.RECOVERER_ROLE()), 0);
     }
 
-    function test_acounting_state() public {
+    function test_accountingState() public {
         assertFalse(accounting.isPaused());
         assertEq(
             accounting.getCurveInfo(earlyAdoption.CURVE_ID()).points,
@@ -77,7 +77,7 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         );
     }
 
-    function test_accounting_roles() public {
+    function test_accountingRoles() public {
         assertTrue(
             accounting.hasRole(
                 accounting.DEFAULT_ADMIN_ROLE(),
@@ -126,7 +126,7 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         assertEq(accounting.getRoleMemberCount(accounting.RECOVERER_ROLE()), 0);
     }
 
-    function test_feeDistributor_state() public {
+    function test_feeDistributorState() public {
         // The conditions below are true just after the vote, but can be broken afterward.
         vm.skip(true);
 

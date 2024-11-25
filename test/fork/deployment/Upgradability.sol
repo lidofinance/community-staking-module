@@ -17,7 +17,7 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
     constructor() {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment(env.DEPLOY_CONFIG);
+        initializeFromDeployment();
     }
 
     function test_CSModuleUpgradeTo() public {
