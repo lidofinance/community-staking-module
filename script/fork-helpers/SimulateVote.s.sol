@@ -6,11 +6,13 @@ pragma solidity 0.8.24;
 import "forge-std/Script.sol";
 import { DeploymentFixtures } from "test/helpers/Fixtures.sol";
 import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
+import { OssifiableProxy } from "../../src/lib/proxy/OssifiableProxy.sol";
+import { CSModule } from "../../src/CSModule.sol";
 import { IBurner } from "../../src/interfaces/IBurner.sol";
 import { ForkHelpersCommon } from "./Common.sol";
 
 contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
-    function run() external {
+    function addModule() external {
         _setUp();
 
         IStakingRouter stakingRouter = IStakingRouter(locator.stakingRouter());
@@ -62,5 +64,48 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         csm.revokeRole(csm.RESUME_ROLE(), agent);
         // 7. Update initial epoch
         hashConsensus.updateInitialEpoch(47480);
+    }
+
+    function upgrade() external {
+        Env memory env = envVars();
+        string memory deploymentConfigContent = vm.readFile(env.DEPLOY_CONFIG);
+        DeploymentConfig memory deploymentConfig = parseDeploymentConfig(
+            deploymentConfigContent
+        );
+        string memory upgradeConfigContent = vm.readFile(env.UPGRADE_CONFIG);
+        UpgradeConfig memory upgradeConfig = parseUpgradeConfig(
+            upgradeConfigContent
+        );
+        OssifiableProxy csmProxy = OssifiableProxy(
+            payable(deploymentConfig.csm)
+        );
+        vm.broadcast(_prepareProxyAdmin(address(csmProxy)));
+        csmProxy.proxy__upgradeTo(upgradeConfig.csmImpl);
+
+        OssifiableProxy accountingProxy = OssifiableProxy(
+            payable(deploymentConfig.accounting)
+        );
+        vm.broadcast(_prepareProxyAdmin(address(accountingProxy)));
+        accountingProxy.proxy__upgradeTo(upgradeConfig.accountingImpl);
+
+        OssifiableProxy oracleProxy = OssifiableProxy(
+            payable(deploymentConfig.oracle)
+        );
+        vm.broadcast(_prepareProxyAdmin(address(oracleProxy)));
+        oracleProxy.proxy__upgradeTo(upgradeConfig.oracleImpl);
+
+        OssifiableProxy feeDistributorProxy = OssifiableProxy(
+            payable(deploymentConfig.feeDistributor)
+        );
+        vm.broadcast(_prepareProxyAdmin(address(feeDistributorProxy)));
+        feeDistributorProxy.proxy__upgradeTo(upgradeConfig.feeDistributorImpl);
+
+        address admin = _prepareAdmin(deploymentConfig.csm);
+        csm = CSModule(deploymentConfig.csm);
+
+        vm.startBroadcast(admin);
+        csm.revokeRole(csm.VERIFIER_ROLE(), address(deploymentConfig.verifier));
+        csm.grantRole(csm.VERIFIER_ROLE(), address(upgradeConfig.verifier));
+        vm.stopBroadcast();
     }
 }

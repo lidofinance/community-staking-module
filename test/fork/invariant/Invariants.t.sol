@@ -22,7 +22,7 @@ contract InvariantsBase is
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment(env.DEPLOY_CONFIG);
+        initializeFromDeployment();
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
 }

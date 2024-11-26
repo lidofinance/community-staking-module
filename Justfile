@@ -11,9 +11,17 @@ deploy_script_name := if chain == "mainnet" {
 }
 
 deploy_implementations_script_name := if chain == "mainnet" {
-    "undefined"
+    "DeployImplementationsMainnet"
 } else if chain == "holesky" {
-    "DeployHoleskyImplementations"
+    "DeployImplementationsHolesky"
+} else {
+    error("Unsupported chain " + chain)
+}
+
+deploy_config_path := if chain == "mainnet" {
+    "artifacts/mainnet/deploy-mainnet.json"
+} else if chain == "holesky" {
+    "artifacts/holesky/deploy-holesky.json"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -124,7 +132,7 @@ kill-fork:
     @-pkill anvil && just _warn "anvil process is killed"
 
 deploy *args:
-    forge script {{deploy_script_path}} --rpc-url {{anvil_rpc_url}} --broadcast --slow {{args}}
+    forge script {{deploy_script_path}} --sig="run(string)" --rpc-url {{anvil_rpc_url}} --broadcast --slow {{args}} -- `git rev-parse HEAD`
 
 deploy-prod *args:
     just _warn "The current `tput bold`chain={{chain}}`tput sgr0` with the following rpc url: $RPC_URL"
@@ -142,23 +150,45 @@ deploy-prod-dry *args:
 
 verify-prod *args:
     just _warn "Pass --chain=your_chain manually. e.g. --chain=holesky for testnet deployment"
-    forge script {{deploy_script_path}} --rpc-url ${RPC_URL} --verify {{args}} --unlocked
+    forge script {{deploy_script_path}} --sig="run(string)" --rpc-url ${RPC_URL} --verify {{args}} --unlocked -- `git rev-parse HEAD`
 
 _deploy-prod *args:
-    forge script {{deploy_script_path}} --force --rpc-url ${RPC_URL} {{args}}
+    forge script {{deploy_script_path}} --sig="run(string)" --force --rpc-url ${RPC_URL} {{args}} -- `git rev-parse HEAD`
+
+_deploy-impl *args:
+    forge script {{deploy_impls_script_path}} --sig="deploy(string,string)" \
+        --rpc-url {{anvil_rpc_url}} --slow {{args}} \
+        -- {{deploy_config_path}} `git rev-parse HEAD`
 
 [confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]
-deploy-impl *args:
-    ARTIFACTS_DIR=./artifacts/latest/ just deploy-impl-dry --broadcast --verify {{args}}
+deploy-impl-prod *args:
+    ARTIFACTS_DIR=./artifacts/latest/ just _deploy-impl --broadcast --verify {{args}}
 
 deploy-impl-dry *args:
-    forge script {{deploy_impls_script_path}} --force --rpc-url ${RPC_URL} {{args}}
+    just _deploy-impl {{args}}
 
 deploy-local:
     just make-fork &
     @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
     just deploy
     just _warn "anvil is kept running in the background: {{anvil_rpc_url}}"
+
+test-upgrade *args:
+    just make-fork --silent &
+    @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
+    DEPLOYER_PRIVATE_KEY=`cat localhost.json | jq -r ".private_keys[0]"` \
+        just _deploy-impl --broadcast
+
+    DEPLOY_CONFIG=./artifacts/{{chain}}/deploy-{{chain}}.json \
+    UPGRADE_CONFIG=./artifacts/local/upgrade-{{chain}}.json \
+    RPC_URL={{anvil_rpc_url}} \
+        just vote-upgrade
+
+    DEPLOY_CONFIG=./artifacts/{{chain}}/deploy-{{chain}}.json \
+    UPGRADE_CONFIG=./artifacts/local/upgrade-{{chain}}.json \
+    RPC_URL={{anvil_rpc_url}} \
+       just test-post-voting {{args}}
+    just kill-fork
 
 test-local *args:
     just make-fork --silent &

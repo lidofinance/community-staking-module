@@ -93,7 +93,7 @@ jobs:
           EMBEDS=$(cat <<EOF
           [
             {
-              "title": "Regular tests are failed! :scream:",
+              "title": "Failed mainnet tests! :scream:",
               "url": "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID",
               "description": "Check the logs for more information."
             }

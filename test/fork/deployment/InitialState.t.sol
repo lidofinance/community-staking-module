@@ -18,7 +18,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment(env.DEPLOY_CONFIG);
+        initializeFromDeployment();
         deployParams = parseDeployParams(env.DEPLOY_CONFIG);
     }
 
@@ -28,7 +28,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         assertEq(csm.getNodeOperatorsCount(), 0);
     }
 
-    function test_acounting_initialState() public {
+    function test_accounting_initialState() public {
         assertFalse(accounting.isPaused());
         assertEq(accounting.totalBondShares(), 0);
         assertEq(
@@ -37,7 +37,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         );
     }
 
-    function test_feedistirbutor_initialState() public {
+    function test_feeDistributor_initialState() public {
         assertEq(feeDistributor.totalClaimableShares(), 0);
         assertEq(feeDistributor.pendingSharesToDistribute(), 0);
         assertEq(feeDistributor.treeRoot(), bytes32(0));
@@ -47,7 +47,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         );
     }
 
-    function test_feeoracle_initialState() public {
+    function test_feeOracle_initialState() public {
         assertFalse(oracle.isPaused());
         (
             bytes32 hash,
@@ -61,7 +61,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         assertFalse(processingStarted);
     }
 
-    function test_hashconsensus_initialState() public {
+    function test_hashConsensus_initialState() public {
         vm.skip(block.chainid != 1);
         assertEq(hashConsensus.getQuorum(), deployParams.hashConsensusQuorum);
         (address[] memory members, ) = hashConsensus.getMembers();

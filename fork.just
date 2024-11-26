@@ -2,8 +2,11 @@
 # Fork helper scripts
 ####
 
-vote:
-    just _impersonate-script SimulateVote
+vote-add-module:
+    just _impersonate-script SimulateVote --sig="addModule"
+
+vote-upgrade:
+    just _impersonate-script SimulateVote --sig="upgrade"
 
 public-release:
     just _impersonate-script PauseResume --sig="publicRelease"
@@ -82,7 +85,7 @@ exit-request noId validatorIndex validatorPubKey:
     just _impersonate-script NodeOperators --sig="exitRequest\(uint256,uint256,bytes\)" -vvv -- {{noId}} {{validatorIndex}} {{validatorPubKey}}
 
 _impersonate-script *args:
-    cast rpc --rpc-url={{anvil_rpc_url}} anvil_autoImpersonateAccount true
+    curl -sS {{anvil_rpc_url}} --header 'Content-Type: application/json' --data '{"jsonrpc":"2.0","method":"anvil_autoImpersonateAccount","params":[true],"id":1}' > /dev/null
     forge script --rpc-url={{anvil_rpc_url}} -vvv --broadcast --unlocked \
         --sender=`cat localhost.json | jq -r ".available_accounts[0]"` {{args}}
-    cast rpc --rpc-url={{anvil_rpc_url}} anvil_autoImpersonateAccount false
+    curl -sS {{anvil_rpc_url}} --header 'Content-Type: application/json' --data '{"jsonrpc":"2.0","method":"anvil_autoImpersonateAccount","params":[false],"id":1}' > /dev/null
