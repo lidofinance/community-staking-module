@@ -158,6 +158,7 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_feeOracle_state() public {
+        // NOTE: It assumes the first report has been settled.
         assertFalse(oracle.isPaused());
         (
             bytes32 hash,
@@ -165,10 +166,9 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
             uint256 processingDeadlineTime,
             bool processingStarted
         ) = oracle.getConsensusReport();
-        assertEq(hash, bytes32(0));
-        assertEq(refSlot, 0);
-        assertEq(processingDeadlineTime, 0);
-        assertFalse(processingStarted);
+        assertFalse(hash == bytes32(0), "expected report hash to be non-zero");
+        assertGt(refSlot, 0);
+        assertGt(processingDeadlineTime, 0);
     }
 
     function test_feeOracle_roles() public {
