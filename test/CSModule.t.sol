@@ -261,12 +261,12 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
             });
     }
 
-    // amount can not be lower than EL_REWARDS_STEALING_FINE
+    // amount can not be lower than EL_REWARDS_STEALING_ADDITIONAL_FINE
     function penalize(uint256 noId, uint256 amount) public {
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
-            amount - csm.EL_REWARDS_STEALING_FINE()
+            amount - csm.EL_REWARDS_STEALING_ADDITIONAL_FINE()
         );
         csm.settleELRewardsStealingPenalty(UintArr(noId));
     }
@@ -287,7 +287,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
+            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
             maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
@@ -379,7 +379,7 @@ contract CSMCommonNoPublicReleaseNoEA is CSMFixtures {
         csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
+            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
             maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
@@ -462,7 +462,7 @@ contract CSMCommonNoRoles is CSMFixtures {
         csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
+            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
             maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
@@ -559,13 +559,13 @@ contract CsmInitialize is CSMCommon {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
+            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
             maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
         });
         assertEq(csm.getType(), "community-staking-module");
-        assertEq(csm.EL_REWARDS_STEALING_FINE(), 0.1 ether);
+        assertEq(csm.EL_REWARDS_STEALING_ADDITIONAL_FINE(), 0.1 ether);
         assertEq(csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(), 10);
         assertEq(address(csm.LIDO_LOCATOR()), address(locator));
     }
@@ -575,7 +575,7 @@ contract CsmInitialize is CSMCommon {
         new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
+            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
             maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(0)
@@ -586,7 +586,7 @@ contract CsmInitialize is CSMCommon {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
+            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
             maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
@@ -605,7 +605,7 @@ contract CsmInitialize is CSMCommon {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
+            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
             maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
@@ -619,7 +619,7 @@ contract CsmInitialize is CSMCommon {
             admin: address(this)
         });
         assertEq(csm.getType(), "community-staking-module");
-        assertEq(csm.EL_REWARDS_STEALING_FINE(), 0.1 ether);
+        assertEq(csm.EL_REWARDS_STEALING_ADDITIONAL_FINE(), 0.1 ether);
         assertEq(csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(), 10);
         assertEq(address(csm.LIDO_LOCATOR()), address(locator));
         assertEq(address(csm.accounting()), address(accounting));
@@ -632,7 +632,7 @@ contract CsmInitialize is CSMCommon {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
+            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
             maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
@@ -652,7 +652,7 @@ contract CsmInitialize is CSMCommon {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
+            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
             maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
@@ -5457,7 +5457,10 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         );
 
         uint256 lockedBond = accounting.getActualLockedBond(noId);
-        assertEq(lockedBond, BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_FINE());
+        assertEq(
+            lockedBond,
+            BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_ADDITIONAL_FINE()
+        );
         assertEq(csm.getNonce(), nonce + 1);
     }
 
@@ -5520,11 +5523,11 @@ contract CsmCancelELRewardsStealingPenalty is CSMCommon {
         vm.expectEmit(true, true, true, true, address(csm));
         emit CSModule.ELRewardsStealingPenaltyCancelled(
             noId,
-            BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_FINE()
+            BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_ADDITIONAL_FINE()
         );
         csm.cancelELRewardsStealingPenalty(
             noId,
-            BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_FINE()
+            BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_ADDITIONAL_FINE()
         );
 
         uint256 lockedBond = accounting.getActualLockedBond(noId);
@@ -5551,7 +5554,7 @@ contract CsmCancelELRewardsStealingPenalty is CSMCommon {
         csm.cancelELRewardsStealingPenalty(noId, BOND_SIZE / 2);
 
         uint256 lockedBond = accounting.getActualLockedBond(noId);
-        assertEq(lockedBond, csm.EL_REWARDS_STEALING_FINE());
+        assertEq(lockedBond, csm.EL_REWARDS_STEALING_ADDITIONAL_FINE());
         // nonce should not change due to no changes in the depositable validators
         assertEq(csm.getNonce(), nonce);
     }
@@ -5586,7 +5589,7 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.retentionUntil, 0);
+        assertEq(lock.lockUntil, 0);
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs()
@@ -5635,11 +5638,11 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             firstNoId
         );
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.retentionUntil, 0);
+        assertEq(lock.lockUntil, 0);
 
         lock = accounting.getLockedBondInfo(secondNoId);
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.retentionUntil, 0);
+        assertEq(lock.lockUntil, 0);
     }
 
     function test_settleELRewardsStealingPenalty_NoLock()
@@ -5658,7 +5661,7 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.retentionUntil, 0);
+        assertEq(lock.lockUntil, 0);
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs_NoLock()
@@ -5691,12 +5694,12 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             firstNoId
         );
         assertEq(firstLock.amount, 0 ether);
-        assertEq(firstLock.retentionUntil, 0);
+        assertEq(firstLock.lockUntil, 0);
         CSBondLock.BondLock memory secondLock = accounting.getLockedBondInfo(
             secondNoId
         );
         assertEq(secondLock.amount, 0 ether);
-        assertEq(secondLock.retentionUntil, 0);
+        assertEq(secondLock.lockUntil, 0);
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs_oneWithNoLock()
@@ -5736,12 +5739,12 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             firstNoId
         );
         assertEq(firstLock.amount, 0 ether);
-        assertEq(firstLock.retentionUntil, 0);
+        assertEq(firstLock.lockUntil, 0);
         CSBondLock.BondLock memory secondLock = accounting.getLockedBondInfo(
             secondNoId
         );
         assertEq(secondLock.amount, 0 ether);
-        assertEq(secondLock.retentionUntil, 0);
+        assertEq(secondLock.lockUntil, 0);
     }
 
     function test_settleELRewardsStealingPenalty_withDuplicates() public {
@@ -5778,10 +5781,12 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             secondNoId
         );
         assertEq(currentLock.amount, 0 ether);
-        assertEq(currentLock.retentionUntil, 0);
+        assertEq(currentLock.lockUntil, 0);
         assertEq(
             bondBalanceAfter,
-            bondBalanceBefore - lockAmount - csm.EL_REWARDS_STEALING_FINE()
+            bondBalanceBefore -
+                lockAmount -
+                csm.EL_REWARDS_STEALING_ADDITIONAL_FINE()
         );
     }
 
@@ -5798,11 +5803,9 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
 }
 
 contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
-    function test_settleELRewardsStealingPenalty_RetentionPeriodIsExpired()
-        public
-    {
+    function test_settleELRewardsStealingPenalty_PeriodIsExpired() public {
         uint256 noId = createNodeOperator();
-        uint256 retentionPeriod = accounting.getBondLockRetentionPeriod();
+        uint256 period = accounting.getBondLockPeriod();
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
         uint256 amount = 1 ether;
@@ -5813,7 +5816,7 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
             amount
         );
 
-        vm.warp(block.timestamp + retentionPeriod + 1 seconds);
+        vm.warp(block.timestamp + period + 1 seconds);
 
         expectNoCall(
             address(accounting),
@@ -5827,7 +5830,7 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
     function test_settleELRewardsStealingPenalty_multipleNOs_oneExpired()
         public
     {
-        uint256 retentionPeriod = accounting.getBondLockRetentionPeriod();
+        uint256 period = accounting.getBondLockPeriod();
         uint256 firstNoId = createNodeOperator(2);
         uint256 secondNoId = createNodeOperator(2);
         uint256[] memory idsToSettle = new uint256[](2);
@@ -5838,7 +5841,7 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
             blockhash(block.number),
             1 ether
         );
-        vm.warp(block.timestamp + retentionPeriod + 1 seconds);
+        vm.warp(block.timestamp + period + 1 seconds);
         csm.reportELRewardsStealingPenalty(
             secondNoId,
             blockhash(block.number),
@@ -5863,7 +5866,7 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
             secondNoId
         );
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.retentionUntil, 0);
+        assertEq(lock.lockUntil, 0);
     }
 
     function test_settleELRewardsStealingPenalty_CurveReset_NoNewUnbonded()
@@ -5984,7 +5987,7 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
     function test_compensateELRewardsStealingPenalty() public assertInvariants {
         uint256 noId = createNodeOperator();
         uint256 amount = 1 ether;
-        uint256 fine = csm.EL_REWARDS_STEALING_FINE();
+        uint256 fine = csm.EL_REWARDS_STEALING_ADDITIONAL_FINE();
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
@@ -6018,7 +6021,7 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
     {
         uint256 noId = createNodeOperator();
         uint256 amount = 1 ether;
-        uint256 fine = csm.EL_REWARDS_STEALING_FINE();
+        uint256 fine = csm.EL_REWARDS_STEALING_ADDITIONAL_FINE();
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
@@ -6051,7 +6054,7 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
     {
         uint256 noId = createNodeOperator(2);
         uint256 amount = 1 ether;
-        uint256 fine = csm.EL_REWARDS_STEALING_FINE();
+        uint256 fine = csm.EL_REWARDS_STEALING_ADDITIONAL_FINE();
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
@@ -6430,7 +6433,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
+            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
             maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
@@ -6452,7 +6455,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: 0.1 ether,
+            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
             maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)

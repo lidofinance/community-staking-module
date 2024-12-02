@@ -48,7 +48,7 @@ contract CSModule is
     uint8 private constant FORCED_TARGET_LIMIT_MODE_ID = 2;
 
     uint256 public immutable INITIAL_SLASHING_PENALTY;
-    uint256 public immutable EL_REWARDS_STEALING_FINE;
+    uint256 public immutable EL_REWARDS_STEALING_ADDITIONAL_FINE;
     uint256
         public immutable MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE;
     uint256 public immutable MAX_KEY_REMOVAL_CHARGE;
@@ -172,7 +172,7 @@ contract CSModule is
     constructor(
         bytes32 moduleType,
         uint256 minSlashingPenaltyQuotient,
-        uint256 elRewardsStealingFine,
+        uint256 elRewardsStealingAdditionalFine,
         uint256 maxKeysPerOperatorEA,
         uint256 maxKeyRemovalCharge,
         address lidoLocator
@@ -181,7 +181,7 @@ contract CSModule is
 
         MODULE_TYPE = moduleType;
         INITIAL_SLASHING_PENALTY = DEPOSIT_SIZE / minSlashingPenaltyQuotient;
-        EL_REWARDS_STEALING_FINE = elRewardsStealingFine;
+        EL_REWARDS_STEALING_ADDITIONAL_FINE = elRewardsStealingAdditionalFine;
         MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE = maxKeysPerOperatorEA;
         MAX_KEY_REMOVAL_CHARGE = maxKeyRemovalCharge;
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
@@ -1003,7 +1003,7 @@ contract CSModule is
     }
 
     /// @notice Report EL rewards stealing for the given Node Operator
-    /// @notice The amount equal to the stolen funds plus EL stealing fine will be locked
+    /// @notice The final locked amount will be equal to the stolen funds plus EL stealing additional fine
     /// @param nodeOperatorId ID of the Node Operator
     /// @param blockHash Execution layer block hash of the proposed block with EL rewards stealing
     /// @param amount Amount of stolen EL rewards in ETH
@@ -1016,7 +1016,7 @@ contract CSModule is
         if (amount == 0) revert InvalidAmount();
         accounting.lockBondETH(
             nodeOperatorId,
-            amount + EL_REWARDS_STEALING_FINE
+            amount + EL_REWARDS_STEALING_ADDITIONAL_FINE
         );
         emit ELRewardsStealingPenaltyReported(
             nodeOperatorId,
@@ -1357,6 +1357,12 @@ contract CSModule is
     /// @return Module type
     function getType() external view returns (bytes32) {
         return MODULE_TYPE;
+    }
+
+    /// @dev DEPRECATED. Use `EL_REWARDS_STEALING_ADDITIONAL_FINE` instead
+    // solhint-disable func-name-mixedcase
+    function EL_REWARDS_STEALING_FINE() external view returns (uint256) {
+        return EL_REWARDS_STEALING_ADDITIONAL_FINE;
     }
 
     /// @notice Get staking module summary

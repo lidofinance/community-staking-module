@@ -41,8 +41,8 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
             32 ether / deployParams.minSlashingPenaltyQuotient
         );
         assertEq(
-            csm.EL_REWARDS_STEALING_FINE(),
-            deployParams.elRewardsStealingFine
+            csm.EL_REWARDS_STEALING_ADDITIONAL_FINE(),
+            deployParams.elRewardsStealingAdditionalFine
         );
         assertEq(
             csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(),
@@ -147,12 +147,12 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
         );
 
         assertEq(
-            accounting.MIN_BOND_LOCK_RETENTION_PERIOD(),
-            deployParams.minBondLockRetentionPeriod
+            accounting.MIN_BOND_LOCK_PERIOD(),
+            deployParams.minBondLockPeriod
         );
         assertEq(
-            accounting.MAX_BOND_LOCK_RETENTION_PERIOD(),
-            deployParams.maxBondLockRetentionPeriod
+            accounting.MAX_BOND_LOCK_PERIOD(),
+            deployParams.maxBondLockPeriod
         );
         assertEq(accounting.MAX_CURVE_LENGTH(), deployParams.maxCurveLength);
     }
@@ -163,10 +163,7 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
             deployParams.bondCurve
         );
         assertEq(address(accounting.feeDistributor()), address(feeDistributor));
-        assertEq(
-            accounting.getBondLockRetentionPeriod(),
-            deployParams.bondLockRetentionPeriod
-        );
+        assertEq(accounting.getBondLockPeriod(), deployParams.bondLockPeriod);
         assertEq(
             accounting.chargePenaltyRecipient(),
             deployParams.chargePenaltyRecipient
@@ -255,7 +252,7 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
             bondCurve: deployParams.bondCurve,
             admin: address(deployParams.aragonAgent),
             _feeDistributor: address(feeDistributor),
-            bondLockRetentionPeriod: deployParams.bondLockRetentionPeriod,
+            bondLockPeriod: deployParams.bondLockPeriod,
             _chargePenaltyRecipient: address(0)
         });
     }

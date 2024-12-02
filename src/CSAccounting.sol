@@ -63,18 +63,18 @@ contract CSAccounting is
     /// @param lidoLocator Lido locator contract address
     /// @param communityStakingModule Community Staking Module contract address
     /// @param maxCurveLength Max number of the points in the bond curves
-    /// @param minBondLockRetentionPeriod Min time in seconds for the bondLock retention period
-    /// @param maxBondLockRetentionPeriod Max time in seconds for the bondLock retention period
+    /// @param minBondLockPeriod Min time in seconds for the bondLock period
+    /// @param maxBondLockPeriod Max time in seconds for the bondLock period
     constructor(
         address lidoLocator,
         address communityStakingModule,
         uint256 maxCurveLength,
-        uint256 minBondLockRetentionPeriod,
-        uint256 maxBondLockRetentionPeriod
+        uint256 minBondLockPeriod,
+        uint256 maxBondLockPeriod
     )
         CSBondCore(lidoLocator)
         CSBondCurve(maxCurveLength)
-        CSBondLock(minBondLockRetentionPeriod, maxBondLockRetentionPeriod)
+        CSBondLock(minBondLockPeriod, maxBondLockPeriod)
     {
         if (communityStakingModule == address(0)) {
             revert ZeroModuleAddress();
@@ -87,18 +87,18 @@ contract CSAccounting is
     /// @param bondCurve Initial bond curve
     /// @param admin Admin role member address
     /// @param _feeDistributor Fee Distributor contract address
-    /// @param bondLockRetentionPeriod Retention period for locked bond in seconds
+    /// @param bondLockPeriod Bond lock period in seconds
     /// @param _chargePenaltyRecipient Recipient of the charge penalty type
     function initialize(
         uint256[] calldata bondCurve,
         address admin,
         address _feeDistributor,
-        uint256 bondLockRetentionPeriod,
+        uint256 bondLockPeriod,
         address _chargePenaltyRecipient
     ) external initializer {
         __AccessControlEnumerable_init();
         __CSBondCurve_init(bondCurve);
-        __CSBondLock_init(bondLockRetentionPeriod);
+        __CSBondLock_init(bondLockPeriod);
 
         if (admin == address(0)) {
             revert ZeroAdminAddress();
@@ -141,12 +141,21 @@ contract CSAccounting is
         _setChargePenaltyRecipient(_chargePenaltyRecipient);
     }
 
+    /// @dev DEPRECATED. Use `setLockedBondPeriod` instead
     /// @notice Set bond lock retention period
     /// @param retention Period in seconds to retain bond lock
     function setLockedBondRetentionPeriod(
         uint256 retention
     ) external onlyRole(ACCOUNTING_MANAGER_ROLE) {
-        CSBondLock._setBondLockRetentionPeriod(retention);
+        CSBondLock._setBondLockPeriod(retention);
+    }
+
+    /// @notice Set bond lock period
+    /// @param period Period in seconds to retain bond lock
+    function setLockedBondPeriod(
+        uint256 period
+    ) external onlyRole(ACCOUNTING_MANAGER_ROLE) {
+        CSBondLock._setBondLockPeriod(period);
     }
 
     /// @notice Add a new bond curve

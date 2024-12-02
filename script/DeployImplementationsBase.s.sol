@@ -39,7 +39,8 @@ abstract contract DeployImplementationsBase is DeployBase {
             CSModule csmImpl = new CSModule({
                 moduleType: config.moduleType,
                 minSlashingPenaltyQuotient: config.minSlashingPenaltyQuotient,
-                elRewardsStealingFine: config.elRewardsStealingFine,
+                elRewardsStealingAdditionalFine: config
+                    .elRewardsStealingAdditionalFine,
                 maxKeysPerOperatorEA: config.maxKeysPerOperatorEA,
                 maxKeyRemovalCharge: config.maxKeyRemovalCharge,
                 lidoLocator: config.lidoLocatorAddress
@@ -49,8 +50,8 @@ abstract contract DeployImplementationsBase is DeployBase {
                 lidoLocator: config.lidoLocatorAddress,
                 communityStakingModule: address(csm),
                 maxCurveLength: config.maxCurveLength,
-                minBondLockRetentionPeriod: config.minBondLockRetentionPeriod,
-                maxBondLockRetentionPeriod: config.maxBondLockRetentionPeriod
+                minBondLockPeriod: config.minBondLockPeriod,
+                maxBondLockPeriod: config.maxBondLockPeriod
             });
 
             CSFeeOracle oracleImpl = new CSFeeOracle({

@@ -6,17 +6,20 @@ pragma solidity 0.8.24;
 interface ICSBondLock {
     /// @dev Bond lock structure.
     /// It contains:
-    ///  - amount         |> amount of locked bond
-    ///  - retentionUntil |> timestamp until locked bond is retained
+    ///  - amount       |> amount of locked bond
+    ///  - lockUntil    |> timestamp until locked bond is retained
     struct BondLock {
         uint128 amount;
-        uint128 retentionUntil;
+        uint128 lockUntil;
     }
 
+    /// @dev DEPRECATED: Use `getBondLockPeriod` instead
     function getBondLockRetentionPeriod()
         external
         view
         returns (uint256 retention);
+
+    function getBondLockPeriod() external view returns (uint256 period);
 
     function getLockedBondInfo(
         uint256 nodeOperatorId
