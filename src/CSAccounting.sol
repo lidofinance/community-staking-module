@@ -87,7 +87,7 @@ contract CSAccounting is
     /// @param bondCurve Initial bond curve
     /// @param admin Admin role member address
     /// @param _feeDistributor Fee Distributor contract address
-    /// @param bondLockPeriod  period for locked bond in seconds
+    /// @param bondLockPeriod Bond lock period in seconds
     /// @param _chargePenaltyRecipient Recipient of the charge penalty type
     function initialize(
         uint256[] calldata bondCurve,

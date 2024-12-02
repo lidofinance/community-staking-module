@@ -1003,7 +1003,7 @@ contract CSModule is
     }
 
     /// @notice Report EL rewards stealing for the given Node Operator
-    /// @notice The amount equal to the stolen funds plus EL stealing additional fine will be locked
+    /// @notice The final locked amount will be equal to the stolen funds plus EL stealing additional fine
     /// @param nodeOperatorId ID of the Node Operator
     /// @param blockHash Execution layer block hash of the proposed block with EL rewards stealing
     /// @param amount Amount of stolen EL rewards in ETH

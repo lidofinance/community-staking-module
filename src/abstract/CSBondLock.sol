@@ -131,7 +131,7 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
         });
     }
 
-    /// @dev Reduce locked bond amount for the given Node Operator without changing period
+    /// @dev Reduce the locked bond amount for the given Node Operator without changing the lock period
     function _reduceAmount(uint256 nodeOperatorId, uint256 amount) internal {
         uint256 blocked = getActualLockedBond(nodeOperatorId);
         if (amount == 0) {
@@ -160,7 +160,7 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
         _setBondLockPeriod(lockPeriod);
     }
 
-    /// @dev Set default bond lock period. That period will be sum with the current block timestamp of lock tx
+    /// @dev Set default bond lock period. That period will be added to the block timestamp of the lock translation to determine the bond lock duration
     function _setBondLockPeriod(uint256 lockPeriod) internal {
         if (
             lockPeriod < MIN_BOND_LOCK_PERIOD ||
