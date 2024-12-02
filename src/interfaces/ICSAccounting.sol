@@ -8,7 +8,7 @@ import { ICSBondCurve } from "./ICSBondCurve.sol";
 import { ICSBondLock } from "./ICSBondLock.sol";
 import { ICSFeeDistributor } from "./ICSFeeDistributor.sol";
 import { IAssetRecovererLib } from "../lib/AssetRecovererLib.sol";
-import "./ICSModule.sol";
+import { ICSModule } from "./ICSModule.sol";
 
 interface ICSAccounting is
     ICSBondCore,
