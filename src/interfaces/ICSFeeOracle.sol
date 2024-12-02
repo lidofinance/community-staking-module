@@ -4,7 +4,7 @@
 pragma solidity 0.8.24;
 
 import { IAssetRecovererLib } from "../lib/AssetRecovererLib.sol";
-import "./ICSFeeDistributor.sol";
+import { ICSFeeDistributor } from "./ICSFeeDistributor.sol";
 
 interface ICSFeeOracle is IAssetRecovererLib {
     struct ReportData {
