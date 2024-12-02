@@ -43,26 +43,13 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     uint256 public constant DEFAULT_BOND_CURVE_ID = 0;
     uint256 public immutable MAX_CURVE_LENGTH;
 
-    event BondCurveAdded(uint256[] bondCurve);
-    event BondCurveUpdated(uint256 indexed curveId, uint256[] bondCurve);
-    event BondCurveSet(uint256 indexed nodeOperatorId, uint256 curveId);
-
-    error InvalidBondCurveLength();
-    error InvalidBondCurveMaxLength();
-    error InvalidBondCurveValues();
-    error InvalidBondCurveId();
-    error InvalidInitialisationCurveId();
-
     constructor(uint256 maxCurveLength) {
         if (maxCurveLength < MIN_CURVE_LENGTH)
             revert InvalidBondCurveMaxLength();
         MAX_CURVE_LENGTH = maxCurveLength;
     }
 
-    /// @dev Get default bond curve info if `curveId` is `0` or invalid
-    /// @notice Return bond curve for the given curve id
-    /// @param curveId Curve id to get bond curve for
-    /// @return Bond curve
+    /// @inheritdoc ICSBondCurve
     function getCurveInfo(
         uint256 curveId
     ) public view returns (BondCurve memory) {
@@ -71,30 +58,21 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         return $.bondCurves[curveId];
     }
 
-    /// @notice Get bond curve for the given Node Operator
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @return Bond curve
+    /// @inheritdoc ICSBondCurve
     function getBondCurve(
         uint256 nodeOperatorId
     ) public view returns (BondCurve memory) {
         return getCurveInfo(getBondCurveId(nodeOperatorId));
     }
 
-    /// @notice Get bond curve ID for the given Node Operator
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @return Bond curve ID
+    /// @inheritdoc ICSBondCurve
     function getBondCurveId(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
         return _getCSBondCurveStorage().operatorBondCurveId[nodeOperatorId];
     }
 
-    /// @notice Get required bond in ETH for the given number of keys for default bond curve
-    /// @dev To calculate the amount for the new keys 2 calls are required:
-    ///      getBondAmountByKeysCount(newTotal) - getBondAmountByKeysCount(currentTotal)
-    /// @param keys Number of keys to get required bond for
-    /// @param curveId Id of the curve to perform calculations against
-    /// @return Amount for particular keys count
+    /// @inheritdoc ICSBondCurve
     function getBondAmountByKeysCount(
         uint256 keys,
         uint256 curveId
@@ -102,10 +80,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         return getBondAmountByKeysCount(keys, getCurveInfo(curveId));
     }
 
-    /// @notice Get keys count for the given bond amount with default bond curve
-    /// @param amount Bond amount in ETH (stETH)to get keys count for
-    /// @param curveId Id of the curve to perform calculations against
-    /// @return Keys count
+    /// @inheritdoc ICSBondCurve
     function getKeysCountByBondAmount(
         uint256 amount,
         uint256 curveId
@@ -113,12 +88,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         return getKeysCountByBondAmount(amount, getCurveInfo(curveId));
     }
 
-    /// @notice Get required bond in ETH for the given number of keys for particular bond curve.
-    /// @dev To calculate the amount for the new keys 2 calls are required:
-    ///      getBondAmountByKeysCount(newTotal, curve) - getBondAmountByKeysCount(currentTotal, curve)
-    /// @param keys Number of keys to get required bond for
-    /// @param curve Bond curve to perform calculations against
-    /// @return Required bond amount in ETH (stETH) for particular keys count
+    /// @inheritdoc ICSBondCurve
     function getBondAmountByKeysCount(
         uint256 keys,
         BondCurve memory curve
@@ -133,10 +103,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
                 : curve.points.unsafeMemoryAccess(keys - 1);
     }
 
-    /// @notice Get keys count for the given bond amount for particular bond curve.
-    /// @param amount Bond amount to get keys count for
-    /// @param curve Bond curve to perform calculations against
-    /// @return Keys count
+    /// @inheritdoc ICSBondCurve
     function getKeysCountByBondAmount(
         uint256 amount,
         BondCurve memory curve

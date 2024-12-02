@@ -6,6 +6,7 @@ pragma solidity 0.8.24;
 import "forge-std/Test.sol";
 
 import { CSModule, NodeOperator, NodeOperatorManagementProperties } from "../../../src/CSModule.sol";
+import { ICSModule } from "../../../src/interfaces/ICSModule.sol";
 import { ILidoLocator } from "../../../src/interfaces/ILidoLocator.sol";
 import { IStakingRouter } from "../../../src/interfaces/IStakingRouter.sol";
 import { IWithdrawalQueue } from "../../../src/interfaces/IWithdrawalQueue.sol";
@@ -225,7 +226,7 @@ contract StakingRouterIntegrationTest is
         address nodeOperatorManager = nextAddress();
         uint256 noId = addNodeOperator(nodeOperatorManager, 5);
 
-        vm.expectRevert(CSModule.NotSupported.selector);
+        vm.expectRevert(ICSModule.NotSupported.selector);
         vm.prank(agent);
         stakingRouter.updateRefundedValidatorsCount(moduleId, noId, 1);
     }

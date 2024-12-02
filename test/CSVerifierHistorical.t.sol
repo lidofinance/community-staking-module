@@ -11,6 +11,7 @@ import { ICSModule } from "../src/interfaces/ICSModule.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 
 import { CSVerifier } from "../src/CSVerifier.sol";
+import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { pack } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 
@@ -90,7 +91,7 @@ contract CSVerifierHistoricalTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                CSVerifier.UnsupportedSlot.selector,
+                ICSVerifier.UnsupportedSlot.selector,
                 fixture.beaconBlock.header.slot
             )
         );
@@ -115,7 +116,7 @@ contract CSVerifierHistoricalTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                CSVerifier.UnsupportedSlot.selector,
+                ICSVerifier.UnsupportedSlot.selector,
                 fixture.oldBlock.header.slot
             )
         );
@@ -142,7 +143,7 @@ contract CSVerifierHistoricalTest is Test {
             abi.encode("lol")
         );
 
-        vm.expectRevert(CSVerifier.InvalidBlockHeader.selector);
+        vm.expectRevert(ICSVerifier.InvalidBlockHeader.selector);
         // solhint-disable-next-line func-named-parameters
         verifier.processHistoricalWithdrawalProof(
             fixture.beaconBlock,
@@ -159,7 +160,7 @@ contract CSVerifierHistoricalTest is Test {
 
         fixture.oldBlock.rootGIndex = GIndex.wrap(bytes32(0));
 
-        vm.expectRevert(CSVerifier.InvalidGIndex.selector);
+        vm.expectRevert(ICSVerifier.InvalidGIndex.selector);
         // solhint-disable-next-line func-named-parameters
         verifier.processHistoricalWithdrawalProof(
             fixture.beaconBlock,

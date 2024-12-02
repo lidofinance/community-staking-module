@@ -571,7 +571,7 @@ contract CsmInitialize is CSMCommon {
     }
 
     function test_constructor_RevertWhen_ZeroLocator() public {
-        vm.expectRevert(CSModule.ZeroLocatorAddress.selector);
+        vm.expectRevert(ICSModule.ZeroLocatorAddress.selector);
         new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
@@ -639,7 +639,7 @@ contract CsmInitialize is CSMCommon {
         });
 
         _enableInitializers(address(csm));
-        vm.expectRevert(CSModule.ZeroAccountingAddress.selector);
+        vm.expectRevert(ICSModule.ZeroAccountingAddress.selector);
         csm.initialize({
             _accounting: address(0),
             _earlyAdoption: address(1337),
@@ -659,7 +659,7 @@ contract CsmInitialize is CSMCommon {
         });
 
         _enableInitializers(address(csm));
-        vm.expectRevert(CSModule.ZeroAdminAddress.selector);
+        vm.expectRevert(ICSModule.ZeroAdminAddress.selector);
         csm.initialize({
             _accounting: address(154),
             _earlyAdoption: address(1337),
@@ -866,11 +866,11 @@ contract CSMAddNodeOperatorETH is CSMCommon {
 
         {
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+            emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, true, true, address(csm));
             emit IStakingModule.SigningKeyAdded(0, keys);
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(0, 1);
+            emit ICSModule.TotalSigningKeysCountChanged(0, 1);
         }
 
         vm.prank(nodeOperator);
@@ -904,11 +904,11 @@ contract CSMAddNodeOperatorETH is CSMCommon {
 
         {
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+            emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, true, true, address(csm));
             emit IStakingModule.SigningKeyAdded(0, keys);
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(0, 1);
+            emit ICSModule.TotalSigningKeysCountChanged(0, 1);
         }
 
         vm.prank(nodeOperator);
@@ -942,7 +942,7 @@ contract CSMAddNodeOperatorETH is CSMCommon {
         address reward = address(42);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.NodeOperatorAdded(0, manager, reward);
+        emit ICSModule.NodeOperatorAdded(0, manager, reward);
         vm.prank(nodeOperator);
         csm.addNodeOperatorETH{ value: BOND_SIZE }(
             keysCount,
@@ -971,9 +971,9 @@ contract CSMAddNodeOperatorETH is CSMCommon {
 
         {
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+            emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.ReferrerSet(0, address(154));
+            emit ICSModule.ReferrerSet(0, address(154));
         }
 
         vm.prank(nodeOperator);
@@ -1001,7 +1001,7 @@ contract CSMAddNodeOperatorETH is CSMCommon {
         );
         vm.deal(nodeOperator, BOND_SIZE - 1);
 
-        vm.expectRevert(CSModule.InvalidAmount.selector);
+        vm.expectRevert(ICSModule.InvalidAmount.selector);
         vm.prank(nodeOperator);
         csm.addNodeOperatorETH{ value: BOND_SIZE - 1 ether }(
             keysCount,
@@ -1032,11 +1032,11 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
 
         {
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+            emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, true, true, address(csm));
             emit IStakingModule.SigningKeyAdded(0, keys);
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(0, 1);
+            emit ICSModule.TotalSigningKeysCountChanged(0, 1);
         }
 
         vm.prank(nodeOperator);
@@ -1079,7 +1079,7 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
         address reward = address(42);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.NodeOperatorAdded(0, manager, reward);
+        emit ICSModule.NodeOperatorAdded(0, manager, reward);
         vm.prank(nodeOperator);
         csm.addNodeOperatorStETH(
             1,
@@ -1117,9 +1117,9 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
 
         {
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+            emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.ReferrerSet(0, address(154));
+            emit ICSModule.ReferrerSet(0, address(154));
         }
 
         vm.prank(nodeOperator);
@@ -1157,7 +1157,7 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
 
         {
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+            emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, true, true, address(stETH));
             emit StETHMock.Approval(
                 nodeOperator,
@@ -1165,7 +1165,7 @@ contract CSMAddNodeOperatorStETH is CSMCommon {
                 BOND_SIZE
             );
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(0, 1);
+            emit ICSModule.TotalSigningKeysCountChanged(0, 1);
         }
 
         vm.prank(nodeOperator);
@@ -1209,11 +1209,11 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
 
         {
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+            emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, true, true, address(csm));
             emit IStakingModule.SigningKeyAdded(0, keys);
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(0, 1);
+            emit ICSModule.TotalSigningKeysCountChanged(0, 1);
         }
 
         csm.addNodeOperatorWstETH(
@@ -1257,7 +1257,7 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
         address reward = address(42);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.NodeOperatorAdded(0, manager, reward);
+        emit ICSModule.NodeOperatorAdded(0, manager, reward);
         csm.addNodeOperatorWstETH(
             keysCount,
             keys,
@@ -1296,9 +1296,9 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
 
         {
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+            emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.ReferrerSet(0, address(154));
+            emit ICSModule.ReferrerSet(0, address(154));
         }
 
         csm.addNodeOperatorWstETH(
@@ -1336,7 +1336,7 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
 
         {
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+            emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
             vm.expectEmit(true, true, true, true, address(wstETH));
             emit WstETHMock.Approval(
                 nodeOperator,
@@ -1344,7 +1344,7 @@ contract CSMAddNodeOperatorWstETH is CSMCommon {
                 wstETHAmount
             );
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(0, 1);
+            emit ICSModule.TotalSigningKeysCountChanged(0, 1);
         }
 
         csm.addNodeOperatorWstETH(
@@ -1391,7 +1391,7 @@ contract CSMAddValidatorKeys is CSMCommon {
             vm.expectEmit(true, true, true, true, address(csm));
             emit IStakingModule.SigningKeyAdded(noId, keys);
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
         }
         csm.addValidatorKeysWstETH(
             noId,
@@ -1434,7 +1434,7 @@ contract CSMAddValidatorKeys is CSMCommon {
             vm.expectEmit(true, true, true, true, address(csm));
             emit IStakingModule.SigningKeyAdded(noId, keys);
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
         }
         csm.addValidatorKeysWstETH(
             noId,
@@ -1470,7 +1470,7 @@ contract CSMAddValidatorKeys is CSMCommon {
             vm.expectEmit(true, true, true, true, address(csm));
             emit IStakingModule.SigningKeyAdded(noId, keys);
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
         }
         csm.addValidatorKeysStETH(
             noId,
@@ -1512,7 +1512,7 @@ contract CSMAddValidatorKeys is CSMCommon {
             vm.expectEmit(true, true, true, true, address(csm));
             emit IStakingModule.SigningKeyAdded(noId, keys);
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
         }
         vm.prank(nodeOperator);
         csm.addValidatorKeysStETH(
@@ -1549,7 +1549,7 @@ contract CSMAddValidatorKeys is CSMCommon {
             vm.expectEmit(true, true, true, true, address(csm));
             emit IStakingModule.SigningKeyAdded(noId, keys);
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
         }
         csm.addValidatorKeysETH{ value: required }(noId, 1, keys, signatures);
         assertEq(csm.getNonce(), nonce + 1);
@@ -1573,7 +1573,7 @@ contract CSMAddValidatorKeys is CSMCommon {
             vm.expectEmit(true, true, true, true, address(csm));
             emit IStakingModule.SigningKeyAdded(noId, keys);
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
         }
         csm.addValidatorKeysETH{ value: deposit }(noId, 1, keys, signatures);
         assertEq(csm.getNonce(), nonce + 1);
@@ -1590,7 +1590,7 @@ contract CSMAddValidatorKeys is CSMCommon {
         uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
         vm.deal(nodeOperator, required - 1 ether);
 
-        vm.expectRevert(CSModule.InvalidAmount.selector);
+        vm.expectRevert(ICSModule.InvalidAmount.selector);
         vm.prank(nodeOperator);
         csm.addValidatorKeysETH{ value: required - 1 ether }(
             noId,
@@ -2501,7 +2501,7 @@ contract CSMObtainDepositData is CSMCommon {
         );
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.DepositableSigningKeysCountChanged(0, 0);
+        emit ICSModule.DepositableSigningKeysCountChanged(0, 0);
         (bytes memory obtainedKeys, bytes memory obtainedSignatures) = csm
             .obtainDepositData(1, "");
         assertEq(obtainedKeys, keys);
@@ -2517,11 +2517,11 @@ contract CSMObtainDepositData is CSMCommon {
         uint256 thirdId = createNodeOperator(1);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.DepositableSigningKeysCountChanged(firstId, 0);
+        emit ICSModule.DepositableSigningKeysCountChanged(firstId, 0);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.DepositableSigningKeysCountChanged(secondId, 0);
+        emit ICSModule.DepositableSigningKeysCountChanged(secondId, 0);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.DepositableSigningKeysCountChanged(thirdId, 0);
+        emit ICSModule.DepositableSigningKeysCountChanged(thirdId, 0);
         csm.obtainDepositData(6, "");
     }
 
@@ -2538,7 +2538,7 @@ contract CSMObtainDepositData is CSMCommon {
         );
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.DepositedSigningKeysCountChanged(noId, keysCount);
+        emit ICSModule.DepositedSigningKeysCountChanged(noId, keysCount);
         (bytes memory depositedKeys, bytes memory depositedSignatures) = csm
             .obtainDepositData(keysCount, "");
 
@@ -2591,7 +2591,7 @@ contract CSMObtainDepositData is CSMCommon {
         uint256 noId = createNodeOperator(7);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.DepositedSigningKeysCountChanged(noId, 3);
+        emit ICSModule.DepositedSigningKeysCountChanged(noId, 3);
         csm.obtainDepositData(3, "");
 
         NodeOperator memory no = csm.getNodeOperator(noId);
@@ -2604,7 +2604,7 @@ contract CSMObtainDepositData is CSMCommon {
         public
         assertInvariants
     {
-        vm.expectRevert(CSModule.NotEnoughKeys.selector);
+        vm.expectRevert(ICSModule.NotEnoughKeys.selector);
         csm.obtainDepositData(1, "");
     }
 
@@ -2749,7 +2749,7 @@ contract CSMClaimRewards is CSMCommon {
         assertInvariants
     {
         uint256 noId = createNodeOperator();
-        vm.expectRevert(CSModule.SenderIsNotEligible.selector);
+        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
         csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
@@ -2838,7 +2838,7 @@ contract CSMClaimRewards is CSMCommon {
         assertInvariants
     {
         uint256 noId = createNodeOperator();
-        vm.expectRevert(CSModule.SenderIsNotEligible.selector);
+        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
         csm.claimRewardsWstETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 
@@ -2910,7 +2910,7 @@ contract CSMClaimRewards is CSMCommon {
         assertInvariants
     {
         uint256 noId = createNodeOperator();
-        vm.expectRevert(CSModule.SenderIsNotEligible.selector);
+        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
         csm.claimRewardsUnstETH(noId, UINT256_MAX, 0, new bytes32[](0));
     }
 }
@@ -3341,7 +3341,7 @@ contract CsmChangeNodeOperatorRewardAddress is CSMCommon {
 contract CsmOnWithdrawalCredentialsChanged is CSMCommon {
     function test_onWithdrawalCredentialsChanged() public assertInvariants {
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.KeyRemovalChargeSet(0 ether);
+        emit ICSModule.KeyRemovalChargeSet(0 ether);
         csm.onWithdrawalCredentialsChanged();
 
         assertEq(csm.keyRemovalCharge(), 0 ether);
@@ -3354,7 +3354,7 @@ contract CsmVetKeys is CSMCommon {
         uint256 keys = 7;
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountChanged(noId, keys);
+        emit ICSModule.VettedSigningKeysCountChanged(noId, keys);
         vm.expectEmit(true, true, true, true, address(csm));
         emit IQueueLib.BatchEnqueued(noId, keys);
         createNodeOperator(keys);
@@ -3368,7 +3368,7 @@ contract CsmVetKeys is CSMCommon {
         uint256 noId = createNodeOperator(2);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountChanged(noId, 3);
+        emit ICSModule.VettedSigningKeysCountChanged(noId, 3);
         vm.expectEmit(true, true, true, true, address(csm));
         emit IQueueLib.BatchEnqueued(noId, 1);
         uploadMoreKeys(noId, 1);
@@ -3401,7 +3401,7 @@ contract CsmVetKeys is CSMCommon {
         assertEq(no.totalVettedKeys, 4);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountChanged(noId, 5); // 7 - 2 removed at the next step.
+        emit ICSModule.VettedSigningKeysCountChanged(noId, 5); // 7 - 2 removed at the next step.
 
         vm.prank(nodeOperator);
         csm.removeKeys(noId, 4, 2); // Remove keys 4 and 5.
@@ -3613,9 +3613,9 @@ contract CsmDecreaseVettedSigningKeysCount is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountChanged(noId, 1);
+        emit ICSModule.VettedSigningKeysCountChanged(noId, 1);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountDecreased(noId);
+        emit ICSModule.VettedSigningKeysCountDecreased(noId);
         unvetKeys({ noId: noId, to: 1 });
 
         NodeOperator memory no = csm.getNodeOperator(noId);
@@ -3635,17 +3635,17 @@ contract CsmDecreaseVettedSigningKeysCount is CSMCommon {
         uint256 newVettedSecond = 3;
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountChanged(firstNoId, newVettedFirst);
+        emit ICSModule.VettedSigningKeysCountChanged(firstNoId, newVettedFirst);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountDecreased(firstNoId);
+        emit ICSModule.VettedSigningKeysCountDecreased(firstNoId);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountChanged(
+        emit ICSModule.VettedSigningKeysCountChanged(
             secondNoId,
             newVettedSecond
         );
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.VettedSigningKeysCountDecreased(secondNoId);
+        emit ICSModule.VettedSigningKeysCountDecreased(secondNoId);
 
         csm.decreaseVettedSigningKeysCount(
             bytes.concat(bytes8(uint64(firstNoId)), bytes8(uint64(secondNoId))),
@@ -3689,7 +3689,7 @@ contract CsmDecreaseVettedSigningKeysCount is CSMCommon {
         uint256 noId = createNodeOperator(10);
         uint256 newVetted = 10;
 
-        vm.expectRevert(CSModule.InvalidVetKeysPointer.selector);
+        vm.expectRevert(ICSModule.InvalidVetKeysPointer.selector);
         unvetKeys(noId, newVetted);
     }
 
@@ -3699,7 +3699,7 @@ contract CsmDecreaseVettedSigningKeysCount is CSMCommon {
         uint256 noId = createNodeOperator(10);
         uint256 newVetted = 15;
 
-        vm.expectRevert(CSModule.InvalidVetKeysPointer.selector);
+        vm.expectRevert(ICSModule.InvalidVetKeysPointer.selector);
         unvetKeys(noId, newVetted);
     }
 
@@ -3710,7 +3710,7 @@ contract CsmDecreaseVettedSigningKeysCount is CSMCommon {
         csm.obtainDepositData(5, "");
         uint256 newVetted = 4;
 
-        vm.expectRevert(CSModule.InvalidVetKeysPointer.selector);
+        vm.expectRevert(ICSModule.InvalidVetKeysPointer.selector);
         unvetKeys(noId, newVetted);
     }
 
@@ -3759,7 +3759,7 @@ contract CsmGetSigningKeys is CSMCommon {
             signatures: randomBytes(96)
         });
 
-        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
+        vm.expectRevert(ICSModule.SigningKeysInvalidOffset.selector);
         csm.getSigningKeys({
             nodeOperatorId: noId,
             startIndex: 0,
@@ -3800,7 +3800,7 @@ contract CsmGetSigningKeys is CSMCommon {
         assertInvariants
         brutalizeMemory
     {
-        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
+        vm.expectRevert(ICSModule.SigningKeysInvalidOffset.selector);
         csm.getSigningKeys(0, 0, 1);
     }
 }
@@ -3847,7 +3847,7 @@ contract CsmGetSigningKeysWithSignatures is CSMCommon {
             signatures: signatures
         });
 
-        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
+        vm.expectRevert(ICSModule.SigningKeysInvalidOffset.selector);
         csm.getSigningKeysWithSignatures({
             nodeOperatorId: noId,
             startIndex: 0,
@@ -3900,7 +3900,7 @@ contract CsmGetSigningKeysWithSignatures is CSMCommon {
         assertInvariants
         brutalizeMemory
     {
-        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
+        vm.expectRevert(ICSModule.SigningKeysInvalidOffset.selector);
         csm.getSigningKeysWithSignatures(0, 0, 1);
     }
 }
@@ -3928,7 +3928,7 @@ contract CsmRemoveKeys is CSMCommon {
             emit IStakingModule.SigningKeyRemoved(noId, key0);
 
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 4);
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 4);
         }
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 1 });
         /*
@@ -3944,7 +3944,7 @@ contract CsmRemoveKeys is CSMCommon {
             emit IStakingModule.SigningKeyRemoved(noId, key1);
 
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 3);
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 3);
         }
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 1, keysCount: 1 });
         /*
@@ -3959,7 +3959,7 @@ contract CsmRemoveKeys is CSMCommon {
             emit IStakingModule.SigningKeyRemoved(noId, key2);
 
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 2);
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
         }
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 2, keysCount: 1 });
         /*
@@ -4000,7 +4000,7 @@ contract CsmRemoveKeys is CSMCommon {
             emit IStakingModule.SigningKeyRemoved(noId, key0);
 
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 3);
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 3);
         }
 
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 2 });
@@ -4042,7 +4042,7 @@ contract CsmRemoveKeys is CSMCommon {
             emit IStakingModule.SigningKeyRemoved(noId, key1);
 
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 3);
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 3);
         }
 
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 1, keysCount: 2 });
@@ -4084,7 +4084,7 @@ contract CsmRemoveKeys is CSMCommon {
             emit IStakingModule.SigningKeyRemoved(noId, key3);
 
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 3);
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 3);
         }
 
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 3, keysCount: 2 });
@@ -4114,7 +4114,7 @@ contract CsmRemoveKeys is CSMCommon {
 
         {
             vm.expectEmit(true, true, true, true, address(csm));
-            emit CSModule.TotalSigningKeysCountChanged(noId, 0);
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 0);
         }
 
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 5 });
@@ -4156,7 +4156,7 @@ contract CSMRemoveKeysChargeFee is CSMCommon {
         );
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.KeyRemovalChargeApplied(noId);
+        emit ICSModule.KeyRemovalChargeApplied(noId);
 
         vm.prank(nodeOperator);
         csm.removeKeys(noId, 1, 2);
@@ -4180,7 +4180,7 @@ contract CSMRemoveKeysChargeFee is CSMCommon {
         for (uint256 i = 0; i < entries.length; i++) {
             assertNotEq(
                 entries[i].topics[0],
-                CSModule.KeyRemovalChargeApplied.selector
+                ICSModule.KeyRemovalChargeApplied.selector
             );
         }
     }
@@ -4219,7 +4219,7 @@ contract CSMRemoveKeysReverts is CSMCommon {
 
         csm.obtainDepositData(1, "");
 
-        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
+        vm.expectRevert(ICSModule.SigningKeysInvalidOffset.selector);
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 1 });
     }
 
@@ -4230,7 +4230,7 @@ contract CSMRemoveKeysReverts is CSMCommon {
         });
 
         vm.prank(stranger);
-        vm.expectRevert(CSModule.SenderIsNotEligible.selector);
+        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
         csm.removeKeys({ nodeOperatorId: noId, startIndex: 0, keysCount: 1 });
     }
 
@@ -4928,7 +4928,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 1, 1);
+        emit ICSModule.TargetValidatorsCountChanged(noId, 1, 1);
         csm.updateTargetValidatorsLimits(noId, 1, 1);
         assertEq(csm.getNonce(), nonce + 1);
     }
@@ -4940,7 +4940,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         uint256 noId = createNodeOperator();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 1, 1);
+        emit ICSModule.TargetValidatorsCountChanged(noId, 1, 1);
         csm.updateTargetValidatorsLimits(noId, 1, 1);
 
         vm.recordLogs();
@@ -4959,7 +4959,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
     {
         uint256 noId = createNodeOperator();
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 1, 0);
+        emit ICSModule.TargetValidatorsCountChanged(noId, 1, 0);
         csm.updateTargetValidatorsLimits(noId, 1, 0);
     }
 
@@ -4971,7 +4971,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 2, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 0, 0);
+        emit ICSModule.TargetValidatorsCountChanged(noId, 0, 0);
         csm.updateTargetValidatorsLimits(noId, 0, 0);
 
         vm.recordLogs();
@@ -4990,7 +4990,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 0, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 1, 10);
+        emit ICSModule.TargetValidatorsCountChanged(noId, 1, 10);
         csm.updateTargetValidatorsLimits(noId, 1, 10);
     }
 
@@ -5002,7 +5002,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 0, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 2, 10);
+        emit ICSModule.TargetValidatorsCountChanged(noId, 2, 10);
         csm.updateTargetValidatorsLimits(noId, 2, 10);
     }
 
@@ -5014,7 +5014,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 1, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 0, 0);
+        emit ICSModule.TargetValidatorsCountChanged(noId, 0, 0);
         csm.updateTargetValidatorsLimits(noId, 0, 10);
     }
 
@@ -5026,7 +5026,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 1, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 0, 0);
+        emit ICSModule.TargetValidatorsCountChanged(noId, 0, 0);
         csm.updateTargetValidatorsLimits(noId, 0, 0);
     }
 
@@ -5038,7 +5038,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 2, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 0, 0);
+        emit ICSModule.TargetValidatorsCountChanged(noId, 0, 0);
         csm.updateTargetValidatorsLimits(noId, 0, 10);
     }
 
@@ -5050,7 +5050,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 2, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 0, 0);
+        emit ICSModule.TargetValidatorsCountChanged(noId, 0, 0);
         csm.updateTargetValidatorsLimits(noId, 0, 0);
     }
 
@@ -5061,7 +5061,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 2, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 1, 5);
+        emit ICSModule.TargetValidatorsCountChanged(noId, 1, 5);
         csm.updateTargetValidatorsLimits(noId, 1, 5);
     }
 
@@ -5072,7 +5072,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         csm.updateTargetValidatorsLimits(noId, 1, 10);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.TargetValidatorsCountChanged(noId, 2, 5);
+        emit ICSModule.TargetValidatorsCountChanged(noId, 2, 5);
         csm.updateTargetValidatorsLimits(noId, 2, 5);
     }
 
@@ -5097,7 +5097,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         public
     {
         createNodeOperator(1);
-        vm.expectRevert(CSModule.InvalidInput.selector);
+        vm.expectRevert(ICSModule.InvalidInput.selector);
         csm.updateTargetValidatorsLimits(0, 1, uint256(type(uint32).max) + 1);
     }
 
@@ -5105,7 +5105,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         public
     {
         createNodeOperator(1);
-        vm.expectRevert(CSModule.InvalidInput.selector);
+        vm.expectRevert(ICSModule.InvalidInput.selector);
         csm.updateTargetValidatorsLimits(0, 3, 1);
     }
 }
@@ -5117,7 +5117,7 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.StuckSigningKeysCountChanged(noId, 1);
+        emit ICSModule.StuckSigningKeysCountChanged(noId, 1);
         csm.updateStuckValidatorsCount(
             bytes.concat(bytes8(0x0000000000000000)),
             bytes.concat(bytes16(0x00000000000000000000000000000001))
@@ -5139,7 +5139,7 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
         csm.obtainDepositData(1, "");
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.StuckSigningKeysCountChanged(noId, 1);
+        emit ICSModule.StuckSigningKeysCountChanged(noId, 1);
         csm.updateStuckValidatorsCount(
             bytes.concat(bytes8(0x0000000000000000)),
             bytes.concat(bytes16(0x00000000000000000000000000000001))
@@ -5170,7 +5170,7 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
         );
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.StuckSigningKeysCountChanged(noId, 0);
+        emit ICSModule.StuckSigningKeysCountChanged(noId, 0);
         emit IQueueLib.BatchEnqueued(noId, 1);
         csm.updateStuckValidatorsCount(
             bytes.concat(bytes8(0x0000000000000000)),
@@ -5200,7 +5200,7 @@ contract CsmUpdateStuckValidatorsCount is CSMCommon {
         createNodeOperator(3);
         csm.obtainDepositData(1, "");
 
-        vm.expectRevert(CSModule.StuckKeysHigherThanNonExited.selector);
+        vm.expectRevert(ICSModule.StuckKeysHigherThanNonExited.selector);
         csm.updateStuckValidatorsCount(
             bytes.concat(bytes8(0x0000000000000000)),
             bytes.concat(bytes16(0x00000000000000000000000000000002))
@@ -5238,7 +5238,7 @@ contract CsmUpdateExitedValidatorsCount is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ExitedSigningKeysCountChanged(noId, 1);
+        emit ICSModule.ExitedSigningKeysCountChanged(noId, 1);
         csm.updateExitedValidatorsCount(
             bytes.concat(bytes8(0x0000000000000000)),
             bytes.concat(bytes16(0x00000000000000000000000000000001))
@@ -5265,7 +5265,7 @@ contract CsmUpdateExitedValidatorsCount is CSMCommon {
     {
         createNodeOperator(1);
 
-        vm.expectRevert(CSModule.ExitedKeysHigherThanTotalDeposited.selector);
+        vm.expectRevert(ICSModule.ExitedKeysHigherThanTotalDeposited.selector);
         csm.updateExitedValidatorsCount(
             bytes.concat(bytes8(0x0000000000000000)),
             bytes.concat(bytes16(0x00000000000000000000000000000001))
@@ -5283,7 +5283,7 @@ contract CsmUpdateExitedValidatorsCount is CSMCommon {
             bytes.concat(bytes16(0x00000000000000000000000000000001))
         );
 
-        vm.expectRevert(CSModule.ExitedKeysDecrease.selector);
+        vm.expectRevert(ICSModule.ExitedKeysDecrease.selector);
         csm.updateExitedValidatorsCount(
             bytes.concat(bytes8(0x0000000000000000)),
             bytes.concat(bytes16(0x00000000000000000000000000000000))
@@ -5323,8 +5323,8 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.StuckSigningKeysCountChanged(noId, 1);
-        emit CSModule.ExitedSigningKeysCountChanged(noId, 1);
+        emit ICSModule.StuckSigningKeysCountChanged(noId, 1);
+        emit ICSModule.ExitedSigningKeysCountChanged(noId, 1);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
             exitedValidatorsKeysCount: 1,
@@ -5370,7 +5370,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
     {
         uint256 noId = createNodeOperator(1);
 
-        vm.expectRevert(CSModule.ExitedKeysHigherThanTotalDeposited.selector);
+        vm.expectRevert(ICSModule.ExitedKeysHigherThanTotalDeposited.selector);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
             exitedValidatorsKeysCount: 100500,
@@ -5384,7 +5384,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         uint256 noId = createNodeOperator(1);
         csm.obtainDepositData(1, "");
 
-        vm.expectRevert(CSModule.StuckKeysHigherThanNonExited.selector);
+        vm.expectRevert(ICSModule.StuckKeysHigherThanNonExited.selector);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
             exitedValidatorsKeysCount: 1,
@@ -5445,7 +5445,7 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltyReported(
+        emit ICSModule.ELRewardsStealingPenaltyReported(
             noId,
             blockhash(block.number),
             BOND_SIZE / 2
@@ -5475,7 +5475,7 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         public
     {
         uint256 noId = createNodeOperator();
-        vm.expectRevert(CSModule.InvalidAmount.selector);
+        vm.expectRevert(ICSModule.InvalidAmount.selector);
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
@@ -5521,7 +5521,7 @@ contract CsmCancelELRewardsStealingPenalty is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltyCancelled(
+        emit ICSModule.ELRewardsStealingPenaltyCancelled(
             noId,
             BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_ADDITIONAL_FINE()
         );
@@ -5550,7 +5550,7 @@ contract CsmCancelELRewardsStealingPenalty is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltyCancelled(noId, BOND_SIZE / 2);
+        emit ICSModule.ELRewardsStealingPenaltyCancelled(noId, BOND_SIZE / 2);
         csm.cancelELRewardsStealingPenalty(noId, BOND_SIZE / 2);
 
         uint256 lockedBond = accounting.getActualLockedBond(noId);
@@ -5580,7 +5580,7 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         );
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(noId);
+        emit ICSModule.ELRewardsStealingPenaltySettled(noId);
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
@@ -5613,9 +5613,9 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         );
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(firstNoId);
+        emit ICSModule.ELRewardsStealingPenaltySettled(firstNoId);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(secondNoId);
+        emit ICSModule.ELRewardsStealingPenaltySettled(secondNoId);
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
@@ -5718,7 +5718,7 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         );
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(secondNoId);
+        emit ICSModule.ELRewardsStealingPenaltySettled(secondNoId);
         expectNoCall(
             address(accounting),
             abi.encodeWithSelector(
@@ -5765,7 +5765,7 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         );
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(secondNoId);
+        emit ICSModule.ELRewardsStealingPenaltySettled(secondNoId);
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
@@ -5849,7 +5849,7 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
         );
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(secondNoId);
+        emit ICSModule.ELRewardsStealingPenaltySettled(secondNoId);
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
@@ -5974,7 +5974,7 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
             amount
         );
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltySettled(noId);
+        emit ICSModule.ELRewardsStealingPenaltySettled(noId);
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
@@ -5997,7 +5997,7 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltyCompensated(noId, amount + fine);
+        emit ICSModule.ELRewardsStealingPenaltyCompensated(noId, amount + fine);
 
         vm.expectCall(
             address(accounting),
@@ -6031,7 +6031,7 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.ELRewardsStealingPenaltyCompensated(noId, amount);
+        emit ICSModule.ELRewardsStealingPenaltyCompensated(noId, amount);
 
         vm.expectCall(
             address(accounting),
@@ -6089,7 +6089,7 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
         public
     {
         uint256 noId = createNodeOperator();
-        vm.expectRevert(CSModule.SenderIsNotEligible.selector);
+        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
         csm.compensateELRewardsStealingPenalty{ value: 1 ether }(noId);
     }
 }
@@ -6103,7 +6103,12 @@ contract CsmSubmitWithdrawal is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.WithdrawalSubmitted(noId, keyIndex, DEPOSIT_SIZE, pubkey);
+        emit ICSModule.WithdrawalSubmitted(
+            noId,
+            keyIndex,
+            DEPOSIT_SIZE,
+            pubkey
+        );
         csm.submitWithdrawal(noId, keyIndex, DEPOSIT_SIZE, false);
 
         NodeOperator memory no = csm.getNodeOperator(noId);
@@ -6123,7 +6128,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.WithdrawalSubmitted(
+        emit ICSModule.WithdrawalSubmitted(
             noId,
             keyIndex,
             DEPOSIT_SIZE - BOND_SIZE - 1 ether,
@@ -6231,7 +6236,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
         assertInvariants
     {
         uint256 noId = createNodeOperator();
-        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
+        vm.expectRevert(ICSModule.SigningKeysInvalidOffset.selector);
         csm.submitWithdrawal(noId, 0, 0, false);
     }
 
@@ -6244,7 +6249,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
         uint256 depositSize = DEPOSIT_SIZE;
 
         csm.submitWithdrawal(noId, 0, depositSize, false);
-        vm.expectRevert(CSModule.AlreadySubmitted.selector);
+        vm.expectRevert(ICSModule.AlreadySubmitted.selector);
         csm.submitWithdrawal(noId, 0, depositSize, false);
     }
 }
@@ -6258,7 +6263,7 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.InitialSlashingSubmitted(noId, keyIndex, pubkey);
+        emit ICSModule.InitialSlashingSubmitted(noId, keyIndex, pubkey);
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
@@ -6286,7 +6291,7 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.InitialSlashingSubmitted(noId, 0, pubkey);
+        emit ICSModule.InitialSlashingSubmitted(noId, 0, pubkey);
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
@@ -6311,11 +6316,11 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         bytes memory pubkey1 = slice(pubkeys, 48, 48);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.InitialSlashingSubmitted(noId, 0, pubkey0);
+        emit ICSModule.InitialSlashingSubmitted(noId, 0, pubkey0);
         csm.submitInitialSlashing(noId, 0);
 
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.InitialSlashingSubmitted(noId, 1, pubkey1);
+        emit ICSModule.InitialSlashingSubmitted(noId, 1, pubkey1);
         csm.submitInitialSlashing(noId, 1);
     }
 
@@ -6344,7 +6349,7 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         public
     {
         uint256 noId = createNodeOperator();
-        vm.expectRevert(CSModule.SigningKeysInvalidOffset.selector);
+        vm.expectRevert(ICSModule.SigningKeysInvalidOffset.selector);
         csm.submitInitialSlashing(noId, 0);
     }
 
@@ -6356,7 +6361,7 @@ contract CsmSubmitInitialSlashing is CSMCommon {
         csm.obtainDepositData(1, "");
 
         csm.submitInitialSlashing(noId, 0);
-        vm.expectRevert(CSModule.AlreadySubmitted.selector);
+        vm.expectRevert(ICSModule.AlreadySubmitted.selector);
         csm.submitInitialSlashing(noId, 0);
     }
 }
@@ -6681,7 +6686,7 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
         vm.prank(admin);
         csm.grantRole(role, actor);
 
-        vm.expectRevert(CSModule.NotSupported.selector);
+        vm.expectRevert(ICSModule.NotSupported.selector);
         vm.prank(actor);
         csm.updateRefundedValidatorsCount(noId, 0);
     }
@@ -6826,7 +6831,7 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
 contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
     function test_activatePublicRelease() public assertInvariants {
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.PublicRelease();
+        emit ICSModule.PublicRelease();
         csm.activatePublicRelease();
 
         assertTrue(csm.publicRelease());
@@ -6838,7 +6843,7 @@ contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
     {
         csm.activatePublicRelease();
 
-        vm.expectRevert(CSModule.AlreadyActivated.selector);
+        vm.expectRevert(ICSModule.AlreadyActivated.selector);
         csm.activatePublicRelease();
     }
 
@@ -6851,7 +6856,7 @@ contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
             keysCount
         );
 
-        vm.expectRevert(CSModule.NotAllowedToJoinYet.selector);
+        vm.expectRevert(ICSModule.NotAllowedToJoinYet.selector);
         csm.addNodeOperatorETH{ value: keysCount * BOND_SIZE }(
             keysCount,
             keys,
@@ -6905,7 +6910,7 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
         vm.deal(nodeOperator, BOND_SIZE / 2);
         vm.prank(nodeOperator);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+        emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
         csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
             keysCount,
             keys,
@@ -6932,7 +6937,7 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
 
         vm.deal(nodeOperator, BOND_SIZE / 2);
         vm.prank(nodeOperator);
-        vm.expectRevert(CSModule.NotAllowedToJoinYet.selector);
+        vm.expectRevert(ICSModule.NotAllowedToJoinYet.selector);
         csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
             keysCount,
             keys,
@@ -6961,7 +6966,7 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
         vm.deal(nodeOperator, BOND_SIZE / 2);
         vm.prank(nodeOperator);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+        emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
         csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
             keysCount,
             keys,
@@ -6991,7 +6996,7 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
         vm.deal(nodeOperator, BOND_SIZE);
         vm.prank(nodeOperator);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+        emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
         csm.addNodeOperatorETH{ value: (BOND_SIZE) * keysCount }(
             keysCount,
             keys,
@@ -7021,7 +7026,7 @@ contract CSMEarlyAdoptionTest is CSMCommonNoPublicRelease {
 
         vm.deal(nodeOperator, (BOND_SIZE / 2) * keysCount);
         vm.prank(nodeOperator);
-        vm.expectRevert(CSModule.MaxSigningKeysCountExceeded.selector);
+        vm.expectRevert(ICSModule.MaxSigningKeysCountExceeded.selector);
         csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
             keysCount,
             keys,
@@ -7050,7 +7055,7 @@ contract CSMEarlyAdoptionTestNoEA is CSMCommonNoPublicReleaseNoEA {
 
         vm.deal(nodeOperator, BOND_SIZE / 2);
         vm.prank(nodeOperator);
-        vm.expectRevert(CSModule.NotAllowedToJoinYet.selector);
+        vm.expectRevert(ICSModule.NotAllowedToJoinYet.selector);
         csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
             keysCount,
             keys,
@@ -7075,7 +7080,7 @@ contract CSMEarlyAdoptionTestNoEA is CSMCommonNoPublicReleaseNoEA {
 
         vm.deal(nodeOperator, BOND_SIZE / 2);
         vm.prank(nodeOperator);
-        vm.expectRevert(CSModule.NotAllowedToJoinYet.selector);
+        vm.expectRevert(ICSModule.NotAllowedToJoinYet.selector);
         csm.addNodeOperatorETH{ value: (BOND_SIZE / 2) * keysCount }(
             keysCount,
             keys,
@@ -7104,7 +7109,7 @@ contract CSMEarlyAdoptionTestNoEA is CSMCommonNoPublicReleaseNoEA {
         vm.deal(nodeOperator, BOND_SIZE);
         vm.prank(nodeOperator);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+        emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
         csm.addNodeOperatorETH{ value: (BOND_SIZE) * keysCount }(
             keysCount,
             keys,
@@ -7134,7 +7139,7 @@ contract CSMEarlyAdoptionTestNoEA is CSMCommonNoPublicReleaseNoEA {
         vm.deal(nodeOperator, BOND_SIZE);
         vm.prank(nodeOperator);
         vm.expectEmit(true, true, true, true, address(csm));
-        emit CSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+        emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
         csm.addNodeOperatorETH{ value: (BOND_SIZE) * keysCount }(
             keysCount,
             keys,
@@ -7794,7 +7799,7 @@ contract CSMMisc is CSMCommon {
     function test_updateRefundedValidatorsCount() public assertInvariants {
         uint256 noId = createNodeOperator();
         uint256 refunded = 1;
-        vm.expectRevert(CSModule.NotSupported.selector);
+        vm.expectRevert(ICSModule.NotSupported.selector);
         csm.updateRefundedValidatorsCount(noId, refunded);
     }
 
@@ -7975,7 +7980,7 @@ contract CSMMisc is CSMCommon {
         public
         assertInvariants
     {
-        vm.expectRevert(CSModule.InvalidInput.selector);
+        vm.expectRevert(ICSModule.InvalidInput.selector);
         csm.setKeyRemovalCharge(1 ether);
     }
 }

@@ -45,18 +45,6 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
     uint256 public immutable MIN_BOND_LOCK_PERIOD;
     uint256 public immutable MAX_BOND_LOCK_PERIOD;
 
-    event BondLockChanged(
-        uint256 indexed nodeOperatorId,
-        uint256 newAmount,
-        uint256 lockUntil
-    );
-    event BondLockRemoved(uint256 indexed nodeOperatorId);
-
-    event BondLockPeriodChanged(uint256 lockPeriod);
-
-    error InvalidBondLockPeriod();
-    error InvalidBondLockAmount();
-
     constructor(uint256 minBondLockPeriod, uint256 maxBondLockPeriod) {
         if (minBondLockPeriod > maxBondLockPeriod) {
             revert InvalidBondLockPeriod();
@@ -82,30 +70,23 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
     }
 
     /// @dev DEPRECATED. Use `getBondLockPeriod` instead
-    /// @notice Get default bond lock retention period
-    /// @return Default bond lock retention period
     function getBondLockRetentionPeriod() external view returns (uint256) {
         return _getCSBondLockStorage().bondLockPeriod;
     }
 
-    /// @notice Get default bond lock period
-    /// @return Default bond lock period
+    /// @inheritdoc ICSBondLock
     function getBondLockPeriod() external view returns (uint256) {
         return _getCSBondLockStorage().bondLockPeriod;
     }
 
-    /// @notice Get information about the locked bond for the given Node Operator
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @return Locked bond info
+    /// @inheritdoc ICSBondLock
     function getLockedBondInfo(
         uint256 nodeOperatorId
     ) public view returns (BondLock memory) {
         return _getCSBondLockStorage().bondLock[nodeOperatorId];
     }
 
-    /// @notice Get amount of the locked bond in ETH (stETH) by the given Node Operator
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @return Amount of the actual locked bond
+    /// @inheritdoc ICSBondLock
     function getActualLockedBond(
         uint256 nodeOperatorId
     ) public view returns (uint256) {

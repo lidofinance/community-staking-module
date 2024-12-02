@@ -8,34 +8,15 @@ import { BaseOracle } from "./lib/base-oracle/BaseOracle.sol";
 
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
-import { IAssetRecovererLib } from "./lib/AssetRecovererLib.sol";
+import { ICSFeeOracle } from "./interfaces/ICSFeeOracle.sol";
 
 contract CSFeeOracle is
+    ICSFeeOracle,
     BaseOracle,
     PausableUntil,
-    AssetRecoverer,
-    IAssetRecovererLib
+    AssetRecoverer
 {
     /// @notice No assets are stored in the contract
-
-    struct ReportData {
-        /// @dev Version of the oracle consensus rules. Current version expected
-        /// by the oracle can be obtained by calling getConsensusVersion().
-        uint256 consensusVersion;
-        /// @dev Reference slot for which the report was calculated. If the slot
-        /// contains a block, the state being reported should include all state
-        /// changes resulting from that block. The epoch containing the slot
-        /// should be finalized prior to calculating the report.
-        uint256 refSlot;
-        /// @notice Merkle Tree root.
-        bytes32 treeRoot;
-        /// @notice CID of the published Merkle tree.
-        string treeCid;
-        /// @notice CID of the file with log of the last frame reported.
-        string logCid;
-        /// @notice Total amount of fees distributed in the report.
-        uint256 distributed;
-    }
 
     /// @notice An ACL role granting the permission to manage the contract (update variables).
     bytes32 public constant CONTRACT_MANAGER_ROLE =
@@ -62,16 +43,6 @@ contract CSFeeOracle is
     /// performance over the network computed by the off-chain oracle.
     uint256 public avgPerfLeewayBP;
 
-    /// @dev Emitted when a new fee distributor contract is set
-    event FeeDistributorContractSet(address feeDistributorContract);
-
-    event PerfLeewaySet(uint256 valueBP);
-
-    error ZeroAdminAddress();
-    error ZeroFeeDistributorAddress();
-    error InvalidPerfLeeway();
-    error SenderNotAllowed();
-
     constructor(
         uint256 secondsPerSlot,
         uint256 genesisTime
@@ -94,25 +65,21 @@ contract CSFeeOracle is
         _setPerformanceLeeway(_avgPerfLeewayBP);
     }
 
-    /// @notice Set a new fee distributor contract
-    /// @param feeDistributorContract Address of the new fee distributor contract
+    /// @inheritdoc ICSFeeOracle
     function setFeeDistributorContract(
         address feeDistributorContract
     ) external onlyRole(CONTRACT_MANAGER_ROLE) {
         _setFeeDistributorContract(feeDistributorContract);
     }
 
-    /// @notice Set a new performance threshold value in basis points
-    /// @param valueBP performance threshold in basis points
+    /// @inheritdoc ICSFeeOracle
     function setPerformanceLeeway(
         uint256 valueBP
     ) external onlyRole(CONTRACT_MANAGER_ROLE) {
         _setPerformanceLeeway(valueBP);
     }
 
-    /// @notice Submit the data for a committee report
-    /// @param data Data for a committee report
-    /// @param contractVersion Version of the oracle consensus rules
+    /// @inheritdoc ICSFeeOracle
     function submitReportData(
         ReportData calldata data,
         uint256 contractVersion
@@ -129,19 +96,17 @@ contract CSFeeOracle is
         _handleConsensusReportData(data);
     }
 
-    /// @notice Resume accepting oracle reports
+    /// @inheritdoc ICSFeeOracle
     function resume() external onlyRole(RESUME_ROLE) {
         _resume();
     }
 
-    /// @notice Pause accepting oracle reports for a `duration` seconds
-    /// @param duration Duration of the pause in seconds
+    /// @inheritdoc ICSFeeOracle
     function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
         _pauseFor(duration);
     }
 
-    /// @notice Pause accepting oracle reports until a timestamp
-    /// @param pauseUntilInclusive Timestamp until which the oracle reports are paused
+    /// @inheritdoc ICSFeeOracle
     function pauseUntil(
         uint256 pauseUntilInclusive
     ) external onlyRole(PAUSE_ROLE) {
