@@ -1,3 +1,4 @@
+# Schedule turned off for now
 ---
 name: Regular mainnet tests
 
@@ -9,8 +10,6 @@ on:
         required: false
         default: false
         type: boolean
-  schedule:
-    - cron: "0 */3 * * *"
 
 env:
   FOUNDRY_PROFILE: ci
