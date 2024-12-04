@@ -92,7 +92,6 @@ interface ICSVerifier {
     /// @param witness Withdrawal witness against the `beaconBlock`'s state root.
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keyIndex Index of the validator key in the Node Operator's key storage
-    /// @notice `witness` is a withdrawal witness against the `beaconBlock`'s state root.
     function processWithdrawalProof(
         ProvableBeaconBlockHeader calldata beaconBlock,
         WithdrawalWitness calldata witness,
