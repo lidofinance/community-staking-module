@@ -148,8 +148,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         view
         returns (uint256);
 
-    function MODULE_MANAGER_ROLE() external view returns (bytes32);
-
     function PAUSE_ROLE() external view returns (bytes32);
 
     function RECOVERER_ROLE() external view returns (bytes32);

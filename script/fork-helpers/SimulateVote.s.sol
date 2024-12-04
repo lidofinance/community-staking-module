@@ -37,10 +37,8 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         vm.stopBroadcast();
 
         vm.startBroadcast(agent);
-        // 1. Grant manager role
-        csm.grantRole(csm.MODULE_MANAGER_ROLE(), agent);
 
-        // 2. Add CommunityStaking module
+        // 1. Add CommunityStaking module
         stakingRouter.addStakingModule({
             _name: "community-staking-v1",
             _stakingModuleAddress: address(csm),
@@ -51,18 +49,18 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
             _maxDepositsPerBlock: 30,
             _minDepositBlockDistance: 25
         });
-        // 3. burner role
+        // 2. burner role
         burner.grantRole(
             burner.REQUEST_BURN_SHARES_ROLE(),
             address(accounting)
         );
-        // 4. Grant resume to agent
+        // 3. Grant resume to agent
         csm.grantRole(csm.RESUME_ROLE(), agent);
-        // 5. Resume CSM
+        // 4. Resume CSM
         csm.resume();
-        // 6. Revoke resume
+        // 5. Revoke resume
         csm.revokeRole(csm.RESUME_ROLE(), agent);
-        // 7. Update initial epoch
+        // 6. Update initial epoch
         hashConsensus.updateInitialEpoch(47480);
     }
 

@@ -28,7 +28,6 @@ contract PauseResume is Script, DeploymentFixtures, ForkHelpersCommon {
     }
 
     function publicRelease() external broadcastCSMAdmin {
-        csm.grantRole(csm.MODULE_MANAGER_ROLE(), csmAdmin);
         csm.activatePublicRelease();
 
         assertTrue(csm.publicRelease());
