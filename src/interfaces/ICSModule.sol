@@ -107,11 +107,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         uint256 amount,
         bytes pubkey
     );
-    event InitialSlashingSubmitted(
-        uint256 indexed nodeOperatorId,
-        uint256 keyIndex,
-        bytes pubkey
-    );
 
     event PublicRelease();
     event KeyRemovalChargeSet(uint256 amount);
