@@ -8,6 +8,7 @@ import "forge-std/Test.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import { CSBondLock } from "../src/abstract/CSBondLock.sol";
+import { ICSBondLock } from "../src/interfaces/ICSBondLock.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 import { LidoMock } from "./helpers/mocks/LidoMock.sol";
 import { WstETHMock } from "./helpers/mocks/WstETHMock.sol";
@@ -50,7 +51,7 @@ contract CSBondLockTest is Test {
         uint256 period = 4 weeks;
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit CSBondLock.BondLockPeriodChanged(period);
+        emit ICSBondLock.BondLockPeriodChanged(period);
 
         bondLock.setBondLockPeriod(period);
 
@@ -60,13 +61,13 @@ contract CSBondLockTest is Test {
 
     function test_setBondLockPeriod_RevertWhen_LessThanMin() public {
         uint256 min = bondLock.MIN_BOND_LOCK_PERIOD();
-        vm.expectRevert(CSBondLock.InvalidBondLockPeriod.selector);
+        vm.expectRevert(ICSBondLock.InvalidBondLockPeriod.selector);
         bondLock.setBondLockPeriod(min - 1 seconds);
     }
 
     function test_setBondLockPeriod_RevertWhen_GreaterThanMax() public {
         uint256 max = bondLock.MAX_BOND_LOCK_PERIOD();
-        vm.expectRevert(CSBondLock.InvalidBondLockPeriod.selector);
+        vm.expectRevert(ICSBondLock.InvalidBondLockPeriod.selector);
         bondLock.setBondLockPeriod(max + 1 seconds);
     }
 
@@ -110,7 +111,7 @@ contract CSBondLockTest is Test {
         uint256 until = block.timestamp + period;
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit CSBondLock.BondLockChanged(noId, amount, until);
+        emit ICSBondLock.BondLockChanged(noId, amount, until);
 
         bondLock.lock(noId, amount);
 
@@ -167,7 +168,7 @@ contract CSBondLockTest is Test {
     }
 
     function test_lock_RevertWhen_ZeroAmount() public {
-        vm.expectRevert(CSBondLock.InvalidBondLockAmount.selector);
+        vm.expectRevert(ICSBondLock.InvalidBondLockAmount.selector);
         bondLock.lock(0, 0);
     }
 
@@ -190,7 +191,7 @@ contract CSBondLockTest is Test {
         bondLock.lock(noId, amount);
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit CSBondLock.BondLockRemoved(noId);
+        emit ICSBondLock.BondLockRemoved(noId);
 
         bondLock.reduceAmount(noId, amount);
 
@@ -213,7 +214,7 @@ contract CSBondLockTest is Test {
         vm.warp(block.timestamp + 1 seconds);
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit CSBondLock.BondLockChanged(noId, rest, periodWhenLock);
+        emit ICSBondLock.BondLockChanged(noId, rest, periodWhenLock);
 
         bondLock.reduceAmount(noId, toRelease);
 
@@ -223,7 +224,7 @@ contract CSBondLockTest is Test {
     }
 
     function test_reduceAmount_RevertWhen_ZeroAmount() public {
-        vm.expectRevert(CSBondLock.InvalidBondLockAmount.selector);
+        vm.expectRevert(ICSBondLock.InvalidBondLockAmount.selector);
         bondLock.reduceAmount(0, 0);
     }
 
@@ -233,7 +234,7 @@ contract CSBondLockTest is Test {
 
         bondLock.lock(noId, amount);
 
-        vm.expectRevert(CSBondLock.InvalidBondLockAmount.selector);
+        vm.expectRevert(ICSBondLock.InvalidBondLockAmount.selector);
         bondLock.reduceAmount(noId, amount + 1 ether);
     }
 
@@ -244,7 +245,7 @@ contract CSBondLockTest is Test {
         bondLock.lock(noId, amount);
 
         vm.expectEmit(true, true, true, true, address(bondLock));
-        emit CSBondLock.BondLockRemoved(noId);
+        emit ICSBondLock.BondLockRemoved(noId);
 
         bondLock.remove(noId);
 

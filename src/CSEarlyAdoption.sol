@@ -16,15 +16,6 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
 
     mapping(address => bool) internal _consumedAddresses;
 
-    event Consumed(address indexed member);
-
-    error InvalidProof();
-    error AlreadyConsumed();
-    error InvalidTreeRoot();
-    error InvalidCurveId();
-    error ZeroModuleAddress();
-    error SenderIsNotModule();
-
     constructor(bytes32 treeRoot, uint256 curveId, address module) {
         if (treeRoot == bytes32(0)) revert InvalidTreeRoot();
         if (curveId == 0) revert InvalidCurveId();
@@ -35,10 +26,7 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
         MODULE = module;
     }
 
-    /// @notice Validate EA eligibility proof and mark it as consumed
-    /// @dev Called only by the module
-    /// @param member Address to be verified alongside the proof
-    /// @param proof Merkle proof of EA eligibility
+    /// @inheritdoc ICSEarlyAdoption
     function consume(address member, bytes32[] calldata proof) external {
         if (msg.sender != MODULE) revert SenderIsNotModule();
         if (_consumedAddresses[member]) revert AlreadyConsumed();
@@ -47,17 +35,12 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
         emit Consumed(member);
     }
 
-    /// @notice Check if the address has already consumed EA access
-    /// @param member Address to check
-    /// @return Consumed flag
+    /// @inheritdoc ICSEarlyAdoption
     function isConsumed(address member) external view returns (bool) {
         return _consumedAddresses[member];
     }
 
-    /// @notice Check is the address is eligible to consume EA access
-    /// @param member Address to check
-    /// @param proof Merkle proof of EA eligibility
-    /// @return Boolean flag if the proof is valid or not
+    /// @inheritdoc ICSEarlyAdoption
     function verifyProof(
         address member,
         bytes32[] calldata proof
@@ -65,10 +48,7 @@ contract CSEarlyAdoption is ICSEarlyAdoption {
         return MerkleProof.verifyCalldata(proof, TREE_ROOT, hashLeaf(member));
     }
 
-    /// @notice Get a hash of a leaf in EA Merkle tree
-    /// @param member EA member address
-    /// @return Hash of the leaf
-    /// @dev Double hash the leaf to prevent second preimage attacks
+    /// @inheritdoc ICSEarlyAdoption
     function hashLeaf(address member) public pure returns (bytes32) {
         return keccak256(bytes.concat(keccak256(abi.encode(member))));
     }

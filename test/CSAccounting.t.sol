@@ -14,6 +14,8 @@ import { ICSFeeDistributor } from "../src/interfaces/ICSFeeDistributor.sol";
 import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
 import { ICSAccounting } from "../src/interfaces/ICSAccounting.sol";
 import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
+import { ICSBondCore } from "../src/interfaces/ICSBondCore.sol";
+import { ICSBondLock } from "../src/interfaces/ICSBondLock.sol";
 
 import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSBondCore } from "../src/abstract/CSBondCore.sol";
@@ -157,7 +159,7 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
     }
 
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
-        vm.expectRevert(CSAccounting.ZeroModuleAddress.selector);
+        vm.expectRevert(ICSAccounting.ZeroModuleAddress.selector);
         accounting = new CSAccounting(
             address(locator),
             address(0),
@@ -170,7 +172,7 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
     function test_constructor_RevertWhen_InvalidBondLockPeriod_MinMoreThanMax()
         public
     {
-        vm.expectRevert(CSBondLock.InvalidBondLockPeriod.selector);
+        vm.expectRevert(ICSBondLock.InvalidBondLockPeriod.selector);
         accounting = new CSAccounting(
             address(locator),
             address(0),
@@ -183,7 +185,7 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
     function test_constructor_RevertWhen_InvalidBondLockPeriod_MaxTooBig()
         public
     {
-        vm.expectRevert(CSBondLock.InvalidBondLockPeriod.selector);
+        vm.expectRevert(ICSBondLock.InvalidBondLockPeriod.selector);
         accounting = new CSAccounting(
             address(locator),
             address(0),
@@ -194,7 +196,7 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
     }
 
     function test_constructor_RevertWhen_InvalidMaxBondCurveLength() public {
-        vm.expectRevert(CSBondCurve.InvalidBondCurveMaxLength.selector);
+        vm.expectRevert(ICSBondCurve.InvalidBondCurveMaxLength.selector);
         accounting = new CSAccounting(
             address(locator),
             address(0),
@@ -239,11 +241,13 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         _enableInitializers(address(accounting));
 
         vm.expectEmit(true, false, false, true, address(accounting));
-        emit CSBondCurve.BondCurveAdded(curve);
+        emit ICSBondCurve.BondCurveAdded(curve);
         vm.expectEmit(true, false, false, true, address(accounting));
-        emit CSBondLock.BondLockPeriodChanged(8 weeks);
+        emit ICSBondLock.BondLockPeriodChanged(8 weeks);
         vm.expectEmit(true, false, false, true, address(accounting));
-        emit CSAccounting.ChargePenaltyRecipientSet(testChargePenaltyRecipient);
+        emit ICSAccounting.ChargePenaltyRecipientSet(
+            testChargePenaltyRecipient
+        );
         accounting.initialize(
             curve,
             admin,
@@ -261,7 +265,7 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
 
         _enableInitializers(address(accounting));
 
-        vm.expectRevert(CSAccounting.ZeroAdminAddress.selector);
+        vm.expectRevert(ICSAccounting.ZeroAdminAddress.selector);
         accounting.initialize(
             curve,
             address(0),
@@ -277,7 +281,7 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
 
         _enableInitializers(address(accounting));
 
-        vm.expectRevert(CSAccounting.ZeroFeeDistributorAddress.selector);
+        vm.expectRevert(ICSAccounting.ZeroFeeDistributorAddress.selector);
         accounting.initialize(
             curve,
             admin,
@@ -294,7 +298,7 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         _enableInitializers(address(accounting));
 
         vm.expectRevert(
-            CSAccounting.ZeroChargePenaltyRecipientAddress.selector
+            ICSAccounting.ZeroChargePenaltyRecipientAddress.selector
         );
         accounting.initialize(
             curve,
@@ -1521,7 +1525,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
         _lock({ id: 0, amount: 1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
@@ -1787,7 +1791,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
@@ -1807,7 +1811,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
@@ -1860,7 +1864,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
@@ -1904,7 +1908,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _operator({ ongoing: 16, withdrawn: 0 });
 
         vm.expectRevert(
-            abi.encodeWithSelector(CSAccounting.SenderIsNotCSM.selector)
+            abi.encodeWithSelector(ICSAccounting.SenderIsNotCSM.selector)
         );
         vm.prank(stranger);
         accounting.claimRewardsStETH(
@@ -2017,7 +2021,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
         _lock({ id: 0, amount: 1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
@@ -2313,7 +2317,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
@@ -2333,7 +2337,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
@@ -2399,7 +2403,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
@@ -2443,7 +2447,7 @@ contract CSAccountingClaimWstETHRewardsTest is
         _operator({ ongoing: 16, withdrawn: 0 });
 
         vm.expectRevert(
-            abi.encodeWithSelector(CSAccounting.SenderIsNotCSM.selector)
+            abi.encodeWithSelector(ICSAccounting.SenderIsNotCSM.selector)
         );
         vm.prank(stranger);
         accounting.claimRewardsWstETH(
@@ -2526,7 +2530,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         _rewards({ fee: 0.1 ether });
         _lock({ id: 0, amount: 1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
@@ -2742,7 +2746,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
@@ -2762,7 +2766,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
@@ -2810,7 +2814,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
 
-        vm.expectRevert(CSBondCore.NothingToClaim.selector);
+        vm.expectRevert(ICSBondCore.NothingToClaim.selector);
         vm.prank(address(stakingModule));
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
@@ -2854,7 +2858,7 @@ contract CSAccountingclaimRewardsUnstETHTest is
         _operator({ ongoing: 16, withdrawn: 0 });
 
         vm.expectRevert(
-            abi.encodeWithSelector(CSAccounting.SenderIsNotCSM.selector)
+            abi.encodeWithSelector(ICSAccounting.SenderIsNotCSM.selector)
         );
         vm.prank(stranger);
         accounting.claimRewardsUnstETH(
@@ -2925,7 +2929,7 @@ contract CSAccountingDepositEthTest is CSAccountingBaseTest {
         vm.deal(stranger, 32 ether);
         vm.prank(stranger);
 
-        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
         accounting.depositETH{ value: 32 ether }(stranger, 0);
     }
 }
@@ -3205,7 +3209,7 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
     function test_depositStETH_revertWhen_SenderIsNotCSM() public {
         vm.prank(stranger);
 
-        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
         accounting.depositStETH(
             stranger,
             0,
@@ -3510,7 +3514,7 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
 
     function test_depositWstETH_revertWhen_SenderIsNotCSM() public {
         vm.prank(stranger);
-        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
         accounting.depositWstETH(
             stranger,
             0,
@@ -3562,7 +3566,7 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
     }
 
     function test_penalize_RevertWhen_SenderIsNotCSM() public {
-        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
         vm.prank(stranger);
         accounting.penalize(0, 20);
     }
@@ -3595,7 +3599,7 @@ contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
     }
 
     function test_chargeFee_RevertWhen_SenderIsNotCSM() public {
-        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
         vm.prank(stranger);
         accounting.chargeFee(0, 20);
     }
@@ -3625,7 +3629,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
     function test_lockBondETH_RevertWhen_SenderIsNotCSM() public {
         mock_getNodeOperatorsCount(1);
 
-        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
         vm.prank(stranger);
         accounting.lockBondETH(0, 1 ether);
     }
@@ -3657,7 +3661,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
     function test_releaseLockedBondETH_RevertWhen_SenderIsNotCSM() public {
         mock_getNodeOperatorsCount(1);
 
-        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
         vm.prank(stranger);
         accounting.releaseLockedBondETH(0, 1 ether);
     }
@@ -3669,7 +3673,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         accounting.lockBondETH(0, 1 ether);
 
         vm.expectEmit(true, true, true, true, address(accounting));
-        emit CSAccounting.BondLockCompensated(0, 0.4 ether);
+        emit ICSAccounting.BondLockCompensated(0, 0.4 ether);
 
         vm.deal(address(stakingModule), 0.4 ether);
         vm.prank(address(stakingModule));
@@ -3695,7 +3699,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
 
         vm.deal(address(stakingModule), 0.4 ether);
         vm.prank(address(stakingModule));
-        vm.expectRevert(CSAccounting.ElRewardsVaultReceiveFailed.selector);
+        vm.expectRevert(ICSAccounting.ElRewardsVaultReceiveFailed.selector);
         accounting.compensateLockedBondETH{ value: 0.4 ether }(0);
     }
 
@@ -3706,7 +3710,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         vm.prank(address(stakingModule));
         accounting.lockBondETH(0, 1 ether);
 
-        vm.expectRevert(CSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
         vm.prank(stranger);
         accounting.compensateLockedBondETH{ value: 1 ether }(0);
     }
@@ -3808,7 +3812,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
     }
 
     function test_updateBondCurve_RevertWhen_InvalidBondCurveId() public {
-        vm.expectRevert(CSBondCurve.InvalidBondCurveId.selector);
+        vm.expectRevert(ICSBondCurve.InvalidBondCurveId.selector);
         vm.prank(admin);
         accounting.updateBondCurve(1, new uint256[](0));
     }
@@ -3833,7 +3837,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
 
     function test_setBondCurve_RevertWhen_OperatorDoesNotExist() public {
         mock_getNodeOperatorsCount(0);
-        vm.expectRevert(CSAccounting.NodeOperatorDoesNotExist.selector);
+        vm.expectRevert(ICSAccounting.NodeOperatorDoesNotExist.selector);
         vm.prank(admin);
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
     }
@@ -3867,7 +3871,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
 
     function test_resetBondCurve_RevertWhen_OperatorDoesNotExist() public {
         mock_getNodeOperatorsCount(0);
-        vm.expectRevert(CSAccounting.NodeOperatorDoesNotExist.selector);
+        vm.expectRevert(ICSAccounting.NodeOperatorDoesNotExist.selector);
         vm.prank(address(stakingModule));
         accounting.resetBondCurve({ nodeOperatorId: 0 });
     }
@@ -3895,7 +3899,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
     function test_setChargePenaltyRecipient() public {
         vm.prank(admin);
         vm.expectEmit(true, false, false, true, address(accounting));
-        emit CSAccounting.ChargePenaltyRecipientSet(address(1337));
+        emit ICSAccounting.ChargePenaltyRecipientSet(address(1337));
         accounting.setChargePenaltyRecipient(address(1337));
         assertEq(accounting.chargePenaltyRecipient(), address(1337));
     }
@@ -4086,7 +4090,7 @@ contract CSAccountingPullFeeRewardsTest is CSAccountingBaseTest {
     function test_pullFeeRewards_revertWhen_operatorDoesNotExits() public {
         mock_getNodeOperatorsCount(0);
 
-        vm.expectRevert(CSAccounting.NodeOperatorDoesNotExist.selector);
+        vm.expectRevert(ICSAccounting.NodeOperatorDoesNotExist.selector);
         accounting.pullFeeRewards(0, 0, new bytes32[](0));
     }
 }

@@ -3,7 +3,8 @@
 pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
-import "../src/CSEarlyAdoption.sol";
+import { CSEarlyAdoption } from "../src/CSEarlyAdoption.sol";
+import { ICSEarlyAdoption } from "../src/interfaces/ICSEarlyAdoption.sol";
 import { Utilities } from "./helpers/Utilities.sol";
 import "./helpers/MerkleTree.sol";
 
@@ -36,17 +37,17 @@ contract CSEarlyAdoptionConstructorTest is Test, Utilities {
     }
 
     function test_constructor_RevertWhen_InvalidTreeRoot() public {
-        vm.expectRevert(CSEarlyAdoption.InvalidTreeRoot.selector);
+        vm.expectRevert(ICSEarlyAdoption.InvalidTreeRoot.selector);
         new CSEarlyAdoption(bytes32(0), curveId, csm);
     }
 
     function test_constructor_RevertWhen_InvalidCurveId() public {
-        vm.expectRevert(CSEarlyAdoption.InvalidCurveId.selector);
+        vm.expectRevert(ICSEarlyAdoption.InvalidCurveId.selector);
         new CSEarlyAdoption(root, 0, csm);
     }
 
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
-        vm.expectRevert(CSEarlyAdoption.ZeroModuleAddress.selector);
+        vm.expectRevert(ICSEarlyAdoption.ZeroModuleAddress.selector);
         new CSEarlyAdoption(root, curveId, address(0));
     }
 }
@@ -85,7 +86,7 @@ contract CSEarlyAdoptionTest is Test, Utilities {
 
         vm.prank(csm);
         vm.expectEmit(true, true, true, true, address(earlyAdoption));
-        emit CSEarlyAdoption.Consumed(nodeOperator);
+        emit ICSEarlyAdoption.Consumed(nodeOperator);
         earlyAdoption.consume(nodeOperator, proof);
     }
 
@@ -93,7 +94,7 @@ contract CSEarlyAdoptionTest is Test, Utilities {
         bytes32[] memory proof = merkleTree.getProof(0);
 
         vm.prank(stranger);
-        vm.expectRevert(CSEarlyAdoption.SenderIsNotModule.selector);
+        vm.expectRevert(ICSEarlyAdoption.SenderIsNotModule.selector);
         earlyAdoption.consume(nodeOperator, proof);
     }
 
@@ -103,7 +104,7 @@ contract CSEarlyAdoptionTest is Test, Utilities {
         vm.startPrank(csm);
         earlyAdoption.consume(nodeOperator, proof);
 
-        vm.expectRevert(CSEarlyAdoption.AlreadyConsumed.selector);
+        vm.expectRevert(ICSEarlyAdoption.AlreadyConsumed.selector);
         earlyAdoption.consume(nodeOperator, proof);
     }
 
@@ -111,7 +112,7 @@ contract CSEarlyAdoptionTest is Test, Utilities {
         bytes32[] memory proof = merkleTree.getProof(0);
 
         vm.prank(csm);
-        vm.expectRevert(CSEarlyAdoption.InvalidProof.selector);
+        vm.expectRevert(ICSEarlyAdoption.InvalidProof.selector);
         earlyAdoption.consume(stranger, proof);
     }
 
@@ -120,7 +121,7 @@ contract CSEarlyAdoptionTest is Test, Utilities {
         proof[0] = bytes32(randomBytes(32));
 
         vm.prank(csm);
-        vm.expectRevert(CSEarlyAdoption.InvalidProof.selector);
+        vm.expectRevert(ICSEarlyAdoption.InvalidProof.selector);
         earlyAdoption.consume(nodeOperator, proof);
     }
 

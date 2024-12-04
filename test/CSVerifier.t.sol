@@ -118,7 +118,7 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
     }
 
     function test_constructor_RevertWhen_InvalidChainConfig() public {
-        vm.expectRevert(CSVerifier.InvalidChainConfig.selector);
+        vm.expectRevert(ICSVerifier.InvalidChainConfig.selector);
         verifier = new CSVerifier({
             withdrawalAddress: nextAddress(),
             module: address(module),
@@ -135,7 +135,7 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
     }
 
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
-        vm.expectRevert(CSVerifier.ZeroModuleAddress.selector);
+        vm.expectRevert(ICSVerifier.ZeroModuleAddress.selector);
         verifier = new CSVerifier({
             withdrawalAddress: nextAddress(),
             module: address(0),
@@ -152,7 +152,7 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
     }
 
     function test_constructor_RevertWhen_ZeroWithdrawalAddress() public {
-        vm.expectRevert(CSVerifier.ZeroWithdrawalAddress.selector);
+        vm.expectRevert(ICSVerifier.ZeroWithdrawalAddress.selector);
         verifier = new CSVerifier({
             withdrawalAddress: address(0),
             module: address(module),
@@ -216,7 +216,7 @@ contract CSVerifierSlashingTest is CSVerifierTestBase {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                CSVerifier.UnsupportedSlot.selector,
+                ICSVerifier.UnsupportedSlot.selector,
                 fixture.beaconBlock.header.slot
             )
         );
@@ -242,7 +242,7 @@ contract CSVerifierSlashingTest is CSVerifierTestBase {
             abi.encode("lol")
         );
 
-        vm.expectRevert(CSVerifier.InvalidBlockHeader.selector);
+        vm.expectRevert(ICSVerifier.InvalidBlockHeader.selector);
         verifier.processSlashingProof(
             fixture.beaconBlock,
             fixture.witness,
@@ -335,7 +335,7 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                CSVerifier.UnsupportedSlot.selector,
+                ICSVerifier.UnsupportedSlot.selector,
                 fixture.beaconBlock.header.slot
             )
         );
@@ -363,7 +363,7 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
             abi.encode("lol")
         );
 
-        vm.expectRevert(CSVerifier.InvalidBlockHeader.selector);
+        vm.expectRevert(ICSVerifier.InvalidBlockHeader.selector);
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,
@@ -392,7 +392,7 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
 
         vm.etch(verifier.BEACON_ROOTS(), new bytes(0));
 
-        vm.expectRevert(CSVerifier.RootNotFound.selector);
+        vm.expectRevert(ICSVerifier.RootNotFound.selector);
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,
@@ -415,7 +415,7 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
             ""
         );
 
-        vm.expectRevert(CSVerifier.RootNotFound.selector);
+        vm.expectRevert(ICSVerifier.RootNotFound.selector);
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,
@@ -436,7 +436,7 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
 
         fixture.witness.withdrawalCredentials = bytes32(0);
 
-        vm.expectRevert(CSVerifier.InvalidWithdrawalAddress.selector);
+        vm.expectRevert(ICSVerifier.InvalidWithdrawalAddress.selector);
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,
@@ -460,7 +460,7 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
             32 +
             154;
 
-        vm.expectRevert(CSVerifier.ValidatorNotWithdrawn.selector);
+        vm.expectRevert(ICSVerifier.ValidatorNotWithdrawn.selector);
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,
@@ -479,7 +479,7 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
 
         fixture.witness.amount = 154;
 
-        vm.expectRevert(CSVerifier.PartialWithdrawal.selector);
+        vm.expectRevert(ICSVerifier.PartialWithdrawal.selector);
         verifier.processWithdrawalProof(
             fixture.beaconBlock,
             fixture.witness,

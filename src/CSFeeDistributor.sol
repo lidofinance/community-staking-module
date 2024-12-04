@@ -40,34 +40,6 @@ contract CSFeeDistributor is
     /// @notice Total Amount of stETH shares available for claiming by NOs
     uint256 public totalClaimableShares;
 
-    /// @dev Emitted when fees are distributed
-    event FeeDistributed(uint256 indexed nodeOperatorId, uint256 shares);
-
-    /// @dev Emitted when distribution data is updated
-    event DistributionDataUpdated(
-        uint256 totalClaimableShares,
-        bytes32 treeRoot,
-        string treeCid
-    );
-
-    /// @dev Emitted when distribution log is updated
-    event DistributionLogUpdated(string logCid);
-
-    error ZeroAccountingAddress();
-    error ZeroStEthAddress();
-    error ZeroAdminAddress();
-    error ZeroOracleAddress();
-    error NotAccounting();
-    error NotOracle();
-
-    error InvalidTreeRoot();
-    error InvalidTreeCID();
-    error InvalidLogCID();
-    error InvalidShares();
-    error InvalidProof();
-    error FeeSharesDecrease();
-    error NotEnoughShares();
-
     constructor(address stETH, address accounting, address oracle) {
         if (accounting == address(0)) revert ZeroAccountingAddress();
         if (oracle == address(0)) revert ZeroOracleAddress();
@@ -87,11 +59,7 @@ contract CSFeeDistributor is
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
-    /// @notice Distribute fees to the Accounting in favor of the Node Operator
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param shares Total Amount of stETH shares earned as fees
-    /// @param proof Merkle proof of the leaf
-    /// @return sharesToDistribute Amount of stETH shares distributed
+    /// @inheritdoc ICSFeeDistributor
     function distributeFees(
         uint256 nodeOperatorId,
         uint256 shares,
@@ -117,7 +85,7 @@ contract CSFeeDistributor is
         emit FeeDistributed(nodeOperatorId, sharesToDistribute);
     }
 
-    /// @notice Receive the data of the Merkle tree from the Oracle contract and process it
+    /// @inheritdoc ICSFeeDistributor
     function processOracleReport(
         bytes32 _treeRoot,
         string calldata _treeCid,
@@ -163,10 +131,7 @@ contract CSFeeDistributor is
         emit DistributionLogUpdated(_logCid);
     }
 
-    /// @notice Recover ERC20 tokens (except for stETH) from the contract
-    /// @dev Any stETH transferred to feeDistributor is treated as a donation and can not be recovered
-    /// @param token Address of the ERC20 token to recover
-    /// @param amount Amount of the ERC20 token to recover
+    /// @inheritdoc AssetRecoverer
     function recoverERC20(address token, uint256 amount) external override {
         _onlyRecoverer();
         if (token == address(STETH)) {
@@ -175,17 +140,12 @@ contract CSFeeDistributor is
         AssetRecovererLib.recoverERC20(token, amount);
     }
 
-    /// @notice Get the Amount of stETH shares that are pending to be distributed
-    /// @return pendingShares Amount shares that are pending to distribute
+    /// @inheritdoc ICSFeeDistributor
     function pendingSharesToDistribute() external view returns (uint256) {
         return STETH.sharesOf(address(this)) - totalClaimableShares;
     }
 
-    /// @notice Get the Amount of stETH shares that can be distributed in favor of the Node Operator
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param shares Total Amount of stETH shares earned as fees
-    /// @param proof Merkle proof of the leaf
-    /// @return sharesToDistribute Amount of stETH shares that can be distributed
+    /// @inheritdoc ICSFeeDistributor
     function getFeesToDistribute(
         uint256 nodeOperatorId,
         uint256 shares,
@@ -210,11 +170,7 @@ contract CSFeeDistributor is
         }
     }
 
-    /// @notice Get a hash of a leaf
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param shares Amount of stETH shares
-    /// @return Hash of the leaf
-    /// @dev Double hash the leaf to prevent second preimage attacks
+    /// @inheritdoc ICSFeeDistributor
     function hashLeaf(
         uint256 nodeOperatorId,
         uint256 shares

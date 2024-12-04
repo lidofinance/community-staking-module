@@ -41,51 +41,6 @@ abstract contract CSBondCore is ICSBondCore {
     bytes32 private constant CS_BOND_CORE_STORAGE_LOCATION =
         0x23f334b9eb5378c2a1573857b8f9d9ca79959360a69e73d3f16848e56ec92100;
 
-    event BondDepositedETH(
-        uint256 indexed nodeOperatorId,
-        address from,
-        uint256 amount
-    );
-    event BondDepositedStETH(
-        uint256 indexed nodeOperatorId,
-        address from,
-        uint256 amount
-    );
-    event BondDepositedWstETH(
-        uint256 indexed nodeOperatorId,
-        address from,
-        uint256 amount
-    );
-    event BondClaimedUnstETH(
-        uint256 indexed nodeOperatorId,
-        address to,
-        uint256 amount,
-        uint256 requestId
-    );
-    event BondClaimedStETH(
-        uint256 indexed nodeOperatorId,
-        address to,
-        uint256 amount
-    );
-    event BondClaimedWstETH(
-        uint256 indexed nodeOperatorId,
-        address to,
-        uint256 amount
-    );
-    event BondBurned(
-        uint256 indexed nodeOperatorId,
-        uint256 toBurnAmount,
-        uint256 burnedAmount
-    );
-    event BondCharged(
-        uint256 indexed nodeOperatorId,
-        uint256 toChargeAmount,
-        uint256 chargedAmount
-    );
-
-    error ZeroLocatorAddress();
-    error NothingToClaim();
-
     constructor(address lidoLocator) {
         if (lidoLocator == address(0)) {
             revert ZeroLocatorAddress();
@@ -96,24 +51,19 @@ abstract contract CSBondCore is ICSBondCore {
         WSTETH = IWstETH(WITHDRAWAL_QUEUE.WSTETH());
     }
 
-    /// @notice Get total bond shares (stETH) stored on the contract
-    /// @return Total bond shares (stETH)
+    /// @inheritdoc ICSBondCore
     function totalBondShares() public view returns (uint256) {
         return _getCSBondCoreStorage().totalBondShares;
     }
 
-    /// @notice Get bond shares (stETH) for the given Node Operator
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @return Bond in stETH shares
+    /// @inheritdoc ICSBondCore
     function getBondShares(
         uint256 nodeOperatorId
     ) public view returns (uint256) {
         return _getCSBondCoreStorage().bondShares[nodeOperatorId];
     }
 
-    /// @notice Get bond amount in ETH (stETH) for the given Node Operator
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @return Bond amount in ETH (stETH)
+    /// @inheritdoc ICSBondCore
     function getBond(uint256 nodeOperatorId) public view returns (uint256) {
         return _ethByShares(getBondShares(nodeOperatorId));
     }
