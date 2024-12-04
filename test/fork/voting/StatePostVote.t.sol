@@ -65,7 +65,6 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         );
         assertTrue(csm.hasRole(csm.VERIFIER_ROLE(), address(verifier)));
         assertEq(csm.getRoleMemberCount(csm.VERIFIER_ROLE()), 1);
-        assertEq(csm.getRoleMemberCount(csm.MODULE_MANAGER_ROLE()), 0);
         assertEq(csm.getRoleMemberCount(csm.RECOVERER_ROLE()), 0);
     }
 
@@ -115,10 +114,6 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
             2
         );
         assertEq(accounting.getRoleMemberCount(accounting.RESUME_ROLE()), 0);
-        assertEq(
-            accounting.getRoleMemberCount(accounting.ACCOUNTING_MANAGER_ROLE()),
-            0
-        );
         assertEq(
             accounting.getRoleMemberCount(accounting.MANAGE_BOND_CURVES_ROLE()),
             0
@@ -185,7 +180,6 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         assertTrue(oracle.hasRole(oracle.PAUSE_ROLE(), address(gateSeal)));
         assertEq(oracle.getRoleMemberCount(oracle.PAUSE_ROLE()), 1);
         assertEq(oracle.getRoleMemberCount(oracle.RESUME_ROLE()), 0);
-        assertEq(oracle.getRoleMemberCount(oracle.CONTRACT_MANAGER_ROLE()), 0);
         assertEq(oracle.getRoleMemberCount(oracle.SUBMIT_DATA_ROLE()), 0);
         assertEq(oracle.getRoleMemberCount(oracle.RECOVERER_ROLE()), 0);
         assertEq(

@@ -34,8 +34,6 @@ contract CSModule is
 
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
-    bytes32 public constant MODULE_MANAGER_ROLE =
-        keccak256("MODULE_MANAGER_ROLE");
     bytes32 public constant STAKING_ROUTER_ROLE =
         keccak256("STAKING_ROUTER_ROLE");
     bytes32 public constant REPORT_EL_REWARDS_STEALING_PENALTY_ROLE =
@@ -137,7 +135,7 @@ contract CSModule is
     }
 
     /// @inheritdoc ICSModule
-    function activatePublicRelease() external onlyRole(MODULE_MANAGER_ROLE) {
+    function activatePublicRelease() external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (publicRelease) revert AlreadyActivated();
         publicRelease = true;
         emit PublicRelease();
@@ -146,7 +144,7 @@ contract CSModule is
     /// @inheritdoc ICSModule
     function setKeyRemovalCharge(
         uint256 amount
-    ) external onlyRole(MODULE_MANAGER_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setKeyRemovalCharge(amount);
     }
 

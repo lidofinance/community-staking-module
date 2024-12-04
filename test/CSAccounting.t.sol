@@ -349,7 +349,6 @@ contract CSAccountingBaseTest is CSAccountingFixtures {
 
         vm.startPrank(admin);
 
-        accounting.grantRole(accounting.ACCOUNTING_MANAGER_ROLE(), admin);
         accounting.grantRole(accounting.PAUSE_ROLE(), admin);
         accounting.grantRole(accounting.RESUME_ROLE(), admin);
         accounting.grantRole(accounting.MANAGE_BOND_CURVES_ROLE(), admin);
@@ -3613,7 +3612,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
     }
 
     function setLockedBondPeriod_RevertWhen_DoesNotHaveRole() public {
-        expectRoleRevert(stranger, accounting.ACCOUNTING_MANAGER_ROLE());
+        expectRoleRevert(stranger, accounting.DEFAULT_ADMIN_ROLE());
         vm.prank(stranger);
         accounting.setLockedBondPeriod(200 days);
     }
@@ -3907,7 +3906,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
     function test_setChargePenaltyRecipient_RevertWhen_DoesNotHaveRole()
         public
     {
-        expectRoleRevert(stranger, accounting.ACCOUNTING_MANAGER_ROLE());
+        expectRoleRevert(stranger, accounting.DEFAULT_ADMIN_ROLE());
         vm.prank(stranger);
         accounting.setChargePenaltyRecipient(address(1337));
     }

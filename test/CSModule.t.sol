@@ -343,7 +343,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         vm.startPrank(admin);
         csm.grantRole(csm.PAUSE_ROLE(), address(this));
         csm.grantRole(csm.RESUME_ROLE(), address(this));
-        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
+        csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(this));
         csm.grantRole(
             csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE(),
@@ -418,7 +418,7 @@ contract CSMCommonNoPublicReleaseNoEA is CSMFixtures {
         vm.startPrank(admin);
         csm.grantRole(csm.PAUSE_ROLE(), address(this));
         csm.grantRole(csm.RESUME_ROLE(), address(this));
-        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
+        csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(this));
         csm.grantRole(
             csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE(),
@@ -516,7 +516,7 @@ contract CSMCommonNoRoles is CSMFixtures {
         });
 
         vm.startPrank(admin);
-        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
+        csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
         csm.grantRole(csm.RESUME_ROLE(), admin);
         csm.grantRole(csm.VERIFIER_ROLE(), address(this));
         csm.resume();
@@ -4163,9 +4163,6 @@ contract CSMRemoveKeysChargeFee is CSMCommon {
     }
 
     function test_removeKeys_withNoFee() public assertInvariants {
-        bytes32 role = csm.MODULE_MANAGER_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, admin);
         vm.prank(admin);
         csm.setKeyRemovalCharge(0);
 
@@ -6446,7 +6443,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
         _enableInitializers(address(csm));
         csm.initialize(address(154), address(42), 0.05 ether, actor);
 
-        bytes32 role = csm.MODULE_MANAGER_ROLE();
+        bytes32 role = csm.DEFAULT_ADMIN_ROLE();
         vm.prank(actor);
         csm.grantRole(role, stranger);
         assertTrue(csm.hasRole(role, stranger));
@@ -6465,7 +6462,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
             maxKeyRemovalCharge: 0.1 ether,
             lidoLocator: address(locator)
         });
-        bytes32 role = csm.MODULE_MANAGER_ROLE();
+        bytes32 role = csm.DEFAULT_ADMIN_ROLE();
         bytes32 adminRole = csm.DEFAULT_ADMIN_ROLE();
 
         vm.startPrank(stranger);
@@ -6474,7 +6471,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_moduleManagerRole_setRemovalCharge() public {
-        bytes32 role = csm.MODULE_MANAGER_ROLE();
+        bytes32 role = csm.DEFAULT_ADMIN_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
 
@@ -6483,7 +6480,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_moduleManagerRole_setRemovalCharge_revert() public {
-        bytes32 role = csm.MODULE_MANAGER_ROLE();
+        bytes32 role = csm.DEFAULT_ADMIN_ROLE();
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
@@ -6491,7 +6488,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_moduleManagerRole_activatePublicRelease() public {
-        bytes32 role = csm.MODULE_MANAGER_ROLE();
+        bytes32 role = csm.DEFAULT_ADMIN_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
 
@@ -6500,7 +6497,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_moduleManagerRole_activatePublicRelease_revert() public {
-        bytes32 role = csm.MODULE_MANAGER_ROLE();
+        bytes32 role = csm.DEFAULT_ADMIN_ROLE();
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);

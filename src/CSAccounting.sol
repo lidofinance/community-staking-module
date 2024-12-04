@@ -31,8 +31,6 @@ contract CSAccounting is
 {
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
-    bytes32 public constant ACCOUNTING_MANAGER_ROLE =
-        keccak256("ACCOUNTING_MANAGER_ROLE");
     bytes32 public constant MANAGE_BOND_CURVES_ROLE =
         keccak256("MANAGE_BOND_CURVES_ROLE");
     bytes32 public constant SET_BOND_CURVE_ROLE =
@@ -123,21 +121,21 @@ contract CSAccounting is
     /// @inheritdoc ICSAccounting
     function setChargePenaltyRecipient(
         address _chargePenaltyRecipient
-    ) external onlyRole(ACCOUNTING_MANAGER_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setChargePenaltyRecipient(_chargePenaltyRecipient);
     }
 
     /// @dev DEPRECATED. Use `setLockedBondPeriod` instead
     function setLockedBondRetentionPeriod(
         uint256 retention
-    ) external onlyRole(ACCOUNTING_MANAGER_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         CSBondLock._setBondLockPeriod(retention);
     }
 
     /// @inheritdoc ICSAccounting
     function setLockedBondPeriod(
         uint256 period
-    ) external onlyRole(ACCOUNTING_MANAGER_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         CSBondLock._setBondLockPeriod(period);
     }
 

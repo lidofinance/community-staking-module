@@ -462,7 +462,6 @@ contract CSFeeOracleTest is Test, Utilities {
             oracle.grantRole(oracle.MANAGE_CONSENSUS_VERSION_ROLE(), ORACLE_ADMIN);
             oracle.grantRole(oracle.PAUSE_ROLE(), ORACLE_ADMIN);
             oracle.grantRole(oracle.RESUME_ROLE(), ORACLE_ADMIN);
-            oracle.grantRole(oracle.CONTRACT_MANAGER_ROLE(), ORACLE_ADMIN);
         }
         vm.stopPrank();
     }

@@ -39,8 +39,6 @@ interface ICSAccounting is
 
     function RESUME_ROLE() external view returns (bytes32);
 
-    function ACCOUNTING_MANAGER_ROLE() external view returns (bytes32);
-
     function MANAGE_BOND_CURVES_ROLE() external view returns (bytes32);
 
     function SET_BOND_CURVE_ROLE() external view returns (bytes32);

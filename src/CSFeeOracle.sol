@@ -18,10 +18,6 @@ contract CSFeeOracle is
 {
     /// @notice No assets are stored in the contract
 
-    /// @notice An ACL role granting the permission to manage the contract (update variables).
-    bytes32 public constant CONTRACT_MANAGER_ROLE =
-        keccak256("CONTRACT_MANAGER_ROLE");
-
     /// @notice An ACL role granting the permission to submit the data for a committee report.
     bytes32 public constant SUBMIT_DATA_ROLE = keccak256("SUBMIT_DATA_ROLE");
 
@@ -68,14 +64,14 @@ contract CSFeeOracle is
     /// @inheritdoc ICSFeeOracle
     function setFeeDistributorContract(
         address feeDistributorContract
-    ) external onlyRole(CONTRACT_MANAGER_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setFeeDistributorContract(feeDistributorContract);
     }
 
     /// @inheritdoc ICSFeeOracle
     function setPerformanceLeeway(
         uint256 valueBP
-    ) external onlyRole(CONTRACT_MANAGER_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setPerformanceLeeway(valueBP);
     }
 
