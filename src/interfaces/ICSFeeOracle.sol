@@ -36,8 +36,6 @@ interface ICSFeeOracle is IAssetRecovererLib {
     error InvalidPerfLeeway();
     error SenderNotAllowed();
 
-    function CONTRACT_MANAGER_ROLE() external view returns (bytes32);
-
     function SUBMIT_DATA_ROLE() external view returns (bytes32);
 
     function PAUSE_ROLE() external view returns (bytes32);
