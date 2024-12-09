@@ -12,6 +12,7 @@ import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 import { BaseOracle } from "../src/lib/base-oracle/BaseOracle.sol";
 import { DistributorMock } from "./helpers/mocks/DistributorMock.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
+import { ICSFeeOracle } from "../src/interfaces/ICSFeeOracle.sol";
 import { Utilities } from "./helpers/Utilities.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 
@@ -81,7 +82,7 @@ contract CSFeeOracleTest is Test, Utilities {
         // INITIAL_EPOCH is far above the lastProcessingRefSlot's epoch
         assertNotEq(startSlot, refSlot);
 
-        CSFeeOracle.ReportData memory data = CSFeeOracle.ReportData({
+        ICSFeeOracle.ReportData memory data = ICSFeeOracle.ReportData({
             consensusVersion: oracle.getConsensusVersion(),
             refSlot: refSlot,
             treeRoot: keccak256("root"),
@@ -130,7 +131,7 @@ contract CSFeeOracleTest is Test, Utilities {
         // INITIAL_EPOCH is far above the lastProcessingRefSlot's epoch
         assertNotEq(startSlot, refSlot);
 
-        CSFeeOracle.ReportData memory data = CSFeeOracle.ReportData({
+        ICSFeeOracle.ReportData memory data = ICSFeeOracle.ReportData({
             consensusVersion: oracle.getConsensusVersion(),
             refSlot: refSlot,
             treeRoot: keccak256("root"),
@@ -142,7 +143,7 @@ contract CSFeeOracleTest is Test, Utilities {
         bytes32 reportHash = keccak256(abi.encode(data));
         _reachConsensus(refSlot, reportHash);
 
-        vm.expectRevert(CSFeeOracle.SenderNotAllowed.selector);
+        vm.expectRevert(ICSFeeOracle.SenderNotAllowed.selector);
         vm.prank(stranger);
         oracle.submitReportData({ data: data, contractVersion: 1 });
     }
@@ -167,7 +168,7 @@ contract CSFeeOracleTest is Test, Utilities {
         // INITIAL_EPOCH is far above the lastProcessingRefSlot's epoch
         assertNotEq(startSlot, refSlot);
 
-        CSFeeOracle.ReportData memory data = CSFeeOracle.ReportData({
+        ICSFeeOracle.ReportData memory data = ICSFeeOracle.ReportData({
             consensusVersion: oracle.getConsensusVersion(),
             refSlot: refSlot,
             treeRoot: keccak256("root"),
@@ -201,7 +202,7 @@ contract CSFeeOracleTest is Test, Utilities {
         // INITIAL_EPOCH is far above the lastProcessingRefSlot's epoch
         assertNotEq(startSlot, refSlot);
 
-        CSFeeOracle.ReportData memory data = CSFeeOracle.ReportData({
+        ICSFeeOracle.ReportData memory data = ICSFeeOracle.ReportData({
             consensusVersion: oracle.getConsensusVersion(),
             refSlot: refSlot,
             treeRoot: keccak256("root"),
@@ -237,7 +238,7 @@ contract CSFeeOracleTest is Test, Utilities {
         // INITIAL_EPOCH is far above the lastProcessingRefSlot's epoch
         assertNotEq(startSlot, refSlot);
 
-        CSFeeOracle.ReportData memory data = CSFeeOracle.ReportData({
+        ICSFeeOracle.ReportData memory data = ICSFeeOracle.ReportData({
             consensusVersion: oracle.getConsensusVersion(),
             refSlot: refSlot,
             treeRoot: keccak256("root"),
@@ -331,7 +332,7 @@ contract CSFeeOracleTest is Test, Utilities {
             address(0),
             address(0)
         );
-        vm.expectRevert(CSFeeOracle.ZeroAdminAddress.selector);
+        vm.expectRevert(ICSFeeOracle.ZeroAdminAddress.selector);
         oracle.initialize(
             address(0),
             address(distributor),
@@ -352,7 +353,7 @@ contract CSFeeOracleTest is Test, Utilities {
         address newDistributor = nextAddress();
 
         vm.expectEmit(true, true, true, true, address(oracle));
-        emit CSFeeOracle.FeeDistributorContractSet(newDistributor);
+        emit ICSFeeOracle.FeeDistributorContractSet(newDistributor);
         vm.prank(ORACLE_ADMIN);
         oracle.setFeeDistributorContract(newDistributor);
 
@@ -369,7 +370,7 @@ contract CSFeeOracleTest is Test, Utilities {
             _setInitialEpoch();
         }
 
-        vm.expectRevert(CSFeeOracle.ZeroFeeDistributorAddress.selector);
+        vm.expectRevert(ICSFeeOracle.ZeroFeeDistributorAddress.selector);
         vm.prank(ORACLE_ADMIN);
         oracle.setFeeDistributorContract(address(0));
     }
@@ -385,7 +386,7 @@ contract CSFeeOracleTest is Test, Utilities {
         uint256 newThreshold = 4200;
 
         vm.expectEmit(true, true, true, true, address(oracle));
-        emit CSFeeOracle.PerfLeewaySet(newThreshold);
+        emit ICSFeeOracle.PerfLeewaySet(newThreshold);
         vm.prank(ORACLE_ADMIN);
         oracle.setPerformanceLeeway(newThreshold);
 
@@ -400,7 +401,7 @@ contract CSFeeOracleTest is Test, Utilities {
             _setInitialEpoch();
         }
 
-        vm.expectRevert(CSFeeOracle.InvalidPerfLeeway.selector);
+        vm.expectRevert(ICSFeeOracle.InvalidPerfLeeway.selector);
         vm.prank(ORACLE_ADMIN);
         oracle.setPerformanceLeeway(99999);
     }
@@ -461,7 +462,6 @@ contract CSFeeOracleTest is Test, Utilities {
             oracle.grantRole(oracle.MANAGE_CONSENSUS_VERSION_ROLE(), ORACLE_ADMIN);
             oracle.grantRole(oracle.PAUSE_ROLE(), ORACLE_ADMIN);
             oracle.grantRole(oracle.RESUME_ROLE(), ORACLE_ADMIN);
-            oracle.grantRole(oracle.CONTRACT_MANAGER_ROLE(), ORACLE_ADMIN);
         }
         vm.stopPrank();
     }

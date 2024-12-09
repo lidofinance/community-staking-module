@@ -46,15 +46,15 @@ struct DeployParams {
     // Accounting
     uint256 maxCurveLength;
     uint256[] bondCurve;
-    uint256 minBondLockRetentionPeriod;
-    uint256 maxBondLockRetentionPeriod;
-    uint256 bondLockRetentionPeriod;
+    uint256 minBondLockPeriod;
+    uint256 maxBondLockPeriod;
+    uint256 bondLockPeriod;
     address setResetBondCurveAddress;
     address chargePenaltyRecipient;
     // Module
     bytes32 moduleType;
     uint256 minSlashingPenaltyQuotient;
-    uint256 elRewardsStealingFine;
+    uint256 elRewardsStealingAdditionalFine;
     uint256 maxKeysPerOperatorEA;
     uint256 maxKeyRemovalCharge;
     uint256 keyRemovalCharge;
@@ -138,7 +138,8 @@ abstract contract DeployBase is Script {
             CSModule csmImpl = new CSModule({
                 moduleType: config.moduleType,
                 minSlashingPenaltyQuotient: config.minSlashingPenaltyQuotient,
-                elRewardsStealingFine: config.elRewardsStealingFine,
+                elRewardsStealingAdditionalFine: config
+                    .elRewardsStealingAdditionalFine,
                 maxKeysPerOperatorEA: config.maxKeysPerOperatorEA,
                 maxKeyRemovalCharge: config.maxKeyRemovalCharge,
                 lidoLocator: config.lidoLocatorAddress
@@ -149,8 +150,8 @@ abstract contract DeployBase is Script {
                 lidoLocator: config.lidoLocatorAddress,
                 communityStakingModule: address(csm),
                 maxCurveLength: config.maxCurveLength,
-                minBondLockRetentionPeriod: config.minBondLockRetentionPeriod,
-                maxBondLockRetentionPeriod: config.maxBondLockRetentionPeriod
+                minBondLockPeriod: config.minBondLockPeriod,
+                maxBondLockPeriod: config.maxBondLockPeriod
             });
             accounting = CSAccounting(
                 _deployProxy(config.proxyAdmin, address(accountingImpl))
@@ -195,7 +196,7 @@ abstract contract DeployBase is Script {
                 bondCurve: config.bondCurve,
                 admin: deployer,
                 _feeDistributor: address(feeDistributor),
-                bondLockRetentionPeriod: config.bondLockRetentionPeriod,
+                bondLockPeriod: config.bondLockPeriod,
                 _chargePenaltyRecipient: config.chargePenaltyRecipient
             });
 

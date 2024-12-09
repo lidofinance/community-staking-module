@@ -31,8 +31,8 @@ contract DeployMainnet is DeployBase {
         config.oracleMembers[4] = 0x007DE4a5F7bc37E2F26c0cb2E8A95006EE9B89b5; // P2P
         config.oracleMembers[5] = 0xc79F702202E3A6B0B6310B537E786B9ACAA19BAf; // Chainlayer
         config.oracleMembers[6] = 0x61c91ECd902EB56e314bB2D5c5C07785444Ea1c8; // bloXroute
-        config.oracleMembers[7] = 0x1Ca0fEC59b86F549e1F1184d97cb47794C8Af58d; // Instadapp
-        config.oracleMembers[8] = 0xe57B3792aDCc5da47EF4fF588883F0ee0c9835C9; // MatrixedLink
+        config.oracleMembers[7] = 0xe57B3792aDCc5da47EF4fF588883F0ee0c9835C9; // MatrixedLink
+        config.oracleMembers[8] = 0x73181107c8D9ED4ce0bbeF7A0b4ccf3320C41d12; // Instadapp
         config.hashConsensusQuorum = 5;
         // Verifier
         // NOTE: Deneb fork gIndexes. Should be updated according to `config.verifierSupportedEpoch` fork epoch if needed
@@ -55,9 +55,9 @@ contract DeployMainnet is DeployBase {
         config.bondCurve[0] = 2.4 ether;
         config.bondCurve[1] = 3.7 ether;
 
-        config.minBondLockRetentionPeriod = 4 weeks;
-        config.maxBondLockRetentionPeriod = 365 days;
-        config.bondLockRetentionPeriod = 8 weeks;
+        config.minBondLockPeriod = 4 weeks;
+        config.maxBondLockPeriod = 365 days;
+        config.bondLockPeriod = 8 weeks;
         config
             .setResetBondCurveAddress = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
         config
@@ -65,7 +65,7 @@ contract DeployMainnet is DeployBase {
         // Module
         config.moduleType = "community-onchain-v1"; // Just a unique type name to be used by the off-chain tooling
         config.minSlashingPenaltyQuotient = 32;
-        config.elRewardsStealingFine = 0.1 ether;
+        config.elRewardsStealingAdditionalFine = 0.1 ether;
         config.maxKeysPerOperatorEA = 12; // 12 EA vals will result in approx 16 ETH worth of bond
         config.maxKeyRemovalCharge = 0.1 ether;
         config.keyRemovalCharge = 0.05 ether;

@@ -6,6 +6,7 @@ pragma solidity 0.8.24;
 import "forge-std/Test.sol";
 
 import { CSModule, NodeOperator, NodeOperatorManagementProperties } from "../../../src/CSModule.sol";
+import { ICSModule } from "../../../src/interfaces/ICSModule.sol";
 import { ILidoLocator } from "../../../src/interfaces/ILidoLocator.sol";
 import { IStakingRouter } from "../../../src/interfaces/IStakingRouter.sol";
 import { IWithdrawalQueue } from "../../../src/interfaces/IWithdrawalQueue.sol";
@@ -52,7 +53,7 @@ contract StakingRouterIntegrationTest is
 
         vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
         csm.grantRole(csm.RESUME_ROLE(), address(this));
-        csm.grantRole(csm.MODULE_MANAGER_ROLE(), address(this));
+        csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(stakingRouter));
         vm.stopPrank();
         if (csm.isPaused()) csm.resume();
@@ -225,7 +226,7 @@ contract StakingRouterIntegrationTest is
         address nodeOperatorManager = nextAddress();
         uint256 noId = addNodeOperator(nodeOperatorManager, 5);
 
-        vm.expectRevert(CSModule.NotSupported.selector);
+        vm.expectRevert(ICSModule.NotSupported.selector);
         vm.prank(agent);
         stakingRouter.updateRefundedValidatorsCount(moduleId, noId, 1);
     }

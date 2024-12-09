@@ -58,11 +58,6 @@ contract CSModuleInvariants is InvariantsBase {
         );
         assertEq(csm.getRoleMemberCount(csm.RESUME_ROLE()), 0, "resume");
         assertEq(
-            csm.getRoleMemberCount(csm.MODULE_MANAGER_ROLE()),
-            0,
-            "module manager"
-        );
-        assertEq(
             csm.getRoleMemberCount(csm.STAKING_ROUTER_ROLE()),
             1,
             "staking router"
@@ -125,11 +120,6 @@ contract CSAccountingInvariants is InvariantsBase {
             accounting.getRoleMemberCount(accounting.RESUME_ROLE()),
             0,
             "resume"
-        );
-        assertEq(
-            accounting.getRoleMemberCount(accounting.ACCOUNTING_MANAGER_ROLE()),
-            0,
-            "accounting manager"
         );
         assertEq(
             accounting.getRoleMemberCount(accounting.MANAGE_BOND_CURVES_ROLE()),
@@ -196,11 +186,6 @@ contract CSFeeOracleInvariant is InvariantsBase {
             oracle.getRoleMemberCount(oracle.DEFAULT_ADMIN_ROLE()),
             adminsCount,
             "default admin"
-        );
-        assertEq(
-            oracle.getRoleMemberCount(oracle.CONTRACT_MANAGER_ROLE()),
-            0,
-            "contract manager"
         );
         assertEq(
             oracle.getRoleMemberCount(oracle.SUBMIT_DATA_ROLE()),

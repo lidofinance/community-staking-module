@@ -65,18 +65,6 @@ contract CSVerifier is ICSVerifier {
     /// @dev Staking module contract
     ICSModule public immutable MODULE;
 
-    error RootNotFound();
-    error InvalidGIndex();
-    error InvalidBlockHeader();
-    error InvalidChainConfig();
-    error PartialWithdrawal();
-    error ValidatorNotWithdrawn();
-    error InvalidWithdrawalAddress();
-    error UnsupportedSlot(Slot slot);
-    error ZeroModuleAddress();
-    error ZeroWithdrawalAddress();
-    error InvalidPivotSlot();
-
     /// @dev The previous and current forks can be essentially the same.
     constructor(
         address withdrawalAddress,
@@ -115,11 +103,7 @@ contract CSVerifier is ICSVerifier {
         PIVOT_SLOT = pivotSlot;
     }
 
-    /// @notice Verify slashing proof and report slashing to the module for valid proofs
-    /// @param beaconBlock Beacon block header
-    /// @param witness Slashing witness
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the validator key in the Node Operator's key storage
+    /// @inheritdoc ICSVerifier
     function processSlashingProof(
         ProvableBeaconBlockHeader calldata beaconBlock,
         SlashingWitness calldata witness,
@@ -166,11 +150,7 @@ contract CSVerifier is ICSVerifier {
         MODULE.submitInitialSlashing(nodeOperatorId, keyIndex);
     }
 
-    /// @notice Verify withdrawal proof and report withdrawal to the module for valid proofs
-    /// @param beaconBlock Beacon block header
-    /// @param witness Withdrawal witness
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the validator key in the Node Operator's key storage
+    /// @inheritdoc ICSVerifier
     function processWithdrawalProof(
         ProvableBeaconBlockHeader calldata beaconBlock,
         WithdrawalWitness calldata witness,
@@ -211,12 +191,7 @@ contract CSVerifier is ICSVerifier {
         );
     }
 
-    /// @notice Verify withdrawal proof against historical summaries data and report withdrawal to the module for valid proofs
-    /// @param beaconBlock Beacon block header
-    /// @param oldBlock Historical block header witness
-    /// @param witness Withdrawal witness
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the validator key in the Node Operator's key storage
+    /// @inheritdoc ICSVerifier
     function processHistoricalWithdrawalProof(
         ProvableBeaconBlockHeader calldata beaconBlock,
         HistoricalHeaderWitness calldata oldBlock,

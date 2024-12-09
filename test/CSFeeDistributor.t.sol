@@ -10,6 +10,7 @@ import { IAssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import { IStETH } from "../src/interfaces/IStETH.sol";
+import { ICSFeeDistributor } from "../src/interfaces/ICSFeeDistributor.sol";
 
 import { Fixtures } from "./helpers/Fixtures.sol";
 import { MerkleTree } from "./helpers/MerkleTree.sol";
@@ -79,17 +80,17 @@ contract CSFeeDistributorConstructorTest is CSFeeDistributorTestBase {
     }
 
     function test_initialize_RevertWhen_ZeroAccountingAddress() public {
-        vm.expectRevert(CSFeeDistributor.ZeroAccountingAddress.selector);
+        vm.expectRevert(ICSFeeDistributor.ZeroAccountingAddress.selector);
         new CSFeeDistributor(address(stETH), address(0), oracle);
     }
 
     function test_initialize_RevertWhen_ZeroStEthAddress() public {
-        vm.expectRevert(CSFeeDistributor.ZeroStEthAddress.selector);
+        vm.expectRevert(ICSFeeDistributor.ZeroStEthAddress.selector);
         new CSFeeDistributor(address(0), address(accounting), oracle);
     }
 
     function test_initialize_RevertWhen_ZeroOracleAddress() public {
-        vm.expectRevert(CSFeeDistributor.ZeroOracleAddress.selector);
+        vm.expectRevert(ICSFeeDistributor.ZeroOracleAddress.selector);
         new CSFeeDistributor(address(stETH), address(accounting), address(0));
     }
 }
@@ -113,7 +114,7 @@ contract CSFeeDistributorInitTest is CSFeeDistributorTestBase {
     function test_initialize_RevertWhen_zeroAdmin() public {
         _enableInitializers(address(feeDistributor));
 
-        vm.expectRevert(CSFeeDistributor.ZeroAdminAddress.selector);
+        vm.expectRevert(ICSFeeDistributor.ZeroAdminAddress.selector);
         feeDistributor.initialize(address(0));
     }
 }
@@ -160,7 +161,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         );
 
         vm.expectEmit(true, true, true, true, address(feeDistributor));
-        emit CSFeeDistributor.FeeDistributed(nodeOperatorId, shares);
+        emit ICSFeeDistributor.FeeDistributed(nodeOperatorId, shares);
 
         vm.prank(address(accounting));
         feeDistributor.distributeFees({
@@ -245,7 +246,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
             .sig("treeRoot()")
             .checked_write(feeDistributor.hashLeaf(noId, shares));
 
-        vm.expectRevert(CSFeeDistributor.InvalidProof.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidProof.selector);
         feeDistributor.getFeesToDistribute({
             proof: new bytes32[](0),
             nodeOperatorId: noId,
@@ -265,7 +266,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         public
         assertInvariants
     {
-        vm.expectRevert(CSFeeDistributor.NotAccounting.selector);
+        vm.expectRevert(ICSFeeDistributor.NotAccounting.selector);
 
         feeDistributor.distributeFees({
             proof: new bytes32[](1),
@@ -278,7 +279,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         public
         assertInvariants
     {
-        vm.expectRevert(CSFeeDistributor.InvalidProof.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidProof.selector);
 
         vm.prank(address(accounting));
         feeDistributor.distributeFees({
@@ -313,7 +314,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
             .with_key(nodeOperatorId)
             .checked_write(shares + 99);
 
-        vm.expectRevert(CSFeeDistributor.FeeSharesDecrease.selector);
+        vm.expectRevert(ICSFeeDistributor.FeeSharesDecrease.selector);
         vm.prank(address(accounting));
         feeDistributor.distributeFees({
             proof: proof,
@@ -341,7 +342,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
             shares - 1
         );
 
-        vm.expectRevert(CSFeeDistributor.NotEnoughShares.selector);
+        vm.expectRevert(ICSFeeDistributor.NotEnoughShares.selector);
         vm.prank(address(accounting));
         feeDistributor.distributeFees({
             proof: proof,
@@ -412,14 +413,14 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         bytes32 treeRoot = someBytes32();
 
         vm.expectEmit(true, true, true, true, address(feeDistributor));
-        emit CSFeeDistributor.DistributionDataUpdated(
+        emit ICSFeeDistributor.DistributionDataUpdated(
             shares,
             treeRoot,
             treeCid
         );
 
         vm.expectEmit(true, true, true, true, address(feeDistributor));
-        emit CSFeeDistributor.DistributionLogUpdated(logCid);
+        emit ICSFeeDistributor.DistributionLogUpdated(logCid);
 
         vm.prank(oracle);
         feeDistributor.processOracleReport(treeRoot, treeCid, logCid, shares);
@@ -471,7 +472,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
 
         bytes32 root = tree.root();
 
-        vm.expectRevert(CSFeeDistributor.InvalidShares.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidShares.selector);
         vm.prank(oracle);
         feeDistributor.processOracleReport(
             root,
@@ -490,7 +491,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
 
         stETH.mintShares(address(feeDistributor), shares);
 
-        vm.expectRevert(CSFeeDistributor.InvalidTreeRoot.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidTreeRoot.selector);
         vm.prank(oracle);
         feeDistributor.processOracleReport(
             bytes32(0),
@@ -510,7 +511,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         stETH.mintShares(address(feeDistributor), shares);
         bytes32 root = feeDistributor.treeRoot();
 
-        vm.expectRevert(CSFeeDistributor.InvalidTreeRoot.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidTreeRoot.selector);
         vm.prank(oracle);
         feeDistributor.processOracleReport(
             root,
@@ -529,7 +530,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
 
         stETH.mintShares(address(feeDistributor), shares);
 
-        vm.expectRevert(CSFeeDistributor.InvalidTreeCID.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidTreeCID.selector);
         vm.prank(oracle);
         feeDistributor.processOracleReport(
             someBytes32(),
@@ -549,7 +550,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         stETH.mintShares(address(feeDistributor), shares);
         string memory lastTreeCid = feeDistributor.treeCid();
 
-        vm.expectRevert(CSFeeDistributor.InvalidTreeCID.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidTreeCID.selector);
         vm.prank(oracle);
         feeDistributor.processOracleReport(
             someBytes32(),
@@ -560,7 +561,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
     }
 
     function test_processOracleReport_RevertWhen_ZeroLogCid() public {
-        vm.expectRevert(CSFeeDistributor.InvalidLogCID.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidLogCID.selector);
         vm.prank(oracle);
         feeDistributor.processOracleReport(someBytes32(), someCIDv0(), "", 0);
     }
@@ -571,7 +572,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
 
         string memory lastLogCid = feeDistributor.logCid();
 
-        vm.expectRevert(CSFeeDistributor.InvalidLogCID.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidLogCID.selector);
         vm.prank(oracle);
         feeDistributor.processOracleReport(
             someBytes32(),
@@ -588,7 +589,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         uint256 shares = 1_000_000;
         _makeInitialReport(shares);
 
-        vm.expectRevert(CSFeeDistributor.InvalidShares.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidShares.selector);
         vm.prank(oracle);
         feeDistributor.processOracleReport(
             someBytes32(),
@@ -602,7 +603,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         public
         assertInvariants
     {
-        vm.expectRevert(CSFeeDistributor.NotOracle.selector);
+        vm.expectRevert(ICSFeeDistributor.NotOracle.selector);
         vm.prank(stranger);
         feeDistributor.processOracleReport(
             someBytes32(),

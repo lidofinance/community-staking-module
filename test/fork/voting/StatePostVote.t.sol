@@ -65,7 +65,6 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         );
         assertTrue(csm.hasRole(csm.VERIFIER_ROLE(), address(verifier)));
         assertEq(csm.getRoleMemberCount(csm.VERIFIER_ROLE()), 1);
-        assertEq(csm.getRoleMemberCount(csm.MODULE_MANAGER_ROLE()), 0);
         assertEq(csm.getRoleMemberCount(csm.RECOVERER_ROLE()), 0);
     }
 
@@ -116,10 +115,6 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         );
         assertEq(accounting.getRoleMemberCount(accounting.RESUME_ROLE()), 0);
         assertEq(
-            accounting.getRoleMemberCount(accounting.ACCOUNTING_MANAGER_ROLE()),
-            0
-        );
-        assertEq(
             accounting.getRoleMemberCount(accounting.MANAGE_BOND_CURVES_ROLE()),
             0
         );
@@ -158,6 +153,7 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_feeOracle_state() public {
+        // NOTE: It assumes the first report has been settled.
         assertFalse(oracle.isPaused());
         (
             bytes32 hash,
@@ -165,10 +161,9 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
             uint256 processingDeadlineTime,
             bool processingStarted
         ) = oracle.getConsensusReport();
-        assertEq(hash, bytes32(0));
-        assertEq(refSlot, 0);
-        assertEq(processingDeadlineTime, 0);
-        assertFalse(processingStarted);
+        assertFalse(hash == bytes32(0), "expected report hash to be non-zero");
+        assertGt(refSlot, 0);
+        assertGt(processingDeadlineTime, 0);
     }
 
     function test_feeOracle_roles() public {
@@ -185,7 +180,6 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         assertTrue(oracle.hasRole(oracle.PAUSE_ROLE(), address(gateSeal)));
         assertEq(oracle.getRoleMemberCount(oracle.PAUSE_ROLE()), 1);
         assertEq(oracle.getRoleMemberCount(oracle.RESUME_ROLE()), 0);
-        assertEq(oracle.getRoleMemberCount(oracle.CONTRACT_MANAGER_ROLE()), 0);
         assertEq(oracle.getRoleMemberCount(oracle.SUBMIT_DATA_ROLE()), 0);
         assertEq(oracle.getRoleMemberCount(oracle.RECOVERER_ROLE()), 0);
         assertEq(

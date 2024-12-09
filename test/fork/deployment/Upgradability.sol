@@ -25,7 +25,8 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
         CSModule newModule = new CSModule({
             moduleType: "CSMv2",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: csm.EL_REWARDS_STEALING_FINE(),
+            elRewardsStealingAdditionalFine: csm
+                .EL_REWARDS_STEALING_ADDITIONAL_FINE(),
             maxKeysPerOperatorEA: csm
                 .MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(),
             maxKeyRemovalCharge: csm.MAX_KEY_REMOVAL_CHARGE(),
@@ -41,7 +42,8 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
         CSModule newModule = new CSModule({
             moduleType: "CSMv2",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingFine: csm.EL_REWARDS_STEALING_FINE(),
+            elRewardsStealingAdditionalFine: csm
+                .EL_REWARDS_STEALING_ADDITIONAL_FINE(),
             maxKeysPerOperatorEA: csm
                 .MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(),
             maxKeyRemovalCharge: csm.MAX_KEY_REMOVAL_CHARGE(),
@@ -73,10 +75,8 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
             lidoLocator: address(accounting.LIDO_LOCATOR()),
             communityStakingModule: address(csm),
             maxCurveLength: currentMaxCurveLength + 10,
-            minBondLockRetentionPeriod: accounting
-                .MIN_BOND_LOCK_RETENTION_PERIOD(),
-            maxBondLockRetentionPeriod: accounting
-                .MAX_BOND_LOCK_RETENTION_PERIOD()
+            minBondLockPeriod: accounting.MIN_BOND_LOCK_PERIOD(),
+            maxBondLockPeriod: accounting.MAX_BOND_LOCK_PERIOD()
         });
         vm.prank(proxy.proxy__getAdmin());
         proxy.proxy__upgradeTo(address(newAccounting));
@@ -90,10 +90,8 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
             lidoLocator: address(accounting.LIDO_LOCATOR()),
             communityStakingModule: address(csm),
             maxCurveLength: currentMaxCurveLength + 10,
-            minBondLockRetentionPeriod: accounting
-                .MIN_BOND_LOCK_RETENTION_PERIOD(),
-            maxBondLockRetentionPeriod: accounting
-                .MAX_BOND_LOCK_RETENTION_PERIOD()
+            minBondLockPeriod: accounting.MIN_BOND_LOCK_PERIOD(),
+            maxBondLockPeriod: accounting.MAX_BOND_LOCK_PERIOD()
         });
         address contractAdmin = accounting.getRoleMember(
             accounting.DEFAULT_ADMIN_ROLE(),

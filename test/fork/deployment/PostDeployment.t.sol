@@ -41,8 +41,8 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
             32 ether / deployParams.minSlashingPenaltyQuotient
         );
         assertEq(
-            csm.EL_REWARDS_STEALING_FINE(),
-            deployParams.elRewardsStealingFine
+            csm.EL_REWARDS_STEALING_ADDITIONAL_FINE(),
+            deployParams.elRewardsStealingAdditionalFine
         );
         assertEq(
             csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(),
@@ -101,7 +101,6 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
         );
         assertTrue(csm.hasRole(csm.VERIFIER_ROLE(), address(verifier)));
         assertEq(csm.getRoleMemberCount(csm.VERIFIER_ROLE()), 1);
-        assertEq(csm.getRoleMemberCount(csm.MODULE_MANAGER_ROLE()), 0);
         assertEq(csm.getRoleMemberCount(csm.RECOVERER_ROLE()), 0);
     }
 
@@ -147,12 +146,12 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
         );
 
         assertEq(
-            accounting.MIN_BOND_LOCK_RETENTION_PERIOD(),
-            deployParams.minBondLockRetentionPeriod
+            accounting.MIN_BOND_LOCK_PERIOD(),
+            deployParams.minBondLockPeriod
         );
         assertEq(
-            accounting.MAX_BOND_LOCK_RETENTION_PERIOD(),
-            deployParams.maxBondLockRetentionPeriod
+            accounting.MAX_BOND_LOCK_PERIOD(),
+            deployParams.maxBondLockPeriod
         );
         assertEq(accounting.MAX_CURVE_LENGTH(), deployParams.maxCurveLength);
     }
@@ -163,10 +162,7 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
             deployParams.bondCurve
         );
         assertEq(address(accounting.feeDistributor()), address(feeDistributor));
-        assertEq(
-            accounting.getBondLockRetentionPeriod(),
-            deployParams.bondLockRetentionPeriod
-        );
+        assertEq(accounting.getBondLockPeriod(), deployParams.bondLockPeriod);
         assertEq(
             accounting.chargePenaltyRecipient(),
             deployParams.chargePenaltyRecipient
@@ -232,10 +228,6 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
         );
         assertEq(accounting.getRoleMemberCount(accounting.RESUME_ROLE()), 0);
         assertEq(
-            accounting.getRoleMemberCount(accounting.ACCOUNTING_MANAGER_ROLE()),
-            0
-        );
-        assertEq(
             accounting.getRoleMemberCount(accounting.MANAGE_BOND_CURVES_ROLE()),
             0
         );
@@ -255,7 +247,7 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
             bondCurve: deployParams.bondCurve,
             admin: address(deployParams.aragonAgent),
             _feeDistributor: address(feeDistributor),
-            bondLockRetentionPeriod: deployParams.bondLockRetentionPeriod,
+            bondLockPeriod: deployParams.bondLockPeriod,
             _chargePenaltyRecipient: address(0)
         });
     }
@@ -352,7 +344,6 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertTrue(oracle.hasRole(oracle.PAUSE_ROLE(), address(gateSeal)));
         assertEq(oracle.getRoleMemberCount(oracle.PAUSE_ROLE()), 1);
         assertEq(oracle.getRoleMemberCount(oracle.RESUME_ROLE()), 0);
-        assertEq(oracle.getRoleMemberCount(oracle.CONTRACT_MANAGER_ROLE()), 0);
         assertEq(oracle.getRoleMemberCount(oracle.SUBMIT_DATA_ROLE()), 0);
         assertEq(oracle.getRoleMemberCount(oracle.RECOVERER_ROLE()), 0);
         assertEq(

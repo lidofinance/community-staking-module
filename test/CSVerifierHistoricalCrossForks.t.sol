@@ -90,7 +90,7 @@ contract CSVerifierBiForkTestConstructor is Test, Utilities {
     }
 
     function test_constructor_RevertWhen_InvalidChainConfig() public {
-        vm.expectRevert(CSVerifier.InvalidChainConfig.selector);
+        vm.expectRevert(ICSVerifier.InvalidChainConfig.selector);
         verifier = new CSVerifier({
             withdrawalAddress: nextAddress(),
             module: address(module),
@@ -107,7 +107,7 @@ contract CSVerifierBiForkTestConstructor is Test, Utilities {
     }
 
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
-        vm.expectRevert(CSVerifier.ZeroModuleAddress.selector);
+        vm.expectRevert(ICSVerifier.ZeroModuleAddress.selector);
         verifier = new CSVerifier({
             withdrawalAddress: nextAddress(),
             module: address(0), // <--
@@ -124,7 +124,7 @@ contract CSVerifierBiForkTestConstructor is Test, Utilities {
     }
 
     function test_constructor_RevertWhen_ZeroWithdrawalAddress() public {
-        vm.expectRevert(CSVerifier.ZeroWithdrawalAddress.selector);
+        vm.expectRevert(ICSVerifier.ZeroWithdrawalAddress.selector);
         verifier = new CSVerifier({
             withdrawalAddress: address(0),
             module: address(module),
@@ -141,7 +141,7 @@ contract CSVerifierBiForkTestConstructor is Test, Utilities {
     }
 
     function test_constructor_RevertWhen_InvalidPivotSlot() public {
-        vm.expectRevert(CSVerifier.InvalidPivotSlot.selector);
+        vm.expectRevert(ICSVerifier.InvalidPivotSlot.selector);
         verifier = new CSVerifier({
             withdrawalAddress: nextAddress(),
             module: address(module),
@@ -224,7 +224,7 @@ contract CSVerifierBiForkHistoricalTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                CSVerifier.UnsupportedSlot.selector,
+                ICSVerifier.UnsupportedSlot.selector,
                 fixture.beaconBlock.header.slot
             )
         );
@@ -249,7 +249,7 @@ contract CSVerifierBiForkHistoricalTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                CSVerifier.UnsupportedSlot.selector,
+                ICSVerifier.UnsupportedSlot.selector,
                 fixture.oldBlock.header.slot
             )
         );
@@ -276,7 +276,7 @@ contract CSVerifierBiForkHistoricalTest is Test {
             abi.encode("lol")
         );
 
-        vm.expectRevert(CSVerifier.InvalidBlockHeader.selector);
+        vm.expectRevert(ICSVerifier.InvalidBlockHeader.selector);
         // solhint-disable-next-line func-named-parameters
         verifier.processHistoricalWithdrawalProof(
             fixture.beaconBlock,
@@ -293,7 +293,7 @@ contract CSVerifierBiForkHistoricalTest is Test {
 
         fixture.oldBlock.rootGIndex = GIndex.wrap(bytes32(0));
 
-        vm.expectRevert(CSVerifier.InvalidGIndex.selector);
+        vm.expectRevert(ICSVerifier.InvalidGIndex.selector);
         // solhint-disable-next-line func-named-parameters
         verifier.processHistoricalWithdrawalProof(
             fixture.beaconBlock,
