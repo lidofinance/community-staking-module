@@ -64,6 +64,7 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     error ZeroAccountingAddress();
     error ZeroAdminAddress();
     error ZeroRewardAddress();
+    error InvalidEarlyAdoptionAddress();
 
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
@@ -115,7 +116,7 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     event PublicRelease();
     event KeyRemovalChargeSet(uint256 amount);
-
+    event EarlyAdoptionSet(address earlyAdoption);
     event KeyRemovalChargeApplied(uint256 indexed nodeOperatorId);
     event ELRewardsStealingPenaltyReported(
         uint256 indexed nodeOperatorId,
@@ -187,6 +188,11 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     /// @notice Public release mode status
     function publicRelease() external view returns (bool);
+
+    /// @notice Set the early adoption contract address
+    /// @param _earlyAdoption Early Adoption contract address
+    /// @dev Can be set to zero address to disable the Early Adoption integration
+    function setEarlyAdoption(address _earlyAdoption) external;
 
     /// @notice Activate public release mode
     ///         Enable permissionless creation of the Node Operators

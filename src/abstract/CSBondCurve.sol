@@ -50,11 +50,16 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     }
 
     /// @inheritdoc ICSBondCurve
+    function curveExists(uint256 curveId) public view returns (bool) {
+        return curveId < _getCSBondCurveStorage().bondCurves.length;
+    }
+
+    /// @inheritdoc ICSBondCurve
     function getCurveInfo(
         uint256 curveId
     ) public view returns (BondCurve memory) {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        if (curveId > $.bondCurves.length - 1) revert InvalidBondCurveId();
+        if (!curveExists(curveId)) revert InvalidBondCurveId();
         return $.bondCurves[curveId];
     }
 

@@ -32,7 +32,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         assertFalse(accounting.isPaused());
         assertEq(accounting.totalBondShares(), 0);
         assertEq(
-            accounting.getCurveInfo(earlyAdoption.CURVE_ID()).points,
+            accounting.getCurveInfo(earlyAdoption.curveId()).points,
             deployParams.earlyAdoptionBondCurve
         );
     }

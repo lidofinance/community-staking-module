@@ -212,18 +212,18 @@ abstract contract DeployBase is Script {
                 address(deployer)
             );
 
-            earlyAdoption = new CSEarlyAdoption({
-                treeRoot: config.earlyAdoptionTreeRoot,
-                curveId: eaCurveId,
-                module: address(csm)
-            });
-
             csm.initialize({
                 _accounting: address(accounting),
-                _earlyAdoption: address(earlyAdoption),
                 _keyRemovalCharge: config.keyRemovalCharge,
                 admin: deployer
             });
+            earlyAdoption = new CSEarlyAdoption({
+                _treeRoot: config.earlyAdoptionTreeRoot,
+                _curveId: eaCurveId,
+                module: address(csm),
+                admin: config.aragonAgent
+            });
+            csm.setEarlyAdoption(address(earlyAdoption));
 
             feeDistributor.initialize({ admin: address(deployer) });
 

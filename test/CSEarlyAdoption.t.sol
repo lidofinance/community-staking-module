@@ -5,71 +5,98 @@ pragma solidity 0.8.24;
 import "forge-std/Test.sol";
 import { CSEarlyAdoption } from "../src/CSEarlyAdoption.sol";
 import { ICSEarlyAdoption } from "../src/interfaces/ICSEarlyAdoption.sol";
+import { ICSModule } from "../src/interfaces/ICSModule.sol";
+import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 import { Utilities } from "./helpers/Utilities.sol";
 import "./helpers/MerkleTree.sol";
+
+contract CSMMock {
+    uint256 public constant latestCurveId = 2;
+
+    function accounting() external view returns (address) {
+        return address(this);
+    }
+
+    function curveExists(uint256 curveId) external view returns (bool) {
+        return curveId <= latestCurveId;
+    }
+}
 
 contract CSEarlyAdoptionConstructorTest is Test, Utilities {
     CSEarlyAdoption internal earlyAdoption;
     address internal csm;
     address internal nodeOperator;
     address internal stranger;
+    address internal admin;
     uint256 internal curveId;
     MerkleTree internal merkleTree;
     bytes32 internal root;
 
     function setUp() public {
-        csm = nextAddress("CSM");
+        csm = address(new CSMMock());
         nodeOperator = nextAddress("NODE_OPERATOR");
         stranger = nextAddress("STRANGER");
+        admin = nextAddress("ADMIN");
 
         merkleTree = new MerkleTree();
         merkleTree.pushLeaf(abi.encode(nodeOperator));
 
         curveId = 1;
         root = merkleTree.root();
+        earlyAdoption = new CSEarlyAdoption(
+            merkleTree.root(),
+            curveId,
+            csm,
+            admin
+        );
     }
 
     function test_constructor() public {
-        earlyAdoption = new CSEarlyAdoption(root, curveId, csm);
-        assertEq(earlyAdoption.TREE_ROOT(), root);
-        assertEq(earlyAdoption.CURVE_ID(), curveId);
+        vm.expectEmit(true, true, true, true);
+        emit ICSEarlyAdoption.TreeRootSet(root);
+        vm.expectEmit(true, true, true, true);
+        emit ICSEarlyAdoption.CurveIdSet(curveId);
+        earlyAdoption = new CSEarlyAdoption(root, curveId, csm, admin);
+
         assertEq(earlyAdoption.MODULE(), csm);
+        assertEq(earlyAdoption.treeRoot(), root);
+        assertEq(earlyAdoption.curveId(), curveId);
+        assertEq(
+            earlyAdoption.getRoleMemberCount(
+                earlyAdoption.DEFAULT_ADMIN_ROLE()
+            ),
+            1
+        );
+        assertEq(
+            earlyAdoption.getRoleMember(earlyAdoption.DEFAULT_ADMIN_ROLE(), 0),
+            admin
+        );
     }
 
     function test_constructor_RevertWhen_InvalidTreeRoot() public {
         vm.expectRevert(ICSEarlyAdoption.InvalidTreeRoot.selector);
-        new CSEarlyAdoption(bytes32(0), curveId, csm);
+        new CSEarlyAdoption(bytes32(0), curveId, csm, admin);
     }
 
     function test_constructor_RevertWhen_InvalidCurveId() public {
         vm.expectRevert(ICSEarlyAdoption.InvalidCurveId.selector);
-        new CSEarlyAdoption(root, 0, csm);
+        new CSEarlyAdoption(root, 0, csm, admin);
+    }
+
+    function test_constructor_RevertWhen_CurveDoesNotExists() public {
+        uint256 invalidCurveId = CSMMock(csm).latestCurveId() + 1;
+        vm.expectRevert(ICSEarlyAdoption.InvalidCurveId.selector);
+        new CSEarlyAdoption(root, invalidCurveId, csm, admin);
     }
 
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
         vm.expectRevert(ICSEarlyAdoption.ZeroModuleAddress.selector);
-        new CSEarlyAdoption(root, curveId, address(0));
+        new CSEarlyAdoption(root, curveId, address(0), admin);
     }
-}
 
-contract CSEarlyAdoptionTest is Test, Utilities {
-    CSEarlyAdoption internal earlyAdoption;
-    address internal csm;
-    address internal nodeOperator;
-    address internal stranger;
-    uint256 internal curveId;
-    MerkleTree internal merkleTree;
-
-    function setUp() public {
-        csm = nextAddress("CSM");
-        nodeOperator = nextAddress("NODE_OPERATOR");
-        stranger = nextAddress("STRANGER");
-
-        merkleTree = new MerkleTree();
-        merkleTree.pushLeaf(abi.encode(nodeOperator));
-
-        curveId = 1;
-        earlyAdoption = new CSEarlyAdoption(merkleTree.root(), curveId, csm);
+    function test_constructor_RevertWhen_ZeroAdminAddress() public {
+        vm.expectRevert(ICSEarlyAdoption.ZeroAdminAddress.selector);
+        new CSEarlyAdoption(root, curveId, csm, address(0));
     }
 
     function test_verifyProof() public {
@@ -146,5 +173,113 @@ contract CSEarlyAdoptionTest is Test, Utilities {
             earlyAdoption.hashLeaf(addr),
             keccak256(bytes.concat(keccak256(abi.encode(addr))))
         );
+    }
+
+    function test_setTreeRoot() public {
+        MerkleTree newTree = new MerkleTree();
+        newTree.pushLeaf(abi.encode(stranger));
+        bytes32 newRoot = newTree.root();
+
+        assertTrue(
+            earlyAdoption.verifyProof(nodeOperator, merkleTree.getProof(0))
+        );
+        assertFalse(earlyAdoption.verifyProof(stranger, newTree.getProof(0)));
+
+        vm.startPrank(admin);
+        earlyAdoption.grantRole(earlyAdoption.SET_TREE_ROOT_ROLE(), admin);
+
+        vm.expectEmit(true, true, true, true);
+        emit ICSEarlyAdoption.TreeRootSet(newRoot);
+        earlyAdoption.setTreeRoot(newRoot);
+
+        vm.stopPrank();
+
+        assertEq(earlyAdoption.treeRoot(), newRoot);
+        assertFalse(
+            earlyAdoption.verifyProof(nodeOperator, merkleTree.getProof(0))
+        );
+        assertTrue(earlyAdoption.verifyProof(stranger, newTree.getProof(0)));
+    }
+
+    function test_setTreeRoot_revert_zeroRoot() public {
+        vm.startPrank(admin);
+        earlyAdoption.grantRole(earlyAdoption.SET_TREE_ROOT_ROLE(), admin);
+
+        vm.expectRevert(ICSEarlyAdoption.InvalidTreeRoot.selector);
+        earlyAdoption.setTreeRoot(bytes32(0));
+
+        vm.stopPrank();
+    }
+
+    function test_setTreeRoot_revert_sameRoot() public {
+        vm.startPrank(admin);
+        earlyAdoption.grantRole(earlyAdoption.SET_TREE_ROOT_ROLE(), admin);
+        bytes32 currRoot = merkleTree.root();
+
+        vm.expectRevert(ICSEarlyAdoption.InvalidTreeRoot.selector);
+        earlyAdoption.setTreeRoot(currRoot);
+
+        vm.stopPrank();
+    }
+
+    function test_setTreeRoot_revert_noRole() public {
+        vm.startPrank(admin);
+        expectRoleRevert(admin, earlyAdoption.SET_TREE_ROOT_ROLE());
+        earlyAdoption.setTreeRoot(bytes32(randomBytes(32)));
+        vm.stopPrank();
+    }
+
+    function test_setCurveId() public {
+        uint256 newCurveId = 2;
+
+        vm.startPrank(admin);
+        earlyAdoption.grantRole(earlyAdoption.SET_CURVE_ID_ROLE(), admin);
+
+        vm.expectEmit(true, true, true, true);
+        emit ICSEarlyAdoption.CurveIdSet(newCurveId);
+        earlyAdoption.setCurveId(newCurveId);
+
+        vm.stopPrank();
+
+        assertEq(earlyAdoption.curveId(), newCurveId);
+    }
+
+    function test_setCurveId_revert_zeroCurveId() public {
+        vm.startPrank(admin);
+        earlyAdoption.grantRole(earlyAdoption.SET_CURVE_ID_ROLE(), admin);
+
+        vm.expectRevert(ICSEarlyAdoption.InvalidCurveId.selector);
+        earlyAdoption.setCurveId(0);
+
+        vm.stopPrank();
+    }
+
+    function test_setCurveId_revert_sameCurveId() public {
+        vm.startPrank(admin);
+        earlyAdoption.grantRole(earlyAdoption.SET_CURVE_ID_ROLE(), admin);
+
+        vm.expectRevert(ICSEarlyAdoption.InvalidCurveId.selector);
+        earlyAdoption.setCurveId(curveId);
+
+        vm.stopPrank();
+    }
+
+    function test_setCurveId_revert_noRole() public {
+        vm.startPrank(admin);
+        expectRoleRevert(admin, earlyAdoption.SET_CURVE_ID_ROLE());
+        earlyAdoption.setCurveId(2);
+        vm.stopPrank();
+    }
+
+    function test_setCurveId_revert_curveNotExists() public {
+        uint256 invalidCurveId = CSMMock(csm).latestCurveId() + 1;
+
+        vm.startPrank(admin);
+        earlyAdoption.grantRole(earlyAdoption.SET_CURVE_ID_ROLE(), admin);
+
+        vm.expectRevert(ICSEarlyAdoption.InvalidCurveId.selector);
+        earlyAdoption.setCurveId(invalidCurveId);
+
+        vm.stopPrank();
     }
 }

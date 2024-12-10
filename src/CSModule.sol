@@ -103,7 +103,6 @@ contract CSModule is
     /// @notice initialize the module
     function initialize(
         address _accounting,
-        address _earlyAdoption,
         uint256 _keyRemovalCharge,
         address admin
     ) external initializer {
@@ -113,8 +112,6 @@ contract CSModule is
         __AccessControlEnumerable_init();
 
         accounting = ICSAccounting(_accounting);
-        // it is possible to deploy module without EA contract
-        earlyAdoption = ICSEarlyAdoption(_earlyAdoption);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(STAKING_ROUTER_ROLE, address(LIDO_LOCATOR.stakingRouter()));
@@ -139,6 +136,21 @@ contract CSModule is
         if (publicRelease) revert AlreadyActivated();
         publicRelease = true;
         emit PublicRelease();
+    }
+
+    /// @inheritdoc ICSModule
+    function setEarlyAdoption(
+        address _earlyAdoption
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (
+            _earlyAdoption != address(0) &&
+            ICSEarlyAdoption(_earlyAdoption).MODULE() != address(this)
+        ) {
+            revert InvalidEarlyAdoptionAddress();
+        }
+
+        earlyAdoption = ICSEarlyAdoption(_earlyAdoption);
+        emit EarlyAdoptionSet(_earlyAdoption);
     }
 
     /// @inheritdoc ICSModule
@@ -1311,7 +1323,7 @@ contract CSModule is
         // @dev It's possible to join with proof even after public release to get beneficial bond curve
         if (proof.length != 0 && address(earlyAdoption) != address(0)) {
             earlyAdoption.consume(msg.sender, proof);
-            curveId = earlyAdoption.CURVE_ID();
+            curveId = earlyAdoption.curveId();
             accounting.setBondCurve(noId, curveId);
         } else {
             curveId = accounting.DEFAULT_BOND_CURVE_ID();

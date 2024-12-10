@@ -326,21 +326,22 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         vm.stopPrank();
 
         uint256 curveId = accounting.addBondCurve(earlyAdoptionCurve);
-        earlyAdoption = new CSEarlyAdoption(
-            merkleTree.root(),
-            curveId,
-            address(csm)
-        );
 
         _enableInitializers(address(csm));
         csm.initialize({
             _accounting: address(accounting),
-            _earlyAdoption: address(earlyAdoption),
             _keyRemovalCharge: 0.05 ether,
             admin: admin
         });
+        earlyAdoption = new CSEarlyAdoption(
+            merkleTree.root(),
+            curveId,
+            address(csm),
+            admin
+        );
 
         vm.startPrank(admin);
+        csm.setEarlyAdoption(address(earlyAdoption));
         csm.grantRole(csm.PAUSE_ROLE(), address(this));
         csm.grantRole(csm.RESUME_ROLE(), address(this));
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
@@ -410,7 +411,6 @@ contract CSMCommonNoPublicReleaseNoEA is CSMFixtures {
         _enableInitializers(address(csm));
         csm.initialize({
             _accounting: address(accounting),
-            _earlyAdoption: address(0),
             _keyRemovalCharge: 0.05 ether,
             admin: admin
         });
@@ -501,21 +501,22 @@ contract CSMCommonNoRoles is CSMFixtures {
         vm.stopPrank();
 
         uint256 curveId = accounting.addBondCurve(earlyAdoptionCurve);
-        earlyAdoption = new CSEarlyAdoption(
-            merkleTree.root(),
-            curveId,
-            address(csm)
-        );
 
         _enableInitializers(address(csm));
         csm.initialize({
             _accounting: address(accounting),
-            _earlyAdoption: address(earlyAdoption),
             _keyRemovalCharge: 0.05 ether,
             admin: admin
         });
+        earlyAdoption = new CSEarlyAdoption(
+            merkleTree.root(),
+            curveId,
+            address(csm),
+            admin
+        );
 
         vm.startPrank(admin);
+        csm.setEarlyAdoption(address(earlyAdoption));
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
         csm.grantRole(csm.RESUME_ROLE(), admin);
         csm.grantRole(csm.VERIFIER_ROLE(), address(this));
@@ -595,7 +596,6 @@ contract CsmInitialize is CSMCommon {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         csm.initialize({
             _accounting: address(accounting),
-            _earlyAdoption: address(1337),
             _keyRemovalCharge: 0.05 ether,
             admin: address(this)
         });
@@ -614,7 +614,6 @@ contract CsmInitialize is CSMCommon {
         _enableInitializers(address(csm));
         csm.initialize({
             _accounting: address(accounting),
-            _earlyAdoption: address(1337),
             _keyRemovalCharge: 0.05 ether,
             admin: address(this)
         });
@@ -623,7 +622,6 @@ contract CsmInitialize is CSMCommon {
         assertEq(csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(), 10);
         assertEq(address(csm.LIDO_LOCATOR()), address(locator));
         assertEq(address(csm.accounting()), address(accounting));
-        assertEq(address(csm.earlyAdoption()), address(1337));
         assertEq(csm.keyRemovalCharge(), 0.05 ether);
         assertTrue(csm.isPaused());
     }
@@ -642,7 +640,6 @@ contract CsmInitialize is CSMCommon {
         vm.expectRevert(ICSModule.ZeroAccountingAddress.selector);
         csm.initialize({
             _accounting: address(0),
-            _earlyAdoption: address(1337),
             _keyRemovalCharge: 0.05 ether,
             admin: address(this)
         });
@@ -662,10 +659,62 @@ contract CsmInitialize is CSMCommon {
         vm.expectRevert(ICSModule.ZeroAdminAddress.selector);
         csm.initialize({
             _accounting: address(154),
-            _earlyAdoption: address(1337),
             _keyRemovalCharge: 0.05 ether,
             admin: address(0)
         });
+    }
+}
+
+contract CSMSetEarlyAdoption is CSMCommon {
+    function test_setEarlyAdoption() public {
+        vm.expectEmit(true, true, true, true);
+        emit ICSModule.EarlyAdoptionSet(address(earlyAdoption));
+        csm.setEarlyAdoption(address(earlyAdoption));
+
+        assertEq(address(csm.earlyAdoption()), address(earlyAdoption));
+    }
+
+    function test_setEarlyAdoption_ZeroValue() public {
+        csm.setEarlyAdoption(address(earlyAdoption));
+        assertEq(address(csm.earlyAdoption()), address(earlyAdoption));
+
+        vm.expectEmit(true, true, true, true);
+        emit ICSModule.EarlyAdoptionSet(address(0));
+        csm.setEarlyAdoption(address(0));
+
+        assertEq(address(csm.earlyAdoption()), address(0));
+    }
+
+    function test_setEarlyAdoption_RevertWhen_InvalidAddress() public {
+        vm.expectRevert();
+        csm.setEarlyAdoption(address(1337));
+    }
+
+    function test_setEarlyAdoption_RevertWhen_InvalidEarlyAdoptionConfiguration()
+        public
+    {
+        CSModule newCSM = new CSModule({
+            moduleType: "community-staking-module",
+            minSlashingPenaltyQuotient: 32,
+            elRewardsStealingAdditionalFine: 0.1 ether,
+            maxKeysPerOperatorEA: 10,
+            maxKeyRemovalCharge: 0.1 ether,
+            lidoLocator: address(locator)
+        });
+        _enableInitializers(address(newCSM));
+        newCSM.initialize({
+            _accounting: address(accounting),
+            _keyRemovalCharge: 0.05 ether,
+            admin: admin
+        });
+        CSEarlyAdoption newEarlyAdoption = new CSEarlyAdoption(
+            merkleTree.root(),
+            earlyAdoption.curveId(),
+            address(newCSM),
+            admin
+        );
+        vm.expectRevert(ICSModule.InvalidEarlyAdoptionAddress.selector);
+        csm.setEarlyAdoption(address(newEarlyAdoption));
     }
 }
 
@@ -6441,7 +6490,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
             lidoLocator: address(locator)
         });
         _enableInitializers(address(csm));
-        csm.initialize(address(154), address(42), 0.05 ether, actor);
+        csm.initialize(address(accounting), 0.05 ether, actor);
 
         bytes32 role = csm.DEFAULT_ADMIN_ROLE();
         vm.prank(actor);

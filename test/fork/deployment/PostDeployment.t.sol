@@ -113,7 +113,6 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         csmImpl.initialize({
             _accounting: address(accounting),
-            _earlyAdoption: address(earlyAdoption),
             _keyRemovalCharge: deployParams.keyRemovalCharge,
             admin: deployParams.aragonAgent
         });
@@ -460,9 +459,9 @@ contract CSEarlyAdoptionDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_constructor() public {
-        assertEq(earlyAdoption.TREE_ROOT(), deployParams.earlyAdoptionTreeRoot);
+        assertEq(earlyAdoption.treeRoot(), deployParams.earlyAdoptionTreeRoot);
         assertEq(
-            accounting.getCurveInfo(earlyAdoption.CURVE_ID()).points,
+            accounting.getCurveInfo(earlyAdoption.curveId()).points,
             deployParams.earlyAdoptionBondCurve
         );
         assertEq(earlyAdoption.MODULE(), address(csm));
