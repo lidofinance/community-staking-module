@@ -3,8 +3,8 @@
 import { concatGindices } from "@chainsafe/persistent-merkle-tree";
 import { ssz } from "@lodestar/types";
 
-for (const fork of ["deneb"]) {
-  /** @type ssz.deneb */
+for (const fork of ["deneb", "electra"]) {
+  /** @type ssz.deneb|ssz.electra */
   const Fork = ssz[fork];
 
   {

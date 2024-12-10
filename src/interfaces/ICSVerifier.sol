@@ -87,18 +87,6 @@ interface ICSVerifier {
 
     function MODULE() external view returns (ICSModule);
 
-    /// @notice Verify slashing proof and report slashing to the module for valid proofs
-    /// @param beaconBlock Beacon block header
-    /// @param witness Slashing witness against the `beaconBlock`'s state root.
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the validator key in the Node Operator's key storage
-    function processSlashingProof(
-        ProvableBeaconBlockHeader calldata beaconBlock,
-        SlashingWitness calldata witness,
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) external;
-
     /// @notice Verify withdrawal proof and report withdrawal to the module for valid proofs
     /// @param beaconBlock Beacon block header
     /// @param witness Withdrawal witness against the `beaconBlock`'s state root.
