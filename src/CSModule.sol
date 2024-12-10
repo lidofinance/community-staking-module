@@ -889,7 +889,9 @@ contract CSModule is
         emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount, pubkey);
 
         if (isSlashed) {
-            // XXX: Can't remove the check so far.
+            // NOTE: Can't remove the check so far to avoid double-accounting of penalty. Make sure
+            // we decided to go with CSVerifier with no processSalshingProof function deployed first
+            // with some meaningful grace period.
             if (_isValidatorSlashed[pointer]) {
                 unchecked {
                     amount += INITIAL_SLASHING_PENALTY;
