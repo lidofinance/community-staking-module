@@ -50,14 +50,6 @@ interface ICSVerifier {
         bytes32[] proof;
     }
 
-    /// @notice `witness` is a slashing witness against the `beaconBlock`'s state root.
-    function processSlashingProof(
-        ProvableBeaconBlockHeader calldata beaconBlock,
-        SlashingWitness calldata witness,
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) external;
-
     /// @notice `witness` is a withdrawal witness against the `beaconBlock`'s state root.
     function processWithdrawalProof(
         ProvableBeaconBlockHeader calldata beaconBlock,
