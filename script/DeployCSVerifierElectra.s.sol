@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
-// Usage: forge script ./script/DeployCSVerifier:DeployCSVerifier[Holesky|Mainnet]
+// Usage: forge script ./script/DeployCSVerifierElectra.s.sol:DeployCSVerifier[Holesky|Mainnet]
 
 pragma solidity 0.8.24;
 
