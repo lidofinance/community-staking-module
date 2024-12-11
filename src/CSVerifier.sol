@@ -104,53 +104,6 @@ contract CSVerifier is ICSVerifier {
     }
 
     /// @inheritdoc ICSVerifier
-    function processSlashingProof(
-        ProvableBeaconBlockHeader calldata beaconBlock,
-        SlashingWitness calldata witness,
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) external {
-        if (beaconBlock.header.slot < FIRST_SUPPORTED_SLOT) {
-            revert UnsupportedSlot(beaconBlock.header.slot);
-        }
-
-        {
-            bytes32 trustedHeaderRoot = _getParentBlockRoot(
-                beaconBlock.rootsTimestamp
-            );
-            if (trustedHeaderRoot != beaconBlock.header.hashTreeRoot()) {
-                revert InvalidBlockHeader();
-            }
-        }
-
-        bytes memory pubkey = MODULE.getSigningKeys(
-            nodeOperatorId,
-            keyIndex,
-            1
-        );
-
-        Validator memory validator = Validator({
-            pubkey: pubkey,
-            withdrawalCredentials: witness.withdrawalCredentials,
-            effectiveBalance: witness.effectiveBalance,
-            slashed: true,
-            activationEligibilityEpoch: witness.activationEligibilityEpoch,
-            activationEpoch: witness.activationEpoch,
-            exitEpoch: witness.exitEpoch,
-            withdrawableEpoch: witness.withdrawableEpoch
-        });
-
-        SSZ.verifyProof({
-            proof: witness.validatorProof,
-            root: beaconBlock.header.stateRoot,
-            leaf: validator.hashTreeRoot(),
-            gI: _getValidatorGI(witness.validatorIndex, beaconBlock.header.slot)
-        });
-
-        MODULE.submitInitialSlashing(nodeOperatorId, keyIndex);
-    }
-
-    /// @inheritdoc ICSVerifier
     function processWithdrawalProof(
         ProvableBeaconBlockHeader calldata beaconBlock,
         WithdrawalWitness calldata witness,
