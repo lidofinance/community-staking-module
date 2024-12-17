@@ -6,7 +6,6 @@ pragma solidity 0.8.24;
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import { ICSEarlyAdoption } from "./interfaces/ICSEarlyAdoption.sol";
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
-import { ICSModule } from "./interfaces/ICSModule.sol";
 import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 
 contract CSEarlyAdoption is
@@ -22,33 +21,29 @@ contract CSEarlyAdoption is
 
     /// @dev Address of the Staking Module using Early Adoption contract
     address public immutable MODULE;
+    /// @dev Id of the bond curve to be assigned for the EA members
+    uint256 public immutable CURVE_ID;
 
     /// @dev Root of the EA members Merkle Tree
     bytes32 public treeRoot;
-    /// @dev Id of the bond curve to be assigned for the EA members
-    uint256 public curveId;
 
     mapping(address => bool) internal _consumedAddresses;
 
     constructor(
         bytes32 _treeRoot,
-        uint256 _curveId,
+        uint256 curveId,
         address module,
         address admin
     ) {
         if (_treeRoot == bytes32(0)) revert InvalidTreeRoot();
-        if (_curveId == 0) revert InvalidCurveId();
+        if (curveId == 0) revert InvalidCurveId();
         if (module == address(0)) revert ZeroModuleAddress();
         if (admin == address(0)) revert ZeroAdminAddress();
 
-        if (!ICSModule(module).accounting().curveExists(_curveId))
-            revert InvalidCurveId();
-
         MODULE = module;
+        CURVE_ID = curveId;
 
         _setTreeRoot(_treeRoot);
-        _setCurveId(_curveId);
-
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
@@ -101,23 +96,8 @@ contract CSEarlyAdoption is
         _setTreeRoot(_treeRoot);
     }
 
-    /// @inheritdoc ICSEarlyAdoption
-    function setCurveId(uint256 _curveId) external onlyRole(SET_CURVE_ID_ROLE) {
-        if (_curveId == 0) revert InvalidCurveId();
-        if (_curveId == curveId) revert InvalidCurveId();
-        if (!ICSModule(MODULE).accounting().curveExists(_curveId))
-            revert InvalidCurveId();
-
-        _setCurveId(_curveId);
-    }
-
     function _setTreeRoot(bytes32 _treeRoot) internal {
         treeRoot = _treeRoot;
         emit TreeRootSet(_treeRoot);
-    }
-
-    function _setCurveId(uint256 _curveId) internal {
-        curveId = _curveId;
-        emit CurveIdSet(_curveId);
     }
 }

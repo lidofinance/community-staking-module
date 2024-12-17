@@ -102,8 +102,27 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         csm = CSModule(deploymentConfig.csm);
 
         vm.startBroadcast(admin);
+        csm.setEarlyAdoption(address(upgradeConfig.earlyAdoption));
+
         csm.revokeRole(csm.VERIFIER_ROLE(), address(deploymentConfig.verifier));
         csm.grantRole(csm.VERIFIER_ROLE(), address(upgradeConfig.verifier));
+
+        csm.revokeRole(csm.PAUSE_ROLE(), address(deploymentConfig.gateSeal));
+        accounting.revokeRole(
+            accounting.PAUSE_ROLE(),
+            address(deploymentConfig.gateSeal)
+        );
+        oracle.revokeRole(
+            oracle.PAUSE_ROLE(),
+            address(deploymentConfig.gateSeal)
+        );
+
+        csm.grantRole(csm.PAUSE_ROLE(), address(upgradeConfig.gateSeal));
+        accounting.grantRole(
+            accounting.PAUSE_ROLE(),
+            address(upgradeConfig.gateSeal)
+        );
+        oracle.grantRole(oracle.PAUSE_ROLE(), address(upgradeConfig.gateSeal));
         vm.stopBroadcast();
     }
 }

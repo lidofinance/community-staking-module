@@ -461,7 +461,7 @@ contract CSEarlyAdoptionDeploymentTest is Test, Utilities, DeploymentFixtures {
     function test_constructor() public {
         assertEq(earlyAdoption.treeRoot(), deployParams.earlyAdoptionTreeRoot);
         assertEq(
-            accounting.getCurveInfo(earlyAdoption.curveId()).points,
+            accounting.getCurveInfo(earlyAdoption.CURVE_ID()).points,
             deployParams.earlyAdoptionBondCurve
         );
         assertEq(earlyAdoption.MODULE(), address(csm));

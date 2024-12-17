@@ -5,7 +5,6 @@ pragma solidity 0.8.24;
 
 interface ICSEarlyAdoption {
     event TreeRootSet(bytes32 indexed treeRoot);
-    event CurveIdSet(uint256 indexed curveId);
     event Consumed(address indexed member);
 
     error InvalidProof();
@@ -26,7 +25,7 @@ interface ICSEarlyAdoption {
 
     function MODULE() external view returns (address);
 
-    function curveId() external view returns (uint256);
+    function CURVE_ID() external view returns (uint256);
 
     function treeRoot() external view returns (bytes32);
 
@@ -68,9 +67,4 @@ interface ICSEarlyAdoption {
     /// @notice Set the root of the EA members Merkle Tree
     /// @param _treeRoot New root of the Merkle Tree
     function setTreeRoot(bytes32 _treeRoot) external;
-
-    /// @notice Set the id of the bond curve to be assigned for the EA members
-    /// @param _curveId New curve id
-    /// @dev does not affect the existing EA members
-    function setCurveId(uint256 _curveId) external;
 }

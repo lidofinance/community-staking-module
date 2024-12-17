@@ -684,37 +684,19 @@ contract CSMSetEarlyAdoption is CSMCommon {
 
         assertEq(address(csm.earlyAdoption()), address(0));
     }
+}
 
-    function test_setEarlyAdoption_RevertWhen_InvalidAddress() public {
-        vm.expectRevert();
-        csm.setEarlyAdoption(address(1337));
-    }
+contract CSMApplyEarlyAdoptionBenefits is CSMCommon {
+    function test_applyEarlyAdoptionBenefits() public {
+        uint256 noId = createNodeOperator();
+        assertEq(accounting.getBondCurveId(noId), 0);
 
-    function test_setEarlyAdoption_RevertWhen_InvalidEarlyAdoptionConfiguration()
-        public
-    {
-        CSModule newCSM = new CSModule({
-            moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
-            elRewardsStealingAdditionalFine: 0.1 ether,
-            maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
-        });
-        _enableInitializers(address(newCSM));
-        newCSM.initialize({
-            _accounting: address(accounting),
-            _keyRemovalCharge: 0.05 ether,
-            admin: admin
-        });
-        CSEarlyAdoption newEarlyAdoption = new CSEarlyAdoption(
-            merkleTree.root(),
-            earlyAdoption.curveId(),
-            address(newCSM),
-            admin
-        );
-        vm.expectRevert(ICSModule.InvalidEarlyAdoptionAddress.selector);
-        csm.setEarlyAdoption(address(newEarlyAdoption));
+        bytes32[] memory proof = merkleTree.getProof(0);
+
+        vm.prank(nodeOperator);
+        csm.applyEarlyAdoptionBenefits(noId, proof);
+
+        assertEq(accounting.getBondCurveId(noId), earlyAdoption.CURVE_ID());
     }
 }
 
@@ -729,7 +711,7 @@ contract CSMPauseTest is CSMCommon {
         assertEq(csm.getResumeSinceTimestamp(), block.timestamp + 1 days);
     }
 
-    function test_pauseFor_indefinetily() public {
+    function test_pauseFor_indefinitely() public {
         csm.pauseFor(type(uint256).max);
         assertTrue(csm.isPaused());
         assertEq(csm.getResumeSinceTimestamp(), type(uint256).max);

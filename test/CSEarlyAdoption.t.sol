@@ -54,13 +54,11 @@ contract CSEarlyAdoptionConstructorTest is Test, Utilities {
     function test_constructor() public {
         vm.expectEmit(true, true, true, true);
         emit ICSEarlyAdoption.TreeRootSet(root);
-        vm.expectEmit(true, true, true, true);
-        emit ICSEarlyAdoption.CurveIdSet(curveId);
         earlyAdoption = new CSEarlyAdoption(root, curveId, csm, admin);
 
         assertEq(earlyAdoption.MODULE(), csm);
+        assertEq(earlyAdoption.CURVE_ID(), curveId);
         assertEq(earlyAdoption.treeRoot(), root);
-        assertEq(earlyAdoption.curveId(), curveId);
         assertEq(
             earlyAdoption.getRoleMemberCount(
                 earlyAdoption.DEFAULT_ADMIN_ROLE()
@@ -81,12 +79,6 @@ contract CSEarlyAdoptionConstructorTest is Test, Utilities {
     function test_constructor_RevertWhen_InvalidCurveId() public {
         vm.expectRevert(ICSEarlyAdoption.InvalidCurveId.selector);
         new CSEarlyAdoption(root, 0, csm, admin);
-    }
-
-    function test_constructor_RevertWhen_CurveDoesNotExists() public {
-        uint256 invalidCurveId = CSMMock(csm).latestCurveId() + 1;
-        vm.expectRevert(ICSEarlyAdoption.InvalidCurveId.selector);
-        new CSEarlyAdoption(root, invalidCurveId, csm, admin);
     }
 
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
@@ -226,60 +218,6 @@ contract CSEarlyAdoptionConstructorTest is Test, Utilities {
         vm.startPrank(admin);
         expectRoleRevert(admin, earlyAdoption.SET_TREE_ROOT_ROLE());
         earlyAdoption.setTreeRoot(bytes32(randomBytes(32)));
-        vm.stopPrank();
-    }
-
-    function test_setCurveId() public {
-        uint256 newCurveId = 2;
-
-        vm.startPrank(admin);
-        earlyAdoption.grantRole(earlyAdoption.SET_CURVE_ID_ROLE(), admin);
-
-        vm.expectEmit(true, true, true, true);
-        emit ICSEarlyAdoption.CurveIdSet(newCurveId);
-        earlyAdoption.setCurveId(newCurveId);
-
-        vm.stopPrank();
-
-        assertEq(earlyAdoption.curveId(), newCurveId);
-    }
-
-    function test_setCurveId_revert_zeroCurveId() public {
-        vm.startPrank(admin);
-        earlyAdoption.grantRole(earlyAdoption.SET_CURVE_ID_ROLE(), admin);
-
-        vm.expectRevert(ICSEarlyAdoption.InvalidCurveId.selector);
-        earlyAdoption.setCurveId(0);
-
-        vm.stopPrank();
-    }
-
-    function test_setCurveId_revert_sameCurveId() public {
-        vm.startPrank(admin);
-        earlyAdoption.grantRole(earlyAdoption.SET_CURVE_ID_ROLE(), admin);
-
-        vm.expectRevert(ICSEarlyAdoption.InvalidCurveId.selector);
-        earlyAdoption.setCurveId(curveId);
-
-        vm.stopPrank();
-    }
-
-    function test_setCurveId_revert_noRole() public {
-        vm.startPrank(admin);
-        expectRoleRevert(admin, earlyAdoption.SET_CURVE_ID_ROLE());
-        earlyAdoption.setCurveId(2);
-        vm.stopPrank();
-    }
-
-    function test_setCurveId_revert_curveNotExists() public {
-        uint256 invalidCurveId = CSMMock(csm).latestCurveId() + 1;
-
-        vm.startPrank(admin);
-        earlyAdoption.grantRole(earlyAdoption.SET_CURVE_ID_ROLE(), admin);
-
-        vm.expectRevert(ICSEarlyAdoption.InvalidCurveId.selector);
-        earlyAdoption.setCurveId(invalidCurveId);
-
         vm.stopPrank();
     }
 }

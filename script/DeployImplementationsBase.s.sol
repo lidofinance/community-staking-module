@@ -54,6 +54,13 @@ abstract contract DeployImplementationsBase is DeployBase {
                 maxBondLockPeriod: config.maxBondLockPeriod
             });
 
+            CSEarlyAdoption earlyAdoption = new CSEarlyAdoption({
+                _treeRoot: config.earlyAdoptionTreeRoot,
+                curveId: earlyAdoption.CURVE_ID(),
+                module: address(csm),
+                admin: config.aragonAgent
+            });
+
             CSFeeOracle oracleImpl = new CSFeeOracle({
                 secondsPerSlot: config.secondsPerSlot,
                 genesisTime: config.clGenesisTime
@@ -83,6 +90,13 @@ abstract contract DeployImplementationsBase is DeployBase {
                 )
             });
 
+            address[] memory sealables = new address[](4);
+            sealables[0] = address(csm);
+            sealables[1] = address(accounting);
+            sealables[2] = address(oracle);
+            sealables[3] = address(earlyAdoption);
+            gateSeal = _deployGateSeal(sealables);
+
             JsonObj memory deployJson = Json.newObj();
             deployJson.set("CSModuleImpl", address(csmImpl));
             deployJson.set("CSAccountingImpl", address(accountingImpl));
@@ -91,6 +105,7 @@ abstract contract DeployImplementationsBase is DeployBase {
             deployJson.set("CSVerifier", address(verifier));
             deployJson.set("CSEarlyAdoption", address(earlyAdoption));
             deployJson.set("HashConsensus", address(hashConsensus));
+            deployJson.set("GateSeal", gateSeal);
             deployJson.set("git-ref", gitRef);
             vm.writeJson(
                 deployJson.str,

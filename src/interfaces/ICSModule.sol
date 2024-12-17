@@ -53,8 +53,8 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     error SigningKeysInvalidOffset();
 
     error AlreadySubmitted();
-
     error AlreadyActivated();
+
     error InvalidAmount();
     error NotAllowedToJoinYet();
     error MaxSigningKeysCountExceeded();
@@ -64,7 +64,7 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     error ZeroAccountingAddress();
     error ZeroAdminAddress();
     error ZeroRewardAddress();
-    error InvalidEarlyAdoptionAddress();
+    error EarlyAdoptionNotSet();
 
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
@@ -190,9 +190,9 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     function publicRelease() external view returns (bool);
 
     /// @notice Set the early adoption contract address
-    /// @param _earlyAdoption Early Adoption contract address
+    /// @param earlyAdoptionAddress Early Adoption contract address
     /// @dev Can be set to zero address to disable the Early Adoption integration
-    function setEarlyAdoption(address _earlyAdoption) external;
+    function setEarlyAdoption(address earlyAdoptionAddress) external;
 
     /// @notice Activate public release mode
     ///         Enable permissionless creation of the Node Operators
@@ -383,6 +383,15 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         uint256 wstETHAmount,
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
+    ) external;
+
+    /// @notice Apply Early Adoption bond curve to any existing Node Operator
+    ///         It consumes existing sender's early adoption proof
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param proof Merkle proof of the sender being eligible for the Early Adoption
+    function applyEarlyAdoptionBenefits(
+        uint256 nodeOperatorId,
+        bytes32[] calldata proof
     ) external;
 
     /// @notice Report EL rewards stealing for the given Node Operator

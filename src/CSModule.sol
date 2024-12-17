@@ -140,17 +140,10 @@ contract CSModule is
 
     /// @inheritdoc ICSModule
     function setEarlyAdoption(
-        address _earlyAdoption
+        address earlyAdoptionAddress
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (
-            _earlyAdoption != address(0) &&
-            ICSEarlyAdoption(_earlyAdoption).MODULE() != address(this)
-        ) {
-            revert InvalidEarlyAdoptionAddress();
-        }
-
-        earlyAdoption = ICSEarlyAdoption(_earlyAdoption);
-        emit EarlyAdoptionSet(_earlyAdoption);
+        earlyAdoption = ICSEarlyAdoption(earlyAdoptionAddress);
+        emit EarlyAdoptionSet(earlyAdoptionAddress);
     }
 
     /// @inheritdoc ICSModule
@@ -451,6 +444,17 @@ contract CSModule is
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true
         });
+    }
+
+    /// @inheritdoc ICSModule
+    function applyEarlyAdoptionBenefits(
+        uint256 nodeOperatorId,
+        bytes32[] calldata proof
+    ) external {
+        if (address(earlyAdoption) == address(0)) {
+            revert EarlyAdoptionNotSet();
+        }
+        _applyEarlyAdoptionCurve(nodeOperatorId, msg.sender, proof);
     }
 
     /// @inheritdoc ICSModule
@@ -1322,9 +1326,8 @@ contract CSModule is
 
         // @dev It's possible to join with proof even after public release to get beneficial bond curve
         if (proof.length != 0 && address(earlyAdoption) != address(0)) {
-            earlyAdoption.consume(msg.sender, proof);
-            curveId = earlyAdoption.curveId();
-            accounting.setBondCurve(noId, curveId);
+            _applyEarlyAdoptionCurve(noId, msg.sender, proof);
+            curveId = earlyAdoption.CURVE_ID();
         } else {
             curveId = accounting.DEFAULT_BOND_CURVE_ID();
         }
@@ -1385,6 +1388,15 @@ contract CSModule is
         if (amount > MAX_KEY_REMOVAL_CHARGE) revert InvalidInput();
         keyRemovalCharge = amount;
         emit KeyRemovalChargeSet(amount);
+    }
+
+    function _applyEarlyAdoptionCurve(
+        uint256 nodeOperatorId,
+        address member,
+        bytes32[] calldata proof
+    ) internal {
+        earlyAdoption.consume(msg.sender, proof);
+        accounting.setBondCurve(nodeOperatorId, earlyAdoption.CURVE_ID());
     }
 
     /// @dev Update exited validators count for a single Node Operator

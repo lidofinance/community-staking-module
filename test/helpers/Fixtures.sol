@@ -104,6 +104,7 @@ contract DeploymentHelpers is Test {
         address verifier;
         address earlyAdoption;
         address hashConsensus;
+        address gateSeal;
     }
 
     function envVars() public returns (Env memory) {
@@ -190,6 +191,7 @@ contract DeploymentHelpers is Test {
             config,
             ".HashConsensus"
         );
+        upgradeConfig.gateSeal = vm.parseJsonAddress(config, ".GateSeal");
     }
 
     function parseDeployParams(
