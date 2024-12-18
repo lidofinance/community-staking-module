@@ -159,7 +159,7 @@ _deploy-prod-confirm *args:
     just _deploy-prod --broadcast {{args}}
 
 _deploy-prod-devnet *args:
-    just _deploy-prod --broadcast {{args}}
+    just _deploy-prod --broadcast --verifier custom --chain ${DEVNET_CHAIN_ID} {{args}}
 
 deploy-prod-dry *args:
     just _deploy-prod {{args}}
