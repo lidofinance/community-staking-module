@@ -6,6 +6,8 @@ deploy_script_name := if chain == "mainnet" {
     "DeployMainnet"
 } else if chain == "holesky" {
     "DeployHolesky"
+} else if chain == "local-devnet" {
+    "DeployLocalDevNet"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -14,6 +16,8 @@ deploy_implementations_script_name := if chain == "mainnet" {
     "DeployImplementationsMainnet"
 } else if chain == "holesky" {
     "DeployImplementationsHolesky"
+} else if chain == "local-devnet" {
+    "DeployImplementationsLocalDevNet"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -22,6 +26,8 @@ deploy_config_path := if chain == "mainnet" {
     "artifacts/mainnet/deploy-mainnet.json"
 } else if chain == "holesky" {
     "artifacts/holesky/deploy-holesky.json"
+} else if chain == "local-devnet" {
+    "artifacts/local-devnet/deploy-local-devnet.json"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -141,9 +147,19 @@ deploy-prod *args:
     cp ./broadcast/{{deploy_script_name}}.s.sol/`cast chain-id --rpc-url=$RPC_URL`/run-latest.json \
         ./artifacts/latest/transactions.json
 
+deploy-local-devnet *args:
+    just _warn "The current `tput bold`chain={{chain}}`tput sgr0` with the following rpc url: $RPC_URL"
+    ARTIFACTS_DIR=./artifacts/latest/ just _deploy-prod-devnet {{args}}
+
+    cp ./broadcast/{{deploy_script_name}}.s.sol/`cast chain-id --rpc-url=$RPC_URL`/run-latest.json \
+        ./artifacts/latest/transactions.json
+
 [confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]
 _deploy-prod-confirm *args:
-    just _deploy-prod --broadcast --verify {{args}}
+    just _deploy-prod --broadcast {{args}}
+
+_deploy-prod-devnet *args:
+    just _deploy-prod --broadcast {{args}}
 
 deploy-prod-dry *args:
     just _deploy-prod {{args}}
@@ -151,6 +167,9 @@ deploy-prod-dry *args:
 verify-prod *args:
     just _warn "Pass --chain=your_chain manually. e.g. --chain=holesky for testnet deployment"
     forge script {{deploy_script_path}} --sig="run(string)" --rpc-url ${RPC_URL} --verify {{args}} --unlocked -- `git rev-parse HEAD`
+
+verify-devnet *args:
+    forge script {{deploy_script_path}} --rpc-url ${RPC_URL} --verify --verifier custom --chain ${DEVNET_CHAIN_ID} {{args}} -- `git rev-parse HEAD`
 
 _deploy-prod *args:
     forge script {{deploy_script_path}} --sig="run(string)" --force --rpc-url ${RPC_URL} {{args}} -- `git rev-parse HEAD`
