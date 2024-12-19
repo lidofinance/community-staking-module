@@ -6,6 +6,8 @@ deploy_script_name := if chain == "mainnet" {
     "DeployMainnet"
 } else if chain == "holesky" {
     "DeployHolesky"
+} else if chain == "local-devnet" {
+    "DeployLocalDevNet"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -14,6 +16,8 @@ deploy_implementations_script_name := if chain == "mainnet" {
     "undefined"
 } else if chain == "holesky" {
     "DeployHoleskyImplementations"
+} else if chain == "local-devnet" {
+    "undefined"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -133,9 +137,19 @@ deploy-prod *args:
     cp ./broadcast/{{deploy_script_name}}.s.sol/`cast chain-id --rpc-url=$RPC_URL`/run-latest.json \
         ./artifacts/latest/transactions.json
 
+deploy-local-devnet *args:
+    just _warn "The current `tput bold`chain={{chain}}`tput sgr0` with the following rpc url: $RPC_URL"
+    ARTIFACTS_DIR=./artifacts/latest/ just _deploy-prod-devnet {{args}}
+
+    cp ./broadcast/{{deploy_script_name}}.s.sol/`cast chain-id --rpc-url=$RPC_URL`/run-latest.json \
+        ./artifacts/latest/transactions.json
+
 [confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]
 _deploy-prod-confirm *args:
-    just _deploy-prod --broadcast --verify {{args}}
+    just _deploy-prod --broadcast {{args}}
+
+_deploy-prod-devnet *args:
+    just _deploy-prod --broadcast {{args}}
 
 deploy-prod-dry *args:
     just _deploy-prod {{args}}
