@@ -115,57 +115,6 @@ contract CSVerifier is ICSVerifier {
         PIVOT_SLOT = pivotSlot;
     }
 
-    /// @notice Verify slashing proof and report slashing to the module for valid proofs
-    /// @param beaconBlock Beacon block header
-    /// @param witness Slashing witness
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the validator key in the Node Operator's key storage
-    function processSlashingProof(
-        ProvableBeaconBlockHeader calldata beaconBlock,
-        SlashingWitness calldata witness,
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) external {
-        if (beaconBlock.header.slot < FIRST_SUPPORTED_SLOT) {
-            revert UnsupportedSlot(beaconBlock.header.slot);
-        }
-
-        {
-            bytes32 trustedHeaderRoot = _getParentBlockRoot(
-                beaconBlock.rootsTimestamp
-            );
-            if (trustedHeaderRoot != beaconBlock.header.hashTreeRoot()) {
-                revert InvalidBlockHeader();
-            }
-        }
-
-        bytes memory pubkey = MODULE.getSigningKeys(
-            nodeOperatorId,
-            keyIndex,
-            1
-        );
-
-        Validator memory validator = Validator({
-            pubkey: pubkey,
-            withdrawalCredentials: witness.withdrawalCredentials,
-            effectiveBalance: witness.effectiveBalance,
-            slashed: true,
-            activationEligibilityEpoch: witness.activationEligibilityEpoch,
-            activationEpoch: witness.activationEpoch,
-            exitEpoch: witness.exitEpoch,
-            withdrawableEpoch: witness.withdrawableEpoch
-        });
-
-        SSZ.verifyProof({
-            proof: witness.validatorProof,
-            root: beaconBlock.header.stateRoot,
-            leaf: validator.hashTreeRoot(),
-            gI: _getValidatorGI(witness.validatorIndex, beaconBlock.header.slot)
-        });
-
-        MODULE.submitInitialSlashing(nodeOperatorId, keyIndex);
-    }
-
     /// @notice Verify withdrawal proof and report withdrawal to the module for valid proofs
     /// @param beaconBlock Beacon block header
     /// @param witness Withdrawal witness
