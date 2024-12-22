@@ -17,7 +17,7 @@ contract DeployLocalDevNet is DeployBase {
 
         // Oracle
         config.secondsPerSlot = 12;
-        config.slotsPerEpoch = 32;
+        config.slotsPerEpoch = vm.envUint("DEVNET_SLOTS_PER_EPOCH");
         config.clGenesisTime = vm.envUint("DEVNET_GENESIS_TIME");
         config.oracleReportEpochsPerFrame = 225 * 7; // 7 days
         config.fastLaneLengthSlots = 0;
