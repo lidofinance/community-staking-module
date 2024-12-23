@@ -75,17 +75,17 @@ contract DeployHolesky is DeployBase {
             .elRewardsStealingReporter = 0xc4DAB3a3ef68C6DFd8614a870D64D475bA44F164; // Dev team EOA
         config
             .chargePenaltyRecipient = 0xE92329EC7ddB11D25e25b3c21eeBf11f15eB325d; // locator.treasury()
-        // EarlyAdoption
+        // VettedGate
         config
-            .earlyAdoptionTreeRoot = 0xc9a9c1576cf4f3213ad9075b72a1f1b147914a252ad927fa4ca3460ff0723ca9;
-        config.earlyAdoptionBondCurve = new uint256[](6);
+            .vettedGateTreeRoot = 0xc9a9c1576cf4f3213ad9075b72a1f1b147914a252ad927fa4ca3460ff0723ca9;
+        config.vettedGateBondCurve = new uint256[](6);
         // 1.5 -> 1.9 -> 1.8 -> 1.7 -> 1.6 -> 1.5
-        config.earlyAdoptionBondCurve[0] = 1.5 ether;
-        config.earlyAdoptionBondCurve[1] = 3.4 ether;
-        config.earlyAdoptionBondCurve[2] = 5.2 ether;
-        config.earlyAdoptionBondCurve[3] = 6.9 ether;
-        config.earlyAdoptionBondCurve[4] = 8.5 ether;
-        config.earlyAdoptionBondCurve[5] = 10 ether;
+        config.vettedGateBondCurve[0] = 1.5 ether;
+        config.vettedGateBondCurve[1] = 3.4 ether;
+        config.vettedGateBondCurve[2] = 5.2 ether;
+        config.vettedGateBondCurve[3] = 6.9 ether;
+        config.vettedGateBondCurve[4] = 8.5 ether;
+        config.vettedGateBondCurve[5] = 10 ether;
         // GateSeal
         config.gateSealFactory = 0x1134F7077055b0B3559BE52AfeF9aA22A0E1eEC2;
         config.sealingCommittee = 0xc4DAB3a3ef68C6DFd8614a870D64D475bA44F164; // Dev team EOA

@@ -136,6 +136,7 @@ contract NodeOperators is
         bytes memory keys = randomBytes(48 * keysCount);
         bytes memory signatures = randomBytes(96 * keysCount);
         csm.addValidatorKeysETH{ value: amount }(
+            msg.sender,
             noId,
             keysCount,
             keys,

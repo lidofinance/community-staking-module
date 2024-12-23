@@ -37,7 +37,7 @@ contract ClaimIntegrationTest is
         uint256 noCount = csm.getNodeOperatorsCount();
         assertCSMKeys(csm);
         assertCSMEnqueuedCount(csm);
-        assertCSMEarlyAdoptionMaxKeys(csm);
+        assertCSMMaxKeys(csm);
         assertAccountingTotalBondShares(noCount, lido, accounting);
         assertAccountingBurnerApproval(
             lido,
@@ -69,6 +69,17 @@ contract ClaimIntegrationTest is
         stranger = nextAddress("stranger");
         nodeOperator = nextAddress("NodeOperator");
 
+        csm.createNodeOperator(
+            nodeOperator,
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            address(0)
+        );
+        defaultNoId = csm.getNodeOperatorsCount() - 1;
+
         uint256 keysCount = 5;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -76,19 +87,13 @@ contract ClaimIntegrationTest is
         uint256 amount = accounting.getBondAmountByKeysCount(keysCount, 0);
         vm.deal(nodeOperator, amount);
         vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: amount }(
+        csm.addValidatorKeysETH{ value: amount }(
+            nodeOperator,
+            defaultNoId,
             keysCount,
             keys,
-            signatures,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            new bytes32[](0),
-            address(0)
+            signatures
         );
-        defaultNoId = csm.getNodeOperatorsCount() - 1;
     }
 
     function test_claimExcessBondStETH() public assertInvariants {

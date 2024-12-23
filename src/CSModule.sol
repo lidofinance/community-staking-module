@@ -12,7 +12,6 @@ import { IStakingModule } from "./interfaces/IStakingModule.sol";
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
-import { ICSEarlyAdoption } from "./interfaces/ICSEarlyAdoption.sol";
 import { ICSModule, NodeOperator, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
 
 import { QueueLib, Batch } from "./lib/QueueLib.sol";
@@ -42,6 +41,10 @@ contract CSModule is
         keccak256("SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE");
     bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
+    bytes32 public constant CREATE_NODE_OPERATOR_ROLE =
+        keccak256("CREATE_NODE_OPERATOR_ROLE");
+    bytes32 public constant CLAIM_BENEFICIAL_CURVE_ROLE =
+        keccak256("CLAIM_BENEFICIAL_CURVE_ROLE");
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
     // @dev see IStakingModule.sol
@@ -65,7 +68,8 @@ contract CSModule is
 
     ICSAccounting public accounting;
 
-    ICSEarlyAdoption public earlyAdoption;
+    /// @dev deprecated
+    address internal _earlyAdoption;
     bool public publicRelease;
 
     uint256 private _nonce;
@@ -139,14 +143,6 @@ contract CSModule is
     }
 
     /// @inheritdoc ICSModule
-    function setEarlyAdoption(
-        address earlyAdoptionAddress
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        earlyAdoption = ICSEarlyAdoption(earlyAdoptionAddress);
-        emit EarlyAdoptionSet(earlyAdoptionAddress);
-    }
-
-    /// @inheritdoc ICSModule
     function setKeyRemovalCharge(
         uint256 amount
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -154,104 +150,58 @@ contract CSModule is
     }
 
     /// @inheritdoc ICSModule
-    function addNodeOperatorETH(
-        uint256 keysCount,
-        bytes calldata publicKeys,
-        bytes calldata signatures,
+    function createNodeOperator(
+        address from,
         NodeOperatorManagementProperties calldata managementProperties,
-        bytes32[] calldata eaProof,
         address referrer
-    ) external payable whenResumed {
-        (uint256 nodeOperatorId, uint256 curveId) = _createNodeOperator(
-            managementProperties,
-            referrer,
-            eaProof
-        );
+    )
+        external
+        onlyRole(CREATE_NODE_OPERATOR_ROLE)
+        whenResumed
+        returns (uint256 nodeOperatorId)
+    {
+        if (from == address(0)) revert ZeroSenderAddress();
 
-        if (
-            msg.value < accounting.getBondAmountByKeysCount(keysCount, curveId)
-        ) {
-            revert InvalidAmount();
+        nodeOperatorId = _nodeOperatorsCount;
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        no.managerAddress = managementProperties.managerAddress == address(0)
+            ? from
+            : managementProperties.managerAddress;
+        no.rewardAddress = managementProperties.rewardAddress == address(0)
+            ? from
+            : managementProperties.rewardAddress;
+        if (managementProperties.extendedManagerPermissions)
+            no.extendedManagerPermissions = managementProperties
+                .extendedManagerPermissions;
+
+        unchecked {
+            ++_nodeOperatorsCount;
         }
 
-        accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
-
-        _addKeysAndUpdateDepositableValidatorsCount(
+        emit NodeOperatorAdded(
             nodeOperatorId,
-            keysCount,
-            publicKeys,
-            signatures
-        );
-    }
-
-    /// @inheritdoc ICSModule
-    function addNodeOperatorStETH(
-        uint256 keysCount,
-        bytes calldata publicKeys,
-        bytes calldata signatures,
-        NodeOperatorManagementProperties calldata managementProperties,
-        ICSAccounting.PermitInput calldata permit,
-        bytes32[] calldata eaProof,
-        address referrer
-    ) external whenResumed {
-        (uint256 nodeOperatorId, uint256 curveId) = _createNodeOperator(
-            managementProperties,
-            referrer,
-            eaProof
+            no.managerAddress,
+            no.rewardAddress
         );
 
-        uint256 amount = accounting.getBondAmountByKeysCount(
-            keysCount,
-            curveId
-        );
-        accounting.depositStETH(msg.sender, nodeOperatorId, amount, permit);
-
-        _addKeysAndUpdateDepositableValidatorsCount(
-            nodeOperatorId,
-            keysCount,
-            publicKeys,
-            signatures
-        );
-    }
-
-    /// @inheritdoc ICSModule
-    function addNodeOperatorWstETH(
-        uint256 keysCount,
-        bytes calldata publicKeys,
-        bytes calldata signatures,
-        NodeOperatorManagementProperties calldata managementProperties,
-        ICSAccounting.PermitInput calldata permit,
-        bytes32[] calldata eaProof,
-        address referrer
-    ) external whenResumed {
-        (uint256 nodeOperatorId, uint256 curveId) = _createNodeOperator(
-            managementProperties,
-            referrer,
-            eaProof
-        );
-
-        uint256 amount = accounting.getBondAmountByKeysCountWstETH(
-            keysCount,
-            curveId
-        );
-        accounting.depositWstETH(msg.sender, nodeOperatorId, amount, permit);
-
-        _addKeysAndUpdateDepositableValidatorsCount(
-            nodeOperatorId,
-            keysCount,
-            publicKeys,
-            signatures
-        );
+        if (referrer != address(0)) emit ReferrerSet(nodeOperatorId, referrer);
+        _incrementModuleNonce();
     }
 
     /// @inheritdoc ICSModule
     function addValidatorKeysETH(
+        address from,
         uint256 nodeOperatorId,
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures
     ) external payable whenResumed {
-        _onlyNodeOperatorManager(nodeOperatorId);
+        if (from == msg.sender) {
+            _onlyNodeOperatorManager(nodeOperatorId, from);
+        } else {
+            _checkRole(CREATE_NODE_OPERATOR_ROLE);
+        }
 
         if (
             msg.value <
@@ -260,7 +210,7 @@ contract CSModule is
             revert InvalidAmount();
         }
 
-        accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
+        accounting.depositETH{ value: msg.value }(from, nodeOperatorId);
 
         _addKeysAndUpdateDepositableValidatorsCount(
             nodeOperatorId,
@@ -272,20 +222,25 @@ contract CSModule is
 
     /// @inheritdoc ICSModule
     function addValidatorKeysStETH(
+        address from,
         uint256 nodeOperatorId,
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
     ) external whenResumed {
-        _onlyNodeOperatorManager(nodeOperatorId);
+        if (from == msg.sender) {
+            _onlyNodeOperatorManager(nodeOperatorId, from);
+        } else {
+            _checkRole(CREATE_NODE_OPERATOR_ROLE);
+        }
 
         uint256 amount = accounting.getRequiredBondForNextKeys(
             nodeOperatorId,
             keysCount
         );
 
-        accounting.depositStETH(msg.sender, nodeOperatorId, amount, permit);
+        accounting.depositStETH(from, nodeOperatorId, amount, permit);
 
         _addKeysAndUpdateDepositableValidatorsCount(
             nodeOperatorId,
@@ -297,20 +252,25 @@ contract CSModule is
 
     /// @inheritdoc ICSModule
     function addValidatorKeysWstETH(
+        address from,
         uint256 nodeOperatorId,
         uint256 keysCount,
         bytes calldata publicKeys,
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
     ) external whenResumed {
-        _onlyNodeOperatorManager(nodeOperatorId);
+        if (from == msg.sender) {
+            _onlyNodeOperatorManager(nodeOperatorId, from);
+        } else {
+            _checkRole(CREATE_NODE_OPERATOR_ROLE);
+        }
 
         uint256 amount = accounting.getRequiredBondForNextKeysWstETH(
             nodeOperatorId,
             keysCount
         );
 
-        accounting.depositWstETH(msg.sender, nodeOperatorId, amount, permit);
+        accounting.depositWstETH(from, nodeOperatorId, amount, permit);
 
         _addKeysAndUpdateDepositableValidatorsCount(
             nodeOperatorId,
@@ -447,14 +407,15 @@ contract CSModule is
     }
 
     /// @inheritdoc ICSModule
-    function applyEarlyAdoptionBenefits(
+    function claimBeneficialBondCurve(
         uint256 nodeOperatorId,
-        bytes32[] calldata proof
-    ) external {
-        if (address(earlyAdoption) == address(0)) {
-            revert EarlyAdoptionNotSet();
-        }
-        _applyEarlyAdoptionCurve(nodeOperatorId, msg.sender, proof);
+        uint256 curveId
+    ) external onlyRole(CLAIM_BENEFICIAL_CURVE_ROLE) {
+        accounting.setBondCurve(nodeOperatorId, curveId);
+        _updateDepositableValidatorsCount({
+            nodeOperatorId: nodeOperatorId,
+            incrementNonceIfUpdated: true
+        });
     }
 
     /// @inheritdoc ICSModule
@@ -728,7 +689,7 @@ contract CSModule is
         uint256 startIndex,
         uint256 keysCount
     ) external {
-        _onlyNodeOperatorManager(nodeOperatorId);
+        _onlyNodeOperatorManager(nodeOperatorId, msg.sender);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         if (startIndex < no.totalDepositedKeys) {
@@ -867,7 +828,7 @@ contract CSModule is
     function compensateELRewardsStealingPenalty(
         uint256 nodeOperatorId
     ) external payable {
-        _onlyNodeOperatorManager(nodeOperatorId);
+        _onlyNodeOperatorManager(nodeOperatorId, msg.sender);
         accounting.compensateLockedBondETH{ value: msg.value }(nodeOperatorId);
         // Nonce should be updated if depositableValidators change
         _updateDepositableValidatorsCount({
@@ -1292,47 +1253,6 @@ contract CSModule is
         emit NonceChanged(_nonce);
     }
 
-    function _createNodeOperator(
-        NodeOperatorManagementProperties calldata managementProperties,
-        address referrer,
-        bytes32[] calldata proof
-    ) internal returns (uint256 noId, uint256 curveId) {
-        if (!publicRelease) {
-            if (proof.length == 0 || address(earlyAdoption) == address(0)) {
-                revert NotAllowedToJoinYet();
-            }
-        }
-
-        noId = _nodeOperatorsCount;
-        NodeOperator storage no = _nodeOperators[noId];
-
-        no.managerAddress = managementProperties.managerAddress == address(0)
-            ? msg.sender
-            : managementProperties.managerAddress;
-        no.rewardAddress = managementProperties.rewardAddress == address(0)
-            ? msg.sender
-            : managementProperties.rewardAddress;
-        if (managementProperties.extendedManagerPermissions)
-            no.extendedManagerPermissions = managementProperties
-                .extendedManagerPermissions;
-
-        unchecked {
-            ++_nodeOperatorsCount;
-        }
-
-        emit NodeOperatorAdded(noId, no.managerAddress, no.rewardAddress);
-
-        if (referrer != address(0)) emit ReferrerSet(noId, referrer);
-
-        // @dev It's possible to join with proof even after public release to get beneficial bond curve
-        if (proof.length != 0 && address(earlyAdoption) != address(0)) {
-            _applyEarlyAdoptionCurve(noId, msg.sender, proof);
-            curveId = earlyAdoption.CURVE_ID();
-        } else {
-            curveId = accounting.DEFAULT_BOND_CURVE_ID();
-        }
-    }
-
     function _addKeysAndUpdateDepositableValidatorsCount(
         uint256 nodeOperatorId,
         uint256 keysCount,
@@ -1388,15 +1308,6 @@ contract CSModule is
         if (amount > MAX_KEY_REMOVAL_CHARGE) revert InvalidInput();
         keyRemovalCharge = amount;
         emit KeyRemovalChargeSet(amount);
-    }
-
-    function _applyEarlyAdoptionCurve(
-        uint256 nodeOperatorId,
-        address member,
-        bytes32[] calldata proof
-    ) internal {
-        earlyAdoption.consume(msg.sender, proof);
-        accounting.setBondCurve(nodeOperatorId, earlyAdoption.CURVE_ID());
     }
 
     /// @dev Update exited validators count for a single Node Operator
@@ -1518,10 +1429,13 @@ contract CSModule is
         }
     }
 
-    function _onlyNodeOperatorManager(uint256 nodeOperatorId) internal view {
+    function _onlyNodeOperatorManager(
+        uint256 nodeOperatorId,
+        address from
+    ) internal view {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (no.managerAddress == address(0)) revert NodeOperatorDoesNotExist();
-        if (no.managerAddress != msg.sender) revert SenderIsNotEligible();
+        if (no.managerAddress != from) revert SenderIsNotEligible();
     }
 
     function _onlyNodeOperatorManagerOrRewardAddresses(

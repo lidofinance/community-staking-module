@@ -10,7 +10,6 @@ import { INOAddresses } from "../lib/NOAddresses.sol";
 import { IAssetRecovererLib } from "../lib/AssetRecovererLib.sol";
 import { Batch } from "../lib/QueueLib.sol";
 import { ILidoLocator } from "./ILidoLocator.sol";
-import { ICSEarlyAdoption } from "./ICSEarlyAdoption.sol";
 import { IStETH } from "./IStETH.sol";
 
 struct NodeOperator {
@@ -56,13 +55,13 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     error AlreadyActivated();
 
     error InvalidAmount();
-    error NotAllowedToJoinYet();
     error MaxSigningKeysCountExceeded();
 
     error NotSupported();
     error ZeroLocatorAddress();
     error ZeroAccountingAddress();
     error ZeroAdminAddress();
+    error ZeroSenderAddress();
     error ZeroRewardAddress();
     error EarlyAdoptionNotSet();
 
@@ -171,11 +170,12 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     function VERIFIER_ROLE() external view returns (bytes32);
 
+    function CREATE_NODE_OPERATOR_ROLE() external view returns (bytes32);
+
+    function CLAIM_BENEFICIAL_CURVE_ROLE() external view returns (bytes32);
+
     /// @notice Returns the address of the accounting contract
     function accounting() external view returns (ICSAccounting);
-
-    /// @notice Returns the early adoption contract address
-    function earlyAdoption() external view returns (ICSEarlyAdoption);
 
     /// @notice Pause creation of the Node Operators and keys upload for `duration` seconds.
     ///         Existing NO management and reward claims are still available.
@@ -189,95 +189,34 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     /// @notice Public release mode status
     function publicRelease() external view returns (bool);
 
-    /// @notice Set the early adoption contract address
-    /// @param earlyAdoptionAddress Early Adoption contract address
-    /// @dev Can be set to zero address to disable the Early Adoption integration
-    function setEarlyAdoption(address earlyAdoptionAddress) external;
-
     /// @notice Activate public release mode
     ///         Enable permissionless creation of the Node Operators
     ///         Remove the keys limit for the Node Operators
     function activatePublicRelease() external;
 
-    /// @notice Add a new Node Operator using ETH as a bond.
-    ///         At least one deposit data and corresponding bond should be provided
-    /// @param keysCount Signing keys count
-    /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of `(deposit_message_root, domain)` tuples
-    ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
+    /// @notice Permissioned method to add a new Node Operator
+    /// @param from Sender address
     /// @param managementProperties Optional. Management properties to be used for the Node Operator.
     ///                             managerAddress: Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used.
     ///                             rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used.
     ///                             extendedManagerPermissions: Flag indicating that managerAddress will be able to change rewardAddress.
     ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
-    /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
-    function addNodeOperatorETH(
-        uint256 keysCount,
-        bytes memory publicKeys,
-        bytes memory signatures,
+    function createNodeOperator(
+        address from,
         NodeOperatorManagementProperties memory managementProperties,
-        bytes32[] memory eaProof,
         address referrer
-    ) external payable;
-
-    /// @notice Add a new Node Operator using stETH as a bond.
-    ///         At least one deposit data and corresponding bond should be provided
-    /// @notice Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
-    /// @param keysCount Signing keys count
-    /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of `(deposit_message_root, domain)` tuples
-    ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
-    /// @param managementProperties Optional. Management properties to be used for the Node Operator.
-    ///                             managerAddress: Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used.
-    ///                             rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used.
-    ///                             extendedManagerPermissions: Flag indicating that managerAddress will be able to change rewardAddress.
-    ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
-    /// @param permit Optional. Permit to use stETH as bond
-    /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
-    /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
-    function addNodeOperatorStETH(
-        uint256 keysCount,
-        bytes memory publicKeys,
-        bytes memory signatures,
-        NodeOperatorManagementProperties memory managementProperties,
-        ICSAccounting.PermitInput memory permit,
-        bytes32[] memory eaProof,
-        address referrer
-    ) external;
-
-    /// @notice Add a new Node Operator using wstETH as a bond.
-    ///         At least one deposit data and corresponding bond should be provided
-    /// @notice Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
-    /// @param keysCount Signing keys count
-    /// @param publicKeys Public keys to submit
-    /// @param signatures Signatures of `(deposit_message_root, domain)` tuples
-    ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
-    /// @param managementProperties Optional. Management properties to be used for the Node Operator.
-    ///                             managerAddress: Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used.
-    ///                             rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used.
-    ///                             extendedManagerPermissions: Flag indicating that managerAddress will be able to change rewardAddress.
-    ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
-    /// @param permit Optional. Permit to use wstETH as bond
-    /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
-    /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
-    function addNodeOperatorWstETH(
-        uint256 keysCount,
-        bytes memory publicKeys,
-        bytes memory signatures,
-        NodeOperatorManagementProperties memory managementProperties,
-        ICSAccounting.PermitInput memory permit,
-        bytes32[] memory eaProof,
-        address referrer
-    ) external;
+    ) external returns (uint256 nodeOperatorId);
 
     /// @notice Add new keys to the existing Node Operator using ETH as a bond
+    /// @param from Sender address
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
     /// @param signatures Signatures of `(deposit_message_root, domain)` tuples
     ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
     function addValidatorKeysETH(
+        address from,
         uint256 nodeOperatorId,
         uint256 keysCount,
         bytes memory publicKeys,
@@ -286,6 +225,7 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     /// @notice Add new keys to the existing Node Operator using stETH as a bond
     /// @notice Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
+    /// @param from Sender address
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
@@ -293,6 +233,7 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
     /// @param permit Optional. Permit to use stETH as bond
     function addValidatorKeysStETH(
+        address from,
         uint256 nodeOperatorId,
         uint256 keysCount,
         bytes memory publicKeys,
@@ -302,6 +243,7 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     /// @notice Add new keys to the existing Node Operator using wstETH as a bond
     /// @notice Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
+    /// @param from Sender address
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
@@ -309,6 +251,7 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     ///                   https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata
     /// @param permit Optional. Permit to use wstETH as bond
     function addValidatorKeysWstETH(
+        address from,
         uint256 nodeOperatorId,
         uint256 keysCount,
         bytes memory publicKeys,
@@ -385,13 +328,13 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         bytes32[] memory rewardsProof
     ) external;
 
-    /// @notice Apply Early Adoption bond curve to any existing Node Operator
-    ///         It consumes existing sender's early adoption proof
+    /// @notice Claim beneficial bond curve for the node operator
+    ///         Permissioned
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param proof Merkle proof of the sender being eligible for the Early Adoption
-    function applyEarlyAdoptionBenefits(
+    /// @param curveId ID of the bond curve
+    function claimBeneficialBondCurve(
         uint256 nodeOperatorId,
-        bytes32[] calldata proof
+        uint256 curveId
     ) external;
 
     /// @notice Report EL rewards stealing for the given Node Operator

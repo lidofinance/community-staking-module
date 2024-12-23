@@ -18,14 +18,16 @@ import { IGateSeal } from "../../src/interfaces/IGateSeal.sol";
 import { HashConsensus } from "../../src/lib/base-oracle/HashConsensus.sol";
 import { IWithdrawalQueue } from "../../src/interfaces/IWithdrawalQueue.sol";
 import { CSModule } from "../../src/CSModule.sol";
+import { PermissionlessGate } from "../../src/PermissionlessGate.sol";
+import { VettedGate } from "../../src/VettedGate.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";
 import { CSFeeOracle } from "../../src/CSFeeOracle.sol";
 import { CSFeeDistributor } from "../../src/CSFeeDistributor.sol";
 import { CSVerifier } from "../../src/CSVerifier.sol";
-import { CSEarlyAdoption } from "../../src/CSEarlyAdoption.sol";
 import { DeployParams } from "../../script/DeployBase.s.sol";
 import { IACL } from "../../src/interfaces/IACL.sol";
 import { IKernel } from "../../src/interfaces/IKernel.sol";
+import { ICSEarlyAdoption } from "../../src/interfaces/ICSEarlyAdoption.sol";
 
 contract Fixtures is StdCheats, Test {
     bytes32 public constant INITIALIZABLE_STORAGE =
@@ -86,6 +88,9 @@ contract DeploymentHelpers is Test {
     struct DeploymentConfig {
         uint256 chainId;
         address csm;
+        address permissionlessGate;
+        address vettedGate;
+        /// legacy from v1
         address earlyAdoption;
         address accounting;
         address oracle;
@@ -97,6 +102,8 @@ contract DeploymentHelpers is Test {
     }
 
     struct UpgradeConfig {
+        address permissionlessGate;
+        address vettedGate;
         address csmImpl;
         address accountingImpl;
         address oracleImpl;
@@ -104,7 +111,6 @@ contract DeploymentHelpers is Test {
         address verifier;
         address earlyAdoption;
         address hashConsensus;
-        address gateSeal;
     }
 
     function envVars() public returns (Env memory) {
@@ -126,11 +132,24 @@ contract DeploymentHelpers is Test {
         deploymentConfig.csm = vm.parseJsonAddress(config, ".CSModule");
         vm.label(deploymentConfig.csm, "csm");
 
+        /// legacy one
         deploymentConfig.earlyAdoption = vm.parseJsonAddress(
             config,
             ".CSEarlyAdoption"
         );
         vm.label(deploymentConfig.earlyAdoption, "earlyAdoption");
+
+        deploymentConfig.permissionlessGate = vm.parseJsonAddress(
+            config,
+            ".PermissionlessGate"
+        );
+        vm.label(deploymentConfig.permissionlessGate, "permissionlessGate");
+
+        deploymentConfig.vettedGate = vm.parseJsonAddress(
+            config,
+            ".VettedGate"
+        );
+        vm.label(deploymentConfig.vettedGate, "vettedGate");
 
         deploymentConfig.accounting = vm.parseJsonAddress(
             config,
@@ -169,6 +188,11 @@ contract DeploymentHelpers is Test {
     function parseUpgradeConfig(
         string memory config
     ) internal view returns (UpgradeConfig memory upgradeConfig) {
+        upgradeConfig.permissionlessGate = vm.parseJsonAddress(
+            config,
+            ".PermissionlessGate"
+        );
+        upgradeConfig.vettedGate = vm.parseJsonAddress(config, ".VettedGate");
         upgradeConfig.csmImpl = vm.parseJsonAddress(config, ".CSModuleImpl");
         upgradeConfig.accountingImpl = vm.parseJsonAddress(
             config,
@@ -183,15 +207,10 @@ contract DeploymentHelpers is Test {
             ".CSFeeDistributorImpl"
         );
         upgradeConfig.verifier = vm.parseJsonAddress(config, ".CSVerifier");
-        upgradeConfig.earlyAdoption = vm.parseJsonAddress(
-            config,
-            ".CSEarlyAdoption"
-        );
         upgradeConfig.hashConsensus = vm.parseJsonAddress(
             config,
             ".HashConsensus"
         );
-        upgradeConfig.gateSeal = vm.parseJsonAddress(config, ".GateSeal");
     }
 
     function parseDeployParams(
@@ -213,7 +232,9 @@ contract DeploymentHelpers is Test {
 
 contract DeploymentFixtures is StdCheats, DeploymentHelpers {
     CSModule public csm;
-    CSEarlyAdoption earlyAdoption;
+    PermissionlessGate public permissionlessGate;
+    VettedGate public vettedGate;
+    ICSEarlyAdoption public earlyAdoption;
     CSAccounting public accounting;
     CSFeeOracle public oracle;
     CSFeeDistributor public feeDistributor;
@@ -234,7 +255,11 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
         assertEq(deploymentConfig.chainId, block.chainid, "ChainId mismatch");
 
         csm = CSModule(deploymentConfig.csm);
-        earlyAdoption = CSEarlyAdoption(deploymentConfig.earlyAdoption);
+        permissionlessGate = PermissionlessGate(
+            deploymentConfig.permissionlessGate
+        );
+        vettedGate = VettedGate(deploymentConfig.vettedGate);
+        earlyAdoption = ICSEarlyAdoption(deploymentConfig.earlyAdoption);
         accounting = CSAccounting(deploymentConfig.accounting);
         oracle = CSFeeOracle(deploymentConfig.oracle);
         feeDistributor = CSFeeDistributor(deploymentConfig.feeDistributor);
@@ -250,7 +275,10 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
             UpgradeConfig memory upgradeConfig = parseUpgradeConfig(
                 vm.readFile(env.UPGRADE_CONFIG)
             );
-            earlyAdoption = CSEarlyAdoption(upgradeConfig.earlyAdoption);
+            permissionlessGate = PermissionlessGate(
+                upgradeConfig.permissionlessGate
+            );
+            vettedGate = VettedGate(upgradeConfig.vettedGate);
             verifier = CSVerifier(upgradeConfig.verifier);
             hashConsensus = HashConsensus(upgradeConfig.hashConsensus);
         }

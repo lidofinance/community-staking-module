@@ -12,7 +12,9 @@ import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
-import { CSEarlyAdoption } from "../src/CSEarlyAdoption.sol";
+import { PermissionlessGate } from "../src/PermissionlessGate.sol";
+import { VettedGate } from "../src/VettedGate.sol";
+import { ICSEarlyAdoption } from "../src/interfaces/ICSEarlyAdoption.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
@@ -20,7 +22,7 @@ import { Slot } from "../src/lib/Types.sol";
 import { DeployBase } from "./DeployBase.s.sol";
 
 abstract contract DeployImplementationsBase is DeployBase {
-    address gateSeal;
+    address earlyAdoption;
 
     function _deploy() internal {
         if (chainId != block.chainid) {
@@ -54,10 +56,11 @@ abstract contract DeployImplementationsBase is DeployBase {
                 maxBondLockPeriod: config.maxBondLockPeriod
             });
 
-            CSEarlyAdoption earlyAdoption = new CSEarlyAdoption({
-                _treeRoot: config.earlyAdoptionTreeRoot,
-                curveId: earlyAdoption.CURVE_ID(),
-                module: address(csm),
+            permissionlessGate = new PermissionlessGate(address(csm));
+            vettedGate = new VettedGate({
+                _treeRoot: config.vettedGateTreeRoot,
+                curveId: ICSEarlyAdoption(earlyAdoption).CURVE_ID(),
+                csm: address(csm),
                 admin: config.aragonAgent
             });
 
@@ -90,22 +93,18 @@ abstract contract DeployImplementationsBase is DeployBase {
                 )
             });
 
-            address[] memory sealables = new address[](4);
-            sealables[0] = address(csm);
-            sealables[1] = address(accounting);
-            sealables[2] = address(oracle);
-            sealables[3] = address(earlyAdoption);
-            gateSeal = _deployGateSeal(sealables);
-
             JsonObj memory deployJson = Json.newObj();
+            deployJson.set(
+                "PermissionlessGateImpl",
+                address(permissionlessGate)
+            );
+            deployJson.set("VettedGate", address(vettedGate));
             deployJson.set("CSModuleImpl", address(csmImpl));
             deployJson.set("CSAccountingImpl", address(accountingImpl));
             deployJson.set("CSFeeOracleImpl", address(oracleImpl));
             deployJson.set("CSFeeDistributorImpl", address(feeDistributorImpl));
             deployJson.set("CSVerifier", address(verifier));
-            deployJson.set("CSEarlyAdoption", address(earlyAdoption));
             deployJson.set("HashConsensus", address(hashConsensus));
-            deployJson.set("GateSeal", gateSeal);
             deployJson.set("git-ref", gitRef);
             vm.writeJson(
                 deployJson.str,

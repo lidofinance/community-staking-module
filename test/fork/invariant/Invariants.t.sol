@@ -38,10 +38,10 @@ contract CSModuleInvariants is InvariantsBase {
         assertCSMEnqueuedCount(csm);
     }
 
-    function test_earlyAdoptionMaxKeys() public noGasMetering {
+    function test_csmMaxKeys() public noGasMetering {
         vm.skip(csm.publicRelease());
 
-        assertCSMEarlyAdoptionMaxKeys(csm);
+        assertCSMMaxKeys(csm);
     }
 
     function test_roles() public {

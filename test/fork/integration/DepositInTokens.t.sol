@@ -36,7 +36,7 @@ contract DepositIntegrationTest is
         uint256 noCount = csm.getNodeOperatorsCount();
         assertCSMKeys(csm);
         assertCSMEnqueuedCount(csm);
-        assertCSMEarlyAdoptionMaxKeys(csm);
+        assertCSMMaxKeys(csm);
         assertAccountingTotalBondShares(noCount, lido, accounting);
         assertAccountingBurnerApproval(
             lido,
@@ -54,6 +54,7 @@ contract DepositIntegrationTest is
         initializeFromDeployment();
 
         vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(this));
         csm.grantRole(csm.RESUME_ROLE(), address(this));
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(stakingRouter));
@@ -69,24 +70,32 @@ contract DepositIntegrationTest is
         strangerPrivateKey = 0x517a4637;
         stranger = vm.addr(strangerPrivateKey);
 
-        (bytes memory keys, bytes memory signatures) = keysSignatures(2);
         address nodeOperator = address(2);
-        uint256 amount = accounting.getBondAmountByKeysCount(2, 0);
-        vm.deal(nodeOperator, amount);
-        vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: amount }(
-            2,
-            keys,
-            signatures,
+        csm.createNodeOperator(
+            nodeOperator,
             NodeOperatorManagementProperties({
                 managerAddress: address(0),
                 rewardAddress: address(0),
                 extendedManagerPermissions: false
             }),
-            new bytes32[](0),
             address(0)
         );
+
+        uint256 keysCount = 2;
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+        uint256 amount = accounting.getBondAmountByKeysCount(keysCount, 0);
+        vm.deal(nodeOperator, amount);
         defaultNoId = csm.getNodeOperatorsCount() - 1;
+        vm.prank(nodeOperator);
+        csm.addValidatorKeysETH{ value: amount }(
+            nodeOperator,
+            defaultNoId,
+            keysCount,
+            keys,
+            signatures
+        );
     }
 
     function test_depositStETH() public assertInvariants {

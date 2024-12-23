@@ -71,8 +71,8 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
     function test_accountingState() public {
         assertFalse(accounting.isPaused());
         assertEq(
-            accounting.getCurveInfo(earlyAdoption.CURVE_ID()).points,
-            deployParams.earlyAdoptionBondCurve
+            accounting.getCurveInfo(vettedGate.CURVE_ID()).points,
+            deployParams.vettedGateBondCurve
         );
     }
 

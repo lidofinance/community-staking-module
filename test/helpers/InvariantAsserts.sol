@@ -124,7 +124,7 @@ contract InvariantAsserts is Test {
         }
     }
 
-    function assertCSMEarlyAdoptionMaxKeys(CSModule csm) public {
+    function assertCSMMaxKeys(CSModule csm) public {
         if (csm.publicRelease()) return;
 
         uint256 noCount = csm.getNodeOperatorsCount();

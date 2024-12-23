@@ -57,7 +57,6 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
 
     function test_initializer() public {
         assertEq(address(csm.accounting()), address(accounting));
-        assertEq(address(csm.earlyAdoption()), address(earlyAdoption));
         assertEq(csm.keyRemovalCharge(), deployParams.keyRemovalCharge);
         assertTrue(
             csm.hasRole(csm.STAKING_ROUTER_ROLE(), locator.stakingRouter())
@@ -448,7 +447,7 @@ contract HashConsensusDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 }
 
-contract CSEarlyAdoptionDeploymentTest is Test, Utilities, DeploymentFixtures {
+contract VettedGateDeploymentTest is Test, Utilities, DeploymentFixtures {
     DeployParams private deployParams;
 
     function setUp() public {
@@ -459,12 +458,12 @@ contract CSEarlyAdoptionDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_constructor() public {
-        assertEq(earlyAdoption.treeRoot(), deployParams.earlyAdoptionTreeRoot);
+        assertEq(vettedGate.treeRoot(), deployParams.vettedGateTreeRoot);
         assertEq(
-            accounting.getCurveInfo(earlyAdoption.CURVE_ID()).points,
-            deployParams.earlyAdoptionBondCurve
+            accounting.getCurveInfo(vettedGate.CURVE_ID()).points,
+            deployParams.vettedGateBondCurve
         );
-        assertEq(earlyAdoption.MODULE(), address(csm));
+        assertEq(address(vettedGate.CSM()), address(csm));
     }
 }
 
