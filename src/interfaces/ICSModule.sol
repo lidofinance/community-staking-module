@@ -107,11 +107,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         uint256 amount,
         bytes pubkey
     );
-    event InitialSlashingSubmitted(
-        uint256 indexed nodeOperatorId,
-        uint256 keyIndex,
-        bytes pubkey
-    );
 
     event PublicRelease();
     event KeyRemovalChargeSet(uint256 amount);
@@ -516,16 +511,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         uint256 keysCount
     ) external view returns (bytes memory keys, bytes memory signatures);
 
-    /// @notice Report Node Operator's key as slashed and apply the initial slashing penalty
-    /// @notice Called by the Verifier contract.
-    ///         See `CSVerifier.processSlashingProof` to use this method permissionless
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the slashed key in the Node Operator's keys storage
-    function submitInitialSlashing(
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) external;
-
     /// @notice Report Node Operator's key as withdrawn and settle withdrawn amount
     /// @notice Called by the Verifier contract.
     ///         See `CSVerifier.processWithdrawalProof` to use this method permissionless
@@ -540,7 +525,9 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         bool isSlashed
     ) external;
 
-    /// @notice Check if the given Node Operator's key is reported as slashed
+    /// @notice DEPRECATED! Check if the given Node Operator's key is reported as slashed
+    /// @notice Since pectra update the contract doesn't store slashing flag of a withdrawn
+    /// validator
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keyIndex Index of the key to check
     /// @return Validator reported as slashed flag

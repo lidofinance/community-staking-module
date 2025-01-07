@@ -6092,6 +6092,8 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
 }
 
 contract CsmSubmitWithdrawal is CSMCommon {
+    using stdStorage for StdStorage;
+
     function test_submitWithdrawal() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
@@ -6162,24 +6164,35 @@ contract CsmSubmitWithdrawal is CSMCommon {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
 
-        csm.submitInitialSlashing(noId, 0);
+        // Pretend someone called csm.submitInitialSlashing(noId, 0) before, so we have
+        // _isValidatorSlashed[...] == true in the module.
+        stdstore
+            .target(address(csm))
+            .sig(csm.isValidatorSlashed.selector)
+            .with_key(noId)
+            .with_key(keyIndex)
+            .checked_write(true);
+
         assertTrue(csm.isValidatorSlashed(noId, keyIndex));
 
-        uint256 exitBalance = DEPOSIT_SIZE - csm.INITIAL_SLASHING_PENALTY();
+        uint256 diffAfterInitialPenalty = 0.75432 ether;
+        uint256 exitBalance = DEPOSIT_SIZE -
+            csm.INITIAL_SLASHING_PENALTY() -
+            diffAfterInitialPenalty;
 
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(
                 accounting.penalize.selector,
                 noId,
-                0.05 ether
+                diffAfterInitialPenalty
             )
         );
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
         );
-        csm.submitWithdrawal(noId, keyIndex, exitBalance - 0.05 ether, true);
+        csm.submitWithdrawal(noId, keyIndex, exitBalance, true);
     }
 
     function test_submitWithdrawal_slashedIsNotReported()
@@ -6207,7 +6220,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
             abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
         );
         csm.submitWithdrawal(noId, keyIndex, exitBalance - 0.05 ether, true);
-        assertTrue(csm.isValidatorSlashed(noId, keyIndex));
+        assertFalse(csm.isValidatorSlashed(noId, keyIndex)); // We do not track it anymore.
     }
 
     function test_submitWithdrawal_unbondedKeys() public assertInvariants {
@@ -6248,118 +6261,6 @@ contract CsmSubmitWithdrawal is CSMCommon {
         csm.submitWithdrawal(noId, 0, depositSize, false);
         vm.expectRevert(ICSModule.AlreadySubmitted.selector);
         csm.submitWithdrawal(noId, 0, depositSize, false);
-    }
-}
-
-contract CsmSubmitInitialSlashing is CSMCommon {
-    function test_submitInitialSlashing() public assertInvariants {
-        uint256 keyIndex = 0;
-        uint256 noId = createNodeOperator(2);
-        (bytes memory pubkey, ) = csm.obtainDepositData(1, "");
-        uint256 penaltyAmount = csm.INITIAL_SLASHING_PENALTY();
-        uint256 nonce = csm.getNonce();
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit ICSModule.InitialSlashingSubmitted(noId, keyIndex, pubkey);
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.penalize.selector,
-                noId,
-                penaltyAmount
-            )
-        );
-        csm.submitInitialSlashing(noId, keyIndex);
-
-        bool slashed = csm.isValidatorSlashed(noId, keyIndex);
-        assertTrue(slashed);
-
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_submitInitialSlashing_Overbonded() public assertInvariants {
-        uint256 noId = createNodeOperator(2);
-        vm.deal(nodeOperator, 32 ether);
-        vm.prank(nodeOperator);
-        csm.depositETH{ value: 32 ether }(0);
-        (bytes memory pubkey, ) = csm.obtainDepositData(1, "");
-        uint256 penaltyAmount = csm.INITIAL_SLASHING_PENALTY();
-
-        uint256 nonce = csm.getNonce();
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit ICSModule.InitialSlashingSubmitted(noId, 0, pubkey);
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.penalize.selector,
-                noId,
-                penaltyAmount
-            )
-        );
-        csm.submitInitialSlashing(noId, 0);
-
-        assertEq(csm.getNonce(), nonce);
-    }
-
-    function test_submitInitialSlashing_differentKeys()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator(2);
-        (bytes memory pubkeys, ) = csm.obtainDepositData(2, "");
-
-        bytes memory pubkey0 = slice(pubkeys, 0, 48);
-        bytes memory pubkey1 = slice(pubkeys, 48, 48);
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit ICSModule.InitialSlashingSubmitted(noId, 0, pubkey0);
-        csm.submitInitialSlashing(noId, 0);
-
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit ICSModule.InitialSlashingSubmitted(noId, 1, pubkey1);
-        csm.submitInitialSlashing(noId, 1);
-    }
-
-    function test_submitInitialSlashing_outOfBond() public assertInvariants {
-        uint256 keyIndex = 0;
-        uint256 noId = createNodeOperator();
-        csm.obtainDepositData(1, "");
-
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            DEPOSIT_SIZE - csm.INITIAL_SLASHING_PENALTY()
-        );
-        csm.submitInitialSlashing(noId, keyIndex);
-    }
-
-    function test_submitInitialSlashing_RevertWhen_NoNodeOperator()
-        public
-        assertInvariants
-    {
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        csm.submitInitialSlashing(0, 0);
-    }
-
-    function test_submitInitialSlashing_RevertWhen_InvalidKeyIndexOffset()
-        public
-    {
-        uint256 noId = createNodeOperator();
-        vm.expectRevert(ICSModule.SigningKeysInvalidOffset.selector);
-        csm.submitInitialSlashing(noId, 0);
-    }
-
-    function test_submitInitialSlashing_RevertWhen_AlreadySubmitted()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator();
-        csm.obtainDepositData(1, "");
-
-        csm.submitInitialSlashing(noId, 0);
-        vm.expectRevert(ICSModule.AlreadySubmitted.selector);
-        csm.submitInitialSlashing(noId, 0);
     }
 }
 
@@ -6577,31 +6478,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
         csm.submitWithdrawal(noId, 0, 1 ether, false);
-    }
-
-    function test_verifierRole_submitInitialSlashing() public {
-        csm.activatePublicRelease();
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.VERIFIER_ROLE();
-
-        vm.startPrank(admin);
-        csm.grantRole(role, actor);
-        csm.grantRole(csm.STAKING_ROUTER_ROLE(), admin);
-        csm.obtainDepositData(1, "");
-        vm.stopPrank();
-
-        vm.prank(actor);
-        csm.submitInitialSlashing(noId, 0);
-    }
-
-    function test_verifierRole_submitInitialSlashing_revert() public {
-        csm.activatePublicRelease();
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.VERIFIER_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.submitInitialSlashing(noId, 0);
     }
 
     function test_recovererRole() public {
@@ -7229,19 +7105,6 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 3);
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 3);
         assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_depositableValidatorsCountChanges_OnInitialSlashing()
-        public
-        assertInvariants
-    {
-        // 1 key becomes unbonded till withdrawal.
-        uint256 noId = createNodeOperator(2);
-        csm.obtainDepositData(1, "");
-        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 1);
-        csm.submitInitialSlashing(noId, 0); // The first key was slashed.
-        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 0);
-        assertEq(getStakingModuleSummary().depositableValidatorsCount, 0);
     }
 
     function test_depositableValidatorsCountChanges_OnWithdrawal()
