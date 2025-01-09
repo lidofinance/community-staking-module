@@ -39,10 +39,7 @@ contract CSPerksRegistryInitTest is CSPerksRegistryBaseTest {
         PerksRegistry.initialize(admin);
 
         assertTrue(
-            PerksRegistry.hasRole(
-                PerksRegistry.DEFAULT_ADMIN_ROLE(),
-                admin
-            )
+            PerksRegistry.hasRole(PerksRegistry.DEFAULT_ADMIN_ROLE(), admin)
         );
     }
 
@@ -196,9 +193,7 @@ contract CSPerksRegistryRewardShareDataTest is CSPerksRegistryBaseTest {
     }
 }
 
-contract CSPerksRegistryPerformanceLeewayDataTest is
-    CSPerksRegistryBaseTest
-{
+contract CSPerksRegistryPerformanceLeewayDataTest is CSPerksRegistryBaseTest {
     function setUp() public virtual override {
         super.setUp();
         _enableInitializers(address(PerksRegistry));
@@ -375,9 +370,7 @@ contract CSPerksRegistryPerformanceLeewayDataTest is
     }
 }
 
-contract CSPerksRegistryPriorityQueueLimitTest is
-    CSPerksRegistryBaseTest
-{
+contract CSPerksRegistryPriorityQueueLimitTest is CSPerksRegistryBaseTest {
     function setUp() public virtual override {
         super.setUp();
         _enableInitializers(address(PerksRegistry));
