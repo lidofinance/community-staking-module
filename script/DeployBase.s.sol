@@ -189,7 +189,8 @@ abstract contract DeployBase is Script {
                 ),
                 pivotSlot: Slot.wrap(
                     uint64(config.verifierSupportedEpoch * config.slotsPerEpoch)
-                )
+                ),
+                admin: deployer
             });
 
             accounting.initialize({
@@ -264,6 +265,8 @@ abstract contract DeployBase is Script {
             csm.grantRole(csm.PAUSE_ROLE(), gateSeal);
             oracle.grantRole(oracle.PAUSE_ROLE(), gateSeal);
             accounting.grantRole(accounting.PAUSE_ROLE(), gateSeal);
+            verifier.grantRole(accounting.PAUSE_ROLE(), gateSeal);
+
             accounting.grantRole(
                 accounting.SET_BOND_CURVE_ROLE(),
                 config.setResetBondCurveAddress
@@ -290,6 +293,9 @@ abstract contract DeployBase is Script {
 
             csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
             csm.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
+
+            verifier.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
+            verifier.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
 
             accounting.grantRole(
                 accounting.DEFAULT_ADMIN_ROLE(),
@@ -354,10 +360,11 @@ abstract contract DeployBase is Script {
         IGateSealFactory gateSealFactory = IGateSealFactory(
             config.gateSealFactory
         );
-        address[] memory sealables = new address[](3);
+        address[] memory sealables = new address[](4);
         sealables[0] = address(csm);
         sealables[1] = address(accounting);
         sealables[2] = address(oracle);
+        sealables[3] = address(verifier);
 
         address committee = config.sealingCommittee == address(0)
             ? deployer

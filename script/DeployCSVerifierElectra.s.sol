@@ -24,6 +24,7 @@ struct Config {
     Slot firstSupportedSlot;
     Slot pivotSlot;
     uint64 slotsPerEpoch;
+    address admin;
 }
 
 // Check the constants below via `yarn run gindex`.
@@ -63,7 +64,8 @@ abstract contract DeployCSVerifier is Script {
             gIHistoricalSummariesPrev: config.gIHistoricalSummariesPrev,
             gIHistoricalSummariesCurr: config.gIHistoricalSummariesCurr,
             firstSupportedSlot: config.firstSupportedSlot,
-            pivotSlot: config.pivotSlot
+            pivotSlot: config.pivotSlot,
+            admin: config.admin
         });
         console.log("CSVerifier deployed at:", address(verifier));
     }
@@ -82,7 +84,8 @@ contract DeployCSVerifierHolesky is DeployCSVerifier {
             gIHistoricalSummariesPrev: HISTORICAL_SUMMARIES_DENEB,
             gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
             firstSupportedSlot: Slot.wrap(950272), // 269_568 * 32, @see https://github.com/eth-clients/mainnet/blob/main/metadata/config.yaml#L52
-            pivotSlot: Slot.wrap(0) // TODO: Update with Electra slot.
+            pivotSlot: Slot.wrap(0), // TODO: Update with Electra slot.
+            admin: 0xE92329EC7ddB11D25e25b3c21eeBf11f15eB325d // Aragon Agent
         });
     }
 }
@@ -100,7 +103,8 @@ contract DeployCSVerifierMainnet is DeployCSVerifier {
             gIHistoricalSummariesPrev: HISTORICAL_SUMMARIES_DENEB,
             gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
             firstSupportedSlot: Slot.wrap(8626176), // 29_696 * 32, @see https://github.com/eth-clients/holesky/blob/main/metadata/config.yaml#L38
-            pivotSlot: Slot.wrap(0) // TODO: Update with Electra slot.
+            pivotSlot: Slot.wrap(0), // TODO: Update with Electra slot.
+            admin: 0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c // Aragon Agent
         });
     }
 }

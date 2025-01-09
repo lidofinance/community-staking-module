@@ -80,7 +80,8 @@ abstract contract DeployImplementationsBase is DeployBase {
                 ),
                 pivotSlot: Slot.wrap(
                     uint64(config.verifierSupportedEpoch * config.slotsPerEpoch)
-                )
+                ),
+                admin: msg.sender
             });
 
             JsonObj memory deployJson = Json.newObj();
