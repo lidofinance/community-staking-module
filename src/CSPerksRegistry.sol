@@ -3,12 +3,12 @@
 
 pragma solidity 0.8.24;
 
-import { ICSBenefitsRegistry } from "./interfaces/ICSBenefitsRegistry.sol";
+import { ICSPerksRegistry } from "./interfaces/ICSPerksRegistry.sol";
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract CSBenefitsRegistry is
-    ICSBenefitsRegistry,
+contract CSPerksRegistry is
+    ICSPerksRegistry,
     Initializable,
     AccessControlEnumerableUpgradeable
 {
@@ -33,7 +33,7 @@ contract CSBenefitsRegistry is
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
-    /// @inheritdoc ICSBenefitsRegistry
+    /// @inheritdoc ICSPerksRegistry
     function setRewardShareData(
         uint256 curveId,
         uint256[] calldata keyPivots,
@@ -56,7 +56,7 @@ contract CSBenefitsRegistry is
         emit RewardShareDataSet(curveId);
     }
 
-    /// @inheritdoc ICSBenefitsRegistry
+    /// @inheritdoc ICSPerksRegistry
     function getRewardShareData(
         uint256 curveId
     )
@@ -71,7 +71,7 @@ contract CSBenefitsRegistry is
         );
     }
 
-    /// @inheritdoc ICSBenefitsRegistry
+    /// @inheritdoc ICSPerksRegistry
     function setPerformanceLeewayData(
         uint256 curveId,
         uint256[] calldata keyPivots,
@@ -94,7 +94,7 @@ contract CSBenefitsRegistry is
         emit PerformanceLeewayDataSet(curveId);
     }
 
-    /// @inheritdoc ICSBenefitsRegistry
+    /// @inheritdoc ICSPerksRegistry
     function getPerformanceLeewayData(
         uint256 curveId
     )
@@ -112,7 +112,7 @@ contract CSBenefitsRegistry is
         );
     }
 
-    /// @inheritdoc ICSBenefitsRegistry
+    /// @inheritdoc ICSPerksRegistry
     function setPriorityQueueLimit(
         uint256 curveId,
         uint256 limit
@@ -121,7 +121,7 @@ contract CSBenefitsRegistry is
         emit PriorityQueueLimitSet(curveId, limit);
     }
 
-    /// @inheritdoc ICSBenefitsRegistry
+    /// @inheritdoc ICSPerksRegistry
     function getPriorityQueueLimit(
         uint256 curveId
     ) external view returns (uint256 limit) {

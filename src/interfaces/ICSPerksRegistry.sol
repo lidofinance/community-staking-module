@@ -3,7 +3,7 @@
 
 pragma solidity 0.8.24;
 
-interface ICSBenefitsRegistry {
+interface ICSPerksRegistry {
     event RewardShareDataSet(uint256 indexed curveId);
     event PerformanceLeewayDataSet(uint256 indexed curveId);
     event PriorityQueueLimitSet(uint256 indexed curveId, uint256 limit);
