@@ -420,6 +420,9 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         );
 
         vm.expectEmit(true, true, true, true, address(feeDistributor));
+        emit ICSFeeDistributor.LastDistributed(shares);
+
+        vm.expectEmit(true, true, true, true, address(feeDistributor));
         emit ICSFeeDistributor.DistributionLogUpdated(logCid);
 
         vm.prank(oracle);

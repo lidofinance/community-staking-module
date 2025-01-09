@@ -121,6 +121,8 @@ contract CSFeeDistributor is
             );
         }
 
+        emit LastDistributed(distributed);
+
         // NOTE: Make sure off-chain tooling provides a distinct CID of a log even for empty reports, e.g. by mixing
         // in a frame identifier such as reference slot to a file.
         if (bytes(_logCid).length == 0) revert InvalidLogCID();

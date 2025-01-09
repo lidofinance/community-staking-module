@@ -20,6 +20,9 @@ interface ICSFeeDistributor is IAssetRecovererLib {
     /// @dev Emitted when distribution log is updated
     event DistributionLogUpdated(string logCid);
 
+    /// @dev It logs how many shares were distributed in the latest report
+    event LastDistributed(uint256 shares);
+
     error ZeroAccountingAddress();
     error ZeroStEthAddress();
     error ZeroAdminAddress();
