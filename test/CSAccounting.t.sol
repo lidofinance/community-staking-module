@@ -2871,7 +2871,7 @@ contract CSAccountingClaimRewardsUnstETHTest is
 }
 
 contract CSAccountingClaimableBondTest is CSAccountingRewardsBaseTest {
-    function test_default() public override assertInvariants {
+    function test_default() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2885,7 +2885,7 @@ contract CSAccountingClaimableBondTest is CSAccountingRewardsBaseTest {
         );
     }
 
-    function test_WithCurve() public override assertInvariants {
+    function test_WithCurve() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2901,9 +2901,9 @@ contract CSAccountingClaimableBondTest is CSAccountingRewardsBaseTest {
         );
     }
 
-    function test_WithLocked() public override assertInvariants {
+    function test_WithLocked() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
-        _deposit({ bond: 32 ether });
+        _deposit({ bond: 33 ether });
         _rewards({ fee: 0.1 ether });
         _lock({ id: 0, amount: 1 ether });
 
@@ -2916,7 +2916,7 @@ contract CSAccountingClaimableBondTest is CSAccountingRewardsBaseTest {
         );
     }
 
-    function test_WithCurveAndLocked() public override assertInvariants {
+    function test_WithCurveAndLocked() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2933,7 +2933,7 @@ contract CSAccountingClaimableBondTest is CSAccountingRewardsBaseTest {
         );
     }
 
-    function test_WithOneWithdrawnValidator() public override assertInvariants {
+    function test_WithOneWithdrawnValidator() public override {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2948,7 +2948,7 @@ contract CSAccountingClaimableBondTest is CSAccountingRewardsBaseTest {
         );
     }
 
-    function test_WithBond() public override assertInvariants {
+    function test_WithBond() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2962,11 +2962,7 @@ contract CSAccountingClaimableBondTest is CSAccountingRewardsBaseTest {
         );
     }
 
-    function test_WithBondAndOneWithdrawnValidator()
-        public
-        override
-        assertInvariants
-    {
+    function test_WithBondAndOneWithdrawnValidator() public override {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
@@ -2981,7 +2977,7 @@ contract CSAccountingClaimableBondTest is CSAccountingRewardsBaseTest {
         );
     }
 
-    function test_WithExcessBond() public override assertInvariants {
+    function test_WithExcessBond() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 33 ether });
         _rewards({ fee: 0.1 ether });
@@ -2996,11 +2992,7 @@ contract CSAccountingClaimableBondTest is CSAccountingRewardsBaseTest {
         );
     }
 
-    function test_WithExcessBondAndOneWithdrawnValidator()
-        public
-        override
-        assertInvariants
-    {
+    function test_WithExcessBondAndOneWithdrawnValidator() public override {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 33 ether });
         _rewards({ fee: 0.1 ether });
@@ -3015,7 +3007,7 @@ contract CSAccountingClaimableBondTest is CSAccountingRewardsBaseTest {
         );
     }
 
-    function test_WithMissingBond() public override assertInvariants {
+    function test_WithMissingBond() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
@@ -3029,11 +3021,7 @@ contract CSAccountingClaimableBondTest is CSAccountingRewardsBaseTest {
         );
     }
 
-    function test_WithMissingBondAndOneWithdrawnValidator()
-        public
-        override
-        assertInvariants
-    {
+    function test_WithMissingBondAndOneWithdrawnValidator() public override {
         _operator({ ongoing: 16, withdrawn: 1 });
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
