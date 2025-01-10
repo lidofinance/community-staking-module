@@ -224,11 +224,6 @@ contract NodeOperators is
         );
     }
 
-    function slash(uint256 noId, uint256 keyIndex) external broadcastVerifier {
-        csm.submitInitialSlashing(noId, keyIndex);
-        assertTrue(csm.isValidatorSlashed(noId, keyIndex));
-    }
-
     function targetLimit(
         uint256 noId,
         uint256 targetLimitMode,

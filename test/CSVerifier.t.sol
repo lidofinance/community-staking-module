@@ -35,13 +35,6 @@ contract CSVerifierTestBase is Test, Utilities {
         ICSVerifier.WithdrawalWitness witness;
     }
 
-    struct SlashingFixture {
-        bytes32 _blockRoot;
-        bytes _pubkey;
-        ICSVerifier.ProvableBeaconBlockHeader beaconBlock;
-        ICSVerifier.SlashingWitness witness;
-    }
-
     CSVerifier public verifier;
     Stub public module;
     Slot public firstSupportedSlot;
@@ -166,109 +159,6 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
             pivotSlot: firstSupportedSlot
         });
-    }
-}
-
-contract CSVerifierSlashingTest is CSVerifierTestBase {
-    function setUp() public {
-        module = new Stub();
-
-        verifier = new CSVerifier({
-            withdrawalAddress: nextAddress("WITHDRAWAL_ADDRESS"),
-            module: address(module),
-            slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
-            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
-            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
-            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
-            gIFirstValidatorPrev: pack(0x560000000000, 40),
-            gIFirstValidatorCurr: pack(0x560000000000, 40),
-            firstSupportedSlot: Slot.wrap(100_500), // Any value less than the slots from the fixtures.
-            pivotSlot: Slot.wrap(100_500)
-        });
-    }
-
-    function test_processSlashingProof() public {
-        SlashingFixture memory fixture = abi.decode(
-            _readFixture("slashing.json"),
-            (SlashingFixture)
-        );
-
-        _setMocksSlashing(fixture);
-
-        verifier.processSlashingProof(
-            fixture.beaconBlock,
-            fixture.witness,
-            0,
-            0
-        );
-    }
-
-    function test_processSlashingProof_RevertWhen_UnsupportedSlot() public {
-        SlashingFixture memory fixture = abi.decode(
-            _readFixture("slashing.json"),
-            (SlashingFixture)
-        );
-
-        _setMocksSlashing(fixture);
-
-        fixture.beaconBlock.header.slot = verifier.FIRST_SUPPORTED_SLOT().dec();
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ICSVerifier.UnsupportedSlot.selector,
-                fixture.beaconBlock.header.slot
-            )
-        );
-        verifier.processSlashingProof(
-            fixture.beaconBlock,
-            fixture.witness,
-            0,
-            0
-        );
-    }
-
-    function test_processSlashingProof_RevertWhen_InvalidBlockHeader() public {
-        SlashingFixture memory fixture = abi.decode(
-            _readFixture("slashing.json"),
-            (SlashingFixture)
-        );
-
-        _setMocksSlashing(fixture);
-
-        vm.mockCall(
-            verifier.BEACON_ROOTS(),
-            abi.encode(fixture.beaconBlock.rootsTimestamp),
-            abi.encode("lol")
-        );
-
-        vm.expectRevert(ICSVerifier.InvalidBlockHeader.selector);
-        verifier.processSlashingProof(
-            fixture.beaconBlock,
-            fixture.witness,
-            0,
-            0
-        );
-    }
-
-    function _setMocksSlashing(SlashingFixture memory fixture) internal {
-        vm.mockCall(
-            verifier.BEACON_ROOTS(),
-            abi.encode(fixture.beaconBlock.rootsTimestamp),
-            abi.encode(fixture._blockRoot)
-        );
-
-        vm.mockCall(
-            address(module),
-            abi.encodeWithSelector(ICSModule.getSigningKeys.selector, 0, 0),
-            abi.encode(fixture._pubkey)
-        );
-
-        vm.mockCall(
-            address(module),
-            abi.encodeWithSelector(ICSModule.submitInitialSlashing.selector),
-            ""
-        );
     }
 }
 

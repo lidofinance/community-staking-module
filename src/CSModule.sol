@@ -74,8 +74,9 @@ contract CSModule is
 
     uint256 private _nonce;
     mapping(uint256 => NodeOperator) private _nodeOperators;
-    // @dev see _keyPointer function for details of noKeyIndexPacked structure
+    /// @dev see _keyPointer function for details of noKeyIndexPacked structure
     mapping(uint256 noKeyIndexPacked => bool) private _isValidatorWithdrawn;
+    /// @dev DEPRECATED! No writes expected after Pectra hard-fork
     mapping(uint256 noKeyIndexPacked => bool) private _isValidatorSlashed;
 
     uint64 private _totalDepositedValidators;
@@ -853,13 +854,13 @@ contract CSModule is
         emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount, pubkey);
 
         if (isSlashed) {
+            // NOTE: Can't remove the check so far to avoid double-accounting of penalty. Make sure
+            // we decided to go with CSVerifier with no processSalshingProof function deployed first
+            // with some meaningful grace period.
             if (_isValidatorSlashed[pointer]) {
-                // Account already burned value
                 unchecked {
                     amount += INITIAL_SLASHING_PENALTY;
                 }
-            } else {
-                _isValidatorSlashed[pointer] = true;
             }
             // Bond curve should be reset to default in case of slashing. See https://hackmd.io/@lido/SygBLW5ja
             accounting.resetBondCurve(nodeOperatorId);
@@ -870,37 +871,6 @@ contract CSModule is
                 accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - amount);
             }
         }
-
-        // Nonce should be updated if depositableValidators change
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true
-        });
-    }
-
-    /// @inheritdoc ICSModule
-    function submitInitialSlashing(
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) external onlyRole(VERIFIER_ROLE) {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (keyIndex >= no.totalDepositedKeys) {
-            revert SigningKeysInvalidOffset();
-        }
-
-        uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
-
-        if (_isValidatorSlashed[pointer]) {
-            revert AlreadySubmitted();
-        }
-
-        _isValidatorSlashed[pointer] = true;
-
-        bytes memory pubkey = SigningKeys.loadKeys(nodeOperatorId, keyIndex, 1);
-        emit InitialSlashingSubmitted(nodeOperatorId, keyIndex, pubkey);
-
-        accounting.penalize(nodeOperatorId, INITIAL_SLASHING_PENALTY);
 
         // Nonce should be updated if depositableValidators change
         _updateDepositableValidatorsCount({
