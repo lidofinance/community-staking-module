@@ -92,7 +92,10 @@ abstract contract DeployImplementationsBase is DeployBase {
             gateSeal = _deployGateSeal(sealables);
 
             verifier.grantRole(verifier.PAUSE_ROLE(), address(gateSeal));
-            verifier.grantRole(verifier.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
+            verifier.grantRole(
+                verifier.DEFAULT_ADMIN_ROLE(),
+                config.aragonAgent
+            );
             verifier.revokeRole(verifier.DEFAULT_ADMIN_ROLE(), deployer);
 
             JsonObj memory deployJson = Json.newObj();

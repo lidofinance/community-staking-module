@@ -299,7 +299,10 @@ abstract contract DeployBase is Script {
             csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
             csm.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
 
-            verifier.grantRole(verifier.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
+            verifier.grantRole(
+                verifier.DEFAULT_ADMIN_ROLE(),
+                config.aragonAgent
+            );
             verifier.revokeRole(verifier.DEFAULT_ADMIN_ROLE(), deployer);
 
             accounting.grantRole(
