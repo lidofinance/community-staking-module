@@ -76,7 +76,7 @@ interface ICSPerksRegistry {
     function setPriorityQueueLimit(uint256 curveId, uint256 limit) external;
 
     /// @notice Get priority queue limit by the curveId.
-    /// @dev Default value is returned if the value is not set for the given curveId.
+    /// @dev Zero is returned if the value is not set for the given curveId.
     /// @dev The first `limit` keys for the Node Operator with the given `curveId` will be placed in the priority queue.
     /// @param curveId Curve Id to get priority queue limit for
     /// @return limit Priority queue limit
