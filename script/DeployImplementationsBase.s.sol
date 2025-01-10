@@ -92,8 +92,8 @@ abstract contract DeployImplementationsBase is DeployBase {
             gateSeal = _deployGateSeal(sealables);
 
             verifier.grantRole(verifier.PAUSE_ROLE(), address(gateSeal));
-            verifier.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
-            verifier.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
+            verifier.grantRole(verifier.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
+            verifier.revokeRole(verifier.DEFAULT_ADMIN_ROLE(), deployer);
 
             JsonObj memory deployJson = Json.newObj();
             deployJson.set("CSModuleImpl", address(csmImpl));

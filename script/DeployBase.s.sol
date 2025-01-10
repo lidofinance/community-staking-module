@@ -270,7 +270,7 @@ abstract contract DeployBase is Script {
             csm.grantRole(csm.PAUSE_ROLE(), gateSeal);
             oracle.grantRole(oracle.PAUSE_ROLE(), gateSeal);
             accounting.grantRole(accounting.PAUSE_ROLE(), gateSeal);
-            verifier.grantRole(accounting.PAUSE_ROLE(), gateSeal);
+            verifier.grantRole(verifier.PAUSE_ROLE(), gateSeal);
 
             accounting.grantRole(
                 accounting.SET_BOND_CURVE_ROLE(),
@@ -299,8 +299,8 @@ abstract contract DeployBase is Script {
             csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
             csm.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
 
-            verifier.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
-            verifier.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
+            verifier.grantRole(verifier.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
+            verifier.revokeRole(verifier.DEFAULT_ADMIN_ROLE(), deployer);
 
             accounting.grantRole(
                 accounting.DEFAULT_ADMIN_ROLE(),
