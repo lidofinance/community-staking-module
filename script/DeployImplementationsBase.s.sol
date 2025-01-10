@@ -94,10 +94,7 @@ abstract contract DeployImplementationsBase is DeployBase {
             });
 
             JsonObj memory deployJson = Json.newObj();
-            deployJson.set(
-                "PermissionlessGateImpl",
-                address(permissionlessGate)
-            );
+            deployJson.set("PermissionlessGate", address(permissionlessGate));
             deployJson.set("VettedGate", address(vettedGate));
             deployJson.set("CSModuleImpl", address(csmImpl));
             deployJson.set("CSAccountingImpl", address(accountingImpl));

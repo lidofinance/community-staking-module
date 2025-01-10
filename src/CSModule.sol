@@ -43,8 +43,8 @@ contract CSModule is
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
     bytes32 public constant CREATE_NODE_OPERATOR_ROLE =
         keccak256("CREATE_NODE_OPERATOR_ROLE");
-    bytes32 public constant CLAIM_BENEFICIAL_CURVE_ROLE =
-        keccak256("CLAIM_BENEFICIAL_CURVE_ROLE");
+    bytes32 public constant SET_BOND_CURVE_ROLE =
+        keccak256("SET_BOND_CURVE_ROLE");
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
     // @dev see IStakingModule.sol
@@ -197,11 +197,7 @@ contract CSModule is
         bytes calldata publicKeys,
         bytes calldata signatures
     ) external payable whenResumed {
-        if (from == msg.sender) {
-            _onlyNodeOperatorManager(nodeOperatorId, from);
-        } else {
-            _checkRole(CREATE_NODE_OPERATOR_ROLE);
-        }
+        _onlyManagerOrCreateNodeOperatorRole(nodeOperatorId, from);
 
         if (
             msg.value <
@@ -229,11 +225,7 @@ contract CSModule is
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
     ) external whenResumed {
-        if (from == msg.sender) {
-            _onlyNodeOperatorManager(nodeOperatorId, from);
-        } else {
-            _checkRole(CREATE_NODE_OPERATOR_ROLE);
-        }
+        _onlyManagerOrCreateNodeOperatorRole(nodeOperatorId, from);
 
         uint256 amount = accounting.getRequiredBondForNextKeys(
             nodeOperatorId,
@@ -259,11 +251,7 @@ contract CSModule is
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
     ) external whenResumed {
-        if (from == msg.sender) {
-            _onlyNodeOperatorManager(nodeOperatorId, from);
-        } else {
-            _checkRole(CREATE_NODE_OPERATOR_ROLE);
-        }
+        _onlyManagerOrCreateNodeOperatorRole(nodeOperatorId, from);
 
         uint256 amount = accounting.getRequiredBondForNextKeysWstETH(
             nodeOperatorId,
@@ -407,10 +395,10 @@ contract CSModule is
     }
 
     /// @inheritdoc ICSModule
-    function claimBeneficialBondCurve(
+    function setBondCurve(
         uint256 nodeOperatorId,
         uint256 curveId
-    ) external onlyRole(CLAIM_BENEFICIAL_CURVE_ROLE) {
+    ) external onlyRole(SET_BOND_CURVE_ROLE) {
         accounting.setBondCurve(nodeOperatorId, curveId);
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
@@ -1426,6 +1414,20 @@ contract CSModule is
                 _incrementModuleNonce();
             }
             depositQueue.normalize(_nodeOperators, nodeOperatorId);
+        }
+    }
+
+    function _onlyManagerOrCreateNodeOperatorRole(
+        uint256 nodeOperatorId,
+        address from
+    ) internal view {
+        if (from == msg.sender) {
+            _onlyNodeOperatorManager(nodeOperatorId, from);
+        } else {
+            _checkRole(CREATE_NODE_OPERATOR_ROLE);
+            if (_nodeOperators[nodeOperatorId].totalAddedKeys > 0) {
+                revert NodeOperatorHasKeys();
+            }
         }
     }
 

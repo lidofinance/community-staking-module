@@ -103,6 +103,11 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
 
         vm.startBroadcast(admin);
 
+        accounting.revokeRole(accounting.SET_BOND_CURVE_ROLE(), address(csm));
+        accounting.revokeRole(
+            accounting.SET_BOND_CURVE_ROLE(),
+            accounting.getRoleMember(accounting.SET_BOND_CURVE_ROLE(), 0)
+        );
         csm.grantRole(
             csm.CREATE_NODE_OPERATOR_ROLE(),
             upgradeConfig.permissionlessGate
@@ -111,10 +116,7 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
             csm.CREATE_NODE_OPERATOR_ROLE(),
             upgradeConfig.vettedGate
         );
-        csm.grantRole(
-            csm.CLAIM_BENEFICIAL_CURVE_ROLE(),
-            upgradeConfig.vettedGate
-        );
+        csm.grantRole(csm.SET_BOND_CURVE_ROLE(), upgradeConfig.vettedGate);
 
         csm.revokeRole(csm.VERIFIER_ROLE(), address(deploymentConfig.verifier));
         csm.grantRole(csm.VERIFIER_ROLE(), address(upgradeConfig.verifier));

@@ -206,7 +206,7 @@ abstract contract DeployBase is Script {
                 accounting.MANAGE_BOND_CURVES_ROLE(),
                 address(deployer)
             );
-            uint256 vettedBondCurve = accounting.addBondCurve(
+            uint256 identifiedSolosCurve = accounting.addBondCurve(
                 config.vettedGateBondCurve
             );
             accounting.revokeRole(
@@ -222,7 +222,7 @@ abstract contract DeployBase is Script {
             permissionlessGate = new PermissionlessGate(address(csm));
             vettedGate = new VettedGate({
                 _treeRoot: config.vettedGateTreeRoot,
-                curveId: vettedBondCurve,
+                curveId: identifiedSolosCurve,
                 csm: address(csm),
                 admin: config.aragonAgent
             });
@@ -271,10 +271,6 @@ abstract contract DeployBase is Script {
             oracle.grantRole(oracle.PAUSE_ROLE(), gateSeal);
             accounting.grantRole(accounting.PAUSE_ROLE(), gateSeal);
             accounting.grantRole(
-                accounting.SET_BOND_CURVE_ROLE(),
-                config.setResetBondCurveAddress
-            );
-            accounting.grantRole(
                 accounting.RESET_BOND_CURVE_ROLE(),
                 config.setResetBondCurveAddress
             );
@@ -284,10 +280,7 @@ abstract contract DeployBase is Script {
                 address(permissionlessGate)
             );
             csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(vettedGate));
-            csm.grantRole(
-                csm.CLAIM_BENEFICIAL_CURVE_ROLE(),
-                address(vettedGate)
-            );
+            csm.grantRole(csm.SET_BOND_CURVE_ROLE(), address(vettedGate));
             csm.grantRole(
                 csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(),
                 config.elRewardsStealingReporter

@@ -33,11 +33,13 @@ contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
         address admin
     ) {
         if (_treeRoot == bytes32(0)) revert InvalidTreeRoot();
-        if (curveId == 0) revert InvalidCurveId();
         if (csm == address(0)) revert ZeroModuleAddress();
         if (admin == address(0)) revert ZeroAdminAddress();
 
         CSM = ICSModule(csm);
+
+        if (curveId == CSM.accounting().DEFAULT_BOND_CURVE_ID())
+            revert InvalidCurveId();
         CURVE_ID = curveId;
 
         _setTreeRoot(_treeRoot);
@@ -70,7 +72,7 @@ contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
             managementProperties,
             referrer
         );
-        CSM.claimBeneficialBondCurve(nodeOperatorId, CURVE_ID);
+        CSM.setBondCurve(nodeOperatorId, CURVE_ID);
         CSM.addValidatorKeysETH{ value: msg.value }({
             from: msg.sender,
             nodeOperatorId: nodeOperatorId,
@@ -97,7 +99,7 @@ contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
             managementProperties,
             referrer
         );
-        CSM.claimBeneficialBondCurve(nodeOperatorId, CURVE_ID);
+        CSM.setBondCurve(nodeOperatorId, CURVE_ID);
         CSM.addValidatorKeysStETH({
             from: msg.sender,
             nodeOperatorId: nodeOperatorId,
@@ -125,7 +127,7 @@ contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
             managementProperties,
             referrer
         );
-        CSM.claimBeneficialBondCurve(nodeOperatorId, CURVE_ID);
+        CSM.setBondCurve(nodeOperatorId, CURVE_ID);
         CSM.addValidatorKeysWstETH({
             from: msg.sender,
             nodeOperatorId: nodeOperatorId,

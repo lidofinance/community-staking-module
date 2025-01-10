@@ -166,9 +166,6 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
             deployParams.chargePenaltyRecipient
         );
         assertTrue(
-            accounting.hasRole(accounting.SET_BOND_CURVE_ROLE(), address(csm))
-        );
-        assertTrue(
             accounting.hasRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm))
         );
 
@@ -204,16 +201,6 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
         );
         assertEq(accounting.getRoleMemberCount(accounting.PAUSE_ROLE()), 1);
 
-        assertTrue(
-            accounting.hasRole(
-                accounting.SET_BOND_CURVE_ROLE(),
-                deployParams.setResetBondCurveAddress
-            )
-        );
-        assertEq(
-            accounting.getRoleMemberCount(accounting.SET_BOND_CURVE_ROLE()),
-            2
-        );
         assertTrue(
             accounting.hasRole(
                 accounting.RESET_BOND_CURVE_ROLE(),

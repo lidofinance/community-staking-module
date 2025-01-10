@@ -6,6 +6,12 @@ import "../../../src/interfaces/ICSModule.sol";
 import { ICSAccounting } from "../../../src/interfaces/ICSAccounting.sol";
 
 contract CSMMock {
+    uint256 public constant DEFAULT_BOND_CURVE_ID = 0;
+
+    function accounting() external view returns (ICSAccounting) {
+        return ICSAccounting(address(this));
+    }
+
     function createNodeOperator(
         address from,
         NodeOperatorManagementProperties memory managementProperties,
@@ -40,8 +46,5 @@ contract CSMMock {
         ICSAccounting.PermitInput memory permit
     ) external {}
 
-    function claimBeneficialBondCurve(
-        uint256 nodeOperatorId,
-        uint256 curveId
-    ) external {}
+    function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external {}
 }

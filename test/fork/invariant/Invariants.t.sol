@@ -127,15 +127,6 @@ contract CSAccountingInvariants is InvariantsBase {
             "manage bond curves"
         );
         assertEq(
-            accounting.getRoleMemberCount(accounting.SET_BOND_CURVE_ROLE()),
-            2,
-            "set bond curve"
-        );
-        assertTrue(
-            accounting.hasRole(accounting.SET_BOND_CURVE_ROLE(), address(csm)),
-            "set bond curve csm"
-        );
-        assertEq(
             accounting.getRoleMemberCount(accounting.RESET_BOND_CURVE_ROLE()),
             2,
             "reset bond curve"

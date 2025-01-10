@@ -39,6 +39,7 @@ struct NodeOperatorManagementProperties {
 
 /// @title Lido's Community Staking Module interface
 interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
+    error NodeOperatorHasKeys();
     error NodeOperatorDoesNotExist();
     error SenderIsNotEligible();
     error InvalidVetKeysPointer();
@@ -63,7 +64,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     error ZeroAdminAddress();
     error ZeroSenderAddress();
     error ZeroRewardAddress();
-    error EarlyAdoptionNotSet();
 
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
@@ -115,7 +115,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     event PublicRelease();
     event KeyRemovalChargeSet(uint256 amount);
-    event EarlyAdoptionSet(address earlyAdoption);
     event KeyRemovalChargeApplied(uint256 indexed nodeOperatorId);
     event ELRewardsStealingPenaltyReported(
         uint256 indexed nodeOperatorId,
@@ -172,7 +171,7 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     function CREATE_NODE_OPERATOR_ROLE() external view returns (bytes32);
 
-    function CLAIM_BENEFICIAL_CURVE_ROLE() external view returns (bytes32);
+    function SET_BOND_CURVE_ROLE() external view returns (bytes32);
 
     /// @notice Returns the address of the accounting contract
     function accounting() external view returns (ICSAccounting);
@@ -195,10 +194,11 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     function activatePublicRelease() external;
 
     /// @notice Permissioned method to add a new Node Operator
-    /// @param from Sender address
+    ///         Should be called by *Gate contracts. See PermissionlessGate.sol and VettedGate.sol for examples
+    /// @param from Sender address. Initial sender address to be used as a default manager and reward addresses
     /// @param managementProperties Optional. Management properties to be used for the Node Operator.
-    ///                             managerAddress: Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used.
-    ///                             rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used.
+    ///                             managerAddress: Used as `managerAddress` for the Node Operator. If not passed `from` will be used.
+    ///                             rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `from` will be used.
     ///                             extendedManagerPermissions: Flag indicating that managerAddress will be able to change rewardAddress.
     ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
@@ -209,7 +209,7 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     ) external returns (uint256 nodeOperatorId);
 
     /// @notice Add new keys to the existing Node Operator using ETH as a bond
-    /// @param from Sender address
+    /// @param from Sender address. Commonly equals to msg.sender except for the case of Node Operator creation by *Gates contracts
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
@@ -225,7 +225,7 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     /// @notice Add new keys to the existing Node Operator using stETH as a bond
     /// @notice Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
-    /// @param from Sender address
+    /// @param from Sender address. Commonly equals to msg.sender except for the case of Node Operator creation by *Gates contracts
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
@@ -243,7 +243,7 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     /// @notice Add new keys to the existing Node Operator using wstETH as a bond
     /// @notice Due to the stETH rounding issue make sure to make approval or sign permit with extra 10 wei to avoid revert
-    /// @param from Sender address
+    /// @param from Sender address. Commonly equals to msg.sender except for the case of Node Operator creation by *Gates contracts
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keysCount Signing keys count
     /// @param publicKeys Public keys to submit
@@ -328,14 +328,11 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         bytes32[] memory rewardsProof
     ) external;
 
-    /// @notice Claim beneficial bond curve for the node operator
+    /// @notice Set bond curve for the node operator
     ///         Permissioned
     /// @param nodeOperatorId ID of the Node Operator
     /// @param curveId ID of the bond curve
-    function claimBeneficialBondCurve(
-        uint256 nodeOperatorId,
-        uint256 curveId
-    ) external;
+    function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external;
 
     /// @notice Report EL rewards stealing for the given Node Operator
     /// @notice The final locked amount will be equal to the stolen funds plus EL stealing additional fine

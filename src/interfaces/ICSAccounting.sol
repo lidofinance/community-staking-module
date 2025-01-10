@@ -41,6 +41,7 @@ interface ICSAccounting is
 
     function MANAGE_BOND_CURVES_ROLE() external view returns (bytes32);
 
+    /// @dev Deprecated. Use setBondCurve with the corresponding role on the CSM contract instead
     function SET_BOND_CURVE_ROLE() external view returns (bytes32);
 
     function RESET_BOND_CURVE_ROLE() external view returns (bytes32);
@@ -273,8 +274,7 @@ interface ICSAccounting is
     function compensateLockedBondETH(uint256 nodeOperatorId) external payable;
 
     /// @notice Set the bond curve for the given Node Operator
-    /// @dev If called externally, the `normalizeQueue` method from CSModule.sol should be called after
-    ///      to ensure key pointers consistency
+    /// @dev Called only by CSM with the queue normalization to ensure key pointers consistency
     /// @param nodeOperatorId ID of the Node Operator
     /// @param curveId ID of the bond curve to set
     function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external;

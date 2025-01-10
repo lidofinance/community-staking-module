@@ -327,7 +327,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
 
         vm.startPrank(admin);
         csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(this));
-        csm.grantRole(csm.CLAIM_BENEFICIAL_CURVE_ROLE(), address(this));
+        csm.grantRole(csm.SET_BOND_CURVE_ROLE(), address(this));
         csm.grantRole(csm.PAUSE_ROLE(), address(this));
         csm.grantRole(csm.RESUME_ROLE(), address(this));
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
