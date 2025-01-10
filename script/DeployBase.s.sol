@@ -260,7 +260,12 @@ abstract contract DeployBase is Script {
                 _avgPerfLeewayBP: config.avgPerfLeewayBP
             });
 
-            address gateSeal = _deployGateSeal();
+            address[] memory sealables = new address[](4);
+            sealables[0] = address(csm);
+            sealables[1] = address(accounting);
+            sealables[2] = address(oracle);
+            sealables[3] = address(verifier);
+            address gateSeal = _deployGateSeal(sealables);
 
             csm.grantRole(csm.PAUSE_ROLE(), gateSeal);
             oracle.grantRole(oracle.PAUSE_ROLE(), gateSeal);
@@ -356,15 +361,12 @@ abstract contract DeployBase is Script {
         return address(proxy);
     }
 
-    function _deployGateSeal() internal returns (address) {
+    function _deployGateSeal(
+        address[] memory sealables
+    ) internal returns (address) {
         IGateSealFactory gateSealFactory = IGateSealFactory(
             config.gateSealFactory
         );
-        address[] memory sealables = new address[](4);
-        sealables[0] = address(csm);
-        sealables[1] = address(accounting);
-        sealables[2] = address(oracle);
-        sealables[3] = address(verifier);
 
         address committee = config.sealingCommittee == address(0)
             ? deployer
