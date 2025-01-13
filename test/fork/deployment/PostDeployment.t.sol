@@ -516,4 +516,10 @@ contract CSVerifierDeploymentTest is Test, Utilities, DeploymentFixtures {
             deployParams.verifierSupportedEpoch * deployParams.slotsPerEpoch
         );
     }
+
+    function test_roles() public {
+        assertTrue(verifier.hasRole(verifier.PAUSE_ROLE(), address(gateSeal)));
+        assertEq(verifier.getRoleMemberCount(verifier.PAUSE_ROLE()), 1);
+        assertEq(verifier.getRoleMemberCount(verifier.RESUME_ROLE()), 0);
+    }
 }

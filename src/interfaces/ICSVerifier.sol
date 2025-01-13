@@ -61,7 +61,12 @@ interface ICSVerifier {
     error UnsupportedSlot(Slot slot);
     error ZeroModuleAddress();
     error ZeroWithdrawalAddress();
+    error ZeroAdminAddress();
     error InvalidPivotSlot();
+
+    function PAUSE_ROLE() external view returns (bytes32);
+
+    function RESUME_ROLE() external view returns (bytes32);
 
     function BEACON_ROOTS() external view returns (address);
 
@@ -86,6 +91,13 @@ interface ICSVerifier {
     function WITHDRAWAL_ADDRESS() external view returns (address);
 
     function MODULE() external view returns (ICSModule);
+
+    /// @notice Pause write methods calls for `duration` seconds
+    /// @param duration Duration of the pause in seconds
+    function pauseFor(uint256 duration) external;
+
+    /// @notice Resume write methods calls
+    function resume() external;
 
     /// @notice Verify withdrawal proof and report withdrawal to the module for valid proofs
     /// @param beaconBlock Beacon block header
