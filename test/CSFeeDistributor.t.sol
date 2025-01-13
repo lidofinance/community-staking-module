@@ -161,7 +161,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         );
 
         vm.expectEmit(true, true, true, true, address(feeDistributor));
-        emit ICSFeeDistributor.FeeDistributed(nodeOperatorId, shares);
+        emit ICSFeeDistributor.OperatorFeeDistributed(nodeOperatorId, shares);
 
         vm.prank(address(accounting));
         feeDistributor.distributeFees({
@@ -418,6 +418,9 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
             treeRoot,
             treeCid
         );
+
+        vm.expectEmit(true, true, true, true, address(feeDistributor));
+        emit ICSFeeDistributor.ModuleFeeDistributed(shares);
 
         vm.expectEmit(true, true, true, true, address(feeDistributor));
         emit ICSFeeDistributor.DistributionLogUpdated(logCid);
