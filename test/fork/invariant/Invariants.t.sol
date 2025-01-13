@@ -226,3 +226,23 @@ contract HashConsensusInvariant is InvariantsBase {
         );
     }
 }
+
+contract VerifierInvariant is InvariantsBase {
+    function test_roles() public {
+        assertEq(
+            verifier.getRoleMemberCount(verifier.PAUSE_ROLE()),
+            1,
+            "pause"
+        );
+        assertEq(
+            verifier.getRoleMember(verifier.PAUSE_ROLE(), 0),
+            address(gateSeal),
+            "pause address"
+        );
+        assertEq(
+            verifier.getRoleMemberCount(verifier.RESUME_ROLE()),
+            0,
+            "resume"
+        );
+    }
+}
