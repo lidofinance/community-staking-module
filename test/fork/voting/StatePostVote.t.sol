@@ -74,6 +74,12 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
             accounting.getCurveInfo(earlyAdoption.CURVE_ID()).points,
             deployParams.earlyAdoptionBondCurve
         );
+        assertTrue(
+            burner.hasRole(
+                burner.REQUEST_BURN_MY_STETH_ROLE(),
+                address(accounting)
+            )
+        );
     }
 
     function test_accountingRoles() public {

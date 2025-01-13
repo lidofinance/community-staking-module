@@ -195,6 +195,7 @@ test-local *args:
     @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
     DEPLOYER_PRIVATE_KEY=`cat localhost.json | jq -r ".private_keys[0]"` \
         just deploy --silent
+
     DEPLOY_CONFIG=./artifacts/local/deploy-{{chain}}.json \
     RPC_URL={{anvil_rpc_url}} \
         just test-deployment {{args}}
