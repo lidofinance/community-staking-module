@@ -80,8 +80,23 @@ abstract contract DeployImplementationsBase is DeployBase {
                 ),
                 pivotSlot: Slot.wrap(
                     uint64(config.verifierSupportedEpoch * config.slotsPerEpoch)
-                )
+                ),
+                admin: deployer
             });
+
+            address[] memory sealables = new address[](4);
+            sealables[0] = address(csm);
+            sealables[1] = address(accounting);
+            sealables[2] = address(oracle);
+            sealables[3] = address(verifier);
+            gateSeal = _deployGateSeal(sealables);
+
+            verifier.grantRole(verifier.PAUSE_ROLE(), address(gateSeal));
+            verifier.grantRole(
+                verifier.DEFAULT_ADMIN_ROLE(),
+                config.aragonAgent
+            );
+            verifier.revokeRole(verifier.DEFAULT_ADMIN_ROLE(), deployer);
 
             JsonObj memory deployJson = Json.newObj();
             deployJson.set("CSModuleImpl", address(csmImpl));
@@ -91,6 +106,7 @@ abstract contract DeployImplementationsBase is DeployBase {
             deployJson.set("CSVerifier", address(verifier));
             deployJson.set("CSEarlyAdoption", address(earlyAdoption));
             deployJson.set("HashConsensus", address(hashConsensus));
+            deployJson.set("GateSeal", address(gateSeal));
             deployJson.set("git-ref", gitRef);
             vm.writeJson(
                 deployJson.str,

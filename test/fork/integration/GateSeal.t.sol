@@ -23,10 +23,11 @@ contract GateSealTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_sealAll() public {
-        address[] memory sealables = new address[](3);
+        address[] memory sealables = new address[](4);
         sealables[0] = address(csm);
         sealables[1] = address(accounting);
         sealables[2] = address(oracle);
+        sealables[3] = address(verifier);
 
         vm.prank(gateSeal.get_sealing_committee());
         gateSeal.seal(sealables);
@@ -34,6 +35,7 @@ contract GateSealTest is Test, Utilities, DeploymentFixtures {
         assertTrue(csm.isPaused());
         assertTrue(accounting.isPaused());
         assertTrue(oracle.isPaused());
+        assertTrue(verifier.isPaused());
     }
 
     function test_sealCSM() public {
@@ -44,6 +46,8 @@ contract GateSealTest is Test, Utilities, DeploymentFixtures {
 
         assertTrue(csm.isPaused());
         assertFalse(accounting.isPaused());
+        assertFalse(oracle.isPaused());
+        assertFalse(verifier.isPaused());
     }
 
     function test_sealAccounting() public {
@@ -54,6 +58,8 @@ contract GateSealTest is Test, Utilities, DeploymentFixtures {
 
         assertTrue(accounting.isPaused());
         assertFalse(csm.isPaused());
+        assertFalse(oracle.isPaused());
+        assertFalse(verifier.isPaused());
     }
 
     function test_sealOracle() public {
@@ -63,7 +69,20 @@ contract GateSealTest is Test, Utilities, DeploymentFixtures {
         gateSeal.seal(sealables);
 
         assertTrue(oracle.isPaused());
-        assertFalse(accounting.isPaused());
         assertFalse(csm.isPaused());
+        assertFalse(accounting.isPaused());
+        assertFalse(verifier.isPaused());
+    }
+
+    function test_sealVerifier() public {
+        address[] memory sealables = new address[](1);
+        sealables[0] = address(verifier);
+        vm.prank(gateSeal.get_sealing_committee());
+        gateSeal.seal(sealables);
+
+        assertTrue(verifier.isPaused());
+        assertFalse(csm.isPaused());
+        assertFalse(accounting.isPaused());
+        assertFalse(oracle.isPaused());
     }
 }

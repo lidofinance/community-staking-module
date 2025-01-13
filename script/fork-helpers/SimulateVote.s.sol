@@ -8,6 +8,8 @@ import { DeploymentFixtures } from "test/helpers/Fixtures.sol";
 import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
 import { OssifiableProxy } from "../../src/lib/proxy/OssifiableProxy.sol";
 import { CSModule } from "../../src/CSModule.sol";
+import { CSAccounting } from "../../src/CSAccounting.sol";
+import { CSFeeOracle } from "../../src/CSFeeOracle.sol";
 import { IBurner } from "../../src/interfaces/IBurner.sol";
 import { ForkHelpersCommon } from "./Common.sol";
 
@@ -100,10 +102,29 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
 
         address admin = _prepareAdmin(deploymentConfig.csm);
         csm = CSModule(deploymentConfig.csm);
+        accounting = CSAccounting(deploymentConfig.accounting);
+        oracle = CSFeeOracle(deploymentConfig.oracle);
 
         vm.startBroadcast(admin);
         csm.revokeRole(csm.VERIFIER_ROLE(), address(deploymentConfig.verifier));
         csm.grantRole(csm.VERIFIER_ROLE(), address(upgradeConfig.verifier));
+
+        csm.revokeRole(csm.PAUSE_ROLE(), address(deploymentConfig.gateSeal));
+        accounting.revokeRole(
+            accounting.PAUSE_ROLE(),
+            address(deploymentConfig.gateSeal)
+        );
+        oracle.revokeRole(
+            oracle.PAUSE_ROLE(),
+            address(deploymentConfig.gateSeal)
+        );
+
+        csm.grantRole(csm.PAUSE_ROLE(), address(upgradeConfig.gateSeal));
+        accounting.grantRole(
+            accounting.PAUSE_ROLE(),
+            address(upgradeConfig.gateSeal)
+        );
+        oracle.grantRole(oracle.PAUSE_ROLE(), address(upgradeConfig.gateSeal));
         vm.stopBroadcast();
     }
 }

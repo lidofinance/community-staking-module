@@ -7,7 +7,7 @@ import { stdJson } from "forge-std/StdJson.sol";
 
 import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { ICSModule } from "../src/interfaces/ICSModule.sol";
-
+import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 
 import { CSVerifier } from "../src/CSVerifier.sol";
@@ -15,6 +15,7 @@ import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { pack } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 
+import { Utilities } from "./helpers/Utilities.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 
 function dec(Slot self) pure returns (Slot slot) {
@@ -25,7 +26,7 @@ function dec(Slot self) pure returns (Slot slot) {
 
 using { dec } for Slot;
 
-contract CSVerifierHistoricalTest is Test {
+contract CSVerifierHistoricalTest is Test, Utilities {
     using stdJson for string;
 
     struct HistoricalWithdrawalFixture {
@@ -38,11 +39,16 @@ contract CSVerifierHistoricalTest is Test {
 
     CSVerifier public verifier;
     Stub public module;
+    address public admin;
+
+    bytes32 public pauseRole;
+    bytes32 public resumeRole;
 
     HistoricalWithdrawalFixture public fixture;
 
     function setUp() public {
         module = new Stub();
+        admin = nextAddress("ADMIN");
         verifier = new CSVerifier({
             withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
@@ -54,8 +60,17 @@ contract CSVerifierHistoricalTest is Test {
             gIFirstValidatorPrev: pack(0x560000000000, 40),
             gIFirstValidatorCurr: pack(0x560000000000, 40),
             firstSupportedSlot: Slot.wrap(100_500), // Any value less than the slots from the fixtures.
-            pivotSlot: Slot.wrap(100_500)
+            pivotSlot: Slot.wrap(100_500),
+            admin: admin
         });
+
+        pauseRole = verifier.PAUSE_ROLE();
+        resumeRole = verifier.RESUME_ROLE();
+
+        vm.startPrank(admin);
+        verifier.grantRole(pauseRole, admin);
+        verifier.grantRole(resumeRole, admin);
+        vm.stopPrank();
     }
 
     function _get_fixture() internal {
@@ -161,6 +176,25 @@ contract CSVerifierHistoricalTest is Test {
         fixture.oldBlock.rootGIndex = GIndex.wrap(bytes32(0));
 
         vm.expectRevert(ICSVerifier.InvalidGIndex.selector);
+        // solhint-disable-next-line func-named-parameters
+        verifier.processHistoricalWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.oldBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processWithdrawalProof_RevertWhenPaused() public {
+        _get_fixture();
+        _setMocksWithdrawal(fixture);
+
+        vm.prank(admin);
+        verifier.pauseFor(100_500);
+        assertTrue(verifier.isPaused());
+
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
         // solhint-disable-next-line func-named-parameters
         verifier.processHistoricalWithdrawalProof(
             fixture.beaconBlock,

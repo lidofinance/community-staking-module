@@ -29,9 +29,11 @@ contract CSVerifierBiForkTestConstructor is Test, Utilities {
     CSVerifier verifier;
 
     Stub module;
+    address public admin;
 
     function setUp() public {
         module = new Stub();
+        admin = nextAddress("ADMIN");
     }
 
     function test_constructor_HappyPath() public {
@@ -46,7 +48,8 @@ contract CSVerifierBiForkTestConstructor is Test, Utilities {
             gIHistoricalSummariesPrev: pack(0x3b, 0),
             gIHistoricalSummariesCurr: pack(0x3b, 0),
             firstSupportedSlot: Slot.wrap(8_192),
-            pivotSlot: Slot.wrap(950_272)
+            pivotSlot: Slot.wrap(950_272),
+            admin: admin
         });
 
         assertEq(
@@ -102,7 +105,8 @@ contract CSVerifierBiForkTestConstructor is Test, Utilities {
             gIHistoricalSummariesPrev: pack(0x3b, 0),
             gIHistoricalSummariesCurr: pack(0x3b, 0),
             firstSupportedSlot: Slot.wrap(8_192),
-            pivotSlot: Slot.wrap(950_272)
+            pivotSlot: Slot.wrap(950_272),
+            admin: admin
         });
     }
 
@@ -119,7 +123,8 @@ contract CSVerifierBiForkTestConstructor is Test, Utilities {
             gIHistoricalSummariesPrev: pack(0x3b, 0),
             gIHistoricalSummariesCurr: pack(0x3b, 0),
             firstSupportedSlot: Slot.wrap(8_192),
-            pivotSlot: Slot.wrap(950_272)
+            pivotSlot: Slot.wrap(950_272),
+            admin: admin
         });
     }
 
@@ -136,7 +141,8 @@ contract CSVerifierBiForkTestConstructor is Test, Utilities {
             gIHistoricalSummariesPrev: pack(0x3b, 0),
             gIHistoricalSummariesCurr: pack(0x3b, 0),
             firstSupportedSlot: Slot.wrap(8_192),
-            pivotSlot: Slot.wrap(950_272)
+            pivotSlot: Slot.wrap(950_272),
+            admin: admin
         });
     }
 
@@ -153,12 +159,13 @@ contract CSVerifierBiForkTestConstructor is Test, Utilities {
             gIHistoricalSummariesPrev: pack(0x3b, 0),
             gIHistoricalSummariesCurr: pack(0x3b, 0),
             firstSupportedSlot: Slot.wrap(200),
-            pivotSlot: Slot.wrap(100)
+            pivotSlot: Slot.wrap(100),
+            admin: admin
         });
     }
 }
 
-contract CSVerifierBiForkHistoricalTest is Test {
+contract CSVerifierBiForkHistoricalTest is Test, Utilities {
     using stdJson for string;
 
     struct HistoricalWithdrawalFixture {
@@ -171,11 +178,13 @@ contract CSVerifierBiForkHistoricalTest is Test {
 
     CSVerifier public verifier;
     Stub public module;
+    address public admin;
 
     HistoricalWithdrawalFixture public fixture;
 
     function setUp() public {
         module = new Stub();
+        admin = nextAddress("ADMIN");
         verifier = new CSVerifier({
             withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
@@ -187,7 +196,8 @@ contract CSVerifierBiForkHistoricalTest is Test {
             gIHistoricalSummariesPrev: pack(0x3b, 0),
             gIHistoricalSummariesCurr: pack(0x3b, 0),
             firstSupportedSlot: Slot.wrap(8_192),
-            pivotSlot: Slot.wrap(950_272)
+            pivotSlot: Slot.wrap(950_272),
+            admin: admin
         });
     }
 

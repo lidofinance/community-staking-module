@@ -5,6 +5,8 @@ pragma solidity 0.8.24;
 
 import { ICSVerifier } from "./interfaces/ICSVerifier.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
+import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
+import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 
 import { BeaconBlockHeader, Slot, Validator, Withdrawal } from "./lib/Types.sol";
 import { GIndex } from "./lib/GIndex.sol";
@@ -22,12 +24,15 @@ function gweiToWei(uint64 amount) pure returns (uint256) {
     return uint256(amount) * 1 gwei;
 }
 
-contract CSVerifier is ICSVerifier {
+contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
     using { amountWei } for Withdrawal;
 
     using SSZ for BeaconBlockHeader;
     using SSZ for Withdrawal;
     using SSZ for Validator;
+
+    bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
+    bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
 
     // See `BEACON_ROOTS_ADDRESS` constant in the EIP-4788.
     address public constant BEACON_ROOTS =
@@ -77,10 +82,12 @@ contract CSVerifier is ICSVerifier {
         GIndex gIHistoricalSummariesPrev,
         GIndex gIHistoricalSummariesCurr,
         Slot firstSupportedSlot,
-        Slot pivotSlot
+        Slot pivotSlot,
+        address admin
     ) {
         if (withdrawalAddress == address(0)) revert ZeroWithdrawalAddress();
         if (module == address(0)) revert ZeroModuleAddress();
+        if (admin == address(0)) revert ZeroAdminAddress();
 
         if (slotsPerEpoch == 0) revert InvalidChainConfig();
         if (firstSupportedSlot > pivotSlot) revert InvalidPivotSlot();
@@ -101,6 +108,18 @@ contract CSVerifier is ICSVerifier {
 
         FIRST_SUPPORTED_SLOT = firstSupportedSlot;
         PIVOT_SLOT = pivotSlot;
+
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+    }
+
+    /// @inheritdoc ICSVerifier
+    function resume() external onlyRole(RESUME_ROLE) {
+        _resume();
+    }
+
+    /// @inheritdoc ICSVerifier
+    function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
+        _pauseFor(duration);
     }
 
     /// @inheritdoc ICSVerifier
@@ -109,7 +128,7 @@ contract CSVerifier is ICSVerifier {
         WithdrawalWitness calldata witness,
         uint256 nodeOperatorId,
         uint256 keyIndex
-    ) external {
+    ) external whenResumed {
         if (beaconBlock.header.slot < FIRST_SUPPORTED_SLOT) {
             revert UnsupportedSlot(beaconBlock.header.slot);
         }
@@ -151,7 +170,7 @@ contract CSVerifier is ICSVerifier {
         WithdrawalWitness calldata witness,
         uint256 nodeOperatorId,
         uint256 keyIndex
-    ) external {
+    ) external whenResumed {
         if (beaconBlock.header.slot < FIRST_SUPPORTED_SLOT) {
             revert UnsupportedSlot(beaconBlock.header.slot);
         }

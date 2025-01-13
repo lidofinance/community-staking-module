@@ -7,6 +7,7 @@ import { stdJson } from "forge-std/StdJson.sol";
 
 import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { ICSModule } from "../src/interfaces/ICSModule.sol";
+import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import { CSVerifier } from "../src/CSVerifier.sol";
@@ -38,6 +39,11 @@ contract CSVerifierTestBase is Test, Utilities {
     CSVerifier public verifier;
     Stub public module;
     Slot public firstSupportedSlot;
+    address public admin;
+    address public stranger;
+
+    bytes32 public pauseRole;
+    bytes32 public resumeRole;
 
     string internal fixturesPath = "./test/fixtures/CSVerifier/";
 
@@ -54,6 +60,7 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
     function setUp() public {
         module = new Stub();
         firstSupportedSlot = Slot.wrap(100_500);
+        admin = nextAddress("ADMIN");
     }
 
     function test_constructor() public {
@@ -70,7 +77,8 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             gIFirstValidatorPrev: pack(0x560000000000, 40),
             gIFirstValidatorCurr: pack(0x560000000001, 40),
             firstSupportedSlot: firstSupportedSlot,
-            pivotSlot: Slot.wrap(100_501)
+            pivotSlot: Slot.wrap(100_501),
+            admin: admin
         });
 
         assertEq(address(verifier.WITHDRAWAL_ADDRESS()), withdrawalAddress);
@@ -123,7 +131,8 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             gIFirstValidatorPrev: pack(0x560000000000, 40),
             gIFirstValidatorCurr: pack(0x560000000000, 40),
             firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
-            pivotSlot: firstSupportedSlot
+            pivotSlot: firstSupportedSlot,
+            admin: admin
         });
     }
 
@@ -140,7 +149,8 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             gIFirstValidatorPrev: pack(0x560000000000, 40),
             gIFirstValidatorCurr: pack(0x560000000000, 40),
             firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
-            pivotSlot: firstSupportedSlot
+            pivotSlot: firstSupportedSlot,
+            admin: admin
         });
     }
 
@@ -157,7 +167,26 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             gIFirstValidatorPrev: pack(0x560000000000, 40),
             gIFirstValidatorCurr: pack(0x560000000000, 40),
             firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
-            pivotSlot: firstSupportedSlot
+            pivotSlot: firstSupportedSlot,
+            admin: admin
+        });
+    }
+
+    function test_constructor_RevertWhen_ZeroAdminAddress() public {
+        vm.expectRevert(ICSVerifier.ZeroAdminAddress.selector);
+        verifier = new CSVerifier({
+            withdrawalAddress: nextAddress(),
+            module: address(module),
+            slotsPerEpoch: 32,
+            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
+            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
+            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+            gIFirstValidatorPrev: pack(0x560000000000, 40),
+            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
+            pivotSlot: firstSupportedSlot,
+            admin: address(0)
         });
     }
 }
@@ -165,6 +194,7 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
 contract CSVerifierWithdrawalTest is CSVerifierTestBase {
     function setUp() public {
         module = new Stub();
+        admin = nextAddress("ADMIN");
 
         verifier = new CSVerifier({
             withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
@@ -177,8 +207,17 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
             gIFirstValidatorPrev: pack(0x560000000000, 40),
             gIFirstValidatorCurr: pack(0x560000000000, 40),
             firstSupportedSlot: Slot.wrap(100_500), // Any value less than the slots from the fixtures.
-            pivotSlot: Slot.wrap(100_500)
+            pivotSlot: Slot.wrap(100_500),
+            admin: admin
         });
+
+        pauseRole = verifier.PAUSE_ROLE();
+        resumeRole = verifier.RESUME_ROLE();
+
+        vm.startPrank(admin);
+        verifier.grantRole(pauseRole, admin);
+        verifier.grantRole(resumeRole, admin);
+        vm.stopPrank();
     }
 
     function test_processWithdrawalProof() public {
@@ -378,6 +417,27 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
         );
     }
 
+    function test_processWithdrawalProof_RevertWhenPaused() public {
+        WithdrawalFixture memory fixture = abi.decode(
+            _readFixture("withdrawal.json"),
+            (WithdrawalFixture)
+        );
+
+        _setMocksWithdrawal(fixture);
+
+        vm.prank(admin);
+        verifier.pauseFor(100_500);
+        assertTrue(verifier.isPaused());
+
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        verifier.processWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
     function _setMocksWithdrawal(WithdrawalFixture memory fixture) internal {
         vm.mockCall(
             verifier.BEACON_ROOTS(),
@@ -396,5 +456,85 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
             abi.encodeWithSelector(ICSModule.submitWithdrawal.selector),
             ""
         );
+    }
+}
+
+contract CSVerifierPauseTest is CSVerifierTestBase {
+    function setUp() public {
+        module = new Stub();
+        admin = nextAddress("ADMIN");
+        stranger = nextAddress("STRANGER");
+
+        verifier = new CSVerifier({
+            withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
+            module: address(module),
+            slotsPerEpoch: 32,
+            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
+            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
+            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+            gIFirstValidatorPrev: pack(0x560000000000, 40),
+            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            firstSupportedSlot: Slot.wrap(100_500), // Any value less than the slots from the fixtures.
+            pivotSlot: Slot.wrap(100_500),
+            admin: admin
+        });
+
+        pauseRole = verifier.PAUSE_ROLE();
+        resumeRole = verifier.RESUME_ROLE();
+
+        vm.startPrank(admin);
+        verifier.grantRole(pauseRole, admin);
+        verifier.grantRole(resumeRole, admin);
+        vm.stopPrank();
+    }
+
+    function test_pause() public {
+        assertFalse(verifier.isPaused());
+        vm.prank(admin);
+        verifier.pauseFor(100_500);
+        assertTrue(verifier.isPaused());
+    }
+
+    function test_pause_RevertWhenNoRole() public {
+        expectRoleRevert(stranger, pauseRole);
+        vm.prank(stranger);
+        verifier.pauseFor(100_500);
+    }
+
+    function test_pause_RevertWhenPaused() public {
+        vm.prank(admin);
+        verifier.pauseFor(100_500);
+        assertTrue(verifier.isPaused());
+
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        vm.prank(admin);
+        verifier.pauseFor(100_500);
+    }
+
+    function test_resume() public {
+        vm.prank(admin);
+        verifier.pauseFor(100_500);
+        assertTrue(verifier.isPaused());
+
+        vm.prank(admin);
+        verifier.resume();
+        assertFalse(verifier.isPaused());
+    }
+
+    function test_resume_RevertWhenNoRole() public {
+        vm.prank(admin);
+        verifier.pauseFor(100_500);
+        assertTrue(verifier.isPaused());
+
+        expectRoleRevert(stranger, resumeRole);
+        vm.prank(stranger);
+        verifier.resume();
+    }
+
+    function test_resume_RevertWhenNotPaused() public {
+        vm.expectRevert(PausableUntil.PausedExpected.selector);
+        vm.prank(admin);
+        verifier.resume();
     }
 }
