@@ -2459,7 +2459,7 @@ contract CSAccountingClaimWstETHRewardsTest is
     }
 }
 
-contract CSAccountingclaimRewardsUnstETHTest is
+contract CSAccountingClaimRewardsUnstETHTest is
     CSAccountingClaimRewardsBaseTest
 {
     function test_default() public override assertInvariants {
@@ -2866,6 +2866,172 @@ contract CSAccountingclaimRewardsUnstETHTest is
             address(user),
             leaf.shares,
             leaf.proof
+        );
+    }
+}
+
+contract CSAccountingClaimableBondTest is CSAccountingRewardsBaseTest {
+    function test_default() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertEq(
+            claimableBondShares,
+            0,
+            "claimable bond shares should be zero"
+        );
+    }
+
+    function test_WithCurve() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+        _curve(defaultCurve);
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertApproxEqAbs(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(15 ether),
+            1 wei,
+            "claimable bond shares should be equal to the curve discount"
+        );
+    }
+
+    function test_WithLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _rewards({ fee: 0.1 ether });
+        _lock({ id: 0, amount: 1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertEq(
+            claimableBondShares,
+            0,
+            "claimable bond shares should be zero"
+        );
+    }
+
+    function test_WithCurveAndLocked() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+        _curve(defaultCurve);
+        _lock({ id: 0, amount: 1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertApproxEqAbs(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(14 ether),
+            1 wei,
+            "claimable bond shares should be equal to the curve discount minus locked"
+        );
+    }
+
+    function test_WithOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertApproxEqAbs(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(2 ether),
+            1 wei,
+            "claimable bond shares should be equal to a single validator bond"
+        );
+    }
+
+    function test_WithBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertEq(
+            claimableBondShares,
+            0,
+            "claimable bond shares should be zero"
+        );
+    }
+
+    function test_WithBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 32 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertApproxEqAbs(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(2 ether),
+            1 wei,
+            "claimable bond shares should be equal to a single validator bond"
+        );
+    }
+
+    function test_WithExcessBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 33 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertApproxEqAbs(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(1 ether),
+            1 wei,
+            "claimable bond shares should be equal to the excess bond"
+        );
+    }
+
+    function test_WithExcessBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 33 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertApproxEqAbs(
+            claimableBondShares,
+            stETH.getSharesByPooledEth(3 ether),
+            1 wei,
+            "claimable bond shares should be equal to a single validator bond plus the excess bond"
+        );
+    }
+
+    function test_WithMissingBond() public override {
+        _operator({ ongoing: 16, withdrawn: 0 });
+        _deposit({ bond: 16 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertEq(
+            claimableBondShares,
+            0,
+            "claimable bond shares should be zero"
+        );
+    }
+
+    function test_WithMissingBondAndOneWithdrawnValidator() public override {
+        _operator({ ongoing: 16, withdrawn: 1 });
+        _deposit({ bond: 16 ether });
+        _rewards({ fee: 0.1 ether });
+
+        uint256 claimableBondShares = accounting.getClaimableBondShares(0);
+
+        assertEq(
+            claimableBondShares,
+            0,
+            "claimable bond shares should be zero"
         );
     }
 }

@@ -466,6 +466,13 @@ contract CSAccounting is
             );
     }
 
+    /// @inheritdoc ICSAccounting
+    function getClaimableBondShares(
+        uint256 nodeOperatorId
+    ) public view returns (uint256) {
+        return _getClaimableBondShares(nodeOperatorId);
+    }
+
     function _pullFeeRewards(
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
