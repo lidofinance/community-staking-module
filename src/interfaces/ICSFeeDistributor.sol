@@ -8,7 +8,10 @@ pragma solidity 0.8.24;
 
 interface ICSFeeDistributor is IAssetRecovererLib {
     /// @dev Emitted when fees are distributed
-    event FeeDistributed(uint256 indexed nodeOperatorId, uint256 shares);
+    event OperatorFeeDistributed(
+        uint256 indexed nodeOperatorId,
+        uint256 shares
+    );
 
     /// @dev Emitted when distribution data is updated
     event DistributionDataUpdated(
@@ -21,7 +24,7 @@ interface ICSFeeDistributor is IAssetRecovererLib {
     event DistributionLogUpdated(string logCid);
 
     /// @dev It logs how many shares were distributed in the latest report
-    event LastDistributed(uint256 shares);
+    event ModuleFeeDistributed(uint256 shares);
 
     error ZeroAccountingAddress();
     error ZeroStEthAddress();
