@@ -41,6 +41,8 @@ contract CSPerksRegistry is
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (keyPivots.length + 1 != rewardShares.length)
             revert InvalidRewardShareData();
+        if (keyPivots.length > 0 && keyPivots[0] == 0)
+            revert InvalidRewardShareData();
         if (keyPivots.length > 1) {
             for (uint256 i = 0; i < keyPivots.length - 1; ++i) {
                 if (keyPivots[i] >= keyPivots[i + 1])
@@ -78,15 +80,18 @@ contract CSPerksRegistry is
         uint256[] calldata performanceLeeways
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (keyPivots.length + 1 != performanceLeeways.length)
-            revert InvalidRewardShareData();
+            revert InvalidPerformanceLeewayData();
+        if (keyPivots.length > 0 && keyPivots[0] == 0)
+            revert InvalidPerformanceLeewayData();
         if (keyPivots.length > 1) {
             for (uint256 i = 0; i < keyPivots.length - 1; ++i) {
                 if (keyPivots[i] >= keyPivots[i + 1])
-                    revert InvalidRewardShareData();
+                    revert InvalidPerformanceLeewayData();
             }
         }
         for (uint256 i = 0; i < performanceLeeways.length; ++i) {
-            if (performanceLeeways[i] > MAX_BP) revert InvalidRewardShareData();
+            if (performanceLeeways[i] > MAX_BP)
+                revert InvalidPerformanceLeewayData();
         }
         _performanceLeewayPivotsData[curveId] = keyPivots;
         _performanceLeewayValuesData[curveId] = performanceLeeways;

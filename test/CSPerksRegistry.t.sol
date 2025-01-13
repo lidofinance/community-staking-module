@@ -118,6 +118,22 @@ contract CSPerksRegistryRewardShareDataTest is CSPerksRegistryBaseTest {
         PerksRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
     }
 
+    function test_setRewardShareData_RevertWhen_first_pivot_is_zero() public {
+        uint256 curveId = 1;
+        uint256[] memory keyPivots = new uint256[](2);
+        keyPivots[0] = 0;
+        keyPivots[1] = 10;
+
+        uint256[] memory rewardShares = new uint256[](3);
+        rewardShares[0] = 10000;
+        rewardShares[1] = 8000;
+        rewardShares[2] = 5000;
+
+        vm.expectRevert(ICSPerksRegistry.InvalidRewardShareData.selector);
+        vm.prank(admin);
+        PerksRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
+    }
+
     function test_setRewardShareData_RevertWhen_invalid_bp_values() public {
         uint256 curveId = 1;
         uint256[] memory keyPivots = new uint256[](1);
@@ -250,7 +266,7 @@ contract CSPerksRegistryPerformanceLeewayDataTest is CSPerksRegistryBaseTest {
         performanceLeeways[0] = 500;
         performanceLeeways[1] = 400;
 
-        vm.expectRevert(ICSPerksRegistry.InvalidRewardShareData.selector);
+        vm.expectRevert(ICSPerksRegistry.InvalidPerformanceLeewayData.selector);
         vm.prank(admin);
         PerksRegistry.setPerformanceLeewayData(
             curveId,
@@ -272,7 +288,29 @@ contract CSPerksRegistryPerformanceLeewayDataTest is CSPerksRegistryBaseTest {
         performanceLeeways[1] = 400;
         performanceLeeways[2] = 300;
 
-        vm.expectRevert(ICSPerksRegistry.InvalidRewardShareData.selector);
+        vm.expectRevert(ICSPerksRegistry.InvalidPerformanceLeewayData.selector);
+        vm.prank(admin);
+        PerksRegistry.setPerformanceLeewayData(
+            curveId,
+            keyPivots,
+            performanceLeeways
+        );
+    }
+
+    function test_setPerformanceLeewayData_RevertWhen_first_pivot_is_zero()
+        public
+    {
+        uint256 curveId = 1;
+        uint256[] memory keyPivots = new uint256[](2);
+        keyPivots[0] = 0;
+        keyPivots[1] = 10;
+
+        uint256[] memory performanceLeeways = new uint256[](3);
+        performanceLeeways[0] = 500;
+        performanceLeeways[1] = 400;
+        performanceLeeways[2] = 300;
+
+        vm.expectRevert(ICSPerksRegistry.InvalidPerformanceLeewayData.selector);
         vm.prank(admin);
         PerksRegistry.setPerformanceLeewayData(
             curveId,
@@ -292,7 +330,7 @@ contract CSPerksRegistryPerformanceLeewayDataTest is CSPerksRegistryBaseTest {
         performanceLeeways[0] = 50000;
         performanceLeeways[1] = 400;
 
-        vm.expectRevert(ICSPerksRegistry.InvalidRewardShareData.selector);
+        vm.expectRevert(ICSPerksRegistry.InvalidPerformanceLeewayData.selector);
         vm.prank(admin);
         PerksRegistry.setPerformanceLeewayData(
             curveId,
