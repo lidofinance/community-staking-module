@@ -135,7 +135,7 @@ contract DeployCSVerifierDevNet is DeployCSVerifier {
         config = Config({
             withdrawalVault: vm.envAddress("CSM_WITHDRAWAL_VAULT"),
             module: vm.envAddress("CSM_MODULE"),
-            slotsPerEpoch: vm.envUint("DEVNET_SLOTS_PER_EPOCH"),
+            slotsPerEpoch: uint64(vm.envUint("DEVNET_SLOTS_PER_EPOCH")),
             gIFirstWithdrawalPrev: FIRST_WITHDRAWAL_DENEB,
             gIFirstWithdrawalCurr: FIRST_WITHDRAWAL_ELECTRA,
             gIFirstValidatorPrev: FIRST_VALIDATOR_DENEB,

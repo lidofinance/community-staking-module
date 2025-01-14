@@ -19,14 +19,15 @@ contract DeployLocalDevNet is DeployBase {
         config.secondsPerSlot = 12;
         config.slotsPerEpoch = vm.envUint("DEVNET_SLOTS_PER_EPOCH");
         config.clGenesisTime = vm.envUint("DEVNET_GENESIS_TIME");
-        config.oracleReportEpochsPerFrame = 225 * 7; // 7 days
+        config.oracleReportEpochsPerFrame = 50;
         config.fastLaneLengthSlots = 0;
         config.consensusVersion = 1;
         config.avgPerfLeewayBP = 500;
-        config.oracleMembers = new address[](2);
+        config.oracleMembers = new address[](3);
         config.oracleMembers[0] = vm.envAddress("CSM_ORACLE_1_ADDRESS");
         config.oracleMembers[1] = vm.envAddress("CSM_ORACLE_2_ADDRESS");
-        config.hashConsensusQuorum = 2;
+        config.oracleMembers[2] = vm.envAddress("CSM_ORACLE_3_ADDRESS");
+        config.hashConsensusQuorum = 3;
         // Verifier
         // NOTE: Deneb fork gIndexes. Should be updated according to `config.verifierSupportedEpoch` fork epoch if needed
         config.gIFirstWithdrawal = GIndex.wrap(
