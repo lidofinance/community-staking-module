@@ -142,8 +142,8 @@ contract DeployCSVerifierDevNet is DeployCSVerifier {
             gIFirstValidatorCurr: FIRST_VALIDATOR_ELECTRA,
             gIHistoricalSummariesPrev: HISTORICAL_SUMMARIES_DENEB,
             gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
-            firstSupportedSlot: Slot.wrap(5 * 32), // epoch 5 // TODO: verify
-            pivotSlot: Slot.wrap(5 * 32), // epoch 5 // TODO: verify
+            firstSupportedSlot: Slot.wrap(0),
+            pivotSlot: Slot.wrap(uint64(vm.envUint("DEVNET_ELECTRA_EPOCH")) * 32),
             chainName: "devnet"
         });
     }
