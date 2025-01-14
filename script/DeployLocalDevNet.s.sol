@@ -39,8 +39,8 @@ contract DeployLocalDevNet is DeployBase {
         config.gIHistoricalSummaries = GIndex.wrap(
             0x0000000000000000000000000000000000000000000000000000000000003b00
         );
-
-        config.verifierSupportedEpoch = 29696;
+        
+        config.verifierSupportedEpoch = vm.envUint("DEVNET_ELECTRA_EPOCH");
         // Accounting
         config.maxCurveLength = 10;
         config.bondCurve = new uint256[](6);
