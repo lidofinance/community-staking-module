@@ -93,7 +93,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         uint256 keysCount
     ) internal returns (uint256 nodeOperatorId) {
         nodeOperatorId = createNodeOperator(managerAddress, false);
-        uploadMoreKeys(nodeOperatorId, keysCount);
+        if (keysCount > 0) uploadMoreKeys(nodeOperatorId, keysCount);
     }
 
     function createNodeOperator(
@@ -700,7 +700,7 @@ contract CSMCreateNodeOperator is CSMCommon {
         vm.expectEmit(true, true, true, true, address(csm));
         emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
 
-        csm.createNodeOperator(
+        uint256 nodeOperatorId = csm.createNodeOperator(
             nodeOperator,
             NodeOperatorManagementProperties({
                 managerAddress: address(0),
@@ -711,6 +711,7 @@ contract CSMCreateNodeOperator is CSMCommon {
         );
         assertEq(csm.getNodeOperatorsCount(), 1);
         assertEq(csm.getNonce(), nonce + 1);
+        assertEq(nodeOperatorId, 0);
     }
 
     function test_createNodeOperator_withCustomAddresses()
@@ -754,6 +755,19 @@ contract CSMCreateNodeOperator is CSMCommon {
             address(154)
         );
     }
+
+    function test_createNodeOperator_revertWhen_ZeroSenderAddress() public {
+        vm.expectRevert(ICSModule.ZeroSenderAddress.selector);
+        csm.createNodeOperator(
+            address(0),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            address(0)
+        );
+    }
 }
 
 contract CSMAddValidatorKeys is CSMCommon {
@@ -777,6 +791,43 @@ contract CSMAddValidatorKeys is CSMCommon {
             vm.expectEmit(true, true, true, true, address(csm));
             emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
         }
+        csm.addValidatorKeysWstETH(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+        assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_AddValidatorKeysWstETH_createNodeOperatorRole()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        uint256 noId = createNodeOperator(0);
+        uint256 toWrap = BOND_SIZE + 1 wei;
+        vm.deal(nodeOperator, toWrap);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: toWrap }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        wstETH.wrap(toWrap);
+        vm.stopPrank();
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+        uint256 nonce = csm.getNonce();
+
+        vm.prank(admin);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+
+        vm.prank(stranger);
         csm.addValidatorKeysWstETH(
             nodeOperator,
             noId,
@@ -875,6 +926,39 @@ contract CSMAddValidatorKeys is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
+    function test_AddValidatorKeysStETH_createNodeOperatorRole()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        uint256 noId = createNodeOperator(0);
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
+        vm.prank(nodeOperator);
+        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+        uint256 nonce = csm.getNonce();
+        vm.prank(admin);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+
+        vm.prank(stranger);
+        csm.addValidatorKeysStETH(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: BOND_SIZE,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+        assertEq(csm.getNonce(), nonce + 1);
+    }
+
     function test_AddValidatorKeysStETH_withPermit()
         public
         assertInvariants
@@ -949,6 +1033,28 @@ contract CSMAddValidatorKeys is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
+    function test_AddValidatorKeysETH_createNodeOperatorRole() public {
+        uint256 noId = createNodeOperator(0);
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
+        vm.deal(stranger, required);
+        uint256 nonce = csm.getNonce();
+        vm.startPrank(admin);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+        vm.stopPrank();
+
+        vm.prank(stranger);
+        csm.addValidatorKeysETH{ value: required }(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures
+        );
+        assertEq(csm.getNonce(), nonce + 1);
+    }
+
     function test_AddValidatorKeysETH_withMoreEthThanRequired()
         public
         assertInvariants
@@ -1003,6 +1109,40 @@ contract CSMAddValidatorKeys is CSMCommon {
 }
 
 contract CSMAddValidatorKeysNegative is CSMCommon {
+    function test_AddValidatorKeysETH_RevertWhen_SenderIsNotEligible() public {
+        uint256 noId = createNodeOperator();
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
+        vm.deal(stranger, required);
+        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
+        vm.prank(stranger);
+        csm.addValidatorKeysETH{ value: required }(
+            stranger,
+            noId,
+            1,
+            new bytes(0),
+            new bytes(0)
+        );
+    }
+
+    function test_AddValidatorKeysETH_RevertWhen_NodeOperatorHasKeys() public {
+        uint256 noId = createNodeOperator();
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
+        vm.deal(stranger, required);
+        vm.startPrank(admin);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+        vm.stopPrank();
+
+        vm.expectRevert(ICSModule.NodeOperatorHasKeys.selector);
+        vm.prank(stranger);
+        csm.addValidatorKeysETH{ value: required }(
+            nodeOperator,
+            noId,
+            1,
+            new bytes(0),
+            new bytes(0)
+        );
+    }
+
     function test_AddValidatorKeysETH_RevertWhen_NoKeys()
         public
         assertInvariants
@@ -1064,6 +1204,61 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
             keysCount,
             keys,
             signatures
+        );
+    }
+
+    function test_AddValidatorKeysStETH_RevertWhen_SenderIsNotEligible()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
+        vm.prank(nodeOperator);
+        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+
+        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
+        vm.prank(stranger);
+        csm.addValidatorKeysStETH(
+            stranger,
+            noId,
+            1,
+            new bytes(0),
+            new bytes(0),
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
+    function test_AddValidatorKeysStETH_RevertWhen_NodeOperatorHasKeys()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
+        vm.prank(nodeOperator);
+        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+        vm.startPrank(admin);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+        vm.stopPrank();
+
+        vm.expectRevert(ICSModule.NodeOperatorHasKeys.selector);
+        vm.prank(stranger);
+        csm.addValidatorKeysStETH(
+            nodeOperator,
+            noId,
+            1,
+            new bytes(0),
+            new bytes(0),
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
         );
     }
 
@@ -1146,6 +1341,69 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
             signatures,
             ICSAccounting.PermitInput({
                 value: BOND_SIZE,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
+    function test_AddValidatorKeysWstETH_RevertWhen_SenderIsNotEligible()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        uint256 toWrap = BOND_SIZE + 1 wei;
+        vm.deal(nodeOperator, toWrap);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: toWrap }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        wstETH.wrap(toWrap);
+        vm.stopPrank();
+
+        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
+        vm.prank(stranger);
+        csm.addValidatorKeysWstETH(
+            stranger,
+            noId,
+            1,
+            new bytes(0),
+            new bytes(0),
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
+    function test_AddValidatorKeysWstETH_RevertWhen_NodeOperatorHasKeys()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        uint256 toWrap = BOND_SIZE + 1 wei;
+        vm.deal(nodeOperator, toWrap);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: toWrap }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        wstETH.wrap(toWrap);
+        vm.stopPrank();
+        vm.startPrank(admin);
+        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), stranger);
+        vm.stopPrank();
+
+        vm.expectRevert(ICSModule.NodeOperatorHasKeys.selector);
+        vm.prank(stranger);
+        csm.addValidatorKeysWstETH(
+            nodeOperator,
+            noId,
+            1,
+            new bytes(0),
+            new bytes(0),
+            ICSAccounting.PermitInput({
+                value: 0,
                 deadline: 0,
                 v: 0,
                 r: 0,
@@ -2029,6 +2287,42 @@ contract CSMClaimRewards is CSMCommon {
         uint256 noId = createNodeOperator();
         vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
         csm.claimRewardsUnstETH(noId, UINT256_MAX, 0, new bytes32[](0));
+    }
+}
+
+contract CsmSetBondCurve is CSMCommon {
+    function test_setBondCurve() public {
+        uint256 nodeOperatorId = createNodeOperator();
+        uint256 curveId = accounting.DEFAULT_BOND_CURVE_ID();
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.setBondCurve.selector,
+                nodeOperatorId,
+                curveId
+            )
+        );
+        csm.setBondCurve(nodeOperatorId, curveId);
+    }
+
+    function test_setBondCurve_updateDepositableValidatorsCount() public {
+        uint256 nodeOperatorId = createNodeOperator();
+        uint256[] memory curvePoints = new uint256[](1);
+        curvePoints[0] = BOND_SIZE * 2;
+
+        uint256 curveId = accounting.addBondCurve(curvePoints);
+        uint256 depositableValidatorsCountBefore = csm
+            .getNodeOperator(nodeOperatorId)
+            .depositableValidatorsCount;
+        assertEq(depositableValidatorsCountBefore, 1);
+
+        csm.setBondCurve(nodeOperatorId, curveId);
+
+        uint256 depositableValidatorsCountAfter = csm
+            .getNodeOperator(nodeOperatorId)
+            .depositableValidatorsCount;
+        assertEq(depositableValidatorsCountAfter, 0);
     }
 }
 
@@ -5474,7 +5768,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.grantRole(role, stranger);
     }
 
-    function test_moduleManagerRole_setRemovalCharge() public {
+    function test_adminRole_setRemovalCharge() public {
         bytes32 role = csm.DEFAULT_ADMIN_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
@@ -5483,7 +5777,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.setKeyRemovalCharge(0.1 ether);
     }
 
-    function test_moduleManagerRole_setRemovalCharge_revert() public {
+    function test_adminRole_setRemovalCharge_revert() public {
         bytes32 role = csm.DEFAULT_ADMIN_ROLE();
 
         vm.prank(stranger);
@@ -5491,7 +5785,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.setKeyRemovalCharge(0.1 ether);
     }
 
-    function test_moduleManagerRole_activatePublicRelease() public {
+    function test_adminRole_activatePublicRelease() public {
         bytes32 role = csm.DEFAULT_ADMIN_ROLE();
         vm.prank(admin);
         csm.grantRole(role, actor);
@@ -5500,12 +5794,64 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.activatePublicRelease();
     }
 
-    function test_moduleManagerRole_activatePublicRelease_revert() public {
+    function test_adminRole_activatePublicRelease_revert() public {
         bytes32 role = csm.DEFAULT_ADMIN_ROLE();
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
         csm.activatePublicRelease();
+    }
+
+    function test_createNodeOperatorRole() public {
+        bytes32 role = csm.CREATE_NODE_OPERATOR_ROLE();
+        vm.prank(admin);
+        csm.grantRole(role, actor);
+
+        vm.prank(actor);
+        csm.createNodeOperator(
+            nodeOperator,
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            address(0)
+        );
+    }
+
+    function test_createNodeOperatorRole_revert() public {
+        bytes32 role = csm.CREATE_NODE_OPERATOR_ROLE();
+
+        vm.prank(stranger);
+        expectRoleRevert(stranger, role);
+        csm.createNodeOperator(
+            nodeOperator,
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            address(0)
+        );
+    }
+
+    function test_setBondCurveRole() public {
+        uint256 nodeOperatorId = createNodeOperator();
+        bytes32 role = csm.SET_BOND_CURVE_ROLE();
+        vm.prank(admin);
+        csm.grantRole(role, actor);
+
+        vm.prank(actor);
+        csm.setBondCurve(nodeOperatorId, 0);
+    }
+
+    function test_setBondCurveRole_revert() public {
+        uint256 nodeOperatorId = createNodeOperator();
+        bytes32 role = csm.SET_BOND_CURVE_ROLE();
+
+        vm.prank(stranger);
+        expectRoleRevert(stranger, role);
+        csm.setBondCurve(nodeOperatorId, 0);
     }
 
     function test_reportELRewardsStealingPenaltyRole() public {
