@@ -3708,13 +3708,13 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
     function test_penalize() public assertInvariants {
         uint256 shares = stETH.getSharesByPooledEth(1 ether);
         uint256 bondSharesBefore = accounting.getBondShares(0);
+        uint256 amountToBurn = stETH.getPooledEthByShares(shares);
 
         vm.expectCall(
             locator.burner(),
             abi.encodeWithSelector(
-                IBurner.requestBurnShares.selector,
-                address(accounting),
-                shares
+                IBurner.requestBurnMyStETH.selector,
+                amountToBurn
             )
         );
 
@@ -3919,7 +3919,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
 
         expectNoCall(
             address(burner),
-            abi.encodeWithSelector(IBurner.requestBurnShares.selector)
+            abi.encodeWithSelector(IBurner.requestBurnMyStETH.selector)
         );
         accounting.settleLockedBondETH(noId);
         vm.stopPrank();
