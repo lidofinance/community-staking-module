@@ -82,7 +82,7 @@ contract CSFeeDistributor is
         }
 
         STETH.transferShares(ACCOUNTING, sharesToDistribute);
-        emit FeeDistributed(nodeOperatorId, sharesToDistribute);
+        emit OperatorFeeDistributed(nodeOperatorId, sharesToDistribute);
     }
 
     /// @inheritdoc ICSFeeDistributor
@@ -120,6 +120,8 @@ contract CSFeeDistributor is
                 _treeCid
             );
         }
+
+        emit ModuleFeeDistributed(distributed);
 
         // NOTE: Make sure off-chain tooling provides a distinct CID of a log even for empty reports, e.g. by mixing
         // in a frame identifier such as reference slot to a file.
