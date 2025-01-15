@@ -20,7 +20,7 @@ interface ICSFeeOracle is IAssetRecovererLib {
         bytes32 treeRoot;
         /// @notice CID of the published Merkle tree.
         string treeCid;
-        /// @notice CID of the file with log of the last frame reported.
+        /// @notice CID of the file with log of the frame reported.
         string logCid;
         /// @notice Total amount of fees distributed in the report.
         uint256 distributed;

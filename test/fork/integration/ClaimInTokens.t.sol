@@ -294,13 +294,15 @@ contract ClaimIntegrationTest is
         tree.pushLeaf(abi.encode(defaultNoId, shares));
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
+        uint256 refSlot = 154;
 
         vm.prank(feeDistributor.ORACLE());
         feeDistributor.processOracleReport(
             root,
             someCIDv0(),
             someCIDv0(),
-            shares
+            shares,
+            refSlot
         );
 
         vm.prank(nodeOperator);
@@ -342,13 +344,15 @@ contract ClaimIntegrationTest is
         tree.pushLeaf(abi.encode(defaultNoId, shares));
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
+        uint256 refSlot = 154;
 
         vm.prank(feeDistributor.ORACLE());
         feeDistributor.processOracleReport(
             root,
             someCIDv0(),
             someCIDv0(),
-            shares
+            shares,
+            refSlot
         );
 
         vm.prank(nodeOperator);
@@ -404,13 +408,15 @@ contract ClaimIntegrationTest is
         tree.pushLeaf(abi.encode(defaultNoId, shares));
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
+        uint256 refSlot = 154;
 
         vm.prank(feeDistributor.ORACLE());
         feeDistributor.processOracleReport(
             root,
             someCIDv0(),
             someCIDv0(),
-            shares
+            shares,
+            refSlot
         );
 
         uint256 accountingSharesBefore = lido.sharesOf(address(accounting));

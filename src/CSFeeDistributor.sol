@@ -25,13 +25,13 @@ contract CSFeeDistributor is
     address public immutable ACCOUNTING;
     address public immutable ORACLE;
 
-    /// @notice Merkle Tree root
+    /// @notice The latest Merkle Tree root
     bytes32 public treeRoot;
 
-    /// @notice CID of the published Merkle tree
+    /// @notice CID of the last published Merkle tree
     string public treeCid;
 
-    /// @notice CID of the file with log of the last frame reported
+    /// @notice CID of the file with log for the last frame reported
     string public logCid;
 
     /// @notice Amount of stETH shares sent to the Accounting in favor of the NO
@@ -39,6 +39,12 @@ contract CSFeeDistributor is
 
     /// @notice Total Amount of stETH shares available for claiming by NOs
     uint256 public totalClaimableShares;
+
+    /// @notice Array of the distribution data history
+    mapping(uint256 => DistributionData) internal _distributionDataHistory;
+
+    /// @notice The number of _distributionDataHistory records
+    uint256 public distributionDataHistoryCount;
 
     constructor(address stETH, address accounting, address oracle) {
         if (accounting == address(0)) revert ZeroAccountingAddress();
@@ -90,16 +96,18 @@ contract CSFeeDistributor is
         bytes32 _treeRoot,
         string calldata _treeCid,
         string calldata _logCid,
-        uint256 distributed
+        uint256 _distributedShares,
+        uint256 refSlot
     ) external {
         if (msg.sender != ORACLE) revert NotOracle();
         if (
-            totalClaimableShares + distributed > STETH.sharesOf(address(this))
+            totalClaimableShares + _distributedShares >
+            STETH.sharesOf(address(this))
         ) {
             revert InvalidShares();
         }
 
-        if (distributed > 0) {
+        if (_distributedShares > 0) {
             if (bytes(_treeCid).length == 0) revert InvalidTreeCID();
             if (keccak256(bytes(_treeCid)) == keccak256(bytes(treeCid)))
                 revert InvalidTreeCID();
@@ -108,7 +116,7 @@ contract CSFeeDistributor is
 
             // Doesn't overflow because of the very first check.
             unchecked {
-                totalClaimableShares += distributed;
+                totalClaimableShares += _distributedShares;
             }
 
             treeRoot = _treeRoot;
@@ -121,7 +129,7 @@ contract CSFeeDistributor is
             );
         }
 
-        emit ModuleFeeDistributed(distributed);
+        emit ModuleFeeDistributed(_distributedShares);
 
         // NOTE: Make sure off-chain tooling provides a distinct CID of a log even for empty reports, e.g. by mixing
         // in a frame identifier such as reference slot to a file.
@@ -131,6 +139,20 @@ contract CSFeeDistributor is
 
         logCid = _logCid;
         emit DistributionLogUpdated(_logCid);
+
+        _distributionDataHistory[
+            distributionDataHistoryCount
+        ] = DistributionData({
+            refSlot: refSlot,
+            treeRoot: treeRoot,
+            treeCid: treeCid,
+            logCid: _logCid,
+            distributed: _distributedShares
+        });
+
+        unchecked {
+            ++distributionDataHistoryCount;
+        }
     }
 
     /// @inheritdoc AssetRecoverer
@@ -145,6 +167,13 @@ contract CSFeeDistributor is
     /// @inheritdoc ICSFeeDistributor
     function pendingSharesToDistribute() external view returns (uint256) {
         return STETH.sharesOf(address(this)) - totalClaimableShares;
+    }
+
+    /// @inheritdoc ICSFeeDistributor
+    function getHistoricalDistributionData(
+        uint256 index
+    ) external view returns (DistributionData memory) {
+        return _distributionDataHistory[index];
     }
 
     /// @inheritdoc ICSFeeDistributor
