@@ -74,6 +74,12 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
             accounting.getCurveInfo(vettedGate.CURVE_ID()).points,
             deployParams.vettedGateBondCurve
         );
+        assertTrue(
+            burner.hasRole(
+                burner.REQUEST_BURN_MY_STETH_ROLE(),
+                address(accounting)
+            )
+        );
     }
 
     function test_accountingRoles() public {

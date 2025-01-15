@@ -101,13 +101,13 @@ contract PenaltyIntegrationTest is
         IBurner burner = IBurner(locator.burner());
         if (
             !burner.hasRole(
-                burner.REQUEST_BURN_SHARES_ROLE(),
+                burner.REQUEST_BURN_MY_STETH_ROLE(),
                 address(accounting)
             )
         ) {
             vm.startPrank(burner.getRoleMember(burner.DEFAULT_ADMIN_ROLE(), 0));
             burner.grantRole(
-                burner.REQUEST_BURN_SHARES_ROLE(),
+                burner.REQUEST_BURN_MY_STETH_ROLE(),
                 address(accounting)
             );
             vm.stopPrank();

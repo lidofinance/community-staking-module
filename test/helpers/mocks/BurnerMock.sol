@@ -12,15 +12,8 @@ contract BurnerMock {
         STETH = _stETH;
     }
 
-    function requestBurnShares(
-        address _from,
-        uint256 _sharesAmountToBurn
-    ) external {
-        IStETH(STETH).transferSharesFrom(
-            _from,
-            address(this),
-            _sharesAmountToBurn
-        );
-        if (_sharesAmountToBurn == 0) revert ZeroBurnAmount();
+    function requestBurnMyStETH(uint256 _amountToBurn) external {
+        if (_amountToBurn == 0) revert ZeroBurnAmount();
+        IStETH(STETH).transferFrom(msg.sender, address(this), _amountToBurn);
     }
 }

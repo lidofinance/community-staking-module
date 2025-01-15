@@ -12,6 +12,7 @@ import { Stub } from "./mocks/Stub.sol";
 import "forge-std/Test.sol";
 import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
 import { ILido } from "../../src/interfaces/ILido.sol";
+import { IBurner } from "../../src/interfaces/IBurner.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 import { IWstETH } from "../../src/interfaces/IWstETH.sol";
 import { IGateSeal } from "../../src/interfaces/IGateSeal.sol";
@@ -251,6 +252,7 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
     IStakingRouter public stakingRouter;
     ILido public lido;
     IGateSeal public gateSeal;
+    IBurner public burner;
 
     function initializeFromDeployment() public {
         Env memory env = envVars();
@@ -276,6 +278,7 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
         stakingRouter = IStakingRouter(locator.stakingRouter());
         wstETH = IWstETH(IWithdrawalQueue(locator.withdrawalQueue()).WSTETH());
         gateSeal = IGateSeal(deploymentConfig.gateSeal);
+        burner = IBurner(locator.burner());
 
         if (!_isEmpty(env.UPGRADE_CONFIG)) {
             UpgradeConfig memory upgradeConfig = parseUpgradeConfig(
