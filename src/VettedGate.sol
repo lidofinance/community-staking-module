@@ -40,6 +40,7 @@ contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
 
         if (curveId == CSM.accounting().DEFAULT_BOND_CURVE_ID())
             revert InvalidCurveId();
+        /// @dev there is no check for curve existence as this contract might be created before the curve is added
         CURVE_ID = curveId;
 
         _setTreeRoot(_treeRoot);

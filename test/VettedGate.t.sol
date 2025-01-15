@@ -4,6 +4,7 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 import { VettedGate } from "../src/VettedGate.sol";
+import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 import { IVettedGate } from "../src/interfaces/IVettedGate.sol";
 import { ICSModule, NodeOperatorManagementProperties } from "../src/interfaces/ICSModule.sol";
 import { ICSAccounting } from "../src/interfaces/ICSAccounting.sol";
@@ -73,6 +74,44 @@ contract VettedGateTest is Test, Utilities {
     function test_constructor_RevertWhen_ZeroAdminAddress() public {
         vm.expectRevert(IVettedGate.ZeroAdminAddress.selector);
         new VettedGate(root, curveId, csm, address(0));
+    }
+
+    function test_pauseFor() public {
+        vm.startPrank(admin);
+        vettedGate.grantRole(vettedGate.PAUSE_ROLE(), admin);
+
+        vm.expectEmit(true, true, true, true);
+        emit PausableUntil.Paused(100);
+        vettedGate.pauseFor(100);
+
+        vm.stopPrank();
+        assertTrue(vettedGate.isPaused());
+    }
+
+    function test_pauseFor_revertWhen_noRole() public {
+        expectRoleRevert(admin, vettedGate.PAUSE_ROLE());
+        vm.prank(admin);
+        vettedGate.pauseFor(100);
+    }
+
+    function test_resume() public {
+        vm.startPrank(admin);
+        vettedGate.grantRole(vettedGate.PAUSE_ROLE(), admin);
+        vettedGate.grantRole(vettedGate.RESUME_ROLE(), admin);
+        vettedGate.pauseFor(100);
+
+        vm.expectEmit(true, true, true, true);
+        emit PausableUntil.Resumed();
+        vettedGate.resume();
+
+        vm.stopPrank();
+        assertFalse(vettedGate.isPaused());
+    }
+
+    function test_resume_revertWhen_noRole() public {
+        expectRoleRevert(admin, vettedGate.RESUME_ROLE());
+        vm.prank(admin);
+        vettedGate.resume();
     }
 
     function test_verifyProof() public {
@@ -154,6 +193,7 @@ contract VettedGateTest is Test, Utilities {
     function test_addNodeOperatorETH() public {
         uint256 keysCount = 1;
         bytes32[] memory proof = merkleTree.getProof(0);
+        assertFalse(vettedGate.isConsumed(nodeOperator));
 
         vm.expectEmit(true, true, true, true);
         emit IVettedGate.Consumed(nodeOperator);
@@ -177,6 +217,7 @@ contract VettedGateTest is Test, Utilities {
     function test_addNodeOperatorStETH() public {
         uint256 keysCount = 1;
         bytes32[] memory proof = merkleTree.getProof(0);
+        assertFalse(vettedGate.isConsumed(nodeOperator));
 
         vm.expectEmit(true, true, true, true);
         emit IVettedGate.Consumed(nodeOperator);
@@ -207,6 +248,7 @@ contract VettedGateTest is Test, Utilities {
     function test_addNodeOperatorWstETH() public {
         uint256 keysCount = 1;
         bytes32[] memory proof = merkleTree.getProof(0);
+        assertFalse(vettedGate.isConsumed(nodeOperator));
 
         vm.expectEmit(true, true, true, true);
         emit IVettedGate.Consumed(nodeOperator);
@@ -234,7 +276,7 @@ contract VettedGateTest is Test, Utilities {
         assertTrue(vettedGate.isConsumed(nodeOperator));
     }
 
-    function test_addNodeOperatorETH_alreadyConsumed() public {
+    function test_addNodeOperatorETH_revertWhen_alreadyConsumed() public {
         uint256 keysCount = 1;
         bytes32[] memory proof = merkleTree.getProof(0);
 
@@ -268,7 +310,7 @@ contract VettedGateTest is Test, Utilities {
         );
     }
 
-    function test_addNodeOperatorETH_invalidProof() public {
+    function test_addNodeOperatorETH_revertWhen_invalidProof() public {
         uint256 keysCount = 1;
         bytes32[] memory invalidProof = merkleTree.getProof(1);
 
@@ -283,6 +325,240 @@ contract VettedGateTest is Test, Utilities {
                 extendedManagerPermissions: false
             }),
             invalidProof,
+            address(0)
+        );
+    }
+
+    function test_addNodeOperatorETH_revertWhen_paused() public {
+        vm.startPrank(admin);
+        vettedGate.grantRole(vettedGate.PAUSE_ROLE(), admin);
+        vettedGate.pauseFor(type(uint256).max);
+        vm.stopPrank();
+
+        uint256 keysCount = 1;
+        bytes32[] memory proof = merkleTree.getProof(0);
+
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        vettedGate.addNodeOperatorETH(
+            keysCount,
+            randomBytes(48 * keysCount),
+            randomBytes(96 * keysCount),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            proof,
+            address(0)
+        );
+    }
+
+    function test_addNodeOperatorStETH_revertWhen_alreadyConsumed() public {
+        uint256 keysCount = 1;
+        bytes32[] memory proof = merkleTree.getProof(0);
+
+        vm.prank(nodeOperator);
+        vettedGate.addNodeOperatorStETH(
+            keysCount,
+            randomBytes(48 * keysCount),
+            randomBytes(96 * keysCount),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            }),
+            proof,
+            address(0)
+        );
+
+        vm.expectRevert(IVettedGate.AlreadyConsumed.selector);
+        vm.prank(nodeOperator);
+        vettedGate.addNodeOperatorStETH(
+            keysCount,
+            randomBytes(48 * keysCount),
+            randomBytes(96 * keysCount),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            }),
+            proof,
+            address(0)
+        );
+    }
+
+    function test_addNodeOperatorStETH_revertWhen_invalidProof() public {
+        uint256 keysCount = 1;
+        bytes32[] memory invalidProof = merkleTree.getProof(1);
+
+        vm.expectRevert(IVettedGate.InvalidProof.selector);
+        vettedGate.addNodeOperatorStETH(
+            keysCount,
+            randomBytes(48 * keysCount),
+            randomBytes(96 * keysCount),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            }),
+            invalidProof,
+            address(0)
+        );
+    }
+
+    function test_addNodeOperatorStETH_revertWhen_paused() public {
+        vm.startPrank(admin);
+        vettedGate.grantRole(vettedGate.PAUSE_ROLE(), admin);
+        vettedGate.pauseFor(type(uint256).max);
+        vm.stopPrank();
+
+        uint256 keysCount = 1;
+        bytes32[] memory proof = merkleTree.getProof(0);
+
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        vettedGate.addNodeOperatorStETH(
+            keysCount,
+            randomBytes(48 * keysCount),
+            randomBytes(96 * keysCount),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            }),
+            proof,
+            address(0)
+        );
+    }
+
+    function test_addNodeOperatorWstETH_revertWhen_alreadyConsumed() public {
+        uint256 keysCount = 1;
+        bytes32[] memory proof = merkleTree.getProof(0);
+
+        vm.prank(nodeOperator);
+        vettedGate.addNodeOperatorWstETH(
+            keysCount,
+            randomBytes(48 * keysCount),
+            randomBytes(96 * keysCount),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            }),
+            proof,
+            address(0)
+        );
+
+        vm.expectRevert(IVettedGate.AlreadyConsumed.selector);
+        vm.prank(nodeOperator);
+        vettedGate.addNodeOperatorStETH(
+            keysCount,
+            randomBytes(48 * keysCount),
+            randomBytes(96 * keysCount),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            }),
+            proof,
+            address(0)
+        );
+    }
+
+    function test_addNodeOperatorWstETH_revertWhen_invalidProof() public {
+        uint256 keysCount = 1;
+        bytes32[] memory invalidProof = merkleTree.getProof(1);
+
+        vm.expectRevert(IVettedGate.InvalidProof.selector);
+        vettedGate.addNodeOperatorWstETH(
+            keysCount,
+            randomBytes(48 * keysCount),
+            randomBytes(96 * keysCount),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            }),
+            invalidProof,
+            address(0)
+        );
+    }
+
+    function test_addNodeOperatorWstETH_revertWhen_paused() public {
+        vm.startPrank(admin);
+        vettedGate.grantRole(vettedGate.PAUSE_ROLE(), admin);
+        vettedGate.pauseFor(type(uint256).max);
+        vm.stopPrank();
+
+        uint256 keysCount = 1;
+        bytes32[] memory proof = merkleTree.getProof(0);
+
+        vm.expectRevert(PausableUntil.ResumedExpected.selector);
+        vettedGate.addNodeOperatorWstETH(
+            keysCount,
+            randomBytes(48 * keysCount),
+            randomBytes(96 * keysCount),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            }),
+            proof,
             address(0)
         );
     }
