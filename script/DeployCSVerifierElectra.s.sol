@@ -67,6 +67,62 @@ abstract contract DeployCSVerifier is Script {
         });
         console.log("CSVerifier deployed at:", address(verifier));
     }
+
+    // forge script --fork-url=$RPC_URL ./script/DeployCSVerifierElectra.s.sol:DeployCSVerifier[Holesky|Mainnet] --sig postDeployCheck $DEPLOYED_VERIFIER
+    function postDeployCheck(address instance) public view {
+        CSVerifier verifier = CSVerifier(instance);
+        require(
+            verifier.SLOTS_PER_EPOCH() == config.slotsPerEpoch,
+            "Unexpected SLOTS_PER_EPOCH"
+        );
+        require(
+            verifier.GI_FIRST_WITHDRAWAL_PREV().unwrap() ==
+                config.gIFirstWithdrawalPrev.unwrap(),
+            "Unexpected GI_FIRST_WITHDRAWAL_PREV"
+        );
+        require(
+            verifier.GI_FIRST_WITHDRAWAL_CURR().unwrap() ==
+                config.gIFirstWithdrawalCurr.unwrap(),
+            "Unexpected GI_FIRST_WITHDRAWAL_CURR"
+        );
+        require(
+            verifier.GI_FIRST_VALIDATOR_PREV().unwrap() ==
+                config.gIFirstValidatorPrev.unwrap(),
+            "Unexpected GI_FIRST_VALIDATOR_PREV"
+        );
+        require(
+            verifier.GI_FIRST_VALIDATOR_CURR().unwrap() ==
+                config.gIFirstValidatorCurr.unwrap(),
+            "Unexpected GI_FIRST_VALIDATOR_CURR"
+        );
+        require(
+            verifier.GI_HISTORICAL_SUMMARIES_PREV().unwrap() ==
+                config.gIHistoricalSummariesPrev.unwrap(),
+            "Unexpected GI_HISTORICAL_SUMMARIES_PREV"
+        );
+        require(
+            verifier.GI_HISTORICAL_SUMMARIES_CURR().unwrap() ==
+                config.gIHistoricalSummariesCurr.unwrap(),
+            "Unexpected GI_HISTORICAL_SUMMARIES_CURR"
+        );
+        require(
+            verifier.FIRST_SUPPORTED_SLOT().unwrap() ==
+                config.firstSupportedSlot.unwrap(),
+            "Unexpected FIRST_SUPPORTED_SLOT"
+        );
+        require(
+            verifier.PIVOT_SLOT().unwrap() == config.pivotSlot.unwrap(),
+            "Unexpected PIVOT_SLOT"
+        );
+        require(
+            verifier.WITHDRAWAL_ADDRESS() == config.withdrawalVault,
+            "Unexpected WITHDRAWAL_ADDRESS"
+        );
+        require(
+            address(verifier.MODULE()) == config.module,
+            "Unexpected MODULE"
+        );
+    }
 }
 
 contract DeployCSVerifierHolesky is DeployCSVerifier {
