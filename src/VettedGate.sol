@@ -65,10 +65,10 @@ contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
         NodeOperatorManagementProperties calldata managementProperties,
         bytes32[] calldata proof,
         address referrer
-    ) external payable {
+    ) external payable returns (uint256 nodeOperatorId) {
         _consume(msg.sender, proof);
 
-        uint256 nodeOperatorId = CSM.createNodeOperator(
+        nodeOperatorId = CSM.createNodeOperator(
             msg.sender,
             managementProperties,
             referrer
@@ -92,10 +92,10 @@ contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
         ICSAccounting.PermitInput calldata permit,
         bytes32[] calldata proof,
         address referrer
-    ) external {
+    ) external returns (uint256 nodeOperatorId) {
         _consume(msg.sender, proof);
 
-        uint256 nodeOperatorId = CSM.createNodeOperator(
+        nodeOperatorId = CSM.createNodeOperator(
             msg.sender,
             managementProperties,
             referrer
@@ -120,10 +120,10 @@ contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
         ICSAccounting.PermitInput calldata permit,
         bytes32[] calldata proof,
         address referrer
-    ) external {
+    ) external returns (uint256 nodeOperatorId) {
         _consume(msg.sender, proof);
 
-        uint256 nodeOperatorId = CSM.createNodeOperator(
+        nodeOperatorId = CSM.createNodeOperator(
             msg.sender,
             managementProperties,
             referrer

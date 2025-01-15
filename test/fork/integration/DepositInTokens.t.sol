@@ -54,7 +54,6 @@ contract DepositIntegrationTest is
         initializeFromDeployment();
 
         vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
-        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(this));
         csm.grantRole(csm.RESUME_ROLE(), address(this));
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(stakingRouter));
@@ -69,17 +68,7 @@ contract DepositIntegrationTest is
         user = vm.addr(userPrivateKey);
         strangerPrivateKey = 0x517a4637;
         stranger = vm.addr(strangerPrivateKey);
-
-        address nodeOperator = address(2);
-        csm.createNodeOperator(
-            nodeOperator,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            address(0)
-        );
+        address nodeOperator = nextAddress("NodeOperator");
 
         uint256 keysCount = 2;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
@@ -87,15 +76,19 @@ contract DepositIntegrationTest is
         );
         uint256 amount = accounting.getBondAmountByKeysCount(keysCount, 0);
         vm.deal(nodeOperator, amount);
-        defaultNoId = csm.getNodeOperatorsCount() - 1;
+
         vm.prank(nodeOperator);
-        csm.addValidatorKeysETH{ value: amount }(
-            nodeOperator,
-            defaultNoId,
-            keysCount,
-            keys,
-            signatures
-        );
+        defaultNoId = permissionlessGate.addNodeOperatorETH{ value: amount }({
+            keysCount: keysCount,
+            publicKeys: keys,
+            signatures: signatures,
+            managementProperties: NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            referrer: address(0)
+        });
     }
 
     function test_depositStETH() public assertInvariants {

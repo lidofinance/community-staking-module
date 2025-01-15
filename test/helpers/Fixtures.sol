@@ -133,24 +133,28 @@ contract DeploymentHelpers is Test {
         deploymentConfig.csm = vm.parseJsonAddress(config, ".CSModule");
         vm.label(deploymentConfig.csm, "csm");
 
-        /// legacy one
-        deploymentConfig.earlyAdoption = vm.parseJsonAddress(
-            config,
-            ".CSEarlyAdoption"
-        );
-        vm.label(deploymentConfig.earlyAdoption, "earlyAdoption");
+        /// Optional for v1 compatibility (upgrade tests). Removed in v2
+        if (vm.keyExists(config, ".CSEarlyAdoption")) {
+            deploymentConfig.earlyAdoption = vm.parseJsonAddress(
+                config,
+                ".CSEarlyAdoption"
+            );
+            vm.label(deploymentConfig.earlyAdoption, "earlyAdoption");
+        }
 
-        deploymentConfig.permissionlessGate = vm.parseJsonAddress(
-            config,
-            ".PermissionlessGate"
-        );
-        vm.label(deploymentConfig.permissionlessGate, "permissionlessGate");
-
-        deploymentConfig.vettedGate = vm.parseJsonAddress(
-            config,
-            ".VettedGate"
-        );
-        vm.label(deploymentConfig.vettedGate, "vettedGate");
+        /// Optional, new in v2. Gates not present in v1 deployment configs
+        if (vm.keyExists(config, ".PermissionlessGate")) {
+            deploymentConfig.permissionlessGate = vm.parseJsonAddress(
+                config,
+                ".PermissionlessGate"
+            );
+            vm.label(deploymentConfig.permissionlessGate, "permissionlessGate");
+            deploymentConfig.vettedGate = vm.parseJsonAddress(
+                config,
+                ".VettedGate"
+            );
+            vm.label(deploymentConfig.vettedGate, "vettedGate");
+        }
 
         deploymentConfig.accounting = vm.parseJsonAddress(
             config,

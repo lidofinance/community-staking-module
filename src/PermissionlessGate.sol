@@ -32,8 +32,8 @@ contract PermissionlessGate is IPermissionlessGate {
         bytes calldata signatures,
         NodeOperatorManagementProperties calldata managementProperties,
         address referrer
-    ) external payable {
-        uint256 nodeOperatorId = CSM.createNodeOperator(
+    ) external payable returns (uint256 nodeOperatorId) {
+        nodeOperatorId = CSM.createNodeOperator(
             msg.sender,
             managementProperties,
             referrer
@@ -56,8 +56,8 @@ contract PermissionlessGate is IPermissionlessGate {
         NodeOperatorManagementProperties calldata managementProperties,
         ICSAccounting.PermitInput calldata permit,
         address referrer
-    ) external {
-        uint256 nodeOperatorId = CSM.createNodeOperator(
+    ) external returns (uint256 nodeOperatorId) {
+        nodeOperatorId = CSM.createNodeOperator(
             msg.sender,
             managementProperties,
             referrer
@@ -81,8 +81,8 @@ contract PermissionlessGate is IPermissionlessGate {
         NodeOperatorManagementProperties calldata managementProperties,
         ICSAccounting.PermitInput calldata permit,
         address referrer
-    ) external {
-        uint256 nodeOperatorId = CSM.createNodeOperator(
+    ) external returns (uint256 nodeOperatorId) {
+        nodeOperatorId = CSM.createNodeOperator(
             msg.sender,
             managementProperties,
             referrer

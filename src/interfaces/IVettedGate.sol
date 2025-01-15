@@ -52,6 +52,7 @@ interface IVettedGate {
     ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
+    /// @return nodeOperatorId Id of the created Node Operator
     function addNodeOperatorETH(
         uint256 keysCount,
         bytes memory publicKeys,
@@ -59,7 +60,7 @@ interface IVettedGate {
         NodeOperatorManagementProperties memory managementProperties,
         bytes32[] memory eaProof,
         address referrer
-    ) external payable;
+    ) external payable returns (uint256 nodeOperatorId);
 
     /// @notice Add a new Node Operator using stETH as a bond.
     ///         At least one deposit data and corresponding bond should be provided
@@ -76,6 +77,7 @@ interface IVettedGate {
     /// @param permit Optional. Permit to use stETH as bond
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
+    /// @return nodeOperatorId Id of the created Node Operator
     function addNodeOperatorStETH(
         uint256 keysCount,
         bytes memory publicKeys,
@@ -84,7 +86,7 @@ interface IVettedGate {
         ICSAccounting.PermitInput memory permit,
         bytes32[] memory eaProof,
         address referrer
-    ) external;
+    ) external returns (uint256 nodeOperatorId);
 
     /// @notice Add a new Node Operator using wstETH as a bond.
     ///         At least one deposit data and corresponding bond should be provided
@@ -101,6 +103,7 @@ interface IVettedGate {
     /// @param permit Optional. Permit to use wstETH as bond
     /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
+    /// @return nodeOperatorId Id of the created Node Operator
     function addNodeOperatorWstETH(
         uint256 keysCount,
         bytes memory publicKeys,
@@ -109,7 +112,7 @@ interface IVettedGate {
         ICSAccounting.PermitInput memory permit,
         bytes32[] memory eaProof,
         address referrer
-    ) external;
+    ) external returns (uint256 nodeOperatorId);
 
     /// @notice Check is the address is eligible to consume EA access
     /// @param member Address to check

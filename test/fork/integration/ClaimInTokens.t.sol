@@ -69,31 +69,25 @@ contract ClaimIntegrationTest is
         stranger = nextAddress("stranger");
         nodeOperator = nextAddress("NodeOperator");
 
-        csm.createNodeOperator(
-            nodeOperator,
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            address(0)
-        );
-        defaultNoId = csm.getNodeOperatorsCount() - 1;
-
         uint256 keysCount = 5;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
         uint256 amount = accounting.getBondAmountByKeysCount(keysCount, 0);
         vm.deal(nodeOperator, amount);
+
         vm.prank(nodeOperator);
-        csm.addValidatorKeysETH{ value: amount }(
-            nodeOperator,
-            defaultNoId,
-            keysCount,
-            keys,
-            signatures
-        );
+        defaultNoId = permissionlessGate.addNodeOperatorETH{ value: amount }({
+            keysCount: keysCount,
+            publicKeys: keys,
+            signatures: signatures,
+            managementProperties: NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            referrer: address(0)
+        });
     }
 
     function test_claimExcessBondStETH() public assertInvariants {
