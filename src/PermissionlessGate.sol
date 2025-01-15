@@ -17,8 +17,6 @@ contract PermissionlessGate is IPermissionlessGate {
     ICSModule public immutable CSM;
     ICSAccounting public immutable ACCOUNTING;
 
-    error ZeroModuleAddress();
-
     constructor(address csm) {
         if (csm == address(0)) revert ZeroModuleAddress();
 

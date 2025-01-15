@@ -2,11 +2,17 @@
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
-import { NodeOperatorManagementProperties } from "./ICSModule.sol";
+import { ICSModule, NodeOperatorManagementProperties } from "./ICSModule.sol";
 import { ICSAccounting } from "./ICSAccounting.sol";
 
 interface IPermissionlessGate {
+    error ZeroModuleAddress();
+
     function CURVE_ID() external view returns (uint256);
+
+    function CSM() external view returns (ICSModule);
+
+    function ACCOUNTING() external view returns (ICSAccounting);
 
     /// @notice Add a new Node Operator using ETH as a bond.
     ///         At least one deposit data and corresponding bond should be provided
