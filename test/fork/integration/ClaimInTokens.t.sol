@@ -302,6 +302,7 @@ contract ClaimIntegrationTest is
             someCIDv0(),
             someCIDv0(),
             shares,
+            0,
             refSlot
         );
 
@@ -352,6 +353,7 @@ contract ClaimIntegrationTest is
             someCIDv0(),
             someCIDv0(),
             shares,
+            0,
             refSlot
         );
 
@@ -416,6 +418,7 @@ contract ClaimIntegrationTest is
             someCIDv0(),
             someCIDv0(),
             shares,
+            0,
             refSlot
         );
 

@@ -168,7 +168,8 @@ abstract contract DeployBase is Script {
             CSFeeDistributor feeDistributorImpl = new CSFeeDistributor({
                 stETH: locator.lido(),
                 accounting: address(accounting),
-                oracle: address(oracle)
+                oracle: address(oracle),
+                rebateRecipient: config.aragonAgent
             });
             feeDistributor = CSFeeDistributor(
                 _deployProxy(config.proxyAdmin, address(feeDistributorImpl))

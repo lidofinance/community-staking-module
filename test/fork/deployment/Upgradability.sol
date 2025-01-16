@@ -154,7 +154,8 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
         CSFeeDistributor newFeeDistributor = new CSFeeDistributor({
             stETH: locator.lido(),
             accounting: address(1337),
-            oracle: address(oracle)
+            oracle: address(oracle),
+            rebateRecipient: address(locator.treasury())
         });
         vm.prank(proxy.proxy__getAdmin());
         proxy.proxy__upgradeTo(address(newFeeDistributor));

@@ -88,7 +88,8 @@ contract CSFeeOracleTest is Test, Utilities {
             treeRoot: keccak256("root"),
             treeCid: someCIDv0(),
             logCid: someCIDv0(),
-            distributed: 1337
+            distributed: 1337,
+            rebate: 154
         });
 
         bytes32 reportHash = keccak256(abi.encode(data));
@@ -137,7 +138,8 @@ contract CSFeeOracleTest is Test, Utilities {
             treeRoot: keccak256("root"),
             treeCid: someCIDv0(),
             logCid: someCIDv0(),
-            distributed: 1337
+            distributed: 1337,
+            rebate: 154
         });
 
         bytes32 reportHash = keccak256(abi.encode(data));
@@ -174,7 +176,8 @@ contract CSFeeOracleTest is Test, Utilities {
             treeRoot: keccak256("root"),
             treeCid: someCIDv0(),
             logCid: someCIDv0(),
-            distributed: 1337
+            distributed: 1337,
+            rebate: 154
         });
 
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
@@ -208,7 +211,8 @@ contract CSFeeOracleTest is Test, Utilities {
             treeRoot: keccak256("root"),
             treeCid: someCIDv0(),
             logCid: someCIDv0(),
-            distributed: 1337
+            distributed: 1337,
+            rebate: 154
         });
 
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
@@ -244,7 +248,8 @@ contract CSFeeOracleTest is Test, Utilities {
             treeRoot: keccak256("root"),
             treeCid: someCIDv0(),
             logCid: someCIDv0(),
-            distributed: 1337
+            distributed: 1337,
+            rebate: 154
         });
 
         bytes32 reportHash = keccak256(abi.encode(data));
