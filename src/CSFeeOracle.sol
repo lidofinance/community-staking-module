@@ -143,6 +143,7 @@ contract CSFeeOracle is
             _treeCid: data.treeCid,
             _logCid: data.logCid,
             _distributedShares: data.distributed,
+            rebateShares: data.rebate,
             refSlot: data.refSlot
         });
     }

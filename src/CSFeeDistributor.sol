@@ -24,6 +24,7 @@ contract CSFeeDistributor is
     IStETH public immutable STETH;
     address public immutable ACCOUNTING;
     address public immutable ORACLE;
+    address public immutable REBATE_RECIPIENT;
 
     /// @notice The latest Merkle Tree root
     bytes32 public treeRoot;
@@ -46,14 +47,21 @@ contract CSFeeDistributor is
     /// @notice The number of _distributionDataHistory records
     uint256 public distributionDataHistoryCount;
 
-    constructor(address stETH, address accounting, address oracle) {
+    constructor(
+        address stETH,
+        address accounting,
+        address oracle,
+        address rebateRecipient
+    ) {
         if (accounting == address(0)) revert ZeroAccountingAddress();
         if (oracle == address(0)) revert ZeroOracleAddress();
         if (stETH == address(0)) revert ZeroStEthAddress();
+        if (rebateRecipient == address(0)) revert ZeroRebateRecipientAddress();
 
         ACCOUNTING = accounting;
         STETH = IStETH(stETH);
         ORACLE = oracle;
+        REBATE_RECIPIENT = rebateRecipient;
 
         _disableInitializers();
     }
@@ -97,11 +105,12 @@ contract CSFeeDistributor is
         string calldata _treeCid,
         string calldata _logCid,
         uint256 _distributedShares,
+        uint256 rebateShares,
         uint256 refSlot
     ) external {
         if (msg.sender != ORACLE) revert NotOracle();
         if (
-            totalClaimableShares + _distributedShares >
+            totalClaimableShares + _distributedShares + rebateShares >
             STETH.sharesOf(address(this))
         ) {
             revert InvalidShares();
@@ -131,6 +140,11 @@ contract CSFeeDistributor is
 
         emit ModuleFeeDistributed(_distributedShares);
 
+        if (rebateShares > 0) {
+            STETH.transferShares(REBATE_RECIPIENT, rebateShares);
+            emit RebateTransferred(rebateShares);
+        }
+
         // NOTE: Make sure off-chain tooling provides a distinct CID of a log even for empty reports, e.g. by mixing
         // in a frame identifier such as reference slot to a file.
         if (bytes(_logCid).length == 0) revert InvalidLogCID();
@@ -147,7 +161,8 @@ contract CSFeeDistributor is
             treeRoot: treeRoot,
             treeCid: treeCid,
             logCid: _logCid,
-            distributed: _distributedShares
+            distributed: _distributedShares,
+            rebate: rebateShares
         });
 
         unchecked {

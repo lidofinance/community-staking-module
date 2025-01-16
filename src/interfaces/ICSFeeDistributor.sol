@@ -21,6 +21,8 @@ interface ICSFeeDistributor is IAssetRecovererLib {
         string logCid;
         /// @notice Total amount of fees distributed in the report.
         uint256 distributed;
+        /// @notice Amount of the rebate shares in the report
+        uint256 rebate;
     }
 
     /// @dev Emitted when fees are distributed
@@ -42,10 +44,14 @@ interface ICSFeeDistributor is IAssetRecovererLib {
     /// @dev It logs how many shares were distributed in the latest report
     event ModuleFeeDistributed(uint256 shares);
 
+    /// @dev Emitted when rebate is transferred
+    event RebateTransferred(uint256 shares);
+
     error ZeroAccountingAddress();
     error ZeroStEthAddress();
     error ZeroAdminAddress();
     error ZeroOracleAddress();
+    error ZeroRebateRecipientAddress();
     error NotAccounting();
     error NotOracle();
 
@@ -64,6 +70,8 @@ interface ICSFeeDistributor is IAssetRecovererLib {
     function ACCOUNTING() external view returns (address);
 
     function ORACLE() external view returns (address);
+
+    function REBATE_RECIPIENT() external view returns (address);
 
     function treeRoot() external view returns (bytes32);
 
@@ -102,12 +110,14 @@ interface ICSFeeDistributor is IAssetRecovererLib {
     /// @param _treeCid an IPFS CID of the tree
     /// @param _logCid an IPFS CID of the log
     /// @param _distributedShares an amount of the distributed shares
+    /// @param rebateShares an amount of the rebate shares
     /// @param refSlot refSlot of the report
     function processOracleReport(
         bytes32 _treeRoot,
         string calldata _treeCid,
         string calldata _logCid,
         uint256 _distributedShares,
+        uint256 rebateShares,
         uint256 refSlot
     ) external;
 

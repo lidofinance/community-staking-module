@@ -24,6 +24,8 @@ interface ICSFeeOracle is IAssetRecovererLib {
         string logCid;
         /// @notice Total amount of fees distributed in the report.
         uint256 distributed;
+        /// @notice Amount of the rebate shares in the report
+        uint256 rebate;
     }
 
     /// @dev Emitted when a new fee distributor contract is set
