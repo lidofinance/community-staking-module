@@ -104,19 +104,19 @@ contract CSFeeDistributor is
         bytes32 _treeRoot,
         string calldata _treeCid,
         string calldata _logCid,
-        uint256 _distributedShares,
-        uint256 rebateShares,
+        uint256 distributed,
+        uint256 rebate,
         uint256 refSlot
     ) external {
         if (msg.sender != ORACLE) revert NotOracle();
         if (
-            totalClaimableShares + _distributedShares + rebateShares >
+            totalClaimableShares + distributed + rebate >
             STETH.sharesOf(address(this))
         ) {
             revert InvalidShares();
         }
 
-        if (_distributedShares > 0) {
+        if (distributed > 0) {
             if (bytes(_treeCid).length == 0) revert InvalidTreeCID();
             if (keccak256(bytes(_treeCid)) == keccak256(bytes(treeCid)))
                 revert InvalidTreeCID();
@@ -125,7 +125,7 @@ contract CSFeeDistributor is
 
             // Doesn't overflow because of the very first check.
             unchecked {
-                totalClaimableShares += _distributedShares;
+                totalClaimableShares += distributed;
             }
 
             treeRoot = _treeRoot;
@@ -138,11 +138,11 @@ contract CSFeeDistributor is
             );
         }
 
-        emit ModuleFeeDistributed(_distributedShares);
+        emit ModuleFeeDistributed(distributed);
 
-        if (rebateShares > 0) {
-            STETH.transferShares(REBATE_RECIPIENT, rebateShares);
-            emit RebateTransferred(rebateShares);
+        if (rebate > 0) {
+            STETH.transferShares(REBATE_RECIPIENT, rebate);
+            emit RebateTransferred(rebate);
         }
 
         // NOTE: Make sure off-chain tooling provides a distinct CID of a log even for empty reports, e.g. by mixing
@@ -161,8 +161,8 @@ contract CSFeeDistributor is
             treeRoot: treeRoot,
             treeCid: treeCid,
             logCid: _logCid,
-            distributed: _distributedShares,
-            rebate: rebateShares
+            distributed: distributed,
+            rebate: rebate
         });
 
         unchecked {

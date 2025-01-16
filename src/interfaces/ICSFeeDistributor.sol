@@ -109,15 +109,15 @@ interface ICSFeeDistributor is IAssetRecovererLib {
     /// @param _treeRoot Root of the Merkle tree
     /// @param _treeCid an IPFS CID of the tree
     /// @param _logCid an IPFS CID of the log
-    /// @param _distributedShares an amount of the distributed shares
-    /// @param rebateShares an amount of the rebate shares
+    /// @param distributed an amount of the distributed shares
+    /// @param rebate an amount of the rebate shares
     /// @param refSlot refSlot of the report
     function processOracleReport(
         bytes32 _treeRoot,
         string calldata _treeCid,
         string calldata _logCid,
-        uint256 _distributedShares,
-        uint256 rebateShares,
+        uint256 distributed,
+        uint256 rebate,
         uint256 refSlot
     ) external;
 
