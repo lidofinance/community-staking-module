@@ -7,6 +7,24 @@ import { IStETH } from "./IStETH.sol";
 pragma solidity 0.8.24;
 
 interface ICSFeeDistributor is IAssetRecovererLib {
+    struct DistributionData {
+        /// @dev Reference slot for which the report was calculated. If the slot
+        /// contains a block, the state being reported should include all state
+        /// changes resulting from that block. The epoch containing the slot
+        /// should be finalized prior to calculating the report.
+        uint256 refSlot;
+        /// @notice Merkle Tree root.
+        bytes32 treeRoot;
+        /// @notice CID of the published Merkle tree.
+        string treeCid;
+        /// @notice CID of the file with log of the frame reported.
+        string logCid;
+        /// @notice Total amount of fees distributed in the report.
+        uint256 distributed;
+        /// @notice Amount of the rebate shares in the report
+        uint256 rebate;
+    }
+
     /// @dev Emitted when fees are distributed
     event OperatorFeeDistributed(
         uint256 indexed nodeOperatorId,
@@ -26,10 +44,14 @@ interface ICSFeeDistributor is IAssetRecovererLib {
     /// @dev It logs how many shares were distributed in the latest report
     event ModuleFeeDistributed(uint256 shares);
 
+    /// @dev Emitted when rebate is transferred
+    event RebateTransferred(uint256 shares);
+
     error ZeroAccountingAddress();
     error ZeroStEthAddress();
     error ZeroAdminAddress();
     error ZeroOracleAddress();
+    error ZeroRebateRecipientAddress();
     error NotAccounting();
     error NotOracle();
 
@@ -48,6 +70,8 @@ interface ICSFeeDistributor is IAssetRecovererLib {
     function ACCOUNTING() external view returns (address);
 
     function ORACLE() external view returns (address);
+
+    function REBATE_RECIPIENT() external view returns (address);
 
     function treeRoot() external view returns (bytes32);
 
@@ -85,16 +109,27 @@ interface ICSFeeDistributor is IAssetRecovererLib {
     /// @param _treeRoot Root of the Merkle tree
     /// @param _treeCid an IPFS CID of the tree
     /// @param _logCid an IPFS CID of the log
+    /// @param distributed an amount of the distributed shares
+    /// @param rebate an amount of the rebate shares
+    /// @param refSlot refSlot of the report
     function processOracleReport(
         bytes32 _treeRoot,
         string calldata _treeCid,
         string calldata _logCid,
-        uint256 _distributedShares
+        uint256 distributed,
+        uint256 rebate,
+        uint256 refSlot
     ) external;
 
     /// @notice Get the Amount of stETH shares that are pending to be distributed
     /// @return pendingShares Amount shares that are pending to distribute
     function pendingSharesToDistribute() external view returns (uint256);
+
+    /// @notice Get the historical record of distribution data
+    /// @return index Historical entry index
+    function getHistoricalDistributionData(
+        uint256 index
+    ) external view returns (DistributionData memory);
 
     /// @notice Get a hash of a leaf
     /// @param nodeOperatorId ID of the Node Operator

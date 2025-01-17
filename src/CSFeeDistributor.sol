@@ -24,14 +24,15 @@ contract CSFeeDistributor is
     IStETH public immutable STETH;
     address public immutable ACCOUNTING;
     address public immutable ORACLE;
+    address public immutable REBATE_RECIPIENT;
 
-    /// @notice Merkle Tree root
+    /// @notice The latest Merkle Tree root
     bytes32 public treeRoot;
 
-    /// @notice CID of the published Merkle tree
+    /// @notice CID of the last published Merkle tree
     string public treeCid;
 
-    /// @notice CID of the file with log of the last frame reported
+    /// @notice CID of the file with log for the last frame reported
     string public logCid;
 
     /// @notice Amount of stETH shares sent to the Accounting in favor of the NO
@@ -40,14 +41,27 @@ contract CSFeeDistributor is
     /// @notice Total Amount of stETH shares available for claiming by NOs
     uint256 public totalClaimableShares;
 
-    constructor(address stETH, address accounting, address oracle) {
+    /// @notice Array of the distribution data history
+    mapping(uint256 => DistributionData) internal _distributionDataHistory;
+
+    /// @notice The number of _distributionDataHistory records
+    uint256 public distributionDataHistoryCount;
+
+    constructor(
+        address stETH,
+        address accounting,
+        address oracle,
+        address rebateRecipient
+    ) {
         if (accounting == address(0)) revert ZeroAccountingAddress();
         if (oracle == address(0)) revert ZeroOracleAddress();
         if (stETH == address(0)) revert ZeroStEthAddress();
+        if (rebateRecipient == address(0)) revert ZeroRebateRecipientAddress();
 
         ACCOUNTING = accounting;
         STETH = IStETH(stETH);
         ORACLE = oracle;
+        REBATE_RECIPIENT = rebateRecipient;
 
         _disableInitializers();
     }
@@ -90,11 +104,14 @@ contract CSFeeDistributor is
         bytes32 _treeRoot,
         string calldata _treeCid,
         string calldata _logCid,
-        uint256 distributed
+        uint256 distributed,
+        uint256 rebate,
+        uint256 refSlot
     ) external {
         if (msg.sender != ORACLE) revert NotOracle();
         if (
-            totalClaimableShares + distributed > STETH.sharesOf(address(this))
+            totalClaimableShares + distributed + rebate >
+            STETH.sharesOf(address(this))
         ) {
             revert InvalidShares();
         }
@@ -123,6 +140,11 @@ contract CSFeeDistributor is
 
         emit ModuleFeeDistributed(distributed);
 
+        if (rebate > 0) {
+            STETH.transferShares(REBATE_RECIPIENT, rebate);
+            emit RebateTransferred(rebate);
+        }
+
         // NOTE: Make sure off-chain tooling provides a distinct CID of a log even for empty reports, e.g. by mixing
         // in a frame identifier such as reference slot to a file.
         if (bytes(_logCid).length == 0) revert InvalidLogCID();
@@ -131,6 +153,21 @@ contract CSFeeDistributor is
 
         logCid = _logCid;
         emit DistributionLogUpdated(_logCid);
+
+        _distributionDataHistory[
+            distributionDataHistoryCount
+        ] = DistributionData({
+            refSlot: refSlot,
+            treeRoot: treeRoot,
+            treeCid: treeCid,
+            logCid: _logCid,
+            distributed: distributed,
+            rebate: rebate
+        });
+
+        unchecked {
+            ++distributionDataHistoryCount;
+        }
     }
 
     /// @inheritdoc AssetRecoverer
@@ -145,6 +182,13 @@ contract CSFeeDistributor is
     /// @inheritdoc ICSFeeDistributor
     function pendingSharesToDistribute() external view returns (uint256) {
         return STETH.sharesOf(address(this)) - totalClaimableShares;
+    }
+
+    /// @inheritdoc ICSFeeDistributor
+    function getHistoricalDistributionData(
+        uint256 index
+    ) external view returns (DistributionData memory) {
+        return _distributionDataHistory[index];
     }
 
     /// @inheritdoc ICSFeeDistributor
