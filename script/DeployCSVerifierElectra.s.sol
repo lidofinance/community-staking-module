@@ -87,7 +87,7 @@ contract DeployCSVerifierHolesky is DeployCSVerifier {
             gIHistoricalSummariesPrev: HISTORICAL_SUMMARIES_DENEB,
             gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
             firstSupportedSlot: Slot.wrap(950272), // 269_568 * 32, @see https://github.com/eth-clients/mainnet/blob/main/metadata/config.yaml#L52
-            pivotSlot: Slot.wrap(0) // TODO: Update with Electra slot.
+            pivotSlot: Slot.wrap(type(uint64).max) // TODO: Update with Electra slot.
         });
     }
 }
@@ -105,7 +105,7 @@ contract DeployCSVerifierMainnet is DeployCSVerifier {
             gIHistoricalSummariesPrev: HISTORICAL_SUMMARIES_DENEB,
             gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
             firstSupportedSlot: Slot.wrap(8626176), // 29_696 * 32, @see https://github.com/eth-clients/holesky/blob/main/metadata/config.yaml#L38
-            pivotSlot: Slot.wrap(0) // TODO: Update with Electra slot.
+            pivotSlot: Slot.wrap(type(uint64).max) // TODO: Update with Electra slot.
         });
     }
 }
