@@ -6,7 +6,7 @@ import "forge-std/Test.sol";
 import { VettedGate } from "../src/VettedGate.sol";
 import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 import { IVettedGate } from "../src/interfaces/IVettedGate.sol";
-import { ICSModule, NodeOperatorManagementProperties } from "../src/interfaces/ICSModule.sol";
+import { ICSModule, NodeOperatorManagementProperties, NodeOperator } from "../src/interfaces/ICSModule.sol";
 import { ICSAccounting } from "../src/interfaces/ICSAccounting.sol";
 import { Utilities } from "./helpers/Utilities.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
@@ -561,5 +561,43 @@ contract VettedGateTest is Test, Utilities {
             proof,
             address(0)
         );
+    }
+
+    function test_claimBondCurve() public {
+        NodeOperator memory no;
+        no.managerAddress = nodeOperator;
+        no.rewardAddress = nodeOperator;
+        no.extendedManagerPermissions = false;
+        CSMMock(csm).mock_setNodeOperator(no);
+        bytes32[] memory proof = merkleTree.getProof(0);
+
+        vm.expectEmit(true, true, true, true);
+        emit IVettedGate.Consumed(nodeOperator);
+        vm.prank(nodeOperator);
+        vettedGate.claimBondCurve(0, proof);
+    }
+
+    function test_claimBondCurve_revertWhen_invalidRewardAddress() public {
+        NodeOperator memory no;
+        no.managerAddress = nodeOperator;
+        no.rewardAddress = stranger;
+        no.extendedManagerPermissions = false;
+        CSMMock(csm).mock_setNodeOperator(no);
+        bytes32[] memory proof = merkleTree.getProof(0);
+
+        vm.expectRevert(IVettedGate.NotAllowedToClaim.selector);
+        vettedGate.claimBondCurve(0, proof);
+    }
+
+    function test_claimBondCurve_revertWhen_invalidManagerAddress() public {
+        NodeOperator memory no;
+        no.managerAddress = stranger;
+        no.rewardAddress = nodeOperator;
+        no.extendedManagerPermissions = true;
+        CSMMock(csm).mock_setNodeOperator(no);
+        bytes32[] memory proof = merkleTree.getProof(0);
+
+        vm.expectRevert(IVettedGate.NotAllowedToClaim.selector);
+        vettedGate.claimBondCurve(0, proof);
     }
 }

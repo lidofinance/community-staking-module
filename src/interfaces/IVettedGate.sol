@@ -17,6 +17,7 @@ interface IVettedGate {
     error InvalidCurveId();
     error ZeroModuleAddress();
     error ZeroAdminAddress();
+    error NotAllowedToClaim();
 
     function PAUSE_ROLE() external view returns (bytes32);
 
@@ -31,8 +32,8 @@ interface IVettedGate {
     function treeRoot() external view returns (bytes32);
 
     /// @notice Pause the contract for a given duration
-    ///         Pausing the contract prevent creating new node operators using EA
-    ///         and consuming EA benefits for the existing ones
+    ///         Pausing the contract prevent creating new node operators using VettedGate
+    ///         and claiming beneficial curve for the existing ones
     /// @param duration Duration of the pause
     function pauseFor(uint256 duration) external;
 
@@ -50,7 +51,7 @@ interface IVettedGate {
     ///                             rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used.
     ///                             extendedManagerPermissions: Flag indicating that managerAddress will be able to change rewardAddress.
     ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
-    /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
+    /// @param proof Merkle proof of the sender being eligible for the beneficial curve
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
     /// @return nodeOperatorId Id of the created Node Operator
     function addNodeOperatorETH(
@@ -58,7 +59,7 @@ interface IVettedGate {
         bytes memory publicKeys,
         bytes memory signatures,
         NodeOperatorManagementProperties memory managementProperties,
-        bytes32[] memory eaProof,
+        bytes32[] memory proof,
         address referrer
     ) external payable returns (uint256 nodeOperatorId);
 
@@ -75,7 +76,7 @@ interface IVettedGate {
     ///                             extendedManagerPermissions: Flag indicating that managerAddress will be able to change rewardAddress.
     ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
     /// @param permit Optional. Permit to use stETH as bond
-    /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
+    /// @param proof Merkle proof of the sender being eligible for the beneficial curve
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
     /// @return nodeOperatorId Id of the created Node Operator
     function addNodeOperatorStETH(
@@ -84,7 +85,7 @@ interface IVettedGate {
         bytes memory signatures,
         NodeOperatorManagementProperties memory managementProperties,
         ICSAccounting.PermitInput memory permit,
-        bytes32[] memory eaProof,
+        bytes32[] memory proof,
         address referrer
     ) external returns (uint256 nodeOperatorId);
 
@@ -101,7 +102,7 @@ interface IVettedGate {
     ///                             extendedManagerPermissions: Flag indicating that managerAddress will be able to change rewardAddress.
     ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
     /// @param permit Optional. Permit to use wstETH as bond
-    /// @param eaProof Optional. Merkle proof of the sender being eligible for the Early Adoption
+    /// @param proof Merkle proof of the sender being eligible for the beneficial curve
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
     /// @return nodeOperatorId Id of the created Node Operator
     function addNodeOperatorWstETH(
@@ -110,31 +111,41 @@ interface IVettedGate {
         bytes memory signatures,
         NodeOperatorManagementProperties memory managementProperties,
         ICSAccounting.PermitInput memory permit,
-        bytes32[] memory eaProof,
+        bytes32[] memory proof,
         address referrer
     ) external returns (uint256 nodeOperatorId);
 
-    /// @notice Check is the address is eligible to consume EA access
+    /// @notice Consume the bond curve for the eligible Node Operator
+    /// @param nodeOperatorId Id of the Node Operator
+    /// @param proof Merkle proof of the sender being eligible for the beneficial curve
+    /// @dev Should be called by the reward address of the Node Operator
+    ///      In case of the extended manager permissions, should be called by the manager address
+    function claimBondCurve(
+        uint256 nodeOperatorId,
+        bytes32[] calldata proof
+    ) external;
+
+    /// @notice Check is the address is eligible to consume beneficial curve
     /// @param member Address to check
-    /// @param proof Merkle proof of EA eligibility
+    /// @param proof Merkle proof of the beneficial curve eligibility
     /// @return Boolean flag if the proof is valid or not
     function verifyProof(
         address member,
         bytes32[] calldata proof
     ) external view returns (bool);
 
-    /// @notice Check if the address has already consumed EA access
+    /// @notice Check if the address has already consumed the curve
     /// @param member Address to check
     /// @return Consumed flag
     function isConsumed(address member) external view returns (bool);
 
-    /// @notice Get a hash of a leaf in EA Merkle tree
-    /// @param member EA member address
+    /// @notice Get a hash of a leaf in the Merkle tree
+    /// @param member eligible member address
     /// @return Hash of the leaf
     /// @dev Double hash the leaf to prevent second preimage attacks
     function hashLeaf(address member) external pure returns (bytes32);
 
-    /// @notice Set the root of the EA members Merkle Tree
+    /// @notice Set the root of the eligible members Merkle Tree
     /// @param _treeRoot New root of the Merkle Tree
     function setTreeRoot(bytes32 _treeRoot) external;
 }

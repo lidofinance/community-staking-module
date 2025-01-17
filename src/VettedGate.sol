@@ -7,7 +7,7 @@ import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerklePr
 import { IVettedGate } from "./interfaces/IVettedGate.sol";
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 import { PausableUntil } from "./lib/utils/PausableUntil.sol";
-import { ICSModule, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
+import { ICSModule, NodeOperatorManagementProperties, NodeOperator } from "./interfaces/ICSModule.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 
 contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
@@ -16,12 +16,12 @@ contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
     bytes32 public constant SET_TREE_ROOT_ROLE =
         keccak256("SET_TREE_ROOT_ROLE");
 
-    /// @dev Address of the Community Staking Module using Early Adoption contract
+    /// @dev Address of the Community Staking Module
     ICSModule public immutable CSM;
-    /// @dev Id of the bond curve to be assigned for the EA members
+    /// @dev Id of the bond curve to be assigned for the eligible members
     uint256 public immutable CURVE_ID;
 
-    /// @dev Root of the EA members Merkle Tree
+    /// @dev Root of the eligible members Merkle Tree
     bytes32 public treeRoot;
 
     mapping(address => bool) internal _consumedAddresses;
@@ -137,6 +137,21 @@ contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
             signatures: signatures,
             permit: permit
         });
+    }
+
+    /// @inheritdoc IVettedGate
+    function claimBondCurve(
+        uint256 nodeOperatorId,
+        bytes32[] calldata proof
+    ) external {
+        NodeOperator memory nodeOperator = CSM.getNodeOperator(nodeOperatorId);
+        address nodeOperatorAddress = nodeOperator.extendedManagerPermissions
+            ? nodeOperator.managerAddress
+            : nodeOperator.rewardAddress;
+        if (nodeOperatorAddress != msg.sender) revert NotAllowedToClaim();
+        _consume(msg.sender, proof);
+
+        CSM.setBondCurve(nodeOperatorId, CURVE_ID);
     }
 
     /// @inheritdoc IVettedGate
