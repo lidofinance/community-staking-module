@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
-// Usage: forge script ./script/DeployCSVerifierElectra.s.sol:DeployCSVerifier[Holesky|Mainnet]
+// Usage: forge script --private-key=$PRIVATE_KEY ./script/DeployCSVerifierElectra.s.sol:DeployCSVerifier[Holesky|Mainnet]
 
 pragma solidity 0.8.24;
 
@@ -50,23 +50,28 @@ GIndex constant FIRST_VALIDATOR_ELECTRA = GIndex.wrap(
 );
 
 abstract contract DeployCSVerifier is Script {
+    CSVerifier internal verifier;
     Config internal config;
 
     function run() public {
-        CSVerifier verifier = new CSVerifier({
-            withdrawalAddress: config.withdrawalVault,
-            module: config.module,
-            slotsPerEpoch: config.slotsPerEpoch,
-            gIFirstWithdrawalPrev: config.gIFirstWithdrawalPrev,
-            gIFirstWithdrawalCurr: config.gIFirstWithdrawalCurr,
-            gIFirstValidatorPrev: config.gIFirstValidatorPrev,
-            gIFirstValidatorCurr: config.gIFirstValidatorCurr,
-            gIHistoricalSummariesPrev: config.gIHistoricalSummariesPrev,
-            gIHistoricalSummariesCurr: config.gIHistoricalSummariesCurr,
-            firstSupportedSlot: config.firstSupportedSlot,
-            pivotSlot: config.pivotSlot,
-            admin: config.admin
-        });
+        vm.startBroadcast();
+        {
+            verifier = new CSVerifier({
+                withdrawalAddress: config.withdrawalVault,
+                module: config.module,
+                slotsPerEpoch: config.slotsPerEpoch,
+                gIFirstWithdrawalPrev: config.gIFirstWithdrawalPrev,
+                gIFirstWithdrawalCurr: config.gIFirstWithdrawalCurr,
+                gIFirstValidatorPrev: config.gIFirstValidatorPrev,
+                gIFirstValidatorCurr: config.gIFirstValidatorCurr,
+                gIHistoricalSummariesPrev: config.gIHistoricalSummariesPrev,
+                gIHistoricalSummariesCurr: config.gIHistoricalSummariesCurr,
+                firstSupportedSlot: config.firstSupportedSlot,
+                pivotSlot: config.pivotSlot,
+                admin: config.admin
+            });
+        }
+        vm.stopBroadcast();
         console.log("CSVerifier deployed at:", address(verifier));
     }
 }
@@ -84,7 +89,7 @@ contract DeployCSVerifierHolesky is DeployCSVerifier {
             gIHistoricalSummariesPrev: HISTORICAL_SUMMARIES_DENEB,
             gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
             firstSupportedSlot: Slot.wrap(950272), // 269_568 * 32, @see https://github.com/eth-clients/mainnet/blob/main/metadata/config.yaml#L52
-            pivotSlot: Slot.wrap(0), // TODO: Update with Electra slot.
+            pivotSlot: Slot.wrap(type(uint64).max), // TODO: Update with Electra slot.
             admin: 0xE92329EC7ddB11D25e25b3c21eeBf11f15eB325d // Aragon Agent
         });
     }
@@ -103,7 +108,7 @@ contract DeployCSVerifierMainnet is DeployCSVerifier {
             gIHistoricalSummariesPrev: HISTORICAL_SUMMARIES_DENEB,
             gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
             firstSupportedSlot: Slot.wrap(8626176), // 29_696 * 32, @see https://github.com/eth-clients/holesky/blob/main/metadata/config.yaml#L38
-            pivotSlot: Slot.wrap(0), // TODO: Update with Electra slot.
+            pivotSlot: Slot.wrap(type(uint64).max), // TODO: Update with Electra slot.
             admin: 0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c // Aragon Agent
         });
     }

@@ -18,7 +18,9 @@ contract DistributorMock {
         bytes32 /* treeRoot */,
         string calldata /* treeCid */,
         string calldata /* logCid */,
-        uint256 /* distributedShares */
+        uint256 /* distributedShares */,
+        uint256 /* rebateShares */,
+        uint256 /* refSlot */
     ) external {
         // do nothing
     }

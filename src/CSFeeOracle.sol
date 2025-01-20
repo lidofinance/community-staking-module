@@ -138,12 +138,14 @@ contract CSFeeOracle is
     }
 
     function _handleConsensusReportData(ReportData calldata data) internal {
-        feeDistributor.processOracleReport(
-            data.treeRoot,
-            data.treeCid,
-            data.logCid,
-            data.distributed
-        );
+        feeDistributor.processOracleReport({
+            _treeRoot: data.treeRoot,
+            _treeCid: data.treeCid,
+            _logCid: data.logCid,
+            distributed: data.distributed,
+            rebate: data.rebate,
+            refSlot: data.refSlot
+        });
     }
 
     function _checkMsgSenderIsAllowedToSubmitData() internal view {

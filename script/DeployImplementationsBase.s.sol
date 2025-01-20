@@ -73,7 +73,8 @@ abstract contract DeployImplementationsBase is DeployBase {
             CSFeeDistributor feeDistributorImpl = new CSFeeDistributor({
                 stETH: locator.lido(),
                 accounting: address(accounting),
-                oracle: address(oracle)
+                oracle: address(oracle),
+                rebateRecipient: config.aragonAgent
             });
 
             verifier = new CSVerifier({
