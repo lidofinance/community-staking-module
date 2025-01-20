@@ -15,14 +15,13 @@ contract PermissionlessGate is IPermissionlessGate {
     uint256 public immutable CURVE_ID;
 
     ICSModule public immutable CSM;
-    ICSAccounting public immutable ACCOUNTING;
 
     constructor(address csm) {
         if (csm == address(0)) revert ZeroModuleAddress();
 
         CSM = ICSModule(csm);
         ACCOUNTING = ICSAccounting(CSM.accounting());
-        CURVE_ID = ACCOUNTING.DEFAULT_BOND_CURVE_ID();
+        CURVE_ID = CSM.accounting().DEFAULT_BOND_CURVE_ID();
     }
 
     /// @inheritdoc IPermissionlessGate

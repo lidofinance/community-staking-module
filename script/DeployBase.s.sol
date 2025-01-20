@@ -285,6 +285,10 @@ abstract contract DeployBase is Script {
             csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(vettedGate));
             csm.grantRole(csm.SET_BOND_CURVE_ROLE(), address(vettedGate));
             csm.grantRole(
+                csm.SET_BOND_CURVE_ROLE(),
+                address(config.setResetBondCurveAddress)
+            );
+            csm.grantRole(
                 csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(),
                 config.elRewardsStealingReporter
             );
