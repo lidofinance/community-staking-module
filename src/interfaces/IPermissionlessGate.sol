@@ -12,8 +12,6 @@ interface IPermissionlessGate {
 
     function CSM() external view returns (ICSModule);
 
-    function ACCOUNTING() external view returns (ICSAccounting);
-
     /// @notice Add a new Node Operator using ETH as a bond.
     ///         At least one deposit data and corresponding bond should be provided
     /// @param keysCount Signing keys count
