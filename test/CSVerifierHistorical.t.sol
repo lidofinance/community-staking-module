@@ -47,6 +47,7 @@ contract CSVerifierHistoricalTest is Test, Utilities {
     HistoricalWithdrawalFixture public fixture;
 
     function setUp() public {
+        _loadFixture();
         module = new Stub();
         admin = nextAddress("ADMIN");
         verifier = new CSVerifier({
@@ -73,7 +74,7 @@ contract CSVerifierHistoricalTest is Test, Utilities {
         vm.stopPrank();
     }
 
-    function _get_fixture() internal {
+    function _loadFixture() internal {
         string memory root = vm.projectRoot();
         string memory path = string.concat(
             root,
@@ -85,7 +86,6 @@ contract CSVerifierHistoricalTest is Test, Utilities {
     }
 
     function test_processWithdrawalProof() public {
-        _get_fixture();
         _setMocksWithdrawal(fixture);
 
         // solhint-disable-next-line func-named-parameters
@@ -99,7 +99,6 @@ contract CSVerifierHistoricalTest is Test, Utilities {
     }
 
     function test_processWithdrawalProof_RevertWhen_UnsupportedSlot() public {
-        _get_fixture();
         _setMocksWithdrawal(fixture);
 
         fixture.beaconBlock.header.slot = verifier.FIRST_SUPPORTED_SLOT().dec();
@@ -124,7 +123,6 @@ contract CSVerifierHistoricalTest is Test, Utilities {
     function test_processWithdrawalProof_RevertWhen_UnsupportedSlot_OldBlock()
         public
     {
-        _get_fixture();
         _setMocksWithdrawal(fixture);
 
         fixture.oldBlock.header.slot = verifier.FIRST_SUPPORTED_SLOT().dec();
@@ -149,7 +147,6 @@ contract CSVerifierHistoricalTest is Test, Utilities {
     function test_processWithdrawalProof_RevertWhen_InvalidBlockHeader()
         public
     {
-        _get_fixture();
         _setMocksWithdrawal(fixture);
 
         vm.mockCall(
@@ -170,7 +167,6 @@ contract CSVerifierHistoricalTest is Test, Utilities {
     }
 
     function test_processWithdrawalProof_RevertWhen_InvalidGI() public {
-        _get_fixture();
         _setMocksWithdrawal(fixture);
 
         fixture.oldBlock.rootGIndex = GIndex.wrap(bytes32(0));
@@ -187,7 +183,6 @@ contract CSVerifierHistoricalTest is Test, Utilities {
     }
 
     function test_processWithdrawalProof_RevertWhenPaused() public {
-        _get_fixture();
         _setMocksWithdrawal(fixture);
 
         vm.prank(admin);
