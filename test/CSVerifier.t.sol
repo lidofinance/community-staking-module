@@ -24,7 +24,15 @@ function dec(Slot self) pure returns (Slot slot) {
     }
 }
 
-using { dec } for Slot;
+function inc(Slot self) pure returns (Slot slot) {
+    assembly ("memory-safe") {
+        slot := add(self, 1)
+    }
+}
+
+using { dec, inc } for Slot;
+
+GIndex constant NULL_GINDEX = GIndex.wrap(0);
 
 contract CSVerifierTestBase is Test, Utilities {
     using stdJson for string;
@@ -124,8 +132,8 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             withdrawalAddress: nextAddress(),
             module: address(module),
             slotsPerEpoch: 0,
-            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
-            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
+            gIHistoricalSummariesPrev: NULL_GINDEX,
+            gIHistoricalSummariesCurr: NULL_GINDEX,
             gIFirstWithdrawalPrev: pack(0xe1c0, 4),
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
@@ -142,8 +150,8 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             withdrawalAddress: nextAddress(),
             module: address(0),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
-            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
+            gIHistoricalSummariesPrev: NULL_GINDEX,
+            gIHistoricalSummariesCurr: NULL_GINDEX,
             gIFirstWithdrawalPrev: pack(0xe1c0, 4),
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
@@ -160,8 +168,8 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             withdrawalAddress: address(0),
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
-            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
+            gIHistoricalSummariesPrev: NULL_GINDEX,
+            gIHistoricalSummariesCurr: NULL_GINDEX,
             gIFirstWithdrawalPrev: pack(0xe1c0, 4),
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
@@ -178,8 +186,8 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             withdrawalAddress: nextAddress(),
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
-            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
+            gIHistoricalSummariesPrev: NULL_GINDEX,
+            gIHistoricalSummariesCurr: NULL_GINDEX,
             gIFirstWithdrawalPrev: pack(0xe1c0, 4),
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
@@ -200,8 +208,8 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
             withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
-            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
+            gIHistoricalSummariesPrev: NULL_GINDEX,
+            gIHistoricalSummariesCurr: NULL_GINDEX,
             gIFirstWithdrawalPrev: pack(0xe1c0, 4),
             gIFirstWithdrawalCurr: pack(0xe1c0, 4),
             gIFirstValidatorPrev: pack(0x560000000000, 40),
@@ -438,6 +446,99 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
         );
     }
 
+    function test_processWithdrawalProof_ForkBeforePivot() public {
+        WithdrawalFixture memory fixture = abi.decode(
+            _readFixture("withdrawal.json"),
+            (WithdrawalFixture)
+        );
+
+        _setMocksWithdrawal(fixture);
+
+        verifier = new CSVerifier({
+            withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
+            module: address(module),
+            slotsPerEpoch: 32,
+            gIHistoricalSummariesPrev: NULL_GINDEX,
+            gIHistoricalSummariesCurr: NULL_GINDEX,
+            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+            gIFirstWithdrawalCurr: pack(0x0, 4),
+            gIFirstValidatorPrev: pack(0x560000000000, 40),
+            gIFirstValidatorCurr: pack(0x0, 40),
+            firstSupportedSlot: fixture.beaconBlock.header.slot.dec(),
+            pivotSlot: fixture.beaconBlock.header.slot.inc(),
+            admin: admin
+        });
+
+        verifier.processWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processWithdrawalProof_ForkAtPivot() public {
+        WithdrawalFixture memory fixture = abi.decode(
+            _readFixture("withdrawal.json"),
+            (WithdrawalFixture)
+        );
+
+        _setMocksWithdrawal(fixture);
+
+        verifier = new CSVerifier({
+            withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
+            module: address(module),
+            slotsPerEpoch: 32,
+            gIHistoricalSummariesPrev: NULL_GINDEX,
+            gIHistoricalSummariesCurr: NULL_GINDEX,
+            gIFirstWithdrawalPrev: pack(0x0, 4),
+            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+            gIFirstValidatorPrev: pack(0x0, 40),
+            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            firstSupportedSlot: fixture.beaconBlock.header.slot.dec(),
+            pivotSlot: fixture.beaconBlock.header.slot,
+            admin: admin
+        });
+
+        verifier.processWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
+    function test_processWithdrawalProof_ForkAfterPivot() public {
+        WithdrawalFixture memory fixture = abi.decode(
+            _readFixture("withdrawal.json"),
+            (WithdrawalFixture)
+        );
+
+        _setMocksWithdrawal(fixture);
+
+        verifier = new CSVerifier({
+            withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
+            module: address(module),
+            slotsPerEpoch: 32,
+            gIHistoricalSummariesPrev: NULL_GINDEX,
+            gIHistoricalSummariesCurr: NULL_GINDEX,
+            gIFirstWithdrawalPrev: pack(0x0, 4),
+            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+            gIFirstValidatorPrev: pack(0x0, 40),
+            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            firstSupportedSlot: fixture.beaconBlock.header.slot.dec(),
+            pivotSlot: fixture.beaconBlock.header.slot.dec(),
+            admin: admin
+        });
+
+        verifier.processWithdrawalProof(
+            fixture.beaconBlock,
+            fixture.witness,
+            0,
+            0
+        );
+    }
+
     function _setMocksWithdrawal(WithdrawalFixture memory fixture) internal {
         vm.mockCall(
             verifier.BEACON_ROOTS(),
@@ -469,12 +570,12 @@ contract CSVerifierPauseTest is CSVerifierTestBase {
             withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: pack(0x0, 0), // We don't care of the value for this test.
-            gIHistoricalSummariesCurr: pack(0x0, 0), // We don't care of the value for this test.
-            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
-            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
-            gIFirstValidatorPrev: pack(0x560000000000, 40),
-            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            gIHistoricalSummariesPrev: NULL_GINDEX,
+            gIHistoricalSummariesCurr: NULL_GINDEX,
+            gIFirstWithdrawalPrev: NULL_GINDEX,
+            gIFirstWithdrawalCurr: NULL_GINDEX,
+            gIFirstValidatorPrev: NULL_GINDEX,
+            gIFirstValidatorCurr: NULL_GINDEX,
             firstSupportedSlot: Slot.wrap(100_500), // Any value less than the slots from the fixtures.
             pivotSlot: Slot.wrap(100_500),
             admin: admin
