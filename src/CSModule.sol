@@ -173,8 +173,7 @@ contract CSModule is
             ? from
             : managementProperties.rewardAddress;
         if (managementProperties.extendedManagerPermissions)
-            no.extendedManagerPermissions = managementProperties
-                .extendedManagerPermissions;
+            no.extendedManagerPermissions = true;
 
         unchecked {
             ++_nodeOperatorsCount;

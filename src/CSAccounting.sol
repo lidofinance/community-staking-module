@@ -34,9 +34,6 @@ contract CSAccounting is
     bytes32 public constant MANAGE_BOND_CURVES_ROLE =
         keccak256("MANAGE_BOND_CURVES_ROLE");
 
-    /// @dev Deprecated. Use setBondCurve with the corresponding role on the CSM contract instead
-    bytes32 public constant SET_BOND_CURVE_ROLE =
-        keccak256("SET_BOND_CURVE_ROLE");
     bytes32 public constant RESET_BOND_CURVE_ROLE =
         keccak256("RESET_BOND_CURVE_ROLE");
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");

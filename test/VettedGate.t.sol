@@ -577,7 +577,7 @@ contract VettedGateTest is Test, Utilities {
         vettedGate.claimBondCurve(0, proof);
     }
 
-    function test_claimBondCurve_revertWhen_invalidRewardAddress() public {
+    function test_claimBondCurve_revertWhen_notRewardAddress() public {
         NodeOperator memory no;
         no.managerAddress = nodeOperator;
         no.rewardAddress = stranger;
@@ -589,7 +589,7 @@ contract VettedGateTest is Test, Utilities {
         vettedGate.claimBondCurve(0, proof);
     }
 
-    function test_claimBondCurve_revertWhen_invalidManagerAddress() public {
+    function test_claimBondCurve_revertWhen_notManagerAddress() public {
         NodeOperator memory no;
         no.managerAddress = stranger;
         no.rewardAddress = nodeOperator;

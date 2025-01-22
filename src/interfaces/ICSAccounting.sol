@@ -41,9 +41,6 @@ interface ICSAccounting is
 
     function MANAGE_BOND_CURVES_ROLE() external view returns (bytes32);
 
-    /// @dev Deprecated. Use setBondCurve with the corresponding role on the CSM contract instead
-    function SET_BOND_CURVE_ROLE() external view returns (bytes32);
-
     function RESET_BOND_CURVE_ROLE() external view returns (bytes32);
 
     function RECOVERER_ROLE() external view returns (bytes32);

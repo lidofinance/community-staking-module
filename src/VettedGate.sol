@@ -16,10 +16,11 @@ contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
     bytes32 public constant SET_TREE_ROOT_ROLE =
         keccak256("SET_TREE_ROOT_ROLE");
 
-    /// @dev Address of the Community Staking Module
-    ICSModule public immutable CSM;
     /// @dev Id of the bond curve to be assigned for the eligible members
     uint256 public immutable CURVE_ID;
+
+    /// @dev Address of the Community Staking Module
+    ICSModule public immutable CSM;
 
     /// @dev Root of the eligible members Merkle Tree
     bytes32 public treeRoot;

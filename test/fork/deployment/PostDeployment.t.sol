@@ -445,6 +445,9 @@ contract VettedGateDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_constructor() public {
+        assertTrue(
+            csm.hasRole(csm.DEFAULT_ADMIN_ROLE(), deployParams.aragonAgent)
+        );
         assertEq(vettedGate.treeRoot(), deployParams.vettedGateTreeRoot);
         assertEq(
             accounting.getCurveInfo(vettedGate.CURVE_ID()).points,
