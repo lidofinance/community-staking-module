@@ -62,7 +62,7 @@ abstract contract DeployImplementationsBase is DeployBase {
                 _treeRoot: config.vettedGateTreeRoot,
                 curveId: ICSEarlyAdoption(earlyAdoption).CURVE_ID(),
                 csm: address(csm),
-                admin: config.aragonAgent
+                admin: deployer
             });
 
             CSFeeOracle oracleImpl = new CSFeeOracle({
@@ -103,6 +103,13 @@ abstract contract DeployImplementationsBase is DeployBase {
             sealables[3] = address(verifier);
             sealables[4] = address(vettedGate);
             gateSeal = _deployGateSeal(sealables);
+
+            vettedGate.grantRole(vettedGate.PAUSE_ROLE(), address(gateSeal));
+            vettedGate.grantRole(
+                vettedGate.DEFAULT_ADMIN_ROLE(),
+                config.aragonAgent
+            );
+            vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
 
             verifier.grantRole(verifier.PAUSE_ROLE(), address(gateSeal));
             verifier.grantRole(

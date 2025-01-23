@@ -50,6 +50,7 @@ contract GateSealTest is Test, Utilities, DeploymentFixtures {
         assertFalse(accounting.isPaused());
         assertFalse(oracle.isPaused());
         assertFalse(verifier.isPaused());
+        assertFalse(vettedGate.isPaused());
     }
 
     function test_sealAccounting() public {
@@ -62,6 +63,7 @@ contract GateSealTest is Test, Utilities, DeploymentFixtures {
         assertFalse(csm.isPaused());
         assertFalse(oracle.isPaused());
         assertFalse(verifier.isPaused());
+        assertFalse(vettedGate.isPaused());
     }
 
     function test_sealOracle() public {
@@ -74,6 +76,7 @@ contract GateSealTest is Test, Utilities, DeploymentFixtures {
         assertFalse(csm.isPaused());
         assertFalse(accounting.isPaused());
         assertFalse(verifier.isPaused());
+        assertFalse(vettedGate.isPaused());
     }
 
     function test_sealVerifier() public {
@@ -86,6 +89,7 @@ contract GateSealTest is Test, Utilities, DeploymentFixtures {
         assertFalse(csm.isPaused());
         assertFalse(accounting.isPaused());
         assertFalse(oracle.isPaused());
+        assertFalse(vettedGate.isPaused());
     }
 
     function test_sealVettedGate() public {
