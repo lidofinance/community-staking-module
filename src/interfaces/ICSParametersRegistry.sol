@@ -54,7 +54,7 @@ interface ICSParametersRegistry {
 
     /// @notice Set default value for the EL rewards stealing additional fine. Default value is used if a specific value is not set for the curveId
     /// @param fine value to be set as default for the EL rewards stealing additional fine
-    function setElRewardsStealingAdditionalFine(uint256 fine) external;
+    function setDefaultElRewardsStealingAdditionalFine(uint256 fine) external;
 
     /// @notice Get default value for the EL rewards stealing additional fine
     function defaultElRewardsStealingAdditionalFine()

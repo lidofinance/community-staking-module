@@ -75,7 +75,7 @@ contract CSParametersRegistry is
     }
 
     /// @inheritdoc ICSParametersRegistry
-    function setElRewardsStealingAdditionalFine(
+    function setDefaultElRewardsStealingAdditionalFine(
         uint256 fine
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setElRewardsStealingAdditionalFine(fine);
