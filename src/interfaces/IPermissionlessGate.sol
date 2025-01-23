@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -21,7 +21,7 @@ interface IPermissionlessGate {
     /// @param managementProperties Optional. Management properties to be used for the Node Operator.
     ///                             managerAddress: Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used.
     ///                             rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used.
-    ///                             extendedManagerPermissions: Flag indicating that managerAddress will be able to change rewardAddress.
+    ///                             extendedManagerPermissions: Flag indicating that `managerAddress` will be able to change `rewardAddress`.
     ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
     /// @return nodeOperatorId Id of the created Node Operator
@@ -43,7 +43,7 @@ interface IPermissionlessGate {
     /// @param managementProperties Optional. Management properties to be used for the Node Operator.
     ///                             managerAddress: Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used.
     ///                             rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used.
-    ///                             extendedManagerPermissions: Flag indicating that managerAddress will be able to change rewardAddress.
+    ///                             extendedManagerPermissions: Flag indicating that `managerAddress` will be able to change `rewardAddress`.
     ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
     /// @param permit Optional. Permit to use stETH as bond
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
@@ -67,7 +67,7 @@ interface IPermissionlessGate {
     /// @param managementProperties Optional. Management properties to be used for the Node Operator.
     ///                             managerAddress: Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used.
     ///                             rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used.
-    ///                             extendedManagerPermissions: Flag indicating that managerAddress will be able to change rewardAddress.
+    ///                             extendedManagerPermissions: Flag indicating that `managerAddress` will be able to change `rewardAddress`.
     ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
     /// @param permit Optional. Permit to use wstETH as bond
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration

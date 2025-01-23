@@ -112,7 +112,7 @@ contract CSAccountingInvariants is InvariantsBase {
             "pause"
         );
         assertEq(
-            csm.getRoleMember(accounting.PAUSE_ROLE(), 0),
+            accounting.getRoleMember(accounting.PAUSE_ROLE(), 0),
             address(gateSeal),
             "pause address"
         );
@@ -185,7 +185,7 @@ contract CSFeeOracleInvariant is InvariantsBase {
         );
         assertEq(oracle.getRoleMemberCount(oracle.PAUSE_ROLE()), 1, "pause");
         assertEq(
-            csm.getRoleMember(oracle.PAUSE_ROLE(), 0),
+            oracle.getRoleMember(oracle.PAUSE_ROLE(), 0),
             address(gateSeal),
             "pause address"
         );

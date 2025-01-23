@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -67,7 +67,7 @@ contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
         bytes32[] calldata proof,
         address referrer
     ) external payable returns (uint256 nodeOperatorId) {
-        _consume(msg.sender, proof);
+        _consume(proof);
 
         nodeOperatorId = CSM.createNodeOperator(
             msg.sender,
@@ -94,7 +94,7 @@ contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
         bytes32[] calldata proof,
         address referrer
     ) external returns (uint256 nodeOperatorId) {
-        _consume(msg.sender, proof);
+        _consume(proof);
 
         nodeOperatorId = CSM.createNodeOperator(
             msg.sender,
@@ -122,7 +122,7 @@ contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
         bytes32[] calldata proof,
         address referrer
     ) external returns (uint256 nodeOperatorId) {
-        _consume(msg.sender, proof);
+        _consume(proof);
 
         nodeOperatorId = CSM.createNodeOperator(
             msg.sender,
@@ -150,7 +150,7 @@ contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
             ? nodeOperator.managerAddress
             : nodeOperator.rewardAddress;
         if (nodeOperatorAddress != msg.sender) revert NotAllowedToClaim();
-        _consume(msg.sender, proof);
+        _consume(proof);
 
         CSM.setBondCurve(nodeOperatorId, CURVE_ID);
     }
@@ -182,14 +182,11 @@ contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
         return keccak256(bytes.concat(keccak256(abi.encode(member))));
     }
 
-    function _consume(
-        address member,
-        bytes32[] calldata proof
-    ) internal whenResumed {
+    function _consume(bytes32[] calldata proof) internal whenResumed {
         if (isConsumed(msg.sender)) revert AlreadyConsumed();
         if (!verifyProof(msg.sender, proof)) revert InvalidProof();
-        _consumedAddresses[member] = true;
-        emit Consumed(member);
+        _consumedAddresses[msg.sender] = true;
+        emit Consumed(msg.sender);
     }
 
     function _setTreeRoot(bytes32 _treeRoot) internal {
