@@ -5,38 +5,49 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { CSPerksRegistry } from "../src/CSPerksRegistry.sol";
-import { ICSPerksRegistry } from "../src/interfaces/ICSPerksRegistry.sol";
+import { CSParametersRegistry } from "../src/CSParametersRegistry.sol";
+import { ICSParametersRegistry } from "../src/interfaces/ICSParametersRegistry.sol";
 
 import { Utilities } from "./helpers/Utilities.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract CSPerksRegistryBaseTest is Test, Utilities, Fixtures {
+contract CSParametersRegistryBaseTest is Test, Utilities, Fixtures {
     address internal admin;
     address internal stranger;
+    ICSParametersRegistry.initializationData internal defaultInitData;
 
-    CSPerksRegistry internal PerksRegistry;
+    CSParametersRegistry internal PerksRegistry;
 
     function setUp() public virtual {
         admin = nextAddress("ADMIN");
         stranger = nextAddress("STRANGER");
 
-        PerksRegistry = new CSPerksRegistry();
+        PerksRegistry = new CSParametersRegistry();
+
+        defaultInitData = ICSParametersRegistry.initializationData({
+            keyRemovalCharge: 0.05 ether,
+            elRewardsStealingAdditionalFine: 0.1 ether,
+            priorityQueueLimit: 0,
+            rewardShare: 800,
+            performanceLeeway: 500,
+            strikesLifetime: 6,
+            strikesThreshold: 3
+        });
     }
 }
 
-contract CSPerksRegistryInitTest is CSPerksRegistryBaseTest {
+contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
     function test_constructor_RevertWhen_InitOnImpl() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        PerksRegistry.initialize(admin);
+        PerksRegistry.initialize(admin, defaultInitData);
     }
 
     function test_initialize_happyPath() public {
         _enableInitializers(address(PerksRegistry));
 
-        PerksRegistry.initialize(admin);
+        PerksRegistry.initialize(admin, defaultInitData);
 
         assertTrue(
             PerksRegistry.hasRole(PerksRegistry.DEFAULT_ADMIN_ROLE(), admin)
@@ -45,16 +56,18 @@ contract CSPerksRegistryInitTest is CSPerksRegistryBaseTest {
 
     function test_initialize_RevertWhen_ZeroAdminAddress() public {
         _enableInitializers(address(PerksRegistry));
-        vm.expectRevert(ICSPerksRegistry.ZeroAdminAddress.selector);
-        PerksRegistry.initialize(address(0));
+        vm.expectRevert(ICSParametersRegistry.ZeroAdminAddress.selector);
+        PerksRegistry.initialize(address(0), defaultInitData);
     }
 }
 
-contract CSPerksRegistryRewardShareDataTest is CSPerksRegistryBaseTest {
+contract CSParametersRegistryRewardShareDataTest is
+    CSParametersRegistryBaseTest
+{
     function setUp() public virtual override {
         super.setUp();
         _enableInitializers(address(PerksRegistry));
-        PerksRegistry.initialize(admin);
+        PerksRegistry.initialize(admin, defaultInitData);
     }
 
     function test_setRewardShareData_set_valid_data() public {
@@ -67,7 +80,7 @@ contract CSPerksRegistryRewardShareDataTest is CSPerksRegistryBaseTest {
         rewardShares[1] = 8000;
 
         vm.expectEmit(true, true, true, true, address(PerksRegistry));
-        emit ICSPerksRegistry.RewardShareDataSet(curveId);
+        emit ICSParametersRegistry.RewardShareDataSet(curveId);
         vm.prank(admin);
         PerksRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
     }
@@ -97,7 +110,7 @@ contract CSPerksRegistryRewardShareDataTest is CSPerksRegistryBaseTest {
         rewardShares[0] = 10000;
         rewardShares[1] = 8000;
 
-        vm.expectRevert(ICSPerksRegistry.InvalidRewardShareData.selector);
+        vm.expectRevert(ICSParametersRegistry.InvalidRewardShareData.selector);
         vm.prank(admin);
         PerksRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
     }
@@ -113,7 +126,7 @@ contract CSPerksRegistryRewardShareDataTest is CSPerksRegistryBaseTest {
         rewardShares[1] = 8000;
         rewardShares[2] = 5000;
 
-        vm.expectRevert(ICSPerksRegistry.InvalidRewardShareData.selector);
+        vm.expectRevert(ICSParametersRegistry.InvalidRewardShareData.selector);
         vm.prank(admin);
         PerksRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
     }
@@ -129,7 +142,7 @@ contract CSPerksRegistryRewardShareDataTest is CSPerksRegistryBaseTest {
         rewardShares[1] = 8000;
         rewardShares[2] = 5000;
 
-        vm.expectRevert(ICSPerksRegistry.InvalidRewardShareData.selector);
+        vm.expectRevert(ICSParametersRegistry.InvalidRewardShareData.selector);
         vm.prank(admin);
         PerksRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
     }
@@ -143,7 +156,7 @@ contract CSPerksRegistryRewardShareDataTest is CSPerksRegistryBaseTest {
         rewardShares[0] = 100000;
         rewardShares[1] = 8000;
 
-        vm.expectRevert(ICSPerksRegistry.InvalidRewardShareData.selector);
+        vm.expectRevert(ICSParametersRegistry.InvalidRewardShareData.selector);
         vm.prank(admin);
         PerksRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
     }
@@ -198,22 +211,15 @@ contract CSPerksRegistryRewardShareDataTest is CSPerksRegistryBaseTest {
             assertEq(rewardSharesOut[i], rewardShares[i]);
         }
     }
-
-    function test_getRewardShareData_RevertWhen_no_data() public {
-        uint256 curveId = 0;
-        vm.expectRevert(ICSPerksRegistry.NoData.selector);
-        (
-            uint256[] memory keyPivotsOut,
-            uint256[] memory rewardSharesOut
-        ) = PerksRegistry.getRewardShareData(curveId);
-    }
 }
 
-contract CSPerksRegistryPerformanceLeewayDataTest is CSPerksRegistryBaseTest {
+contract CSParametersRegistryPerformanceLeewayDataTest is
+    CSParametersRegistryBaseTest
+{
     function setUp() public virtual override {
         super.setUp();
         _enableInitializers(address(PerksRegistry));
-        PerksRegistry.initialize(admin);
+        PerksRegistry.initialize(admin, defaultInitData);
     }
 
     function test_setPerformanceLeewayData_set_valid_data() public {
@@ -226,7 +232,7 @@ contract CSPerksRegistryPerformanceLeewayDataTest is CSPerksRegistryBaseTest {
         performanceLeeways[1] = 400;
 
         vm.expectEmit(true, true, true, true, address(PerksRegistry));
-        emit ICSPerksRegistry.PerformanceLeewayDataSet(curveId);
+        emit ICSParametersRegistry.PerformanceLeewayDataSet(curveId);
         vm.prank(admin);
         PerksRegistry.setPerformanceLeewayData(
             curveId,
@@ -266,7 +272,9 @@ contract CSPerksRegistryPerformanceLeewayDataTest is CSPerksRegistryBaseTest {
         performanceLeeways[0] = 500;
         performanceLeeways[1] = 400;
 
-        vm.expectRevert(ICSPerksRegistry.InvalidPerformanceLeewayData.selector);
+        vm.expectRevert(
+            ICSParametersRegistry.InvalidPerformanceLeewayData.selector
+        );
         vm.prank(admin);
         PerksRegistry.setPerformanceLeewayData(
             curveId,
@@ -288,7 +296,9 @@ contract CSPerksRegistryPerformanceLeewayDataTest is CSPerksRegistryBaseTest {
         performanceLeeways[1] = 400;
         performanceLeeways[2] = 300;
 
-        vm.expectRevert(ICSPerksRegistry.InvalidPerformanceLeewayData.selector);
+        vm.expectRevert(
+            ICSParametersRegistry.InvalidPerformanceLeewayData.selector
+        );
         vm.prank(admin);
         PerksRegistry.setPerformanceLeewayData(
             curveId,
@@ -310,7 +320,9 @@ contract CSPerksRegistryPerformanceLeewayDataTest is CSPerksRegistryBaseTest {
         performanceLeeways[1] = 400;
         performanceLeeways[2] = 300;
 
-        vm.expectRevert(ICSPerksRegistry.InvalidPerformanceLeewayData.selector);
+        vm.expectRevert(
+            ICSParametersRegistry.InvalidPerformanceLeewayData.selector
+        );
         vm.prank(admin);
         PerksRegistry.setPerformanceLeewayData(
             curveId,
@@ -330,7 +342,9 @@ contract CSPerksRegistryPerformanceLeewayDataTest is CSPerksRegistryBaseTest {
         performanceLeeways[0] = 50000;
         performanceLeeways[1] = 400;
 
-        vm.expectRevert(ICSPerksRegistry.InvalidPerformanceLeewayData.selector);
+        vm.expectRevert(
+            ICSParametersRegistry.InvalidPerformanceLeewayData.selector
+        );
         vm.prank(admin);
         PerksRegistry.setPerformanceLeewayData(
             curveId,
@@ -397,22 +411,15 @@ contract CSPerksRegistryPerformanceLeewayDataTest is CSPerksRegistryBaseTest {
             assertEq(performanceLeewaysOut[i], performanceLeeways[i]);
         }
     }
-
-    function test_getPerformanceLeewayData_RevertWhen_no_data() public {
-        uint256 curveId = 0;
-        vm.expectRevert(ICSPerksRegistry.NoData.selector);
-        (
-            uint256[] memory keyPivotsOut,
-            uint256[] memory performanceLeewaysOut
-        ) = PerksRegistry.getPerformanceLeewayData(curveId);
-    }
 }
 
-contract CSPerksRegistryPriorityQueueLimitTest is CSPerksRegistryBaseTest {
+contract CSParametersRegistryPriorityQueueLimitTest is
+    CSParametersRegistryBaseTest
+{
     function setUp() public virtual override {
         super.setUp();
         _enableInitializers(address(PerksRegistry));
-        PerksRegistry.initialize(admin);
+        PerksRegistry.initialize(admin, defaultInitData);
     }
 
     function test_setPriorityQueueLimit_set_valid_data() public {
@@ -420,7 +427,7 @@ contract CSPerksRegistryPriorityQueueLimitTest is CSPerksRegistryBaseTest {
         uint256 limit = 20;
 
         vm.expectEmit(true, true, true, true, address(PerksRegistry));
-        emit ICSPerksRegistry.PriorityQueueLimitSet(curveId, limit);
+        emit ICSParametersRegistry.PriorityQueueLimitSet(curveId, limit);
         vm.prank(admin);
         PerksRegistry.setPriorityQueueLimit(curveId, limit);
     }
