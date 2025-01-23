@@ -30,14 +30,13 @@ contract CSFeeOracle is
     /// @notice An ACL role granting the permission to recover assets
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
-    uint256 internal constant MAX_BP = 10000;
-
     ICSFeeDistributor public feeDistributor;
 
+    /// @notice DEPRECATED. Parameter was migrated to CSParametersRegistry
     /// @notice Leeway in basis points is used to determine the under-performing validators threshold.
     /// `threshold` = `avgPerfBP` - `avgPerfLeewayBP`, where `avgPerfBP` is an average
     /// performance over the network computed by the off-chain oracle.
-    uint256 public avgPerfLeewayBP;
+    uint256 internal _avgPerfLeewayBP;
 
     constructor(
         uint256 secondsPerSlot,
@@ -48,8 +47,7 @@ contract CSFeeOracle is
         address admin,
         address feeDistributorContract,
         address consensusContract,
-        uint256 consensusVersion,
-        uint256 _avgPerfLeewayBP
+        uint256 consensusVersion
     ) external {
         if (admin == address(0)) revert ZeroAdminAddress();
 
@@ -58,7 +56,6 @@ contract CSFeeOracle is
         BaseOracle._initialize(consensusContract, consensusVersion, 0);
         /// @dev _setFeeDistributorContract() reverts if zero address
         _setFeeDistributorContract(feeDistributorContract);
-        _setPerformanceLeeway(_avgPerfLeewayBP);
     }
 
     /// @inheritdoc ICSFeeOracle
@@ -66,13 +63,6 @@ contract CSFeeOracle is
         address feeDistributorContract
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setFeeDistributorContract(feeDistributorContract);
-    }
-
-    /// @inheritdoc ICSFeeOracle
-    function setPerformanceLeeway(
-        uint256 valueBP
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setPerformanceLeeway(valueBP);
     }
 
     /// @inheritdoc ICSFeeOracle
@@ -116,15 +106,6 @@ contract CSFeeOracle is
             revert ZeroFeeDistributorAddress();
         feeDistributor = ICSFeeDistributor(feeDistributorContract);
         emit FeeDistributorContractSet(feeDistributorContract);
-    }
-
-    function _setPerformanceLeeway(uint256 valueBP) internal {
-        if (valueBP > MAX_BP) {
-            revert InvalidPerfLeeway();
-        }
-
-        avgPerfLeewayBP = valueBP;
-        emit PerfLeewaySet(valueBP);
     }
 
     /// @dev Called in `submitConsensusReport` after a consensus is reached.

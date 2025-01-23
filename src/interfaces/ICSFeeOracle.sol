@@ -31,11 +31,8 @@ interface ICSFeeOracle is IAssetRecovererLib {
     /// @dev Emitted when a new fee distributor contract is set
     event FeeDistributorContractSet(address feeDistributorContract);
 
-    event PerfLeewaySet(uint256 valueBP);
-
     error ZeroAdminAddress();
     error ZeroFeeDistributorAddress();
-    error InvalidPerfLeeway();
     error SenderNotAllowed();
 
     function SUBMIT_DATA_ROLE() external view returns (bytes32);
@@ -48,15 +45,9 @@ interface ICSFeeOracle is IAssetRecovererLib {
 
     function feeDistributor() external view returns (ICSFeeDistributor);
 
-    function avgPerfLeewayBP() external view returns (uint256);
-
     /// @notice Set a new fee distributor contract
     /// @param feeDistributorContract Address of the new fee distributor contract
     function setFeeDistributorContract(address feeDistributorContract) external;
-
-    /// @notice Set a new performance threshold value in basis points
-    /// @param valueBP performance threshold in basis points
-    function setPerformanceLeeway(uint256 valueBP) external;
 
     /// @notice Submit the data for a committee report
     /// @param data Data for a committee report

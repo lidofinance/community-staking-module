@@ -327,7 +327,6 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertEq(oracle.getConsensusContract(), address(hashConsensus));
         assertEq(oracle.getConsensusVersion(), deployParams.consensusVersion);
         assertEq(oracle.getLastProcessingRefSlot(), 0);
-        assertEq(oracle.avgPerfLeewayBP(), deployParams.avgPerfLeewayBP);
     }
 
     function test_roles() public {
@@ -367,8 +366,7 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
             admin: address(deployParams.aragonAgent),
             feeDistributorContract: address(feeDistributor),
             consensusContract: address(hashConsensus),
-            consensusVersion: deployParams.consensusVersion,
-            _avgPerfLeewayBP: deployParams.avgPerfLeewayBP
+            consensusVersion: deployParams.consensusVersion
         });
     }
 }

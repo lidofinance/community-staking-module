@@ -257,8 +257,7 @@ abstract contract DeployBase is Script {
                 admin: address(deployer),
                 feeDistributorContract: address(feeDistributor),
                 consensusContract: address(hashConsensus),
-                consensusVersion: config.consensusVersion,
-                _avgPerfLeewayBP: config.avgPerfLeewayBP
+                consensusVersion: config.consensusVersion
             });
 
             address[] memory sealables = new address[](4);

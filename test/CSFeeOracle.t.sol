@@ -44,7 +44,6 @@ contract CSFeeOracleTest is Test, Utilities {
 
     uint256 internal constant CONSENSUS_VERSION = 1;
     uint256 internal constant INITIAL_EPOCH = 17;
-    uint256 internal constant PERF_LEEWAY = 500;
 
     CSFeeOracleForTest public oracle;
     HashConsensus public consensus;
@@ -342,8 +341,7 @@ contract CSFeeOracleTest is Test, Utilities {
             address(0),
             address(distributor),
             address(consensus),
-            CONSENSUS_VERSION,
-            PERF_LEEWAY
+            CONSENSUS_VERSION
         );
     }
 
@@ -378,37 +376,6 @@ contract CSFeeOracleTest is Test, Utilities {
         vm.expectRevert(ICSFeeOracle.ZeroFeeDistributorAddress.selector);
         vm.prank(ORACLE_ADMIN);
         oracle.setFeeDistributorContract(address(0));
-    }
-
-    function test_setPerformanceLeeway() public {
-        {
-            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
-            _grantAllRolesToAdmin();
-            _assertNoReportOnInit();
-            _setInitialEpoch();
-        }
-
-        uint256 newThreshold = 4200;
-
-        vm.expectEmit(true, true, true, true, address(oracle));
-        emit ICSFeeOracle.PerfLeewaySet(newThreshold);
-        vm.prank(ORACLE_ADMIN);
-        oracle.setPerformanceLeeway(newThreshold);
-
-        assertEq(oracle.avgPerfLeewayBP(), newThreshold);
-    }
-
-    function test_setPerformanceThreshold_RevertsWhenInvalidBP() public {
-        {
-            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
-            _grantAllRolesToAdmin();
-            _assertNoReportOnInit();
-            _setInitialEpoch();
-        }
-
-        vm.expectRevert(ICSFeeOracle.InvalidPerfLeeway.selector);
-        vm.prank(ORACLE_ADMIN);
-        oracle.setPerformanceLeeway(99999);
     }
 
     function test_recovererRole() public {
@@ -448,8 +415,7 @@ contract CSFeeOracleTest is Test, Utilities {
             ORACLE_ADMIN,
             address(new DistributorMock(address(0), address(0))),
             address(consensus),
-            CONSENSUS_VERSION,
-            PERF_LEEWAY
+            CONSENSUS_VERSION
         );
     }
 
