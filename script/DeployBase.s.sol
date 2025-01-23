@@ -226,7 +226,7 @@ abstract contract DeployBase is Script {
                 _treeRoot: config.vettedGateTreeRoot,
                 curveId: identifiedSolosCurve,
                 csm: address(csm),
-                admin: config.aragonAgent
+                admin: deployer
             });
 
             feeDistributor.initialize({ admin: address(deployer) });
@@ -263,17 +263,19 @@ abstract contract DeployBase is Script {
                 _avgPerfLeewayBP: config.avgPerfLeewayBP
             });
 
-            address[] memory sealables = new address[](4);
+            address[] memory sealables = new address[](5);
             sealables[0] = address(csm);
             sealables[1] = address(accounting);
             sealables[2] = address(oracle);
             sealables[3] = address(verifier);
+            sealables[4] = address(vettedGate);
             address gateSeal = _deployGateSeal(sealables);
 
             csm.grantRole(csm.PAUSE_ROLE(), gateSeal);
             oracle.grantRole(oracle.PAUSE_ROLE(), gateSeal);
             accounting.grantRole(accounting.PAUSE_ROLE(), gateSeal);
             verifier.grantRole(verifier.PAUSE_ROLE(), gateSeal);
+            vettedGate.grantRole(vettedGate.PAUSE_ROLE(), gateSeal);
             accounting.grantRole(
                 accounting.RESET_BOND_CURVE_ROLE(),
                 config.setResetBondCurveAddress
@@ -306,6 +308,12 @@ abstract contract DeployBase is Script {
 
             csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
             csm.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
+
+            vettedGate.grantRole(
+                vettedGate.DEFAULT_ADMIN_ROLE(),
+                config.aragonAgent
+            );
+            vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
 
             verifier.grantRole(
                 verifier.DEFAULT_ADMIN_ROLE(),

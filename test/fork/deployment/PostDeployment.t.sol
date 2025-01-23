@@ -454,6 +454,11 @@ contract VettedGateDeploymentTest is Test, Utilities, DeploymentFixtures {
             deployParams.vettedGateBondCurve
         );
         assertEq(address(vettedGate.CSM()), address(csm));
+        assertTrue(
+            vettedGate.hasRole(vettedGate.PAUSE_ROLE(), address(gateSeal))
+        );
+        assertEq(vettedGate.getRoleMemberCount(vettedGate.PAUSE_ROLE()), 1);
+        assertEq(vettedGate.getRoleMemberCount(vettedGate.RESUME_ROLE()), 0);
     }
 }
 

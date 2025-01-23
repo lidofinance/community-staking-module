@@ -96,11 +96,12 @@ abstract contract DeployImplementationsBase is DeployBase {
                 admin: deployer
             });
 
-            address[] memory sealables = new address[](4);
+            address[] memory sealables = new address[](5);
             sealables[0] = address(csm);
             sealables[1] = address(accounting);
             sealables[2] = address(oracle);
             sealables[3] = address(verifier);
+            sealables[4] = address(vettedGate);
             gateSeal = _deployGateSeal(sealables);
 
             verifier.grantRole(verifier.PAUSE_ROLE(), address(gateSeal));
