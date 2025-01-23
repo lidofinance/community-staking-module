@@ -291,7 +291,7 @@ contract CSParametersRegistryRewardShareDataTest is
     }
 
     function test_getRewardShareData_default_data() public {
-        uint256 curveId = 1;
+        uint256 curveId = 10;
 
         (
             uint256[] memory keyPivotsOut,
@@ -526,7 +526,7 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
     }
 
     function test_getPerformanceLeewayData_default_data() public {
-        uint256 curveId = 1;
+        uint256 curveId = 10;
 
         (
             uint256[] memory keyPivotsOut,
@@ -592,7 +592,7 @@ contract CSParametersRegistryPriorityQueueLimitTest is
     }
 
     function test_getPriorityQueueLimit_default_data() public {
-        uint256 curveId = 1;
+        uint256 curveId = 10;
         uint256 limitOut = parametersRegistry.getPriorityQueueLimit(curveId);
 
         assertEq(limitOut, defaultInitData.priorityQueueLimit);
@@ -651,7 +651,7 @@ contract CSParametersRegistryKeyRemovalChargeTest is
     }
 
     function test_getKeyRemovalCharge_default_data() public {
-        uint256 curveId = 1;
+        uint256 curveId = 10;
         uint256 chargeOut = parametersRegistry.getKeyRemovalCharge(curveId);
 
         assertEq(chargeOut, defaultInitData.keyRemovalCharge);
@@ -722,7 +722,7 @@ contract CSParametersRegistryElRewardsStealingAdditionalFineTest is
     }
 
     function test_getElRewardsStealingAdditionalFine_default_data() public {
-        uint256 curveId = 1;
+        uint256 curveId = 10;
         uint256 fineOut = parametersRegistry.getElRewardsStealingAdditionalFine(
             curveId
         );
@@ -783,10 +783,10 @@ contract CSParametersRegistryStrikesLifetimeTest is
     }
 
     function test_getStrikesLifetime_default_data() public {
-        uint256 curveId = 1;
+        uint256 curveId = 10;
         uint256 lifetimeOut = parametersRegistry.getStrikesLifetime(curveId);
 
-        assertEq(lifetimeOut, defaultInitData.keyRemovalCharge);
+        assertEq(lifetimeOut, defaultInitData.strikesLifetime);
     }
 }
 
@@ -842,9 +842,9 @@ contract CSParametersRegistryStrikesThresholdTest is
     }
 
     function test_getStrikesThreshold_default_data() public {
-        uint256 curveId = 1;
+        uint256 curveId = 10;
         uint256 thresholdOut = parametersRegistry.getStrikesThreshold(curveId);
 
-        assertEq(thresholdOut, defaultInitData.keyRemovalCharge);
+        assertEq(thresholdOut, defaultInitData.strikesThreshold);
     }
 }
