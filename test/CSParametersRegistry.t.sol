@@ -267,6 +267,46 @@ contract CSParametersRegistryRewardShareDataTest is
         parametersRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
     }
 
+    function test_unsetRewardShareData() public {
+        uint256 curveId = 1;
+        uint256[] memory keyPivots = new uint256[](1);
+        keyPivots[0] = 10;
+
+        uint256[] memory rewardShares = new uint256[](2);
+        rewardShares[0] = 10000;
+        rewardShares[1] = 8000;
+
+        vm.prank(admin);
+        parametersRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
+
+        (
+            uint256[] memory keyPivotsOut,
+            uint256[] memory rewardSharesOut
+        ) = parametersRegistry.getRewardShareData(curveId);
+
+        assertEq(keyPivotsOut.length, keyPivots.length);
+        for (uint256 i = 0; i < keyPivotsOut.length; ++i) {
+            assertEq(keyPivotsOut[i], keyPivots[i]);
+        }
+
+        assertEq(rewardSharesOut.length, rewardShares.length);
+        for (uint256 i = 0; i < rewardSharesOut.length; ++i) {
+            assertEq(rewardSharesOut[i], rewardShares[i]);
+        }
+
+        vm.prank(admin);
+        parametersRegistry.unsetRewardShareData(curveId);
+
+        (keyPivotsOut, rewardSharesOut) = parametersRegistry.getRewardShareData(
+            curveId
+        );
+
+        assertEq(keyPivotsOut.length, 0);
+
+        assertEq(rewardSharesOut.length, 1);
+        assertEq(rewardSharesOut[0], defaultInitData.rewardShare);
+    }
+
     function test_getRewardShareData_usual_data() public {
         uint256 curveId = 1;
         uint256[] memory keyPivots = new uint256[](1);
@@ -494,6 +534,49 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         );
     }
 
+    function test_unsetPerformanceLeewayData() public {
+        uint256 curveId = 1;
+        uint256[] memory keyPivots = new uint256[](1);
+        keyPivots[0] = 100;
+
+        uint256[] memory performanceLeeways = new uint256[](2);
+        performanceLeeways[0] = 500;
+        performanceLeeways[1] = 400;
+
+        vm.prank(admin);
+        parametersRegistry.setPerformanceLeewayData(
+            curveId,
+            keyPivots,
+            performanceLeeways
+        );
+
+        (
+            uint256[] memory keyPivotsOut,
+            uint256[] memory performanceLeewaysOut
+        ) = parametersRegistry.getPerformanceLeewayData(curveId);
+
+        assertEq(keyPivotsOut.length, keyPivots.length);
+        for (uint256 i = 0; i < keyPivotsOut.length; ++i) {
+            assertEq(keyPivotsOut[i], keyPivots[i]);
+        }
+
+        assertEq(performanceLeewaysOut.length, performanceLeeways.length);
+        for (uint256 i = 0; i < performanceLeewaysOut.length; ++i) {
+            assertEq(performanceLeewaysOut[i], performanceLeeways[i]);
+        }
+
+        vm.prank(admin);
+        parametersRegistry.unsetPerformanceLeewayData(curveId);
+
+        (keyPivotsOut, performanceLeewaysOut) = parametersRegistry
+            .getPerformanceLeewayData(curveId);
+
+        assertEq(keyPivotsOut.length, 0);
+
+        assertEq(performanceLeewaysOut.length, 1);
+        assertEq(performanceLeewaysOut[0], defaultInitData.performanceLeeway);
+    }
+
     function test_getPerformanceLeewayData_usual_data() public {
         uint256 curveId = 1;
         uint256[] memory keyPivots = new uint256[](1);
@@ -607,6 +690,25 @@ contract CSParametersRegistryPriorityQueueLimitTest is
         parametersRegistry.setPriorityQueueLimit(curveId, limit);
     }
 
+    function test_unsetPriorityQueueLimit() public {
+        uint256 curveId = 1;
+        uint256 limit = 20;
+
+        vm.prank(admin);
+        parametersRegistry.setPriorityQueueLimit(curveId, limit);
+
+        uint256 limitOut = parametersRegistry.getPriorityQueueLimit(curveId);
+
+        assertEq(limitOut, limit);
+
+        vm.prank(admin);
+        parametersRegistry.unsetPriorityQueueLimit(curveId);
+
+        limitOut = parametersRegistry.getPriorityQueueLimit(curveId);
+
+        assertEq(limitOut, defaultInitData.priorityQueueLimit);
+    }
+
     function test_getPriorityQueueLimit_usual_data() public {
         uint256 curveId = 1;
         uint256 limit = 20;
@@ -664,6 +766,25 @@ contract CSParametersRegistryKeyRemovalChargeTest is
         expectRoleRevert(stranger, role);
         vm.prank(stranger);
         parametersRegistry.setKeyRemovalCharge(curveId, charge);
+    }
+
+    function test_unsetKeyRemovalCharge() public {
+        uint256 curveId = 1;
+        uint256 charge = 1 ether;
+
+        vm.prank(admin);
+        parametersRegistry.setKeyRemovalCharge(curveId, charge);
+
+        uint256 chargeOut = parametersRegistry.getKeyRemovalCharge(curveId);
+
+        assertEq(chargeOut, charge);
+
+        vm.prank(admin);
+        parametersRegistry.unsetKeyRemovalCharge(curveId);
+
+        chargeOut = parametersRegistry.getKeyRemovalCharge(curveId);
+
+        assertEq(chargeOut, defaultInitData.keyRemovalCharge);
     }
 
     function test_getKeyRemovalCharge_usual_data() public {
@@ -733,6 +854,29 @@ contract CSParametersRegistryElRewardsStealingAdditionalFineTest is
         expectRoleRevert(stranger, role);
         vm.prank(stranger);
         parametersRegistry.setElRewardsStealingAdditionalFine(curveId, fine);
+    }
+
+    function test_unsetElRewardsStealingAdditionalFine() public {
+        uint256 curveId = 1;
+        uint256 fine = 1 ether;
+
+        vm.prank(admin);
+        parametersRegistry.setElRewardsStealingAdditionalFine(curveId, fine);
+
+        uint256 fineOut = parametersRegistry.getElRewardsStealingAdditionalFine(
+            curveId
+        );
+
+        assertEq(fineOut, fine);
+
+        vm.prank(admin);
+        parametersRegistry.unsetElRewardsStealingAdditionalFine(curveId);
+
+        fineOut = parametersRegistry.getElRewardsStealingAdditionalFine(
+            curveId
+        );
+
+        assertEq(fineOut, defaultInitData.elRewardsStealingAdditionalFine);
     }
 
     function test_getElRewardsStealingAdditionalFine_usual_data() public {
@@ -833,6 +977,31 @@ contract CSParametersRegistryStrikesParamsTest is CSParametersRegistryBaseTest {
         expectRoleRevert(stranger, role);
         vm.prank(stranger);
         parametersRegistry.setStrikesParams(curveId, lifetime, threshold);
+    }
+
+    function test_unsetStrikesParams() public {
+        uint256 curveId = 1;
+        uint256 lifetime = 3;
+        uint256 threshold = 2;
+
+        vm.prank(admin);
+        parametersRegistry.setStrikesParams(curveId, lifetime, threshold);
+
+        (uint256 lifetimeOut, uint256 thresholdOut) = parametersRegistry
+            .getStrikesParams(curveId);
+
+        assertEq(lifetimeOut, lifetime);
+        assertEq(thresholdOut, threshold);
+
+        vm.prank(admin);
+        parametersRegistry.unsetStrikesParams(curveId);
+
+        (lifetimeOut, thresholdOut) = parametersRegistry.getStrikesParams(
+            curveId
+        );
+
+        assertEq(lifetimeOut, defaultInitData.strikesLifetime);
+        assertEq(thresholdOut, defaultInitData.strikesThreshold);
     }
 
     function test_getStrikesParams_usual_data() public {

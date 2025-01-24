@@ -53,6 +53,12 @@ interface ICSParametersRegistry {
         uint256 lifetime,
         uint256 threshold
     );
+    event KeyRemovalChargeUnset(uint256 indexed curveId);
+    event ElRewardsStealingAdditionalFineUnset(uint256 indexed curveId);
+    event PriorityQueueLimitUnset(uint256 indexed curveId);
+    event RewardShareDataUnset(uint256 indexed curveId);
+    event PerformanceLeewayDataUnset(uint256 indexed curveId);
+    event StrikesParamsUnset(uint256 indexed curveId);
 
     error InvalidRewardShareData();
     error InvalidPerformanceLeewayData();
@@ -115,6 +121,10 @@ interface ICSParametersRegistry {
         uint256 keyRemovalCharge
     ) external;
 
+    /// @notice Unset key removal charge for the curveId
+    /// @param curveId Curve Id to unset custom key removal charge for
+    function unsetKeyRemovalCharge(uint256 curveId) external;
+
     /// @notice Get key removal charge by the curveId. A charge is taken from the bond for each removed key from CSM
     /// @dev `defaultKeyRemovalCharge` is returned if the value is not set for the given curveId.
     /// @param curveId Curve Id to get key removal charge for
@@ -131,6 +141,10 @@ interface ICSParametersRegistry {
         uint256 fine
     ) external;
 
+    /// @notice Unset EL rewards stealing additional fine for the curveId
+    /// @param curveId Curve Id to unset custom EL rewards stealing additional fine for
+    function unsetElRewardsStealingAdditionalFine(uint256 curveId) external;
+
     /// @notice Get EL rewards stealing additional fine by the curveId. Additional fine is added to the EL rewards stealing penalty by CSM
     /// @dev `defaultElRewardsStealingAdditionalFine` is returned if the value is not set for the given curveId.
     /// @param curveId Curve Id to get EL rewards stealing additional fine for
@@ -144,6 +158,10 @@ interface ICSParametersRegistry {
     /// @param curveId Curve Id to associate priority queue limit with
     /// @param limit Priority queue limit
     function setPriorityQueueLimit(uint256 curveId, uint256 limit) external;
+
+    /// @notice Unset priority queue limit for the curveId
+    /// @param curveId Curve Id to unset custom priority queue limit for
+    function unsetPriorityQueueLimit(uint256 curveId) external;
 
     /// @notice Get priority queue limit by the curveId.
     /// @dev Zero is returned if the value is not set for the given curveId.
@@ -165,6 +183,10 @@ interface ICSParametersRegistry {
         uint256[] calldata keyPivots,
         uint256[] calldata rewardShares
     ) external;
+
+    /// @notice Unset reward share parameters for the curveId
+    /// @param curveId Curve Id to unset custom reward share parameters for
+    function unsetRewardShareData(uint256 curveId) external;
 
     /// @notice Get reward share parameters by the curveId.
     /// @dev Reverts if the values are not set for the given curveId.
@@ -192,7 +214,11 @@ interface ICSParametersRegistry {
         uint256[] calldata performanceLeeways
     ) external;
 
-    /// @notice Get performance leeway parameters by the curveId.
+    /// @notice Unset performance leeway parameters for the curveId
+    /// @param curveId Curve Id to unset custom performance leeway parameters for
+    function unsetPerformanceLeewayData(uint256 curveId) external;
+
+    /// @notice Get performance leeway parameters by the curveId
     /// @dev Reverts if the values are not set for the given curveId.
     /// @dev keyPivots = [100, 500] and performanceLeeways = [500, 450, 400] stands for
     ///      5% performance leeway for the keys 1-100, 4.5% performance leeway for the keys 101-500, and 4% performance leeway for the keys > 500
@@ -209,7 +235,7 @@ interface ICSParametersRegistry {
             uint256[] memory performanceLeeways
         );
 
-    /// @notice Set performance strikes lifetime and threshold for the curveId.
+    /// @notice Set performance strikes lifetime and threshold for the curveId
     /// @param curveId Curve Id to associate performance strikes lifetime and threshold with
     /// @param lifetime Performance strikes lifetime
     /// @param threshold Performance strikes threshold
@@ -219,7 +245,11 @@ interface ICSParametersRegistry {
         uint256 threshold
     ) external;
 
-    /// @notice Get performance strikes lifetime by the curveId.
+    /// @notice Unset custom performance strikes lifetime and threshold for the curveId
+    /// @param curveId Curve Id to unset custom performance strikes lifetime and threshold for
+    function unsetStrikesParams(uint256 curveId) external;
+
+    /// @notice Get performance strikes lifetime by the curveId
     ///         Performance strikes lifetime is the number of CSM Perf Oracle frames after which performance strikes are no longer valid
     ///         Performance strikes threshold is the number of active strikes after which validator can be forcefully ejected
     /// @dev `defaultStrikesParams` are returned if the value is not set for the given curveId.

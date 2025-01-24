@@ -119,6 +119,14 @@ contract CSParametersRegistry is
     }
 
     /// @inheritdoc ICSParametersRegistry
+    function unsetKeyRemovalCharge(
+        uint256 curveId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        delete _keyRemovalCharges[curveId];
+        emit KeyRemovalChargeUnset(curveId);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
     function setElRewardsStealingAdditionalFine(
         uint256 curveId,
         uint256 fine
@@ -131,12 +139,28 @@ contract CSParametersRegistry is
     }
 
     /// @inheritdoc ICSParametersRegistry
+    function unsetElRewardsStealingAdditionalFine(
+        uint256 curveId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        delete _elRewardsStealingAdditionalFine[curveId];
+        emit ElRewardsStealingAdditionalFineUnset(curveId);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
     function setPriorityQueueLimit(
         uint256 curveId,
         uint256 limit
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _priorityQueueLimits[curveId] = markedUint248(limit.toUint248(), true);
         emit PriorityQueueLimitSet(curveId, limit);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function unsetPriorityQueueLimit(
+        uint256 curveId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        delete _priorityQueueLimits[curveId];
+        emit PriorityQueueLimitUnset(curveId);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -162,6 +186,16 @@ contract CSParametersRegistry is
         _rewardShareValuesData[curveId] = rewardShares;
 
         emit RewardShareDataSet(curveId);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function unsetRewardShareData(
+        uint256 curveId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        delete _rewardSharePivotsData[curveId];
+        delete _rewardShareValuesData[curveId];
+
+        emit RewardShareDataUnset(curveId);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -191,6 +225,16 @@ contract CSParametersRegistry is
     }
 
     /// @inheritdoc ICSParametersRegistry
+    function unsetPerformanceLeewayData(
+        uint256 curveId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        delete _performanceLeewayPivotsData[curveId];
+        delete _performanceLeewayValuesData[curveId];
+
+        emit PerformanceLeewayDataUnset(curveId);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
     function setStrikesParams(
         uint256 curveId,
         uint256 lifetime,
@@ -203,6 +247,14 @@ contract CSParametersRegistry is
             true
         );
         emit StrikesParamsSet(curveId, lifetime, threshold);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function unsetStrikesParams(
+        uint256 curveId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        delete _strikesParams[curveId];
+        emit StrikesParamsUnset(curveId);
     }
 
     /// @inheritdoc ICSParametersRegistry
