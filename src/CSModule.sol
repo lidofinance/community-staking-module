@@ -197,7 +197,7 @@ contract CSModule is
         bytes calldata publicKeys,
         bytes calldata signatures
     ) external payable whenResumed {
-        _onlyManagerOrCreateNodeOperatorRole(nodeOperatorId, from);
+        _checkCanAddKeys(nodeOperatorId, from);
 
         if (
             msg.value <
@@ -225,7 +225,7 @@ contract CSModule is
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
     ) external whenResumed {
-        _onlyManagerOrCreateNodeOperatorRole(nodeOperatorId, from);
+        _checkCanAddKeys(nodeOperatorId, from);
 
         uint256 amount = accounting.getRequiredBondForNextKeys(
             nodeOperatorId,
@@ -251,7 +251,7 @@ contract CSModule is
         bytes calldata signatures,
         ICSAccounting.PermitInput calldata permit
     ) external whenResumed {
-        _onlyManagerOrCreateNodeOperatorRole(nodeOperatorId, from);
+        _checkCanAddKeys(nodeOperatorId, from);
 
         uint256 amount = accounting.getRequiredBondForNextKeysWstETH(
             nodeOperatorId,
@@ -1386,13 +1386,15 @@ contract CSModule is
         }
     }
 
-    function _onlyManagerOrCreateNodeOperatorRole(
+    function _checkCanAddKeys(
         uint256 nodeOperatorId,
-        address from
+        address who
     ) internal view {
-        if (from == msg.sender) {
-            _onlyNodeOperatorManager(nodeOperatorId, from);
+        // Most likely a direct call, so check the sender is a manager.
+        if (who == msg.sender) {
+            _onlyNodeOperatorManager(nodeOperatorId, msg.sender);
         } else {
+            // We're trying to add keys via gate, check if we can do it.
             _checkRole(CREATE_NODE_OPERATOR_ROLE);
             if (_nodeOperators[nodeOperatorId].totalAddedKeys > 0) {
                 revert NodeOperatorHasKeys();
