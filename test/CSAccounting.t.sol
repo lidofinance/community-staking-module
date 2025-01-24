@@ -352,7 +352,6 @@ contract CSAccountingBaseTest is CSAccountingFixtures {
         accounting.grantRole(accounting.PAUSE_ROLE(), admin);
         accounting.grantRole(accounting.RESUME_ROLE(), admin);
         accounting.grantRole(accounting.MANAGE_BOND_CURVES_ROLE(), admin);
-        accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
         vm.stopPrank();
     }
 }
@@ -530,10 +529,10 @@ abstract contract CSAccountingBondStateBaseTest is
     uint256[] public individualCurve = [1.8 ether, 2.7 ether];
 
     function _curve(uint256[] memory curve) internal virtual {
-        vm.startPrank(admin);
+        vm.prank(admin);
         uint256 curveId = accounting.addBondCurve(curve);
+        vm.prank(address(stakingModule));
         accounting.setBondCurve(0, curveId);
-        vm.stopPrank();
     }
 
     function _lock(uint256 id, uint256 amount) internal virtual {
@@ -1344,10 +1343,10 @@ abstract contract CSAccountingGetRequiredBondForKeysBaseTest is
     uint256[] public defaultCurve = [2 ether, 3 ether];
 
     function _curve(uint256[] memory curve) internal virtual {
-        vm.startPrank(admin);
+        vm.prank(admin);
         uint256 curveId = accounting.addBondCurve(curve);
+        vm.prank(address(stakingModule));
         accounting.setBondCurve(0, curveId);
-        vm.stopPrank();
     }
 
     function test_default() public virtual;
@@ -3989,10 +3988,11 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
 
         mock_getNodeOperatorsCount(1);
 
-        vm.startPrank(admin);
+        vm.prank(admin);
         uint256 addedId = accounting.addBondCurve(curvePoints);
+
+        vm.prank(address(stakingModule));
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: addedId });
-        vm.stopPrank();
 
         ICSBondCurve.BondCurve memory curve = accounting.getBondCurve(0);
 
@@ -4003,13 +4003,13 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
     function test_setBondCurve_RevertWhen_OperatorDoesNotExist() public {
         mock_getNodeOperatorsCount(0);
         vm.expectRevert(ICSAccounting.NodeOperatorDoesNotExist.selector);
-        vm.prank(admin);
+        vm.prank(address(stakingModule));
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
     }
 
-    function test_setBondCurve_RevertWhen_DoesNotHaveRole() public {
-        expectRoleRevert(stranger, accounting.SET_BOND_CURVE_ROLE());
+    function test_setBondCurve_RevertWhen_SenderIsNotCSM() public {
         vm.prank(stranger);
+        vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
     }
 
@@ -4020,12 +4020,13 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
 
         mock_getNodeOperatorsCount(1);
 
-        vm.startPrank(admin);
+        vm.prank(admin);
         uint256 addedId = accounting.addBondCurve(curvePoints);
+
+        vm.startPrank(address(stakingModule));
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: addedId });
-        vm.stopPrank();
-        vm.prank(address(stakingModule));
         accounting.resetBondCurve({ nodeOperatorId: 0 });
+        vm.stopPrank();
 
         ICSBondCurve.BondCurve memory curve = accounting.getBondCurve(0);
 

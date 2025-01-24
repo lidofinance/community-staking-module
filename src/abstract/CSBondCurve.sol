@@ -50,11 +50,17 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     }
 
     /// @inheritdoc ICSBondCurve
+    function curveExists(uint256 curveId) external view returns (bool) {
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
+        return _curveExists(curveId, $);
+    }
+
+    /// @inheritdoc ICSBondCurve
     function getCurveInfo(
         uint256 curveId
     ) public view returns (BondCurve memory) {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        if (curveId > $.bondCurves.length - 1) revert InvalidBondCurveId();
+        if (!_curveExists(curveId, $)) revert InvalidBondCurveId();
         return $.bondCurves[curveId];
     }
 
@@ -197,6 +203,14 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
         $.operatorBondCurveId[nodeOperatorId] = DEFAULT_BOND_CURVE_ID;
         emit BondCurveSet(nodeOperatorId, DEFAULT_BOND_CURVE_ID);
+    }
+
+    /// @dev Check if the curve exists
+    function _curveExists(
+        uint256 curveId,
+        CSBondCurveStorage storage $
+    ) internal view returns (bool) {
+        return curveId < $.bondCurves.length;
     }
 
     function _checkBondCurve(uint256[] calldata curvePoints) private view {

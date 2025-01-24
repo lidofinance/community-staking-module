@@ -71,13 +71,13 @@ contract DeployMainnet is DeployBase {
         config.keyRemovalCharge = 0.05 ether;
         config
             .elRewardsStealingReporter = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
-        // EarlyAdoption
+        // VettedGate
         config
-            .earlyAdoptionTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
-        config.earlyAdoptionBondCurve = new uint256[](2);
+            .vettedGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
+        config.vettedGateBondCurve = new uint256[](2);
         // 1.5 -> 1.3
-        config.earlyAdoptionBondCurve[0] = 1.5 ether;
-        config.earlyAdoptionBondCurve[1] = 2.8 ether;
+        config.vettedGateBondCurve[0] = 1.5 ether;
+        config.vettedGateBondCurve[1] = 2.8 ether;
 
         // GateSeal
         config.gateSealFactory = 0x6C82877cAC5a7A739f16Ca0A89c0A328B8764A24;

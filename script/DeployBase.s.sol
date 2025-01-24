@@ -12,7 +12,8 @@ import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
-import { CSEarlyAdoption } from "../src/CSEarlyAdoption.sol";
+import { PermissionlessGate } from "../src/PermissionlessGate.sol";
+import { VettedGate } from "../src/VettedGate.sol";
 
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { IGateSealFactory } from "../src/interfaces/IGateSealFactory.sol";
@@ -59,9 +60,9 @@ struct DeployParams {
     uint256 maxKeyRemovalCharge;
     uint256 keyRemovalCharge;
     address elRewardsStealingReporter;
-    // EarlyAdoption
-    bytes32 earlyAdoptionTreeRoot;
-    uint256[] earlyAdoptionBondCurve;
+    // VettedGate
+    bytes32 vettedGateTreeRoot;
+    uint256[] vettedGateBondCurve;
     // GateSeal
     address gateSealFactory;
     address sealingCommittee;
@@ -86,7 +87,8 @@ abstract contract DeployBase is Script {
     CSFeeOracle public oracle;
     CSFeeDistributor public feeDistributor;
     CSVerifier public verifier;
-    CSEarlyAdoption public earlyAdoption;
+    PermissionlessGate public permissionlessGate;
+    VettedGate public vettedGate;
     HashConsensus public hashConsensus;
 
     error ChainIdMismatch(uint256 actual, uint256 expected);
@@ -206,24 +208,24 @@ abstract contract DeployBase is Script {
                 accounting.MANAGE_BOND_CURVES_ROLE(),
                 address(deployer)
             );
-            uint256 eaCurveId = accounting.addBondCurve(
-                config.earlyAdoptionBondCurve
+            uint256 identifiedSolosCurve = accounting.addBondCurve(
+                config.vettedGateBondCurve
             );
             accounting.revokeRole(
                 accounting.MANAGE_BOND_CURVES_ROLE(),
                 address(deployer)
             );
 
-            earlyAdoption = new CSEarlyAdoption({
-                treeRoot: config.earlyAdoptionTreeRoot,
-                curveId: eaCurveId,
-                module: address(csm)
-            });
-
             csm.initialize({
                 _accounting: address(accounting),
-                _earlyAdoption: address(earlyAdoption),
                 _keyRemovalCharge: config.keyRemovalCharge,
+                admin: deployer
+            });
+            permissionlessGate = new PermissionlessGate(address(csm));
+            vettedGate = new VettedGate({
+                _treeRoot: config.vettedGateTreeRoot,
+                curveId: identifiedSolosCurve,
+                csm: address(csm),
                 admin: deployer
             });
 
@@ -261,27 +263,34 @@ abstract contract DeployBase is Script {
                 _avgPerfLeewayBP: config.avgPerfLeewayBP
             });
 
-            address[] memory sealables = new address[](4);
+            address[] memory sealables = new address[](5);
             sealables[0] = address(csm);
             sealables[1] = address(accounting);
             sealables[2] = address(oracle);
             sealables[3] = address(verifier);
+            sealables[4] = address(vettedGate);
             address gateSeal = _deployGateSeal(sealables);
 
             csm.grantRole(csm.PAUSE_ROLE(), gateSeal);
             oracle.grantRole(oracle.PAUSE_ROLE(), gateSeal);
             accounting.grantRole(accounting.PAUSE_ROLE(), gateSeal);
             verifier.grantRole(verifier.PAUSE_ROLE(), gateSeal);
-
-            accounting.grantRole(
-                accounting.SET_BOND_CURVE_ROLE(),
-                config.setResetBondCurveAddress
-            );
+            vettedGate.grantRole(vettedGate.PAUSE_ROLE(), gateSeal);
             accounting.grantRole(
                 accounting.RESET_BOND_CURVE_ROLE(),
                 config.setResetBondCurveAddress
             );
 
+            csm.grantRole(
+                csm.CREATE_NODE_OPERATOR_ROLE(),
+                address(permissionlessGate)
+            );
+            csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(vettedGate));
+            csm.grantRole(csm.SET_BOND_CURVE_ROLE(), address(vettedGate));
+            csm.grantRole(
+                csm.SET_BOND_CURVE_ROLE(),
+                address(config.setResetBondCurveAddress)
+            );
             csm.grantRole(
                 csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(),
                 config.elRewardsStealingReporter
@@ -299,6 +308,12 @@ abstract contract DeployBase is Script {
 
             csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
             csm.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
+
+            vettedGate.grantRole(
+                vettedGate.DEFAULT_ADMIN_ROLE(),
+                config.aragonAgent
+            );
+            vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
 
             verifier.grantRole(
                 verifier.DEFAULT_ADMIN_ROLE(),
@@ -335,8 +350,9 @@ abstract contract DeployBase is Script {
 
             JsonObj memory deployJson = Json.newObj();
             deployJson.set("ChainId", chainId);
+            deployJson.set("PermissionlessGate", address(permissionlessGate));
+            deployJson.set("VettedGate", address(vettedGate));
             deployJson.set("CSModule", address(csm));
-            deployJson.set("CSEarlyAdoption", address(earlyAdoption));
             deployJson.set("CSAccounting", address(accounting));
             deployJson.set("CSFeeOracle", address(oracle));
             deployJson.set("CSFeeDistributor", address(feeDistributor));

@@ -16,13 +16,14 @@ block_gas_limit = 30_000_000
 fuzz = { runs = 256 }
 
 gas_reports = [
+    "VettedGate",
+    "PermissionlessGate",
     "CSAccounting",
-    "CSEarlyAdoption",
-    # TODO: there is no report for CSFeeDistributor for some reason
     "CSFeeDistributor",
     "CSFeeOracle",
     "CSModule",
     "CSVerifier",
+    "CSPerksRegistry",
     "AssetRecovererLib",
     "OssifiableProxy",
     "HashConsensus"

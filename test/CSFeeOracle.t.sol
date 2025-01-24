@@ -303,7 +303,7 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.pauseUntil(block.timestamp - 1);
     }
 
-    function test_pauseUntil_indefinetily() public {
+    function test_pauseUntil_indefinitely() public {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
             _grantAllRolesToAdmin();

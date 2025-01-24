@@ -57,7 +57,6 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
 
     function test_initializer() public {
         assertEq(address(csm.accounting()), address(accounting));
-        assertEq(address(csm.earlyAdoption()), address(earlyAdoption));
         assertEq(csm.keyRemovalCharge(), deployParams.keyRemovalCharge);
         assertTrue(
             csm.hasRole(csm.STAKING_ROUTER_ROLE(), locator.stakingRouter())
@@ -113,7 +112,6 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         csmImpl.initialize({
             _accounting: address(accounting),
-            _earlyAdoption: address(earlyAdoption),
             _keyRemovalCharge: deployParams.keyRemovalCharge,
             admin: deployParams.aragonAgent
         });
@@ -168,9 +166,6 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
             deployParams.chargePenaltyRecipient
         );
         assertTrue(
-            accounting.hasRole(accounting.SET_BOND_CURVE_ROLE(), address(csm))
-        );
-        assertTrue(
             accounting.hasRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm))
         );
 
@@ -206,16 +201,6 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
         );
         assertEq(accounting.getRoleMemberCount(accounting.PAUSE_ROLE()), 1);
 
-        assertTrue(
-            accounting.hasRole(
-                accounting.SET_BOND_CURVE_ROLE(),
-                deployParams.setResetBondCurveAddress
-            )
-        );
-        assertEq(
-            accounting.getRoleMemberCount(accounting.SET_BOND_CURVE_ROLE()),
-            2
-        );
         assertTrue(
             accounting.hasRole(
                 accounting.RESET_BOND_CURVE_ROLE(),
@@ -449,7 +434,7 @@ contract HashConsensusDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 }
 
-contract CSEarlyAdoptionDeploymentTest is Test, Utilities, DeploymentFixtures {
+contract VettedGateDeploymentTest is Test, Utilities, DeploymentFixtures {
     DeployParams private deployParams;
 
     function setUp() public {
@@ -460,12 +445,20 @@ contract CSEarlyAdoptionDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_constructor() public {
-        assertEq(earlyAdoption.TREE_ROOT(), deployParams.earlyAdoptionTreeRoot);
-        assertEq(
-            accounting.getCurveInfo(earlyAdoption.CURVE_ID()).points,
-            deployParams.earlyAdoptionBondCurve
+        assertTrue(
+            csm.hasRole(csm.DEFAULT_ADMIN_ROLE(), deployParams.aragonAgent)
         );
-        assertEq(earlyAdoption.MODULE(), address(csm));
+        assertEq(vettedGate.treeRoot(), deployParams.vettedGateTreeRoot);
+        assertEq(
+            accounting.getCurveInfo(vettedGate.CURVE_ID()).points,
+            deployParams.vettedGateBondCurve
+        );
+        assertEq(address(vettedGate.CSM()), address(csm));
+        assertTrue(
+            vettedGate.hasRole(vettedGate.PAUSE_ROLE(), address(gateSeal))
+        );
+        assertEq(vettedGate.getRoleMemberCount(vettedGate.PAUSE_ROLE()), 1);
+        assertEq(vettedGate.getRoleMemberCount(vettedGate.RESUME_ROLE()), 0);
     }
 }
 
