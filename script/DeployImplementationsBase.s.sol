@@ -12,7 +12,9 @@ import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
-import { CSEarlyAdoption } from "../src/CSEarlyAdoption.sol";
+import { PermissionlessGate } from "../src/PermissionlessGate.sol";
+import { VettedGate } from "../src/VettedGate.sol";
+import { ICSEarlyAdoption } from "../src/interfaces/ICSEarlyAdoption.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
@@ -21,6 +23,7 @@ import { DeployBase } from "./DeployBase.s.sol";
 
 abstract contract DeployImplementationsBase is DeployBase {
     address gateSeal;
+    address earlyAdoption;
 
     function _deploy() internal {
         if (chainId != block.chainid) {
@@ -54,6 +57,14 @@ abstract contract DeployImplementationsBase is DeployBase {
                 maxBondLockPeriod: config.maxBondLockPeriod
             });
 
+            permissionlessGate = new PermissionlessGate(address(csm));
+            vettedGate = new VettedGate({
+                _treeRoot: config.vettedGateTreeRoot,
+                curveId: ICSEarlyAdoption(earlyAdoption).CURVE_ID(),
+                csm: address(csm),
+                admin: deployer
+            });
+
             CSFeeOracle oracleImpl = new CSFeeOracle({
                 secondsPerSlot: config.secondsPerSlot,
                 genesisTime: config.clGenesisTime
@@ -85,12 +96,20 @@ abstract contract DeployImplementationsBase is DeployBase {
                 admin: deployer
             });
 
-            address[] memory sealables = new address[](4);
+            address[] memory sealables = new address[](5);
             sealables[0] = address(csm);
             sealables[1] = address(accounting);
             sealables[2] = address(oracle);
             sealables[3] = address(verifier);
+            sealables[4] = address(vettedGate);
             gateSeal = _deployGateSeal(sealables);
+
+            vettedGate.grantRole(vettedGate.PAUSE_ROLE(), address(gateSeal));
+            vettedGate.grantRole(
+                vettedGate.DEFAULT_ADMIN_ROLE(),
+                config.aragonAgent
+            );
+            vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
 
             verifier.grantRole(verifier.PAUSE_ROLE(), address(gateSeal));
             verifier.grantRole(
@@ -100,12 +119,13 @@ abstract contract DeployImplementationsBase is DeployBase {
             verifier.revokeRole(verifier.DEFAULT_ADMIN_ROLE(), deployer);
 
             JsonObj memory deployJson = Json.newObj();
+            deployJson.set("PermissionlessGate", address(permissionlessGate));
+            deployJson.set("VettedGate", address(vettedGate));
             deployJson.set("CSModuleImpl", address(csmImpl));
             deployJson.set("CSAccountingImpl", address(accountingImpl));
             deployJson.set("CSFeeOracleImpl", address(oracleImpl));
             deployJson.set("CSFeeDistributorImpl", address(feeDistributorImpl));
             deployJson.set("CSVerifier", address(verifier));
-            deployJson.set("CSEarlyAdoption", address(earlyAdoption));
             deployJson.set("HashConsensus", address(hashConsensus));
             deployJson.set("GateSeal", address(gateSeal));
             deployJson.set("git-ref", gitRef);

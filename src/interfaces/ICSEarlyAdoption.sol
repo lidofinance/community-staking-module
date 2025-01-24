@@ -3,6 +3,8 @@
 
 pragma solidity 0.8.24;
 
+/// Legacy interface for the early adoption contract
+/// Used only in scripts and tests
 interface ICSEarlyAdoption {
     event Consumed(address indexed member);
 

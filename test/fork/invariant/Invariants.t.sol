@@ -38,10 +38,10 @@ contract CSModuleInvariants is InvariantsBase {
         assertCSMEnqueuedCount(csm);
     }
 
-    function test_earlyAdoptionMaxKeys() public noGasMetering {
+    function test_csmMaxKeys() public noGasMetering {
         vm.skip(csm.publicRelease());
 
-        assertCSMEarlyAdoptionMaxKeys(csm);
+        assertCSMMaxKeys(csm);
     }
 
     function test_roles() public {
@@ -112,7 +112,7 @@ contract CSAccountingInvariants is InvariantsBase {
             "pause"
         );
         assertEq(
-            csm.getRoleMember(accounting.PAUSE_ROLE(), 0),
+            accounting.getRoleMember(accounting.PAUSE_ROLE(), 0),
             address(gateSeal),
             "pause address"
         );
@@ -125,15 +125,6 @@ contract CSAccountingInvariants is InvariantsBase {
             accounting.getRoleMemberCount(accounting.MANAGE_BOND_CURVES_ROLE()),
             0,
             "manage bond curves"
-        );
-        assertEq(
-            accounting.getRoleMemberCount(accounting.SET_BOND_CURVE_ROLE()),
-            2,
-            "set bond curve"
-        );
-        assertTrue(
-            accounting.hasRole(accounting.SET_BOND_CURVE_ROLE(), address(csm)),
-            "set bond curve csm"
         );
         assertEq(
             accounting.getRoleMemberCount(accounting.RESET_BOND_CURVE_ROLE()),
@@ -194,7 +185,7 @@ contract CSFeeOracleInvariant is InvariantsBase {
         );
         assertEq(oracle.getRoleMemberCount(oracle.PAUSE_ROLE()), 1, "pause");
         assertEq(
-            csm.getRoleMember(oracle.PAUSE_ROLE(), 0),
+            oracle.getRoleMember(oracle.PAUSE_ROLE(), 0),
             address(gateSeal),
             "pause address"
         );

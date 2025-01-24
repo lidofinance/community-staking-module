@@ -13,7 +13,6 @@ import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
-import { CSEarlyAdoption } from "../src/CSEarlyAdoption.sol";
 import { DeploymentHelpers } from "../test/helpers/Fixtures.sol";
 
 contract DeployImplementationsHolesky is
@@ -34,12 +33,11 @@ contract DeployImplementationsHolesky is
         );
 
         csm = CSModule(deploymentConfig.csm);
-        earlyAdoption = CSEarlyAdoption(deploymentConfig.earlyAdoption);
+        earlyAdoption = deploymentConfig.earlyAdoption;
         accounting = CSAccounting(deploymentConfig.accounting);
         oracle = CSFeeOracle(deploymentConfig.oracle);
         feeDistributor = CSFeeDistributor(deploymentConfig.feeDistributor);
         hashConsensus = HashConsensus(deploymentConfig.hashConsensus);
-        gateSeal = deploymentConfig.gateSeal;
 
         _deploy();
     }

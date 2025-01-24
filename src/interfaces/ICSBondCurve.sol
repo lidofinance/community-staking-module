@@ -59,10 +59,15 @@ interface ICSBondCurve {
 
     function DEFAULT_BOND_CURVE_ID() external view returns (uint256);
 
-    /// @dev Get default bond curve info if `curveId` is `0` or invalid
+    /// @notice Checks if the curve with the given id exists
+    /// @param curveId Curve id to check
+    /// @return True if the curve exists, false otherwise
+    function curveExists(uint256 curveId) external view returns (bool);
+
     /// @notice Return bond curve for the given curve id
     /// @param curveId Curve id to get bond curve for
     /// @return Bond curve
+    /// @dev Reverts if `curveId` is invalid
     function getCurveInfo(
         uint256 curveId
     ) external view returns (BondCurve memory);

@@ -37,7 +37,7 @@ contract ClaimIntegrationTest is
         uint256 noCount = csm.getNodeOperatorsCount();
         assertCSMKeys(csm);
         assertCSMEnqueuedCount(csm);
-        assertCSMEarlyAdoptionMaxKeys(csm);
+        assertCSMMaxKeys(csm);
         assertAccountingTotalBondShares(noCount, lido, accounting);
         assertAccountingBurnerApproval(
             lido,
@@ -75,20 +75,19 @@ contract ClaimIntegrationTest is
         );
         uint256 amount = accounting.getBondAmountByKeysCount(keysCount, 0);
         vm.deal(nodeOperator, amount);
+
         vm.prank(nodeOperator);
-        csm.addNodeOperatorETH{ value: amount }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
+        defaultNoId = permissionlessGate.addNodeOperatorETH{ value: amount }({
+            keysCount: keysCount,
+            publicKeys: keys,
+            signatures: signatures,
+            managementProperties: NodeOperatorManagementProperties({
                 managerAddress: address(0),
                 rewardAddress: address(0),
                 extendedManagerPermissions: false
             }),
-            new bytes32[](0),
-            address(0)
-        );
-        defaultNoId = csm.getNodeOperatorsCount() - 1;
+            referrer: address(0)
+        });
     }
 
     function test_claimExcessBondStETH() public assertInvariants {

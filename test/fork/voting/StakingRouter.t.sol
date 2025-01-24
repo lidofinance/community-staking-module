@@ -34,7 +34,7 @@ contract StakingRouterIntegrationTest is
         uint256 noCount = csm.getNodeOperatorsCount();
         assertCSMKeys(csm);
         assertCSMEnqueuedCount(csm);
-        assertCSMEarlyAdoptionMaxKeys(csm);
+        assertCSMMaxKeys(csm);
         assertAccountingTotalBondShares(noCount, lido, accounting);
         assertAccountingBurnerApproval(
             lido,
@@ -111,26 +111,27 @@ contract StakingRouterIntegrationTest is
     function addNodeOperator(
         address from,
         uint256 keysCount
-    ) internal returns (uint256) {
+    ) internal returns (uint256 nodeOperatorId) {
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
         uint256 amount = accounting.getBondAmountByKeysCount(keysCount, 0);
         vm.deal(from, amount);
+
         vm.prank(from);
-        csm.addNodeOperatorETH{ value: amount }(
-            keysCount,
-            keys,
-            signatures,
-            NodeOperatorManagementProperties({
+        nodeOperatorId = permissionlessGate.addNodeOperatorETH{
+            value: amount
+        }({
+            keysCount: keysCount,
+            publicKeys: keys,
+            signatures: signatures,
+            managementProperties: NodeOperatorManagementProperties({
                 managerAddress: address(0),
                 rewardAddress: address(0),
                 extendedManagerPermissions: false
             }),
-            new bytes32[](0),
-            address(0)
-        );
-        return csm.getNodeOperatorsCount() - 1;
+            referrer: address(0)
+        });
     }
 
     function hugeDeposit() internal {
