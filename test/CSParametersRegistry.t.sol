@@ -75,14 +75,12 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
             parametersRegistry.defaultPerformanceLeeway(),
             defaultInitData.performanceLeeway
         );
-        assertEq(
-            parametersRegistry.defaultStrikesLifetime(),
-            defaultInitData.strikesLifetime
-        );
-        assertEq(
-            parametersRegistry.defaultStrikesThreshold(),
-            defaultInitData.strikesThreshold
-        );
+
+        (uint256 lifetime, uint256 threshold) = parametersRegistry
+            .defaultStrikesParams();
+
+        assertEq(lifetime, defaultInitData.strikesLifetime);
+        assertEq(threshold, defaultInitData.strikesThreshold);
     }
 
     function test_initialize_RevertWhen_ZeroAdminAddress() public {
@@ -116,6 +114,36 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
         vm.expectRevert(
             ICSParametersRegistry.InvalidPerformanceLeewayData.selector
         );
+        parametersRegistry.initialize(admin, customInitData);
+    }
+
+    function test_initialize_RevertWhen_InvalidStrikesParams_zeroLifetime()
+        public
+    {
+        _enableInitializers(address(parametersRegistry));
+
+        ICSParametersRegistry.initializationData
+            memory customInitData = defaultInitData;
+
+        customInitData.strikesLifetime = 0;
+        customInitData.strikesThreshold = 0;
+
+        vm.expectRevert(ICSParametersRegistry.InvalidStrikesParams.selector);
+        parametersRegistry.initialize(admin, customInitData);
+    }
+
+    function test_initialize_RevertWhen_InvalidStrikesParams_lifetimeLessThanThreshold()
+        public
+    {
+        _enableInitializers(address(parametersRegistry));
+
+        ICSParametersRegistry.initializationData
+            memory customInitData = defaultInitData;
+
+        customInitData.strikesLifetime = 2;
+        customInitData.strikesThreshold = 3;
+
+        vm.expectRevert(ICSParametersRegistry.InvalidStrikesParams.selector);
         parametersRegistry.initialize(admin, customInitData);
     }
 }
@@ -731,120 +759,103 @@ contract CSParametersRegistryElRewardsStealingAdditionalFineTest is
     }
 }
 
-contract CSParametersRegistryStrikesLifetimeTest is
-    CSParametersRegistryBaseTest
-{
+contract CSParametersRegistryStrikesParamsTest is CSParametersRegistryBaseTest {
     function setUp() public virtual override {
         super.setUp();
         _enableInitializers(address(parametersRegistry));
         parametersRegistry.initialize(admin, defaultInitData);
     }
 
-    function test_setDefaultStrikesLifetime() public {
+    function test_setDefaultStrikesParams_happyPath() public {
         uint256 lifetime = 12;
-        vm.expectEmit(true, true, true, true, address(parametersRegistry));
-        emit ICSParametersRegistry.DefaultStrikesLifetimeSet(lifetime);
-        vm.prank(admin);
-        parametersRegistry.setDefaultStrikesLifetime(lifetime);
-
-        assertEq(parametersRegistry.defaultStrikesLifetime(), lifetime);
-    }
-
-    function test_setStrikesLifetime_set_valid_data() public {
-        uint256 curveId = 1;
-        uint256 lifetime = 12;
+        uint256 threshold = 6;
 
         vm.expectEmit(true, true, true, true, address(parametersRegistry));
-        emit ICSParametersRegistry.StrikesLifetimeSet(curveId, lifetime);
+        emit ICSParametersRegistry.DefaultStrikesParamsSet(lifetime, threshold);
         vm.prank(admin);
-        parametersRegistry.setStrikesLifetime(curveId, lifetime);
-    }
+        parametersRegistry.setDefaultStrikesParams(lifetime, threshold);
 
-    function test_setStrikesLifetime_RevertWhen_not_admin() public {
-        uint256 curveId = 1;
-        uint256 lifetime = 12;
-
-        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
-        expectRoleRevert(stranger, role);
-        vm.prank(stranger);
-        parametersRegistry.setStrikesLifetime(curveId, lifetime);
-    }
-
-    function test_getStrikesLifetime_usual_data() public {
-        uint256 curveId = 1;
-        uint256 lifetime = 12;
-
-        vm.prank(admin);
-        parametersRegistry.setStrikesLifetime(curveId, lifetime);
-
-        uint256 lifetimeOut = parametersRegistry.getStrikesLifetime(curveId);
+        (uint256 lifetimeOut, uint256 thresholdOut) = parametersRegistry
+            .defaultStrikesParams();
 
         assertEq(lifetimeOut, lifetime);
-    }
-
-    function test_getStrikesLifetime_default_data() public {
-        uint256 curveId = 10;
-        uint256 lifetimeOut = parametersRegistry.getStrikesLifetime(curveId);
-
-        assertEq(lifetimeOut, defaultInitData.strikesLifetime);
-    }
-}
-
-contract CSParametersRegistryStrikesThresholdTest is
-    CSParametersRegistryBaseTest
-{
-    function setUp() public virtual override {
-        super.setUp();
-        _enableInitializers(address(parametersRegistry));
-        parametersRegistry.initialize(admin, defaultInitData);
-    }
-
-    function test_setDefaultStrikesThreshold() public {
-        uint256 threshold = 2;
-        vm.expectEmit(true, true, true, true, address(parametersRegistry));
-        emit ICSParametersRegistry.DefaultStrikesThresholdSet(threshold);
-        vm.prank(admin);
-        parametersRegistry.setDefaultStrikesThreshold(threshold);
-
-        assertEq(parametersRegistry.defaultStrikesThreshold(), threshold);
-    }
-
-    function test_setStrikesThreshold_set_valid_data() public {
-        uint256 curveId = 1;
-        uint256 threshold = 2;
-
-        vm.expectEmit(true, true, true, true, address(parametersRegistry));
-        emit ICSParametersRegistry.StrikesThresholdSet(curveId, threshold);
-        vm.prank(admin);
-        parametersRegistry.setStrikesThreshold(curveId, threshold);
-    }
-
-    function test_setStrikesThreshold_RevertWhen_not_admin() public {
-        uint256 curveId = 1;
-        uint256 threshold = 2;
-
-        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
-        expectRoleRevert(stranger, role);
-        vm.prank(stranger);
-        parametersRegistry.setStrikesThreshold(curveId, threshold);
-    }
-
-    function test_getStrikesThreshold_usual_data() public {
-        uint256 curveId = 1;
-        uint256 threshold = 2;
-
-        vm.prank(admin);
-        parametersRegistry.setStrikesThreshold(curveId, threshold);
-
-        uint256 thresholdOut = parametersRegistry.getStrikesThreshold(curveId);
-
         assertEq(thresholdOut, threshold);
     }
 
-    function test_getStrikesThreshold_default_data() public {
-        uint256 curveId = 10;
-        uint256 thresholdOut = parametersRegistry.getStrikesThreshold(curveId);
+    function test_setDefaultStrikesParams_revertWhen_zeroLifetime() public {
+        uint256 lifetime = 0;
+        uint256 threshold = 0;
 
+        vm.expectRevert(ICSParametersRegistry.InvalidStrikesParams.selector);
+        vm.prank(admin);
+        parametersRegistry.setDefaultStrikesParams(lifetime, threshold);
+    }
+
+    function test_setDefaultStrikesParams_revertWhen_lifetimeLessThanThreshold()
+        public
+    {
+        uint256 lifetime = 1;
+        uint256 threshold = 2;
+
+        vm.expectRevert(ICSParametersRegistry.InvalidStrikesParams.selector);
+        vm.prank(admin);
+        parametersRegistry.setDefaultStrikesParams(lifetime, threshold);
+    }
+
+    function test_setStrikesParams_revertWhen_zeroLifetime() public {
+        uint256 curveId = 1;
+        uint256 lifetime = 0;
+        uint256 threshold = 0;
+
+        vm.expectRevert(ICSParametersRegistry.InvalidStrikesParams.selector);
+        vm.prank(admin);
+        parametersRegistry.setStrikesParams(curveId, lifetime, threshold);
+    }
+
+    function test_setStrikesParams_revertWhen_lifetimeLessThanThreshold()
+        public
+    {
+        uint256 curveId = 1;
+        uint256 lifetime = 2;
+        uint256 threshold = 3;
+
+        vm.expectRevert(ICSParametersRegistry.InvalidStrikesParams.selector);
+        vm.prank(admin);
+        parametersRegistry.setStrikesParams(curveId, lifetime, threshold);
+    }
+
+    function test_setStrikesParams_RevertWhen_not_admin() public {
+        uint256 curveId = 1;
+        uint256 lifetime = 3;
+        uint256 threshold = 2;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.setStrikesParams(curveId, lifetime, threshold);
+    }
+
+    function test_getStrikesParams_usual_data() public {
+        uint256 curveId = 1;
+        uint256 lifetime = 3;
+        uint256 threshold = 2;
+
+        vm.prank(admin);
+        parametersRegistry.setStrikesParams(curveId, lifetime, threshold);
+
+        (uint256 lifetimeOut, uint256 thresholdOut) = parametersRegistry
+            .getStrikesParams(curveId);
+
+        assertEq(lifetimeOut, lifetime);
+        assertEq(thresholdOut, threshold);
+    }
+
+    function test_getStrikesParams_default_data() public {
+        uint256 curveId = 10;
+        (uint256 lifetimeOut, uint256 thresholdOut) = parametersRegistry
+            .getStrikesParams(curveId);
+
+        assertEq(lifetimeOut, defaultInitData.strikesLifetime);
         assertEq(thresholdOut, defaultInitData.strikesThreshold);
     }
 }

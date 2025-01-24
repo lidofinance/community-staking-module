@@ -36,11 +36,8 @@ contract CSParametersRegistry is
     mapping(uint256 => uint256[]) internal _performanceLeewayPivotsData;
     mapping(uint256 => uint256[]) internal _performanceLeewayValuesData;
 
-    uint256 public defaultStrikesLifetime;
-    mapping(uint256 => markedUint248) internal _strikesLifetimes;
-
-    uint256 public defaultStrikesThreshold;
-    mapping(uint256 => markedUint248) internal _strikesThresholds;
+    StrikesParams public defaultStrikesParams;
+    mapping(uint256 => markedStrikesParams) internal _strikesParams;
 
     constructor() {
         _disableInitializers();
@@ -60,8 +57,7 @@ contract CSParametersRegistry is
         _setDefaultPriorityQueueLimit(data.priorityQueueLimit);
         _setDefaultRewardShare(data.rewardShare);
         _setDefaultPerformanceLeeway(data.performanceLeeway);
-        _setDefaultStrikesLifetime(data.strikesLifetime);
-        _setDefaultStrikesThreshold(data.strikesThreshold);
+        _setDefaultStrikesParams(data.strikesLifetime, data.strikesThreshold);
 
         __AccessControlEnumerable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -103,17 +99,11 @@ contract CSParametersRegistry is
     }
 
     /// @inheritdoc ICSParametersRegistry
-    function setDefaultStrikesLifetime(
-        uint256 lifetime
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setDefaultStrikesLifetime(lifetime);
-    }
-
-    /// @inheritdoc ICSParametersRegistry
-    function setDefaultStrikesThreshold(
+    function setDefaultStrikesParams(
+        uint256 lifetime,
         uint256 threshold
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setDefaultStrikesThreshold(threshold);
+        _setDefaultStrikesParams(lifetime, threshold);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -201,24 +191,18 @@ contract CSParametersRegistry is
     }
 
     /// @inheritdoc ICSParametersRegistry
-    function setStrikesLifetime(
+    function setStrikesParams(
         uint256 curveId,
-        uint256 lifetime
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _strikesLifetimes[curveId] = markedUint248(lifetime.toUint248(), true);
-        emit StrikesLifetimeSet(curveId, lifetime);
-    }
-
-    /// @inheritdoc ICSParametersRegistry
-    function setStrikesThreshold(
-        uint256 curveId,
+        uint256 lifetime,
         uint256 threshold
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _strikesThresholds[curveId] = markedUint248(
-            threshold.toUint248(),
+        _validateStrikesParams(lifetime, threshold);
+        _strikesParams[curveId] = markedStrikesParams(
+            lifetime.toUint128(),
+            threshold.toUint120(),
             true
         );
-        emit StrikesThresholdSet(curveId, threshold);
+        emit StrikesParamsSet(curveId, lifetime, threshold);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -288,19 +272,17 @@ contract CSParametersRegistry is
     }
 
     /// @inheritdoc ICSParametersRegistry
-    function getStrikesLifetime(
+    function getStrikesParams(
         uint256 curveId
-    ) external view returns (uint256 lifetime) {
-        markedUint248 memory data = _strikesLifetimes[curveId];
-        return data.isValue ? data.value : defaultStrikesLifetime;
-    }
-
-    /// @inheritdoc ICSParametersRegistry
-    function getStrikesThreshold(
-        uint256 curveId
-    ) external view returns (uint256 threshold) {
-        markedUint248 memory data = _strikesThresholds[curveId];
-        return data.isValue ? data.value : defaultStrikesThreshold;
+    ) external view returns (uint256 lifetime, uint256 threshold) {
+        markedStrikesParams memory params = _strikesParams[curveId];
+        if (!params.isValue) {
+            return (
+                defaultStrikesParams.lifetime,
+                defaultStrikesParams.threshold
+            );
+        }
+        return (params.lifetime, params.threshold);
     }
 
     function _setDefaultKeyRemovalCharge(uint256 keyRemovalCharge) internal {
@@ -330,13 +312,22 @@ contract CSParametersRegistry is
         emit DefaultPerformanceLeewaySet(leeway);
     }
 
-    function _setDefaultStrikesLifetime(uint256 lifetime) internal {
-        defaultStrikesLifetime = lifetime;
-        emit DefaultStrikesLifetimeSet(lifetime);
+    function _setDefaultStrikesParams(
+        uint256 lifetime,
+        uint256 threshold
+    ) internal {
+        _validateStrikesParams(lifetime, threshold);
+        defaultStrikesParams = StrikesParams({
+            lifetime: lifetime.toUint128(),
+            threshold: threshold.toUint128()
+        });
+        emit DefaultStrikesParamsSet(lifetime, threshold);
     }
 
-    function _setDefaultStrikesThreshold(uint256 threshold) internal {
-        defaultStrikesThreshold = threshold;
-        emit DefaultStrikesThresholdSet(threshold);
+    function _validateStrikesParams(
+        uint256 lifetime,
+        uint256 threshold
+    ) internal pure {
+        if (lifetime < threshold || lifetime < 1) revert InvalidStrikesParams();
     }
 }

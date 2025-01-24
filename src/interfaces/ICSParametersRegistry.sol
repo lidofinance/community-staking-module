@@ -9,6 +9,17 @@ interface ICSParametersRegistry {
         bool isValue;
     }
 
+    struct StrikesParams {
+        uint128 lifetime;
+        uint128 threshold;
+    }
+
+    struct markedStrikesParams {
+        uint128 lifetime;
+        uint120 threshold;
+        bool isValue;
+    }
+
     struct initializationData {
         uint256 keyRemovalCharge;
         uint256 elRewardsStealingAdditionalFine;
@@ -24,8 +35,7 @@ interface ICSParametersRegistry {
     event DefaultPriorityQueueLimitSet(uint256 value);
     event DefaultRewardShareSet(uint256 value);
     event DefaultPerformanceLeewaySet(uint256 value);
-    event DefaultStrikesLifetimeSet(uint256 value);
-    event DefaultStrikesThresholdSet(uint256 value);
+    event DefaultStrikesParamsSet(uint256 lifetime, uint256 threshold);
 
     event KeyRemovalChargeSet(
         uint256 indexed curveId,
@@ -38,11 +48,15 @@ interface ICSParametersRegistry {
     event PriorityQueueLimitSet(uint256 indexed curveId, uint256 limit);
     event RewardShareDataSet(uint256 indexed curveId);
     event PerformanceLeewayDataSet(uint256 indexed curveId);
-    event StrikesLifetimeSet(uint256 indexed curveId, uint256 lifetime);
-    event StrikesThresholdSet(uint256 indexed curveId, uint256 threshold);
+    event StrikesParamsSet(
+        uint256 indexed curveId,
+        uint256 lifetime,
+        uint256 threshold
+    );
 
     error InvalidRewardShareData();
     error InvalidPerformanceLeewayData();
+    error InvalidStrikesParams();
     error ZeroAdminAddress();
 
     /// @notice Set default value for the key removal charge. Default value is used if a specific value is not set for the curveId
@@ -82,19 +96,16 @@ interface ICSParametersRegistry {
     /// @notice Get default value for the performance leeway
     function defaultPerformanceLeeway() external returns (uint256);
 
-    /// @notice Set default value for the strikes lifetime. Default value is used if a specific value is not set for the curveId
+    /// @notice Set default value for the strikes lifetime and threshold. Default value is used if a specific value is not set for the curveId
     /// @param lifetime value to be set as default for the strikes lifetime
-    function setDefaultStrikesLifetime(uint256 lifetime) external;
-
-    /// @notice Get default value for the strikes lifetime
-    function defaultStrikesLifetime() external returns (uint256);
-
-    /// @notice Set default value for the strikes threshold. Default value is used if a specific value is not set for the curveId
     /// @param threshold value to be set as default for the strikes threshold
-    function setDefaultStrikesThreshold(uint256 threshold) external;
+    function setDefaultStrikesParams(
+        uint256 lifetime,
+        uint256 threshold
+    ) external;
 
-    /// @notice Get default value for the strikes threshold
-    function defaultStrikesThreshold() external returns (uint256);
+    /// @notice Get default value for the strikes lifetime and threshold
+    function defaultStrikesParams() external returns (uint128, uint128);
 
     /// @notice Set key removal charge for the curveId.
     /// @param curveId Curve Id to associate key removal charge with
@@ -198,29 +209,24 @@ interface ICSParametersRegistry {
             uint256[] memory performanceLeeways
         );
 
-    /// @notice Set performance strikes lifetime for the curveId.
-    /// @param curveId Curve Id to associate performance strikes lifetime with
+    /// @notice Set performance strikes lifetime and threshold for the curveId.
+    /// @param curveId Curve Id to associate performance strikes lifetime and threshold with
     /// @param lifetime Performance strikes lifetime
-    function setStrikesLifetime(uint256 curveId, uint256 lifetime) external;
+    /// @param threshold Performance strikes threshold
+    function setStrikesParams(
+        uint256 curveId,
+        uint256 lifetime,
+        uint256 threshold
+    ) external;
 
-    /// @notice Get performance strikes lifetime by the curveId. Performance strikes lifetime is the number of CSM Perf Oracle frames after which performance strikes are no longer valid
-    /// @dev `defaultStrikesLifetime` is returned if the value is not set for the given curveId.
+    /// @notice Get performance strikes lifetime by the curveId.
+    ///         Performance strikes lifetime is the number of CSM Perf Oracle frames after which performance strikes are no longer valid
+    ///         Performance strikes threshold is the number of active strikes after which validator can be forcefully ejected
+    /// @dev `defaultStrikesParams` are returned if the value is not set for the given curveId.
     /// @param curveId Curve Id to get performance strikes lifetime for
     /// @return lifetime Performance strikes lifetime
-    function getStrikesLifetime(
-        uint256 curveId
-    ) external view returns (uint256 lifetime);
-
-    /// @notice Set performance strikes threshold for the curveId.
-    /// @param curveId Curve Id to associate performance strikes threshold with
-    /// @param threshold Performance strikes threshold
-    function setStrikesThreshold(uint256 curveId, uint256 threshold) external;
-
-    /// @notice Get performance strikes threshold by the curveId. Performance strikes threshold is the number of active strikes after which validator can be forcefully ejected
-    /// @dev `defaultStrikesThreshold` is returned if the value is not set for the given curveId.
-    /// @param curveId Curve Id to get performance strikes threshold for
     /// @return threshold Performance strikes threshold
-    function getStrikesThreshold(
+    function getStrikesParams(
         uint256 curveId
-    ) external view returns (uint256 threshold);
+    ) external view returns (uint256 lifetime, uint256 threshold);
 }
