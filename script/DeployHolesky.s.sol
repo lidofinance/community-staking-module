@@ -22,7 +22,6 @@ contract DeployHolesky is DeployBase {
         config.oracleReportEpochsPerFrame = 225 * 7; // 7 days
         config.fastLaneLengthSlots = 0;
         config.consensusVersion = 1;
-        config.avgPerfLeewayBP = 500;
         config.oracleMembers = new address[](10);
         config.oracleMembers[0] = 0x12A1D74F8697b9f4F1eEBb0a9d0FB6a751366399;
         config.oracleMembers[1] = 0xD892c09b556b547c80B7d8c8cB8d75bf541B2284;
@@ -69,12 +68,18 @@ contract DeployHolesky is DeployBase {
         config.minSlashingPenaltyQuotient = 32;
         config.elRewardsStealingAdditionalFine = 0.1 ether;
         config.maxKeysPerOperatorEA = 10;
-        config.maxKeyRemovalCharge = 0.1 ether;
-        config.keyRemovalCharge = 0.05 ether;
         config
             .elRewardsStealingReporter = 0xc4DAB3a3ef68C6DFd8614a870D64D475bA44F164; // Dev team EOA
         config
             .chargePenaltyRecipient = 0xE92329EC7ddB11D25e25b3c21eeBf11f15eB325d; // locator.treasury()
+        // CSParameters
+        config.keyRemovalCharge = 0.05 ether;
+        config.elRewardsStealingAdditionalFine = 0.1 ether;
+        config.avgPerfLeewayBP = 500;
+        config.rewardShare = 10000;
+        config.strikesLifetime = 6;
+        config.strikesThreshold = 3;
+        config.priorityQueueLimit = 0;
         // VettedGate
         config
             .vettedGateTreeRoot = 0xc9a9c1576cf4f3213ad9075b72a1f1b147914a252ad927fa4ca3460ff0723ca9;

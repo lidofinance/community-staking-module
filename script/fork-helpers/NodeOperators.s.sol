@@ -251,7 +251,11 @@ contract NodeOperators is
         uint256 lockedAfter = accounting.getActualLockedBond(noId);
         assertEq(
             lockedAfter,
-            lockedBefore + amount + csm.EL_REWARDS_STEALING_ADDITIONAL_FINE()
+            lockedBefore +
+                amount +
+                csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(
+                    accounting.getBondCurveId(noId)
+                )
         );
     }
 

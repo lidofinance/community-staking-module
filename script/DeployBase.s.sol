@@ -14,10 +14,12 @@ import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
 import { PermissionlessGate } from "../src/PermissionlessGate.sol";
 import { VettedGate } from "../src/VettedGate.sol";
+import { CSParametersRegistry } from "../src/CSParametersRegistry.sol";
 
 import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { IGateSealFactory } from "../src/interfaces/IGateSealFactory.sol";
 import { BaseOracle } from "../src/lib/base-oracle/BaseOracle.sol";
+import { ICSParametersRegistry } from "../src/interfaces/ICSParametersRegistry.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
@@ -36,7 +38,6 @@ struct DeployParams {
     uint256 oracleReportEpochsPerFrame;
     uint256 fastLaneLengthSlots;
     uint256 consensusVersion;
-    uint256 avgPerfLeewayBP;
     address[] oracleMembers;
     uint256 hashConsensusQuorum;
     // Verifier
@@ -55,11 +56,16 @@ struct DeployParams {
     // Module
     bytes32 moduleType;
     uint256 minSlashingPenaltyQuotient;
-    uint256 elRewardsStealingAdditionalFine;
     uint256 maxKeysPerOperatorEA;
-    uint256 maxKeyRemovalCharge;
-    uint256 keyRemovalCharge;
     address elRewardsStealingReporter;
+    // CSParameters
+    uint256 keyRemovalCharge;
+    uint256 elRewardsStealingAdditionalFine;
+    uint256 avgPerfLeewayBP;
+    uint256 rewardShare;
+    uint256 strikesLifetime;
+    uint256 strikesThreshold;
+    uint256 priorityQueueLimit;
     // VettedGate
     bytes32 vettedGateTreeRoot;
     uint256[] vettedGateBondCurve;
@@ -90,6 +96,7 @@ abstract contract DeployBase is Script {
     PermissionlessGate public permissionlessGate;
     VettedGate public vettedGate;
     HashConsensus public hashConsensus;
+    CSParametersRegistry public parametersRegistry;
 
     error ChainIdMismatch(uint256 actual, uint256 expected);
     error HashConsensusMismatch();
@@ -137,14 +144,17 @@ abstract contract DeployBase is Script {
 
         vm.startBroadcast(pk);
         {
+            CSParametersRegistry parametersRegistryImpl = new CSParametersRegistry();
+            parametersRegistry = CSParametersRegistry(
+                _deployProxy(config.proxyAdmin, address(parametersRegistryImpl))
+            );
+
             CSModule csmImpl = new CSModule({
                 moduleType: config.moduleType,
                 minSlashingPenaltyQuotient: config.minSlashingPenaltyQuotient,
-                elRewardsStealingAdditionalFine: config
-                    .elRewardsStealingAdditionalFine,
                 maxKeysPerOperatorEA: config.maxKeysPerOperatorEA,
-                maxKeyRemovalCharge: config.maxKeyRemovalCharge,
-                lidoLocator: config.lidoLocatorAddress
+                lidoLocator: config.lidoLocatorAddress,
+                parametersRegistry: address(parametersRegistry)
             });
             csm = CSModule(_deployProxy(config.proxyAdmin, address(csmImpl)));
 
@@ -196,6 +206,20 @@ abstract contract DeployBase is Script {
                 admin: deployer
             });
 
+            parametersRegistry.initialize({
+                admin: deployer,
+                data: ICSParametersRegistry.initializationData({
+                    keyRemovalCharge: config.keyRemovalCharge,
+                    elRewardsStealingAdditionalFine: config
+                        .elRewardsStealingAdditionalFine,
+                    priorityQueueLimit: config.priorityQueueLimit,
+                    rewardShare: config.rewardShare,
+                    performanceLeeway: config.avgPerfLeewayBP,
+                    strikesLifetime: config.strikesLifetime,
+                    strikesThreshold: config.strikesThreshold
+                })
+            });
+
             accounting.initialize({
                 bondCurve: config.bondCurve,
                 admin: deployer,
@@ -218,7 +242,6 @@ abstract contract DeployBase is Script {
 
             csm.initialize({
                 _accounting: address(accounting),
-                _keyRemovalCharge: config.keyRemovalCharge,
                 admin: deployer
             });
             permissionlessGate = new PermissionlessGate(address(csm));
@@ -308,6 +331,15 @@ abstract contract DeployBase is Script {
             csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
             csm.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
 
+            parametersRegistry.grantRole(
+                parametersRegistry.DEFAULT_ADMIN_ROLE(),
+                config.aragonAgent
+            );
+            parametersRegistry.revokeRole(
+                parametersRegistry.DEFAULT_ADMIN_ROLE(),
+                deployer
+            );
+
             vettedGate.grantRole(
                 vettedGate.DEFAULT_ADMIN_ROLE(),
                 config.aragonAgent
@@ -351,6 +383,11 @@ abstract contract DeployBase is Script {
             deployJson.set("ChainId", chainId);
             deployJson.set("PermissionlessGate", address(permissionlessGate));
             deployJson.set("VettedGate", address(vettedGate));
+            deployJson.set(
+                "CSParametersRegistryImpl",
+                address(parametersRegistryImpl)
+            );
+            deployJson.set("CSParametersRegistry", address(parametersRegistry));
             deployJson.set("CSModule", address(csm));
             deployJson.set("CSAccounting", address(accounting));
             deployJson.set("CSFeeOracle", address(oracle));

@@ -11,6 +11,7 @@ import "./helpers/mocks/StETHMock.sol";
 import "./helpers/mocks/LidoLocatorMock.sol";
 import "./helpers/mocks/LidoMock.sol";
 import "./helpers/mocks/WstETHMock.sol";
+import "./helpers/mocks/CSParametersRegistryMock.sol";
 import "./helpers/Utilities.sol";
 import "./helpers/MerkleTree.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
@@ -39,6 +40,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     CSModule public csm;
     CSAccounting public accounting;
     Stub public feeDistributor;
+    CSParametersRegistryMock public parametersRegistry;
 
     address internal admin;
     address internal stranger;
@@ -262,7 +264,8 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
-            amount - csm.EL_REWARDS_STEALING_ADDITIONAL_FINE()
+            amount -
+                csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(0)
         );
         csm.settleELRewardsStealingPenalty(UintArr(noId));
     }
@@ -279,14 +282,14 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         (locator, wstETH, stETH, , ) = initLido();
 
         feeDistributor = new Stub();
+        parametersRegistry = new CSParametersRegistryMock();
 
         csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry)
         });
         uint256[] memory curve = new uint256[](1);
         curve[0] = BOND_SIZE;
@@ -319,11 +322,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         vm.stopPrank();
 
         _enableInitializers(address(csm));
-        csm.initialize({
-            _accounting: address(accounting),
-            _keyRemovalCharge: 0.05 ether,
-            admin: admin
-        });
+        csm.initialize({ _accounting: address(accounting), admin: admin });
 
         vm.startPrank(admin);
         csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(this));
@@ -371,13 +370,14 @@ contract CSMCommonNoRoles is CSMFixtures {
         (locator, wstETH, stETH, , ) = initLido();
 
         feeDistributor = new Stub();
+        parametersRegistry = new CSParametersRegistryMock();
+
         csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry)
         });
 
         uint256[] memory curve = new uint256[](1);
@@ -410,11 +410,7 @@ contract CSMCommonNoRoles is CSMFixtures {
         vm.stopPrank();
 
         _enableInitializers(address(csm));
-        csm.initialize({
-            _accounting: address(accounting),
-            _keyRemovalCharge: 0.05 ether,
-            admin: admin
-        });
+        csm.initialize({ _accounting: address(accounting), admin: admin });
 
         vm.startPrank(admin);
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
@@ -461,15 +457,17 @@ contract CsmInitialize is CSMCommon {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry)
         });
         assertEq(csm.getType(), "community-staking-module");
-        assertEq(csm.EL_REWARDS_STEALING_ADDITIONAL_FINE(), 0.1 ether);
         assertEq(csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(), 10);
         assertEq(address(csm.LIDO_LOCATOR()), address(locator));
+        assertEq(
+            address(csm.PARAMETERS_REGISTRY()),
+            address(parametersRegistry)
+        );
     }
 
     function test_constructor_RevertWhen_ZeroLocator() public {
@@ -477,10 +475,9 @@ contract CsmInitialize is CSMCommon {
         new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(0)
+            lidoLocator: address(0),
+            parametersRegistry: address(parametersRegistry)
         });
     }
 
@@ -488,16 +485,14 @@ contract CsmInitialize is CSMCommon {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry)
         });
 
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         csm.initialize({
             _accounting: address(accounting),
-            _keyRemovalCharge: 0.05 ether,
             admin: address(this)
         });
     }
@@ -506,24 +501,20 @@ contract CsmInitialize is CSMCommon {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry)
         });
 
         _enableInitializers(address(csm));
         csm.initialize({
             _accounting: address(accounting),
-            _keyRemovalCharge: 0.05 ether,
             admin: address(this)
         });
         assertEq(csm.getType(), "community-staking-module");
-        assertEq(csm.EL_REWARDS_STEALING_ADDITIONAL_FINE(), 0.1 ether);
         assertEq(csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(), 10);
         assertEq(address(csm.LIDO_LOCATOR()), address(locator));
         assertEq(address(csm.accounting()), address(accounting));
-        assertEq(csm.keyRemovalCharge(), 0.05 ether);
         assertTrue(csm.isPaused());
     }
 
@@ -531,38 +522,28 @@ contract CsmInitialize is CSMCommon {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry)
         });
 
         _enableInitializers(address(csm));
         vm.expectRevert(ICSModule.ZeroAccountingAddress.selector);
-        csm.initialize({
-            _accounting: address(0),
-            _keyRemovalCharge: 0.05 ether,
-            admin: address(this)
-        });
+        csm.initialize({ _accounting: address(0), admin: address(this) });
     }
 
     function test_initialize_RevertWhen_ZeroAdminAddress() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry)
         });
 
         _enableInitializers(address(csm));
         vm.expectRevert(ICSModule.ZeroAdminAddress.selector);
-        csm.initialize({
-            _accounting: address(154),
-            _keyRemovalCharge: 0.05 ether,
-            admin: address(0)
-        });
+        csm.initialize({ _accounting: address(154), admin: address(0) });
     }
 }
 
@@ -2751,11 +2732,9 @@ contract CsmChangeNodeOperatorRewardAddress is CSMCommon {
 
 contract CsmOnWithdrawalCredentialsChanged is CSMCommon {
     function test_onWithdrawalCredentialsChanged() public assertInvariants {
-        vm.expectEmit(true, true, true, true, address(csm));
-        emit ICSModule.KeyRemovalChargeSet(0 ether);
         csm.onWithdrawalCredentialsChanged();
 
-        assertEq(csm.keyRemovalCharge(), 0 ether);
+        // TODO: Add queue assert
     }
 }
 
@@ -3540,7 +3519,9 @@ contract CSMRemoveKeysChargeFee is CSMCommon {
     function test_removeKeys_chargeFee() public assertInvariants {
         uint256 noId = createNodeOperator(3);
 
-        uint256 amountToCharge = csm.keyRemovalCharge() * 2;
+        uint256 amountToCharge = csm.PARAMETERS_REGISTRY().getKeyRemovalCharge(
+            0
+        ) * 2;
 
         vm.expectCall(
             address(accounting),
@@ -3561,7 +3542,7 @@ contract CSMRemoveKeysChargeFee is CSMCommon {
 
     function test_removeKeys_withNoFee() public assertInvariants {
         vm.prank(admin);
-        csm.setKeyRemovalCharge(0);
+        csm.PARAMETERS_REGISTRY().setKeyRemovalCharge(0, 0);
 
         uint256 noId = createNodeOperator(3);
 
@@ -4853,7 +4834,9 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         uint256 lockedBond = accounting.getActualLockedBond(noId);
         assertEq(
             lockedBond,
-            BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_ADDITIONAL_FINE()
+            BOND_SIZE /
+                2 +
+                csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(0)
         );
         assertEq(csm.getNonce(), nonce + 1);
     }
@@ -4917,11 +4900,15 @@ contract CsmCancelELRewardsStealingPenalty is CSMCommon {
         vm.expectEmit(true, true, true, true, address(csm));
         emit ICSModule.ELRewardsStealingPenaltyCancelled(
             noId,
-            BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_ADDITIONAL_FINE()
+            BOND_SIZE /
+                2 +
+                csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(0)
         );
         csm.cancelELRewardsStealingPenalty(
             noId,
-            BOND_SIZE / 2 + csm.EL_REWARDS_STEALING_ADDITIONAL_FINE()
+            BOND_SIZE /
+                2 +
+                csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(0)
         );
 
         uint256 lockedBond = accounting.getActualLockedBond(noId);
@@ -4948,7 +4935,10 @@ contract CsmCancelELRewardsStealingPenalty is CSMCommon {
         csm.cancelELRewardsStealingPenalty(noId, BOND_SIZE / 2);
 
         uint256 lockedBond = accounting.getActualLockedBond(noId);
-        assertEq(lockedBond, csm.EL_REWARDS_STEALING_ADDITIONAL_FINE());
+        assertEq(
+            lockedBond,
+            csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(0)
+        );
         // nonce should not change due to no changes in the depositable validators
         assertEq(csm.getNonce(), nonce);
     }
@@ -5180,7 +5170,7 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             bondBalanceAfter,
             bondBalanceBefore -
                 lockAmount -
-                csm.EL_REWARDS_STEALING_ADDITIONAL_FINE()
+                csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(0)
         );
     }
 
@@ -5381,7 +5371,9 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
     function test_compensateELRewardsStealingPenalty() public assertInvariants {
         uint256 noId = createNodeOperator();
         uint256 amount = 1 ether;
-        uint256 fine = csm.EL_REWARDS_STEALING_ADDITIONAL_FINE();
+        uint256 fine = csm
+            .PARAMETERS_REGISTRY()
+            .getElRewardsStealingAdditionalFine(0);
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
@@ -5415,7 +5407,9 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
     {
         uint256 noId = createNodeOperator();
         uint256 amount = 1 ether;
-        uint256 fine = csm.EL_REWARDS_STEALING_ADDITIONAL_FINE();
+        uint256 fine = csm
+            .PARAMETERS_REGISTRY()
+            .getElRewardsStealingAdditionalFine(0);
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
@@ -5448,7 +5442,9 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
     {
         uint256 noId = createNodeOperator(2);
         uint256 amount = 1 ether;
-        uint256 fine = csm.EL_REWARDS_STEALING_ADDITIONAL_FINE();
+        uint256 fine = csm
+            .PARAMETERS_REGISTRY()
+            .getElRewardsStealingAdditionalFine(0);
         csm.reportELRewardsStealingPenalty(
             noId,
             blockhash(block.number),
@@ -5733,13 +5729,12 @@ contract CSMAccessControl is CSMCommonNoRoles {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry)
         });
         _enableInitializers(address(csm));
-        csm.initialize(address(accounting), 0.05 ether, actor);
+        csm.initialize(address(accounting), actor);
 
         bytes32 role = csm.DEFAULT_ADMIN_ROLE();
         vm.prank(actor);
@@ -5755,10 +5750,9 @@ contract CSMAccessControl is CSMCommonNoRoles {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            elRewardsStealingAdditionalFine: 0.1 ether,
             maxKeysPerOperatorEA: 10,
-            maxKeyRemovalCharge: 0.1 ether,
-            lidoLocator: address(locator)
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry)
         });
         bytes32 role = csm.DEFAULT_ADMIN_ROLE();
         bytes32 adminRole = csm.DEFAULT_ADMIN_ROLE();
@@ -5766,23 +5760,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
         vm.startPrank(stranger);
         expectRoleRevert(stranger, adminRole);
         csm.grantRole(role, stranger);
-    }
-
-    function test_adminRole_setRemovalCharge() public {
-        bytes32 role = csm.DEFAULT_ADMIN_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.prank(actor);
-        csm.setKeyRemovalCharge(0.1 ether);
-    }
-
-    function test_adminRole_setRemovalCharge_revert() public {
-        bytes32 role = csm.DEFAULT_ADMIN_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.setKeyRemovalCharge(0.1 ether);
     }
 
     function test_adminRole_activatePublicRelease() public {
@@ -6969,18 +6946,5 @@ contract CSMMisc is CSMCommon {
         uint256 activeCount = csm.getActiveNodeOperatorsCount();
 
         assertEq(activeCount, 3);
-    }
-
-    function test_setKeyRemovalCharge() public assertInvariants {
-        csm.setKeyRemovalCharge(0.05 ether);
-        assertEq(csm.keyRemovalCharge(), 0.05 ether);
-    }
-
-    function test_setKeyRemovalCharge_revertWhenMoreThanMax()
-        public
-        assertInvariants
-    {
-        vm.expectRevert(ICSModule.InvalidInput.selector);
-        csm.setKeyRemovalCharge(1 ether);
     }
 }

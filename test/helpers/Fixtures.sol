@@ -91,6 +91,7 @@ contract DeploymentHelpers is Test {
         address csm;
         address permissionlessGate;
         address vettedGate;
+        address parametersRegistry;
         /// legacy from v1
         address earlyAdoption;
         address accounting;
@@ -105,6 +106,8 @@ contract DeploymentHelpers is Test {
     struct UpgradeConfig {
         address permissionlessGate;
         address vettedGate;
+        address parametersRegistry;
+        address parametersRegistryImpl;
         address csmImpl;
         address accountingImpl;
         address oracleImpl;
@@ -157,6 +160,15 @@ contract DeploymentHelpers is Test {
             vm.label(deploymentConfig.vettedGate, "vettedGate");
         }
 
+        /// Optional, new in v2. Parameters registry is not present v1 deployment configs
+        if (vm.keyExists(config, ".CSParametersRegistry")) {
+            deploymentConfig.parametersRegistry = vm.parseJsonAddress(
+                config,
+                ".CSParametersRegistry"
+            );
+            vm.label(deploymentConfig.parametersRegistry, "parametersRegistry");
+        }
+
         deploymentConfig.accounting = vm.parseJsonAddress(
             config,
             ".CSAccounting"
@@ -199,6 +211,10 @@ contract DeploymentHelpers is Test {
             ".PermissionlessGate"
         );
         upgradeConfig.vettedGate = vm.parseJsonAddress(config, ".VettedGate");
+        upgradeConfig.parametersRegistry = vm.parseJsonAddress(
+            config,
+            ".CSParametersRegistry"
+        );
         upgradeConfig.csmImpl = vm.parseJsonAddress(config, ".CSModuleImpl");
         upgradeConfig.accountingImpl = vm.parseJsonAddress(
             config,

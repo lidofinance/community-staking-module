@@ -41,23 +41,14 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
             32 ether / deployParams.minSlashingPenaltyQuotient
         );
         assertEq(
-            csm.EL_REWARDS_STEALING_ADDITIONAL_FINE(),
-            deployParams.elRewardsStealingAdditionalFine
-        );
-        assertEq(
             csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(),
             deployParams.maxKeysPerOperatorEA
-        );
-        assertEq(
-            csm.MAX_KEY_REMOVAL_CHARGE(),
-            deployParams.maxKeyRemovalCharge
         );
         assertEq(address(csm.LIDO_LOCATOR()), deployParams.lidoLocatorAddress);
     }
 
     function test_initializer() public {
         assertEq(address(csm.accounting()), address(accounting));
-        assertEq(csm.keyRemovalCharge(), deployParams.keyRemovalCharge);
         assertTrue(
             csm.hasRole(csm.STAKING_ROUTER_ROLE(), locator.stakingRouter())
         );
@@ -112,7 +103,6 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         csmImpl.initialize({
             _accounting: address(accounting),
-            _keyRemovalCharge: deployParams.keyRemovalCharge,
             admin: deployParams.aragonAgent
         });
     }

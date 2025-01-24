@@ -22,7 +22,6 @@ contract DeployMainnet is DeployBase {
         config.oracleReportEpochsPerFrame = 225 * 28; // 28 days
         config.fastLaneLengthSlots = 1800;
         config.consensusVersion = 1;
-        config.avgPerfLeewayBP = 500;
         config.oracleMembers = new address[](9);
         config.oracleMembers[0] = 0x140Bd8FbDc884f48dA7cb1c09bE8A2fAdfea776E; // Chorus One
         config.oracleMembers[1] = 0xA7410857ABbf75043d61ea54e07D57A6EB6EF186; // Kyber Network
@@ -65,12 +64,17 @@ contract DeployMainnet is DeployBase {
         // Module
         config.moduleType = "community-onchain-v1"; // Just a unique type name to be used by the off-chain tooling
         config.minSlashingPenaltyQuotient = 32;
-        config.elRewardsStealingAdditionalFine = 0.1 ether;
         config.maxKeysPerOperatorEA = 12; // 12 EA vals will result in approx 16 ETH worth of bond
-        config.maxKeyRemovalCharge = 0.1 ether;
-        config.keyRemovalCharge = 0.05 ether;
         config
             .elRewardsStealingReporter = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
+        // CSParameters
+        config.keyRemovalCharge = 0.05 ether;
+        config.elRewardsStealingAdditionalFine = 0.1 ether;
+        config.avgPerfLeewayBP = 500;
+        config.rewardShare = 10000;
+        config.strikesLifetime = 6;
+        config.strikesThreshold = 3;
+        config.priorityQueueLimit = 0;
         // VettedGate
         config
             .vettedGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json

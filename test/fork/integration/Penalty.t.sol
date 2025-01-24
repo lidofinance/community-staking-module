@@ -124,7 +124,10 @@ contract PenaltyIntegrationTest is
         csm.reportELRewardsStealingPenalty(
             defaultNoId,
             blockhash(block.number),
-            amount - csm.EL_REWARDS_STEALING_FINE()
+            amount -
+                csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(
+                    accounting.getBondCurveId(defaultNoId)
+                )
         );
 
         uint256[] memory idsToSettle = new uint256[](1);

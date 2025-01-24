@@ -14,7 +14,9 @@ import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
 import { PermissionlessGate } from "../src/PermissionlessGate.sol";
 import { VettedGate } from "../src/VettedGate.sol";
+import { CSParametersRegistry } from "../src/CSParametersRegistry.sol";
 import { ICSEarlyAdoption } from "../src/interfaces/ICSEarlyAdoption.sol";
+import { ICSParametersRegistry } from "../src/interfaces/ICSParametersRegistry.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
@@ -39,14 +41,30 @@ abstract contract DeployImplementationsBase is DeployBase {
 
         vm.startBroadcast(pk);
         {
+            CSParametersRegistry parametersRegistryImpl = new CSParametersRegistry();
+            parametersRegistry = CSParametersRegistry(
+                _deployProxy(config.proxyAdmin, address(parametersRegistryImpl))
+            );
+            parametersRegistry.initialize({
+                admin: deployer,
+                data: ICSParametersRegistry.initializationData({
+                    keyRemovalCharge: config.keyRemovalCharge,
+                    elRewardsStealingAdditionalFine: config
+                        .elRewardsStealingAdditionalFine,
+                    priorityQueueLimit: config.priorityQueueLimit,
+                    rewardShare: config.rewardShare,
+                    performanceLeeway: config.avgPerfLeewayBP,
+                    strikesLifetime: config.strikesLifetime,
+                    strikesThreshold: config.strikesThreshold
+                })
+            });
+
             CSModule csmImpl = new CSModule({
                 moduleType: config.moduleType,
                 minSlashingPenaltyQuotient: config.minSlashingPenaltyQuotient,
-                elRewardsStealingAdditionalFine: config
-                    .elRewardsStealingAdditionalFine,
                 maxKeysPerOperatorEA: config.maxKeysPerOperatorEA,
-                maxKeyRemovalCharge: config.maxKeyRemovalCharge,
-                lidoLocator: config.lidoLocatorAddress
+                lidoLocator: config.lidoLocatorAddress,
+                parametersRegistry: address(parametersRegistry)
             });
 
             CSAccounting accountingImpl = new CSAccounting({
@@ -118,9 +136,23 @@ abstract contract DeployImplementationsBase is DeployBase {
             );
             verifier.revokeRole(verifier.DEFAULT_ADMIN_ROLE(), deployer);
 
+            parametersRegistry.grantRole(
+                parametersRegistry.DEFAULT_ADMIN_ROLE(),
+                config.aragonAgent
+            );
+            parametersRegistry.revokeRole(
+                parametersRegistry.DEFAULT_ADMIN_ROLE(),
+                deployer
+            );
+
             JsonObj memory deployJson = Json.newObj();
             deployJson.set("PermissionlessGate", address(permissionlessGate));
             deployJson.set("VettedGate", address(vettedGate));
+            deployJson.set(
+                "CSParametersRegistryImpl",
+                address(parametersRegistryImpl)
+            );
+            deployJson.set("CSParametersRegistry", address(parametersRegistry));
             deployJson.set("CSModuleImpl", address(csmImpl));
             deployJson.set("CSAccountingImpl", address(accountingImpl));
             deployJson.set("CSFeeOracleImpl", address(oracleImpl));
