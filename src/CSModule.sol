@@ -166,12 +166,15 @@ contract CSModule is
         nodeOperatorId = _nodeOperatorsCount;
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
-        no.managerAddress = managementProperties.managerAddress == address(0)
+        address managerAddress = managementProperties.managerAddress ==
+            address(0)
             ? from
             : managementProperties.managerAddress;
-        no.rewardAddress = managementProperties.rewardAddress == address(0)
+        address rewardAddress = managementProperties.rewardAddress == address(0)
             ? from
             : managementProperties.rewardAddress;
+        no.managerAddress = managerAddress;
+        no.rewardAddress = rewardAddress;
         if (managementProperties.extendedManagerPermissions)
             no.extendedManagerPermissions = true;
 
@@ -179,11 +182,7 @@ contract CSModule is
             ++_nodeOperatorsCount;
         }
 
-        emit NodeOperatorAdded(
-            nodeOperatorId,
-            no.managerAddress,
-            no.rewardAddress
-        );
+        emit NodeOperatorAdded(nodeOperatorId, managerAddress, rewardAddress);
 
         if (referrer != address(0)) emit ReferrerSet(nodeOperatorId, referrer);
         _incrementModuleNonce();
