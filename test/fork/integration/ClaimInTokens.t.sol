@@ -284,7 +284,7 @@ contract ClaimIntegrationTest is
         // Supply funds to feeDistributor
         vm.startPrank(user);
         vm.deal(user, amount);
-        uint256 shares = lido.submit{ value: amount }({ _referal: address(0) });
+        uint256 shares = lido.submit{ value: amount }(address(0));
         lido.transferShares(address(feeDistributor), shares);
         vm.stopPrank();
 
@@ -335,7 +335,7 @@ contract ClaimIntegrationTest is
         // Supply funds to feeDistributor
         vm.startPrank(user);
         vm.deal(user, amount);
-        uint256 shares = lido.submit{ value: amount }({ _referal: address(0) });
+        uint256 shares = lido.submit{ value: amount }(address(0));
         lido.transferShares(address(feeDistributor), shares);
         vm.stopPrank();
 
@@ -400,7 +400,7 @@ contract ClaimIntegrationTest is
         // Supply funds to feeDistributor
         vm.startPrank(user);
         vm.deal(user, amount);
-        uint256 shares = lido.submit{ value: amount }({ _referal: address(0) });
+        uint256 shares = lido.submit{ value: amount }(address(0));
         lido.transferShares(address(feeDistributor), shares);
         vm.stopPrank();
 

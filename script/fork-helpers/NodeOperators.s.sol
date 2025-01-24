@@ -297,7 +297,7 @@ contract NodeOperators is
 
         bytes3 moduleId = bytes3(uint24(_getCSMId()));
         bytes5 nodeOpId = bytes5(uint40(noId));
-        bytes8 validatorIndex = bytes8(uint64(validatorIndex));
+        bytes8 _validatorIndex = bytes8(uint64(validatorIndex));
 
         (, uint256 refSlot, , ) = vebo.getConsensusReport();
         uint256 reportRefSlot = refSlot + 1;
@@ -305,7 +305,7 @@ contract NodeOperators is
         data = abi.encodePacked(
             moduleId,
             nodeOpId,
-            validatorIndex,
+            _validatorIndex,
             validatorPubKey
         );
         IVEBO.ReportData memory report = IVEBO.ReportData({

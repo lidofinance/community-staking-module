@@ -52,15 +52,15 @@ contract OssifiableProxyTest is Test, Utilities {
         new OssifiableProxy(address(currentImpl), address(0), "0x");
     }
 
-    function test_getAdmin() public {
+    function test_getAdmin() public view {
         assertEq(proxy.proxy__getAdmin(), admin);
     }
 
-    function test_getImplementation() public {
+    function test_getImplementation() public view {
         assertEq(proxy.proxy__getImplementation(), address(currentImpl));
     }
 
-    function test_getIsOssified() public {
+    function test_getIsOssified() public view {
         assertFalse(proxy.proxy__getIsOssified());
     }
 

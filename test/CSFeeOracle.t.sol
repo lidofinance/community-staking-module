@@ -487,7 +487,7 @@ contract CSFeeOracleTest is Test, Utilities {
         }
     }
 
-    function _assertNoReportOnInit() internal {
+    function _assertNoReportOnInit() internal view {
         (
             bytes32 hash, // refSlot
             ,

@@ -18,16 +18,16 @@ contract CSMMock {
     }
 
     function getNodeOperator(
-        uint256 nodeOperatorId
+        uint256 /* nodeOperatorId */
     ) external view returns (NodeOperator memory) {
         return mockNodeOperator;
     }
 
     function createNodeOperator(
-        address from,
-        NodeOperatorManagementProperties memory managementProperties,
-        address referrer
-    ) external returns (uint256) {
+        address /* from */,
+        NodeOperatorManagementProperties memory /* managementProperties */,
+        address /* referrer */
+    ) external pure returns (uint256) {
         return 0;
     }
 

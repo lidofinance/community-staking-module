@@ -13,7 +13,7 @@ contract PausableUntilTest is Test {
         pausable = new PausableUntilImpl();
     }
 
-    function test_PAUSE_INFINITELY() public {
+    function test_PAUSE_INFINITELY() public view {
         assertEq(pausable.PAUSE_INFINITELY(), type(uint256).max);
     }
 
@@ -33,11 +33,11 @@ contract PausableUntilTest is Test {
         pausable.modifierWhenResumed();
     }
 
-    function test_whenResumed_DoesNotRevertIfNotPaused() public {
+    function test_whenResumed_DoesNotRevertIfNotPaused() public view {
         pausable.modifierWhenResumed();
     }
 
-    function test_isPaused_ReturnsFalseIfNotPaused() public {
+    function test_isPaused_ReturnsFalseIfNotPaused() public view {
         assertFalse(pausable.isPaused());
     }
 
@@ -46,7 +46,7 @@ contract PausableUntilTest is Test {
         assertTrue(pausable.isPaused());
     }
 
-    function test_getResumeSinceTimestamp_ReturnsZeroIfNotPaused() public {
+    function test_getResumeSinceTimestamp_ReturnsZeroIfNotPaused() public view {
         assertEq(pausable.getResumeSinceTimestamp(), 0);
     }
 

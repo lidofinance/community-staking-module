@@ -133,7 +133,7 @@ abstract contract CSBondCoreTestBase is Test, Fixtures, Utilities {
 }
 
 contract CSBondCoreConstructorTest is CSBondCoreTestBase {
-    function test_constructor() public {
+    function test_constructor() public view {
         assertEq(address(bondCore.LIDO_LOCATOR()), address(locator));
         assertEq(address(bondCore.LIDO()), locator.lido());
         assertEq(address(bondCore.WSTETH()), address(wstETH));

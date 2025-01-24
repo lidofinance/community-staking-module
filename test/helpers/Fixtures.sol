@@ -193,7 +193,7 @@ contract DeploymentHelpers is Test {
 
     function parseUpgradeConfig(
         string memory config
-    ) internal view returns (UpgradeConfig memory upgradeConfig) {
+    ) internal pure returns (UpgradeConfig memory upgradeConfig) {
         upgradeConfig.permissionlessGate = vm.parseJsonAddress(
             config,
             ".PermissionlessGate"

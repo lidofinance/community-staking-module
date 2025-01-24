@@ -34,7 +34,7 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
 
-    function test_constructor() public {
+    function test_constructor() public view {
         assertEq(csm.getType(), deployParams.moduleType);
         assertEq(
             csm.INITIAL_SLASHING_PENALTY(),
@@ -55,7 +55,7 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertEq(address(csm.LIDO_LOCATOR()), deployParams.lidoLocatorAddress);
     }
 
-    function test_initializer() public {
+    function test_initializer() public view {
         assertEq(address(csm.accounting()), address(accounting));
         assertEq(csm.keyRemovalCharge(), deployParams.keyRemovalCharge);
         assertTrue(
@@ -64,7 +64,7 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertTrue(csm.getRoleMemberCount(csm.STAKING_ROUTER_ROLE()) == 1);
     }
 
-    function test_roles() public {
+    function test_roles() public view {
         assertTrue(
             csm.hasRole(csm.DEFAULT_ADMIN_ROLE(), deployParams.aragonAgent)
         );
@@ -130,7 +130,7 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
 
-    function test_constructor() public {
+    function test_constructor() public view {
         assertEq(address(accounting.CSM()), address(csm));
         assertEq(address(accounting.LIDO_LOCATOR()), address(locator));
         assertEq(address(accounting.LIDO()), locator.lido());
@@ -154,7 +154,7 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertEq(accounting.MAX_CURVE_LENGTH(), deployParams.maxCurveLength);
     }
 
-    function test_initializer() public {
+    function test_initializer() public view {
         assertEq(
             accounting.getCurveInfo(accounting.DEFAULT_BOND_CURVE_ID()).points,
             deployParams.bondCurve
@@ -184,7 +184,7 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
         );
     }
 
-    function test_roles() public {
+    function test_roles() public view {
         assertTrue(
             accounting.hasRole(
                 accounting.DEFAULT_ADMIN_ROLE(),
@@ -250,13 +250,13 @@ contract CSFeeDistributorDeploymentTest is Test, Utilities, DeploymentFixtures {
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
 
-    function test_constructor() public {
+    function test_constructor() public view {
         assertEq(address(feeDistributor.STETH()), address(lido));
         assertEq(feeDistributor.ACCOUNTING(), address(accounting));
         assertEq(feeDistributor.ORACLE(), address(oracle));
     }
 
-    function test_roles() public {
+    function test_roles() public view {
         assertTrue(
             feeDistributor.hasRole(
                 feeDistributor.DEFAULT_ADMIN_ROLE(),
@@ -301,12 +301,12 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
 
-    function test_constructor() public {
+    function test_constructor() public view {
         assertEq(oracle.SECONDS_PER_SLOT(), deployParams.secondsPerSlot);
         assertEq(oracle.GENESIS_TIME(), deployParams.clGenesisTime);
     }
 
-    function test_initializer() public {
+    function test_initializer() public view {
         assertEq(address(oracle.feeDistributor()), address(feeDistributor));
         assertEq(oracle.getContractVersion(), 1);
         assertEq(oracle.getConsensusContract(), address(hashConsensus));
@@ -315,7 +315,7 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertEq(oracle.avgPerfLeewayBP(), deployParams.avgPerfLeewayBP);
     }
 
-    function test_roles() public {
+    function test_roles() public view {
         assertTrue(
             oracle.hasRole(
                 oracle.DEFAULT_ADMIN_ROLE(),
@@ -370,7 +370,7 @@ contract HashConsensusDeploymentTest is Test, Utilities, DeploymentFixtures {
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
 
-    function test_constructor() public {
+    function test_constructor() public view {
         (
             uint256 slotsPerEpoch,
             uint256 secondsPerSlot,
@@ -387,7 +387,7 @@ contract HashConsensusDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertEq(hashConsensus.getReportProcessor(), address(oracle));
     }
 
-    function test_roles() public {
+    function test_roles() public view {
         assertTrue(
             hashConsensus.hasRole(
                 hashConsensus.DEFAULT_ADMIN_ROLE(),
@@ -444,7 +444,7 @@ contract VettedGateDeploymentTest is Test, Utilities, DeploymentFixtures {
         deployParams = parseDeployParams(env.DEPLOY_CONFIG);
     }
 
-    function test_constructor() public {
+    function test_constructor() public view {
         assertTrue(
             csm.hasRole(csm.DEFAULT_ADMIN_ROLE(), deployParams.aragonAgent)
         );
@@ -472,7 +472,7 @@ contract CSVerifierDeploymentTest is Test, Utilities, DeploymentFixtures {
         deployParams = parseDeployParams(env.DEPLOY_CONFIG);
     }
 
-    function test_constructor() public {
+    function test_constructor() public view {
         assertEq(verifier.WITHDRAWAL_ADDRESS(), locator.withdrawalVault());
         assertEq(address(verifier.MODULE()), address(csm));
         assertEq(verifier.SLOTS_PER_EPOCH(), deployParams.slotsPerEpoch);
@@ -510,7 +510,7 @@ contract CSVerifierDeploymentTest is Test, Utilities, DeploymentFixtures {
         );
     }
 
-    function test_roles() public {
+    function test_roles() public view {
         assertTrue(verifier.hasRole(verifier.PAUSE_ROLE(), address(gateSeal)));
         assertEq(verifier.getRoleMemberCount(verifier.PAUSE_ROLE()), 1);
         assertEq(verifier.getRoleMemberCount(verifier.RESUME_ROLE()), 0);

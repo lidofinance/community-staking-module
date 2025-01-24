@@ -39,7 +39,7 @@ contract GIndexTest is Test {
         lib = new Library();
     }
 
-    function test_pack() public {
+    function test_pack() public view {
         GIndex gI;
 
         gI = pack(0x7b426f79504c6a8e9d31415b722f696e705c8a3d9f41, 42);
@@ -56,11 +56,11 @@ contract GIndexTest is Test {
         );
     }
 
-    function test_isRootTrue() public {
+    function test_isRootTrue() public view {
         assertTrue(ROOT.isRoot(), "ROOT is not root gindex");
     }
 
-    function test_isRootFalse() public {
+    function test_isRootFalse() public pure {
         GIndex gI;
 
         gI = pack(0, 0);
@@ -82,7 +82,7 @@ contract GIndexTest is Test {
         );
     }
 
-    function test_isParentOf_Truthy() public {
+    function test_isParentOf_Truthy() public pure {
         assertTrue(pack(1024, 0).isParentOf(pack(2048, 0)));
         assertTrue(pack(1024, 0).isParentOf(pack(2049, 0)));
         assertTrue(pack(1024, 9).isParentOf(pack(2048, 0)));
@@ -93,17 +93,20 @@ contract GIndexTest is Test {
         assertTrue(pack(1024, 0).isParentOf(pack(4098, 0)));
     }
 
-    function testFuzz_ROOT_isParentOfAnyChild(GIndex rhs) public {
+    function testFuzz_ROOT_isParentOfAnyChild(GIndex rhs) public view {
         vm.assume(rhs.index() > 1);
         assertTrue(ROOT.isParentOf(rhs));
     }
 
-    function testFuzz_isParentOf_LessThanAnchor(GIndex lhs, GIndex rhs) public {
+    function testFuzz_isParentOf_LessThanAnchor(
+        GIndex lhs,
+        GIndex rhs
+    ) public pure {
         vm.assume(rhs.index() < lhs.index());
         assertFalse(lhs.isParentOf(rhs));
     }
 
-    function test_isParentOf_OffTheBranch() public {
+    function test_isParentOf_OffTheBranch() public pure {
         assertFalse(pack(1024, 0).isParentOf(pack(2050, 0)));
         assertFalse(pack(1024, 0).isParentOf(pack(2051, 0)));
         assertFalse(pack(1024, 0).isParentOf(pack(2047, 0)));
@@ -124,7 +127,7 @@ contract GIndexTest is Test {
         assertFalse(pack(1024, 0).isParentOf(pack(4094, 0)));
     }
 
-    function test_concat() public {
+    function test_concat() public view {
         assertEq(
             pack(2, 99).concat(pack(3, 99)).unwrap(),
             pack(5, 99).unwrap()
@@ -182,7 +185,7 @@ contract GIndexTest is Test {
         lib.concat(pack(2 ** 200, 0), pack(2 ** 48, 0));
     }
 
-    function testFuzz_concat_WithRoot(GIndex rhs) public {
+    function testFuzz_concat_WithRoot(GIndex rhs) public view {
         vm.assume(rhs.index() > 0);
         assertEq(
             ROOT.concat(rhs).unwrap(),
@@ -191,7 +194,7 @@ contract GIndexTest is Test {
         );
     }
 
-    function testFuzz_concat_isParentOf(GIndex lhs, GIndex rhs) public {
+    function testFuzz_concat_isParentOf(GIndex lhs, GIndex rhs) public pure {
         // Left-hand side value can be a root.
         vm.assume(lhs.index() > 0);
         // But root.concat(root) will result in a root value again, and root is not a parent for itself.
@@ -213,13 +216,13 @@ contract GIndexTest is Test {
         );
     }
 
-    function testFuzz_unpack(uint248 index, uint8 pow) public {
+    function testFuzz_unpack(uint248 index, uint8 pow) public pure {
         GIndex gI = pack(index, pow);
         assertEq(gI.index(), index);
         assertEq(gI.width(), 2 ** pow);
     }
 
-    function test_shr() public {
+    function test_shr() public pure {
         GIndex gI;
 
         gI = pack(1024, 4);
@@ -238,7 +241,7 @@ contract GIndexTest is Test {
         assertEq(gI.shr(14).unwrap(), pack(2063, 4).unwrap());
     }
 
-    function test_shr_AfterConcat() public {
+    function test_shr_AfterConcat() public pure {
         GIndex gI;
         GIndex gIParent = pack(5, 4);
 
@@ -300,7 +303,7 @@ contract GIndexTest is Test {
         lib.shr(lhs.concat(rhs), rhs.width() + shift);
     }
 
-    function test_shl() public {
+    function test_shl() public pure {
         GIndex gI;
 
         gI = pack(1023, 4);
@@ -319,7 +322,7 @@ contract GIndexTest is Test {
         assertEq(gI.shl(15).unwrap(), pack(2048, 4).unwrap());
     }
 
-    function test_shl_AfterConcat() public {
+    function test_shl_AfterConcat() public pure {
         GIndex gI;
         GIndex gIParent = pack(5, 4);
 
@@ -376,7 +379,7 @@ contract GIndexTest is Test {
         lib.shl(lhs.concat(rhs), shift);
     }
 
-    function testFuzz_shl_shr_Idempotent(GIndex gI, uint256 shift) public {
+    function testFuzz_shl_shr_Idempotent(GIndex gI, uint256 shift) public view {
         vm.assume(gI.index() > 0);
         vm.assume(gI.index() >= gI.width());
         vm.assume(shift < gI.index() % gI.width());
@@ -384,7 +387,7 @@ contract GIndexTest is Test {
         assertEq(lib.shr(lib.shl(gI, shift), shift).unwrap(), gI.unwrap());
     }
 
-    function testFuzz_shr_shl_Idempotent(GIndex gI, uint256 shift) public {
+    function testFuzz_shr_shl_Idempotent(GIndex gI, uint256 shift) public view {
         vm.assume(gI.index() > 0);
         vm.assume(gI.index() >= gI.width());
         vm.assume(shift < gI.width() - (gI.index() % gI.width()));
@@ -392,7 +395,7 @@ contract GIndexTest is Test {
         assertEq(lib.shl(lib.shr(gI, shift), shift).unwrap(), gI.unwrap());
     }
 
-    function test_fls() public {
+    function test_fls() public pure {
         for (uint256 i = 1; i < 255; i++) {
             assertEq(fls((1 << i) - 1), i - 1);
             assertEq(fls((1 << i)), i);

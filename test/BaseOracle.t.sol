@@ -126,23 +126,19 @@ contract BaseOracleTest is Test, Utilities {
     function test_submitConsensusReport_RevertsIfSenderIsNotConsensusContract()
         public
     {
-        uint256 initialRefSlot = oracle.getTime();
+        uint256 refSlot = oracle.getTime();
         vm.prank(stranger);
         vm.expectRevert(BaseOracle.SenderIsNotTheConsensusContract.selector);
-        oracle.submitConsensusReport(
-            keccak256("HASH_1"),
-            initialRefSlot,
-            initialRefSlot
-        );
+        oracle.submitConsensusReport(keccak256("HASH_1"), refSlot, refSlot);
     }
 
     function test_submitConsensusReport_SubmitsFromConsensusContract() public {
-        uint256 initialRefSlot = oracle.getTime();
+        uint256 refSlot = oracle.getTime();
         vm.prank(address(consensus));
         oracle.submitConsensusReport(
             keccak256("HASH_1"),
-            initialRefSlot,
-            initialRefSlot + SLOTS_PER_FRAME
+            refSlot,
+            refSlot + SLOTS_PER_FRAME
         );
         assertEq(oracle.getConsensusReportLastCall().callCount, 1);
     }
@@ -150,25 +146,25 @@ contract BaseOracleTest is Test, Utilities {
     function test_discardConsensusReport_RevertsIfSenderIsNotConsensusContract()
         public
     {
-        uint256 initialRefSlot = oracle.getTime();
+        uint256 refSlot = oracle.getTime();
         vm.prank(stranger);
         vm.expectRevert(BaseOracle.SenderIsNotTheConsensusContract.selector);
-        oracle.discardConsensusReport(initialRefSlot);
+        oracle.discardConsensusReport(refSlot);
     }
 
     function test_discardConsensusReport_DiscardsFromConsensusContract()
         public
     {
-        uint256 initialRefSlot = oracle.getTime();
+        uint256 refSlot = oracle.getTime();
         vm.prank(address(consensus));
         oracle.submitConsensusReport(
             keccak256("HASH_1"),
-            initialRefSlot,
-            initialRefSlot + SLOTS_PER_FRAME
+            refSlot,
+            refSlot + SLOTS_PER_FRAME
         );
         assertEq(oracle.getConsensusReportLastCall().callCount, 1);
         vm.prank(address(consensus));
-        oracle.discardConsensusReport(initialRefSlot);
+        oracle.discardConsensusReport(refSlot);
     }
 
     // consensus tests
@@ -392,19 +388,19 @@ contract BaseOracleTest is Test, Utilities {
         oracle.checkProcessingDeadline();
     }
 
-    function test_isConsensusMember_ReturnsFalseOnNonMember() public {
+    function test_isConsensusMember_ReturnsFalseOnNonMember() public view {
         bool r = oracle.isConsensusMember(notMember);
         assertFalse(r);
     }
 
-    function test_isConsensusMember_ReturnsTrueOnMember() public {
+    function test_isConsensusMember_ReturnsTrueOnMember() public view {
         bool r = oracle.isConsensusMember(member);
         assertTrue(r);
     }
 
     // consensus report
 
-    function test_getConsensusReport_ReturnsEmptyState() public {
+    function test_getConsensusReport_ReturnsEmptyState() public view {
         (
             bytes32 hash,
             uint256 refSlot,
@@ -820,12 +816,7 @@ contract BaseOracleTest is Test, Utilities {
         emit BaseOracle.ReportDiscarded(initialRefSlot, keccak256("HASH_1"));
         oracle.discardConsensusReport(initialRefSlot);
 
-        (
-            bytes32 hash,
-            uint256 refSlot,
-            uint256 processingDeadlineTime,
-            bool processingStarted
-        ) = oracle.getConsensusReport();
+        (bytes32 hash, , , ) = oracle.getConsensusReport();
         assertEq(hash, bytes32(0));
     }
 
@@ -842,8 +833,7 @@ contract BaseOracleTest is Test, Utilities {
         vm.prank(address(consensus));
         oracle.discardConsensusReport(initialRefSlot);
 
-        (bytes32 hash, uint256 refSlot, uint256 processingDeadlineTime) = oracle
-            .lastDiscardedReport();
+        (bytes32 hash, , ) = oracle.lastDiscardedReport();
         assertEq(hash, keccak256("HASH_1"));
     }
 
@@ -861,12 +851,7 @@ contract BaseOracleTest is Test, Utilities {
             initialRefSlot,
             deadline
         );
-        (
-            bytes32 hash,
-            uint256 refSlot,
-            uint256 processingDeadlineTime,
-            bool processingStarted
-        ) = oracle.getConsensusReport();
+        (bytes32 hash, , , ) = oracle.getConsensusReport();
         assertEq(hash, keccak256("HASH_2"));
     }
 
@@ -1099,7 +1084,7 @@ contract BaseOracleImpl is BaseOracle {
         _checkConsensusData(refSlot, consensusVersion, hash);
     }
 
-    function checkProcessingDeadline() external {
+    function checkProcessingDeadline() external view {
         _checkProcessingDeadline(
             _storageConsensusReport().value.processingDeadlineTime
         );
