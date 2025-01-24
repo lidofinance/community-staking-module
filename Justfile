@@ -156,9 +156,10 @@ _deploy-prod *args:
     forge script {{deploy_script_path}} --sig="run(string)" --force --rpc-url ${RPC_URL} {{args}} -- `git rev-parse HEAD`
 
 _deploy-impl *args:
-    forge script {{deploy_impls_script_path}} --sig="deploy(string,string)" \
-        --rpc-url {{anvil_rpc_url}} --slow {{args}} \
-        -- {{deploy_config_path}} `git rev-parse HEAD`
+    FOUNDRY_PROFILE=deploy-impl \
+        forge script {{deploy_impls_script_path}} --sig="deploy(string,string)" \
+            --rpc-url {{anvil_rpc_url}} --slow {{args}} \
+            -- {{deploy_config_path}} `git rev-parse HEAD`
 
 [confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]
 deploy-impl-prod *args:
