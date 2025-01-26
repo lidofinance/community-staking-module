@@ -156,7 +156,7 @@ _deploy-prod *args:
     forge script {{deploy_script_path}} --sig="run(string)" --force --rpc-url ${RPC_URL} {{args}} -- `git rev-parse HEAD`
 
 _deploy-impl *args:
-    forge script {{deploy_impls_script_path}} --sig="deploy(string,string)" \
+    FOUNDRY_PROFILE=coverage forge script {{deploy_impls_script_path}} --sig="deploy(string,string)" \
         --rpc-url {{anvil_rpc_url}} --slow {{args}} \
         -- {{deploy_config_path}} `git rev-parse HEAD`
 
