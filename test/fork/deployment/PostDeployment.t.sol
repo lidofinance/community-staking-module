@@ -10,12 +10,14 @@ import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
 import { DeployParams } from "../../../script/DeployBase.s.sol";
 import { OssifiableProxy } from "../../../src/lib/proxy/OssifiableProxy.sol";
 import { CSModule } from "../../../src/CSModule.sol";
+import { CSParametersRegistry } from "../../../src/CSParametersRegistry.sol";
 import { CSAccounting } from "../../../src/CSAccounting.sol";
 import { HashConsensus } from "../../../src/lib/base-oracle/HashConsensus.sol";
 import { CSBondCurve } from "../../../src/abstract/CSBondCurve.sol";
 import { CSFeeDistributor } from "../../../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../../../src/CSFeeOracle.sol";
 import { IWithdrawalQueue } from "../../../src/interfaces/IWithdrawalQueue.sol";
+import { ICSParametersRegistry } from "../../../src/interfaces/ICSParametersRegistry.sol";
 import { BaseOracle } from "../../../src/lib/base-oracle/BaseOracle.sol";
 import { GIndex } from "../../../src/lib/GIndex.sol";
 import { Slot } from "../../../src/lib/Types.sol";
@@ -104,6 +106,89 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
         csmImpl.initialize({
             _accounting: address(accounting),
             admin: deployParams.aragonAgent
+        });
+    }
+}
+
+contract CSParametersRegistryDeploymentTest is
+    Test,
+    Utilities,
+    DeploymentFixtures
+{
+    DeployParams private deployParams;
+
+    function setUp() public {
+        Env memory env = envVars();
+        vm.createSelectFork(env.RPC_URL);
+        initializeFromDeployment();
+        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
+    }
+
+    function test_initializer() public {
+        assertEq(
+            parametersRegistry.defaultKeyRemovalCharge(),
+            deployParams.keyRemovalCharge
+        );
+        assertEq(
+            parametersRegistry.defaultElRewardsStealingAdditionalFine(),
+            deployParams.elRewardsStealingAdditionalFine
+        );
+        assertEq(
+            parametersRegistry.defaultPriorityQueueLimit(),
+            deployParams.priorityQueueLimit
+        );
+        assertEq(
+            parametersRegistry.defaultRewardShare(),
+            deployParams.rewardShare
+        );
+        assertEq(
+            parametersRegistry.defaultPerformanceLeeway(),
+            deployParams.avgPerfLeewayBP
+        );
+        (uint256 strikesLifetime, uint256 strikesThreshold) = parametersRegistry
+            .defaultStrikesParams();
+        assertEq(strikesLifetime, deployParams.strikesLifetime);
+        assertEq(strikesThreshold, deployParams.strikesThreshold);
+    }
+
+    function test_roles() public {
+        assertTrue(
+            parametersRegistry.hasRole(
+                parametersRegistry.DEFAULT_ADMIN_ROLE(),
+                deployParams.aragonAgent
+            )
+        );
+        assertEq(
+            parametersRegistry.getRoleMemberCount(
+                parametersRegistry.DEFAULT_ADMIN_ROLE()
+            ),
+            1
+        );
+    }
+
+    function test_proxy() public {
+        OssifiableProxy proxy = OssifiableProxy(
+            payable(address(parametersRegistry))
+        );
+        assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
+        assertFalse(proxy.proxy__getIsOssified());
+
+        CSParametersRegistry parametersRegistryImpl = CSParametersRegistry(
+            proxy.proxy__getImplementation()
+        );
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        parametersRegistryImpl.initialize({
+            admin: deployParams.aragonAgent,
+            data: ICSParametersRegistry.initializationData({
+                keyRemovalCharge: deployParams.keyRemovalCharge,
+                elRewardsStealingAdditionalFine: deployParams
+                    .elRewardsStealingAdditionalFine,
+                priorityQueueLimit: deployParams.priorityQueueLimit,
+                rewardShare: deployParams.rewardShare,
+                performanceLeeway: deployParams.avgPerfLeewayBP,
+                strikesLifetime: deployParams.strikesLifetime,
+                strikesThreshold: deployParams.strikesThreshold
+            })
         });
     }
 }

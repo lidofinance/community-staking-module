@@ -25,6 +25,55 @@ import { JsonObj, Json } from "./utils/Json.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 
+struct DeployParamsV1 {
+    // Lido addresses
+    address lidoLocatorAddress;
+    address aragonAgent;
+    address easyTrackEVMScriptExecutor;
+    address proxyAdmin;
+    // Oracle
+    uint256 secondsPerSlot;
+    uint256 slotsPerEpoch;
+    uint256 clGenesisTime;
+    uint256 oracleReportEpochsPerFrame;
+    uint256 fastLaneLengthSlots;
+    uint256 consensusVersion;
+    uint256 avgPerfLeewayBP;
+    address[] oracleMembers;
+    uint256 hashConsensusQuorum;
+    // Verifier
+    GIndex gIHistoricalSummaries;
+    GIndex gIFirstWithdrawal;
+    GIndex gIFirstValidator;
+    uint256 verifierSupportedEpoch;
+    // Accounting
+    uint256 maxCurveLength;
+    uint256[] bondCurve;
+    uint256 minBondLockPeriod;
+    uint256 maxBondLockPeriod;
+    uint256 bondLockPeriod;
+    address setResetBondCurveAddress;
+    address chargePenaltyRecipient;
+    // Module
+    bytes32 moduleType;
+    uint256 minSlashingPenaltyQuotient;
+    uint256 elRewardsStealingAdditionalFine;
+    uint256 maxKeysPerOperatorEA;
+    uint256 maxKeyRemovalCharge;
+    uint256 keyRemovalCharge;
+    address elRewardsStealingReporter;
+    // VettedGate
+    bytes32 vettedGateTreeRoot;
+    uint256[] vettedGateBondCurve;
+    // GateSeal
+    address gateSealFactory;
+    address sealingCommittee;
+    uint256 sealDuration;
+    uint256 sealExpiryTimestamp;
+    // Testnet stuff
+    address secondAdminAddress;
+}
+
 struct DeployParams {
     // Lido addresses
     address lidoLocatorAddress;
@@ -383,10 +432,6 @@ abstract contract DeployBase is Script {
             deployJson.set("ChainId", chainId);
             deployJson.set("PermissionlessGate", address(permissionlessGate));
             deployJson.set("VettedGate", address(vettedGate));
-            deployJson.set(
-                "CSParametersRegistryImpl",
-                address(parametersRegistryImpl)
-            );
             deployJson.set("CSParametersRegistry", address(parametersRegistry));
             deployJson.set("CSModule", address(csm));
             deployJson.set("CSAccounting", address(accounting));

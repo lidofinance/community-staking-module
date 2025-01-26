@@ -28,6 +28,33 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         assertEq(csm.getNodeOperatorsCount(), 0);
     }
 
+    function test_parametersRegistry_initialState() public {
+        assertEq(
+            parametersRegistry.defaultKeyRemovalCharge(),
+            deployParams.keyRemovalCharge
+        );
+        assertEq(
+            parametersRegistry.defaultElRewardsStealingAdditionalFine(),
+            deployParams.elRewardsStealingAdditionalFine
+        );
+        assertEq(
+            parametersRegistry.defaultPriorityQueueLimit(),
+            deployParams.priorityQueueLimit
+        );
+        assertEq(
+            parametersRegistry.defaultRewardShare(),
+            deployParams.rewardShare
+        );
+        assertEq(
+            parametersRegistry.defaultPerformanceLeeway(),
+            deployParams.avgPerfLeewayBP
+        );
+        (uint256 strikesLifetime, uint256 strikesThreshold) = parametersRegistry
+            .defaultStrikesParams();
+        assertEq(strikesLifetime, deployParams.strikesLifetime);
+        assertEq(strikesThreshold, deployParams.strikesThreshold);
+    }
+
     function test_accounting_initialState() public {
         assertFalse(accounting.isPaused());
         assertEq(accounting.totalBondShares(), 0);

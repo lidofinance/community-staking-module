@@ -7,20 +7,27 @@ import "forge-std/Test.sol";
 
 import { Utilities } from "../../helpers/Utilities.sol";
 import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
-import { DeployParams } from "../../../script/DeployBase.s.sol";
+import { DeployParams, DeployParamsV1 } from "../../../script/DeployBase.s.sol";
 import { HashConsensus } from "../../../src/lib/base-oracle/HashConsensus.sol";
 import { BaseOracle } from "../../../src/lib/base-oracle/BaseOracle.sol";
 import { Slot } from "../../../src/lib/Types.sol";
 
 contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
-    DeployParams private deployParams;
+    DeployParamsV1 private deployParams;
+    DeployParams private upgradeDeployParams;
     uint256 adminsCount;
+
+    error UpdateConfigRequired();
 
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment();
-        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
+        deployParams = parseDeployParamsV1(env.DEPLOY_CONFIG);
+        if (_isEmpty(env.UPGRADE_CONFIG)) {
+            revert UpdateConfigRequired();
+        }
+        upgradeDeployParams = parseDeployParams(env.UPGRADE_CONFIG);
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
 
@@ -66,6 +73,46 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         assertTrue(csm.hasRole(csm.VERIFIER_ROLE(), address(verifier)));
         assertEq(csm.getRoleMemberCount(csm.VERIFIER_ROLE()), 1);
         assertEq(csm.getRoleMemberCount(csm.RECOVERER_ROLE()), 0);
+    }
+
+    function test_parametersRegistryState() public {
+        assertTrue(
+            parametersRegistry.hasRole(
+                parametersRegistry.DEFAULT_ADMIN_ROLE(),
+                deployParams.aragonAgent
+            )
+        );
+        assertEq(
+            parametersRegistry.getRoleMemberCount(
+                parametersRegistry.DEFAULT_ADMIN_ROLE()
+            ),
+            1
+        );
+
+        assertEq(
+            parametersRegistry.defaultKeyRemovalCharge(),
+            upgradeDeployParams.keyRemovalCharge
+        );
+        assertEq(
+            parametersRegistry.defaultElRewardsStealingAdditionalFine(),
+            upgradeDeployParams.elRewardsStealingAdditionalFine
+        );
+        assertEq(
+            parametersRegistry.defaultPriorityQueueLimit(),
+            upgradeDeployParams.priorityQueueLimit
+        );
+        assertEq(
+            parametersRegistry.defaultRewardShare(),
+            upgradeDeployParams.rewardShare
+        );
+        assertEq(
+            parametersRegistry.defaultPerformanceLeeway(),
+            upgradeDeployParams.avgPerfLeewayBP
+        );
+        (uint256 strikesLifetime, uint256 strikesThreshold) = parametersRegistry
+            .defaultStrikesParams();
+        assertEq(strikesLifetime, upgradeDeployParams.strikesLifetime);
+        assertEq(strikesThreshold, upgradeDeployParams.strikesThreshold);
     }
 
     function test_accountingState() public {
