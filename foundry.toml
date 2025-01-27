@@ -35,7 +35,7 @@ fs_permissions = [
     { access = "read", path = "./test/fixtures" },
 ]
 
-ignored_warnings_from = ["src/lib/base-oracle/HashConsensus.sol", "test/helpers/mocks/LidoMock.sol", "test/OssifiableProxy.t.sol"]
+ignored_warnings_from = ["src/lib/base-oracle/HashConsensus.sol", "test/OssifiableProxy.t.sol"]
 
 [profile.ci]
 verbosity = 3
@@ -46,4 +46,9 @@ fuzz = { runs = 10_000, max_test_rejects = 2_000_000 }
 [profile.coverage]
 # due to coverage running with optimizer disabled, we need to increase the gas limit
 # to fit CSM contract tests in one block
+block_gas_limit = 60_000_000
+
+[profile.deploy-impl]
+# unknown problem of too high estimated gas usage in the implementation deployment script
+# after upgrading forge-std 1.7.6 -> 1.9.5
 block_gas_limit = 60_000_000

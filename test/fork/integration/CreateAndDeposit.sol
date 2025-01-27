@@ -125,7 +125,7 @@ contract PermissionlessCreateNodeOperatorTest is IntegrationTestBase {
     function test_createNodeOperatorStETH() public assertInvariants {
         vm.startPrank(nodeOperator);
         vm.deal(nodeOperator, 32 ether);
-        lido.submit{ value: 32 ether }({ _referal: address(0) });
+        lido.submit{ value: 32 ether }(address(0));
 
         uint256 preTotalShares = accounting.totalBondShares();
 
@@ -172,7 +172,7 @@ contract PermissionlessCreateNodeOperatorTest is IntegrationTestBase {
     function test_createNodeOperatorWstETH() public assertInvariants {
         vm.startPrank(nodeOperator);
         vm.deal(nodeOperator, 32 ether);
-        lido.submit{ value: 32 ether }({ _referal: address(0) });
+        lido.submit{ value: 32 ether }(address(0));
         lido.approve(address(wstETH), type(uint256).max);
         uint256 preTotalShares = accounting.totalBondShares();
 
@@ -261,7 +261,7 @@ contract VettedGateCreateNodeOperatorTest is IntegrationTestBase {
     function test_createNodeOperatorStETH() public assertInvariants {
         vm.startPrank(nodeOperator);
         vm.deal(nodeOperator, 32 ether);
-        lido.submit{ value: 32 ether }({ _referal: address(0) });
+        lido.submit{ value: 32 ether }(address(0));
 
         uint256 preTotalShares = accounting.totalBondShares();
 
@@ -308,7 +308,7 @@ contract VettedGateCreateNodeOperatorTest is IntegrationTestBase {
     function test_createNodeOperatorWstETH() public assertInvariants {
         vm.startPrank(nodeOperator);
         vm.deal(nodeOperator, 32 ether);
-        lido.submit{ value: 32 ether }({ _referal: address(0) });
+        lido.submit{ value: 32 ether }(address(0));
         lido.approve(address(wstETH), type(uint256).max);
         uint256 preTotalShares = accounting.totalBondShares();
         wstETH.approve(address(accounting), type(uint256).max);
@@ -423,9 +423,7 @@ contract DepositIntegrationTest is IntegrationTestBase {
     function test_depositStETH() public assertInvariants {
         vm.startPrank(user);
         vm.deal(user, 32 ether);
-        uint256 shares = lido.submit{ value: 32 ether }({
-            _referal: address(0)
-        });
+        uint256 shares = lido.submit{ value: 32 ether }(address(0));
 
         uint256 preShares = accounting.getBondShares(defaultNoId);
         uint256 preTotalShares = accounting.totalBondShares();
@@ -466,7 +464,7 @@ contract DepositIntegrationTest is IntegrationTestBase {
     function test_depositWstETH() public assertInvariants {
         vm.startPrank(user);
         vm.deal(user, 32 ether);
-        lido.submit{ value: 32 ether }({ _referal: address(0) });
+        lido.submit{ value: 32 ether }(address(0));
         lido.approve(address(wstETH), type(uint256).max);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
 
@@ -508,9 +506,7 @@ contract DepositIntegrationTest is IntegrationTestBase {
 
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        uint256 shares = lido.submit{ value: 32 ether }({
-            _referal: address(0)
-        });
+        uint256 shares = lido.submit{ value: 32 ether }(address(0));
 
         uint256 preShares = accounting.getBondShares(defaultNoId);
         uint256 preTotalShares = accounting.totalBondShares();
@@ -545,7 +541,7 @@ contract DepositIntegrationTest is IntegrationTestBase {
 
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        lido.submit{ value: 32 ether }({ _referal: address(0) });
+        lido.submit{ value: 32 ether }(address(0));
         lido.approve(address(wstETH), type(uint256).max);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
 

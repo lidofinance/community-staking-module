@@ -533,7 +533,7 @@ contract CSModule is
     function updateRefundedValidatorsCount(
         uint256 /* nodeOperatorId */,
         uint256 /* refundedValidatorsCount */
-    ) external onlyRole(STAKING_ROUTER_ROLE) {
+    ) external view onlyRole(STAKING_ROUTER_ROLE) {
         revert NotSupported();
     }
 

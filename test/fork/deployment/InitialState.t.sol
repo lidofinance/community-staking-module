@@ -22,7 +22,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         deployParams = parseDeployParams(env.DEPLOY_CONFIG);
     }
 
-    function test_module_initialState() public {
+    function test_module_initialState() public view {
         assertTrue(csm.isPaused());
         assertFalse(csm.publicRelease());
         assertEq(csm.getNodeOperatorsCount(), 0);
@@ -55,7 +55,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         assertEq(strikesThreshold, deployParams.strikesThreshold);
     }
 
-    function test_accounting_initialState() public {
+    function test_accounting_initialState() public view {
         assertFalse(accounting.isPaused());
         assertEq(accounting.totalBondShares(), 0);
         assertEq(
@@ -64,7 +64,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         );
     }
 
-    function test_feeDistributor_initialState() public {
+    function test_feeDistributor_initialState() public view {
         assertEq(feeDistributor.totalClaimableShares(), 0);
         assertEq(feeDistributor.pendingSharesToDistribute(), 0);
         assertEq(feeDistributor.treeRoot(), bytes32(0));
@@ -74,7 +74,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         );
     }
 
-    function test_feeOracle_initialState() public {
+    function test_feeOracle_initialState() public view {
         assertFalse(oracle.isPaused());
         (
             bytes32 hash,

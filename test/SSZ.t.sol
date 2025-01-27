@@ -31,7 +31,7 @@ contract SSZTest is Utilities, Test {
         lib = new Library();
     }
 
-    function test_toLittleEndianUint() public {
+    function test_toLittleEndianUint() public pure {
         uint256 v = 0x1234567890ABCDEF;
         bytes32 expected = bytes32(
             bytes.concat(hex"EFCDAB9078563412", bytes24(0))
@@ -40,33 +40,33 @@ contract SSZTest is Utilities, Test {
         assertEq(actual, expected);
     }
 
-    function test_toLittleEndianUintZero() public {
+    function test_toLittleEndianUintZero() public pure {
         bytes32 actual = SSZ.toLittleEndian(0);
         assertEq(actual, bytes32(0));
     }
 
-    function test_toLittleEndianFalse() public {
+    function test_toLittleEndianFalse() public pure {
         bool v = false;
         bytes32 expected = 0x0000000000000000000000000000000000000000000000000000000000000000;
         bytes32 actual = SSZ.toLittleEndian(v);
         assertEq(actual, expected);
     }
 
-    function test_toLittleEndianTrue() public {
+    function test_toLittleEndianTrue() public pure {
         bool v = true;
         bytes32 expected = 0x0100000000000000000000000000000000000000000000000000000000000000;
         bytes32 actual = SSZ.toLittleEndian(v);
         assertEq(actual, expected);
     }
 
-    function testFuzz_toLittleEndian_Idempotent(uint256 v) public {
+    function testFuzz_toLittleEndian_Idempotent(uint256 v) public pure {
         uint256 n = v;
         n = uint256(SSZ.toLittleEndian(n));
         n = uint256(SSZ.toLittleEndian(n));
         assertEq(n, v);
     }
 
-    function test_withdrawalRoot() public {
+    function test_withdrawalRoot() public pure {
         Withdrawal memory w = Withdrawal({
             index: 15213404,
             validatorIndex: 429156,
@@ -84,7 +84,7 @@ contract SSZTest is Utilities, Test {
         SSZ.hashTreeRoot(w);
     }
 
-    function test_withdrawalRoot_AllZeroes() public {
+    function test_withdrawalRoot_AllZeroes() public pure {
         Withdrawal memory w = Withdrawal({
             index: 0,
             validatorIndex: 0,
@@ -96,7 +96,7 @@ contract SSZTest is Utilities, Test {
         assertEq(actual, expected);
     }
 
-    function test_withdrawalRoot_AllOnes() public {
+    function test_withdrawalRoot_AllOnes() public pure {
         Withdrawal memory w = Withdrawal({
             index: type(uint64).max,
             validatorIndex: type(uint64).max,
@@ -108,7 +108,7 @@ contract SSZTest is Utilities, Test {
         assertEq(actual, expected);
     }
 
-    function test_ValidatorRootExitedSlashed() public {
+    function test_ValidatorRootExitedSlashed() public view {
         Validator memory v = Validator({
             pubkey: hex"91760f8a17729cfcb68bfc621438e5d9dfa831cd648e7b2b7d33540a7cbfda1257e4405e67cd8d3260351ab3ff71b213",
             withdrawalCredentials: 0x01000000000000000000000006676e8584342cc8b6052cfdf381c3a281f00ac8,
@@ -125,7 +125,7 @@ contract SSZTest is Utilities, Test {
         assertEq(actual, expected);
     }
 
-    function test_ValidatorRootActive() public {
+    function test_ValidatorRootActive() public view {
         Validator memory v = Validator({
             pubkey: hex"8fb78536e82bcec34e98fff85c907f0a8e6f4b1ccdbf1e8ace26b59eb5a06d16f34e50837f6c490e2ad6a255db8d543b",
             withdrawalCredentials: 0x0023b9d00bf66e7f8071208a85afde59b3148dea046ee3db5d79244880734881,
@@ -142,7 +142,7 @@ contract SSZTest is Utilities, Test {
         assertEq(actual, expected);
     }
 
-    function test_ValidatorRootExtraBytesInPubkey() public {
+    function test_ValidatorRootExtraBytesInPubkey() public view {
         Validator memory v = Validator({
             pubkey: hex"8fb78536e82bcec34e98fff85c907f0a8e6f4b1ccdbf1e8ace26b59eb5a06d16f34e50837f6c490e2ad6a255db8d543bDEADBEEFDEADBEEFDEADBEEFDEADBEEF",
             withdrawalCredentials: 0x0023b9d00bf66e7f8071208a85afde59b3148dea046ee3db5d79244880734881,
@@ -159,7 +159,7 @@ contract SSZTest is Utilities, Test {
         assertEq(actual, expected);
     }
 
-    function test_ValidatorRoot_AllZeroes() public {
+    function test_ValidatorRoot_AllZeroes() public view {
         Validator memory v = Validator({
             pubkey: hex"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
             withdrawalCredentials: 0x0000000000000000000000000000000000000000000000000000000000000000,
@@ -176,7 +176,7 @@ contract SSZTest is Utilities, Test {
         assertEq(actual, expected);
     }
 
-    function test_ValidatorRoot_AllOnes() public {
+    function test_ValidatorRoot_AllOnes() public view {
         Validator memory v = Validator({
             pubkey: hex"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
             withdrawalCredentials: 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff,
@@ -199,7 +199,7 @@ contract SSZTest is Utilities, Test {
         SSZ.hashTreeRoot(v);
     }
 
-    function test_BeaconBlockHeaderRoot() public {
+    function test_BeaconBlockHeaderRoot() public view {
         // Can be obtained via /eth/v1/beacon/headers/{block_id}.
         BeaconBlockHeader memory h = BeaconBlockHeader({
             slot: Slot.wrap(7472518),
@@ -214,7 +214,7 @@ contract SSZTest is Utilities, Test {
         assertEq(actual, expected);
     }
 
-    function test_BeaconBlockHeaderRoot_AllZeroes() public {
+    function test_BeaconBlockHeaderRoot_AllZeroes() public view {
         BeaconBlockHeader memory h = BeaconBlockHeader({
             slot: Slot.wrap(0),
             proposerIndex: 0,
@@ -228,7 +228,7 @@ contract SSZTest is Utilities, Test {
         assertEq(actual, expected);
     }
 
-    function test_BeaconBlockHeaderRoot_AllOnes() public {
+    function test_BeaconBlockHeaderRoot_AllOnes() public view {
         BeaconBlockHeader memory h = BeaconBlockHeader({
             slot: Slot.wrap(type(uint64).max),
             proposerIndex: type(uint64).max,

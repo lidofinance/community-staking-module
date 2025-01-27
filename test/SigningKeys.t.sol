@@ -338,7 +338,7 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
         uint256 nodeOperatorId = 154;
 
         (bytes memory pubkeys, bytes memory signatures) = keysSignatures(3);
-        uint256 totalKeysCount = signingKeys.saveKeysSigs({
+        signingKeys.saveKeysSigs({
             nodeOperatorId: nodeOperatorId,
             startIndex: 0,
             keysCount: 3,
@@ -528,7 +528,7 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
 contract SigningKeysLoadTest is SigningKeysTestBase {
     using SigningKeys for bytes32;
 
-    function test_getKeyOffset() public {
+    function test_getKeyOffset() public pure {
         assertEq(
             uint256(
                 0xc7224de16f166822b4efb83b0e3edb78754345751aa6411448d7bf241a1dd403
@@ -618,7 +618,7 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
         uint64 nodeOperatorId,
         uint32 startIndex,
         uint32 keysCount
-    ) public {
+    ) public view {
         keysCount = uint32(bound(keysCount, 1, 500));
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
@@ -690,7 +690,7 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
         uint64 nodeOperatorId,
         uint32 startIndex,
         uint32 keysCount
-    ) public {
+    ) public view {
         keysCount = uint32(bound(keysCount, 1, 200));
         unchecked {
             vm.assume(startIndex + keysCount > startIndex);
