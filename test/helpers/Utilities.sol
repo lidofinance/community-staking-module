@@ -116,17 +116,17 @@ contract Utilities is CommonBase {
     }
 
     function someCIDv0() public returns (string memory result) {
-        bytes memory seed = randomBytes(46);
+        bytes memory CIDSeed = randomBytes(46);
 
-        seed[0] = "Q";
-        seed[1] = "m";
+        CIDSeed[0] = "Q";
+        CIDSeed[1] = "m";
 
-        for (uint256 i = 2; i < seed.length; ++i) {
-            uint256 symIndex = uint8(seed[i]) % 58;
-            seed[i] = BASE58ALPHABET[symIndex];
+        for (uint256 i = 2; i < CIDSeed.length; ++i) {
+            uint256 symIndex = uint8(CIDSeed[i]) % 58;
+            CIDSeed[i] = BASE58ALPHABET[symIndex];
         }
 
-        result = string(seed);
+        result = string(CIDSeed);
     }
 
     function checkChainId(uint256 chainId) public view {
@@ -175,10 +175,10 @@ contract Utilities is CommonBase {
         bytes memory subject,
         uint256 offset,
         uint256 length
-    ) public pure returns (bytes memory slice) {
-        slice = new bytes(length);
+    ) public pure returns (bytes memory result) {
+        result = new bytes(length);
         for (uint i; i < length; ++i) {
-            slice[i] = subject[offset + i];
+            result[i] = subject[offset + i];
         }
     }
 

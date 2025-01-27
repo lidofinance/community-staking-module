@@ -135,7 +135,7 @@ contract DeploymentHelpers is Test {
         vm.label(deploymentConfig.csm, "csm");
 
         /// Optional for v1 compatibility (upgrade tests). Removed in v2
-        if (vm.keyExists(config, ".CSEarlyAdoption")) {
+        if (vm.keyExistsJson(config, ".CSEarlyAdoption")) {
             deploymentConfig.earlyAdoption = vm.parseJsonAddress(
                 config,
                 ".CSEarlyAdoption"
@@ -144,7 +144,7 @@ contract DeploymentHelpers is Test {
         }
 
         /// Optional, new in v2. Gates not present in v1 deployment configs
-        if (vm.keyExists(config, ".PermissionlessGate")) {
+        if (vm.keyExistsJson(config, ".PermissionlessGate")) {
             deploymentConfig.permissionlessGate = vm.parseJsonAddress(
                 config,
                 ".PermissionlessGate"
@@ -193,7 +193,7 @@ contract DeploymentHelpers is Test {
 
     function parseUpgradeConfig(
         string memory config
-    ) internal view returns (UpgradeConfig memory upgradeConfig) {
+    ) internal pure returns (UpgradeConfig memory upgradeConfig) {
         upgradeConfig.permissionlessGate = vm.parseJsonAddress(
             config,
             ".PermissionlessGate"

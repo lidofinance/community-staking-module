@@ -53,20 +53,25 @@ contract QueueLibTest is Test {
         q = new Library();
     }
 
-    function test_createBatch() public {
+    function test_createBatch() public pure {
         assertEq(
             createBatch(0x27489e20a0060b72, 0x3a1748bdff5e4457).unwrap(),
             0x27489e20a0060b723a1748bdff5e445700000000000000000000000000000000
         );
     }
 
-    function testFuzz_setKeys(uint64 a, uint64 b, uint64 c) public {
+    function testFuzz_setKeys(uint64 a, uint64 b, uint64 c) public pure {
         Batch p = createBatch(a, b);
         p = p.setKeys(c);
         assertEq(p.keys(), c);
     }
 
-    function testFuzz_setNext(uint64 a, uint64 b, uint64 c, uint64 d) public {
+    function testFuzz_setNext(
+        uint64 a,
+        uint64 b,
+        uint64 c,
+        uint64 d
+    ) public pure {
         Batch p0 = createBatch(a, b);
         Batch p1 = createBatch(c, d);
         p0 = p0.setNext(p1);

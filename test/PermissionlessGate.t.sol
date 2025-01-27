@@ -19,7 +19,7 @@ contract PermissionlessGateTest is Test, Utilities {
         gate = new PermissionlessGate(address(csm));
     }
 
-    function test_constructor() public {
+    function test_constructor() public view {
         assertEq(gate.CURVE_ID(), csm.DEFAULT_BOND_CURVE_ID());
         assertEq(address(gate.CSM()), address(csm));
     }

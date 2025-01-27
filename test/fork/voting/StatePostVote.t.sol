@@ -24,12 +24,12 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
 
-    function test_moduleState() public {
+    function test_moduleState() public view {
         assertFalse(csm.isPaused());
         assertFalse(csm.publicRelease());
     }
 
-    function test_moduleRoles() public {
+    function test_moduleRoles() public view {
         assertTrue(
             csm.hasRole(csm.DEFAULT_ADMIN_ROLE(), deployParams.aragonAgent)
         );
@@ -68,7 +68,7 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         assertEq(csm.getRoleMemberCount(csm.RECOVERER_ROLE()), 0);
     }
 
-    function test_accountingState() public {
+    function test_accountingState() public view {
         assertFalse(accounting.isPaused());
         assertEq(
             accounting.getCurveInfo(vettedGate.CURVE_ID()).points,
@@ -82,7 +82,7 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         );
     }
 
-    function test_accountingRoles() public {
+    function test_accountingRoles() public view {
         assertTrue(
             accounting.hasRole(
                 accounting.DEFAULT_ADMIN_ROLE(),
@@ -130,7 +130,7 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         );
     }
 
-    function test_feeDistributor_roles() public {
+    function test_feeDistributor_roles() public view {
         assertTrue(
             feeDistributor.hasRole(
                 feeDistributor.DEFAULT_ADMIN_ROLE(),
@@ -148,21 +148,21 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         );
     }
 
-    function test_feeOracle_state() public {
+    function test_feeOracle_state() public view {
         // NOTE: It assumes the first report has been settled.
         assertFalse(oracle.isPaused());
         (
             bytes32 hash,
             uint256 refSlot,
             uint256 processingDeadlineTime,
-            bool processingStarted
+
         ) = oracle.getConsensusReport();
         assertFalse(hash == bytes32(0), "expected report hash to be non-zero");
         assertGt(refSlot, 0);
         assertGt(processingDeadlineTime, 0);
     }
 
-    function test_feeOracle_roles() public {
+    function test_feeOracle_roles() public view {
         assertTrue(
             oracle.hasRole(
                 oracle.DEFAULT_ADMIN_ROLE(),
@@ -202,7 +202,7 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         );
     }
 
-    function test_hashConsensus_roles() public {
+    function test_hashConsensus_roles() public view {
         assertTrue(
             hashConsensus.hasRole(
                 hashConsensus.DEFAULT_ADMIN_ROLE(),
@@ -255,7 +255,7 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         );
     }
 
-    function test_verifier_roles() public {
+    function test_verifier_roles() public view {
         assertTrue(verifier.hasRole(verifier.PAUSE_ROLE(), address(gateSeal)));
         assertEq(verifier.getRoleMemberCount(verifier.PAUSE_ROLE()), 1);
         assertEq(verifier.getRoleMemberCount(verifier.RESUME_ROLE()), 0);

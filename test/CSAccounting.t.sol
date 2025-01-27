@@ -357,7 +357,7 @@ contract CSAccountingBaseTest is CSAccountingFixtures {
 }
 
 contract CSAccountingPauseTest is CSAccountingBaseTest {
-    function test_notPausedByDefault() public {
+    function test_notPausedByDefault() public view {
         assertFalse(accounting.isPaused());
     }
 
@@ -3108,9 +3108,7 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
     function test_depositStETH() public assertInvariants {
         vm.deal(user, 32 ether);
         vm.prank(user);
-        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
-            _referal: address(0)
-        });
+        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
 
         vm.prank(address(stakingModule));
         accounting.depositStETH(
@@ -3183,9 +3181,7 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
     {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
-            _referal: address(0)
-        });
+        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(accounting), type(uint256).max);
         vm.stopPrank();
 
@@ -3224,9 +3220,7 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
     function test_depositStETH_withPermit() public assertInvariants {
         vm.deal(user, 32 ether);
         vm.prank(user);
-        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
-            _referal: address(0)
-        });
+        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
 
         vm.prank(address(stakingModule));
         vm.expectEmit(true, true, true, true, address(stETH));
@@ -3270,7 +3264,7 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
     {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(accounting), 1 ether);
         vm.stopPrank();
 
@@ -3307,7 +3301,7 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
     {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(accounting), UINT256_MAX);
         vm.stopPrank();
 
@@ -3342,7 +3336,7 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
     {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(accounting), 32 ether);
         vm.stopPrank();
 
@@ -3399,7 +3393,7 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
     function test_depositWstETH() public assertInvariants {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         uint256 sharesToDeposit = stETH.getSharesByPooledEth(
@@ -3478,7 +3472,7 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
     {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         uint256 sharesToDeposit = stETH.getSharesByPooledEth(
@@ -3522,7 +3516,7 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
     function test_depositWstETH_withPermit() public assertInvariants {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         uint256 sharesToDeposit = stETH.getSharesByPooledEth(
@@ -3572,7 +3566,7 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
     {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         wstETH.approve(address(accounting), 1 ether);
@@ -3611,7 +3605,7 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
     {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         wstETH.approve(address(accounting), UINT256_MAX);
@@ -3646,7 +3640,7 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
     {
         vm.deal(user, 32 ether);
         vm.startPrank(user);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         wstETH.approve(address(accounting), 32 ether);

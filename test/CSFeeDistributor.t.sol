@@ -543,7 +543,6 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
     }
 
     function test_processOracleReport_HappyPath() public assertInvariants {
-        uint256 nodeOperatorId = 42;
         uint256 shares = 100;
         uint256 rebate = 10;
         uint256 refSlot = 154;

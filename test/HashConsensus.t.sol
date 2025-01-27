@@ -162,7 +162,7 @@ contract HashConsensusTestAccessControl is HashConsensusBase {
 }
 
 contract HashConsensusTestDeploy is HashConsensusBase {
-    function test_getChainConfig() public {
+    function test_getChainConfig() public view {
         (
             uint256 slotsPerEpoch,
             uint256 secondsPerSlot,
@@ -173,7 +173,7 @@ contract HashConsensusTestDeploy is HashConsensusBase {
         assertEq(genesisTime, GENESIS_TIME);
     }
 
-    function test_getFrameConfig() public {
+    function test_getFrameConfig() public view {
         (
             uint256 initialEpoch,
             uint256 epochsPerFrame,
@@ -282,7 +282,7 @@ contract HashConsensusSetFastLaneLengthSlotsTest is HashConsensusBase {
 }
 
 contract HashConsensusFastLaneMembersTest is HashConsensusBase {
-    function test_initialState() public {
+    function test_initialState() public view {
         assertFalse(consensus.getIsFastLaneMember(member1));
         assertFalse(consensus.getConsensusStateForMember(member1).isFastLane);
         assertFalse(consensus.getIsFastLaneMember(member2));

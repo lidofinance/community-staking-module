@@ -12,7 +12,7 @@ import { Batch } from "../../src/lib/QueueLib.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";
 
 contract InvariantAsserts is Test {
-    function assertCSMKeys(CSModule csm) public {
+    function assertCSMKeys(CSModule csm) public view {
         uint256 noCount = csm.getNodeOperatorsCount();
         NodeOperator memory no;
 
@@ -124,7 +124,7 @@ contract InvariantAsserts is Test {
         }
     }
 
-    function assertCSMMaxKeys(CSModule csm) public {
+    function assertCSMMaxKeys(CSModule csm) public view {
         if (csm.publicRelease()) return;
 
         uint256 noCount = csm.getNodeOperatorsCount();
@@ -143,7 +143,7 @@ contract InvariantAsserts is Test {
         uint256 nodeOperatorsCount,
         IStETH steth,
         CSAccounting accounting
-    ) public {
+    ) public view {
         uint256 totalNodeOperatorsShares;
 
         for (uint256 noId = 0; noId < nodeOperatorsCount; noId++) {
@@ -165,7 +165,7 @@ contract InvariantAsserts is Test {
         IStETH steth,
         address accounting,
         address burner
-    ) public {
+    ) public view {
         assertGe(
             steth.allowance(accounting, burner),
             type(uint128).max,
@@ -176,7 +176,7 @@ contract InvariantAsserts is Test {
     function assertFeeDistributorClaimableShares(
         IStETH lido,
         CSFeeDistributor feeDistributor
-    ) public {
+    ) public view {
         assertGe(
             lido.sharesOf(address(feeDistributor)),
             feeDistributor.totalClaimableShares(),
@@ -184,7 +184,9 @@ contract InvariantAsserts is Test {
         );
     }
 
-    function assertFeeDistributorTree(CSFeeDistributor feeDistributor) public {
+    function assertFeeDistributorTree(
+        CSFeeDistributor feeDistributor
+    ) public view {
         if (feeDistributor.treeRoot() == bytes32(0)) {
             assertEq(
                 feeDistributor.treeCid(),

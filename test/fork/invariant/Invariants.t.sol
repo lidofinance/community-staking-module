@@ -44,7 +44,7 @@ contract CSModuleInvariants is InvariantsBase {
         assertCSMMaxKeys(csm);
     }
 
-    function test_roles() public {
+    function test_roles() public view {
         assertEq(
             csm.getRoleMemberCount(csm.DEFAULT_ADMIN_ROLE()),
             adminsCount,
@@ -92,7 +92,7 @@ contract CSAccountingInvariants is InvariantsBase {
         assertAccountingTotalBondShares(noCount, lido, accounting);
     }
 
-    function test_burnerApproval() public {
+    function test_burnerApproval() public view {
         assertAccountingBurnerApproval(
             lido,
             address(accounting),
@@ -100,7 +100,7 @@ contract CSAccountingInvariants is InvariantsBase {
         );
     }
 
-    function test_roles() public {
+    function test_roles() public view {
         assertEq(
             accounting.getRoleMemberCount(accounting.DEFAULT_ADMIN_ROLE()),
             adminsCount,
@@ -147,15 +147,15 @@ contract CSAccountingInvariants is InvariantsBase {
 }
 
 contract CSFeeDistributorInvariants is InvariantsBase {
-    function test_claimableShares() public {
+    function test_claimableShares() public view {
         assertFeeDistributorClaimableShares(lido, feeDistributor);
     }
 
-    function test_tree() public {
+    function test_tree() public view {
         assertFeeDistributorTree(feeDistributor);
     }
 
-    function test_roles() public {
+    function test_roles() public view {
         assertEq(
             feeDistributor.getRoleMemberCount(
                 feeDistributor.DEFAULT_ADMIN_ROLE()
@@ -172,7 +172,7 @@ contract CSFeeDistributorInvariants is InvariantsBase {
 }
 
 contract CSFeeOracleInvariant is InvariantsBase {
-    function test_roles() public {
+    function test_roles() public view {
         assertEq(
             oracle.getRoleMemberCount(oracle.DEFAULT_ADMIN_ROLE()),
             adminsCount,
@@ -209,7 +209,7 @@ contract CSFeeOracleInvariant is InvariantsBase {
 }
 
 contract HashConsensusInvariant is InvariantsBase {
-    function test_roles() public {
+    function test_roles() public view {
         assertEq(
             oracle.getRoleMemberCount(oracle.DEFAULT_ADMIN_ROLE()),
             adminsCount,
@@ -219,7 +219,7 @@ contract HashConsensusInvariant is InvariantsBase {
 }
 
 contract VerifierInvariant is InvariantsBase {
-    function test_roles() public {
+    function test_roles() public view {
         assertEq(
             verifier.getRoleMemberCount(verifier.PAUSE_ROLE()),
             1,

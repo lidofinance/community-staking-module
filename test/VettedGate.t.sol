@@ -114,14 +114,14 @@ contract VettedGateTest is Test, Utilities {
         vettedGate.resume();
     }
 
-    function test_verifyProof() public {
+    function test_verifyProof() public view {
         assertTrue(
             vettedGate.verifyProof(nodeOperator, merkleTree.getProof(0))
         );
         assertFalse(vettedGate.verifyProof(stranger, merkleTree.getProof(0)));
     }
 
-    function test_hashLeaf() public {
+    function test_hashLeaf() public view {
         // keccak256(bytes.concat(keccak256(abi.encode(address(154))))) = 0x0f7ac7a58332324fa3de7b7a4a05de303436d846e292fa579646a7496f0c2c1a
         assertEq(
             vettedGate.hashLeaf(address(154)),
@@ -129,7 +129,7 @@ contract VettedGateTest is Test, Utilities {
         );
     }
 
-    function testFuzz_hashLeaf(address addr) public {
+    function testFuzz_hashLeaf(address addr) public view {
         assertEq(
             vettedGate.hashLeaf(addr),
             keccak256(bytes.concat(keccak256(abi.encode(addr))))

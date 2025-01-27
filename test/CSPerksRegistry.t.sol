@@ -202,10 +202,7 @@ contract CSPerksRegistryRewardShareDataTest is CSPerksRegistryBaseTest {
     function test_getRewardShareData_RevertWhen_no_data() public {
         uint256 curveId = 0;
         vm.expectRevert(ICSPerksRegistry.NoData.selector);
-        (
-            uint256[] memory keyPivotsOut,
-            uint256[] memory rewardSharesOut
-        ) = PerksRegistry.getRewardShareData(curveId);
+        PerksRegistry.getRewardShareData(curveId);
     }
 }
 
@@ -401,10 +398,7 @@ contract CSPerksRegistryPerformanceLeewayDataTest is CSPerksRegistryBaseTest {
     function test_getPerformanceLeewayData_RevertWhen_no_data() public {
         uint256 curveId = 0;
         vm.expectRevert(ICSPerksRegistry.NoData.selector);
-        (
-            uint256[] memory keyPivotsOut,
-            uint256[] memory performanceLeewaysOut
-        ) = PerksRegistry.getPerformanceLeewayData(curveId);
+        PerksRegistry.getPerformanceLeewayData(curveId);
     }
 }
 
@@ -447,7 +441,7 @@ contract CSPerksRegistryPriorityQueueLimitTest is CSPerksRegistryBaseTest {
         assertEq(limitOut, limit);
     }
 
-    function test_getPerformanceLeewayData_default_return() public {
+    function test_getPerformanceLeewayData_default_return() public view {
         uint256 curveId = 0;
         uint256 limitOut = PerksRegistry.getPriorityQueueLimit(curveId);
 

@@ -171,7 +171,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     }
 
     // Checks that the queue is in the expected state starting from its head.
-    function _assertQueueState(BatchInfo[] memory exp) internal {
+    function _assertQueueState(BatchInfo[] memory exp) internal view {
         (uint128 curr, ) = csm.depositQueue(); // queue.head
 
         for (uint256 i = 0; i < exp.length; ++i) {
@@ -208,7 +208,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         );
     }
 
-    function _assertQueueIsEmpty() internal {
+    function _assertQueueIsEmpty() internal view {
         (uint128 curr, ) = csm.depositQueue(); // queue.head
         assertTrue(csm.depositQueueItem(curr).isNil(), "queue should be empty");
     }
@@ -567,7 +567,7 @@ contract CsmInitialize is CSMCommon {
 }
 
 contract CSMPauseTest is CSMCommon {
-    function test_notPausedByDefault() public {
+    function test_notPausedByDefault() public view {
         assertFalse(csm.isPaused());
     }
 
@@ -1574,9 +1574,7 @@ contract CSMDepositStETH is CSMCommon {
         uint256 preShares = accounting.getBondShares(noId);
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
-        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
-            _referal: address(0)
-        });
+        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
         csm.depositStETH(
             noId,
             32 ether,
@@ -1608,7 +1606,7 @@ contract CSMDepositStETH is CSMCommon {
         uint256 noId = createNodeOperator();
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
         csm.depositStETH(
             noId + 1,
@@ -1628,9 +1626,7 @@ contract CSMDepositStETH is CSMCommon {
         uint256 preShares = accounting.getBondShares(noId);
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
-        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }({
-            _referal: address(0)
-        });
+        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
 
         vm.expectEmit(true, true, true, true, address(stETH));
         emit StETHMock.Approval(nodeOperator, address(accounting), 32 ether);
@@ -1673,7 +1669,7 @@ contract CSMDepositStETH is CSMCommon {
 
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         csm.depositStETH(
             0,
             32 ether,
@@ -1696,7 +1692,7 @@ contract CSMDepositStETH is CSMCommon {
 
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         csm.depositStETH(
             noId,
             32 ether,
@@ -1719,7 +1715,7 @@ contract CSMDepositWstETH is CSMCommon {
         uint256 preShares = accounting.getBondShares(noId);
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         uint256 sharesToDeposit = stETH.getSharesByPooledEth(
@@ -1757,7 +1753,7 @@ contract CSMDepositWstETH is CSMCommon {
         uint256 noId = createNodeOperator();
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
@@ -1779,7 +1775,7 @@ contract CSMDepositWstETH is CSMCommon {
         uint256 preShares = accounting.getBondShares(noId);
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
         uint256 sharesToDeposit = stETH.getSharesByPooledEth(
@@ -1827,7 +1823,7 @@ contract CSMDepositWstETH is CSMCommon {
 
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
 
@@ -1853,7 +1849,7 @@ contract CSMDepositWstETH is CSMCommon {
 
         vm.deal(nodeOperator, 32 ether);
         vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }({ _referal: address(0) });
+        stETH.submit{ value: 32 ether }(address(0));
         stETH.approve(address(wstETH), UINT256_MAX);
         uint256 wstETHAmount = wstETH.wrap(32 ether);
 
@@ -3659,6 +3655,7 @@ contract CsmGetNodeOperatorNonWithdrawnKeys is CSMCommon {
 
     function test_getNodeOperatorNonWithdrawnKeys_ZeroWhenNoNodeOperator()
         public
+        view
     {
         uint256 keys = csm.getNodeOperatorNonWithdrawnKeys(0);
         assertEq(keys, 0);

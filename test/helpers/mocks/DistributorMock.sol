@@ -26,17 +26,17 @@ contract DistributorMock {
     }
 
     function getFeesToDistribute(
-        uint256 nodeOperatorId,
-        uint256 shares,
-        bytes32[] calldata proof
+        uint256 /* nodeOperatorId */,
+        uint256 /* shares */,
+        bytes32[] calldata /* proof */
     ) public view returns (uint256 sharesToDistribute) {
         return STETH.sharesOf(address(this));
     }
 
     function distributeFees(
-        uint256 nodeOperatorId,
+        uint256 /* nodeOperatorId */,
         uint256 shares,
-        bytes32[] calldata proof
+        bytes32[] calldata /* proof */
     ) external returns (uint256) {
         STETH.transferShares(ACCOUNTING, shares);
         return shares;

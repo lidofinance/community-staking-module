@@ -155,7 +155,7 @@ contract StakingRouterIntegrationTest is
         vm.stopPrank();
     }
 
-    function test_connectCSMToRouter() public {
+    function test_connectCSMToRouter() public view {
         IStakingRouter.StakingModule memory module = stakingRouter
             .getStakingModule(moduleId);
         assertTrue(module.stakingModuleAddress == address(csm));
