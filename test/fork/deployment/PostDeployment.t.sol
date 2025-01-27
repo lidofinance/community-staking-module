@@ -124,7 +124,7 @@ contract CSParametersRegistryDeploymentTest is
         deployParams = parseDeployParams(env.DEPLOY_CONFIG);
     }
 
-    function test_initializer() public {
+    function test_initializer() public view {
         assertEq(
             parametersRegistry.defaultKeyRemovalCharge(),
             deployParams.keyRemovalCharge
@@ -151,7 +151,7 @@ contract CSParametersRegistryDeploymentTest is
         assertEq(strikesThreshold, deployParams.strikesThreshold);
     }
 
-    function test_roles() public {
+    function test_roles() public view {
         assertTrue(
             parametersRegistry.hasRole(
                 parametersRegistry.DEFAULT_ADMIN_ROLE(),

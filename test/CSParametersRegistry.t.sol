@@ -358,7 +358,7 @@ contract CSParametersRegistryRewardShareDataTest is
         }
     }
 
-    function test_getRewardShareData_default_data() public {
+    function test_getRewardShareData_default_data() public view {
         uint256 curveId = 10;
 
         (
@@ -636,7 +636,7 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         }
     }
 
-    function test_getPerformanceLeewayData_default_data() public {
+    function test_getPerformanceLeewayData_default_data() public view {
         uint256 curveId = 10;
 
         (
@@ -721,7 +721,7 @@ contract CSParametersRegistryPriorityQueueLimitTest is
         assertEq(limitOut, limit);
     }
 
-    function test_getPriorityQueueLimit_default_data() public {
+    function test_getPriorityQueueLimit_default_data() public view {
         uint256 curveId = 10;
         uint256 limitOut = parametersRegistry.getPriorityQueueLimit(curveId);
 
@@ -799,7 +799,7 @@ contract CSParametersRegistryKeyRemovalChargeTest is
         assertEq(chargeOut, charge);
     }
 
-    function test_getKeyRemovalCharge_default_data() public {
+    function test_getKeyRemovalCharge_default_data() public view {
         uint256 curveId = 10;
         uint256 chargeOut = parametersRegistry.getKeyRemovalCharge(curveId);
 
@@ -893,7 +893,10 @@ contract CSParametersRegistryElRewardsStealingAdditionalFineTest is
         assertEq(fineOut, fine);
     }
 
-    function test_getElRewardsStealingAdditionalFine_default_data() public {
+    function test_getElRewardsStealingAdditionalFine_default_data()
+        public
+        view
+    {
         uint256 curveId = 10;
         uint256 fineOut = parametersRegistry.getElRewardsStealingAdditionalFine(
             curveId
@@ -1019,7 +1022,7 @@ contract CSParametersRegistryStrikesParamsTest is CSParametersRegistryBaseTest {
         assertEq(thresholdOut, threshold);
     }
 
-    function test_getStrikesParams_default_data() public {
+    function test_getStrikesParams_default_data() public view {
         uint256 curveId = 10;
         (uint256 lifetimeOut, uint256 thresholdOut) = parametersRegistry
             .getStrikesParams(curveId);

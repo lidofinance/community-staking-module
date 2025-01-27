@@ -75,7 +75,7 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         assertEq(csm.getRoleMemberCount(csm.RECOVERER_ROLE()), 0);
     }
 
-    function test_parametersRegistryState() public {
+    function test_parametersRegistryState() public view {
         assertTrue(
             parametersRegistry.hasRole(
                 parametersRegistry.DEFAULT_ADMIN_ROLE(),

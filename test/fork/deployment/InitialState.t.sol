@@ -28,7 +28,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         assertEq(csm.getNodeOperatorsCount(), 0);
     }
 
-    function test_parametersRegistry_initialState() public {
+    function test_parametersRegistry_initialState() public view {
         assertEq(
             parametersRegistry.defaultKeyRemovalCharge(),
             deployParams.keyRemovalCharge
