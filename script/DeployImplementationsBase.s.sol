@@ -15,6 +15,7 @@ import { CSVerifier } from "../src/CSVerifier.sol";
 import { PermissionlessGate } from "../src/PermissionlessGate.sol";
 import { VettedGate } from "../src/VettedGate.sol";
 import { ICSEarlyAdoption } from "../src/interfaces/ICSEarlyAdoption.sol";
+import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
@@ -81,12 +82,14 @@ abstract contract DeployImplementationsBase is DeployBase {
                 withdrawalAddress: locator.withdrawalVault(),
                 module: address(csm),
                 slotsPerEpoch: uint64(config.slotsPerEpoch),
-                gIFirstWithdrawalPrev: config.gIFirstWithdrawal,
-                gIFirstWithdrawalCurr: config.gIFirstWithdrawal,
-                gIFirstValidatorPrev: config.gIFirstValidator,
-                gIFirstValidatorCurr: config.gIFirstValidator,
-                gIHistoricalSummariesPrev: config.gIHistoricalSummaries,
-                gIHistoricalSummariesCurr: config.gIHistoricalSummaries,
+                gindices: ICSVerifier.GIndices({
+                    gIFirstWithdrawalPrev: config.gIFirstWithdrawal,
+                    gIFirstWithdrawalCurr: config.gIFirstWithdrawal,
+                    gIFirstValidatorPrev: config.gIFirstValidator,
+                    gIFirstValidatorCurr: config.gIFirstValidator,
+                    gIHistoricalSummariesPrev: config.gIHistoricalSummaries,
+                    gIHistoricalSummariesCurr: config.gIHistoricalSummaries
+                }),
                 firstSupportedSlot: Slot.wrap(
                     uint64(config.verifierSupportedEpoch * config.slotsPerEpoch)
                 ),
