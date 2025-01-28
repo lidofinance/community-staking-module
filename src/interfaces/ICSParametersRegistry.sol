@@ -30,6 +30,11 @@ interface ICSParametersRegistry {
         uint256 strikesThreshold;
     }
 
+    struct PivotsAndValues {
+        uint256[] pivots;
+        uint256[] values;
+    }
+
     event DefaultKeyRemovalChargeSet(uint256 value);
     event DefaultElRewardsStealingAdditionalFineSet(uint256 value);
     event DefaultPriorityQueueLimitSet(uint256 value);

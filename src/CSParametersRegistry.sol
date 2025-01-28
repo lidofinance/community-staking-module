@@ -28,13 +28,11 @@ contract CSParametersRegistry is
 
     /// @dev Default value for the reward share. Can be only be set as a flat value due to possible sybil attacks
     uint256 public defaultRewardShare;
-    mapping(uint256 => uint256[]) internal _rewardSharePivotsData;
-    mapping(uint256 => uint256[]) internal _rewardShareValuesData;
+    mapping(uint256 => PivotsAndValues) internal _rewardShareData;
 
     /// @dev Default value for the performance leeway. Can be only be set as a flat value due to possible sybil attacks
     uint256 public defaultPerformanceLeeway;
-    mapping(uint256 => uint256[]) internal _performanceLeewayPivotsData;
-    mapping(uint256 => uint256[]) internal _performanceLeewayValuesData;
+    mapping(uint256 => PivotsAndValues) internal _performanceLeewayData;
 
     StrikesParams public defaultStrikesParams;
     mapping(uint256 => MarkedStrikesParams) internal _strikesParams;
@@ -184,8 +182,10 @@ contract CSParametersRegistry is
         for (uint256 i = 0; i < rewardSharesLength; ++i) {
             if (rewardShares[i] > MAX_BP) revert InvalidRewardShareData();
         }
-        _rewardSharePivotsData[curveId] = keyPivots;
-        _rewardShareValuesData[curveId] = rewardShares;
+        _rewardShareData[curveId] = PivotsAndValues({
+            pivots: keyPivots,
+            values: rewardShares
+        });
 
         emit RewardShareDataSet(curveId);
     }
@@ -194,8 +194,7 @@ contract CSParametersRegistry is
     function unsetRewardShareData(
         uint256 curveId
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        delete _rewardSharePivotsData[curveId];
-        delete _rewardShareValuesData[curveId];
+        delete _rewardShareData[curveId];
 
         emit RewardShareDataUnset(curveId);
     }
@@ -222,8 +221,10 @@ contract CSParametersRegistry is
             if (performanceLeeways[i] > MAX_BP)
                 revert InvalidPerformanceLeewayData();
         }
-        _performanceLeewayPivotsData[curveId] = keyPivots;
-        _performanceLeewayValuesData[curveId] = performanceLeeways;
+        _performanceLeewayData[curveId] = PivotsAndValues({
+            pivots: keyPivots,
+            values: performanceLeeways
+        });
 
         emit PerformanceLeewayDataSet(curveId);
     }
@@ -232,8 +233,7 @@ contract CSParametersRegistry is
     function unsetPerformanceLeewayData(
         uint256 curveId
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        delete _performanceLeewayPivotsData[curveId];
-        delete _performanceLeewayValuesData[curveId];
+        delete _performanceLeewayData[curveId];
 
         emit PerformanceLeewayDataUnset(curveId);
     }
@@ -294,15 +294,13 @@ contract CSParametersRegistry is
         view
         returns (uint256[] memory keyPivots, uint256[] memory rewardShares)
     {
-        if (_rewardShareValuesData[curveId].length == 0) {
+        PivotsAndValues memory rewardShareData = _rewardShareData[curveId];
+        if (rewardShareData.pivots.length == 0) {
             rewardShares = new uint256[](1);
             rewardShares[0] = defaultRewardShare;
             return (new uint256[](0), rewardShares);
         }
-        return (
-            _rewardSharePivotsData[curveId],
-            _rewardShareValuesData[curveId]
-        );
+        return (rewardShareData.pivots, rewardShareData.values);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -316,15 +314,15 @@ contract CSParametersRegistry is
             uint256[] memory performanceLeeways
         )
     {
-        if (_performanceLeewayValuesData[curveId].length == 0) {
+        PivotsAndValues memory performanceLeewayData = _performanceLeewayData[
+            curveId
+        ];
+        if (performanceLeewayData.pivots.length == 0) {
             performanceLeeways = new uint256[](1);
             performanceLeeways[0] = defaultPerformanceLeeway;
             return (new uint256[](0), performanceLeeways);
         }
-        return (
-            _performanceLeewayPivotsData[curveId],
-            _performanceLeewayValuesData[curveId]
-        );
+        return (performanceLeewayData.pivots, performanceLeewayData.values);
     }
 
     /// @inheritdoc ICSParametersRegistry
