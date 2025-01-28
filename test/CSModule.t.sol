@@ -2946,7 +2946,10 @@ contract CsmQueueOps is CSMCommon {
         }
     }
 
-    function test_enqueueNodeOperatorKeys_NothingToDo() public assertInvariants {
+    function test_enqueueNodeOperatorKeys_NothingToDo()
+        public
+        assertInvariants
+    {
         // `enqueueNodeOperatorKeys` will be called on creating a node operator and uploading a key.
         uint256 noId = createNodeOperator();
 

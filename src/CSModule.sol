@@ -1381,7 +1381,10 @@ contract CSModule is
             if (incrementNonceIfUpdated) {
                 _incrementModuleNonce();
             }
-            depositQueue.enqueueNodeOperatorKeys(_nodeOperators, nodeOperatorId);
+            depositQueue.enqueueNodeOperatorKeys(
+                _nodeOperators,
+                nodeOperatorId
+            );
         }
     }
 
