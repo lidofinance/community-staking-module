@@ -257,7 +257,7 @@ abstract contract DeployBase is Script {
 
             parametersRegistry.initialize({
                 admin: deployer,
-                data: ICSParametersRegistry.initializationData({
+                data: ICSParametersRegistry.InitializationData({
                     keyRemovalCharge: config.keyRemovalCharge,
                     elRewardsStealingAdditionalFine: config
                         .elRewardsStealingAdditionalFine,

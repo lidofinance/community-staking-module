@@ -16,7 +16,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 contract CSParametersRegistryBaseTest is Test, Utilities, Fixtures {
     address internal admin;
     address internal stranger;
-    ICSParametersRegistry.initializationData internal defaultInitData;
+    ICSParametersRegistry.InitializationData internal defaultInitData;
 
     CSParametersRegistry internal parametersRegistry;
 
@@ -26,7 +26,7 @@ contract CSParametersRegistryBaseTest is Test, Utilities, Fixtures {
 
         parametersRegistry = new CSParametersRegistry();
 
-        defaultInitData = ICSParametersRegistry.initializationData({
+        defaultInitData = ICSParametersRegistry.InitializationData({
             keyRemovalCharge: 0.05 ether,
             elRewardsStealingAdditionalFine: 0.1 ether,
             priorityQueueLimit: 0,
@@ -92,7 +92,7 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
     function test_initialize_RevertWhen_InvalidDefaultRewardShare() public {
         _enableInitializers(address(parametersRegistry));
 
-        ICSParametersRegistry.initializationData
+        ICSParametersRegistry.InitializationData
             memory customInitData = defaultInitData;
 
         customInitData.rewardShare = 10001;
@@ -106,7 +106,7 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
     {
         _enableInitializers(address(parametersRegistry));
 
-        ICSParametersRegistry.initializationData
+        ICSParametersRegistry.InitializationData
             memory customInitData = defaultInitData;
 
         customInitData.performanceLeeway = 10001;
@@ -122,7 +122,7 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
     {
         _enableInitializers(address(parametersRegistry));
 
-        ICSParametersRegistry.initializationData
+        ICSParametersRegistry.InitializationData
             memory customInitData = defaultInitData;
 
         customInitData.strikesLifetime = 0;
@@ -137,7 +137,7 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
     {
         _enableInitializers(address(parametersRegistry));
 
-        ICSParametersRegistry.initializationData
+        ICSParametersRegistry.InitializationData
             memory customInitData = defaultInitData;
 
         customInitData.strikesLifetime = 2;

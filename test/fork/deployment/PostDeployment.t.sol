@@ -179,7 +179,7 @@ contract CSParametersRegistryDeploymentTest is
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         parametersRegistryImpl.initialize({
             admin: deployParams.aragonAgent,
-            data: ICSParametersRegistry.initializationData({
+            data: ICSParametersRegistry.InitializationData({
                 keyRemovalCharge: deployParams.keyRemovalCharge,
                 elRewardsStealingAdditionalFine: deployParams
                     .elRewardsStealingAdditionalFine,

@@ -4,7 +4,7 @@
 pragma solidity 0.8.24;
 
 interface ICSParametersRegistry {
-    struct markedUint248 {
+    struct MarkedUint248 {
         uint248 value;
         bool isValue;
     }
@@ -14,13 +14,13 @@ interface ICSParametersRegistry {
         uint128 threshold;
     }
 
-    struct markedStrikesParams {
+    struct MarkedStrikesParams {
         uint128 lifetime;
         uint120 threshold;
         bool isValue;
     }
 
-    struct initializationData {
+    struct InitializationData {
         uint256 keyRemovalCharge;
         uint256 elRewardsStealingAdditionalFine;
         uint256 priorityQueueLimit;
@@ -203,10 +203,10 @@ interface ICSParametersRegistry {
         returns (uint256[] memory keyPivots, uint256[] memory rewardShares);
 
     /// @notice Set performance leeway parameters for the curveId
-    /// @dev keyPivots = [100, 500] and performanceLeeways = [500, 450, 400] stands for
-    ///      5% performance leeway for the keys 1-100, 4.5% performance leeway for the keys 101-500, and 4% performance leeway for the keys > 500
+    /// @dev keyPivots = [20, 100] and performanceLeeways = [500, 450, 400] stands for
+    ///      5% performance leeway for the keys 1-20, 4.5% performance leeway for the keys 21-100, and 4% performance leeway for the keys > 100
     /// @param curveId Curve Id to associate performance leeway data with
-    /// @param keyPivots Pivot numbers of the keys (ex. [100, 500])
+    /// @param keyPivots Pivot numbers of the keys (ex. [20, 100])
     /// @param performanceLeeways Performance leeway percentages in BP (ex. [500, 450, 400])
     function setPerformanceLeewayData(
         uint256 curveId,
@@ -237,8 +237,8 @@ interface ICSParametersRegistry {
 
     /// @notice Set performance strikes lifetime and threshold for the curveId
     /// @param curveId Curve Id to associate performance strikes lifetime and threshold with
-    /// @param lifetime Performance strikes lifetime
-    /// @param threshold Performance strikes threshold
+    /// @param lifetime Number of CSM Perf Oracle frames after which performance strikes are no longer valid
+    /// @param threshold Number of active strikes after which validator can be forcefully ejected
     function setStrikesParams(
         uint256 curveId,
         uint256 lifetime,
@@ -249,13 +249,11 @@ interface ICSParametersRegistry {
     /// @param curveId Curve Id to unset custom performance strikes lifetime and threshold for
     function unsetStrikesParams(uint256 curveId) external;
 
-    /// @notice Get performance strikes lifetime by the curveId
-    ///         Performance strikes lifetime is the number of CSM Perf Oracle frames after which performance strikes are no longer valid
-    ///         Performance strikes threshold is the number of active strikes after which validator can be forcefully ejected
+    /// @notice Get performance strikes lifetime and threshold by the curveId
     /// @dev `defaultStrikesParams` are returned if the value is not set for the given curveId.
-    /// @param curveId Curve Id to get performance strikes lifetime for
-    /// @return lifetime Performance strikes lifetime
-    /// @return threshold Performance strikes threshold
+    /// @param curveId Curve Id to get performance strikes lifetime and threshold for
+    /// @return lifetime Number of CSM Perf Oracle frames after which performance strikes are no longer valid
+    /// @return threshold Number of active strikes after which validator can be forcefully ejected
     function getStrikesParams(
         uint256 curveId
     ) external view returns (uint256 lifetime, uint256 threshold);

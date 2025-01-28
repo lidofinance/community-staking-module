@@ -18,26 +18,26 @@ contract CSParametersRegistry is
     uint256 internal constant MAX_BP = 10000;
 
     uint256 public defaultKeyRemovalCharge;
-    mapping(uint256 => markedUint248) internal _keyRemovalCharges;
+    mapping(uint256 => MarkedUint248) internal _keyRemovalCharges;
 
     uint256 public defaultElRewardsStealingAdditionalFine;
-    mapping(uint256 => markedUint248) internal _elRewardsStealingAdditionalFine;
+    mapping(uint256 => MarkedUint248) internal _elRewardsStealingAdditionalFine;
 
     uint256 public defaultPriorityQueueLimit;
-    mapping(uint256 => markedUint248) internal _priorityQueueLimits;
+    mapping(uint256 => MarkedUint248) internal _priorityQueueLimits;
 
     /// @dev Default value for the reward share. Can be only be set as a flat value due to possible sybil attacks
     uint256 public defaultRewardShare;
     mapping(uint256 => uint256[]) internal _rewardSharePivotsData;
     mapping(uint256 => uint256[]) internal _rewardShareValuesData;
 
-    /// @dev Default value for the reward share. Can be only be set as a flat value due to possible sybil attacks
+    /// @dev Default value for the performance leeway. Can be only be set as a flat value due to possible sybil attacks
     uint256 public defaultPerformanceLeeway;
     mapping(uint256 => uint256[]) internal _performanceLeewayPivotsData;
     mapping(uint256 => uint256[]) internal _performanceLeewayValuesData;
 
     StrikesParams public defaultStrikesParams;
-    mapping(uint256 => markedStrikesParams) internal _strikesParams;
+    mapping(uint256 => MarkedStrikesParams) internal _strikesParams;
 
     constructor() {
         _disableInitializers();
@@ -46,7 +46,7 @@ contract CSParametersRegistry is
     /// @notice initialize contract
     function initialize(
         address admin,
-        initializationData calldata data
+        InitializationData calldata data
     ) external initializer {
         if (admin == address(0)) revert ZeroAdminAddress();
 
@@ -111,7 +111,7 @@ contract CSParametersRegistry is
         uint256 curveId,
         uint256 keyRemovalCharge
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _keyRemovalCharges[curveId] = markedUint248(
+        _keyRemovalCharges[curveId] = MarkedUint248(
             keyRemovalCharge.toUint248(),
             true
         );
@@ -131,7 +131,7 @@ contract CSParametersRegistry is
         uint256 curveId,
         uint256 fine
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _elRewardsStealingAdditionalFine[curveId] = markedUint248(
+        _elRewardsStealingAdditionalFine[curveId] = MarkedUint248(
             fine.toUint248(),
             true
         );
@@ -151,7 +151,7 @@ contract CSParametersRegistry is
         uint256 curveId,
         uint256 limit
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _priorityQueueLimits[curveId] = markedUint248(limit.toUint248(), true);
+        _priorityQueueLimits[curveId] = MarkedUint248(limit.toUint248(), true);
         emit PriorityQueueLimitSet(curveId, limit);
     }
 
@@ -241,7 +241,7 @@ contract CSParametersRegistry is
         uint256 threshold
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _validateStrikesParams(lifetime, threshold);
-        _strikesParams[curveId] = markedStrikesParams(
+        _strikesParams[curveId] = MarkedStrikesParams(
             lifetime.toUint128(),
             threshold.toUint120(),
             true
@@ -261,7 +261,7 @@ contract CSParametersRegistry is
     function getKeyRemovalCharge(
         uint256 curveId
     ) external view returns (uint256 keyRemovalCharge) {
-        markedUint248 memory data = _keyRemovalCharges[curveId];
+        MarkedUint248 memory data = _keyRemovalCharges[curveId];
         return data.isValue ? data.value : defaultKeyRemovalCharge;
     }
 
@@ -269,7 +269,7 @@ contract CSParametersRegistry is
     function getElRewardsStealingAdditionalFine(
         uint256 curveId
     ) external view returns (uint256 fine) {
-        markedUint248 memory data = _elRewardsStealingAdditionalFine[curveId];
+        MarkedUint248 memory data = _elRewardsStealingAdditionalFine[curveId];
         return
             data.isValue ? data.value : defaultElRewardsStealingAdditionalFine;
     }
@@ -278,7 +278,7 @@ contract CSParametersRegistry is
     function getPriorityQueueLimit(
         uint256 curveId
     ) external view returns (uint256 limit) {
-        markedUint248 memory data = _priorityQueueLimits[curveId];
+        MarkedUint248 memory data = _priorityQueueLimits[curveId];
         return data.isValue ? data.value : defaultPriorityQueueLimit;
     }
 
@@ -291,9 +291,9 @@ contract CSParametersRegistry is
         returns (uint256[] memory keyPivots, uint256[] memory rewardShares)
     {
         if (_rewardShareValuesData[curveId].length == 0) {
-            uint256[] memory values = new uint256[](1);
-            values[0] = defaultRewardShare;
-            return (new uint256[](0), values);
+            rewardShares = new uint256[](1);
+            rewardShares[0] = defaultRewardShare;
+            return (new uint256[](0), rewardShares);
         }
         return (
             _rewardSharePivotsData[curveId],
@@ -313,9 +313,9 @@ contract CSParametersRegistry is
         )
     {
         if (_performanceLeewayValuesData[curveId].length == 0) {
-            uint256[] memory values = new uint256[](1);
-            values[0] = defaultPerformanceLeeway;
-            return (new uint256[](0), values);
+            performanceLeeways = new uint256[](1);
+            performanceLeeways[0] = defaultPerformanceLeeway;
+            return (new uint256[](0), performanceLeeways);
         }
         return (
             _performanceLeewayPivotsData[curveId],
@@ -327,7 +327,7 @@ contract CSParametersRegistry is
     function getStrikesParams(
         uint256 curveId
     ) external view returns (uint256 lifetime, uint256 threshold) {
-        markedStrikesParams memory params = _strikesParams[curveId];
+        MarkedStrikesParams memory params = _strikesParams[curveId];
         if (!params.isValue) {
             return (
                 defaultStrikesParams.lifetime,
