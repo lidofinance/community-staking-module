@@ -51,7 +51,7 @@ contract CSParametersRegistry is
         if (admin == address(0)) revert ZeroAdminAddress();
 
         _setDefaultKeyRemovalCharge(data.keyRemovalCharge);
-        _setElRewardsStealingAdditionalFine(
+        _setDefaultElRewardsStealingAdditionalFine(
             data.elRewardsStealingAdditionalFine
         );
         _setDefaultPriorityQueueLimit(data.priorityQueueLimit);
@@ -74,7 +74,7 @@ contract CSParametersRegistry is
     function setDefaultElRewardsStealingAdditionalFine(
         uint256 fine
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setElRewardsStealingAdditionalFine(fine);
+        _setDefaultElRewardsStealingAdditionalFine(fine);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -169,17 +169,19 @@ contract CSParametersRegistry is
         uint256[] calldata keyPivots,
         uint256[] calldata rewardShares
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (keyPivots.length + 1 != rewardShares.length)
+        uint256 keyPivotsLength = keyPivots.length;
+        uint256 rewardSharesLength = rewardShares.length;
+        if (keyPivotsLength + 1 != rewardSharesLength)
             revert InvalidRewardShareData();
-        if (keyPivots.length > 0 && keyPivots[0] == 0)
+        if (keyPivotsLength > 0 && keyPivots[0] == 0)
             revert InvalidRewardShareData();
-        if (keyPivots.length > 1) {
-            for (uint256 i = 0; i < keyPivots.length - 1; ++i) {
+        if (keyPivotsLength > 1) {
+            for (uint256 i = 0; i < keyPivotsLength - 1; ++i) {
                 if (keyPivots[i] >= keyPivots[i + 1])
                     revert InvalidRewardShareData();
             }
         }
-        for (uint256 i = 0; i < rewardShares.length; ++i) {
+        for (uint256 i = 0; i < rewardSharesLength; ++i) {
             if (rewardShares[i] > MAX_BP) revert InvalidRewardShareData();
         }
         _rewardSharePivotsData[curveId] = keyPivots;
@@ -204,17 +206,19 @@ contract CSParametersRegistry is
         uint256[] calldata keyPivots,
         uint256[] calldata performanceLeeways
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (keyPivots.length + 1 != performanceLeeways.length)
+        uint256 keyPivotsLength = keyPivots.length;
+        uint256 performanceLeewaysLength = performanceLeeways.length;
+        if (keyPivotsLength + 1 != performanceLeewaysLength)
             revert InvalidPerformanceLeewayData();
-        if (keyPivots.length > 0 && keyPivots[0] == 0)
+        if (keyPivotsLength > 0 && keyPivots[0] == 0)
             revert InvalidPerformanceLeewayData();
-        if (keyPivots.length > 1) {
-            for (uint256 i = 0; i < keyPivots.length - 1; ++i) {
+        if (keyPivotsLength > 1) {
+            for (uint256 i = 0; i < keyPivotsLength - 1; ++i) {
                 if (keyPivots[i] >= keyPivots[i + 1])
                     revert InvalidPerformanceLeewayData();
             }
         }
-        for (uint256 i = 0; i < performanceLeeways.length; ++i) {
+        for (uint256 i = 0; i < performanceLeewaysLength; ++i) {
             if (performanceLeeways[i] > MAX_BP)
                 revert InvalidPerformanceLeewayData();
         }
@@ -342,7 +346,7 @@ contract CSParametersRegistry is
         emit DefaultKeyRemovalChargeSet(keyRemovalCharge);
     }
 
-    function _setElRewardsStealingAdditionalFine(uint256 fine) internal {
+    function _setDefaultElRewardsStealingAdditionalFine(uint256 fine) internal {
         defaultElRewardsStealingAdditionalFine = fine;
         emit DefaultElRewardsStealingAdditionalFineSet(fine);
     }
