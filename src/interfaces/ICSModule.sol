@@ -423,10 +423,10 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         uint256 maxItems
     ) external returns (uint256 removed, uint256 lastRemovedAtDepth);
 
-    /// @notice Perform queue normalization for the given Node Operator
-    /// @notice Normalization stands for adding vetted but not enqueued keys to the queue
+    /// @notice Enqueue all unqueued keys for the given Node Operator
+    /// @notice Unqueued stands for vetted but not enqueued keys
     /// @param nodeOperatorId ID of the Node Operator
-    function normalizeQueue(uint256 nodeOperatorId) external;
+    function enqueueNodeOperatorKeys(uint256 nodeOperatorId) external;
 
     /// @notice Get Node Operator info
     /// @param nodeOperatorId ID of the Node Operator

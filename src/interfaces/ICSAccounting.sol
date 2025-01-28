@@ -284,7 +284,7 @@ interface ICSAccounting is
     function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external;
 
     /// @notice Reset bond curve to the default one for the given Node Operator
-    /// @dev If called externally, the `normalizeQueue` method from CSModule.sol should be called after
+    /// @dev If called externally, the `enqueueNodeOperatorKeys` method from CSModule.sol should be called after
     ///      to ensure key pointers consistency
     /// @param nodeOperatorId ID of the Node Operator
     function resetBondCurve(uint256 nodeOperatorId) external;

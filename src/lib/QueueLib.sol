@@ -114,7 +114,7 @@ library QueueLib {
     //////
     /// External methods
     //////
-    function normalize(
+    function enqueueNodeOperatorKeys(
         Queue storage self,
         mapping(uint256 => NodeOperator) storage nodeOperators,
         uint256 nodeOperatorId

@@ -2946,13 +2946,13 @@ contract CsmQueueOps is CSMCommon {
         }
     }
 
-    function test_normalizeQueue_NothingToDo() public assertInvariants {
-        // `normalizeQueue` will be called on creating a node operator and uploading a key.
+    function test_enqueueNodeOperatorKeys_NothingToDo() public assertInvariants {
+        // `enqueueNodeOperatorKeys` will be called on creating a node operator and uploading a key.
         uint256 noId = createNodeOperator();
 
         vm.recordLogs();
         vm.prank(nodeOperator);
-        csm.normalizeQueue(noId);
+        csm.enqueueNodeOperatorKeys(noId);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         assertEq(logs.length, 0);
     }
@@ -6351,7 +6351,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be no unbonded keys"
         );
 
-        csm.normalizeQueue(noId);
+        csm.enqueueNodeOperatorKeys(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             0,
@@ -6383,7 +6383,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be unbonded keys"
         );
 
-        csm.normalizeQueue(noId);
+        csm.enqueueNodeOperatorKeys(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             0,
@@ -6420,7 +6420,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be no unbonded keys"
         );
 
-        csm.normalizeQueue(noId);
+        csm.enqueueNodeOperatorKeys(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore,
@@ -6454,7 +6454,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be unbonded keys"
         );
 
-        csm.normalizeQueue(noId);
+        csm.enqueueNodeOperatorKeys(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore - 2,
@@ -6497,7 +6497,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
         );
         assertEq(accounting.getUnbondedKeysCount(noId), 0);
 
-        csm.normalizeQueue(noId);
+        csm.enqueueNodeOperatorKeys(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             0,
@@ -6540,7 +6540,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
         );
         assertEq(accounting.getUnbondedKeysCount(noId), 2);
 
-        csm.normalizeQueue(noId);
+        csm.enqueueNodeOperatorKeys(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             0,
@@ -6589,7 +6589,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be no unbonded keys after curve update"
         );
 
-        csm.normalizeQueue(noId);
+        csm.enqueueNodeOperatorKeys(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore,
@@ -6638,7 +6638,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be unbonded keys after curve update"
         );
 
-        csm.normalizeQueue(noId);
+        csm.enqueueNodeOperatorKeys(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore - 2,
@@ -6688,7 +6688,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be no unbonded keys after curve update"
         );
 
-        csm.normalizeQueue(noId);
+        csm.enqueueNodeOperatorKeys(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore,
@@ -6738,7 +6738,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be unbonded keys after curve update"
         );
 
-        csm.normalizeQueue(noId);
+        csm.enqueueNodeOperatorKeys(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore - 2,
