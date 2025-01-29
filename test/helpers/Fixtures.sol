@@ -19,13 +19,14 @@ import { IGateSeal } from "../../src/interfaces/IGateSeal.sol";
 import { HashConsensus } from "../../src/lib/base-oracle/HashConsensus.sol";
 import { IWithdrawalQueue } from "../../src/interfaces/IWithdrawalQueue.sol";
 import { CSModule } from "../../src/CSModule.sol";
+import { CSParametersRegistry } from "../../src/CSParametersRegistry.sol";
 import { PermissionlessGate } from "../../src/PermissionlessGate.sol";
 import { VettedGate } from "../../src/VettedGate.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";
 import { CSFeeOracle } from "../../src/CSFeeOracle.sol";
 import { CSFeeDistributor } from "../../src/CSFeeDistributor.sol";
 import { CSVerifier } from "../../src/CSVerifier.sol";
-import { DeployParams } from "../../script/DeployBase.s.sol";
+import { DeployParams, DeployParamsV1 } from "../../script/DeployBase.s.sol";
 import { IACL } from "../../src/interfaces/IACL.sol";
 import { IKernel } from "../../src/interfaces/IKernel.sol";
 import { ICSEarlyAdoption } from "../../src/interfaces/ICSEarlyAdoption.sol";
@@ -91,6 +92,7 @@ contract DeploymentHelpers is Test {
         address csm;
         address permissionlessGate;
         address vettedGate;
+        address parametersRegistry;
         /// legacy from v1
         address earlyAdoption;
         address accounting;
@@ -105,6 +107,8 @@ contract DeploymentHelpers is Test {
     struct UpgradeConfig {
         address permissionlessGate;
         address vettedGate;
+        address parametersRegistry;
+        address parametersRegistryImpl;
         address csmImpl;
         address accountingImpl;
         address oracleImpl;
@@ -157,6 +161,15 @@ contract DeploymentHelpers is Test {
             vm.label(deploymentConfig.vettedGate, "vettedGate");
         }
 
+        /// Optional, new in v2. Parameters registry is not present v1 deployment configs
+        if (vm.keyExists(config, ".CSParametersRegistry")) {
+            deploymentConfig.parametersRegistry = vm.parseJsonAddress(
+                config,
+                ".CSParametersRegistry"
+            );
+            vm.label(deploymentConfig.parametersRegistry, "parametersRegistry");
+        }
+
         deploymentConfig.accounting = vm.parseJsonAddress(
             config,
             ".CSAccounting"
@@ -199,6 +212,10 @@ contract DeploymentHelpers is Test {
             ".PermissionlessGate"
         );
         upgradeConfig.vettedGate = vm.parseJsonAddress(config, ".VettedGate");
+        upgradeConfig.parametersRegistry = vm.parseJsonAddress(
+            config,
+            ".CSParametersRegistry"
+        );
         upgradeConfig.csmImpl = vm.parseJsonAddress(config, ".CSModuleImpl");
         upgradeConfig.accountingImpl = vm.parseJsonAddress(
             config,
@@ -220,6 +237,17 @@ contract DeploymentHelpers is Test {
         upgradeConfig.gateSeal = vm.parseJsonAddress(config, ".GateSeal");
     }
 
+    function parseDeployParamsV1(
+        string memory deployConfigPath
+    ) internal view returns (DeployParamsV1 memory) {
+        string memory config = vm.readFile(deployConfigPath);
+        return
+            abi.decode(
+                vm.parseJsonBytes(config, ".DeployParams"),
+                (DeployParamsV1)
+            );
+    }
+
     function parseDeployParams(
         string memory deployConfigPath
     ) internal view returns (DeployParams memory) {
@@ -239,6 +267,7 @@ contract DeploymentHelpers is Test {
 
 contract DeploymentFixtures is StdCheats, DeploymentHelpers {
     CSModule public csm;
+    CSParametersRegistry public parametersRegistry;
     PermissionlessGate public permissionlessGate;
     VettedGate public vettedGate;
     ICSEarlyAdoption public earlyAdoption;
@@ -263,6 +292,9 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
         assertEq(deploymentConfig.chainId, block.chainid, "ChainId mismatch");
 
         csm = CSModule(deploymentConfig.csm);
+        parametersRegistry = CSParametersRegistry(
+            deploymentConfig.parametersRegistry
+        );
         permissionlessGate = PermissionlessGate(
             deploymentConfig.permissionlessGate
         );
@@ -283,6 +315,9 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
         if (!_isEmpty(env.UPGRADE_CONFIG)) {
             UpgradeConfig memory upgradeConfig = parseUpgradeConfig(
                 vm.readFile(env.UPGRADE_CONFIG)
+            );
+            parametersRegistry = CSParametersRegistry(
+                upgradeConfig.parametersRegistry
             );
             permissionlessGate = PermissionlessGate(
                 upgradeConfig.permissionlessGate

@@ -11,6 +11,7 @@ import { IAssetRecovererLib } from "../lib/AssetRecovererLib.sol";
 import { Batch } from "../lib/QueueLib.sol";
 import { ILidoLocator } from "./ILidoLocator.sol";
 import { IStETH } from "./IStETH.sol";
+import { ICSParametersRegistry } from "./ICSParametersRegistry.sol";
 
 struct NodeOperator {
     // All the counters below are used together e.g. in the _updateDepositableValidatorsCount
@@ -64,6 +65,7 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     error ZeroAdminAddress();
     error ZeroSenderAddress();
     error ZeroRewardAddress();
+    error ZeroParametersRegistryAddress();
 
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
@@ -109,7 +111,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     );
 
     event PublicRelease();
-    event KeyRemovalChargeSet(uint256 amount);
     event KeyRemovalChargeApplied(uint256 indexed nodeOperatorId);
     event ELRewardsStealingPenaltyReported(
         uint256 indexed nodeOperatorId,
@@ -126,16 +127,9 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     );
     event ELRewardsStealingPenaltySettled(uint256 indexed nodeOperatorId);
 
-    function EL_REWARDS_STEALING_ADDITIONAL_FINE()
-        external
-        view
-        returns (uint256);
-
     function INITIAL_SLASHING_PENALTY() external view returns (uint256);
 
     function LIDO_LOCATOR() external view returns (ILidoLocator);
-
-    function MAX_KEY_REMOVAL_CHARGE() external view returns (uint256);
 
     function MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE()
         external
@@ -167,6 +161,11 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     function CREATE_NODE_OPERATOR_ROLE() external view returns (bytes32);
 
     function SET_BOND_CURVE_ROLE() external view returns (bytes32);
+
+    function PARAMETERS_REGISTRY()
+        external
+        view
+        returns (ICSParametersRegistry);
 
     /// @notice Returns the address of the accounting contract
     function accounting() external view returns (ICSAccounting);
@@ -509,12 +508,4 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         uint256 startIndex,
         uint256 keysCount
     ) external;
-
-    /// @notice Returns the key removal charge amount
-    function keyRemovalCharge() external view returns (uint256);
-
-    /// @notice Set the key removal charge amount.
-    ///         A charge is taken from the bond for each removed key
-    /// @param amount Amount of stETH in wei to be charged for removing a single key
-    function setKeyRemovalCharge(uint256 amount) external;
 }

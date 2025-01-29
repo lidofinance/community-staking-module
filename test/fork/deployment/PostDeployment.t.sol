@@ -10,12 +10,14 @@ import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
 import { DeployParams } from "../../../script/DeployBase.s.sol";
 import { OssifiableProxy } from "../../../src/lib/proxy/OssifiableProxy.sol";
 import { CSModule } from "../../../src/CSModule.sol";
+import { CSParametersRegistry } from "../../../src/CSParametersRegistry.sol";
 import { CSAccounting } from "../../../src/CSAccounting.sol";
 import { HashConsensus } from "../../../src/lib/base-oracle/HashConsensus.sol";
 import { CSBondCurve } from "../../../src/abstract/CSBondCurve.sol";
 import { CSFeeDistributor } from "../../../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../../../src/CSFeeOracle.sol";
 import { IWithdrawalQueue } from "../../../src/interfaces/IWithdrawalQueue.sol";
+import { ICSParametersRegistry } from "../../../src/interfaces/ICSParametersRegistry.sol";
 import { BaseOracle } from "../../../src/lib/base-oracle/BaseOracle.sol";
 import { GIndex } from "../../../src/lib/GIndex.sol";
 import { Slot } from "../../../src/lib/Types.sol";
@@ -41,23 +43,14 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
             32 ether / deployParams.minSlashingPenaltyQuotient
         );
         assertEq(
-            csm.EL_REWARDS_STEALING_ADDITIONAL_FINE(),
-            deployParams.elRewardsStealingAdditionalFine
-        );
-        assertEq(
             csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(),
             deployParams.maxKeysPerOperatorEA
-        );
-        assertEq(
-            csm.MAX_KEY_REMOVAL_CHARGE(),
-            deployParams.maxKeyRemovalCharge
         );
         assertEq(address(csm.LIDO_LOCATOR()), deployParams.lidoLocatorAddress);
     }
 
     function test_initializer() public view {
         assertEq(address(csm.accounting()), address(accounting));
-        assertEq(csm.keyRemovalCharge(), deployParams.keyRemovalCharge);
         assertTrue(
             csm.hasRole(csm.STAKING_ROUTER_ROLE(), locator.stakingRouter())
         );
@@ -112,8 +105,90 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         csmImpl.initialize({
             _accounting: address(accounting),
-            _keyRemovalCharge: deployParams.keyRemovalCharge,
             admin: deployParams.aragonAgent
+        });
+    }
+}
+
+contract CSParametersRegistryDeploymentTest is
+    Test,
+    Utilities,
+    DeploymentFixtures
+{
+    DeployParams private deployParams;
+
+    function setUp() public {
+        Env memory env = envVars();
+        vm.createSelectFork(env.RPC_URL);
+        initializeFromDeployment();
+        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
+    }
+
+    function test_initializer() public view {
+        assertEq(
+            parametersRegistry.defaultKeyRemovalCharge(),
+            deployParams.keyRemovalCharge
+        );
+        assertEq(
+            parametersRegistry.defaultElRewardsStealingAdditionalFine(),
+            deployParams.elRewardsStealingAdditionalFine
+        );
+        assertEq(
+            parametersRegistry.defaultPriorityQueueLimit(),
+            deployParams.priorityQueueLimit
+        );
+        assertEq(
+            parametersRegistry.defaultRewardShare(),
+            deployParams.rewardShareBP
+        );
+        assertEq(
+            parametersRegistry.defaultPerformanceLeeway(),
+            deployParams.avgPerfLeewayBP
+        );
+        (uint256 strikesLifetime, uint256 strikesThreshold) = parametersRegistry
+            .defaultStrikesParams();
+        assertEq(strikesLifetime, deployParams.strikesLifetimeFrames);
+        assertEq(strikesThreshold, deployParams.strikesThreshold);
+    }
+
+    function test_roles() public view {
+        assertTrue(
+            parametersRegistry.hasRole(
+                parametersRegistry.DEFAULT_ADMIN_ROLE(),
+                deployParams.aragonAgent
+            )
+        );
+        assertEq(
+            parametersRegistry.getRoleMemberCount(
+                parametersRegistry.DEFAULT_ADMIN_ROLE()
+            ),
+            1
+        );
+    }
+
+    function test_proxy() public {
+        OssifiableProxy proxy = OssifiableProxy(
+            payable(address(parametersRegistry))
+        );
+        assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
+        assertFalse(proxy.proxy__getIsOssified());
+
+        CSParametersRegistry parametersRegistryImpl = CSParametersRegistry(
+            proxy.proxy__getImplementation()
+        );
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        parametersRegistryImpl.initialize({
+            admin: deployParams.aragonAgent,
+            data: ICSParametersRegistry.InitializationData({
+                keyRemovalCharge: deployParams.keyRemovalCharge,
+                elRewardsStealingAdditionalFine: deployParams
+                    .elRewardsStealingAdditionalFine,
+                priorityQueueLimit: deployParams.priorityQueueLimit,
+                rewardShare: deployParams.rewardShareBP,
+                performanceLeeway: deployParams.avgPerfLeewayBP,
+                strikesLifetime: deployParams.strikesLifetimeFrames,
+                strikesThreshold: deployParams.strikesThreshold
+            })
         });
     }
 }
@@ -312,7 +387,6 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertEq(oracle.getConsensusContract(), address(hashConsensus));
         assertEq(oracle.getConsensusVersion(), deployParams.consensusVersion);
         assertEq(oracle.getLastProcessingRefSlot(), 0);
-        assertEq(oracle.avgPerfLeewayBP(), deployParams.avgPerfLeewayBP);
     }
 
     function test_roles() public view {
@@ -352,8 +426,7 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
             admin: address(deployParams.aragonAgent),
             feeDistributorContract: address(feeDistributor),
             consensusContract: address(hashConsensus),
-            consensusVersion: deployParams.consensusVersion,
-            _avgPerfLeewayBP: deployParams.avgPerfLeewayBP
+            consensusVersion: deployParams.consensusVersion
         });
     }
 }

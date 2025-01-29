@@ -11,6 +11,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { IStakingModule } from "./interfaces/IStakingModule.sol";
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
+import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSModule, NodeOperator, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
 
@@ -51,24 +52,24 @@ contract CSModule is
     uint8 private constant FORCED_TARGET_LIMIT_MODE_ID = 2;
 
     uint256 public immutable INITIAL_SLASHING_PENALTY;
-    uint256 public immutable EL_REWARDS_STEALING_ADDITIONAL_FINE;
     uint256
         public immutable MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE;
-    uint256 public immutable MAX_KEY_REMOVAL_CHARGE;
     bytes32 private immutable MODULE_TYPE;
     ILidoLocator public immutable LIDO_LOCATOR;
     IStETH public immutable STETH;
+    ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
 
     ////////////////////////
     // State variables below
     ////////////////////////
-    uint256 public keyRemovalCharge;
+    /// @dev DEPRECATED. Moved to CSParametersRegistry
+    uint256 internal _keyRemovalCharge;
 
     QueueLib.Queue public depositQueue;
 
     ICSAccounting public accounting;
 
-    /// @dev deprecated
+    /// @dev DEPRECATED
     address internal _earlyAdoption;
     bool public publicRelease;
 
@@ -87,20 +88,20 @@ contract CSModule is
     constructor(
         bytes32 moduleType,
         uint256 minSlashingPenaltyQuotient,
-        uint256 elRewardsStealingAdditionalFine,
         uint256 maxKeysPerOperatorEA,
-        uint256 maxKeyRemovalCharge,
-        address lidoLocator
+        address lidoLocator,
+        address parametersRegistry
     ) {
         if (lidoLocator == address(0)) revert ZeroLocatorAddress();
+        if (parametersRegistry == address(0))
+            revert ZeroParametersRegistryAddress();
 
         MODULE_TYPE = moduleType;
         INITIAL_SLASHING_PENALTY = DEPOSIT_SIZE / minSlashingPenaltyQuotient;
-        EL_REWARDS_STEALING_ADDITIONAL_FINE = elRewardsStealingAdditionalFine;
         MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE = maxKeysPerOperatorEA;
-        MAX_KEY_REMOVAL_CHARGE = maxKeyRemovalCharge;
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
         STETH = IStETH(LIDO_LOCATOR.lido());
+        PARAMETERS_REGISTRY = ICSParametersRegistry(parametersRegistry);
 
         _disableInitializers();
     }
@@ -108,7 +109,6 @@ contract CSModule is
     /// @notice initialize the module
     function initialize(
         address _accounting,
-        uint256 _keyRemovalCharge,
         address admin
     ) external initializer {
         if (_accounting == address(0)) revert ZeroAccountingAddress();
@@ -121,7 +121,6 @@ contract CSModule is
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(STAKING_ROUTER_ROLE, address(LIDO_LOCATOR.stakingRouter()));
 
-        _setKeyRemovalCharge(_keyRemovalCharge);
         // CSM is on pause initially and should be resumed during the vote
         _pauseFor(PausableUntil.PAUSE_INFINITELY);
     }
@@ -141,13 +140,6 @@ contract CSModule is
         if (publicRelease) revert AlreadyActivated();
         publicRelease = true;
         emit PublicRelease();
-    }
-
-    /// @inheritdoc ICSModule
-    function setKeyRemovalCharge(
-        uint256 amount
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setKeyRemovalCharge(amount);
     }
 
     /// @inheritdoc ICSModule
@@ -694,7 +686,9 @@ contract CSModule is
         // The Node Operator is charged for the every removed key. It's motivated by the fact that the DAO should cleanup
         // the queue from the empty batches related to the Node Operator. It's possible to have multiple batches with only one
         // key in it, so it means the DAO should be able to cover removal costs for as much batches as keys removed in this case.
-        uint256 amountToCharge = keyRemovalCharge * keysCount;
+        uint256 amountToCharge = PARAMETERS_REGISTRY.getKeyRemovalCharge(
+            accounting.getBondCurveId(nodeOperatorId)
+        ) * keysCount;
         if (amountToCharge != 0) {
             accounting.chargeFee(nodeOperatorId, amountToCharge);
             emit KeyRemovalChargeApplied(nodeOperatorId);
@@ -748,10 +742,11 @@ contract CSModule is
     ) external onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
         if (amount == 0) revert InvalidAmount();
-        accounting.lockBondETH(
-            nodeOperatorId,
-            amount + EL_REWARDS_STEALING_ADDITIONAL_FINE
-        );
+        uint256 additionalFine = PARAMETERS_REGISTRY
+            .getElRewardsStealingAdditionalFine(
+                accounting.getBondCurveId(nodeOperatorId)
+            );
+        accounting.lockBondETH(nodeOperatorId, amount + additionalFine);
         emit ELRewardsStealingPenaltyReported(
             nodeOperatorId,
             blockHash,
@@ -878,7 +873,7 @@ contract CSModule is
     }
 
     /// @inheritdoc IStakingModule
-    /// @dev Resets the key removal charge
+    /// @dev Wipes out the queue
     /// @dev Changing the WC means that the current deposit data in the queue is not valid anymore and can't be deposited
     ///      So, the key removal charge should be reset to 0 to allow Node Operators to remove the keys without any charge.
     ///      After keys removal the DAO should set the new key removal charge.
@@ -886,7 +881,8 @@ contract CSModule is
         external
         onlyRole(STAKING_ROUTER_ROLE)
     {
-        _setKeyRemovalCharge(0);
+        // skip all existing queue batches to effectively wipe out the queue
+        depositQueue.head = depositQueue.tail;
     }
 
     /// @inheritdoc IStakingModule
@@ -1025,12 +1021,6 @@ contract CSModule is
     /// @inheritdoc IStakingModule
     function getType() external view returns (bytes32) {
         return MODULE_TYPE;
-    }
-
-    /// @dev DEPRECATED. Use `EL_REWARDS_STEALING_ADDITIONAL_FINE` instead
-    // solhint-disable func-name-mixedcase
-    function EL_REWARDS_STEALING_FINE() external view returns (uint256) {
-        return EL_REWARDS_STEALING_ADDITIONAL_FINE;
     }
 
     /// @inheritdoc IStakingModule
@@ -1258,12 +1248,6 @@ contract CSModule is
             incrementNonceIfUpdated: false
         });
         _incrementModuleNonce();
-    }
-
-    function _setKeyRemovalCharge(uint256 amount) internal {
-        if (amount > MAX_KEY_REMOVAL_CHARGE) revert InvalidInput();
-        keyRemovalCharge = amount;
-        emit KeyRemovalChargeSet(amount);
     }
 
     /// @dev Update exited validators count for a single Node Operator
