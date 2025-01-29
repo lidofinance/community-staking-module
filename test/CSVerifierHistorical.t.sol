@@ -54,12 +54,14 @@ contract CSVerifierHistoricalTest is Test, Utilities {
             withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: pack(0x3b, 0),
-            gIHistoricalSummariesCurr: pack(0x3b, 0),
-            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
-            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
-            gIFirstValidatorPrev: pack(0x560000000000, 40),
-            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: pack(0x3b, 0),
+                gIHistoricalSummariesCurr: pack(0x3b, 0),
+                gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+                gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+                gIFirstValidatorPrev: pack(0x560000000000, 40),
+                gIFirstValidatorCurr: pack(0x560000000000, 40)
+            }),
             firstSupportedSlot: Slot.wrap(100_500), // Any value less than the slots from the fixtures.
             pivotSlot: Slot.wrap(100_500),
             admin: admin

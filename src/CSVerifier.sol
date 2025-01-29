@@ -75,12 +75,7 @@ contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
         address withdrawalAddress,
         address module,
         uint64 slotsPerEpoch,
-        GIndex gIFirstWithdrawalPrev,
-        GIndex gIFirstWithdrawalCurr,
-        GIndex gIFirstValidatorPrev,
-        GIndex gIFirstValidatorCurr,
-        GIndex gIHistoricalSummariesPrev,
-        GIndex gIHistoricalSummariesCurr,
+        GIndices memory gindices,
         Slot firstSupportedSlot,
         Slot pivotSlot,
         address admin
@@ -97,14 +92,14 @@ contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
 
         SLOTS_PER_EPOCH = slotsPerEpoch;
 
-        GI_FIRST_WITHDRAWAL_PREV = gIFirstWithdrawalPrev;
-        GI_FIRST_WITHDRAWAL_CURR = gIFirstWithdrawalCurr;
+        GI_FIRST_WITHDRAWAL_PREV = gindices.gIFirstWithdrawalPrev;
+        GI_FIRST_WITHDRAWAL_CURR = gindices.gIFirstWithdrawalCurr;
 
-        GI_FIRST_VALIDATOR_PREV = gIFirstValidatorPrev;
-        GI_FIRST_VALIDATOR_CURR = gIFirstValidatorCurr;
+        GI_FIRST_VALIDATOR_PREV = gindices.gIFirstValidatorPrev;
+        GI_FIRST_VALIDATOR_CURR = gindices.gIFirstValidatorCurr;
 
-        GI_HISTORICAL_SUMMARIES_PREV = gIHistoricalSummariesPrev;
-        GI_HISTORICAL_SUMMARIES_CURR = gIHistoricalSummariesCurr;
+        GI_HISTORICAL_SUMMARIES_PREV = gindices.gIHistoricalSummariesPrev;
+        GI_HISTORICAL_SUMMARIES_CURR = gindices.gIHistoricalSummariesCurr;
 
         FIRST_SUPPORTED_SLOT = firstSupportedSlot;
         PIVOT_SLOT = pivotSlot;

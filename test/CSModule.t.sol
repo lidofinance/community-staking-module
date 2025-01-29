@@ -2809,9 +2809,9 @@ contract CsmQueueOps is CSMCommon {
 
     function _isQueueDirty(uint256 maxItems) internal returns (bool) {
         // XXX: Mimic a **eth_call** to avoid state changes.
-        uint256 snapshot = vm.snapshot();
+        uint256 snapshot = vm.snapshotState();
         (uint256 toRemove, ) = csm.cleanDepositQueue(maxItems);
-        vm.revertTo(snapshot);
+        vm.revertToState(snapshot);
         return toRemove > 0;
     }
 
@@ -2925,7 +2925,7 @@ contract CsmQueueOps is CSMCommon {
         // Items marked with * below are supposed to be removed.
         // (0;3) (1;5) *(2;1) (3;4) (4;2) *(1;2) (3;2) (4;2)
 
-        uint256 snapshot = vm.snapshot();
+        uint256 snapshot = vm.snapshotState();
 
         {
             (uint256 toRemove, uint256 toVisit) = csm.cleanDepositQueue({
@@ -2935,7 +2935,7 @@ contract CsmQueueOps is CSMCommon {
             assertEq(toVisit, 6, "toVisit != 6");
         }
 
-        vm.revertTo(snapshot);
+        vm.revertToState(snapshot);
 
         {
             (uint256 toRemove, uint256 toVisit) = csm.cleanDepositQueue({
