@@ -162,7 +162,7 @@ contract DeploymentHelpers is Test {
         }
 
         /// Optional, new in v2. Parameters registry is not present v1 deployment configs
-        if (vm.keyExists(config, ".CSParametersRegistry")) {
+        if (vm.keyExistsJson(config, ".CSParametersRegistry")) {
             deploymentConfig.parametersRegistry = vm.parseJsonAddress(
                 config,
                 ".CSParametersRegistry"
