@@ -8,6 +8,15 @@ import { GIndex } from "../lib/GIndex.sol";
 import { ICSModule } from "./ICSModule.sol";
 
 interface ICSVerifier {
+    struct GIndices {
+        GIndex gIFirstWithdrawalPrev;
+        GIndex gIFirstWithdrawalCurr;
+        GIndex gIFirstValidatorPrev;
+        GIndex gIFirstValidatorCurr;
+        GIndex gIHistoricalSummariesPrev;
+        GIndex gIHistoricalSummariesCurr;
+    }
+
     struct ProvableBeaconBlockHeader {
         BeaconBlockHeader header; // Header of a block which root is a root at rootsTimestamp.
         uint64 rootsTimestamp; // To be passed to the EIP-4788 block roots contract.

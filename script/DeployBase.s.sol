@@ -12,6 +12,7 @@ import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
+import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { PermissionlessGate } from "../src/PermissionlessGate.sol";
 import { VettedGate } from "../src/VettedGate.sol";
 import { CSParametersRegistry } from "../src/CSParametersRegistry.sol";
@@ -240,12 +241,14 @@ abstract contract DeployBase is Script {
                 withdrawalAddress: locator.withdrawalVault(),
                 module: address(csm),
                 slotsPerEpoch: uint64(config.slotsPerEpoch),
-                gIFirstWithdrawalPrev: config.gIFirstWithdrawal,
-                gIFirstWithdrawalCurr: config.gIFirstWithdrawal,
-                gIFirstValidatorPrev: config.gIFirstValidator,
-                gIFirstValidatorCurr: config.gIFirstValidator,
-                gIHistoricalSummariesPrev: config.gIHistoricalSummaries,
-                gIHistoricalSummariesCurr: config.gIHistoricalSummaries,
+                gindices: ICSVerifier.GIndices({
+                    gIFirstWithdrawalPrev: config.gIFirstWithdrawal,
+                    gIFirstWithdrawalCurr: config.gIFirstWithdrawal,
+                    gIFirstValidatorPrev: config.gIFirstValidator,
+                    gIFirstValidatorCurr: config.gIFirstValidator,
+                    gIHistoricalSummariesPrev: config.gIHistoricalSummaries,
+                    gIHistoricalSummariesCurr: config.gIHistoricalSummaries
+                }),
                 firstSupportedSlot: Slot.wrap(
                     uint64(config.verifierSupportedEpoch * config.slotsPerEpoch)
                 ),

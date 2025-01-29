@@ -78,12 +78,14 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             withdrawalAddress: withdrawalAddress,
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: pack(0xfff0, 4),
-            gIHistoricalSummariesCurr: pack(0xffff, 4),
-            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
-            gIFirstWithdrawalCurr: pack(0xe1c1, 4),
-            gIFirstValidatorPrev: pack(0x560000000000, 40),
-            gIFirstValidatorCurr: pack(0x560000000001, 40),
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: pack(0xfff0, 4),
+                gIHistoricalSummariesCurr: pack(0xffff, 4),
+                gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+                gIFirstWithdrawalCurr: pack(0xe1c1, 4),
+                gIFirstValidatorPrev: pack(0x560000000000, 40),
+                gIFirstValidatorCurr: pack(0x560000000001, 40)
+            }),
             firstSupportedSlot: firstSupportedSlot,
             pivotSlot: Slot.wrap(100_501),
             admin: admin
@@ -132,12 +134,14 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             withdrawalAddress: nextAddress(),
             module: address(module),
             slotsPerEpoch: 0,
-            gIHistoricalSummariesPrev: NULL_GINDEX,
-            gIHistoricalSummariesCurr: NULL_GINDEX,
-            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
-            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
-            gIFirstValidatorPrev: pack(0x560000000000, 40),
-            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: NULL_GINDEX,
+                gIHistoricalSummariesCurr: NULL_GINDEX,
+                gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+                gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+                gIFirstValidatorPrev: pack(0x560000000000, 40),
+                gIFirstValidatorCurr: pack(0x560000000000, 40)
+            }),
             firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
             pivotSlot: firstSupportedSlot,
             admin: admin
@@ -150,12 +154,14 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             withdrawalAddress: nextAddress(),
             module: address(0),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: NULL_GINDEX,
-            gIHistoricalSummariesCurr: NULL_GINDEX,
-            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
-            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
-            gIFirstValidatorPrev: pack(0x560000000000, 40),
-            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: NULL_GINDEX,
+                gIHistoricalSummariesCurr: NULL_GINDEX,
+                gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+                gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+                gIFirstValidatorPrev: pack(0x560000000000, 40),
+                gIFirstValidatorCurr: pack(0x560000000000, 40)
+            }),
             firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
             pivotSlot: firstSupportedSlot,
             admin: admin
@@ -168,12 +174,14 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             withdrawalAddress: address(0),
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: NULL_GINDEX,
-            gIHistoricalSummariesCurr: NULL_GINDEX,
-            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
-            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
-            gIFirstValidatorPrev: pack(0x560000000000, 40),
-            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: NULL_GINDEX,
+                gIHistoricalSummariesCurr: NULL_GINDEX,
+                gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+                gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+                gIFirstValidatorPrev: pack(0x560000000000, 40),
+                gIFirstValidatorCurr: pack(0x560000000000, 40)
+            }),
             firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
             pivotSlot: firstSupportedSlot,
             admin: admin
@@ -186,12 +194,14 @@ contract CSVerifierTestConstructor is CSVerifierTestBase {
             withdrawalAddress: nextAddress(),
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: NULL_GINDEX,
-            gIHistoricalSummariesCurr: NULL_GINDEX,
-            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
-            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
-            gIFirstValidatorPrev: pack(0x560000000000, 40),
-            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: NULL_GINDEX,
+                gIHistoricalSummariesCurr: NULL_GINDEX,
+                gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+                gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+                gIFirstValidatorPrev: pack(0x560000000000, 40),
+                gIFirstValidatorCurr: pack(0x560000000000, 40)
+            }),
             firstSupportedSlot: firstSupportedSlot, // Any value less than the slots from the fixtures.
             pivotSlot: firstSupportedSlot,
             admin: address(0)
@@ -208,12 +218,14 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
             withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: NULL_GINDEX,
-            gIHistoricalSummariesCurr: NULL_GINDEX,
-            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
-            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
-            gIFirstValidatorPrev: pack(0x560000000000, 40),
-            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: NULL_GINDEX,
+                gIHistoricalSummariesCurr: NULL_GINDEX,
+                gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+                gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+                gIFirstValidatorPrev: pack(0x560000000000, 40),
+                gIFirstValidatorCurr: pack(0x560000000000, 40)
+            }),
             firstSupportedSlot: Slot.wrap(100_500), // Any value less than the slots from the fixtures.
             pivotSlot: Slot.wrap(100_500),
             admin: admin
@@ -458,12 +470,14 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
             withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: NULL_GINDEX,
-            gIHistoricalSummariesCurr: NULL_GINDEX,
-            gIFirstWithdrawalPrev: pack(0xe1c0, 4),
-            gIFirstWithdrawalCurr: pack(0x0, 4),
-            gIFirstValidatorPrev: pack(0x560000000000, 40),
-            gIFirstValidatorCurr: pack(0x0, 40),
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: NULL_GINDEX,
+                gIHistoricalSummariesCurr: NULL_GINDEX,
+                gIFirstWithdrawalPrev: pack(0xe1c0, 4),
+                gIFirstWithdrawalCurr: pack(0x0, 4),
+                gIFirstValidatorPrev: pack(0x560000000000, 40),
+                gIFirstValidatorCurr: pack(0x0, 40)
+            }),
             firstSupportedSlot: fixture.beaconBlock.header.slot.dec(),
             pivotSlot: fixture.beaconBlock.header.slot.inc(),
             admin: admin
@@ -489,12 +503,14 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
             withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: NULL_GINDEX,
-            gIHistoricalSummariesCurr: NULL_GINDEX,
-            gIFirstWithdrawalPrev: pack(0x0, 4),
-            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
-            gIFirstValidatorPrev: pack(0x0, 40),
-            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: NULL_GINDEX,
+                gIHistoricalSummariesCurr: NULL_GINDEX,
+                gIFirstWithdrawalPrev: pack(0x0, 4),
+                gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+                gIFirstValidatorPrev: pack(0x0, 40),
+                gIFirstValidatorCurr: pack(0x560000000000, 40)
+            }),
             firstSupportedSlot: fixture.beaconBlock.header.slot.dec(),
             pivotSlot: fixture.beaconBlock.header.slot,
             admin: admin
@@ -520,12 +536,14 @@ contract CSVerifierWithdrawalTest is CSVerifierTestBase {
             withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: NULL_GINDEX,
-            gIHistoricalSummariesCurr: NULL_GINDEX,
-            gIFirstWithdrawalPrev: pack(0x0, 4),
-            gIFirstWithdrawalCurr: pack(0xe1c0, 4),
-            gIFirstValidatorPrev: pack(0x0, 40),
-            gIFirstValidatorCurr: pack(0x560000000000, 40),
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: NULL_GINDEX,
+                gIHistoricalSummariesCurr: NULL_GINDEX,
+                gIFirstWithdrawalPrev: pack(0x0, 4),
+                gIFirstWithdrawalCurr: pack(0xe1c0, 4),
+                gIFirstValidatorPrev: pack(0x0, 40),
+                gIFirstValidatorCurr: pack(0x560000000000, 40)
+            }),
             firstSupportedSlot: fixture.beaconBlock.header.slot.dec(),
             pivotSlot: fixture.beaconBlock.header.slot.dec(),
             admin: admin
@@ -570,12 +588,14 @@ contract CSVerifierPauseTest is CSVerifierTestBase {
             withdrawalAddress: 0xb3E29C46Ee1745724417C0C51Eb2351A1C01cF36,
             module: address(module),
             slotsPerEpoch: 32,
-            gIHistoricalSummariesPrev: NULL_GINDEX,
-            gIHistoricalSummariesCurr: NULL_GINDEX,
-            gIFirstWithdrawalPrev: NULL_GINDEX,
-            gIFirstWithdrawalCurr: NULL_GINDEX,
-            gIFirstValidatorPrev: NULL_GINDEX,
-            gIFirstValidatorCurr: NULL_GINDEX,
+            gindices: ICSVerifier.GIndices({
+                gIHistoricalSummariesPrev: NULL_GINDEX,
+                gIHistoricalSummariesCurr: NULL_GINDEX,
+                gIFirstWithdrawalPrev: NULL_GINDEX,
+                gIFirstWithdrawalCurr: NULL_GINDEX,
+                gIFirstValidatorPrev: NULL_GINDEX,
+                gIFirstValidatorCurr: NULL_GINDEX
+            }),
             firstSupportedSlot: Slot.wrap(100_500), // Any value less than the slots from the fixtures.
             pivotSlot: Slot.wrap(100_500),
             admin: admin
