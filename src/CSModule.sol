@@ -272,7 +272,7 @@ contract CSModule is
         _onlyExistingNodeOperator(nodeOperatorId);
         accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
 
-        // Due to new bond nonce update might be required and normalize queue might be required
+        // Due to new bond nonce update might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true
@@ -293,7 +293,7 @@ contract CSModule is
             permit
         );
 
-        // Due to new bond nonce update might be required and normalize queue might be required
+        // Due to new bond nonce update might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true
@@ -314,7 +314,7 @@ contract CSModule is
             permit
         );
 
-        // Due to new bond nonce update might be required and normalize queue might be required
+        // Due to new bond nonce update might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true
@@ -338,7 +338,7 @@ contract CSModule is
             rewardsProof: rewardsProof
         });
 
-        // Due to possible missing bond compensation nonce update might be required and normalize queue might be required
+        // Due to possible missing bond compensation nonce update might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true
@@ -362,7 +362,7 @@ contract CSModule is
             rewardsProof: rewardsProof
         });
 
-        // Due to possible missing bond compensation nonce update might be required and normalize queue might be required
+        // Due to possible missing bond compensation nonce update might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true
@@ -386,7 +386,7 @@ contract CSModule is
             rewardsProof: rewardsProof
         });
 
-        // Due to possible missing bond compensation nonce update might be required and normalize queue might be required
+        // Due to possible missing bond compensation nonce update might be required
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true
@@ -731,13 +731,13 @@ contract CSModule is
     // }
 
     /// @inheritdoc ICSModule
-    function normalizeQueue(uint256 nodeOperatorId) external {
+    function enqueueNodeOperatorKeys(uint256 nodeOperatorId) external {
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true
         });
-        // Direct call of `normalize` if depositable is not changed
-        depositQueue.normalize(_nodeOperators, nodeOperatorId);
+        // Direct call of `enqueueNodeOperatorKeys` if depositable is not changed
+        depositQueue.enqueueNodeOperatorKeys(_nodeOperators, nodeOperatorId);
     }
 
     /// @inheritdoc ICSModule
@@ -1381,7 +1381,10 @@ contract CSModule is
             if (incrementNonceIfUpdated) {
                 _incrementModuleNonce();
             }
-            depositQueue.normalize(_nodeOperators, nodeOperatorId);
+            depositQueue.enqueueNodeOperatorKeys(
+                _nodeOperators,
+                nodeOperatorId
+            );
         }
     }
 
