@@ -111,8 +111,8 @@ struct DeployParams {
     uint256 keyRemovalCharge;
     uint256 elRewardsStealingAdditionalFine;
     uint256 avgPerfLeewayBP;
-    uint256 rewardShare;
-    uint256 strikesLifetime;
+    uint256 rewardShareBP;
+    uint256 strikesLifetimeFrames;
     uint256 strikesThreshold;
     uint256 priorityQueueLimit;
     // VettedGate
@@ -262,9 +262,9 @@ abstract contract DeployBase is Script {
                     elRewardsStealingAdditionalFine: config
                         .elRewardsStealingAdditionalFine,
                     priorityQueueLimit: config.priorityQueueLimit,
-                    rewardShare: config.rewardShare,
+                    rewardShare: config.rewardShareBP,
                     performanceLeeway: config.avgPerfLeewayBP,
-                    strikesLifetime: config.strikesLifetime,
+                    strikesLifetime: config.strikesLifetimeFrames,
                     strikesThreshold: config.strikesThreshold
                 })
             });

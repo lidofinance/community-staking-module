@@ -139,7 +139,7 @@ contract CSParametersRegistryDeploymentTest is
         );
         assertEq(
             parametersRegistry.defaultRewardShare(),
-            deployParams.rewardShare
+            deployParams.rewardShareBP
         );
         assertEq(
             parametersRegistry.defaultPerformanceLeeway(),
@@ -147,7 +147,7 @@ contract CSParametersRegistryDeploymentTest is
         );
         (uint256 strikesLifetime, uint256 strikesThreshold) = parametersRegistry
             .defaultStrikesParams();
-        assertEq(strikesLifetime, deployParams.strikesLifetime);
+        assertEq(strikesLifetime, deployParams.strikesLifetimeFrames);
         assertEq(strikesThreshold, deployParams.strikesThreshold);
     }
 
@@ -184,9 +184,9 @@ contract CSParametersRegistryDeploymentTest is
                 elRewardsStealingAdditionalFine: deployParams
                     .elRewardsStealingAdditionalFine,
                 priorityQueueLimit: deployParams.priorityQueueLimit,
-                rewardShare: deployParams.rewardShare,
+                rewardShare: deployParams.rewardShareBP,
                 performanceLeeway: deployParams.avgPerfLeewayBP,
-                strikesLifetime: deployParams.strikesLifetime,
+                strikesLifetime: deployParams.strikesLifetimeFrames,
                 strikesThreshold: deployParams.strikesThreshold
             })
         });

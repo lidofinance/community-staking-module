@@ -43,7 +43,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         );
         assertEq(
             parametersRegistry.defaultRewardShare(),
-            deployParams.rewardShare
+            deployParams.rewardShareBP
         );
         assertEq(
             parametersRegistry.defaultPerformanceLeeway(),
@@ -51,7 +51,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         );
         (uint256 strikesLifetime, uint256 strikesThreshold) = parametersRegistry
             .defaultStrikesParams();
-        assertEq(strikesLifetime, deployParams.strikesLifetime);
+        assertEq(strikesLifetime, deployParams.strikesLifetimeFrames);
         assertEq(strikesThreshold, deployParams.strikesThreshold);
     }
 

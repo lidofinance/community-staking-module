@@ -52,9 +52,9 @@ abstract contract DeployImplementationsBase is DeployBase {
                     elRewardsStealingAdditionalFine: config
                         .elRewardsStealingAdditionalFine,
                     priorityQueueLimit: config.priorityQueueLimit,
-                    rewardShare: config.rewardShare,
+                    rewardShare: config.rewardShareBP,
                     performanceLeeway: config.avgPerfLeewayBP,
-                    strikesLifetime: config.strikesLifetime,
+                    strikesLifetime: config.strikesLifetimeFrames,
                     strikesThreshold: config.strikesThreshold
                 })
             });
