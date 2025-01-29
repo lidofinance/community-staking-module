@@ -9,6 +9,7 @@ import { Script } from "forge-std/Script.sol";
 import { console2 as console } from "forge-std/console2.sol";
 
 import { CSVerifier } from "../src/CSVerifier.sol";
+import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 
@@ -60,12 +61,14 @@ abstract contract DeployCSVerifier is Script {
                 withdrawalAddress: config.withdrawalVault,
                 module: config.module,
                 slotsPerEpoch: config.slotsPerEpoch,
-                gIFirstWithdrawalPrev: config.gIFirstWithdrawalPrev,
-                gIFirstWithdrawalCurr: config.gIFirstWithdrawalCurr,
-                gIFirstValidatorPrev: config.gIFirstValidatorPrev,
-                gIFirstValidatorCurr: config.gIFirstValidatorCurr,
-                gIHistoricalSummariesPrev: config.gIHistoricalSummariesPrev,
-                gIHistoricalSummariesCurr: config.gIHistoricalSummariesCurr,
+                gindices: ICSVerifier.GIndices({
+                    gIFirstWithdrawalPrev: config.gIFirstWithdrawalPrev,
+                    gIFirstWithdrawalCurr: config.gIFirstWithdrawalCurr,
+                    gIFirstValidatorPrev: config.gIFirstValidatorPrev,
+                    gIFirstValidatorCurr: config.gIFirstValidatorCurr,
+                    gIHistoricalSummariesPrev: config.gIHistoricalSummariesPrev,
+                    gIHistoricalSummariesCurr: config.gIHistoricalSummariesCurr
+                }),
                 firstSupportedSlot: config.firstSupportedSlot,
                 pivotSlot: config.pivotSlot,
                 admin: config.admin
