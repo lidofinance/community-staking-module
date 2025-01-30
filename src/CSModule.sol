@@ -528,16 +528,6 @@ contract CSModule is
     }
 
     /// @inheritdoc IStakingModule
-    /// @dev Always reverts. Non supported in CSM
-    /// @dev `refundedValidatorsCount` is not used in the module
-    function updateRefundedValidatorsCount(
-        uint256 /* nodeOperatorId */,
-        uint256 /* refundedValidatorsCount */
-    ) external view onlyRole(STAKING_ROUTER_ROLE) {
-        revert NotSupported();
-    }
-
-    /// @inheritdoc IStakingModule
     function updateTargetValidatorsLimits(
         uint256 nodeOperatorId,
         uint256 targetLimitMode,
@@ -995,6 +985,16 @@ contract CSModule is
             _nodeOperators,
             maxItems
         );
+    }
+
+    /// @inheritdoc IStakingModule
+    /// @dev Always reverts. Non supported in CSM
+    /// @dev `refundedValidatorsCount` is not used in the module
+    function updateRefundedValidatorsCount(
+        uint256 /* nodeOperatorId */,
+        uint256 /* refundedValidatorsCount */
+    ) external view onlyRole(STAKING_ROUTER_ROLE) {
+        revert NotSupported();
     }
 
     /// @inheritdoc ICSModule
