@@ -67,6 +67,8 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     error ZeroRewardAddress();
     error ZeroParametersRegistryAddress();
 
+    error DepositPriorityAlreadyUsed();
+
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
         address indexed managerAddress,
@@ -404,9 +406,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         uint256 nodeOperatorId,
         address newAddress
     ) external;
-
-    /// @notice Returns the deposit queue head and tail
-    function depositQueue() external view returns (uint128 head, uint128 tail);
 
     /// @notice Get the deposit queue item by an index
     /// @param index Index of a queue item

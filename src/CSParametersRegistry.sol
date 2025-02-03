@@ -171,14 +171,17 @@ contract CSParametersRegistry is
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         uint256 keyPivotsLength = keyPivots.length;
         uint256 rewardSharesLength = rewardShares.length;
-        if (keyPivotsLength + 1 != rewardSharesLength)
+        if (keyPivotsLength + 1 != rewardSharesLength) {
             revert InvalidRewardShareData();
-        if (keyPivotsLength > 0 && keyPivots[0] == 0)
+        }
+        if (keyPivotsLength > 0 && keyPivots[0] == 0) {
             revert InvalidRewardShareData();
+        }
         if (keyPivotsLength > 1) {
             for (uint256 i = 0; i < keyPivotsLength - 1; ++i) {
-                if (keyPivots[i] >= keyPivots[i + 1])
+                if (keyPivots[i] >= keyPivots[i + 1]) {
                     revert InvalidRewardShareData();
+                }
             }
         }
         for (uint256 i = 0; i < rewardSharesLength; ++i) {
@@ -209,19 +212,23 @@ contract CSParametersRegistry is
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         uint256 keyPivotsLength = keyPivots.length;
         uint256 performanceLeewaysLength = performanceLeeways.length;
-        if (keyPivotsLength + 1 != performanceLeewaysLength)
+        if (keyPivotsLength + 1 != performanceLeewaysLength) {
             revert InvalidPerformanceLeewayData();
-        if (keyPivotsLength > 0 && keyPivots[0] == 0)
+        }
+        if (keyPivotsLength > 0 && keyPivots[0] == 0) {
             revert InvalidPerformanceLeewayData();
+        }
         if (keyPivotsLength > 1) {
             for (uint256 i = 0; i < keyPivotsLength - 1; ++i) {
-                if (keyPivots[i] >= keyPivots[i + 1])
+                if (keyPivots[i] >= keyPivots[i + 1]) {
                     revert InvalidPerformanceLeewayData();
+                }
             }
         }
         for (uint256 i = 0; i < performanceLeewaysLength; ++i) {
-            if (performanceLeeways[i] > MAX_BP)
+            if (performanceLeeways[i] > MAX_BP) {
                 revert InvalidPerformanceLeewayData();
+            }
         }
         _performanceLeewayData[curveId] = PivotsAndValues({
             pivots: keyPivots,
@@ -339,6 +346,28 @@ contract CSParametersRegistry is
             );
         }
         return (params.lifetime, params.threshold);
+    }
+
+    function getQueuePriority(
+        uint256 curveId
+    ) external view returns (uint256 priority) {
+        return 40; // Default priority, should be greater than LEGACY_QUEUE_PRIOIRITY.
+    }
+
+    function isEligibleForPriorityQueue(
+        uint256 curveId
+    ) external view returns (bool) {
+        // TODO: Early adopters or whatever. Need to think about the mechanic.
+        return curveId == 1;
+    }
+
+    function maxKeysPerOperatorInPriorityQueue()
+        external
+        view
+        returns (uint256)
+    {
+        // TODO: constant or configurable value.
+        return 10;
     }
 
     function _setDefaultKeyRemovalCharge(uint256 keyRemovalCharge) internal {

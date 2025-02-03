@@ -62,10 +62,12 @@ contract CSModule is
     ////////////////////////
     // State variables below
     ////////////////////////
-    /// @dev DEPRECATED. Moved to CSParametersRegistry
-    uint256 internal _keyRemovalCharge;
+    mapping(uint256 queuePriority => QueueLib.Queue queue) queueByPriority;
 
-    QueueLib.Queue public depositQueue;
+    /// @dev Legacy queue (priority=10), that we will probably may be able to remove in the future.
+    QueueLib.Queue public legacyQueue;
+
+    uint256 private constant LEGACY_QUEUE_PRIOIRITY = 10;
 
     ICSAccounting public accounting;
 
@@ -84,6 +86,9 @@ contract CSModule is
     uint64 private _totalExitedValidators;
     uint64 private _depositableValidatorsCount;
     uint64 private _nodeOperatorsCount;
+
+    // TODO: Place instead of publicRelease.
+    uint256[] internal _depositPriorities;
 
     constructor(
         bytes32 moduleType,
@@ -721,7 +726,27 @@ contract CSModule is
             incrementNonceIfUpdated: true
         });
         // Direct call of `enqueueNodeOperatorKeys` if depositable is not changed
-        depositQueue.enqueueNodeOperatorKeys(_nodeOperators, nodeOperatorId);
+        _enqueueNodeOperatorKeys(nodeOperatorId);
+    }
+
+    function _enqueueNodeOperatorKeys(uint256 nodeOperatorId) internal {
+        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        if (PARAMETERS_REGISTRY.isEligibleForPriorityQueue(curveId) &&
+            PARAMETERS_REGISTRY.maxKeysPerOperatorInPriorityQueue() > no.totalAddedKeys) {
+            QueueLib.Queue storage q = _getPriorityQueue();
+            q.enqueueNodeOperatorKeys(_nodeOperators, nodeOperatorId);
+        }
+
+        if (no.depositableValidatorsCount == 0) {
+            return;
+        }
+
+        uint256 p = PARAMETERS_REGISTRY.getQueuePriority(curveId);
+        QueueLib.Queue storage q = _getQueue(p);
+
+        q.enqueueNodeOperatorKeys(_nodeOperators, nodeOperatorId);
     }
 
     /// @inheritdoc ICSModule
@@ -872,7 +897,10 @@ contract CSModule is
         onlyRole(STAKING_ROUTER_ROLE)
     {
         // skip all existing queue batches to effectively wipe out the queue
-        depositQueue.head = depositQueue.tail;
+        for (uint256 p; p < _depositPriorities.length; ++p) {
+            QueueLib.Queue storage q = _getQueue(p);
+            q.head = q.tail;
+        }
     }
 
     /// @inheritdoc IStakingModule
@@ -892,6 +920,38 @@ contract CSModule is
         uint256 depositsLeft = depositsCount;
         uint256 loadedKeysCount = 0;
 
+        for (uint256 p; p < _depositPriorities.length; ++p) {
+            // TODO: Check that passing bytes arrays works.
+            (depositsLeft, loadedKeysCount) = _getDepositDataFromQueue(
+                _getQueue(p),
+                depositsLeft,
+                loadedKeysCount,
+                publicKeys,
+                signatures
+            );
+            if (depositsLeft == 0) break;
+        }
+
+        if (loadedKeysCount != depositsCount) {
+            revert NotEnoughKeys();
+        }
+
+        unchecked {
+            // @dev depositsCount can not overflow in practice due to memory and gas limits
+            _depositableValidatorsCount -= uint64(depositsCount);
+            _totalDepositedValidators += uint64(depositsCount);
+        }
+
+        _incrementModuleNonce();
+    }
+
+    function _getDepositDataFromQueue(
+        QueueLib.Queue storage depositQueue,
+        uint256 depositsLeft,
+        uint256 loadedKeysCount,
+        bytes memory publicKeys,
+        bytes memory signatures
+    ) internal returns (uint256, uint256) {
         for (
             Batch item = depositQueue.peek();
             !item.isNil();
@@ -964,27 +1024,48 @@ contract CSModule is
                 }
             }
         }
-        if (loadedKeysCount != depositsCount) {
-            revert NotEnoughKeys();
+
+        return (depositsLeft, loadedKeysCount);
+    }
+
+    // TODO: Remove with fixing tests.
+    function depositQueue() external view returns (uint128 head, uint128 tail) {
+        return (legacyQueue.head, legacyQueue.tail);
+    }
+
+    function registerDepositPriority(
+        uint256 value
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        // Ensured by an upgrade to v2.
+        // if (priority == LEGACY_QUEUE_PRIOIRITY) {
+        //     revert QueuePriorityAlreadyUsed();
+        // }
+
+        for (uint256 i; i < _depositPriorities.length; ++i) {
+            uint256 buf = _depositPriorities[i];
+
+            if (value == buf) {
+                revert DepositPriorityAlreadyUsed();
+            }
+
+            if (value < buf) {
+                _depositPriorities[i] = value;
+                value = buf;
+            }
         }
 
-        unchecked {
-            // @dev depositsCount can not overflow in practice due to memory and gas limits
-            _depositableValidatorsCount -= uint64(depositsCount);
-            _totalDepositedValidators += uint64(depositsCount);
-        }
-
-        _incrementModuleNonce();
+        _depositPriorities.push(value);
     }
 
     /// @inheritdoc ICSModule
     function cleanDepositQueue(
         uint256 maxItems
     ) external returns (uint256 removed, uint256 lastRemovedAtDepth) {
-        (removed, lastRemovedAtDepth) = depositQueue.clean(
-            _nodeOperators,
-            maxItems
-        );
+        for (uint256 p; p < _depositPriorities.length; ++p) {
+            QueueLib.Queue storage q = _getQueue(_depositPriorities[p]);
+            // FIXME: Check that we have exhausted the queue before moving further.
+            (removed, lastRemovedAtDepth) = q.clean(_nodeOperators, maxItems);
+        }
     }
 
     /// @inheritdoc IStakingModule
@@ -999,7 +1080,19 @@ contract CSModule is
 
     /// @inheritdoc ICSModule
     function depositQueueItem(uint128 index) external view returns (Batch) {
-        return depositQueue.at(index);
+        for (uint256 p; p < _depositPriorities.length; ++p) {
+            QueueLib.Queue storage q = _getQueue(_depositPriorities[p]);
+            uint128 qLen = q.length();
+
+            if (index >= qLen) {
+                index -= qLen;
+                continue;
+            }
+
+            return q.at(index);
+        }
+
+        return Batch.wrap(0);
     }
 
     /// @inheritdoc ICSModule
@@ -1199,6 +1292,22 @@ contract CSModule is
         emit NonceChanged(_nonce);
     }
 
+    function _getPriorityQueue() internal view returns (QueueLib.Queue storage) {
+        return _getQueue(0);
+    }
+
+    function _getQueue(
+        uint256 priority
+    ) internal view returns (QueueLib.Queue storage q) {
+        if (priority == LEGACY_QUEUE_PRIOIRITY) {
+            assembly {
+                q.slot := legacyQueue.slot
+            }
+        } else {
+            return queueByPriority[priority];
+        }
+    }
+
     function _addKeysAndUpdateDepositableValidatorsCount(
         uint256 nodeOperatorId,
         uint256 keysCount,
@@ -1365,10 +1474,7 @@ contract CSModule is
             if (incrementNonceIfUpdated) {
                 _incrementModuleNonce();
             }
-            depositQueue.enqueueNodeOperatorKeys(
-                _nodeOperators,
-                nodeOperatorId
-            );
+            _enqueueNodeOperatorKeys(nodeOperatorId);
         }
     }
 

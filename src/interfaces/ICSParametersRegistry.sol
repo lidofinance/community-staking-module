@@ -262,4 +262,8 @@ interface ICSParametersRegistry {
     function getStrikesParams(
         uint256 curveId
     ) external view returns (uint256 lifetime, uint256 threshold);
+
+    function isEligibleForPriorityQueue(uint256 curveId) external view returns (bool);
+    function getQueuePriority(uint256 curveId) external view returns (uint256);
+    function maxKeysPerOperatorInPriorityQueue() external view returns (uint256);
 }

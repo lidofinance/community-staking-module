@@ -234,4 +234,10 @@ library QueueLib {
     ) internal view returns (Batch) {
         return self.queue[index];
     }
+
+    function length(Queue storage self) internal view returns (uint128) {
+        unchecked {
+            return self.tail - self.head;
+        }
+    }
 }
