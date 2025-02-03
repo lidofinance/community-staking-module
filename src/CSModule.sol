@@ -13,6 +13,7 @@ import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
 import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
+import { ICSStrikes } from "./interfaces/ICSStrikes.sol";
 import { ICSModule, NodeOperator, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
 
 import { QueueLib, Batch } from "./lib/QueueLib.sol";
@@ -85,6 +86,10 @@ contract CSModule is
     uint64 private _depositableValidatorsCount;
     uint64 private _nodeOperatorsCount;
 
+    ICSStrikes public strikes;
+    /// @dev see _keyPointer function for details of noKeyIndexPacked structure
+    mapping(uint256 noKeyIndexPacked => bool) private _isValidatorEjected;
+
     constructor(
         bytes32 moduleType,
         uint256 minSlashingPenaltyQuotient,
@@ -106,23 +111,30 @@ contract CSModule is
         _disableInitializers();
     }
 
-    /// @notice initialize the module
+    /// @notice initialize the module from scratch
     function initialize(
         address _accounting,
+        address _strikes,
         address admin
-    ) external initializer {
+    ) external reinitializer(2) {
         if (_accounting == address(0)) revert ZeroAccountingAddress();
         if (admin == address(0)) revert ZeroAdminAddress();
 
         __AccessControlEnumerable_init();
 
         accounting = ICSAccounting(_accounting);
+        _setStrikesContract(_strikes);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(STAKING_ROUTER_ROLE, address(LIDO_LOCATOR.stakingRouter()));
 
         // CSM is on pause initially and should be resumed during the vote
         _pauseFor(PausableUntil.PAUSE_INFINITELY);
+    }
+
+    /// @dev should be called after update on the proxy
+    function finalizeUpgradeV2(address _strikes) external reinitializer(2) {
+        _setStrikesContract(_strikes);
     }
 
     /// @inheritdoc ICSModule
@@ -140,6 +152,18 @@ contract CSModule is
         if (publicRelease) revert AlreadyActivated();
         publicRelease = true;
         emit PublicRelease();
+    }
+
+    function setStrikesContract(
+        address _strikes
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setStrikesContract(_strikes);
+    }
+
+    function _setStrikesContract(address strikesContract) internal {
+        if (strikesContract == address(0)) revert ZeroStrikesAddress();
+        strikes = ICSStrikes(strikesContract);
+        emit StrikesContractSet(strikesContract);
     }
 
     /// @inheritdoc ICSModule
@@ -862,6 +886,43 @@ contract CSModule is
         });
     }
 
+    /// @inheritdoc ICSModule
+    function ejectBadPerformer(
+        uint64 nodeOperatorId,
+        uint256 keyIndex,
+        uint256[] calldata strikesData,
+        bytes32[] calldata proof
+    ) external {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (keyIndex >= no.totalDepositedKeys) {
+            revert SigningKeysInvalidOffset();
+        }
+
+        uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
+        if (_isValidatorEjected[pointer]) revert AlreadySubmitted();
+
+        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
+
+        (, uint256 threshold) = PARAMETERS_REGISTRY.getStrikesParams(curveId);
+        bool isEjectable = _isEnoughStrikesToEject(strikesData, threshold);
+        if (!isEjectable) revert NotEnoughStrikesToEject();
+
+        bytes memory pubkey = SigningKeys.loadKeys(nodeOperatorId, keyIndex, 1);
+        strikes.verifyProof(nodeOperatorId, pubkey, strikesData, proof);
+
+        uint256 penaltyAmount = PARAMETERS_REGISTRY.getBadPerformancePenalty(
+            curveId
+        );
+        if (penaltyAmount > 0)
+            accounting.penalize(nodeOperatorId, penaltyAmount);
+
+        _isValidatorEjected[pointer] = true;
+        emit EjectionSubmitted(nodeOperatorId, keyIndex, pubkey);
+
+        // TODO: call requestEjection(pointer);
+    }
+
     /// @inheritdoc IStakingModule
     /// @dev Wipes out the queue
     /// @dev Changing the WC means that the current deposit data in the queue is not valid anymore and can't be deposited
@@ -1016,6 +1077,14 @@ contract CSModule is
         uint256 keyIndex
     ) external view returns (bool) {
         return _isValidatorWithdrawn[_keyPointer(nodeOperatorId, keyIndex)];
+    }
+
+    /// @inheritdoc ICSModule
+    function isValidatorEjected(
+        uint256 nodeOperatorId,
+        uint256 keyIndex
+    ) external view returns (bool) {
+        return _isValidatorEjected[_keyPointer(nodeOperatorId, keyIndex)];
     }
 
     /// @inheritdoc IStakingModule
@@ -1386,6 +1455,19 @@ contract CSModule is
                 revert NodeOperatorHasKeys();
             }
         }
+    }
+
+    function _isEnoughStrikesToEject(
+        uint256[] calldata strikesData,
+        uint256 ejectThreshold
+    ) internal view returns (bool) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < strikesData.length; i++) {
+            if (strikesData[i] > 0) {
+                count++;
+            }
+        }
+        return count >= ejectThreshold;
     }
 
     function _onlyNodeOperatorManager(

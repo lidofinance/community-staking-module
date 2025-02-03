@@ -39,6 +39,9 @@ contract CSParametersRegistry is
     StrikesParams public defaultStrikesParams;
     mapping(uint256 => MarkedStrikesParams) internal _strikesParams;
 
+    uint256 public defaultBadPerformancePenalty;
+    mapping(uint256 => MarkedUint248) internal _badPerformancePenalties;
+
     constructor() {
         _disableInitializers();
     }
@@ -104,6 +107,13 @@ contract CSParametersRegistry is
         uint256 threshold
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setDefaultStrikesParams(lifetime, threshold);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function setDefaultBadPerformancePenalty(
+        uint256 penalty
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setDefaultBadPerformancePenalty(penalty);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -264,6 +274,26 @@ contract CSParametersRegistry is
     }
 
     /// @inheritdoc ICSParametersRegistry
+    function setBadPerformancePenalty(
+        uint256 curveId,
+        uint256 penalty
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _badPerformancePenalties[curveId] = MarkedUint248(
+            penalty.toUint248(),
+            true
+        );
+        emit BadPerformancePenaltySet(curveId, penalty);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function unsetBadPerformancePenalty(
+        uint256 curveId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        delete _badPerformancePenalties[curveId];
+        emit BadPerformancePenaltyUnset(curveId);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
     function getKeyRemovalCharge(
         uint256 curveId
     ) external view returns (uint256 keyRemovalCharge) {
@@ -341,6 +371,14 @@ contract CSParametersRegistry is
         return (params.lifetime, params.threshold);
     }
 
+    /// @inheritdoc ICSParametersRegistry
+    function getBadPerformancePenalty(
+        uint256 curveId
+    ) external view returns (uint256 penalty) {
+        MarkedUint248 memory data = _badPerformancePenalties[curveId];
+        return data.isValue ? data.value : defaultBadPerformancePenalty;
+    }
+
     function _setDefaultKeyRemovalCharge(uint256 keyRemovalCharge) internal {
         defaultKeyRemovalCharge = keyRemovalCharge;
         emit DefaultKeyRemovalChargeSet(keyRemovalCharge);
@@ -378,6 +416,11 @@ contract CSParametersRegistry is
             threshold: threshold.toUint128()
         });
         emit DefaultStrikesParamsSet(lifetime, threshold);
+    }
+
+    function _setDefaultBadPerformancePenalty(uint256 penalty) internal {
+        defaultBadPerformancePenalty = penalty;
+        emit DefaultBadPerformancePenaltySet(penalty);
     }
 
     function _validateStrikesParams(

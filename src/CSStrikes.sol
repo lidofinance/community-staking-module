@@ -1,0 +1,78 @@
+// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-License-Identifier: GPL-3.0
+
+pragma solidity 0.8.24;
+
+import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+
+import { ICSStrikes } from "./interfaces/ICSStrikes.sol";
+
+/// @author vgorkavenko
+contract CSStrikes is ICSStrikes {
+    address public immutable ORACLE;
+
+    /// @notice The latest Merkle Tree root
+    bytes32 public treeRoot;
+
+    /// @notice CID of the last published Merkle tree
+    string public treeCid;
+
+    constructor(address oracle) {
+        if (oracle == address(0)) revert ZeroOracleAddress();
+        ORACLE = oracle;
+    }
+
+    /// @inheritdoc ICSStrikes
+    function processOracleReport(
+        bytes32 _treeRoot,
+        string calldata _treeCid
+    ) external {
+        if (msg.sender != ORACLE) revert NotOracle();
+
+        bool isSameCid = keccak256(bytes(_treeCid)) ==
+            keccak256(bytes(treeCid));
+        bool isSameRoot = _treeRoot == treeRoot;
+
+        if (bytes(_treeCid).length != 0 && _treeRoot != bytes32(0)) {
+            if (isSameCid) revert InvalidTreeCID();
+            if (isSameRoot) revert InvalidTreeRoot();
+        }
+
+        if (!isSameCid && !isSameRoot) {
+            treeRoot = _treeRoot;
+            treeCid = _treeCid;
+
+            emit StrikesDataUpdated(_treeRoot, _treeCid);
+        }
+    }
+
+    /// @inheritdoc ICSStrikes
+    function verifyProof(
+        uint64 nodeOperatorId,
+        bytes calldata pubkey,
+        uint256[] calldata strikesData,
+        bytes32[] calldata proof
+    ) external view {
+        if (proof.length == 0) revert InvalidProof();
+        bool isValid = MerkleProof.verifyCalldata(
+            proof,
+            treeRoot,
+            hashLeaf(nodeOperatorId, pubkey, strikesData)
+        );
+        if (!isValid) revert InvalidProof();
+    }
+
+    /// @inheritdoc ICSStrikes
+    function hashLeaf(
+        uint256 nodeOperatorId,
+        bytes memory pubkey,
+        uint256[] calldata strikesData
+    ) public pure returns (bytes32) {
+        return
+            keccak256(
+                bytes.concat(
+                    keccak256(abi.encode(nodeOperatorId, pubkey, strikesData))
+                )
+            );
+    }
+}

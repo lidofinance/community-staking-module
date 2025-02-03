@@ -7,6 +7,7 @@ import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { BaseOracle } from "./lib/base-oracle/BaseOracle.sol";
 
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
+import { ICSStrikes } from "./interfaces/ICSStrikes.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 import { ICSFeeOracle } from "./interfaces/ICSFeeOracle.sol";
 
@@ -38,24 +39,47 @@ contract CSFeeOracle is
     /// performance over the network computed by the off-chain oracle.
     uint256 internal _avgPerfLeewayBP;
 
+    ICSStrikes public strikes;
+
     constructor(
         uint256 secondsPerSlot,
         uint256 genesisTime
     ) BaseOracle(secondsPerSlot, genesisTime) {}
 
+    /// @dev initialize contract from scratch
     function initialize(
         address admin,
         address feeDistributorContract,
+        address strikesContract,
         address consensusContract,
-        uint256 consensusVersion
+        uint256 consensusVersion,
+        uint256 lastProcessingRefSlot
     ) external {
         if (admin == address(0)) revert ZeroAdminAddress();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
-        BaseOracle._initialize(consensusContract, consensusVersion, 0);
+        BaseOracle._initialize(
+            consensusContract,
+            consensusVersion,
+            lastProcessingRefSlot
+        );
         /// @dev _setFeeDistributorContract() reverts if zero address
         _setFeeDistributorContract(feeDistributorContract);
+        /// @dev _setStrikesContract() reverts if zero address
+        _setStrikesContract(strikesContract);
+        _updateContractVersion(2);
+    }
+
+    /// @dev should be called after update on the proxy
+    function finalizeUpgradeV2(
+        uint256 consensusVersion,
+        address strikesContract
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setConsensusVersion(consensusVersion);
+        /// @dev _setStrikesContract() reverts if zero address
+        _setStrikesContract(strikesContract);
+        _updateContractVersion(2);
     }
 
     /// @inheritdoc ICSFeeOracle
@@ -63,6 +87,13 @@ contract CSFeeOracle is
         address feeDistributorContract
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setFeeDistributorContract(feeDistributorContract);
+    }
+
+    /// @inheritdoc ICSFeeOracle
+    function setStrikesContract(
+        address strikesContract
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setStrikesContract(strikesContract);
     }
 
     /// @inheritdoc ICSFeeOracle
@@ -108,6 +139,12 @@ contract CSFeeOracle is
         emit FeeDistributorContractSet(feeDistributorContract);
     }
 
+    function _setStrikesContract(address strikesContract) internal {
+        if (strikesContract == address(0)) revert ZeroStrikesAddress();
+        strikes = ICSStrikes(strikesContract);
+        emit StrikesContractSet(strikesContract);
+    }
+
     /// @dev Called in `submitConsensusReport` after a consensus is reached.
     function _handleConsensusReport(
         ConsensusReport memory /* report */,
@@ -127,6 +164,7 @@ contract CSFeeOracle is
             rebate: data.rebate,
             refSlot: data.refSlot
         });
+        strikes.processOracleReport(data.strikesTreeRoot, data.strikesTreeCid);
     }
 
     function _checkMsgSenderIsAllowedToSubmitData() internal view {

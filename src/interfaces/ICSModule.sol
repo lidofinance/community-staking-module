@@ -62,10 +62,13 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     error NotSupported();
     error ZeroLocatorAddress();
     error ZeroAccountingAddress();
+    error ZeroStrikesAddress();
     error ZeroAdminAddress();
     error ZeroSenderAddress();
     error ZeroRewardAddress();
     error ZeroParametersRegistryAddress();
+
+    error NotEnoughStrikesToEject();
 
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
@@ -109,8 +112,14 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         uint256 amount,
         bytes pubkey
     );
+    event EjectionSubmitted(
+        uint256 indexed nodeOperatorId,
+        uint256 keyIndex,
+        bytes pubkey
+    );
 
     event PublicRelease();
+    event StrikesContractSet(address strikesContract);
     event KeyRemovalChargeApplied(uint256 indexed nodeOperatorId);
     event ELRewardsStealingPenaltyReported(
         uint256 indexed nodeOperatorId,
@@ -477,6 +486,20 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         uint256 keyIndex,
         uint256 amount,
         bool isSlashed
+    ) external;
+
+    /// @notice Report Node Operator's key as withdrawn and settle withdrawn amount
+    /// @notice Called by the CSStrikes contract.
+    ///         See `CSStrikes.processValidatorEjection` to use this method permissionless
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keyIndex Index of the withdrawn key in the Node Operator's keys storage
+    /// @param strikesData Strikes of the Node Operator's validator key. TODO: value is to be defined (timestamps or refSlots ?)
+    /// @param proof Proof of the strikes
+    function ejectBadPerformer(
+        uint64 nodeOperatorId,
+        uint256 keyIndex,
+        uint256[] calldata strikesData,
+        bytes32[] calldata proof
     ) external;
 
     /// @notice DEPRECATED! Check if the given Node Operator's key is reported as slashed
