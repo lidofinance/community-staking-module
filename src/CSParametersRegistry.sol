@@ -21,7 +21,8 @@ contract CSParametersRegistry is
     mapping(uint256 => MarkedUint248) internal _keyRemovalCharges;
 
     uint256 public defaultElRewardsStealingAdditionalFine;
-    mapping(uint256 => MarkedUint248) internal _elRewardsStealingAdditionalFine;
+    mapping(uint256 => MarkedUint248)
+        internal _elRewardsStealingAdditionalFines;
 
     uint256 public defaultPriorityQueueLimit;
     mapping(uint256 => MarkedUint248) internal _priorityQueueLimits;
@@ -131,7 +132,7 @@ contract CSParametersRegistry is
         uint256 curveId,
         uint256 fine
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _elRewardsStealingAdditionalFine[curveId] = MarkedUint248(
+        _elRewardsStealingAdditionalFines[curveId] = MarkedUint248(
             fine.toUint248(),
             true
         );
@@ -142,7 +143,7 @@ contract CSParametersRegistry is
     function unsetElRewardsStealingAdditionalFine(
         uint256 curveId
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        delete _elRewardsStealingAdditionalFine[curveId];
+        delete _elRewardsStealingAdditionalFines[curveId];
         emit ElRewardsStealingAdditionalFineUnset(curveId);
     }
 
@@ -275,7 +276,7 @@ contract CSParametersRegistry is
     function getElRewardsStealingAdditionalFine(
         uint256 curveId
     ) external view returns (uint256 fine) {
-        MarkedUint248 memory data = _elRewardsStealingAdditionalFine[curveId];
+        MarkedUint248 memory data = _elRewardsStealingAdditionalFines[curveId];
         return
             data.isValue ? data.value : defaultElRewardsStealingAdditionalFine;
     }
