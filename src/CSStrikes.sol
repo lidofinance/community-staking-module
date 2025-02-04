@@ -28,20 +28,18 @@ contract CSStrikes is ICSStrikes {
         string calldata _treeCid
     ) external {
         if (msg.sender != ORACLE) revert NotOracle();
-
-        bool isSameCid = keccak256(bytes(_treeCid)) ==
-            keccak256(bytes(treeCid));
-        bool isSameRoot = _treeRoot == treeRoot;
-
-        if (bytes(_treeCid).length != 0 && _treeRoot != bytes32(0)) {
-            if (isSameCid) revert InvalidTreeCID();
-            if (isSameRoot) revert InvalidTreeRoot();
-        }
-
-        if (!isSameCid && !isSameRoot) {
+        /// @dev should be both empty or not empty
+        bool isNewRootEmpty = _treeRoot == bytes32(0);
+        bool isNewCidEmpty = bytes(_treeCid).length == 0;
+        if (isNewRootEmpty != isNewCidEmpty) revert InvalidReportData();
+        /// @dev should be both updated or not updated
+        bool isRootUpdated = treeRoot != _treeRoot;
+        bool isCidUpdated = keccak256(bytes(treeCid)) !=
+            keccak256(bytes(_treeCid));
+        if (isRootUpdated != isCidUpdated) revert InvalidReportData();
+        if (isRootUpdated) {
             treeRoot = _treeRoot;
             treeCid = _treeCid;
-
             emit StrikesDataUpdated(_treeRoot, _treeCid);
         }
     }

@@ -13,8 +13,10 @@ interface ICSStrikes {
     error ZeroBadPerformancePenaltyAmount();
     error NotOracle();
 
+    error InvalidReportData();
     error InvalidTreeRoot();
     error InvalidTreeCID();
+
     error InvalidProof();
 
     function ORACLE() external view returns (address);
