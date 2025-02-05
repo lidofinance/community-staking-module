@@ -152,17 +152,14 @@ contract CSParametersRegistry is
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         uint256 keyPivotsLength = keyPivots.length;
         uint256 rewardSharesLength = rewardShares.length;
-        if (keyPivotsLength + 1 != rewardSharesLength) {
+        if (keyPivotsLength + 1 != rewardSharesLength)
             revert InvalidRewardShareData();
-        }
-        if (keyPivotsLength > 0 && keyPivots[0] == 0) {
+        if (keyPivotsLength > 0 && keyPivots[0] == 0)
             revert InvalidRewardShareData();
-        }
         if (keyPivotsLength > 1) {
             for (uint256 i = 0; i < keyPivotsLength - 1; ++i) {
-                if (keyPivots[i] >= keyPivots[i + 1]) {
+                if (keyPivots[i] >= keyPivots[i + 1])
                     revert InvalidRewardShareData();
-                }
             }
         }
         for (uint256 i = 0; i < rewardSharesLength; ++i) {
@@ -193,23 +190,19 @@ contract CSParametersRegistry is
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         uint256 keyPivotsLength = keyPivots.length;
         uint256 performanceLeewaysLength = performanceLeeways.length;
-        if (keyPivotsLength + 1 != performanceLeewaysLength) {
+        if (keyPivotsLength + 1 != performanceLeewaysLength)
             revert InvalidPerformanceLeewayData();
-        }
-        if (keyPivotsLength > 0 && keyPivots[0] == 0) {
+        if (keyPivotsLength > 0 && keyPivots[0] == 0)
             revert InvalidPerformanceLeewayData();
-        }
         if (keyPivotsLength > 1) {
             for (uint256 i = 0; i < keyPivotsLength - 1; ++i) {
-                if (keyPivots[i] >= keyPivots[i + 1]) {
+                if (keyPivots[i] >= keyPivots[i + 1])
                     revert InvalidPerformanceLeewayData();
-                }
             }
         }
         for (uint256 i = 0; i < performanceLeewaysLength; ++i) {
-            if (performanceLeeways[i] > MAX_BP) {
+            if (performanceLeeways[i] > MAX_BP)
                 revert InvalidPerformanceLeewayData();
-            }
         }
         _performanceLeewayData[curveId] = PivotsAndValues({
             pivots: keyPivots,
