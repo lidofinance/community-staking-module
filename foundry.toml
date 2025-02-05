@@ -48,7 +48,7 @@ fuzz = { runs = 10_000, max_test_rejects = 2_000_000 }
 # to fit CSM contract tests in one block
 block_gas_limit = 60_000_000
 
-[profile.deploy-impl]
+[profile.deploy]
 # unknown problem of too high estimated gas usage in the implementation deployment script
 # after upgrading forge-std 1.7.6 -> 1.9.5
 block_gas_limit = 60_000_000

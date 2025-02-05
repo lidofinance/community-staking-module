@@ -40,6 +40,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     CSModule public csm;
     CSAccounting public accounting;
     Stub public feeDistributor;
+    Stub public strikes;
     CSParametersRegistryMock public parametersRegistry;
 
     address internal admin;
@@ -282,6 +283,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         (locator, wstETH, stETH, , ) = initLido();
 
         feeDistributor = new Stub();
+        strikes = new Stub();
         parametersRegistry = new CSParametersRegistryMock();
 
         csm = new CSModule({
@@ -322,7 +324,11 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         vm.stopPrank();
 
         _enableInitializers(address(csm));
-        csm.initialize({ _accounting: address(accounting), admin: admin });
+        csm.initialize({
+            _accounting: address(accounting),
+            _strikes: address(strikes),
+            admin: admin
+        });
 
         vm.startPrank(admin);
         csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(this));
@@ -370,6 +376,7 @@ contract CSMCommonNoRoles is CSMFixtures {
         (locator, wstETH, stETH, , ) = initLido();
 
         feeDistributor = new Stub();
+        strikes = new Stub();
         parametersRegistry = new CSParametersRegistryMock();
 
         csm = new CSModule({
@@ -410,7 +417,11 @@ contract CSMCommonNoRoles is CSMFixtures {
         vm.stopPrank();
 
         _enableInitializers(address(csm));
-        csm.initialize({ _accounting: address(accounting), admin: admin });
+        csm.initialize({
+            _accounting: address(accounting),
+            _strikes: address(strikes),
+            admin: admin
+        });
 
         vm.startPrank(admin);
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
@@ -493,6 +504,7 @@ contract CsmInitialize is CSMCommon {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         csm.initialize({
             _accounting: address(accounting),
+            _strikes: address(strikes),
             admin: address(this)
         });
     }
@@ -509,6 +521,7 @@ contract CsmInitialize is CSMCommon {
         _enableInitializers(address(csm));
         csm.initialize({
             _accounting: address(accounting),
+            _strikes: address(strikes),
             admin: address(this)
         });
         assertEq(csm.getType(), "community-staking-module");
@@ -529,7 +542,29 @@ contract CsmInitialize is CSMCommon {
 
         _enableInitializers(address(csm));
         vm.expectRevert(ICSModule.ZeroAccountingAddress.selector);
-        csm.initialize({ _accounting: address(0), admin: address(this) });
+        csm.initialize({
+            _accounting: address(0),
+            _strikes: address(155),
+            admin: address(this)
+        });
+    }
+
+    function test_initialize_RevertWhen_ZeroStrikesAddress() public {
+        CSModule csm = new CSModule({
+            moduleType: "community-staking-module",
+            minSlashingPenaltyQuotient: 32,
+            maxKeysPerOperatorEA: 10,
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry)
+        });
+
+        _enableInitializers(address(csm));
+        vm.expectRevert(ICSModule.ZeroStrikesAddress.selector);
+        csm.initialize({
+            _accounting: address(154),
+            _strikes: address(0),
+            admin: address(this)
+        });
     }
 
     function test_initialize_RevertWhen_ZeroAdminAddress() public {
@@ -543,7 +578,11 @@ contract CsmInitialize is CSMCommon {
 
         _enableInitializers(address(csm));
         vm.expectRevert(ICSModule.ZeroAdminAddress.selector);
-        csm.initialize({ _accounting: address(154), admin: address(0) });
+        csm.initialize({
+            _accounting: address(154),
+            _strikes: address(155),
+            admin: address(0)
+        });
     }
 }
 
@@ -5734,7 +5773,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
             parametersRegistry: address(parametersRegistry)
         });
         _enableInitializers(address(csm));
-        csm.initialize(address(accounting), actor);
+        csm.initialize(address(accounting), address(strikes), actor);
 
         bytes32 role = csm.DEFAULT_ADMIN_ROLE();
         vm.prank(actor);

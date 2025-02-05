@@ -52,18 +52,13 @@ contract CSFeeOracle is
         address feeDistributorContract,
         address strikesContract,
         address consensusContract,
-        uint256 consensusVersion,
-        uint256 lastProcessingRefSlot
+        uint256 consensusVersion
     ) external {
         if (admin == address(0)) revert ZeroAdminAddress();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
-        BaseOracle._initialize(
-            consensusContract,
-            consensusVersion,
-            lastProcessingRefSlot
-        );
+        BaseOracle._initialize(consensusContract, consensusVersion, 0);
         /// @dev _setFeeDistributorContract() reverts if zero address
         _setFeeDistributorContract(feeDistributorContract);
         /// @dev _setStrikesContract() reverts if zero address

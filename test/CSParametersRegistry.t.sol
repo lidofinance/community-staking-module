@@ -33,7 +33,8 @@ contract CSParametersRegistryBaseTest is Test, Utilities, Fixtures {
             rewardShare: 8000,
             performanceLeeway: 500,
             strikesLifetime: 6,
-            strikesThreshold: 3
+            strikesThreshold: 3,
+            badPerformancePenalty: 0.1 ether
         });
     }
 }
@@ -81,6 +82,11 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
 
         assertEq(lifetime, defaultInitData.strikesLifetime);
         assertEq(threshold, defaultInitData.strikesThreshold);
+
+        assertEq(
+            parametersRegistry.defaultBadPerformancePenalty(),
+            defaultInitData.badPerformancePenalty
+        );
     }
 
     function test_initialize_RevertWhen_ZeroAdminAddress() public {
@@ -1029,5 +1035,36 @@ contract CSParametersRegistryStrikesParamsTest is CSParametersRegistryBaseTest {
 
         assertEq(lifetimeOut, defaultInitData.strikesLifetime);
         assertEq(thresholdOut, defaultInitData.strikesThreshold);
+    }
+}
+
+contract CSParametersRegistryBadPerformancePenaltyTest is
+    CSParametersRegistryBaseTest
+{
+    function setUp() public virtual override {
+        super.setUp();
+        _enableInitializers(address(parametersRegistry));
+        parametersRegistry.initialize(admin, defaultInitData);
+    }
+
+    function test_setDefaultBadPerformancePenalty() public {
+        uint256 penalty = 1 ether;
+        vm.expectEmit(true, true, true, true, address(parametersRegistry));
+        emit ICSParametersRegistry.DefaultBadPerformancePenaltySet(penalty);
+        vm.prank(admin);
+        parametersRegistry.setDefaultBadPerformancePenalty(penalty);
+
+        assertEq(parametersRegistry.defaultBadPerformancePenalty(), penalty);
+    }
+
+    function test_setDefaultBadPerformancePenalty_RevertWhen_not_admin()
+        public
+    {
+        uint256 penalty = 1 ether;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.setDefaultBadPerformancePenalty(penalty);
     }
 }

@@ -25,6 +25,7 @@ import { VettedGate } from "../../src/VettedGate.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";
 import { CSFeeOracle } from "../../src/CSFeeOracle.sol";
 import { CSFeeDistributor } from "../../src/CSFeeDistributor.sol";
+import { CSStrikes } from "../../src/CSStrikes.sol";
 import { CSVerifier } from "../../src/CSVerifier.sol";
 import { DeployParams, DeployParamsV1 } from "../../script/DeployBase.s.sol";
 import { IACL } from "../../src/interfaces/IACL.sol";
@@ -98,6 +99,7 @@ contract DeploymentHelpers is Test {
         address accounting;
         address oracle;
         address feeDistributor;
+        address strikes;
         address verifier;
         address hashConsensus;
         address lidoLocator;
@@ -161,13 +163,18 @@ contract DeploymentHelpers is Test {
             vm.label(deploymentConfig.vettedGate, "vettedGate");
         }
 
-        /// Optional, new in v2. Parameters registry is not present v1 deployment configs
+        /// Optional, new in v2. Parameters registry and Strikes is not present v1 deployment configs
         if (vm.keyExistsJson(config, ".CSParametersRegistry")) {
             deploymentConfig.parametersRegistry = vm.parseJsonAddress(
                 config,
                 ".CSParametersRegistry"
             );
             vm.label(deploymentConfig.parametersRegistry, "parametersRegistry");
+            deploymentConfig.strikes = vm.parseJsonAddress(
+                config,
+                ".CSStrikes"
+            );
+            vm.label(deploymentConfig.strikes, "strikes");
         }
 
         deploymentConfig.accounting = vm.parseJsonAddress(
@@ -274,6 +281,7 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
     CSAccounting public accounting;
     CSFeeOracle public oracle;
     CSFeeDistributor public feeDistributor;
+    CSStrikes public strikes;
     CSVerifier public verifier;
     HashConsensus public hashConsensus;
     ILidoLocator public locator;
@@ -303,6 +311,7 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
         accounting = CSAccounting(deploymentConfig.accounting);
         oracle = CSFeeOracle(deploymentConfig.oracle);
         feeDistributor = CSFeeDistributor(deploymentConfig.feeDistributor);
+        strikes = CSStrikes(deploymentConfig.strikes);
         verifier = CSVerifier(deploymentConfig.verifier);
         hashConsensus = HashConsensus(deploymentConfig.hashConsensus);
         locator = ILidoLocator(deploymentConfig.lidoLocator);

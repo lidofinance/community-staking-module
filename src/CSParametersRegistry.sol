@@ -62,6 +62,7 @@ contract CSParametersRegistry is
         _setDefaultRewardShare(data.rewardShare);
         _setDefaultPerformanceLeeway(data.performanceLeeway);
         _setDefaultStrikesParams(data.strikesLifetime, data.strikesThreshold);
+        _setDefaultBadPerformancePenalty(data.badPerformancePenalty);
 
         __AccessControlEnumerable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);

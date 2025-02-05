@@ -28,6 +28,7 @@ interface ICSParametersRegistry {
         uint256 performanceLeeway;
         uint256 strikesLifetime;
         uint256 strikesThreshold;
+        uint256 badPerformancePenalty;
     }
 
     struct PivotsAndValues {

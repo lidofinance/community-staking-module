@@ -154,6 +154,7 @@ contract CSModule is
         emit PublicRelease();
     }
 
+    /// @inheritdoc ICSModule
     function setStrikesContract(
         address _strikes
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -1460,7 +1461,7 @@ contract CSModule is
     function _isEnoughStrikesToEject(
         uint256[] calldata strikesData,
         uint256 ejectThreshold
-    ) internal view returns (bool) {
+    ) internal pure returns (bool) {
         uint256 count = 0;
         for (uint256 i = 0; i < strikesData.length; i++) {
             if (strikesData[i] > 0) {

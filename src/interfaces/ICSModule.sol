@@ -196,6 +196,10 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     ///         Remove the keys limit for the Node Operators
     function activatePublicRelease() external;
 
+    /// @notice Set the address of the Strikes contract
+    /// @param strikesContract Address of the Strikes contract
+    function setStrikesContract(address strikesContract) external;
+
     /// @notice Permissioned method to add a new Node Operator
     ///         Should be called by `*Gate.sol` contracts. See `PermissionlessGate.sol` and `VettedGate.sol` for examples
     /// @param from Sender address. Initial sender address to be used as a default manager and reward addresses
@@ -518,6 +522,14 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     /// @param keyIndex index of the key to check
     /// @return Validator reported as withdrawn flag
     function isValidatorWithdrawn(
+        uint256 nodeOperatorId,
+        uint256 keyIndex
+    ) external view returns (bool);
+
+    /// @notice Check if the given Node Operator's key is reported as ejected
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keyIndex index of the key to check
+    function isValidatorEjected(
         uint256 nodeOperatorId,
         uint256 keyIndex
     ) external view returns (bool);
