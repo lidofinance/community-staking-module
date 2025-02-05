@@ -6,6 +6,8 @@ pragma solidity 0.8.24;
 interface ICSStrikes {
     /// @dev Emitted when strikes data is updated
     event StrikesDataUpdated(bytes32 treeRoot, string treeCid);
+    /// @dev Emitted when strikes is updated from non-empty to empty
+    event StrikesDataWiped();
 
     error ZeroAdminAddress();
     error ZeroOracleAddress();
@@ -14,8 +16,6 @@ interface ICSStrikes {
     error NotOracle();
 
     error InvalidReportData();
-    error InvalidTreeRoot();
-    error InvalidTreeCID();
 
     error InvalidProof();
 
@@ -40,7 +40,7 @@ interface ICSStrikes {
     /// @param strikesData Strikes of the Node Operator
     /// @param proof Merkle proof of the leaf
     function verifyProof(
-        uint64 nodeOperatorId,
+        uint256 nodeOperatorId,
         bytes calldata pubkey,
         uint256[] calldata strikesData,
         bytes32[] calldata proof
