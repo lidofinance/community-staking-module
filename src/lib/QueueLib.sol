@@ -114,24 +114,6 @@ library QueueLib {
     //////
     /// External methods
     //////
-    function enqueueNodeOperatorKeys(
-        Queue storage self,
-        mapping(uint256 => NodeOperator) storage nodeOperators,
-        uint256 nodeOperatorId
-    ) external {
-        NodeOperator storage no = nodeOperators[nodeOperatorId];
-        uint32 depositable = no.depositableValidatorsCount;
-        uint32 enqueued = no.enqueuedCount;
-
-        if (enqueued < depositable) {
-            uint32 count;
-            unchecked {
-                count = depositable - enqueued;
-            }
-            no.enqueuedCount = depositable;
-            self.enqueue(nodeOperatorId, count);
-        }
-    }
 
     function clean(
         Queue storage self,
@@ -140,7 +122,12 @@ library QueueLib {
         TransientUintUintMap queueLookup
     )
         external
-        returns (uint256 removed, uint256 lastRemovedAtDepth)
+        returns (
+            uint256 removed,
+            uint256 lastRemovedAtDepth,
+            uint256 visited,
+            bool isFinished
+        )
     {
         if (maxItems == 0) revert IQueueLib.QueueLookupNoLimit();
 
@@ -150,9 +137,10 @@ library QueueLib {
         uint128 head = self.head;
         uint128 curr = head;
 
-        for (uint256 i; i < maxItems; ++i) {
+        for (; visited < maxItems; ++visited) {
             Batch item = self.queue[curr];
             if (item.isNil()) {
+                isFinished = true;
                 break;
             }
 
@@ -175,7 +163,7 @@ library QueueLib {
                 no.enqueuedCount -= uint32(item.keys());
 
                 unchecked {
-                    lastRemovedAtDepth = i + 1;
+                    lastRemovedAtDepth = visited + 1;
                     ++removed;
                 }
             } else {
@@ -235,11 +223,5 @@ library QueueLib {
         uint128 index
     ) internal view returns (Batch) {
         return self.queue[index];
-    }
-
-    function length(Queue storage self) internal view returns (uint128) {
-        unchecked {
-            return self.tail - self.head;
-        }
     }
 }

@@ -1065,10 +1065,13 @@ contract CSModule is
 
         for (uint256 p = 0; p <= LOWEST_PRIORITY; ++p) {
             QueueLib.Queue storage q = _getQueue(p);
-            uint256 qLen = q.length();
 
-            (uint256 removedPerQueue, uint256 lastRemovedAtDepthPerQueue) = q
-                .clean(_nodeOperators, maxItems, queueLookup);
+            (
+                uint256 removedPerQueue,
+                uint256 lastRemovedAtDepthPerQueue,
+                uint256 visited,
+                bool isFinished
+            ) = q.clean(_nodeOperators, maxItems, queueLookup);
 
             if (removed > 0) {
                 unchecked {
@@ -1086,13 +1089,13 @@ contract CSModule is
                 }
             }
 
-            if (qLen >= maxItems) {
+            if (!isFinished) {
                 break;
             }
 
             unchecked {
-                totalVisited += qLen;
-                maxItems -= qLen;
+                totalVisited += visited;
+                maxItems -= visited;
             }
         }
     }
@@ -1108,40 +1111,12 @@ contract CSModule is
     }
 
     /// @inheritdoc ICSModule
-    function depositQueueLength() external view returns (uint128 length) {
-        for (uint256 p = 0; p <= LOWEST_PRIORITY; ++p) {
-            QueueLib.Queue storage q = _getQueue(p);
-            length += q.length();
-        }
-    }
-
-    /// @inheritdoc ICSModule
     function depositQueueItem(
+        uint256 queuePriority,
         uint128 index
-    ) external view returns (Batch, uint256) {
-        for (uint256 p = 0; p <= LOWEST_PRIORITY; ++p) {
-            QueueLib.Queue storage q = _getQueue(p);
-            uint128 qLen = q.length();
-
-            // 0123 45 6789
-            // 0123 01 0123
-            // ****|**|*^**
-
-            // p  qLen   index
-            //               7
-            // 0     4   7-4=3 -> continue
-            // 1     2   3-2=1 -> continue
-            // 2     4       1 -> halt
-
-            if (index >= qLen) {
-                index -= qLen;
-                continue;
-            }
-
-            return (q.at(index), p);
-        }
-
-        return (Batch.wrap(0), 0);
+    ) external view returns (Batch) {
+        QueueLib.Queue storage q = _getQueue(queuePriority);
+        return q.at(index);
     }
 
     /// @inheritdoc ICSModule

@@ -405,16 +405,13 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         address newAddress
     ) external;
 
-    /// @notice Returns the length of the deposit queue
-    /// @return length Deposit queue item length
-    function depositQueueLength() external view returns (uint128 length);
-
     /// @notice Get the deposit queue item by an index
+    /// @param queuePriority Priority of the queue to get an item from
     /// @param index Index of a queue item (continuous numbering)
     /// @return Deposit queue item and the priority of the queue
     function depositQueueItem(
-        uint128 index
-    ) external view returns (Batch, uint256);
+        uint256 queuePriority, uint128 index
+    ) external view returns (Batch);
 
     /// @notice Clean the deposit queue from batches with no depositable keys
     /// @dev Use **eth_call** to check how many items will be removed
