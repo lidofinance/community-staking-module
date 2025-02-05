@@ -23,8 +23,9 @@ contract CSParametersRegistry is
     uint256 public defaultElRewardsStealingAdditionalFine;
     mapping(uint256 => MarkedUint248) internal _elRewardsStealingAdditionalFine;
 
-    uint256 public defaultPriorityQueueLimit;
-    mapping(uint256 => MarkedUint248) internal _priorityQueueLimits;
+    PriorityQueueConfig public defaultPriorityQueueConfig;
+    mapping(uint256 curveId => MarkedPriorityQueueConfig)
+        internal _priorityQueueConfigs;
 
     /// @dev Default value for the reward share. Can be only be set as a flat value due to possible sybil attacks
     ///      Decreased reward share for some validators > N will promote sybils. Increased reward share for validators > N will give large operators an advantage
@@ -39,8 +40,13 @@ contract CSParametersRegistry is
     StrikesParams public defaultStrikesParams;
     mapping(uint256 => MarkedStrikesParams) internal _strikesParams;
 
-    constructor() {
+    uint256 public immutable LOWEST_PRIORITY;
+    uint256 public immutable LEGACY_QUEUE_PRIORITY;
+
+    constructor(uint256 lowestPriority) {
         _disableInitializers();
+        LOWEST_PRIORITY = lowestPriority;
+        LEGACY_QUEUE_PRIORITY = lowestPriority - 1;
     }
 
     /// @notice initialize contract
@@ -54,7 +60,6 @@ contract CSParametersRegistry is
         _setDefaultElRewardsStealingAdditionalFine(
             data.elRewardsStealingAdditionalFine
         );
-        _setDefaultPriorityQueueLimit(data.priorityQueueLimit);
         _setDefaultRewardShare(data.rewardShare);
         _setDefaultPerformanceLeeway(data.performanceLeeway);
         _setDefaultStrikesParams(data.strikesLifetime, data.strikesThreshold);
@@ -75,13 +80,6 @@ contract CSParametersRegistry is
         uint256 fine
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setDefaultElRewardsStealingAdditionalFine(fine);
-    }
-
-    /// @inheritdoc ICSParametersRegistry
-    function setDefaultPriorityQueueLimit(
-        uint256 limit
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setDefaultPriorityQueueLimit(limit);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -144,23 +142,6 @@ contract CSParametersRegistry is
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         delete _elRewardsStealingAdditionalFine[curveId];
         emit ElRewardsStealingAdditionalFineUnset(curveId);
-    }
-
-    /// @inheritdoc ICSParametersRegistry
-    function setPriorityQueueLimit(
-        uint256 curveId,
-        uint256 limit
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _priorityQueueLimits[curveId] = MarkedUint248(limit.toUint248(), true);
-        emit PriorityQueueLimitSet(curveId, limit);
-    }
-
-    /// @inheritdoc ICSParametersRegistry
-    function unsetPriorityQueueLimit(
-        uint256 curveId
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        delete _priorityQueueLimits[curveId];
-        emit PriorityQueueLimitUnset(curveId);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -288,14 +269,6 @@ contract CSParametersRegistry is
     }
 
     /// @inheritdoc ICSParametersRegistry
-    function getPriorityQueueLimit(
-        uint256 curveId
-    ) external view returns (uint256 limit) {
-        MarkedUint248 memory data = _priorityQueueLimits[curveId];
-        return data.isValue ? data.value : defaultPriorityQueueLimit;
-    }
-
-    /// @inheritdoc ICSParametersRegistry
     function getRewardShareData(
         uint256 curveId
     )
@@ -348,26 +321,36 @@ contract CSParametersRegistry is
         return (params.lifetime, params.threshold);
     }
 
-    function getQueuePriority(
-        uint256 curveId
-    ) external view returns (uint256 priority) {
-        return 40; // Default priority, should be greater than LEGACY_QUEUE_PRIOIRITY.
+    function setPriorityQueueConfig(
+        uint256 curveId,
+        PriorityQueueConfig memory config
+    ) external {
+        if (config.priority == LEGACY_QUEUE_PRIORITY) {
+            revert QueueCannotBeUsed();
+        }
+
+        _priorityQueueConfigs[curveId] = MarkedPriorityQueueConfig({
+            priority: config.priority,
+            maxKeys: config.maxKeys,
+            isValue: true
+        });
     }
 
-    function isEligibleForPriorityQueue(
+    function getPriorityQueueConfig(
         uint256 curveId
-    ) external view returns (bool) {
-        // TODO: Early adopters or whatever. Need to think about the mechanic.
-        return curveId == 1;
-    }
+    ) external view returns (uint32 queuePriority, uint32 maxKeys) {
+        MarkedPriorityQueueConfig storage config = _priorityQueueConfigs[
+            curveId
+        ];
 
-    function maxKeysPerOperatorInPriorityQueue()
-        external
-        view
-        returns (uint256)
-    {
-        // TODO: constant or configurable value.
-        return 10;
+        if (!config.isValue) {
+            return (
+                defaultPriorityQueueConfig.priority,
+                defaultPriorityQueueConfig.maxKeys
+            );
+        }
+
+        return (config.priority, config.maxKeys);
     }
 
     function _setDefaultKeyRemovalCharge(uint256 keyRemovalCharge) internal {
@@ -378,11 +361,6 @@ contract CSParametersRegistry is
     function _setDefaultElRewardsStealingAdditionalFine(uint256 fine) internal {
         defaultElRewardsStealingAdditionalFine = fine;
         emit DefaultElRewardsStealingAdditionalFineSet(fine);
-    }
-
-    function _setDefaultPriorityQueueLimit(uint256 limit) internal {
-        defaultPriorityQueueLimit = limit;
-        emit DefaultPriorityQueueLimitSet(limit);
     }
 
     function _setDefaultRewardShare(uint256 share) internal {

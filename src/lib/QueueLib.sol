@@ -136,8 +136,12 @@ library QueueLib {
     function clean(
         Queue storage self,
         mapping(uint256 => NodeOperator) storage nodeOperators,
-        uint256 maxItems
-    ) external returns (uint256 removed, uint256 lastRemovedAtDepth) {
+        uint256 maxItems,
+        TransientUintUintMap queueLookup
+    )
+        external
+        returns (uint256 removed, uint256 lastRemovedAtDepth)
+    {
         if (maxItems == 0) revert IQueueLib.QueueLookupNoLimit();
 
         Batch prev;
@@ -145,8 +149,6 @@ library QueueLib {
 
         uint128 head = self.head;
         uint128 curr = head;
-
-        TransientUintUintMap queueLookup = TransientUintUintMapLib.create();
 
         for (uint256 i; i < maxItems; ++i) {
             Batch item = self.queue[curr];

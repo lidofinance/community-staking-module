@@ -9,6 +9,17 @@ interface ICSParametersRegistry {
         bool isValue;
     }
 
+    struct MarkedPriorityQueueConfig {
+        uint32 priority;
+        uint32 maxKeys;
+        bool isValue;
+    }
+
+    struct PriorityQueueConfig {
+        uint32 priority;
+        uint32 maxKeys;
+    }
+
     struct StrikesParams {
         uint128 lifetime;
         uint128 threshold;
@@ -69,6 +80,11 @@ interface ICSParametersRegistry {
     error InvalidPerformanceLeewayData();
     error InvalidStrikesParams();
     error ZeroAdminAddress();
+    error QueueCannotBeUsed();
+
+    function LOWEST_PRIORITY() external view returns (uint256);
+
+    function LEGACY_QUEUE_PRIORITY() external view returns (uint256);
 
     /// @notice Set default value for the key removal charge. Default value is used if a specific value is not set for the curveId
     /// @param keyRemovalCharge value to be set as default for the key removal charge
@@ -86,12 +102,14 @@ interface ICSParametersRegistry {
         external
         returns (uint256);
 
-    /// @notice Set default value for the priority queue limit. Default value is used if a specific value is not set for the curveId
-    /// @param limit value to be set as default for the priority queue limit
-    function setDefaultPriorityQueueLimit(uint256 limit) external;
+    function setPriorityQueueConfig(
+        uint256 curveId,
+        PriorityQueueConfig memory config
+    ) external;
 
-    /// @notice Get default value for the priority queue limit
-    function defaultPriorityQueueLimit() external returns (uint256);
+    function getPriorityQueueConfig(
+        uint256 curveId
+    ) external view returns (uint32 queuePriority, uint32 maxKeys);
 
     /// @notice Set default value for the reward share. Default value is used if a specific value is not set for the curveId
     /// @param share value to be set as default for the reward share
@@ -157,25 +175,6 @@ interface ICSParametersRegistry {
     function getElRewardsStealingAdditionalFine(
         uint256 curveId
     ) external view returns (uint256 fine);
-
-    /// @notice Set priority queue limit for the curveId.
-    /// @dev The first `limit` keys for the Node Operator with the given `curveId` will be placed in the priority queue.
-    /// @param curveId Curve Id to associate priority queue limit with
-    /// @param limit Priority queue limit
-    function setPriorityQueueLimit(uint256 curveId, uint256 limit) external;
-
-    /// @notice Unset priority queue limit for the curveId
-    /// @param curveId Curve Id to unset custom priority queue limit for
-    function unsetPriorityQueueLimit(uint256 curveId) external;
-
-    /// @notice Get priority queue limit by the curveId.
-    /// @dev Zero is returned if the value is not set for the given curveId.
-    /// @dev The first `limit` keys for the Node Operator with the given `curveId` will be placed in the priority queue.
-    /// @param curveId Curve Id to get priority queue limit for
-    /// @return limit Priority queue limit
-    function getPriorityQueueLimit(
-        uint256 curveId
-    ) external view returns (uint256 limit);
 
     /// @notice Set reward share parameters for the curveId
     /// @dev keyPivots = [10, 50] and rewardShares = [10000, 8000, 5000] stands for
@@ -262,8 +261,4 @@ interface ICSParametersRegistry {
     function getStrikesParams(
         uint256 curveId
     ) external view returns (uint256 lifetime, uint256 threshold);
-
-    function isEligibleForPriorityQueue(uint256 curveId) external view returns (bool);
-    function getQueuePriority(uint256 curveId) external view returns (uint256);
-    function maxKeysPerOperatorInPriorityQueue() external view returns (uint256);
 }
