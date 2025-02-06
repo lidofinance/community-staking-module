@@ -23,9 +23,8 @@ contract CSParametersRegistry is
     uint256 public defaultElRewardsStealingAdditionalFine;
     mapping(uint256 => MarkedUint248) internal _elRewardsStealingAdditionalFine;
 
-    PriorityQueueConfig public defaultPriorityQueueConfig;
-    mapping(uint256 curveId => MarkedPriorityQueueConfig)
-        internal _priorityQueueConfigs;
+    QueueConfig public defaultQueueConfig;
+    mapping(uint256 curveId => MarkedQueueConfig) internal _queueConfigs;
 
     /// @dev Default value for the reward share. Can be only be set as a flat value due to possible sybil attacks
     ///      Decreased reward share for some validators > N will promote sybils. Increased reward share for validators > N will give large operators an advantage
@@ -63,6 +62,10 @@ contract CSParametersRegistry is
         _setDefaultRewardShare(data.rewardShare);
         _setDefaultPerformanceLeeway(data.performanceLeeway);
         _setDefaultStrikesParams(data.strikesLifetime, data.strikesThreshold);
+        _setDefaultQueueConfig(
+            data.defaultQueuePriority,
+            data.defaultQueueMaxKeys
+        );
 
         __AccessControlEnumerable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -102,6 +105,14 @@ contract CSParametersRegistry is
         uint256 threshold
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setDefaultStrikesParams(lifetime, threshold);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function setDefaultQueueConfig(
+        uint256 priority,
+        uint256 maxKeys
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setDefaultQueueConfig(priority, maxKeys);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -245,6 +256,33 @@ contract CSParametersRegistry is
     }
 
     /// @inheritdoc ICSParametersRegistry
+    function setQueueConfig(
+        uint256 curveId,
+        QueueConfig memory config
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (config.priority == LEGACY_QUEUE_PRIORITY) {
+            revert QueueCannotBeUsed();
+        }
+
+        _queueConfigs[curveId] = MarkedQueueConfig({
+            priority: config.priority,
+            maxKeys: config.maxKeys,
+            isValue: true
+        });
+
+        emit QueueConfigSet(curveId, config.priority, config.maxKeys);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function unsetQueueConfig(
+        uint256 curveId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        delete _queueConfigs[curveId];
+
+        emit QueueConfigUnset(curveId);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
     function getKeyRemovalCharge(
         uint256 curveId
     ) external view returns (uint256 keyRemovalCharge) {
@@ -314,33 +352,14 @@ contract CSParametersRegistry is
         return (params.lifetime, params.threshold);
     }
 
-    function setPriorityQueueConfig(
-        uint256 curveId,
-        PriorityQueueConfig memory config
-    ) external {
-        if (config.priority == LEGACY_QUEUE_PRIORITY) {
-            revert QueueCannotBeUsed();
-        }
-
-        _priorityQueueConfigs[curveId] = MarkedPriorityQueueConfig({
-            priority: config.priority,
-            maxKeys: config.maxKeys,
-            isValue: true
-        });
-    }
-
-    function getPriorityQueueConfig(
+    /// @inheritdoc ICSParametersRegistry
+    function getQueueConfig(
         uint256 curveId
     ) external view returns (uint32 queuePriority, uint32 maxKeys) {
-        MarkedPriorityQueueConfig storage config = _priorityQueueConfigs[
-            curveId
-        ];
+        MarkedQueueConfig storage config = _queueConfigs[curveId];
 
         if (!config.isValue) {
-            return (
-                defaultPriorityQueueConfig.priority,
-                defaultPriorityQueueConfig.maxKeys
-            );
+            return (defaultQueueConfig.priority, defaultQueueConfig.maxKeys);
         }
 
         return (config.priority, config.maxKeys);
@@ -385,5 +404,15 @@ contract CSParametersRegistry is
         uint256 threshold
     ) internal pure {
         if (lifetime < threshold || lifetime < 1) revert InvalidStrikesParams();
+    }
+
+    function _setDefaultQueueConfig(
+        uint256 priority,
+        uint256 maxKeys
+    ) internal {
+        defaultQueueConfig.priority = priority.toUint32();
+        defaultQueueConfig.maxKeys = maxKeys.toUint32();
+
+        emit DefaultQueueConfigSet(priority, maxKeys);
     }
 }

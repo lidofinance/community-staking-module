@@ -9,13 +9,13 @@ interface ICSParametersRegistry {
         bool isValue;
     }
 
-    struct MarkedPriorityQueueConfig {
+    struct MarkedQueueConfig {
         uint32 priority;
         uint32 maxKeys;
         bool isValue;
     }
 
-    struct PriorityQueueConfig {
+    struct QueueConfig {
         uint32 priority;
         uint32 maxKeys;
     }
@@ -34,11 +34,12 @@ interface ICSParametersRegistry {
     struct InitializationData {
         uint256 keyRemovalCharge;
         uint256 elRewardsStealingAdditionalFine;
-        uint256 priorityQueueLimit;
         uint256 rewardShare;
         uint256 performanceLeeway;
         uint256 strikesLifetime;
         uint256 strikesThreshold;
+        uint256 defaultQueuePriority;
+        uint256 defaultQueueMaxKeys;
     }
 
     struct PivotsAndValues {
@@ -48,10 +49,10 @@ interface ICSParametersRegistry {
 
     event DefaultKeyRemovalChargeSet(uint256 value);
     event DefaultElRewardsStealingAdditionalFineSet(uint256 value);
-    event DefaultPriorityQueueLimitSet(uint256 value);
     event DefaultRewardShareSet(uint256 value);
     event DefaultPerformanceLeewaySet(uint256 value);
     event DefaultStrikesParamsSet(uint256 lifetime, uint256 threshold);
+    event DefaultQueueConfigSet(uint256 priority, uint256 maxKeys);
 
     event KeyRemovalChargeSet(
         uint256 indexed curveId,
@@ -61,7 +62,6 @@ interface ICSParametersRegistry {
         uint256 indexed curveId,
         uint256 fine
     );
-    event PriorityQueueLimitSet(uint256 indexed curveId, uint256 limit);
     event RewardShareDataSet(uint256 indexed curveId);
     event PerformanceLeewayDataSet(uint256 indexed curveId);
     event StrikesParamsSet(
@@ -71,10 +71,11 @@ interface ICSParametersRegistry {
     );
     event KeyRemovalChargeUnset(uint256 indexed curveId);
     event ElRewardsStealingAdditionalFineUnset(uint256 indexed curveId);
-    event PriorityQueueLimitUnset(uint256 indexed curveId);
     event RewardShareDataUnset(uint256 indexed curveId);
     event PerformanceLeewayDataUnset(uint256 indexed curveId);
     event StrikesParamsUnset(uint256 indexed curveId);
+    event QueueConfigSet(uint256 indexed curveId, uint256 priority, uint256 maxKeys);
+    event QueueConfigUnset(uint256 indexed curveId);
 
     error InvalidRewardShareData();
     error InvalidPerformanceLeewayData();
@@ -97,19 +98,11 @@ interface ICSParametersRegistry {
     /// @param fine value to be set as default for the EL rewards stealing additional fine
     function setDefaultElRewardsStealingAdditionalFine(uint256 fine) external;
 
+
     /// @notice Get default value for the EL rewards stealing additional fine
     function defaultElRewardsStealingAdditionalFine()
         external
         returns (uint256);
-
-    function setPriorityQueueConfig(
-        uint256 curveId,
-        PriorityQueueConfig memory config
-    ) external;
-
-    function getPriorityQueueConfig(
-        uint256 curveId
-    ) external view returns (uint32 queuePriority, uint32 maxKeys);
 
     /// @notice Set default value for the reward share. Default value is used if a specific value is not set for the curveId
     /// @param share value to be set as default for the reward share
@@ -205,6 +198,33 @@ interface ICSParametersRegistry {
         external
         view
         returns (uint256[] memory keyPivots, uint256[] memory rewardShares);
+
+    /// @notice Set default value for QueueConfig. Default value is used if a specific value is not set for the curveId.
+    /// @param priority Queue priority.
+    /// @param maxKeys Maximum number of keys in the queue available for a Node Operator.
+    function setDefaultQueueConfig(uint256 priority, uint256 maxKeys) external;
+
+    /// @notice Sets the provided config to the given curve.
+    /// @param curveId Curve Id to set the config.
+    /// @param config Config to be used for the curve.
+    function setQueueConfig(
+        uint256 curveId,
+        QueueConfig memory config
+    ) external;
+
+    /// @notice Set the given curve's config to the default one.
+    /// @param curveId Curve Id to unset custom config.
+    function unsetQueueConfig(
+        uint256 curveId
+    ) external;
+
+    /// @notice Get the queue config for the given curve.
+    /// @param curveId Curve Id to get the queue config for.
+    /// @return priority Queue priority.
+    /// @return maxKeys Maximum number of keys in the queue available for a Node Operator.
+    function getQueueConfig(
+        uint256 curveId
+    ) external view returns (uint32 priority, uint32 maxKeys);
 
     /// @notice Set performance leeway parameters for the curveId
     /// @dev keyPivots = [20, 100] and performanceLeeways = [500, 450, 400] stands for
