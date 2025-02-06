@@ -33,18 +33,17 @@ contract CSStrikes is ICSStrikes {
         bool isNewCidEmpty = bytes(_treeCid).length == 0;
         if (isNewRootEmpty != isNewCidEmpty) revert InvalidReportData();
         if (isNewRootEmpty) {
-            if (treeRoot == bytes32(0)) return;
-            delete treeRoot;
-            delete treeCid;
-            emit StrikesDataWiped();
+            if (treeRoot != bytes32(0)) {
+                delete treeRoot;
+                delete treeCid;
+                emit StrikesDataWiped();
+            }
             return;
         }
-        /// @dev should be both updated or not updated
-        bool isRootUpdated = treeRoot != _treeRoot;
-        bool isCidUpdated = keccak256(bytes(treeCid)) !=
-            keccak256(bytes(_treeCid));
-        if (isRootUpdated != isCidUpdated) revert InvalidReportData();
-        if (!isRootUpdated) revert InvalidReportData();
+        if (keccak256(bytes(treeCid)) == keccak256(bytes(_treeCid))) {
+            revert InvalidReportData();
+        }
+        if (treeRoot == _treeRoot) revert InvalidReportData();
         treeRoot = _treeRoot;
         treeCid = _treeCid;
         emit StrikesDataUpdated(_treeRoot, _treeCid);
