@@ -765,9 +765,6 @@ contract CSModule is
     ) internal {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         uint32 depositable = no.depositableValidatorsCount;
-        if (depositable > maxKeys) {
-            depositable = maxKeys;
-        }
         uint32 enqueued = no.enqueuedCount;
 
         if (enqueued < depositable) {
@@ -775,6 +772,7 @@ contract CSModule is
 
             unchecked {
                 count = depositable - enqueued;
+                if (count > maxKeys) count = maxKeys;
                 no.enqueuedCount += count;
             }
 
