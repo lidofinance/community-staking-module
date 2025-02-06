@@ -889,7 +889,7 @@ contract CSModule is
 
     /// @inheritdoc ICSModule
     function ejectBadPerformer(
-        uint64 nodeOperatorId,
+        uint256 nodeOperatorId,
         uint256 keyIndex,
         uint256[] calldata strikesData,
         bytes32[] calldata proof
@@ -906,8 +906,8 @@ contract CSModule is
         uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
 
         (, uint256 threshold) = PARAMETERS_REGISTRY.getStrikesParams(curveId);
-        bool isEjectable = _isEnoughStrikesToEject(strikesData, threshold);
-        if (!isEjectable) revert NotEnoughStrikesToEject();
+        if (!_isEnoughStrikesToEject(strikesData, threshold))
+            revert NotEnoughStrikesToEject();
 
         bytes memory pubkey = SigningKeys.loadKeys(nodeOperatorId, keyIndex, 1);
         strikes.verifyProof(nodeOperatorId, pubkey, strikesData, proof);

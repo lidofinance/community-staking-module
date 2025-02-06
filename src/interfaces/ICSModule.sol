@@ -500,7 +500,7 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     /// @param strikesData Strikes of the Node Operator's validator key. TODO: value is to be defined (timestamps or refSlots ?)
     /// @param proof Proof of the strikes
     function ejectBadPerformer(
-        uint64 nodeOperatorId,
+        uint256 nodeOperatorId,
         uint256 keyIndex,
         uint256[] calldata strikesData,
         bytes32[] calldata proof

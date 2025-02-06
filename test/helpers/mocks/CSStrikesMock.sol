@@ -11,4 +11,13 @@ contract CSStrikesMock {
     ) external {
         // do nothing
     }
+
+    function verifyProof(
+        uint256 nodeOperatorId,
+        bytes calldata pubkey,
+        uint256[] calldata strikesData,
+        bytes32[] calldata proof
+    ) external view {
+        // do nothing
+    }
 }
