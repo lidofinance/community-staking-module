@@ -99,6 +99,9 @@ abstract contract DeployImplementationsBase is DeployBase {
             });
 
             CSStrikes strikesImpl = new CSStrikes(address(oracle));
+            strikes = CSStrikes(
+                _deployProxy(config.proxyAdmin, address(strikesImpl))
+            );
 
             verifier = new CSVerifier({
                 withdrawalAddress: locator.withdrawalVault(),
@@ -164,6 +167,7 @@ abstract contract DeployImplementationsBase is DeployBase {
             deployJson.set("CSAccountingImpl", address(accountingImpl));
             deployJson.set("CSFeeOracleImpl", address(oracleImpl));
             deployJson.set("CSFeeDistributorImpl", address(feeDistributorImpl));
+            deployJson.set("CSStrikes", address(strikes));
             deployJson.set("CSStrikesImpl", address(strikesImpl));
             deployJson.set("CSVerifier", address(verifier));
             deployJson.set("HashConsensus", address(hashConsensus));

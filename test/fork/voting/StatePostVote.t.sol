@@ -34,6 +34,7 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
     function test_moduleState() public view {
         assertFalse(csm.isPaused());
         assertTrue(csm.publicRelease());
+        assertEq(address(csm.strikes()), address(strikes));
     }
 
     function test_moduleRoles() public view {
@@ -177,6 +178,11 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         );
     }
 
+    function test_strikesState() public view {
+        assertEq(strikes.treeRoot(), bytes32(0));
+        assertEq(keccak256(abi.encodePacked(strikes.treeCid())), keccak256(""));
+    }
+
     function test_feeDistributor_roles() public view {
         assertTrue(
             feeDistributor.hasRole(
@@ -207,6 +213,9 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         assertFalse(hash == bytes32(0), "expected report hash to be non-zero");
         assertGt(refSlot, 0);
         assertGt(processingDeadlineTime, 0);
+        assertEq(oracle.getConsensusVersion(), 2);
+        assertEq(oracle.getContractVersion(), 2);
+        assertEq(address(oracle.strikes()), address(strikes));
     }
 
     function test_feeOracle_roles() public view {

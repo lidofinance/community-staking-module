@@ -77,11 +77,18 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         UpgradeConfig memory upgradeConfig = parseUpgradeConfig(
             upgradeConfigContent
         );
+
         OssifiableProxy csmProxy = OssifiableProxy(
             payable(deploymentConfig.csm)
         );
-        vm.broadcast(_prepareProxyAdmin(address(csmProxy)));
-        csmProxy.proxy__upgradeTo(upgradeConfig.csmImpl);
+        vm.startBroadcast(_prepareProxyAdmin(address(csmProxy)));
+        {
+            csmProxy.proxy__upgradeTo(upgradeConfig.csmImpl);
+            CSModule(deploymentConfig.csm).finalizeUpgradeV2(
+                upgradeConfig.strikes
+            );
+        }
+        vm.stopBroadcast();
 
         OssifiableProxy accountingProxy = OssifiableProxy(
             payable(deploymentConfig.accounting)
@@ -92,8 +99,15 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         OssifiableProxy oracleProxy = OssifiableProxy(
             payable(deploymentConfig.oracle)
         );
-        vm.broadcast(_prepareProxyAdmin(address(oracleProxy)));
-        oracleProxy.proxy__upgradeTo(upgradeConfig.oracleImpl);
+        vm.startBroadcast(_prepareProxyAdmin(address(oracleProxy)));
+        {
+            oracleProxy.proxy__upgradeTo(upgradeConfig.oracleImpl);
+            CSFeeOracle(deploymentConfig.oracle).finalizeUpgradeV2({
+                consensusVersion: 2,
+                strikesContract: upgradeConfig.strikes
+            });
+        }
+        vm.stopBroadcast();
 
         OssifiableProxy feeDistributorProxy = OssifiableProxy(
             payable(deploymentConfig.feeDistributor)

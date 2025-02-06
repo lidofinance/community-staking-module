@@ -110,7 +110,7 @@ contract DeploymentHelpers is Test {
         address permissionlessGate;
         address vettedGate;
         address parametersRegistry;
-        address parametersRegistryImpl;
+        address strikes;
         address csmImpl;
         address accountingImpl;
         address oracleImpl;
@@ -223,6 +223,7 @@ contract DeploymentHelpers is Test {
             config,
             ".CSParametersRegistry"
         );
+        upgradeConfig.strikes = vm.parseJsonAddress(config, ".CSStrikes");
         upgradeConfig.csmImpl = vm.parseJsonAddress(config, ".CSModuleImpl");
         upgradeConfig.accountingImpl = vm.parseJsonAddress(
             config,
@@ -328,6 +329,7 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
             parametersRegistry = CSParametersRegistry(
                 upgradeConfig.parametersRegistry
             );
+            strikes = CSStrikes(upgradeConfig.strikes);
             permissionlessGate = PermissionlessGate(
                 upgradeConfig.permissionlessGate
             );
