@@ -410,7 +410,8 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     /// @param index Index of a queue item (continuous numbering)
     /// @return Deposit queue item and the priority of the queue
     function depositQueueItem(
-        uint256 queuePriority, uint128 index
+        uint256 queuePriority,
+        uint128 index
     ) external view returns (Batch);
 
     /// @notice Clean the deposit queue from batches with no depositable keys

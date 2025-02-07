@@ -11,13 +11,13 @@ interface ICSParametersRegistry {
 
     struct MarkedQueueConfig {
         uint32 priority;
-        uint32 maxKeys;
+        uint32 maxDeposits;
         bool isValue;
     }
 
     struct QueueConfig {
         uint32 priority;
-        uint32 maxKeys;
+        uint32 maxDeposits;
     }
 
     struct StrikesParams {
@@ -39,7 +39,7 @@ interface ICSParametersRegistry {
         uint256 strikesLifetime;
         uint256 strikesThreshold;
         uint256 defaultQueuePriority;
-        uint256 defaultQueueMaxKeys;
+        uint256 defaultQueueMaxDeposits;
     }
 
     struct PivotsAndValues {
@@ -52,7 +52,7 @@ interface ICSParametersRegistry {
     event DefaultRewardShareSet(uint256 value);
     event DefaultPerformanceLeewaySet(uint256 value);
     event DefaultStrikesParamsSet(uint256 lifetime, uint256 threshold);
-    event DefaultQueueConfigSet(uint256 priority, uint256 maxKeys);
+    event DefaultQueueConfigSet(uint256 priority, uint256 maxDeposits);
 
     event KeyRemovalChargeSet(
         uint256 indexed curveId,
@@ -74,7 +74,11 @@ interface ICSParametersRegistry {
     event RewardShareDataUnset(uint256 indexed curveId);
     event PerformanceLeewayDataUnset(uint256 indexed curveId);
     event StrikesParamsUnset(uint256 indexed curveId);
-    event QueueConfigSet(uint256 indexed curveId, uint256 priority, uint256 maxKeys);
+    event QueueConfigSet(
+        uint256 indexed curveId,
+        uint256 priority,
+        uint256 maxDeposits
+    );
     event QueueConfigUnset(uint256 indexed curveId);
 
     error InvalidRewardShareData();
@@ -97,7 +101,6 @@ interface ICSParametersRegistry {
     /// @notice Set default value for the EL rewards stealing additional fine. Default value is used if a specific value is not set for the curveId
     /// @param fine value to be set as default for the EL rewards stealing additional fine
     function setDefaultElRewardsStealingAdditionalFine(uint256 fine) external;
-
 
     /// @notice Get default value for the EL rewards stealing additional fine
     function defaultElRewardsStealingAdditionalFine()
@@ -201,8 +204,11 @@ interface ICSParametersRegistry {
 
     /// @notice Set default value for QueueConfig. Default value is used if a specific value is not set for the curveId.
     /// @param priority Queue priority.
-    /// @param maxKeys Maximum number of keys in the queue available for a Node Operator.
-    function setDefaultQueueConfig(uint256 priority, uint256 maxKeys) external;
+    /// @param maxDeposits Maximum number of deposits a Node Operator can get via the priority queue.
+    function setDefaultQueueConfig(
+        uint256 priority,
+        uint256 maxDeposits
+    ) external;
 
     /// @notice Sets the provided config to the given curve.
     /// @param curveId Curve Id to set the config.
@@ -214,17 +220,15 @@ interface ICSParametersRegistry {
 
     /// @notice Set the given curve's config to the default one.
     /// @param curveId Curve Id to unset custom config.
-    function unsetQueueConfig(
-        uint256 curveId
-    ) external;
+    function unsetQueueConfig(uint256 curveId) external;
 
     /// @notice Get the queue config for the given curve.
     /// @param curveId Curve Id to get the queue config for.
     /// @return priority Queue priority.
-    /// @return maxKeys Maximum number of keys in the queue available for a Node Operator.
+    /// @return maxDeposits Maximum number of deposits a Node Operator can get via the priority queue.
     function getQueueConfig(
         uint256 curveId
-    ) external view returns (uint32 priority, uint32 maxKeys);
+    ) external view returns (uint32 priority, uint32 maxDeposits);
 
     /// @notice Set performance leeway parameters for the curveId
     /// @dev keyPivots = [20, 100] and performanceLeeways = [500, 450, 400] stands for

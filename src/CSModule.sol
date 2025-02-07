@@ -734,16 +734,15 @@ contract CSModule is
 
     function _enqueueNodeOperatorKeys(uint256 nodeOperatorId) internal {
         uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
-        (uint32 priority, uint32 maxKeys) = PARAMETERS_REGISTRY.getQueueConfig(
-            curveId
-        );
+        (uint32 priority, uint32 maxDeposits) = PARAMETERS_REGISTRY
+            .getQueueConfig(curveId);
 
         if (priority < LEGACY_QUEUE_PRIORITY) {
             NodeOperator storage no = _nodeOperators[nodeOperatorId];
             uint32 enqueuedSoFar = no.totalDepositedKeys + no.enqueuedCount;
 
-            if (maxKeys > enqueuedSoFar) {
-                uint32 leftForQueue = maxKeys - enqueuedSoFar;
+            if (maxDeposits > enqueuedSoFar) {
+                uint32 leftForQueue = maxDeposits - enqueuedSoFar;
                 _enqueueNodeOperatorKeys(
                     nodeOperatorId,
                     priority,

@@ -64,7 +64,7 @@ contract CSParametersRegistry is
         _setDefaultStrikesParams(data.strikesLifetime, data.strikesThreshold);
         _setDefaultQueueConfig(
             data.defaultQueuePriority,
-            data.defaultQueueMaxKeys
+            data.defaultQueueMaxDeposits
         );
 
         __AccessControlEnumerable_init();
@@ -110,9 +110,9 @@ contract CSParametersRegistry is
     /// @inheritdoc ICSParametersRegistry
     function setDefaultQueueConfig(
         uint256 priority,
-        uint256 maxKeys
+        uint256 maxDeposits
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setDefaultQueueConfig(priority, maxKeys);
+        _setDefaultQueueConfig(priority, maxDeposits);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -266,11 +266,11 @@ contract CSParametersRegistry is
 
         _queueConfigs[curveId] = MarkedQueueConfig({
             priority: config.priority,
-            maxKeys: config.maxKeys,
+            maxDeposits: config.maxDeposits,
             isValue: true
         });
 
-        emit QueueConfigSet(curveId, config.priority, config.maxKeys);
+        emit QueueConfigSet(curveId, config.priority, config.maxDeposits);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -355,14 +355,17 @@ contract CSParametersRegistry is
     /// @inheritdoc ICSParametersRegistry
     function getQueueConfig(
         uint256 curveId
-    ) external view returns (uint32 queuePriority, uint32 maxKeys) {
+    ) external view returns (uint32 queuePriority, uint32 maxDeposits) {
         MarkedQueueConfig storage config = _queueConfigs[curveId];
 
         if (!config.isValue) {
-            return (defaultQueueConfig.priority, defaultQueueConfig.maxKeys);
+            return (
+                defaultQueueConfig.priority,
+                defaultQueueConfig.maxDeposits
+            );
         }
 
-        return (config.priority, config.maxKeys);
+        return (config.priority, config.maxDeposits);
     }
 
     function _setDefaultKeyRemovalCharge(uint256 keyRemovalCharge) internal {
@@ -408,11 +411,11 @@ contract CSParametersRegistry is
 
     function _setDefaultQueueConfig(
         uint256 priority,
-        uint256 maxKeys
+        uint256 maxDeposits
     ) internal {
         defaultQueueConfig.priority = priority.toUint32();
-        defaultQueueConfig.maxKeys = maxKeys.toUint32();
+        defaultQueueConfig.maxDeposits = maxDeposits.toUint32();
 
-        emit DefaultQueueConfigSet(priority, maxKeys);
+        emit DefaultQueueConfigSet(priority, maxDeposits);
     }
 }
