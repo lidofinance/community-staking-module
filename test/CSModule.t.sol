@@ -2766,14 +2766,6 @@ contract CsmChangeNodeOperatorRewardAddress is CSMCommon {
     }
 }
 
-contract CsmOnWithdrawalCredentialsChanged is CSMCommon {
-    function test_onWithdrawalCredentialsChanged() public assertInvariants {
-        csm.onWithdrawalCredentialsChanged();
-
-        // TODO: Add queue assert
-    }
-}
-
 contract CsmVetKeys is CSMCommon {
     function test_vetKeys_OnUploadKeys() public assertInvariants {
         uint256 noId = createNodeOperator(2);
