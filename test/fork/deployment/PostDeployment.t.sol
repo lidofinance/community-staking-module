@@ -134,10 +134,6 @@ contract CSParametersRegistryDeploymentTest is
             deployParams.elRewardsStealingAdditionalFine
         );
         assertEq(
-            parametersRegistry.defaultPriorityQueueLimit(),
-            deployParams.priorityQueueLimit
-        );
-        assertEq(
             parametersRegistry.defaultRewardShare(),
             deployParams.rewardShareBP
         );
@@ -149,6 +145,11 @@ contract CSParametersRegistryDeploymentTest is
             .defaultStrikesParams();
         assertEq(strikesLifetime, deployParams.strikesLifetimeFrames);
         assertEq(strikesThreshold, deployParams.strikesThreshold);
+
+        (uint256 priority, uint256 maxDeposits) = parametersRegistry
+            .defaultQueueConfig();
+        assertEq(priority, deployParams.defaultQueuePriority);
+        assertEq(maxDeposits, deployParams.defaultQueueMaxDeposits);
     }
 
     function test_roles() public view {
@@ -183,11 +184,12 @@ contract CSParametersRegistryDeploymentTest is
                 keyRemovalCharge: deployParams.keyRemovalCharge,
                 elRewardsStealingAdditionalFine: deployParams
                     .elRewardsStealingAdditionalFine,
-                priorityQueueLimit: deployParams.priorityQueueLimit,
                 rewardShare: deployParams.rewardShareBP,
                 performanceLeeway: deployParams.avgPerfLeewayBP,
                 strikesLifetime: deployParams.strikesLifetimeFrames,
-                strikesThreshold: deployParams.strikesThreshold
+                strikesThreshold: deployParams.strikesThreshold,
+                defaultQueuePriority: deployParams.defaultQueuePriority,
+                defaultQueueMaxDeposits: deployParams.defaultQueueMaxDeposits
             })
         });
     }

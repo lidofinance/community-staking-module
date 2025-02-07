@@ -173,16 +173,24 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     }
 
     // Checks that the queue is in the expected state starting from its head.
-    function _assertQueueState(BatchInfo[] memory exp) internal view {
-        (uint128 curr, ) = csm.depositQueue(); // queue.head
+    function _assertQueueState(
+        uint256 priority,
+        BatchInfo[] memory exp
+    ) internal view {
+        (uint128 curr, ) = csm.depositQueuePointers(priority); // queue.head
 
         for (uint256 i = 0; i < exp.length; ++i) {
             BatchInfo memory b = exp[i];
-            Batch item = csm.depositQueueItem(curr);
+            Batch item = csm.depositQueueItem(priority, curr);
 
             assertFalse(
                 item.isNil(),
-                string.concat("unexpected end of queue at index ", i.toString())
+                string.concat(
+                    "unexpected end of queue with priority=",
+                    priority.toString(),
+                    " at index ",
+                    i.toString()
+                )
             );
 
             curr = item.next();
@@ -193,26 +201,45 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
                 noId,
                 b.nodeOperatorId,
                 string.concat(
-                    "unexpected `nodeOperatorId` at index ",
+                    "unexpected `nodeOperatorId` at queue with priority=",
+                    priority.toString(),
+                    " at index ",
                     i.toString()
                 )
             );
             assertEq(
                 keysInBatch,
                 b.count,
-                string.concat("unexpected `count` at index ", i.toString())
+                string.concat(
+                    "unexpected `count` at queue with priority=",
+                    priority.toString(),
+                    " at index ",
+                    i.toString()
+                )
             );
         }
 
         assertTrue(
-            csm.depositQueueItem(curr).isNil(),
-            "unexpected tail of queue"
+            csm.depositQueueItem(priority, curr).isNil(),
+            string.concat(
+                "unexpected tail of queue with priority=",
+                priority.toString()
+            )
         );
     }
 
     function _assertQueueIsEmpty() internal view {
-        (uint128 curr, ) = csm.depositQueue(); // queue.head
-        assertTrue(csm.depositQueueItem(curr).isNil(), "queue should be empty");
+        for (uint256 p = 0; p < csm.QUEUE_LOWEST_PRIORITY(); ++p) {
+            (uint128 curr, ) = csm.depositQueuePointers(p); // queue.head
+            assertTrue(
+                csm.depositQueueItem(p, curr).isNil(),
+                string.concat(
+                    "queue with priority=",
+                    p.toString(),
+                    " is not empty"
+                )
+            );
+        }
     }
 
     function getNodeOperatorSummary(
@@ -2742,7 +2769,7 @@ contract CsmVetKeys is CSMCommon {
         BatchInfo[] memory exp = new BatchInfo[](2);
         exp[0] = BatchInfo({ nodeOperatorId: noId, count: 2 });
         exp[1] = BatchInfo({ nodeOperatorId: noId, count: 1 });
-        _assertQueueState(exp);
+        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
     }
 
     function test_vetKeys_Counters() public assertInvariants {
@@ -2861,7 +2888,7 @@ contract CsmQueueOps is CSMCommon {
         BatchInfo[] memory exp = new BatchInfo[](2);
         exp[0] = BatchInfo({ nodeOperatorId: 0, count: 3 });
         exp[1] = BatchInfo({ nodeOperatorId: 1, count: 5 });
-        _assertQueueState(exp);
+        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
 
         (toRemove, ) = csm.cleanDepositQueue(LOOKUP_DEPTH);
         assertEq(toRemove, 0, "queue should be clean");
@@ -5457,7 +5484,7 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
 
         BatchInfo[] memory exp = new BatchInfo[](1);
         exp[0] = BatchInfo({ nodeOperatorId: noId, count: 1 });
-        _assertQueueState(exp);
+        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
     }
 
     function test_compensateELRewardsStealingPenalty_RevertWhen_NoNodeOperator()

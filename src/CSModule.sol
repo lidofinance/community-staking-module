@@ -984,6 +984,14 @@ contract CSModule is
     }
 
     /// @inheritdoc ICSModule
+    function depositQueuePointers(
+        uint256 queuePriority
+    ) external view returns (uint128 head, uint128 tail) {
+        QueueLib.Queue storage q = _getQueue(queuePriority);
+        return (q.head, q.tail);
+    }
+
+    /// @inheritdoc ICSModule
     function depositQueueItem(
         uint256 queuePriority,
         uint128 index

@@ -24,16 +24,19 @@ contract CSParametersRegistryBaseTest is Test, Utilities, Fixtures {
         admin = nextAddress("ADMIN");
         stranger = nextAddress("STRANGER");
 
-        parametersRegistry = new CSParametersRegistry();
+        parametersRegistry = new CSParametersRegistry({
+            queueLowestPriority: 5
+        });
 
         defaultInitData = ICSParametersRegistry.InitializationData({
             keyRemovalCharge: 0.05 ether,
             elRewardsStealingAdditionalFine: 0.1 ether,
-            priorityQueueLimit: 0,
             rewardShare: 8000,
             performanceLeeway: 500,
             strikesLifetime: 6,
-            strikesThreshold: 3
+            strikesThreshold: 3,
+            defaultQueuePriority: 0,
+            defaultQueueMaxDeposits: 10
         });
     }
 }
@@ -64,10 +67,6 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
             defaultInitData.elRewardsStealingAdditionalFine
         );
         assertEq(
-            parametersRegistry.defaultPriorityQueueLimit(),
-            defaultInitData.priorityQueueLimit
-        );
-        assertEq(
             parametersRegistry.defaultRewardShare(),
             defaultInitData.rewardShare
         );
@@ -81,6 +80,12 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
 
         assertEq(lifetime, defaultInitData.strikesLifetime);
         assertEq(threshold, defaultInitData.strikesThreshold);
+
+        (uint256 priority, uint256 maxDeposits) = parametersRegistry
+            .defaultQueueConfig();
+
+        assertEq(priority, defaultInitData.defaultQueuePriority);
+        assertEq(maxDeposits, defaultInitData.defaultQueueMaxDeposits);
     }
 
     function test_initialize_RevertWhen_ZeroAdminAddress() public {
@@ -648,84 +653,6 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
 
         assertEq(leewaysOut.length, 1);
         assertEq(leewaysOut[0], defaultInitData.performanceLeeway);
-    }
-}
-
-contract CSParametersRegistryPriorityQueueLimitTest is
-    CSParametersRegistryBaseTest
-{
-    function setUp() public virtual override {
-        super.setUp();
-        _enableInitializers(address(parametersRegistry));
-        parametersRegistry.initialize(admin, defaultInitData);
-    }
-
-    function test_setDefaultPriorityQueueLimit() public {
-        uint256 limit = 154;
-        vm.expectEmit(true, true, true, true, address(parametersRegistry));
-        emit ICSParametersRegistry.DefaultPriorityQueueLimitSet(limit);
-        vm.prank(admin);
-        parametersRegistry.setDefaultPriorityQueueLimit(limit);
-
-        assertEq(parametersRegistry.defaultPriorityQueueLimit(), limit);
-    }
-
-    function test_setPriorityQueueLimit_set_valid_data() public {
-        uint256 curveId = 1;
-        uint256 limit = 20;
-
-        vm.expectEmit(true, true, true, true, address(parametersRegistry));
-        emit ICSParametersRegistry.PriorityQueueLimitSet(curveId, limit);
-        vm.prank(admin);
-        parametersRegistry.setPriorityQueueLimit(curveId, limit);
-    }
-
-    function test_setPriorityQueueLimit_RevertWhen_not_admin() public {
-        uint256 curveId = 1;
-        uint256 limit = 20;
-
-        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
-        expectRoleRevert(stranger, role);
-        vm.prank(stranger);
-        parametersRegistry.setPriorityQueueLimit(curveId, limit);
-    }
-
-    function test_unsetPriorityQueueLimit() public {
-        uint256 curveId = 1;
-        uint256 limit = 20;
-
-        vm.prank(admin);
-        parametersRegistry.setPriorityQueueLimit(curveId, limit);
-
-        uint256 limitOut = parametersRegistry.getPriorityQueueLimit(curveId);
-
-        assertEq(limitOut, limit);
-
-        vm.prank(admin);
-        parametersRegistry.unsetPriorityQueueLimit(curveId);
-
-        limitOut = parametersRegistry.getPriorityQueueLimit(curveId);
-
-        assertEq(limitOut, defaultInitData.priorityQueueLimit);
-    }
-
-    function test_getPriorityQueueLimit_usual_data() public {
-        uint256 curveId = 1;
-        uint256 limit = 20;
-
-        vm.prank(admin);
-        parametersRegistry.setPriorityQueueLimit(curveId, limit);
-
-        uint256 limitOut = parametersRegistry.getPriorityQueueLimit(curveId);
-
-        assertEq(limitOut, limit);
-    }
-
-    function test_getPriorityQueueLimit_default_data() public view {
-        uint256 curveId = 10;
-        uint256 limitOut = parametersRegistry.getPriorityQueueLimit(curveId);
-
-        assertEq(limitOut, defaultInitData.priorityQueueLimit);
     }
 }
 

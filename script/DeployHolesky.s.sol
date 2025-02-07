@@ -78,7 +78,7 @@ contract DeployHolesky is DeployBase {
         config.rewardShareBP = 10000;
         config.strikesLifetimeFrames = 6;
         config.strikesThreshold = 3;
-        config.priorityQueueLimit = 0;
+        config.queueLowestPriority = 5;
         // VettedGate
         config
             .vettedGateTreeRoot = 0xc9a9c1576cf4f3213ad9075b72a1f1b147914a252ad927fa4ca3460ff0723ca9;

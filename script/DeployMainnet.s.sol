@@ -74,7 +74,7 @@ contract DeployMainnet is DeployBase {
         config.rewardShareBP = 10000;
         config.strikesLifetimeFrames = 6;
         config.strikesThreshold = 3;
-        config.priorityQueueLimit = 0;
+        config.queueLowestPriority = 5;
         // VettedGate
         config
             .vettedGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json

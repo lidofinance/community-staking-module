@@ -38,10 +38,6 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
             deployParams.elRewardsStealingAdditionalFine
         );
         assertEq(
-            parametersRegistry.defaultPriorityQueueLimit(),
-            deployParams.priorityQueueLimit
-        );
-        assertEq(
             parametersRegistry.defaultRewardShare(),
             deployParams.rewardShareBP
         );
@@ -53,6 +49,12 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
             .defaultStrikesParams();
         assertEq(strikesLifetime, deployParams.strikesLifetimeFrames);
         assertEq(strikesThreshold, deployParams.strikesThreshold);
+
+        (uint256 priority, uint256 maxDeposits) = parametersRegistry
+            .defaultQueueConfig();
+
+        assertEq(priority, deployParams.defaultQueuePriority);
+        assertEq(maxDeposits, deployParams.defaultQueueMaxDeposits);
     }
 
     function test_accounting_initialState() public view {
