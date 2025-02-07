@@ -60,9 +60,9 @@ contract CSModule is
     IStETH public immutable STETH;
     ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
 
-    /// @dev LOWEST_PRIORITY identifies the range of available priorities: [0; LOWEST_PRIORITY].
-    uint256 public immutable LOWEST_PRIORITY;
-    uint256 public immutable LEGACY_QUEUE_PRIORITY;
+    /// @dev QUEUE_LOWEST_PRIORITY identifies the range of available priorities: [0; QUEUE_LOWEST_PRIORITY].
+    uint256 public immutable QUEUE_LOWEST_PRIORITY;
+    uint256 public immutable QUEUE_LEGACY_PRIORITY;
 
     ////////////////////////
     // State variables below
@@ -70,7 +70,7 @@ contract CSModule is
     mapping(uint256 queuePriority => QueueLib.Queue queue)
         internal _queueByPriority;
 
-    /// @dev Legacy queue (priority=LEGACY_QUEUE_PRIORITY), that we will probably may be able to remove in the future.
+    /// @dev Legacy queue (priority=QUEUE_LEGACY_PRIORITY), that we will probably may be able to remove in the future.
     QueueLib.Queue public legacyQueue;
 
     ICSAccounting public accounting;
@@ -108,8 +108,8 @@ contract CSModule is
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
         STETH = IStETH(LIDO_LOCATOR.lido());
         PARAMETERS_REGISTRY = ICSParametersRegistry(parametersRegistry);
-        LOWEST_PRIORITY = PARAMETERS_REGISTRY.LOWEST_PRIORITY();
-        LEGACY_QUEUE_PRIORITY = PARAMETERS_REGISTRY.LEGACY_QUEUE_PRIORITY();
+        QUEUE_LOWEST_PRIORITY = PARAMETERS_REGISTRY.QUEUE_LOWEST_PRIORITY();
+        QUEUE_LEGACY_PRIORITY = PARAMETERS_REGISTRY.QUEUE_LEGACY_PRIORITY();
 
         _disableInitializers();
     }
@@ -732,55 +732,6 @@ contract CSModule is
         _enqueueNodeOperatorKeys(nodeOperatorId);
     }
 
-    function _enqueueNodeOperatorKeys(uint256 nodeOperatorId) internal {
-        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
-        (uint32 priority, uint32 maxDeposits) = PARAMETERS_REGISTRY
-            .getQueueConfig(curveId);
-
-        if (priority < LEGACY_QUEUE_PRIORITY) {
-            NodeOperator storage no = _nodeOperators[nodeOperatorId];
-            uint32 enqueuedSoFar = no.totalDepositedKeys + no.enqueuedCount;
-
-            if (maxDeposits > enqueuedSoFar) {
-                uint32 leftForQueue = maxDeposits - enqueuedSoFar;
-                _enqueueNodeOperatorKeys(
-                    nodeOperatorId,
-                    priority,
-                    leftForQueue
-                );
-            }
-        }
-
-        _enqueueNodeOperatorKeys(
-            nodeOperatorId,
-            LOWEST_PRIORITY,
-            type(uint32).max
-        );
-    }
-
-    function _enqueueNodeOperatorKeys(
-        uint256 nodeOperatorId,
-        uint256 queuePriority,
-        uint32 maxKeys
-    ) internal {
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        uint32 depositable = no.depositableValidatorsCount;
-        uint32 enqueued = no.enqueuedCount;
-
-        if (enqueued < depositable) {
-            uint32 count;
-
-            unchecked {
-                count = depositable - enqueued;
-                if (count > maxKeys) count = maxKeys;
-                no.enqueuedCount += count;
-            }
-
-            QueueLib.Queue storage q = _getQueue(queuePriority);
-            q.enqueue(nodeOperatorId, count);
-        }
-    }
-
     /// @inheritdoc ICSModule
     function reportELRewardsStealingPenalty(
         uint256 nodeOperatorId,
@@ -928,7 +879,8 @@ contract CSModule is
         external
         onlyRole(STAKING_ROUTER_ROLE)
     {
-        // Nothing to do.
+        // solhint-disable-previous-line no-empty-blocks
+        // Nothing to do. The key removal charge should be reset separately to 0 to allow Node Operators to remove the keys without any charge.
     }
 
     /// @inheritdoc IStakingModule
@@ -948,7 +900,8 @@ contract CSModule is
         uint256 depositsLeft = depositsCount;
         uint256 loadedKeysCount = 0;
 
-        for (uint256 p = 0; p <= LOWEST_PRIORITY; ++p) {
+        for (uint256 p = 0; p <= QUEUE_LOWEST_PRIORITY; ++p) {
+            // solhint-disable-next-line func-named-parameters
             (depositsLeft, loadedKeysCount) = _getDepositDataFromQueue(
                 _getQueue(p),
                 depositsLeft,
@@ -972,85 +925,6 @@ contract CSModule is
         _incrementModuleNonce();
     }
 
-    function _getDepositDataFromQueue(
-        QueueLib.Queue storage queue,
-        uint256 depositsLeft,
-        uint256 loadedKeysCount,
-        bytes memory publicKeys,
-        bytes memory signatures
-    ) internal returns (uint256, uint256) {
-        for (Batch item = queue.peek(); !item.isNil(); item = queue.peek()) {
-            // NOTE: see the `enqueuedCount` note below.
-            unchecked {
-                uint256 noId = item.noId();
-                uint256 keysInBatch = item.keys();
-                NodeOperator storage no = _nodeOperators[noId];
-
-                uint256 keysCount = Math.min(
-                    Math.min(no.depositableValidatorsCount, keysInBatch),
-                    depositsLeft
-                );
-                // `depositsLeft` is non-zero at this point all the time, so the check `depositsLeft > keysCount`
-                // covers the case when no depositable keys on the Node Operator have been left.
-                if (depositsLeft > keysCount || keysCount == keysInBatch) {
-                    // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
-                    // @dev No need to safe cast due to internal logic
-                    no.enqueuedCount -= uint32(keysInBatch);
-                    // We've consumed all the keys in the batch, so we dequeue it.
-                    queue.dequeue();
-                } else {
-                    // This branch covers the case when we stop in the middle of the batch.
-                    // We release the amount of keys consumed only, the rest will be kept.
-                    // @dev No need to safe cast due to internal logic
-                    no.enqueuedCount -= uint32(keysCount);
-                    // NOTE: `keysInBatch` can't be less than `keysCount` at this point.
-                    // We update the batch with the remaining keys.
-                    item = item.setKeys(keysInBatch - keysCount);
-                    // Store the updated batch back to the queue.
-                    queue.queue[queue.head] = item;
-                }
-
-                if (keysCount == 0) {
-                    continue;
-                }
-
-                // solhint-disable-next-line func-named-parameters
-                SigningKeys.loadKeysSigs(
-                    noId,
-                    no.totalDepositedKeys,
-                    keysCount,
-                    publicKeys,
-                    signatures,
-                    loadedKeysCount
-                );
-
-                // It's impossible in practice to reach the limit of these variables.
-                loadedKeysCount += keysCount;
-                // @dev No need to safe cast due to internal logic
-                no.totalDepositedKeys += uint32(keysCount);
-
-                emit DepositedSigningKeysCountChanged(
-                    noId,
-                    no.totalDepositedKeys
-                );
-
-                // No need for `_updateDepositableValidatorsCount` call since we update the number directly.
-                // `keysCount` is min of `depositableValidatorsCount` and `depositsLeft`.
-                // @dev No need to safe cast due to internal logic
-                uint32 newCount = no.depositableValidatorsCount -
-                    uint32(keysCount);
-                no.depositableValidatorsCount = newCount;
-                emit DepositableSigningKeysCountChanged(noId, newCount);
-                depositsLeft -= keysCount;
-                if (depositsLeft == 0) {
-                    break;
-                }
-            }
-        }
-
-        return (depositsLeft, loadedKeysCount);
-    }
-
     /// @inheritdoc ICSModule
     function cleanDepositQueue(
         uint256 maxItems
@@ -1061,7 +935,7 @@ contract CSModule is
 
         uint256 totalVisited = 0;
 
-        for (uint256 p = 0; p <= LOWEST_PRIORITY; ++p) {
+        for (uint256 p = 0; p <= QUEUE_LOWEST_PRIORITY; ++p) {
             QueueLib.Queue storage q = _getQueue(p);
 
             (
@@ -1314,17 +1188,83 @@ contract CSModule is
         emit NonceChanged(_nonce);
     }
 
-    /// @dev Acts as a proxy to `_queueByPriority` till `legacyQueue` deprecation.
-    function _getQueue(
-        uint256 priority
-    ) internal view returns (QueueLib.Queue storage q) {
-        if (priority == LEGACY_QUEUE_PRIORITY) {
-            assembly {
-                q.slot := legacyQueue.slot
+    function _getDepositDataFromQueue(
+        QueueLib.Queue storage queue,
+        uint256 depositsLeft,
+        uint256 loadedKeysCount,
+        bytes memory publicKeys,
+        bytes memory signatures
+    ) internal returns (uint256, uint256) {
+        for (Batch item = queue.peek(); !item.isNil(); item = queue.peek()) {
+            // NOTE: see the `enqueuedCount` note below.
+            unchecked {
+                uint256 noId = item.noId();
+                uint256 keysInBatch = item.keys();
+                NodeOperator storage no = _nodeOperators[noId];
+
+                uint256 keysCount = Math.min(
+                    Math.min(no.depositableValidatorsCount, keysInBatch),
+                    depositsLeft
+                );
+                // `depositsLeft` is non-zero at this point all the time, so the check `depositsLeft > keysCount`
+                // covers the case when no depositable keys on the Node Operator have been left.
+                if (depositsLeft > keysCount || keysCount == keysInBatch) {
+                    // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
+                    // @dev No need to safe cast due to internal logic
+                    no.enqueuedCount -= uint32(keysInBatch);
+                    // We've consumed all the keys in the batch, so we dequeue it.
+                    queue.dequeue();
+                } else {
+                    // This branch covers the case when we stop in the middle of the batch.
+                    // We release the amount of keys consumed only, the rest will be kept.
+                    // @dev No need to safe cast due to internal logic
+                    no.enqueuedCount -= uint32(keysCount);
+                    // NOTE: `keysInBatch` can't be less than `keysCount` at this point.
+                    // We update the batch with the remaining keys.
+                    item = item.setKeys(keysInBatch - keysCount);
+                    // Store the updated batch back to the queue.
+                    queue.queue[queue.head] = item;
+                }
+
+                if (keysCount == 0) {
+                    continue;
+                }
+
+                // solhint-disable-next-line func-named-parameters
+                SigningKeys.loadKeysSigs(
+                    noId,
+                    no.totalDepositedKeys,
+                    keysCount,
+                    publicKeys,
+                    signatures,
+                    loadedKeysCount
+                );
+
+                // It's impossible in practice to reach the limit of these variables.
+                loadedKeysCount += keysCount;
+                // @dev No need to safe cast due to internal logic
+                no.totalDepositedKeys += uint32(keysCount);
+
+                emit DepositedSigningKeysCountChanged(
+                    noId,
+                    no.totalDepositedKeys
+                );
+
+                // No need for `_updateDepositableValidatorsCount` call since we update the number directly.
+                // `keysCount` is min of `depositableValidatorsCount` and `depositsLeft`.
+                // @dev No need to safe cast due to internal logic
+                uint32 newCount = no.depositableValidatorsCount -
+                    uint32(keysCount);
+                no.depositableValidatorsCount = newCount;
+                emit DepositableSigningKeysCountChanged(noId, newCount);
+                depositsLeft -= keysCount;
+                if (depositsLeft == 0) {
+                    break;
+                }
             }
-        } else {
-            q = _queueByPriority[priority];
         }
+
+        return (depositsLeft, loadedKeysCount);
     }
 
     function _addKeysAndUpdateDepositableValidatorsCount(
@@ -1494,6 +1434,68 @@ contract CSModule is
                 _incrementModuleNonce();
             }
             _enqueueNodeOperatorKeys(nodeOperatorId);
+        }
+    }
+
+    function _enqueueNodeOperatorKeys(uint256 nodeOperatorId) internal {
+        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
+        (uint32 priority, uint32 maxDeposits) = PARAMETERS_REGISTRY
+            .getQueueConfig(curveId);
+
+        if (priority < QUEUE_LEGACY_PRIORITY) {
+            NodeOperator storage no = _nodeOperators[nodeOperatorId];
+            uint32 enqueuedSoFar = no.totalDepositedKeys + no.enqueuedCount;
+
+            if (maxDeposits > enqueuedSoFar) {
+                uint32 leftForQueue = maxDeposits - enqueuedSoFar;
+                _enqueueNodeOperatorKeys(
+                    nodeOperatorId,
+                    priority,
+                    leftForQueue
+                );
+            }
+        }
+
+        _enqueueNodeOperatorKeys(
+            nodeOperatorId,
+            QUEUE_LOWEST_PRIORITY,
+            type(uint32).max
+        );
+    }
+
+    function _enqueueNodeOperatorKeys(
+        uint256 nodeOperatorId,
+        uint256 queuePriority,
+        uint32 maxKeys
+    ) internal {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        uint32 depositable = no.depositableValidatorsCount;
+        uint32 enqueued = no.enqueuedCount;
+
+        if (enqueued < depositable) {
+            uint32 count;
+
+            unchecked {
+                count = depositable - enqueued;
+                if (count > maxKeys) count = maxKeys;
+                no.enqueuedCount += count;
+            }
+
+            QueueLib.Queue storage q = _getQueue(queuePriority);
+            q.enqueue(nodeOperatorId, count);
+        }
+    }
+
+    /// @dev Acts as a proxy to `_queueByPriority` till `legacyQueue` deprecation.
+    function _getQueue(
+        uint256 priority
+    ) internal view returns (QueueLib.Queue storage q) {
+        if (priority == QUEUE_LOWEST_PRIORITY) {
+            assembly {
+                q.slot := legacyQueue.slot
+            }
+        } else {
+            q = _queueByPriority[priority];
         }
     }
 

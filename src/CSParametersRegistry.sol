@@ -39,13 +39,13 @@ contract CSParametersRegistry is
     StrikesParams public defaultStrikesParams;
     mapping(uint256 => MarkedStrikesParams) internal _strikesParams;
 
-    uint256 public immutable LOWEST_PRIORITY;
-    uint256 public immutable LEGACY_QUEUE_PRIORITY;
+    uint256 public immutable QUEUE_LOWEST_PRIORITY;
+    uint256 public immutable QUEUE_LEGACY_PRIORITY;
 
-    constructor(uint256 lowestPriority) {
+    constructor(uint256 queueLowestPriority) {
         _disableInitializers();
-        LOWEST_PRIORITY = lowestPriority;
-        LEGACY_QUEUE_PRIORITY = lowestPriority - 1;
+        QUEUE_LOWEST_PRIORITY = queueLowestPriority;
+        QUEUE_LEGACY_PRIORITY = queueLowestPriority - 1;
     }
 
     /// @notice initialize contract
@@ -258,9 +258,9 @@ contract CSParametersRegistry is
     /// @inheritdoc ICSParametersRegistry
     function setQueueConfig(
         uint256 curveId,
-        QueueConfig memory config
+        QueueConfig calldata config
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (config.priority == LEGACY_QUEUE_PRIORITY) {
+        if (config.priority == QUEUE_LEGACY_PRIORITY) {
             revert QueueCannotBeUsed();
         }
 
@@ -402,13 +402,6 @@ contract CSParametersRegistry is
         emit DefaultStrikesParamsSet(lifetime, threshold);
     }
 
-    function _validateStrikesParams(
-        uint256 lifetime,
-        uint256 threshold
-    ) internal pure {
-        if (lifetime < threshold || lifetime < 1) revert InvalidStrikesParams();
-    }
-
     function _setDefaultQueueConfig(
         uint256 priority,
         uint256 maxDeposits
@@ -417,5 +410,12 @@ contract CSParametersRegistry is
         defaultQueueConfig.maxDeposits = maxDeposits.toUint32();
 
         emit DefaultQueueConfigSet(priority, maxDeposits);
+    }
+
+    function _validateStrikesParams(
+        uint256 lifetime,
+        uint256 threshold
+    ) internal pure {
+        if (lifetime < threshold || lifetime < 1) revert InvalidStrikesParams();
     }
 }

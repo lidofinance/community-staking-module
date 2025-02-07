@@ -3,7 +3,7 @@
 pragma solidity 0.8.24;
 
 import { NodeOperator } from "../interfaces/ICSModule.sol";
-import { TransientUintUintMap, TransientUintUintMapLib } from "./TransientUintUintMapLib.sol";
+import { TransientUintUintMap } from "./TransientUintUintMapLib.sol";
 
 // Batch is an uint256 as it's the internal data type used by solidity.
 // Batch is a packed value, consisting of the following fields:
