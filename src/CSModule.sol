@@ -988,8 +988,7 @@ contract CSModule is
         uint256 queuePriority,
         uint128 index
     ) external view returns (Batch) {
-        QueueLib.Queue storage q = _getQueue(queuePriority);
-        return q.at(index);
+        return _getQueue(queuePriority).at(index);
     }
 
     /// @inheritdoc ICSModule
@@ -1488,6 +1487,7 @@ contract CSModule is
     }
 
     /// @dev Acts as a proxy to `_queueByPriority` till `legacyQueue` deprecation.
+    /// @dev TODO: Remove in CSM v3.
     function _getQueue(
         uint256 priority
     ) internal view returns (QueueLib.Queue storage q) {
