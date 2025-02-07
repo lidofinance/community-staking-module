@@ -946,7 +946,7 @@ contract CSModule is
                 bool isFinished
             ) = q.clean(_nodeOperators, maxItems, queueLookup);
 
-            if (removed > 0) {
+            if (removedPerQueue > 0) {
                 unchecked {
                     // 1234 56 789A
                     // 1234 12 1234
