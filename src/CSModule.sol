@@ -871,9 +871,10 @@ contract CSModule is
     }
 
     /// @inheritdoc IStakingModule
-    /// @dev Wipes out the queue
-    /// @dev Changing the WC means that the current deposit data in the queue is not valid anymore and can't be deposited
-    ///      So, the key removal charge should be reset to 0 to allow Node Operators to remove the keys without any charge.
+    /// @dev Does nothing
+    /// @dev Changing the WC means that the current deposit data in the queue is not valid anymore and can't be deposited.
+    ///      DSM will unvet current keys.
+    ///      The key removal charge should be reset to 0 to allow Node Operators to remove the keys without any charge.
     ///      After keys removal the DAO should set the new key removal charge.
     function onWithdrawalCredentialsChanged()
         external
