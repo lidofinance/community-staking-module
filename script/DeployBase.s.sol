@@ -240,7 +240,10 @@ abstract contract DeployBase is Script {
                 _deployProxy(config.proxyAdmin, address(feeDistributorImpl))
             );
 
-            CSStrikes strikesImpl = new CSStrikes(address(oracle));
+            CSStrikes strikesImpl = new CSStrikes(
+                address(csm),
+                address(oracle)
+            );
             strikes = CSStrikes(
                 _deployProxy(config.proxyAdmin, address(strikesImpl))
             );
@@ -303,7 +306,6 @@ abstract contract DeployBase is Script {
 
             csm.initialize({
                 _accounting: address(accounting),
-                _strikes: address(strikes),
                 admin: deployer
             });
             permissionlessGate = new PermissionlessGate(address(csm));

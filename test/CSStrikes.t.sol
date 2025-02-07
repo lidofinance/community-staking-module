@@ -22,6 +22,7 @@ using stdStorage for StdStorage;
 contract CSStrikesTestBase is Test, Fixtures, Utilities, InvariantAsserts {
     address internal stranger;
     address internal oracle;
+    address internal module;
     CSStrikes internal strikes;
     MerkleTree internal tree;
 
@@ -37,16 +38,23 @@ contract CSStrikesConstructorTest is CSStrikesTestBase {
     function setUp() public {
         stranger = nextAddress("STRANGER");
         oracle = nextAddress("ORACLE");
+        module = nextAddress("MODULE");
     }
 
     function test_constructor_happyPath() public {
-        strikes = new CSStrikes(oracle);
+        strikes = new CSStrikes(module, oracle);
         assertEq(strikes.ORACLE(), oracle);
+        assertEq(address(strikes.MODULE()), module);
+    }
+
+    function test_initialize_RevertWhen_ZeroModuleAddress() public {
+        vm.expectRevert(ICSStrikes.ZeroModuleAddress.selector);
+        new CSStrikes(address(0), oracle);
     }
 
     function test_initialize_RevertWhen_ZeroOracleAddress() public {
         vm.expectRevert(ICSStrikes.ZeroOracleAddress.selector);
-        new CSStrikes(address(0));
+        new CSStrikes(module, address(0));
     }
 }
 
@@ -54,8 +62,9 @@ contract CSStrikesTest is CSStrikesTestBase {
     function setUp() public {
         stranger = nextAddress("STRANGER");
         oracle = nextAddress("ORACLE");
+        module = nextAddress("MODULE");
 
-        strikes = new CSStrikes(oracle);
+        strikes = new CSStrikes(module, oracle);
 
         tree = new MerkleTree();
 
@@ -166,9 +175,6 @@ contract CSStrikesTest is CSStrikesTestBase {
     function test_processOracleReport_EmptySubsequentReport() public {
         vm.prank(oracle);
         strikes.processOracleReport(someBytes32(), someCIDv0());
-
-        string memory lastTreeCid = strikes.treeCid();
-        bytes32 lastRoot = strikes.treeRoot();
 
         vm.expectEmit(true, true, true, true, address(strikes));
         emit ICSStrikes.StrikesDataWiped();

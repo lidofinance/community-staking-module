@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
+import { ICSModule } from "./ICSModule.sol";
+
 pragma solidity 0.8.24;
 
 interface ICSStrikes {
@@ -9,7 +11,7 @@ interface ICSStrikes {
     /// @dev Emitted when strikes is updated from non-empty to empty
     event StrikesDataWiped();
 
-    error ZeroAdminAddress();
+    error ZeroModuleAddress();
     error ZeroOracleAddress();
     error ZeroEjectionFeeAmount();
     error ZeroBadPerformancePenaltyAmount();
@@ -21,9 +23,23 @@ interface ICSStrikes {
 
     function ORACLE() external view returns (address);
 
+    function MODULE() external view returns (ICSModule);
+
     function treeRoot() external view returns (bytes32);
 
     function treeCid() external view returns (string calldata);
+
+    /// @notice Report Node Operator's key as bad performing
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keyIndex Index of the withdrawn key in the Node Operator's keys storage
+    /// @param strikesData Strikes of the Node Operator's validator key. TODO: value is to be defined (timestamps or refSlots ?)
+    /// @param proof Proof of the strikes
+    function processBadPerformanceProof(
+        uint256 nodeOperatorId,
+        uint256 keyIndex,
+        uint256[] calldata strikesData,
+        bytes32[] calldata proof
+    ) external;
 
     /// @notice Receive the data of the Merkle tree from the Oracle contract and process it
     /// @param _treeRoot Root of the Merkle tree

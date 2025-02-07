@@ -34,7 +34,6 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
     function test_moduleState() public view {
         assertFalse(csm.isPaused());
         assertTrue(csm.publicRelease());
-        assertEq(address(csm.strikes()), address(strikes));
     }
 
     function test_moduleRoles() public view {

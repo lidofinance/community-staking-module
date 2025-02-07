@@ -13,7 +13,6 @@ import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
 import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
-import { ICSStrikes } from "./interfaces/ICSStrikes.sol";
 import { ICSModule, NodeOperator, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
 
 import { QueueLib, Batch } from "./lib/QueueLib.sol";
@@ -42,6 +41,8 @@ contract CSModule is
     bytes32 public constant SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE =
         keccak256("SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE");
     bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
+    bytes32 public constant BAD_PERFORMER_EJECTOR_ROLE =
+        keccak256("BAD_PERFORMER_EJECTOR_ROLE");
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
     bytes32 public constant CREATE_NODE_OPERATOR_ROLE =
         keccak256("CREATE_NODE_OPERATOR_ROLE");
@@ -86,7 +87,6 @@ contract CSModule is
     uint64 private _depositableValidatorsCount;
     uint64 private _nodeOperatorsCount;
 
-    ICSStrikes public strikes;
     /// @dev see _keyPointer function for details of noKeyIndexPacked structure
     mapping(uint256 noKeyIndexPacked => bool) private _isValidatorEjected;
 
@@ -114,7 +114,6 @@ contract CSModule is
     /// @notice initialize the module from scratch
     function initialize(
         address _accounting,
-        address _strikes,
         address admin
     ) external reinitializer(2) {
         if (_accounting == address(0)) revert ZeroAccountingAddress();
@@ -123,7 +122,6 @@ contract CSModule is
         __AccessControlEnumerable_init();
 
         accounting = ICSAccounting(_accounting);
-        _setStrikesContract(_strikes);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(STAKING_ROUTER_ROLE, address(LIDO_LOCATOR.stakingRouter()));
@@ -133,9 +131,7 @@ contract CSModule is
     }
 
     /// @dev should be called after update on the proxy
-    function finalizeUpgradeV2(address _strikes) external reinitializer(2) {
-        _setStrikesContract(_strikes);
-    }
+    function finalizeUpgradeV2() external reinitializer(2) {}
 
     /// @inheritdoc ICSModule
     function resume() external onlyRole(RESUME_ROLE) {
@@ -152,19 +148,6 @@ contract CSModule is
         if (publicRelease) revert AlreadyActivated();
         publicRelease = true;
         emit PublicRelease();
-    }
-
-    /// @inheritdoc ICSModule
-    function setStrikesContract(
-        address _strikes
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setStrikesContract(_strikes);
-    }
-
-    function _setStrikesContract(address strikesContract) internal {
-        if (strikesContract == address(0)) revert ZeroStrikesAddress();
-        strikes = ICSStrikes(strikesContract);
-        emit StrikesContractSet(strikesContract);
     }
 
     /// @inheritdoc ICSModule
@@ -891,9 +874,8 @@ contract CSModule is
     function ejectBadPerformer(
         uint256 nodeOperatorId,
         uint256 keyIndex,
-        uint256[] calldata strikesData,
-        bytes32[] calldata proof
-    ) external {
+        uint256 strikesCount
+    ) external onlyRole(BAD_PERFORMER_EJECTOR_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (keyIndex >= no.totalDepositedKeys) {
@@ -901,27 +883,24 @@ contract CSModule is
         }
 
         uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
-        if (_isValidatorEjected[pointer]) revert AlreadySubmitted();
+        /// @dev We don't check `exited` to have an ability
+        ///      to penalize the Node Operator even he exited but not withdraw validator
+        if (_isValidatorWithdrawn[pointer]) revert AlreadyWithdrawn();
+        if (_isValidatorEjected[pointer]) revert AlreadyEjected();
 
         uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
 
         (, uint256 threshold) = PARAMETERS_REGISTRY.getStrikesParams(curveId);
-        if (!_isEnoughStrikesToEject(strikesData, threshold))
-            revert NotEnoughStrikesToEject();
+        if (strikesCount < threshold) revert NotEnoughStrikesToEject();
+
+        uint256 penalty = PARAMETERS_REGISTRY.getBadPerformancePenalty(curveId);
+        if (penalty > 0) accounting.penalize(nodeOperatorId, penalty);
 
         bytes memory pubkey = SigningKeys.loadKeys(nodeOperatorId, keyIndex, 1);
-        strikes.verifyProof(nodeOperatorId, pubkey, strikesData, proof);
-
-        uint256 penaltyAmount = PARAMETERS_REGISTRY.getBadPerformancePenalty(
-            curveId
-        );
-        if (penaltyAmount > 0)
-            accounting.penalize(nodeOperatorId, penaltyAmount);
+        // TODO: make the function payable and call `requestEjection{ value: msg.value }(pubkey)`
 
         _isValidatorEjected[pointer] = true;
         emit EjectionSubmitted(nodeOperatorId, keyIndex, pubkey);
-
-        // TODO: call requestEjection(pointer);
     }
 
     /// @inheritdoc IStakingModule
@@ -1456,19 +1435,6 @@ contract CSModule is
                 revert NodeOperatorHasKeys();
             }
         }
-    }
-
-    function _isEnoughStrikesToEject(
-        uint256[] calldata strikesData,
-        uint256 ejectThreshold
-    ) internal pure returns (bool) {
-        uint256 count = 0;
-        for (uint256 i = 0; i < strikesData.length; i++) {
-            if (strikesData[i] > 0) {
-                count++;
-            }
-        }
-        return count >= ejectThreshold;
     }
 
     function _onlyNodeOperatorManager(

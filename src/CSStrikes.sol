@@ -5,11 +5,13 @@ pragma solidity 0.8.24;
 
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
+import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ICSStrikes } from "./interfaces/ICSStrikes.sol";
 
 /// @author vgorkavenko
 contract CSStrikes is ICSStrikes {
     address public immutable ORACLE;
+    ICSModule public immutable MODULE;
 
     /// @notice The latest Merkle Tree root
     bytes32 public treeRoot;
@@ -17,8 +19,10 @@ contract CSStrikes is ICSStrikes {
     /// @notice CID of the last published Merkle tree
     string public treeCid;
 
-    constructor(address oracle) {
+    constructor(address module, address oracle) {
+        if (module == address(0)) revert ZeroModuleAddress();
         if (oracle == address(0)) revert ZeroOracleAddress();
+        MODULE = ICSModule(module);
         ORACLE = oracle;
     }
 
@@ -50,12 +54,28 @@ contract CSStrikes is ICSStrikes {
     }
 
     /// @inheritdoc ICSStrikes
-    function verifyProof(
+    function processBadPerformanceProof(
         uint256 nodeOperatorId,
-        bytes calldata pubkey,
+        uint256 keyIndex,
         uint256[] calldata strikesData,
         bytes32[] calldata proof
-    ) external view {
+    ) external {
+        bytes memory pubkey = MODULE.getSigningKeys(
+            nodeOperatorId,
+            keyIndex,
+            1
+        );
+        verifyProof(nodeOperatorId, pubkey, strikesData, proof);
+        MODULE.ejectBadPerformer(nodeOperatorId, keyIndex, strikesData.length);
+    }
+
+    /// @inheritdoc ICSStrikes
+    function verifyProof(
+        uint256 nodeOperatorId,
+        bytes memory pubkey,
+        uint256[] calldata strikesData,
+        bytes32[] calldata proof
+    ) public view {
         if (proof.length == 0) revert InvalidProof();
         bool isValid = MerkleProof.verifyCalldata(
             proof,

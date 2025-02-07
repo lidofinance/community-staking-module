@@ -32,13 +32,6 @@ contract CSFeeOracle is
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
     ICSFeeDistributor public feeDistributor;
-
-    /// @notice DEPRECATED. Parameter was migrated to CSParametersRegistry
-    /// @notice Leeway in basis points is used to determine the under-performing validators threshold.
-    /// `threshold` = `avgPerfBP` - `avgPerfLeewayBP`, where `avgPerfBP` is an average
-    /// performance over the network computed by the off-chain oracle.
-    uint256 internal _avgPerfLeewayBP;
-
     ICSStrikes public strikes;
 
     constructor(

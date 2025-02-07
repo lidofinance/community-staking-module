@@ -105,7 +105,6 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         csmImpl.initialize({
             _accounting: address(accounting),
-            _strikes: address(strikes),
             admin: deployParams.aragonAgent
         });
     }

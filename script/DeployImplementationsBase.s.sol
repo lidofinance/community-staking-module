@@ -98,7 +98,10 @@ abstract contract DeployImplementationsBase is DeployBase {
                 rebateRecipient: config.aragonAgent
             });
 
-            CSStrikes strikesImpl = new CSStrikes(address(oracle));
+            CSStrikes strikesImpl = new CSStrikes(
+                address(csm),
+                address(oracle)
+            );
             strikes = CSStrikes(
                 _deployProxy(config.proxyAdmin, address(strikesImpl))
             );

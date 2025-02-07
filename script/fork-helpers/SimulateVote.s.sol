@@ -84,9 +84,7 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         vm.startBroadcast(_prepareProxyAdmin(address(csmProxy)));
         {
             csmProxy.proxy__upgradeTo(upgradeConfig.csmImpl);
-            CSModule(deploymentConfig.csm).finalizeUpgradeV2(
-                upgradeConfig.strikes
-            );
+            CSModule(deploymentConfig.csm).finalizeUpgradeV2();
         }
         vm.stopBroadcast();
 

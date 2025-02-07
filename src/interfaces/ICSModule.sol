@@ -54,6 +54,8 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     error SigningKeysInvalidOffset();
 
     error AlreadySubmitted();
+    error AlreadyWithdrawn();
+    error AlreadyEjected();
     error AlreadyActivated();
 
     error InvalidAmount();
@@ -62,7 +64,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     error NotSupported();
     error ZeroLocatorAddress();
     error ZeroAccountingAddress();
-    error ZeroStrikesAddress();
     error ZeroAdminAddress();
     error ZeroSenderAddress();
     error ZeroRewardAddress();
@@ -119,7 +120,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     );
 
     event PublicRelease();
-    event StrikesContractSet(address strikesContract);
     event KeyRemovalChargeApplied(uint256 indexed nodeOperatorId);
     event ELRewardsStealingPenaltyReported(
         uint256 indexed nodeOperatorId,
@@ -167,6 +167,8 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     function VERIFIER_ROLE() external view returns (bytes32);
 
+    function BAD_PERFORMER_EJECTOR_ROLE() external view returns (bytes32);
+
     function CREATE_NODE_OPERATOR_ROLE() external view returns (bytes32);
 
     function SET_BOND_CURVE_ROLE() external view returns (bytes32);
@@ -195,10 +197,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     ///         Enable permissionless creation of the Node Operators
     ///         Remove the keys limit for the Node Operators
     function activatePublicRelease() external;
-
-    /// @notice Set the address of the Strikes contract
-    /// @param strikesContract Address of the Strikes contract
-    function setStrikesContract(address strikesContract) external;
 
     /// @notice Permissioned method to add a new Node Operator
     ///         Should be called by `*Gate.sol` contracts. See `PermissionlessGate.sol` and `VettedGate.sol` for examples
@@ -494,16 +492,14 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     /// @notice Report Node Operator's key as withdrawn and settle withdrawn amount
     /// @notice Called by the CSStrikes contract.
-    ///         See `CSStrikes.processValidatorEjection` to use this method permissionless
+    ///         See `CSStrikes.processBadPerformanceProof` to use this method permissionless
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keyIndex Index of the withdrawn key in the Node Operator's keys storage
-    /// @param strikesData Strikes of the Node Operator's validator key. TODO: value is to be defined (timestamps or refSlots ?)
-    /// @param proof Proof of the strikes
+    /// @param strikesCount Strikes count of the Node Operator's validator key
     function ejectBadPerformer(
         uint256 nodeOperatorId,
         uint256 keyIndex,
-        uint256[] calldata strikesData,
-        bytes32[] calldata proof
+        uint256 strikesCount
     ) external;
 
     /// @notice DEPRECATED! Check if the given Node Operator's key is reported as slashed

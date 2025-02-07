@@ -325,11 +325,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         vm.stopPrank();
 
         _enableInitializers(address(csm));
-        csm.initialize({
-            _accounting: address(accounting),
-            _strikes: address(strikes),
-            admin: admin
-        });
+        csm.initialize({ _accounting: address(accounting), admin: admin });
 
         vm.startPrank(admin);
         csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(this));
@@ -418,11 +414,7 @@ contract CSMCommonNoRoles is CSMFixtures {
         vm.stopPrank();
 
         _enableInitializers(address(csm));
-        csm.initialize({
-            _accounting: address(accounting),
-            _strikes: address(strikes),
-            admin: admin
-        });
+        csm.initialize({ _accounting: address(accounting), admin: admin });
 
         vm.startPrank(admin);
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
@@ -505,7 +497,6 @@ contract CsmInitialize is CSMCommon {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         csm.initialize({
             _accounting: address(accounting),
-            _strikes: address(strikes),
             admin: address(this)
         });
     }
@@ -522,7 +513,6 @@ contract CsmInitialize is CSMCommon {
         _enableInitializers(address(csm));
         csm.initialize({
             _accounting: address(accounting),
-            _strikes: address(strikes),
             admin: address(this)
         });
         assertEq(csm.getType(), "community-staking-module");
@@ -543,29 +533,7 @@ contract CsmInitialize is CSMCommon {
 
         _enableInitializers(address(csm));
         vm.expectRevert(ICSModule.ZeroAccountingAddress.selector);
-        csm.initialize({
-            _accounting: address(0),
-            _strikes: address(155),
-            admin: address(this)
-        });
-    }
-
-    function test_initialize_RevertWhen_ZeroStrikesAddress() public {
-        CSModule csm = new CSModule({
-            moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
-            maxKeysPerOperatorEA: 10,
-            lidoLocator: address(locator),
-            parametersRegistry: address(parametersRegistry)
-        });
-
-        _enableInitializers(address(csm));
-        vm.expectRevert(ICSModule.ZeroStrikesAddress.selector);
-        csm.initialize({
-            _accounting: address(154),
-            _strikes: address(0),
-            admin: address(this)
-        });
+        csm.initialize({ _accounting: address(0), admin: address(this) });
     }
 
     function test_initialize_RevertWhen_ZeroAdminAddress() public {
@@ -579,11 +547,7 @@ contract CsmInitialize is CSMCommon {
 
         _enableInitializers(address(csm));
         vm.expectRevert(ICSModule.ZeroAdminAddress.selector);
-        csm.initialize({
-            _accounting: address(154),
-            _strikes: address(155),
-            admin: address(0)
-        });
+        csm.initialize({ _accounting: address(154), admin: address(0) });
     }
 }
 
@@ -5699,6 +5663,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
 
 contract CsmEjectBadPerformer is CSMCommon {
     function test_ejectBadPerformer() public assertInvariants {
+        csm.grantRole(csm.BAD_PERFORMER_EJECTOR_ROLE(), address(this));
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
         (bytes memory pubkey, ) = csm.obtainDepositData(1, "");
@@ -5706,7 +5671,7 @@ contract CsmEjectBadPerformer is CSMCommon {
         uint256[] memory strikesData = new uint256[](6);
         strikesData[0] = 1;
         strikesData[1] = 2;
-        strikesData[5] = 3;
+        strikesData[2] = 3;
 
         vm.expectEmit(true, true, true, true, address(csm));
         emit ICSModule.EjectionSubmitted(noId, keyIndex, pubkey);
@@ -5714,7 +5679,7 @@ contract CsmEjectBadPerformer is CSMCommon {
             address(accounting),
             abi.encodeWithSelector(accounting.penalize.selector, noId, penalty)
         );
-        csm.ejectBadPerformer(noId, keyIndex, strikesData, new bytes32[](0));
+        csm.ejectBadPerformer(noId, keyIndex, strikesData.length);
 
         bool ejected = csm.isValidatorEjected(noId, keyIndex);
         assertTrue(ejected);
@@ -5723,6 +5688,7 @@ contract CsmEjectBadPerformer is CSMCommon {
     }
 
     function test_ejectBadPerformer_NoPenalty() public assertInvariants {
+        csm.grantRole(csm.BAD_PERFORMER_EJECTOR_ROLE(), address(this));
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
         (bytes memory pubkey, ) = csm.obtainDepositData(1, "");
@@ -5738,7 +5704,7 @@ contract CsmEjectBadPerformer is CSMCommon {
             address(accounting),
             abi.encodeWithSelector(accounting.penalize.selector, noId, 0)
         );
-        csm.ejectBadPerformer(noId, keyIndex, strikesData, new bytes32[](0));
+        csm.ejectBadPerformer(noId, keyIndex, strikesData.length);
 
         bool ejected = csm.isValidatorEjected(noId, keyIndex);
         assertTrue(ejected);
@@ -5747,40 +5713,49 @@ contract CsmEjectBadPerformer is CSMCommon {
     }
 
     function test_ejectBadPerformer_RevertWhen_NoNodeOperator() public {
+        csm.grantRole(csm.BAD_PERFORMER_EJECTOR_ROLE(), address(this));
         vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        csm.ejectBadPerformer(0, 0, new uint256[](0), new bytes32[](0));
+        csm.ejectBadPerformer(0, 0, 0);
     }
 
     function test_ejectBadPerformer_RevertWhen_InvalidKeyIndexOffset() public {
+        csm.grantRole(csm.BAD_PERFORMER_EJECTOR_ROLE(), address(this));
         uint256 noId = createNodeOperator();
         vm.expectRevert(ICSModule.SigningKeysInvalidOffset.selector);
-        csm.ejectBadPerformer(noId, 0, new uint256[](0), new bytes32[](0));
+        csm.ejectBadPerformer(noId, 0, 0);
     }
 
     function test_ejectBadPerformer_RevertWhen_AlreadySubmitted() public {
+        csm.grantRole(csm.BAD_PERFORMER_EJECTOR_ROLE(), address(this));
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
-        uint256[] memory strikesData = new uint256[](6);
+        uint256[] memory strikesData = new uint256[](3);
         strikesData[0] = 1;
         strikesData[1] = 2;
-        strikesData[5] = 3;
+        strikesData[2] = 3;
 
-        csm.ejectBadPerformer(noId, 0, strikesData, new bytes32[](0));
-        vm.expectRevert(ICSModule.AlreadySubmitted.selector);
-        csm.ejectBadPerformer(noId, 0, strikesData, new bytes32[](0));
+        csm.ejectBadPerformer(noId, 0, strikesData.length);
+        vm.expectRevert(ICSModule.AlreadyEjected.selector);
+        csm.ejectBadPerformer(noId, 0, strikesData.length);
     }
 
     function test_ejectBadPerformer_RevertWhen_NotEnoughStrikesToEject()
         public
     {
+        csm.grantRole(csm.BAD_PERFORMER_EJECTOR_ROLE(), address(this));
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
-        uint256[] memory strikesData = new uint256[](6);
+        uint256[] memory strikesData = new uint256[](2);
         strikesData[0] = 1;
         strikesData[1] = 2;
 
         vm.expectRevert(ICSModule.NotEnoughStrikesToEject.selector);
-        csm.ejectBadPerformer(noId, 0, strikesData, new bytes32[](0));
+        csm.ejectBadPerformer(noId, 0, strikesData.length);
+    }
+
+    function test_ejectBadPerformer_RevertWhen_NoRole() public {
+        expectRoleRevert(address(this), csm.BAD_PERFORMER_EJECTOR_ROLE());
+        csm.ejectBadPerformer(0, 0, 0);
     }
 }
 
@@ -5861,7 +5836,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
             parametersRegistry: address(parametersRegistry)
         });
         _enableInitializers(address(csm));
-        csm.initialize(address(accounting), address(strikes), actor);
+        csm.initialize(address(accounting), actor);
 
         bytes32 role = csm.DEFAULT_ADMIN_ROLE();
         vm.prank(actor);
