@@ -234,7 +234,7 @@ contract CSBondCurveTest is Test {
         assertEq(bondCurve.getBondCurveId(noId), 0);
     }
 
-    function test_curveExists_curveExits() public {
+    function test_curveExists_curveExists() public {
         uint256[] memory _bondCurve = new uint256[](2);
         _bondCurve[0] = 16 ether;
         _bondCurve[1] = 32 ether;
@@ -244,7 +244,7 @@ contract CSBondCurveTest is Test {
         assertTrue(bondCurve.curveExists(addedId));
     }
 
-    function test_curveExists_curveNotExits() public {
+    function test_curveExists_curveNotExists() public {
         assertFalse(bondCurve.curveExists(1));
     }
 
