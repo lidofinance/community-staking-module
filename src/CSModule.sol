@@ -883,8 +883,6 @@ contract CSModule is
         }
 
         uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
-        /// @dev We don't check `exited` to have an ability
-        ///      to penalize the Node Operator even he exited but not withdraw validator
         if (_isValidatorWithdrawn[pointer]) revert AlreadyWithdrawn();
         if (_isValidatorEjected[pointer]) revert AlreadyEjected();
 
