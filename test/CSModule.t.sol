@@ -481,6 +481,19 @@ contract CsmInitialize is CSMCommon {
         });
     }
 
+    function test_constructor_RevertWhen_ZeroParametersRegistryAddress()
+        public
+    {
+        vm.expectRevert(ICSModule.ZeroParametersRegistryAddress.selector);
+        new CSModule({
+            moduleType: "community-staking-module",
+            minSlashingPenaltyQuotient: 32,
+            maxKeysPerOperatorEA: 10,
+            lidoLocator: address(locator),
+            parametersRegistry: address(0)
+        });
+    }
+
     function test_constructor_RevertWhen_InitOnImpl() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
@@ -6136,6 +6149,29 @@ contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
 
         vm.expectRevert(ICSModule.AlreadyActivated.selector);
         csm.activatePublicRelease();
+    }
+}
+
+contract CSMNoKeysLimit is CSMCommonNoPublicRelease {
+    function test_revertWhen_uploadMoreKeysThanAllowed() public {
+        uint256 noId = createNodeOperator(1);
+        uint256 keysCount = 10;
+        uint256 amount = accounting.getRequiredBondForNextKeys(noId, keysCount);
+        address managerAddress = csm.getNodeOperator(noId).managerAddress;
+        vm.deal(managerAddress, amount);
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysCount
+        );
+
+        vm.expectRevert(ICSModule.MaxSigningKeysCountExceeded.selector);
+        vm.prank(managerAddress);
+        csm.addValidatorKeysETH{ value: amount }(
+            managerAddress,
+            noId,
+            keysCount,
+            keys,
+            signatures
+        );
     }
 }
 
