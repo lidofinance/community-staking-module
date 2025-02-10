@@ -74,6 +74,11 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         );
     }
 
+    function test_strikes_initialState() public view {
+        assertEq(strikes.treeRoot(), bytes32(0));
+        assertEq(keccak256(abi.encodePacked(strikes.treeCid())), keccak256(""));
+    }
+
     function test_feeOracle_initialState() public view {
         assertFalse(oracle.isPaused());
         (

@@ -388,6 +388,7 @@ abstract contract DeployBase is Script {
             );
 
             csm.grantRole(csm.VERIFIER_ROLE(), address(verifier));
+            csm.grantRole(csm.BAD_PERFORMER_EJECTOR_ROLE(), address(strikes));
 
             if (config.secondAdminAddress != address(0)) {
                 _grantSecondAdmins();
