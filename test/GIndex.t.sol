@@ -176,7 +176,7 @@ contract GIndexTest is Test {
 
     function test_concat_RevertsIfTooBigIndices() public {
         vm.expectRevert(IndexOutOfRange.selector);
-        MAX.concat(MAX);
+        lib.concat(MAX, MAX);
 
         vm.expectRevert(IndexOutOfRange.selector);
         lib.concat(pack(2 ** 48, 0), pack(2 ** 200, 0));
