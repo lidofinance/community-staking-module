@@ -148,6 +148,11 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         csm.revokeRole(csm.VERIFIER_ROLE(), address(deploymentConfig.verifier));
         csm.grantRole(csm.VERIFIER_ROLE(), address(upgradeConfig.verifier));
 
+        csm.grantRole(
+            csm.BAD_PERFORMER_EJECTOR_ROLE(),
+            address(deploymentConfig.strikes)
+        );
+
         csm.revokeRole(csm.PAUSE_ROLE(), address(deploymentConfig.gateSeal));
         accounting.revokeRole(
             accounting.PAUSE_ROLE(),

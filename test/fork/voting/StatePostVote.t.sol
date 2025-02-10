@@ -71,7 +71,12 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
             1
         );
         assertTrue(csm.hasRole(csm.VERIFIER_ROLE(), address(verifier)));
+        assertTrue(
+            csm.hasRole(csm.BAD_PERFORMER_EJECTOR_ROLE(), address(strikes))
+        );
+
         assertEq(csm.getRoleMemberCount(csm.VERIFIER_ROLE()), 1);
+        assertEq(csm.getRoleMemberCount(csm.BAD_PERFORMER_EJECTOR_ROLE()), 1);
         assertEq(csm.getRoleMemberCount(csm.RECOVERER_ROLE()), 0);
     }
 

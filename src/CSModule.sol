@@ -832,9 +832,7 @@ contract CSModule is
         }
 
         uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
-        if (_isValidatorWithdrawn[pointer]) {
-            revert AlreadySubmitted();
-        }
+        if (_isValidatorWithdrawn[pointer]) revert AlreadyWithdrawn();
 
         _isValidatorWithdrawn[pointer] = true;
         unchecked {

@@ -53,7 +53,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     error SigningKeysInvalidOffset();
 
-    error AlreadySubmitted();
     error AlreadyWithdrawn();
     error AlreadyEjected();
     error AlreadyActivated();
