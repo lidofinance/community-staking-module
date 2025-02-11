@@ -163,7 +163,7 @@ contract OssifiableProxyTest is Test, Utilities {
     function test_receive() public {
         vm.deal(admin, 2 ether);
         vm.prank(admin);
-        vm.expectEmit(true, true, true, true, address(proxy));
+        vm.expectEmit(address(proxy));
         emit InitializableImplementationStub.FallbackIsFired();
         payable(address(proxy)).call{ value: 1 ether }("");
         assertEq(address(proxy).balance, 1 ether);

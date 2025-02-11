@@ -93,7 +93,7 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
             keysCount,
             startIndex
         );
-        vm.expectEmit(true, true, true, true, address(signingKeys));
+        vm.expectEmit(address(signingKeys));
         emit IStakingModule.SigningKeyAdded(nodeOperatorId, pubkeys);
         uint256 newKeysCount = signingKeys.saveKeysSigs(
             nodeOperatorId,
@@ -121,7 +121,7 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
             keysCount,
             startIndex
         );
-        vm.expectEmit(true, true, true, true, address(signingKeys));
+        vm.expectEmit(address(signingKeys));
         emit IStakingModule.SigningKeyAdded(nodeOperatorId, pubkeys);
         uint256 newKeysCount = signingKeys.saveKeysSigs(
             nodeOperatorId,
@@ -347,7 +347,7 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
         });
 
         bytes memory removedKey = slice(pubkeys, PUBKEY_LENGTH, PUBKEY_LENGTH);
-        vm.expectEmit(true, true, true, true, address(signingKeys));
+        vm.expectEmit(address(signingKeys));
         emit IStakingModule.SigningKeyRemoved(nodeOperatorId, removedKey);
         uint256 newTotalKeysCount = signingKeys.removeKeysSigs({
             nodeOperatorId: nodeOperatorId,
@@ -377,7 +377,7 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
         uint16 startIndex = 2;
         uint256 nodeOperatorId = 154;
 
-        vm.expectEmit(true, true, true, true, address(signingKeys));
+        vm.expectEmit(address(signingKeys));
         emit IStakingModule.SigningKeyRemoved(
             nodeOperatorId,
             new bytes(PUBKEY_LENGTH)
