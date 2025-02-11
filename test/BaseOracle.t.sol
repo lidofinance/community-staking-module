@@ -253,7 +253,7 @@ contract BaseOracleTest is Test, Utilities {
         newConsensus.setInitialRefSlot(initialRefSlot);
 
         vm.prank(admin);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.ConsensusHashContractSet(
             address(newConsensus),
             address(consensus)
@@ -277,7 +277,7 @@ contract BaseOracleTest is Test, Utilities {
 
     function test_setConsensusVersion_UpdatesConsensusVersion() public {
         vm.prank(admin);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.ConsensusVersionSet(3, CONSENSUS_VERSION);
         oracle.setConsensusVersion(3);
 
@@ -444,7 +444,7 @@ contract BaseOracleTest is Test, Utilities {
         uint256 nextRefSlot = initialRefSlot + SLOTS_PER_EPOCH;
         uint256 nextRefSlotDeadline = deadline + SECONDS_PER_EPOCH;
         vm.prank(address(consensus));
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.WarnProcessingMissed(initialRefSlot);
         oracle.submitConsensusReport(
             keccak256("HASH_2"),
@@ -579,9 +579,9 @@ contract BaseOracleTest is Test, Utilities {
             deadline
         );
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.ProcessingStarted(initialRefSlot, keccak256("HASH_1"));
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracleImpl.MockStartProcessingResult(0);
         oracle.startProcessing();
     }
@@ -605,9 +605,9 @@ contract BaseOracleTest is Test, Utilities {
             refSlot1Deadline
         );
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.ProcessingStarted(refSlot1, keccak256("HASH_2"));
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracleImpl.MockStartProcessingResult(initialRefSlot);
         oracle.startProcessing();
         assertEq(oracle.getLastProcessingRefSlot(), refSlot1);
@@ -700,7 +700,7 @@ contract BaseOracleTest is Test, Utilities {
         assertEq(beforeCallCount, 0);
 
         vm.prank(address(consensus));
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.ReportSubmitted(
             initialRefSlot,
             keccak256("HASH_1"),
@@ -732,9 +732,9 @@ contract BaseOracleTest is Test, Utilities {
         );
 
         vm.prank(address(consensus));
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.WarnProcessingMissed(secondRefSlot);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.ReportSubmitted(
             thirdRefSlot,
             keccak256("HASH_1"),
@@ -812,7 +812,7 @@ contract BaseOracleTest is Test, Utilities {
         );
 
         vm.prank(address(consensus));
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.ReportDiscarded(initialRefSlot, keccak256("HASH_1"));
         oracle.discardConsensusReport(initialRefSlot);
 
@@ -941,7 +941,7 @@ contract BaseOracleTest is Test, Utilities {
             deadline + SECONDS_PER_EPOCH
         );
 
-        vm.expectEmit(true, true, true, true, address(oracle));
+        vm.expectEmit(address(oracle));
         emit BaseOracle.WarnProcessingMissed(initialRefSlot + SLOTS_PER_EPOCH);
         oracle.submitConsensusReport(
             keccak256("HASH_3"),
@@ -975,7 +975,7 @@ contract BaseOracleTest is Test, Utilities {
             deadline
         );
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(oracle));
         emit BaseOracle.WarnProcessingMissed(initialRefSlot);
         oracle.submitConsensusReport(
             keccak256("HASH_2"),

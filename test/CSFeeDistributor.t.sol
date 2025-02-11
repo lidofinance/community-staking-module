@@ -196,7 +196,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
             refSlot
         );
 
-        vm.expectEmit(true, true, true, true, address(feeDistributor));
+        vm.expectEmit(address(feeDistributor));
         emit ICSFeeDistributor.OperatorFeeDistributed(nodeOperatorId, shares);
 
         vm.prank(address(accounting));
@@ -552,20 +552,20 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         string memory logCid = someCIDv0();
         bytes32 treeRoot = someBytes32();
 
-        vm.expectEmit(true, true, true, true, address(feeDistributor));
+        vm.expectEmit(address(feeDistributor));
         emit ICSFeeDistributor.DistributionDataUpdated(
             shares,
             treeRoot,
             treeCid
         );
 
-        vm.expectEmit(true, true, true, true, address(feeDistributor));
+        vm.expectEmit(address(feeDistributor));
         emit ICSFeeDistributor.ModuleFeeDistributed(shares);
 
-        vm.expectEmit(true, true, true, true, address(feeDistributor));
+        vm.expectEmit(address(feeDistributor));
         emit ICSFeeDistributor.RebateTransferred(rebate);
 
-        vm.expectEmit(true, true, true, true, address(feeDistributor));
+        vm.expectEmit(address(feeDistributor));
         emit ICSFeeDistributor.DistributionLogUpdated(logCid);
 
         vm.prank(oracle);
@@ -889,7 +889,7 @@ contract CSFeeDistributorAssetRecovererTest is CSFeeDistributorTestBase {
         uint256 amount = 42 ether;
         vm.deal(address(feeDistributor), amount);
 
-        vm.expectEmit(true, true, true, true, address(feeDistributor));
+        vm.expectEmit(address(feeDistributor));
         emit IAssetRecovererLib.EtherRecovered(recoverer, amount);
 
         vm.prank(recoverer);
@@ -913,7 +913,7 @@ contract CSFeeDistributorAssetRecovererTest is CSFeeDistributorTestBase {
         token.mint(address(feeDistributor), 1000);
 
         vm.prank(recoverer);
-        vm.expectEmit(true, true, true, true, address(feeDistributor));
+        vm.expectEmit(address(feeDistributor));
         emit IAssetRecovererLib.ERC20Recovered(address(token), recoverer, 1000);
         feeDistributor.recoverERC20(address(token), 1000);
 
