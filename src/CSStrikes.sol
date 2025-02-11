@@ -60,12 +60,14 @@ contract CSStrikes is ICSStrikes {
         uint256[] calldata strikesData,
         bytes32[] calldata proof
     ) external {
+        if (proof.length == 0) revert InvalidProof();
         bytes memory pubkey = MODULE.getSigningKeys(
             nodeOperatorId,
             keyIndex,
             1
         );
-        verifyProof(nodeOperatorId, pubkey, strikesData, proof);
+        if (!verifyProof(nodeOperatorId, pubkey, strikesData, proof))
+            revert InvalidProof();
         MODULE.ejectBadPerformer(nodeOperatorId, keyIndex, strikesData.length);
     }
 
@@ -75,14 +77,13 @@ contract CSStrikes is ICSStrikes {
         bytes memory pubkey,
         uint256[] calldata strikesData,
         bytes32[] calldata proof
-    ) public view {
-        if (proof.length == 0) revert InvalidProof();
-        bool isValid = MerkleProof.verifyCalldata(
-            proof,
-            treeRoot,
-            hashLeaf(nodeOperatorId, pubkey, strikesData)
-        );
-        if (!isValid) revert InvalidProof();
+    ) public view returns (bool) {
+        return
+            MerkleProof.verifyCalldata(
+                proof,
+                treeRoot,
+                hashLeaf(nodeOperatorId, pubkey, strikesData)
+            );
     }
 
     /// @inheritdoc ICSStrikes

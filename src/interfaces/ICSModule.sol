@@ -476,7 +476,7 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     ) external view returns (bytes memory keys, bytes memory signatures);
 
     /// @notice Report Node Operator's key as withdrawn and settle withdrawn amount
-    /// @notice Called by the Verifier contract.
+    /// @notice Called by `CSVerifier` contract.
     ///         See `CSVerifier.processWithdrawalProof` to use this method permissionless
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keyIndex Index of the withdrawn key in the Node Operator's keys storage
@@ -489,8 +489,8 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         bool isSlashed
     ) external;
 
-    /// @notice Report Node Operator's key as withdrawn and settle withdrawn amount
-    /// @notice Called by the CSStrikes contract.
+    /// @notice Report Node Operator's key as bad performer and eject it with corresponding penalty
+    /// @notice Called by the `CSStrikes` contract.
     ///         See `CSStrikes.processBadPerformanceProof` to use this method permissionless
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keyIndex Index of the withdrawn key in the Node Operator's keys storage

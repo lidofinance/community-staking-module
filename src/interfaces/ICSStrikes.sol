@@ -60,7 +60,7 @@ interface ICSStrikes {
         bytes calldata pubkey,
         uint256[] calldata strikesData,
         bytes32[] calldata proof
-    ) external view;
+    ) external view returns (bool);
 
     /// @notice Get a hash of a leaf
     /// @param nodeOperatorId ID of the Node Operator
