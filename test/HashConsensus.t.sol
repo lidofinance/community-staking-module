@@ -244,7 +244,7 @@ contract HashConsensusSetFastLaneLengthSlotsTest is HashConsensusBase {
         consensus.grantRole(role, stranger);
 
         vm.prank(stranger);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(consensus));
         emit HashConsensus.FastLaneConfigSet(64);
         consensus.setFastLaneLengthSlots(64);
 
@@ -300,9 +300,9 @@ contract HashConsensusFastLaneMembersTest is HashConsensusBase {
 contract HashConsensusFrameConfigTest is HashConsensusBase {
     function test_setFrameConfig() public {
         vm.prank(manager);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(consensus));
         emit HashConsensus.FrameConfigSet(INITIAL_EPOCH, 5);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(consensus));
         emit HashConsensus.FastLaneConfigSet(1);
         consensus.setFrameConfig(5, 1);
 
@@ -368,7 +368,7 @@ contract HashConsensusInitialEpochTest is HashConsensusBase {
         consensus = _deployHashConsensus();
 
         vm.prank(admin);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(consensus));
         emit HashConsensus.FrameConfigSet(10, EPOCHS_PER_FRAME);
         consensus.updateInitialEpoch(10);
 
@@ -510,7 +510,7 @@ contract HashConsensusInitialEpochTest is HashConsensusBase {
         assertEq(memberState.lastMemberReportRefSlot, 0);
 
         vm.prank(member1);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(consensus));
         emit HashConsensus.ReportReceived(
             refSlot,
             member1,
@@ -675,7 +675,7 @@ contract HashConsensusAddMembersTest is HashConsensusBase {
 
     function test_addMember() public {
         vm.prank(manager);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(consensus));
         emit HashConsensus.MemberAdded(member1, 1, 1);
         consensus.addMember(member1, 1);
 
@@ -704,7 +704,7 @@ contract HashConsensusAddMembersTest is HashConsensusBase {
         vm.prank(manager);
         consensus.addMember(member1, 1);
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(consensus));
         emit HashConsensus.MemberAdded(member2, 2, 3);
         vm.prank(manager);
         consensus.addMember(member2, 3);
@@ -729,9 +729,9 @@ contract HashConsensusAddMembersTest is HashConsensusBase {
         (, bytes32 consensusReport, ) = consensus.getConsensusState();
         assertEq(consensusReport, bytes32(0));
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(consensus));
         emit HashConsensus.MemberAdded(member3, 3, 2);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(consensus));
         emit HashConsensus.ConsensusReached(refSlot, keccak256("HASH_1"), 2);
         vm.prank(manager);
         consensus.addMember(member3, 2);
@@ -756,9 +756,9 @@ contract HashConsensusAddMembersTest is HashConsensusBase {
         (, bytes32 consensusReport, ) = consensus.getConsensusState();
         assertEq(consensusReport, keccak256("HASH_1"));
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(consensus));
         emit HashConsensus.MemberAdded(member3, 3, 3);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(consensus));
         emit HashConsensus.ConsensusLost(refSlot);
         vm.prank(manager);
         consensus.addMember(member3, 3);
@@ -795,7 +795,7 @@ contract HashConsensusRemoveMemberTest is HashConsensusBase {
 
     function test_removeMember() public {
         vm.prank(manager);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(consensus));
         emit HashConsensus.MemberRemoved(member1, 2, 3);
         consensus.removeMember(member1, 3);
 
@@ -871,7 +871,7 @@ contract HashConsensusRemoveMemberTest is HashConsensusBase {
         consensus.submitReport(refSlot, keccak256("HASH_1"), CONSENSUS_VERSION);
 
         vm.prank(manager);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(consensus));
         emit HashConsensus.ConsensusReached(refSlot, keccak256("HASH_1"), 2);
         consensus.removeMember(member3, 2);
 
@@ -920,12 +920,12 @@ contract HashConsensusRemoveMemberTest is HashConsensusBase {
         vm.prank(member2);
         consensus.submitReport(refSlot, keccak256("HASH_1"), CONSENSUS_VERSION);
         vm.prank(member3);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(consensus));
         emit HashConsensus.ConsensusReached(refSlot, keccak256("HASH_1"), 3);
         consensus.submitReport(refSlot, keccak256("HASH_1"), CONSENSUS_VERSION);
 
         vm.prank(manager);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(consensus));
         emit HashConsensus.ConsensusLost(refSlot);
         consensus.removeMember(member3, 3);
 
@@ -987,7 +987,7 @@ contract HashConsensusReportProcessorTest is HashConsensusBase {
             CONSENSUS_VERSION
         );
         vm.prank(manager);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(consensus));
         emit HashConsensus.ReportProcessorSet(
             address(newReportProcessor),
             address(reportProcessor)
@@ -1228,12 +1228,12 @@ contract HashConsensusSubmitReportTest is HashConsensusBase {
         consensus.submitReport(refSlot, keccak256("HASH_1"), CONSENSUS_VERSION);
 
         vm.prank(member2);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(consensus));
         emit HashConsensus.ConsensusReached(refSlot, keccak256("HASH_1"), 2);
         consensus.submitReport(refSlot, keccak256("HASH_1"), CONSENSUS_VERSION);
 
         vm.prank(member2);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(consensus));
         emit HashConsensus.ConsensusLost(refSlot);
         consensus.submitReport(refSlot, keccak256("HASH_2"), CONSENSUS_VERSION);
     }

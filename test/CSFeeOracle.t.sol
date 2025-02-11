@@ -355,7 +355,7 @@ contract CSFeeOracleTest is Test, Utilities {
 
         address newDistributor = nextAddress();
 
-        vm.expectEmit(true, true, true, true, address(oracle));
+        vm.expectEmit(address(oracle));
         emit ICSFeeOracle.FeeDistributorContractSet(newDistributor);
         vm.prank(ORACLE_ADMIN);
         oracle.setFeeDistributorContract(newDistributor);
@@ -474,7 +474,7 @@ contract CSFeeOracleTest is Test, Utilities {
 
     function _reachConsensus(uint256 refSlot, bytes32 hash) internal {
         for (uint256 i; i < quorum; i++) {
-            vm.expectEmit(true, true, true, true, address(consensus));
+            vm.expectEmit(address(consensus));
             emit HashConsensus.ReportReceived(refSlot, members[i], hash);
 
             vm.prank(members[i]);

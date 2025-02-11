@@ -240,11 +240,11 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
 
         _enableInitializers(address(accounting));
 
-        vm.expectEmit(true, false, false, true, address(accounting));
+        vm.expectEmit(address(accounting));
         emit ICSBondCurve.BondCurveAdded(curve);
-        vm.expectEmit(true, false, false, true, address(accounting));
+        vm.expectEmit(address(accounting));
         emit ICSBondLock.BondLockPeriodChanged(8 weeks);
-        vm.expectEmit(true, false, false, true, address(accounting));
+        vm.expectEmit(address(accounting));
         emit ICSAccounting.ChargePenaltyRecipientSet(
             testChargePenaltyRecipient
         );
@@ -3223,7 +3223,7 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
         uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
 
         vm.prank(address(stakingModule));
-        vm.expectEmit(true, true, true, true, address(stETH));
+        vm.expectEmit(address(stETH));
         emit StETHMock.Approval(user, address(accounting), 32 ether);
 
         accounting.depositStETH(
@@ -3268,7 +3268,7 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
         stETH.approve(address(accounting), 1 ether);
         vm.stopPrank();
 
-        vm.expectEmit(true, true, true, true, address(stETH));
+        vm.expectEmit(address(stETH));
         emit StETHMock.Approval(user, address(accounting), 32 ether);
 
         vm.recordLogs();
@@ -3524,7 +3524,7 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
         );
         vm.stopPrank();
 
-        vm.expectEmit(true, true, true, true, address(wstETH));
+        vm.expectEmit(address(wstETH));
         emit WstETHMock.Approval(user, address(accounting), 32 ether);
 
         vm.prank(address(stakingModule));
@@ -3572,7 +3572,7 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
         wstETH.approve(address(accounting), 1 ether);
         vm.stopPrank();
 
-        vm.expectEmit(true, true, true, true, address(wstETH));
+        vm.expectEmit(address(wstETH));
         emit WstETHMock.Approval(user, address(accounting), 32 ether);
 
         vm.recordLogs();
@@ -3830,7 +3830,7 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         vm.prank(address(stakingModule));
         accounting.lockBondETH(0, 1 ether);
 
-        vm.expectEmit(true, true, true, true, address(accounting));
+        vm.expectEmit(address(accounting));
         emit ICSAccounting.BondLockCompensated(0, 0.4 ether);
 
         vm.deal(address(stakingModule), 0.4 ether);
@@ -4058,7 +4058,7 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
 
     function test_setChargePenaltyRecipient() public {
         vm.prank(admin);
-        vm.expectEmit(true, false, false, true, address(accounting));
+        vm.expectEmit(address(accounting));
         emit ICSAccounting.ChargePenaltyRecipientSet(address(1337));
         accounting.setChargePenaltyRecipient(address(1337));
         assertEq(accounting.chargePenaltyRecipient(), address(1337));
@@ -4133,7 +4133,7 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
         uint256 amount = 42 ether;
         vm.deal(address(accounting), amount);
 
-        vm.expectEmit(true, true, true, true, address(accounting));
+        vm.expectEmit(address(accounting));
         emit IAssetRecovererLib.EtherRecovered(recoverer, amount);
 
         vm.prank(recoverer);
@@ -4148,7 +4148,7 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
         token.mint(address(accounting), 1000);
 
         vm.prank(recoverer);
-        vm.expectEmit(true, true, true, true, address(accounting));
+        vm.expectEmit(address(accounting));
         emit IAssetRecovererLib.ERC20Recovered(address(token), recoverer, 1000);
         accounting.recoverERC20(address(token), 1000);
 
@@ -4196,7 +4196,7 @@ contract CSAccountingAssetRecovererTest is CSAccountingBaseTest {
         stETH.mintShares(address(accounting), sharesToRecover);
 
         vm.prank(recoverer);
-        vm.expectEmit(true, true, true, true, address(accounting));
+        vm.expectEmit(address(accounting));
         emit IAssetRecovererLib.StETHSharesRecovered(
             recoverer,
             sharesToRecover

@@ -159,7 +159,7 @@ contract CSParametersRegistryRewardShareDataTest is
 
     function test_setDefaultRewardShare_set_valid_data() public {
         uint256 rewardShare = 700;
-        vm.expectEmit(true, true, true, true, address(parametersRegistry));
+        vm.expectEmit(address(parametersRegistry));
         emit ICSParametersRegistry.DefaultRewardShareSet(rewardShare);
         vm.prank(admin);
         parametersRegistry.setDefaultRewardShare(rewardShare);
@@ -185,7 +185,7 @@ contract CSParametersRegistryRewardShareDataTest is
         rewardShares[0] = 10000;
         rewardShares[1] = 8000;
 
-        vm.expectEmit(true, true, true, true, address(parametersRegistry));
+        vm.expectEmit(address(parametersRegistry));
         emit ICSParametersRegistry.RewardShareDataSet(curveId);
         vm.prank(admin);
         parametersRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
@@ -384,7 +384,7 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
 
     function test_setDefaultPerformanceLeewayData_set_valid_data() public {
         uint256 leeway = 700;
-        vm.expectEmit(true, true, true, true, address(parametersRegistry));
+        vm.expectEmit(address(parametersRegistry));
         emit ICSParametersRegistry.DefaultPerformanceLeewaySet(leeway);
         vm.prank(admin);
         parametersRegistry.setDefaultPerformanceLeeway(leeway);
@@ -412,7 +412,7 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         performanceLeeways[0] = 500;
         performanceLeeways[1] = 400;
 
-        vm.expectEmit(true, true, true, true, address(parametersRegistry));
+        vm.expectEmit(address(parametersRegistry));
         emit ICSParametersRegistry.PerformanceLeewayDataSet(curveId);
         vm.prank(admin);
         parametersRegistry.setPerformanceLeewayData(
@@ -662,7 +662,7 @@ contract CSParametersRegistryPriorityQueueLimitTest is
 
     function test_setDefaultPriorityQueueLimit() public {
         uint256 limit = 154;
-        vm.expectEmit(true, true, true, true, address(parametersRegistry));
+        vm.expectEmit(address(parametersRegistry));
         emit ICSParametersRegistry.DefaultPriorityQueueLimitSet(limit);
         vm.prank(admin);
         parametersRegistry.setDefaultPriorityQueueLimit(limit);
@@ -674,7 +674,7 @@ contract CSParametersRegistryPriorityQueueLimitTest is
         uint256 curveId = 1;
         uint256 limit = 20;
 
-        vm.expectEmit(true, true, true, true, address(parametersRegistry));
+        vm.expectEmit(address(parametersRegistry));
         emit ICSParametersRegistry.PriorityQueueLimitSet(curveId, limit);
         vm.prank(admin);
         parametersRegistry.setPriorityQueueLimit(curveId, limit);
@@ -740,7 +740,7 @@ contract CSParametersRegistryKeyRemovalChargeTest is
 
     function test_setDefaultKeyRemovalCharge() public {
         uint256 charge = 1 ether;
-        vm.expectEmit(true, true, true, true, address(parametersRegistry));
+        vm.expectEmit(address(parametersRegistry));
         emit ICSParametersRegistry.DefaultKeyRemovalChargeSet(charge);
         vm.prank(admin);
         parametersRegistry.setDefaultKeyRemovalCharge(charge);
@@ -752,7 +752,7 @@ contract CSParametersRegistryKeyRemovalChargeTest is
         uint256 curveId = 1;
         uint256 charge = 1 ether;
 
-        vm.expectEmit(true, true, true, true, address(parametersRegistry));
+        vm.expectEmit(address(parametersRegistry));
         emit ICSParametersRegistry.KeyRemovalChargeSet(curveId, charge);
         vm.prank(admin);
         parametersRegistry.setKeyRemovalCharge(curveId, charge);
@@ -818,7 +818,7 @@ contract CSParametersRegistryElRewardsStealingAdditionalFineTest is
 
     function test_setDefaultElRewardsStealingAdditionalFine() public {
         uint256 fine = 1 ether;
-        vm.expectEmit(true, true, true, true, address(parametersRegistry));
+        vm.expectEmit(address(parametersRegistry));
         emit ICSParametersRegistry.DefaultElRewardsStealingAdditionalFineSet(
             fine
         );
@@ -835,7 +835,7 @@ contract CSParametersRegistryElRewardsStealingAdditionalFineTest is
         uint256 curveId = 1;
         uint256 fine = 1 ether;
 
-        vm.expectEmit(true, true, true, true, address(parametersRegistry));
+        vm.expectEmit(address(parametersRegistry));
         emit ICSParametersRegistry.ElRewardsStealingAdditionalFineSet(
             curveId,
             fine
@@ -917,7 +917,7 @@ contract CSParametersRegistryStrikesParamsTest is CSParametersRegistryBaseTest {
         uint256 lifetime = 12;
         uint256 threshold = 6;
 
-        vm.expectEmit(true, true, true, true, address(parametersRegistry));
+        vm.expectEmit(address(parametersRegistry));
         emit ICSParametersRegistry.DefaultStrikesParamsSet(lifetime, threshold);
         vm.prank(admin);
         parametersRegistry.setDefaultStrikesParams(lifetime, threshold);
