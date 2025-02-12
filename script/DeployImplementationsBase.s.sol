@@ -58,8 +58,8 @@ abstract contract DeployImplementationsBase is DeployBase {
                     performanceLeeway: config.avgPerfLeewayBP,
                     strikesLifetime: config.strikesLifetimeFrames,
                     strikesThreshold: config.strikesThreshold,
-                    defaultQueuePriority: 0,
-                    defaultQueueMaxDeposits: 0
+                    defaultQueuePriority: config.defaultQueuePriority,
+                    defaultQueueMaxDeposits: config.defaultQueueMaxDeposits
                 })
             });
 
