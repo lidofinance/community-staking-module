@@ -12,8 +12,9 @@ import { Utilities } from "./helpers/Utilities.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 import { MerkleTree } from "./helpers/MerkleTree.sol";
 import { CSMMock } from "./helpers/mocks/CSMMock.sol";
+import { Fixtures } from "./helpers/Fixtures.sol";
 
-contract VettedGateTest is Test, Utilities {
+contract VettedGateTest is Test, Utilities, Fixtures {
     VettedGate internal vettedGate;
     address internal csm;
     address internal nodeOperator;
@@ -35,16 +36,35 @@ contract VettedGateTest is Test, Utilities {
 
         curveId = 1;
         root = merkleTree.root();
-        vettedGate = new VettedGate(merkleTree.root(), curveId, csm, admin);
+        vettedGate = new VettedGate(curveId, csm);
+        _enableInitializers(address(vettedGate));
+        vettedGate.initialize(merkleTree.root(), admin);
     }
 
     function test_constructor() public {
+        vettedGate = new VettedGate(curveId, csm);
+        assertEq(vettedGate.CURVE_ID(), curveId);
+        assertEq(address(vettedGate.CSM()), csm);
+    }
+
+    function test_constructor_RevertWhen_InvalidCurveId() public {
+        vm.expectRevert(IVettedGate.InvalidCurveId.selector);
+        new VettedGate(0, csm);
+    }
+
+    function test_constructor_RevertWhen_ZeroModuleAddress() public {
+        vm.expectRevert(IVettedGate.ZeroModuleAddress.selector);
+        new VettedGate(curveId, address(0));
+    }
+
+    function test_initializer() public {
+        vettedGate = new VettedGate(curveId, csm);
+        _enableInitializers(address(vettedGate));
+
         vm.expectEmit();
         emit IVettedGate.TreeRootSet(root);
-        vettedGate = new VettedGate(root, curveId, csm, admin);
+        vettedGate.initialize(merkleTree.root(), admin);
 
-        assertEq(address(vettedGate.CSM()), csm);
-        assertEq(vettedGate.CURVE_ID(), curveId);
         assertEq(vettedGate.treeRoot(), root);
         assertEq(
             vettedGate.getRoleMemberCount(vettedGate.DEFAULT_ADMIN_ROLE()),
@@ -56,24 +76,20 @@ contract VettedGateTest is Test, Utilities {
         );
     }
 
-    function test_constructor_RevertWhen_InvalidTreeRoot() public {
+    function test_initializer_RevertWhen_InvalidTreeRoot() public {
+        vettedGate = new VettedGate(curveId, csm);
+        _enableInitializers(address(vettedGate));
+
         vm.expectRevert(IVettedGate.InvalidTreeRoot.selector);
-        new VettedGate(bytes32(0), curveId, csm, admin);
+        vettedGate.initialize(bytes32(0), admin);
     }
 
-    function test_constructor_RevertWhen_InvalidCurveId() public {
-        vm.expectRevert(IVettedGate.InvalidCurveId.selector);
-        new VettedGate(root, 0, csm, admin);
-    }
+    function test_initializer_RevertWhen_ZeroAdminAddress() public {
+        vettedGate = new VettedGate(curveId, csm);
+        _enableInitializers(address(vettedGate));
 
-    function test_constructor_RevertWhen_ZeroModuleAddress() public {
-        vm.expectRevert(IVettedGate.ZeroModuleAddress.selector);
-        new VettedGate(root, curveId, address(0), admin);
-    }
-
-    function test_constructor_RevertWhen_ZeroAdminAddress() public {
         vm.expectRevert(IVettedGate.ZeroAdminAddress.selector);
-        new VettedGate(root, curveId, csm, address(0));
+        vettedGate.initialize(root, address(0));
     }
 
     function test_pauseFor() public {
