@@ -242,6 +242,14 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         }
     }
 
+    function _isQueueDirty(uint256 maxItems) internal returns (bool) {
+        // XXX: Mimic a **eth_call** to avoid state changes.
+        uint256 snapshot = vm.snapshotState();
+        (uint256 toRemove, ) = csm.cleanDepositQueue(maxItems);
+        vm.revertToState(snapshot);
+        return toRemove > 0;
+    }
+
     function getNodeOperatorSummary(
         uint256 noId
     ) public view returns (NodeOperatorSummary memory) {
@@ -2805,14 +2813,6 @@ contract CsmVetKeys is CSMCommon {
 contract CsmQueueOps is CSMCommon {
     uint256 internal constant LOOKUP_DEPTH = 150; // derived from maxDepositsPerBlock
 
-    function _isQueueDirty(uint256 maxItems) internal returns (bool) {
-        // XXX: Mimic a **eth_call** to avoid state changes.
-        uint256 snapshot = vm.snapshotState();
-        (uint256 toRemove, ) = csm.cleanDepositQueue(maxItems);
-        vm.revertToState(snapshot);
-        return toRemove > 0;
-    }
-
     function test_emptyQueueIsClean() public assertInvariants {
         bool isDirty = _isQueueDirty(LOOKUP_DEPTH);
         assertFalse(isDirty, "queue should be clean");
@@ -2995,6 +2995,188 @@ contract CsmQueueOps is CSMCommon {
         vm.expectEmit(true, true, true, true, address(csm));
         emit IQueueLib.BatchEnqueued(noId, 1);
         csm.submitWithdrawal(noId, 0, DEPOSIT_SIZE, false);
+    }
+}
+
+contract CsmPriorityQueue is CSMCommon {
+    uint32 PRIORITY_QUEUE = 0;
+
+    function setUp() public override {
+        super.setUp();
+        // Just to make sure we configured defaults properly and check things properly.
+        assertNotEq(PRIORITY_QUEUE, csm.QUEUE_LOWEST_PRIORITY());
+        assertNotEq(PRIORITY_QUEUE, csm.QUEUE_LEGACY_PRIORITY());
+    }
+
+    function test_enqueueToPriorityQueue() public {
+        uint256 noId = createNodeOperator(0);
+
+        _assertPriorityQueueEmpty();
+        _enablePriorityQueue();
+
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit IQueueLib.BatchEnqueued(noId, 10);
+
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit IQueueLib.BatchEnqueued(noId, 5);
+
+            uploadMoreKeys(noId, 15);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 10 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 5 });
+        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
+    }
+
+    function test_migrateToPriorityQueue_EnqueuedLessThanMaxDeposits() public {
+        uint256 noId = createNodeOperator(0);
+        uploadMoreKeys(noId, 8);
+
+        _assertPriorityQueueEmpty();
+        _enablePriorityQueue();
+
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit IQueueLib.BatchEnqueued(noId, 8);
+
+            vm.prank(nodeOperator);
+            csm.migrateToPriorityQueue(noId);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 8 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 8 });
+        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
+    }
+
+    function test_migrateToPriorityQueue_EnqueuedMoreThanMaxDeposits() public {
+        uint256 noId = createNodeOperator(0);
+        uploadMoreKeys(noId, 15);
+
+        _assertPriorityQueueEmpty();
+        _enablePriorityQueue();
+
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit IQueueLib.BatchEnqueued(noId, 10);
+
+            vm.prank(nodeOperator);
+            csm.migrateToPriorityQueue(noId);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 10 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 15 });
+        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
+    }
+
+    function test_migrateToPriorityQueue_DepositedLessThanMaxDeposits() public {
+        uint256 noId = createNodeOperator(0);
+        uploadMoreKeys(noId, 15);
+
+        csm.obtainDepositData(8, "");
+
+        _assertPriorityQueueEmpty();
+        _enablePriorityQueue();
+
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit IQueueLib.BatchEnqueued(noId, 2);
+
+            vm.prank(nodeOperator);
+            csm.migrateToPriorityQueue(noId);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 2 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        // The batch was partially consumed by the obtainDepositData call.
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 7 });
+        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
+    }
+
+    function test_migrateToPriorityQueue_DepositedMoreThanMaxDeposits() public {
+        uint256 noId = createNodeOperator(0);
+        uploadMoreKeys(noId, 15);
+
+        csm.obtainDepositData(12, "");
+
+        _assertPriorityQueueEmpty();
+        _enablePriorityQueue();
+
+        {
+            vm.prank(nodeOperator);
+            csm.migrateToPriorityQueue(noId);
+        }
+
+        _assertPriorityQueueEmpty();
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+        // The batch was partially consumed by the obtainDepositData call.
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 3 });
+        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
+    }
+
+    function test_migrateToPriorityQueue_RevertsIfPriorityQueueAlreadyUsedViaMigrate()
+        public
+    {
+        uint256 noId = createNodeOperator(0);
+        uploadMoreKeys(noId, 15);
+
+        _enablePriorityQueue();
+        _assertPriorityQueueEmpty();
+
+        {
+            vm.prank(nodeOperator);
+            csm.migrateToPriorityQueue(noId);
+        }
+
+        {
+            vm.expectRevert(ICSModule.AlreadyMigrated.selector);
+            vm.prank(nodeOperator);
+            csm.migrateToPriorityQueue(noId);
+        }
+    }
+
+    function test_migrateToPriorityQueue_RevertsIfPriorityQueueAlreadyUsedViaAddKeys()
+        public
+    {
+        _enablePriorityQueue();
+        _assertPriorityQueueEmpty();
+
+        uint256 noId = createNodeOperator(0);
+        uploadMoreKeys(noId, 15);
+
+        {
+            vm.expectRevert(ICSModule.AlreadyMigrated.selector);
+            vm.prank(nodeOperator);
+            csm.migrateToPriorityQueue(noId);
+        }
+    }
+
+    function _enablePriorityQueue() internal {
+        parametersRegistry.setQueueConfig({
+            curveId: 0,
+            priority: PRIORITY_QUEUE,
+            maxDeposits: 10
+        });
+    }
+
+    function _assertPriorityQueueEmpty() internal {
+        _assertQueueState(PRIORITY_QUEUE, new BatchInfo[](0));
     }
 }
 

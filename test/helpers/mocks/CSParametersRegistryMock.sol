@@ -3,12 +3,19 @@
 
 pragma solidity 0.8.24;
 
+struct MarkedQueueConfig {
+    uint32 priority;
+    uint32 maxDeposits;
+    bool isValue;
+}
+
 contract CSParametersRegistryMock {
     uint256 public keyRemovalCharge = 0.01 ether;
 
-    // FIXME: We need for multiple priorities.
-    uint256 public QUEUE_LOWEST_PRIORITY = 0;
-    uint256 public QUEUE_LEGACY_PRIORITY = 0;
+    uint256 public QUEUE_LOWEST_PRIORITY = 5;
+    uint256 public QUEUE_LEGACY_PRIORITY = 4;
+
+    mapping(uint256 curveId => MarkedQueueConfig) internal _queueConfigs;
 
     function getKeyRemovalCharge(
         uint256 /* curveId */
@@ -29,10 +36,28 @@ contract CSParametersRegistryMock {
         return 0.1 ether;
     }
 
+    function setQueueConfig(
+        uint256 curveId,
+        uint32 priority,
+        uint32 maxDeposits
+    ) external {
+        _queueConfigs[curveId] = MarkedQueueConfig({
+            priority: priority,
+            maxDeposits: maxDeposits,
+            isValue: true
+        });
+    }
+
     function getQueueConfig(
-        uint256 /* curveId */
+        uint256 curveId
     ) external view returns (uint32 priority, uint32 maxDeposits) {
-        // FIXME: Should not put all to the legacy queue.
-        return (uint32(QUEUE_LEGACY_PRIORITY), type(uint32).max);
+        MarkedQueueConfig storage config = _queueConfigs[curveId];
+
+        if (!config.isValue) {
+            // NOTE: To preserve the old corpus of tests.
+            return (uint32(QUEUE_LOWEST_PRIORITY), type(uint32).max);
+        }
+
+        return (config.priority, config.maxDeposits);
     }
 }
