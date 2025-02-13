@@ -71,7 +71,12 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
             1
         );
         assertTrue(csm.hasRole(csm.VERIFIER_ROLE(), address(verifier)));
+        assertTrue(
+            csm.hasRole(csm.BAD_PERFORMER_EJECTOR_ROLE(), address(strikes))
+        );
+
         assertEq(csm.getRoleMemberCount(csm.VERIFIER_ROLE()), 1);
+        assertEq(csm.getRoleMemberCount(csm.BAD_PERFORMER_EJECTOR_ROLE()), 1);
         assertEq(csm.getRoleMemberCount(csm.RECOVERER_ROLE()), 0);
     }
 
@@ -177,6 +182,11 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         );
     }
 
+    function test_strikesState() public view {
+        assertEq(strikes.treeRoot(), bytes32(0));
+        assertEq(keccak256(abi.encodePacked(strikes.treeCid())), keccak256(""));
+    }
+
     function test_feeDistributor_roles() public view {
         assertTrue(
             feeDistributor.hasRole(
@@ -207,6 +217,9 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         assertFalse(hash == bytes32(0), "expected report hash to be non-zero");
         assertGt(refSlot, 0);
         assertGt(processingDeadlineTime, 0);
+        assertEq(oracle.getConsensusVersion(), 2);
+        assertEq(oracle.getContractVersion(), 2);
+        assertEq(address(oracle.strikes()), address(strikes));
     }
 
     function test_feeOracle_roles() public view {

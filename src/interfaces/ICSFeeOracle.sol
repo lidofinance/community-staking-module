@@ -26,13 +26,21 @@ interface ICSFeeOracle is IAssetRecovererLib {
         uint256 distributed;
         /// @notice Amount of the rebate shares in the report
         uint256 rebate;
+        /// @notice Merkle Tree root of the strikes.
+        bytes32 strikesTreeRoot;
+        /// @notice CID of the published Merkle tree of the strikes.
+        string strikesTreeCid;
     }
 
     /// @dev Emitted when a new fee distributor contract is set
     event FeeDistributorContractSet(address feeDistributorContract);
 
+    /// @dev Emitted when a new strikes contract is set
+    event StrikesContractSet(address strikesContract);
+
     error ZeroAdminAddress();
     error ZeroFeeDistributorAddress();
+    error ZeroStrikesAddress();
     error SenderNotAllowed();
 
     function SUBMIT_DATA_ROLE() external view returns (bytes32);
@@ -48,6 +56,10 @@ interface ICSFeeOracle is IAssetRecovererLib {
     /// @notice Set a new fee distributor contract
     /// @param feeDistributorContract Address of the new fee distributor contract
     function setFeeDistributorContract(address feeDistributorContract) external;
+
+    /// @notice Set a new strikes contract
+    /// @param strikesContract Address of the new strikes contract
+    function setStrikesContract(address strikesContract) external;
 
     /// @notice Submit the data for a committee report
     /// @param data Data for a committee report

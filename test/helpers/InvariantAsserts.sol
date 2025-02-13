@@ -10,6 +10,7 @@ import { CSModule } from "../../src/CSModule.sol";
 import { NodeOperator } from "../../src/interfaces/ICSModule.sol";
 import { Batch } from "../../src/lib/QueueLib.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";
+import { CSStrikes } from "../../src/CSStrikes.sol";
 
 contract InvariantAsserts is Test {
     function assertCSMKeys(CSModule csm) public view {
@@ -199,6 +200,14 @@ contract InvariantAsserts is Test {
                 "",
                 "tree exists, but has no CID"
             );
+        }
+    }
+
+    function assertStrikesTree(CSStrikes strikes) public view {
+        if (strikes.treeRoot() == bytes32(0)) {
+            assertEq(strikes.treeCid(), "", "tree doesn't exist, but has CID");
+        } else {
+            assertNotEq(strikes.treeCid(), "", "tree exists, but has no CID");
         }
     }
 }

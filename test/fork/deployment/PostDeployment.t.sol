@@ -92,7 +92,11 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
             1
         );
         assertTrue(csm.hasRole(csm.VERIFIER_ROLE(), address(verifier)));
+        assertTrue(
+            csm.hasRole(csm.BAD_PERFORMER_EJECTOR_ROLE(), address(strikes))
+        );
         assertEq(csm.getRoleMemberCount(csm.VERIFIER_ROLE()), 1);
+        assertEq(csm.getRoleMemberCount(csm.BAD_PERFORMER_EJECTOR_ROLE()), 1);
         assertEq(csm.getRoleMemberCount(csm.RECOVERER_ROLE()), 0);
     }
 
@@ -187,7 +191,8 @@ contract CSParametersRegistryDeploymentTest is
                 rewardShare: deployParams.rewardShareBP,
                 performanceLeeway: deployParams.avgPerfLeewayBP,
                 strikesLifetime: deployParams.strikesLifetimeFrames,
-                strikesThreshold: deployParams.strikesThreshold
+                strikesThreshold: deployParams.strikesThreshold,
+                badPerformancePenalty: deployParams.badPerformancePenalty
             })
         });
     }
@@ -364,6 +369,30 @@ contract CSFeeDistributorDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 }
 
+contract CSStrikesDeploymentTest is Test, Utilities, DeploymentFixtures {
+    DeployParams private deployParams;
+    uint256 adminsCount;
+
+    function setUp() public {
+        Env memory env = envVars();
+        vm.createSelectFork(env.RPC_URL);
+        initializeFromDeployment();
+        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
+        adminsCount = block.chainid == 1 ? 1 : 2;
+    }
+
+    function test_constructor() public view {
+        assertEq(address(strikes.ORACLE()), address(oracle));
+        assertEq(address(strikes.MODULE()), address(csm));
+    }
+
+    function test_proxy() public view {
+        OssifiableProxy proxy = OssifiableProxy(payable(address(strikes)));
+        assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
+        assertFalse(proxy.proxy__getIsOssified());
+    }
+}
+
 contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
     DeployParams private deployParams;
     uint256 adminsCount;
@@ -383,7 +412,8 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
 
     function test_initializer() public view {
         assertEq(address(oracle.feeDistributor()), address(feeDistributor));
-        assertEq(oracle.getContractVersion(), 1);
+        assertEq(address(oracle.strikes()), address(strikes));
+        assertEq(oracle.getContractVersion(), 2);
         assertEq(oracle.getConsensusContract(), address(hashConsensus));
         assertEq(oracle.getConsensusVersion(), deployParams.consensusVersion);
         assertEq(oracle.getLastProcessingRefSlot(), 0);
@@ -425,6 +455,7 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
         oracleImpl.initialize({
             admin: address(deployParams.aragonAgent),
             feeDistributorContract: address(feeDistributor),
+            strikesContract: address(strikes),
             consensusContract: address(hashConsensus),
             consensusVersion: deployParams.consensusVersion
         });

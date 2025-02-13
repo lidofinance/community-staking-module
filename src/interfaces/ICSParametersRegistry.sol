@@ -28,6 +28,7 @@ interface ICSParametersRegistry {
         uint256 performanceLeeway;
         uint256 strikesLifetime;
         uint256 strikesThreshold;
+        uint256 badPerformancePenalty;
     }
 
     struct PivotsAndValues {
@@ -41,6 +42,7 @@ interface ICSParametersRegistry {
     event DefaultRewardShareSet(uint256 value);
     event DefaultPerformanceLeewaySet(uint256 value);
     event DefaultStrikesParamsSet(uint256 lifetime, uint256 threshold);
+    event DefaultBadPerformancePenaltySet(uint256 value);
 
     event KeyRemovalChargeSet(
         uint256 indexed curveId,
@@ -58,12 +60,15 @@ interface ICSParametersRegistry {
         uint256 lifetime,
         uint256 threshold
     );
+    event BadPerformancePenaltySet(uint256 indexed curveId, uint256 penalty);
+
     event KeyRemovalChargeUnset(uint256 indexed curveId);
     event ElRewardsStealingAdditionalFineUnset(uint256 indexed curveId);
     event PriorityQueueLimitUnset(uint256 indexed curveId);
     event RewardShareDataUnset(uint256 indexed curveId);
     event PerformanceLeewayDataUnset(uint256 indexed curveId);
     event StrikesParamsUnset(uint256 indexed curveId);
+    event BadPerformancePenaltyUnset(uint256 indexed curveId);
 
     error InvalidRewardShareData();
     error InvalidPerformanceLeewayData();
@@ -117,6 +122,12 @@ interface ICSParametersRegistry {
 
     /// @notice Get default value for the strikes lifetime and threshold
     function defaultStrikesParams() external returns (uint128, uint128);
+
+    /// @notice Set default value for the bad performance penalty. Default value is used if a specific value is not set for the curveId
+    /// @param penalty value to be set as default for the bad performance penalty
+    function setDefaultBadPerformancePenalty(uint256 penalty) external;
+
+    /// @notice Get default value for the bad performance penalty
 
     /// @notice Set key removal charge for the curveId.
     /// @param curveId Curve Id to associate key removal charge with
@@ -262,4 +273,24 @@ interface ICSParametersRegistry {
     function getStrikesParams(
         uint256 curveId
     ) external view returns (uint256 lifetime, uint256 threshold);
+
+    /// @notice Set bad performance penalty for the curveId
+    /// @param curveId Curve Id to associate bad performance penalty with
+    /// @param penalty Bad performance penalty
+    function setBadPerformancePenalty(
+        uint256 curveId,
+        uint256 penalty
+    ) external;
+
+    /// @notice Unset bad performance penalty for the curveId
+    /// @param curveId Curve Id to unset custom bad performance penalty for
+    function unsetBadPerformancePenalty(uint256 curveId) external;
+
+    /// @notice Get bad performance penalty by the curveId
+    /// @dev `defaultBadPerformancePenalty` is returned if the value is not set for the given curveId.
+    /// @param curveId Curve Id to get bad performance penalty for
+    /// @return penalty Bad performance penalty
+    function getBadPerformancePenalty(
+        uint256 curveId
+    ) external view returns (uint256 penalty);
 }

@@ -340,6 +340,7 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
             address(this)
         );
         csm.grantRole(csm.VERIFIER_ROLE(), address(this));
+        csm.grantRole(csm.BAD_PERFORMER_EJECTOR_ROLE(), address(this));
         accounting.grantRole(
             accounting.MANAGE_BOND_CURVES_ROLE(),
             address(this)
@@ -5648,7 +5649,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
         csm.submitWithdrawal(noId, 0, 0, false);
     }
 
-    function test_submitWithdrawal_RevertWhen_AlreadySubmitted()
+    function test_submitWithdrawal_RevertWhen_AlreadyWithdrawn()
         public
         assertInvariants
     {
@@ -5657,8 +5658,106 @@ contract CsmSubmitWithdrawal is CSMCommon {
         uint256 depositSize = DEPOSIT_SIZE;
 
         csm.submitWithdrawal(noId, 0, depositSize, false);
-        vm.expectRevert(ICSModule.AlreadySubmitted.selector);
+        vm.expectRevert(ICSModule.AlreadyWithdrawn.selector);
         csm.submitWithdrawal(noId, 0, depositSize, false);
+    }
+}
+
+contract CsmEjectBadPerformer is CSMCommon {
+    function test_ejectBadPerformer() public assertInvariants {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        (bytes memory pubkey, ) = csm.obtainDepositData(1, "");
+        uint256 penalty = csm.PARAMETERS_REGISTRY().getBadPerformancePenalty(0);
+        uint256[] memory strikesData = new uint256[](3);
+        strikesData[0] = 1;
+        strikesData[1] = 2;
+        strikesData[2] = 3;
+
+        vm.expectEmit(address(csm));
+        emit ICSModule.EjectionSubmitted(noId, keyIndex, pubkey);
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.penalize.selector, noId, penalty)
+        );
+        csm.ejectBadPerformer(noId, keyIndex, strikesData.length);
+
+        assertTrue(csm.isValidatorEjected(noId, keyIndex));
+
+        // TODO: check ejection contract call
+    }
+
+    function test_ejectBadPerformer_NoPenalty() public assertInvariants {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        (bytes memory pubkey, ) = csm.obtainDepositData(1, "");
+        csm.PARAMETERS_REGISTRY().setBadPerformancePenalty(0, 0);
+        uint256[] memory strikesData = new uint256[](3);
+        strikesData[0] = 1;
+        strikesData[1] = 2;
+        strikesData[2] = 3;
+
+        vm.expectEmit(address(csm));
+        emit ICSModule.EjectionSubmitted(noId, keyIndex, pubkey);
+        expectNoCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.penalize.selector, noId, 0)
+        );
+        csm.ejectBadPerformer(noId, keyIndex, strikesData.length);
+
+        assertTrue(csm.isValidatorEjected(noId, keyIndex));
+
+        // TODO: check ejection contract call
+    }
+
+    function test_ejectBadPerformer_RevertWhen_NoNodeOperator() public {
+        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
+        csm.ejectBadPerformer(0, 0, 0);
+    }
+
+    function test_ejectBadPerformer_RevertWhen_InvalidKeyIndexOffset() public {
+        uint256 noId = createNodeOperator();
+        vm.expectRevert(ICSModule.SigningKeysInvalidOffset.selector);
+        csm.ejectBadPerformer(noId, 0, 0);
+    }
+
+    function test_ejectBadPerformer_RevertWhen_AlreadyEjected() public {
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+        uint256[] memory strikesData = new uint256[](3);
+        strikesData[0] = 1;
+        strikesData[1] = 2;
+        strikesData[2] = 3;
+
+        csm.ejectBadPerformer(noId, 0, strikesData.length);
+        vm.expectRevert(ICSModule.AlreadyEjected.selector);
+        csm.ejectBadPerformer(noId, 0, strikesData.length);
+    }
+
+    function test_ejectBadPerformer_RevertWhen_AlreadyWithdrawn() public {
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+        uint256[] memory strikesData = new uint256[](3);
+        strikesData[0] = 1;
+        strikesData[1] = 2;
+        strikesData[2] = 3;
+
+        csm.submitWithdrawal(noId, 0, DEPOSIT_SIZE, false);
+        vm.expectRevert(ICSModule.AlreadyWithdrawn.selector);
+        csm.ejectBadPerformer(noId, 0, strikesData.length);
+    }
+
+    function test_ejectBadPerformer_RevertWhen_NotEnoughStrikesToEject()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+        uint256[] memory strikesData = new uint256[](2);
+        strikesData[0] = 1;
+        strikesData[1] = 2;
+
+        vm.expectRevert(ICSModule.NotEnoughStrikesToEject.selector);
+        csm.ejectBadPerformer(noId, 0, strikesData.length);
     }
 }
 
@@ -5909,6 +6008,31 @@ contract CSMAccessControl is CSMCommonNoRoles {
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
         csm.submitWithdrawal(noId, 0, 1 ether, false);
+    }
+
+    function test_badPerformerEjectorRole_ejectBadPerformer() public {
+        csm.activatePublicRelease();
+        uint256 noId = createNodeOperator();
+        bytes32 role = csm.BAD_PERFORMER_EJECTOR_ROLE();
+
+        vm.startPrank(admin);
+        csm.grantRole(role, actor);
+        csm.grantRole(csm.STAKING_ROUTER_ROLE(), admin);
+        csm.obtainDepositData(1, "");
+        vm.stopPrank();
+
+        uint256[] memory strikesData = new uint256[](3);
+        strikesData[0] = 1;
+        strikesData[1] = 2;
+        strikesData[2] = 3;
+
+        vm.prank(actor);
+        csm.ejectBadPerformer(noId, 0, 3);
+    }
+
+    function test_badPerformerEjectorRole_ejectBadPerformer_revert() public {
+        expectRoleRevert(address(this), csm.BAD_PERFORMER_EJECTOR_ROLE());
+        csm.ejectBadPerformer(0, 0, 0);
     }
 
     function test_recovererRole() public {
