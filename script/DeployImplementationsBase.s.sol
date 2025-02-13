@@ -58,7 +58,10 @@ abstract contract DeployImplementationsBase is DeployBase {
                     performanceLeeway: config.avgPerfLeewayBP,
                     strikesLifetime: config.strikesLifetimeFrames,
                     strikesThreshold: config.strikesThreshold,
-                    badPerformancePenalty: config.badPerformancePenalty
+                    badPerformancePenalty: config.badPerformancePenalty,
+                    attestationsWeight: config.attestationsWeight,
+                    blocksWeight: config.blocksWeight,
+                    syncWeight: config.syncWeight
                 })
             });
 

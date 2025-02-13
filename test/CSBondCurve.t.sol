@@ -244,7 +244,7 @@ contract CSBondCurveTest is Test {
         assertTrue(bondCurve.curveExists(addedId));
     }
 
-    function test_curveExists_curveNotExists() public {
+    function test_curveExists_curveNotExists() public view {
         assertFalse(bondCurve.curveExists(1));
     }
 

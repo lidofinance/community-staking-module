@@ -80,6 +80,9 @@ contract DeployHolesky is DeployBase {
         config.strikesThreshold = 3;
         config.priorityQueueLimit = 0;
         config.badPerformancePenalty = 0.1 ether; // TODO: to be reviewed
+        config.attestationsWeight = 54; // https://eth2book.info/capella/part2/incentives/rewards/
+        config.blocksWeight = 8; // https://eth2book.info/capella/part2/incentives/rewards/
+        config.syncWeight = 2; // https://eth2book.info/capella/part2/incentives/rewards/
         // VettedGate
         config
             .vettedGateTreeRoot = 0xc9a9c1576cf4f3213ad9075b72a1f1b147914a252ad927fa4ca3460ff0723ca9;

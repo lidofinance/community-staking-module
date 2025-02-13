@@ -192,7 +192,10 @@ contract CSParametersRegistryDeploymentTest is
                 performanceLeeway: deployParams.avgPerfLeewayBP,
                 strikesLifetime: deployParams.strikesLifetimeFrames,
                 strikesThreshold: deployParams.strikesThreshold,
-                badPerformancePenalty: deployParams.badPerformancePenalty
+                badPerformancePenalty: deployParams.badPerformancePenalty,
+                attestationsWeight: deployParams.attestationsWeight,
+                blocksWeight: deployParams.blocksWeight,
+                syncWeight: deployParams.syncWeight
             })
         });
     }
