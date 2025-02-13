@@ -732,6 +732,54 @@ contract CSModule is
         _enqueueNodeOperatorKeys(nodeOperatorId);
     }
 
+    /// @dev TODO: Remove the method in the next major release.
+    /// @inheritdoc ICSModule
+    function migrateToPriorityQueue(uint256 nodeOperatorId) external {
+        _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
+
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        if (no.usedPriorityQueue) {
+            revert AlreadyMigrated();
+        }
+
+        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
+        (uint32 priority, uint32 maxDeposits) = PARAMETERS_REGISTRY
+            .getQueueConfig(curveId);
+
+        if (priority < QUEUE_LEGACY_PRIORITY) {
+            uint32 deposited = no.totalDepositedKeys;
+            uint32 enqueued = no.enqueuedCount;
+
+            if (maxDeposits > deposited) {
+                uint32 toMigrate = uint32(
+                    Math.min(maxDeposits - deposited, enqueued)
+                );
+
+                unchecked {
+                    _nodeOperators[nodeOperatorId].enqueuedCount -= toMigrate;
+                }
+                _enqueueNodeOperatorKeys(nodeOperatorId, priority, toMigrate);
+            }
+
+            no.usedPriorityQueue = true;
+        }
+
+        // An alternative version to fit into the bytecode requirements is below. Please consider
+        // the described caveat of the approach.
+
+        // NOTE: We allow a node operator (NO) to reset their enqueued counter to zero only once to
+        // migrate their keys from the legacy queue to a priority queue, if any. As a downside, the
+        // node operator effectively can have their seats doubled in the queue.
+        // Let's say we have a priority queue with a maximum of 10 deposits. Imagine a NO has 20
+        // keys queued in the legacy queue. Then, the NO calls this method and gets their enqueued
+        // counter reset to zero. As a result, the module will place 10 keys into the priority queue
+        // and 10 more keys at the end of the overall queue. The original batches are kept in the
+        // queue, so in total, the NO will have batches with 40 keys queued altogether.
+        // _nodeOperators[nodeOperatorId].enqueuedCount = 0;
+        // _enqueueNodeOperatorKeys(nodeOperatorId);
+    }
+
     /// @inheritdoc ICSModule
     function reportELRewardsStealingPenalty(
         uint256 nodeOperatorId,
@@ -1461,6 +1509,7 @@ contract CSModule is
                     priority,
                     leftForQueue
                 );
+                no.usedPriorityQueue = true;
             }
         }
 

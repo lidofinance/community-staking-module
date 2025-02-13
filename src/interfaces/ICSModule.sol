@@ -30,6 +30,7 @@ struct NodeOperator {
     /* 4 */ address rewardAddress;
     /* 5 */ address proposedRewardAddress;
     /* 5 */ bool extendedManagerPermissions;
+    /* 5 */ bool usedPriorityQueue;
 }
 
 struct NodeOperatorManagementProperties {
@@ -55,6 +56,7 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     error AlreadySubmitted();
     error AlreadyActivated();
+    error AlreadyMigrated();
 
     error InvalidAmount();
     error MaxSigningKeysCountExceeded();
@@ -435,6 +437,15 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     /// @notice Unqueued stands for vetted but not enqueued keys
     /// @param nodeOperatorId ID of the Node Operator
     function enqueueNodeOperatorKeys(uint256 nodeOperatorId) external;
+
+    /// Performs a one-time migration of allocated seats from the legacy queue to a priority queue
+    /// for an eligible node operator. This is possible, e.g., in the following scenario: A node
+    /// operator with EA curve added their keys before CSM v2 and has no deposits due to a very long
+    /// queue. The EA curve gives the node operator the ability to get some count of deposits through
+    /// the priority queue. So, by calling the migration method, the node operator can obtain seats
+    /// in the priority queue even though they already have seats in the legacy queue.
+    /// @param nodeOperatorId ID of the Node Operator
+    function migrateToPriorityQueue(uint256 nodeOperatorId) external;
 
     /// @notice Get Node Operator info
     /// @param nodeOperatorId ID of the Node Operator
