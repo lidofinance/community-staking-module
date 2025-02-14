@@ -14,6 +14,7 @@ import "./helpers/mocks/WstETHMock.sol";
 import "./helpers/mocks/CSParametersRegistryMock.sol";
 import "./helpers/Utilities.sol";
 import "./helpers/MerkleTree.sol";
+import { console2 } from "forge-std/console2.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
 import { IAssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
 import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
@@ -25,6 +26,7 @@ import { InvariantAsserts } from "./helpers/InvariantAsserts.sol";
 
 abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     using Strings for uint256;
+    using Strings for uint128;
 
     struct BatchInfo {
         uint256 nodeOperatorId;
@@ -228,7 +230,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     }
 
     function _assertQueueIsEmpty() internal view {
-        for (uint256 p = 0; p < csm.QUEUE_LOWEST_PRIORITY(); ++p) {
+        for (uint256 p = 0; p <= csm.QUEUE_LOWEST_PRIORITY(); ++p) {
             (uint128 curr, ) = csm.depositQueuePointers(p); // queue.head
             assertTrue(
                 csm.depositQueueItem(p, curr).isNil(),
@@ -238,6 +240,36 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
                     " is not empty"
                 )
             );
+        }
+    }
+
+    function _printQueue() internal {
+        for (uint256 p = 0; p <= csm.QUEUE_LOWEST_PRIORITY(); ++p) {
+            (uint128 curr, ) = csm.depositQueuePointers(p);
+
+            for (;;) {
+                Batch item = csm.depositQueueItem(p, curr);
+                if (item.isNil()) break;
+
+                uint256 noId = item.noId();
+                uint256 keysInBatch = item.keys();
+
+                console2.log(
+                    string.concat(
+                        "queue.priority=",
+                        p.toString(),
+                        "[",
+                        curr.toString(),
+                        "]={noId:",
+                        noId.toString(),
+                        ",count:",
+                        keysInBatch.toString(),
+                        "}"
+                    )
+                );
+
+                curr = item.next();
+            }
         }
     }
 
@@ -2985,6 +3017,8 @@ contract CsmQueueOps is CSMCommon {
 }
 
 contract CsmPriorityQueue is CSMCommon {
+    uint256 constant LOOKUP_DEPTH = 150;
+
     uint32 constant PRIORITY_QUEUE = 0;
     uint32 constant MAX_DEPOSITS = 10;
 
@@ -3304,6 +3338,61 @@ contract CsmPriorityQueue is CSMCommon {
         }
     }
 
+    function test_queueCleanupWorksAcrossQueues() public {
+        _enablePriorityQueue();
+
+        _assertRegularQueueEmpty();
+        _assertPriorityQueueEmpty();
+
+        uint256 noId = createNodeOperator(0);
+
+        uploadMoreKeys(noId, 2);
+        uploadMoreKeys(noId, 10);
+        uploadMoreKeys(noId, 10);
+        // [2] [8] | ... | [2] [10]
+
+        unvetKeys({ noId: noId, to: 2 });
+
+        (uint256 toRemove, ) = csm.cleanDepositQueue(LOOKUP_DEPTH);
+        assertEq(toRemove, 3, "should remove 3 batches");
+
+        bool isDirty = _isQueueDirty(LOOKUP_DEPTH);
+        assertFalse(isDirty, "queue should be clean");
+    }
+
+    function test_queueCleanupReturnsCorrectDepth() public {
+        _enablePriorityQueue();
+
+        _assertRegularQueueEmpty();
+        _assertPriorityQueueEmpty();
+
+        uint256 noIdOne = createNodeOperator(0);
+        uint256 noIdTwo = createNodeOperator(0);
+
+        uploadMoreKeys(noIdOne, 2);
+        uploadMoreKeys(noIdOne, 10);
+        uploadMoreKeys(noIdOne, 10);
+
+        uploadMoreKeys(noIdTwo, 10);
+        uploadMoreKeys(noIdTwo, 10);
+        uploadMoreKeys(noIdTwo, 10);
+
+        unvetKeys({ noId: noIdOne, to: 2 });
+
+        // [0,2] [0,8] [1,10] | ... | [0,2] [0,10] [1,10] [1,10]
+        //     1     2      3             4      5      6      7
+        //           ^                    ^      ^       removed
+
+        (uint256 toRemove, uint256 lastRemovedAtDepth) = csm.cleanDepositQueue(
+            LOOKUP_DEPTH
+        );
+        assertEq(toRemove, 3, "should remove 3 batches");
+        assertEq(lastRemovedAtDepth, 5, "the depth should be 5");
+
+        bool isDirty = _isQueueDirty(LOOKUP_DEPTH);
+        assertFalse(isDirty, "queue should be clean");
+    }
+
     function _enablePriorityQueue() internal {
         parametersRegistry.setQueueConfig({
             curveId: 0,
@@ -3312,11 +3401,11 @@ contract CsmPriorityQueue is CSMCommon {
         });
     }
 
-    function _assertPriorityQueueEmpty() internal {
+    function _assertPriorityQueueEmpty() private view {
         _assertQueueState(PRIORITY_QUEUE, new BatchInfo[](0));
     }
 
-    function _assertRegularQueueEmpty() internal {
+    function _assertRegularQueueEmpty() private view {
         _assertQueueState(REGULAR_QUEUE, new BatchInfo[](0));
     }
 }
