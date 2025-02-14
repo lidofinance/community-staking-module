@@ -38,7 +38,6 @@ contract IntegrationTestBase is
         uint256 noCount = csm.getNodeOperatorsCount();
         assertCSMKeys(csm);
         assertCSMEnqueuedCount(csm);
-        assertCSMMaxKeys(csm);
         assertAccountingTotalBondShares(noCount, lido, accounting);
         assertAccountingBurnerApproval(
             lido,
@@ -66,7 +65,6 @@ contract IntegrationTestBase is
         vm.stopPrank();
 
         if (csm.isPaused()) csm.resume();
-        if (!csm.publicRelease()) csm.activatePublicRelease();
 
         handleStakingLimit();
         handleBunkerMode();

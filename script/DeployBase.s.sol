@@ -26,6 +26,7 @@ import { ICSParametersRegistry } from "../src/interfaces/ICSParametersRegistry.s
 import { JsonObj, Json } from "./utils/Json.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
+import { VettedGateFactory } from "../src/VettedGateFactory.sol";
 
 struct DeployParamsV1 {
     // Lido addresses
@@ -106,8 +107,6 @@ struct DeployParams {
     address chargePenaltyRecipient;
     // Module
     bytes32 moduleType;
-    uint256 minSlashingPenaltyQuotient;
-    uint256 maxKeysPerOperatorEA;
     address elRewardsStealingReporter;
     // CSParameters
     uint256 keyRemovalCharge;
@@ -150,6 +149,7 @@ abstract contract DeployBase is Script {
     CSStrikes public strikes;
     CSVerifier public verifier;
     PermissionlessGate public permissionlessGate;
+    VettedGateFactory public vettedGateFactory;
     VettedGate public vettedGate;
     HashConsensus public hashConsensus;
     CSParametersRegistry public parametersRegistry;
@@ -207,8 +207,6 @@ abstract contract DeployBase is Script {
 
             CSModule csmImpl = new CSModule({
                 moduleType: config.moduleType,
-                minSlashingPenaltyQuotient: config.minSlashingPenaltyQuotient,
-                maxKeysPerOperatorEA: config.maxKeysPerOperatorEA,
                 lidoLocator: config.lidoLocatorAddress,
                 parametersRegistry: address(parametersRegistry)
             });
@@ -315,12 +313,16 @@ abstract contract DeployBase is Script {
                 admin: deployer
             });
             permissionlessGate = new PermissionlessGate(address(csm));
-            vettedGate = new VettedGate({
-                _treeRoot: config.vettedGateTreeRoot,
-                curveId: identifiedSolosCurve,
-                csm: address(csm),
-                admin: deployer
-            });
+
+            vettedGateFactory = new VettedGateFactory();
+            vettedGate = VettedGate(
+                vettedGateFactory.create({
+                    csm: address(csm),
+                    curveId: identifiedSolosCurve,
+                    treeRoot: config.vettedGateTreeRoot,
+                    admin: deployer
+                })
+            );
 
             feeDistributor.initialize({ admin: address(deployer) });
 
@@ -454,6 +456,7 @@ abstract contract DeployBase is Script {
             JsonObj memory deployJson = Json.newObj();
             deployJson.set("ChainId", chainId);
             deployJson.set("PermissionlessGate", address(permissionlessGate));
+            deployJson.set("VettedGateFactory", address(vettedGateFactory));
             deployJson.set("VettedGate", address(vettedGate));
             deployJson.set("CSParametersRegistry", address(parametersRegistry));
             deployJson.set("CSModule", address(csm));
