@@ -205,6 +205,7 @@ interface ICSAccounting is
     /// @param rewardAddress Reward address of the node operator
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
+    /// @return shares Amount of stETH shares claimed
     /// @dev It's impossible to use single-leaf proof via this method, so this case should be treated carefully by
     /// off-chain tooling, e.g. to make sure a tree has at least 2 leafs.
     function claimRewardsStETH(
@@ -213,7 +214,7 @@ interface ICSAccounting is
         address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
-    ) external;
+    ) external returns (uint256 shares);
 
     /// @notice Claim full reward (fee + bond) in wstETH for the given Node Operator available for this moment.
     ///         `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond
@@ -223,6 +224,7 @@ interface ICSAccounting is
     /// @param rewardAddress Reward address of the node operator
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
+    /// @return claimedWstETHAmount Amount of wstETH claimed
     /// @dev It's impossible to use single-leaf proof via this method, so this case should be treated carefully by
     /// off-chain tooling, e.g. to make sure a tree has at least 2 leafs.
     function claimRewardsWstETH(
@@ -231,7 +233,7 @@ interface ICSAccounting is
         address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
-    ) external;
+    ) external returns (uint256 claimedWstETHAmount);
 
     /// @notice Request full reward (fee + bond) in Withdrawal NFT (unstETH) for the given Node Operator available for this moment.
     ///         `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond
@@ -242,6 +244,7 @@ interface ICSAccounting is
     /// @param rewardAddress Reward address of the node operator
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
+    /// @return requestId Withdrawal NFT ID
     /// @dev It's impossible to use single-leaf proof via this method, so this case should be treated carefully by
     /// off-chain tooling, e.g. to make sure a tree has at least 2 leafs.
     function claimRewardsUnstETH(
@@ -250,7 +253,7 @@ interface ICSAccounting is
         address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
-    ) external;
+    ) external returns (uint256 requestId);
 
     /// @notice Lock bond in ETH for the given Node Operator
     /// @dev Called by CSM exclusively

@@ -112,7 +112,7 @@ contract ClaimIntegrationTest is
         assertTrue(excessBondShares > 0, "Excess bond should be > 0");
 
         vm.prank(nodeOperator);
-        csm.claimRewardsStETH(
+        uint256 claimedShares = csm.claimRewardsStETH(
             defaultNoId,
             type(uint256).max,
             0,
@@ -126,6 +126,11 @@ contract ClaimIntegrationTest is
         );
         uint256 accountingTotalBondSharesAfter = accounting.totalBondShares();
 
+        assertEq(
+            claimedShares,
+            excessBondShares,
+            "Claimed shares should be equal to excess bond"
+        );
         assertEq(
             noSharesAfter,
             noSharesBefore + excessBondShares,
@@ -170,7 +175,7 @@ contract ClaimIntegrationTest is
         );
 
         vm.prank(nodeOperator);
-        csm.claimRewardsWstETH(
+        uint256 claimedWstETH = csm.claimRewardsWstETH(
             defaultNoId,
             type(uint256).max,
             0,
@@ -184,6 +189,11 @@ contract ClaimIntegrationTest is
         );
         uint256 accountingTotalBondSharesAfter = accounting.totalBondShares();
 
+        assertEq(
+            claimedWstETH,
+            excessBondWstETH,
+            "Claimed WstETH should be equal to excess bond WstETH"
+        );
         assertEq(
             balanceAfter,
             balanceBefore + excessBondWstETH,
@@ -233,7 +243,7 @@ contract ClaimIntegrationTest is
         assertTrue(excessBondShares > 0, "Excess bond should be > 0");
 
         vm.prank(nodeOperator);
-        csm.claimRewardsUnstETH(
+        uint256 claimedRequestId = csm.claimRewardsUnstETH(
             defaultNoId,
             type(uint256).max,
             0,
@@ -258,6 +268,11 @@ contract ClaimIntegrationTest is
         );
         uint256 accountingTotalBondSharesAfter = accounting.totalBondShares();
 
+        assertEq(
+            claimedRequestId,
+            requestsIdsAfter[0],
+            "Claimed request should be equal to found request"
+        );
         assertEq(
             statuses[0].amountOfStETH,
             lido.getPooledEthByShares(excessBondShares),
@@ -306,10 +321,21 @@ contract ClaimIntegrationTest is
         );
 
         vm.prank(nodeOperator);
-        csm.claimRewardsStETH(defaultNoId, type(uint256).max, shares, proof);
+        uint256 claimedShares = csm.claimRewardsStETH(
+            defaultNoId,
+            type(uint256).max,
+            shares,
+            proof
+        );
 
         uint256 noSharesAfter = lido.sharesOf(nodeOperator);
         uint256 accountingSharesAfter = lido.sharesOf(address(accounting));
+
+        assertEq(
+            claimedShares,
+            shares,
+            "Claimed shares should be equal to distributed shares"
+        );
         assertEq(
             noSharesAfter,
             noSharesBefore +
@@ -339,6 +365,10 @@ contract ClaimIntegrationTest is
         lido.transferShares(address(feeDistributor), shares);
         vm.stopPrank();
 
+        uint256 distributedWstETHAmount = wstETH.getWstETHByStETH(
+            lido.getPooledEthByShares(shares)
+        );
+
         // Prepare and submit report data
         MerkleTree tree = new MerkleTree();
         tree.pushLeaf(abi.encode(defaultNoId, shares));
@@ -357,10 +387,16 @@ contract ClaimIntegrationTest is
         );
 
         vm.prank(nodeOperator);
-        csm.claimRewardsWstETH(defaultNoId, type(uint256).max, shares, proof);
+        uint256 claimedWstETHAmount = csm.claimRewardsWstETH(
+            defaultNoId,
+            type(uint256).max,
+            shares,
+            proof
+        );
 
         uint256 accountingSharesAfter = lido.sharesOf(address(accounting));
 
+        assertEq(claimedWstETHAmount, distributedWstETHAmount);
         assertEq(
             wstETH.balanceOf(nodeOperator),
             balanceBefore +
@@ -424,7 +460,12 @@ contract ClaimIntegrationTest is
         uint256 accountingSharesBefore = lido.sharesOf(address(accounting));
 
         vm.prank(nodeOperator);
-        csm.claimRewardsUnstETH(defaultNoId, type(uint256).max, shares, proof);
+        uint256 claimedRequestId = csm.claimRewardsUnstETH(
+            defaultNoId,
+            type(uint256).max,
+            shares,
+            proof
+        );
 
         uint256[] memory requestsIdsAfter = wq.getWithdrawalRequests(
             nodeOperator
@@ -438,6 +479,11 @@ contract ClaimIntegrationTest is
         IWithdrawalQueue.WithdrawalRequestStatus[] memory statuses = wq
             .getWithdrawalStatus(requestsIdsAfter);
 
+        assertEq(
+            claimedRequestId,
+            requestsIdsAfter[0],
+            "Claimed request should be equal to found request"
+        );
         uint256 accountingSharesAfter = lido.sharesOf(address(accounting));
         assertApproxEqAbs(
             statuses[0].amountOfStETH,

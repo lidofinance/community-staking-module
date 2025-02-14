@@ -233,11 +233,12 @@ contract CSAccounting is
         address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
-    ) external whenResumed onlyCSM {
+    ) external whenResumed onlyCSM returns (uint256) {
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
-        CSBondCore._claimStETH(nodeOperatorId, stETHAmount, rewardAddress);
+        return
+            CSBondCore._claimStETH(nodeOperatorId, stETHAmount, rewardAddress);
     }
 
     /// @inheritdoc ICSAccounting
@@ -247,11 +248,16 @@ contract CSAccounting is
         address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
-    ) external whenResumed onlyCSM {
+    ) external whenResumed onlyCSM returns (uint256) {
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
-        CSBondCore._claimWstETH(nodeOperatorId, wstETHAmount, rewardAddress);
+        return
+            CSBondCore._claimWstETH(
+                nodeOperatorId,
+                wstETHAmount,
+                rewardAddress
+            );
     }
 
     /// @inheritdoc ICSAccounting
@@ -261,11 +267,16 @@ contract CSAccounting is
         address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
-    ) external whenResumed onlyCSM {
+    ) external whenResumed onlyCSM returns (uint256) {
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
-        CSBondCore._claimUnstETH(nodeOperatorId, stEthAmount, rewardAddress);
+        return
+            CSBondCore._claimUnstETH(
+                nodeOperatorId,
+                stEthAmount,
+                rewardAddress
+            );
     }
 
     /// @inheritdoc ICSAccounting
