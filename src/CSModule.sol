@@ -53,9 +53,6 @@ contract CSModule is
     // @dev see IStakingModule.sol
     uint8 private constant FORCED_TARGET_LIMIT_MODE_ID = 2;
 
-    uint256 public immutable INITIAL_SLASHING_PENALTY;
-    uint256
-        public immutable MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE;
     bytes32 private immutable MODULE_TYPE;
     ILidoLocator public immutable LIDO_LOCATOR;
     IStETH public immutable STETH;
@@ -73,6 +70,7 @@ contract CSModule is
 
     /// @dev DEPRECATED
     address internal _earlyAdoption;
+    /// @dev DEPRECATED
     bool public publicRelease;
 
     uint256 private _nonce;
@@ -92,8 +90,6 @@ contract CSModule is
 
     constructor(
         bytes32 moduleType,
-        uint256 minSlashingPenaltyQuotient,
-        uint256 maxKeysPerOperatorEA,
         address lidoLocator,
         address parametersRegistry
     ) {
@@ -102,8 +98,6 @@ contract CSModule is
             revert ZeroParametersRegistryAddress();
 
         MODULE_TYPE = moduleType;
-        INITIAL_SLASHING_PENALTY = DEPOSIT_SIZE / minSlashingPenaltyQuotient;
-        MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE = maxKeysPerOperatorEA;
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
         STETH = IStETH(LIDO_LOCATOR.lido());
         PARAMETERS_REGISTRY = ICSParametersRegistry(parametersRegistry);
@@ -141,13 +135,6 @@ contract CSModule is
     /// @inheritdoc ICSModule
     function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
         _pauseFor(duration);
-    }
-
-    /// @inheritdoc ICSModule
-    function activatePublicRelease() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (publicRelease) revert AlreadyActivated();
-        publicRelease = true;
-        emit PublicRelease();
     }
 
     /// @inheritdoc ICSModule
@@ -843,14 +830,6 @@ contract CSModule is
         emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount, pubkey);
 
         if (isSlashed) {
-            // NOTE: Can't remove the check so far to avoid double-accounting of penalty. Make sure
-            // we decided to go with CSVerifier with no processSalshingProof function deployed first
-            // with some meaningful grace period.
-            if (_isValidatorSlashed[pointer]) {
-                unchecked {
-                    amount += INITIAL_SLASHING_PENALTY;
-                }
-            }
             // Bond curve should be reset to default in case of slashing. See https://hackmd.io/@lido/SygBLW5ja
             accounting.resetBondCurve(nodeOperatorId);
         }
@@ -1038,14 +1017,6 @@ contract CSModule is
     /// @inheritdoc ICSModule
     function depositQueueItem(uint128 index) external view returns (Batch) {
         return depositQueue.at(index);
-    }
-
-    /// @inheritdoc ICSModule
-    function isValidatorSlashed(
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) external view returns (bool) {
-        return _isValidatorSlashed[_keyPointer(nodeOperatorId, keyIndex)];
     }
 
     /// @inheritdoc ICSModule
@@ -1253,16 +1224,6 @@ contract CSModule is
     ) internal {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         uint256 startIndex = no.totalAddedKeys;
-        unchecked {
-            // startIndex + keysCount can't overflow because of deposit check in the parent methods
-            if (
-                !publicRelease &&
-                startIndex + keysCount >
-                MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE
-            ) {
-                revert MaxSigningKeysCountExceeded();
-            }
-        }
 
         // solhint-disable-next-line func-named-parameters
         SigningKeys.saveKeysSigs(

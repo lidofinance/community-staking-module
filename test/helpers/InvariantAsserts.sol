@@ -125,21 +125,6 @@ contract InvariantAsserts is Test {
         }
     }
 
-    function assertCSMMaxKeys(CSModule csm) public view {
-        if (csm.publicRelease()) return;
-
-        uint256 noCount = csm.getNodeOperatorsCount();
-        NodeOperator memory no;
-        for (uint256 noId = 0; noId < noCount; noId++) {
-            no = csm.getNodeOperator(noId);
-
-            assertGe(
-                csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(),
-                no.totalAddedKeys
-            );
-        }
-    }
-
     function assertAccountingTotalBondShares(
         uint256 nodeOperatorsCount,
         IStETH steth,

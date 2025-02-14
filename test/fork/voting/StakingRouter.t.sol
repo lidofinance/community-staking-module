@@ -34,7 +34,6 @@ contract StakingRouterIntegrationTest is
         uint256 noCount = csm.getNodeOperatorsCount();
         assertCSMKeys(csm);
         assertCSMEnqueuedCount(csm);
-        assertCSMMaxKeys(csm);
         assertAccountingTotalBondShares(noCount, lido, accounting);
         assertAccountingBurnerApproval(
             lido,
@@ -57,7 +56,6 @@ contract StakingRouterIntegrationTest is
         csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(stakingRouter));
         vm.stopPrank();
         if (csm.isPaused()) csm.resume();
-        if (!csm.publicRelease()) csm.activatePublicRelease();
 
         agent = stakingRouter.getRoleMember(
             stakingRouter.DEFAULT_ADMIN_ROLE(),
