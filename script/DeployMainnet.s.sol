@@ -75,8 +75,8 @@ contract DeployMainnet is DeployBase {
         config.strikesLifetimeFrames = 6;
         config.strikesThreshold = 3;
         config.queueLowestPriority = 5;
-        config.defaultQueuePriority = 0;
-        config.defaultQueueMaxDeposits = 10;
+        config.defaultQueuePriority = 5;
+        config.defaultQueueMaxDeposits = type(uint32).max;
         // VettedGate
         config
             .vettedGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
