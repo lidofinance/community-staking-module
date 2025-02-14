@@ -38,10 +38,6 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
 
     function test_constructor() public view {
         assertEq(csm.getType(), deployParams.moduleType);
-        assertEq(
-            csm.INITIAL_SLASHING_PENALTY(),
-            32 ether / deployParams.minSlashingPenaltyQuotient
-        );
         assertEq(address(csm.LIDO_LOCATOR()), deployParams.lidoLocatorAddress);
     }
 

@@ -106,7 +106,6 @@ struct DeployParams {
     address chargePenaltyRecipient;
     // Module
     bytes32 moduleType;
-    uint256 minSlashingPenaltyQuotient;
     address elRewardsStealingReporter;
     // CSParameters
     uint256 keyRemovalCharge;
@@ -206,7 +205,6 @@ abstract contract DeployBase is Script {
 
             CSModule csmImpl = new CSModule({
                 moduleType: config.moduleType,
-                minSlashingPenaltyQuotient: config.minSlashingPenaltyQuotient,
                 lidoLocator: config.lidoLocatorAddress,
                 parametersRegistry: address(parametersRegistry)
             });

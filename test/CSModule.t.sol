@@ -285,7 +285,6 @@ contract CSMCommon is CSMFixtures {
 
         csm = new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
@@ -366,7 +365,6 @@ contract CSMCommonNoRoles is CSMFixtures {
 
         csm = new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
@@ -447,7 +445,6 @@ contract CsmInitialize is CSMCommon {
     function test_constructor() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
@@ -463,7 +460,6 @@ contract CsmInitialize is CSMCommon {
         vm.expectRevert(ICSModule.ZeroLocatorAddress.selector);
         new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
             lidoLocator: address(0),
             parametersRegistry: address(parametersRegistry)
         });
@@ -475,7 +471,6 @@ contract CsmInitialize is CSMCommon {
         vm.expectRevert(ICSModule.ZeroParametersRegistryAddress.selector);
         new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
             lidoLocator: address(locator),
             parametersRegistry: address(0)
         });
@@ -484,7 +479,6 @@ contract CsmInitialize is CSMCommon {
     function test_constructor_RevertWhen_InitOnImpl() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
@@ -499,7 +493,6 @@ contract CsmInitialize is CSMCommon {
     function test_initialize() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
@@ -518,7 +511,6 @@ contract CsmInitialize is CSMCommon {
     function test_initialize_RevertWhen_ZeroAccountingAddress() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
@@ -531,7 +523,6 @@ contract CsmInitialize is CSMCommon {
     function test_initialize_RevertWhen_ZeroAdminAddress() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
@@ -5539,70 +5530,6 @@ contract CsmSubmitWithdrawal is CSMCommon {
         csm.submitWithdrawal(noId, keyIndex, depositSize - 1 ether, false);
     }
 
-    function test_submitWithdrawal_slashedReported() public assertInvariants {
-        uint256 keyIndex = 0;
-        uint256 noId = createNodeOperator();
-        csm.obtainDepositData(1, "");
-
-        // Pretend someone called csm.submitInitialSlashing(noId, 0) before, so we have
-        // _isValidatorSlashed[...] == true in the module.
-        stdstore
-            .target(address(csm))
-            .sig(csm.isValidatorSlashed.selector)
-            .with_key(noId)
-            .with_key(keyIndex)
-            .checked_write(true);
-
-        assertTrue(csm.isValidatorSlashed(noId, keyIndex));
-
-        uint256 diffAfterInitialPenalty = 0.75432 ether;
-        uint256 exitBalance = DEPOSIT_SIZE -
-            csm.INITIAL_SLASHING_PENALTY() -
-            diffAfterInitialPenalty;
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.penalize.selector,
-                noId,
-                diffAfterInitialPenalty
-            )
-        );
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
-        csm.submitWithdrawal(noId, keyIndex, exitBalance, true);
-    }
-
-    function test_submitWithdrawal_slashedIsNotReported()
-        public
-        assertInvariants
-    {
-        uint256 keyIndex = 0;
-        uint256 noId = createNodeOperator();
-        csm.obtainDepositData(1, "");
-
-        assertFalse(csm.isValidatorSlashed(noId, keyIndex));
-
-        uint256 exitBalance = DEPOSIT_SIZE - csm.INITIAL_SLASHING_PENALTY();
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.penalize.selector,
-                noId,
-                csm.INITIAL_SLASHING_PENALTY() + 0.05 ether
-            )
-        );
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
-        csm.submitWithdrawal(noId, keyIndex, exitBalance - 0.05 ether, true);
-        assertFalse(csm.isValidatorSlashed(noId, keyIndex)); // We do not track it anymore.
-    }
-
     function test_submitWithdrawal_unbondedKeys() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator(2);
@@ -5813,7 +5740,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
     function test_adminRole() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
@@ -5833,7 +5759,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
     function test_adminRole_revert() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
-            minSlashingPenaltyQuotient: 32,
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });

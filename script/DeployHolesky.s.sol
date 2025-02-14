@@ -65,7 +65,6 @@ contract DeployHolesky is DeployBase {
             .setResetBondCurveAddress = 0xc4DAB3a3ef68C6DFd8614a870D64D475bA44F164; // Dev team EOA
         // Module
         config.moduleType = "community-onchain-v1";
-        config.minSlashingPenaltyQuotient = 32;
         config
             .elRewardsStealingReporter = 0xc4DAB3a3ef68C6DFd8614a870D64D475bA44F164; // Dev team EOA
         config

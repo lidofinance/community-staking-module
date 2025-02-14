@@ -53,7 +53,6 @@ contract CSModule is
     // @dev see IStakingModule.sol
     uint8 private constant FORCED_TARGET_LIMIT_MODE_ID = 2;
 
-    uint256 public immutable INITIAL_SLASHING_PENALTY;
     bytes32 private immutable MODULE_TYPE;
     ILidoLocator public immutable LIDO_LOCATOR;
     IStETH public immutable STETH;
@@ -91,7 +90,6 @@ contract CSModule is
 
     constructor(
         bytes32 moduleType,
-        uint256 minSlashingPenaltyQuotient,
         address lidoLocator,
         address parametersRegistry
     ) {
@@ -100,7 +98,6 @@ contract CSModule is
             revert ZeroParametersRegistryAddress();
 
         MODULE_TYPE = moduleType;
-        INITIAL_SLASHING_PENALTY = DEPOSIT_SIZE / minSlashingPenaltyQuotient;
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
         STETH = IStETH(LIDO_LOCATOR.lido());
         PARAMETERS_REGISTRY = ICSParametersRegistry(parametersRegistry);
@@ -833,14 +830,6 @@ contract CSModule is
         emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount, pubkey);
 
         if (isSlashed) {
-            // NOTE: Can't remove the check so far to avoid double-accounting of penalty. Make sure
-            // we decided to go with CSVerifier with no processSalshingProof function deployed first
-            // with some meaningful grace period.
-            if (_isValidatorSlashed[pointer]) {
-                unchecked {
-                    amount += INITIAL_SLASHING_PENALTY;
-                }
-            }
             // Bond curve should be reset to default in case of slashing. See https://hackmd.io/@lido/SygBLW5ja
             accounting.resetBondCurve(nodeOperatorId);
         }
@@ -1028,14 +1017,6 @@ contract CSModule is
     /// @inheritdoc ICSModule
     function depositQueueItem(uint128 index) external view returns (Batch) {
         return depositQueue.at(index);
-    }
-
-    /// @inheritdoc ICSModule
-    function isValidatorSlashed(
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) external view returns (bool) {
-        return _isValidatorSlashed[_keyPointer(nodeOperatorId, keyIndex)];
     }
 
     /// @inheritdoc ICSModule

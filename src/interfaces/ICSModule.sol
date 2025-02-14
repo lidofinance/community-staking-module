@@ -132,8 +132,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     );
     event ELRewardsStealingPenaltySettled(uint256 indexed nodeOperatorId);
 
-    function INITIAL_SLASHING_PENALTY() external view returns (uint256);
-
     function LIDO_LOCATOR() external view returns (ILidoLocator);
 
     function PAUSE_ROLE() external view returns (bytes32);
@@ -487,17 +485,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         uint256 keyIndex,
         uint256 strikesCount
     ) external;
-
-    /// @notice DEPRECATED! Check if the given Node Operator's key is reported as slashed
-    /// @notice Since pectra update the contract doesn't store slashing flag of a withdrawn
-    /// validator
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the key to check
-    /// @return Validator reported as slashed flag
-    function isValidatorSlashed(
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) external view returns (bool);
 
     /// @notice Check if the given Node Operator's key is reported as withdrawn
     /// @param nodeOperatorId ID of the Node Operator
