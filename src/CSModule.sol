@@ -740,7 +740,7 @@ contract CSModule is
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         if (no.usedPriorityQueue) {
-            revert AlreadyMigrated();
+            revert CannotMigrate();
         }
 
         uint256 curveId = accounting.getBondCurveId(nodeOperatorId);

@@ -51,12 +51,12 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     error InvalidInput();
     error NotEnoughKeys();
+    error CannotMigrate();
 
     error SigningKeysInvalidOffset();
 
     error AlreadySubmitted();
     error AlreadyActivated();
-    error AlreadyMigrated();
 
     error InvalidAmount();
     error MaxSigningKeysCountExceeded();
