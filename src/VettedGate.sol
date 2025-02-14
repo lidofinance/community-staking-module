@@ -3,14 +3,18 @@
 
 pragma solidity 0.8.24;
 
-import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import { IVettedGate } from "./interfaces/IVettedGate.sol";
-import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
-import { PausableUntil } from "./lib/utils/PausableUntil.sol";
-import { ICSModule, NodeOperatorManagementProperties, NodeOperator } from "./interfaces/ICSModule.sol";
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
+import { ICSModule, NodeOperatorManagementProperties, NodeOperator } from "./interfaces/ICSModule.sol";
+import { IVettedGate } from "./interfaces/IVettedGate.sol";
+import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 
-contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
+contract VettedGate is
+    IVettedGate,
+    AccessControlEnumerableUpgradeable,
+    PausableUntil
+{
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant SET_TREE_ROOT_ROLE =
@@ -27,15 +31,8 @@ contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
 
     mapping(address => bool) internal _consumedAddresses;
 
-    constructor(
-        bytes32 _treeRoot,
-        uint256 curveId,
-        address csm,
-        address admin
-    ) {
-        if (_treeRoot == bytes32(0)) revert InvalidTreeRoot();
+    constructor(uint256 curveId, address csm) {
         if (csm == address(0)) revert ZeroModuleAddress();
-        if (admin == address(0)) revert ZeroAdminAddress();
 
         CSM = ICSModule(csm);
 
@@ -43,6 +40,14 @@ contract VettedGate is IVettedGate, AccessControlEnumerable, PausableUntil {
             revert InvalidCurveId();
         /// @dev there is no check for curve existence as this contract might be created before the curve is added
         CURVE_ID = curveId;
+        _disableInitializers();
+    }
+
+    function initialize(bytes32 _treeRoot, address admin) external initializer {
+        __AccessControlEnumerable_init();
+
+        if (_treeRoot == bytes32(0)) revert InvalidTreeRoot();
+        if (admin == address(0)) revert ZeroAdminAddress();
 
         _setTreeRoot(_treeRoot);
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
