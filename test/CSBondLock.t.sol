@@ -50,7 +50,7 @@ contract CSBondLockTest is Test {
     function test_setBondLockPeriod() public {
         uint256 period = 4 weeks;
 
-        vm.expectEmit(true, true, true, true, address(bondLock));
+        vm.expectEmit(address(bondLock));
         emit ICSBondLock.BondLockPeriodChanged(period);
 
         bondLock.setBondLockPeriod(period);
@@ -110,7 +110,7 @@ contract CSBondLockTest is Test {
         uint256 amount = 1 ether;
         uint256 until = block.timestamp + period;
 
-        vm.expectEmit(true, true, true, true, address(bondLock));
+        vm.expectEmit(address(bondLock));
         emit ICSBondLock.BondLockChanged(noId, amount, until);
 
         bondLock.lock(noId, amount);
@@ -190,7 +190,7 @@ contract CSBondLockTest is Test {
 
         bondLock.lock(noId, amount);
 
-        vm.expectEmit(true, true, true, true, address(bondLock));
+        vm.expectEmit(address(bondLock));
         emit ICSBondLock.BondLockRemoved(noId);
 
         bondLock.reduceAmount(noId, amount);
@@ -213,7 +213,7 @@ contract CSBondLockTest is Test {
 
         vm.warp(block.timestamp + 1 seconds);
 
-        vm.expectEmit(true, true, true, true, address(bondLock));
+        vm.expectEmit(address(bondLock));
         emit ICSBondLock.BondLockChanged(noId, rest, periodWhenLock);
 
         bondLock.reduceAmount(noId, toRelease);
@@ -244,7 +244,7 @@ contract CSBondLockTest is Test {
 
         bondLock.lock(noId, amount);
 
-        vm.expectEmit(true, true, true, true, address(bondLock));
+        vm.expectEmit(address(bondLock));
         emit ICSBondLock.BondLockRemoved(noId);
 
         bondLock.remove(noId);

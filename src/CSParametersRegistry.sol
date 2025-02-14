@@ -40,6 +40,13 @@ contract CSParametersRegistry is
     StrikesParams public defaultStrikesParams;
     mapping(uint256 => MarkedStrikesParams) internal _strikesParams;
 
+    uint256 public defaultBadPerformancePenalty;
+    mapping(uint256 => MarkedUint248) internal _badPerformancePenalties;
+
+    PerformanceCoefficients public defaultPerformanceCoefficients;
+    mapping(uint256 => MarkedPerformanceCoefficients)
+        internal _performanceCoefficients;
+
     uint256 public immutable QUEUE_LOWEST_PRIORITY;
     uint256 public immutable QUEUE_LEGACY_PRIORITY;
 
@@ -63,6 +70,12 @@ contract CSParametersRegistry is
         _setDefaultRewardShare(data.rewardShare);
         _setDefaultPerformanceLeeway(data.performanceLeeway);
         _setDefaultStrikesParams(data.strikesLifetime, data.strikesThreshold);
+        _setDefaultBadPerformancePenalty(data.badPerformancePenalty);
+        _setDefaultPerformanceCoefficients(
+            data.attestationsWeight,
+            data.blocksWeight,
+            data.syncWeight
+        );
         _setDefaultQueueConfig(
             data.defaultQueuePriority,
             data.defaultQueueMaxDeposits
@@ -106,6 +119,26 @@ contract CSParametersRegistry is
         uint256 threshold
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setDefaultStrikesParams(lifetime, threshold);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function setDefaultBadPerformancePenalty(
+        uint256 penalty
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setDefaultBadPerformancePenalty(penalty);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function setDefaultPerformanceCoefficients(
+        uint256 attestationsWeight,
+        uint256 blocksWeight,
+        uint256 syncWeight
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setDefaultPerformanceCoefficients(
+            attestationsWeight,
+            blocksWeight,
+            syncWeight
+        );
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -241,8 +274,8 @@ contract CSParametersRegistry is
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _validateStrikesParams(lifetime, threshold);
         _strikesParams[curveId] = MarkedStrikesParams(
-            lifetime.toUint128(),
-            threshold.toUint120(),
+            lifetime.toUint32(),
+            threshold.toUint32(),
             true
         );
         emit StrikesParamsSet(curveId, lifetime, threshold);
@@ -254,6 +287,55 @@ contract CSParametersRegistry is
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         delete _strikesParams[curveId];
         emit StrikesParamsUnset(curveId);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function setBadPerformancePenalty(
+        uint256 curveId,
+        uint256 penalty
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _badPerformancePenalties[curveId] = MarkedUint248(
+            penalty.toUint248(),
+            true
+        );
+        emit BadPerformancePenaltySet(curveId, penalty);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function unsetBadPerformancePenalty(
+        uint256 curveId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        delete _badPerformancePenalties[curveId];
+        emit BadPerformancePenaltyUnset(curveId);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function setPerformanceCoefficients(
+        uint256 curveId,
+        uint256 attestationsWeight,
+        uint256 blocksWeight,
+        uint256 syncWeight
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _performanceCoefficients[curveId] = MarkedPerformanceCoefficients(
+            attestationsWeight.toUint32(),
+            blocksWeight.toUint32(),
+            syncWeight.toUint32(),
+            true
+        );
+        emit PerformanceCoefficientsSet(
+            curveId,
+            attestationsWeight,
+            blocksWeight,
+            syncWeight
+        );
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function unsetPerformanceCoefficients(
+        uint256 curveId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        delete _performanceCoefficients[curveId];
+        emit PerformanceCoefficientsUnset(curveId);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -354,6 +436,42 @@ contract CSParametersRegistry is
     }
 
     /// @inheritdoc ICSParametersRegistry
+    function getBadPerformancePenalty(
+        uint256 curveId
+    ) external view returns (uint256 penalty) {
+        MarkedUint248 memory data = _badPerformancePenalties[curveId];
+        return data.isValue ? data.value : defaultBadPerformancePenalty;
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function getPerformanceCoefficients(
+        uint256 curveId
+    )
+        external
+        view
+        returns (
+            uint256 attestationsWeight,
+            uint256 blocksWeight,
+            uint256 syncWeight
+        )
+    {
+        MarkedPerformanceCoefficients
+            memory coefficients = _performanceCoefficients[curveId];
+        if (!coefficients.isValue) {
+            return (
+                defaultPerformanceCoefficients.attestationsWeight,
+                defaultPerformanceCoefficients.blocksWeight,
+                defaultPerformanceCoefficients.syncWeight
+            );
+        }
+        return (
+            coefficients.attestationsWeight,
+            coefficients.blocksWeight,
+            coefficients.syncWeight
+        );
+    }
+
+    /// @inheritdoc ICSParametersRegistry
     function getQueueConfig(
         uint256 curveId
     ) external view returns (uint32 queuePriority, uint32 maxDeposits) {
@@ -397,10 +515,32 @@ contract CSParametersRegistry is
     ) internal {
         _validateStrikesParams(lifetime, threshold);
         defaultStrikesParams = StrikesParams({
-            lifetime: lifetime.toUint128(),
-            threshold: threshold.toUint128()
+            lifetime: lifetime.toUint32(),
+            threshold: threshold.toUint32()
         });
         emit DefaultStrikesParamsSet(lifetime, threshold);
+    }
+
+    function _setDefaultBadPerformancePenalty(uint256 penalty) internal {
+        defaultBadPerformancePenalty = penalty;
+        emit DefaultBadPerformancePenaltySet(penalty);
+    }
+
+    function _setDefaultPerformanceCoefficients(
+        uint256 attestationsWeight,
+        uint256 blocksWeight,
+        uint256 syncWeight
+    ) internal {
+        defaultPerformanceCoefficients = PerformanceCoefficients({
+            attestationsWeight: attestationsWeight.toUint32(),
+            blocksWeight: blocksWeight.toUint32(),
+            syncWeight: syncWeight.toUint32()
+        });
+        emit DefaultPerformanceCoefficientsSet(
+            attestationsWeight,
+            blocksWeight,
+            syncWeight
+        );
     }
 
     function _setDefaultQueueConfig(

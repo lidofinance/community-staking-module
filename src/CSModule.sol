@@ -42,6 +42,8 @@ contract CSModule is
     bytes32 public constant SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE =
         keccak256("SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE");
     bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
+    bytes32 public constant BAD_PERFORMER_EJECTOR_ROLE =
+        keccak256("BAD_PERFORMER_EJECTOR_ROLE");
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
     bytes32 public constant CREATE_NODE_OPERATOR_ROLE =
         keccak256("CREATE_NODE_OPERATOR_ROLE");
@@ -91,6 +93,9 @@ contract CSModule is
     uint64 private _depositableValidatorsCount;
     uint64 private _nodeOperatorsCount;
 
+    /// @dev see _keyPointer function for details of noKeyIndexPacked structure
+    mapping(uint256 noKeyIndexPacked => bool) private _isValidatorEjected;
+
     constructor(
         bytes32 moduleType,
         uint256 minSlashingPenaltyQuotient,
@@ -114,11 +119,11 @@ contract CSModule is
         _disableInitializers();
     }
 
-    /// @notice initialize the module
+    /// @notice initialize the module from scratch
     function initialize(
         address _accounting,
         address admin
-    ) external initializer {
+    ) external reinitializer(2) {
         if (_accounting == address(0)) revert ZeroAccountingAddress();
         if (admin == address(0)) revert ZeroAdminAddress();
 
@@ -132,6 +137,9 @@ contract CSModule is
         // CSM is on pause initially and should be resumed during the vote
         _pauseFor(PausableUntil.PAUSE_INFINITELY);
     }
+
+    /// @dev should be called after update on the proxy
+    function finalizeUpgradeV2() external reinitializer(2) {}
 
     /// @inheritdoc ICSModule
     function resume() external onlyRole(RESUME_ROLE) {
@@ -880,9 +888,7 @@ contract CSModule is
         }
 
         uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
-        if (_isValidatorWithdrawn[pointer]) {
-            revert AlreadySubmitted();
-        }
+        if (_isValidatorWithdrawn[pointer]) revert AlreadyWithdrawn();
 
         _isValidatorWithdrawn[pointer] = true;
         unchecked {
@@ -916,6 +922,37 @@ contract CSModule is
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true
         });
+    }
+
+    /// @inheritdoc ICSModule
+    function ejectBadPerformer(
+        uint256 nodeOperatorId,
+        uint256 keyIndex,
+        uint256 strikesCount
+    ) external onlyRole(BAD_PERFORMER_EJECTOR_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        if (keyIndex >= no.totalDepositedKeys) {
+            revert SigningKeysInvalidOffset();
+        }
+
+        uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
+        if (_isValidatorWithdrawn[pointer]) revert AlreadyWithdrawn();
+        if (_isValidatorEjected[pointer]) revert AlreadyEjected();
+
+        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
+
+        (, uint256 threshold) = PARAMETERS_REGISTRY.getStrikesParams(curveId);
+        if (strikesCount < threshold) revert NotEnoughStrikesToEject();
+
+        uint256 penalty = PARAMETERS_REGISTRY.getBadPerformancePenalty(curveId);
+        if (penalty > 0) accounting.penalize(nodeOperatorId, penalty);
+
+        bytes memory pubkey = SigningKeys.loadKeys(nodeOperatorId, keyIndex, 1);
+        // TODO: make the function payable and call `requestEjection{ value: msg.value }(pubkey)`
+
+        _isValidatorEjected[pointer] = true;
+        emit EjectionSubmitted(nodeOperatorId, keyIndex, pubkey);
     }
 
     /// @inheritdoc IStakingModule
@@ -1061,6 +1098,14 @@ contract CSModule is
         uint256 keyIndex
     ) external view returns (bool) {
         return _isValidatorWithdrawn[_keyPointer(nodeOperatorId, keyIndex)];
+    }
+
+    /// @inheritdoc ICSModule
+    function isValidatorEjected(
+        uint256 nodeOperatorId,
+        uint256 keyIndex
+    ) external view returns (bool) {
+        return _isValidatorEjected[_keyPointer(nodeOperatorId, keyIndex)];
     }
 
     /// @inheritdoc IStakingModule

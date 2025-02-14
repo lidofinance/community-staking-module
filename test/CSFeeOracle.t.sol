@@ -11,7 +11,9 @@ import { HashConsensus } from "../src/lib/base-oracle/HashConsensus.sol";
 import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 import { BaseOracle } from "../src/lib/base-oracle/BaseOracle.sol";
 import { DistributorMock } from "./helpers/mocks/DistributorMock.sol";
+import { CSStrikesMock } from "./helpers/mocks/CSStrikesMock.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
+import { Versioned } from "../src/lib/utils/Versioned.sol";
 import { ICSFeeOracle } from "../src/interfaces/ICSFeeOracle.sol";
 import { Utilities } from "./helpers/Utilities.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
@@ -88,14 +90,16 @@ contract CSFeeOracleTest is Test, Utilities {
             treeCid: someCIDv0(),
             logCid: someCIDv0(),
             distributed: 1337,
-            rebate: 154
+            rebate: 154,
+            strikesTreeRoot: keccak256("strikesRoot"),
+            strikesTreeCid: someCIDv0()
         });
 
         bytes32 reportHash = keccak256(abi.encode(data));
         _reachConsensus(refSlot, reportHash);
 
         vm.prank(members[0]);
-        oracle.submitReportData({ data: data, contractVersion: 1 });
+        oracle.submitReportData({ data: data, contractVersion: 2 });
 
         (, startSlot, , ) = oracle.getConsensusReport();
         (refSlot, ) = consensus.getCurrentFrame();
@@ -138,7 +142,9 @@ contract CSFeeOracleTest is Test, Utilities {
             treeCid: someCIDv0(),
             logCid: someCIDv0(),
             distributed: 1337,
-            rebate: 154
+            rebate: 154,
+            strikesTreeRoot: keccak256("strikesRoot"),
+            strikesTreeCid: someCIDv0()
         });
 
         bytes32 reportHash = keccak256(abi.encode(data));
@@ -146,7 +152,7 @@ contract CSFeeOracleTest is Test, Utilities {
 
         vm.expectRevert(ICSFeeOracle.SenderNotAllowed.selector);
         vm.prank(stranger);
-        oracle.submitReportData({ data: data, contractVersion: 1 });
+        oracle.submitReportData({ data: data, contractVersion: 2 });
     }
 
     function test_submitReport_RevertWhen_PausedFor() public {
@@ -176,12 +182,14 @@ contract CSFeeOracleTest is Test, Utilities {
             treeCid: someCIDv0(),
             logCid: someCIDv0(),
             distributed: 1337,
-            rebate: 154
+            rebate: 154,
+            strikesTreeRoot: keccak256("strikesRoot"),
+            strikesTreeCid: someCIDv0()
         });
 
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
         vm.prank(members[0]);
-        oracle.submitReportData({ data: data, contractVersion: 1 });
+        oracle.submitReportData({ data: data, contractVersion: 2 });
     }
 
     function test_submitReport_RevertWhen_PausedUntil() public {
@@ -211,12 +219,14 @@ contract CSFeeOracleTest is Test, Utilities {
             treeCid: someCIDv0(),
             logCid: someCIDv0(),
             distributed: 1337,
-            rebate: 154
+            rebate: 154,
+            strikesTreeRoot: keccak256("strikesRoot"),
+            strikesTreeCid: someCIDv0()
         });
 
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
         vm.prank(members[0]);
-        oracle.submitReportData({ data: data, contractVersion: 1 });
+        oracle.submitReportData({ data: data, contractVersion: 2 });
     }
 
     function test_happyPath_whenResumed() public {
@@ -248,14 +258,16 @@ contract CSFeeOracleTest is Test, Utilities {
             treeCid: someCIDv0(),
             logCid: someCIDv0(),
             distributed: 1337,
-            rebate: 154
+            rebate: 154,
+            strikesTreeRoot: keccak256("strikesRoot"),
+            strikesTreeCid: someCIDv0()
         });
 
         bytes32 reportHash = keccak256(abi.encode(data));
         _reachConsensus(refSlot, reportHash);
 
         vm.prank(members[0]);
-        oracle.submitReportData({ data: data, contractVersion: 1 });
+        oracle.submitReportData({ data: data, contractVersion: 2 });
 
         (, startSlot, , ) = oracle.getConsensusReport();
         (refSlot, ) = consensus.getCurrentFrame();
@@ -336,10 +348,12 @@ contract CSFeeOracleTest is Test, Utilities {
             address(0),
             address(0)
         );
+        CSStrikesMock strikes = new CSStrikesMock();
         vm.expectRevert(ICSFeeOracle.ZeroAdminAddress.selector);
         oracle.initialize(
             address(0),
             address(distributor),
+            address(strikes),
             address(consensus),
             CONSENSUS_VERSION
         );
@@ -355,7 +369,7 @@ contract CSFeeOracleTest is Test, Utilities {
 
         address newDistributor = nextAddress();
 
-        vm.expectEmit(true, true, true, true, address(oracle));
+        vm.expectEmit(address(oracle));
         emit ICSFeeOracle.FeeDistributorContractSet(newDistributor);
         vm.prank(ORACLE_ADMIN);
         oracle.setFeeDistributorContract(newDistributor);
@@ -376,6 +390,37 @@ contract CSFeeOracleTest is Test, Utilities {
         vm.expectRevert(ICSFeeOracle.ZeroFeeDistributorAddress.selector);
         vm.prank(ORACLE_ADMIN);
         oracle.setFeeDistributorContract(address(0));
+    }
+
+    function test_setStrikesContract() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+        }
+
+        address newStrikes = nextAddress();
+
+        vm.expectEmit(true, true, true, true, address(oracle));
+        emit ICSFeeOracle.StrikesContractSet(newStrikes);
+        vm.prank(ORACLE_ADMIN);
+        oracle.setStrikesContract(newStrikes);
+
+        assertEq(address(oracle.strikes()), newStrikes);
+    }
+
+    function test_setStrikesContract_RevertWhen_ZeroStrikesAddress() public {
+        {
+            _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(INITIAL_EPOCH));
+            _grantAllRolesToAdmin();
+            _assertNoReportOnInit();
+            _setInitialEpoch();
+        }
+
+        vm.expectRevert(ICSFeeOracle.ZeroStrikesAddress.selector);
+        vm.prank(ORACLE_ADMIN);
+        oracle.setStrikesContract(address(0));
     }
 
     function test_recovererRole() public {
@@ -414,6 +459,7 @@ contract CSFeeOracleTest is Test, Utilities {
         oracle.initialize(
             ORACLE_ADMIN,
             address(new DistributorMock(address(0), address(0))),
+            address(new CSStrikesMock()),
             address(consensus),
             CONSENSUS_VERSION
         );
@@ -474,7 +520,7 @@ contract CSFeeOracleTest is Test, Utilities {
 
     function _reachConsensus(uint256 refSlot, bytes32 hash) internal {
         for (uint256 i; i < quorum; i++) {
-            vm.expectEmit(true, true, true, true, address(consensus));
+            vm.expectEmit(address(consensus));
             emit HashConsensus.ReportReceived(refSlot, members[i], hash);
 
             vm.prank(members[i]);

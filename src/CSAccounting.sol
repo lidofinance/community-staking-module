@@ -123,13 +123,6 @@ contract CSAccounting is
         _setChargePenaltyRecipient(_chargePenaltyRecipient);
     }
 
-    /// @dev DEPRECATED. Use `setLockedBondPeriod` instead
-    function setLockedBondRetentionPeriod(
-        uint256 retention
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        CSBondLock._setBondLockPeriod(retention);
-    }
-
     /// @inheritdoc ICSAccounting
     function setLockedBondPeriod(
         uint256 period

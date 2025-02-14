@@ -68,14 +68,14 @@ contract PausableUntilTest is Test {
     }
 
     function test_pauseFor_PausesCorrectly() public {
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(pausable));
         emit PausableUntil.Paused(404);
         pausable.exposedPauseFor(404);
         assertTrue(pausable.isPaused());
     }
 
     function test_pauseFor_PausesToMaxUint256() public {
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(pausable));
         emit PausableUntil.Paused(type(uint256).max);
         pausable.exposedPauseFor(type(uint256).max);
         assertTrue(pausable.isPaused());
@@ -94,7 +94,7 @@ contract PausableUntilTest is Test {
 
     function test_pauseUntil_PausesCorrectly() public {
         uint256 timestamp = block.timestamp;
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(pausable));
         // we expect +1 because the pauseUntil is inclusive
         emit PausableUntil.Paused(1001);
         pausable.exposedPauseUntil(timestamp + 1000);
@@ -102,7 +102,7 @@ contract PausableUntilTest is Test {
     }
 
     function test_pauseUntil_PausesToMaxUint256() public {
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(pausable));
         emit PausableUntil.Paused(type(uint256).max);
         pausable.exposedPauseUntil(type(uint256).max);
         assertTrue(pausable.isPaused());
@@ -115,7 +115,7 @@ contract PausableUntilTest is Test {
 
     function test_resume_ResumesCorrectly() public {
         pausable.exposedPauseFor(1000);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(pausable));
         emit PausableUntil.Resumed();
         pausable.exposedResume();
         assertFalse(pausable.isPaused());
@@ -130,14 +130,14 @@ contract PausableUntilTest is Test {
 
     function test_setPausedState_PausesCorrectly() public {
         uint256 timestamp = block.timestamp;
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(pausable));
         emit PausableUntil.Paused(1000);
         pausable.exposedSetPauseState(timestamp + 1000);
         assertTrue(pausable.isPaused());
     }
 
     function test_setPausedState_PausesToMaxUint256() public {
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(pausable));
         emit PausableUntil.Paused(type(uint256).max);
         pausable.exposedSetPauseState(type(uint256).max);
         assertTrue(pausable.isPaused());
@@ -145,7 +145,7 @@ contract PausableUntilTest is Test {
 
     function test_setPausedState_ResumesCorrectly() public {
         uint256 timestamp = block.timestamp;
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(pausable));
         emit PausableUntil.Paused(1);
         pausable.exposedSetPauseState(timestamp + 1);
         vm.warp(timestamp + 1);

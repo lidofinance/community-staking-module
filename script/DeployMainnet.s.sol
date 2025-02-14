@@ -21,7 +21,7 @@ contract DeployMainnet is DeployBase {
         config.clGenesisTime = 1606824023; // https://github.com/eth-clients/mainnet/blob/f6b7882618a5ad2c1d2731ae35e5d16a660d5bb7/README.md?plain=1#L10
         config.oracleReportEpochsPerFrame = 225 * 28; // 28 days
         config.fastLaneLengthSlots = 1800;
-        config.consensusVersion = 1;
+        config.consensusVersion = 2;
         config.oracleMembers = new address[](9);
         config.oracleMembers[0] = 0x140Bd8FbDc884f48dA7cb1c09bE8A2fAdfea776E; // Chorus One
         config.oracleMembers[1] = 0xA7410857ABbf75043d61ea54e07D57A6EB6EF186; // Kyber Network
@@ -77,6 +77,10 @@ contract DeployMainnet is DeployBase {
         config.queueLowestPriority = 5;
         config.defaultQueuePriority = 5;
         config.defaultQueueMaxDeposits = type(uint32).max;
+        config.badPerformancePenalty = 0.1 ether; // TODO: to be reviewed
+        config.attestationsWeight = 54; // https://eth2book.info/capella/part2/incentives/rewards/
+        config.blocksWeight = 8; // https://eth2book.info/capella/part2/incentives/rewards/
+        config.syncWeight = 2; // https://eth2book.info/capella/part2/incentives/rewards/
         // VettedGate
         config
             .vettedGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json

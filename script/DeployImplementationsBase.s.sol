@@ -10,6 +10,7 @@ import { HashConsensus } from "../src/lib/base-oracle/HashConsensus.sol";
 import { CSModule } from "../src/CSModule.sol";
 import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
+import { CSStrikes } from "../src/CSStrikes.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
 import { PermissionlessGate } from "../src/PermissionlessGate.sol";
@@ -59,7 +60,11 @@ abstract contract DeployImplementationsBase is DeployBase {
                     strikesLifetime: config.strikesLifetimeFrames,
                     strikesThreshold: config.strikesThreshold,
                     defaultQueuePriority: config.defaultQueuePriority,
-                    defaultQueueMaxDeposits: config.defaultQueueMaxDeposits
+                    defaultQueueMaxDeposits: config.defaultQueueMaxDeposits,
+                    badPerformancePenalty: config.badPerformancePenalty,
+                    attestationsWeight: config.attestationsWeight,
+                    blocksWeight: config.blocksWeight,
+                    syncWeight: config.syncWeight
                 })
             });
 
@@ -98,6 +103,14 @@ abstract contract DeployImplementationsBase is DeployBase {
                 oracle: address(oracle),
                 rebateRecipient: config.aragonAgent
             });
+
+            CSStrikes strikesImpl = new CSStrikes(
+                address(csm),
+                address(oracle)
+            );
+            strikes = CSStrikes(
+                _deployProxy(config.proxyAdmin, address(strikesImpl))
+            );
 
             verifier = new CSVerifier({
                 withdrawalAddress: locator.withdrawalVault(),
@@ -163,6 +176,8 @@ abstract contract DeployImplementationsBase is DeployBase {
             deployJson.set("CSAccountingImpl", address(accountingImpl));
             deployJson.set("CSFeeOracleImpl", address(oracleImpl));
             deployJson.set("CSFeeDistributorImpl", address(feeDistributorImpl));
+            deployJson.set("CSStrikes", address(strikes));
+            deployJson.set("CSStrikesImpl", address(strikesImpl));
             deployJson.set("CSVerifier", address(verifier));
             deployJson.set("HashConsensus", address(hashConsensus));
             deployJson.set("GateSeal", address(gateSeal));

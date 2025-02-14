@@ -39,7 +39,7 @@ contract VettedGateTest is Test, Utilities {
     }
 
     function test_constructor() public {
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit();
         emit IVettedGate.TreeRootSet(root);
         vettedGate = new VettedGate(root, curveId, csm, admin);
 
@@ -80,7 +80,7 @@ contract VettedGateTest is Test, Utilities {
         vm.startPrank(admin);
         vettedGate.grantRole(vettedGate.PAUSE_ROLE(), admin);
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(vettedGate));
         emit PausableUntil.Paused(100);
         vettedGate.pauseFor(100);
 
@@ -100,7 +100,7 @@ contract VettedGateTest is Test, Utilities {
         vettedGate.grantRole(vettedGate.RESUME_ROLE(), admin);
         vettedGate.pauseFor(100);
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(vettedGate));
         emit PausableUntil.Resumed();
         vettedGate.resume();
 
@@ -149,7 +149,7 @@ contract VettedGateTest is Test, Utilities {
         vm.startPrank(admin);
         vettedGate.grantRole(vettedGate.SET_TREE_ROOT_ROLE(), admin);
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(vettedGate));
         emit IVettedGate.TreeRootSet(newRoot);
         vettedGate.setTreeRoot(newRoot);
 
@@ -195,7 +195,7 @@ contract VettedGateTest is Test, Utilities {
         bytes32[] memory proof = merkleTree.getProof(0);
         assertFalse(vettedGate.isConsumed(nodeOperator));
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(vettedGate));
         emit IVettedGate.Consumed(nodeOperator);
         vm.prank(nodeOperator);
         vettedGate.addNodeOperatorETH(
@@ -219,7 +219,7 @@ contract VettedGateTest is Test, Utilities {
         bytes32[] memory proof = merkleTree.getProof(0);
         assertFalse(vettedGate.isConsumed(nodeOperator));
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(vettedGate));
         emit IVettedGate.Consumed(nodeOperator);
         vm.prank(nodeOperator);
         vettedGate.addNodeOperatorStETH(
@@ -250,7 +250,7 @@ contract VettedGateTest is Test, Utilities {
         bytes32[] memory proof = merkleTree.getProof(0);
         assertFalse(vettedGate.isConsumed(nodeOperator));
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(vettedGate));
         emit IVettedGate.Consumed(nodeOperator);
         vm.prank(nodeOperator);
         vettedGate.addNodeOperatorWstETH(
@@ -571,7 +571,7 @@ contract VettedGateTest is Test, Utilities {
         CSMMock(csm).mock_setNodeOperator(no);
         bytes32[] memory proof = merkleTree.getProof(0);
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(address(vettedGate));
         emit IVettedGate.Consumed(nodeOperator);
         vm.prank(nodeOperator);
         vettedGate.claimBondCurve(0, proof);

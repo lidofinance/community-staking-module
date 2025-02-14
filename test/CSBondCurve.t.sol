@@ -86,7 +86,7 @@ contract CSBondCurveTest is Test {
         _bondCurve[0] = 16 ether;
         _bondCurve[1] = 32 ether;
 
-        vm.expectEmit(true, true, true, true, address(bondCurve));
+        vm.expectEmit(address(bondCurve));
         emit ICSBondCurve.BondCurveAdded(_bondCurve);
 
         uint256 addedId = bondCurve.addBondCurve(_bondCurve);
@@ -134,7 +134,7 @@ contract CSBondCurveTest is Test {
 
         uint256 toUpdateId = 0;
 
-        vm.expectEmit(true, true, true, true, address(bondCurve));
+        vm.expectEmit(address(bondCurve));
         emit ICSBondCurve.BondCurveUpdated(toUpdateId, _bondCurve);
 
         bondCurve.updateBondCurve(toUpdateId, _bondCurve);
@@ -196,7 +196,7 @@ contract CSBondCurveTest is Test {
         curvePoints[0] = 16 ether;
         uint256 addedId = bondCurve.addBondCurve(curvePoints);
 
-        vm.expectEmit(true, true, true, true, address(bondCurve));
+        vm.expectEmit(address(bondCurve));
         emit ICSBondCurve.BondCurveSet(noId, addedId);
         bondCurve.setBondCurve(noId, addedId);
 
@@ -215,7 +215,7 @@ contract CSBondCurveTest is Test {
         uint256 addedId = bondCurve.addBondCurve(curvePoints);
         bondCurve.setBondCurve(noId, addedId);
 
-        vm.expectEmit(true, true, true, true, address(bondCurve));
+        vm.expectEmit(address(bondCurve));
         emit ICSBondCurve.BondCurveSet(noId, 0);
 
         bondCurve.resetBondCurve(noId);
@@ -232,6 +232,20 @@ contract CSBondCurveTest is Test {
         Vm.Log[] memory entries = vm.getRecordedLogs();
         assertEq(entries.length, 0);
         assertEq(bondCurve.getBondCurveId(noId), 0);
+    }
+
+    function test_curveExists_curveExists() public {
+        uint256[] memory _bondCurve = new uint256[](2);
+        _bondCurve[0] = 16 ether;
+        _bondCurve[1] = 32 ether;
+
+        uint256 addedId = bondCurve.addBondCurve(_bondCurve);
+
+        assertTrue(bondCurve.curveExists(addedId));
+    }
+
+    function test_curveExists_curveNotExists() public view {
+        assertFalse(bondCurve.curveExists(1));
     }
 
     function test_getKeysCountByBondAmount_default() public view {

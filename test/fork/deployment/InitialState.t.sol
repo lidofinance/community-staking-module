@@ -55,6 +55,20 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
 
         assertEq(priority, deployParams.defaultQueuePriority);
         assertEq(maxDeposits, deployParams.defaultQueueMaxDeposits);
+
+        assertEq(
+            parametersRegistry.defaultBadPerformancePenalty(),
+            deployParams.badPerformancePenalty
+        );
+
+        (
+            uint256 attestationsWeight,
+            uint256 blocksWeight,
+            uint256 syncWeight
+        ) = parametersRegistry.defaultPerformanceCoefficients();
+        assertEq(attestationsWeight, deployParams.attestationsWeight);
+        assertEq(blocksWeight, deployParams.blocksWeight);
+        assertEq(syncWeight, deployParams.syncWeight);
     }
 
     function test_accounting_initialState() public view {
@@ -74,6 +88,11 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
             keccak256(abi.encodePacked(feeDistributor.treeCid())),
             keccak256("")
         );
+    }
+
+    function test_strikes_initialState() public view {
+        assertEq(strikes.treeRoot(), bytes32(0));
+        assertEq(keccak256(abi.encodePacked(strikes.treeCid())), keccak256(""));
     }
 
     function test_feeOracle_initialState() public view {

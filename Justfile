@@ -132,7 +132,8 @@ kill-fork:
     @-pkill anvil && just _warn "anvil process is killed"
 
 deploy *args:
-    forge script {{deploy_script_path}} --sig="run(string)" --rpc-url {{anvil_rpc_url}} --broadcast --slow {{args}} -- `git rev-parse HEAD`
+    FOUNDRY_PROFILE=deploy \
+        forge script {{deploy_script_path}} --sig="run(string)" --rpc-url {{anvil_rpc_url}} --broadcast --slow {{args}} -- `git rev-parse HEAD`
 
 deploy-prod *args:
     just _warn "The current `tput bold`chain={{chain}}`tput sgr0` with the following rpc url: $RPC_URL"
@@ -156,7 +157,7 @@ _deploy-prod *args:
     forge script {{deploy_script_path}} --sig="run(string)" --force --rpc-url ${RPC_URL} {{args}} -- `git rev-parse HEAD`
 
 _deploy-impl *args:
-    FOUNDRY_PROFILE=deploy-impl \
+    FOUNDRY_PROFILE=deploy \
         forge script {{deploy_impls_script_path}} --sig="deploy(string,string)" \
             --rpc-url {{anvil_rpc_url}} --slow {{args}} \
             -- {{deploy_config_path}} `git rev-parse HEAD`
