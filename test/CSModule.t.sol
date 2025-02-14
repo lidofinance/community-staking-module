@@ -2999,16 +2999,41 @@ contract CsmQueueOps is CSMCommon {
 }
 
 contract CsmPriorityQueue is CSMCommon {
-    uint32 PRIORITY_QUEUE = 0;
+    uint32 constant PRIORITY_QUEUE = 0;
+    uint32 constant MAX_DEPOSITS = 10;
+
+    uint32 REGULAR_QUEUE;
 
     function setUp() public override {
         super.setUp();
         // Just to make sure we configured defaults properly and check things properly.
         assertNotEq(PRIORITY_QUEUE, csm.QUEUE_LOWEST_PRIORITY());
         assertNotEq(PRIORITY_QUEUE, csm.QUEUE_LEGACY_PRIORITY());
+        REGULAR_QUEUE = uint32(csm.QUEUE_LOWEST_PRIORITY());
     }
 
-    function test_enqueueToPriorityQueue() public {
+    function test_enqueueToPriorityQueue_LessThanMaxDeposits() public {
+        uint256 noId = createNodeOperator(0);
+
+        _assertPriorityQueueEmpty();
+        _enablePriorityQueue();
+
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit IQueueLib.BatchEnqueued(noId, 8);
+
+            uploadMoreKeys(noId, 8);
+        }
+
+        _assertRegularQueueEmpty();
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 8 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+    }
+
+    function test_enqueueToPriorityQueue_MoreThanMaxDeposits() public {
         uint256 noId = createNodeOperator(0);
 
         _assertPriorityQueueEmpty();
@@ -3030,7 +3055,133 @@ contract CsmPriorityQueue is CSMCommon {
         _assertQueueState(PRIORITY_QUEUE, exp);
 
         exp[0] = BatchInfo({ nodeOperatorId: noId, count: 5 });
-        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_enqueueToPriorityQueue_AlreadyEnqueuedLessThanMaxDeposits()
+        public
+    {
+        uint256 noId = createNodeOperator(0);
+
+        _assertPriorityQueueEmpty();
+        _enablePriorityQueue();
+
+        uploadMoreKeys(noId, 8);
+
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit IQueueLib.BatchEnqueued(noId, 2);
+
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit IQueueLib.BatchEnqueued(noId, 10);
+
+            uploadMoreKeys(noId, 12);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](2);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 8 });
+        exp[1] = BatchInfo({ nodeOperatorId: noId, count: 2 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 10 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_enqueueToPriorityQueue_AlreadyEnqueuedMoreThanMaxDeposits()
+        public
+    {
+        uint256 noId = createNodeOperator(0);
+
+        _assertPriorityQueueEmpty();
+        _enablePriorityQueue();
+
+        uploadMoreKeys(noId, 12);
+
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit IQueueLib.BatchEnqueued(noId, 12);
+
+            uploadMoreKeys(noId, 12);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 10 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp = new BatchInfo[](2);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 2 });
+        exp[1] = BatchInfo({ nodeOperatorId: noId, count: 12 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_enqueueToPriorityQueue_EnqueuedWithDepositedLessThanMaxDeposits()
+        public
+    {
+        uint256 noId = createNodeOperator(0);
+
+        _assertPriorityQueueEmpty();
+        _enablePriorityQueue();
+
+        uploadMoreKeys(noId, 8);
+        csm.obtainDepositData(3, ""); // no.enqueuedCount == 5
+
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit IQueueLib.BatchEnqueued(noId, 2);
+
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit IQueueLib.BatchEnqueued(noId, 10);
+
+            uploadMoreKeys(noId, 12);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](2);
+
+        // The batch was partially consumed by the obtainDepositData call.
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 5 });
+        exp[1] = BatchInfo({ nodeOperatorId: noId, count: 2 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 10 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_enqueueToPriorityQueue_EnqueuedWithDepositedMoreThanMaxDeposits()
+        public
+    {
+        uint256 noId = createNodeOperator(0);
+
+        _assertPriorityQueueEmpty();
+        _enablePriorityQueue();
+
+        uploadMoreKeys(noId, 12);
+        csm.obtainDepositData(3, ""); // no.enqueuedCount == 9
+
+        {
+            vm.expectEmit(true, true, true, true, address(csm));
+            emit IQueueLib.BatchEnqueued(noId, 12);
+
+            uploadMoreKeys(noId, 12);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        // The batch was partially consumed by the obtainDepositData call.
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 7 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp = new BatchInfo[](2);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 2 });
+        exp[1] = BatchInfo({ nodeOperatorId: noId, count: 12 });
+        _assertQueueState(REGULAR_QUEUE, exp);
     }
 
     function test_migrateToPriorityQueue_EnqueuedLessThanMaxDeposits() public {
@@ -3054,7 +3205,7 @@ contract CsmPriorityQueue is CSMCommon {
         _assertQueueState(PRIORITY_QUEUE, exp);
 
         exp[0] = BatchInfo({ nodeOperatorId: noId, count: 8 });
-        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
+        _assertQueueState(REGULAR_QUEUE, exp);
     }
 
     function test_migrateToPriorityQueue_EnqueuedMoreThanMaxDeposits() public {
@@ -3078,7 +3229,7 @@ contract CsmPriorityQueue is CSMCommon {
         _assertQueueState(PRIORITY_QUEUE, exp);
 
         exp[0] = BatchInfo({ nodeOperatorId: noId, count: 15 });
-        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
+        _assertQueueState(REGULAR_QUEUE, exp);
     }
 
     function test_migrateToPriorityQueue_DepositedLessThanMaxDeposits() public {
@@ -3105,7 +3256,7 @@ contract CsmPriorityQueue is CSMCommon {
 
         // The batch was partially consumed by the obtainDepositData call.
         exp[0] = BatchInfo({ nodeOperatorId: noId, count: 7 });
-        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
+        _assertQueueState(REGULAR_QUEUE, exp);
     }
 
     function test_migrateToPriorityQueue_DepositedMoreThanMaxDeposits() public {
@@ -3127,7 +3278,7 @@ contract CsmPriorityQueue is CSMCommon {
         BatchInfo[] memory exp = new BatchInfo[](1);
         // The batch was partially consumed by the obtainDepositData call.
         exp[0] = BatchInfo({ nodeOperatorId: noId, count: 3 });
-        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
+        _assertQueueState(REGULAR_QUEUE, exp);
     }
 
     function test_migrateToPriorityQueue_RevertsIfPriorityQueueAlreadyUsedViaMigrate()
@@ -3171,12 +3322,16 @@ contract CsmPriorityQueue is CSMCommon {
         parametersRegistry.setQueueConfig({
             curveId: 0,
             priority: PRIORITY_QUEUE,
-            maxDeposits: 10
+            maxDeposits: MAX_DEPOSITS
         });
     }
 
     function _assertPriorityQueueEmpty() internal {
         _assertQueueState(PRIORITY_QUEUE, new BatchInfo[](0));
+    }
+
+    function _assertRegularQueueEmpty() internal {
+        _assertQueueState(REGULAR_QUEUE, new BatchInfo[](0));
     }
 }
 
