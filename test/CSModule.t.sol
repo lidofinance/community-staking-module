@@ -70,7 +70,6 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     modifier assertInvariants() {
         _;
         vm.pauseGasMetering();
-        assertCSMMaxKeys(csm);
         assertCSMEnqueuedCount(csm);
         assertCSMKeys(csm);
         vm.resumeGasMetering();
@@ -271,7 +270,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     }
 }
 
-contract CSMCommonNoPublicRelease is CSMFixtures {
+contract CSMCommon is CSMFixtures {
     function setUp() public virtual {
         nodeOperator = nextAddress("NODE_OPERATOR");
         stranger = nextAddress("STRANGER");
@@ -287,7 +286,6 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
         csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
@@ -351,13 +349,6 @@ contract CSMCommonNoPublicRelease is CSMFixtures {
     }
 }
 
-contract CSMCommon is CSMCommonNoPublicRelease {
-    function setUp() public virtual override {
-        super.setUp();
-        csm.activatePublicRelease();
-    }
-}
-
 contract CSMCommonNoRoles is CSMFixtures {
     address internal actor;
 
@@ -376,7 +367,6 @@ contract CSMCommonNoRoles is CSMFixtures {
         csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
@@ -458,12 +448,10 @@ contract CsmInitialize is CSMCommon {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
         assertEq(csm.getType(), "community-staking-module");
-        assertEq(csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(), 10);
         assertEq(address(csm.LIDO_LOCATOR()), address(locator));
         assertEq(
             address(csm.PARAMETERS_REGISTRY()),
@@ -476,7 +464,6 @@ contract CsmInitialize is CSMCommon {
         new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            maxKeysPerOperatorEA: 10,
             lidoLocator: address(0),
             parametersRegistry: address(parametersRegistry)
         });
@@ -489,7 +476,6 @@ contract CsmInitialize is CSMCommon {
         new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator),
             parametersRegistry: address(0)
         });
@@ -499,7 +485,6 @@ contract CsmInitialize is CSMCommon {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
@@ -515,7 +500,6 @@ contract CsmInitialize is CSMCommon {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
@@ -526,7 +510,6 @@ contract CsmInitialize is CSMCommon {
             admin: address(this)
         });
         assertEq(csm.getType(), "community-staking-module");
-        assertEq(csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(), 10);
         assertEq(address(csm.LIDO_LOCATOR()), address(locator));
         assertEq(address(csm.accounting()), address(accounting));
         assertTrue(csm.isPaused());
@@ -536,7 +519,6 @@ contract CsmInitialize is CSMCommon {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
@@ -550,7 +532,6 @@ contract CsmInitialize is CSMCommon {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
@@ -5833,7 +5814,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
@@ -5854,7 +5834,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             minSlashingPenaltyQuotient: 32,
-            maxKeysPerOperatorEA: 10,
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
@@ -5864,23 +5843,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
         vm.startPrank(stranger);
         expectRoleRevert(stranger, adminRole);
         csm.grantRole(role, stranger);
-    }
-
-    function test_adminRole_activatePublicRelease() public {
-        bytes32 role = csm.DEFAULT_ADMIN_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.prank(actor);
-        csm.activatePublicRelease();
-    }
-
-    function test_adminRole_activatePublicRelease_revert() public {
-        bytes32 role = csm.DEFAULT_ADMIN_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.activatePublicRelease();
     }
 
     function test_createNodeOperatorRole() public {
@@ -5936,7 +5898,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_reportELRewardsStealingPenaltyRole() public {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE();
         vm.prank(admin);
@@ -5951,7 +5912,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_reportELRewardsStealingPenaltyRole_revert() public {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE();
 
@@ -5965,7 +5925,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_settleELRewardsStealingPenaltyRole() public {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE();
         vm.prank(admin);
@@ -5976,7 +5935,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_settleELRewardsStealingPenaltyRole_revert() public {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE();
 
@@ -5986,7 +5944,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_verifierRole_submitWithdrawal() public {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.VERIFIER_ROLE();
 
@@ -6001,7 +5958,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_verifierRole_submitWithdrawal_revert() public {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.VERIFIER_ROLE();
 
@@ -6011,7 +5967,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
     }
 
     function test_badPerformerEjectorRole_ejectBadPerformer() public {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.BAD_PERFORMER_EJECTOR_ROLE();
 
@@ -6108,7 +6063,6 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
     }
 
     function test_stakingRouterRole_updateRefundedValidatorsCount() public {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
         vm.prank(admin);
@@ -6122,7 +6076,6 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
     function test_stakingRouterRole_updateRefundedValidatorsCount_revert()
         public
     {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
 
@@ -6132,7 +6085,6 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
     }
 
     function test_stakingRouterRole_updateTargetValidatorsLimits() public {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
         vm.prank(admin);
@@ -6145,7 +6097,6 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
     function test_stakingRouterRole_updateTargetValidatorsLimits_revert()
         public
     {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
 
@@ -6212,7 +6163,6 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
     }
 
     function test_stakingRouterRole_unsafeUpdateValidatorsCountRole() public {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
         vm.prank(admin);
@@ -6225,7 +6175,6 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
     function test_stakingRouterRole_unsafeUpdateValidatorsCountRole_revert()
         public
     {
-        csm.activatePublicRelease();
         uint256 noId = createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
 
@@ -6235,7 +6184,6 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
     }
 
     function test_stakingRouterRole_unvetKeys() public {
-        csm.activatePublicRelease();
         createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
         vm.prank(admin);
@@ -6246,56 +6194,12 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
     }
 
     function test_stakingRouterRole_unvetKeys_revert() public {
-        csm.activatePublicRelease();
         createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
         csm.decreaseVettedSigningKeysCount(new bytes(0), new bytes(0));
-    }
-}
-
-contract CSMActivatePublicRelease is CSMCommonNoPublicRelease {
-    function test_activatePublicRelease() public assertInvariants {
-        vm.expectEmit(address(csm));
-        emit ICSModule.PublicRelease();
-        csm.activatePublicRelease();
-
-        assertTrue(csm.publicRelease());
-    }
-
-    function test_activatePublicRelease_RevertWhen_AlreadyActivated()
-        public
-        assertInvariants
-    {
-        csm.activatePublicRelease();
-
-        vm.expectRevert(ICSModule.AlreadyActivated.selector);
-        csm.activatePublicRelease();
-    }
-}
-
-contract CSMNoKeysLimit is CSMCommonNoPublicRelease {
-    function test_revertWhen_uploadMoreKeysThanAllowed() public {
-        uint256 noId = createNodeOperator(1);
-        uint256 keysCount = 10;
-        uint256 amount = accounting.getRequiredBondForNextKeys(noId, keysCount);
-        address managerAddress = csm.getNodeOperator(noId).managerAddress;
-        vm.deal(managerAddress, amount);
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-
-        vm.expectRevert(ICSModule.MaxSigningKeysCountExceeded.selector);
-        vm.prank(managerAddress);
-        csm.addValidatorKeysETH{ value: amount }(
-            managerAddress,
-            noId,
-            keysCount,
-            keys,
-            signatures
-        );
     }
 }
 

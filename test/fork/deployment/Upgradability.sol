@@ -25,8 +25,6 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
         CSModule newModule = new CSModule({
             moduleType: "CSMv2",
             minSlashingPenaltyQuotient: 32,
-            maxKeysPerOperatorEA: csm
-                .MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(),
             lidoLocator: address(csm.LIDO_LOCATOR()),
             parametersRegistry: address(csm.PARAMETERS_REGISTRY())
         });
@@ -40,8 +38,6 @@ contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
         CSModule newModule = new CSModule({
             moduleType: "CSMv2",
             minSlashingPenaltyQuotient: 32,
-            maxKeysPerOperatorEA: csm
-                .MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(),
             lidoLocator: address(csm.LIDO_LOCATOR()),
             parametersRegistry: address(csm.PARAMETERS_REGISTRY())
         });

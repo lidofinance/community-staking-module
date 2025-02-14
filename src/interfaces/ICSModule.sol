@@ -55,10 +55,8 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     error AlreadyWithdrawn();
     error AlreadyEjected();
-    error AlreadyActivated();
 
     error InvalidAmount();
-    error MaxSigningKeysCountExceeded();
 
     error NotSupported();
     error ZeroLocatorAddress();
@@ -118,7 +116,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         bytes pubkey
     );
 
-    event PublicRelease();
     event KeyRemovalChargeApplied(uint256 indexed nodeOperatorId);
     event ELRewardsStealingPenaltyReported(
         uint256 indexed nodeOperatorId,
@@ -138,11 +135,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     function INITIAL_SLASHING_PENALTY() external view returns (uint256);
 
     function LIDO_LOCATOR() external view returns (ILidoLocator);
-
-    function MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE()
-        external
-        view
-        returns (uint256);
 
     function PAUSE_ROLE() external view returns (bytes32);
 
@@ -191,11 +183,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     /// @notice Public release mode status
     function publicRelease() external view returns (bool);
-
-    /// @notice Activate public release mode
-    ///         Enable permissionless creation of the Node Operators
-    ///         Remove the keys limit for the Node Operators
-    function activatePublicRelease() external;
 
     /// @notice Permissioned method to add a new Node Operator
     ///         Should be called by `*Gate.sol` contracts. See `PermissionlessGate.sol` and `VettedGate.sol` for examples

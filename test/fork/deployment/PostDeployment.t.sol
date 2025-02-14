@@ -42,10 +42,6 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
             csm.INITIAL_SLASHING_PENALTY(),
             32 ether / deployParams.minSlashingPenaltyQuotient
         );
-        assertEq(
-            csm.MAX_SIGNING_KEYS_PER_OPERATOR_BEFORE_PUBLIC_RELEASE(),
-            deployParams.maxKeysPerOperatorEA
-        );
         assertEq(address(csm.LIDO_LOCATOR()), deployParams.lidoLocatorAddress);
     }
 

@@ -68,7 +68,6 @@ abstract contract DeployImplementationsBase is DeployBase {
             CSModule csmImpl = new CSModule({
                 moduleType: config.moduleType,
                 minSlashingPenaltyQuotient: config.minSlashingPenaltyQuotient,
-                maxKeysPerOperatorEA: config.maxKeysPerOperatorEA,
                 lidoLocator: config.lidoLocatorAddress,
                 parametersRegistry: address(parametersRegistry)
             });
