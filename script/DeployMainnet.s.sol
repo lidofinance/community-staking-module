@@ -63,8 +63,6 @@ contract DeployMainnet is DeployBase {
             .chargePenaltyRecipient = 0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c; // locator.treasury()
         // Module
         config.moduleType = "community-onchain-v1"; // Just a unique type name to be used by the off-chain tooling
-        config.minSlashingPenaltyQuotient = 32;
-        config.maxKeysPerOperatorEA = 12; // 12 EA vals will result in approx 16 ETH worth of bond
         config
             .elRewardsStealingReporter = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
         // CSParameters

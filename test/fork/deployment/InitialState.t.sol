@@ -24,7 +24,6 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
 
     function test_module_initialState() public view {
         assertTrue(csm.isPaused());
-        assertFalse(csm.publicRelease());
         assertEq(csm.getNodeOperatorsCount(), 0);
     }
 
