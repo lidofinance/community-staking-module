@@ -14,6 +14,7 @@ import { CSStrikes } from "../src/CSStrikes.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
 import { PermissionlessGate } from "../src/PermissionlessGate.sol";
+import { VettedGateFactory } from "../src/VettedGateFactory.sol";
 import { VettedGate } from "../src/VettedGate.sol";
 import { CSParametersRegistry } from "../src/CSParametersRegistry.sol";
 import { ICSEarlyAdoption } from "../src/interfaces/ICSEarlyAdoption.sol";
@@ -80,12 +81,16 @@ abstract contract DeployImplementationsBase is DeployBase {
             });
 
             permissionlessGate = new PermissionlessGate(address(csm));
-            vettedGate = new VettedGate({
-                _treeRoot: config.vettedGateTreeRoot,
-                curveId: ICSEarlyAdoption(earlyAdoption).CURVE_ID(),
-                csm: address(csm),
-                admin: deployer
-            });
+
+            vettedGateFactory = new VettedGateFactory();
+            vettedGate = VettedGate(
+                vettedGateFactory.create({
+                    csm: address(csm),
+                    curveId: ICSEarlyAdoption(earlyAdoption).CURVE_ID(),
+                    treeRoot: config.vettedGateTreeRoot,
+                    admin: deployer
+                })
+            );
 
             CSFeeOracle oracleImpl = new CSFeeOracle({
                 secondsPerSlot: config.secondsPerSlot,
@@ -161,6 +166,7 @@ abstract contract DeployImplementationsBase is DeployBase {
 
             JsonObj memory deployJson = Json.newObj();
             deployJson.set("PermissionlessGate", address(permissionlessGate));
+            deployJson.set("VettedGateFactory", address(vettedGateFactory));
             deployJson.set("VettedGate", address(vettedGate));
             deployJson.set(
                 "CSParametersRegistryImpl",
