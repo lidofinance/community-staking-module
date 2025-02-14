@@ -118,6 +118,20 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
             .defaultStrikesParams();
         assertEq(strikesLifetime, upgradeDeployParams.strikesLifetimeFrames);
         assertEq(strikesThreshold, upgradeDeployParams.strikesThreshold);
+
+        assertEq(
+            parametersRegistry.defaultBadPerformancePenalty(),
+            upgradeDeployParams.badPerformancePenalty
+        );
+
+        (
+            uint256 attestationsWeight,
+            uint256 blocksWeight,
+            uint256 syncWeight
+        ) = parametersRegistry.defaultPerformanceCoefficients();
+        assertEq(attestationsWeight, upgradeDeployParams.attestationsWeight);
+        assertEq(blocksWeight, upgradeDeployParams.blocksWeight);
+        assertEq(syncWeight, upgradeDeployParams.syncWeight);
     }
 
     function test_accountingState() public view {

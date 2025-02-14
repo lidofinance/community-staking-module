@@ -153,6 +153,20 @@ contract CSParametersRegistryDeploymentTest is
             .defaultStrikesParams();
         assertEq(strikesLifetime, deployParams.strikesLifetimeFrames);
         assertEq(strikesThreshold, deployParams.strikesThreshold);
+
+        assertEq(
+            parametersRegistry.defaultBadPerformancePenalty(),
+            deployParams.badPerformancePenalty
+        );
+
+        (
+            uint256 attestationsWeight,
+            uint256 blocksWeight,
+            uint256 syncWeight
+        ) = parametersRegistry.defaultPerformanceCoefficients();
+        assertEq(attestationsWeight, deployParams.attestationsWeight);
+        assertEq(blocksWeight, deployParams.blocksWeight);
+        assertEq(syncWeight, deployParams.syncWeight);
     }
 
     function test_roles() public view {
@@ -192,7 +206,10 @@ contract CSParametersRegistryDeploymentTest is
                 performanceLeeway: deployParams.avgPerfLeewayBP,
                 strikesLifetime: deployParams.strikesLifetimeFrames,
                 strikesThreshold: deployParams.strikesThreshold,
-                badPerformancePenalty: deployParams.badPerformancePenalty
+                badPerformancePenalty: deployParams.badPerformancePenalty,
+                attestationsWeight: deployParams.attestationsWeight,
+                blocksWeight: deployParams.blocksWeight,
+                syncWeight: deployParams.syncWeight
             })
         });
     }
