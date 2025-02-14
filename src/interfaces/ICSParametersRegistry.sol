@@ -10,13 +10,26 @@ interface ICSParametersRegistry {
     }
 
     struct StrikesParams {
-        uint128 lifetime;
-        uint128 threshold;
+        uint32 lifetime;
+        uint32 threshold;
     }
 
     struct MarkedStrikesParams {
-        uint128 lifetime;
-        uint120 threshold;
+        uint32 lifetime;
+        uint32 threshold;
+        bool isValue;
+    }
+
+    struct PerformanceCoefficients {
+        uint32 attestationsWeight;
+        uint32 blocksWeight;
+        uint32 syncWeight;
+    }
+
+    struct MarkedPerformanceCoefficients {
+        uint32 attestationsWeight;
+        uint32 blocksWeight;
+        uint32 syncWeight;
         bool isValue;
     }
 
@@ -29,6 +42,9 @@ interface ICSParametersRegistry {
         uint256 strikesLifetime;
         uint256 strikesThreshold;
         uint256 badPerformancePenalty;
+        uint256 attestationsWeight;
+        uint256 blocksWeight;
+        uint256 syncWeight;
     }
 
     struct PivotsAndValues {
@@ -43,6 +59,11 @@ interface ICSParametersRegistry {
     event DefaultPerformanceLeewaySet(uint256 value);
     event DefaultStrikesParamsSet(uint256 lifetime, uint256 threshold);
     event DefaultBadPerformancePenaltySet(uint256 value);
+    event DefaultPerformanceCoefficientsSet(
+        uint256 attestationsWeight,
+        uint256 blocksWeight,
+        uint256 syncWeight
+    );
 
     event KeyRemovalChargeSet(
         uint256 indexed curveId,
@@ -61,6 +82,12 @@ interface ICSParametersRegistry {
         uint256 threshold
     );
     event BadPerformancePenaltySet(uint256 indexed curveId, uint256 penalty);
+    event PerformanceCoefficientsSet(
+        uint256 indexed curveId,
+        uint256 attestationsWeight,
+        uint256 blocksWeight,
+        uint256 syncWeight
+    );
 
     event KeyRemovalChargeUnset(uint256 indexed curveId);
     event ElRewardsStealingAdditionalFineUnset(uint256 indexed curveId);
@@ -69,6 +96,7 @@ interface ICSParametersRegistry {
     event PerformanceLeewayDataUnset(uint256 indexed curveId);
     event StrikesParamsUnset(uint256 indexed curveId);
     event BadPerformancePenaltyUnset(uint256 indexed curveId);
+    event PerformanceCoefficientsUnset(uint256 indexed curveId);
 
     error InvalidRewardShareData();
     error InvalidPerformanceLeewayData();
@@ -112,7 +140,7 @@ interface ICSParametersRegistry {
     /// @notice Get default value for the performance leeway
     function defaultPerformanceLeeway() external returns (uint256);
 
-    /// @notice Set default value for the strikes lifetime and threshold. Default value is used if a specific value is not set for the curveId
+    /// @notice Set default values for the strikes lifetime and threshold. Default values are used if specific values are not set for the curveId
     /// @param lifetime value to be set as default for the strikes lifetime
     /// @param threshold value to be set as default for the strikes threshold
     function setDefaultStrikesParams(
@@ -121,13 +149,29 @@ interface ICSParametersRegistry {
     ) external;
 
     /// @notice Get default value for the strikes lifetime and threshold
-    function defaultStrikesParams() external returns (uint128, uint128);
+    function defaultStrikesParams() external returns (uint32, uint32);
 
     /// @notice Set default value for the bad performance penalty. Default value is used if a specific value is not set for the curveId
     /// @param penalty value to be set as default for the bad performance penalty
     function setDefaultBadPerformancePenalty(uint256 penalty) external;
 
     /// @notice Get default value for the bad performance penalty
+    function defaultBadPerformancePenalty() external returns (uint256);
+
+    /// @notice Set default values for the performance coefficients. Default values are used if specific values are not set for the curveId
+    /// @param attestationsWeight value to be set as default for the attestations effectiveness weight
+    /// @param blocksWeight value to be set as default for block proposals effectiveness weight
+    /// @param syncWeight value to be set as default for sync participation effectiveness weight
+    function setDefaultPerformanceCoefficients(
+        uint256 attestationsWeight,
+        uint256 blocksWeight,
+        uint256 syncWeight
+    ) external;
+
+    /// @notice Get default value for the performance coefficients
+    function defaultPerformanceCoefficients()
+        external
+        returns (uint32, uint32, uint32);
 
     /// @notice Set key removal charge for the curveId.
     /// @param curveId Curve Id to associate key removal charge with
@@ -293,4 +337,37 @@ interface ICSParametersRegistry {
     function getBadPerformancePenalty(
         uint256 curveId
     ) external view returns (uint256 penalty);
+
+    /// @notice Set performance coefficients for the curveId
+    /// @param curveId Curve Id to associate performance coefficients with
+    /// @param attestationsWeight Attestations effectiveness weight
+    /// @param blocksWeight Block proposals effectiveness weight
+    /// @param syncWeight Sync participation effectiveness weight
+    function setPerformanceCoefficients(
+        uint256 curveId,
+        uint256 attestationsWeight,
+        uint256 blocksWeight,
+        uint256 syncWeight
+    ) external;
+
+    /// @notice Unset custom performance coefficients for the curveId
+    /// @param curveId Curve Id to unset custom performance coefficients for
+    function unsetPerformanceCoefficients(uint256 curveId) external;
+
+    /// @notice Get performance coefficients by the curveId
+    /// @dev `defaultPerformanceCoefficients` are returned if the value is not set for the given curveId.
+    /// @param curveId Curve Id to get performance coefficients for
+    /// @return attestationsWeight Attestations effectiveness weight
+    /// @return blocksWeight Block proposals effectiveness weight
+    /// @return syncWeight Sync participation effectiveness weight
+    function getPerformanceCoefficients(
+        uint256 curveId
+    )
+        external
+        view
+        returns (
+            uint256 attestationsWeight,
+            uint256 blocksWeight,
+            uint256 syncWeight
+        );
 }

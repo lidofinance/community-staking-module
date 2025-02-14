@@ -119,6 +119,9 @@ struct DeployParams {
     uint256 strikesThreshold;
     uint256 priorityQueueLimit;
     uint256 badPerformancePenalty;
+    uint256 attestationsWeight;
+    uint256 blocksWeight;
+    uint256 syncWeight;
     // VettedGate
     bytes32 vettedGateTreeRoot;
     uint256[] vettedGateBondCurve;
@@ -282,7 +285,10 @@ abstract contract DeployBase is Script {
                     performanceLeeway: config.avgPerfLeewayBP,
                     strikesLifetime: config.strikesLifetimeFrames,
                     strikesThreshold: config.strikesThreshold,
-                    badPerformancePenalty: config.badPerformancePenalty
+                    badPerformancePenalty: config.badPerformancePenalty,
+                    attestationsWeight: config.attestationsWeight,
+                    blocksWeight: config.blocksWeight,
+                    syncWeight: config.syncWeight
                 })
             });
 
