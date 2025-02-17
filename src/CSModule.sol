@@ -546,15 +546,9 @@ contract CSModule is
             no.targetLimit == targetLimit
         ) return;
 
-        if (no.targetLimitMode != targetLimitMode) {
-            // @dev No need to safe cast due to conditions above
-            no.targetLimitMode = uint8(targetLimitMode);
-        }
-
-        if (no.targetLimit != targetLimit) {
-            // @dev No need to safe cast due to conditions above
-            no.targetLimit = uint32(targetLimit);
-        }
+        // @dev No need to safe cast due to conditions above
+        no.targetLimitMode = uint8(targetLimitMode);
+        no.targetLimit = uint32(targetLimit);
 
         emit TargetValidatorsCountChanged(
             nodeOperatorId,
