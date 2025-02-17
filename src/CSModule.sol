@@ -719,7 +719,7 @@ contract CSModule is
                 );
 
                 unchecked {
-                    _nodeOperators[nodeOperatorId].enqueuedCount -= toMigrate;
+                    no.enqueuedCount -= toMigrate;
                 }
                 _enqueueNodeOperatorKeys(nodeOperatorId, priority, toMigrate);
             }
@@ -932,16 +932,88 @@ contract CSModule is
         uint256 depositsLeft = depositsCount;
         uint256 loadedKeysCount = 0;
 
-        for (uint256 p = 0; p <= QUEUE_LOWEST_PRIORITY; ++p) {
-            // solhint-disable-next-line func-named-parameters
-            (depositsLeft, loadedKeysCount) = _getDepositDataFromQueue(
-                _getQueue(p),
-                depositsLeft,
-                loadedKeysCount,
-                publicKeys,
-                signatures
-            );
-            if (depositsLeft == 0) break;
+        QueueLib.Queue storage queue;
+        uint256 p = 0;
+
+        for (;;) {
+            if (p > QUEUE_LOWEST_PRIORITY || depositsLeft == 0) break;
+            queue = _getQueue(p);
+            unchecked {
+                ++p;
+            }
+
+            for (
+                Batch item = queue.peek();
+                !item.isNil();
+                item = queue.peek()
+            ) {
+                // NOTE: see the `enqueuedCount` note below.
+                unchecked {
+                    uint256 noId = item.noId();
+                    uint256 keysInBatch = item.keys();
+                    NodeOperator storage no = _nodeOperators[noId];
+
+                    uint256 keysCount = Math.min(
+                        Math.min(no.depositableValidatorsCount, keysInBatch),
+                        depositsLeft
+                    );
+                    // `depositsLeft` is non-zero at this point all the time, so the check `depositsLeft > keysCount`
+                    // covers the case when no depositable keys on the Node Operator have been left.
+                    if (depositsLeft > keysCount || keysCount == keysInBatch) {
+                        // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
+                        // @dev No need to safe cast due to internal logic
+                        no.enqueuedCount -= uint32(keysInBatch);
+                        // We've consumed all the keys in the batch, so we dequeue it.
+                        queue.dequeue();
+                    } else {
+                        // This branch covers the case when we stop in the middle of the batch.
+                        // We release the amount of keys consumed only, the rest will be kept.
+                        // @dev No need to safe cast due to internal logic
+                        no.enqueuedCount -= uint32(keysCount);
+                        // NOTE: `keysInBatch` can't be less than `keysCount` at this point.
+                        // We update the batch with the remaining keys.
+                        item = item.setKeys(keysInBatch - keysCount);
+                        // Store the updated batch back to the queue.
+                        queue.queue[queue.head] = item;
+                    }
+
+                    if (keysCount == 0) {
+                        continue;
+                    }
+
+                    // solhint-disable-next-line func-named-parameters
+                    SigningKeys.loadKeysSigs(
+                        noId,
+                        no.totalDepositedKeys,
+                        keysCount,
+                        publicKeys,
+                        signatures,
+                        loadedKeysCount
+                    );
+
+                    // It's impossible in practice to reach the limit of these variables.
+                    loadedKeysCount += keysCount;
+                    // @dev No need to safe cast due to internal logic
+                    no.totalDepositedKeys += uint32(keysCount);
+
+                    emit DepositedSigningKeysCountChanged(
+                        noId,
+                        no.totalDepositedKeys
+                    );
+
+                    // No need for `_updateDepositableValidatorsCount` call since we update the number directly.
+                    // `keysCount` is min of `depositableValidatorsCount` and `depositsLeft`.
+                    // @dev No need to safe cast due to internal logic
+                    uint32 newCount = no.depositableValidatorsCount -
+                        uint32(keysCount);
+                    no.depositableValidatorsCount = newCount;
+                    emit DepositableSigningKeysCountChanged(noId, newCount);
+                    depositsLeft -= keysCount;
+                    if (depositsLeft == 0) {
+                        break;
+                    }
+                }
+            }
         }
 
         if (loadedKeysCount != depositsCount) {
@@ -965,17 +1037,24 @@ contract CSModule is
         // the same operator across multiple queues.
         TransientUintUintMap queueLookup = TransientUintUintMapLib.create();
 
-        uint256 totalVisited = 0;
+        QueueLib.Queue storage queue;
 
-        for (uint256 p = 0; p <= QUEUE_LOWEST_PRIORITY; ++p) {
-            QueueLib.Queue storage q = _getQueue(p);
+        uint256 totalVisited = 0;
+        uint256 p = 0;
+
+        for (;;) {
+            if (p > QUEUE_LOWEST_PRIORITY) break;
+            queue = _getQueue(p);
+            unchecked {
+                ++p;
+            }
 
             (
                 uint256 removedPerQueue,
                 uint256 lastRemovedAtDepthPerQueue,
                 uint256 visited,
                 bool isFinished
-            ) = q.clean(_nodeOperators, maxItems, queueLookup);
+            ) = queue.clean(_nodeOperators, maxItems, queueLookup);
 
             if (removedPerQueue > 0) {
                 unchecked {
@@ -1225,85 +1304,6 @@ contract CSModule is
             ++_nonce;
         }
         emit NonceChanged(_nonce);
-    }
-
-    function _getDepositDataFromQueue(
-        QueueLib.Queue storage queue,
-        uint256 depositsLeft,
-        uint256 loadedKeysCount,
-        bytes memory publicKeys,
-        bytes memory signatures
-    ) internal returns (uint256, uint256) {
-        for (Batch item = queue.peek(); !item.isNil(); item = queue.peek()) {
-            // NOTE: see the `enqueuedCount` note below.
-            unchecked {
-                uint256 noId = item.noId();
-                uint256 keysInBatch = item.keys();
-                NodeOperator storage no = _nodeOperators[noId];
-
-                uint256 keysCount = Math.min(
-                    Math.min(no.depositableValidatorsCount, keysInBatch),
-                    depositsLeft
-                );
-                // `depositsLeft` is non-zero at this point all the time, so the check `depositsLeft > keysCount`
-                // covers the case when no depositable keys on the Node Operator have been left.
-                if (depositsLeft > keysCount || keysCount == keysInBatch) {
-                    // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
-                    // @dev No need to safe cast due to internal logic
-                    no.enqueuedCount -= uint32(keysInBatch);
-                    // We've consumed all the keys in the batch, so we dequeue it.
-                    queue.dequeue();
-                } else {
-                    // This branch covers the case when we stop in the middle of the batch.
-                    // We release the amount of keys consumed only, the rest will be kept.
-                    // @dev No need to safe cast due to internal logic
-                    no.enqueuedCount -= uint32(keysCount);
-                    // NOTE: `keysInBatch` can't be less than `keysCount` at this point.
-                    // We update the batch with the remaining keys.
-                    item = item.setKeys(keysInBatch - keysCount);
-                    // Store the updated batch back to the queue.
-                    queue.queue[queue.head] = item;
-                }
-
-                if (keysCount == 0) {
-                    continue;
-                }
-
-                // solhint-disable-next-line func-named-parameters
-                SigningKeys.loadKeysSigs(
-                    noId,
-                    no.totalDepositedKeys,
-                    keysCount,
-                    publicKeys,
-                    signatures,
-                    loadedKeysCount
-                );
-
-                // It's impossible in practice to reach the limit of these variables.
-                loadedKeysCount += keysCount;
-                // @dev No need to safe cast due to internal logic
-                no.totalDepositedKeys += uint32(keysCount);
-
-                emit DepositedSigningKeysCountChanged(
-                    noId,
-                    no.totalDepositedKeys
-                );
-
-                // No need for `_updateDepositableValidatorsCount` call since we update the number directly.
-                // `keysCount` is min of `depositableValidatorsCount` and `depositsLeft`.
-                // @dev No need to safe cast due to internal logic
-                uint32 newCount = no.depositableValidatorsCount -
-                    uint32(keysCount);
-                no.depositableValidatorsCount = newCount;
-                emit DepositableSigningKeysCountChanged(noId, newCount);
-                depositsLeft -= keysCount;
-                if (depositsLeft == 0) {
-                    break;
-                }
-            }
-        }
-
-        return (depositsLeft, loadedKeysCount);
     }
 
     function _addKeysAndUpdateDepositableValidatorsCount(
