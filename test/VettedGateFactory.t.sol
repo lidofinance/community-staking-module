@@ -3,6 +3,7 @@
 pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
+import { VettedGate } from "../src/VettedGate.sol";
 import { VettedGateFactory } from "../src/VettedGateFactory.sol";
 import { IVettedGateFactory } from "../src/interfaces/IVettedGateFactory.sol";
 import { IVettedGate } from "../src/interfaces/IVettedGate.sol";
@@ -18,8 +19,9 @@ contract VettedGateFactoryTest is Test, Utilities {
     uint256 curveId;
 
     function setUp() public {
-        factory = new VettedGateFactory();
         csm = new CSMMock();
+        address vettedGateImpl = address(new VettedGate(address(csm)));
+        factory = new VettedGateFactory(vettedGateImpl);
         root = bytes32(randomBytes(32));
         curveId = 1;
     }
@@ -27,14 +29,9 @@ contract VettedGateFactoryTest is Test, Utilities {
     function test_create() public {
         vm.expectEmit(false, false, false, false, address(factory));
         emit IVettedGateFactory.VettedGateCreated(address(0));
-        address instance = factory.create(
-            address(csm),
-            curveId,
-            root,
-            address(this)
-        );
+        address instance = factory.create(curveId, root, address(this));
         IVettedGate gate = IVettedGate(instance);
-        assertEq(gate.CURVE_ID(), curveId);
+        assertEq(gate.curveId(), curveId);
         assertEq(address(gate.CSM()), address(csm));
         assertEq(gate.treeRoot(), root);
 

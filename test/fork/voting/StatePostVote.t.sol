@@ -136,7 +136,7 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
     function test_accountingState() public view {
         assertFalse(accounting.isPaused());
         assertEq(
-            accounting.getCurveInfo(vettedGate.CURVE_ID()).points,
+            accounting.getCurveInfo(vettedGate.curveId()).points,
             deployParams.vettedGateBondCurve
         );
         assertTrue(

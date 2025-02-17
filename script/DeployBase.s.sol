@@ -314,10 +314,10 @@ abstract contract DeployBase is Script {
             });
             permissionlessGate = new PermissionlessGate(address(csm));
 
-            vettedGateFactory = new VettedGateFactory();
+            address vettedGateImpl = address(new VettedGate(address(csm)));
+            vettedGateFactory = new VettedGateFactory(vettedGateImpl);
             vettedGate = VettedGate(
                 vettedGateFactory.create({
-                    csm: address(csm),
                     curveId: identifiedSolosCurve,
                     treeRoot: config.vettedGateTreeRoot,
                     admin: deployer

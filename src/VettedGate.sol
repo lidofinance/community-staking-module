@@ -20,31 +20,36 @@ contract VettedGate is
     bytes32 public constant SET_TREE_ROOT_ROLE =
         keccak256("SET_TREE_ROOT_ROLE");
 
-    /// @dev Id of the bond curve to be assigned for the eligible members
-    uint256 public immutable CURVE_ID;
-
     /// @dev Address of the Community Staking Module
     ICSModule public immutable CSM;
+
+    /// @dev Id of the bond curve to be assigned for the eligible members
+    uint256 public curveId;
 
     /// @dev Root of the eligible members Merkle Tree
     bytes32 public treeRoot;
 
     mapping(address => bool) internal _consumedAddresses;
 
-    constructor(uint256 curveId, address csm) {
+    constructor(address csm) {
         if (csm == address(0)) revert ZeroModuleAddress();
 
         CSM = ICSModule(csm);
 
-        if (curveId == CSM.accounting().DEFAULT_BOND_CURVE_ID())
-            revert InvalidCurveId();
-        /// @dev there is no check for curve existence as this contract might be created before the curve is added
-        CURVE_ID = curveId;
         _disableInitializers();
     }
 
-    function initialize(bytes32 _treeRoot, address admin) external initializer {
+    function initialize(
+        uint256 _curveId,
+        bytes32 _treeRoot,
+        address admin
+    ) external initializer {
         __AccessControlEnumerable_init();
+
+        if (_curveId == CSM.accounting().DEFAULT_BOND_CURVE_ID())
+            revert InvalidCurveId();
+        /// @dev there is no check for curve existence as this contract might be created before the curve is added
+        curveId = _curveId;
 
         if (_treeRoot == bytes32(0)) revert InvalidTreeRoot();
         if (admin == address(0)) revert ZeroAdminAddress();
@@ -79,7 +84,7 @@ contract VettedGate is
             managementProperties,
             referrer
         );
-        CSM.setBondCurve(nodeOperatorId, CURVE_ID);
+        CSM.setBondCurve(nodeOperatorId, curveId);
         CSM.addValidatorKeysETH{ value: msg.value }({
             from: msg.sender,
             nodeOperatorId: nodeOperatorId,
@@ -106,7 +111,7 @@ contract VettedGate is
             managementProperties,
             referrer
         );
-        CSM.setBondCurve(nodeOperatorId, CURVE_ID);
+        CSM.setBondCurve(nodeOperatorId, curveId);
         CSM.addValidatorKeysStETH({
             from: msg.sender,
             nodeOperatorId: nodeOperatorId,
@@ -134,7 +139,7 @@ contract VettedGate is
             managementProperties,
             referrer
         );
-        CSM.setBondCurve(nodeOperatorId, CURVE_ID);
+        CSM.setBondCurve(nodeOperatorId, curveId);
         CSM.addValidatorKeysWstETH({
             from: msg.sender,
             nodeOperatorId: nodeOperatorId,
@@ -157,7 +162,7 @@ contract VettedGate is
         if (nodeOperatorAddress != msg.sender) revert NotAllowedToClaim();
         _consume(proof);
 
-        CSM.setBondCurve(nodeOperatorId, CURVE_ID);
+        CSM.setBondCurve(nodeOperatorId, curveId);
     }
 
     /// @inheritdoc IVettedGate
