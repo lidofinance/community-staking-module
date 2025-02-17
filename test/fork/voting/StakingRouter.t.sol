@@ -254,30 +254,6 @@ contract StakingRouterIntegrationTest is
         assertEq(no.totalExitedKeys, exited);
     }
 
-    function test_reportStakingModuleStuckValidatorsCountByNodeOperator()
-        public
-        assertInvariants
-    {
-        address nodeOperatorManager = nextAddress();
-        uint256 noId = addNodeOperator(nodeOperatorManager, 5);
-
-        hugeDeposit();
-
-        (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
-        lidoDepositWithNoGasMetering(totalDepositableKeys - 2);
-
-        uint256 stuck = 1;
-        vm.prank(agent);
-        stakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator(
-            moduleId,
-            bytes.concat(bytes8(uint64(noId))),
-            bytes.concat(bytes16(uint128(stuck)))
-        );
-
-        NodeOperator memory no = csm.getNodeOperator(noId);
-        assertEq(no.stuckValidatorsCount, stuck);
-    }
-
     function test_getStakingModuleSummary() public assertInvariants {
         IStakingRouter.StakingModuleSummary memory summaryOld = stakingRouter
             .getStakingModuleSummary(moduleId);
@@ -335,24 +311,19 @@ contract StakingRouterIntegrationTest is
             bytes.concat(bytes16(uint128(exited)))
         );
 
-        uint256 stuck = 1;
-        vm.prank(agent);
-        stakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator(
-            moduleId,
-            bytes.concat(bytes8(uint64(noId))),
-            bytes.concat(bytes16(uint128(stuck)))
-        );
-
         IStakingRouter.NodeOperatorSummary memory summary = stakingRouter
             .getNodeOperatorSummary(moduleId, noId);
         assertEq(summary.targetLimitMode, 0);
         assertEq(summary.targetValidatorsCount, 0);
-        assertEq(summary.stuckValidatorsCount, stuck);
+        assertEq(summary.stuckValidatorsCount, 0);
         assertEq(summary.refundedValidatorsCount, 0);
         assertEq(summary.stuckPenaltyEndTimestamp, 0);
         assertEq(summary.totalExitedValidators, exited);
         assertEq(summary.totalDepositedValidators, keysCount - 2);
-        assertEq(summary.depositableValidatorsCount, 0); // due to stuck != 0
+        assertEq(
+            summary.depositableValidatorsCount,
+            totalDepositableKeys - keysToDeposit
+        );
     }
 
     function test_unsafeSetExitedValidatorsCount() public assertInvariants {
@@ -372,31 +343,22 @@ contract StakingRouterIntegrationTest is
             bytes.concat(bytes16(uint128(exited)))
         );
 
-        uint256 stuck = 2;
-        vm.prank(agent);
-        stakingRouter.reportStakingModuleStuckValidatorsCountByNodeOperator(
-            moduleId,
-            bytes.concat(bytes8(uint64(noId))),
-            bytes.concat(bytes16(uint128(stuck)))
-        );
-
         IStakingRouter.StakingModule memory moduleInfo = stakingRouter
             .getStakingModule(moduleId);
 
         uint256 unsafeExited = 1;
-        uint256 unsafeStuck = 1;
 
         IStakingRouter.ValidatorsCountsCorrection
             memory correction = IStakingRouter.ValidatorsCountsCorrection({
                 currentModuleExitedValidatorsCount: moduleInfo
                     .exitedValidatorsCount,
                 currentNodeOperatorExitedValidatorsCount: exited,
-                currentNodeOperatorStuckValidatorsCount: stuck,
+                currentNodeOperatorStuckValidatorsCount: 0,
                 // dirty hack since prev call does not update total counts
                 newModuleExitedValidatorsCount: moduleInfo
                     .exitedValidatorsCount + unsafeExited,
                 newNodeOperatorExitedValidatorsCount: unsafeExited,
-                newNodeOperatorStuckValidatorsCount: unsafeStuck
+                newNodeOperatorStuckValidatorsCount: 0
             });
         vm.prank(agent);
         stakingRouter.unsafeSetExitedValidatorsCount(
@@ -407,7 +369,6 @@ contract StakingRouterIntegrationTest is
         );
 
         NodeOperator memory no = csm.getNodeOperator(noId);
-        assertEq(no.stuckValidatorsCount, unsafeStuck);
         assertEq(no.totalExitedKeys, unsafeExited);
     }
 

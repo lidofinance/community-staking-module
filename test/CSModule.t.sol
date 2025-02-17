@@ -166,13 +166,6 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         );
     }
 
-    function setStuck(uint256 noId, uint256 to) internal {
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(uint64(noId))),
-            bytes.concat(bytes16(uint128(to)))
-        );
-    }
-
     // Checks that the queue is in the expected state starting from its head.
     function _assertQueueState(
         uint256 priority,
@@ -4916,124 +4909,6 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
     }
 }
 
-contract CsmUpdateStuckValidatorsCount is CSMCommon {
-    function test_updateStuckValidatorsCount_NonZero() public assertInvariants {
-        uint256 noId = createNodeOperator(3);
-        csm.obtainDepositData(1, "");
-        uint256 nonce = csm.getNonce();
-
-        vm.expectEmit(address(csm));
-        emit ICSModule.StuckSigningKeysCountChanged(noId, 1);
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-
-        NodeOperator memory no = csm.getNodeOperator(noId);
-        assertEq(
-            no.stuckValidatorsCount,
-            1,
-            "stuckValidatorsCount not increased"
-        );
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_updateStuckValidatorsCount_NonZero_UploadNewKeysAfter_DepositableShouldBeZero()
-        public
-    {
-        uint256 noId = createNodeOperator(3);
-        csm.obtainDepositData(1, "");
-
-        vm.expectEmit(address(csm));
-        emit ICSModule.StuckSigningKeysCountChanged(noId, 1);
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-
-        uploadMoreKeys(noId, 1);
-
-        NodeOperator memory no = csm.getNodeOperator(noId);
-        assertEq(
-            no.stuckValidatorsCount,
-            1,
-            "stuckValidatorsCount not increased"
-        );
-        assertEq(
-            no.depositableValidatorsCount,
-            0,
-            "depositableValidatorsCount is not zero"
-        );
-    }
-
-    function test_updateStuckValidatorsCount_Unstuck() public assertInvariants {
-        uint256 noId = createNodeOperator(2);
-        csm.obtainDepositData(1, "");
-
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-
-        vm.expectEmit(address(csm));
-        emit ICSModule.StuckSigningKeysCountChanged(noId, 0);
-        emit IQueueLib.BatchEnqueued(noId, 1);
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000000))
-        );
-        NodeOperator memory no = csm.getNodeOperator(noId);
-        assertEq(
-            no.stuckValidatorsCount,
-            0,
-            "stuckValidatorsCount should be zero"
-        );
-    }
-
-    function test_updateStuckValidatorsCount_RevertWhen_NoNodeOperator()
-        public
-    {
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-    }
-
-    function test_updateStuckValidatorsCount_RevertWhen_CountMoreThanDeposited()
-        public
-    {
-        createNodeOperator(3);
-        csm.obtainDepositData(1, "");
-
-        vm.expectRevert(ICSModule.StuckKeysHigherThanNonExited.selector);
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000002))
-        );
-    }
-
-    function test_updateStuckValidatorsCount_NoEventWhenStuckKeysCountSame()
-        public
-    {
-        createNodeOperator();
-        csm.obtainDepositData(1, "");
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-
-        vm.recordLogs();
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        // One event is NonceChanged
-        assertEq(logs.length, 1);
-    }
-}
-
 contract CsmUpdateExitedValidatorsCount is CSMCommon {
     function test_updateExitedValidatorsCount_NonZero()
         public
@@ -5129,7 +5004,6 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(address(csm));
-        emit ICSModule.StuckSigningKeysCountChanged(noId, 1);
         emit ICSModule.ExitedSigningKeysCountChanged(noId, 1);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
@@ -5141,7 +5015,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         assertEq(no.totalExitedKeys, 1, "totalExitedKeys not increased");
         assertEq(
             no.stuckValidatorsCount,
-            1,
+            0,
             "stuckValidatorsCount not increased"
         );
 
@@ -5181,20 +5055,6 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
             nodeOperatorId: noId,
             exitedValidatorsKeysCount: 100500,
             stuckValidatorsKeysCount: 1
-        });
-    }
-
-    function test_unsafeUpdateValidatorsCount_RevertWhen_StuckCountMoreThanDeposited()
-        public
-    {
-        uint256 noId = createNodeOperator(1);
-        csm.obtainDepositData(1, "");
-
-        vm.expectRevert(ICSModule.StuckKeysHigherThanNonExited.selector);
-        csm.unsafeUpdateValidatorsCount({
-            nodeOperatorId: noId,
-            exitedValidatorsKeysCount: 1,
-            stuckValidatorsKeysCount: 100500
         });
     }
 
@@ -6404,23 +6264,6 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
         csm.onRewardsMinted(0);
     }
 
-    function test_stakingRouterRole_updateStuckValidatorsCount() public {
-        bytes32 role = csm.STAKING_ROUTER_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.prank(actor);
-        csm.updateStuckValidatorsCount("", "");
-    }
-
-    function test_stakingRouterRole_updateStuckValidatorsCount_revert() public {
-        bytes32 role = csm.STAKING_ROUTER_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.updateStuckValidatorsCount("", "");
-    }
-
     function test_stakingRouterRole_updateExitedValidatorsCount() public {
         bytes32 role = csm.STAKING_ROUTER_ROLE();
         vm.prank(admin);
@@ -6594,21 +6437,6 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 4);
     }
 
-    function test_depositableValidatorsCountChanges_OnStuck()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator(7);
-        createNodeOperator(2);
-        csm.obtainDepositData(4, "");
-        setStuck(noId, 2);
-        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 0);
-        assertEq(getStakingModuleSummary().depositableValidatorsCount, 2);
-        setStuck(noId, 0);
-        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 3);
-        assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
-    }
-
     function test_depositableValidatorsCountChanges_OnUnsafeUpdateExitedValidators()
         public
     {
@@ -6627,7 +6455,7 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
     }
 
-    function test_depositableValidatorsCountChanges_OnUnsafeUpdateStuckValidators()
+    function test_depositableValidatorsCountDoesntChange_OnUnsafeUpdateStuckValidators()
         public
     {
         uint256 noId = createNodeOperator(7);
@@ -6641,8 +6469,8 @@ contract CSMDepositableValidatorsCount is CSMCommon {
             exitedValidatorsKeysCount: 0,
             stuckValidatorsKeysCount: 1
         });
-        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 0);
-        assertEq(getStakingModuleSummary().depositableValidatorsCount, 2);
+        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 3);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
     }
 
     function test_depositableValidatorsCountChanges_OnUnvetKeys()
