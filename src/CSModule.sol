@@ -322,10 +322,10 @@ contract CSModule is
         uint256 stETHAmount,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
-    ) external {
+    ) external returns (uint256 claimedShares) {
         _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
-        accounting.claimRewardsStETH({
+        claimedShares = accounting.claimRewardsStETH({
             nodeOperatorId: nodeOperatorId,
             stETHAmount: stETHAmount,
             rewardAddress: _nodeOperators[nodeOperatorId].rewardAddress,
@@ -346,10 +346,10 @@ contract CSModule is
         uint256 wstETHAmount,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
-    ) external {
+    ) external returns (uint256 claimedWstETHAmount) {
         _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
-        accounting.claimRewardsWstETH({
+        claimedWstETHAmount = accounting.claimRewardsWstETH({
             nodeOperatorId: nodeOperatorId,
             wstETHAmount: wstETHAmount,
             rewardAddress: _nodeOperators[nodeOperatorId].rewardAddress,
@@ -370,10 +370,10 @@ contract CSModule is
         uint256 stEthAmount,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
-    ) external {
+    ) external returns (uint256 requestId) {
         _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
 
-        accounting.claimRewardsUnstETH({
+        requestId = accounting.claimRewardsUnstETH({
             nodeOperatorId: nodeOperatorId,
             stEthAmount: stEthAmount,
             rewardAddress: _nodeOperators[nodeOperatorId].rewardAddress,
@@ -554,15 +554,9 @@ contract CSModule is
             no.targetLimit == targetLimit
         ) return;
 
-        if (no.targetLimitMode != targetLimitMode) {
-            // @dev No need to safe cast due to conditions above
-            no.targetLimitMode = uint8(targetLimitMode);
-        }
-
-        if (no.targetLimit != targetLimit) {
-            // @dev No need to safe cast due to conditions above
-            no.targetLimit = uint32(targetLimit);
-        }
+        // @dev No need to safe cast due to conditions above
+        no.targetLimitMode = uint8(targetLimitMode);
+        no.targetLimit = uint32(targetLimit);
 
         emit TargetValidatorsCountChanged(
             nodeOperatorId,

@@ -121,7 +121,7 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 nodeOperatorId,
         uint256 requestedAmountToClaim,
         address to
-    ) internal {
+    ) internal returns (uint256 requestId) {
         uint256 claimableShares = _getClaimableBondShares(nodeOperatorId);
         uint256 sharesToClaim = requestedAmountToClaim <
             _ethByShares(claimableShares)
@@ -132,13 +132,11 @@ abstract contract CSBondCore is ICSBondCore {
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = _ethByShares(sharesToClaim);
         uint256 sharesBefore = LIDO.sharesOf(address(this));
-        uint256[] memory requestIds = WITHDRAWAL_QUEUE.requestWithdrawals(
-            amounts,
-            to
-        );
+
+        requestId = WITHDRAWAL_QUEUE.requestWithdrawals(amounts, to)[0];
         uint256 sharesAfter = LIDO.sharesOf(address(this));
         _unsafeReduceBond(nodeOperatorId, sharesBefore - sharesAfter);
-        emit BondClaimedUnstETH(nodeOperatorId, to, amounts[0], requestIds[0]);
+        emit BondClaimedUnstETH(nodeOperatorId, to, amounts[0], requestId);
     }
 
     /// @dev Claim Node Operator's excess bond shares (stETH) in stETH by transferring shares from the contract
@@ -146,10 +144,9 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 nodeOperatorId,
         uint256 requestedAmountToClaim,
         address to
-    ) internal {
+    ) internal returns (uint256 sharesToClaim) {
         uint256 claimableShares = _getClaimableBondShares(nodeOperatorId);
-        uint256 sharesToClaim = requestedAmountToClaim <
-            _ethByShares(claimableShares)
+        sharesToClaim = requestedAmountToClaim < _ethByShares(claimableShares)
             ? _sharesByEth(requestedAmountToClaim)
             : claimableShares;
         if (sharesToClaim == 0) revert NothingToClaim();
@@ -164,18 +161,18 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 nodeOperatorId,
         uint256 requestedAmountToClaim,
         address to
-    ) internal {
+    ) internal returns (uint256 wstETHAmount) {
         uint256 claimableShares = _getClaimableBondShares(nodeOperatorId);
         uint256 sharesToClaim = requestedAmountToClaim < claimableShares
             ? requestedAmountToClaim
             : claimableShares;
         if (sharesToClaim == 0) revert NothingToClaim();
         uint256 sharesBefore = LIDO.sharesOf(address(this));
-        uint256 amount = WSTETH.wrap(_ethByShares(sharesToClaim));
+        wstETHAmount = WSTETH.wrap(_ethByShares(sharesToClaim));
         uint256 sharesAfter = LIDO.sharesOf(address(this));
         _unsafeReduceBond(nodeOperatorId, sharesBefore - sharesAfter);
-        WSTETH.transfer(to, amount);
-        emit BondClaimedWstETH(nodeOperatorId, to, amount);
+        WSTETH.transfer(to, wstETHAmount);
+        emit BondClaimedWstETH(nodeOperatorId, to, wstETHAmount);
     }
 
     /// @dev Burn Node Operator's bond shares (stETH). Shares will be burned on the next stETH rebase

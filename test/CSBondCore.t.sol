@@ -49,24 +49,24 @@ contract CSBondCoreTestable is CSBondCore {
         uint256 nodeOperatorId,
         uint256 amountToClaim,
         address to
-    ) external {
-        _claimUnstETH(nodeOperatorId, amountToClaim, to);
+    ) external returns (uint256) {
+        return _claimUnstETH(nodeOperatorId, amountToClaim, to);
     }
 
     function claimStETH(
         uint256 nodeOperatorId,
         uint256 amountToClaim,
         address to
-    ) external {
-        _claimStETH(nodeOperatorId, amountToClaim, to);
+    ) external returns (uint256) {
+        return _claimStETH(nodeOperatorId, amountToClaim, to);
     }
 
     function claimWstETH(
         uint256 nodeOperatorId,
         uint256 amountToClaim,
         address to
-    ) external {
-        _claimWstETH(nodeOperatorId, amountToClaim, to);
+    ) external returns (uint256) {
+        return _claimWstETH(nodeOperatorId, amountToClaim, to);
     }
 
     function getClaimableBondShares(
@@ -178,14 +178,14 @@ contract CSBondCoreETHTest is CSBondCoreTestBase {
         _deposit(1 ether);
 
         uint256 claimableShares = bondCore.getClaimableBondShares(0);
-        uint256 claimedETH = stETH.getPooledEthByShares(claimableShares);
+        uint256 claimableETH = stETH.getPooledEthByShares(claimableShares);
+        uint256 bondSharesBefore = bondCore.getBondShares(0);
 
         vm.expectEmit(address(bondCore));
-        emit ICSBondCore.BondClaimedUnstETH(0, user, claimedETH, 0);
+        emit ICSBondCore.BondClaimedUnstETH(0, user, claimableETH, 0);
+        uint256 requestId = bondCore.claimUnstETH(0, claimableETH + 1, user);
 
-        uint256 bondSharesBefore = bondCore.getBondShares(0);
-        bondCore.claimUnstETH(0, claimedETH + 1, user);
-
+        assertEq(requestId, 0);
         assertEq(
             bondCore.getBondShares(0),
             bondSharesBefore - sharesToEthToShares(claimableShares)
@@ -214,12 +214,11 @@ contract CSBondCoreETHTest is CSBondCoreTestBase {
         _deposit(1 ether);
 
         uint256 claimableShares = bondCore.getClaimableBondShares(0);
-        uint256 claimedETH = stETH.getPooledEthByShares(claimableShares);
+        uint256 claimableETH = stETH.getPooledEthByShares(claimableShares);
+        uint256 bondSharesBefore = bondCore.getBondShares(0);
 
         vm.expectEmit(address(bondCore));
-        emit ICSBondCore.BondClaimedUnstETH(0, user, claimedETH, 0);
-
-        uint256 bondSharesBefore = bondCore.getBondShares(0);
+        emit ICSBondCore.BondClaimedUnstETH(0, user, claimableETH, 0);
         bondCore.claimUnstETH(0, 2 ether, user);
 
         assertEq(
@@ -235,22 +234,21 @@ contract CSBondCoreETHTest is CSBondCoreTestBase {
     function test_claimUnstETH_WhenToClaimIsLessThanClaimable() public {
         _deposit(1 ether);
 
-        uint256 claimedShares = stETH.getSharesByPooledEth(0.25 ether);
-        uint256 claimedETH = stETH.getPooledEthByShares(claimedShares);
+        uint256 claimableShares = stETH.getSharesByPooledEth(0.25 ether);
+        uint256 claimableETH = stETH.getPooledEthByShares(claimableShares);
+        uint256 bondSharesBefore = bondCore.getBondShares(0);
 
         vm.expectEmit(address(bondCore));
-        emit ICSBondCore.BondClaimedUnstETH(0, user, claimedETH, 0);
-
-        uint256 bondSharesBefore = bondCore.getBondShares(0);
+        emit ICSBondCore.BondClaimedUnstETH(0, user, claimableETH, 0);
         bondCore.claimUnstETH(0, 0.25 ether, user);
 
         assertEq(
             bondCore.getBondShares(0),
-            bondSharesBefore - sharesToEthToShares(claimedShares)
+            bondSharesBefore - sharesToEthToShares(claimableShares)
         );
         assertEq(
             bondCore.totalBondShares(),
-            bondSharesBefore - sharesToEthToShares(claimedShares)
+            bondSharesBefore - sharesToEthToShares(claimableShares)
         );
     }
 }
@@ -278,14 +276,14 @@ contract CSBondCoreStETHTest is CSBondCoreTestBase {
         _deposit(1 ether);
 
         uint256 claimableShares = bondCore.getClaimableBondShares(0);
-        uint256 claimedETH = stETH.getPooledEthByShares(claimableShares);
+        uint256 claimableETH = stETH.getPooledEthByShares(claimableShares);
+        uint256 bondSharesBefore = bondCore.getBondShares(0);
 
         vm.expectEmit(address(bondCore));
-        emit ICSBondCore.BondClaimedStETH(0, user, claimedETH);
+        emit ICSBondCore.BondClaimedStETH(0, user, claimableETH);
+        uint256 claimedShares = bondCore.claimStETH(0, claimableETH, user);
 
-        uint256 bondSharesBefore = bondCore.getBondShares(0);
-        bondCore.claimStETH(0, claimedETH, user);
-
+        assertEq(claimedShares, claimableShares);
         assertEq(bondCore.getBondShares(0), bondSharesBefore - claimableShares);
         assertEq(
             bondCore.totalBondShares(),
@@ -312,34 +310,14 @@ contract CSBondCoreStETHTest is CSBondCoreTestBase {
         _deposit(1 ether);
 
         uint256 claimableShares = bondCore.getClaimableBondShares(0);
-        uint256 claimedETH = stETH.getPooledEthByShares(claimableShares);
+        uint256 claimableETH = stETH.getPooledEthByShares(claimableShares);
+        uint256 bondSharesBefore = bondCore.getBondShares(0);
 
         vm.expectEmit(address(bondCore));
-        emit ICSBondCore.BondClaimedStETH(0, user, claimedETH);
+        emit ICSBondCore.BondClaimedStETH(0, user, claimableETH);
+        uint256 claimedShares = bondCore.claimStETH(0, 2 ether, user);
 
-        uint256 bondSharesBefore = bondCore.getBondShares(0);
-        bondCore.claimStETH(0, 2 ether, user);
-
-        assertEq(bondCore.getBondShares(0), bondSharesBefore - claimableShares);
-        assertEq(
-            bondCore.totalBondShares(),
-            bondSharesBefore - claimableShares
-        );
-        assertEq(stETH.sharesOf(user), claimableShares);
-    }
-
-    function test_claimStETH_WhenToClaimIsEqualToClaimable() public {
-        _deposit(1 ether);
-
-        uint256 claimableShares = bondCore.getClaimableBondShares(0);
-        uint256 claimedETH = stETH.getPooledEthByShares(claimableShares);
-
-        vm.expectEmit(address(bondCore));
-        emit ICSBondCore.BondClaimedStETH(0, user, claimedETH);
-
-        uint256 bondSharesBefore = bondCore.getBondShares(0);
-        bondCore.claimStETH(0, 1 ether, user);
-
+        assertEq(claimedShares, claimableShares);
         assertEq(bondCore.getBondShares(0), bondSharesBefore - claimableShares);
         assertEq(
             bondCore.totalBondShares(),
@@ -351,18 +329,21 @@ contract CSBondCoreStETHTest is CSBondCoreTestBase {
     function test_claimStETH_WhenToClaimIsLessThanClaimable() public {
         _deposit(1 ether);
 
-        uint256 claimedShares = stETH.getSharesByPooledEth(0.25 ether);
-        uint256 claimedETH = stETH.getPooledEthByShares(claimedShares);
+        uint256 claimableShares = stETH.getSharesByPooledEth(0.25 ether);
+        uint256 claimableETH = stETH.getPooledEthByShares(claimableShares);
+        uint256 bondSharesBefore = bondCore.getBondShares(0);
 
         vm.expectEmit(address(bondCore));
-        emit ICSBondCore.BondClaimedStETH(0, user, claimedETH);
+        emit ICSBondCore.BondClaimedStETH(0, user, claimableETH);
+        uint256 claimedShares = bondCore.claimStETH(0, 0.25 ether, user);
 
-        uint256 bondSharesBefore = bondCore.getBondShares(0);
-        bondCore.claimStETH(0, 0.25 ether, user);
-
-        assertEq(bondCore.getBondShares(0), bondSharesBefore - claimedShares);
-        assertEq(bondCore.totalBondShares(), bondSharesBefore - claimedShares);
-        assertEq(stETH.sharesOf(user), claimedShares);
+        assertEq(claimedShares, claimableShares);
+        assertEq(bondCore.getBondShares(0), bondSharesBefore - claimableShares);
+        assertEq(
+            bondCore.totalBondShares(),
+            bondSharesBefore - claimableShares
+        );
+        assertEq(stETH.sharesOf(user), claimableShares);
     }
 }
 
@@ -392,19 +373,22 @@ contract CSBondCoreWstETHTest is CSBondCoreTestBase {
         _deposit(1 ether);
 
         uint256 claimableShares = bondCore.getClaimableBondShares(0);
-        uint256 claimedWstETH = stETH.getSharesByPooledEth(
+        uint256 claimableWstETH = stETH.getSharesByPooledEth(
             stETH.getPooledEthByShares(claimableShares)
         );
+        uint256 bondSharesBefore = bondCore.getBondShares(0);
 
         vm.expectEmit(address(bondCore));
-        emit ICSBondCore.BondClaimedWstETH(0, user, claimedWstETH);
+        emit ICSBondCore.BondClaimedWstETH(0, user, claimableWstETH);
+        uint256 claimedWstETH = bondCore.claimWstETH(0, claimableShares, user);
 
-        uint256 bondSharesBefore = bondCore.getBondShares(0);
-        bondCore.claimWstETH(0, claimableShares, user);
-
-        assertEq(bondCore.getBondShares(0), bondSharesBefore - claimedWstETH);
-        assertEq(bondCore.totalBondShares(), bondSharesBefore - claimedWstETH);
-        assertEq(wstETH.balanceOf(user), claimedWstETH);
+        assertEq(claimedWstETH, claimableWstETH);
+        assertEq(bondCore.getBondShares(0), bondSharesBefore - claimableWstETH);
+        assertEq(
+            bondCore.totalBondShares(),
+            bondSharesBefore - claimableWstETH
+        );
+        assertEq(wstETH.balanceOf(user), claimableWstETH);
     }
 
     function test_claimWstETH_WhenClaimableIsZero() public {
@@ -425,57 +409,48 @@ contract CSBondCoreWstETHTest is CSBondCoreTestBase {
         _deposit(1 ether);
 
         uint256 claimableShares = bondCore.getClaimableBondShares(0);
-        uint256 claimedWstETH = stETH.getSharesByPooledEth(
+        uint256 claimableWstETH = stETH.getSharesByPooledEth(
             stETH.getPooledEthByShares(claimableShares)
         );
+        uint256 bondSharesBefore = bondCore.getBondShares(0);
 
         vm.expectEmit(address(bondCore));
-        emit ICSBondCore.BondClaimedWstETH(0, user, claimedWstETH);
-
-        uint256 bondSharesBefore = bondCore.getBondShares(0);
-        bondCore.claimWstETH(0, claimableShares + 1, user);
-
-        assertEq(bondCore.getBondShares(0), bondSharesBefore - claimedWstETH);
-        assertEq(bondCore.totalBondShares(), bondSharesBefore - claimedWstETH);
-        assertEq(wstETH.balanceOf(user), claimedWstETH);
-    }
-
-    function test_claimWstETH_WhenToClaimIsEqualToClaimable() public {
-        _deposit(1 ether);
-
-        uint256 claimableShares = bondCore.getClaimableBondShares(0);
-        uint256 claimedWstETH = stETH.getSharesByPooledEth(
-            stETH.getPooledEthByShares(claimableShares)
+        emit ICSBondCore.BondClaimedWstETH(0, user, claimableWstETH);
+        uint256 claimedWstETH = bondCore.claimWstETH(
+            0,
+            claimableShares + 1,
+            user
         );
 
-        vm.expectEmit(address(bondCore));
-        emit ICSBondCore.BondClaimedWstETH(0, user, claimedWstETH);
-
-        uint256 bondSharesBefore = bondCore.getBondShares(0);
-        bondCore.claimWstETH(0, claimableShares, user);
-
-        assertEq(bondCore.getBondShares(0), bondSharesBefore - claimedWstETH);
-        assertEq(bondCore.totalBondShares(), bondSharesBefore - claimedWstETH);
-        assertEq(wstETH.balanceOf(user), claimedWstETH);
+        assertEq(claimedWstETH, claimableWstETH);
+        assertEq(bondCore.getBondShares(0), bondSharesBefore - claimableWstETH);
+        assertEq(
+            bondCore.totalBondShares(),
+            bondSharesBefore - claimableWstETH
+        );
+        assertEq(wstETH.balanceOf(user), claimableWstETH);
     }
 
     function test_claimWstETH_WhenToClaimIsLessThanClaimable() public {
         _deposit(1 ether);
 
-        uint256 claimedShares = stETH.getSharesByPooledEth(0.25 ether);
-        uint256 claimedWstETH = stETH.getSharesByPooledEth(
-            stETH.getPooledEthByShares(claimedShares)
+        uint256 claimableShares = stETH.getSharesByPooledEth(0.25 ether);
+        uint256 claimableWstETH = stETH.getSharesByPooledEth(
+            stETH.getPooledEthByShares(claimableShares)
         );
+        uint256 bondSharesBefore = bondCore.getBondShares(0);
 
         vm.expectEmit(address(bondCore));
-        emit ICSBondCore.BondClaimedWstETH(0, user, claimedWstETH);
+        emit ICSBondCore.BondClaimedWstETH(0, user, claimableWstETH);
+        uint256 claimedWstETH = bondCore.claimWstETH(0, claimableShares, user);
 
-        uint256 bondSharesBefore = bondCore.getBondShares(0);
-        bondCore.claimWstETH(0, claimedShares, user);
-
-        assertEq(bondCore.getBondShares(0), bondSharesBefore - claimedWstETH);
-        assertEq(bondCore.totalBondShares(), bondSharesBefore - claimedWstETH);
-        assertEq(wstETH.balanceOf(user), claimedWstETH);
+        assertEq(claimedWstETH, claimableWstETH);
+        assertEq(bondCore.getBondShares(0), bondSharesBefore - claimableWstETH);
+        assertEq(
+            bondCore.totalBondShares(),
+            bondSharesBefore - claimableWstETH
+        );
+        assertEq(wstETH.balanceOf(user), claimableWstETH);
     }
 }
 
