@@ -279,12 +279,13 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     /// @param stETHAmount Amount of stETH to claim
     /// @param cumulativeFeeShares Optional. Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Optional. Merkle proof of the rewards
+    /// @return claimedShares Amount of claimed stETH shares
     function claimRewardsStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount,
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
-    ) external;
+    ) external returns (uint256 claimedShares);
 
     /// @notice Request full reward (fees + bond rewards) in Withdrawal NFT (unstETH) for the given Node Operator
     /// @notice Amounts less than `MIN_STETH_WITHDRAWAL_AMOUNT` (see LidoWithdrawalQueue contract) are not allowed
@@ -296,12 +297,13 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     /// @param stEthAmount Amount of ETH to request
     /// @param cumulativeFeeShares Optional. Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Optional. Merkle proof of the rewards
+    /// @return requestId Withdrawal NFT ID
     function claimRewardsUnstETH(
         uint256 nodeOperatorId,
         uint256 stEthAmount,
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
-    ) external;
+    ) external returns (uint256 requestId);
 
     /// @notice Claim full reward (fees + bond rewards) in wstETH for the given Node Operator
     /// @notice If `wstETHAmount` exceeds the current claimable amount, the claimable amount will be used instead
@@ -310,12 +312,13 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     /// @param wstETHAmount Amount of wstETH to claim
     /// @param cumulativeFeeShares Optional. Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Optional. Merkle proof of the rewards
+    /// @return claimedWstETHAmount Amount of claimed wstETH
     function claimRewardsWstETH(
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
         uint256 cumulativeFeeShares,
         bytes32[] memory rewardsProof
-    ) external;
+    ) external returns (uint256 claimedWstETHAmount);
 
     /// @notice Set bond curve for the node operator
     ///         Permissioned
