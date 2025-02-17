@@ -133,7 +133,11 @@ contract CSModule is
     }
 
     /// @dev should be called after update on the proxy
-    function finalizeUpgradeV2() external reinitializer(2) {}
+    function finalizeUpgradeV2() external reinitializer(2) {
+        assembly ("memory-safe") {
+            sstore(_queueByPriority.slot, 0x00)
+        }
+    }
 
     /// @inheritdoc ICSModule
     function resume() external onlyRole(RESUME_ROLE) {
