@@ -45,7 +45,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     error NodeOperatorDoesNotExist();
     error SenderIsNotEligible();
     error InvalidVetKeysPointer();
-    error StuckKeysHigherThanNonExited();
     error ExitedKeysHigherThanTotalDeposited();
     error ExitedKeysDecrease();
 
@@ -92,10 +91,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     event ExitedSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
         uint256 exitedKeysCount
-    );
-    event StuckSigningKeysCountChanged(
-        uint256 indexed nodeOperatorId,
-        uint256 stuckKeysCount
     );
     event TotalSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,

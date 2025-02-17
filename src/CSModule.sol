@@ -477,32 +477,6 @@ contract CSModule is
     }
 
     /// @inheritdoc IStakingModule
-    /// @dev If the stuck keys count is above zero for the Node Operator,
-    ///      the depositable validators count is set to 0 for this Node Operator
-    function updateStuckValidatorsCount(
-        bytes calldata nodeOperatorIds,
-        bytes calldata stuckValidatorsCounts
-    ) external onlyRole(STAKING_ROUTER_ROLE) {
-        uint256 operatorsInReport = ValidatorCountsReport.safeCountOperators(
-            nodeOperatorIds,
-            stuckValidatorsCounts
-        );
-
-        for (uint256 i = 0; i < operatorsInReport; ++i) {
-            (
-                uint256 nodeOperatorId,
-                uint256 stuckValidatorsCount
-            ) = ValidatorCountsReport.next(
-                    nodeOperatorIds,
-                    stuckValidatorsCounts,
-                    i
-                );
-            _updateStuckValidatorsCount(nodeOperatorId, stuckValidatorsCount);
-        }
-        _incrementModuleNonce();
-    }
-
-    /// @inheritdoc IStakingModule
     function updateExitedValidatorsCount(
         bytes calldata nodeOperatorIds,
         bytes calldata exitedValidatorsCounts
@@ -593,7 +567,6 @@ contract CSModule is
             exitedValidatorsCount: exitedValidatorsKeysCount,
             allowDecrease: true
         });
-        _updateStuckValidatorsCount(nodeOperatorId, stuckValidatorsKeysCount);
         _incrementModuleNonce();
     }
 
@@ -1401,42 +1374,6 @@ contract CSModule is
             nodeOperatorId,
             exitedValidatorsCount
         );
-    }
-
-    function _updateStuckValidatorsCount(
-        uint256 nodeOperatorId,
-        uint256 stuckValidatorsCount
-    ) internal {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (stuckValidatorsCount == no.stuckValidatorsCount) return;
-        unchecked {
-            if (
-                stuckValidatorsCount >
-                no.totalDepositedKeys - no.totalExitedKeys
-            ) revert StuckKeysHigherThanNonExited();
-        }
-
-        // @dev No need to safe cast due to conditions above
-        no.stuckValidatorsCount = uint32(stuckValidatorsCount);
-        emit StuckSigningKeysCountChanged(nodeOperatorId, stuckValidatorsCount);
-
-        if (stuckValidatorsCount > 0 && no.depositableValidatorsCount > 0) {
-            // INFO: The only consequence of stuck keys from the on-chain perspective is suspending deposits to the
-            // Node Operator. To do that, we set the depositableValidatorsCount to 0 for this Node Operator. Hence
-            // we can omit the call to the _updateDepositableValidatorsCount function here to save gas.
-            unchecked {
-                _depositableValidatorsCount -= no.depositableValidatorsCount;
-            }
-            no.depositableValidatorsCount = 0;
-            emit DepositableSigningKeysCountChanged(nodeOperatorId, 0);
-        } else {
-            // Nonce will be updated on the top level once per call
-            _updateDepositableValidatorsCount({
-                nodeOperatorId: nodeOperatorId,
-                incrementNonceIfUpdated: false
-            });
-        }
     }
 
     function _updateDepositableValidatorsCount(

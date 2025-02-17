@@ -104,15 +104,6 @@ interface IStakingModule {
         bytes calldata vettedSigningKeysCounts
     ) external;
 
-    /// @notice Updates the number of the validators of the given node operator that were requested
-    ///         to exit but failed to do so in the max allowed time
-    /// @param nodeOperatorIds bytes packed array of the node operators id
-    /// @param stuckValidatorsCounts bytes packed array of the new number of STUCK validators for the node operators
-    function updateStuckValidatorsCount(
-        bytes calldata nodeOperatorIds,
-        bytes calldata stuckValidatorsCounts
-    ) external;
-
     /// @notice Updates the number of the validators in the EXITED state for node operator with given id
     /// @param nodeOperatorIds bytes packed array of the node operators id
     /// @param exitedValidatorsCounts bytes packed array of the new number of EXITED validators for the node operators
