@@ -94,8 +94,6 @@ using { noId, keys, setKeys, setNext, next, isNil, unwrap } for Batch global;
 using QueueLib for QueueLib.Queue;
 
 interface IQueueLib {
-    event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
-
     error QueueIsEmpty();
     error QueueLookupNoLimit();
 }
@@ -201,7 +199,6 @@ library QueueLib {
         unchecked {
             ++self.tail;
         }
-        emit IQueueLib.BatchEnqueued(nodeOperatorId, keysCount);
     }
 
     function dequeue(Queue storage self) internal returns (Batch item) {

@@ -818,7 +818,7 @@ contract CSMAddValidatorKeys is CSMCommon {
             vm.expectEmit(address(csm));
             emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
             vm.expectEmit(address(csm));
-            emit IQueueLib.BatchEnqueued(noId, 1);
+            emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
         }
         csm.addValidatorKeysWstETH(
             nodeOperator,
@@ -985,7 +985,7 @@ contract CSMAddValidatorKeys is CSMCommon {
             vm.expectEmit(address(csm));
             emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
             vm.expectEmit(address(csm));
-            emit IQueueLib.BatchEnqueued(noId, 1);
+            emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
         }
         csm.addValidatorKeysStETH(
             nodeOperator,
@@ -1139,15 +1139,15 @@ contract CSMAddValidatorKeys is CSMCommon {
         vm.deal(nodeOperator, required);
         uint256 nonce = csm.getNonce();
 
-        vm.prank(nodeOperator);
         {
             vm.expectEmit(address(csm));
             emit IStakingModule.SigningKeyAdded(noId, keys);
             vm.expectEmit(address(csm));
             emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
             vm.expectEmit(address(csm));
-            emit IQueueLib.BatchEnqueued(noId, 1);
+            emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
         }
+        vm.prank(nodeOperator);
         csm.addValidatorKeysETH{ value: required }(
             nodeOperator,
             noId,
@@ -2915,7 +2915,7 @@ contract CsmVetKeys is CSMCommon {
         vm.expectEmit(address(csm));
         emit ICSModule.VettedSigningKeysCountChanged(noId, 3);
         vm.expectEmit(address(csm));
-        emit IQueueLib.BatchEnqueued(noId, 1);
+        emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
         uploadMoreKeys(noId, 1);
 
         NodeOperator memory no = csm.getNodeOperator(noId);
@@ -3117,7 +3117,7 @@ contract CsmQueueOps is CSMCommon {
         csm.cleanDepositQueue(1);
 
         vm.expectEmit(address(csm));
-        emit IQueueLib.BatchEnqueued(noId, 7);
+        emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 7);
 
         csm.updateTargetValidatorsLimits({
             nodeOperatorId: noId,
@@ -3140,7 +3140,7 @@ contract CsmQueueOps is CSMCommon {
         csm.cleanDepositQueue(1);
 
         vm.expectEmit(address(csm));
-        emit IQueueLib.BatchEnqueued(noId, 1);
+        emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
         csm.submitWithdrawal(noId, 0, DEPOSIT_SIZE, false);
     }
 }
@@ -3164,17 +3164,17 @@ contract CsmPriorityQueue is CSMCommon {
     function test_enqueueToPriorityQueue_LessThanMaxDeposits() public {
         uint256 noId = createNodeOperator(0);
 
-        _assertPriorityQueueEmpty();
-        _enablePriorityQueue();
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
         {
             vm.expectEmit(address(csm));
-            emit IQueueLib.BatchEnqueued(noId, 8);
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 8);
 
             uploadMoreKeys(noId, 8);
         }
 
-        _assertRegularQueueEmpty();
+        _assertQueueEmpty(REGULAR_QUEUE);
 
         BatchInfo[] memory exp = new BatchInfo[](1);
 
@@ -3185,15 +3185,15 @@ contract CsmPriorityQueue is CSMCommon {
     function test_enqueueToPriorityQueue_MoreThanMaxDeposits() public {
         uint256 noId = createNodeOperator(0);
 
-        _assertPriorityQueueEmpty();
-        _enablePriorityQueue();
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
         {
             vm.expectEmit(address(csm));
-            emit IQueueLib.BatchEnqueued(noId, 10);
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 10);
 
             vm.expectEmit(address(csm));
-            emit IQueueLib.BatchEnqueued(noId, 5);
+            emit ICSModule.BatchEnqueued(REGULAR_QUEUE, noId, 5);
 
             uploadMoreKeys(noId, 15);
         }
@@ -3212,17 +3212,17 @@ contract CsmPriorityQueue is CSMCommon {
     {
         uint256 noId = createNodeOperator(0);
 
-        _assertPriorityQueueEmpty();
-        _enablePriorityQueue();
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
         uploadMoreKeys(noId, 8);
 
         {
             vm.expectEmit(address(csm));
-            emit IQueueLib.BatchEnqueued(noId, 2);
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 2);
 
             vm.expectEmit(address(csm));
-            emit IQueueLib.BatchEnqueued(noId, 10);
+            emit ICSModule.BatchEnqueued(REGULAR_QUEUE, noId, 10);
 
             uploadMoreKeys(noId, 12);
         }
@@ -3244,14 +3244,14 @@ contract CsmPriorityQueue is CSMCommon {
     {
         uint256 noId = createNodeOperator(0);
 
-        _assertPriorityQueueEmpty();
-        _enablePriorityQueue();
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
         uploadMoreKeys(noId, 12);
 
         {
             vm.expectEmit(address(csm));
-            emit IQueueLib.BatchEnqueued(noId, 12);
+            emit ICSModule.BatchEnqueued(REGULAR_QUEUE, noId, 12);
 
             uploadMoreKeys(noId, 12);
         }
@@ -3273,18 +3273,18 @@ contract CsmPriorityQueue is CSMCommon {
     {
         uint256 noId = createNodeOperator(0);
 
-        _assertPriorityQueueEmpty();
-        _enablePriorityQueue();
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
         uploadMoreKeys(noId, 8);
         csm.obtainDepositData(3, ""); // no.enqueuedCount == 5
 
         {
             vm.expectEmit(address(csm));
-            emit IQueueLib.BatchEnqueued(noId, 2);
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 2);
 
             vm.expectEmit(address(csm));
-            emit IQueueLib.BatchEnqueued(noId, 10);
+            emit ICSModule.BatchEnqueued(REGULAR_QUEUE, noId, 10);
 
             uploadMoreKeys(noId, 12);
         }
@@ -3307,15 +3307,15 @@ contract CsmPriorityQueue is CSMCommon {
     {
         uint256 noId = createNodeOperator(0);
 
-        _assertPriorityQueueEmpty();
-        _enablePriorityQueue();
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
         uploadMoreKeys(noId, 12);
         csm.obtainDepositData(3, ""); // no.enqueuedCount == 9
 
         {
             vm.expectEmit(address(csm));
-            emit IQueueLib.BatchEnqueued(noId, 12);
+            emit ICSModule.BatchEnqueued(REGULAR_QUEUE, noId, 12);
 
             uploadMoreKeys(noId, 12);
         }
@@ -3337,12 +3337,12 @@ contract CsmPriorityQueue is CSMCommon {
         uint256 noId = createNodeOperator(0);
         uploadMoreKeys(noId, 8);
 
-        _assertPriorityQueueEmpty();
-        _enablePriorityQueue();
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
         {
             vm.expectEmit(address(csm));
-            emit IQueueLib.BatchEnqueued(noId, 8);
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 8);
 
             vm.prank(nodeOperator);
             csm.migrateToPriorityQueue(noId);
@@ -3361,12 +3361,12 @@ contract CsmPriorityQueue is CSMCommon {
         uint256 noId = createNodeOperator(0);
         uploadMoreKeys(noId, 15);
 
-        _assertPriorityQueueEmpty();
-        _enablePriorityQueue();
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
         {
             vm.expectEmit(address(csm));
-            emit IQueueLib.BatchEnqueued(noId, 10);
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 10);
 
             vm.prank(nodeOperator);
             csm.migrateToPriorityQueue(noId);
@@ -3387,12 +3387,12 @@ contract CsmPriorityQueue is CSMCommon {
 
         csm.obtainDepositData(8, "");
 
-        _assertPriorityQueueEmpty();
-        _enablePriorityQueue();
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
         {
             vm.expectEmit(address(csm));
-            emit IQueueLib.BatchEnqueued(noId, 2);
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 2);
 
             vm.prank(nodeOperator);
             csm.migrateToPriorityQueue(noId);
@@ -3414,15 +3414,15 @@ contract CsmPriorityQueue is CSMCommon {
 
         csm.obtainDepositData(12, "");
 
-        _assertPriorityQueueEmpty();
-        _enablePriorityQueue();
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
         {
             vm.prank(nodeOperator);
             csm.migrateToPriorityQueue(noId);
         }
 
-        _assertPriorityQueueEmpty();
+        _assertQueueEmpty(PRIORITY_QUEUE);
 
         BatchInfo[] memory exp = new BatchInfo[](1);
         // The batch was partially consumed by the obtainDepositData call.
@@ -3436,8 +3436,8 @@ contract CsmPriorityQueue is CSMCommon {
         uint256 noId = createNodeOperator(0);
         uploadMoreKeys(noId, 15);
 
-        _enablePriorityQueue();
-        _assertPriorityQueueEmpty();
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
         {
             vm.prank(nodeOperator);
@@ -3454,8 +3454,8 @@ contract CsmPriorityQueue is CSMCommon {
     function test_migrateToPriorityQueue_RevertsIfPriorityQueueAlreadyUsedViaAddKeys()
         public
     {
-        _enablePriorityQueue();
-        _assertPriorityQueueEmpty();
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
         uint256 noId = createNodeOperator(0);
         uploadMoreKeys(noId, 15);
@@ -3468,10 +3468,8 @@ contract CsmPriorityQueue is CSMCommon {
     }
 
     function test_queueCleanupWorksAcrossQueues() public {
-        _enablePriorityQueue();
-
-        _assertRegularQueueEmpty();
-        _assertPriorityQueueEmpty();
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
         uint256 noId = createNodeOperator(0);
 
@@ -3490,10 +3488,8 @@ contract CsmPriorityQueue is CSMCommon {
     }
 
     function test_queueCleanupReturnsCorrectDepth() public {
-        _enablePriorityQueue();
-
-        _assertRegularQueueEmpty();
-        _assertPriorityQueueEmpty();
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
         uint256 noIdOne = createNodeOperator(0);
         uint256 noIdTwo = createNodeOperator(0);
@@ -3522,20 +3518,19 @@ contract CsmPriorityQueue is CSMCommon {
         assertFalse(isDirty, "queue should be clean");
     }
 
-    function _enablePriorityQueue() internal {
+    function _enablePriorityQueue(
+        uint32 priority,
+        uint32 maxDeposits
+    ) internal {
         parametersRegistry.setQueueConfig({
             curveId: 0,
-            priority: PRIORITY_QUEUE,
-            maxDeposits: MAX_DEPOSITS
+            priority: priority,
+            maxDeposits: maxDeposits
         });
     }
 
-    function _assertPriorityQueueEmpty() private view {
-        _assertQueueState(PRIORITY_QUEUE, new BatchInfo[](0));
-    }
-
-    function _assertRegularQueueEmpty() private view {
-        _assertQueueState(REGULAR_QUEUE, new BatchInfo[](0));
+    function _assertQueueEmpty(uint32 priority) private view {
+        _assertQueueState(priority, new BatchInfo[](0));
     }
 }
 
@@ -5340,7 +5335,7 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         vm.warp(accounting.getBondLockPeriod() + 1);
 
         vm.expectEmit(address(csm));
-        emit IQueueLib.BatchEnqueued(noId, 1);
+        emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
         csm.enqueueNodeOperatorKeys(noId);
 
         no = csm.getNodeOperator(noId);

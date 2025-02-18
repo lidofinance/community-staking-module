@@ -1477,6 +1477,7 @@ contract CSModule is
 
             QueueLib.Queue storage q = _getQueue(queuePriority);
             q.enqueue(nodeOperatorId, count);
+            emit BatchEnqueued(queuePriority, nodeOperatorId, count);
         }
     }
 
