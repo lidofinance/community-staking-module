@@ -74,7 +74,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         assertFalse(accounting.isPaused());
         assertEq(accounting.totalBondShares(), 0);
         assertEq(
-            accounting.getCurveInfo(vettedGate.CURVE_ID()).points,
+            accounting.getCurveInfo(vettedGate.curveId()).points,
             deployParams.vettedGateBondCurve
         );
     }

@@ -565,7 +565,7 @@ contract VettedGateDeploymentTest is Test, Utilities, DeploymentFixtures {
         );
         assertEq(vettedGate.treeRoot(), deployParams.vettedGateTreeRoot);
         assertEq(
-            accounting.getCurveInfo(vettedGate.CURVE_ID()).points,
+            accounting.getCurveInfo(vettedGate.curveId()).points,
             deployParams.vettedGateBondCurve
         );
         assertEq(address(vettedGate.CSM()), address(csm));
