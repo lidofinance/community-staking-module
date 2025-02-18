@@ -236,7 +236,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         }
     }
 
-    function _printQueue() internal {
+    function _printQueue() internal view {
         for (uint256 p = 0; p <= csm.QUEUE_LOWEST_PRIORITY(); ++p) {
             (uint128 curr, ) = csm.depositQueuePointers(p);
 

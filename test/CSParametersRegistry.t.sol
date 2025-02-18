@@ -1494,7 +1494,7 @@ contract CSParametersRegistryQueueConfigTest is
         assertEq(maxDepositsOut, maxDeposits);
     }
 
-    function test_get_defaultData() public override {
+    function test_get_defaultData() public view override {
         uint256 curveId = 11;
 
         (uint256 priorityOut, uint256 maxDepositsOut) = parametersRegistry

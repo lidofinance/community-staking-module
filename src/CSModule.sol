@@ -566,6 +566,9 @@ contract CSModule is
         uint256 exitedValidatorsKeysCount,
         uint256 stuckValidatorsKeysCount
     ) external onlyRole(STAKING_ROUTER_ROLE) {
+        // NOTE: Silence the unused argument warning.
+        stuckValidatorsKeysCount;
+
         _updateExitedValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             exitedValidatorsCount: exitedValidatorsKeysCount,
