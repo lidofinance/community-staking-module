@@ -3344,7 +3344,6 @@ contract CsmPriorityQueue is CSMCommon {
             vm.expectEmit(address(csm));
             emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 8);
 
-            vm.prank(nodeOperator);
             csm.migrateToPriorityQueue(noId);
         }
 
@@ -3368,7 +3367,6 @@ contract CsmPriorityQueue is CSMCommon {
             vm.expectEmit(address(csm));
             emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 10);
 
-            vm.prank(nodeOperator);
             csm.migrateToPriorityQueue(noId);
         }
 
@@ -3394,7 +3392,6 @@ contract CsmPriorityQueue is CSMCommon {
             vm.expectEmit(address(csm));
             emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 2);
 
-            vm.prank(nodeOperator);
             csm.migrateToPriorityQueue(noId);
         }
 
@@ -3418,7 +3415,6 @@ contract CsmPriorityQueue is CSMCommon {
         _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
         {
-            vm.prank(nodeOperator);
             csm.migrateToPriorityQueue(noId);
         }
 
@@ -3439,14 +3435,10 @@ contract CsmPriorityQueue is CSMCommon {
         _assertQueueEmpty(PRIORITY_QUEUE);
         _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
-        {
-            vm.prank(nodeOperator);
-            csm.migrateToPriorityQueue(noId);
-        }
+        csm.migrateToPriorityQueue(noId);
 
         {
             vm.expectRevert(ICSModule.PriorityQueueAlreadyUsed.selector);
-            vm.prank(nodeOperator);
             csm.migrateToPriorityQueue(noId);
         }
     }
@@ -3462,7 +3454,6 @@ contract CsmPriorityQueue is CSMCommon {
 
         {
             vm.expectRevert(ICSModule.PriorityQueueAlreadyUsed.selector);
-            vm.prank(nodeOperator);
             csm.migrateToPriorityQueue(noId);
         }
     }

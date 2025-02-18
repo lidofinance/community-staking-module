@@ -700,8 +700,6 @@ contract CSModule is
     /// @dev TODO: Remove the method in the next major release.
     /// @inheritdoc ICSModule
     function migrateToPriorityQueue(uint256 nodeOperatorId) external {
-        _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
-
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         if (no.usedPriorityQueue) {
