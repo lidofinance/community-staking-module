@@ -93,7 +93,7 @@ contract ClaimIntegrationTest is
         vm.startPrank(user);
         vm.deal(user, amount);
 
-        csm.depositETH{ value: amount }(defaultNoId);
+        accounting.depositETH{ value: amount }(defaultNoId);
         vm.stopPrank();
 
         uint256 noSharesBefore = lido.sharesOf(nodeOperator);
@@ -152,7 +152,7 @@ contract ClaimIntegrationTest is
         vm.startPrank(user);
         vm.deal(user, amount);
 
-        csm.depositETH{ value: amount }(defaultNoId);
+        accounting.depositETH{ value: amount }(defaultNoId);
         vm.stopPrank();
 
         uint256 balanceBefore = wstETH.balanceOf(nodeOperator);
@@ -225,7 +225,7 @@ contract ClaimIntegrationTest is
         vm.startPrank(user);
         vm.deal(user, amount);
 
-        csm.depositETH{ value: amount }(defaultNoId);
+        accounting.depositETH{ value: amount }(defaultNoId);
         vm.stopPrank();
 
         uint256 accountingSharesBefore = lido.sharesOf(address(accounting));

@@ -98,6 +98,17 @@ contract CSAccountingFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         );
     }
 
+    function mock_enqueueNodeOperatorKeys() internal {
+        vm.mockCall(
+            address(stakingModule),
+            abi.encodeWithSelector(
+                ICSModule.enqueueNodeOperatorKeys.selector,
+                0
+            ),
+            ""
+        );
+    }
+
     function addBond(uint256 nodeOperatorId, uint256 amount) internal {
         vm.deal(address(stakingModule), amount);
         vm.prank(address(stakingModule));
@@ -3098,6 +3109,70 @@ contract CSAccountingDepositEthTest is CSAccountingBaseTest {
     }
 }
 
+contract CSAccountingDepositEthPermissionlessTest is CSAccountingBaseTest {
+    function setUp() public override {
+        super.setUp();
+        mock_getNodeOperatorNonWithdrawnKeys(0);
+        mock_getNodeOperatorsCount(1);
+        mock_enqueueNodeOperatorKeys();
+    }
+
+    function test_depositETH() public assertInvariants {
+        vm.deal(address(user), 32 ether);
+        uint256 sharesToDeposit = stETH.getSharesByPooledEth(32 ether);
+
+        vm.prank(address(user));
+        accounting.depositETH{ value: 32 ether }(0);
+
+        assertEq(
+            address(user).balance,
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            sharesToDeposit,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            sharesToDeposit,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
+    }
+
+    function test_depositETH_zeroAmount() public assertInvariants {
+        vm.prank(address(user));
+        accounting.depositETH{ value: 0 ether }(0);
+
+        assertEq(
+            address(user).balance,
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            0,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            0,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), 0);
+    }
+
+    function test_depositETH_revertWhen_OperatorDoesNotExist() public {
+        mock_getNodeOperatorsCount(0);
+        vm.deal(user, 32 ether);
+
+        vm.expectRevert(ICSAccounting.NodeOperatorDoesNotExist.selector);
+        accounting.depositETH{ value: 32 ether }(0);
+    }
+}
+
 contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
     function setUp() public override {
         super.setUp();
@@ -3370,6 +3445,284 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
         vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
         accounting.depositStETH(
             stranger,
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+}
+
+contract CSAccountingDepositStEthPermissionlessTest is CSAccountingBaseTest {
+    function setUp() public override {
+        super.setUp();
+        mock_getNodeOperatorNonWithdrawnKeys(0);
+        mock_getNodeOperatorsCount(1);
+        mock_enqueueNodeOperatorKeys();
+    }
+
+    function test_depositStETH() public assertInvariants {
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
+
+        vm.prank(user);
+        accounting.depositStETH(
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            stETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            sharesToDeposit,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            sharesToDeposit,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
+    }
+
+    function test_depositStETH_zeroAmount() public assertInvariants {
+        vm.prank(address(user));
+        accounting.depositStETH(
+            0,
+            0 ether,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            stETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            0,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            0,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), 0);
+    }
+
+    function test_depositStETH_withoutPermitButWithAllowance()
+        public
+        assertInvariants
+    {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(accounting), type(uint256).max);
+        vm.stopPrank();
+
+        vm.prank(address(user));
+        accounting.depositStETH(
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            stETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            sharesToDeposit,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            sharesToDeposit,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
+    }
+
+    function test_depositStETH_withPermit() public assertInvariants {
+        vm.deal(user, 32 ether);
+        vm.prank(user);
+        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
+
+        vm.prank(address(user));
+        vm.expectEmit(address(stETH));
+        emit StETHMock.Approval(user, address(accounting), 32 ether);
+
+        accounting.depositStETH(
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            stETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            sharesToDeposit,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            sharesToDeposit,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
+    }
+
+    function test_depositStETH_withPermit_AlreadyPermittedWithLess()
+        public
+        assertInvariants
+    {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(accounting), 1 ether);
+        vm.stopPrank();
+
+        vm.expectEmit(address(stETH));
+        emit StETHMock.Approval(user, address(accounting), 32 ether);
+
+        vm.recordLogs();
+
+        vm.prank(address(user));
+        accounting.depositStETH(
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            2,
+            "should emit only one event about approve and deposit"
+        );
+    }
+
+    function test_depositStETH_withPermit_AlreadyPermittedWithInf()
+        public
+        assertInvariants
+    {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(accounting), UINT256_MAX);
+        vm.stopPrank();
+
+        vm.prank(address(user));
+        vm.recordLogs();
+
+        accounting.depositStETH(
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            1,
+            "should emit only one event about deposit"
+        );
+    }
+
+    function test_depositStETH_withPermit_AlreadyPermittedWithTheSame()
+        public
+        assertInvariants
+    {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(accounting), 32 ether);
+        vm.stopPrank();
+
+        vm.recordLogs();
+
+        vm.prank(address(user));
+        accounting.depositStETH(
+            0,
+            32 ether,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            1,
+            "should emit only one event about deposit"
+        );
+    }
+
+    function test_depositStETH_revertWhen_OperatorDoesNotExist() public {
+        mock_getNodeOperatorsCount(0);
+        vm.deal(user, 32 ether);
+
+        vm.expectRevert(ICSAccounting.NodeOperatorDoesNotExist.selector);
+        accounting.depositStETH(
             0,
             32 ether,
             ICSAccounting.PermitInput({
@@ -3675,6 +4028,306 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
         vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
         accounting.depositWstETH(
             stranger,
+            0,
+            100,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+}
+
+contract CSAccountingDepositWstEthPermissionlessTest is CSAccountingBaseTest {
+    function setUp() public override {
+        super.setUp();
+        mock_getNodeOperatorNonWithdrawnKeys(0);
+        mock_getNodeOperatorsCount(1);
+        mock_enqueueNodeOperatorKeys();
+    }
+
+    function test_depositWstETH() public assertInvariants {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        uint256 sharesToDeposit = stETH.getSharesByPooledEth(
+            wstETH.getStETHByWstETH(wstETHAmount)
+        );
+        vm.stopPrank();
+
+        vm.prank(address(user));
+        accounting.depositWstETH(
+            0,
+            wstETHAmount,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            wstETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            sharesToDeposit,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            sharesToDeposit,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
+    }
+
+    function test_depositWstETH_zeroAmount() public assertInvariants {
+        vm.prank(address(user));
+        accounting.depositWstETH(
+            0,
+            0 ether,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            wstETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            0,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            0,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), 0);
+    }
+
+    function test_depositWstETH_withoutPermitButWithAllowance()
+        public
+        assertInvariants
+    {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        uint256 sharesToDeposit = stETH.getSharesByPooledEth(
+            wstETH.getStETHByWstETH(wstETHAmount)
+        );
+        wstETH.approve(address(accounting), UINT256_MAX);
+        vm.stopPrank();
+
+        vm.prank(address(user));
+        accounting.depositWstETH(
+            0,
+            wstETHAmount,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            wstETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            sharesToDeposit,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            stETH.sharesOf(address(accounting)),
+            sharesToDeposit,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
+    }
+
+    function test_depositWstETH_withPermit() public assertInvariants {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        uint256 sharesToDeposit = stETH.getSharesByPooledEth(
+            wstETH.getStETHByWstETH(wstETHAmount)
+        );
+        vm.stopPrank();
+
+        vm.expectEmit(address(wstETH));
+        emit WstETHMock.Approval(user, address(accounting), 32 ether);
+
+        vm.prank(address(user));
+        accounting.depositWstETH(
+            0,
+            wstETHAmount,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            wstETH.balanceOf(user),
+            0,
+            "user balance should be 0 after deposit"
+        );
+        assertEq(
+            accounting.getBondShares(0),
+            sharesToDeposit,
+            "bond shares should be equal to deposited shares"
+        );
+        assertEq(
+            accounting.totalBondShares(),
+            sharesToDeposit,
+            "bond manager shares should be equal to deposited shares"
+        );
+        assertEq(accounting.totalBondShares(), sharesToDeposit);
+    }
+
+    function test_depositWstETH_withPermit_AlreadyPermittedWithLess()
+        public
+        assertInvariants
+    {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        wstETH.approve(address(accounting), 1 ether);
+        vm.stopPrank();
+
+        vm.expectEmit(address(wstETH));
+        emit WstETHMock.Approval(user, address(accounting), 32 ether);
+
+        vm.recordLogs();
+
+        vm.prank(address(user));
+        accounting.depositWstETH(
+            0,
+            wstETHAmount,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            2,
+            "should emit only one event about approve and deposit"
+        );
+    }
+
+    function test_depositWstETH_withPermit_AlreadyPermittedWithInf()
+        public
+        assertInvariants
+    {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        wstETH.approve(address(accounting), UINT256_MAX);
+        vm.stopPrank();
+
+        vm.recordLogs();
+
+        vm.prank(address(user));
+        accounting.depositWstETH(
+            0,
+            wstETHAmount,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            1,
+            "should emit only one event about deposit"
+        );
+    }
+
+    function test_depositWstETH_withPermit_AlreadyPermittedWithTheSame()
+        public
+    {
+        vm.deal(user, 32 ether);
+        vm.startPrank(user);
+        stETH.submit{ value: 32 ether }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        uint256 wstETHAmount = wstETH.wrap(32 ether);
+        wstETH.approve(address(accounting), 32 ether);
+        vm.stopPrank();
+
+        vm.recordLogs();
+
+        vm.prank(address(user));
+        accounting.depositWstETH(
+            0,
+            wstETHAmount,
+            ICSAccounting.PermitInput({
+                value: 32 ether,
+                deadline: type(uint256).max,
+                // mock permit signature
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+
+        assertEq(
+            vm.getRecordedLogs().length,
+            1,
+            "should emit only one event about deposit"
+        );
+    }
+
+    function test_depositWstETH_revertWhen_OperatorDoesNotExist() public {
+        mock_getNodeOperatorsCount(0);
+        vm.deal(user, 32 ether);
+
+        vm.expectRevert(ICSAccounting.NodeOperatorDoesNotExist.selector);
+        accounting.depositWstETH(
             0,
             100,
             ICSAccounting.PermitInput({
