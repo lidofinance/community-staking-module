@@ -8,24 +8,29 @@ import { OssifiableProxy } from "./lib/proxy/OssifiableProxy.sol";
 import { VettedGate } from "./VettedGate.sol";
 
 contract VettedGateFactory is IVettedGateFactory {
+    address public immutable VETTED_GATE_IMPL;
+
+    constructor(address vettedGateImpl) {
+        if (vettedGateImpl == address(0)) revert ZeroImplementationAddress();
+
+        VETTED_GATE_IMPL = vettedGateImpl;
+    }
+
     /// @inheritdoc IVettedGateFactory
     function create(
-        address csm,
         uint256 curveId,
         bytes32 treeRoot,
         address admin
     ) external returns (address instance) {
-        VettedGate gateImpl = new VettedGate(curveId, csm);
-
         instance = address(
             new OssifiableProxy({
-                implementation_: address(gateImpl),
+                implementation_: address(VETTED_GATE_IMPL),
                 data_: new bytes(0),
                 admin_: admin
             })
         );
 
-        VettedGate(instance).initialize(treeRoot, admin);
+        VettedGate(instance).initialize(curveId, treeRoot, admin);
 
         emit VettedGateCreated(instance);
     }
