@@ -227,7 +227,7 @@ contract VettedGateCreateNodeOperatorTest is IntegrationTestBase {
         );
         uint256 amount = accounting.getBondAmountByKeysCount(
             keysCount,
-            vettedGate.CURVE_ID()
+            vettedGate.curveId()
         );
         vm.deal(nodeOperator, amount);
 
@@ -250,7 +250,7 @@ contract VettedGateCreateNodeOperatorTest is IntegrationTestBase {
         });
         vm.stopPrank();
 
-        assertEq(accounting.getBondCurveId(noId), vettedGate.CURVE_ID());
+        assertEq(accounting.getBondCurveId(noId), vettedGate.curveId());
         assertEq(accounting.getBondShares(noId), shares);
         assertEq(accounting.totalBondShares(), shares + preTotalShares);
         assertTrue(vettedGate.isConsumed(nodeOperator));
@@ -271,10 +271,7 @@ contract VettedGateCreateNodeOperatorTest is IntegrationTestBase {
         );
 
         uint256 shares = lido.getSharesByPooledEth(
-            accounting.getBondAmountByKeysCount(
-                keysCount,
-                vettedGate.CURVE_ID()
-            )
+            accounting.getBondAmountByKeysCount(keysCount, vettedGate.curveId())
         );
         uint256 noId = vettedGate.addNodeOperatorStETH({
             keysCount: keysCount,
@@ -297,7 +294,7 @@ contract VettedGateCreateNodeOperatorTest is IntegrationTestBase {
         });
         vm.stopPrank();
 
-        assertEq(accounting.getBondCurveId(noId), vettedGate.CURVE_ID());
+        assertEq(accounting.getBondCurveId(noId), vettedGate.curveId());
         assertEq(accounting.getBondShares(noId), shares);
         assertEq(accounting.totalBondShares(), shares + preTotalShares);
         assertTrue(vettedGate.isConsumed(nodeOperator));
@@ -316,10 +313,7 @@ contract VettedGateCreateNodeOperatorTest is IntegrationTestBase {
             keysCount
         );
         uint256 wstETHAmount = wstETH.wrap(
-            accounting.getBondAmountByKeysCount(
-                keysCount,
-                vettedGate.CURVE_ID()
-            )
+            accounting.getBondAmountByKeysCount(keysCount, vettedGate.curveId())
         );
 
         uint256 shares = lido.getSharesByPooledEth(
@@ -347,7 +341,7 @@ contract VettedGateCreateNodeOperatorTest is IntegrationTestBase {
         });
         vm.stopPrank();
 
-        assertEq(accounting.getBondCurveId(noId), vettedGate.CURVE_ID());
+        assertEq(accounting.getBondCurveId(noId), vettedGate.curveId());
         assertEq(accounting.getBondShares(noId), shares);
         assertEq(accounting.totalBondShares(), shares + preTotalShares);
         assertTrue(vettedGate.isConsumed(nodeOperator));
@@ -385,7 +379,7 @@ contract VettedGateCreateNodeOperatorTest is IntegrationTestBase {
         vettedGate.claimBondCurve(noId, merkleTree.getProof(0));
         vm.stopPrank();
 
-        assertEq(accounting.getBondCurveId(noId), vettedGate.CURVE_ID());
+        assertEq(accounting.getBondCurveId(noId), vettedGate.curveId());
         assertTrue(accounting.getClaimableBondShares(noId) > 0);
         assertTrue(vettedGate.isConsumed(nodeOperator));
     }

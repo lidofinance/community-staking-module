@@ -82,10 +82,10 @@ abstract contract DeployImplementationsBase is DeployBase {
 
             permissionlessGate = new PermissionlessGate(address(csm));
 
-            vettedGateFactory = new VettedGateFactory();
+            address vettedGateImpl = address(new VettedGate(address(csm)));
+            vettedGateFactory = new VettedGateFactory(vettedGateImpl);
             vettedGate = VettedGate(
                 vettedGateFactory.create({
-                    csm: address(csm),
                     curveId: ICSEarlyAdoption(earlyAdoption).CURVE_ID(),
                     treeRoot: config.vettedGateTreeRoot,
                     admin: deployer

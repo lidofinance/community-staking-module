@@ -27,7 +27,7 @@ interface IVettedGate {
 
     function CSM() external view returns (ICSModule);
 
-    function CURVE_ID() external view returns (uint256);
+    function curveId() external view returns (uint256);
 
     function treeRoot() external view returns (bytes32);
 
