@@ -3168,7 +3168,7 @@ contract CsmPriorityQueue is CSMCommon {
         _enablePriorityQueue();
 
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IQueueLib.BatchEnqueued(noId, 8);
 
             uploadMoreKeys(noId, 8);
@@ -3189,10 +3189,10 @@ contract CsmPriorityQueue is CSMCommon {
         _enablePriorityQueue();
 
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IQueueLib.BatchEnqueued(noId, 10);
 
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IQueueLib.BatchEnqueued(noId, 5);
 
             uploadMoreKeys(noId, 15);
@@ -3218,10 +3218,10 @@ contract CsmPriorityQueue is CSMCommon {
         uploadMoreKeys(noId, 8);
 
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IQueueLib.BatchEnqueued(noId, 2);
 
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IQueueLib.BatchEnqueued(noId, 10);
 
             uploadMoreKeys(noId, 12);
@@ -3250,7 +3250,7 @@ contract CsmPriorityQueue is CSMCommon {
         uploadMoreKeys(noId, 12);
 
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IQueueLib.BatchEnqueued(noId, 12);
 
             uploadMoreKeys(noId, 12);
@@ -3280,10 +3280,10 @@ contract CsmPriorityQueue is CSMCommon {
         csm.obtainDepositData(3, ""); // no.enqueuedCount == 5
 
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IQueueLib.BatchEnqueued(noId, 2);
 
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IQueueLib.BatchEnqueued(noId, 10);
 
             uploadMoreKeys(noId, 12);
@@ -3314,7 +3314,7 @@ contract CsmPriorityQueue is CSMCommon {
         csm.obtainDepositData(3, ""); // no.enqueuedCount == 9
 
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IQueueLib.BatchEnqueued(noId, 12);
 
             uploadMoreKeys(noId, 12);
@@ -3341,7 +3341,7 @@ contract CsmPriorityQueue is CSMCommon {
         _enablePriorityQueue();
 
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IQueueLib.BatchEnqueued(noId, 8);
 
             vm.prank(nodeOperator);
@@ -3365,7 +3365,7 @@ contract CsmPriorityQueue is CSMCommon {
         _enablePriorityQueue();
 
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IQueueLib.BatchEnqueued(noId, 10);
 
             vm.prank(nodeOperator);
@@ -3391,7 +3391,7 @@ contract CsmPriorityQueue is CSMCommon {
         _enablePriorityQueue();
 
         {
-            vm.expectEmit(true, true, true, true, address(csm));
+            vm.expectEmit(address(csm));
             emit IQueueLib.BatchEnqueued(noId, 2);
 
             vm.prank(nodeOperator);
