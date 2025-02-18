@@ -1368,3 +1368,138 @@ contract CSParametersRegistryPerformanceCoefficientsTest is
         assertEq(syncOut, defaultInitData.syncWeight);
     }
 }
+
+contract CSParametersRegistryQueueConfigTest is
+    CSParametersRegistryBaseTestInitialized,
+    ParametersTest
+{
+    function test_setDefault() public override {
+        uint32 priority = 17;
+        uint32 maxDeposits = 42;
+
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.DefaultQueueConfigSet(priority, maxDeposits);
+        vm.prank(admin);
+        parametersRegistry.setDefaultQueueConfig(priority, maxDeposits);
+
+        (uint256 priorityOut, uint256 maxDepositsOut) = parametersRegistry
+            .defaultQueueConfig();
+        assertEq(priorityOut, priority);
+        assertEq(maxDepositsOut, maxDeposits);
+    }
+
+    function test_setDefault_RevertWhen_notAdmin() public override {
+        uint32 priority = 17;
+        uint32 maxDeposits = 42;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.setDefaultQueueConfig(priority, maxDeposits);
+    }
+
+    function test_set() public override {
+        uint256 curveId = 11;
+        uint32 priority = 17;
+        uint32 maxDeposits = 42;
+
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.QueueConfigSet(
+            curveId,
+            priority,
+            maxDeposits
+        );
+        vm.prank(admin);
+        parametersRegistry.setQueueConfig(
+            curveId,
+            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
+        );
+
+        (uint256 priorityOut, uint256 maxDepositsOut) = parametersRegistry
+            .getQueueConfig(curveId);
+        assertEq(priorityOut, priority);
+        assertEq(maxDepositsOut, maxDeposits);
+    }
+
+    function test_set_RevertWhen_notAdmin() public override {
+        uint256 curveId = 11;
+        uint32 priority = 17;
+        uint32 maxDeposits = 42;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.setQueueConfig(
+            curveId,
+            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
+        );
+    }
+
+    function test_unset() public override {
+        uint256 curveId = 11;
+        uint32 priority = 17;
+        uint32 maxDeposits = 42;
+
+        vm.prank(admin);
+        parametersRegistry.setQueueConfig(
+            curveId,
+            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
+        );
+
+        (uint256 priorityOut, uint256 maxDepositsOut) = parametersRegistry
+            .getQueueConfig(curveId);
+        assertEq(priorityOut, priority);
+        assertEq(maxDepositsOut, maxDeposits);
+
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.QueueConfigUnset(curveId);
+        vm.prank(admin);
+        parametersRegistry.unsetQueueConfig(curveId);
+
+        (priorityOut, maxDepositsOut) = parametersRegistry.getQueueConfig(
+            curveId
+        );
+        assertEq(priorityOut, defaultInitData.defaultQueuePriority);
+        assertEq(maxDepositsOut, defaultInitData.defaultQueueMaxDeposits);
+    }
+
+    function test_unset_RevertWhen_notAdmin() public override {
+        uint256 curveId = 11;
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.unsetQueueConfig(curveId);
+    }
+
+    function test_get_usualData() public override {
+        uint256 curveId = 11;
+        uint32 priority = 17;
+        uint32 maxDeposits = 42;
+
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.QueueConfigSet(
+            curveId,
+            priority,
+            maxDeposits
+        );
+        vm.prank(admin);
+        parametersRegistry.setQueueConfig(
+            curveId,
+            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
+        );
+
+        (uint256 priorityOut, uint256 maxDepositsOut) = parametersRegistry
+            .getQueueConfig(curveId);
+        assertEq(priorityOut, priority);
+        assertEq(maxDepositsOut, maxDeposits);
+    }
+
+    function test_get_defaultData() public override {
+        uint256 curveId = 11;
+
+        (uint256 priorityOut, uint256 maxDepositsOut) = parametersRegistry
+            .getQueueConfig(curveId);
+        assertEq(priorityOut, defaultInitData.defaultQueuePriority);
+        assertEq(maxDepositsOut, defaultInitData.defaultQueueMaxDeposits);
+    }
+}
