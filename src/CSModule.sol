@@ -688,14 +688,13 @@ contract CSModule is
     //     // Confiscate ejection fee from the bond
     // }
 
+    /// TOGO: Consider renaming
     /// @inheritdoc ICSModule
     function enqueueNodeOperatorKeys(uint256 nodeOperatorId) external {
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true
         });
-        // Direct call of `enqueueNodeOperatorKeys` if depositable is not changed
-        _enqueueNodeOperatorKeys(nodeOperatorId);
     }
 
     /// @dev TODO: Remove the method in the next major release.
@@ -1224,7 +1223,8 @@ contract CSModule is
             targetLimitMode = no.targetLimitMode;
             targetValidatorsCount = no.targetLimit;
         }
-        stuckValidatorsCount = no.stuckValidatorsCount;
+        // @dev Unused after TW
+        stuckValidatorsCount = 0;
         // @dev unused in CSM
         refundedValidatorsCount = 0;
         // @dev unused in CSM
@@ -1343,7 +1343,7 @@ contract CSModule is
         }
         emit TotalSigningKeysCountChanged(nodeOperatorId, no.totalAddedKeys);
 
-        // Nonce is updated below since in case of stuck keys depositable keys might not change
+        // Nonce is updated below since in case of target limit depositable keys might not change
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: false
@@ -1396,10 +1396,6 @@ contract CSModule is
             } else if (unbondedKeys > no.totalAddedKeys - no.totalVettedKeys) {
                 newCount = nonDeposited - unbondedKeys;
             }
-        }
-
-        if (no.stuckValidatorsCount > 0 && newCount > 0) {
-            newCount = 0;
         }
 
         if (no.targetLimitMode > 0 && newCount > 0) {
