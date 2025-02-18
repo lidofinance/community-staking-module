@@ -3445,7 +3445,7 @@ contract CsmPriorityQueue is CSMCommon {
         }
 
         {
-            vm.expectRevert(ICSModule.CannotMigrate.selector);
+            vm.expectRevert(ICSModule.PriorityQueueAlreadyUsed.selector);
             vm.prank(nodeOperator);
             csm.migrateToPriorityQueue(noId);
         }
@@ -3461,7 +3461,7 @@ contract CsmPriorityQueue is CSMCommon {
         uploadMoreKeys(noId, 15);
 
         {
-            vm.expectRevert(ICSModule.CannotMigrate.selector);
+            vm.expectRevert(ICSModule.PriorityQueueAlreadyUsed.selector);
             vm.prank(nodeOperator);
             csm.migrateToPriorityQueue(noId);
         }

@@ -50,7 +50,7 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     error InvalidInput();
     error NotEnoughKeys();
-    error CannotMigrate();
+    error PriorityQueueAlreadyUsed();
 
     error SigningKeysInvalidOffset();
 
