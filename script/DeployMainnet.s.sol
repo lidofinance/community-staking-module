@@ -21,7 +21,7 @@ contract DeployMainnet is DeployBase {
         config.clGenesisTime = 1606824023; // https://github.com/eth-clients/mainnet/blob/f6b7882618a5ad2c1d2731ae35e5d16a660d5bb7/README.md?plain=1#L10
         config.oracleReportEpochsPerFrame = 225 * 28; // 28 days
         config.fastLaneLengthSlots = 1800;
-        config.consensusVersion = 2;
+        config.consensusVersion = 3;
         config.oracleMembers = new address[](9);
         config.oracleMembers[0] = 0x140Bd8FbDc884f48dA7cb1c09bE8A2fAdfea776E; // Chorus One
         config.oracleMembers[1] = 0xA7410857ABbf75043d61ea54e07D57A6EB6EF186; // Kyber Network

@@ -230,7 +230,7 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         assertFalse(hash == bytes32(0), "expected report hash to be non-zero");
         assertGt(refSlot, 0);
         assertGt(processingDeadlineTime, 0);
-        assertEq(oracle.getConsensusVersion(), 2);
+        assertEq(oracle.getConsensusVersion(), 3);
         assertEq(oracle.getContractVersion(), 2);
         assertEq(address(oracle.strikes()), address(strikes));
     }
