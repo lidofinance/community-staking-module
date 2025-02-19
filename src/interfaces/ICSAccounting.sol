@@ -178,6 +178,17 @@ interface ICSAccounting is
         PermitInput calldata permit
     ) external;
 
+    /// @notice Unwrap the user's wstETH and deposit stETH to the bond for the given Node Operator
+    /// @dev Permissionless. Enqueues Node Operator's keys if needed
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param wstETHAmount Amount of wstETH to deposit
+    /// @param permit wstETH permit for the contract
+    function depositWstETH(
+        uint256 nodeOperatorId,
+        uint256 wstETHAmount,
+        PermitInput calldata permit
+    ) external;
+
     /// @notice Deposit user's stETH to the bond for the given Node Operator
     /// @dev Called by CSM exclusively
     /// @param from Address to deposit stETH from
@@ -191,11 +202,27 @@ interface ICSAccounting is
         PermitInput calldata permit
     ) external;
 
+    /// @notice Deposit user's stETH to the bond for the given Node Operator
+    /// @dev Permissionless. Enqueues Node Operator's keys if needed
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param stETHAmount Amount of stETH to deposit
+    /// @param permit stETH permit for the contract
+    function depositStETH(
+        uint256 nodeOperatorId,
+        uint256 stETHAmount,
+        PermitInput calldata permit
+    ) external;
+
     /// @notice Stake user's ETH with Lido and deposit stETH to the bond
     /// @dev Called by CSM exclusively
     /// @param from Address to stake ETH and deposit stETH from
     /// @param nodeOperatorId ID of the Node Operator
     function depositETH(address from, uint256 nodeOperatorId) external payable;
+
+    /// @notice Stake user's ETH with Lido and deposit stETH to the bond
+    /// @dev Permissionless. Enqueues Node Operator's keys if needed
+    /// @param nodeOperatorId ID of the Node Operator
+    function depositETH(uint256 nodeOperatorId) external payable;
 
     /// @notice Claim full reward (fee + bond) in stETH for the given Node Operator with desirable value.
     ///         `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond

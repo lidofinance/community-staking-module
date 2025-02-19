@@ -248,30 +248,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         ICSAccounting.PermitInput memory permit
     ) external;
 
-    /// @notice Stake user's ETH with Lido and make a deposit in stETH to the bond of the existing Node Operator
-    /// @param nodeOperatorId ID of the Node Operator
-    function depositETH(uint256 nodeOperatorId) external payable;
-
-    /// @notice Deposit user's stETH to the bond of the existing Node Operator
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param stETHAmount Amount of stETH to deposit
-    /// @param permit Optional. Permit to use stETH as bond
-    function depositStETH(
-        uint256 nodeOperatorId,
-        uint256 stETHAmount,
-        ICSAccounting.PermitInput memory permit
-    ) external;
-
-    /// @notice Unwrap the user's wstETH and make a deposit in stETH to the bond of the existing Node Operator
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param wstETHAmount Amount of wstETH to deposit
-    /// @param permit Optional. Permit to use wstETH as bond
-    function depositWstETH(
-        uint256 nodeOperatorId,
-        uint256 wstETHAmount,
-        ICSAccounting.PermitInput memory permit
-    ) external;
-
     /// @notice Claim full reward (fees + bond rewards) in stETH for the given Node Operator
     /// @notice If `stETHAmount` exceeds the current claimable amount, the claimable amount will be used instead
     /// @notice If `rewardsProof` is not provided, only excess bond (bond rewards) will be available for claim
