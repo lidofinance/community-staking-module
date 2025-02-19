@@ -223,7 +223,6 @@ contract CSParametersRegistry is
         uint256 curveId
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         delete _rewardShareData[curveId];
-
         emit RewardShareDataUnset(curveId);
     }
 
@@ -262,7 +261,6 @@ contract CSParametersRegistry is
         uint256 curveId
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         delete _performanceLeewayData[curveId];
-
         emit PerformanceLeewayDataUnset(curveId);
     }
 
@@ -361,7 +359,6 @@ contract CSParametersRegistry is
         uint256 curveId
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         delete _queueConfigs[curveId];
-
         emit QueueConfigUnset(curveId);
     }
 
@@ -549,7 +546,6 @@ contract CSParametersRegistry is
     ) internal {
         defaultQueueConfig.priority = priority.toUint32();
         defaultQueueConfig.maxDeposits = maxDeposits.toUint32();
-
         emit DefaultQueueConfigSet(priority, maxDeposits);
     }
 

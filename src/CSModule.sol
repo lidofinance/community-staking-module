@@ -637,7 +637,7 @@ contract CSModule is
     //     // Confiscate ejection fee from the bond
     // }
 
-    /// TOGO: Consider renaming
+    /// TODO: Consider renaming
     /// @inheritdoc ICSModule
     function enqueueNodeOperatorKeys(uint256 nodeOperatorId) external {
         _updateDepositableValidatorsCount({
@@ -655,17 +655,15 @@ contract CSModule is
             revert PriorityQueueAlreadyUsed();
         }
 
-        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
         (uint32 priority, uint32 maxDeposits) = PARAMETERS_REGISTRY
-            .getQueueConfig(curveId);
+            .getQueueConfig(accounting.getBondCurveId(nodeOperatorId));
 
         if (priority < QUEUE_LEGACY_PRIORITY) {
             uint32 deposited = no.totalDepositedKeys;
-            uint32 enqueued = no.enqueuedCount;
 
             if (maxDeposits > deposited) {
                 uint32 toMigrate = uint32(
-                    Math.min(maxDeposits - deposited, enqueued)
+                    Math.min(maxDeposits - deposited, no.enqueuedCount)
                 );
 
                 unchecked {
@@ -883,13 +881,13 @@ contract CSModule is
         uint256 loadedKeysCount = 0;
 
         QueueLib.Queue storage queue;
-        uint256 p = 0;
+        uint256 priority = 0;
 
         for (;;) {
-            if (p > QUEUE_LOWEST_PRIORITY || depositsLeft == 0) break;
-            queue = _getQueue(p);
+            if (priority > QUEUE_LOWEST_PRIORITY || depositsLeft == 0) break;
+            queue = _getQueue(priority);
             unchecked {
-                ++p;
+                ++priority;
             }
 
             for (

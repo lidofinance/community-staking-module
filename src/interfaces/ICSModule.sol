@@ -382,7 +382,7 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         address newAddress
     ) external;
 
-    /// @notice Get the pointers to the ends of queue with the given priority.
+    /// @notice Get the pointers to the head and tail of queue with the given priority.
     /// @param queuePriority Priority of the queue to get the pointers.
     /// @return head Pointer to the head of the queue.
     /// @return tail Pointer to the tail of the queue.
