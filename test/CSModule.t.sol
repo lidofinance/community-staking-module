@@ -1669,369 +1669,6 @@ contract CSMAddValidatorKeysNegative is CSMCommon {
     }
 }
 
-contract CSMDepositETH is CSMCommon {
-    function test_DepositETH() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        uint256 preShares = accounting.getBondShares(noId);
-        vm.deal(nodeOperator, 32 ether);
-        uint256 sharesToDeposit = stETH.getSharesByPooledEth(32 ether);
-
-        vm.prank(nodeOperator);
-        csm.depositETH{ value: 32 ether }(noId);
-
-        assertEq(
-            nodeOperator.balance,
-            0,
-            "user balance should be 0 after deposit"
-        );
-        assertEq(
-            accounting.getBondShares(noId),
-            sharesToDeposit + preShares,
-            "bond shares should be equal to deposited shares + pre shares"
-        );
-    }
-
-    function test_DepositETH_NotExistingNodeOperator() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        vm.deal(nodeOperator, 32 ether);
-
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        vm.prank(nodeOperator);
-        csm.depositETH{ value: 32 ether }(noId + 1);
-    }
-
-    function test_DepositETH_NonceShouldChange() public assertInvariants {
-        uint256 noId = createNodeOperator();
-
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            BOND_SIZE / 2
-        );
-
-        uint256 nonce = csm.getNonce();
-
-        vm.deal(nodeOperator, 32 ether);
-        vm.prank(nodeOperator);
-        csm.depositETH{ value: 32 ether }(0);
-
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_DepositETH_NonceShouldNotChange() public assertInvariants {
-        uint256 noId = createNodeOperator();
-
-        uint256 nonce = csm.getNonce();
-
-        vm.deal(nodeOperator, 32 ether);
-        vm.prank(nodeOperator);
-        csm.depositETH{ value: 32 ether }(noId);
-
-        assertEq(csm.getNonce(), nonce);
-    }
-}
-
-contract CSMDepositStETH is CSMCommon {
-    function test_DepositStETH() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        uint256 preShares = accounting.getBondShares(noId);
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
-        csm.depositStETH(
-            noId,
-            32 ether,
-            ICSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(
-            stETH.balanceOf(nodeOperator),
-            0,
-            "user balance should be 0 after deposit"
-        );
-        assertEq(
-            accounting.getBondShares(noId),
-            sharesToDeposit + preShares,
-            "bond shares should be equal to deposited shares + pre shares"
-        );
-    }
-
-    function test_DepositStETH_NotExistingNodeOperator()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator();
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }(address(0));
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        csm.depositStETH(
-            noId + 1,
-            32 ether,
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-    }
-
-    function test_DepositStETH_withPermit() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        uint256 preShares = accounting.getBondShares(noId);
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
-
-        vm.expectEmit(address(stETH));
-        emit StETHMock.Approval(nodeOperator, address(accounting), 32 ether);
-
-        csm.depositStETH(
-            noId,
-            32 ether,
-            ICSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: type(uint256).max,
-                // mock permit signature
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(
-            stETH.balanceOf(nodeOperator),
-            0,
-            "user balance should be 0 after deposit"
-        );
-        assertEq(
-            accounting.getBondShares(noId),
-            sharesToDeposit + preShares,
-            "bond shares should be equal to deposited shares + pre shares"
-        );
-    }
-
-    function test_DepositStETH_NonceShouldChange() public assertInvariants {
-        uint256 noId = createNodeOperator();
-
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            BOND_SIZE / 2
-        );
-
-        uint256 nonce = csm.getNonce();
-
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }(address(0));
-        csm.depositStETH(
-            0,
-            32 ether,
-            ICSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_DepositStETH_NonceShouldNotChange() public assertInvariants {
-        uint256 noId = createNodeOperator();
-
-        uint256 nonce = csm.getNonce();
-
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }(address(0));
-        csm.depositStETH(
-            noId,
-            32 ether,
-            ICSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(csm.getNonce(), nonce);
-    }
-}
-
-contract CSMDepositWstETH is CSMCommon {
-    function test_DepositWstETH() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        uint256 preShares = accounting.getBondShares(noId);
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }(address(0));
-        stETH.approve(address(wstETH), UINT256_MAX);
-        uint256 wstETHAmount = wstETH.wrap(32 ether);
-        uint256 sharesToDeposit = stETH.getSharesByPooledEth(
-            wstETH.getStETHByWstETH(wstETHAmount)
-        );
-
-        csm.depositWstETH(
-            noId,
-            wstETHAmount,
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(
-            wstETH.balanceOf(nodeOperator),
-            0,
-            "user balance should be 0 after deposit"
-        );
-        assertEq(
-            accounting.getBondShares(noId),
-            sharesToDeposit + preShares,
-            "bond shares should be equal to deposited shares + pre shares"
-        );
-    }
-
-    function test_DepositWstETH_NotExistingNodeOperator()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator();
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }(address(0));
-        stETH.approve(address(wstETH), UINT256_MAX);
-        uint256 wstETHAmount = wstETH.wrap(32 ether);
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        csm.depositWstETH(
-            noId + 1,
-            wstETHAmount,
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-    }
-
-    function test_DepositWstETH_withPermit() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        uint256 preShares = accounting.getBondShares(noId);
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }(address(0));
-        stETH.approve(address(wstETH), UINT256_MAX);
-        uint256 wstETHAmount = wstETH.wrap(32 ether);
-        uint256 sharesToDeposit = stETH.getSharesByPooledEth(
-            wstETH.getStETHByWstETH(wstETHAmount)
-        );
-
-        vm.expectEmit(address(wstETH));
-        emit WstETHMock.Approval(nodeOperator, address(accounting), 32 ether);
-
-        csm.depositWstETH(
-            noId,
-            wstETHAmount,
-            ICSAccounting.PermitInput({
-                value: 32 ether,
-                deadline: type(uint256).max,
-                // mock permit signature
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(
-            wstETH.balanceOf(nodeOperator),
-            0,
-            "user balance should be 0 after deposit"
-        );
-        assertEq(
-            accounting.getBondShares(noId),
-            sharesToDeposit + preShares,
-            "bond shares should be equal to deposited shares + pre shares"
-        );
-    }
-
-    function test_DepositWstETH_NonceShouldChange() public assertInvariants {
-        uint256 noId = createNodeOperator();
-
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            BOND_SIZE / 2
-        );
-
-        uint256 nonce = csm.getNonce();
-
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }(address(0));
-        stETH.approve(address(wstETH), UINT256_MAX);
-        uint256 wstETHAmount = wstETH.wrap(32 ether);
-
-        csm.depositWstETH(
-            0,
-            wstETHAmount,
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_DepositWstETH_NonceShouldNotChange() public assertInvariants {
-        uint256 noId = createNodeOperator();
-
-        uint256 nonce = csm.getNonce();
-
-        vm.deal(nodeOperator, 32 ether);
-        vm.startPrank(nodeOperator);
-        stETH.submit{ value: 32 ether }(address(0));
-        stETH.approve(address(wstETH), UINT256_MAX);
-        uint256 wstETHAmount = wstETH.wrap(32 ether);
-
-        csm.depositWstETH(
-            noId,
-            wstETHAmount,
-            ICSAccounting.PermitInput({
-                value: 0,
-                deadline: 0,
-                v: 0,
-                r: 0,
-                s: 0
-            })
-        );
-
-        assertEq(csm.getNonce(), nonce);
-    }
-}
-
 contract CSMObtainDepositData is CSMCommon {
     // TODO: test with near to real values
 
@@ -2218,7 +1855,7 @@ contract CSMClaimRewards is CSMCommon {
 
         vm.deal(nodeOperator, amount);
         vm.prank(nodeOperator);
-        csm.depositETH{ value: amount }(noId);
+        accounting.depositETH{ value: amount }(noId);
 
         uint256 noSharesBefore = stETH.sharesOf(nodeOperator);
 
@@ -2259,7 +1896,7 @@ contract CSMClaimRewards is CSMCommon {
 
         vm.deal(nodeOperator, 1 ether);
         vm.prank(nodeOperator);
-        csm.depositETH{ value: 1 ether }(noId);
+        accounting.depositETH{ value: 1 ether }(noId);
 
         vm.prank(nodeOperator);
         csm.proposeNodeOperatorRewardAddressChange(noId, rewardAddress);
@@ -2295,7 +1932,7 @@ contract CSMClaimRewards is CSMCommon {
 
         vm.deal(nodeOperator, amount);
         vm.prank(nodeOperator);
-        csm.depositETH{ value: amount }(noId);
+        accounting.depositETH{ value: amount }(noId);
 
         uint256 noWstEthBefore = wstETH.balanceOf(nodeOperator);
 
@@ -2349,7 +1986,7 @@ contract CSMClaimRewards is CSMCommon {
 
         vm.deal(nodeOperator, 1 ether);
         vm.prank(nodeOperator);
-        csm.depositETH{ value: 1 ether }(noId);
+        accounting.depositETH{ value: 1 ether }(noId);
 
         vm.prank(nodeOperator);
         csm.proposeNodeOperatorRewardAddressChange(noId, rewardAddress);
@@ -2382,7 +2019,7 @@ contract CSMClaimRewards is CSMCommon {
 
         vm.deal(nodeOperator, 1 ether);
         vm.prank(nodeOperator);
-        csm.depositETH{ value: 1 ether }(noId);
+        accounting.depositETH{ value: 1 ether }(noId);
 
         vm.expectCall(
             address(accounting),
@@ -2421,7 +2058,7 @@ contract CSMClaimRewards is CSMCommon {
 
         vm.deal(nodeOperator, 1 ether);
         vm.prank(nodeOperator);
-        csm.depositETH{ value: 1 ether }(noId);
+        accounting.depositETH{ value: 1 ether }(noId);
 
         vm.prank(nodeOperator);
         csm.proposeNodeOperatorRewardAddressChange(noId, rewardAddress);
@@ -5283,7 +4920,7 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
 
         vm.deal(nodeOperator, 32 ether);
         vm.prank(nodeOperator);
-        csm.depositETH{ value: 32 ether }(0);
+        accounting.depositETH{ value: 32 ether }(0);
 
         uint256 nonce = csm.getNonce();
 
@@ -5723,7 +5360,7 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
 
         vm.deal(nodeOperator, 3 ether);
         vm.prank(nodeOperator);
-        csm.depositETH{ value: 3 ether }(0);
+        accounting.depositETH{ value: 3 ether }(0);
 
         uint256 amount = 1 ether;
         uint256[] memory idsToSettle = new uint256[](1);
@@ -5766,7 +5403,7 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
 
         vm.deal(nodeOperator, 2 ether);
         vm.prank(nodeOperator);
-        csm.depositETH{ value: 2 ether }(0);
+        accounting.depositETH{ value: 2 ether }(0);
 
         uint256 amount = 1 ether;
         uint256[] memory idsToSettle = new uint256[](1);

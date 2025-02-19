@@ -267,60 +267,6 @@ contract CSModule is
     }
 
     /// @inheritdoc ICSModule
-    function depositETH(uint256 nodeOperatorId) external payable {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        accounting.depositETH{ value: msg.value }(msg.sender, nodeOperatorId);
-
-        // Due to new bond nonce update might be required
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true
-        });
-    }
-
-    /// @inheritdoc ICSModule
-    function depositStETH(
-        uint256 nodeOperatorId,
-        uint256 stETHAmount,
-        ICSAccounting.PermitInput calldata permit
-    ) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        accounting.depositStETH(
-            msg.sender,
-            nodeOperatorId,
-            stETHAmount,
-            permit
-        );
-
-        // Due to new bond nonce update might be required
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true
-        });
-    }
-
-    /// @inheritdoc ICSModule
-    function depositWstETH(
-        uint256 nodeOperatorId,
-        uint256 wstETHAmount,
-        ICSAccounting.PermitInput calldata permit
-    ) external {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        accounting.depositWstETH(
-            msg.sender,
-            nodeOperatorId,
-            wstETHAmount,
-            permit
-        );
-
-        // Due to new bond nonce update might be required
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true
-        });
-    }
-
-    /// @inheritdoc ICSModule
     function claimRewardsStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount,

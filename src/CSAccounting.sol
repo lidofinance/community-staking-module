@@ -163,6 +163,13 @@ contract CSAccounting is
     }
 
     /// @inheritdoc ICSAccounting
+    function depositETH(uint256 nodeOperatorId) external payable whenResumed {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        CSBondCore._depositETH(msg.sender, nodeOperatorId);
+        CSM.enqueueNodeOperatorKeys(nodeOperatorId);
+    }
+
+    /// @inheritdoc ICSAccounting
     function depositETH(
         address from,
         uint256 nodeOperatorId
@@ -177,25 +184,20 @@ contract CSAccounting is
         uint256 stETHAmount,
         PermitInput calldata permit
     ) external whenResumed onlyCSM {
-        // @dev for some reason foundry coverage consider this if as not fully covered. Check tests to see it is covered indeed
-        // preventing revert for already used permit or avoid permit usage in case of value == 0
-        if (
-            permit.value > 0 &&
-            LIDO.allowance(from, address(this)) < permit.value
-        ) {
-            // solhint-disable-next-line func-named-parameters
-            LIDO.permit(
-                from,
-                address(this),
-                permit.value,
-                permit.deadline,
-                permit.v,
-                permit.r,
-                permit.s
-            );
-        }
-
+        _unwrapStETHPermitIfRequired(from, permit);
         CSBondCore._depositStETH(from, nodeOperatorId, stETHAmount);
+    }
+
+    /// @inheritdoc ICSAccounting
+    function depositStETH(
+        uint256 nodeOperatorId,
+        uint256 stETHAmount,
+        PermitInput calldata permit
+    ) external whenResumed {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        _unwrapStETHPermitIfRequired(msg.sender, permit);
+        CSBondCore._depositStETH(msg.sender, nodeOperatorId, stETHAmount);
+        CSM.enqueueNodeOperatorKeys(nodeOperatorId);
     }
 
     /// @inheritdoc ICSAccounting
@@ -205,25 +207,20 @@ contract CSAccounting is
         uint256 wstETHAmount,
         PermitInput calldata permit
     ) external whenResumed onlyCSM {
-        // @dev for some reason foundry coverage consider this if as not fully covered. Check tests to see it is covered indeed
-        // preventing revert for already used permit or avoid permit usage in case of value == 0
-        if (
-            permit.value > 0 &&
-            WSTETH.allowance(from, address(this)) < permit.value
-        ) {
-            // solhint-disable-next-line func-named-parameters
-            WSTETH.permit(
-                from,
-                address(this),
-                permit.value,
-                permit.deadline,
-                permit.v,
-                permit.r,
-                permit.s
-            );
-        }
-
+        _unwrapWstETHPermitIfRequired(from, permit);
         CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
+    }
+
+    /// @inheritdoc ICSAccounting
+    function depositWstETH(
+        uint256 nodeOperatorId,
+        uint256 wstETHAmount,
+        PermitInput calldata permit
+    ) external whenResumed {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        _unwrapWstETHPermitIfRequired(msg.sender, permit);
+        CSBondCore._depositWstETH(msg.sender, nodeOperatorId, wstETHAmount);
+        CSM.enqueueNodeOperatorKeys(nodeOperatorId);
     }
 
     /// @inheritdoc ICSAccounting
@@ -534,6 +531,46 @@ contract CSAccounting is
                 nonWithdrawnKeys > bondedKeys
                     ? nonWithdrawnKeys - bondedKeys
                     : 0;
+        }
+    }
+
+    function _unwrapStETHPermitIfRequired(
+        address from,
+        PermitInput calldata permit
+    ) internal {
+        if (
+            permit.value > 0 &&
+            LIDO.allowance(from, address(this)) < permit.value
+        ) {
+            LIDO.permit({
+                owner: from,
+                spender: address(this),
+                value: permit.value,
+                deadline: permit.deadline,
+                v: permit.v,
+                r: permit.r,
+                s: permit.s
+            });
+        }
+    }
+
+    function _unwrapWstETHPermitIfRequired(
+        address from,
+        PermitInput calldata permit
+    ) internal {
+        if (
+            permit.value > 0 &&
+            WSTETH.allowance(from, address(this)) < permit.value
+        ) {
+            WSTETH.permit({
+                owner: from,
+                spender: address(this),
+                value: permit.value,
+                deadline: permit.deadline,
+                v: permit.v,
+                r: permit.r,
+                s: permit.s
+            });
         }
     }
 

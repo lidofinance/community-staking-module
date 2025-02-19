@@ -421,7 +421,7 @@ contract DepositIntegrationTest is IntegrationTestBase {
         uint256 preTotalShares = accounting.totalBondShares();
 
         lido.approve(address(accounting), type(uint256).max);
-        csm.depositStETH(
+        accounting.depositStETH(
             defaultNoId,
             32 ether,
             ICSAccounting.PermitInput({
@@ -446,7 +446,7 @@ contract DepositIntegrationTest is IntegrationTestBase {
         uint256 preTotalShares = accounting.totalBondShares();
 
         uint256 shares = lido.getSharesByPooledEth(32 ether);
-        csm.depositETH{ value: 32 ether }(defaultNoId);
+        accounting.depositETH{ value: 32 ether }(defaultNoId);
 
         assertEq(user.balance, 0);
         assertEq(accounting.getBondShares(defaultNoId), shares + preShares);
@@ -468,7 +468,7 @@ contract DepositIntegrationTest is IntegrationTestBase {
         uint256 preTotalShares = accounting.totalBondShares();
 
         wstETH.approve(address(accounting), type(uint256).max);
-        csm.depositWstETH(
+        accounting.depositWstETH(
             defaultNoId,
             wstETHAmount,
             ICSAccounting.PermitInput({
@@ -503,7 +503,7 @@ contract DepositIntegrationTest is IntegrationTestBase {
         uint256 preShares = accounting.getBondShares(defaultNoId);
         uint256 preTotalShares = accounting.totalBondShares();
 
-        csm.depositStETH(
+        accounting.depositStETH(
             defaultNoId,
             32 ether,
             ICSAccounting.PermitInput({
@@ -544,7 +544,7 @@ contract DepositIntegrationTest is IntegrationTestBase {
         uint256 preShares = accounting.getBondShares(defaultNoId);
         uint256 preTotalShares = accounting.totalBondShares();
 
-        csm.depositWstETH(
+        accounting.depositWstETH(
             defaultNoId,
             wstETHAmount,
             ICSAccounting.PermitInput({
