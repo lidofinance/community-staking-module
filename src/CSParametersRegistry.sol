@@ -24,8 +24,8 @@ contract CSParametersRegistry is
     mapping(uint256 => MarkedUint248)
         internal _elRewardsStealingAdditionalFines;
 
-    uint256 public defaultPriorityQueueLimit;
-    mapping(uint256 => MarkedUint248) internal _priorityQueueLimits;
+    QueueConfig public defaultQueueConfig;
+    mapping(uint256 curveId => MarkedQueueConfig) internal _queueConfigs;
 
     /// @dev Default value for the reward share. Can be only be set as a flat value due to possible sybil attacks
     ///      Decreased reward share for some validators > N will promote sybils. Increased reward share for validators > N will give large operators an advantage
@@ -47,8 +47,13 @@ contract CSParametersRegistry is
     mapping(uint256 => MarkedPerformanceCoefficients)
         internal _performanceCoefficients;
 
-    constructor() {
+    uint256 public immutable QUEUE_LOWEST_PRIORITY;
+    uint256 public immutable QUEUE_LEGACY_PRIORITY;
+
+    constructor(uint256 queueLowestPriority) {
         _disableInitializers();
+        QUEUE_LOWEST_PRIORITY = queueLowestPriority;
+        QUEUE_LEGACY_PRIORITY = queueLowestPriority - 1;
     }
 
     /// @notice initialize contract
@@ -62,7 +67,6 @@ contract CSParametersRegistry is
         _setDefaultElRewardsStealingAdditionalFine(
             data.elRewardsStealingAdditionalFine
         );
-        _setDefaultPriorityQueueLimit(data.priorityQueueLimit);
         _setDefaultRewardShare(data.rewardShare);
         _setDefaultPerformanceLeeway(data.performanceLeeway);
         _setDefaultStrikesParams(data.strikesLifetime, data.strikesThreshold);
@@ -71,6 +75,10 @@ contract CSParametersRegistry is
             data.attestationsWeight,
             data.blocksWeight,
             data.syncWeight
+        );
+        _setDefaultQueueConfig(
+            data.defaultQueuePriority,
+            data.defaultQueueMaxDeposits
         );
 
         __AccessControlEnumerable_init();
@@ -89,13 +97,6 @@ contract CSParametersRegistry is
         uint256 fine
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setDefaultElRewardsStealingAdditionalFine(fine);
-    }
-
-    /// @inheritdoc ICSParametersRegistry
-    function setDefaultPriorityQueueLimit(
-        uint256 limit
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setDefaultPriorityQueueLimit(limit);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -141,6 +142,14 @@ contract CSParametersRegistry is
     }
 
     /// @inheritdoc ICSParametersRegistry
+    function setDefaultQueueConfig(
+        uint256 priority,
+        uint256 maxDeposits
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setDefaultQueueConfig(priority, maxDeposits);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
     function setKeyRemovalCharge(
         uint256 curveId,
         uint256 keyRemovalCharge
@@ -181,23 +190,6 @@ contract CSParametersRegistry is
     }
 
     /// @inheritdoc ICSParametersRegistry
-    function setPriorityQueueLimit(
-        uint256 curveId,
-        uint256 limit
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _priorityQueueLimits[curveId] = MarkedUint248(limit.toUint248(), true);
-        emit PriorityQueueLimitSet(curveId, limit);
-    }
-
-    /// @inheritdoc ICSParametersRegistry
-    function unsetPriorityQueueLimit(
-        uint256 curveId
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        delete _priorityQueueLimits[curveId];
-        emit PriorityQueueLimitUnset(curveId);
-    }
-
-    /// @inheritdoc ICSParametersRegistry
     function setRewardShareData(
         uint256 curveId,
         uint256[] calldata keyPivots,
@@ -231,7 +223,6 @@ contract CSParametersRegistry is
         uint256 curveId
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         delete _rewardShareData[curveId];
-
         emit RewardShareDataUnset(curveId);
     }
 
@@ -270,7 +261,6 @@ contract CSParametersRegistry is
         uint256 curveId
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         delete _performanceLeewayData[curveId];
-
         emit PerformanceLeewayDataUnset(curveId);
     }
 
@@ -347,6 +337,36 @@ contract CSParametersRegistry is
     }
 
     /// @inheritdoc ICSParametersRegistry
+    function setQueueConfig(
+        uint256 curveId,
+        QueueConfig calldata config
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (config.priority == QUEUE_LEGACY_PRIORITY) {
+            revert QueueCannotBeUsed();
+        }
+
+        if (config.priority > QUEUE_LOWEST_PRIORITY) {
+            revert QueueCannotBeUsed();
+        }
+
+        _queueConfigs[curveId] = MarkedQueueConfig({
+            priority: config.priority,
+            maxDeposits: config.maxDeposits,
+            isValue: true
+        });
+
+        emit QueueConfigSet(curveId, config.priority, config.maxDeposits);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function unsetQueueConfig(
+        uint256 curveId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        delete _queueConfigs[curveId];
+        emit QueueConfigUnset(curveId);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
     function getKeyRemovalCharge(
         uint256 curveId
     ) external view returns (uint256 keyRemovalCharge) {
@@ -361,14 +381,6 @@ contract CSParametersRegistry is
         MarkedUint248 memory data = _elRewardsStealingAdditionalFines[curveId];
         return
             data.isValue ? data.value : defaultElRewardsStealingAdditionalFine;
-    }
-
-    /// @inheritdoc ICSParametersRegistry
-    function getPriorityQueueLimit(
-        uint256 curveId
-    ) external view returns (uint256 limit) {
-        MarkedUint248 memory data = _priorityQueueLimits[curveId];
-        return data.isValue ? data.value : defaultPriorityQueueLimit;
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -460,6 +472,22 @@ contract CSParametersRegistry is
         );
     }
 
+    /// @inheritdoc ICSParametersRegistry
+    function getQueueConfig(
+        uint256 curveId
+    ) external view returns (uint32 queuePriority, uint32 maxDeposits) {
+        MarkedQueueConfig storage config = _queueConfigs[curveId];
+
+        if (!config.isValue) {
+            return (
+                defaultQueueConfig.priority,
+                defaultQueueConfig.maxDeposits
+            );
+        }
+
+        return (config.priority, config.maxDeposits);
+    }
+
     function _setDefaultKeyRemovalCharge(uint256 keyRemovalCharge) internal {
         defaultKeyRemovalCharge = keyRemovalCharge;
         emit DefaultKeyRemovalChargeSet(keyRemovalCharge);
@@ -468,11 +496,6 @@ contract CSParametersRegistry is
     function _setDefaultElRewardsStealingAdditionalFine(uint256 fine) internal {
         defaultElRewardsStealingAdditionalFine = fine;
         emit DefaultElRewardsStealingAdditionalFineSet(fine);
-    }
-
-    function _setDefaultPriorityQueueLimit(uint256 limit) internal {
-        defaultPriorityQueueLimit = limit;
-        emit DefaultPriorityQueueLimitSet(limit);
     }
 
     function _setDefaultRewardShare(uint256 share) internal {
@@ -519,6 +542,18 @@ contract CSParametersRegistry is
             blocksWeight,
             syncWeight
         );
+    }
+
+    function _setDefaultQueueConfig(
+        uint256 priority,
+        uint256 maxDeposits
+    ) internal {
+        if (priority > QUEUE_LOWEST_PRIORITY) {
+            revert QueueCannotBeUsed();
+        }
+        defaultQueueConfig.priority = priority.toUint32();
+        defaultQueueConfig.maxDeposits = maxDeposits.toUint32();
+        emit DefaultQueueConfigSet(priority, maxDeposits);
     }
 
     function _validateStrikesParams(

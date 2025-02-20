@@ -30,6 +30,7 @@ struct NodeOperator {
     /* 4 */ address rewardAddress;
     /* 5 */ address proposedRewardAddress;
     /* 5 */ bool extendedManagerPermissions;
+    /* 5 */ bool usedPriorityQueue;
 }
 
 struct NodeOperatorManagementProperties {
@@ -44,12 +45,12 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     error NodeOperatorDoesNotExist();
     error SenderIsNotEligible();
     error InvalidVetKeysPointer();
-    error StuckKeysHigherThanNonExited();
     error ExitedKeysHigherThanTotalDeposited();
     error ExitedKeysDecrease();
 
     error InvalidInput();
     error NotEnoughKeys();
+    error PriorityQueueAlreadyUsed();
 
     error SigningKeysInvalidOffset();
 
@@ -91,10 +92,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         uint256 indexed nodeOperatorId,
         uint256 exitedKeysCount
     );
-    event StuckSigningKeysCountChanged(
-        uint256 indexed nodeOperatorId,
-        uint256 stuckKeysCount
-    );
     event TotalSigningKeysCountChanged(
         uint256 indexed nodeOperatorId,
         uint256 totalKeysCount
@@ -114,6 +111,12 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         uint256 indexed nodeOperatorId,
         uint256 keyIndex,
         bytes pubkey
+    );
+
+    event BatchEnqueued(
+        uint256 indexed queuePriority,
+        uint256 indexed nodeOperatorId,
+        uint256 count
     );
 
     event KeyRemovalChargeApplied(uint256 indexed nodeOperatorId);
@@ -379,13 +382,22 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         address newAddress
     ) external;
 
-    /// @notice Returns the deposit queue head and tail
-    function depositQueue() external view returns (uint128 head, uint128 tail);
+    /// @notice Get the pointers to the head and tail of queue with the given priority.
+    /// @param queuePriority Priority of the queue to get the pointers.
+    /// @return head Pointer to the head of the queue.
+    /// @return tail Pointer to the tail of the queue.
+    function depositQueuePointers(
+        uint256 queuePriority
+    ) external view returns (uint128 head, uint128 tail);
 
     /// @notice Get the deposit queue item by an index
-    /// @param index Index of a queue item
-    /// @return Deposit queue item
-    function depositQueueItem(uint128 index) external view returns (Batch);
+    /// @param queuePriority Priority of the queue to get an item from
+    /// @param index Index of a queue item (continuous numbering)
+    /// @return Deposit queue item and the priority of the queue
+    function depositQueueItem(
+        uint256 queuePriority,
+        uint128 index
+    ) external view returns (Batch);
 
     /// @notice Clean the deposit queue from batches with no depositable keys
     /// @dev Use **eth_call** to check how many items will be removed
@@ -400,6 +412,15 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     /// @notice Unqueued stands for vetted but not enqueued keys
     /// @param nodeOperatorId ID of the Node Operator
     function enqueueNodeOperatorKeys(uint256 nodeOperatorId) external;
+
+    /// Performs a one-time migration of allocated seats from the legacy queue to a priority queue
+    /// for an eligible node operator. This is possible, e.g., in the following scenario: A node
+    /// operator with EA curve added their keys before CSM v2 and has no deposits due to a very long
+    /// queue. The EA curve gives the node operator the ability to get some count of deposits through
+    /// the priority queue. So, by calling the migration method, the node operator can obtain seats
+    /// in the priority queue even though they already have seats in the legacy queue.
+    /// @param nodeOperatorId ID of the Node Operator
+    function migrateToPriorityQueue(uint256 nodeOperatorId) external;
 
     /// @notice Get Node Operator info
     /// @param nodeOperatorId ID of the Node Operator

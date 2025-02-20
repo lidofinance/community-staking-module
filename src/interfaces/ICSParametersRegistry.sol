@@ -9,6 +9,17 @@ interface ICSParametersRegistry {
         bool isValue;
     }
 
+    struct MarkedQueueConfig {
+        uint32 priority;
+        uint32 maxDeposits;
+        bool isValue;
+    }
+
+    struct QueueConfig {
+        uint32 priority;
+        uint32 maxDeposits;
+    }
+
     struct StrikesParams {
         uint32 lifetime;
         uint32 threshold;
@@ -36,11 +47,12 @@ interface ICSParametersRegistry {
     struct InitializationData {
         uint256 keyRemovalCharge;
         uint256 elRewardsStealingAdditionalFine;
-        uint256 priorityQueueLimit;
         uint256 rewardShare;
         uint256 performanceLeeway;
         uint256 strikesLifetime;
         uint256 strikesThreshold;
+        uint256 defaultQueuePriority;
+        uint256 defaultQueueMaxDeposits;
         uint256 badPerformancePenalty;
         uint256 attestationsWeight;
         uint256 blocksWeight;
@@ -54,7 +66,6 @@ interface ICSParametersRegistry {
 
     event DefaultKeyRemovalChargeSet(uint256 value);
     event DefaultElRewardsStealingAdditionalFineSet(uint256 value);
-    event DefaultPriorityQueueLimitSet(uint256 value);
     event DefaultRewardShareSet(uint256 value);
     event DefaultPerformanceLeewaySet(uint256 value);
     event DefaultStrikesParamsSet(uint256 lifetime, uint256 threshold);
@@ -64,6 +75,7 @@ interface ICSParametersRegistry {
         uint256 blocksWeight,
         uint256 syncWeight
     );
+    event DefaultQueueConfigSet(uint256 priority, uint256 maxDeposits);
 
     event KeyRemovalChargeSet(
         uint256 indexed curveId,
@@ -73,7 +85,6 @@ interface ICSParametersRegistry {
         uint256 indexed curveId,
         uint256 fine
     );
-    event PriorityQueueLimitSet(uint256 indexed curveId, uint256 limit);
     event RewardShareDataSet(uint256 indexed curveId);
     event PerformanceLeewayDataSet(uint256 indexed curveId);
     event StrikesParamsSet(
@@ -91,17 +102,29 @@ interface ICSParametersRegistry {
 
     event KeyRemovalChargeUnset(uint256 indexed curveId);
     event ElRewardsStealingAdditionalFineUnset(uint256 indexed curveId);
-    event PriorityQueueLimitUnset(uint256 indexed curveId);
     event RewardShareDataUnset(uint256 indexed curveId);
     event PerformanceLeewayDataUnset(uint256 indexed curveId);
     event StrikesParamsUnset(uint256 indexed curveId);
     event BadPerformancePenaltyUnset(uint256 indexed curveId);
     event PerformanceCoefficientsUnset(uint256 indexed curveId);
+    event QueueConfigSet(
+        uint256 indexed curveId,
+        uint256 priority,
+        uint256 maxDeposits
+    );
+    event QueueConfigUnset(uint256 indexed curveId);
 
     error InvalidRewardShareData();
     error InvalidPerformanceLeewayData();
     error InvalidStrikesParams();
     error ZeroAdminAddress();
+    error QueueCannotBeUsed();
+
+    /// @notice The lowest priority a deposit queue can be assigned with.
+    function QUEUE_LOWEST_PRIORITY() external view returns (uint256);
+
+    /// @notice The priority reserved to be used for legacy queue only.
+    function QUEUE_LEGACY_PRIORITY() external view returns (uint256);
 
     /// @notice Set default value for the key removal charge. Default value is used if a specific value is not set for the curveId
     /// @param keyRemovalCharge value to be set as default for the key removal charge
@@ -118,13 +141,6 @@ interface ICSParametersRegistry {
     function defaultElRewardsStealingAdditionalFine()
         external
         returns (uint256);
-
-    /// @notice Set default value for the priority queue limit. Default value is used if a specific value is not set for the curveId
-    /// @param limit value to be set as default for the priority queue limit
-    function setDefaultPriorityQueueLimit(uint256 limit) external;
-
-    /// @notice Get default value for the priority queue limit
-    function defaultPriorityQueueLimit() external returns (uint256);
 
     /// @notice Set default value for the reward share. Default value is used if a specific value is not set for the curveId
     /// @param share value to be set as default for the reward share
@@ -213,25 +229,6 @@ interface ICSParametersRegistry {
         uint256 curveId
     ) external view returns (uint256 fine);
 
-    /// @notice Set priority queue limit for the curveId.
-    /// @dev The first `limit` keys for the Node Operator with the given `curveId` will be placed in the priority queue.
-    /// @param curveId Curve Id to associate priority queue limit with
-    /// @param limit Priority queue limit
-    function setPriorityQueueLimit(uint256 curveId, uint256 limit) external;
-
-    /// @notice Unset priority queue limit for the curveId
-    /// @param curveId Curve Id to unset custom priority queue limit for
-    function unsetPriorityQueueLimit(uint256 curveId) external;
-
-    /// @notice Get priority queue limit by the curveId.
-    /// @dev Zero is returned if the value is not set for the given curveId.
-    /// @dev The first `limit` keys for the Node Operator with the given `curveId` will be placed in the priority queue.
-    /// @param curveId Curve Id to get priority queue limit for
-    /// @return limit Priority queue limit
-    function getPriorityQueueLimit(
-        uint256 curveId
-    ) external view returns (uint256 limit);
-
     /// @notice Set reward share parameters for the curveId
     /// @dev keyPivots = [10, 50] and rewardShares = [10000, 8000, 5000] stands for
     ///      100% rewards for the keys 1-10, 80% rewards for the keys 11-50, and 50% rewards for the keys > 50
@@ -261,6 +258,34 @@ interface ICSParametersRegistry {
         external
         view
         returns (uint256[] memory keyPivots, uint256[] memory rewardShares);
+
+    /// @notice Set default value for QueueConfig. Default value is used if a specific value is not set for the curveId.
+    /// @param priority Queue priority.
+    /// @param maxDeposits Maximum number of deposits a Node Operator can get via the priority queue.
+    function setDefaultQueueConfig(
+        uint256 priority,
+        uint256 maxDeposits
+    ) external;
+
+    /// @notice Sets the provided config to the given curve.
+    /// @param curveId Curve Id to set the config.
+    /// @param config Config to be used for the curve.
+    function setQueueConfig(
+        uint256 curveId,
+        QueueConfig memory config
+    ) external;
+
+    /// @notice Set the given curve's config to the default one.
+    /// @param curveId Curve Id to unset custom config.
+    function unsetQueueConfig(uint256 curveId) external;
+
+    /// @notice Get the queue config for the given curve.
+    /// @param curveId Curve Id to get the queue config for.
+    /// @return priority Queue priority.
+    /// @return maxDeposits Maximum number of deposits a Node Operator can get via the priority queue.
+    function getQueueConfig(
+        uint256 curveId
+    ) external view returns (uint32 priority, uint32 maxDeposits);
 
     /// @notice Set performance leeway parameters for the curveId
     /// @dev keyPivots = [20, 100] and performanceLeeways = [500, 450, 400] stands for

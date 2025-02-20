@@ -14,6 +14,7 @@ import "./helpers/mocks/WstETHMock.sol";
 import "./helpers/mocks/CSParametersRegistryMock.sol";
 import "./helpers/Utilities.sol";
 import "./helpers/MerkleTree.sol";
+import { console } from "forge-std/console.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
 import { IAssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
 import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
@@ -25,6 +26,7 @@ import { InvariantAsserts } from "./helpers/InvariantAsserts.sol";
 
 abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     using Strings for uint256;
+    using Strings for uint128;
 
     struct BatchInfo {
         uint256 nodeOperatorId;
@@ -164,24 +166,25 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         );
     }
 
-    function setStuck(uint256 noId, uint256 to) internal {
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(uint64(noId))),
-            bytes.concat(bytes16(uint128(to)))
-        );
-    }
-
     // Checks that the queue is in the expected state starting from its head.
-    function _assertQueueState(BatchInfo[] memory exp) internal view {
-        (uint128 curr, ) = csm.depositQueue(); // queue.head
+    function _assertQueueState(
+        uint256 priority,
+        BatchInfo[] memory exp
+    ) internal view {
+        (uint128 curr, ) = csm.depositQueuePointers(priority); // queue.head
 
         for (uint256 i = 0; i < exp.length; ++i) {
             BatchInfo memory b = exp[i];
-            Batch item = csm.depositQueueItem(curr);
+            Batch item = csm.depositQueueItem(priority, curr);
 
             assertFalse(
                 item.isNil(),
-                string.concat("unexpected end of queue at index ", i.toString())
+                string.concat(
+                    "unexpected end of queue with priority=",
+                    priority.toString(),
+                    " at index ",
+                    i.toString()
+                )
             );
 
             curr = item.next();
@@ -192,26 +195,83 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
                 noId,
                 b.nodeOperatorId,
                 string.concat(
-                    "unexpected `nodeOperatorId` at index ",
+                    "unexpected `nodeOperatorId` at queue with priority=",
+                    priority.toString(),
+                    " at index ",
                     i.toString()
                 )
             );
             assertEq(
                 keysInBatch,
                 b.count,
-                string.concat("unexpected `count` at index ", i.toString())
+                string.concat(
+                    "unexpected `count` at queue with priority=",
+                    priority.toString(),
+                    " at index ",
+                    i.toString()
+                )
             );
         }
 
         assertTrue(
-            csm.depositQueueItem(curr).isNil(),
-            "unexpected tail of queue"
+            csm.depositQueueItem(priority, curr).isNil(),
+            string.concat(
+                "unexpected tail of queue with priority=",
+                priority.toString()
+            )
         );
     }
 
     function _assertQueueIsEmpty() internal view {
-        (uint128 curr, ) = csm.depositQueue(); // queue.head
-        assertTrue(csm.depositQueueItem(curr).isNil(), "queue should be empty");
+        for (uint256 p = 0; p <= csm.QUEUE_LOWEST_PRIORITY(); ++p) {
+            (uint128 curr, ) = csm.depositQueuePointers(p); // queue.head
+            assertTrue(
+                csm.depositQueueItem(p, curr).isNil(),
+                string.concat(
+                    "queue with priority=",
+                    p.toString(),
+                    " is not empty"
+                )
+            );
+        }
+    }
+
+    function _printQueue() internal view {
+        for (uint256 p = 0; p <= csm.QUEUE_LOWEST_PRIORITY(); ++p) {
+            (uint128 curr, ) = csm.depositQueuePointers(p);
+
+            for (;;) {
+                Batch item = csm.depositQueueItem(p, curr);
+                if (item.isNil()) break;
+
+                uint256 noId = item.noId();
+                uint256 keysInBatch = item.keys();
+
+                console.log(
+                    string.concat(
+                        "queue.priority=",
+                        p.toString(),
+                        "[",
+                        curr.toString(),
+                        "]={noId:",
+                        noId.toString(),
+                        ",count:",
+                        keysInBatch.toString(),
+                        "}"
+                    )
+                );
+
+                curr = item.next();
+            }
+        }
+    }
+
+    function _isQueueDirty(uint256 maxItems) internal returns (bool) {
+        // XXX: Mimic a **eth_call** to avoid state changes.
+        uint256 snapshot = vm.snapshotState();
+        (uint256 toRemove, ) = csm.cleanDepositQueue(maxItems);
+        vm.revertToState(snapshot);
+        return toRemove > 0;
     }
 
     function getNodeOperatorSummary(
@@ -757,6 +817,8 @@ contract CSMAddValidatorKeys is CSMCommon {
             emit IStakingModule.SigningKeyAdded(noId, keys);
             vm.expectEmit(address(csm));
             emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
         }
         csm.addValidatorKeysWstETH(
             nodeOperator,
@@ -773,6 +835,53 @@ contract CSMAddValidatorKeys is CSMCommon {
             })
         );
         assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_AddValidatorKeysWstETH_withTargetLimitSet()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        uint256 noId = createNodeOperator();
+
+        csm.updateTargetValidatorsLimits({
+            nodeOperatorId: noId,
+            targetLimitMode: 1,
+            targetLimit: 0
+        });
+
+        uint256 toWrap = BOND_SIZE + 1 wei;
+        vm.deal(nodeOperator, toWrap);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: toWrap }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        wstETH.wrap(toWrap);
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+        uint256 nonce = csm.getNonce();
+
+        {
+            vm.expectEmit(address(csm));
+            emit IStakingModule.SigningKeyAdded(noId, keys);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
+        }
+        csm.addValidatorKeysWstETH(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+        assertEq(csm.getNonce(), nonce + 1);
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.depositableValidatorsCount, 0);
     }
 
     function test_AddValidatorKeysWstETH_createNodeOperatorRole()
@@ -875,6 +984,8 @@ contract CSMAddValidatorKeys is CSMCommon {
             emit IStakingModule.SigningKeyAdded(noId, keys);
             vm.expectEmit(address(csm));
             emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
         }
         csm.addValidatorKeysStETH(
             nodeOperator,
@@ -891,6 +1002,51 @@ contract CSMAddValidatorKeys is CSMCommon {
             })
         );
         assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_AddValidatorKeysStETH_withTargetLimitSet()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        uint256 noId = createNodeOperator();
+
+        csm.updateTargetValidatorsLimits({
+            nodeOperatorId: noId,
+            targetLimitMode: 1,
+            targetLimit: 0
+        });
+
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+        uint256 nonce = csm.getNonce();
+
+        {
+            vm.expectEmit(address(csm));
+            emit IStakingModule.SigningKeyAdded(noId, keys);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
+        }
+        csm.addValidatorKeysStETH(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: BOND_SIZE,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+        assertEq(csm.getNonce(), nonce + 1);
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.depositableValidatorsCount, 0);
     }
 
     function test_AddValidatorKeysStETH_createNodeOperatorRole()
@@ -983,6 +1139,44 @@ contract CSMAddValidatorKeys is CSMCommon {
         vm.deal(nodeOperator, required);
         uint256 nonce = csm.getNonce();
 
+        {
+            vm.expectEmit(address(csm));
+            emit IStakingModule.SigningKeyAdded(noId, keys);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
+        }
+        vm.prank(nodeOperator);
+        csm.addValidatorKeysETH{ value: required }(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures
+        );
+        assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_AddValidatorKeysETH_withTargetLimitSet()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        uint256 noId = createNodeOperator();
+
+        csm.updateTargetValidatorsLimits({
+            nodeOperatorId: noId,
+            targetLimitMode: 1,
+            targetLimit: 0
+        });
+
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
+        vm.deal(nodeOperator, required);
+        uint256 nonce = csm.getNonce();
+
         vm.prank(nodeOperator);
         {
             vm.expectEmit(address(csm));
@@ -998,6 +1192,8 @@ contract CSMAddValidatorKeys is CSMCommon {
             signatures
         );
         assertEq(csm.getNonce(), nonce + 1);
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.depositableValidatorsCount, 0);
     }
 
     function test_AddValidatorKeysETH_createNodeOperatorRole() public {
@@ -2356,7 +2552,7 @@ contract CsmVetKeys is CSMCommon {
         vm.expectEmit(address(csm));
         emit ICSModule.VettedSigningKeysCountChanged(noId, 3);
         vm.expectEmit(address(csm));
-        emit IQueueLib.BatchEnqueued(noId, 1);
+        emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
         uploadMoreKeys(noId, 1);
 
         NodeOperator memory no = csm.getNodeOperator(noId);
@@ -2365,7 +2561,7 @@ contract CsmVetKeys is CSMCommon {
         BatchInfo[] memory exp = new BatchInfo[](2);
         exp[0] = BatchInfo({ nodeOperatorId: noId, count: 2 });
         exp[1] = BatchInfo({ nodeOperatorId: noId, count: 1 });
-        _assertQueueState(exp);
+        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
     }
 
     function test_vetKeys_Counters() public assertInvariants {
@@ -2400,14 +2596,6 @@ contract CsmVetKeys is CSMCommon {
 
 contract CsmQueueOps is CSMCommon {
     uint256 internal constant LOOKUP_DEPTH = 150; // derived from maxDepositsPerBlock
-
-    function _isQueueDirty(uint256 maxItems) internal returns (bool) {
-        // XXX: Mimic a **eth_call** to avoid state changes.
-        uint256 snapshot = vm.snapshotState();
-        (uint256 toRemove, ) = csm.cleanDepositQueue(maxItems);
-        vm.revertToState(snapshot);
-        return toRemove > 0;
-    }
 
     function test_emptyQueueIsClean() public assertInvariants {
         bool isDirty = _isQueueDirty(LOOKUP_DEPTH);
@@ -2484,7 +2672,7 @@ contract CsmQueueOps is CSMCommon {
         BatchInfo[] memory exp = new BatchInfo[](2);
         exp[0] = BatchInfo({ nodeOperatorId: 0, count: 3 });
         exp[1] = BatchInfo({ nodeOperatorId: 1, count: 5 });
-        _assertQueueState(exp);
+        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
 
         (toRemove, ) = csm.cleanDepositQueue(LOOKUP_DEPTH);
         assertEq(toRemove, 0, "queue should be clean");
@@ -2566,7 +2754,7 @@ contract CsmQueueOps is CSMCommon {
         csm.cleanDepositQueue(1);
 
         vm.expectEmit(address(csm));
-        emit IQueueLib.BatchEnqueued(noId, 7);
+        emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 7);
 
         csm.updateTargetValidatorsLimits({
             nodeOperatorId: noId,
@@ -2589,8 +2777,416 @@ contract CsmQueueOps is CSMCommon {
         csm.cleanDepositQueue(1);
 
         vm.expectEmit(address(csm));
-        emit IQueueLib.BatchEnqueued(noId, 1);
+        emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
         csm.submitWithdrawal(noId, 0, DEPOSIT_SIZE, false);
+    }
+}
+
+contract CsmPriorityQueue is CSMCommon {
+    uint256 constant LOOKUP_DEPTH = 150;
+
+    uint32 constant PRIORITY_QUEUE = 0;
+    uint32 constant MAX_DEPOSITS = 10;
+
+    uint32 REGULAR_QUEUE;
+
+    function setUp() public override {
+        super.setUp();
+        // Just to make sure we configured defaults properly and check things properly.
+        assertNotEq(PRIORITY_QUEUE, csm.QUEUE_LOWEST_PRIORITY());
+        assertNotEq(PRIORITY_QUEUE, csm.QUEUE_LEGACY_PRIORITY());
+        REGULAR_QUEUE = uint32(csm.QUEUE_LOWEST_PRIORITY());
+    }
+
+    function test_enqueueToPriorityQueue_LessThanMaxDeposits() public {
+        uint256 noId = createNodeOperator(0);
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 8);
+
+            uploadMoreKeys(noId, 8);
+        }
+
+        _assertQueueEmpty(REGULAR_QUEUE);
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 8 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+    }
+
+    function test_enqueueToPriorityQueue_MoreThanMaxDeposits() public {
+        uint256 noId = createNodeOperator(0);
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 10);
+
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(REGULAR_QUEUE, noId, 5);
+
+            uploadMoreKeys(noId, 15);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 10 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 5 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_enqueueToPriorityQueue_AlreadyEnqueuedLessThanMaxDeposits()
+        public
+    {
+        uint256 noId = createNodeOperator(0);
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        uploadMoreKeys(noId, 8);
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 2);
+
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(REGULAR_QUEUE, noId, 10);
+
+            uploadMoreKeys(noId, 12);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](2);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 8 });
+        exp[1] = BatchInfo({ nodeOperatorId: noId, count: 2 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 10 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_enqueueToPriorityQueue_AlreadyEnqueuedMoreThanMaxDeposits()
+        public
+    {
+        uint256 noId = createNodeOperator(0);
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        uploadMoreKeys(noId, 12);
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(REGULAR_QUEUE, noId, 12);
+
+            uploadMoreKeys(noId, 12);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 10 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp = new BatchInfo[](2);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 2 });
+        exp[1] = BatchInfo({ nodeOperatorId: noId, count: 12 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_enqueueToPriorityQueue_EnqueuedWithDepositedLessThanMaxDeposits()
+        public
+    {
+        uint256 noId = createNodeOperator(0);
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        uploadMoreKeys(noId, 8);
+        csm.obtainDepositData(3, ""); // no.enqueuedCount == 5
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 2);
+
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(REGULAR_QUEUE, noId, 10);
+
+            uploadMoreKeys(noId, 12);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](2);
+
+        // The batch was partially consumed by the obtainDepositData call.
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 5 });
+        exp[1] = BatchInfo({ nodeOperatorId: noId, count: 2 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 10 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_enqueueToPriorityQueue_EnqueuedWithDepositedMoreThanMaxDeposits()
+        public
+    {
+        uint256 noId = createNodeOperator(0);
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        uploadMoreKeys(noId, 12);
+        csm.obtainDepositData(3, ""); // no.enqueuedCount == 9
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(REGULAR_QUEUE, noId, 12);
+
+            uploadMoreKeys(noId, 12);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        // The batch was partially consumed by the obtainDepositData call.
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 7 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp = new BatchInfo[](2);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 2 });
+        exp[1] = BatchInfo({ nodeOperatorId: noId, count: 12 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_migrateToPriorityQueue_EnqueuedLessThanMaxDeposits() public {
+        uint256 noId = createNodeOperator(0);
+        uploadMoreKeys(noId, 8);
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 8);
+
+            csm.migrateToPriorityQueue(noId);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 8 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 8 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_migrateToPriorityQueue_EnqueuedMoreThanMaxDeposits() public {
+        uint256 noId = createNodeOperator(0);
+        uploadMoreKeys(noId, 15);
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 10);
+
+            csm.migrateToPriorityQueue(noId);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 10 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 15 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_migrateToPriorityQueue_DepositedLessThanMaxDeposits() public {
+        uint256 noId = createNodeOperator(0);
+        uploadMoreKeys(noId, 15);
+
+        csm.obtainDepositData(8, "");
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 2);
+
+            csm.migrateToPriorityQueue(noId);
+        }
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 2 });
+        _assertQueueState(PRIORITY_QUEUE, exp);
+
+        // The batch was partially consumed by the obtainDepositData call.
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 7 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_migrateToPriorityQueue_DepositedMoreThanMaxDeposits() public {
+        uint256 noId = createNodeOperator(0);
+        uploadMoreKeys(noId, 15);
+
+        csm.obtainDepositData(12, "");
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        {
+            csm.migrateToPriorityQueue(noId);
+        }
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+
+        BatchInfo[] memory exp = new BatchInfo[](1);
+        // The batch was partially consumed by the obtainDepositData call.
+        exp[0] = BatchInfo({ nodeOperatorId: noId, count: 3 });
+        _assertQueueState(REGULAR_QUEUE, exp);
+    }
+
+    function test_migrateToPriorityQueue_RevertsIfPriorityQueueAlreadyUsedViaMigrate()
+        public
+    {
+        uint256 noId = createNodeOperator(0);
+        uploadMoreKeys(noId, 15);
+
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        csm.migrateToPriorityQueue(noId);
+
+        {
+            vm.expectRevert(ICSModule.PriorityQueueAlreadyUsed.selector);
+            csm.migrateToPriorityQueue(noId);
+        }
+    }
+
+    function test_migrateToPriorityQueue_RevertsIfPriorityQueueAlreadyUsedViaAddKeys()
+        public
+    {
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        uint256 noId = createNodeOperator(0);
+        uploadMoreKeys(noId, 15);
+
+        {
+            vm.expectRevert(ICSModule.PriorityQueueAlreadyUsed.selector);
+            csm.migrateToPriorityQueue(noId);
+        }
+    }
+
+    function test_queueCleanupWorksAcrossQueues() public {
+        _assertQueueEmpty(PRIORITY_QUEUE);
+        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
+
+        uint256 noId = createNodeOperator(0);
+
+        uploadMoreKeys(noId, 2);
+        uploadMoreKeys(noId, 10);
+        uploadMoreKeys(noId, 10);
+        // [2] [8] | ... | [2] [10]
+
+        unvetKeys({ noId: noId, to: 2 });
+
+        (uint256 toRemove, ) = csm.cleanDepositQueue(LOOKUP_DEPTH);
+        assertEq(toRemove, 3, "should remove 3 batches");
+
+        bool isDirty = _isQueueDirty(LOOKUP_DEPTH);
+        assertFalse(isDirty, "queue should be clean");
+    }
+
+    function test_queueCleanupReturnsCorrectDepth() public {
+        uint256 noIdOne = createNodeOperator(0);
+        uint256 noIdTwo = createNodeOperator(0);
+
+        _enablePriorityQueue(0, 10);
+        uploadMoreKeys(noIdOne, 2);
+        uploadMoreKeys(noIdOne, 10);
+        uploadMoreKeys(noIdOne, 10);
+
+        _enablePriorityQueue(1, 10);
+        uploadMoreKeys(noIdTwo, 2);
+        uploadMoreKeys(noIdTwo, 8);
+        uploadMoreKeys(noIdTwo, 2);
+
+        unvetKeys({ noId: noIdTwo, to: 2 });
+
+        // [0,2] [0,8] | [1,2] [1,8] | ... | [0,2] [0,10] [1,2]
+        //     1     2       3     4             5      6     7
+        //                         ^                          ^ removed
+
+        uint256 snapshot;
+
+        {
+            snapshot = vm.snapshotState();
+            (uint256 toRemove, uint256 lastRemovedAtDepth) = csm
+                .cleanDepositQueue(3);
+            vm.revertToState(snapshot);
+            assertEq(toRemove, 0, "should remove 0 batch(es)");
+            assertEq(lastRemovedAtDepth, 0, "the depth should be 0");
+        }
+
+        {
+            snapshot = vm.snapshotState();
+            (uint256 toRemove, uint256 lastRemovedAtDepth) = csm
+                .cleanDepositQueue(4);
+            vm.revertToState(snapshot);
+            assertEq(toRemove, 1, "should remove 1 batch(es)");
+            assertEq(lastRemovedAtDepth, 4, "the depth should be 4");
+        }
+
+        {
+            snapshot = vm.snapshotState();
+            (uint256 toRemove, uint256 lastRemovedAtDepth) = csm
+                .cleanDepositQueue(7);
+            vm.revertToState(snapshot);
+            assertEq(toRemove, 2, "should remove 2 batch(es)");
+            assertEq(lastRemovedAtDepth, 7, "the depth should be 7");
+        }
+
+        {
+            snapshot = vm.snapshotState();
+            (uint256 toRemove, uint256 lastRemovedAtDepth) = csm
+                .cleanDepositQueue(100_500);
+            vm.revertToState(snapshot);
+            assertEq(toRemove, 2, "should remove 2 batch(es)");
+            assertEq(lastRemovedAtDepth, 7, "the depth should be 7");
+        }
+    }
+
+    function _enablePriorityQueue(
+        uint32 priority,
+        uint32 maxDeposits
+    ) internal {
+        parametersRegistry.setQueueConfig({
+            curveId: 0,
+            priority: priority,
+            maxDeposits: maxDeposits
+        });
+    }
+
+    function _assertQueueEmpty(uint32 priority) private view {
+        _assertQueueState(priority, new BatchInfo[](0));
     }
 }
 
@@ -4100,124 +4696,6 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
     }
 }
 
-contract CsmUpdateStuckValidatorsCount is CSMCommon {
-    function test_updateStuckValidatorsCount_NonZero() public assertInvariants {
-        uint256 noId = createNodeOperator(3);
-        csm.obtainDepositData(1, "");
-        uint256 nonce = csm.getNonce();
-
-        vm.expectEmit(address(csm));
-        emit ICSModule.StuckSigningKeysCountChanged(noId, 1);
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-
-        NodeOperator memory no = csm.getNodeOperator(noId);
-        assertEq(
-            no.stuckValidatorsCount,
-            1,
-            "stuckValidatorsCount not increased"
-        );
-        assertEq(csm.getNonce(), nonce + 1);
-    }
-
-    function test_updateStuckValidatorsCount_NonZero_UploadNewKeysAfter_DepositableShouldBeZero()
-        public
-    {
-        uint256 noId = createNodeOperator(3);
-        csm.obtainDepositData(1, "");
-
-        vm.expectEmit(address(csm));
-        emit ICSModule.StuckSigningKeysCountChanged(noId, 1);
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-
-        uploadMoreKeys(noId, 1);
-
-        NodeOperator memory no = csm.getNodeOperator(noId);
-        assertEq(
-            no.stuckValidatorsCount,
-            1,
-            "stuckValidatorsCount not increased"
-        );
-        assertEq(
-            no.depositableValidatorsCount,
-            0,
-            "depositableValidatorsCount is not zero"
-        );
-    }
-
-    function test_updateStuckValidatorsCount_Unstuck() public assertInvariants {
-        uint256 noId = createNodeOperator(2);
-        csm.obtainDepositData(1, "");
-
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-
-        vm.expectEmit(address(csm));
-        emit ICSModule.StuckSigningKeysCountChanged(noId, 0);
-        emit IQueueLib.BatchEnqueued(noId, 1);
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000000))
-        );
-        NodeOperator memory no = csm.getNodeOperator(noId);
-        assertEq(
-            no.stuckValidatorsCount,
-            0,
-            "stuckValidatorsCount should be zero"
-        );
-    }
-
-    function test_updateStuckValidatorsCount_RevertWhen_NoNodeOperator()
-        public
-    {
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-    }
-
-    function test_updateStuckValidatorsCount_RevertWhen_CountMoreThanDeposited()
-        public
-    {
-        createNodeOperator(3);
-        csm.obtainDepositData(1, "");
-
-        vm.expectRevert(ICSModule.StuckKeysHigherThanNonExited.selector);
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000002))
-        );
-    }
-
-    function test_updateStuckValidatorsCount_NoEventWhenStuckKeysCountSame()
-        public
-    {
-        createNodeOperator();
-        csm.obtainDepositData(1, "");
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-
-        vm.recordLogs();
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(0x0000000000000000)),
-            bytes.concat(bytes16(0x00000000000000000000000000000001))
-        );
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        // One event is NonceChanged
-        assertEq(logs.length, 1);
-    }
-}
-
 contract CsmUpdateExitedValidatorsCount is CSMCommon {
     function test_updateExitedValidatorsCount_NonZero()
         public
@@ -4313,7 +4791,6 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         vm.expectEmit(address(csm));
-        emit ICSModule.StuckSigningKeysCountChanged(noId, 1);
         emit ICSModule.ExitedSigningKeysCountChanged(noId, 1);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
@@ -4325,7 +4802,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         assertEq(no.totalExitedKeys, 1, "totalExitedKeys not increased");
         assertEq(
             no.stuckValidatorsCount,
-            1,
+            0,
             "stuckValidatorsCount not increased"
         );
 
@@ -4365,20 +4842,6 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
             nodeOperatorId: noId,
             exitedValidatorsKeysCount: 100500,
             stuckValidatorsKeysCount: 1
-        });
-    }
-
-    function test_unsafeUpdateValidatorsCount_RevertWhen_StuckCountMoreThanDeposited()
-        public
-    {
-        uint256 noId = createNodeOperator(1);
-        csm.obtainDepositData(1, "");
-
-        vm.expectRevert(ICSModule.StuckKeysHigherThanNonExited.selector);
-        csm.unsafeUpdateValidatorsCount({
-            nodeOperatorId: noId,
-            exitedValidatorsKeysCount: 1,
-            stuckValidatorsKeysCount: 100500
         });
     }
 
@@ -4454,6 +4917,8 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
                 csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(0)
         );
         assertEq(csm.getNonce(), nonce + 1);
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.depositableValidatorsCount, 0);
     }
 
     function test_reportELRewardsStealingPenalty_RevertWhen_NoNodeOperator()
@@ -4494,6 +4959,43 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
         );
 
         assertEq(csm.getNonce(), nonce);
+    }
+
+    function test_reportELRewardsStealingPenalty_EnqueueAfterUnlock()
+        public
+        assertInvariants
+    {
+        uint256 noId = createNodeOperator();
+        uint256 nonce = csm.getNonce();
+
+        csm.reportELRewardsStealingPenalty(
+            noId,
+            blockhash(block.number),
+            BOND_SIZE / 2
+        );
+
+        uint256 lockedBond = accounting.getActualLockedBond(noId);
+        assertEq(
+            lockedBond,
+            BOND_SIZE /
+                2 +
+                csm.PARAMETERS_REGISTRY().getElRewardsStealingAdditionalFine(0)
+        );
+        assertEq(csm.getNonce(), nonce + 1);
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.depositableValidatorsCount, 0);
+
+        createNodeOperator();
+        csm.obtainDepositData(1, "");
+
+        vm.warp(accounting.getBondLockPeriod() + 1);
+
+        vm.expectEmit(address(csm));
+        emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
+        csm.enqueueNodeOperatorKeys(noId);
+
+        no = csm.getNodeOperator(noId);
+        assertEq(no.depositableValidatorsCount, 1);
     }
 }
 
@@ -5080,7 +5582,7 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
 
         BatchInfo[] memory exp = new BatchInfo[](1);
         exp[0] = BatchInfo({ nodeOperatorId: noId, count: 1 });
-        _assertQueueState(exp);
+        _assertQueueState(csm.QUEUE_LOWEST_PRIORITY(), exp);
     }
 
     function test_compensateELRewardsStealingPenalty_RevertWhen_NoNodeOperator()
@@ -5588,23 +6090,6 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
         csm.onRewardsMinted(0);
     }
 
-    function test_stakingRouterRole_updateStuckValidatorsCount() public {
-        bytes32 role = csm.STAKING_ROUTER_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.prank(actor);
-        csm.updateStuckValidatorsCount("", "");
-    }
-
-    function test_stakingRouterRole_updateStuckValidatorsCount_revert() public {
-        bytes32 role = csm.STAKING_ROUTER_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.updateStuckValidatorsCount("", "");
-    }
-
     function test_stakingRouterRole_updateExitedValidatorsCount() public {
         bytes32 role = csm.STAKING_ROUTER_ROLE();
         vm.prank(admin);
@@ -5778,21 +6263,6 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 4);
     }
 
-    function test_depositableValidatorsCountChanges_OnStuck()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator(7);
-        createNodeOperator(2);
-        csm.obtainDepositData(4, "");
-        setStuck(noId, 2);
-        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 0);
-        assertEq(getStakingModuleSummary().depositableValidatorsCount, 2);
-        setStuck(noId, 0);
-        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 3);
-        assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
-    }
-
     function test_depositableValidatorsCountChanges_OnUnsafeUpdateExitedValidators()
         public
     {
@@ -5811,7 +6281,7 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
     }
 
-    function test_depositableValidatorsCountChanges_OnUnsafeUpdateStuckValidators()
+    function test_depositableValidatorsCountDoesntChange_OnUnsafeUpdateStuckValidators()
         public
     {
         uint256 noId = createNodeOperator(7);
@@ -5825,8 +6295,8 @@ contract CSMDepositableValidatorsCount is CSMCommon {
             exitedValidatorsKeysCount: 0,
             stuckValidatorsKeysCount: 1
         });
-        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 0);
-        assertEq(getStakingModuleSummary().depositableValidatorsCount, 2);
+        assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 3);
+        assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
     }
 
     function test_depositableValidatorsCountChanges_OnUnvetKeys()

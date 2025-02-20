@@ -103,11 +103,14 @@ contract InvariantAsserts is Test {
         uint256 noCount = csm.getNodeOperatorsCount();
         NodeOperator memory no;
 
-        (uint128 head, uint128 tail) = csm.depositQueue();
-        for (uint128 i = head; i < tail; ) {
-            Batch item = csm.depositQueueItem(i);
-            batchKeys[item.noId()] += item.keys();
-            i = item.next();
+        for (uint256 p = 0; p <= csm.QUEUE_LOWEST_PRIORITY(); ++p) {
+            (uint128 head, uint128 tail) = csm.depositQueuePointers(p);
+
+            for (uint128 i = head; i < tail; ) {
+                Batch item = csm.depositQueueItem(p, i);
+                batchKeys[item.noId()] += item.keys();
+                i = item.next();
+            }
         }
 
         for (uint256 noId = 0; noId < noCount; noId++) {
