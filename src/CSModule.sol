@@ -988,13 +988,13 @@ contract CSModule is
         QueueLib.Queue storage queue;
 
         uint256 totalVisited = 0;
-        uint256 p = 0;
+        uint256 priority = 0;
 
         for (;;) {
-            if (p > QUEUE_LOWEST_PRIORITY) break;
-            queue = _getQueue(p);
+            if (priority > QUEUE_LOWEST_PRIORITY) break;
+            queue = _getQueue(priority);
             unchecked {
-                ++p;
+                ++priority;
             }
 
             (
@@ -1006,9 +1006,11 @@ contract CSModule is
 
             if (removedPerQueue > 0) {
                 unchecked {
-                    // 1234 56 789A
-                    // 1234 12 1234
-                    // **R*|**|**R*
+                    // 1234 56 789A     <- cumulative depth (A=10)
+                    // 1234 12 1234     <- depth per queue
+                    // **R*|**|**R*     <- queue with [R]emoved elements
+                    //
+                    // Given that we observed all 3 queues:
                     // totalVisited: 4+2=6
                     // lastRemovedAtDepthPerQueue: 3
                     // lastRemovedAtDepth: 6+3=9
@@ -1020,6 +1022,9 @@ contract CSModule is
                 }
             }
 
+            // NOTE: If `maxItems` is set to the total length of the queue(s), `isFinished` is equal
+            // to false, effectively breaking the cycle, because in `QueueLib.clean` we don't reach
+            // an empty batch after the end of a queue.
             if (!isFinished) {
                 break;
             }
