@@ -1168,12 +1168,12 @@ contract CSModule is
             targetLimitMode = no.targetLimitMode;
             targetValidatorsCount = no.targetLimit;
         }
-        // @dev Unused after TW
-        stuckValidatorsCount = 0;
-        // @dev unused in CSM
-        refundedValidatorsCount = 0;
-        // @dev unused in CSM
-        stuckPenaltyEndTimestamp = 0;
+        {
+            // TODO: Unused in CSM, remove with TW.
+            // stuckValidatorsCount = 0;
+            // refundedValidatorsCount = 0;
+            // stuckPenaltyEndTimestamp = 0;
+        }
         totalExitedValidators = no.totalExitedKeys;
         totalDepositedValidators = no.totalDepositedKeys;
         depositableValidatorsCount = no.depositableValidatorsCount;
