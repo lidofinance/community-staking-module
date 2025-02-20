@@ -383,7 +383,6 @@ contract CSMCommon is CSMFixtures {
 
         vm.startPrank(admin);
         csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(this));
-        csm.grantRole(csm.SET_BOND_CURVE_ROLE(), address(this));
         csm.grantRole(csm.PAUSE_ROLE(), address(this));
         csm.grantRole(csm.RESUME_ROLE(), address(this));
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
@@ -402,6 +401,7 @@ contract CSMCommon is CSMFixtures {
             accounting.MANAGE_BOND_CURVES_ROLE(),
             address(this)
         );
+        accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), address(this));
         vm.stopPrank();
 
         csm.resume();
@@ -1843,42 +1843,6 @@ contract CSMObtainDepositData is CSMCommon {
         assertEq(no.enqueuedCount, random);
         assertEq(no.totalDepositedKeys, totalKeys - random);
         assertEq(no.depositableValidatorsCount, random);
-    }
-}
-
-contract CsmSetBondCurve is CSMCommon {
-    function test_setBondCurve() public {
-        uint256 nodeOperatorId = createNodeOperator();
-        uint256 curveId = accounting.DEFAULT_BOND_CURVE_ID();
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.setBondCurve.selector,
-                nodeOperatorId,
-                curveId
-            )
-        );
-        csm.setBondCurve(nodeOperatorId, curveId);
-    }
-
-    function test_setBondCurve_updateDepositableValidatorsCount() public {
-        uint256 nodeOperatorId = createNodeOperator();
-        uint256[] memory curvePoints = new uint256[](1);
-        curvePoints[0] = BOND_SIZE * 2;
-
-        uint256 curveId = accounting.addBondCurve(curvePoints);
-        uint256 depositableValidatorsCountBefore = csm
-            .getNodeOperator(nodeOperatorId)
-            .depositableValidatorsCount;
-        assertEq(depositableValidatorsCountBefore, 1);
-
-        csm.setBondCurve(nodeOperatorId, curveId);
-
-        uint256 depositableValidatorsCountAfter = csm
-            .getNodeOperator(nodeOperatorId)
-            .depositableValidatorsCount;
-        assertEq(depositableValidatorsCountAfter, 0);
     }
 }
 
@@ -5141,7 +5105,6 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
 
         uint256 curveId = accounting.addBondCurve(curvePoints);
 
-        vm.prank(address(csm));
         accounting.setBondCurve(0, curveId);
 
         uploadMoreKeys(0, 1);
@@ -5184,7 +5147,6 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
 
         uint256 curveId = accounting.addBondCurve(curvePoints);
 
-        vm.prank(address(csm));
         accounting.setBondCurve(0, curveId);
 
         uploadMoreKeys(0, 1);
@@ -5700,25 +5662,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
             }),
             address(0)
         );
-    }
-
-    function test_setBondCurveRole() public {
-        uint256 nodeOperatorId = createNodeOperator();
-        bytes32 role = csm.SET_BOND_CURVE_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.prank(actor);
-        csm.setBondCurve(nodeOperatorId, 0);
-    }
-
-    function test_setBondCurveRole_revert() public {
-        uint256 nodeOperatorId = createNodeOperator();
-        bytes32 role = csm.SET_BOND_CURVE_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.setBondCurve(nodeOperatorId, 0);
     }
 
     function test_reportELRewardsStealingPenaltyRole() public {

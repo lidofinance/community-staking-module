@@ -23,6 +23,9 @@ contract VettedGate is
     /// @dev Address of the Community Staking Module
     ICSModule public immutable CSM;
 
+    /// @dev Address of the CSM Accounting
+    ICSAccounting public immutable ACCOUNTING;
+
     /// @dev Id of the bond curve to be assigned for the eligible members
     uint256 public curveId;
 
@@ -35,6 +38,7 @@ contract VettedGate is
         if (csm == address(0)) revert ZeroModuleAddress();
 
         CSM = ICSModule(csm);
+        ACCOUNTING = ICSAccounting(CSM.accounting());
 
         _disableInitializers();
     }
@@ -46,7 +50,7 @@ contract VettedGate is
     ) external initializer {
         __AccessControlEnumerable_init();
 
-        if (_curveId == CSM.accounting().DEFAULT_BOND_CURVE_ID())
+        if (_curveId == ACCOUNTING.DEFAULT_BOND_CURVE_ID())
             revert InvalidCurveId();
         /// @dev there is no check for curve existence as this contract might be created before the curve is added
         curveId = _curveId;
@@ -84,7 +88,7 @@ contract VettedGate is
             managementProperties,
             referrer
         );
-        CSM.setBondCurve(nodeOperatorId, curveId);
+        ACCOUNTING.setBondCurve(nodeOperatorId, curveId);
         CSM.addValidatorKeysETH{ value: msg.value }({
             from: msg.sender,
             nodeOperatorId: nodeOperatorId,
@@ -111,7 +115,7 @@ contract VettedGate is
             managementProperties,
             referrer
         );
-        CSM.setBondCurve(nodeOperatorId, curveId);
+        ACCOUNTING.setBondCurve(nodeOperatorId, curveId);
         CSM.addValidatorKeysStETH({
             from: msg.sender,
             nodeOperatorId: nodeOperatorId,
@@ -139,7 +143,7 @@ contract VettedGate is
             managementProperties,
             referrer
         );
-        CSM.setBondCurve(nodeOperatorId, curveId);
+        ACCOUNTING.setBondCurve(nodeOperatorId, curveId);
         CSM.addValidatorKeysWstETH({
             from: msg.sender,
             nodeOperatorId: nodeOperatorId,
@@ -162,7 +166,7 @@ contract VettedGate is
         if (nodeOperatorAddress != msg.sender) revert NotAllowedToClaim();
         _consume(proof);
 
-        CSM.setBondCurve(nodeOperatorId, curveId);
+        ACCOUNTING.setBondCurve(nodeOperatorId, curveId);
     }
 
     /// @inheritdoc IVettedGate

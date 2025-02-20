@@ -377,6 +377,14 @@ abstract contract DeployBase is Script {
             verifier.grantRole(verifier.PAUSE_ROLE(), gateSeal);
             vettedGate.grantRole(vettedGate.PAUSE_ROLE(), gateSeal);
             accounting.grantRole(
+                accounting.SET_BOND_CURVE_ROLE(),
+                address(config.setResetBondCurveAddress)
+            );
+            accounting.grantRole(
+                accounting.SET_BOND_CURVE_ROLE(),
+                address(vettedGate)
+            );
+            accounting.grantRole(
                 accounting.RESET_BOND_CURVE_ROLE(),
                 config.setResetBondCurveAddress
             );
@@ -386,11 +394,6 @@ abstract contract DeployBase is Script {
                 address(permissionlessGate)
             );
             csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(vettedGate));
-            csm.grantRole(csm.SET_BOND_CURVE_ROLE(), address(vettedGate));
-            csm.grantRole(
-                csm.SET_BOND_CURVE_ROLE(),
-                address(config.setResetBondCurveAddress)
-            );
             csm.grantRole(
                 csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(),
                 config.elRewardsStealingReporter

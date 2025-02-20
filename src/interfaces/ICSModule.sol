@@ -163,8 +163,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     function CREATE_NODE_OPERATOR_ROLE() external view returns (bytes32);
 
-    function SET_BOND_CURVE_ROLE() external view returns (bytes32);
-
     function PARAMETERS_REGISTRY()
         external
         view
@@ -250,12 +248,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         bytes memory signatures,
         ICSAccounting.PermitInput memory permit
     ) external;
-
-    /// @notice Set bond curve for the node operator
-    ///         Permissioned
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param curveId ID of the bond curve
-    function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external;
 
     /// @notice Report EL rewards stealing for the given Node Operator
     /// @notice The final locked amount will be equal to the stolen funds plus EL stealing additional fine

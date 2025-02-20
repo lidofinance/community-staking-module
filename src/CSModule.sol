@@ -47,8 +47,6 @@ contract CSModule is
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
     bytes32 public constant CREATE_NODE_OPERATOR_ROLE =
         keccak256("CREATE_NODE_OPERATOR_ROLE");
-    bytes32 public constant SET_BOND_CURVE_ROLE =
-        keccak256("SET_BOND_CURVE_ROLE");
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
     // @dev see IStakingModule.sol
@@ -264,18 +262,6 @@ contract CSModule is
             publicKeys,
             signatures
         );
-    }
-
-    /// @inheritdoc ICSModule
-    function setBondCurve(
-        uint256 nodeOperatorId,
-        uint256 curveId
-    ) external onlyRole(SET_BOND_CURVE_ROLE) {
-        accounting.setBondCurve(nodeOperatorId, curveId);
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true
-        });
     }
 
     /// @inheritdoc ICSModule
@@ -1410,15 +1396,6 @@ contract CSModule is
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (no.managerAddress == address(0)) revert NodeOperatorDoesNotExist();
         if (no.managerAddress != from) revert SenderIsNotEligible();
-    }
-
-    function _onlyNodeOperatorManagerOrRewardAddresses(
-        uint256 nodeOperatorId
-    ) internal view {
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (no.managerAddress == address(0)) revert NodeOperatorDoesNotExist();
-        if (no.managerAddress != msg.sender && no.rewardAddress != msg.sender)
-            revert SenderIsNotEligible();
     }
 
     function _onlyExistingNodeOperator(uint256 nodeOperatorId) internal view {
