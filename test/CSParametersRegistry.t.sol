@@ -1502,4 +1502,31 @@ contract CSParametersRegistryQueueConfigTest is
         assertEq(priorityOut, defaultInitData.defaultQueuePriority);
         assertEq(maxDepositsOut, defaultInitData.defaultQueueMaxDeposits);
     }
+
+    function test_set_RevertWhen_QueuePriorityIsLegacyQueue() public {
+        uint256 curveId = 11;
+        uint32 priority = uint32(parametersRegistry.QUEUE_LEGACY_PRIORITY());
+        uint32 maxDeposits = 42;
+
+        vm.expectRevert(ICSParametersRegistry.QueueCannotBeUsed.selector);
+        vm.prank(admin);
+        parametersRegistry.setQueueConfig(
+            curveId,
+            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
+        );
+    }
+
+    function test_set_RevertWhen_QueuePriorityAboveLimit() public {
+        uint256 curveId = 11;
+        uint32 priority = uint32(parametersRegistry.QUEUE_LOWEST_PRIORITY()) +
+            1;
+        uint32 maxDeposits = 42;
+
+        vm.expectRevert(ICSParametersRegistry.QueueCannotBeUsed.selector);
+        vm.prank(admin);
+        parametersRegistry.setQueueConfig(
+            curveId,
+            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
+        );
+    }
 }
