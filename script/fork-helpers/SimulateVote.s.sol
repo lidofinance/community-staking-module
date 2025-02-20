@@ -101,7 +101,7 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         {
             oracleProxy.proxy__upgradeTo(upgradeConfig.oracleImpl);
             CSFeeOracle(deploymentConfig.oracle).finalizeUpgradeV2({
-                consensusVersion: 2,
+                consensusVersion: 3,
                 strikesContract: upgradeConfig.strikes
             });
         }
