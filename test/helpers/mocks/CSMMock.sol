@@ -5,12 +5,22 @@ pragma solidity 0.8.24;
 import { NodeOperatorManagementProperties, NodeOperator } from "../../../src/interfaces/ICSModule.sol";
 import { ICSAccounting } from "../../../src/interfaces/ICSAccounting.sol";
 
-contract CSMMock {
+contract AccountingMock {
     uint256 public constant DEFAULT_BOND_CURVE_ID = 0;
+
+    function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external {}
+}
+
+contract CSMMock {
     NodeOperator internal mockNodeOperator;
+    ICSAccounting public immutable ACCOUNTING;
+
+    constructor() {
+        ACCOUNTING = ICSAccounting(address(new AccountingMock()));
+    }
 
     function accounting() external view returns (ICSAccounting) {
-        return ICSAccounting(address(this));
+        return ACCOUNTING;
     }
 
     function mock_setNodeOperator(NodeOperator memory no) external {
@@ -56,6 +66,4 @@ contract CSMMock {
         bytes memory signatures,
         ICSAccounting.PermitInput memory permit
     ) external {}
-
-    function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external {}
 }

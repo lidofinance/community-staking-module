@@ -123,18 +123,6 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         vm.startBroadcast(admin);
 
         accounting.revokeRole(keccak256("SET_BOND_CURVE_ROLE"), address(csm));
-        /// @dev fetch the multisig address from the current accounting roles state
-        ///      and grant the same role from the new CSM implementation
-        address setResetBondCurveMember = accounting.getRoleMember(
-            keccak256("SET_BOND_CURVE_ROLE"),
-            0
-        );
-        accounting.revokeRole(
-            keccak256("SET_BOND_CURVE_ROLE"),
-            setResetBondCurveMember
-        );
-        csm.grantRole(csm.SET_BOND_CURVE_ROLE(), setResetBondCurveMember);
-
         csm.grantRole(
             csm.CREATE_NODE_OPERATOR_ROLE(),
             upgradeConfig.permissionlessGate
@@ -143,7 +131,10 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
             csm.CREATE_NODE_OPERATOR_ROLE(),
             upgradeConfig.vettedGate
         );
-        csm.grantRole(csm.SET_BOND_CURVE_ROLE(), upgradeConfig.vettedGate);
+        accounting.grantRole(
+            accounting.SET_BOND_CURVE_ROLE(),
+            upgradeConfig.vettedGate
+        );
 
         csm.revokeRole(csm.VERIFIER_ROLE(), address(deploymentConfig.verifier));
         csm.grantRole(csm.VERIFIER_ROLE(), address(upgradeConfig.verifier));
