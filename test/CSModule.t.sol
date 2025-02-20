@@ -3147,7 +3147,6 @@ contract CsmPriorityQueue is CSMCommon {
         }
 
         {
-            console.log("***");
             snapshot = vm.snapshotState();
             (uint256 toRemove, uint256 lastRemovedAtDepth) = csm
                 .cleanDepositQueue(4);
@@ -3157,7 +3156,6 @@ contract CsmPriorityQueue is CSMCommon {
         }
 
         {
-            console.log("***");
             snapshot = vm.snapshotState();
             (uint256 toRemove, uint256 lastRemovedAtDepth) = csm
                 .cleanDepositQueue(7);
@@ -3167,7 +3165,6 @@ contract CsmPriorityQueue is CSMCommon {
         }
 
         {
-            console.log("***");
             snapshot = vm.snapshotState();
             (uint256 toRemove, uint256 lastRemovedAtDepth) = csm
                 .cleanDepositQueue(100_500);
