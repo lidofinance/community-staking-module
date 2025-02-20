@@ -14,7 +14,7 @@ import "./helpers/mocks/WstETHMock.sol";
 import "./helpers/mocks/CSParametersRegistryMock.sol";
 import "./helpers/Utilities.sol";
 import "./helpers/MerkleTree.sol";
-import { console2 } from "forge-std/console2.sol";
+import { console } from "forge-std/console.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
 import { IAssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
 import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
@@ -247,7 +247,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
                 uint256 noId = item.noId();
                 uint256 keysInBatch = item.keys();
 
-                console2.log(
+                console.log(
                     string.concat(
                         "queue.priority=",
                         p.toString(),
@@ -3116,34 +3116,65 @@ contract CsmPriorityQueue is CSMCommon {
     }
 
     function test_queueCleanupReturnsCorrectDepth() public {
-        _assertQueueEmpty(PRIORITY_QUEUE);
-        _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
-
         uint256 noIdOne = createNodeOperator(0);
         uint256 noIdTwo = createNodeOperator(0);
 
+        _enablePriorityQueue(0, 10);
         uploadMoreKeys(noIdOne, 2);
         uploadMoreKeys(noIdOne, 10);
         uploadMoreKeys(noIdOne, 10);
 
-        uploadMoreKeys(noIdTwo, 10);
-        uploadMoreKeys(noIdTwo, 10);
-        uploadMoreKeys(noIdTwo, 10);
+        _enablePriorityQueue(1, 10);
+        uploadMoreKeys(noIdTwo, 2);
+        uploadMoreKeys(noIdTwo, 8);
+        uploadMoreKeys(noIdTwo, 2);
 
-        unvetKeys({ noId: noIdOne, to: 2 });
+        unvetKeys({ noId: noIdTwo, to: 2 });
 
-        // [0,2] [0,8] [1,10] | ... | [0,2] [0,10] [1,10] [1,10]
-        //     1     2      3             4      5      6      7
-        //           ^                    ^      ^       removed
+        // [0,2] [0,8] | [1,2] [1,8] | ... | [0,2] [0,10] [1,2]
+        //     1     2       3     4             5      6     7
+        //                         ^                          ^ removed
 
-        (uint256 toRemove, uint256 lastRemovedAtDepth) = csm.cleanDepositQueue(
-            LOOKUP_DEPTH
-        );
-        assertEq(toRemove, 3, "should remove 3 batches");
-        assertEq(lastRemovedAtDepth, 5, "the depth should be 5");
+        uint256 snapshot;
 
-        bool isDirty = _isQueueDirty(LOOKUP_DEPTH);
-        assertFalse(isDirty, "queue should be clean");
+        {
+            snapshot = vm.snapshotState();
+            (uint256 toRemove, uint256 lastRemovedAtDepth) = csm
+                .cleanDepositQueue(3);
+            vm.revertToState(snapshot);
+            assertEq(toRemove, 0, "should remove 0 batch(es)");
+            assertEq(lastRemovedAtDepth, 0, "the depth should be 0");
+        }
+
+        {
+            console.log("***");
+            snapshot = vm.snapshotState();
+            (uint256 toRemove, uint256 lastRemovedAtDepth) = csm
+                .cleanDepositQueue(4);
+            vm.revertToState(snapshot);
+            assertEq(toRemove, 1, "should remove 1 batch(es)");
+            assertEq(lastRemovedAtDepth, 4, "the depth should be 4");
+        }
+
+        {
+            console.log("***");
+            snapshot = vm.snapshotState();
+            (uint256 toRemove, uint256 lastRemovedAtDepth) = csm
+                .cleanDepositQueue(7);
+            vm.revertToState(snapshot);
+            assertEq(toRemove, 2, "should remove 2 batch(es)");
+            assertEq(lastRemovedAtDepth, 7, "the depth should be 7");
+        }
+
+        {
+            console.log("***");
+            snapshot = vm.snapshotState();
+            (uint256 toRemove, uint256 lastRemovedAtDepth) = csm
+                .cleanDepositQueue(100_500);
+            vm.revertToState(snapshot);
+            assertEq(toRemove, 2, "should remove 2 batch(es)");
+            assertEq(lastRemovedAtDepth, 7, "the depth should be 7");
+        }
     }
 
     function _enablePriorityQueue(
