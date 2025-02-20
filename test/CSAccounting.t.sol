@@ -353,6 +353,7 @@ contract CSAccountingBaseTest is CSAccountingFixtures {
         (locator, wstETH, stETH, burner, ) = initLido();
 
         stakingModule = new Stub();
+        mock_enqueueNodeOperatorKeys();
 
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
@@ -384,6 +385,7 @@ contract CSAccountingBaseTest is CSAccountingFixtures {
         accounting.grantRole(accounting.PAUSE_ROLE(), admin);
         accounting.grantRole(accounting.RESUME_ROLE(), admin);
         accounting.grantRole(accounting.MANAGE_BOND_CURVES_ROLE(), admin);
+        accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
         vm.stopPrank();
     }
 }
@@ -545,7 +547,7 @@ abstract contract CSAccountingBondStateBaseTest is
     function _curve(uint256[] memory curve) internal virtual {
         vm.prank(admin);
         uint256 curveId = accounting.addBondCurve(curve);
-        vm.prank(address(stakingModule));
+        vm.prank(admin);
         accounting.setBondCurve(0, curveId);
     }
 
@@ -1359,7 +1361,7 @@ abstract contract CSAccountingGetRequiredBondForKeysBaseTest is
     function _curve(uint256[] memory curve) internal virtual {
         vm.prank(admin);
         uint256 curveId = accounting.addBondCurve(curve);
-        vm.prank(address(stakingModule));
+        vm.prank(admin);
         accounting.setBondCurve(0, curveId);
     }
 
@@ -1429,7 +1431,6 @@ abstract contract CSAccountingRewardsBaseTest is CSAccountingBondStateBaseTest {
         super.setUp();
         rewardAddress = nextAddress("reward address");
         mock_getNodeOperatorManagementProperties(user, rewardAddress, false);
-        mock_enqueueNodeOperatorKeys();
     }
 
     function _rewards(uint256 fee) internal {
@@ -3233,7 +3234,6 @@ contract CSAccountingDepositEthPermissionlessTest is CSAccountingBaseTest {
         super.setUp();
         mock_getNodeOperatorNonWithdrawnKeys(0);
         mock_getNodeOperatorsCount(1);
-        mock_enqueueNodeOperatorKeys();
     }
 
     function test_depositETH() public assertInvariants {
@@ -3582,7 +3582,6 @@ contract CSAccountingDepositStEthPermissionlessTest is CSAccountingBaseTest {
         super.setUp();
         mock_getNodeOperatorNonWithdrawnKeys(0);
         mock_getNodeOperatorsCount(1);
-        mock_enqueueNodeOperatorKeys();
     }
 
     function test_depositStETH() public assertInvariants {
@@ -4165,7 +4164,6 @@ contract CSAccountingDepositWstEthPermissionlessTest is CSAccountingBaseTest {
         super.setUp();
         mock_getNodeOperatorNonWithdrawnKeys(0);
         mock_getNodeOperatorsCount(1);
-        mock_enqueueNodeOperatorKeys();
     }
 
     function test_depositWstETH() public assertInvariants {
@@ -4757,7 +4755,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         vm.prank(admin);
         uint256 addedId = accounting.addBondCurve(curvePoints);
 
-        vm.prank(address(stakingModule));
+        vm.prank(admin);
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: addedId });
 
         ICSBondCurve.BondCurve memory curve = accounting.getBondCurve(0);
@@ -4769,13 +4767,13 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
     function test_setBondCurve_RevertWhen_OperatorDoesNotExist() public {
         mock_getNodeOperatorsCount(0);
         vm.expectRevert(ICSAccounting.NodeOperatorDoesNotExist.selector);
-        vm.prank(address(stakingModule));
+        vm.prank(admin);
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
     }
 
-    function test_setBondCurve_RevertWhen_SenderIsNotCSM() public {
+    function test_setBondCurve_RevertWhen_DoesNotHaveRole() public {
+        expectRoleRevert(stranger, accounting.SET_BOND_CURVE_ROLE());
         vm.prank(stranger);
-        vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
     }
 
@@ -4789,8 +4787,9 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         vm.prank(admin);
         uint256 addedId = accounting.addBondCurve(curvePoints);
 
-        vm.startPrank(address(stakingModule));
+        vm.prank(admin);
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: addedId });
+        vm.prank(address(stakingModule));
         accounting.resetBondCurve({ nodeOperatorId: 0 });
         vm.stopPrank();
 

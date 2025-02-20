@@ -34,6 +34,8 @@ contract CSAccounting is
     bytes32 public constant MANAGE_BOND_CURVES_ROLE =
         keccak256("MANAGE_BOND_CURVES_ROLE");
 
+    bytes32 public constant SET_BOND_CURVE_ROLE =
+        keccak256("SET_BOND_CURVE_ROLE");
     bytes32 public constant RESET_BOND_CURVE_ROLE =
         keccak256("RESET_BOND_CURVE_ROLE");
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
@@ -149,9 +151,10 @@ contract CSAccounting is
     function setBondCurve(
         uint256 nodeOperatorId,
         uint256 curveId
-    ) external onlyCSM {
+    ) external onlyRole(SET_BOND_CURVE_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
         CSBondCurve._setBondCurve(nodeOperatorId, curveId);
+        CSM.enqueueNodeOperatorKeys(nodeOperatorId);
     }
 
     /// @inheritdoc ICSAccounting

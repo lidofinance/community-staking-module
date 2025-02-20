@@ -292,6 +292,22 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
 
         assertTrue(
             accounting.hasRole(
+                accounting.SET_BOND_CURVE_ROLE(),
+                address(vettedGate)
+            )
+        );
+        assertTrue(
+            accounting.hasRole(
+                accounting.SET_BOND_CURVE_ROLE(),
+                deployParams.setResetBondCurveAddress
+            )
+        );
+        assertFalse(
+            accounting.hasRole(accounting.SET_BOND_CURVE_ROLE(), address(csm))
+        );
+
+        assertTrue(
+            accounting.hasRole(
                 accounting.RESET_BOND_CURVE_ROLE(),
                 deployParams.setResetBondCurveAddress
             )
@@ -559,7 +575,10 @@ contract VettedGateDeploymentTest is Test, Utilities, DeploymentFixtures {
 
     function test_constructor() public view {
         assertTrue(
-            csm.hasRole(csm.DEFAULT_ADMIN_ROLE(), deployParams.aragonAgent)
+            vettedGate.hasRole(
+                vettedGate.DEFAULT_ADMIN_ROLE(),
+                deployParams.aragonAgent
+            )
         );
         assertEq(vettedGate.treeRoot(), deployParams.vettedGateTreeRoot);
         assertEq(
@@ -567,6 +586,7 @@ contract VettedGateDeploymentTest is Test, Utilities, DeploymentFixtures {
             deployParams.vettedGateBondCurve
         );
         assertEq(address(vettedGate.CSM()), address(csm));
+        assertEq(address(vettedGate.ACCOUNTING()), address(accounting));
         assertTrue(
             vettedGate.hasRole(vettedGate.PAUSE_ROLE(), address(gateSeal))
         );
