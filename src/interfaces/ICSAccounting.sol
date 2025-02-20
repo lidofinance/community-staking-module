@@ -28,6 +28,7 @@ interface ICSAccounting is
     event ChargePenaltyRecipientSet(address chargePenaltyRecipient);
 
     error SenderIsNotCSM();
+    error SenderIsNotEligible();
     error ZeroModuleAddress();
     error ZeroAdminAddress();
     error ZeroFeeDistributorAddress();
@@ -226,10 +227,8 @@ interface ICSAccounting is
 
     /// @notice Claim full reward (fee + bond) in stETH for the given Node Operator with desirable value.
     ///         `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond
-    /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param stETHAmount Amount of stETH to claim
-    /// @param rewardAddress Reward address of the node operator
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
     /// @return shares Amount of stETH shares claimed
@@ -238,17 +237,14 @@ interface ICSAccounting is
     function claimRewardsStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount,
-        address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
     ) external returns (uint256 shares);
 
     /// @notice Claim full reward (fee + bond) in wstETH for the given Node Operator available for this moment.
     ///         `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond
-    /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param wstETHAmount Amount of wstETH to claim
-    /// @param rewardAddress Reward address of the node operator
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
     /// @return claimedWstETHAmount Amount of wstETH claimed
@@ -257,7 +253,6 @@ interface ICSAccounting is
     function claimRewardsWstETH(
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
-        address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
     ) external returns (uint256 claimedWstETHAmount);
@@ -265,10 +260,8 @@ interface ICSAccounting is
     /// @notice Request full reward (fee + bond) in Withdrawal NFT (unstETH) for the given Node Operator available for this moment.
     ///         `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond
     /// @dev Reverts if amount isn't between `MIN_STETH_WITHDRAWAL_AMOUNT` and `MAX_STETH_WITHDRAWAL_AMOUNT`
-    /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param stEthAmount Amount of ETH to request
-    /// @param rewardAddress Reward address of the node operator
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
     /// @return requestId Withdrawal NFT ID
@@ -277,7 +270,6 @@ interface ICSAccounting is
     function claimRewardsUnstETH(
         uint256 nodeOperatorId,
         uint256 stEthAmount,
-        address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
     ) external returns (uint256 requestId);
