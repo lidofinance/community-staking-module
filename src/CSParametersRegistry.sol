@@ -345,6 +345,10 @@ contract CSParametersRegistry is
             revert QueueCannotBeUsed();
         }
 
+        if (config.priority > QUEUE_LOWEST_PRIORITY) {
+            revert QueueCannotBeUsed();
+        }
+
         _queueConfigs[curveId] = MarkedQueueConfig({
             priority: config.priority,
             maxDeposits: config.maxDeposits,
@@ -544,6 +548,9 @@ contract CSParametersRegistry is
         uint256 priority,
         uint256 maxDeposits
     ) internal {
+        if (priority > QUEUE_LOWEST_PRIORITY) {
+            revert QueueCannotBeUsed();
+        }
         defaultQueueConfig.priority = priority.toUint32();
         defaultQueueConfig.maxDeposits = maxDeposits.toUint32();
         emit DefaultQueueConfigSet(priority, maxDeposits);

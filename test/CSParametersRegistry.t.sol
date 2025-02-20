@@ -1374,7 +1374,7 @@ contract CSParametersRegistryQueueConfigTest is
     ParametersTest
 {
     function test_setDefault() public override {
-        uint32 priority = 17;
+        uint32 priority = 3;
         uint32 maxDeposits = 42;
 
         vm.expectEmit(address(parametersRegistry));
@@ -1389,7 +1389,7 @@ contract CSParametersRegistryQueueConfigTest is
     }
 
     function test_setDefault_RevertWhen_notAdmin() public override {
-        uint32 priority = 17;
+        uint32 priority = 3;
         uint32 maxDeposits = 42;
 
         bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
@@ -1400,7 +1400,7 @@ contract CSParametersRegistryQueueConfigTest is
 
     function test_set() public override {
         uint256 curveId = 11;
-        uint32 priority = 17;
+        uint32 priority = 3;
         uint32 maxDeposits = 42;
 
         vm.expectEmit(address(parametersRegistry));
@@ -1423,7 +1423,7 @@ contract CSParametersRegistryQueueConfigTest is
 
     function test_set_RevertWhen_notAdmin() public override {
         uint256 curveId = 11;
-        uint32 priority = 17;
+        uint32 priority = 3;
         uint32 maxDeposits = 42;
 
         bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
@@ -1437,7 +1437,7 @@ contract CSParametersRegistryQueueConfigTest is
 
     function test_unset() public override {
         uint256 curveId = 11;
-        uint32 priority = 17;
+        uint32 priority = 3;
         uint32 maxDeposits = 42;
 
         vm.prank(admin);
@@ -1473,7 +1473,7 @@ contract CSParametersRegistryQueueConfigTest is
 
     function test_get_usualData() public override {
         uint256 curveId = 11;
-        uint32 priority = 17;
+        uint32 priority = 3;
         uint32 maxDeposits = 42;
 
         vm.expectEmit(address(parametersRegistry));
