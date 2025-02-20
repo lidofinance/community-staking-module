@@ -11,7 +11,7 @@ import { CSBondCurve } from "./abstract/CSBondCurve.sol";
 import { CSBondLock } from "./abstract/CSBondLock.sol";
 
 import { IStakingModule } from "./interfaces/IStakingModule.sol";
-import { ICSModule } from "./interfaces/ICSModule.sol";
+import { ICSModule, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
@@ -223,57 +223,69 @@ contract CSAccounting is
         CSM.enqueueNodeOperatorKeys(nodeOperatorId);
     }
 
-    /// @inheritdoc ICSAccounting
     function claimRewardsStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount,
-        address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
-    ) external whenResumed onlyCSM returns (uint256) {
+    ) external whenResumed returns (uint256 claimedShares) {
+        NodeOperatorManagementProperties memory no = CSM
+            .getNodeOperatorManagementProperties(nodeOperatorId);
+        _onlyNodeOperatorManagerOrRewardAddresses(no);
+
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
-        return
-            CSBondCore._claimStETH(nodeOperatorId, stETHAmount, rewardAddress);
+        claimedShares = CSBondCore._claimStETH(
+            nodeOperatorId,
+            stETHAmount,
+            no.rewardAddress
+        );
+        CSM.enqueueNodeOperatorKeys(nodeOperatorId);
     }
 
     /// @inheritdoc ICSAccounting
     function claimRewardsWstETH(
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
-        address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
-    ) external whenResumed onlyCSM returns (uint256) {
+    ) external whenResumed returns (uint256 claimedWstETH) {
+        NodeOperatorManagementProperties memory no = CSM
+            .getNodeOperatorManagementProperties(nodeOperatorId);
+        _onlyNodeOperatorManagerOrRewardAddresses(no);
+
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
-        return
-            CSBondCore._claimWstETH(
-                nodeOperatorId,
-                wstETHAmount,
-                rewardAddress
-            );
+        claimedWstETH = CSBondCore._claimWstETH(
+            nodeOperatorId,
+            wstETHAmount,
+            no.rewardAddress
+        );
+        CSM.enqueueNodeOperatorKeys(nodeOperatorId);
     }
 
     /// @inheritdoc ICSAccounting
     function claimRewardsUnstETH(
         uint256 nodeOperatorId,
         uint256 stEthAmount,
-        address rewardAddress,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
-    ) external whenResumed onlyCSM returns (uint256) {
+    ) external whenResumed returns (uint256 requestId) {
+        NodeOperatorManagementProperties memory no = CSM
+            .getNodeOperatorManagementProperties(nodeOperatorId);
+        _onlyNodeOperatorManagerOrRewardAddresses(no);
+
         if (rewardsProof.length != 0) {
             _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
         }
-        return
-            CSBondCore._claimUnstETH(
-                nodeOperatorId,
-                stEthAmount,
-                rewardAddress
-            );
+        requestId = CSBondCore._claimUnstETH(
+            nodeOperatorId,
+            stEthAmount,
+            no.rewardAddress
+        );
+        CSM.enqueueNodeOperatorKeys(nodeOperatorId);
     }
 
     /// @inheritdoc ICSAccounting
@@ -584,6 +596,14 @@ contract CSAccounting is
             IStakingModule(address(CSM)).getNodeOperatorsCount()
         ) return;
         revert NodeOperatorDoesNotExist();
+    }
+
+    function _onlyNodeOperatorManagerOrRewardAddresses(
+        NodeOperatorManagementProperties memory no
+    ) internal view {
+        if (no.managerAddress == address(0)) revert NodeOperatorDoesNotExist();
+        if (no.managerAddress != msg.sender && no.rewardAddress != msg.sender)
+            revert SenderIsNotEligible();
     }
 
     function _setChargePenaltyRecipient(

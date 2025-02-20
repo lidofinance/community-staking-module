@@ -251,54 +251,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         ICSAccounting.PermitInput memory permit
     ) external;
 
-    /// @notice Claim full reward (fees + bond rewards) in stETH for the given Node Operator
-    /// @notice If `stETHAmount` exceeds the current claimable amount, the claimable amount will be used instead
-    /// @notice If `rewardsProof` is not provided, only excess bond (bond rewards) will be available for claim
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param stETHAmount Amount of stETH to claim
-    /// @param cumulativeFeeShares Optional. Cumulative fee stETH shares for the Node Operator
-    /// @param rewardsProof Optional. Merkle proof of the rewards
-    /// @return claimedShares Amount of claimed stETH shares
-    function claimRewardsStETH(
-        uint256 nodeOperatorId,
-        uint256 stETHAmount,
-        uint256 cumulativeFeeShares,
-        bytes32[] memory rewardsProof
-    ) external returns (uint256 claimedShares);
-
-    /// @notice Request full reward (fees + bond rewards) in Withdrawal NFT (unstETH) for the given Node Operator
-    /// @notice Amounts less than `MIN_STETH_WITHDRAWAL_AMOUNT` (see LidoWithdrawalQueue contract) are not allowed
-    /// @notice Amounts above `MAX_STETH_WITHDRAWAL_AMOUNT` should be requested in several transactions
-    /// @notice If `ethAmount` exceeds the current claimable amount, the claimable amount will be used instead
-    /// @notice If `rewardsProof` is not provided, only excess bond (bond rewards) will be available for claim
-    /// @dev Reverts if amount isn't between `MIN_STETH_WITHDRAWAL_AMOUNT` and `MAX_STETH_WITHDRAWAL_AMOUNT`
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param stEthAmount Amount of ETH to request
-    /// @param cumulativeFeeShares Optional. Cumulative fee stETH shares for the Node Operator
-    /// @param rewardsProof Optional. Merkle proof of the rewards
-    /// @return requestId Withdrawal NFT ID
-    function claimRewardsUnstETH(
-        uint256 nodeOperatorId,
-        uint256 stEthAmount,
-        uint256 cumulativeFeeShares,
-        bytes32[] memory rewardsProof
-    ) external returns (uint256 requestId);
-
-    /// @notice Claim full reward (fees + bond rewards) in wstETH for the given Node Operator
-    /// @notice If `wstETHAmount` exceeds the current claimable amount, the claimable amount will be used instead
-    /// @notice If `rewardsProof` is not provided, only excess bond (bond rewards) will be available for claim
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param wstETHAmount Amount of wstETH to claim
-    /// @param cumulativeFeeShares Optional. Cumulative fee stETH shares for the Node Operator
-    /// @param rewardsProof Optional. Merkle proof of the rewards
-    /// @return claimedWstETHAmount Amount of claimed wstETH
-    function claimRewardsWstETH(
-        uint256 nodeOperatorId,
-        uint256 wstETHAmount,
-        uint256 cumulativeFeeShares,
-        bytes32[] memory rewardsProof
-    ) external returns (uint256 claimedWstETHAmount);
-
     /// @notice Set bond curve for the node operator
     ///         Permissioned
     /// @param nodeOperatorId ID of the Node Operator
@@ -428,6 +380,13 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     function getNodeOperator(
         uint256 nodeOperatorId
     ) external view returns (NodeOperator memory);
+
+    /// @notice Get Node Operator management properties
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return Node Operator management properties
+    function getNodeOperatorManagementProperties(
+        uint256 nodeOperatorId
+    ) external view returns (NodeOperatorManagementProperties memory);
 
     /// @notice Get Node Operator non-withdrawn keys
     /// @param nodeOperatorId ID of the Node Operator

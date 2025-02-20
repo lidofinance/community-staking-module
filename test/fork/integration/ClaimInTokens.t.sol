@@ -110,7 +110,7 @@ contract ClaimIntegrationTest is
         assertTrue(excessBondShares > 0, "Excess bond should be > 0");
 
         vm.prank(nodeOperator);
-        uint256 claimedShares = csm.claimRewardsStETH(
+        uint256 claimedShares = accounting.claimRewardsStETH(
             defaultNoId,
             type(uint256).max,
             0,
@@ -173,7 +173,7 @@ contract ClaimIntegrationTest is
         );
 
         vm.prank(nodeOperator);
-        uint256 claimedWstETH = csm.claimRewardsWstETH(
+        uint256 claimedWstETH = accounting.claimRewardsWstETH(
             defaultNoId,
             type(uint256).max,
             0,
@@ -241,7 +241,7 @@ contract ClaimIntegrationTest is
         assertTrue(excessBondShares > 0, "Excess bond should be > 0");
 
         vm.prank(nodeOperator);
-        uint256 claimedRequestId = csm.claimRewardsUnstETH(
+        uint256 claimedRequestId = accounting.claimRewardsUnstETH(
             defaultNoId,
             type(uint256).max,
             0,
@@ -319,7 +319,7 @@ contract ClaimIntegrationTest is
         );
 
         vm.prank(nodeOperator);
-        uint256 claimedShares = csm.claimRewardsStETH(
+        uint256 claimedShares = accounting.claimRewardsStETH(
             defaultNoId,
             type(uint256).max,
             shares,
@@ -385,7 +385,7 @@ contract ClaimIntegrationTest is
         );
 
         vm.prank(nodeOperator);
-        uint256 claimedWstETHAmount = csm.claimRewardsWstETH(
+        uint256 claimedWstETHAmount = accounting.claimRewardsWstETH(
             defaultNoId,
             type(uint256).max,
             shares,
@@ -458,7 +458,7 @@ contract ClaimIntegrationTest is
         uint256 accountingSharesBefore = lido.sharesOf(address(accounting));
 
         vm.prank(nodeOperator);
-        uint256 claimedRequestId = csm.claimRewardsUnstETH(
+        uint256 claimedRequestId = accounting.claimRewardsUnstETH(
             defaultNoId,
             type(uint256).max,
             shares,
