@@ -383,7 +383,6 @@ contract CSMCommon is CSMFixtures {
 
         vm.startPrank(admin);
         csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(this));
-        csm.grantRole(csm.SET_BOND_CURVE_ROLE(), address(this));
         csm.grantRole(csm.PAUSE_ROLE(), address(this));
         csm.grantRole(csm.RESUME_ROLE(), address(this));
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
@@ -402,6 +401,7 @@ contract CSMCommon is CSMFixtures {
             accounting.MANAGE_BOND_CURVES_ROLE(),
             address(this)
         );
+        accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), address(this));
         vm.stopPrank();
 
         csm.resume();
@@ -1843,282 +1843,6 @@ contract CSMObtainDepositData is CSMCommon {
         assertEq(no.enqueuedCount, random);
         assertEq(no.totalDepositedKeys, totalKeys - random);
         assertEq(no.depositableValidatorsCount, random);
-    }
-}
-
-contract CSMClaimRewards is CSMCommon {
-    function test_claimRewardsStETH() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        csm.obtainDepositData(1, "");
-
-        uint256 amount = 1 ether;
-
-        vm.deal(nodeOperator, amount);
-        vm.prank(nodeOperator);
-        accounting.depositETH{ value: amount }(noId);
-
-        uint256 noSharesBefore = stETH.sharesOf(nodeOperator);
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.claimRewardsStETH.selector,
-                noId,
-                UINT256_MAX,
-                nodeOperator,
-                0,
-                new bytes32[](0)
-            ),
-            1
-        );
-        vm.prank(nodeOperator);
-        csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
-
-        uint256 noSharesAfter = stETH.sharesOf(nodeOperator);
-
-        assertEq(
-            noSharesAfter,
-            noSharesBefore + stETH.getSharesByPooledEth(amount)
-        );
-        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
-            noId
-        );
-        assertEq(current, required, "NO bond shares should be equal required");
-    }
-
-    function test_claimRewardsStETH_fromRewardAddress()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator();
-        address rewardAddress = nextAddress("rewardAddress");
-        csm.obtainDepositData(1, "");
-
-        vm.deal(nodeOperator, 1 ether);
-        vm.prank(nodeOperator);
-        accounting.depositETH{ value: 1 ether }(noId);
-
-        vm.prank(nodeOperator);
-        csm.proposeNodeOperatorRewardAddressChange(noId, rewardAddress);
-
-        vm.startPrank(rewardAddress);
-        csm.confirmNodeOperatorRewardAddressChange(noId);
-
-        csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
-    }
-
-    function test_claimRewardsStETH_RevertWhen_NoNodeOperator()
-        public
-        assertInvariants
-    {
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        csm.claimRewardsStETH(0, UINT256_MAX, 0, new bytes32[](0));
-    }
-
-    function test_claimRewardsStETH_RevertWhen_NotEligible()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator();
-        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
-        csm.claimRewardsStETH(noId, UINT256_MAX, 0, new bytes32[](0));
-    }
-
-    function test_claimRewardsWstETH() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        csm.obtainDepositData(1, "");
-
-        uint256 amount = 1 ether;
-
-        vm.deal(nodeOperator, amount);
-        vm.prank(nodeOperator);
-        accounting.depositETH{ value: amount }(noId);
-
-        uint256 noWstEthBefore = wstETH.balanceOf(nodeOperator);
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.claimRewardsWstETH.selector,
-                noId,
-                UINT256_MAX,
-                nodeOperator,
-                0,
-                new bytes32[](0)
-            ),
-            1
-        );
-        vm.prank(nodeOperator);
-        csm.claimRewardsWstETH(noId, UINT256_MAX, 0, new bytes32[](0));
-
-        uint256 noWstEthAfter = wstETH.balanceOf(nodeOperator);
-        // This triple conversion reflects the internal logic
-        // ETH -> stETH -> wstETH
-        assertEq(
-            noWstEthAfter,
-            noWstEthBefore +
-                stETH.getSharesByPooledEth(
-                    stETH.getPooledEthByShares(
-                        stETH.getSharesByPooledEth(amount)
-                    )
-                )
-        );
-
-        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
-            noId
-        );
-        // Approx due to wstETH claim mechanics shares -> stETH -> wstETH
-        assertApproxEqAbs(
-            current,
-            required,
-            1 wei,
-            "NO bond shares should be equal required"
-        );
-    }
-
-    function test_claimRewardsWstETH_fromRewardAddress()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator();
-        address rewardAddress = nextAddress("rewardAddress");
-        csm.obtainDepositData(1, "");
-
-        vm.deal(nodeOperator, 1 ether);
-        vm.prank(nodeOperator);
-        accounting.depositETH{ value: 1 ether }(noId);
-
-        vm.prank(nodeOperator);
-        csm.proposeNodeOperatorRewardAddressChange(noId, rewardAddress);
-
-        vm.startPrank(rewardAddress);
-        csm.confirmNodeOperatorRewardAddressChange(noId);
-        csm.claimRewardsWstETH(noId, UINT256_MAX, 0, new bytes32[](0));
-    }
-
-    function test_claimRewardsWstETH_RevertWhen_NoNodeOperator()
-        public
-        assertInvariants
-    {
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        csm.claimRewardsWstETH(0, UINT256_MAX, 0, new bytes32[](0));
-    }
-
-    function test_claimRewardsWstETH_RevertWhen_NotEligible()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator();
-        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
-        csm.claimRewardsWstETH(noId, UINT256_MAX, 0, new bytes32[](0));
-    }
-
-    function test_requestRewardsETH() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        csm.obtainDepositData(1, "");
-
-        vm.deal(nodeOperator, 1 ether);
-        vm.prank(nodeOperator);
-        accounting.depositETH{ value: 1 ether }(noId);
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.claimRewardsUnstETH.selector,
-                noId,
-                UINT256_MAX,
-                nodeOperator,
-                0,
-                new bytes32[](0)
-            ),
-            1
-        );
-        vm.prank(nodeOperator);
-        csm.claimRewardsUnstETH(noId, UINT256_MAX, 0, new bytes32[](0));
-
-        (uint256 current, uint256 required) = accounting.getBondSummaryShares(
-            noId
-        );
-        // Approx due to unstETH claim mechanics shares -> stETH -> unstETH
-        assertApproxEqAbs(
-            current,
-            required,
-            1 wei,
-            "NO bond shares should be equal required"
-        );
-    }
-
-    function test_requestRewardsETH_fromRewardAddress()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator();
-        address rewardAddress = nextAddress("rewardAddress");
-        csm.obtainDepositData(1, "");
-
-        vm.deal(nodeOperator, 1 ether);
-        vm.prank(nodeOperator);
-        accounting.depositETH{ value: 1 ether }(noId);
-
-        vm.prank(nodeOperator);
-        csm.proposeNodeOperatorRewardAddressChange(noId, rewardAddress);
-
-        vm.startPrank(rewardAddress);
-        csm.confirmNodeOperatorRewardAddressChange(noId);
-        csm.claimRewardsUnstETH(noId, UINT256_MAX, 0, new bytes32[](0));
-    }
-
-    function test_requestRewardsETH_RevertWhen_NoNodeOperator()
-        public
-        assertInvariants
-    {
-        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
-        csm.claimRewardsUnstETH(0, UINT256_MAX, 0, new bytes32[](0));
-    }
-
-    function test_requestRewardsETH_RevertWhen_NotEligible()
-        public
-        assertInvariants
-    {
-        uint256 noId = createNodeOperator();
-        vm.expectRevert(ICSModule.SenderIsNotEligible.selector);
-        csm.claimRewardsUnstETH(noId, UINT256_MAX, 0, new bytes32[](0));
-    }
-}
-
-contract CsmSetBondCurve is CSMCommon {
-    function test_setBondCurve() public {
-        uint256 nodeOperatorId = createNodeOperator();
-        uint256 curveId = accounting.DEFAULT_BOND_CURVE_ID();
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.setBondCurve.selector,
-                nodeOperatorId,
-                curveId
-            )
-        );
-        csm.setBondCurve(nodeOperatorId, curveId);
-    }
-
-    function test_setBondCurve_updateDepositableValidatorsCount() public {
-        uint256 nodeOperatorId = createNodeOperator();
-        uint256[] memory curvePoints = new uint256[](1);
-        curvePoints[0] = BOND_SIZE * 2;
-
-        uint256 curveId = accounting.addBondCurve(curvePoints);
-        uint256 depositableValidatorsCountBefore = csm
-            .getNodeOperator(nodeOperatorId)
-            .depositableValidatorsCount;
-        assertEq(depositableValidatorsCountBefore, 1);
-
-        csm.setBondCurve(nodeOperatorId, curveId);
-
-        uint256 depositableValidatorsCountAfter = csm
-            .getNodeOperator(nodeOperatorId)
-            .depositableValidatorsCount;
-        assertEq(depositableValidatorsCountAfter, 0);
     }
 }
 
@@ -5381,7 +5105,6 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
 
         uint256 curveId = accounting.addBondCurve(curvePoints);
 
-        vm.prank(address(csm));
         accounting.setBondCurve(0, curveId);
 
         uploadMoreKeys(0, 1);
@@ -5424,7 +5147,6 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
 
         uint256 curveId = accounting.addBondCurve(curvePoints);
 
-        vm.prank(address(csm));
         accounting.setBondCurve(0, curveId);
 
         uploadMoreKeys(0, 1);
@@ -5940,25 +5662,6 @@ contract CSMAccessControl is CSMCommonNoRoles {
             }),
             address(0)
         );
-    }
-
-    function test_setBondCurveRole() public {
-        uint256 nodeOperatorId = createNodeOperator();
-        bytes32 role = csm.SET_BOND_CURVE_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.prank(actor);
-        csm.setBondCurve(nodeOperatorId, 0);
-    }
-
-    function test_setBondCurveRole_revert() public {
-        uint256 nodeOperatorId = createNodeOperator();
-        bytes32 role = csm.SET_BOND_CURVE_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.setBondCurve(nodeOperatorId, 0);
     }
 
     function test_reportELRewardsStealingPenaltyRole() public {

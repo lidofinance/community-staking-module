@@ -44,6 +44,10 @@ contract VettedGateTest is Test, Utilities, Fixtures {
     function test_constructor() public {
         vettedGate = new VettedGate(csm);
         assertEq(address(vettedGate.CSM()), csm);
+        assertEq(
+            address(vettedGate.ACCOUNTING()),
+            address(ICSModule(csm).accounting())
+        );
     }
 
     function test_constructor_RevertWhen_ZeroModuleAddress() public {

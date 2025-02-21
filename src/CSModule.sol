@@ -47,8 +47,6 @@ contract CSModule is
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
     bytes32 public constant CREATE_NODE_OPERATOR_ROLE =
         keccak256("CREATE_NODE_OPERATOR_ROLE");
-    bytes32 public constant SET_BOND_CURVE_ROLE =
-        keccak256("SET_BOND_CURVE_ROLE");
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
     // @dev see IStakingModule.sol
@@ -264,90 +262,6 @@ contract CSModule is
             publicKeys,
             signatures
         );
-    }
-
-    /// @inheritdoc ICSModule
-    function claimRewardsStETH(
-        uint256 nodeOperatorId,
-        uint256 stETHAmount,
-        uint256 cumulativeFeeShares,
-        bytes32[] calldata rewardsProof
-    ) external returns (uint256 claimedShares) {
-        _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
-
-        claimedShares = accounting.claimRewardsStETH({
-            nodeOperatorId: nodeOperatorId,
-            stETHAmount: stETHAmount,
-            rewardAddress: _nodeOperators[nodeOperatorId].rewardAddress,
-            cumulativeFeeShares: cumulativeFeeShares,
-            rewardsProof: rewardsProof
-        });
-
-        // Due to possible missing bond compensation nonce update might be required
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true
-        });
-    }
-
-    /// @inheritdoc ICSModule
-    function claimRewardsWstETH(
-        uint256 nodeOperatorId,
-        uint256 wstETHAmount,
-        uint256 cumulativeFeeShares,
-        bytes32[] calldata rewardsProof
-    ) external returns (uint256 claimedWstETHAmount) {
-        _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
-
-        claimedWstETHAmount = accounting.claimRewardsWstETH({
-            nodeOperatorId: nodeOperatorId,
-            wstETHAmount: wstETHAmount,
-            rewardAddress: _nodeOperators[nodeOperatorId].rewardAddress,
-            cumulativeFeeShares: cumulativeFeeShares,
-            rewardsProof: rewardsProof
-        });
-
-        // Due to possible missing bond compensation nonce update might be required
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true
-        });
-    }
-
-    /// @inheritdoc ICSModule
-    function claimRewardsUnstETH(
-        uint256 nodeOperatorId,
-        uint256 stEthAmount,
-        uint256 cumulativeFeeShares,
-        bytes32[] calldata rewardsProof
-    ) external returns (uint256 requestId) {
-        _onlyNodeOperatorManagerOrRewardAddresses(nodeOperatorId);
-
-        requestId = accounting.claimRewardsUnstETH({
-            nodeOperatorId: nodeOperatorId,
-            stEthAmount: stEthAmount,
-            rewardAddress: _nodeOperators[nodeOperatorId].rewardAddress,
-            cumulativeFeeShares: cumulativeFeeShares,
-            rewardsProof: rewardsProof
-        });
-
-        // Due to possible missing bond compensation nonce update might be required
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true
-        });
-    }
-
-    /// @inheritdoc ICSModule
-    function setBondCurve(
-        uint256 nodeOperatorId,
-        uint256 curveId
-    ) external onlyRole(SET_BOND_CURVE_ROLE) {
-        accounting.setBondCurve(nodeOperatorId, curveId);
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true
-        });
     }
 
     /// @inheritdoc ICSModule
@@ -1106,6 +1020,20 @@ contract CSModule is
     }
 
     /// @inheritdoc ICSModule
+    function getNodeOperatorManagementProperties(
+        uint256 nodeOperatorId
+    ) external view returns (NodeOperatorManagementProperties memory) {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        return (
+            NodeOperatorManagementProperties(
+                no.managerAddress,
+                no.rewardAddress,
+                no.extendedManagerPermissions
+            )
+        );
+    }
+
+    /// @inheritdoc ICSModule
     function getNodeOperatorNonWithdrawnKeys(
         uint256 nodeOperatorId
     ) external view returns (uint256) {
@@ -1468,15 +1396,6 @@ contract CSModule is
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         if (no.managerAddress == address(0)) revert NodeOperatorDoesNotExist();
         if (no.managerAddress != from) revert SenderIsNotEligible();
-    }
-
-    function _onlyNodeOperatorManagerOrRewardAddresses(
-        uint256 nodeOperatorId
-    ) internal view {
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (no.managerAddress == address(0)) revert NodeOperatorDoesNotExist();
-        if (no.managerAddress != msg.sender && no.rewardAddress != msg.sender)
-            revert SenderIsNotEligible();
     }
 
     function _onlyExistingNodeOperator(uint256 nodeOperatorId) internal view {
