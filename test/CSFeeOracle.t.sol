@@ -402,7 +402,7 @@ contract CSFeeOracleTest is Test, Utilities {
 
         address newStrikes = nextAddress();
 
-        vm.expectEmit(true, true, true, true, address(oracle));
+        vm.expectEmit(address(oracle));
         emit ICSFeeOracle.StrikesContractSet(newStrikes);
         vm.prank(ORACLE_ADMIN);
         oracle.setStrikesContract(newStrikes);

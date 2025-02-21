@@ -18,6 +18,7 @@ import { ICSModule, NodeOperator, NodeOperatorManagementProperties } from "./int
 import { QueueLib, Batch } from "./lib/QueueLib.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
 import { NOAddresses } from "./lib/NOAddresses.sol";
+import { TransientUintUintMap, TransientUintUintMapLib } from "./lib/TransientUintUintMapLib.sol";
 
 import { SigningKeys } from "./lib/SigningKeys.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
@@ -58,13 +59,18 @@ contract CSModule is
     IStETH public immutable STETH;
     ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
 
+    /// @dev QUEUE_LOWEST_PRIORITY identifies the range of available priorities: [0; QUEUE_LOWEST_PRIORITY].
+    uint256 public immutable QUEUE_LOWEST_PRIORITY;
+    uint256 public immutable QUEUE_LEGACY_PRIORITY;
+
     ////////////////////////
     // State variables below
     ////////////////////////
-    /// @dev DEPRECATED. Moved to CSParametersRegistry
-    uint256 internal _keyRemovalCharge;
+    mapping(uint256 queuePriority => QueueLib.Queue queue)
+        internal _queueByPriority;
 
-    QueueLib.Queue public depositQueue;
+    /// @dev Legacy queue (priority=QUEUE_LEGACY_PRIORITY), that we will probably may be able to remove in the future.
+    QueueLib.Queue public legacyQueue;
 
     ICSAccounting public accounting;
 
@@ -101,6 +107,8 @@ contract CSModule is
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
         STETH = IStETH(LIDO_LOCATOR.lido());
         PARAMETERS_REGISTRY = ICSParametersRegistry(parametersRegistry);
+        QUEUE_LOWEST_PRIORITY = PARAMETERS_REGISTRY.QUEUE_LOWEST_PRIORITY();
+        QUEUE_LEGACY_PRIORITY = PARAMETERS_REGISTRY.QUEUE_LEGACY_PRIORITY();
 
         _disableInitializers();
     }
@@ -125,7 +133,11 @@ contract CSModule is
     }
 
     /// @dev should be called after update on the proxy
-    function finalizeUpgradeV2() external reinitializer(2) {}
+    function finalizeUpgradeV2() external reinitializer(2) {
+        assembly ("memory-safe") {
+            sstore(_queueByPriority.slot, 0x00)
+        }
+    }
 
     /// @inheritdoc ICSModule
     function resume() external onlyRole(RESUME_ROLE) {
@@ -415,32 +427,6 @@ contract CSModule is
     }
 
     /// @inheritdoc IStakingModule
-    /// @dev If the stuck keys count is above zero for the Node Operator,
-    ///      the depositable validators count is set to 0 for this Node Operator
-    function updateStuckValidatorsCount(
-        bytes calldata nodeOperatorIds,
-        bytes calldata stuckValidatorsCounts
-    ) external onlyRole(STAKING_ROUTER_ROLE) {
-        uint256 operatorsInReport = ValidatorCountsReport.safeCountOperators(
-            nodeOperatorIds,
-            stuckValidatorsCounts
-        );
-
-        for (uint256 i = 0; i < operatorsInReport; ++i) {
-            (
-                uint256 nodeOperatorId,
-                uint256 stuckValidatorsCount
-            ) = ValidatorCountsReport.next(
-                    nodeOperatorIds,
-                    stuckValidatorsCounts,
-                    i
-                );
-            _updateStuckValidatorsCount(nodeOperatorId, stuckValidatorsCount);
-        }
-        _incrementModuleNonce();
-    }
-
-    /// @inheritdoc IStakingModule
     function updateExitedValidatorsCount(
         bytes calldata nodeOperatorIds,
         bytes calldata exitedValidatorsCounts
@@ -526,12 +512,14 @@ contract CSModule is
         uint256 exitedValidatorsKeysCount,
         uint256 stuckValidatorsKeysCount
     ) external onlyRole(STAKING_ROUTER_ROLE) {
+        // NOTE: Silence the unused argument warning.
+        stuckValidatorsKeysCount;
+
         _updateExitedValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             exitedValidatorsCount: exitedValidatorsKeysCount,
             allowDecrease: true
         });
-        _updateStuckValidatorsCount(nodeOperatorId, stuckValidatorsKeysCount);
         _incrementModuleNonce();
     }
 
@@ -649,14 +637,57 @@ contract CSModule is
     //     // Confiscate ejection fee from the bond
     // }
 
+    /// TODO: Consider renaming
     /// @inheritdoc ICSModule
     function enqueueNodeOperatorKeys(uint256 nodeOperatorId) external {
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true
         });
-        // Direct call of `enqueueNodeOperatorKeys` if depositable is not changed
-        depositQueue.enqueueNodeOperatorKeys(_nodeOperators, nodeOperatorId);
+    }
+
+    /// @dev TODO: Remove the method in the next major release.
+    /// @inheritdoc ICSModule
+    function migrateToPriorityQueue(uint256 nodeOperatorId) external {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+
+        if (no.usedPriorityQueue) {
+            revert PriorityQueueAlreadyUsed();
+        }
+
+        (uint32 priority, uint32 maxDeposits) = PARAMETERS_REGISTRY
+            .getQueueConfig(accounting.getBondCurveId(nodeOperatorId));
+
+        if (priority < QUEUE_LEGACY_PRIORITY) {
+            uint32 deposited = no.totalDepositedKeys;
+
+            if (maxDeposits > deposited) {
+                uint32 toMigrate = uint32(
+                    Math.min(maxDeposits - deposited, no.enqueuedCount)
+                );
+
+                unchecked {
+                    no.enqueuedCount -= toMigrate;
+                }
+                _enqueueNodeOperatorKeys(nodeOperatorId, priority, toMigrate);
+            }
+
+            no.usedPriorityQueue = true;
+        }
+
+        // An alternative version to fit into the bytecode requirements is below. Please consider
+        // the described caveat of the approach.
+
+        // NOTE: We allow a node operator (NO) to reset their enqueued counter to zero only once to
+        // migrate their keys from the legacy queue to a priority queue, if any. As a downside, the
+        // node operator effectively can have their seats doubled in the queue.
+        // Let's say we have a priority queue with a maximum of 10 deposits. Imagine a NO has 20
+        // keys queued in the legacy queue. Then, the NO calls this method and gets their enqueued
+        // counter reset to zero. As a result, the module will place 10 keys into the priority queue
+        // and 10 more keys at the end of the overall queue. The original batches are kept in the
+        // queue, so in total, the NO will have batches with 40 keys queued altogether.
+        // _nodeOperators[nodeOperatorId].enqueuedCount = 0;
+        // _enqueueNodeOperatorKeys(nodeOperatorId);
     }
 
     /// @inheritdoc ICSModule
@@ -849,78 +880,90 @@ contract CSModule is
         uint256 depositsLeft = depositsCount;
         uint256 loadedKeysCount = 0;
 
-        for (
-            Batch item = depositQueue.peek();
-            !item.isNil();
-            item = depositQueue.peek()
-        ) {
-            // NOTE: see the `enqueuedCount` note below.
+        QueueLib.Queue storage queue;
+        uint256 priority = 0;
+
+        for (;;) {
+            if (priority > QUEUE_LOWEST_PRIORITY || depositsLeft == 0) break;
+            queue = _getQueue(priority);
             unchecked {
-                uint256 noId = item.noId();
-                uint256 keysInBatch = item.keys();
-                NodeOperator storage no = _nodeOperators[noId];
+                ++priority;
+            }
 
-                uint256 keysCount = Math.min(
-                    Math.min(no.depositableValidatorsCount, keysInBatch),
-                    depositsLeft
-                );
-                // `depositsLeft` is non-zero at this point all the time, so the check `depositsLeft > keysCount`
-                // covers the case when no depositable keys on the Node Operator have been left.
-                if (depositsLeft > keysCount || keysCount == keysInBatch) {
-                    // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
+            for (
+                Batch item = queue.peek();
+                !item.isNil();
+                item = queue.peek()
+            ) {
+                // NOTE: see the `enqueuedCount` note below.
+                unchecked {
+                    uint256 noId = item.noId();
+                    uint256 keysInBatch = item.keys();
+                    NodeOperator storage no = _nodeOperators[noId];
+
+                    uint256 keysCount = Math.min(
+                        Math.min(no.depositableValidatorsCount, keysInBatch),
+                        depositsLeft
+                    );
+                    // `depositsLeft` is non-zero at this point all the time, so the check `depositsLeft > keysCount`
+                    // covers the case when no depositable keys on the Node Operator have been left.
+                    if (depositsLeft > keysCount || keysCount == keysInBatch) {
+                        // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
+                        // @dev No need to safe cast due to internal logic
+                        no.enqueuedCount -= uint32(keysInBatch);
+                        // We've consumed all the keys in the batch, so we dequeue it.
+                        queue.dequeue();
+                    } else {
+                        // This branch covers the case when we stop in the middle of the batch.
+                        // We release the amount of keys consumed only, the rest will be kept.
+                        // @dev No need to safe cast due to internal logic
+                        no.enqueuedCount -= uint32(keysCount);
+                        // NOTE: `keysInBatch` can't be less than `keysCount` at this point.
+                        // We update the batch with the remaining keys.
+                        item = item.setKeys(keysInBatch - keysCount);
+                        // Store the updated batch back to the queue.
+                        queue.queue[queue.head] = item;
+                    }
+
+                    if (keysCount == 0) {
+                        continue;
+                    }
+
+                    // solhint-disable-next-line func-named-parameters
+                    SigningKeys.loadKeysSigs(
+                        noId,
+                        no.totalDepositedKeys,
+                        keysCount,
+                        publicKeys,
+                        signatures,
+                        loadedKeysCount
+                    );
+
+                    // It's impossible in practice to reach the limit of these variables.
+                    loadedKeysCount += keysCount;
                     // @dev No need to safe cast due to internal logic
-                    no.enqueuedCount -= uint32(keysInBatch);
-                    // We've consumed all the keys in the batch, so we dequeue it.
-                    depositQueue.dequeue();
-                } else {
-                    // This branch covers the case when we stop in the middle of the batch.
-                    // We release the amount of keys consumed only, the rest will be kept.
+                    no.totalDepositedKeys += uint32(keysCount);
+
+                    emit DepositedSigningKeysCountChanged(
+                        noId,
+                        no.totalDepositedKeys
+                    );
+
+                    // No need for `_updateDepositableValidatorsCount` call since we update the number directly.
+                    // `keysCount` is min of `depositableValidatorsCount` and `depositsLeft`.
                     // @dev No need to safe cast due to internal logic
-                    no.enqueuedCount -= uint32(keysCount);
-                    // NOTE: `keysInBatch` can't be less than `keysCount` at this point.
-                    // We update the batch with the remaining keys.
-                    item = item.setKeys(keysInBatch - keysCount);
-                    // Store the updated batch back to the queue.
-                    depositQueue.queue[depositQueue.head] = item;
-                }
-
-                if (keysCount == 0) {
-                    continue;
-                }
-
-                // solhint-disable-next-line func-named-parameters
-                SigningKeys.loadKeysSigs(
-                    noId,
-                    no.totalDepositedKeys,
-                    keysCount,
-                    publicKeys,
-                    signatures,
-                    loadedKeysCount
-                );
-
-                // It's impossible in practice to reach the limit of these variables.
-                loadedKeysCount += keysCount;
-                // @dev No need to safe cast due to internal logic
-                no.totalDepositedKeys += uint32(keysCount);
-
-                emit DepositedSigningKeysCountChanged(
-                    noId,
-                    no.totalDepositedKeys
-                );
-
-                // No need for `_updateDepositableValidatorsCount` call since we update the number directly.
-                // `keysCount` is min of `depositableValidatorsCount` and `depositsLeft`.
-                // @dev No need to safe cast due to internal logic
-                uint32 newCount = no.depositableValidatorsCount -
-                    uint32(keysCount);
-                no.depositableValidatorsCount = newCount;
-                emit DepositableSigningKeysCountChanged(noId, newCount);
-                depositsLeft -= keysCount;
-                if (depositsLeft == 0) {
-                    break;
+                    uint32 newCount = no.depositableValidatorsCount -
+                        uint32(keysCount);
+                    no.depositableValidatorsCount = newCount;
+                    emit DepositableSigningKeysCountChanged(noId, newCount);
+                    depositsLeft -= keysCount;
+                    if (depositsLeft == 0) {
+                        break;
+                    }
                 }
             }
         }
+
         if (loadedKeysCount != depositsCount) {
             revert NotEnoughKeys();
         }
@@ -938,10 +981,59 @@ contract CSModule is
     function cleanDepositQueue(
         uint256 maxItems
     ) external returns (uint256 removed, uint256 lastRemovedAtDepth) {
-        (removed, lastRemovedAtDepth) = depositQueue.clean(
-            _nodeOperators,
-            maxItems
-        );
+        // NOTE: We need one unique hash map per function invocation to be able to track batches of
+        // the same operator across multiple queues.
+        TransientUintUintMap queueLookup = TransientUintUintMapLib.create();
+
+        QueueLib.Queue storage queue;
+
+        uint256 totalVisited = 0;
+        uint256 priority = 0;
+
+        for (;;) {
+            if (priority > QUEUE_LOWEST_PRIORITY) break;
+            queue = _getQueue(priority);
+            unchecked {
+                ++priority;
+            }
+
+            (
+                uint256 removedPerQueue,
+                uint256 lastRemovedAtDepthPerQueue,
+                uint256 visited,
+                bool isFinished
+            ) = queue.clean(_nodeOperators, maxItems, queueLookup);
+
+            if (removedPerQueue > 0) {
+                unchecked {
+                    // 1234 56 789A     <- cumulative depth (A=10)
+                    // 1234 12 1234     <- depth per queue
+                    // **R*|**|**R*     <- queue with [R]emoved elements
+                    //
+                    // Given that we observed all 3 queues:
+                    // totalVisited: 4+2=6
+                    // lastRemovedAtDepthPerQueue: 3
+                    // lastRemovedAtDepth: 6+3=9
+
+                    lastRemovedAtDepth =
+                        totalVisited +
+                        lastRemovedAtDepthPerQueue;
+                    removed += removedPerQueue;
+                }
+            }
+
+            // NOTE: If `maxItems` is set to the total length of the queue(s), `isFinished` is equal
+            // to false, effectively breaking the cycle, because in `QueueLib.clean` we don't reach
+            // an empty batch after the end of a queue.
+            if (!isFinished) {
+                break;
+            }
+
+            unchecked {
+                totalVisited += visited;
+                maxItems -= visited;
+            }
+        }
     }
 
     /// @inheritdoc IStakingModule
@@ -955,8 +1047,19 @@ contract CSModule is
     }
 
     /// @inheritdoc ICSModule
-    function depositQueueItem(uint128 index) external view returns (Batch) {
-        return depositQueue.at(index);
+    function depositQueuePointers(
+        uint256 queuePriority
+    ) external view returns (uint128 head, uint128 tail) {
+        QueueLib.Queue storage q = _getQueue(queuePriority);
+        return (q.head, q.tail);
+    }
+
+    /// @inheritdoc ICSModule
+    function depositQueueItem(
+        uint256 queuePriority,
+        uint128 index
+    ) external view returns (Batch) {
+        return _getQueue(queuePriority).at(index);
     }
 
     /// @inheritdoc ICSModule
@@ -1070,11 +1173,12 @@ contract CSModule is
             targetLimitMode = no.targetLimitMode;
             targetValidatorsCount = no.targetLimit;
         }
-        stuckValidatorsCount = no.stuckValidatorsCount;
-        // @dev unused in CSM
-        refundedValidatorsCount = 0;
-        // @dev unused in CSM
-        stuckPenaltyEndTimestamp = 0;
+        {
+            // TODO: Unused in CSM, remove with TW.
+            // stuckValidatorsCount = 0;
+            // refundedValidatorsCount = 0;
+            // stuckPenaltyEndTimestamp = 0;
+        }
         totalExitedValidators = no.totalExitedKeys;
         totalDepositedValidators = no.totalDepositedKeys;
         depositableValidatorsCount = no.depositableValidatorsCount;
@@ -1189,7 +1293,7 @@ contract CSModule is
         }
         emit TotalSigningKeysCountChanged(nodeOperatorId, no.totalAddedKeys);
 
-        // Nonce is updated below since in case of stuck keys depositable keys might not change
+        // Nonce is updated below since in case of target limit depositable keys might not change
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: false
@@ -1226,42 +1330,6 @@ contract CSModule is
         );
     }
 
-    function _updateStuckValidatorsCount(
-        uint256 nodeOperatorId,
-        uint256 stuckValidatorsCount
-    ) internal {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (stuckValidatorsCount == no.stuckValidatorsCount) return;
-        unchecked {
-            if (
-                stuckValidatorsCount >
-                no.totalDepositedKeys - no.totalExitedKeys
-            ) revert StuckKeysHigherThanNonExited();
-        }
-
-        // @dev No need to safe cast due to conditions above
-        no.stuckValidatorsCount = uint32(stuckValidatorsCount);
-        emit StuckSigningKeysCountChanged(nodeOperatorId, stuckValidatorsCount);
-
-        if (stuckValidatorsCount > 0 && no.depositableValidatorsCount > 0) {
-            // INFO: The only consequence of stuck keys from the on-chain perspective is suspending deposits to the
-            // Node Operator. To do that, we set the depositableValidatorsCount to 0 for this Node Operator. Hence
-            // we can omit the call to the _updateDepositableValidatorsCount function here to save gas.
-            unchecked {
-                _depositableValidatorsCount -= no.depositableValidatorsCount;
-            }
-            no.depositableValidatorsCount = 0;
-            emit DepositableSigningKeysCountChanged(nodeOperatorId, 0);
-        } else {
-            // Nonce will be updated on the top level once per call
-            _updateDepositableValidatorsCount({
-                nodeOperatorId: nodeOperatorId,
-                incrementNonceIfUpdated: false
-            });
-        }
-    }
-
     function _updateDepositableValidatorsCount(
         uint256 nodeOperatorId,
         bool incrementNonceIfUpdated
@@ -1278,10 +1346,6 @@ contract CSModule is
             } else if (unbondedKeys > no.totalAddedKeys - no.totalVettedKeys) {
                 newCount = nonDeposited - unbondedKeys;
             }
-        }
-
-        if (no.stuckValidatorsCount > 0 && newCount > 0) {
-            newCount = 0;
         }
 
         if (no.targetLimitMode > 0 && newCount > 0) {
@@ -1312,10 +1376,72 @@ contract CSModule is
             if (incrementNonceIfUpdated) {
                 _incrementModuleNonce();
             }
-            depositQueue.enqueueNodeOperatorKeys(
-                _nodeOperators,
-                nodeOperatorId
-            );
+            _enqueueNodeOperatorKeys(nodeOperatorId);
+        }
+    }
+
+    function _enqueueNodeOperatorKeys(uint256 nodeOperatorId) internal {
+        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
+        (uint32 priority, uint32 maxDeposits) = PARAMETERS_REGISTRY
+            .getQueueConfig(curveId);
+
+        if (priority < QUEUE_LEGACY_PRIORITY) {
+            NodeOperator storage no = _nodeOperators[nodeOperatorId];
+            uint32 enqueuedSoFar = no.totalDepositedKeys + no.enqueuedCount;
+
+            if (maxDeposits > enqueuedSoFar) {
+                uint32 leftForQueue = maxDeposits - enqueuedSoFar;
+                _enqueueNodeOperatorKeys(
+                    nodeOperatorId,
+                    priority,
+                    leftForQueue
+                );
+                no.usedPriorityQueue = true;
+            }
+        }
+
+        _enqueueNodeOperatorKeys(
+            nodeOperatorId,
+            QUEUE_LOWEST_PRIORITY,
+            type(uint32).max
+        );
+    }
+
+    function _enqueueNodeOperatorKeys(
+        uint256 nodeOperatorId,
+        uint256 queuePriority,
+        uint32 maxKeys
+    ) internal {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        uint32 depositable = no.depositableValidatorsCount;
+        uint32 enqueued = no.enqueuedCount;
+
+        if (enqueued < depositable) {
+            uint32 count;
+
+            unchecked {
+                count = depositable - enqueued;
+                if (count > maxKeys) count = maxKeys;
+                no.enqueuedCount += count;
+            }
+
+            QueueLib.Queue storage q = _getQueue(queuePriority);
+            q.enqueue(nodeOperatorId, count);
+            emit BatchEnqueued(queuePriority, nodeOperatorId, count);
+        }
+    }
+
+    /// @dev Acts as a proxy to `_queueByPriority` till `legacyQueue` deprecation.
+    /// @dev TODO: Remove in CSM v3.
+    function _getQueue(
+        uint256 priority
+    ) internal view returns (QueueLib.Queue storage q) {
+        if (priority == QUEUE_LOWEST_PRIORITY) {
+            assembly {
+                q.slot := legacyQueue.slot
+            }
+        } else {
+            q = _queueByPriority[priority];
         }
     }
 

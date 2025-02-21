@@ -193,21 +193,6 @@ contract NodeOperators is
         assertEq(csm.getNodeOperator(noId).totalExitedKeys, exitedKeysCount);
     }
 
-    function stuck(
-        uint256 noId,
-        uint256 stuckKeysCount
-    ) external broadcastStakingRouter {
-        csm.updateStuckValidatorsCount(
-            bytes.concat(bytes8(uint64(noId))),
-            bytes.concat(bytes16(uint128(stuckKeysCount)))
-        );
-
-        assertEq(
-            csm.getNodeOperator(noId).stuckValidatorsCount,
-            stuckKeysCount
-        );
-    }
-
     function withdraw(
         uint256 noId,
         uint256 keyIndex,

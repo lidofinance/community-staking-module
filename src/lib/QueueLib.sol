@@ -3,7 +3,7 @@
 pragma solidity 0.8.24;
 
 import { NodeOperator } from "../interfaces/ICSModule.sol";
-import { TransientUintUintMap, TransientUintUintMapLib } from "./TransientUintUintMapLib.sol";
+import { TransientUintUintMap } from "./TransientUintUintMapLib.sol";
 
 // Batch is an uint256 as it's the internal data type used by solidity.
 // Batch is a packed value, consisting of the following fields:
@@ -94,8 +94,6 @@ using { noId, keys, setKeys, setNext, next, isNil, unwrap } for Batch global;
 using QueueLib for QueueLib.Queue;
 
 interface IQueueLib {
-    event BatchEnqueued(uint256 indexed nodeOperatorId, uint256 count);
-
     error QueueIsEmpty();
     error QueueLookupNoLimit();
 }
@@ -114,30 +112,21 @@ library QueueLib {
     //////
     /// External methods
     //////
-    function enqueueNodeOperatorKeys(
-        Queue storage self,
-        mapping(uint256 => NodeOperator) storage nodeOperators,
-        uint256 nodeOperatorId
-    ) external {
-        NodeOperator storage no = nodeOperators[nodeOperatorId];
-        uint32 depositable = no.depositableValidatorsCount;
-        uint32 enqueued = no.enqueuedCount;
-
-        if (enqueued < depositable) {
-            uint32 count;
-            unchecked {
-                count = depositable - enqueued;
-            }
-            no.enqueuedCount = depositable;
-            self.enqueue(nodeOperatorId, count);
-        }
-    }
 
     function clean(
         Queue storage self,
         mapping(uint256 => NodeOperator) storage nodeOperators,
-        uint256 maxItems
-    ) external returns (uint256 removed, uint256 lastRemovedAtDepth) {
+        uint256 maxItems,
+        TransientUintUintMap queueLookup
+    )
+        external
+        returns (
+            uint256 removed,
+            uint256 lastRemovedAtDepth,
+            uint256 visited,
+            bool isFinished
+        )
+    {
         if (maxItems == 0) revert IQueueLib.QueueLookupNoLimit();
 
         Batch prev;
@@ -146,11 +135,10 @@ library QueueLib {
         uint128 head = self.head;
         uint128 curr = head;
 
-        TransientUintUintMap queueLookup = TransientUintUintMapLib.create();
-
-        for (uint256 i; i < maxItems; ++i) {
+        for (; visited < maxItems; ++visited) {
             Batch item = self.queue[curr];
             if (item.isNil()) {
+                isFinished = true;
                 break;
             }
 
@@ -173,7 +161,7 @@ library QueueLib {
                 no.enqueuedCount -= uint32(item.keys());
 
                 unchecked {
-                    lastRemovedAtDepth = i + 1;
+                    lastRemovedAtDepth = visited + 1;
                     ++removed;
                 }
             } else {
@@ -211,7 +199,6 @@ library QueueLib {
         unchecked {
             ++self.tail;
         }
-        emit IQueueLib.BatchEnqueued(nodeOperatorId, keysCount);
     }
 
     function dequeue(Queue storage self) internal returns (Batch item) {
