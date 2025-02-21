@@ -545,10 +545,10 @@ abstract contract CSAccountingBondStateBaseTest is
     uint256[] public individualCurve = [1.8 ether, 2.7 ether];
 
     function _curve(uint256[] memory curve) internal virtual {
-        vm.prank(admin);
+        vm.startPrank(admin);
         uint256 curveId = accounting.addBondCurve(curve);
-        vm.prank(admin);
         accounting.setBondCurve(0, curveId);
+        vm.stopPrank();
     }
 
     function _lock(uint256 id, uint256 amount) internal virtual {
@@ -1359,10 +1359,10 @@ abstract contract CSAccountingGetRequiredBondForKeysBaseTest is
     uint256[] public defaultCurve = [2 ether, 3 ether];
 
     function _curve(uint256[] memory curve) internal virtual {
-        vm.prank(admin);
+        vm.startPrank(admin);
         uint256 curveId = accounting.addBondCurve(curve);
-        vm.prank(admin);
         accounting.setBondCurve(0, curveId);
+        vm.stopPrank();
     }
 
     function test_default() public virtual;
@@ -4752,11 +4752,12 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
 
         mock_getNodeOperatorsCount(1);
 
-        vm.prank(admin);
-        uint256 addedId = accounting.addBondCurve(curvePoints);
+        vm.startPrank(admin);
 
-        vm.prank(admin);
+        uint256 addedId = accounting.addBondCurve(curvePoints);
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: addedId });
+
+        vm.stopPrank();
 
         ICSBondCurve.BondCurve memory curve = accounting.getBondCurve(0);
 
@@ -4784,14 +4785,15 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
 
         mock_getNodeOperatorsCount(1);
 
-        vm.prank(admin);
-        uint256 addedId = accounting.addBondCurve(curvePoints);
+        vm.startPrank(admin);
 
-        vm.prank(admin);
+        uint256 addedId = accounting.addBondCurve(curvePoints);
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: addedId });
+
+        vm.stopPrank();
+
         vm.prank(address(stakingModule));
         accounting.resetBondCurve({ nodeOperatorId: 0 });
-        vm.stopPrank();
 
         ICSBondCurve.BondCurve memory curve = accounting.getBondCurve(0);
 

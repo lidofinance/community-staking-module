@@ -226,6 +226,7 @@ contract CSAccounting is
         CSM.enqueueNodeOperatorKeys(nodeOperatorId);
     }
 
+    /// @inheritdoc ICSAccounting
     function claimRewardsStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount,
@@ -500,6 +501,46 @@ contract CSAccounting is
         CSBondCore._increaseBond(nodeOperatorId, distributed);
     }
 
+    function _unwrapStETHPermitIfRequired(
+        address from,
+        PermitInput calldata permit
+    ) internal {
+        if (
+            permit.value > 0 &&
+            LIDO.allowance(from, address(this)) < permit.value
+        ) {
+            LIDO.permit({
+                owner: from,
+                spender: address(this),
+                value: permit.value,
+                deadline: permit.deadline,
+                v: permit.v,
+                r: permit.r,
+                s: permit.s
+            });
+        }
+    }
+
+    function _unwrapWstETHPermitIfRequired(
+        address from,
+        PermitInput calldata permit
+    ) internal {
+        if (
+            permit.value > 0 &&
+            WSTETH.allowance(from, address(this)) < permit.value
+        ) {
+            WSTETH.permit({
+                owner: from,
+                spender: address(this),
+                value: permit.value,
+                deadline: permit.deadline,
+                v: permit.v,
+                r: permit.r,
+                s: permit.s
+            });
+        }
+    }
+
     /// @dev Overrides the original implementation to account for a locked bond and withdrawn validators
     function _getClaimableBondShares(
         uint256 nodeOperatorId
@@ -546,46 +587,6 @@ contract CSAccounting is
                 nonWithdrawnKeys > bondedKeys
                     ? nonWithdrawnKeys - bondedKeys
                     : 0;
-        }
-    }
-
-    function _unwrapStETHPermitIfRequired(
-        address from,
-        PermitInput calldata permit
-    ) internal {
-        if (
-            permit.value > 0 &&
-            LIDO.allowance(from, address(this)) < permit.value
-        ) {
-            LIDO.permit({
-                owner: from,
-                spender: address(this),
-                value: permit.value,
-                deadline: permit.deadline,
-                v: permit.v,
-                r: permit.r,
-                s: permit.s
-            });
-        }
-    }
-
-    function _unwrapWstETHPermitIfRequired(
-        address from,
-        PermitInput calldata permit
-    ) internal {
-        if (
-            permit.value > 0 &&
-            WSTETH.allowance(from, address(this)) < permit.value
-        ) {
-            WSTETH.permit({
-                owner: from,
-                spender: address(this),
-                value: permit.value,
-                deadline: permit.deadline,
-                v: permit.v,
-                r: permit.r,
-                s: permit.s
-            });
         }
     }
 
