@@ -488,6 +488,28 @@ contract CSAccounting is
         return _getClaimableBondShares(nodeOperatorId);
     }
 
+    /// @inheritdoc ICSAccounting
+    function getClaimableBondShares(
+        uint256 nodeOperatorId,
+        uint256 cumulativeFeeShares,
+        bytes32[] calldata rewardsProof
+    ) public view returns (uint256 claimableShares) {
+        uint256 distributedFees = feeDistributor.getFeesToDistribute(
+            nodeOperatorId,
+            cumulativeFeeShares,
+            rewardsProof
+        );
+        uint256 current = CSBondCore.getBondShares(nodeOperatorId) +
+            distributedFees;
+        uint256 required = _sharesByEth(
+            CSBondCurve.getBondAmountByKeysCount(
+                CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
+                CSBondCurve.getBondCurve(nodeOperatorId)
+            ) + CSBondLock.getActualLockedBond(nodeOperatorId)
+        );
+        return current > required ? current - required : 0;
+    }
+
     function _pullFeeRewards(
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,

@@ -168,6 +168,18 @@ interface ICSAccounting is
         uint256 nodeOperatorId
     ) external view returns (uint256);
 
+    /// @notice Get current claimable bond in stETH shares for the given Node Operator
+    ///         Includes potential rewards distributed by the Fee Distributor
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
+    /// @param rewardsProof Merkle proof of the rewards
+    /// @return Current claimable bond in stETH shares
+    function getClaimableBondShares(
+        uint256 nodeOperatorId,
+        uint256 cumulativeFeeShares,
+        bytes32[] calldata rewardsProof
+    ) external view returns (uint256);
+
     /// @notice Unwrap the user's wstETH and deposit stETH to the bond for the given Node Operator
     /// @dev Called by CSM exclusively
     /// @param from Address to unwrap wstETH from
