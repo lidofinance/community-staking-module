@@ -86,6 +86,5 @@ exit-request noId validatorIndex validatorPubKey:
 
 _impersonate-script *args:
     curl -sS {{anvil_rpc_url}} --header 'Content-Type: application/json' --data '{"jsonrpc":"2.0","method":"anvil_autoImpersonateAccount","params":[true],"id":1}' > /dev/null
-    forge script --rpc-url={{anvil_rpc_url}} -vvv --broadcast --unlocked \
-        --sender=`cat localhost.json | jq -r ".available_accounts[0]"` {{args}}
+    forge script --rpc-url={{anvil_rpc_url}} -vvv --broadcast --unlocked {{args}}
     curl -sS {{anvil_rpc_url}} --header 'Content-Type: application/json' --data '{"jsonrpc":"2.0","method":"anvil_autoImpersonateAccount","params":[false],"id":1}' > /dev/null

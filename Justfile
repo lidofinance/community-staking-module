@@ -30,7 +30,7 @@ deploy_script_path := "script" / deploy_script_name + ".s.sol:" + deploy_script_
 deploy_impls_script_path := "script" / deploy_implementations_script_name + ".s.sol:" + deploy_implementations_script_name
 
 anvil_host := env_var_or_default("ANVIL_IP_ADDR", "127.0.0.1")
-anvil_port := "8545"
+anvil_port := env_var_or_default("ANVIL_PORT", "8545")
 anvil_rpc_url := "http://" + anvil_host + ":" + anvil_port
 
 default: clean deps build test-all
