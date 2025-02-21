@@ -72,7 +72,9 @@ contract DeployMainnet is DeployBase {
         config.rewardShareBP = 10000;
         config.strikesLifetimeFrames = 6;
         config.strikesThreshold = 3;
-        config.priorityQueueLimit = 0;
+        config.queueLowestPriority = 5;
+        config.defaultQueuePriority = 5;
+        config.defaultQueueMaxDeposits = type(uint32).max;
         config.badPerformancePenalty = 0.1 ether; // TODO: to be reviewed
         config.attestationsWeight = 54; // https://eth2book.info/capella/part2/incentives/rewards/
         config.blocksWeight = 8; // https://eth2book.info/capella/part2/incentives/rewards/

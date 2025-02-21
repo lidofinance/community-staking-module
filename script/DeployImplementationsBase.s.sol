@@ -44,7 +44,9 @@ abstract contract DeployImplementationsBase is DeployBase {
 
         vm.startBroadcast(pk);
         {
-            CSParametersRegistry parametersRegistryImpl = new CSParametersRegistry();
+            CSParametersRegistry parametersRegistryImpl = new CSParametersRegistry(
+                    config.queueLowestPriority
+                );
             parametersRegistry = CSParametersRegistry(
                 _deployProxy(config.proxyAdmin, address(parametersRegistryImpl))
             );
@@ -54,11 +56,12 @@ abstract contract DeployImplementationsBase is DeployBase {
                     keyRemovalCharge: config.keyRemovalCharge,
                     elRewardsStealingAdditionalFine: config
                         .elRewardsStealingAdditionalFine,
-                    priorityQueueLimit: config.priorityQueueLimit,
                     rewardShare: config.rewardShareBP,
                     performanceLeeway: config.avgPerfLeewayBP,
                     strikesLifetime: config.strikesLifetimeFrames,
                     strikesThreshold: config.strikesThreshold,
+                    defaultQueuePriority: config.defaultQueuePriority,
+                    defaultQueueMaxDeposits: config.defaultQueueMaxDeposits,
                     badPerformancePenalty: config.badPerformancePenalty,
                     attestationsWeight: config.attestationsWeight,
                     blocksWeight: config.blocksWeight,

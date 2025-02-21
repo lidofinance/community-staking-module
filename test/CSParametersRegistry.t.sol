@@ -24,16 +24,19 @@ contract CSParametersRegistryBaseTest is Test, Utilities, Fixtures {
         admin = nextAddress("ADMIN");
         stranger = nextAddress("STRANGER");
 
-        parametersRegistry = new CSParametersRegistry();
+        parametersRegistry = new CSParametersRegistry({
+            queueLowestPriority: 5
+        });
 
         defaultInitData = ICSParametersRegistry.InitializationData({
             keyRemovalCharge: 0.05 ether,
             elRewardsStealingAdditionalFine: 0.1 ether,
-            priorityQueueLimit: 0,
             rewardShare: 8000,
             performanceLeeway: 500,
             strikesLifetime: 6,
             strikesThreshold: 3,
+            defaultQueuePriority: 0,
+            defaultQueueMaxDeposits: 10,
             badPerformancePenalty: 0.1 ether,
             attestationsWeight: 54,
             blocksWeight: 8,
@@ -58,10 +61,6 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
         vm.expectEmit(address(parametersRegistry));
         emit ICSParametersRegistry.DefaultElRewardsStealingAdditionalFineSet(
             defaultInitData.elRewardsStealingAdditionalFine
-        );
-        vm.expectEmit(address(parametersRegistry));
-        emit ICSParametersRegistry.DefaultPriorityQueueLimitSet(
-            defaultInitData.priorityQueueLimit
         );
         vm.expectEmit(address(parametersRegistry));
         emit ICSParametersRegistry.DefaultRewardShareSet(
@@ -103,10 +102,6 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
             defaultInitData.elRewardsStealingAdditionalFine
         );
         assertEq(
-            parametersRegistry.defaultPriorityQueueLimit(),
-            defaultInitData.priorityQueueLimit
-        );
-        assertEq(
             parametersRegistry.defaultRewardShare(),
             defaultInitData.rewardShare
         );
@@ -120,6 +115,12 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
 
         assertEq(lifetime, defaultInitData.strikesLifetime);
         assertEq(threshold, defaultInitData.strikesThreshold);
+
+        (uint256 priority, uint256 maxDeposits) = parametersRegistry
+            .defaultQueueConfig();
+
+        assertEq(priority, defaultInitData.defaultQueuePriority);
+        assertEq(maxDeposits, defaultInitData.defaultQueueMaxDeposits);
 
         assertEq(
             parametersRegistry.defaultBadPerformancePenalty(),
@@ -750,97 +751,6 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
     }
 }
 
-contract CSParametersRegistryPriorityQueueLimitTest is
-    CSParametersRegistryBaseTestInitialized,
-    ParametersTest
-{
-    function test_setDefault() public override {
-        uint256 limit = 154;
-        vm.expectEmit(address(parametersRegistry));
-        emit ICSParametersRegistry.DefaultPriorityQueueLimitSet(limit);
-        vm.prank(admin);
-        parametersRegistry.setDefaultPriorityQueueLimit(limit);
-
-        assertEq(parametersRegistry.defaultPriorityQueueLimit(), limit);
-    }
-
-    function test_setDefault_RevertWhen_notAdmin() public override {
-        uint256 limit = 154;
-
-        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
-        expectRoleRevert(stranger, role);
-        vm.prank(stranger);
-        parametersRegistry.setDefaultPriorityQueueLimit(limit);
-    }
-
-    function test_set() public override {
-        uint256 curveId = 1;
-        uint256 limit = 20;
-
-        vm.expectEmit(address(parametersRegistry));
-        emit ICSParametersRegistry.PriorityQueueLimitSet(curveId, limit);
-        vm.prank(admin);
-        parametersRegistry.setPriorityQueueLimit(curveId, limit);
-    }
-
-    function test_set_RevertWhen_notAdmin() public override {
-        uint256 curveId = 1;
-        uint256 limit = 20;
-
-        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
-        expectRoleRevert(stranger, role);
-        vm.prank(stranger);
-        parametersRegistry.setPriorityQueueLimit(curveId, limit);
-    }
-
-    function test_unset() public override {
-        uint256 curveId = 1;
-        uint256 limit = 20;
-
-        vm.prank(admin);
-        parametersRegistry.setPriorityQueueLimit(curveId, limit);
-
-        uint256 limitOut = parametersRegistry.getPriorityQueueLimit(curveId);
-
-        assertEq(limitOut, limit);
-
-        vm.prank(admin);
-        parametersRegistry.unsetPriorityQueueLimit(curveId);
-
-        limitOut = parametersRegistry.getPriorityQueueLimit(curveId);
-
-        assertEq(limitOut, defaultInitData.priorityQueueLimit);
-    }
-
-    function test_unset_RevertWhen_notAdmin() public override {
-        uint256 curveId = 1;
-
-        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
-        expectRoleRevert(stranger, role);
-        vm.prank(stranger);
-        parametersRegistry.unsetPriorityQueueLimit(curveId);
-    }
-
-    function test_get_usualData() public override {
-        uint256 curveId = 1;
-        uint256 limit = 20;
-
-        vm.prank(admin);
-        parametersRegistry.setPriorityQueueLimit(curveId, limit);
-
-        uint256 limitOut = parametersRegistry.getPriorityQueueLimit(curveId);
-
-        assertEq(limitOut, limit);
-    }
-
-    function test_get_defaultData() public view override {
-        uint256 curveId = 10;
-        uint256 limitOut = parametersRegistry.getPriorityQueueLimit(curveId);
-
-        assertEq(limitOut, defaultInitData.priorityQueueLimit);
-    }
-}
-
 contract CSParametersRegistryKeyRemovalChargeTest is
     CSParametersRegistryBaseTestInitialized,
     ParametersTest
@@ -1456,5 +1366,167 @@ contract CSParametersRegistryPerformanceCoefficientsTest is
         assertEq(attestationsOut, defaultInitData.attestationsWeight);
         assertEq(blocksOut, defaultInitData.blocksWeight);
         assertEq(syncOut, defaultInitData.syncWeight);
+    }
+}
+
+contract CSParametersRegistryQueueConfigTest is
+    CSParametersRegistryBaseTestInitialized,
+    ParametersTest
+{
+    function test_setDefault() public override {
+        uint32 priority = 3;
+        uint32 maxDeposits = 42;
+
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.DefaultQueueConfigSet(priority, maxDeposits);
+        vm.prank(admin);
+        parametersRegistry.setDefaultQueueConfig(priority, maxDeposits);
+
+        (uint256 priorityOut, uint256 maxDepositsOut) = parametersRegistry
+            .defaultQueueConfig();
+        assertEq(priorityOut, priority);
+        assertEq(maxDepositsOut, maxDeposits);
+    }
+
+    function test_setDefault_RevertWhen_notAdmin() public override {
+        uint32 priority = 3;
+        uint32 maxDeposits = 42;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.setDefaultQueueConfig(priority, maxDeposits);
+    }
+
+    function test_set() public override {
+        uint256 curveId = 11;
+        uint32 priority = 3;
+        uint32 maxDeposits = 42;
+
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.QueueConfigSet(
+            curveId,
+            priority,
+            maxDeposits
+        );
+        vm.prank(admin);
+        parametersRegistry.setQueueConfig(
+            curveId,
+            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
+        );
+
+        (uint256 priorityOut, uint256 maxDepositsOut) = parametersRegistry
+            .getQueueConfig(curveId);
+        assertEq(priorityOut, priority);
+        assertEq(maxDepositsOut, maxDeposits);
+    }
+
+    function test_set_RevertWhen_notAdmin() public override {
+        uint256 curveId = 11;
+        uint32 priority = 3;
+        uint32 maxDeposits = 42;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.setQueueConfig(
+            curveId,
+            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
+        );
+    }
+
+    function test_unset() public override {
+        uint256 curveId = 11;
+        uint32 priority = 3;
+        uint32 maxDeposits = 42;
+
+        vm.prank(admin);
+        parametersRegistry.setQueueConfig(
+            curveId,
+            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
+        );
+
+        (uint256 priorityOut, uint256 maxDepositsOut) = parametersRegistry
+            .getQueueConfig(curveId);
+        assertEq(priorityOut, priority);
+        assertEq(maxDepositsOut, maxDeposits);
+
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.QueueConfigUnset(curveId);
+        vm.prank(admin);
+        parametersRegistry.unsetQueueConfig(curveId);
+
+        (priorityOut, maxDepositsOut) = parametersRegistry.getQueueConfig(
+            curveId
+        );
+        assertEq(priorityOut, defaultInitData.defaultQueuePriority);
+        assertEq(maxDepositsOut, defaultInitData.defaultQueueMaxDeposits);
+    }
+
+    function test_unset_RevertWhen_notAdmin() public override {
+        uint256 curveId = 11;
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.unsetQueueConfig(curveId);
+    }
+
+    function test_get_usualData() public override {
+        uint256 curveId = 11;
+        uint32 priority = 3;
+        uint32 maxDeposits = 42;
+
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.QueueConfigSet(
+            curveId,
+            priority,
+            maxDeposits
+        );
+        vm.prank(admin);
+        parametersRegistry.setQueueConfig(
+            curveId,
+            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
+        );
+
+        (uint256 priorityOut, uint256 maxDepositsOut) = parametersRegistry
+            .getQueueConfig(curveId);
+        assertEq(priorityOut, priority);
+        assertEq(maxDepositsOut, maxDeposits);
+    }
+
+    function test_get_defaultData() public view override {
+        uint256 curveId = 11;
+
+        (uint256 priorityOut, uint256 maxDepositsOut) = parametersRegistry
+            .getQueueConfig(curveId);
+        assertEq(priorityOut, defaultInitData.defaultQueuePriority);
+        assertEq(maxDepositsOut, defaultInitData.defaultQueueMaxDeposits);
+    }
+
+    function test_set_RevertWhen_QueuePriorityIsLegacyQueue() public {
+        uint256 curveId = 11;
+        uint32 priority = uint32(parametersRegistry.QUEUE_LEGACY_PRIORITY());
+        uint32 maxDeposits = 42;
+
+        vm.expectRevert(ICSParametersRegistry.QueueCannotBeUsed.selector);
+        vm.prank(admin);
+        parametersRegistry.setQueueConfig(
+            curveId,
+            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
+        );
+    }
+
+    function test_set_RevertWhen_QueuePriorityAboveLimit() public {
+        uint256 curveId = 11;
+        uint32 priority = uint32(parametersRegistry.QUEUE_LOWEST_PRIORITY()) +
+            1;
+        uint32 maxDeposits = 42;
+
+        vm.expectRevert(ICSParametersRegistry.QueueCannotBeUsed.selector);
+        vm.prank(admin);
+        parametersRegistry.setQueueConfig(
+            curveId,
+            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
+        );
     }
 }

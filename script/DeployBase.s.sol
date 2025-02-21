@@ -115,7 +115,9 @@ struct DeployParams {
     uint256 rewardShareBP;
     uint256 strikesLifetimeFrames;
     uint256 strikesThreshold;
-    uint256 priorityQueueLimit;
+    uint256 queueLowestPriority;
+    uint256 defaultQueuePriority;
+    uint256 defaultQueueMaxDeposits;
     uint256 badPerformancePenalty;
     uint256 attestationsWeight;
     uint256 blocksWeight;
@@ -200,7 +202,9 @@ abstract contract DeployBase is Script {
 
         vm.startBroadcast(pk);
         {
-            CSParametersRegistry parametersRegistryImpl = new CSParametersRegistry();
+            CSParametersRegistry parametersRegistryImpl = new CSParametersRegistry(
+                    config.queueLowestPriority
+                );
             parametersRegistry = CSParametersRegistry(
                 _deployProxy(config.proxyAdmin, address(parametersRegistryImpl))
             );
@@ -276,11 +280,12 @@ abstract contract DeployBase is Script {
                     keyRemovalCharge: config.keyRemovalCharge,
                     elRewardsStealingAdditionalFine: config
                         .elRewardsStealingAdditionalFine,
-                    priorityQueueLimit: config.priorityQueueLimit,
                     rewardShare: config.rewardShareBP,
                     performanceLeeway: config.avgPerfLeewayBP,
                     strikesLifetime: config.strikesLifetimeFrames,
                     strikesThreshold: config.strikesThreshold,
+                    defaultQueuePriority: config.defaultQueuePriority,
+                    defaultQueueMaxDeposits: config.defaultQueueMaxDeposits,
                     badPerformancePenalty: config.badPerformancePenalty,
                     attestationsWeight: config.attestationsWeight,
                     blocksWeight: config.blocksWeight,

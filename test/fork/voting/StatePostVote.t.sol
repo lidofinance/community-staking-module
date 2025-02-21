@@ -102,10 +102,6 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
             upgradeDeployParams.elRewardsStealingAdditionalFine
         );
         assertEq(
-            parametersRegistry.defaultPriorityQueueLimit(),
-            upgradeDeployParams.priorityQueueLimit
-        );
-        assertEq(
             parametersRegistry.defaultRewardShare(),
             upgradeDeployParams.rewardShareBP
         );
@@ -117,6 +113,11 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
             .defaultStrikesParams();
         assertEq(strikesLifetime, upgradeDeployParams.strikesLifetimeFrames);
         assertEq(strikesThreshold, upgradeDeployParams.strikesThreshold);
+
+        (uint256 priority, uint256 maxDeposits) = parametersRegistry
+            .defaultQueueConfig();
+        assertEq(priority, upgradeDeployParams.defaultQueuePriority);
+        assertEq(maxDeposits, upgradeDeployParams.defaultQueueMaxDeposits);
 
         assertEq(
             parametersRegistry.defaultBadPerformancePenalty(),
