@@ -174,7 +174,7 @@ interface ICSAccounting is
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
     /// @return Current claimable bond in stETH shares
-    function getClaimableBondShares(
+    function getClaimableRewardsAndBondShares(
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof

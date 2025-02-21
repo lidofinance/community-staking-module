@@ -3166,17 +3166,16 @@ contract CSAccountingClaimableBondTest is CSAccountingRewardsBaseTest {
     }
 }
 
-contract CSAccountingClaimableBondWithProofTest is CSAccountingRewardsBaseTest {
+contract CSAccountingClaimableRewardsAndBondSharesTest is
+    CSAccountingRewardsBaseTest
+{
     function test_default() public override {
         _operator({ ongoing: 16, withdrawn: 0 });
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
 
-        uint256 claimableBondShares = accounting.getClaimableBondShares(
-            0,
-            leaf.shares,
-            leaf.proof
-        );
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
 
         assertEq(
             claimableBondShares,
@@ -3191,11 +3190,8 @@ contract CSAccountingClaimableBondWithProofTest is CSAccountingRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
         _curve(curveWithDiscount);
 
-        uint256 claimableBondShares = accounting.getClaimableBondShares(
-            0,
-            leaf.shares,
-            leaf.proof
-        );
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
 
         assertApproxEqAbs(
             claimableBondShares,
@@ -3211,11 +3207,8 @@ contract CSAccountingClaimableBondWithProofTest is CSAccountingRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
         _lock({ amount: 1 ether });
 
-        uint256 claimableBondShares = accounting.getClaimableBondShares(
-            0,
-            leaf.shares,
-            leaf.proof
-        );
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
 
         assertEq(
             claimableBondShares,
@@ -3230,11 +3223,8 @@ contract CSAccountingClaimableBondWithProofTest is CSAccountingRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
         _lock({ amount: 1.05 ether });
 
-        uint256 claimableBondShares = accounting.getClaimableBondShares(
-            0,
-            leaf.shares,
-            leaf.proof
-        );
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
 
         assertEq(
             claimableBondShares,
@@ -3250,11 +3240,8 @@ contract CSAccountingClaimableBondWithProofTest is CSAccountingRewardsBaseTest {
         _curve(curveWithDiscount);
         _lock({ amount: 1 ether });
 
-        uint256 claimableBondShares = accounting.getClaimableBondShares(
-            0,
-            leaf.shares,
-            leaf.proof
-        );
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
 
         assertApproxEqAbs(
             claimableBondShares,
@@ -3269,11 +3256,8 @@ contract CSAccountingClaimableBondWithProofTest is CSAccountingRewardsBaseTest {
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
 
-        uint256 claimableBondShares = accounting.getClaimableBondShares(
-            0,
-            leaf.shares,
-            leaf.proof
-        );
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
 
         assertApproxEqAbs(
             claimableBondShares,
@@ -3288,11 +3272,8 @@ contract CSAccountingClaimableBondWithProofTest is CSAccountingRewardsBaseTest {
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
 
-        uint256 claimableBondShares = accounting.getClaimableBondShares(
-            0,
-            leaf.shares,
-            leaf.proof
-        );
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
 
         assertEq(
             claimableBondShares,
@@ -3306,11 +3287,8 @@ contract CSAccountingClaimableBondWithProofTest is CSAccountingRewardsBaseTest {
         _deposit({ bond: 32 ether });
         _rewards({ fee: 0.1 ether });
 
-        uint256 claimableBondShares = accounting.getClaimableBondShares(
-            0,
-            leaf.shares,
-            leaf.proof
-        );
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
 
         assertApproxEqAbs(
             claimableBondShares,
@@ -3325,11 +3303,8 @@ contract CSAccountingClaimableBondWithProofTest is CSAccountingRewardsBaseTest {
         _deposit({ bond: 33 ether });
         _rewards({ fee: 0.1 ether });
 
-        uint256 claimableBondShares = accounting.getClaimableBondShares(
-            0,
-            leaf.shares,
-            leaf.proof
-        );
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
 
         assertApproxEqAbs(
             claimableBondShares,
@@ -3344,11 +3319,8 @@ contract CSAccountingClaimableBondWithProofTest is CSAccountingRewardsBaseTest {
         _deposit({ bond: 33 ether });
         _rewards({ fee: 0.1 ether });
 
-        uint256 claimableBondShares = accounting.getClaimableBondShares(
-            0,
-            leaf.shares,
-            leaf.proof
-        );
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
 
         assertApproxEqAbs(
             claimableBondShares,
@@ -3363,11 +3335,8 @@ contract CSAccountingClaimableBondWithProofTest is CSAccountingRewardsBaseTest {
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        uint256 claimableBondShares = accounting.getClaimableBondShares(
-            0,
-            leaf.shares,
-            leaf.proof
-        );
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
 
         assertEq(
             claimableBondShares,
@@ -3381,11 +3350,8 @@ contract CSAccountingClaimableBondWithProofTest is CSAccountingRewardsBaseTest {
         _deposit({ bond: 16 ether });
         _rewards({ fee: 0.1 ether });
 
-        uint256 claimableBondShares = accounting.getClaimableBondShares(
-            0,
-            leaf.shares,
-            leaf.proof
-        );
+        uint256 claimableBondShares = accounting
+            .getClaimableRewardsAndBondShares(0, leaf.shares, leaf.proof);
 
         assertEq(
             claimableBondShares,

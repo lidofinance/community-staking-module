@@ -489,7 +489,7 @@ contract CSAccounting is
     }
 
     /// @inheritdoc ICSAccounting
-    function getClaimableBondShares(
+    function getClaimableRewardsAndBondShares(
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
