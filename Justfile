@@ -65,16 +65,16 @@ test-unit *args:
     forge test --no-match-path 'test/fork/*' -vvv {{args}}
 
 test-integration *args:
-    forge test --match-path 'test/fork/integration/*' -vvv {{args}}
+    forge test --match-path 'test/fork/integration/*' -vvv --show-progress {{args}}
 
 test-deployment *args:
-    forge test --match-path 'test/fork/*' --no-match-path='test/fork/voting/*' -vvv {{args}}
+    forge test --match-path 'test/fork/*' --no-match-path='test/fork/voting/*' -vvv --show-progress {{args}}
 
 test-post-voting *args:
-    forge test --match-path 'test/fork/*' --no-match-path='test/fork/deployment/*' -vvv {{args}}
+    forge test --match-path 'test/fork/*' --no-match-path='test/fork/deployment/*' -vvv --show-progress {{args}}
 
 test-invariant *args:
-    forge test --match-path 'test/fork/invariant/*' -vvv {{args}}
+    forge test --match-path 'test/fork/invariant/*' -vvv --show-progress {{args}}
 
 gas-report:
     #!/usr/bin/env python

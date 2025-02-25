@@ -18,6 +18,7 @@ import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
 import { IKernel } from "../../../src/interfaces/IKernel.sol";
 import { IACL } from "../../../src/interfaces/IACL.sol";
 import { InvariantAsserts } from "../../helpers/InvariantAsserts.sol";
+import { Batch } from "../../../src/lib/QueueLib.sol";
 
 contract StakingRouterIntegrationTest is
     Test,
@@ -132,6 +133,21 @@ contract StakingRouterIntegrationTest is
         });
     }
 
+    function getDepositableNodeOperator()
+        internal
+        returns (uint256 noId, uint256 keysCount)
+    {
+        for (uint256 i = 0; i < csm.QUEUE_LOWEST_PRIORITY(); ++i) {
+            (uint128 head, ) = csm.depositQueuePointers(i);
+            Batch batch = csm.depositQueueItem(i, head);
+            if (!batch.isNil()) {
+                return (batch.noId(), batch.keys());
+            }
+        }
+        keysCount = 5;
+        noId = addNodeOperator(nextAddress(), keysCount);
+    }
+
     function hugeDeposit() internal {
         // It's impossible to process deposits if withdrawal requests amount is more than the buffered ether,
         // so we need to make sure that the buffered ether is enough by submitting this tremendous amount.
@@ -160,14 +176,16 @@ contract StakingRouterIntegrationTest is
     }
 
     function test_RouterDeposit() public assertInvariants {
-        address nodeOperatorManager = nextAddress();
-        uint256 noId = addNodeOperator(nodeOperatorManager, 1);
-        (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
+        (uint256 noId, uint256 keysCount) = getDepositableNodeOperator();
+        uint256 depositedKeysBefore = csm
+            .getNodeOperator(noId)
+            .totalDepositedKeys;
+
         hugeDeposit();
 
-        lidoDepositWithNoGasMetering(totalDepositableKeys);
+        lidoDepositWithNoGasMetering(keysCount);
         NodeOperator memory no = csm.getNodeOperator(noId);
-        assertEq(no.totalDepositedKeys, 1);
+        assertEq(no.totalDepositedKeys, depositedKeysBefore + keysCount);
     }
 
     function test_routerReportRewardsMinted() public assertInvariants {
@@ -234,13 +252,12 @@ contract StakingRouterIntegrationTest is
         public
         assertInvariants
     {
-        address nodeOperatorManager = nextAddress();
-        uint256 noId = addNodeOperator(nodeOperatorManager, 5);
+        (uint256 noId, uint256 keysCount) = getDepositableNodeOperator();
+        uint256 exitedKeysBefore = csm.getNodeOperator(noId).totalExitedKeys;
 
         hugeDeposit();
 
-        (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
-        lidoDepositWithNoGasMetering(totalDepositableKeys - 2);
+        lidoDepositWithNoGasMetering(keysCount);
 
         uint256 exited = 1;
         vm.prank(agent);
@@ -251,22 +268,18 @@ contract StakingRouterIntegrationTest is
         );
 
         NodeOperator memory no = csm.getNodeOperator(noId);
-        assertEq(no.totalExitedKeys, exited);
+        assertEq(no.totalExitedKeys, exitedKeysBefore + exited);
     }
 
     function test_getStakingModuleSummary() public assertInvariants {
         IStakingRouter.StakingModuleSummary memory summaryOld = stakingRouter
             .getStakingModuleSummary(moduleId);
 
-        address nodeOperatorManager = nextAddress();
-        uint256 keysCount = 5;
-        uint256 noId = addNodeOperator(nodeOperatorManager, keysCount);
+        (uint256 noId, uint256 keysCount) = getDepositableNodeOperator();
 
         hugeDeposit();
 
-        (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
-        uint256 keysToDeposit = totalDepositableKeys - 2;
-        lidoDepositWithNoGasMetering(keysToDeposit);
+        lidoDepositWithNoGasMetering(keysCount);
 
         uint256 exited = 1;
         vm.prank(agent);
@@ -284,24 +297,27 @@ contract StakingRouterIntegrationTest is
         );
         assertEq(
             summary.totalDepositedValidators,
-            summaryOld.totalDepositedValidators + keysToDeposit
+            summaryOld.totalDepositedValidators + keysCount
         );
         assertEq(
             summary.depositableValidatorsCount,
-            summaryOld.depositableValidatorsCount + keysCount - keysToDeposit
+            summaryOld.depositableValidatorsCount - keysCount
         );
     }
 
     function test_getNodeOperatorSummary() public assertInvariants {
-        address nodeOperatorManager = nextAddress();
-        uint256 keysCount = 5;
-        uint256 noId = addNodeOperator(nodeOperatorManager, keysCount);
+        (uint256 noId, uint256 keysCount) = getDepositableNodeOperator();
+        uint256 depositedValidatorsBefore = csm
+            .getNodeOperator(noId)
+            .totalDepositedKeys;
+        uint256 depositableValidatorsCount = csm
+            .getNodeOperator(noId)
+            .depositableValidatorsCount;
 
         hugeDeposit();
 
         (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
-        uint256 keysToDeposit = totalDepositableKeys - 2;
-        lidoDepositWithNoGasMetering(keysToDeposit);
+        lidoDepositWithNoGasMetering(keysCount);
 
         uint256 exited = 1;
         vm.prank(agent);
@@ -319,21 +335,29 @@ contract StakingRouterIntegrationTest is
         assertEq(summary.refundedValidatorsCount, 0);
         assertEq(summary.stuckPenaltyEndTimestamp, 0);
         assertEq(summary.totalExitedValidators, exited);
-        assertEq(summary.totalDepositedValidators, keysCount - 2);
+        assertEq(
+            summary.totalDepositedValidators,
+            depositedValidatorsBefore + keysCount
+        );
         assertEq(
             summary.depositableValidatorsCount,
-            totalDepositableKeys - keysToDeposit
+            depositableValidatorsCount - keysCount
         );
     }
 
     function test_unsafeSetExitedValidatorsCount() public assertInvariants {
-        address nodeOperatorManager = nextAddress();
-        uint256 noId = addNodeOperator(nodeOperatorManager, 10);
-
         hugeDeposit();
+        uint256 noId;
+        uint256 keysCount;
 
-        (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
-        lidoDepositWithNoGasMetering(totalDepositableKeys - 4);
+        for (;;) {
+            (noId, keysCount) = getDepositableNodeOperator();
+            lidoDepositWithNoGasMetering(keysCount);
+            /// we need to be sure there are more than 1 keys for further checks
+            if (csm.getNodeOperator(noId).totalDepositedKeys > 1) {
+                break;
+            }
+        }
 
         uint256 exited = 2;
         vm.prank(agent);
