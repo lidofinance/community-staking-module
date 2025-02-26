@@ -1364,7 +1364,7 @@ contract CSModule is
     function _getQueue(
         uint256 priority
     ) internal view returns (QueueLib.Queue storage q) {
-        if (priority == QUEUE_LOWEST_PRIORITY) {
+        if (priority == QUEUE_LEGACY_PRIORITY) {
             assembly {
                 q.slot := legacyQueue.slot
             }

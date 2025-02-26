@@ -33,6 +33,9 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
 
     function test_moduleState() public view {
         assertFalse(csm.isPaused());
+        assertFalse(
+            csm.depositQueueItem(csm.QUEUE_LEGACY_PRIORITY(), 0).isNil()
+        );
     }
 
     function test_moduleRoles() public view {
