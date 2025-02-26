@@ -120,8 +120,8 @@ jobs:
       - name: Run local integration tests
         run: just test-local
         env:
-          CHAIN: holesky
-          RPC_URL: ${{ secrets.RPC_URL_HOLESKY }}
+          CHAIN: mainnet
+          RPC_URL: ${{ secrets.RPC_URL_MAINNET }}
 
       - name: Run post-vote tests after upgrade
         run: just test-upgrade
