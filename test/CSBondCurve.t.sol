@@ -234,18 +234,20 @@ contract CSBondCurveTest is Test {
         assertEq(bondCurve.getBondCurveId(noId), 0);
     }
 
-    function test_curveExists_curveExists() public {
+    function test_getCurvesCount() public {
         uint256[] memory _bondCurve = new uint256[](2);
         _bondCurve[0] = 16 ether;
         _bondCurve[1] = 32 ether;
 
         uint256 addedId = bondCurve.addBondCurve(_bondCurve);
 
-        assertTrue(bondCurve.curveExists(addedId));
+        // default one + 1 extra curve
+        assertEq(bondCurve.getCurvesCount(), 2);
     }
 
-    function test_curveExists_curveNotExists() public view {
-        assertFalse(bondCurve.curveExists(1));
+    function test_getCurvesCount_noExtraCurves() public view {
+        // only default one
+        assertEq(bondCurve.getCurvesCount(), 1);
     }
 
     function test_getKeysCountByBondAmount_default() public view {
