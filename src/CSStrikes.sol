@@ -6,12 +6,14 @@ pragma solidity 0.8.24;
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 import { ICSModule } from "./interfaces/ICSModule.sol";
+import { ICSEjector } from "./interfaces/ICSEjector.sol";
 import { ICSStrikes } from "./interfaces/ICSStrikes.sol";
 
 /// @author vgorkavenko
 contract CSStrikes is ICSStrikes {
     address public immutable ORACLE;
     ICSModule public immutable MODULE;
+    ICSEjector public immutable EJECTOR;
 
     /// @notice The latest Merkle Tree root
     bytes32 public treeRoot;
@@ -19,10 +21,12 @@ contract CSStrikes is ICSStrikes {
     /// @notice CID of the last published Merkle tree
     string public treeCid;
 
-    constructor(address module, address oracle) {
+    constructor(address module, address ejector, address oracle) {
         if (module == address(0)) revert ZeroModuleAddress();
+        if (ejector == address(0)) revert ZeroEjectorAddress();
         if (oracle == address(0)) revert ZeroOracleAddress();
         MODULE = ICSModule(module);
+        EJECTOR = ICSEjector(ejector);
         ORACLE = oracle;
     }
 
@@ -68,7 +72,7 @@ contract CSStrikes is ICSStrikes {
         );
         if (!verifyProof(nodeOperatorId, pubkey, strikesData, proof))
             revert InvalidProof();
-        MODULE.ejectBadPerformer(nodeOperatorId, keyIndex, strikesData.length);
+        EJECTOR.ejectBadPerformer(nodeOperatorId, keyIndex, strikesData.length);
     }
 
     /// @inheritdoc ICSStrikes

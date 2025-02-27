@@ -12,6 +12,7 @@ interface ICSStrikes {
     event StrikesDataWiped();
 
     error ZeroModuleAddress();
+    error ZeroEjectorAddress();
     error ZeroOracleAddress();
     error ZeroEjectionFeeAmount();
     error ZeroBadPerformancePenaltyAmount();

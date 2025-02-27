@@ -10,6 +10,7 @@ import { OssifiableProxy } from "../src/lib/proxy/OssifiableProxy.sol";
 import { CSModule } from "../src/CSModule.sol";
 import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
+import { CSEjector } from "../src/CSEjector.sol";
 import { CSStrikes } from "../src/CSStrikes.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
@@ -148,6 +149,7 @@ abstract contract DeployBase is Script {
     CSAccounting public accounting;
     CSFeeOracle public oracle;
     CSFeeDistributor public feeDistributor;
+    CSEjector public ejector;
     CSStrikes public strikes;
     CSVerifier public verifier;
     PermissionlessGate public permissionlessGate;
@@ -245,14 +247,6 @@ abstract contract DeployBase is Script {
                 _deployProxy(config.proxyAdmin, address(feeDistributorImpl))
             );
 
-            CSStrikes strikesImpl = new CSStrikes(
-                address(csm),
-                address(oracle)
-            );
-            strikes = CSStrikes(
-                _deployProxy(config.proxyAdmin, address(strikesImpl))
-            );
-
             verifier = new CSVerifier({
                 withdrawalAddress: locator.withdrawalVault(),
                 module: address(csm),
@@ -317,6 +311,20 @@ abstract contract DeployBase is Script {
                 _accounting: address(accounting),
                 admin: deployer
             });
+
+            CSEjector ejectorImpl = new CSEjector(address(csm));
+            ejector = CSEjector(
+                _deployProxy(config.proxyAdmin, address(ejectorImpl))
+            );
+
+            ejector.initialize({ admin: deployer });
+
+            strikes = new CSStrikes(
+                address(csm),
+                address(ejector),
+                address(oracle)
+            );
+
             permissionlessGate = new PermissionlessGate(address(csm));
 
             address vettedGateImpl = address(new VettedGate(address(csm)));
@@ -363,12 +371,13 @@ abstract contract DeployBase is Script {
                 consensusVersion: config.consensusVersion
             });
 
-            address[] memory sealables = new address[](5);
+            address[] memory sealables = new address[](6);
             sealables[0] = address(csm);
             sealables[1] = address(accounting);
             sealables[2] = address(oracle);
             sealables[3] = address(verifier);
             sealables[4] = address(vettedGate);
+            sealables[5] = address(ejector);
             address gateSeal = _deployGateSeal(sealables);
 
             csm.grantRole(csm.PAUSE_ROLE(), gateSeal);
@@ -376,6 +385,11 @@ abstract contract DeployBase is Script {
             accounting.grantRole(accounting.PAUSE_ROLE(), gateSeal);
             verifier.grantRole(verifier.PAUSE_ROLE(), gateSeal);
             vettedGate.grantRole(vettedGate.PAUSE_ROLE(), gateSeal);
+            ejector.grantRole(
+                ejector.BAD_PERFORMER_EJECTOR_ROLE(),
+                address(strikes)
+            );
+            ejector.grantRole(ejector.PAUSE_ROLE(), gateSeal);
             accounting.grantRole(
                 accounting.SET_BOND_CURVE_ROLE(),
                 address(config.setResetBondCurveAddress)
@@ -388,6 +402,9 @@ abstract contract DeployBase is Script {
                 accounting.RESET_BOND_CURVE_ROLE(),
                 config.setResetBondCurveAddress
             );
+
+            accounting.grantRole(accounting.PENALIZE_ROLE(), address(csm));
+            accounting.grantRole(accounting.PENALIZE_ROLE(), address(ejector));
 
             csm.grantRole(
                 csm.CREATE_NODE_OPERATOR_ROLE(),
@@ -404,7 +421,6 @@ abstract contract DeployBase is Script {
             );
 
             csm.grantRole(csm.VERIFIER_ROLE(), address(verifier));
-            csm.grantRole(csm.BAD_PERFORMER_EJECTOR_ROLE(), address(strikes));
 
             if (config.secondAdminAddress != address(0)) {
                 _grantSecondAdmins();
@@ -412,6 +428,9 @@ abstract contract DeployBase is Script {
 
             csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
             csm.revokeRole(csm.DEFAULT_ADMIN_ROLE(), deployer);
+
+            ejector.grantRole(ejector.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
+            ejector.revokeRole(ejector.DEFAULT_ADMIN_ROLE(), deployer);
 
             parametersRegistry.grantRole(
                 parametersRegistry.DEFAULT_ADMIN_ROLE(),
@@ -471,6 +490,7 @@ abstract contract DeployBase is Script {
             deployJson.set("CSAccounting", address(accounting));
             deployJson.set("CSFeeOracle", address(oracle));
             deployJson.set("CSFeeDistributor", address(feeDistributor));
+            deployJson.set("CSEjector", address(ejector));
             deployJson.set("CSStrikes", address(strikes));
             deployJson.set("HashConsensus", address(hashConsensus));
             deployJson.set("CSVerifier", address(verifier));

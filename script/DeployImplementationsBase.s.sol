@@ -10,6 +10,7 @@ import { HashConsensus } from "../src/lib/base-oracle/HashConsensus.sol";
 import { CSModule } from "../src/CSModule.sol";
 import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
+import { CSEjector } from "../src/CSEjector.sol";
 import { CSStrikes } from "../src/CSStrikes.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
@@ -107,12 +108,17 @@ abstract contract DeployImplementationsBase is DeployBase {
                 rebateRecipient: config.aragonAgent
             });
 
-            CSStrikes strikesImpl = new CSStrikes(
-                address(csm),
-                address(oracle)
+            CSEjector ejectorImpl = new CSEjector(address(csm));
+            ejector = CSEjector(
+                _deployProxy(config.proxyAdmin, address(ejectorImpl))
             );
-            strikes = CSStrikes(
-                _deployProxy(config.proxyAdmin, address(strikesImpl))
+
+            ejector.initialize({ admin: deployer });
+
+            strikes = new CSStrikes(
+                address(csm),
+                address(ejector),
+                address(oracle)
             );
 
             verifier = new CSVerifier({
@@ -136,13 +142,22 @@ abstract contract DeployImplementationsBase is DeployBase {
                 admin: deployer
             });
 
-            address[] memory sealables = new address[](5);
+            address[] memory sealables = new address[](6);
             sealables[0] = address(csm);
             sealables[1] = address(accounting);
             sealables[2] = address(oracle);
             sealables[3] = address(verifier);
             sealables[4] = address(vettedGate);
+            sealables[5] = address(ejector);
             gateSeal = _deployGateSeal(sealables);
+
+            ejector.grantRole(
+                ejector.BAD_PERFORMER_EJECTOR_ROLE(),
+                address(strikes)
+            );
+            ejector.grantRole(ejector.PAUSE_ROLE(), gateSeal);
+            ejector.grantRole(ejector.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
+            ejector.revokeRole(ejector.DEFAULT_ADMIN_ROLE(), deployer);
 
             vettedGate.grantRole(vettedGate.PAUSE_ROLE(), address(gateSeal));
             vettedGate.grantRole(
@@ -180,8 +195,8 @@ abstract contract DeployImplementationsBase is DeployBase {
             deployJson.set("CSAccountingImpl", address(accountingImpl));
             deployJson.set("CSFeeOracleImpl", address(oracleImpl));
             deployJson.set("CSFeeDistributorImpl", address(feeDistributorImpl));
+            deployJson.set("CSEjector", address(ejector));
             deployJson.set("CSStrikes", address(strikes));
-            deployJson.set("CSStrikesImpl", address(strikesImpl));
             deployJson.set("CSVerifier", address(verifier));
             deployJson.set("HashConsensus", address(hashConsensus));
             deployJson.set("GateSeal", address(gateSeal));

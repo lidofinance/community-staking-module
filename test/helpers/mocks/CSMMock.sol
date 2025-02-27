@@ -4,19 +4,34 @@
 pragma solidity 0.8.24;
 import { NodeOperatorManagementProperties, NodeOperator } from "../../../src/interfaces/ICSModule.sol";
 import { ICSAccounting } from "../../../src/interfaces/ICSAccounting.sol";
+import { ICSParametersRegistry } from "../../../src/interfaces/ICSParametersRegistry.sol";
+import { CSParametersRegistryMock } from "./CSParametersRegistryMock.sol";
+import { Utilities } from "../Utilities.sol";
 
 contract AccountingMock {
     uint256 public constant DEFAULT_BOND_CURVE_ID = 0;
 
     function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external {}
+
+    function penalize(uint256 nodeOperatorId, uint256 amount) external {}
+
+    function getBondCurveId(uint256 nodeOperatorId) external returns (uint256) {
+        return DEFAULT_BOND_CURVE_ID;
+    }
 }
 
-contract CSMMock {
+contract CSMMock is Utilities {
     NodeOperator internal mockNodeOperator;
+    uint256 internal nodeOperatorsCount;
+    bool internal isValidatorWithdrawnMock;
     ICSAccounting public immutable ACCOUNTING;
+    ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
 
     constructor() {
         ACCOUNTING = ICSAccounting(address(new AccountingMock()));
+        PARAMETERS_REGISTRY = ICSParametersRegistry(
+            address(new CSParametersRegistryMock())
+        );
     }
 
     function accounting() external view returns (ICSAccounting) {
@@ -31,6 +46,25 @@ contract CSMMock {
         uint256 /* nodeOperatorId */
     ) external view returns (NodeOperator memory) {
         return mockNodeOperator;
+    }
+
+    function mock_setIsValidatorWithdrawn(bool value) external {
+        isValidatorWithdrawnMock = value;
+    }
+
+    function isValidatorWithdrawn(
+        uint256,
+        uint256
+    ) external view returns (bool) {
+        return isValidatorWithdrawnMock;
+    }
+
+    function mock_setNodeOperatorsCount(uint256 count) external {
+        nodeOperatorsCount = count;
+    }
+
+    function getNodeOperatorsCount() external view returns (uint256) {
+        return nodeOperatorsCount;
     }
 
     function createNodeOperator(
@@ -66,4 +100,12 @@ contract CSMMock {
         bytes memory signatures,
         ICSAccounting.PermitInput memory permit
     ) external {}
+
+    function getSigningKeys(
+        uint256 nodeOperatorId,
+        uint256 startIndex,
+        uint256 keysCount
+    ) external returns (bytes memory pubkeys) {
+        (pubkeys, ) = keysSignatures(keysCount);
+    }
 }

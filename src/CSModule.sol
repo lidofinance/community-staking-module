@@ -42,8 +42,6 @@ contract CSModule is
     bytes32 public constant SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE =
         keccak256("SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE");
     bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
-    bytes32 public constant BAD_PERFORMER_EJECTOR_ROLE =
-        keccak256("BAD_PERFORMER_EJECTOR_ROLE");
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
     bytes32 public constant CREATE_NODE_OPERATOR_ROLE =
         keccak256("CREATE_NODE_OPERATOR_ROLE");
@@ -88,9 +86,6 @@ contract CSModule is
     uint64 private _totalExitedValidators;
     uint64 private _depositableValidatorsCount;
     uint64 private _nodeOperatorsCount;
-
-    /// @dev see _keyPointer function for details of noKeyIndexPacked structure
-    mapping(uint256 noKeyIndexPacked => bool) private _isValidatorEjected;
 
     constructor(
         bytes32 moduleType,
@@ -537,20 +532,6 @@ contract CSModule is
         _incrementModuleNonce();
     }
 
-    // @notice CSM will go live before EIP-7002
-    // @notice to be implemented in CSM v2
-    // /// @notice Node Operator should be able to voluntary eject own validators
-    // /// @notice Validator private key might be lost
-    // function voluntaryEjectValidator(
-    //     uint256 nodeOperatorId,
-    //     uint256 startIndex,
-    //     uint256 keysCount
-    // ) external onlyExistingNodeOperator(nodeOperatorId) {
-    //     onlyNodeOperatorManager(nodeOperatorId);
-    //     // Mark validators for priority ejection
-    //     // Confiscate ejection fee from the bond
-    // }
-
     /// TODO: Consider renaming
     /// @inheritdoc ICSModule
     function enqueueNodeOperatorKeys(uint256 nodeOperatorId) external {
@@ -730,37 +711,6 @@ contract CSModule is
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true
         });
-    }
-
-    /// @inheritdoc ICSModule
-    function ejectBadPerformer(
-        uint256 nodeOperatorId,
-        uint256 keyIndex,
-        uint256 strikesCount
-    ) external onlyRole(BAD_PERFORMER_EJECTOR_ROLE) {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (keyIndex >= no.totalDepositedKeys) {
-            revert SigningKeysInvalidOffset();
-        }
-
-        uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
-        if (_isValidatorWithdrawn[pointer]) revert AlreadyWithdrawn();
-        if (_isValidatorEjected[pointer]) revert AlreadyEjected();
-
-        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
-
-        (, uint256 threshold) = PARAMETERS_REGISTRY.getStrikesParams(curveId);
-        if (strikesCount < threshold) revert NotEnoughStrikesToEject();
-
-        uint256 penalty = PARAMETERS_REGISTRY.getBadPerformancePenalty(curveId);
-        if (penalty > 0) accounting.penalize(nodeOperatorId, penalty);
-
-        bytes memory pubkey = SigningKeys.loadKeys(nodeOperatorId, keyIndex, 1);
-        // TODO: make the function payable and call `requestEjection{ value: msg.value }(pubkey)`
-
-        _isValidatorEjected[pointer] = true;
-        emit EjectionSubmitted(nodeOperatorId, keyIndex, pubkey);
     }
 
     /// @inheritdoc IStakingModule
@@ -982,14 +932,6 @@ contract CSModule is
         uint256 keyIndex
     ) external view returns (bool) {
         return _isValidatorWithdrawn[_keyPointer(nodeOperatorId, keyIndex)];
-    }
-
-    /// @inheritdoc ICSModule
-    function isValidatorEjected(
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) external view returns (bool) {
-        return _isValidatorEjected[_keyPointer(nodeOperatorId, keyIndex)];
     }
 
     /// @inheritdoc IStakingModule
