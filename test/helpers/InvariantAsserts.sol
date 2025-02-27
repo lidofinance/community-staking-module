@@ -11,9 +11,35 @@ import { NodeOperator } from "../../src/interfaces/ICSModule.sol";
 import { Batch } from "../../src/lib/QueueLib.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";
 import { CSStrikes } from "../../src/CSStrikes.sol";
+import { console } from "forge-std/console.sol";
 
 contract InvariantAsserts is Test {
-    function assertCSMKeys(CSModule csm) public view {
+    bool internal _skipped;
+
+    function skipInvariants() public returns (bool skip) {
+        if (_skipped) {
+            return true;
+        }
+        string memory profile = vm.envOr("FOUNDRY_PROFILE", string(""));
+        bool isCIProfile = keccak256(abi.encodePacked(profile)) ==
+            keccak256(abi.encodePacked("ci"));
+        bool forkIsActive;
+        try vm.activeFork() returns (uint256) {
+            forkIsActive = true;
+        } catch {}
+        skip = !isCIProfile && forkIsActive;
+        if (skip) {
+            console.log(
+                "WARN: Skipping invariants. It only runs with FOUNDRY_PROFILE=ci and active fork"
+            );
+            _skipped = true;
+        }
+    }
+
+    function assertCSMKeys(CSModule csm) public {
+        if (skipInvariants()) {
+            return;
+        }
         uint256 noCount = csm.getNodeOperatorsCount();
         NodeOperator memory no;
 
@@ -100,6 +126,9 @@ contract InvariantAsserts is Test {
     mapping(uint256 => uint256) batchKeys;
 
     function assertCSMEnqueuedCount(CSModule csm) public {
+        if (skipInvariants()) {
+            return;
+        }
         uint256 noCount = csm.getNodeOperatorsCount();
         NodeOperator memory no;
 
@@ -132,7 +161,10 @@ contract InvariantAsserts is Test {
         uint256 nodeOperatorsCount,
         IStETH steth,
         CSAccounting accounting
-    ) public view {
+    ) public {
+        if (skipInvariants()) {
+            return;
+        }
         uint256 totalNodeOperatorsShares;
 
         for (uint256 noId = 0; noId < nodeOperatorsCount; noId++) {
@@ -154,7 +186,10 @@ contract InvariantAsserts is Test {
         IStETH steth,
         address accounting,
         address burner
-    ) public view {
+    ) public {
+        if (skipInvariants()) {
+            return;
+        }
         assertGe(
             steth.allowance(accounting, burner),
             type(uint128).max,
@@ -165,7 +200,10 @@ contract InvariantAsserts is Test {
     function assertFeeDistributorClaimableShares(
         IStETH lido,
         CSFeeDistributor feeDistributor
-    ) public view {
+    ) public {
+        if (skipInvariants()) {
+            return;
+        }
         assertGe(
             lido.sharesOf(address(feeDistributor)),
             feeDistributor.totalClaimableShares(),
@@ -173,9 +211,10 @@ contract InvariantAsserts is Test {
         );
     }
 
-    function assertFeeDistributorTree(
-        CSFeeDistributor feeDistributor
-    ) public view {
+    function assertFeeDistributorTree(CSFeeDistributor feeDistributor) public {
+        if (skipInvariants()) {
+            return;
+        }
         if (feeDistributor.treeRoot() == bytes32(0)) {
             assertEq(
                 feeDistributor.treeCid(),
@@ -191,7 +230,10 @@ contract InvariantAsserts is Test {
         }
     }
 
-    function assertStrikesTree(CSStrikes strikes) public view {
+    function assertStrikesTree(CSStrikes strikes) public {
+        if (skipInvariants()) {
+            return;
+        }
         if (strikes.treeRoot() == bytes32(0)) {
             assertEq(strikes.treeCid(), "", "tree doesn't exist, but has CID");
         } else {

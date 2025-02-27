@@ -86,7 +86,7 @@ contract CSAccountingInvariants is InvariantsBase {
         assertAccountingTotalBondShares(noCount, lido, accounting);
     }
 
-    function test_burnerApproval() public view {
+    function test_burnerApproval() public {
         assertAccountingBurnerApproval(
             lido,
             address(accounting),
@@ -141,11 +141,11 @@ contract CSAccountingInvariants is InvariantsBase {
 }
 
 contract CSFeeDistributorInvariants is InvariantsBase {
-    function test_claimableShares() public view {
+    function test_claimableShares() public {
         assertFeeDistributorClaimableShares(lido, feeDistributor);
     }
 
-    function test_tree() public view {
+    function test_tree() public {
         assertFeeDistributorTree(feeDistributor);
     }
 
