@@ -11,7 +11,7 @@ interface ICSStrikes {
     /// @dev Emitted when strikes is updated from non-empty to empty
     event StrikesDataWiped();
 
-    error ZeroModuleAddress();
+    error ZeroEjectorAddress();
     error ZeroOracleAddress();
     error ZeroEjectionFeeAmount();
     error ZeroBadPerformancePenaltyAmount();
@@ -22,8 +22,6 @@ interface ICSStrikes {
     error InvalidProof();
 
     function ORACLE() external view returns (address);
-
-    function MODULE() external view returns (ICSModule);
 
     function treeRoot() external view returns (bytes32);
 

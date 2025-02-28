@@ -386,6 +386,10 @@ contract CSAccountingBaseTest is CSAccountingFixtures {
         accounting.grantRole(accounting.RESUME_ROLE(), admin);
         accounting.grantRole(accounting.MANAGE_BOND_CURVES_ROLE(), admin);
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), admin);
+        accounting.grantRole(
+            accounting.PENALIZE_ROLE(),
+            address(stakingModule)
+        );
         vm.stopPrank();
     }
 }
@@ -4688,8 +4692,8 @@ contract CSAccountingPenalizeTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
-    function test_penalize_RevertWhen_SenderIsNotCSM() public {
-        vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
+    function test_penalize_RevertWhen_DoesNotHaveRole() public {
+        expectRoleRevert(stranger, accounting.PENALIZE_ROLE());
         vm.prank(stranger);
         accounting.penalize(0, 20);
     }
@@ -4721,8 +4725,8 @@ contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), bondSharesAfter);
     }
 
-    function test_chargeFee_RevertWhen_SenderIsNotCSM() public {
-        vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
+    function test_chargeFee_RevertWhen_DoesNotHaveRole() public {
+        expectRoleRevert(stranger, accounting.PENALIZE_ROLE());
         vm.prank(stranger);
         accounting.chargeFee(0, 20);
     }

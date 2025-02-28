@@ -73,12 +73,8 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
             1
         );
         assertTrue(csm.hasRole(csm.VERIFIER_ROLE(), address(verifier)));
-        assertTrue(
-            csm.hasRole(csm.BAD_PERFORMER_EJECTOR_ROLE(), address(strikes))
-        );
 
         assertEq(csm.getRoleMemberCount(csm.VERIFIER_ROLE()), 1);
-        assertEq(csm.getRoleMemberCount(csm.BAD_PERFORMER_EJECTOR_ROLE()), 1);
         assertEq(csm.getRoleMemberCount(csm.RECOVERER_ROLE()), 0);
     }
 
@@ -336,5 +332,21 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         assertTrue(verifier.hasRole(verifier.PAUSE_ROLE(), address(gateSeal)));
         assertEq(verifier.getRoleMemberCount(verifier.PAUSE_ROLE()), 1);
         assertEq(verifier.getRoleMemberCount(verifier.RESUME_ROLE()), 0);
+    }
+
+    function test_ejector_roles() public view {
+        assertTrue(ejector.hasRole(ejector.PAUSE_ROLE(), address(gateSeal)));
+        assertEq(ejector.getRoleMemberCount(ejector.PAUSE_ROLE()), 1);
+        assertEq(ejector.getRoleMemberCount(ejector.RESUME_ROLE()), 0);
+        assertTrue(
+            ejector.hasRole(
+                ejector.BAD_PERFORMER_EJECTOR_ROLE(),
+                address(strikes)
+            )
+        );
+        assertEq(
+            ejector.getRoleMemberCount(ejector.BAD_PERFORMER_EJECTOR_ROLE()),
+            1
+        );
     }
 }

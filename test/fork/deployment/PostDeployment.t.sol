@@ -84,11 +84,7 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
             1
         );
         assertTrue(csm.hasRole(csm.VERIFIER_ROLE(), address(verifier)));
-        assertTrue(
-            csm.hasRole(csm.BAD_PERFORMER_EJECTOR_ROLE(), address(strikes))
-        );
         assertEq(csm.getRoleMemberCount(csm.VERIFIER_ROLE()), 1);
-        assertEq(csm.getRoleMemberCount(csm.BAD_PERFORMER_EJECTOR_ROLE()), 1);
         assertEq(csm.getRoleMemberCount(csm.RECOVERER_ROLE()), 0);
     }
 
@@ -410,13 +406,7 @@ contract CSStrikesDeploymentTest is Test, Utilities, DeploymentFixtures {
 
     function test_constructor() public view {
         assertEq(address(strikes.ORACLE()), address(oracle));
-        assertEq(address(strikes.MODULE()), address(csm));
-    }
-
-    function test_proxy() public view {
-        OssifiableProxy proxy = OssifiableProxy(payable(address(strikes)));
-        assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
-        assertFalse(proxy.proxy__getIsOssified());
+        assertEq(address(strikes.EJECTOR()), address(ejector));
     }
 }
 
@@ -649,5 +639,43 @@ contract CSVerifierDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertTrue(verifier.hasRole(verifier.PAUSE_ROLE(), address(gateSeal)));
         assertEq(verifier.getRoleMemberCount(verifier.PAUSE_ROLE()), 1);
         assertEq(verifier.getRoleMemberCount(verifier.RESUME_ROLE()), 0);
+    }
+}
+
+contract CSEjectorDeploymentTest is Test, Utilities, DeploymentFixtures {
+    DeployParams private deployParams;
+
+    function setUp() public {
+        Env memory env = envVars();
+        vm.createSelectFork(env.RPC_URL);
+        initializeFromDeployment();
+        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
+    }
+
+    function test_constructor() public view {
+        assertEq(address(ejector.MODULE()), address(csm));
+        assertEq(address(ejector.ACCOUNTING()), address(accounting));
+    }
+
+    function test_roles() public view {
+        assertTrue(ejector.hasRole(ejector.PAUSE_ROLE(), address(gateSeal)));
+        assertEq(ejector.getRoleMemberCount(verifier.PAUSE_ROLE()), 1);
+        assertEq(ejector.getRoleMemberCount(verifier.RESUME_ROLE()), 0);
+        assertTrue(
+            ejector.hasRole(
+                ejector.BAD_PERFORMER_EJECTOR_ROLE(),
+                address(strikes)
+            )
+        );
+        assertEq(
+            ejector.getRoleMemberCount(ejector.BAD_PERFORMER_EJECTOR_ROLE()),
+            1
+        );
+    }
+
+    function test_proxy() public view {
+        OssifiableProxy proxy = OssifiableProxy(payable(address(ejector)));
+        assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
+        assertFalse(proxy.proxy__getIsOssified());
     }
 }

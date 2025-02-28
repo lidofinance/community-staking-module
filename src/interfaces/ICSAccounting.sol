@@ -46,6 +46,8 @@ interface ICSAccounting is
 
     function RESET_BOND_CURVE_ROLE() external view returns (bytes32);
 
+    function PENALIZE_ROLE() external view returns (bytes32);
+
     function RECOVERER_ROLE() external view returns (bytes32);
 
     function CSM() external view returns (ICSModule);
@@ -326,13 +328,11 @@ interface ICSAccounting is
     function resetBondCurve(uint256 nodeOperatorId) external;
 
     /// @notice Penalize bond by burning stETH shares of the given Node Operator
-    /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param amount Amount to penalize in ETH (stETH)
     function penalize(uint256 nodeOperatorId, uint256 amount) external;
 
     /// @notice Charge fee from bond by transferring stETH shares of the given Node Operator to the charge recipient
-    /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
     /// @param amount Amount to charge in ETH (stETH)
     function chargeFee(uint256 nodeOperatorId, uint256 amount) external;
