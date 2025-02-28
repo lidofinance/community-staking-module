@@ -23,6 +23,7 @@ contract AccountingMock {
 contract CSMMock is Utilities {
     NodeOperator internal mockNodeOperator;
     uint256 internal nodeOperatorsCount;
+    uint256 internal nodeOperatorTotalDepositedKeys;
     bool internal isValidatorWithdrawnMock;
     ICSAccounting public immutable ACCOUNTING;
     ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
@@ -65,6 +66,16 @@ contract CSMMock is Utilities {
 
     function getNodeOperatorsCount() external view returns (uint256) {
         return nodeOperatorsCount;
+    }
+
+    function mock_setNodeOperatorTotalDepositedKeys(uint256 count) external {
+        nodeOperatorTotalDepositedKeys = count;
+    }
+
+    function getNodeOperatorTotalDepositedKeys(
+        uint256
+    ) external view returns (uint256) {
+        return nodeOperatorTotalDepositedKeys;
     }
 
     function createNodeOperator(

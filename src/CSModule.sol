@@ -1055,6 +1055,14 @@ contract CSModule is
     }
 
     /// @inheritdoc ICSModule
+    function getNodeOperatorTotalDepositedKeys(
+        uint256 nodeOperatorId
+    ) external view returns (uint256 totalDepositedKeys) {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        totalDepositedKeys = no.totalDepositedKeys;
+    }
+
+    /// @inheritdoc ICSModule
     function getSigningKeys(
         uint256 nodeOperatorId,
         uint256 startIndex,

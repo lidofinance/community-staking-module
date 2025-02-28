@@ -377,6 +377,13 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         uint256 nodeOperatorId
     ) external view returns (uint256);
 
+    /// @notice Get Node Operator total deposited keys
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return Total deposited keys count
+    function getNodeOperatorTotalDepositedKeys(
+        uint256 nodeOperatorId
+    ) external view returns (uint256);
+
     /// @notice Get Node Operator signing keys
     /// @param nodeOperatorId ID of the Node Operator
     /// @param startIndex Index of the first key

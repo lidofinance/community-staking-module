@@ -10,7 +10,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { IStakingModule } from "./interfaces/IStakingModule.sol";
 import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
-import { ICSModule, NodeOperator } from "./interfaces/ICSModule.sol";
+import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ICSEjector } from "./interfaces/ICSEjector.sol";
 
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
@@ -66,8 +66,10 @@ contract CSEjector is
         uint256 strikesCount
     ) external whenResumed onlyRole(BAD_PERFORMER_EJECTOR_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
-        NodeOperator memory no = MODULE.getNodeOperator(nodeOperatorId);
-        if (keyIndex >= no.totalDepositedKeys) {
+
+        if (
+            keyIndex >= MODULE.getNodeOperatorTotalDepositedKeys(nodeOperatorId)
+        ) {
             revert SigningKeysInvalidOffset();
         }
 

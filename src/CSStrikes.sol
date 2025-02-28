@@ -105,7 +105,7 @@ contract CSStrikes is ICSStrikes {
         keys = ICSModule(EJECTOR.MODULE()).getSigningKeys(
             nodeOperatorId,
             startIndex,
-            1
+            keysCount
         );
     }
 }

@@ -111,9 +111,7 @@ contract CSEjectorTest is Test, Utilities, Fixtures {
         strikesData[1] = 2;
         strikesData[2] = 3;
 
-        NodeOperator memory no;
-        no.totalDepositedKeys = 1;
-        csm.mock_setNodeOperator(no);
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
         csm.mock_setNodeOperatorsCount(1);
 
         vm.expectEmit(address(ejector));
@@ -139,9 +137,7 @@ contract CSEjectorTest is Test, Utilities, Fixtures {
         strikesData[1] = 2;
         strikesData[2] = 3;
 
-        NodeOperator memory no;
-        no.totalDepositedKeys = 1;
-        csm.mock_setNodeOperator(no);
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
         csm.mock_setNodeOperatorsCount(1);
 
         vm.expectEmit(address(ejector));
@@ -172,9 +168,7 @@ contract CSEjectorTest is Test, Utilities, Fixtures {
         strikesData[1] = 2;
         strikesData[2] = 3;
 
-        NodeOperator memory no;
-        no.totalDepositedKeys = 0;
-        csm.mock_setNodeOperator(no);
+        csm.mock_setNodeOperatorTotalDepositedKeys(0);
         csm.mock_setNodeOperatorsCount(1);
 
         vm.expectRevert(ICSEjector.SigningKeysInvalidOffset.selector);
@@ -191,9 +185,7 @@ contract CSEjectorTest is Test, Utilities, Fixtures {
         strikesData[1] = 2;
         strikesData[2] = 3;
 
-        NodeOperator memory no;
-        no.totalDepositedKeys = 1;
-        csm.mock_setNodeOperator(no);
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
         csm.mock_setNodeOperatorsCount(1);
 
         ejector.ejectBadPerformer(noId, keyIndex, strikesData.length);
@@ -211,9 +203,7 @@ contract CSEjectorTest is Test, Utilities, Fixtures {
         strikesData[1] = 2;
         strikesData[2] = 3;
 
-        NodeOperator memory no;
-        no.totalDepositedKeys = 1;
-        csm.mock_setNodeOperator(no);
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
         csm.mock_setNodeOperatorsCount(1);
         csm.mock_setIsValidatorWithdrawn(true);
 
@@ -232,9 +222,7 @@ contract CSEjectorTest is Test, Utilities, Fixtures {
         strikesData[0] = 1;
         strikesData[1] = 2;
 
-        NodeOperator memory no;
-        no.totalDepositedKeys = 1;
-        csm.mock_setNodeOperator(no);
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
         csm.mock_setNodeOperatorsCount(1);
 
         vm.expectRevert(ICSEjector.NotEnoughStrikesToEject.selector);
