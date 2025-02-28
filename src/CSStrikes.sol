@@ -12,7 +12,6 @@ import { ICSStrikes } from "./interfaces/ICSStrikes.sol";
 /// @author vgorkavenko
 contract CSStrikes is ICSStrikes {
     address public immutable ORACLE;
-    ICSModule public immutable MODULE;
     ICSEjector public immutable EJECTOR;
 
     /// @notice The latest Merkle Tree root
@@ -21,11 +20,9 @@ contract CSStrikes is ICSStrikes {
     /// @notice CID of the last published Merkle tree
     string public treeCid;
 
-    constructor(address module, address ejector, address oracle) {
-        if (module == address(0)) revert ZeroModuleAddress();
+    constructor(address ejector, address oracle) {
         if (ejector == address(0)) revert ZeroEjectorAddress();
         if (oracle == address(0)) revert ZeroOracleAddress();
-        MODULE = ICSModule(module);
         EJECTOR = ICSEjector(ejector);
         ORACLE = oracle;
     }
@@ -65,11 +62,7 @@ contract CSStrikes is ICSStrikes {
         bytes32[] calldata proof
     ) external {
         if (proof.length == 0) revert InvalidProof();
-        bytes memory pubkey = MODULE.getSigningKeys(
-            nodeOperatorId,
-            keyIndex,
-            1
-        );
+        bytes memory pubkey = _getSigningKeys(nodeOperatorId, keyIndex, 1);
         if (!verifyProof(nodeOperatorId, pubkey, strikesData, proof))
             revert InvalidProof();
         EJECTOR.ejectBadPerformer(nodeOperatorId, keyIndex, strikesData.length);
@@ -102,5 +95,17 @@ contract CSStrikes is ICSStrikes {
                     keccak256(abi.encode(nodeOperatorId, pubkey, strikesData))
                 )
             );
+    }
+
+    function _getSigningKeys(
+        uint256 nodeOperatorId,
+        uint256 startIndex,
+        uint256 keysCount
+    ) internal view returns (bytes memory keys) {
+        keys = ICSModule(EJECTOR.MODULE()).getSigningKeys(
+            nodeOperatorId,
+            startIndex,
+            1
+        );
     }
 }

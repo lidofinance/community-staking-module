@@ -44,24 +44,19 @@ contract CSStrikesConstructorTest is CSStrikesTestBase {
     }
 
     function test_constructor_happyPath() public {
-        strikes = new CSStrikes(module, ejector, oracle);
+        strikes = new CSStrikes(ejector, oracle);
         assertEq(strikes.ORACLE(), oracle);
-        assertEq(address(strikes.MODULE()), module);
-    }
-
-    function test_initialize_RevertWhen_ZeroModuleAddress() public {
-        vm.expectRevert(ICSStrikes.ZeroModuleAddress.selector);
-        new CSStrikes(address(0), ejector, oracle);
+        assertEq(address(strikes.EJECTOR()), ejector);
     }
 
     function test_initialize_RevertWhen_ZeroEjectorAddress() public {
         vm.expectRevert(ICSStrikes.ZeroEjectorAddress.selector);
-        new CSStrikes(module, address(0), oracle);
+        new CSStrikes(address(0), oracle);
     }
 
     function test_initialize_RevertWhen_ZeroOracleAddress() public {
         vm.expectRevert(ICSStrikes.ZeroOracleAddress.selector);
-        new CSStrikes(module, ejector, address(0));
+        new CSStrikes(ejector, address(0));
     }
 }
 
@@ -72,7 +67,7 @@ contract CSStrikesTest is CSStrikesTestBase {
         module = nextAddress("MODULE");
         ejector = nextAddress("EJECTOR");
 
-        strikes = new CSStrikes(module, ejector, oracle);
+        strikes = new CSStrikes(ejector, oracle);
 
         tree = new MerkleTree();
 
@@ -157,7 +152,12 @@ contract CSStrikesTest is CSStrikesTestBase {
         bytes32[] memory proof = tree.getProof(0);
 
         vm.mockCall(
-            address(strikes.MODULE()),
+            address(strikes.EJECTOR()),
+            abi.encodeWithSelector(ICSEjector.MODULE.selector),
+            abi.encode(module)
+        );
+        vm.mockCall(
+            module,
             abi.encodeWithSelector(ICSModule.getSigningKeys.selector),
             abi.encode(pubkey)
         );
@@ -195,7 +195,12 @@ contract CSStrikesTest is CSStrikesTestBase {
         bytes32[] memory proof = tree.getProof(1);
 
         vm.mockCall(
-            address(strikes.MODULE()),
+            address(strikes.EJECTOR()),
+            abi.encodeWithSelector(ICSEjector.MODULE.selector),
+            abi.encode(module)
+        );
+        vm.mockCall(
+            module,
             abi.encodeWithSelector(ICSModule.getSigningKeys.selector),
             abi.encode(pubkey)
         );

@@ -319,11 +319,7 @@ abstract contract DeployBase is Script {
 
             ejector.initialize({ admin: deployer });
 
-            strikes = new CSStrikes(
-                address(csm),
-                address(ejector),
-                address(oracle)
-            );
+            strikes = new CSStrikes(address(ejector), address(oracle));
 
             permissionlessGate = new PermissionlessGate(address(csm));
 
