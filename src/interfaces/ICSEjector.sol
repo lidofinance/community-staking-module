@@ -47,11 +47,11 @@ interface ICSEjector is IAssetRecovererLib {
     ///         See `CSStrikes.processBadPerformanceProof` to use this method permissionless
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keyIndex Index of the withdrawn key in the Node Operator's keys storage
-    /// @param strikesCount Strikes count of the Node Operator's validator key
+    /// @param strikes Strikes of the Node Operator's validator key
     function ejectBadPerformer(
         uint256 nodeOperatorId,
         uint256 keyIndex,
-        uint256 strikesCount
+        uint256 strikes
     ) external;
 
     /// @notice Check if the given Node Operator's key is reported as ejected

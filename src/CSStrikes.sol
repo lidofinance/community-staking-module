@@ -61,11 +61,23 @@ contract CSStrikes is ICSStrikes {
         uint256[] calldata strikesData,
         bytes32[] calldata proof
     ) external {
-        if (proof.length == 0) revert InvalidProof();
-        bytes memory pubkey = _getSigningKeys(nodeOperatorId, keyIndex, 1);
+        // NOTE: We allow empty proofs to be delivered because there’s no way to use the tree’s
+        // internal nodes without brute-forcing the input data.
+
+        bytes memory pubkey = MODULE.getSigningKeys(
+            nodeOperatorId,
+            keyIndex,
+            1
+        );
         if (!verifyProof(nodeOperatorId, pubkey, strikesData, proof))
             revert InvalidProof();
-        EJECTOR.ejectBadPerformer(nodeOperatorId, keyIndex, strikesData.length);
+
+        uint256 strikes = 0;
+        for (uint256 i; i < strikesData.length; ++i) {
+            strikes += strikesData[i];
+        }
+
+        EJECTOR.ejectBadPerformer(nodeOperatorId, keyIndex, strikes);
     }
 
     /// @inheritdoc ICSStrikes

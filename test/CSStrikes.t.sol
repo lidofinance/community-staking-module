@@ -173,7 +173,7 @@ contract CSStrikesTest is CSStrikesTestBase {
                 ICSEjector.ejectBadPerformer.selector,
                 noId,
                 0,
-                3
+                301503
             )
         );
         strikes.processBadPerformanceProof(noId, 0, strikesData, proof);
@@ -209,20 +209,40 @@ contract CSStrikesTest is CSStrikesTestBase {
         strikes.processBadPerformanceProof(noId, 0, strikesData, proof);
     }
 
-    function test_processBadPerformanceProof_RevertWhen_EmptyProof() public {
+    function test_processBadPerformanceProof_Accepts_EmptyProof() public {
         uint256 noId = 42;
         (bytes memory pubkey, ) = keysSignatures(1);
         uint256[] memory strikesData = new uint256[](6);
         strikesData[0] = 100500;
 
         tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
-        tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
 
         bytes32 root = tree.root();
         vm.prank(oracle);
         strikes.processOracleReport(root, someCIDv0());
 
-        vm.expectRevert(ICSStrikes.InvalidProof.selector);
+        bytes32[] memory proof = tree.getProof(0);
+
+        vm.mockCall(
+            address(strikes.MODULE()),
+            abi.encodeWithSelector(ICSModule.getSigningKeys.selector),
+            abi.encode(pubkey)
+        );
+        vm.mockCall(
+            address(strikes.MODULE()),
+            abi.encodeWithSelector(ICSModule.ejectBadPerformer.selector),
+            ""
+        );
+
+        vm.expectCall(
+            address(strikes.MODULE()),
+            abi.encodeWithSelector(
+                ICSModule.ejectBadPerformer.selector,
+                noId,
+                0,
+                100500
+            )
+        );
         strikes.processBadPerformanceProof(
             noId,
             0,

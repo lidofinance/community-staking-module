@@ -63,7 +63,7 @@ contract CSEjector is
     function ejectBadPerformer(
         uint256 nodeOperatorId,
         uint256 keyIndex,
-        uint256 strikesCount
+        uint256 strikes
     ) external whenResumed onlyRole(BAD_PERFORMER_EJECTOR_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
 
@@ -84,7 +84,7 @@ contract CSEjector is
         ICSParametersRegistry registry = MODULE.PARAMETERS_REGISTRY();
 
         (, uint256 threshold) = registry.getStrikesParams(curveId);
-        if (strikesCount < threshold) revert NotEnoughStrikesToEject();
+        if (strikes < threshold) revert NotEnoughStrikesToEject();
 
         uint256 penalty = registry.getBadPerformancePenalty(curveId);
         if (penalty > 0) ACCOUNTING.penalize(nodeOperatorId, penalty);
