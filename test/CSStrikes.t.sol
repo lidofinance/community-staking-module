@@ -152,7 +152,7 @@ contract CSStrikesTest is CSStrikesTestBase {
         bytes32[] memory proof = tree.getProof(0);
 
         vm.mockCall(
-            address(strikes.EJECTOR()),
+            address(ejector),
             abi.encodeWithSelector(ICSEjector.MODULE.selector),
             abi.encode(module)
         );
@@ -162,13 +162,13 @@ contract CSStrikesTest is CSStrikesTestBase {
             abi.encode(pubkey)
         );
         vm.mockCall(
-            address(strikes.EJECTOR()),
+            address(ejector),
             abi.encodeWithSelector(ICSEjector.ejectBadPerformer.selector),
             ""
         );
 
         vm.expectCall(
-            address(strikes.EJECTOR()),
+            address(ejector),
             abi.encodeWithSelector(
                 ICSEjector.ejectBadPerformer.selector,
                 noId,
@@ -195,7 +195,7 @@ contract CSStrikesTest is CSStrikesTestBase {
         bytes32[] memory proof = tree.getProof(1);
 
         vm.mockCall(
-            address(strikes.EJECTOR()),
+            address(ejector),
             abi.encodeWithSelector(ICSEjector.MODULE.selector),
             abi.encode(module)
         );
@@ -224,20 +224,25 @@ contract CSStrikesTest is CSStrikesTestBase {
         bytes32[] memory proof = tree.getProof(0);
 
         vm.mockCall(
-            address(strikes.MODULE()),
+            address(ejector),
+            abi.encodeWithSelector(ICSEjector.MODULE.selector),
+            abi.encode(module)
+        );
+        vm.mockCall(
+            address(module),
             abi.encodeWithSelector(ICSModule.getSigningKeys.selector),
             abi.encode(pubkey)
         );
         vm.mockCall(
-            address(strikes.MODULE()),
-            abi.encodeWithSelector(ICSModule.ejectBadPerformer.selector),
+            address(ejector),
+            abi.encodeWithSelector(ICSEjector.ejectBadPerformer.selector),
             ""
         );
 
         vm.expectCall(
-            address(strikes.MODULE()),
+            address(ejector),
             abi.encodeWithSelector(
-                ICSModule.ejectBadPerformer.selector,
+                ICSEjector.ejectBadPerformer.selector,
                 noId,
                 0,
                 100500
@@ -309,6 +314,25 @@ contract CSStrikesTest is CSStrikesTestBase {
         assertEq(strikes.treeCid(), newTreeCid);
     }
 
+    function test_processOracleReport_NothingUpdated() public assertInvariants {
+        bytes32 root = someBytes32();
+        string memory treeCid = someCIDv0();
+
+        vm.prank(oracle);
+        strikes.processOracleReport(root, treeCid);
+
+        vm.recordLogs();
+        {
+            vm.prank(oracle);
+            strikes.processOracleReport(root, treeCid);
+        }
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 0);
+
+        assertEq(strikes.treeRoot(), root);
+        assertEq(strikes.treeCid(), treeCid);
+    }
+
     function test_processOracleReport_RevertWhen_NotOracle()
         public
         assertInvariants
@@ -317,7 +341,7 @@ contract CSStrikesTest is CSStrikesTestBase {
         strikes.processOracleReport(bytes32(0), someCIDv0());
     }
 
-    function test_processOracleReport_RevertWhen_TreeRootEmpty()
+    function test_processOracleReport_RevertWhen_OnlyTreeRootEmpty()
         public
         assertInvariants
     {
@@ -329,7 +353,7 @@ contract CSStrikesTest is CSStrikesTestBase {
         strikes.processOracleReport(bytes32(0), someCIDv0());
     }
 
-    function test_processOracleReport_RevertWhen_TreeCidEmpty()
+    function test_processOracleReport_RevertWhen_OnlyTreeCidEmpty()
         public
         assertInvariants
     {
@@ -339,21 +363,6 @@ contract CSStrikesTest is CSStrikesTestBase {
         vm.expectRevert(ICSStrikes.InvalidReportData.selector);
         vm.prank(oracle);
         strikes.processOracleReport(someBytes32(), "");
-    }
-
-    function test_processOracleReport_RevertWhen_NothingUpdated()
-        public
-        assertInvariants
-    {
-        bytes32 root = someBytes32();
-        string memory treeCid = someCIDv0();
-
-        vm.prank(oracle);
-        strikes.processOracleReport(root, treeCid);
-
-        vm.expectRevert(ICSStrikes.InvalidReportData.selector);
-        vm.prank(oracle);
-        strikes.processOracleReport(root, treeCid);
     }
 
     function test_processOracleReport_RevertWhen_OnlyRootUpdated()

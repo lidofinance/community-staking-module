@@ -45,13 +45,16 @@ contract CSStrikes is ICSStrikes {
             }
             return;
         }
-        if (keccak256(bytes(treeCid)) == keccak256(bytes(_treeCid))) {
-            revert InvalidReportData();
+
+        bool isSameRoot = _treeRoot == treeRoot;
+        bool isSameCid = keccak256(bytes(_treeCid)) ==
+            keccak256(bytes(treeCid));
+        if (isSameRoot != isSameCid) revert InvalidReportData();
+        if (!isSameRoot) {
+            treeRoot = _treeRoot;
+            treeCid = _treeCid;
+            emit StrikesDataUpdated(_treeRoot, _treeCid);
         }
-        if (treeRoot == _treeRoot) revert InvalidReportData();
-        treeRoot = _treeRoot;
-        treeCid = _treeCid;
-        emit StrikesDataUpdated(_treeRoot, _treeCid);
     }
 
     /// @inheritdoc ICSStrikes
@@ -64,11 +67,7 @@ contract CSStrikes is ICSStrikes {
         // NOTE: We allow empty proofs to be delivered because there’s no way to use the tree’s
         // internal nodes without brute-forcing the input data.
 
-        bytes memory pubkey = MODULE.getSigningKeys(
-            nodeOperatorId,
-            keyIndex,
-            1
-        );
+        bytes memory pubkey = _getSigningKeys(nodeOperatorId, keyIndex, 1);
         if (!verifyProof(nodeOperatorId, pubkey, strikesData, proof))
             revert InvalidProof();
 
