@@ -8,6 +8,7 @@ import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSStrikes } from "../src/CSStrikes.sol";
 import { ICSStrikes } from "../src/interfaces/ICSStrikes.sol";
 import { ICSModule } from "../src/interfaces/ICSModule.sol";
+import { ICSEjector } from "../src/interfaces/ICSEjector.sol";
 import { IAssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
@@ -22,6 +23,7 @@ contract CSStrikesTestBase is Test, Fixtures, Utilities, InvariantAsserts {
     address internal stranger;
     address internal oracle;
     address internal module;
+    address internal ejector;
     CSStrikes internal strikes;
     MerkleTree internal tree;
 
@@ -38,22 +40,23 @@ contract CSStrikesConstructorTest is CSStrikesTestBase {
         stranger = nextAddress("STRANGER");
         oracle = nextAddress("ORACLE");
         module = nextAddress("MODULE");
+        ejector = nextAddress("EJECTOR");
     }
 
     function test_constructor_happyPath() public {
-        strikes = new CSStrikes(module, oracle);
+        strikes = new CSStrikes(ejector, oracle);
         assertEq(strikes.ORACLE(), oracle);
-        assertEq(address(strikes.MODULE()), module);
+        assertEq(address(strikes.EJECTOR()), ejector);
     }
 
-    function test_initialize_RevertWhen_ZeroModuleAddress() public {
-        vm.expectRevert(ICSStrikes.ZeroModuleAddress.selector);
+    function test_initialize_RevertWhen_ZeroEjectorAddress() public {
+        vm.expectRevert(ICSStrikes.ZeroEjectorAddress.selector);
         new CSStrikes(address(0), oracle);
     }
 
     function test_initialize_RevertWhen_ZeroOracleAddress() public {
         vm.expectRevert(ICSStrikes.ZeroOracleAddress.selector);
-        new CSStrikes(module, address(0));
+        new CSStrikes(ejector, address(0));
     }
 }
 
@@ -62,8 +65,9 @@ contract CSStrikesTest is CSStrikesTestBase {
         stranger = nextAddress("STRANGER");
         oracle = nextAddress("ORACLE");
         module = nextAddress("MODULE");
+        ejector = nextAddress("EJECTOR");
 
-        strikes = new CSStrikes(module, oracle);
+        strikes = new CSStrikes(ejector, oracle);
 
         tree = new MerkleTree();
 
@@ -148,20 +152,25 @@ contract CSStrikesTest is CSStrikesTestBase {
         bytes32[] memory proof = tree.getProof(0);
 
         vm.mockCall(
-            address(strikes.MODULE()),
+            address(strikes.EJECTOR()),
+            abi.encodeWithSelector(ICSEjector.MODULE.selector),
+            abi.encode(module)
+        );
+        vm.mockCall(
+            module,
             abi.encodeWithSelector(ICSModule.getSigningKeys.selector),
             abi.encode(pubkey)
         );
         vm.mockCall(
-            address(strikes.MODULE()),
-            abi.encodeWithSelector(ICSModule.ejectBadPerformer.selector),
+            address(strikes.EJECTOR()),
+            abi.encodeWithSelector(ICSEjector.ejectBadPerformer.selector),
             ""
         );
 
         vm.expectCall(
-            address(strikes.MODULE()),
+            address(strikes.EJECTOR()),
             abi.encodeWithSelector(
-                ICSModule.ejectBadPerformer.selector,
+                ICSEjector.ejectBadPerformer.selector,
                 noId,
                 0,
                 3
@@ -186,7 +195,12 @@ contract CSStrikesTest is CSStrikesTestBase {
         bytes32[] memory proof = tree.getProof(1);
 
         vm.mockCall(
-            address(strikes.MODULE()),
+            address(strikes.EJECTOR()),
+            abi.encodeWithSelector(ICSEjector.MODULE.selector),
+            abi.encode(module)
+        );
+        vm.mockCall(
+            module,
             abi.encodeWithSelector(ICSModule.getSigningKeys.selector),
             abi.encode(pubkey)
         );

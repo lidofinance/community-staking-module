@@ -10,6 +10,7 @@ import { OssifiableProxy } from "../../src/lib/proxy/OssifiableProxy.sol";
 import { CSModule } from "../../src/CSModule.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";
 import { CSFeeOracle } from "../../src/CSFeeOracle.sol";
+import { CSEjector } from "../../src/CSEjector.sol";
 import { IBurner } from "../../src/interfaces/IBurner.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 import { ForkHelpersCommon } from "./Common.sol";
@@ -139,15 +140,15 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         csm.revokeRole(csm.VERIFIER_ROLE(), address(deploymentConfig.verifier));
         csm.grantRole(csm.VERIFIER_ROLE(), address(upgradeConfig.verifier));
 
-        csm.grantRole(
-            csm.BAD_PERFORMER_EJECTOR_ROLE(),
-            address(upgradeConfig.strikes)
-        );
-
         csm.revokeRole(csm.PAUSE_ROLE(), address(deploymentConfig.gateSeal));
         accounting.revokeRole(
             accounting.PAUSE_ROLE(),
             address(deploymentConfig.gateSeal)
+        );
+        accounting.grantRole(accounting.PENALIZE_ROLE(), address(csm));
+        accounting.grantRole(
+            accounting.PENALIZE_ROLE(),
+            address(upgradeConfig.ejector)
         );
         oracle.revokeRole(
             oracle.PAUSE_ROLE(),

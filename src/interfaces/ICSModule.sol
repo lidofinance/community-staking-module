@@ -55,7 +55,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     error SigningKeysInvalidOffset();
 
     error AlreadyWithdrawn();
-    error AlreadyEjected();
 
     error InvalidAmount();
 
@@ -66,8 +65,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     error ZeroSenderAddress();
     error ZeroRewardAddress();
     error ZeroParametersRegistryAddress();
-
-    error NotEnoughStrikesToEject();
 
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
@@ -105,11 +102,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         uint256 indexed nodeOperatorId,
         uint256 keyIndex,
         uint256 amount,
-        bytes pubkey
-    );
-    event EjectionSubmitted(
-        uint256 indexed nodeOperatorId,
-        uint256 keyIndex,
         bytes pubkey
     );
 
@@ -158,8 +150,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     function STETH() external view returns (IStETH);
 
     function VERIFIER_ROLE() external view returns (bytes32);
-
-    function BAD_PERFORMER_EJECTOR_ROLE() external view returns (bytes32);
 
     function CREATE_NODE_OPERATOR_ROLE() external view returns (bytes32);
 
@@ -387,6 +377,13 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         uint256 nodeOperatorId
     ) external view returns (uint256);
 
+    /// @notice Get Node Operator total deposited keys
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return Total deposited keys count
+    function getNodeOperatorTotalDepositedKeys(
+        uint256 nodeOperatorId
+    ) external view returns (uint256);
+
     /// @notice Get Node Operator signing keys
     /// @param nodeOperatorId ID of the Node Operator
     /// @param startIndex Index of the first key
@@ -425,31 +422,11 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         bool isSlashed
     ) external;
 
-    /// @notice Report Node Operator's key as bad performer and eject it with corresponding penalty
-    /// @notice Called by the `CSStrikes` contract.
-    ///         See `CSStrikes.processBadPerformanceProof` to use this method permissionless
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the withdrawn key in the Node Operator's keys storage
-    /// @param strikesCount Strikes count of the Node Operator's validator key
-    function ejectBadPerformer(
-        uint256 nodeOperatorId,
-        uint256 keyIndex,
-        uint256 strikesCount
-    ) external;
-
     /// @notice Check if the given Node Operator's key is reported as withdrawn
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keyIndex index of the key to check
     /// @return Validator reported as withdrawn flag
     function isValidatorWithdrawn(
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) external view returns (bool);
-
-    /// @notice Check if the given Node Operator's key is reported as ejected
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex index of the key to check
-    function isValidatorEjected(
         uint256 nodeOperatorId,
         uint256 keyIndex
     ) external view returns (bool);
