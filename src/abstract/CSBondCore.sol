@@ -26,7 +26,7 @@ import { ICSBondCore } from "../interfaces/ICSBondCore.sol";
 ///
 /// @author vgorkavenko
 abstract contract CSBondCore is ICSBondCore {
-    /// @custom:storage-location erc7201:CSAccounting.CSBondCore
+    /// @custom:storage-location erc7201:CSBondCore
     struct CSBondCoreStorage {
         mapping(uint256 nodeOperatorId => uint256 shares) bondShares;
         uint256 totalBondShares;
