@@ -13,20 +13,16 @@ import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ICSEjector } from "./interfaces/ICSEjector.sol";
 
-import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
-
 contract CSEjector is
     ICSEjector,
     Initializable,
     AccessControlEnumerableUpgradeable,
-    PausableUntil,
-    AssetRecoverer
+    PausableUntil
 {
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant BAD_PERFORMER_EJECTOR_ROLE =
         keccak256("BAD_PERFORMER_EJECTOR_ROLE");
-    bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
     ICSModule public immutable MODULE;
     ICSAccounting public immutable ACCOUNTING;
@@ -114,10 +110,6 @@ contract CSEjector is
             IStakingModule(address(MODULE)).getNodeOperatorsCount()
         ) return;
         revert NodeOperatorDoesNotExist();
-    }
-
-    function _onlyRecoverer() internal view override {
-        _checkRole(RECOVERER_ROLE);
     }
 
     /// @dev Both nodeOperatorId and keyIndex are limited to uint64 by the CSModule.sol
