@@ -32,6 +32,7 @@ contract CSFeeOracle is
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
     ICSFeeDistributor public feeDistributor;
+    /// @custom:oz-retyped-from uint256
     ICSStrikes public strikes;
 
     constructor(
