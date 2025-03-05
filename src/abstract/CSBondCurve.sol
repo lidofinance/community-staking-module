@@ -28,7 +28,7 @@ import { ICSBondCurve } from "../interfaces/ICSBondCurve.sol";
 abstract contract CSBondCurve is ICSBondCurve, Initializable {
     using Arrays for uint256[];
 
-    /// @custom:storage-location erc7201:CSAccounting.CSBondCurve
+    /// @custom:storage-location erc7201:CSBondCurve
     struct CSBondCurveStorage {
         BondCurve[] bondCurves;
         /// @dev Mapping of Node Operator id to bond curve id

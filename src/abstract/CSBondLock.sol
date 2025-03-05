@@ -29,7 +29,7 @@ import { ICSBondLock } from "../interfaces/ICSBondLock.sol";
 abstract contract CSBondLock is ICSBondLock, Initializable {
     using SafeCast for uint256;
 
-    /// @custom:storage-location erc7201:CSAccounting.CSBondLock
+    /// @custom:storage-location erc7201:CSBondLock
     struct CSBondLockStorage {
         /// @dev Default bond lock period for all locks
         ///      After this period the bond lock is removed and no longer valid
