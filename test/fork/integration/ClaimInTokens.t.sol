@@ -304,6 +304,7 @@ contract ClaimIntegrationTest is
         // Prepare and submit report data
         MerkleTree tree = new MerkleTree();
         tree.pushLeaf(abi.encode(defaultNoId, shares));
+        tree.pushLeaf(abi.encode(type(uint64).max, 0));
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
         uint256 refSlot = 154;
@@ -370,6 +371,7 @@ contract ClaimIntegrationTest is
         // Prepare and submit report data
         MerkleTree tree = new MerkleTree();
         tree.pushLeaf(abi.encode(defaultNoId, shares));
+        tree.pushLeaf(abi.encode(type(uint64).max, 0));
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
         uint256 refSlot = 154;
@@ -441,6 +443,7 @@ contract ClaimIntegrationTest is
         // Prepare and submit report data
         MerkleTree tree = new MerkleTree();
         tree.pushLeaf(abi.encode(defaultNoId, shares));
+        tree.pushLeaf(abi.encode(type(uint64).max, 0));
         bytes32[] memory proof = tree.getProof(0);
         bytes32 root = tree.root();
         uint256 refSlot = 154;
