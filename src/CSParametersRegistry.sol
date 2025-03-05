@@ -560,7 +560,6 @@ contract CSParametersRegistry is
         uint256 lifetime,
         uint256 threshold
     ) internal pure {
-        if (threshold == 0) revert InvalidStrikesParams();
-        if (lifetime == 0) revert InvalidStrikesParams();
+        if (threshold == 0 || lifetime == 0) revert InvalidStrikesParams();
     }
 }
