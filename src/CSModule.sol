@@ -62,15 +62,20 @@ contract CSModule is
     ////////////////////////
     // State variables below
     ////////////////////////
+
+    /// @custom:oz-renamed-from keyRemovalCharge
+    /// @custom:oz-retyped-from uint256
     mapping(uint256 queuePriority => QueueLib.Queue queue)
         internal _queueByPriority;
 
     /// @dev Legacy queue (priority=QUEUE_LEGACY_PRIORITY), that we will probably may be able to remove in the future.
+    /// @custom:oz-renamed-from depositQueue
     QueueLib.Queue public legacyQueue;
 
     ICSAccounting public accounting;
 
     /// @dev DEPRECATED
+    /// @custom:oz-renamed-from earlyAdoption
     address internal _earlyAdoption;
     /// @dev DEPRECATED
     bool public publicRelease;

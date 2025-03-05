@@ -122,6 +122,47 @@ coverage-lcov *args:
 diffyscan-contracts *args:
     yarn generate:diffyscan {{args}}
 
+oz-upgrades:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    FOUNDRY_PROFILE=upgrades just build --skip=script,test
+
+    CURR_DIR=$(pwd)
+    TMP_DIR=$(mktemp -d)
+    git clone --depth 1 --branch main https://github.com/lidofinance/community-staking-module "$TMP_DIR"
+
+    cd "$TMP_DIR"
+    just deps
+    FOUNDRY_PROFILE=upgrades just build --skip=script,test
+    cd "$CURR_DIR"
+
+    cp -r "$TMP_DIR/out/build-info" out/v1
+
+    # Muted some errors globally
+    #   --unsafeAllowLinkedLibraries due to no support for linked libraries in upgrades-core
+    #   --unsafeAllow=constructor,state-variable-immutable - all the contracts have immutables with safe usage
+    # These changes fixing a mistake in the custom annotations in the v1 contract, but no changes in the actual storage pointer
+    #   - Deleted namespace `erc7201:CSAccounting.CSBondLock`
+    #   - Deleted namespace `erc7201:CSAccounting.CSBondCurve`
+    #   - Deleted namespace `erc7201:CSAccounting.CSBondCore`
+    # These findings related to the namespaced storage structs which can't be annotated properly https://github.com/OpenZeppelin/openzeppelin-upgrades/issues/802
+    #   - Renamed `bondLockRetentionPeriod` to `bondLockPeriod`
+    #   - Upgraded `bondLock` to an incompatible type
+    # A safe change in the CSFeeOracle. We nullify the whole slot in the upgrade call
+    #   - Layout changed for `strikes` (uint256 -> contract ICSStrikes). Number of bytes changed from 32 to 20
+
+    npx @openzeppelin/upgrades-core validate --contract=CSModule --reference=v1:CSModule --referenceBuildInfoDirs=out/v1 \
+        --unsafeAllowLinkedLibraries --unsafeAllow=constructor,state-variable-immutable || true
+    npx @openzeppelin/upgrades-core validate --contract=CSAccounting --reference=v1:CSAccounting --referenceBuildInfoDirs=out/v1 \
+        --unsafeAllowLinkedLibraries --unsafeAllow=constructor,state-variable-immutable || true
+    npx @openzeppelin/upgrades-core validate --contract=CSFeeOracle --reference=v1:CSFeeOracle --referenceBuildInfoDirs=out/v1 \
+        --unsafeAllowLinkedLibraries --unsafeAllow=constructor,state-variable-immutable || true
+    npx @openzeppelin/upgrades-core validate --contract=CSFeeDistributor --reference=v1:CSFeeDistributor --referenceBuildInfoDirs=out/v1 \
+        --unsafeAllowLinkedLibraries --unsafeAllow=constructor,state-variable-immutable || true
+
+    rm -rf "$TMP_DIR"
+
 make-fork *args:
     @if pgrep -x "anvil" > /dev/null; \
         then just _warn "anvil process is already running in the background. Make sure it's connected to the right network and in the right state."; \

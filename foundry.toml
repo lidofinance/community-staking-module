@@ -52,3 +52,7 @@ block_gas_limit = 60_000_000
 # unknown problem of too high estimated gas usage in the implementation deployment script
 # after upgrading forge-std 1.7.6 -> 1.9.5
 block_gas_limit = 60_000_000
+
+[profile.upgrades]
+extra_output = ["storageLayout"]
+build_info=true
