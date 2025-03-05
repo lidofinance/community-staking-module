@@ -181,13 +181,13 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
             memory customInitData = defaultInitData;
 
         customInitData.strikesLifetime = 0;
-        customInitData.strikesThreshold = 0;
+        customInitData.strikesThreshold = 1;
 
         vm.expectRevert(ICSParametersRegistry.InvalidStrikesParams.selector);
         parametersRegistry.initialize(admin, customInitData);
     }
 
-    function test_initialize_RevertWhen_InvalidStrikesParams_lifetimeLessThanThreshold()
+    function test_initialize_RevertWhen_InvalidStrikesParams_zeroThreshold()
         public
     {
         _enableInitializers(address(parametersRegistry));
@@ -195,8 +195,8 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
         ICSParametersRegistry.InitializationData
             memory customInitData = defaultInitData;
 
-        customInitData.strikesLifetime = 2;
-        customInitData.strikesThreshold = 3;
+        customInitData.strikesLifetime = 1;
+        customInitData.strikesThreshold = 0;
 
         vm.expectRevert(ICSParametersRegistry.InvalidStrikesParams.selector);
         parametersRegistry.initialize(admin, customInitData);
@@ -973,16 +973,16 @@ contract CSParametersRegistryStrikesParamsTest is
 
     function test_setDefault_RevertWhen_zeroLifetime() public {
         uint256 lifetime = 0;
-        uint256 threshold = 0;
+        uint256 threshold = 1;
 
         vm.expectRevert(ICSParametersRegistry.InvalidStrikesParams.selector);
         vm.prank(admin);
         parametersRegistry.setDefaultStrikesParams(lifetime, threshold);
     }
 
-    function test_setDefault_RevertWhen_lifetimeLessThanThreshold() public {
+    function test_setDefault_RevertWhen_zeroThreshold() public {
         uint256 lifetime = 1;
-        uint256 threshold = 2;
+        uint256 threshold = 0;
 
         vm.expectRevert(ICSParametersRegistry.InvalidStrikesParams.selector);
         vm.prank(admin);
@@ -1024,10 +1024,10 @@ contract CSParametersRegistryStrikesParamsTest is
         parametersRegistry.setStrikesParams(curveId, lifetime, threshold);
     }
 
-    function test_set_RevertWhen_lifetimeLessThanThreshold() public {
+    function test_set_RevertWhen_zeroThreshold() public {
         uint256 curveId = 1;
-        uint256 lifetime = 2;
-        uint256 threshold = 3;
+        uint256 lifetime = 1;
+        uint256 threshold = 0;
 
         vm.expectRevert(ICSParametersRegistry.InvalidStrikesParams.selector);
         vm.prank(admin);
