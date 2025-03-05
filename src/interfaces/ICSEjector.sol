@@ -27,8 +27,6 @@ interface ICSEjector is IAssetRecovererLib {
 
     function RESUME_ROLE() external view returns (bytes32);
 
-    function RECOVERER_ROLE() external view returns (bytes32);
-
     function BAD_PERFORMER_EJECTOR_ROLE() external view returns (bytes32);
 
     function MODULE() external view returns (ICSModule);
