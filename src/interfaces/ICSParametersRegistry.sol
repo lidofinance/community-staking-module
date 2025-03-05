@@ -157,14 +157,16 @@ interface ICSParametersRegistry {
     function defaultPerformanceLeeway() external returns (uint256);
 
     /// @notice Set default values for the strikes lifetime and threshold. Default values are used if specific values are not set for the curveId
-    /// @param lifetime value to be set as default for the strikes lifetime
-    /// @param threshold value to be set as default for the strikes threshold
+    /// @param lifetime The default number of CSM Performance Oracle frames to store strikes values
+    /// @param threshold The default strikes value leading to validator force ejection.
     function setDefaultStrikesParams(
         uint256 lifetime,
         uint256 threshold
     ) external;
 
-    /// @notice Get default value for the strikes lifetime and threshold
+    /// @notice Get default value for the strikes lifetime (frames count) and threshold (integer)
+    /// @return lifetime The default number of CSM Performance Oracle frames to store strikes values
+    /// @return threshold The default strikes value leading to validator force ejection.
     function defaultStrikesParams() external returns (uint32, uint32);
 
     /// @notice Set default value for the bad performance penalty. Default value is used if a specific value is not set for the curveId
@@ -322,8 +324,8 @@ interface ICSParametersRegistry {
 
     /// @notice Set performance strikes lifetime and threshold for the curveId
     /// @param curveId Curve Id to associate performance strikes lifetime and threshold with
-    /// @param lifetime Number of CSM Perf Oracle frames after which performance strikes are no longer valid
-    /// @param threshold Number of active strikes after which validator can be forcefully ejected
+    /// @param lifetime Number of CSM Performance Oracle frames to store strikes values
+    /// @param threshold The strikes value leading to validator force ejection
     function setStrikesParams(
         uint256 curveId,
         uint256 lifetime,
@@ -335,10 +337,10 @@ interface ICSParametersRegistry {
     function unsetStrikesParams(uint256 curveId) external;
 
     /// @notice Get performance strikes lifetime and threshold by the curveId
-    /// @dev `defaultStrikesParams` are returned if the value is not set for the given curveId.
+    /// @dev `defaultStrikesParams` are returned if the value is not set for the given curveId
     /// @param curveId Curve Id to get performance strikes lifetime and threshold for
-    /// @return lifetime Number of CSM Perf Oracle frames after which performance strikes are no longer valid
-    /// @return threshold Number of active strikes after which validator can be forcefully ejected
+    /// @return lifetime Number of CSM Performance Oracle frames to store strikes values
+    /// @return threshold The strikes value leading to validator force ejection
     function getStrikesParams(
         uint256 curveId
     ) external view returns (uint256 lifetime, uint256 threshold);

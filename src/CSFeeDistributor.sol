@@ -197,6 +197,8 @@ contract CSFeeDistributor is
         uint256 shares,
         bytes32[] calldata proof
     ) public view returns (uint256 sharesToDistribute) {
+        // NOTE: We reject the empty proofs to separate two business logic paths on the level of
+        // CSAccounting (see _pullFeeRewards function invocations) with and without a proof.
         if (proof.length == 0) revert InvalidProof();
         bool isValid = MerkleProof.verifyCalldata(
             proof,
