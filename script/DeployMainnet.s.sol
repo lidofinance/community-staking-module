@@ -68,7 +68,7 @@ contract DeployMainnet is DeployBase {
         // CSParameters
         config.keyRemovalCharge = 0.05 ether;
         config.elRewardsStealingAdditionalFine = 0.1 ether;
-        config.keysLimit = 100_000; // technically unlimited
+        config.keysLimit = type(uint256).max;
         config.avgPerfLeewayBP = 500;
         config.rewardShareBP = 10000;
         config.strikesLifetimeFrames = 6;
