@@ -112,6 +112,7 @@ struct DeployParams {
     // CSParameters
     uint256 keyRemovalCharge;
     uint256 elRewardsStealingAdditionalFine;
+    uint256 keysLimit;
     uint256 avgPerfLeewayBP;
     uint256 rewardShareBP;
     uint256 strikesLifetimeFrames;
@@ -274,6 +275,7 @@ abstract contract DeployBase is Script {
                     keyRemovalCharge: config.keyRemovalCharge,
                     elRewardsStealingAdditionalFine: config
                         .elRewardsStealingAdditionalFine,
+                    keysLimit: config.keysLimit,
                     rewardShare: config.rewardShareBP,
                     performanceLeeway: config.avgPerfLeewayBP,
                     strikesLifetime: config.strikesLifetimeFrames,

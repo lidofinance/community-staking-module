@@ -57,6 +57,7 @@ abstract contract DeployImplementationsBase is DeployBase {
                     keyRemovalCharge: config.keyRemovalCharge,
                     elRewardsStealingAdditionalFine: config
                         .elRewardsStealingAdditionalFine,
+                    keysLimit: config.keysLimit,
                     rewardShare: config.rewardShareBP,
                     performanceLeeway: config.avgPerfLeewayBP,
                     strikesLifetime: config.strikesLifetimeFrames,

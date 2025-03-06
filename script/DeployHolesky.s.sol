@@ -72,6 +72,7 @@ contract DeployHolesky is DeployBase {
         // CSParameters
         config.keyRemovalCharge = 0.05 ether;
         config.elRewardsStealingAdditionalFine = 0.1 ether;
+        config.keysLimit = 100_000; // technically unlimited
         config.avgPerfLeewayBP = 500;
         config.rewardShareBP = 10000;
         config.strikesLifetimeFrames = 6;
