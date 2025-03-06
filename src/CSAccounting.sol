@@ -84,7 +84,7 @@ contract CSAccounting is
         address _feeDistributor,
         uint256 bondLockPeriod,
         address _chargePenaltyRecipient
-    ) external initializer {
+    ) external reinitializer(2) {
         __AccessControlEnumerable_init();
         __CSBondCurve_init(bondCurve);
         __CSBondLock_init(bondLockPeriod);
@@ -107,6 +107,8 @@ contract CSAccounting is
         LIDO.approve(address(WITHDRAWAL_QUEUE), type(uint256).max);
         LIDO.approve(LIDO_LOCATOR.burner(), type(uint256).max);
     }
+
+    function finalizeUpgradeV2() external reinitializer(2) {}
 
     /// @inheritdoc ICSAccounting
     function resume() external onlyRole(RESUME_ROLE) {
@@ -376,6 +378,11 @@ contract CSAccounting is
     /// @inheritdoc ICSAccounting
     function renewBurnerAllowance() external {
         LIDO.approve(LIDO_LOCATOR.burner(), type(uint256).max);
+    }
+
+    /// @inheritdoc ICSAccounting
+    function getInitializedVersion() external view returns (uint64) {
+        return _getInitializedVersion();
     }
 
     /// @inheritdoc ICSAccounting

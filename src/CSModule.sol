@@ -915,6 +915,11 @@ contract CSModule is
         }
     }
 
+    /// @inheritdoc ICSModule
+    function getInitializedVersion() external view returns (uint64) {
+        return _getInitializedVersion();
+    }
+
     /// @inheritdoc IStakingModule
     /// @dev Always reverts. Non supported in CSM
     /// @dev `refundedValidatorsCount` is not used in the module
