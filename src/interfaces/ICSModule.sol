@@ -39,6 +39,13 @@ struct NodeOperatorManagementProperties {
     bool extendedManagerPermissions;
 }
 
+struct ValidatorWithdrawalInfo {
+    uint256 nodeOperatorId; // @dev ID of the Node Operator
+    uint256 keyIndex; // @dev Index of the withdrawn key in the Node Operator's keys storage
+    uint256 amount; // @dev Amount of withdrawn ETH in wei
+    bool isSlashed; // @dev If validator is slashed or not
+}
+
 /// @title Lido's Community Staking Module interface
 interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     error NodeOperatorHasKeys();
@@ -408,18 +415,12 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         uint256 keysCount
     ) external view returns (bytes memory keys, bytes memory signatures);
 
-    /// @notice Report Node Operator's key as withdrawn and settle withdrawn amount
+    /// @notice Report Node Operator's keys as withdrawn and settle withdrawn amount
     /// @notice Called by `CSVerifier` contract.
     ///         See `CSVerifier.processWithdrawalProof` to use this method permissionless
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the withdrawn key in the Node Operator's keys storage
-    /// @param amount Amount of withdrawn ETH in wei
-    /// @param isSlashed Validator is slashed or not
-    function submitWithdrawal(
-        uint256 nodeOperatorId,
-        uint256 keyIndex,
-        uint256 amount,
-        bool isSlashed
+    /// @param withdrawalsInfo An array for the validator withdrawals info structs
+    function submitWithdrawals(
+        ValidatorWithdrawalInfo[] calldata withdrawalsInfo
     ) external;
 
     /// @notice Check if the given Node Operator's key is reported as withdrawn
