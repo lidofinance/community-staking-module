@@ -10,6 +10,7 @@ import { OssifiableProxy } from "../../src/lib/proxy/OssifiableProxy.sol";
 import { CSModule } from "../../src/CSModule.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";
 import { CSFeeOracle } from "../../src/CSFeeOracle.sol";
+import { CSFeeDistributor } from "../../src/CSFeeDistributor.sol";
 import { CSEjector } from "../../src/CSEjector.sol";
 import { IBurner } from "../../src/interfaces/IBurner.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
@@ -92,8 +93,12 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         OssifiableProxy accountingProxy = OssifiableProxy(
             payable(deploymentConfig.accounting)
         );
-        vm.broadcast(_prepareProxyAdmin(address(accountingProxy)));
-        accountingProxy.proxy__upgradeTo(upgradeConfig.accountingImpl);
+        vm.startBroadcast(_prepareProxyAdmin(address(accountingProxy)));
+        {
+            accountingProxy.proxy__upgradeTo(upgradeConfig.accountingImpl);
+            CSAccounting(deploymentConfig.accounting).finalizeUpgradeV2();
+        }
+        vm.stopBroadcast();
 
         OssifiableProxy oracleProxy = OssifiableProxy(
             payable(deploymentConfig.oracle)
@@ -111,8 +116,15 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         OssifiableProxy feeDistributorProxy = OssifiableProxy(
             payable(deploymentConfig.feeDistributor)
         );
-        vm.broadcast(_prepareProxyAdmin(address(feeDistributorProxy)));
-        feeDistributorProxy.proxy__upgradeTo(upgradeConfig.feeDistributorImpl);
+        vm.startBroadcast(_prepareProxyAdmin(address(feeDistributorProxy)));
+        {
+            feeDistributorProxy.proxy__upgradeTo(
+                upgradeConfig.feeDistributorImpl
+            );
+            CSFeeDistributor(deploymentConfig.feeDistributor)
+                .finalizeUpgradeV2();
+        }
+        vm.stopBroadcast();
 
         address admin = _prepareAdmin(deploymentConfig.csm);
         locator = ILidoLocator(deploymentConfig.lidoLocator);

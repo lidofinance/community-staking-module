@@ -5016,6 +5016,10 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
 }
 
 contract CSAccountingMiscTest is CSAccountingBaseTest {
+    function test_getInitializedVersion() public {
+        assertEq(accounting.getInitializedVersion(), 2);
+    }
+
     function test_totalBondShares() public assertInvariants {
         mock_getNodeOperatorsCount(2);
         vm.deal(address(stakingModule), 64 ether);

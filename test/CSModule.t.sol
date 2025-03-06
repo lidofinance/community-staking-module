@@ -6436,6 +6436,10 @@ contract CSMRecoverERC20 is CSMCommon {
 }
 
 contract CSMMisc is CSMCommon {
+    function test_getInitializedVersion() public view {
+        assertEq(csm.getInitializedVersion(), 2);
+    }
+
     function test_updateRefundedValidatorsCount() public assertInvariants {
         uint256 noId = createNodeOperator();
         uint256 refunded = 1;
