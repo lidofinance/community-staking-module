@@ -83,6 +83,9 @@ interface ICSFeeDistributor is IAssetRecovererLib {
 
     function totalClaimableShares() external view returns (uint256);
 
+    /// @notice Get the initialized version of the contract
+    function getInitializedVersion() external view returns (uint64);
+
     /// @notice Get the Amount of stETH shares that can be distributed in favor of the Node Operator
     /// @param nodeOperatorId ID of the Node Operator
     /// @param shares Total Amount of stETH shares earned as fees

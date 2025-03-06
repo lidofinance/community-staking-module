@@ -56,6 +56,9 @@ interface ICSAccounting is
 
     function chargePenaltyRecipient() external view returns (address);
 
+    /// @notice Get the initialized version of the contract
+    function getInitializedVersion() external view returns (uint64);
+
     /// @notice Resume reward claims and deposits
     function resume() external;
 

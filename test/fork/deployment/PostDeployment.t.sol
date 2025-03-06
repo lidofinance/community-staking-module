@@ -47,6 +47,7 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
             csm.hasRole(csm.STAKING_ROUTER_ROLE(), locator.stakingRouter())
         );
         assertTrue(csm.getRoleMemberCount(csm.STAKING_ROUTER_ROLE()) == 1);
+        assertEq(csm.getInitializedVersion(), 2);
     }
 
     function test_roles() public view {
@@ -271,6 +272,7 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
             lido.allowance(address(accounting), locator.burner()),
             type(uint256).max
         );
+        assertEq(accounting.getInitializedVersion(), 2);
     }
 
     function test_roles() public view {
@@ -359,6 +361,10 @@ contract CSFeeDistributorDeploymentTest is Test, Utilities, DeploymentFixtures {
         assertEq(address(feeDistributor.STETH()), address(lido));
         assertEq(feeDistributor.ACCOUNTING(), address(accounting));
         assertEq(feeDistributor.ORACLE(), address(oracle));
+    }
+
+    function test_initializer() public view {
+        assertEq(feeDistributor.getInitializedVersion(), 2);
     }
 
     function test_roles() public view {

@@ -66,6 +66,12 @@ contract CSFeeOracleTest is Test, Utilities {
         stranger = nextAddress();
     }
 
+    function test_getContractVersion() public {
+        _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));
+
+        assertEq(oracle.getContractVersion(), 2);
+    }
+
     function test_happyPath() public {
         {
             _deployFeeOracleAndHashConsensus(_lastSlotOfEpoch(1));

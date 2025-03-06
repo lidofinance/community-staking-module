@@ -177,6 +177,10 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         vm.label(address(csm), "CSM");
     }
 
+    function test_getInitializedVersion() public view {
+        assertEq(feeDistributor.getInitializedVersion(), 2);
+    }
+
     function test_distributeFeesHappyPath() public assertInvariants {
         uint256 nodeOperatorId = 42;
         uint256 shares = 100;
