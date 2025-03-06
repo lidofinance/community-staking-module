@@ -66,12 +66,14 @@ contract CSFeeDistributor is
         _disableInitializers();
     }
 
-    function initialize(address admin) external initializer {
+    function initialize(address admin) external reinitializer(2) {
         __AccessControlEnumerable_init();
         if (admin == address(0)) revert ZeroAdminAddress();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
+
+    function finalizeUpgradeV2() external reinitializer(2) {}
 
     /// @inheritdoc ICSFeeDistributor
     function distributeFees(
@@ -177,6 +179,11 @@ contract CSFeeDistributor is
             revert NotAllowedToRecover();
         }
         AssetRecovererLib.recoverERC20(token, amount);
+    }
+
+    /// @inheritdoc ICSFeeDistributor
+    function getInitializedVersion() external view returns (uint64) {
+        return _getInitializedVersion();
     }
 
     /// @inheritdoc ICSFeeDistributor
