@@ -5427,10 +5427,10 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
     }
 }
 
-contract CsmSubmitWithdrawal is CSMCommon {
+contract CsmSubmitWithdrawals is CSMCommon {
     using stdStorage for StdStorage;
 
-    function test_submitWithdrawal() public assertInvariants {
+    function test_submitWithdrawals() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
         (bytes memory pubkey, ) = csm.obtainDepositData(1, "");
@@ -5465,7 +5465,41 @@ contract CsmSubmitWithdrawal is CSMCommon {
         assertEq(csm.getNonce(), nonce);
     }
 
-    function test_submitWithdrawal_changeNonce() public assertInvariants {
+    function test_submitWithdrawals_slashed() public assertInvariants {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        (bytes memory pubkey, ) = csm.obtainDepositData(1, "");
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            DEPOSIT_SIZE,
+            true
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(ICSAccounting.resetBondCurve.selector, noId)
+        );
+        vm.expectEmit(address(csm));
+        emit ICSModule.WithdrawalSubmitted(
+            noId,
+            keyIndex,
+            DEPOSIT_SIZE,
+            pubkey
+        );
+        csm.submitWithdrawals(withdrawalInfo);
+
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        assertEq(no.totalWithdrawnKeys, 1);
+        bool withdrawn = csm.isValidatorWithdrawn(noId, keyIndex);
+        assertTrue(withdrawn);
+    }
+
+    function test_submitWithdrawals_changeNonce() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator(2);
         (bytes memory pubkey, ) = csm.obtainDepositData(1, "");
@@ -5497,7 +5531,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_submitWithdrawal_lowExitBalance() public assertInvariants {
+    function test_submitWithdrawals_lowExitBalance() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
         uint256 depositSize = DEPOSIT_SIZE;
@@ -5520,7 +5554,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
         csm.submitWithdrawals(withdrawalInfo);
     }
 
-    function test_submitWithdrawal_unbondedKeys() public assertInvariants {
+    function test_submitWithdrawals_unbondedKeys() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator(2);
         csm.obtainDepositData(1, "");
@@ -5539,7 +5573,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
-    function test_submitWithdrawal_RevertWhen_NoNodeOperator()
+    function test_submitWithdrawals_RevertWhen_NoNodeOperator()
         public
         assertInvariants
     {
@@ -5551,7 +5585,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
         csm.submitWithdrawals(withdrawalInfo);
     }
 
-    function test_submitWithdrawal_RevertWhen_InvalidKeyIndexOffset()
+    function test_submitWithdrawals_RevertWhen_InvalidKeyIndexOffset()
         public
         assertInvariants
     {
@@ -5565,7 +5599,7 @@ contract CsmSubmitWithdrawal is CSMCommon {
         csm.submitWithdrawals(withdrawalInfo);
     }
 
-    function test_submitWithdrawal_RevertWhen_AlreadyWithdrawn()
+    function test_submitWithdrawals_RevertWhen_AlreadyWithdrawn()
         public
         assertInvariants
     {
