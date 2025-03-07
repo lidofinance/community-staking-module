@@ -9,7 +9,7 @@ import { ForkHelpersCommon } from "./Common.sol";
 import "../../src/interfaces/IVEBO.sol";
 import { Utilities } from "../../test/helpers/Utilities.sol";
 import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
-import { NodeOperator } from "../../src/interfaces/ICSModule.sol";
+import { NodeOperator, ValidatorWithdrawalInfo } from "../../src/interfaces/ICSModule.sol";
 
 contract NodeOperators is
     Script,
@@ -200,7 +200,15 @@ contract NodeOperators is
     ) external broadcastVerifier {
         uint256 withdrawnBefore = csm.getNodeOperator(noId).totalWithdrawnKeys;
 
-        csm.submitWithdrawal(noId, keyIndex, amount, false);
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            amount,
+            false
+        );
+        csm.submitWithdrawals(withdrawalInfo);
 
         assertTrue(csm.isValidatorWithdrawn(noId, keyIndex));
         assertEq(

@@ -13,7 +13,7 @@ import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
 import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
-import { ICSModule, NodeOperator, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
+import { ICSModule, NodeOperator, NodeOperatorManagementProperties, ValidatorWithdrawalInfo } from "./interfaces/ICSModule.sol";
 
 import { QueueLib, Batch } from "./lib/QueueLib.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
@@ -677,45 +677,65 @@ contract CSModule is
     }
 
     /// @inheritdoc ICSModule
-    function submitWithdrawal(
-        uint256 nodeOperatorId,
-        uint256 keyIndex,
-        uint256 amount,
-        bool isSlashed
+    function submitWithdrawals(
+        ValidatorWithdrawalInfo[] calldata withdrawalsInfo
     ) external onlyRole(VERIFIER_ROLE) {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (keyIndex >= no.totalDepositedKeys) {
-            revert SigningKeysInvalidOffset();
-        }
+        for (uint256 i; i < withdrawalsInfo.length; ++i) {
+            ValidatorWithdrawalInfo memory withdrawalInfo = withdrawalsInfo[i];
 
-        uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
-        if (_isValidatorWithdrawn[pointer]) revert AlreadyWithdrawn();
+            _onlyExistingNodeOperator(withdrawalInfo.nodeOperatorId);
+            NodeOperator storage no = _nodeOperators[
+                withdrawalInfo.nodeOperatorId
+            ];
 
-        _isValidatorWithdrawn[pointer] = true;
-        unchecked {
-            ++no.totalWithdrawnKeys;
-        }
-
-        bytes memory pubkey = SigningKeys.loadKeys(nodeOperatorId, keyIndex, 1);
-        emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount, pubkey);
-
-        if (isSlashed) {
-            // Bond curve should be reset to default in case of slashing. See https://hackmd.io/@lido/SygBLW5ja
-            accounting.resetBondCurve(nodeOperatorId);
-        }
-
-        if (DEPOSIT_SIZE > amount) {
-            unchecked {
-                accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - amount);
+            if (withdrawalInfo.keyIndex >= no.totalDepositedKeys) {
+                revert SigningKeysInvalidOffset();
             }
-        }
 
-        // Nonce should be updated if depositableValidators change
-        _updateDepositableValidatorsCount({
-            nodeOperatorId: nodeOperatorId,
-            incrementNonceIfUpdated: true
-        });
+            uint256 pointer = _keyPointer(
+                withdrawalInfo.nodeOperatorId,
+                withdrawalInfo.keyIndex
+            );
+            if (_isValidatorWithdrawn[pointer]) revert AlreadyWithdrawn();
+
+            _isValidatorWithdrawn[pointer] = true;
+            unchecked {
+                ++no.totalWithdrawnKeys;
+            }
+
+            bytes memory pubkey = SigningKeys.loadKeys(
+                withdrawalInfo.nodeOperatorId,
+                withdrawalInfo.keyIndex,
+                1
+            );
+
+            emit WithdrawalSubmitted(
+                withdrawalInfo.nodeOperatorId,
+                withdrawalInfo.keyIndex,
+                withdrawalInfo.amount,
+                pubkey
+            );
+
+            if (withdrawalInfo.isSlashed) {
+                // Bond curve should be reset to default in case of slashing. See https://hackmd.io/@lido/SygBLW5ja
+                accounting.resetBondCurve(withdrawalInfo.nodeOperatorId);
+            }
+
+            if (DEPOSIT_SIZE > withdrawalInfo.amount) {
+                unchecked {
+                    accounting.penalize(
+                        withdrawalInfo.nodeOperatorId,
+                        DEPOSIT_SIZE - withdrawalInfo.amount
+                    );
+                }
+            }
+
+            // Nonce should be updated if depositableValidators change
+            _updateDepositableValidatorsCount({
+                nodeOperatorId: withdrawalInfo.nodeOperatorId,
+                incrementNonceIfUpdated: true
+            });
+        }
     }
 
     /// @inheritdoc IStakingModule

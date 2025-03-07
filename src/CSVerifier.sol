@@ -4,7 +4,7 @@
 pragma solidity 0.8.24;
 
 import { ICSVerifier } from "./interfaces/ICSVerifier.sol";
-import { ICSModule } from "./interfaces/ICSModule.sol";
+import { ICSModule, ValidatorWithdrawalInfo } from "./interfaces/ICSModule.sol";
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 
@@ -150,12 +150,15 @@ contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
             pubkey: pubkey
         });
 
-        MODULE.submitWithdrawal(
+        ValidatorWithdrawalInfo[]
+            memory withdrawalsInfo = new ValidatorWithdrawalInfo[](1);
+        withdrawalsInfo[0] = ValidatorWithdrawalInfo(
             nodeOperatorId,
             keyIndex,
             withdrawalAmount,
             witness.slashed
         );
+        MODULE.submitWithdrawals(withdrawalsInfo);
     }
 
     /// @inheritdoc ICSVerifier
@@ -214,12 +217,15 @@ contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
             pubkey: pubkey
         });
 
-        MODULE.submitWithdrawal(
+        ValidatorWithdrawalInfo[]
+            memory withdrawalsInfo = new ValidatorWithdrawalInfo[](1);
+        withdrawalsInfo[0] = ValidatorWithdrawalInfo(
             nodeOperatorId,
             keyIndex,
             withdrawalAmount,
             witness.slashed
         );
+        MODULE.submitWithdrawals(withdrawalsInfo);
     }
 
     function _getParentBlockRoot(

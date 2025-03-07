@@ -220,7 +220,7 @@ contract CSVerifierBiForkHistoricalTestShared is Utilities {
 
         vm.mockCall(
             address(module),
-            abi.encodeWithSelector(ICSModule.submitWithdrawal.selector),
+            abi.encodeWithSelector(ICSModule.submitWithdrawals.selector),
             ""
         );
     }
