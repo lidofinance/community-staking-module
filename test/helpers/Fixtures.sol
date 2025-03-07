@@ -87,6 +87,7 @@ contract DeploymentHelpers is Test {
         string RPC_URL;
         string DEPLOY_CONFIG;
         string UPGRADE_CONFIG;
+        uint256 VOTE_PREV_BLOCK;
     }
 
     struct DeploymentConfig {
@@ -128,7 +129,8 @@ contract DeploymentHelpers is Test {
         Env memory env = Env(
             vm.envOr("RPC_URL", string("")),
             vm.envOr("DEPLOY_CONFIG", string("")),
-            vm.envOr("UPGRADE_CONFIG", string(""))
+            vm.envOr("UPGRADE_CONFIG", string("")),
+            vm.envOr("VOTE_PREV_BLOCK", uint256(0))
         );
         vm.skip(_isEmpty(env.RPC_URL));
         vm.skip(_isEmpty(env.DEPLOY_CONFIG));
@@ -298,6 +300,12 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
     IGateSeal public gateSeal;
     IBurner public burner;
 
+    // v2 implementations
+    CSModule public csmImpl;
+    CSAccounting public accountingImpl;
+    CSFeeOracle public oracleImpl;
+    CSFeeDistributor public feeDistributorImpl;
+
     function initializeFromDeployment() public {
         Env memory env = envVars();
         string memory config = vm.readFile(env.DEPLOY_CONFIG);
@@ -333,6 +341,13 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
             UpgradeConfig memory upgradeConfig = parseUpgradeConfig(
                 vm.readFile(env.UPGRADE_CONFIG)
             );
+            csmImpl = CSModule(upgradeConfig.csmImpl);
+            accountingImpl = CSAccounting(upgradeConfig.accountingImpl);
+            oracleImpl = CSFeeOracle(upgradeConfig.oracleImpl);
+            feeDistributorImpl = CSFeeDistributor(
+                upgradeConfig.feeDistributorImpl
+            );
+
             parametersRegistry = CSParametersRegistry(
                 upgradeConfig.parametersRegistry
             );
