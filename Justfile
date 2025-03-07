@@ -217,20 +217,22 @@ deploy-local:
     just _warn "anvil is kept running in the background: {{anvil_rpc_url}}"
 
 test-upgrade *args:
+    #!/usr/bin/env bash
+
     just make-fork --silent &
-    @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
+    while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
+
     DEPLOYER_PRIVATE_KEY=`cat localhost.json | jq -r ".private_keys[0]"` \
         just _deploy-impl --broadcast
 
-    DEPLOY_CONFIG=./artifacts/{{chain}}/deploy-{{chain}}.json \
-    UPGRADE_CONFIG=./artifacts/local/upgrade-{{chain}}.json \
-    RPC_URL={{anvil_rpc_url}} \
-        just vote-upgrade
+    export DEPLOY_CONFIG=./artifacts/{{chain}}/deploy-{{chain}}.json
+    export UPGRADE_CONFIG=./artifacts/local/upgrade-{{chain}}.json
+    export RPC_URL={{anvil_rpc_url}}
+    export VOTE_PREV_BLOCK=`cast block-number -r $RPC_URL`
 
-    DEPLOY_CONFIG=./artifacts/{{chain}}/deploy-{{chain}}.json \
-    UPGRADE_CONFIG=./artifacts/local/upgrade-{{chain}}.json \
-    RPC_URL={{anvil_rpc_url}} \
-       just test-post-voting {{args}}
+    just vote-upgrade
+    just test-post-voting {{args}}
+
     just kill-fork
 
 test-local *args:
