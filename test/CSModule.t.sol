@@ -832,6 +832,39 @@ contract CSMAddValidatorKeys is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
+    function test_AddValidatorKeysWstETH_revertWhen_KeysLimitExceeded()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        uint256 noId = createNodeOperator();
+        uint256 toWrap = BOND_SIZE + 1 wei;
+        vm.deal(nodeOperator, toWrap);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: toWrap }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        wstETH.wrap(toWrap);
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        parametersRegistry.setKeysLimit(0, 1);
+
+        vm.expectRevert(ICSModule.KeysLimitExceeded.selector);
+        csm.addValidatorKeysWstETH(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
     function test_AddValidatorKeysWstETH_withTargetLimitSet()
         public
         assertInvariants
@@ -999,6 +1032,37 @@ contract CSMAddValidatorKeys is CSMCommon {
         assertEq(csm.getNonce(), nonce + 1);
     }
 
+    function test_AddValidatorKeysStETH_revertWhen_KeysLimitExceeded()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        uint256 noId = createNodeOperator();
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+
+        parametersRegistry.setKeysLimit(0, 1);
+
+        vm.expectRevert(ICSModule.KeysLimitExceeded.selector);
+        csm.addValidatorKeysStETH(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: BOND_SIZE,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
     function test_AddValidatorKeysStETH_withTargetLimitSet()
         public
         assertInvariants
@@ -1151,6 +1215,30 @@ contract CSMAddValidatorKeys is CSMCommon {
             signatures
         );
         assertEq(csm.getNonce(), nonce + 1);
+    }
+
+    function test_AddValidatorKeysETH_revertWhen_KeysLimitExceeded()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        uint256 noId = createNodeOperator();
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
+        vm.deal(nodeOperator, required);
+
+        parametersRegistry.setKeysLimit(0, 1);
+
+        vm.expectRevert(ICSModule.KeysLimitExceeded.selector);
+        vm.prank(nodeOperator);
+        csm.addValidatorKeysETH{ value: required }(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures
+        );
     }
 
     function test_AddValidatorKeysETH_withTargetLimitSet()

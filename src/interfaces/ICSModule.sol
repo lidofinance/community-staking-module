@@ -59,6 +59,7 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     error NotEnoughKeys();
     error PriorityQueueAlreadyUsed();
 
+    error KeysLimitExceeded();
     error SigningKeysInvalidOffset();
 
     error AlreadyWithdrawn();
