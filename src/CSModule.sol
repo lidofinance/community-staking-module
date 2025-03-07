@@ -681,17 +681,21 @@ contract CSModule is
         ValidatorWithdrawalInfo[] calldata withdrawalsInfo
     ) external onlyRole(VERIFIER_ROLE) {
         for (uint256 i; i < withdrawalsInfo.length; ++i) {
-            uint256 nodeOperatorId = withdrawalsInfo[i].nodeOperatorId;
+            ValidatorWithdrawalInfo memory withdrawalInfo = withdrawalsInfo[i];
 
-            _onlyExistingNodeOperator(nodeOperatorId);
-            NodeOperator storage no = _nodeOperators[nodeOperatorId];
+            _onlyExistingNodeOperator(withdrawalInfo.nodeOperatorId);
+            NodeOperator storage no = _nodeOperators[
+                withdrawalInfo.nodeOperatorId
+            ];
 
-            uint256 keyIndex = withdrawalsInfo[i].keyIndex;
-            if (keyIndex >= no.totalDepositedKeys) {
+            if (withdrawalInfo.keyIndex >= no.totalDepositedKeys) {
                 revert SigningKeysInvalidOffset();
             }
 
-            uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
+            uint256 pointer = _keyPointer(
+                withdrawalInfo.nodeOperatorId,
+                withdrawalInfo.keyIndex
+            );
             if (_isValidatorWithdrawn[pointer]) revert AlreadyWithdrawn();
 
             _isValidatorWithdrawn[pointer] = true;
@@ -700,29 +704,35 @@ contract CSModule is
             }
 
             bytes memory pubkey = SigningKeys.loadKeys(
-                nodeOperatorId,
-                keyIndex,
+                withdrawalInfo.nodeOperatorId,
+                withdrawalInfo.keyIndex,
                 1
             );
 
-            uint256 amount = withdrawalsInfo[i].amount;
+            emit WithdrawalSubmitted(
+                withdrawalInfo.nodeOperatorId,
+                withdrawalInfo.keyIndex,
+                withdrawalInfo.amount,
+                pubkey
+            );
 
-            emit WithdrawalSubmitted(nodeOperatorId, keyIndex, amount, pubkey);
-
-            if (withdrawalsInfo[i].isSlashed) {
+            if (withdrawalInfo.isSlashed) {
                 // Bond curve should be reset to default in case of slashing. See https://hackmd.io/@lido/SygBLW5ja
-                accounting.resetBondCurve(nodeOperatorId);
+                accounting.resetBondCurve(withdrawalInfo.nodeOperatorId);
             }
 
-            if (DEPOSIT_SIZE > amount) {
+            if (DEPOSIT_SIZE > withdrawalInfo.amount) {
                 unchecked {
-                    accounting.penalize(nodeOperatorId, DEPOSIT_SIZE - amount);
+                    accounting.penalize(
+                        withdrawalInfo.nodeOperatorId,
+                        DEPOSIT_SIZE - withdrawalInfo.amount
+                    );
                 }
             }
 
             // Nonce should be updated if depositableValidators change
             _updateDepositableValidatorsCount({
-                nodeOperatorId: nodeOperatorId,
+                nodeOperatorId: withdrawalInfo.nodeOperatorId,
                 incrementNonceIfUpdated: true
             });
         }
