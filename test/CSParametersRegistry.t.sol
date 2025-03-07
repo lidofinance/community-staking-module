@@ -210,6 +210,37 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
         vm.expectRevert(ICSParametersRegistry.InvalidStrikesParams.selector);
         parametersRegistry.initialize(admin, customInitData);
     }
+
+    function test_initialize_RevertWhen_InvalidPriorityQueueId_QueueIdGreaterThanAllowed()
+        public
+    {
+        _enableInitializers(address(parametersRegistry));
+
+        ICSParametersRegistry.InitializationData
+            memory customInitData = defaultInitData;
+
+        customInitData.defaultQueuePriority =
+            parametersRegistry.QUEUE_LOWEST_PRIORITY() +
+            1;
+
+        vm.expectRevert(ICSParametersRegistry.QueueCannotBeUsed.selector);
+        parametersRegistry.initialize(admin, customInitData);
+    }
+
+    function test_initialize_RevertWhen_InvalidPriorityQueueId_QueueIdIsLegacyQueue()
+        public
+    {
+        _enableInitializers(address(parametersRegistry));
+
+        ICSParametersRegistry.InitializationData
+            memory customInitData = defaultInitData;
+
+        customInitData.defaultQueuePriority = parametersRegistry
+            .QUEUE_LEGACY_PRIORITY();
+
+        vm.expectRevert(ICSParametersRegistry.QueueCannotBeUsed.selector);
+        parametersRegistry.initialize(admin, customInitData);
+    }
 }
 
 abstract contract ParametersTest {

@@ -6835,4 +6835,41 @@ contract CSMMisc is CSMCommon {
 
         assertEq(activeCount, 3);
     }
+
+    function test_getNodeOperatorTotalDepositedKeys() public assertInvariants {
+        uint256 noId = createNodeOperator();
+
+        uint256 depositedCount = csm.getNodeOperatorTotalDepositedKeys(noId);
+        assertEq(depositedCount, 0);
+
+        csm.obtainDepositData(1, "");
+
+        depositedCount = csm.getNodeOperatorTotalDepositedKeys(noId);
+        assertEq(depositedCount, 1);
+    }
+
+    function test_getNodeOperatorManagementProperties()
+        public
+        assertInvariants
+    {
+        address manager = nextAddress();
+        address reward = nextAddress();
+        bool extended = true;
+
+        uint256 noId = csm.createNodeOperator(
+            manager,
+            NodeOperatorManagementProperties({
+                managerAddress: manager,
+                rewardAddress: reward,
+                extendedManagerPermissions: extended
+            }),
+            address(0)
+        );
+
+        NodeOperatorManagementProperties memory props = csm
+            .getNodeOperatorManagementProperties(noId);
+        assertEq(props.managerAddress, manager);
+        assertEq(props.rewardAddress, reward);
+        assertEq(props.extendedManagerPermissions, extended);
+    }
 }
