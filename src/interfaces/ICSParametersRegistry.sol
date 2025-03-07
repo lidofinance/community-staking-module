@@ -47,6 +47,7 @@ interface ICSParametersRegistry {
     struct InitializationData {
         uint256 keyRemovalCharge;
         uint256 elRewardsStealingAdditionalFine;
+        uint256 keysLimit;
         uint256 rewardShare;
         uint256 performanceLeeway;
         uint256 strikesLifetime;
@@ -66,6 +67,7 @@ interface ICSParametersRegistry {
 
     event DefaultKeyRemovalChargeSet(uint256 value);
     event DefaultElRewardsStealingAdditionalFineSet(uint256 value);
+    event DefaultKeysLimitSet(uint256 value);
     event DefaultRewardShareSet(uint256 value);
     event DefaultPerformanceLeewaySet(uint256 value);
     event DefaultStrikesParamsSet(uint256 lifetime, uint256 threshold);
@@ -85,6 +87,7 @@ interface ICSParametersRegistry {
         uint256 indexed curveId,
         uint256 fine
     );
+    event KeysLimitSet(uint256 indexed curveId, uint256 limit);
     event RewardShareDataSet(uint256 indexed curveId);
     event PerformanceLeewayDataSet(uint256 indexed curveId);
     event StrikesParamsSet(
@@ -102,6 +105,7 @@ interface ICSParametersRegistry {
 
     event KeyRemovalChargeUnset(uint256 indexed curveId);
     event ElRewardsStealingAdditionalFineUnset(uint256 indexed curveId);
+    event KeysLimitUnset(uint256 indexed curveId);
     event RewardShareDataUnset(uint256 indexed curveId);
     event PerformanceLeewayDataUnset(uint256 indexed curveId);
     event StrikesParamsUnset(uint256 indexed curveId);
@@ -141,6 +145,13 @@ interface ICSParametersRegistry {
     function defaultElRewardsStealingAdditionalFine()
         external
         returns (uint256);
+
+    /// @notice Set default value for the keys limit. Default value is used if a specific value is not set for the curveId
+    /// @param limit value to be set as default for the keys limit
+    function setDefaultKeysLimit(uint256 limit) external;
+
+    /// @notice Get default value for the key removal charge
+    function defaultKeysLimit() external returns (uint256);
 
     /// @notice Set default value for the reward share. Default value is used if a specific value is not set for the curveId
     /// @param share value to be set as default for the reward share
@@ -230,6 +241,23 @@ interface ICSParametersRegistry {
     function getElRewardsStealingAdditionalFine(
         uint256 curveId
     ) external view returns (uint256 fine);
+
+    /// @notice Set keys limit for the curveId.
+    /// @param curveId Curve Id to associate keys limit with
+    /// @param limit Keys limit
+    function setKeysLimit(uint256 curveId, uint256 limit) external;
+
+    /// @notice Unset key removal charge for the curveId
+    /// @param curveId Curve Id to unset custom key removal charge for
+    function unsetKeysLimit(uint256 curveId) external;
+
+    /// @notice Get keys limit by the curveId. A limit indicates the maximal amount of the non-exited keys Node Operator can upload
+    /// @dev `defaultKeysLimit` is returned if the value is not set for the given curveId.
+    /// @param curveId Curve Id to get keys limit for
+    /// @return limit Keys limit
+    function getKeysLimit(
+        uint256 curveId
+    ) external view returns (uint256 limit);
 
     /// @notice Set reward share parameters for the curveId
     /// @dev keyPivots = [10, 50] and rewardShares = [10000, 8000, 5000] stands for

@@ -126,6 +126,7 @@ contract CSParametersRegistryDeploymentTest is
             parametersRegistry.defaultElRewardsStealingAdditionalFine(),
             deployParams.elRewardsStealingAdditionalFine
         );
+        assertEq(parametersRegistry.defaultKeysLimit(), deployParams.keysLimit);
         assertEq(
             parametersRegistry.defaultRewardShare(),
             deployParams.rewardShareBP
@@ -191,6 +192,7 @@ contract CSParametersRegistryDeploymentTest is
                 keyRemovalCharge: deployParams.keyRemovalCharge,
                 elRewardsStealingAdditionalFine: deployParams
                     .elRewardsStealingAdditionalFine,
+                keysLimit: deployParams.keysLimit,
                 rewardShare: deployParams.rewardShareBP,
                 performanceLeeway: deployParams.avgPerfLeewayBP,
                 strikesLifetime: deployParams.strikesLifetimeFrames,

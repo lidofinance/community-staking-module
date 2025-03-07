@@ -31,6 +31,7 @@ contract CSParametersRegistryBaseTest is Test, Utilities, Fixtures {
         defaultInitData = ICSParametersRegistry.InitializationData({
             keyRemovalCharge: 0.05 ether,
             elRewardsStealingAdditionalFine: 0.1 ether,
+            keysLimit: 100_000,
             rewardShare: 8000,
             performanceLeeway: 500,
             strikesLifetime: 6,
@@ -61,6 +62,10 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
         vm.expectEmit(address(parametersRegistry));
         emit ICSParametersRegistry.DefaultElRewardsStealingAdditionalFineSet(
             defaultInitData.elRewardsStealingAdditionalFine
+        );
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.DefaultKeysLimitSet(
+            defaultInitData.keysLimit
         );
         vm.expectEmit(address(parametersRegistry));
         emit ICSParametersRegistry.DefaultRewardShareSet(
@@ -100,6 +105,10 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
         assertEq(
             parametersRegistry.defaultElRewardsStealingAdditionalFine(),
             defaultInitData.elRewardsStealingAdditionalFine
+        );
+        assertEq(
+            parametersRegistry.defaultKeysLimit(),
+            defaultInitData.keysLimit
         );
         assertEq(
             parametersRegistry.defaultRewardShare(),
@@ -948,6 +957,98 @@ contract CSParametersRegistryElRewardsStealingAdditionalFineTest is
         );
 
         assertEq(fineOut, defaultInitData.elRewardsStealingAdditionalFine);
+    }
+}
+
+contract CSParametersRegistryKeysLimitTest is
+    CSParametersRegistryBaseTestInitialized,
+    ParametersTest
+{
+    function test_setDefault() public override {
+        uint256 limit = 1000;
+
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.DefaultKeysLimitSet(limit);
+        vm.prank(admin);
+        parametersRegistry.setDefaultKeysLimit(limit);
+
+        assertEq(parametersRegistry.defaultKeysLimit(), limit);
+    }
+
+    function test_setDefault_RevertWhen_notAdmin() public override {
+        uint256 limit = 1000;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.setDefaultKeysLimit(limit);
+    }
+
+    function test_set() public override {
+        uint256 curveId = 1;
+        uint256 limit = 1000;
+
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.KeysLimitSet(curveId, limit);
+        vm.prank(admin);
+        parametersRegistry.setKeysLimit(curveId, limit);
+    }
+
+    function test_set_RevertWhen_notAdmin() public override {
+        uint256 curveId = 1;
+        uint256 limit = 1000;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.setKeysLimit(curveId, limit);
+    }
+
+    function test_unset() public override {
+        uint256 curveId = 1;
+        uint256 limit = 1000;
+
+        vm.prank(admin);
+        parametersRegistry.setKeysLimit(curveId, limit);
+
+        uint256 limitOut = parametersRegistry.getKeysLimit(curveId);
+
+        assertEq(limitOut, limit);
+
+        vm.prank(admin);
+        parametersRegistry.unsetKeysLimit(curveId);
+
+        limitOut = parametersRegistry.getKeysLimit(curveId);
+
+        assertEq(limitOut, defaultInitData.keysLimit);
+    }
+
+    function test_unset_RevertWhen_notAdmin() public override {
+        uint256 curveId = 1;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.unsetKeysLimit(curveId);
+    }
+
+    function test_get_usualData() public override {
+        uint256 curveId = 1;
+        uint256 limit = 1000;
+
+        vm.prank(admin);
+        parametersRegistry.setKeysLimit(curveId, limit);
+
+        uint256 limitOut = parametersRegistry.getKeysLimit(curveId);
+
+        assertEq(limitOut, limit);
+    }
+
+    function test_get_defaultData() public view override {
+        uint256 curveId = 10;
+        uint256 limitOut = parametersRegistry.getKeysLimit(curveId);
+
+        assertEq(limitOut, defaultInitData.keysLimit);
     }
 }
 

@@ -101,6 +101,10 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
             upgradeDeployParams.elRewardsStealingAdditionalFine
         );
         assertEq(
+            parametersRegistry.defaultKeysLimit(),
+            upgradeDeployParams.keysLimit
+        );
+        assertEq(
             parametersRegistry.defaultRewardShare(),
             upgradeDeployParams.rewardShareBP
         );
