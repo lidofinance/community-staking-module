@@ -24,6 +24,9 @@ contract CSParametersRegistry is
     mapping(uint256 => MarkedUint248)
         internal _elRewardsStealingAdditionalFines;
 
+    uint256 public defaultKeysLimit;
+    mapping(uint256 => MarkedUint248) internal _keysLimits;
+
     QueueConfig public defaultQueueConfig;
     mapping(uint256 curveId => MarkedQueueConfig) internal _queueConfigs;
 
@@ -67,6 +70,7 @@ contract CSParametersRegistry is
         _setDefaultElRewardsStealingAdditionalFine(
             data.elRewardsStealingAdditionalFine
         );
+        _setDefaultKeysLimit(data.keysLimit);
         _setDefaultRewardShare(data.rewardShare);
         _setDefaultPerformanceLeeway(data.performanceLeeway);
         _setDefaultStrikesParams(data.strikesLifetime, data.strikesThreshold);
@@ -97,6 +101,13 @@ contract CSParametersRegistry is
         uint256 fine
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setDefaultElRewardsStealingAdditionalFine(fine);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function setDefaultKeysLimit(
+        uint256 limit
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setDefaultKeysLimit(limit);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -187,6 +198,23 @@ contract CSParametersRegistry is
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         delete _elRewardsStealingAdditionalFines[curveId];
         emit ElRewardsStealingAdditionalFineUnset(curveId);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function setKeysLimit(
+        uint256 curveId,
+        uint256 limit
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _keysLimits[curveId] = MarkedUint248(limit.toUint248(), true);
+        emit KeysLimitSet(curveId, limit);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function unsetKeysLimit(
+        uint256 curveId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        delete _keysLimits[curveId];
+        emit KeysLimitUnset(curveId);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -384,6 +412,14 @@ contract CSParametersRegistry is
     }
 
     /// @inheritdoc ICSParametersRegistry
+    function getKeysLimit(
+        uint256 curveId
+    ) external view returns (uint256 limit) {
+        MarkedUint248 memory data = _keysLimits[curveId];
+        return data.isValue ? data.value : defaultKeysLimit;
+    }
+
+    /// @inheritdoc ICSParametersRegistry
     function getRewardShareData(
         uint256 curveId
     )
@@ -496,6 +532,11 @@ contract CSParametersRegistry is
     function _setDefaultElRewardsStealingAdditionalFine(uint256 fine) internal {
         defaultElRewardsStealingAdditionalFine = fine;
         emit DefaultElRewardsStealingAdditionalFineSet(fine);
+    }
+
+    function _setDefaultKeysLimit(uint256 limit) internal {
+        defaultKeysLimit = limit;
+        emit DefaultKeysLimitSet(limit);
     }
 
     function _setDefaultRewardShare(uint256 share) internal {

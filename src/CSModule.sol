@@ -1157,6 +1157,12 @@ contract CSModule is
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         uint256 startIndex = no.totalAddedKeys;
 
+        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
+        uint256 keysLimit = PARAMETERS_REGISTRY.getKeysLimit(curveId);
+
+        if (no.totalAddedKeys + keysCount - no.totalExitedKeys > keysLimit)
+            revert KeysLimitExceeded();
+
         // solhint-disable-next-line func-named-parameters
         SigningKeys.saveKeysSigs(
             nodeOperatorId,

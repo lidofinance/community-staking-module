@@ -12,6 +12,8 @@ struct MarkedQueueConfig {
 contract CSParametersRegistryMock {
     uint256 public keyRemovalCharge = 0.01 ether;
 
+    uint256 public keysLimit = 100_000;
+
     uint256 public strikesLifetime = 6;
     uint256 public strikesThreshold = 3;
 
@@ -33,6 +35,16 @@ contract CSParametersRegistryMock {
         uint256 charge
     ) external {
         keyRemovalCharge = charge;
+    }
+
+    function getKeysLimit(
+        uint256 /* curveId */
+    ) external view returns (uint256) {
+        return keysLimit;
+    }
+
+    function setKeysLimit(uint256 /* curveId */, uint256 limit) external {
+        keysLimit = limit;
     }
 
     function getElRewardsStealingAdditionalFine(
