@@ -67,8 +67,8 @@ contract CSFeeOracle is
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setConsensusVersion(consensusVersion);
 
-        /// @dev nullify the storage slot. There is a transition from uint256 (32 bytes) to address (20 bytes)
-        ///      so we need to clear the complete slot to avoid any data corruption
+        // nullify the storage slot. There is a transition from uint256 (32 bytes) to address (20 bytes)
+        // so we need to clear the complete slot to avoid any data corruption
         assembly {
             sstore(strikes.slot, 0)
         }
