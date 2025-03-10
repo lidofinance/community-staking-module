@@ -96,6 +96,7 @@ contract DeployHolesky is DeployBase {
         config.vettedGateBondCurve[4] = 8.5 ether;
         config.vettedGateBondCurve[5] = 10 ether;
         // GateSeal
+        config.gateSealEnabled = true;
         config.gateSealFactory = 0x1134F7077055b0B3559BE52AfeF9aA22A0E1eEC2;
         config.sealingCommittee = 0xc4DAB3a3ef68C6DFd8614a870D64D475bA44F164; // Dev team EOA
         config.sealDuration = 6 days;

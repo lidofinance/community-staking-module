@@ -6,6 +6,8 @@ deploy_script_name := if chain == "mainnet" {
     "DeployMainnet"
 } else if chain == "holesky" {
     "DeployHolesky"
+} else if chain == "local-devnet" {
+    "DeployLocalDevNet"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -14,6 +16,8 @@ deploy_implementations_script_name := if chain == "mainnet" {
     "DeployImplementationsMainnet"
 } else if chain == "holesky" {
     "DeployImplementationsHolesky"
+} else if chain == "local-devnet" {
+    "SCRIPT_IS_NOT_DEFINED"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -22,6 +26,8 @@ deploy_config_path := if chain == "mainnet" {
     "artifacts/mainnet/deploy-mainnet.json"
 } else if chain == "holesky" {
     "artifacts/holesky/deploy-holesky.json"
+} else if chain == "local-devnet" {
+    "artifacts/holesky/deploy-local-devnet.json"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -174,7 +180,7 @@ kill-fork:
 
 deploy *args:
     FOUNDRY_PROFILE=deploy \
-        forge script {{deploy_script_path}} --sig="run(string)" --rpc-url {{anvil_rpc_url}} --broadcast --slow {{args}} -- `git rev-parse HEAD`
+        forge script {{deploy_script_path}} --sig="run(string)" --rpc-url {{anvil_rpc_url}} --broadcast {{args}} -- `git rev-parse HEAD`
 
 deploy-prod *args:
     just _warn "The current `tput bold`chain={{chain}}`tput sgr0` with the following rpc url: $RPC_URL"
