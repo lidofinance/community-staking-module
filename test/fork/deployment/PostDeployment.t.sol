@@ -396,7 +396,10 @@ contract CSFeeDistributorDeploymentTest is Test, Utilities, DeploymentFixtures {
             proxy.proxy__getImplementation()
         );
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        distributorImpl.initialize({ admin: deployParams.aragonAgent });
+        distributorImpl.initialize({
+            admin: deployParams.aragonAgent,
+            _rebateRecipient: deployParams.aragonAgent
+        });
     }
 }
 

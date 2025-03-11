@@ -80,6 +80,8 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
             upgradeConfigContent
         );
 
+        address admin = _prepareAdmin(deploymentConfig.csm);
+
         OssifiableProxy csmProxy = OssifiableProxy(
             payable(deploymentConfig.csm)
         );
@@ -121,12 +123,12 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
             feeDistributorProxy.proxy__upgradeTo(
                 upgradeConfig.feeDistributorImpl
             );
-            CSFeeDistributor(deploymentConfig.feeDistributor)
-                .finalizeUpgradeV2();
+            CSFeeDistributor(deploymentConfig.feeDistributor).finalizeUpgradeV2(
+                admin
+            );
         }
         vm.stopBroadcast();
 
-        address admin = _prepareAdmin(deploymentConfig.csm);
         locator = ILidoLocator(deploymentConfig.lidoLocator);
         csm = CSModule(deploymentConfig.csm);
         accounting = CSAccounting(deploymentConfig.accounting);

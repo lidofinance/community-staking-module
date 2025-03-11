@@ -62,8 +62,7 @@ contract CSFeeDistributorConstructorTest is CSFeeDistributorTestBase {
         feeDistributor = new CSFeeDistributor(
             address(stETH),
             address(accounting),
-            oracle,
-            rebateRecipient
+            oracle
         );
 
         assertEq(feeDistributor.ACCOUNTING(), address(accounting));
@@ -75,52 +74,26 @@ contract CSFeeDistributorConstructorTest is CSFeeDistributorTestBase {
         feeDistributor = new CSFeeDistributor(
             address(stETH),
             address(accounting),
-            oracle,
-            rebateRecipient
+            oracle
         );
 
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        feeDistributor.initialize(address(this));
+        feeDistributor.initialize(address(this), rebateRecipient);
     }
 
     function test_initialize_RevertWhen_ZeroAccountingAddress() public {
         vm.expectRevert(ICSFeeDistributor.ZeroAccountingAddress.selector);
-        new CSFeeDistributor(
-            address(stETH),
-            address(0),
-            oracle,
-            rebateRecipient
-        );
+        new CSFeeDistributor(address(stETH), address(0), oracle);
     }
 
     function test_initialize_RevertWhen_ZeroStEthAddress() public {
         vm.expectRevert(ICSFeeDistributor.ZeroStEthAddress.selector);
-        new CSFeeDistributor(
-            address(0),
-            address(accounting),
-            oracle,
-            rebateRecipient
-        );
+        new CSFeeDistributor(address(0), address(accounting), oracle);
     }
 
     function test_initialize_RevertWhen_ZeroOracleAddress() public {
         vm.expectRevert(ICSFeeDistributor.ZeroOracleAddress.selector);
-        new CSFeeDistributor(
-            address(stETH),
-            address(accounting),
-            address(0),
-            rebateRecipient
-        );
-    }
-
-    function test_initialize_RevertWhen_ZeroRebateREcipientAddress() public {
-        vm.expectRevert(ICSFeeDistributor.ZeroRebateRecipientAddress.selector);
-        new CSFeeDistributor(
-            address(stETH),
-            address(accounting),
-            oracle,
-            address(0)
-        );
+        new CSFeeDistributor(address(stETH), address(accounting), address(0));
     }
 }
 
@@ -137,8 +110,7 @@ contract CSFeeDistributorInitTest is CSFeeDistributorTestBase {
         feeDistributor = new CSFeeDistributor(
             address(stETH),
             address(accounting),
-            oracle,
-            rebateRecipient
+            oracle
         );
     }
 
@@ -146,7 +118,14 @@ contract CSFeeDistributorInitTest is CSFeeDistributorTestBase {
         _enableInitializers(address(feeDistributor));
 
         vm.expectRevert(ICSFeeDistributor.ZeroAdminAddress.selector);
-        feeDistributor.initialize(address(0));
+        feeDistributor.initialize(address(0), rebateRecipient);
+    }
+
+    function test_initialize_RevertWhen_zeroRebateRecipient() public {
+        _enableInitializers(address(feeDistributor));
+
+        vm.expectRevert(ICSFeeDistributor.ZeroRebateRecipientAddress.selector);
+        feeDistributor.initialize(address(this), address(0));
     }
 }
 
@@ -163,12 +142,11 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         feeDistributor = new CSFeeDistributor(
             address(stETH),
             address(accounting),
-            oracle,
-            rebateRecipient
+            oracle
         );
 
         _enableInitializers(address(feeDistributor));
-        feeDistributor.initialize(address(this));
+        feeDistributor.initialize(address(this), rebateRecipient);
 
         tree = new MerkleTree();
 
@@ -837,6 +815,26 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         );
     }
 
+    function test_setRebateRecipient() public {
+        address recipient = nextAddress();
+        feeDistributor.setRebateRecipient(recipient);
+        assertEq(feeDistributor.rebateRecipient(), recipient);
+    }
+
+    function test_setRebateRecipient_revertWhen_ZeroRebateRecipientAddress()
+        public
+    {
+        vm.expectRevert(ICSFeeDistributor.ZeroRebateRecipientAddress.selector);
+        feeDistributor.setRebateRecipient(address(0));
+    }
+
+    function test_setRebateRecipient_revertWhen_NotAdmin() public {
+        address recipient = nextAddress();
+        expectRoleRevert(stranger, feeDistributor.DEFAULT_ADMIN_ROLE());
+        vm.prank(stranger);
+        feeDistributor.setRebateRecipient(recipient);
+    }
+
     function _makeInitialReport(uint256 shares) internal {
         stETH.mintShares(address(feeDistributor), shares);
         uint256 refSlot = 154;
@@ -870,13 +868,12 @@ contract CSFeeDistributorAssetRecovererTest is CSFeeDistributorTestBase {
         feeDistributor = new CSFeeDistributor(
             address(stETH),
             address(accounting),
-            nextAddress("ORACLE"),
-            rebateRecipient
+            nextAddress("ORACLE")
         );
 
         _enableInitializers(address(feeDistributor));
 
-        feeDistributor.initialize(address(this));
+        feeDistributor.initialize(address(this), rebateRecipient);
 
         feeDistributor.grantRole(feeDistributor.RECOVERER_ROLE(), recoverer);
     }

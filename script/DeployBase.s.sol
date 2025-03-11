@@ -241,8 +241,7 @@ abstract contract DeployBase is Script {
             CSFeeDistributor feeDistributorImpl = new CSFeeDistributor({
                 stETH: locator.lido(),
                 accounting: address(accounting),
-                oracle: address(oracle),
-                rebateRecipient: config.aragonAgent
+                oracle: address(oracle)
             });
             feeDistributor = CSFeeDistributor(
                 _deployProxy(config.proxyAdmin, address(feeDistributorImpl))
@@ -335,7 +334,10 @@ abstract contract DeployBase is Script {
                 })
             );
 
-            feeDistributor.initialize({ admin: address(deployer) });
+            feeDistributor.initialize({
+                admin: address(deployer),
+                _rebateRecipient: config.aragonAgent
+            });
 
             hashConsensus = new HashConsensus({
                 slotsPerEpoch: config.slotsPerEpoch,
