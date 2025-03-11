@@ -369,11 +369,10 @@ contract CSParametersRegistry is
         uint256 curveId,
         QueueConfig calldata config
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (config.priority == QUEUE_LEGACY_PRIORITY) {
-            revert QueueCannotBeUsed();
-        }
-
-        if (config.priority > QUEUE_LOWEST_PRIORITY) {
+        if (
+            config.priority > QUEUE_LOWEST_PRIORITY ||
+            config.priority == QUEUE_LEGACY_PRIORITY
+        ) {
             revert QueueCannotBeUsed();
         }
 
@@ -589,7 +588,10 @@ contract CSParametersRegistry is
         uint256 priority,
         uint256 maxDeposits
     ) internal {
-        if (priority > QUEUE_LOWEST_PRIORITY) {
+        if (
+            priority > QUEUE_LOWEST_PRIORITY ||
+            priority == QUEUE_LEGACY_PRIORITY
+        ) {
             revert QueueCannotBeUsed();
         }
         defaultQueueConfig.priority = priority.toUint32();

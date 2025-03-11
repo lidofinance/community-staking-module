@@ -1465,6 +1465,8 @@ abstract contract CSAccountingClaimRewardsBaseTest is
     function test_SenderIsRewardAddress() public virtual;
 
     function test_RevertWhen_SenderIsNotEligible() public virtual;
+
+    function test_RevertWhen_NodeOperatorDoesNotExist() public virtual;
 }
 
 contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
@@ -1962,6 +1964,21 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
             abi.encodeWithSelector(ICSAccounting.SenderIsNotEligible.selector)
         );
         vm.prank(stranger);
+        accounting.claimRewardsStETH(
+            leaf.nodeOperatorId,
+            UINT256_MAX,
+            leaf.shares,
+            leaf.proof
+        );
+    }
+
+    function test_RevertWhen_NodeOperatorDoesNotExist() public override {
+        mock_getNodeOperatorManagementProperties(address(0), address(0), false);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ICSAccounting.NodeOperatorDoesNotExist.selector
+            )
+        );
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
@@ -2537,6 +2554,21 @@ contract CSAccountingClaimWstETHRewardsTest is
             leaf.proof
         );
     }
+
+    function test_RevertWhen_NodeOperatorDoesNotExist() public override {
+        mock_getNodeOperatorManagementProperties(address(0), address(0), false);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ICSAccounting.NodeOperatorDoesNotExist.selector
+            )
+        );
+        accounting.claimRewardsWstETH(
+            leaf.nodeOperatorId,
+            UINT256_MAX,
+            leaf.shares,
+            leaf.proof
+        );
+    }
 }
 
 contract CSAccountingClaimRewardsUnstETHTest is
@@ -2995,6 +3027,21 @@ contract CSAccountingClaimRewardsUnstETHTest is
             abi.encodeWithSelector(ICSAccounting.SenderIsNotEligible.selector)
         );
         vm.prank(stranger);
+        accounting.claimRewardsUnstETH(
+            leaf.nodeOperatorId,
+            UINT256_MAX,
+            leaf.shares,
+            leaf.proof
+        );
+    }
+
+    function test_RevertWhen_NodeOperatorDoesNotExist() public override {
+        mock_getNodeOperatorManagementProperties(address(0), address(0), false);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ICSAccounting.NodeOperatorDoesNotExist.selector
+            )
+        );
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
             UINT256_MAX,
