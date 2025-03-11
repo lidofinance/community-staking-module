@@ -54,10 +54,8 @@ contract RecoverIntegrationTest is
         user = nextAddress("User");
 
         vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
-        csm.grantRole(csm.RESUME_ROLE(), address(this));
         csm.grantRole(csm.RECOVERER_ROLE(), recoverer);
         vm.stopPrank();
-        if (csm.isPaused()) csm.resume();
 
         handleStakingLimit();
         handleBunkerMode();
