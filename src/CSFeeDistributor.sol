@@ -24,7 +24,6 @@ contract CSFeeDistributor is
     IStETH public immutable STETH;
     address public immutable ACCOUNTING;
     address public immutable ORACLE;
-    address public immutable REBATE_RECIPIENT;
 
     /// @notice The latest Merkle Tree root
     bytes32 public treeRoot;
@@ -47,33 +46,45 @@ contract CSFeeDistributor is
     /// @notice The number of _distributionDataHistory records
     uint256 public distributionDataHistoryCount;
 
-    constructor(
-        address stETH,
-        address accounting,
-        address oracle,
-        address rebateRecipient
-    ) {
+    /// @notice The address to transfer rebate to
+    address public rebateRecipient;
+
+    constructor(address stETH, address accounting, address oracle) {
         if (accounting == address(0)) revert ZeroAccountingAddress();
         if (oracle == address(0)) revert ZeroOracleAddress();
         if (stETH == address(0)) revert ZeroStEthAddress();
-        if (rebateRecipient == address(0)) revert ZeroRebateRecipientAddress();
 
         ACCOUNTING = accounting;
         STETH = IStETH(stETH);
         ORACLE = oracle;
-        REBATE_RECIPIENT = rebateRecipient;
 
         _disableInitializers();
     }
 
-    function initialize(address admin) external reinitializer(2) {
+    function initialize(
+        address admin,
+        address _rebateRecipient
+    ) external reinitializer(2) {
         __AccessControlEnumerable_init();
         if (admin == address(0)) revert ZeroAdminAddress();
+
+        _setRebateRecipient(_rebateRecipient);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
-    function finalizeUpgradeV2() external reinitializer(2) {}
+    function finalizeUpgradeV2(
+        address _rebateRecipient
+    ) external reinitializer(2) {
+        _setRebateRecipient(_rebateRecipient);
+    }
+
+    /// @inheritdoc ICSFeeDistributor
+    function setRebateRecipient(
+        address _rebateRecipient
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setRebateRecipient(_rebateRecipient);
+    }
 
     /// @inheritdoc ICSFeeDistributor
     function distributeFees(
@@ -143,7 +154,7 @@ contract CSFeeDistributor is
         emit ModuleFeeDistributed(distributed);
 
         if (rebate > 0) {
-            STETH.transferShares(REBATE_RECIPIENT, rebate);
+            STETH.transferShares(rebateRecipient, rebate);
             emit RebateTransferred(rebate);
         }
 
@@ -234,6 +245,11 @@ contract CSFeeDistributor is
             keccak256(
                 bytes.concat(keccak256(abi.encode(nodeOperatorId, shares)))
             );
+    }
+
+    function _setRebateRecipient(address _rebateRecipient) internal {
+        if (_rebateRecipient == address(0)) revert ZeroRebateRecipientAddress();
+        rebateRecipient = _rebateRecipient;
     }
 
     function _onlyRecoverer() internal view override {

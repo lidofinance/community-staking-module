@@ -71,8 +71,6 @@ interface ICSFeeDistributor is IAssetRecovererLib {
 
     function ORACLE() external view returns (address);
 
-    function REBATE_RECIPIENT() external view returns (address);
-
     function treeRoot() external view returns (bytes32);
 
     function treeCid() external view returns (string calldata);
@@ -83,8 +81,16 @@ interface ICSFeeDistributor is IAssetRecovererLib {
 
     function totalClaimableShares() external view returns (uint256);
 
+    function distributionDataHistoryCount() external view returns (uint256);
+
+    function rebateRecipient() external view returns (address);
+
     /// @notice Get the initialized version of the contract
     function getInitializedVersion() external view returns (uint64);
+
+    /// @notice Set address to send rebate to
+    /// @param _rebateRecipient Address to send rebate to
+    function setRebateRecipient(address _rebateRecipient) external;
 
     /// @notice Get the Amount of stETH shares that can be distributed in favor of the Node Operator
     /// @param nodeOperatorId ID of the Node Operator
