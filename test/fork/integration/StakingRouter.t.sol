@@ -272,10 +272,10 @@ contract StakingRouterIntegrationTest is
     }
 
     function test_getStakingModuleSummary() public assertInvariants {
+        (uint256 noId, uint256 keysCount) = getDepositableNodeOperator();
+
         IStakingRouter.StakingModuleSummary memory summaryOld = stakingRouter
             .getStakingModuleSummary(moduleId);
-
-        (uint256 noId, uint256 keysCount) = getDepositableNodeOperator();
 
         hugeDeposit();
 
