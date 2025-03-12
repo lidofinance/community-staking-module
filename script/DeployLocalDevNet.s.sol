@@ -6,7 +6,7 @@ pragma solidity 0.8.24;
 import { DeployBase } from "./DeployBase.s.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 
-contract DeployMainnet is DeployBase {
+contract DeployLocalDevNet is DeployBase {
     constructor() DeployBase("local-devnet", 32382) {
         // Lido addresses
         config.lidoLocatorAddress = vm.envAddress("CSM_LOCATOR_ADDRESS");
