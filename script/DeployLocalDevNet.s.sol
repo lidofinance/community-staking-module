@@ -73,7 +73,7 @@ contract DeployLocalDevNet is DeployBase {
         // VettedGate
         config.vettedGateTreeRoot = vm.envOr(
             "CSM_VETTED_GATE_TREE_ROOT",
-            bytes32(0)
+            bytes32(uint256(0xdeadbeef))
         );
         config.vettedGateBondCurve = new uint256[](2);
         // 1.5 -> 1.3
