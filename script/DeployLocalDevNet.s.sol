@@ -79,8 +79,10 @@ contract DeployLocalDevNet is DeployBase {
         config.blocksWeight = 8; // https://eth2book.info/capella/part2/incentives/rewards/
         config.syncWeight = 2; // https://eth2book.info/capella/part2/incentives/rewards/
         // VettedGate
-        config
-            .vettedGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
+        config.vettedGateTreeRoot = vm.envOr(
+            "CSM_VETTED_GATE_TREE_ROOT",
+            bytes32(0)
+        );
         config.vettedGateBondCurve = new uint256[](2);
         // 1.5 -> 1.3
         config.vettedGateBondCurve[0] = 1.5 ether;
