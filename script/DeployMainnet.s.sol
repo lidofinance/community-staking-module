@@ -4,7 +4,7 @@
 pragma solidity 0.8.24;
 
 import { DeployBase } from "./DeployBase.s.sol";
-import { GIndex } from "../src/lib/GIndex.sol";
+import { GIndicies } from "./constants/GIndicies.sol";
 
 contract DeployMainnet is DeployBase {
     constructor() DeployBase("mainnet", 1) {
@@ -34,17 +34,9 @@ contract DeployMainnet is DeployBase {
         config.oracleMembers[8] = 0x73181107c8D9ED4ce0bbeF7A0b4ccf3320C41d12; // Instadapp
         config.hashConsensusQuorum = 5;
         // Verifier
-        // NOTE: Deneb fork gIndexes. Should be updated according to `config.verifierSupportedEpoch` fork epoch if needed
-        // Check using `yarn run gindex`
-        config.gIFirstWithdrawal = GIndex.wrap(
-            0x0000000000000000000000000000000000000000000000000000000000e1c004
-        );
-        config.gIFirstValidator = GIndex.wrap(
-            0x0000000000000000000000000000000000000000000000000056000000000028
-        );
-        config.gIHistoricalSummaries = GIndex.wrap(
-            0x0000000000000000000000000000000000000000000000000000000000003b00
-        );
+        config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_CAPELLA;
+        config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_CAPELLA;
+        config.gIHistoricalSummaries = GIndicies.HISTORICAL_SUMMARIES_CAPELLA;
 
         config.verifierSupportedEpoch = 269568;
         // Accounting
