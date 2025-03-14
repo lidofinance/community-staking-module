@@ -4,8 +4,6 @@ import "fork.just"
 chain := env_var_or_default("CHAIN", "mainnet")
 deploy_script_name := if chain == "mainnet" {
     "DeployMainnet"
-} else if chain == "holesky" {
-    "DeployHolesky"
 } else if chain == "local-devnet" {
     "DeployLocalDevNet"
 } else {
@@ -14,8 +12,6 @@ deploy_script_name := if chain == "mainnet" {
 
 deploy_implementations_script_name := if chain == "mainnet" {
     "DeployImplementationsMainnet"
-} else if chain == "holesky" {
-    "DeployImplementationsHolesky"
 } else if chain == "local-devnet" {
     "SCRIPT_IS_NOT_DEFINED"
 } else {
@@ -24,8 +20,6 @@ deploy_implementations_script_name := if chain == "mainnet" {
 
 deploy_config_path := if chain == "mainnet" {
     "artifacts/mainnet/deploy-mainnet.json"
-} else if chain == "holesky" {
-    "artifacts/holesky/deploy-holesky.json"
 } else if chain == "local-devnet" {
     "artifacts/local-devnet/deploy-local-devnet.json"
 } else {
