@@ -7,7 +7,7 @@ import { DeployBase } from "./DeployBase.s.sol";
 import { GIndicies } from "./constants/GIndicies.sol";
 
 contract DeployLocalDevNet is DeployBase {
-    constructor() DeployBase("local-devnet", 32382) {
+    constructor() DeployBase("local-devnet", vm.envUint("DEVNET_CHAIN_ID")) {
         // Lido addresses
         config.lidoLocatorAddress = vm.envAddress("CSM_LOCATOR_ADDRESS");
         config.aragonAgent = vm.envAddress("CSM_ARAGON_AGENT_ADDRESS");
