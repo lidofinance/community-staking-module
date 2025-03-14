@@ -1,57 +1,48 @@
 # CSFeeOracle
-
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/ed13582ed87bf90a004e225eef6ca845b31d396d/src/CSFeeOracle.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/86cbb28dad521bfac5576c8a7b405bc33b32f44d/src/CSFeeOracle.sol)
 
 **Inherits:**
-[BaseOracle](/src/lib/base-oracle/BaseOracle.sol/abstract.BaseOracle.md), [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md), [IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md)
+[ICSFeeOracle](/src/interfaces/ICSFeeOracle.sol/interface.ICSFeeOracle.md), [BaseOracle](/src/lib/base-oracle/BaseOracle.sol/abstract.BaseOracle.md), [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
+
 
 ## State Variables
-
-### CONTRACT_MANAGER_ROLE
-
-An ACL role granting the permission to manage the contract (update variables).
-
-```solidity
-bytes32 public constant CONTRACT_MANAGER_ROLE = keccak256("CONTRACT_MANAGER_ROLE");
-```
-
 ### SUBMIT_DATA_ROLE
+No assets are stored in the contract
 
 An ACL role granting the permission to submit the data for a committee report.
+
 
 ```solidity
 bytes32 public constant SUBMIT_DATA_ROLE = keccak256("SUBMIT_DATA_ROLE");
 ```
 
-### PAUSE_ROLE
 
+### PAUSE_ROLE
 An ACL role granting the permission to pause accepting oracle reports
+
 
 ```solidity
 bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
 ```
 
-### RESUME_ROLE
 
+### RESUME_ROLE
 An ACL role granting the permission to resume accepting oracle reports
+
 
 ```solidity
 bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
 ```
 
-### RECOVERER_ROLE
 
+### RECOVERER_ROLE
 An ACL role granting the permission to recover assets
+
 
 ```solidity
 bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 ```
 
-### MAX_BP
-
-```solidity
-uint256 internal constant MAX_BP = 10000;
-```
 
 ### feeDistributor
 
@@ -59,19 +50,20 @@ uint256 internal constant MAX_BP = 10000;
 ICSFeeDistributor public feeDistributor;
 ```
 
-### avgPerfLeewayBP
 
-Leeway in basis points is used to determine the under-performing validators threshold.
-`threshold` = `avgPerfBP` - `avgPerfLeewayBP`, where `avgPerfBP` is an average
-performance over the network computed by the off-chain oracle.
+### strikes
+**Note:**
+oz-retyped-from: uint256
+
 
 ```solidity
-uint256 public avgPerfLeewayBP;
+ICSStrikes public strikes;
 ```
 
-## Functions
 
+## Functions
 ### constructor
+
 
 ```solidity
 constructor(uint256 secondsPerSlot, uint256 genesisTime) BaseOracle(secondsPerSlot, genesisTime);
@@ -79,66 +71,84 @@ constructor(uint256 secondsPerSlot, uint256 genesisTime) BaseOracle(secondsPerSl
 
 ### initialize
 
+*initialize contract from scratch*
+
+
 ```solidity
 function initialize(
-  address admin,
-  address feeDistributorContract,
-  address consensusContract,
-  uint256 consensusVersion,
-  uint256 _avgPerfLeewayBP
+    address admin,
+    address feeDistributorContract,
+    address strikesContract,
+    address consensusContract,
+    uint256 consensusVersion
 ) external;
+```
+
+### finalizeUpgradeV2
+
+*_setFeeDistributorContract() reverts if zero address*
+
+*_setStrikesContract() reverts if zero address*
+
+*should be called after update on the proxy*
+
+
+```solidity
+function finalizeUpgradeV2(uint256 consensusVersion, address strikesContract) external onlyRole(DEFAULT_ADMIN_ROLE);
 ```
 
 ### setFeeDistributorContract
 
 Set a new fee distributor contract
 
-_\_setFeeDistributorContract() reverts if zero address_
+*_setStrikesContract() reverts if zero address*
+
 
 ```solidity
-function setFeeDistributorContract(
-  address feeDistributorContract
-) external onlyRole(CONTRACT_MANAGER_ROLE);
+function setFeeDistributorContract(address feeDistributorContract) external onlyRole(DEFAULT_ADMIN_ROLE);
 ```
-
 **Parameters**
 
-| Name                     | Type      | Description                                 |
-| ------------------------ | --------- | ------------------------------------------- |
-| `feeDistributorContract` | `address` | Address of the new fee distributor contract |
+|Name|Type|Description|
+|----|----|-----------|
+|`feeDistributorContract`|`address`|Address of the new fee distributor contract|
 
-### setPerformanceLeeway
 
-Set a new performance threshold value in basis points
+### setStrikesContract
+
+Set a new strikes contract
+
 
 ```solidity
-function setPerformanceLeeway(uint256 valueBP) external onlyRole(CONTRACT_MANAGER_ROLE);
+function setStrikesContract(address strikesContract) external onlyRole(DEFAULT_ADMIN_ROLE);
 ```
-
 **Parameters**
 
-| Name      | Type      | Description                           |
-| --------- | --------- | ------------------------------------- |
-| `valueBP` | `uint256` | performance threshold in basis points |
+|Name|Type|Description|
+|----|----|-----------|
+|`strikesContract`|`address`|Address of the new strikes contract|
+
 
 ### submitReportData
 
 Submit the data for a committee report
 
+
 ```solidity
 function submitReportData(ReportData calldata data, uint256 contractVersion) external whenResumed;
 ```
-
 **Parameters**
 
-| Name              | Type         | Description                           |
-| ----------------- | ------------ | ------------------------------------- |
-| `data`            | `ReportData` | Data for a committee report           |
-| `contractVersion` | `uint256`    | Version of the oracle consensus rules |
+|Name|Type|Description|
+|----|----|-----------|
+|`data`|`ReportData`|Data for a committee report|
+|`contractVersion`|`uint256`|Version of the oracle consensus rules|
+
 
 ### resume
 
 Resume accepting oracle reports
+
 
 ```solidity
 function resume() external onlyRole(RESUME_ROLE);
@@ -148,123 +158,73 @@ function resume() external onlyRole(RESUME_ROLE);
 
 Pause accepting oracle reports for a `duration` seconds
 
+
 ```solidity
 function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE);
 ```
-
 **Parameters**
 
-| Name       | Type      | Description                      |
-| ---------- | --------- | -------------------------------- |
-| `duration` | `uint256` | Duration of the pause in seconds |
+|Name|Type|Description|
+|----|----|-----------|
+|`duration`|`uint256`|Duration of the pause in seconds|
+
 
 ### pauseUntil
 
 Pause accepting oracle reports until a timestamp
 
+
 ```solidity
 function pauseUntil(uint256 pauseUntilInclusive) external onlyRole(PAUSE_ROLE);
 ```
-
 **Parameters**
 
-| Name                  | Type      | Description                                         |
-| --------------------- | --------- | --------------------------------------------------- |
-| `pauseUntilInclusive` | `uint256` | Timestamp until which the oracle reports are paused |
+|Name|Type|Description|
+|----|----|-----------|
+|`pauseUntilInclusive`|`uint256`|Timestamp until which the oracle reports are paused|
 
-### \_setFeeDistributorContract
+
+### _setFeeDistributorContract
+
 
 ```solidity
 function _setFeeDistributorContract(address feeDistributorContract) internal;
 ```
 
-### \_setPerformanceLeeway
+### _setStrikesContract
+
 
 ```solidity
-function _setPerformanceLeeway(uint256 valueBP) internal;
+function _setStrikesContract(address strikesContract) internal;
 ```
 
-### \_handleConsensusReport
+### _handleConsensusReport
 
-_Called in `submitConsensusReport` after a consensus is reached._
+*Called in `submitConsensusReport` after a consensus is reached.*
+
 
 ```solidity
 function _handleConsensusReport(ConsensusReport memory, uint256, uint256) internal override;
 ```
 
-### \_handleConsensusReportData
+### _handleConsensusReportData
+
 
 ```solidity
 function _handleConsensusReportData(ReportData calldata data) internal;
 ```
 
-### \_checkMsgSenderIsAllowedToSubmitData
+### _checkMsgSenderIsAllowedToSubmitData
+
 
 ```solidity
 function _checkMsgSenderIsAllowedToSubmitData() internal view;
 ```
 
-### \_onlyRecoverer
+### _onlyRecoverer
+
 
 ```solidity
 function _onlyRecoverer() internal view override;
 ```
 
-## Events
-
-### FeeDistributorContractSet
-
-_Emitted when a new fee distributor contract is set_
-
-```solidity
-event FeeDistributorContractSet(address feeDistributorContract);
-```
-
-### PerfLeewaySet
-
-```solidity
-event PerfLeewaySet(uint256 valueBP);
-```
-
-## Errors
-
-### ZeroAdminAddress
-
-```solidity
-error ZeroAdminAddress();
-```
-
-### ZeroFeeDistributorAddress
-
-```solidity
-error ZeroFeeDistributorAddress();
-```
-
-### InvalidPerfLeeway
-
-```solidity
-error InvalidPerfLeeway();
-```
-
-### SenderNotAllowed
-
-```solidity
-error SenderNotAllowed();
-```
-
-## Structs
-
-### ReportData
-
-No assets are stored in the contract
-
-```solidity
-struct ReportData {
-  uint256 consensusVersion;
-  uint256 refSlot;
-  bytes32 treeRoot;
-  string treeCid;
-  string logCid;
-  uint256 distributed;
-}
-```

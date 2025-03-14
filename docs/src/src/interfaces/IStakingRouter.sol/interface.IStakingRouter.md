@@ -1,10 +1,10 @@
 # IStakingRouter
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/86cbb28dad521bfac5576c8a7b405bc33b32f44d/src/interfaces/IStakingRouter.sol)
 
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/ed13582ed87bf90a004e225eef6ca845b31d396d/src/interfaces/IStakingRouter.sol)
 
 ## Functions
-
 ### DEFAULT_ADMIN_ROLE
+
 
 ```solidity
 function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
@@ -12,11 +12,13 @@ function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
 
 ### DEPOSIT_CONTRACT
 
+
 ```solidity
 function DEPOSIT_CONTRACT() external view returns (address);
 ```
 
 ### FEE_PRECISION_POINTS
+
 
 ```solidity
 function FEE_PRECISION_POINTS() external view returns (uint256);
@@ -24,11 +26,13 @@ function FEE_PRECISION_POINTS() external view returns (uint256);
 
 ### MANAGE_WITHDRAWAL_CREDENTIALS_ROLE
 
+
 ```solidity
 function MANAGE_WITHDRAWAL_CREDENTIALS_ROLE() external view returns (bytes32);
 ```
 
 ### MAX_STAKING_MODULES_COUNT
+
 
 ```solidity
 function MAX_STAKING_MODULES_COUNT() external view returns (uint256);
@@ -36,11 +40,13 @@ function MAX_STAKING_MODULES_COUNT() external view returns (uint256);
 
 ### MAX_STAKING_MODULE_NAME_LENGTH
 
+
 ```solidity
 function MAX_STAKING_MODULE_NAME_LENGTH() external view returns (uint256);
 ```
 
 ### REPORT_EXITED_VALIDATORS_ROLE
+
 
 ```solidity
 function REPORT_EXITED_VALIDATORS_ROLE() external view returns (bytes32);
@@ -48,11 +54,13 @@ function REPORT_EXITED_VALIDATORS_ROLE() external view returns (bytes32);
 
 ### REPORT_REWARDS_MINTED_ROLE
 
+
 ```solidity
 function REPORT_REWARDS_MINTED_ROLE() external view returns (bytes32);
 ```
 
 ### STAKING_MODULE_MANAGE_ROLE
+
 
 ```solidity
 function STAKING_MODULE_MANAGE_ROLE() external view returns (bytes32);
@@ -60,11 +68,13 @@ function STAKING_MODULE_MANAGE_ROLE() external view returns (bytes32);
 
 ### STAKING_MODULE_UNVETTING_ROLE
 
+
 ```solidity
 function STAKING_MODULE_UNVETTING_ROLE() external view returns (bytes32);
 ```
 
 ### TOTAL_BASIS_POINTS
+
 
 ```solidity
 function TOTAL_BASIS_POINTS() external view returns (uint256);
@@ -72,46 +82,47 @@ function TOTAL_BASIS_POINTS() external view returns (uint256);
 
 ### UNSAFE_SET_EXITED_VALIDATORS_ROLE
 
+
 ```solidity
 function UNSAFE_SET_EXITED_VALIDATORS_ROLE() external view returns (bytes32);
 ```
 
 ### addStakingModule
 
+
 ```solidity
 function addStakingModule(
-  string memory _name,
-  address _stakingModuleAddress,
-  uint256 _stakeShareLimit,
-  uint256 _priorityExitShareThreshold,
-  uint256 _stakingModuleFee,
-  uint256 _treasuryFee,
-  uint256 _maxDepositsPerBlock,
-  uint256 _minDepositBlockDistance
+    string memory _name,
+    address _stakingModuleAddress,
+    uint256 _stakeShareLimit,
+    uint256 _priorityExitShareThreshold,
+    uint256 _stakingModuleFee,
+    uint256 _treasuryFee,
+    uint256 _maxDepositsPerBlock,
+    uint256 _minDepositBlockDistance
 ) external;
 ```
 
 ### decreaseStakingModuleVettedKeysCountByNodeOperator
 
+
 ```solidity
 function decreaseStakingModuleVettedKeysCountByNodeOperator(
-  uint256 _stakingModuleId,
-  bytes memory _nodeOperatorIds,
-  bytes memory _vettedSigningKeysCounts
+    uint256 _stakingModuleId,
+    bytes memory _nodeOperatorIds,
+    bytes memory _vettedSigningKeysCounts
 ) external;
 ```
 
 ### deposit
 
+
 ```solidity
-function deposit(
-  uint256 _depositsCount,
-  uint256 _stakingModuleId,
-  bytes memory _depositCalldata
-) external payable;
+function deposit(uint256 _depositsCount, uint256 _stakingModuleId, bytes memory _depositCalldata) external payable;
 ```
 
 ### finalizeUpgrade_v2
+
 
 ```solidity
 function finalizeUpgrade_v2(uint256[] memory _priorityExitShareThresholds) external;
@@ -119,13 +130,13 @@ function finalizeUpgrade_v2(uint256[] memory _priorityExitShareThresholds) exter
 
 ### getAllNodeOperatorDigests
 
+
 ```solidity
-function getAllNodeOperatorDigests(
-  uint256 _stakingModuleId
-) external view returns (NodeOperatorDigest[] memory);
+function getAllNodeOperatorDigests(uint256 _stakingModuleId) external view returns (NodeOperatorDigest[] memory);
 ```
 
 ### getAllStakingModuleDigests
+
 
 ```solidity
 function getAllStakingModuleDigests() external view returns (StakingModuleDigest[] memory);
@@ -133,19 +144,23 @@ function getAllStakingModuleDigests() external view returns (StakingModuleDigest
 
 ### getContractVersion
 
+
 ```solidity
 function getContractVersion() external view returns (uint256);
 ```
 
 ### getDepositsAllocation
 
+
 ```solidity
-function getDepositsAllocation(
-  uint256 _depositsCount
-) external view returns (uint256 allocated, uint256[] memory allocations);
+function getDepositsAllocation(uint256 _depositsCount)
+    external
+    view
+    returns (uint256 allocated, uint256[] memory allocations);
 ```
 
 ### getLido
+
 
 ```solidity
 function getLido() external view returns (address);
@@ -153,33 +168,36 @@ function getLido() external view returns (address);
 
 ### getNodeOperatorDigests
 
+
 ```solidity
-function getNodeOperatorDigests(
-  uint256 _stakingModuleId,
-  uint256[] memory _nodeOperatorIds
-) external view returns (NodeOperatorDigest[] memory digests);
+function getNodeOperatorDigests(uint256 _stakingModuleId, uint256[] memory _nodeOperatorIds)
+    external
+    view
+    returns (NodeOperatorDigest[] memory digests);
 ```
 
 ### getNodeOperatorDigests
 
+
 ```solidity
-function getNodeOperatorDigests(
-  uint256 _stakingModuleId,
-  uint256 _offset,
-  uint256 _limit
-) external view returns (NodeOperatorDigest[] memory);
+function getNodeOperatorDigests(uint256 _stakingModuleId, uint256 _offset, uint256 _limit)
+    external
+    view
+    returns (NodeOperatorDigest[] memory);
 ```
 
 ### getNodeOperatorSummary
 
+
 ```solidity
-function getNodeOperatorSummary(
-  uint256 _stakingModuleId,
-  uint256 _nodeOperatorId
-) external view returns (NodeOperatorSummary memory summary);
+function getNodeOperatorSummary(uint256 _stakingModuleId, uint256 _nodeOperatorId)
+    external
+    view
+    returns (NodeOperatorSummary memory summary);
 ```
 
 ### getRoleAdmin
+
 
 ```solidity
 function getRoleAdmin(bytes32 role) external view returns (bytes32);
@@ -187,11 +205,13 @@ function getRoleAdmin(bytes32 role) external view returns (bytes32);
 
 ### getRoleMember
 
+
 ```solidity
 function getRoleMember(bytes32 role, uint256 index) external view returns (address);
 ```
 
 ### getRoleMemberCount
+
 
 ```solidity
 function getRoleMemberCount(bytes32 role) external view returns (uint256);
@@ -199,23 +219,26 @@ function getRoleMemberCount(bytes32 role) external view returns (uint256);
 
 ### getStakingFeeAggregateDistribution
 
+
 ```solidity
 function getStakingFeeAggregateDistribution()
-  external
-  view
-  returns (uint96 modulesFee, uint96 treasuryFee, uint256 basePrecision);
+    external
+    view
+    returns (uint96 modulesFee, uint96 treasuryFee, uint256 basePrecision);
 ```
 
 ### getStakingFeeAggregateDistributionE4Precision
 
+
 ```solidity
 function getStakingFeeAggregateDistributionE4Precision()
-  external
-  view
-  returns (uint16 modulesFee, uint16 treasuryFee);
+    external
+    view
+    returns (uint16 modulesFee, uint16 treasuryFee);
 ```
 
 ### getStakingModule
+
 
 ```solidity
 function getStakingModule(uint256 _stakingModuleId) external view returns (StakingModule memory);
@@ -223,21 +246,26 @@ function getStakingModule(uint256 _stakingModuleId) external view returns (Staki
 
 ### getStakingModuleActiveValidatorsCount
 
+
 ```solidity
-function getStakingModuleActiveValidatorsCount(
-  uint256 _stakingModuleId
-) external view returns (uint256 activeValidatorsCount);
+function getStakingModuleActiveValidatorsCount(uint256 _stakingModuleId)
+    external
+    view
+    returns (uint256 activeValidatorsCount);
 ```
 
 ### getStakingModuleDigests
 
+
 ```solidity
-function getStakingModuleDigests(
-  uint256[] memory _stakingModuleIds
-) external view returns (StakingModuleDigest[] memory digests);
+function getStakingModuleDigests(uint256[] memory _stakingModuleIds)
+    external
+    view
+    returns (StakingModuleDigest[] memory digests);
 ```
 
 ### getStakingModuleIds
+
 
 ```solidity
 function getStakingModuleIds() external view returns (uint256[] memory stakingModuleIds);
@@ -245,11 +273,13 @@ function getStakingModuleIds() external view returns (uint256[] memory stakingMo
 
 ### getStakingModuleIsActive
 
+
 ```solidity
 function getStakingModuleIsActive(uint256 _stakingModuleId) external view returns (bool);
 ```
 
 ### getStakingModuleIsDepositsPaused
+
 
 ```solidity
 function getStakingModuleIsDepositsPaused(uint256 _stakingModuleId) external view returns (bool);
@@ -257,11 +287,13 @@ function getStakingModuleIsDepositsPaused(uint256 _stakingModuleId) external vie
 
 ### getStakingModuleIsStopped
 
+
 ```solidity
 function getStakingModuleIsStopped(uint256 _stakingModuleId) external view returns (bool);
 ```
 
 ### getStakingModuleLastDepositBlock
+
 
 ```solidity
 function getStakingModuleLastDepositBlock(uint256 _stakingModuleId) external view returns (uint256);
@@ -269,30 +301,30 @@ function getStakingModuleLastDepositBlock(uint256 _stakingModuleId) external vie
 
 ### getStakingModuleMaxDepositsCount
 
+
 ```solidity
-function getStakingModuleMaxDepositsCount(
-  uint256 _stakingModuleId,
-  uint256 _maxDepositsValue
-) external view returns (uint256);
+function getStakingModuleMaxDepositsCount(uint256 _stakingModuleId, uint256 _maxDepositsValue)
+    external
+    view
+    returns (uint256);
 ```
 
 ### getStakingModuleMaxDepositsPerBlock
 
+
 ```solidity
-function getStakingModuleMaxDepositsPerBlock(
-  uint256 _stakingModuleId
-) external view returns (uint256);
+function getStakingModuleMaxDepositsPerBlock(uint256 _stakingModuleId) external view returns (uint256);
 ```
 
 ### getStakingModuleMinDepositBlockDistance
 
+
 ```solidity
-function getStakingModuleMinDepositBlockDistance(
-  uint256 _stakingModuleId
-) external view returns (uint256);
+function getStakingModuleMinDepositBlockDistance(uint256 _stakingModuleId) external view returns (uint256);
 ```
 
 ### getStakingModuleNonce
+
 
 ```solidity
 function getStakingModuleNonce(uint256 _stakingModuleId) external view returns (uint256);
@@ -300,19 +332,23 @@ function getStakingModuleNonce(uint256 _stakingModuleId) external view returns (
 
 ### getStakingModuleStatus
 
+
 ```solidity
 function getStakingModuleStatus(uint256 _stakingModuleId) external view returns (uint8);
 ```
 
 ### getStakingModuleSummary
 
+
 ```solidity
-function getStakingModuleSummary(
-  uint256 _stakingModuleId
-) external view returns (StakingModuleSummary memory summary);
+function getStakingModuleSummary(uint256 _stakingModuleId)
+    external
+    view
+    returns (StakingModuleSummary memory summary);
 ```
 
 ### getStakingModules
+
 
 ```solidity
 function getStakingModules() external view returns (StakingModule[] memory res);
@@ -320,26 +356,29 @@ function getStakingModules() external view returns (StakingModule[] memory res);
 
 ### getStakingModulesCount
 
+
 ```solidity
 function getStakingModulesCount() external view returns (uint256);
 ```
 
 ### getStakingRewardsDistribution
 
+
 ```solidity
 function getStakingRewardsDistribution()
-  external
-  view
-  returns (
-    address[] memory recipients,
-    uint256[] memory stakingModuleIds,
-    uint96[] memory stakingModuleFees,
-    uint96 totalFee,
-    uint256 precisionPoints
-  );
+    external
+    view
+    returns (
+        address[] memory recipients,
+        uint256[] memory stakingModuleIds,
+        uint96[] memory stakingModuleFees,
+        uint96 totalFee,
+        uint256 precisionPoints
+    );
 ```
 
 ### getTotalFeeE4Precision
+
 
 ```solidity
 function getTotalFeeE4Precision() external view returns (uint16 totalFee);
@@ -347,11 +386,13 @@ function getTotalFeeE4Precision() external view returns (uint16 totalFee);
 
 ### getWithdrawalCredentials
 
+
 ```solidity
 function getWithdrawalCredentials() external view returns (bytes32);
 ```
 
 ### grantRole
+
 
 ```solidity
 function grantRole(bytes32 role, address account) external;
@@ -359,11 +400,13 @@ function grantRole(bytes32 role, address account) external;
 
 ### hasRole
 
+
 ```solidity
 function hasRole(bytes32 role, address account) external view returns (bool);
 ```
 
 ### hasStakingModule
+
 
 ```solidity
 function hasStakingModule(uint256 _stakingModuleId) external view returns (bool);
@@ -371,11 +414,13 @@ function hasStakingModule(uint256 _stakingModuleId) external view returns (bool)
 
 ### initialize
 
+
 ```solidity
 function initialize(address _admin, address _lido, bytes32 _withdrawalCredentials) external;
 ```
 
 ### onValidatorsCountsByNodeOperatorReportingFinished
+
 
 ```solidity
 function onValidatorsCountsByNodeOperatorReportingFinished() external;
@@ -383,40 +428,42 @@ function onValidatorsCountsByNodeOperatorReportingFinished() external;
 
 ### renounceRole
 
+
 ```solidity
 function renounceRole(bytes32 role, address account) external;
 ```
 
 ### reportRewardsMinted
 
+
 ```solidity
-function reportRewardsMinted(
-  uint256[] memory _stakingModuleIds,
-  uint256[] memory _totalShares
-) external;
+function reportRewardsMinted(uint256[] memory _stakingModuleIds, uint256[] memory _totalShares) external;
 ```
 
 ### reportStakingModuleExitedValidatorsCountByNodeOperator
 
+
 ```solidity
 function reportStakingModuleExitedValidatorsCountByNodeOperator(
-  uint256 _stakingModuleId,
-  bytes memory _nodeOperatorIds,
-  bytes memory _exitedValidatorsCounts
+    uint256 _stakingModuleId,
+    bytes memory _nodeOperatorIds,
+    bytes memory _exitedValidatorsCounts
 ) external;
 ```
 
 ### reportStakingModuleStuckValidatorsCountByNodeOperator
 
+
 ```solidity
 function reportStakingModuleStuckValidatorsCountByNodeOperator(
-  uint256 _stakingModuleId,
-  bytes memory _nodeOperatorIds,
-  bytes memory _stuckValidatorsCounts
+    uint256 _stakingModuleId,
+    bytes memory _nodeOperatorIds,
+    bytes memory _stuckValidatorsCounts
 ) external;
 ```
 
 ### revokeRole
+
 
 ```solidity
 function revokeRole(bytes32 role, address account) external;
@@ -424,11 +471,13 @@ function revokeRole(bytes32 role, address account) external;
 
 ### setStakingModuleStatus
 
+
 ```solidity
 function setStakingModuleStatus(uint256 _stakingModuleId, uint8 _status) external;
 ```
 
 ### setWithdrawalCredentials
+
 
 ```solidity
 function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external;
@@ -436,73 +485,79 @@ function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external;
 
 ### supportsInterface
 
+
 ```solidity
 function supportsInterface(bytes4 interfaceId) external view returns (bool);
 ```
 
 ### unsafeSetExitedValidatorsCount
 
+
 ```solidity
 function unsafeSetExitedValidatorsCount(
-  uint256 _stakingModuleId,
-  uint256 _nodeOperatorId,
-  bool _triggerUpdateFinish,
-  ValidatorsCountsCorrection memory _correction
+    uint256 _stakingModuleId,
+    uint256 _nodeOperatorId,
+    bool _triggerUpdateFinish,
+    ValidatorsCountsCorrection memory _correction
 ) external;
 ```
 
 ### updateExitedValidatorsCountByStakingModule
 
+
 ```solidity
 function updateExitedValidatorsCountByStakingModule(
-  uint256[] memory _stakingModuleIds,
-  uint256[] memory _exitedValidatorsCounts
+    uint256[] memory _stakingModuleIds,
+    uint256[] memory _exitedValidatorsCounts
 ) external returns (uint256);
 ```
 
 ### updateRefundedValidatorsCount
 
+
 ```solidity
 function updateRefundedValidatorsCount(
-  uint256 _stakingModuleId,
-  uint256 _nodeOperatorId,
-  uint256 _refundedValidatorsCount
+    uint256 _stakingModuleId,
+    uint256 _nodeOperatorId,
+    uint256 _refundedValidatorsCount
 ) external;
 ```
 
 ### updateStakingModule
 
+
 ```solidity
 function updateStakingModule(
-  uint256 _stakingModuleId,
-  uint256 _stakeShareLimit,
-  uint256 _priorityExitShareThreshold,
-  uint256 _stakingModuleFee,
-  uint256 _treasuryFee,
-  uint256 _maxDepositsPerBlock,
-  uint256 _minDepositBlockDistance
+    uint256 _stakingModuleId,
+    uint256 _stakeShareLimit,
+    uint256 _priorityExitShareThreshold,
+    uint256 _stakingModuleFee,
+    uint256 _treasuryFee,
+    uint256 _maxDepositsPerBlock,
+    uint256 _minDepositBlockDistance
 ) external;
 ```
 
 ### updateTargetValidatorsLimits
 
+
 ```solidity
 function updateTargetValidatorsLimits(
-  uint256 _stakingModuleId,
-  uint256 _nodeOperatorId,
-  uint256 _targetLimitMode,
-  uint256 _targetLimit
+    uint256 _stakingModuleId,
+    uint256 _nodeOperatorId,
+    uint256 _targetLimitMode,
+    uint256 _targetLimit
 ) external;
 ```
 
 ### receive
+
 
 ```solidity
 receive() external payable;
 ```
 
 ## Events
-
 ### ContractVersionSet
 
 ```solidity
@@ -512,10 +567,7 @@ event ContractVersionSet(uint256 version);
 ### ExitedAndStuckValidatorsCountsUpdateFailed
 
 ```solidity
-event ExitedAndStuckValidatorsCountsUpdateFailed(
-  uint256 indexed stakingModuleId,
-  bytes lowLevelRevertData
-);
+event ExitedAndStuckValidatorsCountsUpdateFailed(uint256 indexed stakingModuleId, bytes lowLevelRevertData);
 ```
 
 ### RewardsMintedReportFailed
@@ -527,11 +579,7 @@ event RewardsMintedReportFailed(uint256 indexed stakingModuleId, bytes lowLevelR
 ### RoleAdminChanged
 
 ```solidity
-event RoleAdminChanged(
-  bytes32 indexed role,
-  bytes32 indexed previousAdminRole,
-  bytes32 indexed newAdminRole
-);
+event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole);
 ```
 
 ### RoleGranted
@@ -549,20 +597,14 @@ event RoleRevoked(bytes32 indexed role, address indexed account, address indexed
 ### StakingModuleAdded
 
 ```solidity
-event StakingModuleAdded(
-  uint256 indexed stakingModuleId,
-  address stakingModule,
-  string name,
-  address createdBy
-);
+event StakingModuleAdded(uint256 indexed stakingModuleId, address stakingModule, string name, address createdBy);
 ```
 
 ### StakingModuleExitedValidatorsIncompleteReporting
 
 ```solidity
 event StakingModuleExitedValidatorsIncompleteReporting(
-  uint256 indexed stakingModuleId,
-  uint256 unreportedExitedValidatorsCount
+    uint256 indexed stakingModuleId, uint256 unreportedExitedValidatorsCount
 );
 ```
 
@@ -570,30 +612,21 @@ event StakingModuleExitedValidatorsIncompleteReporting(
 
 ```solidity
 event StakingModuleFeesSet(
-  uint256 indexed stakingModuleId,
-  uint256 stakingModuleFee,
-  uint256 treasuryFee,
-  address setBy
+    uint256 indexed stakingModuleId, uint256 stakingModuleFee, uint256 treasuryFee, address setBy
 );
 ```
 
 ### StakingModuleMaxDepositsPerBlockSet
 
 ```solidity
-event StakingModuleMaxDepositsPerBlockSet(
-  uint256 indexed stakingModuleId,
-  uint256 maxDepositsPerBlock,
-  address setBy
-);
+event StakingModuleMaxDepositsPerBlockSet(uint256 indexed stakingModuleId, uint256 maxDepositsPerBlock, address setBy);
 ```
 
 ### StakingModuleMinDepositBlockDistanceSet
 
 ```solidity
 event StakingModuleMinDepositBlockDistanceSet(
-  uint256 indexed stakingModuleId,
-  uint256 minDepositBlockDistance,
-  address setBy
+    uint256 indexed stakingModuleId, uint256 minDepositBlockDistance, address setBy
 );
 ```
 
@@ -601,10 +634,7 @@ event StakingModuleMinDepositBlockDistanceSet(
 
 ```solidity
 event StakingModuleShareLimitSet(
-  uint256 indexed stakingModuleId,
-  uint256 stakeShareLimit,
-  uint256 priorityExitShareThreshold,
-  address setBy
+    uint256 indexed stakingModuleId, uint256 stakeShareLimit, uint256 priorityExitShareThreshold, address setBy
 );
 ```
 
@@ -633,7 +663,6 @@ event WithdrawalsCredentialsChangeFailed(uint256 indexed stakingModuleId, bytes 
 ```
 
 ## Errors
-
 ### AppAuthLidoFailed
 
 ```solidity
@@ -721,10 +750,7 @@ error NonZeroContractVersionOnInit();
 ### ReportedExitedValidatorsExceedDeposited
 
 ```solidity
-error ReportedExitedValidatorsExceedDeposited(
-  uint256 reportedExitedValidatorsCount,
-  uint256 depositedValidatorsCount
-);
+error ReportedExitedValidatorsExceedDeposited(uint256 reportedExitedValidatorsCount, uint256 depositedValidatorsCount);
 ```
 
 ### StakingModuleAddressExists
@@ -773,9 +799,9 @@ error UnexpectedContractVersion(uint256 expected, uint256 received);
 
 ```solidity
 error UnexpectedCurrentValidatorsCount(
-  uint256 currentModuleExitedValidatorsCount,
-  uint256 currentNodeOpExitedValidatorsCount,
-  uint256 currentNodeOpStuckValidatorsCount
+    uint256 currentModuleExitedValidatorsCount,
+    uint256 currentNodeOpExitedValidatorsCount,
+    uint256 currentNodeOpStuckValidatorsCount
 );
 ```
 
@@ -798,19 +824,18 @@ error ZeroAddress(string field);
 ```
 
 ## Structs
-
 ### NodeOperatorSummary
 
 ```solidity
 struct NodeOperatorSummary {
-  uint256 targetLimitMode;
-  uint256 targetValidatorsCount;
-  uint256 stuckValidatorsCount;
-  uint256 refundedValidatorsCount;
-  uint256 stuckPenaltyEndTimestamp;
-  uint256 totalExitedValidators;
-  uint256 totalDepositedValidators;
-  uint256 depositableValidatorsCount;
+    uint256 targetLimitMode;
+    uint256 targetValidatorsCount;
+    uint256 stuckValidatorsCount;
+    uint256 refundedValidatorsCount;
+    uint256 stuckPenaltyEndTimestamp;
+    uint256 totalExitedValidators;
+    uint256 totalDepositedValidators;
+    uint256 depositableValidatorsCount;
 }
 ```
 
@@ -818,9 +843,9 @@ struct NodeOperatorSummary {
 
 ```solidity
 struct NodeOperatorDigest {
-  uint256 id;
-  bool isActive;
-  NodeOperatorSummary summary;
+    uint256 id;
+    bool isActive;
+    NodeOperatorSummary summary;
 }
 ```
 
@@ -828,19 +853,19 @@ struct NodeOperatorDigest {
 
 ```solidity
 struct StakingModule {
-  uint24 id;
-  address stakingModuleAddress;
-  uint16 stakingModuleFee;
-  uint16 treasuryFee;
-  uint16 stakeShareLimit;
-  uint8 status;
-  string name;
-  uint64 lastDepositAt;
-  uint256 lastDepositBlock;
-  uint256 exitedValidatorsCount;
-  uint16 priorityExitShareThreshold;
-  uint64 maxDepositsPerBlock;
-  uint64 minDepositBlockDistance;
+    uint24 id;
+    address stakingModuleAddress;
+    uint16 stakingModuleFee;
+    uint16 treasuryFee;
+    uint16 stakeShareLimit;
+    uint8 status;
+    string name;
+    uint64 lastDepositAt;
+    uint256 lastDepositBlock;
+    uint256 exitedValidatorsCount;
+    uint16 priorityExitShareThreshold;
+    uint64 maxDepositsPerBlock;
+    uint64 minDepositBlockDistance;
 }
 ```
 
@@ -848,9 +873,9 @@ struct StakingModule {
 
 ```solidity
 struct StakingModuleSummary {
-  uint256 totalExitedValidators;
-  uint256 totalDepositedValidators;
-  uint256 depositableValidatorsCount;
+    uint256 totalExitedValidators;
+    uint256 totalDepositedValidators;
+    uint256 depositableValidatorsCount;
 }
 ```
 
@@ -858,10 +883,10 @@ struct StakingModuleSummary {
 
 ```solidity
 struct StakingModuleDigest {
-  uint256 nodeOperatorsCount;
-  uint256 activeNodeOperatorsCount;
-  StakingModule state;
-  StakingModuleSummary summary;
+    uint256 nodeOperatorsCount;
+    uint256 activeNodeOperatorsCount;
+    StakingModule state;
+    StakingModuleSummary summary;
 }
 ```
 
@@ -869,11 +894,12 @@ struct StakingModuleDigest {
 
 ```solidity
 struct ValidatorsCountsCorrection {
-  uint256 currentModuleExitedValidatorsCount;
-  uint256 currentNodeOperatorExitedValidatorsCount;
-  uint256 currentNodeOperatorStuckValidatorsCount;
-  uint256 newModuleExitedValidatorsCount;
-  uint256 newNodeOperatorExitedValidatorsCount;
-  uint256 newNodeOperatorStuckValidatorsCount;
+    uint256 currentModuleExitedValidatorsCount;
+    uint256 currentNodeOperatorExitedValidatorsCount;
+    uint256 currentNodeOperatorStuckValidatorsCount;
+    uint256 newModuleExitedValidatorsCount;
+    uint256 newNodeOperatorExitedValidatorsCount;
+    uint256 newNodeOperatorStuckValidatorsCount;
 }
 ```
+
