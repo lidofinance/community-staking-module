@@ -81,7 +81,6 @@ contract DeployLocalDevNet is DeployBase {
         config.vettedGateBondCurve[1] = 2.8 ether;
 
         // GateSeal
-        config.gateSealEnabled = false;
         config.gateSealFactory = 0x0000000000000000000000000000000000000000;
         config.sealingCommittee = 0x0000000000000000000000000000000000000000;
         config.sealDuration = 0;

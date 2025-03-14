@@ -128,7 +128,6 @@ struct DeployParams {
     bytes32 vettedGateTreeRoot;
     uint256[] vettedGateBondCurve;
     // GateSeal
-    bool gateSealEnabled;
     address gateSealFactory;
     address sealingCommittee;
     uint256 sealDuration;
@@ -373,7 +372,7 @@ abstract contract DeployBase is Script {
             });
 
             address gateSeal;
-            if (config.gateSealEnabled) {
+            if (config.gateSealFactory != address(0)) {
                 address[] memory sealables = new address[](6);
                 sealables[0] = address(csm);
                 sealables[1] = address(accounting);

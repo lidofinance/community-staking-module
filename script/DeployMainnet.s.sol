@@ -81,7 +81,6 @@ contract DeployMainnet is DeployBase {
         config.vettedGateBondCurve[1] = 2.8 ether;
 
         // GateSeal
-        config.gateSealEnabled = true;
         config.gateSealFactory = 0x6C82877cAC5a7A739f16Ca0A89c0A328B8764A24;
         config.sealingCommittee = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
         config.sealDuration = 6 days;
