@@ -124,7 +124,7 @@ just vote-upgrade
 After a vote, you can test the contracts in the new state. It includes both `integration` and `vote-upgrade` tests
 
 ```bash
-just test-vote-upgrade
+just test-post-upgrade
 ```
 
 Kill fork after testing

@@ -70,7 +70,7 @@ test-deployment *args:
 test-integration *args:
     forge test --match-path 'test/fork/integration/*' -vvv --show-progress {{args}}
 
-test-vote-upgrade *args:
+test-post-upgrade *args:
     forge test --match-path='test/fork/*' --no-match-path 'test/fork/deployment/*' -vvv --show-progress {{args}}
 
 gas-report:
@@ -228,7 +228,7 @@ test-upgrade *args:
     export VOTE_PREV_BLOCK=`cast block-number -r $RPC_URL`
 
     just vote-upgrade
-    just test-vote-upgrade {{args}}
+    just test-post-upgrade {{args}}
 
     just kill-fork
 

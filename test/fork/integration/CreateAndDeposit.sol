@@ -80,8 +80,13 @@ contract IntegrationTestBase is
 }
 
 contract PermissionlessCreateNodeOperatorTest is IntegrationTestBase {
+    uint256 internal immutable keysCount;
+
+    constructor() {
+        keysCount = 1;
+    }
+
     function test_createNodeOperatorETH() public assertInvariants {
-        uint256 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
@@ -127,7 +132,6 @@ contract PermissionlessCreateNodeOperatorTest is IntegrationTestBase {
 
         lido.approve(address(accounting), type(uint256).max);
 
-        uint256 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
@@ -176,7 +180,6 @@ contract PermissionlessCreateNodeOperatorTest is IntegrationTestBase {
 
         wstETH.approve(address(accounting), type(uint256).max);
 
-        uint256 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
@@ -221,9 +224,22 @@ contract PermissionlessCreateNodeOperatorTest is IntegrationTestBase {
     }
 }
 
+contract PermissionlessCreateNodeOperator10KeysTest is
+    PermissionlessCreateNodeOperatorTest
+{
+    constructor() {
+        keysCount = 10;
+    }
+}
+
 contract VettedGateCreateNodeOperatorTest is IntegrationTestBase {
+    uint256 internal immutable keysCount;
+
+    constructor() {
+        keysCount = 1;
+    }
+
     function test_createNodeOperatorETH() public assertInvariants {
-        uint256 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
@@ -269,7 +285,6 @@ contract VettedGateCreateNodeOperatorTest is IntegrationTestBase {
 
         lido.approve(address(accounting), type(uint256).max);
 
-        uint256 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
@@ -314,7 +329,6 @@ contract VettedGateCreateNodeOperatorTest is IntegrationTestBase {
         uint256 preTotalShares = accounting.totalBondShares();
         wstETH.approve(address(accounting), type(uint256).max);
 
-        uint256 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
@@ -356,7 +370,6 @@ contract VettedGateCreateNodeOperatorTest is IntegrationTestBase {
     }
 
     function test_claimBondCurve() public {
-        uint256 keysCount = 2;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
@@ -392,6 +405,14 @@ contract VettedGateCreateNodeOperatorTest is IntegrationTestBase {
         assertEq(accounting.getBondCurveId(noId), vettedGate.curveId());
         assertTrue(accounting.getClaimableBondShares(noId) > 0);
         assertTrue(vettedGate.isConsumed(nodeOperator));
+    }
+}
+
+contract VettedGateCreateNodeOperator10KeysTest is
+    VettedGateCreateNodeOperatorTest
+{
+    constructor() {
+        keysCount = 10;
     }
 }
 
@@ -585,6 +606,11 @@ contract DepositTest is IntegrationTestBase {
 contract AddValidatorKeysTest is IntegrationTestBase {
     uint256 internal defaultNoId;
     uint256 internal initialKeysCount = 2;
+    uint256 internal immutable keysCount;
+
+    constructor() {
+        keysCount = 1;
+    }
 
     function setUp() public override {
         super.setUp();
@@ -613,7 +639,6 @@ contract AddValidatorKeysTest is IntegrationTestBase {
     }
 
     function test_addValidatorKeysETH() public assertInvariants {
-        uint256 keysCount = 1;
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
@@ -637,7 +662,6 @@ contract AddValidatorKeysTest is IntegrationTestBase {
     }
 
     function test_addValidatorKeysStETH() public assertInvariants {
-        uint256 keysCount = 1;
         vm.startPrank(nodeOperator);
         vm.deal(nodeOperator, 32 ether);
         lido.submit{ value: 32 ether }(address(0));
@@ -671,7 +695,6 @@ contract AddValidatorKeysTest is IntegrationTestBase {
     }
 
     function test_addValidatorKeysWstETH() public assertInvariants {
-        uint256 keysCount = 1;
         vm.startPrank(nodeOperator);
         vm.deal(nodeOperator, 32 ether);
         lido.submit{ value: 32 ether }(address(0));
@@ -709,6 +732,12 @@ contract AddValidatorKeysTest is IntegrationTestBase {
 
         NodeOperator memory no = csm.getNodeOperator(defaultNoId);
         assertEq(no.totalAddedKeys, initialKeysCount + keysCount);
+    }
+}
+
+contract AddValidatorKeys10KeysTest is AddValidatorKeysTest {
+    constructor() {
+        keysCount = 10;
     }
 }
 
