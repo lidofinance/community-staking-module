@@ -41,9 +41,9 @@ contract DeployLocalDevNet is DeployBase {
         config.bondCurve[0] = 2.4 ether;
         config.bondCurve[1] = 3.7 ether;
 
-        config.minBondLockPeriod = 4 weeks;
-        config.maxBondLockPeriod = 365 days;
-        config.bondLockPeriod = 8 weeks;
+        config.minBondLockPeriod = 1 days;
+        config.maxBondLockPeriod = 7 days;
+        config.bondLockPeriod = 1 days;
         config.setResetBondCurveAddress = vm.envAddress(
             "CSM_FIRST_ADMIN_ADDRESS"
         ); // Dev team EOA
