@@ -27,7 +27,7 @@ deploy_config_path := if chain == "mainnet" {
 } else if chain == "holesky" {
     "artifacts/holesky/deploy-holesky.json"
 } else if chain == "local-devnet" {
-    "artifacts/holesky/deploy-local-devnet.json"
+    "artifacts/local-devnet/deploy-local-devnet.json"
 } else {
     error("Unsupported chain " + chain)
 }
