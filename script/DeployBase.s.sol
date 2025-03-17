@@ -371,25 +371,29 @@ abstract contract DeployBase is Script {
                 consensusVersion: config.consensusVersion
             });
 
-            address[] memory sealables = new address[](6);
-            sealables[0] = address(csm);
-            sealables[1] = address(accounting);
-            sealables[2] = address(oracle);
-            sealables[3] = address(verifier);
-            sealables[4] = address(vettedGate);
-            sealables[5] = address(ejector);
-            address gateSeal = _deployGateSeal(sealables);
+            address gateSeal;
+            if (config.gateSealFactory != address(0)) {
+                address[] memory sealables = new address[](6);
+                sealables[0] = address(csm);
+                sealables[1] = address(accounting);
+                sealables[2] = address(oracle);
+                sealables[3] = address(verifier);
+                sealables[4] = address(vettedGate);
+                sealables[5] = address(ejector);
+                gateSeal = _deployGateSeal(sealables);
 
-            csm.grantRole(csm.PAUSE_ROLE(), gateSeal);
-            oracle.grantRole(oracle.PAUSE_ROLE(), gateSeal);
-            accounting.grantRole(accounting.PAUSE_ROLE(), gateSeal);
-            verifier.grantRole(verifier.PAUSE_ROLE(), gateSeal);
-            vettedGate.grantRole(vettedGate.PAUSE_ROLE(), gateSeal);
+                csm.grantRole(csm.PAUSE_ROLE(), gateSeal);
+                oracle.grantRole(oracle.PAUSE_ROLE(), gateSeal);
+                accounting.grantRole(accounting.PAUSE_ROLE(), gateSeal);
+                verifier.grantRole(verifier.PAUSE_ROLE(), gateSeal);
+                vettedGate.grantRole(vettedGate.PAUSE_ROLE(), gateSeal);
+                ejector.grantRole(ejector.PAUSE_ROLE(), gateSeal);
+            }
+
             ejector.grantRole(
                 ejector.BAD_PERFORMER_EJECTOR_ROLE(),
                 address(strikes)
             );
-            ejector.grantRole(ejector.PAUSE_ROLE(), gateSeal);
             accounting.grantRole(
                 accounting.SET_BOND_CURVE_ROLE(),
                 address(config.setResetBondCurveAddress)

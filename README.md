@@ -140,7 +140,7 @@ The following commands are related to the deployment process:
 - Dry run of deploy script to be sure it works as expected
 
 ```bash
-just deploy-prod-dry
+just deploy-live-dry
 ```
 
 - Broadcast transactions
@@ -148,7 +148,7 @@ just deploy-prod-dry
 > Note: pass `--legacy` arg in case of the following error: `Failed to get EIP-1559 fees`
 
 ```bash
-just deploy-prod
+just deploy-live
 ```
 
 After that there should be artifacts in the `./artifacts/latest` directory,
