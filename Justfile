@@ -4,24 +4,24 @@ import "fork.just"
 chain := env_var_or_default("CHAIN", "mainnet")
 deploy_script_name := if chain == "mainnet" {
     "DeployMainnet"
-} else if chain == "holesky" {
-    "DeployHolesky"
+} else if chain == "local-devnet" {
+    "DeployLocalDevNet"
 } else {
     error("Unsupported chain " + chain)
 }
 
 deploy_implementations_script_name := if chain == "mainnet" {
     "DeployImplementationsMainnet"
-} else if chain == "holesky" {
-    "DeployImplementationsHolesky"
+} else if chain == "local-devnet" {
+    "SCRIPT_IS_NOT_DEFINED"
 } else {
     error("Unsupported chain " + chain)
 }
 
 deploy_config_path := if chain == "mainnet" {
     "artifacts/mainnet/deploy-mainnet.json"
-} else if chain == "holesky" {
-    "artifacts/holesky/deploy-holesky.json"
+} else if chain == "local-devnet" {
+    "artifacts/local-devnet/deploy-local-devnet.json"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -176,25 +176,32 @@ deploy *args:
     FOUNDRY_PROFILE=deploy \
         forge script {{deploy_script_path}} --sig="run(string)" --rpc-url {{anvil_rpc_url}} --broadcast --slow {{args}} -- `git rev-parse HEAD`
 
-deploy-prod *args:
+deploy-live *args:
     just _warn "The current `tput bold`chain={{chain}}`tput sgr0` with the following rpc url: $RPC_URL"
-    ARTIFACTS_DIR=./artifacts/latest/ just _deploy-prod-confirm {{args}}
+    ARTIFACTS_DIR=./artifacts/latest/ just _deploy-live {{args}}
+
+    cp ./broadcast/{{deploy_script_name}}.s.sol/`cast chain-id --rpc-url=$RPC_URL`/run-latest.json \
+        ./artifacts/latest/transactions.json
+
+deploy-live-no-confirm *args:
+    just _warn "The current `tput bold`chain={{chain}}`tput sgr0` with the following rpc url: $RPC_URL"
+    ARTIFACTS_DIR=./artifacts/latest/ just _deploy-live-no-confirm --broadcast {{args}}
 
     cp ./broadcast/{{deploy_script_name}}.s.sol/`cast chain-id --rpc-url=$RPC_URL`/run-latest.json \
         ./artifacts/latest/transactions.json
 
 [confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]
-_deploy-prod-confirm *args:
-    just _deploy-prod --broadcast --verify {{args}}
+_deploy-live *args:
+    just _deploy-live-no-confirm --broadcast --verify {{args}}
 
-deploy-prod-dry *args:
-    just _deploy-prod {{args}}
+deploy-live-dry *args:
+    just _deploy-live-no-confirm {{args}}
 
-verify-prod *args:
+verify-live *args:
     just _warn "Pass --chain=your_chain manually. e.g. --chain=holesky for testnet deployment"
     forge script {{deploy_script_path}} --sig="run(string)" --rpc-url ${RPC_URL} --verify {{args}} --unlocked -- `git rev-parse HEAD`
 
-_deploy-prod *args:
+_deploy-live-no-confirm *args:
     forge script {{deploy_script_path}} --sig="run(string)" --force --rpc-url ${RPC_URL} {{args}} -- `git rev-parse HEAD`
 
 _deploy-impl *args:
@@ -204,7 +211,7 @@ _deploy-impl *args:
             -- {{deploy_config_path}} `git rev-parse HEAD`
 
 [confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]
-deploy-impl-prod *args:
+deploy-impl-live *args:
     ARTIFACTS_DIR=./artifacts/latest/ just _deploy-impl --broadcast --verify {{args}}
 
 deploy-impl-dry *args:
