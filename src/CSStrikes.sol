@@ -12,6 +12,7 @@ import { ICSStrikes } from "./interfaces/ICSStrikes.sol";
 /// @author vgorkavenko
 contract CSStrikes is ICSStrikes {
     address public immutable ORACLE;
+    ICSModule public immutable MODULE;
     ICSEjector public immutable EJECTOR;
 
     /// @notice The latest Merkle Tree root
@@ -24,6 +25,7 @@ contract CSStrikes is ICSStrikes {
         if (ejector == address(0)) revert ZeroEjectorAddress();
         if (oracle == address(0)) revert ZeroOracleAddress();
         EJECTOR = ICSEjector(ejector);
+        MODULE = EJECTOR.MODULE();
         ORACLE = oracle;
     }
 
@@ -113,10 +115,6 @@ contract CSStrikes is ICSStrikes {
         uint256 startIndex,
         uint256 keysCount
     ) internal view returns (bytes memory keys) {
-        keys = ICSModule(EJECTOR.MODULE()).getSigningKeys(
-            nodeOperatorId,
-            startIndex,
-            keysCount
-        );
+        keys = MODULE.getSigningKeys(nodeOperatorId, startIndex, keysCount);
     }
 }
