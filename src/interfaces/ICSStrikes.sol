@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 import { ICSModule } from "./ICSModule.sol";
+import { ICSEjector } from "./ICSEjector.sol";
 
 pragma solidity 0.8.24;
 
@@ -22,6 +23,10 @@ interface ICSStrikes {
     error InvalidProof();
 
     function ORACLE() external view returns (address);
+
+    function MODULE() external view returns (ICSModule);
+
+    function EJECTOR() external view returns (ICSEjector);
 
     function treeRoot() external view returns (bytes32);
 
