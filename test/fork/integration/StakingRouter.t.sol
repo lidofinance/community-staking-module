@@ -115,7 +115,7 @@ contract StakingRouterIntegrationTest is
         }
 
         vm.prank(locator.depositSecurityModule());
-        vm.startSnapshotGas("CSM.obtainDepositData_30keys");
+        vm.startSnapshotGas("CSM.lidoDepositCSM_30keys");
         lido.deposit(keysCount, moduleId, "");
         vm.stopSnapshotGas();
     }

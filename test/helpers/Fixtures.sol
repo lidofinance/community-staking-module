@@ -396,7 +396,7 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
         handleStakingLimit();
         handleBunkerMode();
 
-        address whale = address(1);
+        address whale = address(100499);
         vm.prank(whale);
         vm.deal(whale, 1e7 ether);
         lido.submit{ value: 1e7 ether }(address(0));

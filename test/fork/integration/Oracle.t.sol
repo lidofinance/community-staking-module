@@ -94,12 +94,12 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
             consensusVersion: consensusVersion,
             refSlot: refSlot,
             treeRoot: feesTreeRoot,
-            treeCid: "0x1",
-            logCid: "0x2",
+            treeCid: someCIDv0(),
+            logCid: someCIDv0(),
             distributed: distributedShares,
             rebate: 0,
             strikesTreeRoot: strikesTreeRoot,
-            strikesTreeCid: "0x3"
+            strikesTreeCid: someCIDv0()
         });
         reachConsensus(refSlot, keccak256(abi.encode(data)));
     }
@@ -114,9 +114,11 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
 
         uint256[] memory strikesData = new uint256[](1);
         strikesData[0] = 0;
-        strikesTree.pushLeaf(abi.encode(nodeOperatorId, "0x1", strikesData));
         strikesTree.pushLeaf(
-            abi.encode(nodeOperatorId + 1, "0x1", strikesData)
+            abi.encode(nodeOperatorId, randomBytes(48), strikesData)
+        );
+        strikesTree.pushLeaf(
+            abi.encode(nodeOperatorId + 1, randomBytes(48), strikesData)
         );
 
         ICSFeeOracle.ReportData memory data = prepareReport(
@@ -129,6 +131,7 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
         vm.startPrank(addresses[0]);
         vm.startSnapshotGas("CSFeeOracle.submitReportData_fees");
         oracle.submitReportData(data, contractVersion);
+        vm.stopSnapshotGas();
         vm.stopPrank();
 
         assertEq(feeDistributor.pendingSharesToDistribute(), 0);
@@ -153,11 +156,13 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
         (, uint256 threshold) = parametersRegistry.getStrikesParams(
             accounting.getBondCurveId(nodeOperatorId)
         );
-        uint256[] memory strikesData = new uint256[](1);
-        strikesData[0] = threshold;
+        uint256[] memory strikesData = new uint256[](threshold);
+        for (uint256 i = 0; i < threshold; i++) {
+            strikesData[i] = 1;
+        }
         strikesTree.pushLeaf(abi.encode(nodeOperatorId, key, strikesData));
         strikesTree.pushLeaf(
-            abi.encode(nodeOperatorId + 1, "0x1", strikesData)
+            abi.encode(nodeOperatorId + 1, randomBytes(48), strikesData)
         );
 
         ICSFeeOracle.ReportData memory data = prepareReport(
