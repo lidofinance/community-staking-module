@@ -19,6 +19,14 @@ import { ERC20Testable } from "./helpers/ERCTestable.sol";
 import { Utilities } from "./helpers/Utilities.sol";
 import { InvariantAsserts } from "./helpers/InvariantAsserts.sol";
 
+contract EjectorMock {
+    address public MODULE;
+
+    constructor(address _module) {
+        MODULE = _module;
+    }
+}
+
 contract CSStrikesTestBase is Test, Fixtures, Utilities, InvariantAsserts {
     address internal stranger;
     address internal oracle;
@@ -40,12 +48,13 @@ contract CSStrikesConstructorTest is CSStrikesTestBase {
         stranger = nextAddress("STRANGER");
         oracle = nextAddress("ORACLE");
         module = nextAddress("MODULE");
-        ejector = nextAddress("EJECTOR");
+        ejector = address(new EjectorMock(module));
     }
 
     function test_constructor_happyPath() public {
         strikes = new CSStrikes(ejector, oracle);
         assertEq(strikes.ORACLE(), oracle);
+        assertEq(address(strikes.MODULE()), module);
         assertEq(address(strikes.EJECTOR()), ejector);
     }
 
@@ -65,7 +74,7 @@ contract CSStrikesTest is CSStrikesTestBase {
         stranger = nextAddress("STRANGER");
         oracle = nextAddress("ORACLE");
         module = nextAddress("MODULE");
-        ejector = nextAddress("EJECTOR");
+        ejector = address(new EjectorMock(module));
 
         strikes = new CSStrikes(ejector, oracle);
 

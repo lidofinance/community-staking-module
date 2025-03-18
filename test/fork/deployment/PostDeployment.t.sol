@@ -417,6 +417,7 @@ contract CSStrikesDeploymentTest is Test, Utilities, DeploymentFixtures {
 
     function test_constructor() public view {
         assertEq(address(strikes.ORACLE()), address(oracle));
+        assertEq(address(strikes.MODULE()), address(csm));
         assertEq(address(strikes.EJECTOR()), address(ejector));
     }
 }
