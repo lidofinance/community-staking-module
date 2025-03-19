@@ -571,5 +571,17 @@ abstract contract DeployBase is Script {
             hashConsensus.DEFAULT_ADMIN_ROLE(),
             config.secondAdminAddress
         );
+        parametersRegistry.grantRole(
+            parametersRegistry.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        vettedGate.grantRole(
+            vettedGate.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        ejector.grantRole(
+            ejector.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
     }
 }
