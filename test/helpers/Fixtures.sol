@@ -16,6 +16,7 @@ import { IBurner } from "../../src/interfaces/IBurner.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 import { IWstETH } from "../../src/interfaces/IWstETH.sol";
 import { IGateSeal } from "../../src/interfaces/IGateSeal.sol";
+import { NodeOperatorManagementProperties } from "../../src/interfaces/ICSModule.sol";
 import { HashConsensus } from "../../src/lib/base-oracle/HashConsensus.sol";
 import { IWithdrawalQueue } from "../../src/interfaces/IWithdrawalQueue.sol";
 import { CSModule } from "../../src/CSModule.sol";
@@ -32,6 +33,8 @@ import { DeployParams, DeployParamsV1 } from "../../script/DeployBase.s.sol";
 import { IACL } from "../../src/interfaces/IACL.sol";
 import { IKernel } from "../../src/interfaces/IKernel.sol";
 import { ICSEarlyAdoption } from "../../src/interfaces/ICSEarlyAdoption.sol";
+import { Utilities } from "./Utilities.sol";
+import { Batch } from "../../src/lib/QueueLib.sol";
 
 contract Fixtures is StdCheats, Test {
     bytes32 public constant INITIALIZABLE_STORAGE =
@@ -306,6 +309,8 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
     CSFeeOracle public oracleImpl;
     CSFeeDistributor public feeDistributorImpl;
 
+    error CSModuleNotFound();
+
     function initializeFromDeployment() public {
         Env memory env = envVars();
         string memory config = vm.readFile(env.DEPLOY_CONFIG);
@@ -383,5 +388,68 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
             vm.prank(wq.getRoleMember(wq.ORACLE_ROLE(), 0));
             wq.onOracleReport(false, 0, 0);
         }
+    }
+
+    function hugeDeposit() internal {
+        // It's impossible to process deposits if withdrawal requests amount is more than the buffered ether,
+        // so we need to make sure that the buffered ether is enough by submitting this tremendous amount.
+        handleStakingLimit();
+        handleBunkerMode();
+
+        address whale = address(100499);
+        vm.prank(whale);
+        vm.deal(whale, 1e7 ether);
+        lido.submit{ value: 1e7 ether }(address(0));
+    }
+
+    function findCSModule() internal view returns (uint256) {
+        uint256[] memory ids = stakingRouter.getStakingModuleIds();
+        for (uint256 i = ids.length - 1; i > 0; i--) {
+            IStakingRouter.StakingModule memory module = stakingRouter
+                .getStakingModule(ids[i]);
+            if (module.stakingModuleAddress == address(csm)) {
+                return ids[i];
+            }
+        }
+        revert CSModuleNotFound();
+    }
+
+    function addNodeOperator(
+        address from,
+        uint256 keysCount
+    ) internal returns (uint256 nodeOperatorId) {
+        (bytes memory keys, bytes memory signatures) = new Utilities()
+            .keysSignatures(keysCount);
+        uint256 amount = accounting.getBondAmountByKeysCount(keysCount, 0);
+        vm.deal(from, amount);
+
+        vm.prank(from);
+        nodeOperatorId = permissionlessGate.addNodeOperatorETH{
+            value: amount
+        }({
+            keysCount: keysCount,
+            publicKeys: keys,
+            signatures: signatures,
+            managementProperties: NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            referrer: address(0)
+        });
+    }
+
+    function getDepositableNodeOperator(
+        address nodeOperatorAddress
+    ) internal returns (uint256 noId, uint256 keysCount) {
+        for (uint256 i = 0; i < csm.QUEUE_LOWEST_PRIORITY(); ++i) {
+            (uint128 head, ) = csm.depositQueuePointers(i);
+            Batch batch = csm.depositQueueItem(i, head);
+            if (!batch.isNil()) {
+                return (batch.noId(), batch.keys());
+            }
+        }
+        keysCount = 5;
+        noId = addNodeOperator(nodeOperatorAddress, keysCount);
     }
 }

@@ -5,18 +5,10 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { CSModule, NodeOperator, NodeOperatorManagementProperties } from "../../../src/CSModule.sol";
-import { ICSModule } from "../../../src/interfaces/ICSModule.sol";
-import { ILidoLocator } from "../../../src/interfaces/ILidoLocator.sol";
+import { ICSModule, NodeOperator } from "../../../src/interfaces/ICSModule.sol";
 import { IStakingRouter } from "../../../src/interfaces/IStakingRouter.sol";
-import { IWithdrawalQueue } from "../../../src/interfaces/IWithdrawalQueue.sol";
-import { CSAccounting } from "../../../src/CSAccounting.sol";
-import { ILido } from "../../../src/interfaces/ILido.sol";
-import { IWstETH } from "../../../src/interfaces/IWstETH.sol";
 import { Utilities } from "../../helpers/Utilities.sol";
 import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
-import { IKernel } from "../../../src/interfaces/IKernel.sol";
-import { IACL } from "../../../src/interfaces/IACL.sol";
 import { InvariantAsserts } from "../../helpers/InvariantAsserts.sol";
 import { Batch } from "../../../src/lib/QueueLib.sol";
 
@@ -52,11 +44,8 @@ contract StakingRouterIntegrationTest is
         initializeFromDeployment();
 
         vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
-        csm.grantRole(csm.RESUME_ROLE(), address(this));
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
-        csm.grantRole(csm.STAKING_ROUTER_ROLE(), address(stakingRouter));
         vm.stopPrank();
-        if (csm.isPaused()) csm.resume();
 
         agent = stakingRouter.getRoleMember(
             stakingRouter.DEFAULT_ADMIN_ROLE(),
@@ -81,87 +70,10 @@ contract StakingRouterIntegrationTest is
         );
         vm.stopPrank();
 
-        moduleId = findOrAddCSModule();
-    }
-
-    function findOrAddCSModule() internal returns (uint256) {
-        uint256[] memory ids = stakingRouter.getStakingModuleIds();
-        for (uint256 i = ids.length - 1; i > 0; i--) {
-            IStakingRouter.StakingModule memory module = stakingRouter
-                .getStakingModule(ids[i]);
-            if (module.stakingModuleAddress == address(csm)) {
-                return ids[i];
-            }
-        }
-        vm.prank(agent);
-        stakingRouter.addStakingModule({
-            _name: "community-staking-v1",
-            _stakingModuleAddress: address(csm),
-            _stakeShareLimit: 10000,
-            _priorityExitShareThreshold: 10000,
-            _stakingModuleFee: 500,
-            _treasuryFee: 500,
-            _maxDepositsPerBlock: 30,
-            _minDepositBlockDistance: 25
-        });
-        return ids.length + 1;
-    }
-
-    function addNodeOperator(
-        address from,
-        uint256 keysCount
-    ) internal returns (uint256 nodeOperatorId) {
-        (bytes memory keys, bytes memory signatures) = keysSignatures(
-            keysCount
-        );
-        uint256 amount = accounting.getBondAmountByKeysCount(keysCount, 0);
-        vm.deal(from, amount);
-
-        vm.prank(from);
-        nodeOperatorId = permissionlessGate.addNodeOperatorETH{
-            value: amount
-        }({
-            keysCount: keysCount,
-            publicKeys: keys,
-            signatures: signatures,
-            managementProperties: NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            referrer: address(0)
-        });
-    }
-
-    function getDepositableNodeOperator()
-        internal
-        returns (uint256 noId, uint256 keysCount)
-    {
-        for (uint256 i = 0; i < csm.QUEUE_LOWEST_PRIORITY(); ++i) {
-            (uint128 head, ) = csm.depositQueuePointers(i);
-            Batch batch = csm.depositQueueItem(i, head);
-            if (!batch.isNil()) {
-                return (batch.noId(), batch.keys());
-            }
-        }
-        keysCount = 5;
-        noId = addNodeOperator(nextAddress(), keysCount);
-    }
-
-    function hugeDeposit() internal {
-        // It's impossible to process deposits if withdrawal requests amount is more than the buffered ether,
-        // so we need to make sure that the buffered ether is enough by submitting this tremendous amount.
-        handleStakingLimit();
-        handleBunkerMode();
-
-        address whale = nextAddress();
-        vm.prank(whale);
-        vm.deal(whale, 1e7 ether);
-        lido.submit{ value: 1e7 ether }(address(0));
+        moduleId = findCSModule();
     }
 
     function lidoDepositWithNoGasMetering(uint256 keysCount) internal {
-        // @dev: depositing keys without gas metering in case of huge queue
         vm.startPrank(locator.depositSecurityModule());
         vm.pauseGasMetering();
         lido.deposit(keysCount, moduleId, "");
@@ -176,7 +88,9 @@ contract StakingRouterIntegrationTest is
     }
 
     function test_RouterDeposit() public assertInvariants {
-        (uint256 noId, uint256 keysCount) = getDepositableNodeOperator();
+        (uint256 noId, uint256 keysCount) = getDepositableNodeOperator(
+            nextAddress()
+        );
         uint256 depositedKeysBefore = csm
             .getNodeOperator(noId)
             .totalDepositedKeys;
@@ -186,6 +100,24 @@ contract StakingRouterIntegrationTest is
         lidoDepositWithNoGasMetering(keysCount);
         NodeOperator memory no = csm.getNodeOperator(noId);
         assertEq(no.totalDepositedKeys, depositedKeysBefore + keysCount);
+    }
+
+    function test_routerDepositOneBatch() public assertInvariants {
+        hugeDeposit();
+        uint256 keysCount = 30;
+        (, , uint256 depositableValidatorsCount) = csm
+            .getStakingModuleSummary();
+        if (depositableValidatorsCount < keysCount) {
+            addNodeOperator(
+                nextAddress(),
+                keysCount - depositableValidatorsCount
+            );
+        }
+
+        vm.prank(locator.depositSecurityModule());
+        vm.startSnapshotGas("CSM.lidoDepositCSM_30keys");
+        lido.deposit(keysCount, moduleId, "");
+        vm.stopSnapshotGas();
     }
 
     function test_routerReportRewardsMinted() public assertInvariants {
@@ -252,7 +184,9 @@ contract StakingRouterIntegrationTest is
         public
         assertInvariants
     {
-        (uint256 noId, uint256 keysCount) = getDepositableNodeOperator();
+        (uint256 noId, uint256 keysCount) = getDepositableNodeOperator(
+            nextAddress()
+        );
         uint256 exitedKeysBefore = csm.getNodeOperator(noId).totalExitedKeys;
 
         hugeDeposit();
@@ -272,7 +206,9 @@ contract StakingRouterIntegrationTest is
     }
 
     function test_getStakingModuleSummary() public assertInvariants {
-        (uint256 noId, uint256 keysCount) = getDepositableNodeOperator();
+        (uint256 noId, uint256 keysCount) = getDepositableNodeOperator(
+            nextAddress()
+        );
 
         IStakingRouter.StakingModuleSummary memory summaryOld = stakingRouter
             .getStakingModuleSummary(moduleId);
@@ -306,7 +242,9 @@ contract StakingRouterIntegrationTest is
     }
 
     function test_getNodeOperatorSummary() public assertInvariants {
-        (uint256 noId, uint256 keysCount) = getDepositableNodeOperator();
+        (uint256 noId, uint256 keysCount) = getDepositableNodeOperator(
+            nextAddress()
+        );
         uint256 depositedValidatorsBefore = csm
             .getNodeOperator(noId)
             .totalDepositedKeys;
@@ -351,7 +289,7 @@ contract StakingRouterIntegrationTest is
         uint256 keysCount;
 
         for (;;) {
-            (noId, keysCount) = getDepositableNodeOperator();
+            (noId, keysCount) = getDepositableNodeOperator(nextAddress());
             lidoDepositWithNoGasMetering(keysCount);
             /// we need to be sure there are more than 1 keys for further checks
             if (csm.getNodeOperator(noId).totalDepositedKeys > 1) {
@@ -408,11 +346,13 @@ contract StakingRouterIntegrationTest is
                 0
             )
         );
+        vm.startSnapshotGas("CSM.decreaseVettedSigningKeysCount");
         stakingRouter.decreaseStakingModuleVettedKeysCountByNodeOperator(
             moduleId,
             bytes.concat(bytes8(uint64(noId))),
             bytes.concat(bytes16(uint128(newVetted)))
         );
+        vm.stopSnapshotGas();
 
         NodeOperator memory no = csm.getNodeOperator(noId);
         assertEq(no.totalVettedKeys, newVetted);

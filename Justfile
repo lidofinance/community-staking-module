@@ -64,17 +64,14 @@ test-all:
 test-unit *args:
     forge test --no-match-path 'test/fork/*' -vvv {{args}}
 
+test-deployment *args:
+    forge test --match-path 'test/fork/deployment/*' -vvv --show-progress {{args}}
+
 test-integration *args:
     forge test --match-path 'test/fork/integration/*' -vvv --show-progress {{args}}
 
-test-deployment *args:
-    forge test --match-path 'test/fork/*' --no-match-path='test/fork/voting/*' -vvv --show-progress {{args}}
-
-test-post-voting *args:
-    forge test --match-path 'test/fork/*' --no-match-path='test/fork/deployment/*' -vvv --show-progress {{args}}
-
-test-invariant *args:
-    forge test --match-path 'test/fork/invariant/*' -vvv --show-progress {{args}}
+test-post-upgrade *args:
+    forge test --match-path='test/fork/*' --no-match-path 'test/fork/deployment/*' -vvv --show-progress {{args}}
 
 gas-report:
     #!/usr/bin/env python
@@ -113,7 +110,7 @@ gas-report:
     print(f"Done. Gas report saved to {filename}")
 
 coverage *args:
-    FOUNDRY_PROFILE=coverage forge coverage --no-match-path 'test/fork/*' {{args}}
+    FOUNDRY_PROFILE=coverage forge coverage --no-match-coverage 'test' --no-match-path 'test/fork/*' {{args}}
 
 # Run coverage and save the report in LCOV file.
 coverage-lcov *args:
@@ -238,19 +235,25 @@ test-upgrade *args:
     export VOTE_PREV_BLOCK=`cast block-number -r $RPC_URL`
 
     just vote-upgrade
-    just test-post-voting {{args}}
+    just test-post-upgrade {{args}}
 
     just kill-fork
 
 test-local *args:
+    #!/usr/bin/env bash
+
     just make-fork --silent &
-    @while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
+    while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
     DEPLOYER_PRIVATE_KEY=`cat localhost.json | jq -r ".private_keys[0]"` \
         just deploy --silent
 
-    DEPLOY_CONFIG=./artifacts/local/deploy-{{chain}}.json \
-    RPC_URL={{anvil_rpc_url}} \
-        just test-deployment {{args}}
+    export DEPLOY_CONFIG=./artifacts/local/deploy-{{chain}}.json
+    export RPC_URL={{anvil_rpc_url}}
+
+    just test-deployment {{args}}
+    just vote-add-module
+    just test-integration {{args}}
+
     just kill-fork
 
 _warn message:

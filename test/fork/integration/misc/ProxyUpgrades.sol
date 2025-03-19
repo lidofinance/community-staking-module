@@ -5,15 +5,15 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
-import { OssifiableProxy } from "../../../src/lib/proxy/OssifiableProxy.sol";
-import { CSModule } from "../../../src/CSModule.sol";
-import { CSAccounting } from "../../../src/CSAccounting.sol";
-import { CSFeeDistributor } from "../../../src/CSFeeDistributor.sol";
-import { CSFeeOracle } from "../../../src/CSFeeOracle.sol";
-import { Utilities } from "../../helpers/Utilities.sol";
-import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
+import { OssifiableProxy } from "../../../../src/lib/proxy/OssifiableProxy.sol";
+import { CSModule } from "../../../../src/CSModule.sol";
+import { CSAccounting } from "../../../../src/CSAccounting.sol";
+import { CSFeeDistributor } from "../../../../src/CSFeeDistributor.sol";
+import { CSFeeOracle } from "../../../../src/CSFeeOracle.sol";
+import { Utilities } from "../../../helpers/Utilities.sol";
+import { DeploymentFixtures } from "../../../helpers/Fixtures.sol";
 
-contract UpgradabilityTest is Test, Utilities, DeploymentFixtures {
+contract ProxyUpgrades is Test, Utilities, DeploymentFixtures {
     constructor() {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);

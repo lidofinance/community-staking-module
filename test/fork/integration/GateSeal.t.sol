@@ -15,10 +15,8 @@ contract GateSealTest is Test, Utilities, DeploymentFixtures {
         initializeFromDeployment();
 
         vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
-        csm.grantRole(csm.RESUME_ROLE(), address(this));
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
         vm.stopPrank();
-        if (csm.isPaused()) csm.resume();
     }
 
     function test_sealAll() public {

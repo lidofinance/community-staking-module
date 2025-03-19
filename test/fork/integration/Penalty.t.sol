@@ -54,8 +54,6 @@ contract PenaltyIntegrationTest is
         initializeFromDeployment();
 
         vm.startPrank(csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
-        csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(this));
-        csm.grantRole(csm.RESUME_ROLE(), address(this));
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
         csm.grantRole(
             csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(),
@@ -66,7 +64,6 @@ contract PenaltyIntegrationTest is
             address(this)
         );
         vm.stopPrank();
-        if (csm.isPaused()) csm.resume();
 
         handleStakingLimit();
         handleBunkerMode();
@@ -94,22 +91,6 @@ contract PenaltyIntegrationTest is
             }),
             referrer: address(0)
         });
-
-        // grant role if testing against non-connected CSM
-        IBurner burner = IBurner(locator.burner());
-        if (
-            !burner.hasRole(
-                burner.REQUEST_BURN_MY_STETH_ROLE(),
-                address(accounting)
-            )
-        ) {
-            vm.startPrank(burner.getRoleMember(burner.DEFAULT_ADMIN_ROLE(), 0));
-            burner.grantRole(
-                burner.REQUEST_BURN_MY_STETH_ROLE(),
-                address(accounting)
-            );
-            vm.stopPrank();
-        }
     }
 
     function test_penalty() public assertInvariants {
