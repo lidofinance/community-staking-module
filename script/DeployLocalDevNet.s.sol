@@ -86,6 +86,9 @@ contract DeployLocalDevNet is DeployBase {
         config.sealDuration = 0;
         config.sealExpiryTimestamp = 0;
 
+        // An address from the shared wallet, look for `shared-wallet.ts` in `lido-local-devnet`.
+        config.secondAdminAddress = 0xafF0CA253b97e54440965855cec0A8a2E2399896;
+
         _setUp();
     }
 }
