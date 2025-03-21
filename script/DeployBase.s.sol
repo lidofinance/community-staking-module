@@ -163,6 +163,7 @@ abstract contract DeployBase is Script {
     error HashConsensusMismatch();
     error IsNotReadyForDeployment();
     error CannotBeUsedInMainnet();
+    error InvalidSecondAdmin();
 
     constructor(string memory _chainName, uint256 _chainId) {
         chainName = _chainName;
@@ -427,6 +428,9 @@ abstract contract DeployBase is Script {
             csm.grantRole(csm.VERIFIER_ROLE(), address(verifier));
 
             if (config.secondAdminAddress != address(0)) {
+                if (config.secondAdminAddress == deployer) {
+                    revert InvalidSecondAdmin();
+                }
                 _grantSecondAdmins();
             }
 

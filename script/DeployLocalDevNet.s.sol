@@ -86,6 +86,11 @@ contract DeployLocalDevNet is DeployBase {
         config.sealDuration = 0;
         config.sealExpiryTimestamp = 0;
 
+        config.secondAdminAddress = vm.envOr(
+            "CSM_SECOND_ADMIN_ADDRESS",
+            address(0)
+        );
+
         _setUp();
     }
 }
