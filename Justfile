@@ -8,16 +8,20 @@ deploy_script_name := if chain == "mainnet" {
     "DeployHolesky"
 } else if chain == "hoodi" {
     "DeployHoodi"
+} else if chain == "local-devnet" {
+    "DeployLocalDevNet"
 } else {
     error("Unsupported chain " + chain)
 }
 
 deploy_implementations_script_name := if chain == "mainnet" {
-    "undefined"
+    "SCRIPT_IS_NOT_DEFINED"
 } else if chain == "holesky" {
     "DeployHoleskyImplementations"
 } else if chain == "hoodi" {
-    "undefined"
+    "SCRIPT_IS_NOT_DEFINED"
+} else if chain == "local-devnet" {
+    "SCRIPT_IS_NOT_DEFINED"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -130,25 +134,32 @@ kill-fork:
 deploy *args:
     forge script {{deploy_script_path}} --rpc-url {{anvil_rpc_url}} --broadcast --slow {{args}}
 
-deploy-prod *args:
+deploy-live *args:
     just _warn "The current `tput bold`chain={{chain}}`tput sgr0` with the following rpc url: $RPC_URL"
-    ARTIFACTS_DIR=./artifacts/latest/ just _deploy-prod-confirm {{args}}
+    ARTIFACTS_DIR=./artifacts/latest/ just _deploy-live {{args}}
+
+    cp ./broadcast/{{deploy_script_name}}.s.sol/`cast chain-id --rpc-url=$RPC_URL`/run-latest.json \
+        ./artifacts/latest/transactions.json
+
+deploy-live-no-confirm *args:
+    just _warn "The current `tput bold`chain={{chain}}`tput sgr0` with the following rpc url: $RPC_URL"
+    ARTIFACTS_DIR=./artifacts/latest/ just _deploy-live-no-confirm --broadcast {{args}}
 
     cp ./broadcast/{{deploy_script_name}}.s.sol/`cast chain-id --rpc-url=$RPC_URL`/run-latest.json \
         ./artifacts/latest/transactions.json
 
 [confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]
-_deploy-prod-confirm *args:
-    just _deploy-prod --broadcast --verify {{args}}
+_deploy-live *args:
+    just _deploy-live-no-confirm --broadcast --verify {{args}}
 
-deploy-prod-dry *args:
-    just _deploy-prod {{args}}
+deploy-live-dry *args:
+    just _deploy-live-no-confirm {{args}}
 
-verify-prod *args:
+verify-live *args:
     just _warn "Pass --chain=your_chain manually. e.g. --chain=holesky for testnet deployment"
     forge script {{deploy_script_path}} --rpc-url ${RPC_URL} --verify {{args}} --unlocked
 
-_deploy-prod *args:
+_deploy-live-no-confirm *args:
     forge script {{deploy_script_path}} --force --rpc-url ${RPC_URL} {{args}}
 
 [confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]

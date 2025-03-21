@@ -256,11 +256,14 @@ abstract contract DeployBase is Script {
                 _avgPerfLeewayBP: config.avgPerfLeewayBP
             });
 
-            address gateSeal = _deployGateSeal();
+            address gateSeal;
+            if (config.gateSealFactory != address(0)) {
+                gateSeal = _deployGateSeal();
+                csm.grantRole(csm.PAUSE_ROLE(), gateSeal);
+                oracle.grantRole(oracle.PAUSE_ROLE(), gateSeal);
+                accounting.grantRole(accounting.PAUSE_ROLE(), gateSeal);
+            }
 
-            csm.grantRole(csm.PAUSE_ROLE(), gateSeal);
-            oracle.grantRole(oracle.PAUSE_ROLE(), gateSeal);
-            accounting.grantRole(accounting.PAUSE_ROLE(), gateSeal);
             accounting.grantRole(
                 accounting.SET_BOND_CURVE_ROLE(),
                 config.setResetBondCurveAddress

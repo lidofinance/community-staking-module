@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
-// Usage: forge script --private-key=$PRIVATE_KEY ./script/DeployCSVerifierElectra.s.sol:DeployCSVerifier[Holesky|Mainnet]
+// Usage: DEPLOYER_PRIVATE_KEY=$PRIVATE_KEY forge script ./script/DeployCSVerifierElectra.s.sol:DeployCSVerifier[Holesky|Mainnet|DevNet]
 
 pragma solidity 0.8.24;
 
@@ -11,6 +11,7 @@ import { console2 as console } from "forge-std/console2.sol";
 import { CSVerifier } from "../src/CSVerifier.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
+import { JsonObj, Json } from "./utils/Json.sol";
 
 struct Config {
     address withdrawalVault;
@@ -24,6 +25,7 @@ struct Config {
     Slot firstSupportedSlot;
     Slot pivotSlot;
     uint64 slotsPerEpoch;
+    string chainName;
 }
 
 // Check the constants below via `yarn run gindex`.
@@ -49,28 +51,47 @@ GIndex constant FIRST_VALIDATOR_ELECTRA = GIndex.wrap(
 );
 
 abstract contract DeployCSVerifier is Script {
-    CSVerifier internal verifier;
     Config internal config;
+    string internal artifactDir;
 
     function run() public {
-        vm.startBroadcast();
-        {
-            verifier = new CSVerifier({
-                withdrawalAddress: config.withdrawalVault,
-                module: config.module,
-                slotsPerEpoch: config.slotsPerEpoch,
-                gIFirstWithdrawalPrev: config.gIFirstWithdrawalPrev,
-                gIFirstWithdrawalCurr: config.gIFirstWithdrawalCurr,
-                gIFirstValidatorPrev: config.gIFirstValidatorPrev,
-                gIFirstValidatorCurr: config.gIFirstValidatorCurr,
-                gIHistoricalSummariesPrev: config.gIHistoricalSummariesPrev,
-                gIHistoricalSummariesCurr: config.gIHistoricalSummariesCurr,
-                firstSupportedSlot: config.firstSupportedSlot,
-                pivotSlot: config.pivotSlot
-            });
-        }
+        artifactDir = vm.envOr("ARTIFACTS_DIR", string("./artifacts/latest/"));
+        uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        address deployer = vm.addr(pk);
+        vm.label(deployer, "DEPLOYER");
+
+        vm.startBroadcast(pk);
+        CSVerifier verifier = new CSVerifier({
+            withdrawalAddress: config.withdrawalVault,
+            module: config.module,
+            slotsPerEpoch: config.slotsPerEpoch,
+            gIFirstWithdrawalPrev: config.gIFirstWithdrawalPrev,
+            gIFirstWithdrawalCurr: config.gIFirstWithdrawalCurr,
+            gIFirstValidatorPrev: config.gIFirstValidatorPrev,
+            gIFirstValidatorCurr: config.gIFirstValidatorCurr,
+            gIHistoricalSummariesPrev: config.gIHistoricalSummariesPrev,
+            gIHistoricalSummariesCurr: config.gIHistoricalSummariesCurr,
+            firstSupportedSlot: config.firstSupportedSlot,
+            pivotSlot: config.pivotSlot
+        });
         vm.stopBroadcast();
+
+        JsonObj memory deployJson = Json.newObj();
+        deployJson.set("CSVerifier", address(verifier));
+        vm.writeJson(deployJson.str, _deployJsonFilename());
         console.log("CSVerifier deployed at:", address(verifier));
+    }
+
+    function _deployJsonFilename() internal view returns (string memory) {
+        return
+            string(
+                abi.encodePacked(
+                    artifactDir,
+                    "deploy-verifier-",
+                    config.chainName,
+                    ".json"
+                )
+            );
     }
 }
 
@@ -87,7 +108,8 @@ contract DeployCSVerifierHolesky is DeployCSVerifier {
             gIHistoricalSummariesPrev: HISTORICAL_SUMMARIES_DENEB,
             gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
             firstSupportedSlot: Slot.wrap(950272), // 29_696 * 32, @see https://github.com/eth-clients/holesky/blob/main/metadata/config.yaml#L38
-            pivotSlot: Slot.wrap(3710976) // 115_968 * 32, @see https://github.com/eth-clients/holesky/blob/main/metadata/config.yaml#L42
+            pivotSlot: Slot.wrap(3710976), // 115_968 * 32, @see https://github.com/eth-clients/holesky/blob/main/metadata/config.yaml#L42
+            chainName: "holesky"
         });
     }
 }
@@ -105,7 +127,29 @@ contract DeployCSVerifierMainnet is DeployCSVerifier {
             gIHistoricalSummariesPrev: HISTORICAL_SUMMARIES_DENEB,
             gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
             firstSupportedSlot: Slot.wrap(8626176), // 269_568 * 32, @see https://github.com/eth-clients/mainnet/blob/main/metadata/config.yaml#L52
-            pivotSlot: Slot.wrap(type(uint64).max) // TODO: Update with Electra slot.
+            pivotSlot: Slot.wrap(type(uint64).max), // TODO: Update with Electra slot.
+            chainName: "mainnet"
+        });
+    }
+}
+
+contract DeployCSVerifierDevNet is DeployCSVerifier {
+    constructor() {
+        config = Config({
+            withdrawalVault: vm.envAddress("CSM_WITHDRAWAL_VAULT"),
+            module: vm.envAddress("CSM_MODULE"),
+            slotsPerEpoch: uint64(vm.envUint("DEVNET_SLOTS_PER_EPOCH")),
+            gIFirstWithdrawalPrev: FIRST_WITHDRAWAL_DENEB,
+            gIFirstWithdrawalCurr: FIRST_WITHDRAWAL_ELECTRA,
+            gIFirstValidatorPrev: FIRST_VALIDATOR_DENEB,
+            gIFirstValidatorCurr: FIRST_VALIDATOR_ELECTRA,
+            gIHistoricalSummariesPrev: HISTORICAL_SUMMARIES_DENEB,
+            gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
+            firstSupportedSlot: Slot.wrap(0),
+            pivotSlot: Slot.wrap(
+                uint64(vm.envUint("DEVNET_ELECTRA_EPOCH")) * 32
+            ),
+            chainName: "devnet"
         });
     }
 }
