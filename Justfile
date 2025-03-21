@@ -222,6 +222,7 @@ deploy-local:
 
 test-upgrade *args:
     #!/usr/bin/env bash
+    set -euxo pipefail
 
     just make-fork --silent &
     while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
@@ -241,6 +242,7 @@ test-upgrade *args:
 
 test-local *args:
     #!/usr/bin/env bash
+    set -euxo pipefail
 
     just make-fork --silent &
     while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
