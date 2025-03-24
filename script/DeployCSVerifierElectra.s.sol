@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
-// Usage: DEPLOYER_PRIVATE_KEY=$PRIVATE_KEY forge script ./script/DeployCSVerifierElectra.s.sol:DeployCSVerifier[Holesky|Mainnet|DevNet]
+// Usage: forge script --private-key=$PRIVATE_KEY ./script/DeployCSVerifierElectra.s.sol:DeployCSVerifier[Holesky|Mainnet|DevNet]
 
 pragma solidity 0.8.24;
 
@@ -56,11 +56,8 @@ abstract contract DeployCSVerifier is Script {
 
     function run() public {
         artifactDir = vm.envOr("ARTIFACTS_DIR", string("./artifacts/latest/"));
-        uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address deployer = vm.addr(pk);
-        vm.label(deployer, "DEPLOYER");
 
-        vm.startBroadcast(pk);
+        vm.startBroadcast();
         CSVerifier verifier = new CSVerifier({
             withdrawalAddress: config.withdrawalVault,
             module: config.module,
