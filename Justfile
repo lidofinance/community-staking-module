@@ -227,8 +227,7 @@ test-upgrade *args:
     just make-fork --silent &
     while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
 
-    DEPLOYER_PRIVATE_KEY=`cat localhost.json | jq -r ".private_keys[0]"` \
-        just _deploy-impl --broadcast
+    just _deploy-impl --broadcast --private-key=`cat localhost.json | jq -r ".private_keys[0]"`
 
     export DEPLOY_CONFIG=./artifacts/{{chain}}/deploy-{{chain}}.json
     export UPGRADE_CONFIG=./artifacts/local/upgrade-{{chain}}.json
@@ -246,8 +245,7 @@ test-local *args:
 
     just make-fork --silent &
     while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
-    DEPLOYER_PRIVATE_KEY=`cat localhost.json | jq -r ".private_keys[0]"` \
-        just deploy --silent
+    just deploy --silent --private-key=`cat localhost.json | jq -r ".private_keys[0]"`
 
     export DEPLOY_CONFIG=./artifacts/local/deploy-{{chain}}.json
     export RPC_URL={{anvil_rpc_url}}
