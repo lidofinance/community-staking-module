@@ -39,11 +39,10 @@ abstract contract DeployImplementationsBase is DeployBase {
             });
         }
         artifactDir = vm.envOr("ARTIFACTS_DIR", string("./artifacts/local/"));
-        pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        deployer = vm.addr(pk);
+        (, deployer, ) = vm.readCallers();
         vm.label(deployer, "DEPLOYER");
 
-        vm.startBroadcast(pk);
+        vm.startBroadcast(deployer);
         {
             CSParametersRegistry parametersRegistryImpl = new CSParametersRegistry(
                     config.queueLowestPriority

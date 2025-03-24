@@ -145,7 +145,6 @@ abstract contract DeployBase is Script {
     ILidoLocator internal locator;
 
     address internal deployer;
-    uint256 internal pk;
     CSModule public csm;
     CSAccounting public accounting;
     CSFeeOracle public oracle;
@@ -200,11 +199,10 @@ abstract contract DeployBase is Script {
             }
         }
         artifactDir = vm.envOr("ARTIFACTS_DIR", string("./artifacts/local/"));
-        pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        deployer = vm.addr(pk);
+        (, deployer, ) = vm.readCallers();
         vm.label(deployer, "DEPLOYER");
 
-        vm.startBroadcast(pk);
+        vm.startBroadcast(deployer);
         {
             CSParametersRegistry parametersRegistryImpl = new CSParametersRegistry(
                     config.queueLowestPriority
