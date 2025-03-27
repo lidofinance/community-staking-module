@@ -69,8 +69,8 @@ contract CSFeeOracle is
 
         // nullify the storage slot. There is a transition from uint256 (32 bytes) to address (20 bytes)
         // so we need to clear the complete slot to avoid any data corruption
-        assembly {
-            sstore(strikes.slot, 0)
+        assembly ("memory-safe") {
+            sstore(strikes.slot, 0x00)
         }
 
         /// @dev _setStrikesContract() reverts if zero address

@@ -353,10 +353,10 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         uint256 maxItems
     ) external returns (uint256 removed, uint256 lastRemovedAtDepth);
 
-    /// @notice Enqueue all unqueued keys for the given Node Operator
+    /// @notice Update depositable validators data and enqueue all unqueued keys for the given Node Operator
     /// @notice Unqueued stands for vetted but not enqueued keys
     /// @param nodeOperatorId ID of the Node Operator
-    function enqueueNodeOperatorKeys(uint256 nodeOperatorId) external;
+    function updateDepositableValidatorsCount(uint256 nodeOperatorId) external;
 
     /// Performs a one-time migration of allocated seats from the legacy queue to a priority queue
     /// for an eligible node operator. This is possible, e.g., in the following scenario: A node

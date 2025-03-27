@@ -202,7 +202,9 @@ contract CSModule is
             revert InvalidAmount();
         }
 
-        accounting.depositETH{ value: msg.value }(from, nodeOperatorId);
+        if (msg.value != 0) {
+            accounting.depositETH{ value: msg.value }(from, nodeOperatorId);
+        }
 
         _addKeysAndUpdateDepositableValidatorsCount(
             nodeOperatorId,
@@ -228,7 +230,9 @@ contract CSModule is
             keysCount
         );
 
-        accounting.depositStETH(from, nodeOperatorId, amount, permit);
+        if (amount != 0) {
+            accounting.depositStETH(from, nodeOperatorId, amount, permit);
+        }
 
         _addKeysAndUpdateDepositableValidatorsCount(
             nodeOperatorId,
@@ -254,7 +258,9 @@ contract CSModule is
             keysCount
         );
 
-        accounting.depositWstETH(from, nodeOperatorId, amount, permit);
+        if (amount != 0) {
+            accounting.depositWstETH(from, nodeOperatorId, amount, permit);
+        }
 
         _addKeysAndUpdateDepositableValidatorsCount(
             nodeOperatorId,
@@ -539,7 +545,7 @@ contract CSModule is
 
     /// TODO: Consider renaming
     /// @inheritdoc ICSModule
-    function enqueueNodeOperatorKeys(uint256 nodeOperatorId) external {
+    function updateDepositableValidatorsCount(uint256 nodeOperatorId) external {
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true

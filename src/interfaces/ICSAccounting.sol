@@ -76,7 +76,7 @@ interface ICSAccounting is
 
     /// @notice Set bond lock period
     /// @param period Period in seconds to retain bond lock
-    function setLockedBondPeriod(uint256 period) external;
+    function setBondLockPeriod(uint256 period) external;
 
     /// @notice Add a new bond curve
     /// @param bondCurve Bond curve definition to add
@@ -319,14 +319,13 @@ interface ICSAccounting is
     function compensateLockedBondETH(uint256 nodeOperatorId) external payable;
 
     /// @notice Set the bond curve for the given Node Operator
-    /// @dev Normalizes the CSM queue to ensure key pointers consistency
+    /// @dev Updates depositable validators count in CSM to ensure key pointers consistency
     /// @param nodeOperatorId ID of the Node Operator
     /// @param curveId ID of the bond curve to set
     function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external;
 
     /// @notice Reset bond curve to the default one for the given Node Operator
-    /// @dev If called externally, the `enqueueNodeOperatorKeys` method from CSModule.sol should be called after
-    ///      to ensure key pointers consistency
+    /// @dev Updates depositable validators count in CSM to ensure key pointers consistency
     /// @param nodeOperatorId ID of the Node Operator
     function resetBondCurve(uint256 nodeOperatorId) external;
 

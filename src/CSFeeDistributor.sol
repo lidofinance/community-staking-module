@@ -129,6 +129,10 @@ contract CSFeeDistributor is
             revert InvalidShares();
         }
 
+        if (distributed == 0 && rebate > 0) {
+            revert InvalidReportData();
+        }
+
         if (distributed > 0) {
             if (bytes(_treeCid).length == 0) revert InvalidTreeCID();
             if (keccak256(bytes(_treeCid)) == keccak256(bytes(treeCid)))
@@ -215,8 +219,8 @@ contract CSFeeDistributor is
         uint256 shares,
         bytes32[] calldata proof
     ) public view returns (uint256 sharesToDistribute) {
-        // NOTE: We reject the empty proofs to separate two business logic paths on the level of
-        // CSAccounting (see _pullFeeRewards function invocations) with and without a proof.
+        // NOTE: We reject empty proofs to separate two business logic paths on the level of
+        // CSAccounting.sol (see _pullFeeRewards function invocations) with and without a proof.
         if (proof.length == 0) revert InvalidProof();
         bool isValid = MerkleProof.verifyCalldata(
             proof,
@@ -250,6 +254,7 @@ contract CSFeeDistributor is
     function _setRebateRecipient(address _rebateRecipient) internal {
         if (_rebateRecipient == address(0)) revert ZeroRebateRecipientAddress();
         rebateRecipient = _rebateRecipient;
+        emit RebateRecipientSet(_rebateRecipient);
     }
 
     function _onlyRecoverer() internal view override {

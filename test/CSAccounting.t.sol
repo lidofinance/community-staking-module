@@ -98,11 +98,11 @@ contract CSAccountingFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         );
     }
 
-    function mock_enqueueNodeOperatorKeys() internal {
+    function mock_updateDepositableValidatorsCount() internal {
         vm.mockCall(
             address(stakingModule),
             abi.encodeWithSelector(
-                ICSModule.enqueueNodeOperatorKeys.selector,
+                ICSModule.updateDepositableValidatorsCount.selector,
                 0
             ),
             ""
@@ -353,7 +353,7 @@ contract CSAccountingBaseTest is CSAccountingFixtures {
         (locator, wstETH, stETH, burner, ) = initLido();
 
         stakingModule = new Stub();
-        mock_enqueueNodeOperatorKeys();
+        mock_updateDepositableValidatorsCount();
 
         uint256[] memory curve = new uint256[](1);
         curve[0] = 2 ether;
@@ -4780,16 +4780,16 @@ contract CSAccountingChargeFeeTest is CSAccountingBaseTest {
 }
 
 contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
-    function setLockedBondPeriod() public {
+    function test_setBondLockPeriod() public {
         vm.prank(admin);
-        accounting.setLockedBondPeriod(200 days);
+        accounting.setBondLockPeriod(200 days);
         assertEq(accounting.getBondLockPeriod(), 200 days);
     }
 
-    function setLockedBondPeriod_RevertWhen_DoesNotHaveRole() public {
+    function test_setBondLockPeriod_RevertWhen_DoesNotHaveRole() public {
         expectRoleRevert(stranger, accounting.DEFAULT_ADMIN_ROLE());
         vm.prank(stranger);
-        accounting.setLockedBondPeriod(200 days);
+        accounting.setBondLockPeriod(200 days);
     }
 
     function test_lockBondETH() public assertInvariants {
@@ -5101,10 +5101,10 @@ contract CSAccountingMiscTest is CSAccountingBaseTest {
         accounting.setChargePenaltyRecipient(address(0));
     }
 
-    function test_setLockedBondPeriod() public assertInvariants {
+    function test_setBondLockPeriod() public assertInvariants {
         uint256 period = accounting.MIN_BOND_LOCK_PERIOD() + 1;
         vm.prank(admin);
-        accounting.setLockedBondPeriod(period);
+        accounting.setBondLockPeriod(period);
         uint256 actual = accounting.getBondLockPeriod();
         assertEq(actual, period);
     }
