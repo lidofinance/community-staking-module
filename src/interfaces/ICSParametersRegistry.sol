@@ -58,6 +58,7 @@ interface ICSParametersRegistry {
         uint256 attestationsWeight;
         uint256 blocksWeight;
         uint256 syncWeight;
+        uint256 defaultExitTimeframeDeadlineTimestamp;
     }
 
     struct PivotsAndValues {
@@ -78,6 +79,7 @@ interface ICSParametersRegistry {
         uint256 syncWeight
     );
     event DefaultQueueConfigSet(uint256 priority, uint256 maxDeposits);
+    event DefaultExitTimeframeDeadlineTimestampSet(uint256 timestamp);
 
     event KeyRemovalChargeSet(
         uint256 indexed curveId,
@@ -117,6 +119,11 @@ interface ICSParametersRegistry {
         uint256 maxDeposits
     );
     event QueueConfigUnset(uint256 indexed curveId);
+    event ExitTimeframeDeadlineTimestampSet(
+        uint256 indexed curveId,
+        uint256 timestamp
+    );
+    event ExitTimeframeDeadlineTimestampUnset(uint256 indexed curveId);
 
     error InvalidRewardShareData();
     error InvalidPerformanceLeewayData();
@@ -201,6 +208,15 @@ interface ICSParametersRegistry {
     function defaultPerformanceCoefficients()
         external
         returns (uint32, uint32, uint32);
+
+    /// @notice set default value for exit timeframe deadline timestamp. Default value is used if a specific value is not set for the curveId
+    /// @param timestamp value to be set as default for the exit timeframe deadline timestamp
+    function setDefaultExitTimeframeDeadlineTimestamp(
+        uint256 timestamp
+    ) external;
+
+    /// @notice Get default value for the exit timeframe deadline timestamp
+    function defaultExitTimeframeDeadlineTimestamp() external returns (uint256);
 
     /// @notice Set key removal charge for the curveId.
     /// @param curveId Curve Id to associate key removal charge with
@@ -425,4 +441,23 @@ interface ICSParametersRegistry {
             uint256 blocksWeight,
             uint256 syncWeight
         );
+
+    /// @notice Set exit timeframe deadline timestamp for the curveId
+    /// @param curveId Curve Id to associate exit timeframe deadline timestamp with
+    /// @param timestamp Exit timeframe deadline timestamp
+    function setExitTimeframeDeadlineTimestamp(
+        uint256 curveId,
+        uint256 timestamp
+    ) external;
+
+    /// @notice Unset exit timeframe deadline timestamp for the curveId
+    /// @param curveId Curve Id to unset custom exit timeframe deadline timestamp for
+    function unsetExitTimeframeDeadlineTimestamp(uint256 curveId) external;
+
+    /// @notice Get exit timeframe deadline timestamp by the curveId
+    /// @dev `defaultExitTimeframeDeadlineTimestamp` is returned if the value is not set for the given curveId.
+    /// @param curveId Curve Id to get exit timeframe deadline timestamp for
+    function getExitTimeframeDeadlineTimestamp(
+        uint256 curveId
+    ) external view returns (uint256 timestamp);
 }

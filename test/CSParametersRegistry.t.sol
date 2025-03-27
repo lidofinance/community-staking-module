@@ -41,7 +41,8 @@ contract CSParametersRegistryBaseTest is Test, Utilities, Fixtures {
             badPerformancePenalty: 0.1 ether,
             attestationsWeight: 54,
             blocksWeight: 8,
-            syncWeight: 2
+            syncWeight: 2,
+            defaultExitTimeframeDeadlineTimestamp: 1 days
         });
     }
 }
@@ -89,6 +90,15 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
             defaultInitData.attestationsWeight,
             defaultInitData.blocksWeight,
             defaultInitData.syncWeight
+        );
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.DefaultQueueConfigSet(
+            defaultInitData.defaultQueuePriority,
+            defaultInitData.defaultQueueMaxDeposits
+        );
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.DefaultExitTimeframeDeadlineTimestampSet(
+            defaultInitData.defaultExitTimeframeDeadlineTimestamp
         );
         parametersRegistry.initialize(admin, defaultInitData);
 
@@ -145,6 +155,11 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
         assertEq(attestationsOut, defaultInitData.attestationsWeight);
         assertEq(blocksOut, defaultInitData.blocksWeight);
         assertEq(syncOut, defaultInitData.syncWeight);
+
+        assertEq(
+            parametersRegistry.defaultExitTimeframeDeadlineTimestamp(),
+            defaultInitData.defaultExitTimeframeDeadlineTimestamp
+        );
     }
 
     function test_initialize_RevertWhen_ZeroAdminAddress() public {
@@ -1659,6 +1674,117 @@ contract CSParametersRegistryQueueConfigTest is
         parametersRegistry.setQueueConfig(
             curveId,
             ICSParametersRegistry.QueueConfig(priority, maxDeposits)
+        );
+    }
+}
+
+contract CSParametersRegistryExitTimeframeDeadlineTimestampTest is
+    CSParametersRegistryBaseTestInitialized,
+    ParametersTest
+{
+    function test_setDefault() public override {
+        uint256 deadline = 7 days;
+
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.DefaultExitTimeframeDeadlineTimestampSet(
+            deadline
+        );
+        vm.prank(admin);
+        parametersRegistry.setDefaultExitTimeframeDeadlineTimestamp(deadline);
+
+        assertEq(
+            parametersRegistry.defaultExitTimeframeDeadlineTimestamp(),
+            deadline
+        );
+    }
+
+    function test_setDefault_RevertWhen_notAdmin() public override {
+        uint256 deadline = 7 days;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.setDefaultExitTimeframeDeadlineTimestamp(deadline);
+    }
+
+    function test_set() public override {
+        uint256 curveId = 1;
+        uint256 deadline = 3 days;
+
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.ExitTimeframeDeadlineTimestampSet(
+            curveId,
+            deadline
+        );
+        vm.prank(admin);
+        parametersRegistry.setExitTimeframeDeadlineTimestamp(curveId, deadline);
+    }
+
+    function test_set_RevertWhen_notAdmin() public override {
+        uint256 curveId = 1;
+        uint256 deadline = 3 days;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.setExitTimeframeDeadlineTimestamp(curveId, deadline);
+    }
+
+    function test_unset() public override {
+        uint256 curveId = 1;
+        uint256 deadline = 3 days;
+
+        vm.prank(admin);
+        parametersRegistry.setExitTimeframeDeadlineTimestamp(curveId, deadline);
+
+        uint256 deadlineOut = parametersRegistry
+            .getExitTimeframeDeadlineTimestamp(curveId);
+
+        assertEq(deadlineOut, deadline);
+
+        vm.prank(admin);
+        parametersRegistry.unsetExitTimeframeDeadlineTimestamp(curveId);
+
+        deadlineOut = parametersRegistry.getExitTimeframeDeadlineTimestamp(
+            curveId
+        );
+
+        assertEq(
+            deadlineOut,
+            defaultInitData.defaultExitTimeframeDeadlineTimestamp
+        );
+    }
+
+    function test_unset_RevertWhen_notAdmin() public override {
+        uint256 curveId = 1;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.unsetExitTimeframeDeadlineTimestamp(curveId);
+    }
+
+    function test_get_usualData() public override {
+        uint256 curveId = 1;
+        uint256 deadline = 3 days;
+
+        vm.prank(admin);
+        parametersRegistry.setExitTimeframeDeadlineTimestamp(curveId, deadline);
+
+        uint256 deadlineOut = parametersRegistry
+            .getExitTimeframeDeadlineTimestamp(curveId);
+
+        assertEq(deadlineOut, deadline);
+    }
+
+    function test_get_defaultData() public view override {
+        uint256 curveId = 10;
+        uint256 deadlineOut = parametersRegistry
+            .getExitTimeframeDeadlineTimestamp(curveId);
+
+        assertEq(
+            deadlineOut,
+            defaultInitData.defaultExitTimeframeDeadlineTimestamp
         );
     }
 }

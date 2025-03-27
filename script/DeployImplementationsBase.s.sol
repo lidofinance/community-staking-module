@@ -66,7 +66,9 @@ abstract contract DeployImplementationsBase is DeployBase {
                     badPerformancePenalty: config.badPerformancePenalty,
                     attestationsWeight: config.attestationsWeight,
                     blocksWeight: config.blocksWeight,
-                    syncWeight: config.syncWeight
+                    syncWeight: config.syncWeight,
+                    defaultExitTimeframeDeadlineTimestamp: config
+                        .defaultExitTimeframeDeadlineTimestamp
                 })
             });
 

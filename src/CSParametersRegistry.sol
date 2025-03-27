@@ -50,6 +50,9 @@ contract CSParametersRegistry is
     mapping(uint256 => MarkedPerformanceCoefficients)
         internal _performanceCoefficients;
 
+    uint256 public defaultExitTimeframeDeadlineTimestamp;
+    mapping(uint256 => MarkedUint248) internal _exitTimeframeDeadlineTimestamps;
+
     uint256 public immutable QUEUE_LOWEST_PRIORITY;
     uint256 public immutable QUEUE_LEGACY_PRIORITY;
 
@@ -83,6 +86,9 @@ contract CSParametersRegistry is
         _setDefaultQueueConfig(
             data.defaultQueuePriority,
             data.defaultQueueMaxDeposits
+        );
+        _setDefaultExitTimeframeDeadlineTimestamp(
+            data.defaultExitTimeframeDeadlineTimestamp
         );
 
         __AccessControlEnumerable_init();
@@ -158,6 +164,13 @@ contract CSParametersRegistry is
         uint256 maxDeposits
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setDefaultQueueConfig(priority, maxDeposits);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function setDefaultExitTimeframeDeadlineTimestamp(
+        uint256 timestamp
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setDefaultExitTimeframeDeadlineTimestamp(timestamp);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -394,6 +407,26 @@ contract CSParametersRegistry is
     }
 
     /// @inheritdoc ICSParametersRegistry
+    function setExitTimeframeDeadlineTimestamp(
+        uint256 curveId,
+        uint256 timestamp
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _exitTimeframeDeadlineTimestamps[curveId] = MarkedUint248(
+            timestamp.toUint248(),
+            true
+        );
+        emit ExitTimeframeDeadlineTimestampSet(curveId, timestamp);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function unsetExitTimeframeDeadlineTimestamp(
+        uint256 curveId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        delete _exitTimeframeDeadlineTimestamps[curveId];
+        emit ExitTimeframeDeadlineTimestampUnset(curveId);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
     function getKeyRemovalCharge(
         uint256 curveId
     ) external view returns (uint256 keyRemovalCharge) {
@@ -523,6 +556,14 @@ contract CSParametersRegistry is
         return (config.priority, config.maxDeposits);
     }
 
+    function getExitTimeframeDeadlineTimestamp(
+        uint256 curveId
+    ) external view returns (uint256 timestamp) {
+        MarkedUint248 memory data = _exitTimeframeDeadlineTimestamps[curveId];
+        return
+            data.isValue ? data.value : defaultExitTimeframeDeadlineTimestamp;
+    }
+
     function _setDefaultKeyRemovalCharge(uint256 keyRemovalCharge) internal {
         defaultKeyRemovalCharge = keyRemovalCharge;
         emit DefaultKeyRemovalChargeSet(keyRemovalCharge);
@@ -597,6 +638,13 @@ contract CSParametersRegistry is
         defaultQueueConfig.priority = priority.toUint32();
         defaultQueueConfig.maxDeposits = maxDeposits.toUint32();
         emit DefaultQueueConfigSet(priority, maxDeposits);
+    }
+
+    function _setDefaultExitTimeframeDeadlineTimestamp(
+        uint256 timestamp
+    ) internal {
+        defaultExitTimeframeDeadlineTimestamp = timestamp;
+        emit DefaultExitTimeframeDeadlineTimestampSet(timestamp);
     }
 
     function _validateStrikesParams(

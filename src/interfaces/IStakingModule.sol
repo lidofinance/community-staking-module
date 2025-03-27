@@ -177,6 +177,54 @@ interface IStakingModule {
     ///      Details about error data: https://docs.soliditylang.org/en/v0.8.9/control-structures.html#error-handling-assert-require-revert-and-exceptions
     function onWithdrawalCredentialsChanged() external;
 
+    /// @notice Handles tracking and penalization logic for validators that remain active beyond their eligible exit window.
+    /// @dev This function is called to report the current exit-related status of validators belonging to a specific node operator.
+    ///      It accepts a batch of validator public keys, each associated with the duration (in seconds) they were eligible to exit but have not.
+    ///      This data could be used to trigger penalties for the node operator if validators have been non-exiting for too long.
+    /// @param _nodeOperatorId The ID of the node operator whose validators statuses being delivered.
+    /// @param _proofSlotTimestamp The timestamp (slot time) when the validators were last known to be in an active ongoing state.
+    /// @param _publicKeys Concatenated public keys of the validators being reported.
+    /// @param _eligibleToExitInSec Array of durations (in seconds), each indicating how long a validator has been eligible to exit but hasn't.
+    function handleActiveValidatorsExitingStatus(
+        uint256 _nodeOperatorId,
+        uint256 _proofSlotTimestamp,
+        bytes calldata _publicKeys,
+        bytes calldata _eligibleToExitInSec
+    ) external;
+
+    /// @notice Handles the triggerable exit events validator belonging to a specific node operator.
+    /// @dev This function is called when a validator is exited using the triggerable exit request on EL.
+    /// @param _nodeOperatorId The ID of the node operator.
+    /// @param _publicKeys Concatenated public keys of the validators being reported.
+    /// @param _withdrawalRequestPaidFee Fee amount paid to send withdrawal request on EL.
+    /// @param _exitType The type of exit being performed.
+    ///        This parameter may be interpreted differently across various staking modules, depending on their specific implementation.
+    function onTriggerableExit(
+        uint256 _nodeOperatorId,
+        bytes calldata _publicKeys,
+        uint256 _withdrawalRequestPaidFee,
+        uint256 _exitType
+    ) external;
+
+    /// @notice Determines whether a validator exit status should be updated and will have affect on Node Operator.
+    /// @param _nodeOperatorId The ID of the node operator.
+    /// @param _proofSlotTimestamp The timestamp (slot time) when the validators were last known to be in an active ongoing state.
+    /// @param _publicKey Validator's public key.
+    /// @param _eligibleToExitInSec The number of seconds the validator was eligible to exit but did not.
+    /// @return bool Returns true if contract should receive updated validator's status.
+    function shouldValidatorBePenalized(
+        uint256 _nodeOperatorId,
+        uint256 _proofSlotTimestamp,
+        bytes calldata _publicKey,
+        uint256 _eligibleToExitInSec
+    ) external view returns (bool);
+
+    /// @notice Returns the number of seconds after which a validator is considered late.
+    /// @return The exit deadline threshold in seconds.
+    function exitDeadlineThreshold(
+        uint256 _nodeOperatorId
+    ) external view returns (uint256);
+
     /// @dev Event to be emitted on StakingModule's nonce change
     event NonceChanged(uint256 nonce);
 
