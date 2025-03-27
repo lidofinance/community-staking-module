@@ -47,6 +47,9 @@ interface ICSFeeDistributor is IAssetRecovererLib {
     /// @dev Emitted when rebate is transferred
     event RebateTransferred(uint256 shares);
 
+    /// @dev Emitted when rebate recipient is set
+    event RebateRecipientSet(address recipient);
+
     error ZeroAccountingAddress();
     error ZeroStEthAddress();
     error ZeroAdminAddress();
@@ -55,6 +58,7 @@ interface ICSFeeDistributor is IAssetRecovererLib {
     error NotAccounting();
     error NotOracle();
 
+    error InvalidReportData();
     error InvalidTreeRoot();
     error InvalidTreeCID();
     error InvalidLogCID();

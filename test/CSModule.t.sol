@@ -2535,16 +2535,16 @@ contract CsmQueueOps is CSMCommon {
         }
     }
 
-    function test_enqueueNodeOperatorKeys_NothingToDo()
+    function test_updateDepositableValidatorsCount_NothingToDo()
         public
         assertInvariants
     {
-        // `enqueueNodeOperatorKeys` will be called on creating a node operator and uploading a key.
+        // `updateDepositableValidatorsCount` will be called on creating a node operator and uploading a key.
         uint256 noId = createNodeOperator();
 
         vm.recordLogs();
         vm.prank(nodeOperator);
-        csm.enqueueNodeOperatorKeys(noId);
+        csm.updateDepositableValidatorsCount(noId);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         assertEq(logs.length, 0);
     }
@@ -4820,7 +4820,7 @@ contract CsmReportELRewardsStealingPenalty is CSMCommon {
 
         vm.expectEmit(address(csm));
         emit ICSModule.BatchEnqueued(csm.QUEUE_LOWEST_PRIORITY(), noId, 1);
-        csm.enqueueNodeOperatorKeys(noId);
+        csm.updateDepositableValidatorsCount(noId);
 
         no = csm.getNodeOperator(noId);
         assertEq(no.depositableValidatorsCount, 1);
@@ -6215,7 +6215,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be no unbonded keys"
         );
 
-        csm.enqueueNodeOperatorKeys(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             0,
@@ -6247,7 +6247,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be unbonded keys"
         );
 
-        csm.enqueueNodeOperatorKeys(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             0,
@@ -6284,7 +6284,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be no unbonded keys"
         );
 
-        csm.enqueueNodeOperatorKeys(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore,
@@ -6318,7 +6318,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be unbonded keys"
         );
 
-        csm.enqueueNodeOperatorKeys(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore - 2,
@@ -6361,7 +6361,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
         );
         assertEq(accounting.getUnbondedKeysCount(noId), 0);
 
-        csm.enqueueNodeOperatorKeys(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             0,
@@ -6404,7 +6404,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
         );
         assertEq(accounting.getUnbondedKeysCount(noId), 2);
 
-        csm.enqueueNodeOperatorKeys(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             0,
@@ -6453,7 +6453,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be no unbonded keys after curve update"
         );
 
-        csm.enqueueNodeOperatorKeys(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore,
@@ -6502,7 +6502,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be unbonded keys after curve update"
         );
 
-        csm.enqueueNodeOperatorKeys(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore - 2,
@@ -6552,7 +6552,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be no unbonded keys after curve update"
         );
 
-        csm.enqueueNodeOperatorKeys(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore,
@@ -6602,7 +6602,7 @@ contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
             "Should be unbonded keys after curve update"
         );
 
-        csm.enqueueNodeOperatorKeys(noId);
+        csm.updateDepositableValidatorsCount(noId);
         assertEq(
             csm.getNodeOperator(noId).depositableValidatorsCount,
             depositableBefore - 2,
