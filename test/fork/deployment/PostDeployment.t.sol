@@ -101,6 +101,7 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         csmImpl.initialize({
             _accounting: address(accounting),
+            _ejector: address(ejector),
             admin: deployParams.aragonAgent
         });
     }
@@ -193,7 +194,10 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
                 attestationsWeight: deployParams.attestationsWeight,
                 blocksWeight: deployParams.blocksWeight,
                 syncWeight: deployParams.syncWeight,
-                defaultAllowedExitDelay: deployParams.defaultAllowedExitDelay
+                defaultAllowedExitDelay: deployParams.defaultAllowedExitDelay,
+                defaultExitDelayPenalty: deployParams.defaultExitDelayPenalty,
+                defaultMaxWithdrawalRequestFee: deployParams
+                    .defaultMaxWithdrawalRequestFee
             })
         });
     }
@@ -589,6 +593,10 @@ contract CSVerifierDeploymentTest is DeploymentBaseTest {
 contract CSEjectorDeploymentTest is DeploymentBaseTest {
     function test_constructor() public view {
         assertEq(address(ejector.MODULE()), address(csm));
+        assertEq(
+            address(ejector.PARAMETERS_REGISTRY()),
+            address(parametersRegistry)
+        );
         assertEq(address(ejector.ACCOUNTING()), address(accounting));
     }
 

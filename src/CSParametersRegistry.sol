@@ -62,6 +62,12 @@ contract CSParametersRegistry is
     uint256 public defaultAllowedExitDelay;
     mapping(uint256 => MarkedUint248) internal _allowedExitDelay;
 
+    uint256 public defaultExitDelayPenalty;
+    mapping(uint256 => MarkedUint248) internal _exitDelayPenalties;
+
+    uint256 public defaultMaxWithdrawalRequestFee;
+    mapping(uint256 => MarkedUint248) internal _maxWithdrawalRequestFees;
+
     constructor(uint256 queueLowestPriority) {
         QUEUE_LOWEST_PRIORITY = queueLowestPriority;
         QUEUE_LEGACY_PRIORITY = queueLowestPriority - 1;
@@ -97,6 +103,8 @@ contract CSParametersRegistry is
             data.defaultQueueMaxDeposits
         );
         _setDefaultAllowedExitDelay(data.defaultAllowedExitDelay);
+        _setDefaultExitDelayPenalty(data.defaultExitDelayPenalty);
+        _setDefaultMaxWithdrawalRequestFee(data.defaultMaxWithdrawalRequestFee);
 
         __AccessControlEnumerable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -178,6 +186,20 @@ contract CSParametersRegistry is
         uint256 delay
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setDefaultAllowedExitDelay(delay);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function setDefaultExitDelayPenalty(
+        uint256 penalty
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setDefaultExitDelayPenalty(penalty);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function setDefaultMaxWithdrawalRequestFee(
+        uint256 fee
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setDefaultMaxWithdrawalRequestFee(fee);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -404,6 +426,43 @@ contract CSParametersRegistry is
     }
 
     /// @inheritdoc ICSParametersRegistry
+    function setExitDelayPenalty(
+        uint256 curveId,
+        uint256 penalty
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _exitDelayPenalties[curveId] = MarkedUint248(penalty.toUint248(), true);
+        emit ExitDelayPenaltySet(curveId, penalty);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function unsetExitDelayPenalty(
+        uint256 curveId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        delete _exitDelayPenalties[curveId];
+        emit ExitDelayPenaltyUnset(curveId);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function setMaxWithdrawalRequestFee(
+        uint256 curveId,
+        uint256 fee
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _maxWithdrawalRequestFees[curveId] = MarkedUint248(
+            fee.toUint248(),
+            true
+        );
+        emit MaxWithdrawalRequestFeeSet(curveId, fee);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function unsetMaxWithdrawalRequestFee(
+        uint256 curveId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        delete _maxWithdrawalRequestFees[curveId];
+        emit MaxWithdrawalRequestFeeUnset(curveId);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
     function getKeyRemovalCharge(
         uint256 curveId
     ) external view returns (uint256 keyRemovalCharge) {
@@ -516,11 +575,28 @@ contract CSParametersRegistry is
         return (config.priority, config.maxDeposits);
     }
 
+    /// @inheritdoc ICSParametersRegistry
     function getAllowedExitDelay(
         uint256 curveId
     ) external view returns (uint256 delay) {
         MarkedUint248 memory data = _allowedExitDelay[curveId];
         return data.isValue ? data.value : defaultAllowedExitDelay;
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function getExitDelayPenalty(
+        uint256 curveId
+    ) external view returns (uint256 penalty) {
+        MarkedUint248 memory data = _exitDelayPenalties[curveId];
+        return data.isValue ? data.value : defaultExitDelayPenalty;
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function getMaxWithdrawalRequestFee(
+        uint256 curveId
+    ) external view returns (uint256 fee) {
+        MarkedUint248 memory data = _maxWithdrawalRequestFees[curveId];
+        return data.isValue ? data.value : defaultMaxWithdrawalRequestFee;
     }
 
     function _setDefaultKeyRemovalCharge(uint256 keyRemovalCharge) internal {
@@ -623,6 +699,16 @@ contract CSParametersRegistry is
     function _setDefaultAllowedExitDelay(uint256 delay) internal {
         defaultAllowedExitDelay = delay;
         emit DefaultAllowedExitDelaySet(delay);
+    }
+
+    function _setDefaultExitDelayPenalty(uint256 penalty) internal {
+        defaultExitDelayPenalty = penalty;
+        emit DefaultExitDelayPenaltySet(penalty);
+    }
+
+    function _setDefaultMaxWithdrawalRequestFee(uint256 fee) internal {
+        defaultMaxWithdrawalRequestFee = fee;
+        emit DefaultMaxWithdrawalRequestFeeSet(fee);
     }
 
     function _validateStrikesParams(

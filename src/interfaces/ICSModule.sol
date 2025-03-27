@@ -73,6 +73,7 @@ interface ICSModule is
 
     error ZeroLocatorAddress();
     error ZeroAccountingAddress();
+    error ZeroEjectorAddress();
     error ZeroAdminAddress();
     error ZeroSenderAddress();
     error ZeroParametersRegistryAddress();
@@ -137,6 +138,10 @@ interface ICSModule is
         uint256 amount
     );
     event ELRewardsStealingPenaltySettled(uint256 indexed nodeOperatorId);
+    event DelayedValidatorExitPenalized(
+        uint256 indexed nodeOperatorId,
+        uint256 penaltyValue
+    );
 
     function LIDO_LOCATOR() external view returns (ILidoLocator);
 

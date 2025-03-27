@@ -66,7 +66,10 @@ abstract contract DeployImplementationsBase is DeployBase {
                     attestationsWeight: config.attestationsWeight,
                     blocksWeight: config.blocksWeight,
                     syncWeight: config.syncWeight,
-                    defaultAllowedExitDelay: config.defaultAllowedExitDelay
+                    defaultAllowedExitDelay: config.defaultAllowedExitDelay,
+                    defaultExitDelayPenalty: config.defaultExitDelayPenalty,
+                    defaultMaxWithdrawalRequestFee: config
+                        .defaultMaxWithdrawalRequestFee
                 })
             });
 
@@ -107,7 +110,11 @@ abstract contract DeployImplementationsBase is DeployBase {
                 oracle: address(oracle)
             });
 
-            CSEjector ejectorImpl = new CSEjector(address(csm));
+            CSEjector ejectorImpl = new CSEjector(
+                address(csm),
+                address(parametersRegistry),
+                address(accounting)
+            );
             ejector = CSEjector(
                 _deployProxy(config.proxyAdmin, address(ejectorImpl))
             );

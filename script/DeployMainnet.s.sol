@@ -73,6 +73,8 @@ contract DeployMainnet is DeployBase {
         config.blocksWeight = 8; // https://eth2book.info/capella/part2/incentives/rewards/
         config.syncWeight = 2; // https://eth2book.info/capella/part2/incentives/rewards/
         config.defaultAllowedExitDelay = 4 days; // TODO: reconsider
+        config.defaultExitDelayPenalty = 0.1 ether; // TODO: to be reviewed
+        config.defaultMaxWithdrawalRequestFee = 0.1 ether; // TODO: to be reviewed
         // VettedGate
         config
             .vettedGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json

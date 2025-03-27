@@ -18,14 +18,7 @@ import { Stub } from "./helpers/mocks/Stub.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
 import { Utilities } from "./helpers/Utilities.sol";
 import { InvariantAsserts } from "./helpers/InvariantAsserts.sol";
-
-contract EjectorMock {
-    address public MODULE;
-
-    constructor(address _module) {
-        MODULE = _module;
-    }
-}
+import { EjectorMock } from "./helpers/mocks/EjectorMock.sol";
 
 contract CSStrikesTestBase is Test, Fixtures, Utilities, InvariantAsserts {
     address internal stranger;

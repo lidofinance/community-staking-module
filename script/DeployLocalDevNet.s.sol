@@ -71,6 +71,8 @@ contract DeployLocalDevNet is DeployBase {
         config.blocksWeight = 8; // https://eth2book.info/capella/part2/incentives/rewards/
         config.syncWeight = 2; // https://eth2book.info/capella/part2/incentives/rewards/
         config.defaultAllowedExitDelay = 4 days; // TODO: reconsider
+        config.defaultExitDelayPenalty = 0.1 ether; // TODO: to be reviewed
+        config.defaultMaxWithdrawalRequestFee = 0.1 ether; // TODO: to be reviewed
         // VettedGate
         config.vettedGateTreeRoot = vm.envOr(
             "CSM_VETTED_GATE_TREE_ROOT",

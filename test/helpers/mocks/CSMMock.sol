@@ -29,6 +29,7 @@ contract CSMMock is Utilities {
     bool internal isValidatorWithdrawnMock;
     ICSAccounting public immutable ACCOUNTING;
     ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
+    NodeOperatorManagementProperties internal managementProperties;
 
     constructor() {
         ACCOUNTING = ICSAccounting(address(new AccountingMock()));
@@ -49,6 +50,18 @@ contract CSMMock is Utilities {
         uint256 /* nodeOperatorId */
     ) external view returns (NodeOperator memory) {
         return mockNodeOperator;
+    }
+
+    function mock_setNodeOperatorManagementProperties(
+        NodeOperatorManagementProperties memory _managementProperties
+    ) external {
+        managementProperties = _managementProperties;
+    }
+
+    function getNodeOperatorManagementProperties(
+        uint256 nodeOperatorId
+    ) external view returns (NodeOperatorManagementProperties memory) {
+        return managementProperties;
     }
 
     function mock_setIsValidatorWithdrawn(bool value) external {
@@ -120,5 +133,11 @@ contract CSMMock is Utilities {
         uint256 keysCount
     ) external pure returns (bytes memory pubkeys) {
         (pubkeys, ) = keysSignatures(keysCount);
+    }
+
+    function exitDeadlineThreshold(
+        uint256 nodeOperatorId
+    ) external view returns (uint256) {
+        return PARAMETERS_REGISTRY.getAllowedExitDelay(0);
     }
 }
