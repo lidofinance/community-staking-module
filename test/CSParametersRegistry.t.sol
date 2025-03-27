@@ -41,7 +41,8 @@ contract CSParametersRegistryBaseTest is Test, Utilities, Fixtures {
             badPerformancePenalty: 0.1 ether,
             attestationsWeight: 54,
             blocksWeight: 8,
-            syncWeight: 2
+            syncWeight: 2,
+            defaultAllowedExitDelay: 1 days
         });
     }
 }
@@ -89,6 +90,15 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
             defaultInitData.attestationsWeight,
             defaultInitData.blocksWeight,
             defaultInitData.syncWeight
+        );
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.DefaultQueueConfigSet(
+            defaultInitData.defaultQueuePriority,
+            defaultInitData.defaultQueueMaxDeposits
+        );
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.DefaultAllowedExitDelaySet(
+            defaultInitData.defaultAllowedExitDelay
         );
         parametersRegistry.initialize(admin, defaultInitData);
 
@@ -145,6 +155,11 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
         assertEq(attestationsOut, defaultInitData.attestationsWeight);
         assertEq(blocksOut, defaultInitData.blocksWeight);
         assertEq(syncOut, defaultInitData.syncWeight);
+
+        assertEq(
+            parametersRegistry.defaultAllowedExitDelay(),
+            defaultInitData.defaultAllowedExitDelay
+        );
     }
 
     function test_initialize_RevertWhen_ZeroAdminAddress() public {
@@ -1820,5 +1835,97 @@ contract CSParametersRegistryQueueConfigTest is
             curveId,
             ICSParametersRegistry.QueueConfig(priority, maxDeposits)
         );
+    }
+}
+
+contract CSParametersRegistryAllowedExitDelayTest is
+    CSParametersRegistryBaseTestInitialized,
+    ParametersTest
+{
+    function test_setDefault() public override {
+        uint256 delay = 7 days;
+
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.DefaultAllowedExitDelaySet(delay);
+        vm.prank(admin);
+        parametersRegistry.setDefaultAllowedExitDelay(delay);
+
+        assertEq(parametersRegistry.defaultAllowedExitDelay(), delay);
+    }
+
+    function test_setDefault_RevertWhen_notAdmin() public override {
+        uint256 delay = 7 days;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.setDefaultAllowedExitDelay(delay);
+    }
+
+    function test_set() public override {
+        uint256 curveId = 1;
+        uint256 delay = 3 days;
+
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.AllowedExitDelaySet(curveId, delay);
+        vm.prank(admin);
+        parametersRegistry.setAllowedExitDelay(curveId, delay);
+    }
+
+    function test_set_RevertWhen_notAdmin() public override {
+        uint256 curveId = 1;
+        uint256 delay = 3 days;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.setAllowedExitDelay(curveId, delay);
+    }
+
+    function test_unset() public override {
+        uint256 curveId = 1;
+        uint256 delay = 3 days;
+
+        vm.prank(admin);
+        parametersRegistry.setAllowedExitDelay(curveId, delay);
+
+        uint256 delayOut = parametersRegistry.getAllowedExitDelay(curveId);
+
+        assertEq(delayOut, delay);
+
+        vm.prank(admin);
+        parametersRegistry.unsetAllowedExitDelay(curveId);
+
+        delayOut = parametersRegistry.getAllowedExitDelay(curveId);
+
+        assertEq(delayOut, defaultInitData.defaultAllowedExitDelay);
+    }
+
+    function test_unset_RevertWhen_notAdmin() public override {
+        uint256 curveId = 1;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.unsetAllowedExitDelay(curveId);
+    }
+
+    function test_get_usualData() public override {
+        uint256 curveId = 1;
+        uint256 delay = 3 days;
+
+        vm.prank(admin);
+        parametersRegistry.setAllowedExitDelay(curveId, delay);
+
+        uint256 delayOut = parametersRegistry.getAllowedExitDelay(curveId);
+
+        assertEq(delayOut, delay);
+    }
+
+    function test_get_defaultData() public view override {
+        uint256 curveId = 10;
+        uint256 delayOut = parametersRegistry.getAllowedExitDelay(curveId);
+
+        assertEq(delayOut, defaultInitData.defaultAllowedExitDelay);
     }
 }

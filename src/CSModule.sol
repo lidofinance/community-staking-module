@@ -74,11 +74,10 @@ contract CSModule is
 
     ICSAccounting public accounting;
 
-    /// @dev DEPRECATED
     /// @custom:oz-renamed-from earlyAdoption
-    address internal _earlyAdoption;
-    /// @dev DEPRECATED
-    bool public publicRelease;
+    /// @custom:oz-retyped-from address
+    mapping(uint256 noKeyIndexPacked => uint256)
+        private _isValidatorExitDelayed;
 
     uint256 private _nonce;
     mapping(uint256 => NodeOperator) private _nodeOperators;
@@ -134,6 +133,7 @@ contract CSModule is
     function finalizeUpgradeV2() external reinitializer(2) {
         assembly ("memory-safe") {
             sstore(_queueByPriority.slot, 0x00)
+            sstore(_isValidatorExitDelayed.slot, 0x00)
         }
     }
 
@@ -760,6 +760,22 @@ contract CSModule is
     }
 
     /// @inheritdoc IStakingModule
+    function handleActiveValidatorsExitingStatus(
+        uint256 /* _nodeOperatorId */,
+        uint256 /* _proofSlotTimestamp */,
+        bytes calldata /* _publicKey */,
+        uint256 /* _eligibleToExitInSec */
+    ) external {}
+
+    /// @inheritdoc IStakingModule
+    function onTriggerableExit(
+        uint256 /* _nodeOperatorId */,
+        bytes calldata /* _publicKey */,
+        uint256 /* _withdrawalRequestPaidFee */,
+        uint256 /* _exitType */
+    ) external {}
+
+    /// @inheritdoc IStakingModule
     /// @notice Get the next `depositsCount` of depositable keys with signatures from the queue
     /// @dev Second param `depositCalldata` is not used
     function obtainDepositData(
@@ -1160,6 +1176,26 @@ contract CSModule is
         for (uint256 i = 0; i < nodeOperatorIds.length; ++i) {
             nodeOperatorIds[i] = offset + i;
         }
+    }
+
+    /// @inheritdoc IStakingModule
+    function shouldValidatorBePenalized(
+        uint256 /* _nodeOperatorId */,
+        uint256 /* _proofSlotTimestamp */,
+        bytes calldata /* _publicKey */,
+        uint256 /* _eligibleToExitInSec */
+    ) external view returns (bool) {
+        return false;
+    }
+
+    /// @inheritdoc IStakingModule
+    function exitDeadlineThreshold(
+        uint256 nodeOperatorId
+    ) external view returns (uint256) {
+        return
+            PARAMETERS_REGISTRY.getAllowedExitDelay(
+                accounting.getBondCurveId(nodeOperatorId)
+            );
     }
 
     function _incrementModuleNonce() internal {
