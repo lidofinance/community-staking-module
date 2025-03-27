@@ -611,6 +611,11 @@ contract CSParametersRegistry is
         emit DefaultAllowedExitDelaySet(delay);
     }
 
+    function _setDefaultAllowedExitDelay(uint256 delay) internal {
+        defaultAllowedExitDelay = delay;
+        emit DefaultAllowedExitDelaySet(delay);
+    }
+
     function _validateStrikesParams(
         uint256 lifetime,
         uint256 threshold
