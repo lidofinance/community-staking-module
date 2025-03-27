@@ -124,6 +124,7 @@ struct DeployParams {
     uint256 attestationsWeight;
     uint256 blocksWeight;
     uint256 syncWeight;
+    uint256 defaultExitTimeframeDeadlineTimestamp;
     // VettedGate
     bytes32 vettedGateTreeRoot;
     uint256[] vettedGateBondCurve;
@@ -283,7 +284,9 @@ abstract contract DeployBase is Script {
                     badPerformancePenalty: config.badPerformancePenalty,
                     attestationsWeight: config.attestationsWeight,
                     blocksWeight: config.blocksWeight,
-                    syncWeight: config.syncWeight
+                    syncWeight: config.syncWeight,
+                    defaultExitTimeframeDeadlineTimestamp: config
+                        .defaultExitTimeframeDeadlineTimestamp
                 })
             });
 
