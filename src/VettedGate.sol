@@ -55,7 +55,6 @@ contract VettedGate is
         /// @dev there is no check for curve existence as this contract might be created before the curve is added
         curveId = _curveId;
 
-        if (_treeRoot == bytes32(0)) revert InvalidTreeRoot();
         if (admin == address(0)) revert ZeroAdminAddress();
 
         _setTreeRoot(_treeRoot);
@@ -173,8 +172,6 @@ contract VettedGate is
     function setTreeRoot(
         bytes32 _treeRoot
     ) external onlyRole(SET_TREE_ROOT_ROLE) {
-        if (_treeRoot == bytes32(0)) revert InvalidTreeRoot();
-        if (_treeRoot == treeRoot) revert InvalidTreeRoot();
         _setTreeRoot(_treeRoot);
     }
 
@@ -204,6 +201,8 @@ contract VettedGate is
     }
 
     function _setTreeRoot(bytes32 _treeRoot) internal {
+        if (_treeRoot == bytes32(0)) revert InvalidTreeRoot();
+        if (_treeRoot == treeRoot) revert InvalidTreeRoot();
         treeRoot = _treeRoot;
         emit TreeRootSet(_treeRoot);
     }
