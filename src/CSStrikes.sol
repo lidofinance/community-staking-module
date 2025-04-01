@@ -69,7 +69,11 @@ contract CSStrikes is ICSStrikes {
         // NOTE: We allow empty proofs to be delivered because there’s no way to use the tree’s
         // internal nodes without brute-forcing the input data.
 
-        bytes memory pubkey = _getSigningKeys(nodeOperatorId, keyIndex, 1);
+        bytes memory pubkey = MODULE.getSigningKeys(
+            nodeOperatorId,
+            keyIndex,
+            1
+        );
         if (!verifyProof(nodeOperatorId, pubkey, strikesData, proof))
             revert InvalidProof();
 
@@ -108,13 +112,5 @@ contract CSStrikes is ICSStrikes {
                     keccak256(abi.encode(nodeOperatorId, pubkey, strikesData))
                 )
             );
-    }
-
-    function _getSigningKeys(
-        uint256 nodeOperatorId,
-        uint256 startIndex,
-        uint256 keysCount
-    ) internal view returns (bytes memory keys) {
-        keys = MODULE.getSigningKeys(nodeOperatorId, startIndex, keysCount);
     }
 }
