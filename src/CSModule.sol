@@ -25,7 +25,6 @@ import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 
 contract CSModule is
     ICSModule,
-    IStakingModule,
     Initializable,
     AccessControlEnumerableUpgradeable,
     PausableUntil,
