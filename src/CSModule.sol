@@ -563,7 +563,6 @@ contract CSModule is
         }
 
         uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
-
         (uint32 priority, uint32 maxDeposits) = PARAMETERS_REGISTRY
             .getQueueConfig(curveId);
 
@@ -607,10 +606,9 @@ contract CSModule is
     ) external onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
         if (amount == 0) revert InvalidAmount();
+        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
         uint256 additionalFine = PARAMETERS_REGISTRY
-            .getElRewardsStealingAdditionalFine(
-                accounting.getBondCurveId(nodeOperatorId)
-            );
+            .getElRewardsStealingAdditionalFine(curveId);
         accounting.lockBondETH(nodeOperatorId, amount + additionalFine);
         emit ELRewardsStealingPenaltyReported(
             nodeOperatorId,
