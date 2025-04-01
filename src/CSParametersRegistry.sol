@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -17,15 +17,22 @@ contract CSParametersRegistry is
 
     uint256 internal constant MAX_BP = 10000;
 
+    uint256 public immutable QUEUE_LOWEST_PRIORITY;
+    uint256 public immutable QUEUE_LEGACY_PRIORITY;
+
+    ////////////////////////
+    // State variables below
+    ////////////////////////
+
     uint256 public defaultKeyRemovalCharge;
-    mapping(uint256 => MarkedUint248) internal _keyRemovalCharges;
+    mapping(uint256 curveId => MarkedUint248) internal _keyRemovalCharges;
 
     uint256 public defaultElRewardsStealingAdditionalFine;
-    mapping(uint256 => MarkedUint248)
+    mapping(uint256 curveId => MarkedUint248)
         internal _elRewardsStealingAdditionalFines;
 
     uint256 public defaultKeysLimit;
-    mapping(uint256 => MarkedUint248) internal _keysLimits;
+    mapping(uint256 curveId => MarkedUint248) internal _keysLimits;
 
     QueueConfig public defaultQueueConfig;
     mapping(uint256 curveId => MarkedQueueConfig) internal _queueConfigs;
@@ -33,30 +40,28 @@ contract CSParametersRegistry is
     /// @dev Default value for the reward share. Can be only be set as a flat value due to possible sybil attacks
     ///      Decreased reward share for some validators > N will promote sybils. Increased reward share for validators > N will give large operators an advantage
     uint256 public defaultRewardShare;
-    mapping(uint256 => PivotsAndValues) internal _rewardShareData;
+    mapping(uint256 curveId => PivotsAndValues) internal _rewardShareData;
 
     /// @dev Default value for the performance leeway. Can be only be set as a flat value due to possible sybil attacks
     ///      Decreased performance leeway for some validators > N will promote sybils. Increased performance leeway for validators > N will give large operators an advantage
     uint256 public defaultPerformanceLeeway;
-    mapping(uint256 => PivotsAndValues) internal _performanceLeewayData;
+    mapping(uint256 curveId => PivotsAndValues) internal _performanceLeewayData;
 
     StrikesParams public defaultStrikesParams;
-    mapping(uint256 => MarkedStrikesParams) internal _strikesParams;
+    mapping(uint256 curveId => MarkedStrikesParams) internal _strikesParams;
 
     uint256 public defaultBadPerformancePenalty;
-    mapping(uint256 => MarkedUint248) internal _badPerformancePenalties;
+    mapping(uint256 curveId => MarkedUint248) internal _badPerformancePenalties;
 
     PerformanceCoefficients public defaultPerformanceCoefficients;
-    mapping(uint256 => MarkedPerformanceCoefficients)
+    mapping(uint256 curveId => MarkedPerformanceCoefficients)
         internal _performanceCoefficients;
 
-    uint256 public immutable QUEUE_LOWEST_PRIORITY;
-    uint256 public immutable QUEUE_LEGACY_PRIORITY;
-
     constructor(uint256 queueLowestPriority) {
-        _disableInitializers();
         QUEUE_LOWEST_PRIORITY = queueLowestPriority;
         QUEUE_LEGACY_PRIORITY = queueLowestPriority - 1;
+
+        _disableInitializers();
     }
 
     /// @notice initialize contract
@@ -220,30 +225,11 @@ contract CSParametersRegistry is
     /// @inheritdoc ICSParametersRegistry
     function setRewardShareData(
         uint256 curveId,
-        uint256[] calldata keyPivots,
-        uint256[] calldata rewardShares
+        PivotsAndValues calldata data
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        uint256 keyPivotsLength = keyPivots.length;
-        uint256 rewardSharesLength = rewardShares.length;
-        if (keyPivotsLength + 1 != rewardSharesLength)
-            revert InvalidRewardShareData();
-        if (keyPivotsLength > 0 && keyPivots[0] == 0)
-            revert InvalidRewardShareData();
-        if (keyPivotsLength > 1) {
-            for (uint256 i = 0; i < keyPivotsLength - 1; ++i) {
-                if (keyPivots[i] >= keyPivots[i + 1])
-                    revert InvalidRewardShareData();
-            }
-        }
-        for (uint256 i = 0; i < rewardSharesLength; ++i) {
-            if (rewardShares[i] > MAX_BP) revert InvalidRewardShareData();
-        }
-        _rewardShareData[curveId] = PivotsAndValues({
-            pivots: keyPivots,
-            values: rewardShares
-        });
-
-        emit RewardShareDataSet(curveId);
+        _validatePivotsAndValues(data);
+        _rewardShareData[curveId] = data;
+        emit RewardShareDataSet(curveId, data);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -257,31 +243,11 @@ contract CSParametersRegistry is
     /// @inheritdoc ICSParametersRegistry
     function setPerformanceLeewayData(
         uint256 curveId,
-        uint256[] calldata keyPivots,
-        uint256[] calldata performanceLeeways
+        PivotsAndValues calldata data
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        uint256 keyPivotsLength = keyPivots.length;
-        uint256 performanceLeewaysLength = performanceLeeways.length;
-        if (keyPivotsLength + 1 != performanceLeewaysLength)
-            revert InvalidPerformanceLeewayData();
-        if (keyPivotsLength > 0 && keyPivots[0] == 0)
-            revert InvalidPerformanceLeewayData();
-        if (keyPivotsLength > 1) {
-            for (uint256 i = 0; i < keyPivotsLength - 1; ++i) {
-                if (keyPivots[i] >= keyPivots[i + 1])
-                    revert InvalidPerformanceLeewayData();
-            }
-        }
-        for (uint256 i = 0; i < performanceLeewaysLength; ++i) {
-            if (performanceLeeways[i] > MAX_BP)
-                revert InvalidPerformanceLeewayData();
-        }
-        _performanceLeewayData[curveId] = PivotsAndValues({
-            pivots: keyPivots,
-            values: performanceLeeways
-        });
-
-        emit PerformanceLeewayDataSet(curveId);
+        _validatePivotsAndValues(data);
+        _performanceLeewayData[curveId] = data;
+        emit PerformanceLeewayDataSet(curveId, data);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -342,6 +308,11 @@ contract CSParametersRegistry is
         uint256 blocksWeight,
         uint256 syncWeight
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _validatePerformanceCoefficients(
+            attestationsWeight,
+            blocksWeight,
+            syncWeight
+        );
         _performanceCoefficients[curveId] = MarkedPerformanceCoefficients(
             attestationsWeight.toUint32(),
             blocksWeight.toUint32(),
@@ -369,19 +340,12 @@ contract CSParametersRegistry is
         uint256 curveId,
         QueueConfig calldata config
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (
-            config.priority > QUEUE_LOWEST_PRIORITY ||
-            config.priority == QUEUE_LEGACY_PRIORITY
-        ) {
-            revert QueueCannotBeUsed();
-        }
-
+        _validateQueueConfig(config.priority, config.maxDeposits);
         _queueConfigs[curveId] = MarkedQueueConfig({
             priority: config.priority,
             maxDeposits: config.maxDeposits,
             isValue: true
         });
-
         emit QueueConfigSet(curveId, config.priority, config.maxDeposits);
     }
 
@@ -397,7 +361,7 @@ contract CSParametersRegistry is
     function getKeyRemovalCharge(
         uint256 curveId
     ) external view returns (uint256 keyRemovalCharge) {
-        MarkedUint248 memory data = _keyRemovalCharges[curveId];
+        MarkedUint248 storage data = _keyRemovalCharges[curveId];
         return data.isValue ? data.value : defaultKeyRemovalCharge;
     }
 
@@ -405,7 +369,7 @@ contract CSParametersRegistry is
     function getElRewardsStealingAdditionalFine(
         uint256 curveId
     ) external view returns (uint256 fine) {
-        MarkedUint248 memory data = _elRewardsStealingAdditionalFines[curveId];
+        MarkedUint248 storage data = _elRewardsStealingAdditionalFines[curveId];
         return
             data.isValue ? data.value : defaultElRewardsStealingAdditionalFine;
     }
@@ -414,54 +378,39 @@ contract CSParametersRegistry is
     function getKeysLimit(
         uint256 curveId
     ) external view returns (uint256 limit) {
-        MarkedUint248 memory data = _keysLimits[curveId];
+        MarkedUint248 storage data = _keysLimits[curveId];
         return data.isValue ? data.value : defaultKeysLimit;
     }
 
     /// @inheritdoc ICSParametersRegistry
     function getRewardShareData(
         uint256 curveId
-    )
-        external
-        view
-        returns (uint256[] memory keyPivots, uint256[] memory rewardShares)
-    {
-        PivotsAndValues memory rewardShareData = _rewardShareData[curveId];
-        if (rewardShareData.pivots.length == 0) {
-            rewardShares = new uint256[](1);
-            rewardShares[0] = defaultRewardShare;
-            return (new uint256[](0), rewardShares);
+    ) external view returns (PivotsAndValues memory data) {
+        data = _rewardShareData[curveId];
+        if (data.values.length == 0) {
+            data.pivots = new uint256[](0);
+            data.values = new uint256[](1);
+            data.values[0] = defaultRewardShare;
         }
-        return (rewardShareData.pivots, rewardShareData.values);
     }
 
     /// @inheritdoc ICSParametersRegistry
     function getPerformanceLeewayData(
         uint256 curveId
-    )
-        external
-        view
-        returns (
-            uint256[] memory keyPivots,
-            uint256[] memory performanceLeeways
-        )
-    {
-        PivotsAndValues memory performanceLeewayData = _performanceLeewayData[
-            curveId
-        ];
-        if (performanceLeewayData.pivots.length == 0) {
-            performanceLeeways = new uint256[](1);
-            performanceLeeways[0] = defaultPerformanceLeeway;
-            return (new uint256[](0), performanceLeeways);
+    ) external view returns (PivotsAndValues memory data) {
+        data = _performanceLeewayData[curveId];
+        if (data.values.length == 0) {
+            data.pivots = new uint256[](0);
+            data.values = new uint256[](1);
+            data.values[0] = defaultPerformanceLeeway;
         }
-        return (performanceLeewayData.pivots, performanceLeewayData.values);
     }
 
     /// @inheritdoc ICSParametersRegistry
     function getStrikesParams(
         uint256 curveId
     ) external view returns (uint256 lifetime, uint256 threshold) {
-        MarkedStrikesParams memory params = _strikesParams[curveId];
+        MarkedStrikesParams storage params = _strikesParams[curveId];
         if (!params.isValue) {
             return (
                 defaultStrikesParams.lifetime,
@@ -475,7 +424,7 @@ contract CSParametersRegistry is
     function getBadPerformancePenalty(
         uint256 curveId
     ) external view returns (uint256 penalty) {
-        MarkedUint248 memory data = _badPerformancePenalties[curveId];
+        MarkedUint248 storage data = _badPerformancePenalties[curveId];
         return data.isValue ? data.value : defaultBadPerformancePenalty;
     }
 
@@ -492,7 +441,7 @@ contract CSParametersRegistry is
         )
     {
         MarkedPerformanceCoefficients
-            memory coefficients = _performanceCoefficients[curveId];
+            storage coefficients = _performanceCoefficients[curveId];
         if (!coefficients.isValue) {
             return (
                 defaultPerformanceCoefficients.attestationsWeight,
@@ -572,6 +521,11 @@ contract CSParametersRegistry is
         uint256 blocksWeight,
         uint256 syncWeight
     ) internal {
+        _validatePerformanceCoefficients(
+            attestationsWeight,
+            blocksWeight,
+            syncWeight
+        );
         defaultPerformanceCoefficients = PerformanceCoefficients({
             attestationsWeight: attestationsWeight.toUint32(),
             blocksWeight: blocksWeight.toUint32(),
@@ -588,15 +542,23 @@ contract CSParametersRegistry is
         uint256 priority,
         uint256 maxDeposits
     ) internal {
+        _validateQueueConfig(priority, maxDeposits);
+        defaultQueueConfig.priority = priority.toUint32();
+        defaultQueueConfig.maxDeposits = maxDeposits.toUint32();
+        emit DefaultQueueConfigSet(priority, maxDeposits);
+    }
+
+    function _validateQueueConfig(
+        uint256 priority,
+        uint256 maxDeposits
+    ) internal view {
         if (
             priority > QUEUE_LOWEST_PRIORITY ||
             priority == QUEUE_LEGACY_PRIORITY
         ) {
             revert QueueCannotBeUsed();
         }
-        defaultQueueConfig.priority = priority.toUint32();
-        defaultQueueConfig.maxDeposits = maxDeposits.toUint32();
-        emit DefaultQueueConfigSet(priority, maxDeposits);
+        if (maxDeposits == 0) revert ZeroMaxDeposits();
     }
 
     function _validateStrikesParams(
@@ -604,5 +566,33 @@ contract CSParametersRegistry is
         uint256 threshold
     ) internal pure {
         if (threshold == 0 || lifetime == 0) revert InvalidStrikesParams();
+    }
+
+    function _validatePerformanceCoefficients(
+        uint256 attestationsWeight,
+        uint256 blocksWeight,
+        uint256 syncWeight
+    ) internal pure {
+        if (attestationsWeight == 0 && blocksWeight == 0 && syncWeight == 0)
+            revert InvalidPerformanceCoefficients();
+    }
+
+    function _validatePivotsAndValues(
+        PivotsAndValues memory data
+    ) internal pure {
+        uint256 pivotsLength = data.pivots.length;
+        uint256 valuesLength = data.values.length;
+        if (pivotsLength + 1 != valuesLength) revert InvalidPivotsAndValues();
+        if (pivotsLength > 0 && data.pivots[0] == 0)
+            revert InvalidPivotsAndValues();
+        if (pivotsLength > 1) {
+            for (uint256 i = 0; i < pivotsLength - 1; ++i) {
+                if (data.pivots[i] >= data.pivots[i + 1])
+                    revert InvalidPivotsAndValues();
+            }
+        }
+        for (uint256 i = 0; i < valuesLength; ++i) {
+            if (data.values[i] > MAX_BP) revert InvalidPivotsAndValues();
+        }
     }
 }

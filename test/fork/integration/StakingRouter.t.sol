@@ -171,15 +171,6 @@ contract StakingRouterIntegrationTest is
         assertEq(targetValidatorsCount, 2);
     }
 
-    function test_updateRefundedValidatorsCount() public assertInvariants {
-        address nodeOperatorManager = nextAddress();
-        uint256 noId = addNodeOperator(nodeOperatorManager, 5);
-
-        vm.expectRevert(ICSModule.NotSupported.selector);
-        vm.prank(agent);
-        stakingRouter.updateRefundedValidatorsCount(moduleId, noId, 1);
-    }
-
     function test_reportStakingModuleExitedValidatorsCountByNodeOperator()
         public
         assertInvariants

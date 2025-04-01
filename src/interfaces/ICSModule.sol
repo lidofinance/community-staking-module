@@ -66,7 +66,6 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
 
     error InvalidAmount();
 
-    error NotSupported();
     error ZeroLocatorAddress();
     error ZeroAccountingAddress();
     error ZeroAdminAddress();

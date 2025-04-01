@@ -151,6 +151,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             $.bondCurves.push(
                 BondCurve({ points: curvePoints, trend: curveTrend })
             );
+            // TODO: Add bond curve ID
             emit BondCurveAdded(curvePoints);
             return $.bondCurves.length - 1;
         }

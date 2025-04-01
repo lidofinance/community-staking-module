@@ -357,6 +357,7 @@ contract CSAccounting is
     ) external {
         _onlyExistingNodeOperator(nodeOperatorId);
         _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
+        CSM.updateDepositableValidatorsCount(nodeOperatorId);
     }
 
     /// @inheritdoc AssetRecoverer

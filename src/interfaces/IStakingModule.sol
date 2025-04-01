@@ -112,14 +112,6 @@ interface IStakingModule {
         bytes calldata exitedValidatorsCounts
     ) external;
 
-    /// @notice Updates the number of the refunded validators for node operator with the given id
-    /// @param nodeOperatorId Id of the node operator
-    /// @param refundedValidatorsCount New number of refunded validators of the node operator
-    function updateRefundedValidatorsCount(
-        uint256 nodeOperatorId,
-        uint256 refundedValidatorsCount
-    ) external;
-
     /// @notice Updates the limit of the validators that can be used for deposit
     /// @param nodeOperatorId ID of the Node Operator
     /// @param targetLimitMode Target limit mode for the Node Operator (see https://hackmd.io/@lido/BJXRTxMRp)
