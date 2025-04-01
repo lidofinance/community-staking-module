@@ -519,8 +519,9 @@ contract CSModule is
         // The Node Operator is charged for the every removed key. It's motivated by the fact that the DAO should cleanup
         // the queue from the empty batches related to the Node Operator. It's possible to have multiple batches with only one
         // key in it, so it means the DAO should be able to cover removal costs for as much batches as keys removed in this case.
+        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
         uint256 amountToCharge = PARAMETERS_REGISTRY.getKeyRemovalCharge(
-            accounting.getBondCurveId(nodeOperatorId)
+            curveId
         ) * keysCount;
         if (amountToCharge != 0) {
             accounting.chargeFee(nodeOperatorId, amountToCharge);
