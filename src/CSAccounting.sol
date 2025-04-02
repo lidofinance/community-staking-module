@@ -45,7 +45,10 @@ contract CSAccounting is
     address public chargePenaltyRecipient;
 
     modifier onlyCSM() {
-        if (msg.sender != address(CSM)) revert SenderIsNotCSM();
+        if (msg.sender != address(CSM)) {
+            revert SenderIsNotCSM();
+        }
+
         _;
     }
 
@@ -318,7 +321,10 @@ contract CSAccounting is
         (bool success, ) = LIDO_LOCATOR.elRewardsVault().call{
             value: msg.value
         }("");
-        if (!success) revert ElRewardsVaultReceiveFailed();
+        if (!success) {
+            revert ElRewardsVaultReceiveFailed();
+        }
+
         CSBondLock._reduceAmount(nodeOperatorId, msg.value);
         emit BondLockCompensated(nodeOperatorId, msg.value);
     }
@@ -608,7 +614,10 @@ contract CSAccounting is
                 uint256 lockedBond = CSBondLock.getActualLockedBond(
                     nodeOperatorId
                 );
-                if (currentBond <= lockedBond) return nonWithdrawnKeys;
+                if (currentBond <= lockedBond) {
+                    return nonWithdrawnKeys;
+                }
+
                 currentBond -= lockedBond;
             }
             uint256 bondedKeys = CSBondCurve.getKeysCountByBondAmount(
@@ -630,16 +639,24 @@ contract CSAccounting is
         if (
             nodeOperatorId <
             IStakingModule(address(CSM)).getNodeOperatorsCount()
-        ) return;
+        ) {
+            return;
+        }
+
         revert NodeOperatorDoesNotExist();
     }
 
     function _onlyNodeOperatorManagerOrRewardAddresses(
         NodeOperatorManagementProperties memory no
     ) internal view {
-        if (no.managerAddress == address(0)) revert NodeOperatorDoesNotExist();
-        if (no.managerAddress == msg.sender || no.rewardAddress == msg.sender)
+        if (no.managerAddress == address(0)) {
+            revert NodeOperatorDoesNotExist();
+        }
+
+        if (no.managerAddress == msg.sender || no.rewardAddress == msg.sender) {
             return;
+        }
+
         revert SenderIsNotEligible();
     }
 

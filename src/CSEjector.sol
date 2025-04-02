@@ -31,14 +31,19 @@ contract CSEjector is
     mapping(uint256 noKeyIndexPacked => bool) private _isValidatorEjected;
 
     constructor(address module) {
-        if (module == address(0)) revert ZeroModuleAddress();
+        if (module == address(0)) {
+            revert ZeroModuleAddress();
+        }
+
         MODULE = ICSModule(module);
         ACCOUNTING = ICSAccounting(MODULE.accounting());
     }
 
     /// @notice initialize the contract from scratch
     function initialize(address admin) external initializer {
-        if (admin == address(0)) revert ZeroAdminAddress();
+        if (admin == address(0)) {
+            revert ZeroAdminAddress();
+        }
 
         __AccessControlEnumerable_init();
 
@@ -69,21 +74,28 @@ contract CSEjector is
             revert SigningKeysInvalidOffset();
         }
 
-        if (MODULE.isValidatorWithdrawn(nodeOperatorId, keyIndex))
+        if (MODULE.isValidatorWithdrawn(nodeOperatorId, keyIndex)) {
             revert AlreadyWithdrawn();
+        }
 
         uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
-        if (_isValidatorEjected[pointer]) revert AlreadyEjected();
+        if (_isValidatorEjected[pointer]) {
+            revert AlreadyEjected();
+        }
 
         uint256 curveId = ACCOUNTING.getBondCurveId(nodeOperatorId);
 
         ICSParametersRegistry registry = MODULE.PARAMETERS_REGISTRY();
 
         (, uint256 threshold) = registry.getStrikesParams(curveId);
-        if (strikes < threshold) revert NotEnoughStrikesToEject();
+        if (strikes < threshold) {
+            revert NotEnoughStrikesToEject();
+        }
 
         uint256 penalty = registry.getBadPerformancePenalty(curveId);
-        if (penalty > 0) ACCOUNTING.penalize(nodeOperatorId, penalty);
+        if (penalty > 0) {
+            ACCOUNTING.penalize(nodeOperatorId, penalty);
+        }
 
         bytes memory pubkey = MODULE.getSigningKeys(
             nodeOperatorId,
@@ -108,7 +120,10 @@ contract CSEjector is
         if (
             nodeOperatorId <
             IStakingModule(address(MODULE)).getNodeOperatorsCount()
-        ) return;
+        ) {
+            return;
+        }
+
         revert NodeOperatorDoesNotExist();
     }
 

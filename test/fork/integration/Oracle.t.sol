@@ -29,7 +29,10 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
         feesTree = new MerkleTree();
         strikesTree = new MerkleTree();
 
-        if (csm.isPaused()) csm.resume();
+        if (csm.isPaused()) {
+            csm.resume();
+        }
+
         hugeDeposit();
 
         uint256 keysCount;

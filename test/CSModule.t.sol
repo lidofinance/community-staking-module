@@ -97,7 +97,9 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         uint256 keysCount
     ) internal returns (uint256 nodeOperatorId) {
         nodeOperatorId = createNodeOperator(managerAddress, false);
-        if (keysCount > 0) uploadMoreKeys(nodeOperatorId, keysCount);
+        if (keysCount > 0) {
+            uploadMoreKeys(nodeOperatorId, keysCount);
+        }
     }
 
     function createNodeOperator(
@@ -243,7 +245,9 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
 
             for (;;) {
                 Batch item = csm.depositQueueItem(p, curr);
-                if (item.isNil()) break;
+                if (item.isNil()) {
+                    break;
+                }
 
                 uint256 noId = item.noId();
                 uint256 keysInBatch = item.keys();

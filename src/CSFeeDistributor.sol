@@ -50,9 +50,17 @@ contract CSFeeDistributor is
     address public rebateRecipient;
 
     constructor(address stETH, address accounting, address oracle) {
-        if (accounting == address(0)) revert ZeroAccountingAddress();
-        if (oracle == address(0)) revert ZeroOracleAddress();
-        if (stETH == address(0)) revert ZeroStEthAddress();
+        if (accounting == address(0)) {
+            revert ZeroAccountingAddress();
+        }
+
+        if (oracle == address(0)) {
+            revert ZeroOracleAddress();
+        }
+
+        if (stETH == address(0)) {
+            revert ZeroStEthAddress();
+        }
 
         ACCOUNTING = accounting;
         STETH = IStETH(stETH);
@@ -66,7 +74,9 @@ contract CSFeeDistributor is
         address _rebateRecipient
     ) external reinitializer(2) {
         __AccessControlEnumerable_init();
-        if (admin == address(0)) revert ZeroAdminAddress();
+        if (admin == address(0)) {
+            revert ZeroAdminAddress();
+        }
 
         _setRebateRecipient(_rebateRecipient);
 
@@ -92,7 +102,10 @@ contract CSFeeDistributor is
         uint256 shares,
         bytes32[] calldata proof
     ) external returns (uint256 sharesToDistribute) {
-        if (msg.sender != ACCOUNTING) revert NotAccounting();
+        if (msg.sender != ACCOUNTING) {
+            revert NotAccounting();
+        }
+
         sharesToDistribute = getFeesToDistribute(nodeOperatorId, shares, proof);
 
         if (sharesToDistribute == 0) {
@@ -121,7 +134,10 @@ contract CSFeeDistributor is
         uint256 rebate,
         uint256 refSlot
     ) external {
-        if (msg.sender != ORACLE) revert NotOracle();
+        if (msg.sender != ORACLE) {
+            revert NotOracle();
+        }
+
         if (
             totalClaimableShares + distributed + rebate >
             STETH.sharesOf(address(this))
@@ -134,11 +150,21 @@ contract CSFeeDistributor is
         }
 
         if (distributed > 0) {
-            if (bytes(_treeCid).length == 0) revert InvalidTreeCID();
-            if (keccak256(bytes(_treeCid)) == keccak256(bytes(treeCid)))
+            if (bytes(_treeCid).length == 0) {
                 revert InvalidTreeCID();
-            if (_treeRoot == bytes32(0)) revert InvalidTreeRoot();
-            if (_treeRoot == treeRoot) revert InvalidTreeRoot();
+            }
+
+            if (keccak256(bytes(_treeCid)) == keccak256(bytes(treeCid))) {
+                revert InvalidTreeCID();
+            }
+
+            if (_treeRoot == bytes32(0)) {
+                revert InvalidTreeRoot();
+            }
+
+            if (_treeRoot == treeRoot) {
+                revert InvalidTreeRoot();
+            }
 
             // Doesn't overflow because of the very first check.
             unchecked {
@@ -164,9 +190,13 @@ contract CSFeeDistributor is
 
         // NOTE: Make sure off-chain tooling provides a distinct CID of a log even for empty reports, e.g. by mixing
         // in a frame identifier such as reference slot to a file.
-        if (bytes(_logCid).length == 0) revert InvalidLogCID();
-        if (keccak256(bytes(_logCid)) == keccak256(bytes(logCid)))
+        if (bytes(_logCid).length == 0) {
             revert InvalidLogCID();
+        }
+
+        if (keccak256(bytes(_logCid)) == keccak256(bytes(logCid))) {
+            revert InvalidLogCID();
+        }
 
         logCid = _logCid;
         emit DistributionLogUpdated(_logCid);
@@ -221,13 +251,18 @@ contract CSFeeDistributor is
     ) public view returns (uint256 sharesToDistribute) {
         // NOTE: We reject empty proofs to separate two business logic paths on the level of
         // CSAccounting.sol (see _pullFeeRewards function invocations) with and without a proof.
-        if (proof.length == 0) revert InvalidProof();
+        if (proof.length == 0) {
+            revert InvalidProof();
+        }
+
         bool isValid = MerkleProof.verifyCalldata(
             proof,
             treeRoot,
             hashLeaf(nodeOperatorId, shares)
         );
-        if (!isValid) revert InvalidProof();
+        if (!isValid) {
+            revert InvalidProof();
+        }
 
         uint256 _distributedShares = distributedShares[nodeOperatorId];
         if (_distributedShares > shares) {
@@ -252,7 +287,10 @@ contract CSFeeDistributor is
     }
 
     function _setRebateRecipient(address _rebateRecipient) internal {
-        if (_rebateRecipient == address(0)) revert ZeroRebateRecipientAddress();
+        if (_rebateRecipient == address(0)) {
+            revert ZeroRebateRecipientAddress();
+        }
+
         rebateRecipient = _rebateRecipient;
         emit RebateRecipientSet(_rebateRecipient);
     }

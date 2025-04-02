@@ -22,8 +22,14 @@ contract CSStrikes is ICSStrikes {
     string public treeCid;
 
     constructor(address ejector, address oracle) {
-        if (ejector == address(0)) revert ZeroEjectorAddress();
-        if (oracle == address(0)) revert ZeroOracleAddress();
+        if (ejector == address(0)) {
+            revert ZeroEjectorAddress();
+        }
+
+        if (oracle == address(0)) {
+            revert ZeroOracleAddress();
+        }
+
         EJECTOR = ICSEjector(ejector);
         MODULE = EJECTOR.MODULE();
         ORACLE = oracle;
@@ -34,11 +40,17 @@ contract CSStrikes is ICSStrikes {
         bytes32 _treeRoot,
         string calldata _treeCid
     ) external {
-        if (msg.sender != ORACLE) revert NotOracle();
+        if (msg.sender != ORACLE) {
+            revert NotOracle();
+        }
+
         /// @dev should be both empty or not empty
         bool isNewRootEmpty = _treeRoot == bytes32(0);
         bool isNewCidEmpty = bytes(_treeCid).length == 0;
-        if (isNewRootEmpty != isNewCidEmpty) revert InvalidReportData();
+        if (isNewRootEmpty != isNewCidEmpty) {
+            revert InvalidReportData();
+        }
+
         if (isNewRootEmpty) {
             if (treeRoot != bytes32(0)) {
                 delete treeRoot;
@@ -51,7 +63,10 @@ contract CSStrikes is ICSStrikes {
         bool isSameRoot = _treeRoot == treeRoot;
         bool isSameCid = keccak256(bytes(_treeCid)) ==
             keccak256(bytes(treeCid));
-        if (isSameRoot != isSameCid) revert InvalidReportData();
+        if (isSameRoot != isSameCid) {
+            revert InvalidReportData();
+        }
+
         if (!isSameRoot) {
             treeRoot = _treeRoot;
             treeCid = _treeCid;
@@ -74,8 +89,9 @@ contract CSStrikes is ICSStrikes {
             keyIndex,
             1
         );
-        if (!verifyProof(nodeOperatorId, pubkey, strikesData, proof))
+        if (!verifyProof(nodeOperatorId, pubkey, strikesData, proof)) {
             revert InvalidProof();
+        }
 
         uint256 strikes = 0;
         for (uint256 i; i < strikesData.length; ++i) {
