@@ -44,8 +44,10 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     uint256 public immutable MAX_CURVE_LENGTH;
 
     constructor(uint256 maxCurveLength) {
-        if (maxCurveLength < MIN_CURVE_LENGTH)
+        if (maxCurveLength < MIN_CURVE_LENGTH) {
             revert InvalidBondCurveMaxLength();
+        }
+
         MAX_CURVE_LENGTH = maxCurveLength;
     }
 
@@ -59,7 +61,10 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         uint256 curveId
     ) public view returns (BondCurve memory) {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        if (curveId > $.bondCurves.length - 1) revert InvalidBondCurveId();
+        if (curveId > $.bondCurves.length - 1) {
+            revert InvalidBondCurveId();
+        }
+
         return $.bondCurves[curveId];
     }
 
@@ -98,7 +103,10 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         uint256 keys,
         BondCurve memory curve
     ) public pure returns (uint256) {
-        if (keys == 0) return 0;
+        if (keys == 0) {
+            return 0;
+        }
+
         uint256 len = curve.points.length;
         return
             keys > len
@@ -113,7 +121,10 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         uint256 amount,
         BondCurve memory curve
     ) public pure returns (uint256) {
-        if (amount < curve.points.unsafeMemoryAccess(0)) return 0;
+        if (amount < curve.points.unsafeMemoryAccess(0)) {
+            return 0;
+        }
+
         uint256 len = curve.points.length;
         uint256 maxCurveAmount = curve.points.unsafeMemoryAccess(len - 1);
         unchecked {
@@ -129,8 +140,9 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         uint256[] calldata defaultBondCurvePoints
     ) internal onlyInitializing {
         uint256 addedId = _addBondCurve(defaultBondCurvePoints);
-        if (addedId != DEFAULT_BOND_CURVE_ID)
+        if (addedId != DEFAULT_BOND_CURVE_ID) {
             revert InvalidInitialisationCurveId();
+        }
     }
 
     /// @dev Add a new bond curve to the array
@@ -163,7 +175,9 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     ) internal {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
         unchecked {
-            if (curveId > $.bondCurves.length - 1) revert InvalidBondCurveId();
+            if (curveId > $.bondCurves.length - 1) {
+                revert InvalidBondCurveId();
+            }
 
             _checkBondCurve(curvePoints);
 
@@ -187,7 +201,9 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     function _setBondCurve(uint256 nodeOperatorId, uint256 curveId) internal {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
         unchecked {
-            if (curveId > $.bondCurves.length - 1) revert InvalidBondCurveId();
+            if (curveId > $.bondCurves.length - 1) {
+                revert InvalidBondCurveId();
+            }
         }
         $.operatorBondCurveId[nodeOperatorId] = curveId;
         emit BondCurveSet(nodeOperatorId, curveId);
@@ -197,8 +213,9 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     ///      (for example, because of breaking the rules by Node Operator)
     function _resetBondCurve(uint256 nodeOperatorId) internal {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        if ($.operatorBondCurveId[nodeOperatorId] == DEFAULT_BOND_CURVE_ID)
+        if ($.operatorBondCurveId[nodeOperatorId] == DEFAULT_BOND_CURVE_ID) {
             return;
+        }
 
         $.operatorBondCurveId[nodeOperatorId] = DEFAULT_BOND_CURVE_ID;
         emit BondCurveSet(nodeOperatorId, DEFAULT_BOND_CURVE_ID);
@@ -208,12 +225,19 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         if (
             curvePoints.length < MIN_CURVE_LENGTH ||
             curvePoints.length > MAX_CURVE_LENGTH
-        ) revert InvalidBondCurveLength();
-        if (curvePoints[0] == 0) revert InvalidBondCurveValues();
+        ) {
+            revert InvalidBondCurveLength();
+        }
+
+        if (curvePoints[0] == 0) {
+            revert InvalidBondCurveValues();
+        }
+
         for (uint256 i = 1; i < curvePoints.length; ++i) {
             unchecked {
-                if (curvePoints[i] <= curvePoints[i - 1])
+                if (curvePoints[i] <= curvePoints[i - 1]) {
                     revert InvalidBondCurveValues();
+                }
             }
         }
     }

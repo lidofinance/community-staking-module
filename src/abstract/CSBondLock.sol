@@ -76,7 +76,7 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
         BondLock storage bondLock = _getCSBondLockStorage().bondLock[
             nodeOperatorId
         ];
-        return bondLock.lockUntil > block.timestamp ? bondLock.amount : 0;
+        return bondLock.until > block.timestamp ? bondLock.amount : 0;
     }
 
     /// @dev Lock bond amount for the given Node Operator until the period.
@@ -85,13 +85,13 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
         if (amount == 0) {
             revert InvalidBondLockAmount();
         }
-        if ($.bondLock[nodeOperatorId].lockUntil > block.timestamp) {
+        if ($.bondLock[nodeOperatorId].until > block.timestamp) {
             amount += $.bondLock[nodeOperatorId].amount;
         }
         _changeBondLock({
             nodeOperatorId: nodeOperatorId,
             amount: amount,
-            lockUntil: block.timestamp + $.bondLockPeriod
+            until: block.timestamp + $.bondLockPeriod
         });
     }
 
@@ -108,7 +108,7 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
             _changeBondLock(
                 nodeOperatorId,
                 blocked - amount,
-                _getCSBondLockStorage().bondLock[nodeOperatorId].lockUntil
+                _getCSBondLockStorage().bondLock[nodeOperatorId].until
             );
         }
     }
@@ -120,26 +120,23 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function __CSBondLock_init(uint256 lockPeriod) internal onlyInitializing {
-        _setBondLockPeriod(lockPeriod);
+    function __CSBondLock_init(uint256 period) internal onlyInitializing {
+        _setBondLockPeriod(period);
     }
 
     /// @dev Set default bond lock period. That period will be added to the block timestamp of the lock translation to determine the bond lock duration
-    function _setBondLockPeriod(uint256 lockPeriod) internal {
-        if (
-            lockPeriod < MIN_BOND_LOCK_PERIOD ||
-            lockPeriod > MAX_BOND_LOCK_PERIOD
-        ) {
+    function _setBondLockPeriod(uint256 period) internal {
+        if (period < MIN_BOND_LOCK_PERIOD || period > MAX_BOND_LOCK_PERIOD) {
             revert InvalidBondLockPeriod();
         }
-        _getCSBondLockStorage().bondLockPeriod = lockPeriod;
-        emit BondLockPeriodChanged(lockPeriod);
+        _getCSBondLockStorage().bondLockPeriod = period;
+        emit BondLockPeriodChanged(period);
     }
 
     function _changeBondLock(
         uint256 nodeOperatorId,
         uint256 amount,
-        uint256 lockUntil
+        uint256 until
     ) private {
         if (amount == 0) {
             _remove(nodeOperatorId);
@@ -147,9 +144,9 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
         }
         _getCSBondLockStorage().bondLock[nodeOperatorId] = BondLock({
             amount: amount.toUint128(),
-            lockUntil: lockUntil.toUint128()
+            until: until.toUint128()
         });
-        emit BondLockChanged(nodeOperatorId, amount, lockUntil);
+        emit BondLockChanged(nodeOperatorId, amount, until);
     }
 
     function _getCSBondLockStorage()

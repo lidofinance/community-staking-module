@@ -32,7 +32,6 @@ import { CSVerifier } from "../../src/CSVerifier.sol";
 import { DeployParams, DeployParamsV1 } from "../../script/DeployBase.s.sol";
 import { IACL } from "../../src/interfaces/IACL.sol";
 import { IKernel } from "../../src/interfaces/IKernel.sol";
-import { ICSEarlyAdoption } from "../../src/interfaces/ICSEarlyAdoption.sol";
 import { Utilities } from "./Utilities.sol";
 import { Batch } from "../../src/lib/QueueLib.sol";
 
@@ -288,7 +287,7 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
     CSParametersRegistry public parametersRegistry;
     PermissionlessGate public permissionlessGate;
     VettedGate public vettedGate;
-    ICSEarlyAdoption public earlyAdoption;
+    address public earlyAdoption;
     CSAccounting public accounting;
     CSFeeOracle public oracle;
     CSFeeDistributor public feeDistributor;
@@ -327,7 +326,7 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
             deploymentConfig.permissionlessGate
         );
         vettedGate = VettedGate(deploymentConfig.vettedGate);
-        earlyAdoption = ICSEarlyAdoption(deploymentConfig.earlyAdoption);
+        earlyAdoption = deploymentConfig.earlyAdoption;
         accounting = CSAccounting(deploymentConfig.accounting);
         oracle = CSFeeOracle(deploymentConfig.oracle);
         feeDistributor = CSFeeDistributor(deploymentConfig.feeDistributor);

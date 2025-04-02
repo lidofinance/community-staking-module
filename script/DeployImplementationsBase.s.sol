@@ -18,7 +18,6 @@ import { PermissionlessGate } from "../src/PermissionlessGate.sol";
 import { VettedGateFactory } from "../src/VettedGateFactory.sol";
 import { VettedGate } from "../src/VettedGate.sol";
 import { CSParametersRegistry } from "../src/CSParametersRegistry.sol";
-import { ICSEarlyAdoption } from "../src/interfaces/ICSEarlyAdoption.sol";
 import { ICSParametersRegistry } from "../src/interfaces/ICSParametersRegistry.sol";
 import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 
@@ -213,4 +212,8 @@ abstract contract DeployImplementationsBase is DeployBase {
 
         vm.stopBroadcast();
     }
+}
+
+interface ICSEarlyAdoption {
+    function CURVE_ID() external view returns (uint256);
 }

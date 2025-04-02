@@ -244,8 +244,6 @@ contract StakingRouterIntegrationTest is
             .depositableValidatorsCount;
 
         hugeDeposit();
-
-        (, , uint256 totalDepositableKeys) = csm.getStakingModuleSummary();
         lidoDepositWithNoGasMetering(keysCount);
 
         uint256 exited = 1;

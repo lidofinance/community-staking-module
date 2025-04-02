@@ -13,7 +13,10 @@ contract BurnerMock {
     }
 
     function requestBurnMyStETH(uint256 _amountToBurn) external {
-        if (_amountToBurn == 0) revert ZeroBurnAmount();
+        if (_amountToBurn == 0) {
+            revert ZeroBurnAmount();
+        }
+
         IStETH(STETH).transferFrom(msg.sender, address(this), _amountToBurn);
     }
 }

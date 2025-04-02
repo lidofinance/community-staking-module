@@ -254,8 +254,13 @@ contract Utilities is CommonBase {
             // Check the value of the zero slot.
             zeroSlotIsNotZero := mload(0x60)
         }
-        if (freeMemoryPointerOverflowed) revert FreeMemoryPointerOverflowed();
-        if (zeroSlotIsNotZero) revert ZeroSlotIsNotZero();
+        if (freeMemoryPointerOverflowed) {
+            revert FreeMemoryPointerOverflowed();
+        }
+
+        if (zeroSlotIsNotZero) {
+            revert ZeroSlotIsNotZero();
+        }
     }
 
     /// See https://github.com/Vectorized/solady - MIT licensed.

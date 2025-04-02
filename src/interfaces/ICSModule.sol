@@ -47,7 +47,12 @@ struct ValidatorWithdrawalInfo {
 }
 
 /// @title Lido's Community Staking Module interface
-interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
+interface ICSModule is
+    IQueueLib,
+    INOAddresses,
+    IAssetRecovererLib,
+    IStakingModule
+{
     error NodeOperatorHasKeys();
     error NodeOperatorDoesNotExist();
     error SenderIsNotEligible();

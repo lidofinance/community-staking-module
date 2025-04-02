@@ -25,7 +25,6 @@ import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 
 contract CSModule is
     ICSModule,
-    IStakingModule,
     Initializable,
     AccessControlEnumerableUpgradeable,
     PausableUntil,
@@ -96,9 +95,13 @@ contract CSModule is
         address lidoLocator,
         address parametersRegistry
     ) {
-        if (lidoLocator == address(0)) revert ZeroLocatorAddress();
-        if (parametersRegistry == address(0))
+        if (lidoLocator == address(0)) {
+            revert ZeroLocatorAddress();
+        }
+
+        if (parametersRegistry == address(0)) {
             revert ZeroParametersRegistryAddress();
+        }
 
         MODULE_TYPE = moduleType;
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
@@ -115,8 +118,13 @@ contract CSModule is
         address _accounting,
         address admin
     ) external reinitializer(2) {
-        if (_accounting == address(0)) revert ZeroAccountingAddress();
-        if (admin == address(0)) revert ZeroAdminAddress();
+        if (_accounting == address(0)) {
+            revert ZeroAccountingAddress();
+        }
+
+        if (admin == address(0)) {
+            revert ZeroAdminAddress();
+        }
 
         __AccessControlEnumerable_init();
 
@@ -158,7 +166,9 @@ contract CSModule is
         whenResumed
         returns (uint256 nodeOperatorId)
     {
-        if (from == address(0)) revert ZeroSenderAddress();
+        if (from == address(0)) {
+            revert ZeroSenderAddress();
+        }
 
         nodeOperatorId = _nodeOperatorsCount;
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
@@ -172,8 +182,9 @@ contract CSModule is
             : managementProperties.rewardAddress;
         no.managerAddress = managerAddress;
         no.rewardAddress = rewardAddress;
-        if (managementProperties.extendedManagerPermissions)
+        if (managementProperties.extendedManagerPermissions) {
             no.extendedManagerPermissions = true;
+        }
 
         unchecked {
             ++_nodeOperatorsCount;
@@ -181,7 +192,10 @@ contract CSModule is
 
         emit NodeOperatorAdded(nodeOperatorId, managerAddress, rewardAddress);
 
-        if (referrer != address(0)) emit ReferrerSet(nodeOperatorId, referrer);
+        if (referrer != address(0)) {
+            emit ReferrerSet(nodeOperatorId, referrer);
+        }
+
         _incrementModuleNonce();
     }
 
@@ -396,7 +410,9 @@ contract CSModule is
         if (
             no.targetLimitMode == targetLimitMode &&
             no.targetLimit == targetLimit
-        ) return;
+        ) {
+            return;
+        }
 
         // @dev No need to safe cast due to conditions above
         no.targetLimitMode = uint8(targetLimitMode);
@@ -605,7 +621,9 @@ contract CSModule is
         uint256 amount
     ) external onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
-        if (amount == 0) revert InvalidAmount();
+        if (amount == 0) {
+            revert InvalidAmount();
+        }
         uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
         uint256 additionalFine = PARAMETERS_REGISTRY
             .getElRewardsStealingAdditionalFine(curveId);
@@ -703,7 +721,9 @@ contract CSModule is
                 withdrawalInfo.nodeOperatorId,
                 withdrawalInfo.keyIndex
             );
-            if (_isValidatorWithdrawn[pointer]) revert AlreadyWithdrawn();
+            if (_isValidatorWithdrawn[pointer]) {
+                revert AlreadyWithdrawn();
+            }
 
             _isValidatorWithdrawn[pointer] = true;
             unchecked {
@@ -787,7 +807,9 @@ contract CSModule is
         returns (bytes memory publicKeys, bytes memory signatures)
     {
         (publicKeys, signatures) = SigningKeys.initKeysSigsBuf(depositsCount);
-        if (depositsCount == 0) return (publicKeys, signatures);
+        if (depositsCount == 0) {
+            return (publicKeys, signatures);
+        }
 
         uint256 depositsLeft = depositsCount;
         uint256 loadedKeysCount = 0;
@@ -797,7 +819,10 @@ contract CSModule is
         uint256 priority = 0;
 
         while (true) {
-            if (priority > QUEUE_LOWEST_PRIORITY || depositsLeft == 0) break;
+            if (priority > QUEUE_LOWEST_PRIORITY || depositsLeft == 0) {
+                break;
+            }
+
             queue = _getQueue(priority);
             unchecked {
                 ++priority;
@@ -909,7 +934,10 @@ contract CSModule is
         uint256 priority = 0;
 
         while (true) {
-            if (priority > QUEUE_LOWEST_PRIORITY) break;
+            if (priority > QUEUE_LOWEST_PRIORITY) {
+                break;
+            }
+
             queue = _getQueue(priority);
             unchecked {
                 ++priority;
@@ -1168,7 +1196,10 @@ contract CSModule is
         uint256 limit
     ) external view returns (uint256[] memory nodeOperatorIds) {
         uint256 nodeOperatorsCount = _nodeOperatorsCount;
-        if (offset >= nodeOperatorsCount || limit == 0) return new uint256[](0);
+        if (offset >= nodeOperatorsCount || limit == 0) {
+            return new uint256[](0);
+        }
+
         uint256 idsCount = limit < nodeOperatorsCount - offset
             ? limit
             : nodeOperatorsCount - offset;
@@ -1217,8 +1248,9 @@ contract CSModule is
         uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
         uint256 keysLimit = PARAMETERS_REGISTRY.getKeysLimit(curveId);
 
-        if (totalAddedKeys + keysCount - no.totalExitedKeys > keysLimit)
+        if (totalAddedKeys + keysCount - no.totalExitedKeys > keysLimit) {
             revert KeysLimitExceeded();
+        }
 
         // solhint-disable-next-line func-named-parameters
         SigningKeys.saveKeysSigs(
@@ -1265,11 +1297,16 @@ contract CSModule is
         _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         uint32 totalExitedKeys = no.totalExitedKeys;
-        if (exitedValidatorsCount == totalExitedKeys) return;
-        if (exitedValidatorsCount > no.totalDepositedKeys)
+        if (exitedValidatorsCount == totalExitedKeys) {
+            return;
+        }
+        if (exitedValidatorsCount > no.totalDepositedKeys) {
             revert ExitedKeysHigherThanTotalDeposited();
-        if (!allowDecrease && exitedValidatorsCount < totalExitedKeys)
+        }
+        if (!allowDecrease && exitedValidatorsCount < totalExitedKeys) {
             revert ExitedKeysDecrease();
+        }
+
         unchecked {
             // @dev No need to safe cast due to conditions above
             _totalExitedValidators =
@@ -1377,7 +1414,10 @@ contract CSModule is
 
             unchecked {
                 count = depositable - enqueued;
-                if (count > maxKeys) count = maxKeys;
+                if (count > maxKeys) {
+                    count = maxKeys;
+                }
+
                 no.enqueuedCount = enqueued + count;
             }
 
@@ -1422,12 +1462,20 @@ contract CSModule is
         address from
     ) internal view {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (no.managerAddress == address(0)) revert NodeOperatorDoesNotExist();
-        if (no.managerAddress != from) revert SenderIsNotEligible();
+        if (no.managerAddress == address(0)) {
+            revert NodeOperatorDoesNotExist();
+        }
+
+        if (no.managerAddress != from) {
+            revert SenderIsNotEligible();
+        }
     }
 
     function _onlyExistingNodeOperator(uint256 nodeOperatorId) internal view {
-        if (nodeOperatorId < _nodeOperatorsCount) return;
+        if (nodeOperatorId < _nodeOperatorsCount) {
+            return;
+        }
+
         revert NodeOperatorDoesNotExist();
     }
 

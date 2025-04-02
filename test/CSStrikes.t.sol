@@ -231,6 +231,7 @@ contract CSStrikesTest is CSStrikesTestBase {
         strikes.processOracleReport(root, someCIDv0());
 
         bytes32[] memory proof = tree.getProof(0);
+        assertEq(proof.length, 0);
 
         vm.mockCall(
             address(ejector),
@@ -257,12 +258,7 @@ contract CSStrikesTest is CSStrikesTestBase {
                 100500
             )
         );
-        strikes.processBadPerformanceProof(
-            noId,
-            0,
-            strikesData,
-            new bytes32[](0)
-        );
+        strikes.processBadPerformanceProof(noId, 0, strikesData, proof);
     }
 
     function test_processOracleReport() public assertInvariants {

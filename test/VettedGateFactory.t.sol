@@ -28,7 +28,7 @@ contract VettedGateFactoryConstructorTest is Test, Utilities {
 
     function test_constructor_RevertWhen_ZeroImpl() public {
         vm.expectRevert(IVettedGateFactory.ZeroImplementationAddress.selector);
-        VettedGateFactory factory = new VettedGateFactory(address(0));
+        new VettedGateFactory(address(0));
     }
 }
 
