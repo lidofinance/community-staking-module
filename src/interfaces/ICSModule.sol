@@ -46,6 +46,11 @@ struct ValidatorWithdrawalInfo {
     bool isSlashed; // @dev If validator is slashed or not
 }
 
+struct ExitPenaltyInfo {
+    uint256 penaltyValue;
+    uint256 withdrawalRequestFee;
+}
+
 /// @title Lido's Community Staking Module interface
 interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     error NodeOperatorHasKeys();
@@ -72,6 +77,8 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
     error ZeroSenderAddress();
     error ZeroRewardAddress();
     error ZeroParametersRegistryAddress();
+    error InvalidExitDelay();
+    error ExitDelayAlreadyReported();
 
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
@@ -133,6 +140,17 @@ interface ICSModule is IQueueLib, INOAddresses, IAssetRecovererLib {
         uint256 amount
     );
     event ELRewardsStealingPenaltySettled(uint256 indexed nodeOperatorId);
+    event ValidatorExitDelayReported(
+        uint256 indexed nodeOperatorId,
+        uint256 exitDelay,
+        bytes pubkey
+    );
+    event ValidatorExitTriggered(
+        uint256 indexed nodeOperatorId,
+        uint256 indexed exitType,
+        bytes pubkey,
+        uint256 withdrawalRequestFee
+    );
 
     function LIDO_LOCATOR() external view returns (ILidoLocator);
 

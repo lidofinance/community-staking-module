@@ -13,7 +13,7 @@ import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
 import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
-import { ICSModule, NodeOperator, NodeOperatorManagementProperties, ValidatorWithdrawalInfo } from "./interfaces/ICSModule.sol";
+import { ICSModule, NodeOperator, NodeOperatorManagementProperties, ValidatorWithdrawalInfo, ExitPenaltyInfo } from "./interfaces/ICSModule.sol";
 
 import { QueueLib, Batch } from "./lib/QueueLib.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
@@ -76,8 +76,7 @@ contract CSModule is
 
     /// @custom:oz-renamed-from earlyAdoption
     /// @custom:oz-retyped-from address
-    mapping(uint256 noKeyIndexPacked => uint256)
-        private _isValidatorExitDelayed;
+    mapping(bytes32 => ExitPenaltyInfo) private _exitPenaltyInfo;
 
     uint256 private _nonce;
     mapping(uint256 => NodeOperator) private _nodeOperators;
@@ -133,7 +132,7 @@ contract CSModule is
     function finalizeUpgradeV2() external reinitializer(2) {
         assembly ("memory-safe") {
             sstore(_queueByPriority.slot, 0x00)
-            sstore(_isValidatorExitDelayed.slot, 0x00)
+            sstore(_exitPenaltyInfo.slot, 0x00)
         }
     }
 
@@ -728,6 +727,32 @@ contract CSModule is
                 accounting.resetBondCurve(withdrawalInfo.nodeOperatorId);
             }
 
+            bytes32 noPublicKeyPacked = _nodeOperatorPublicKeyPacked(
+                withdrawalInfo.nodeOperatorId,
+                pubkey
+            );
+            ExitPenaltyInfo storage exitPenaltyInfo = _exitPenaltyInfo[
+                noPublicKeyPacked
+            ];
+            if (exitPenaltyInfo.penaltyValue != 0) {
+                accounting.penalize(
+                    withdrawalInfo.nodeOperatorId,
+                    exitPenaltyInfo.penaltyValue
+                );
+                exitPenaltyInfo.penaltyValue = 0;
+            }
+            if (exitPenaltyInfo.withdrawalRequestFee != 0) {
+                uint256 maxFee = PARAMETERS_REGISTRY.getMaxWithdrawalRequestFee(
+                    accounting.getBondCurveId(withdrawalInfo.nodeOperatorId)
+                );
+                uint256 fee = Math.min(
+                    exitPenaltyInfo.withdrawalRequestFee,
+                    maxFee
+                );
+                accounting.chargeFee(withdrawalInfo.nodeOperatorId, fee);
+                exitPenaltyInfo.withdrawalRequestFee = 0;
+            }
+
             if (DEPOSIT_SIZE > withdrawalInfo.amount) {
                 unchecked {
                     accounting.penalize(
@@ -761,19 +786,64 @@ contract CSModule is
 
     /// @inheritdoc IStakingModule
     function reportValidatorExitDelay(
-        uint256 /* _nodeOperatorId */,
-        uint256 /* _proofSlotTimestamp */,
-        bytes calldata /* _publicKey */,
-        uint256 /* _eligibleToExitInSec */
-    ) external {}
+        uint256 nodeOperatorId,
+        uint256 proofSlotTimestamp,
+        bytes calldata publicKey,
+        uint256 eligibleToExitInSec
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
+
+        uint256 allowedExitDelay = PARAMETERS_REGISTRY.getAllowedExitDelay(
+            curveId
+        );
+        if (eligibleToExitInSec < allowedExitDelay) revert InvalidExitDelay();
+
+        bytes32 noPublicKeyPacked = _nodeOperatorPublicKeyPacked(
+            nodeOperatorId,
+            publicKey
+        );
+        if (_exitPenaltyInfo[noPublicKeyPacked].penaltyValue != 0) {
+            revert ExitDelayAlreadyReported();
+        }
+        _exitPenaltyInfo[noPublicKeyPacked].penaltyValue = PARAMETERS_REGISTRY
+            .getExitDelayPenalty(curveId);
+        emit ValidatorExitDelayReported(
+            nodeOperatorId,
+            eligibleToExitInSec - allowedExitDelay,
+            publicKey
+        );
+    }
 
     /// @inheritdoc IStakingModule
     function onValidatorExitTriggered(
-        uint256 /* _nodeOperatorId */,
-        bytes calldata /* _publicKey */,
-        uint256 /* _withdrawalRequestPaidFee */,
-        uint256 /* _exitType */
-    ) external {}
+        uint256 nodeOperatorId,
+        bytes calldata publicKey,
+        uint256 withdrawalRequestPaidFee,
+        uint256 exitType
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
+
+        /// assuming exit type == 0 is an exit paid by the node operator
+        /// TODO make it const
+        if (exitType != 0) {
+            bytes32 noPublicKeyPacked = _nodeOperatorPublicKeyPacked(
+                nodeOperatorId,
+                publicKey
+            );
+            ExitPenaltyInfo storage exitPenaltyInfo = _exitPenaltyInfo[
+                noPublicKeyPacked
+            ];
+            exitPenaltyInfo.withdrawalRequestFee = withdrawalRequestPaidFee;
+        }
+
+        emit ValidatorExitTriggered(
+            nodeOperatorId,
+            exitType,
+            publicKey,
+            withdrawalRequestPaidFee
+        );
+    }
 
     /// @inheritdoc IStakingModule
     /// @notice Get the next `depositsCount` of depositable keys with signatures from the queue
@@ -1180,12 +1250,21 @@ contract CSModule is
 
     /// @inheritdoc IStakingModule
     function isValidatorExitDelayPenaltyApplicable(
-        uint256 /* _nodeOperatorId */,
-        uint256 /* _proofSlotTimestamp */,
-        bytes calldata /* _publicKey */,
-        uint256 /* _eligibleToExitInSec */
+        uint256 nodeOperatorId,
+        uint256 proofSlotTimestamp,
+        bytes calldata publicKey,
+        uint256 eligibleToExitInSec
     ) external view returns (bool) {
-        return false;
+        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
+        uint256 allowedExitDelay = PARAMETERS_REGISTRY.getAllowedExitDelay(
+            curveId
+        );
+        if (eligibleToExitInSec < allowedExitDelay) return false;
+        bytes32 noPublicKeyPacked = _nodeOperatorPublicKeyPacked(
+            nodeOperatorId,
+            publicKey
+        );
+        return _exitPenaltyInfo[noPublicKeyPacked].penaltyValue == 0;
     }
 
     /// @inheritdoc IStakingModule
@@ -1454,5 +1533,12 @@ contract CSModule is
         uint256 keyIndex
     ) internal pure returns (uint256) {
         return (nodeOperatorId << 128) | keyIndex;
+    }
+
+    function _nodeOperatorPublicKeyPacked(
+        uint256 nodeOperatorId,
+        bytes memory publicKey
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encode(nodeOperatorId, publicKey));
     }
 }
