@@ -136,7 +136,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     /// @dev Add a new bond curve to the array
     function _addBondCurve(
         uint256[] calldata curvePoints
-    ) internal returns (uint256) {
+    ) internal returns (uint256 curveId) {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
 
         _checkBondCurve(curvePoints);
@@ -151,8 +151,8 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             $.bondCurves.push(
                 BondCurve({ points: curvePoints, trend: curveTrend })
             );
-            emit BondCurveAdded(curvePoints);
-            return $.bondCurves.length - 1;
+            curveId = $.bondCurves.length - 1;
+            emit BondCurveAdded(curveId, curvePoints);
         }
     }
 

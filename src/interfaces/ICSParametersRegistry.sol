@@ -60,6 +60,8 @@ interface ICSParametersRegistry {
         uint256 syncWeight;
     }
 
+    /// @dev Pivots are the pivotal points after which the next value should be used.
+    ///      [1, pivots[0]] -> values[0], (pivots[0], pivots[1]] -> values[1], ..., (pivots[x], inf) -> values[x+1]
     struct PivotsAndValues {
         uint256[] pivots;
         uint256[] values;
@@ -88,8 +90,11 @@ interface ICSParametersRegistry {
         uint256 fine
     );
     event KeysLimitSet(uint256 indexed curveId, uint256 limit);
-    event RewardShareDataSet(uint256 indexed curveId);
-    event PerformanceLeewayDataSet(uint256 indexed curveId);
+    event RewardShareDataSet(uint256 indexed curveId, PivotsAndValues data);
+    event PerformanceLeewayDataSet(
+        uint256 indexed curveId,
+        PivotsAndValues data
+    );
     event StrikesParamsSet(
         uint256 indexed curveId,
         uint256 lifetime,
@@ -120,7 +125,10 @@ interface ICSParametersRegistry {
 
     error InvalidRewardShareData();
     error InvalidPerformanceLeewayData();
+    error InvalidPivotsAndValues();
+    error InvalidPerformanceCoefficients();
     error InvalidStrikesParams();
+    error ZeroMaxDeposits();
     error ZeroAdminAddress();
     error QueueCannotBeUsed();
 
@@ -263,12 +271,10 @@ interface ICSParametersRegistry {
     /// @dev keyPivots = [10, 50] and rewardShares = [10000, 8000, 5000] stands for
     ///      100% rewards for the keys 1-10, 80% rewards for the keys 11-50, and 50% rewards for the keys > 50
     /// @param curveId Curve Id to associate reward share data with
-    /// @param keyPivots Pivot numbers of the keys (ex. [10, 50])
-    /// @param rewardShares Reward share percentages in BP (ex. [10000, 8000, 5000])
+    /// @param data Pivot numbers of the keys (ex. [10, 50]) (data.pivots) and reward share percentages in BP (ex. [10000, 8000, 5000]) (data.values)
     function setRewardShareData(
         uint256 curveId,
-        uint256[] calldata keyPivots,
-        uint256[] calldata rewardShares
+        PivotsAndValues calldata data
     ) external;
 
     /// @notice Unset reward share parameters for the curveId
@@ -280,14 +286,10 @@ interface ICSParametersRegistry {
     /// @dev keyPivots = [10, 50] and rewardShares = [10000, 8000, 5000] stands for
     ///      100% rewards for the keys 1-10, 80% rewards for the keys 11-50, and 50% rewards for the keys > 50
     /// @param curveId Curve Id to get reward share data for
-    /// @return keyPivots Pivot numbers of the keys (ex. [10, 50])
-    /// @return rewardShares Reward share percentages in BP (ex. [10000, 8000, 5000])
+    /// @return data Pivot numbers of the keys (ex. [10, 50]) (data.pivots) and reward share percentages in BP (ex. [10000, 8000, 5000]) (data.values)
     function getRewardShareData(
         uint256 curveId
-    )
-        external
-        view
-        returns (uint256[] memory keyPivots, uint256[] memory rewardShares);
+    ) external view returns (PivotsAndValues memory data);
 
     /// @notice Set default value for QueueConfig. Default value is used if a specific value is not set for the curveId.
     /// @param priority Queue priority.
@@ -321,12 +323,10 @@ interface ICSParametersRegistry {
     /// @dev keyPivots = [20, 100] and performanceLeeways = [500, 450, 400] stands for
     ///      5% performance leeway for the keys 1-20, 4.5% performance leeway for the keys 21-100, and 4% performance leeway for the keys > 100
     /// @param curveId Curve Id to associate performance leeway data with
-    /// @param keyPivots Pivot numbers of the keys (ex. [20, 100])
-    /// @param performanceLeeways Performance leeway percentages in BP (ex. [500, 450, 400])
+    /// @param data Pivot numbers of the keys (ex. [20, 100]) (data.pivots) and performance leeway percentages in BP (ex. [500, 450, 400]) (data.values)
     function setPerformanceLeewayData(
         uint256 curveId,
-        uint256[] calldata keyPivots,
-        uint256[] calldata performanceLeeways
+        PivotsAndValues calldata data
     ) external;
 
     /// @notice Unset performance leeway parameters for the curveId
@@ -338,17 +338,10 @@ interface ICSParametersRegistry {
     /// @dev keyPivots = [100, 500] and performanceLeeways = [500, 450, 400] stands for
     ///      5% performance leeway for the keys 1-100, 4.5% performance leeway for the keys 101-500, and 4% performance leeway for the keys > 500
     /// @param curveId Curve Id to get performance leeway data for
-    /// @return keyPivots Pivot numbers of the keys (ex. [100, 500])
-    /// @return performanceLeeways Performance leeway percentages in BP (ex. [500, 450, 400])
+    /// @return data Pivot numbers of the keys (ex. [100, 500]) (data.pivots) and performance leeway percentages in BP (ex. [500, 450, 400]) (data.values)
     function getPerformanceLeewayData(
         uint256 curveId
-    )
-        external
-        view
-        returns (
-            uint256[] memory keyPivots,
-            uint256[] memory performanceLeeways
-        );
+    ) external view returns (PivotsAndValues memory data);
 
     /// @notice Set performance strikes lifetime and threshold for the curveId
     /// @param curveId Curve Id to associate performance strikes lifetime and threshold with

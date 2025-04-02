@@ -5888,28 +5888,6 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
         csm.updateExitedValidatorsCount("", "");
     }
 
-    function test_stakingRouterRole_updateRefundedValidatorsCount() public {
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.STAKING_ROUTER_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.expectRevert(ICSModule.NotSupported.selector);
-        vm.prank(actor);
-        csm.updateRefundedValidatorsCount(noId, 0);
-    }
-
-    function test_stakingRouterRole_updateRefundedValidatorsCount_revert()
-        public
-    {
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.STAKING_ROUTER_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.updateRefundedValidatorsCount(noId, 0);
-    }
-
     function test_stakingRouterRole_updateTargetValidatorsLimits() public {
         uint256 noId = createNodeOperator();
         bytes32 role = csm.STAKING_ROUTER_ROLE();
@@ -6659,13 +6637,6 @@ contract CSMRecoverERC20 is CSMCommon {
 contract CSMMisc is CSMCommon {
     function test_getInitializedVersion() public view {
         assertEq(csm.getInitializedVersion(), 2);
-    }
-
-    function test_updateRefundedValidatorsCount() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        uint256 refunded = 1;
-        vm.expectRevert(ICSModule.NotSupported.selector);
-        csm.updateRefundedValidatorsCount(noId, refunded);
     }
 
     function test_getActiveNodeOperatorsCount_OneOperator()

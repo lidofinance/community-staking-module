@@ -241,6 +241,36 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
         vm.expectRevert(ICSParametersRegistry.QueueCannotBeUsed.selector);
         parametersRegistry.initialize(admin, customInitData);
     }
+
+    function test_initialize_RevertWhen_ZeroPriorityQueueMaxDeposits() public {
+        _enableInitializers(address(parametersRegistry));
+
+        ICSParametersRegistry.InitializationData
+            memory customInitData = defaultInitData;
+
+        customInitData.defaultQueueMaxDeposits = 0;
+
+        vm.expectRevert(ICSParametersRegistry.ZeroMaxDeposits.selector);
+        parametersRegistry.initialize(admin, customInitData);
+    }
+
+    function test_initialize_RevertWhen_InvalidPerformanceCoefficients()
+        public
+    {
+        _enableInitializers(address(parametersRegistry));
+
+        ICSParametersRegistry.InitializationData
+            memory customInitData = defaultInitData;
+
+        customInitData.attestationsWeight = 0;
+        customInitData.blocksWeight = 0;
+        customInitData.syncWeight = 0;
+
+        vm.expectRevert(
+            ICSParametersRegistry.InvalidPerformanceCoefficients.selector
+        );
+        parametersRegistry.initialize(admin, customInitData);
+    }
 }
 
 abstract contract ParametersTest {
@@ -312,10 +342,16 @@ contract CSParametersRegistryRewardShareDataTest is
         rewardShares[0] = 10000;
         rewardShares[1] = 8000;
 
+        ICSParametersRegistry.PivotsAndValues
+            memory data = ICSParametersRegistry.PivotsAndValues({
+                pivots: keyPivots,
+                values: rewardShares
+            });
+
         vm.expectEmit(address(parametersRegistry));
-        emit ICSParametersRegistry.RewardShareDataSet(curveId);
+        emit ICSParametersRegistry.RewardShareDataSet(curveId, data);
         vm.prank(admin);
-        parametersRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
+        parametersRegistry.setRewardShareData(curveId, data);
     }
 
     function test_set_RevertWhen_notAdmin() public override {
@@ -327,10 +363,16 @@ contract CSParametersRegistryRewardShareDataTest is
         rewardShares[0] = 10000;
         rewardShares[1] = 8000;
 
+        ICSParametersRegistry.PivotsAndValues
+            memory data = ICSParametersRegistry.PivotsAndValues({
+                pivots: keyPivots,
+                values: rewardShares
+            });
+
         bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
         expectRoleRevert(stranger, role);
         vm.prank(stranger);
-        parametersRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
+        parametersRegistry.setRewardShareData(curveId, data);
     }
 
     function test_set_RevertWhen_invalidDataLength() public {
@@ -343,9 +385,15 @@ contract CSParametersRegistryRewardShareDataTest is
         rewardShares[0] = 10000;
         rewardShares[1] = 8000;
 
-        vm.expectRevert(ICSParametersRegistry.InvalidRewardShareData.selector);
+        ICSParametersRegistry.PivotsAndValues
+            memory data = ICSParametersRegistry.PivotsAndValues({
+                pivots: keyPivots,
+                values: rewardShares
+            });
+
+        vm.expectRevert(ICSParametersRegistry.InvalidPivotsAndValues.selector);
         vm.prank(admin);
-        parametersRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
+        parametersRegistry.setRewardShareData(curveId, data);
     }
 
     function test_set_RevertWhen_invalidPivotsSort() public {
@@ -359,9 +407,15 @@ contract CSParametersRegistryRewardShareDataTest is
         rewardShares[1] = 8000;
         rewardShares[2] = 5000;
 
-        vm.expectRevert(ICSParametersRegistry.InvalidRewardShareData.selector);
+        ICSParametersRegistry.PivotsAndValues
+            memory data = ICSParametersRegistry.PivotsAndValues({
+                pivots: keyPivots,
+                values: rewardShares
+            });
+
+        vm.expectRevert(ICSParametersRegistry.InvalidPivotsAndValues.selector);
         vm.prank(admin);
-        parametersRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
+        parametersRegistry.setRewardShareData(curveId, data);
     }
 
     function test_set_RevertWhen_firstPivotIsZero() public {
@@ -375,9 +429,15 @@ contract CSParametersRegistryRewardShareDataTest is
         rewardShares[1] = 8000;
         rewardShares[2] = 5000;
 
-        vm.expectRevert(ICSParametersRegistry.InvalidRewardShareData.selector);
+        ICSParametersRegistry.PivotsAndValues
+            memory data = ICSParametersRegistry.PivotsAndValues({
+                pivots: keyPivots,
+                values: rewardShares
+            });
+
+        vm.expectRevert(ICSParametersRegistry.InvalidPivotsAndValues.selector);
         vm.prank(admin);
-        parametersRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
+        parametersRegistry.setRewardShareData(curveId, data);
     }
 
     function test_set_RevertWhen_invalidBpValues() public {
@@ -389,9 +449,15 @@ contract CSParametersRegistryRewardShareDataTest is
         rewardShares[0] = 100000;
         rewardShares[1] = 8000;
 
-        vm.expectRevert(ICSParametersRegistry.InvalidRewardShareData.selector);
+        ICSParametersRegistry.PivotsAndValues
+            memory data = ICSParametersRegistry.PivotsAndValues({
+                pivots: keyPivots,
+                values: rewardShares
+            });
+
+        vm.expectRevert(ICSParametersRegistry.InvalidPivotsAndValues.selector);
         vm.prank(admin);
-        parametersRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
+        parametersRegistry.setRewardShareData(curveId, data);
     }
 
     function test_unset() public override {
@@ -403,35 +469,37 @@ contract CSParametersRegistryRewardShareDataTest is
         rewardShares[0] = 10000;
         rewardShares[1] = 8000;
 
+        ICSParametersRegistry.PivotsAndValues
+            memory data = ICSParametersRegistry.PivotsAndValues({
+                pivots: keyPivots,
+                values: rewardShares
+            });
+
         vm.prank(admin);
-        parametersRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
+        parametersRegistry.setRewardShareData(curveId, data);
 
-        (
-            uint256[] memory keyPivotsOut,
-            uint256[] memory rewardSharesOut
-        ) = parametersRegistry.getRewardShareData(curveId);
+        ICSParametersRegistry.PivotsAndValues
+            memory dataOut = parametersRegistry.getRewardShareData(curveId);
 
-        assertEq(keyPivotsOut.length, keyPivots.length);
-        for (uint256 i = 0; i < keyPivotsOut.length; ++i) {
-            assertEq(keyPivotsOut[i], keyPivots[i]);
+        assertEq(dataOut.pivots.length, keyPivots.length);
+        for (uint256 i = 0; i < dataOut.pivots.length; ++i) {
+            assertEq(dataOut.pivots[i], keyPivots[i]);
         }
 
-        assertEq(rewardSharesOut.length, rewardShares.length);
-        for (uint256 i = 0; i < rewardSharesOut.length; ++i) {
-            assertEq(rewardSharesOut[i], rewardShares[i]);
+        assertEq(dataOut.values.length, rewardShares.length);
+        for (uint256 i = 0; i < dataOut.values.length; ++i) {
+            assertEq(dataOut.values[i], rewardShares[i]);
         }
 
         vm.prank(admin);
         parametersRegistry.unsetRewardShareData(curveId);
 
-        (keyPivotsOut, rewardSharesOut) = parametersRegistry.getRewardShareData(
-            curveId
-        );
+        dataOut = parametersRegistry.getRewardShareData(curveId);
 
-        assertEq(keyPivotsOut.length, 0);
+        assertEq(dataOut.pivots.length, 0);
 
-        assertEq(rewardSharesOut.length, 1);
-        assertEq(rewardSharesOut[0], defaultInitData.rewardShare);
+        assertEq(dataOut.values.length, 1);
+        assertEq(dataOut.values[0], defaultInitData.rewardShare);
     }
 
     function test_unset_RevertWhen_notAdmin() public override {
@@ -452,22 +520,26 @@ contract CSParametersRegistryRewardShareDataTest is
         rewardShares[0] = 10000;
         rewardShares[1] = 8000;
 
+        ICSParametersRegistry.PivotsAndValues
+            memory data = ICSParametersRegistry.PivotsAndValues({
+                pivots: keyPivots,
+                values: rewardShares
+            });
+
         vm.prank(admin);
-        parametersRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
+        parametersRegistry.setRewardShareData(curveId, data);
 
-        (
-            uint256[] memory keyPivotsOut,
-            uint256[] memory rewardSharesOut
-        ) = parametersRegistry.getRewardShareData(curveId);
+        ICSParametersRegistry.PivotsAndValues
+            memory dataOut = parametersRegistry.getRewardShareData(curveId);
 
-        assertEq(keyPivotsOut.length, keyPivots.length);
-        for (uint256 i = 0; i < keyPivotsOut.length; ++i) {
-            assertEq(keyPivotsOut[i], keyPivots[i]);
+        assertEq(dataOut.pivots.length, keyPivots.length);
+        for (uint256 i = 0; i < dataOut.pivots.length; ++i) {
+            assertEq(dataOut.pivots[i], keyPivots[i]);
         }
 
-        assertEq(rewardSharesOut.length, rewardShares.length);
-        for (uint256 i = 0; i < rewardSharesOut.length; ++i) {
-            assertEq(rewardSharesOut[i], rewardShares[i]);
+        assertEq(dataOut.values.length, rewardShares.length);
+        for (uint256 i = 0; i < dataOut.values.length; ++i) {
+            assertEq(dataOut.values[i], rewardShares[i]);
         }
     }
 
@@ -476,36 +548,38 @@ contract CSParametersRegistryRewardShareDataTest is
         uint256[] memory keyPivots = new uint256[](0);
 
         uint256[] memory rewardShares = new uint256[](1);
-        rewardShares[0] = 8000;
+        rewardShares[0] = 8500;
+
+        ICSParametersRegistry.PivotsAndValues
+            memory data = ICSParametersRegistry.PivotsAndValues({
+                pivots: keyPivots,
+                values: rewardShares
+            });
 
         vm.prank(admin);
-        parametersRegistry.setRewardShareData(curveId, keyPivots, rewardShares);
+        parametersRegistry.setRewardShareData(curveId, data);
 
-        (
-            uint256[] memory keyPivotsOut,
-            uint256[] memory rewardSharesOut
-        ) = parametersRegistry.getRewardShareData(curveId);
+        ICSParametersRegistry.PivotsAndValues
+            memory dataOut = parametersRegistry.getRewardShareData(curveId);
 
-        assertEq(keyPivotsOut.length, keyPivots.length);
+        assertEq(dataOut.pivots.length, keyPivots.length);
 
-        assertEq(rewardSharesOut.length, rewardShares.length);
-        for (uint256 i = 0; i < rewardSharesOut.length; ++i) {
-            assertEq(rewardSharesOut[i], rewardShares[i]);
+        assertEq(dataOut.values.length, rewardShares.length);
+        for (uint256 i = 0; i < dataOut.values.length; ++i) {
+            assertEq(dataOut.values[i], rewardShares[i]);
         }
     }
 
     function test_get_defaultData() public view override {
         uint256 curveId = 10;
 
-        (
-            uint256[] memory keyPivotsOut,
-            uint256[] memory rewardSharesOut
-        ) = parametersRegistry.getRewardShareData(curveId);
+        ICSParametersRegistry.PivotsAndValues
+            memory dataOut = parametersRegistry.getRewardShareData(curveId);
 
-        assertEq(keyPivotsOut.length, 0);
+        assertEq(dataOut.pivots.length, 0);
 
-        assertEq(rewardSharesOut.length, 1);
-        assertEq(rewardSharesOut[0], defaultInitData.rewardShare);
+        assertEq(dataOut.values.length, 1);
+        assertEq(dataOut.values[0], defaultInitData.rewardShare);
     }
 }
 
@@ -551,14 +625,16 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         performanceLeeways[0] = 500;
         performanceLeeways[1] = 400;
 
+        ICSParametersRegistry.PivotsAndValues
+            memory data = ICSParametersRegistry.PivotsAndValues({
+                pivots: keyPivots,
+                values: performanceLeeways
+            });
+
         vm.expectEmit(address(parametersRegistry));
-        emit ICSParametersRegistry.PerformanceLeewayDataSet(curveId);
+        emit ICSParametersRegistry.PerformanceLeewayDataSet(curveId, data);
         vm.prank(admin);
-        parametersRegistry.setPerformanceLeewayData(
-            curveId,
-            keyPivots,
-            performanceLeeways
-        );
+        parametersRegistry.setPerformanceLeewayData(curveId, data);
     }
 
     function test_set_RevertWhen_notAdmin() public override {
@@ -570,14 +646,16 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         performanceLeeways[0] = 500;
         performanceLeeways[1] = 400;
 
+        ICSParametersRegistry.PivotsAndValues
+            memory data = ICSParametersRegistry.PivotsAndValues({
+                pivots: keyPivots,
+                values: performanceLeeways
+            });
+
         bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
         expectRoleRevert(stranger, role);
         vm.prank(stranger);
-        parametersRegistry.setPerformanceLeewayData(
-            curveId,
-            keyPivots,
-            performanceLeeways
-        );
+        parametersRegistry.setPerformanceLeewayData(curveId, data);
     }
 
     function test_set_RevertWhen_invalidDataLength() public {
@@ -590,15 +668,15 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         performanceLeeways[0] = 500;
         performanceLeeways[1] = 400;
 
-        vm.expectRevert(
-            ICSParametersRegistry.InvalidPerformanceLeewayData.selector
-        );
+        ICSParametersRegistry.PivotsAndValues
+            memory data = ICSParametersRegistry.PivotsAndValues({
+                pivots: keyPivots,
+                values: performanceLeeways
+            });
+
+        vm.expectRevert(ICSParametersRegistry.InvalidPivotsAndValues.selector);
         vm.prank(admin);
-        parametersRegistry.setPerformanceLeewayData(
-            curveId,
-            keyPivots,
-            performanceLeeways
-        );
+        parametersRegistry.setPerformanceLeewayData(curveId, data);
     }
 
     function test_set_RevertWhen_invalidPivotsSort() public {
@@ -612,15 +690,15 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         performanceLeeways[1] = 400;
         performanceLeeways[2] = 300;
 
-        vm.expectRevert(
-            ICSParametersRegistry.InvalidPerformanceLeewayData.selector
-        );
+        ICSParametersRegistry.PivotsAndValues
+            memory data = ICSParametersRegistry.PivotsAndValues({
+                pivots: keyPivots,
+                values: performanceLeeways
+            });
+
+        vm.expectRevert(ICSParametersRegistry.InvalidPivotsAndValues.selector);
         vm.prank(admin);
-        parametersRegistry.setPerformanceLeewayData(
-            curveId,
-            keyPivots,
-            performanceLeeways
-        );
+        parametersRegistry.setPerformanceLeewayData(curveId, data);
     }
 
     function test_set_RevertWhen_firstPivotIsZero() public {
@@ -634,15 +712,15 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         performanceLeeways[1] = 400;
         performanceLeeways[2] = 300;
 
-        vm.expectRevert(
-            ICSParametersRegistry.InvalidPerformanceLeewayData.selector
-        );
+        ICSParametersRegistry.PivotsAndValues
+            memory data = ICSParametersRegistry.PivotsAndValues({
+                pivots: keyPivots,
+                values: performanceLeeways
+            });
+
+        vm.expectRevert(ICSParametersRegistry.InvalidPivotsAndValues.selector);
         vm.prank(admin);
-        parametersRegistry.setPerformanceLeewayData(
-            curveId,
-            keyPivots,
-            performanceLeeways
-        );
+        parametersRegistry.setPerformanceLeewayData(curveId, data);
     }
 
     function test_set_RevertWhen_invalidBpValues() public {
@@ -654,15 +732,15 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         performanceLeeways[0] = 50000;
         performanceLeeways[1] = 400;
 
-        vm.expectRevert(
-            ICSParametersRegistry.InvalidPerformanceLeewayData.selector
-        );
+        ICSParametersRegistry.PivotsAndValues
+            memory data = ICSParametersRegistry.PivotsAndValues({
+                pivots: keyPivots,
+                values: performanceLeeways
+            });
+
+        vm.expectRevert(ICSParametersRegistry.InvalidPivotsAndValues.selector);
         vm.prank(admin);
-        parametersRegistry.setPerformanceLeewayData(
-            curveId,
-            keyPivots,
-            performanceLeeways
-        );
+        parametersRegistry.setPerformanceLeewayData(curveId, data);
     }
 
     function test_unset() public override {
@@ -671,41 +749,42 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         keyPivots[0] = 100;
 
         uint256[] memory performanceLeeways = new uint256[](2);
-        performanceLeeways[0] = 500;
+        performanceLeeways[0] = 450;
         performanceLeeways[1] = 400;
 
+        ICSParametersRegistry.PivotsAndValues
+            memory data = ICSParametersRegistry.PivotsAndValues({
+                pivots: keyPivots,
+                values: performanceLeeways
+            });
+
         vm.prank(admin);
-        parametersRegistry.setPerformanceLeewayData(
-            curveId,
-            keyPivots,
-            performanceLeeways
-        );
+        parametersRegistry.setPerformanceLeewayData(curveId, data);
 
-        (
-            uint256[] memory keyPivotsOut,
-            uint256[] memory performanceLeewaysOut
-        ) = parametersRegistry.getPerformanceLeewayData(curveId);
+        ICSParametersRegistry.PivotsAndValues
+            memory dataOut = parametersRegistry.getPerformanceLeewayData(
+                curveId
+            );
 
-        assertEq(keyPivotsOut.length, keyPivots.length);
-        for (uint256 i = 0; i < keyPivotsOut.length; ++i) {
-            assertEq(keyPivotsOut[i], keyPivots[i]);
+        assertEq(dataOut.pivots.length, keyPivots.length);
+        for (uint256 i = 0; i < dataOut.pivots.length; ++i) {
+            assertEq(dataOut.pivots[i], keyPivots[i]);
         }
 
-        assertEq(performanceLeewaysOut.length, performanceLeeways.length);
-        for (uint256 i = 0; i < performanceLeewaysOut.length; ++i) {
-            assertEq(performanceLeewaysOut[i], performanceLeeways[i]);
+        assertEq(dataOut.values.length, performanceLeeways.length);
+        for (uint256 i = 0; i < dataOut.values.length; ++i) {
+            assertEq(dataOut.values[i], performanceLeeways[i]);
         }
 
         vm.prank(admin);
         parametersRegistry.unsetPerformanceLeewayData(curveId);
 
-        (keyPivotsOut, performanceLeewaysOut) = parametersRegistry
-            .getPerformanceLeewayData(curveId);
+        dataOut = parametersRegistry.getPerformanceLeewayData(curveId);
 
-        assertEq(keyPivotsOut.length, 0);
+        assertEq(dataOut.pivots.length, 0);
 
-        assertEq(performanceLeewaysOut.length, 1);
-        assertEq(performanceLeewaysOut[0], defaultInitData.performanceLeeway);
+        assertEq(dataOut.values.length, 1);
+        assertEq(dataOut.values[0], defaultInitData.performanceLeeway);
     }
 
     function test_unset_RevertWhen_notAdmin() public override {
@@ -726,26 +805,28 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         performanceLeeways[0] = 500;
         performanceLeeways[1] = 400;
 
+        ICSParametersRegistry.PivotsAndValues
+            memory data = ICSParametersRegistry.PivotsAndValues({
+                pivots: keyPivots,
+                values: performanceLeeways
+            });
+
         vm.prank(admin);
-        parametersRegistry.setPerformanceLeewayData(
-            curveId,
-            keyPivots,
-            performanceLeeways
-        );
+        parametersRegistry.setPerformanceLeewayData(curveId, data);
 
-        (
-            uint256[] memory keyPivotsOut,
-            uint256[] memory performanceLeewaysOut
-        ) = parametersRegistry.getPerformanceLeewayData(curveId);
+        ICSParametersRegistry.PivotsAndValues
+            memory dataOut = parametersRegistry.getPerformanceLeewayData(
+                curveId
+            );
 
-        assertEq(keyPivotsOut.length, keyPivots.length);
-        for (uint256 i = 0; i < keyPivotsOut.length; ++i) {
-            assertEq(keyPivotsOut[i], keyPivots[i]);
+        assertEq(dataOut.pivots.length, keyPivots.length);
+        for (uint256 i = 0; i < dataOut.pivots.length; ++i) {
+            assertEq(dataOut.pivots[i], keyPivots[i]);
         }
 
-        assertEq(performanceLeewaysOut.length, performanceLeeways.length);
-        for (uint256 i = 0; i < performanceLeewaysOut.length; ++i) {
-            assertEq(performanceLeewaysOut[i], performanceLeeways[i]);
+        assertEq(dataOut.values.length, performanceLeeways.length);
+        for (uint256 i = 0; i < dataOut.values.length; ++i) {
+            assertEq(dataOut.values[i], performanceLeeways[i]);
         }
     }
 
@@ -754,40 +835,42 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         uint256[] memory keyPivots = new uint256[](0);
 
         uint256[] memory performanceLeeways = new uint256[](1);
-        performanceLeeways[0] = 500;
+        performanceLeeways[0] = 450;
+
+        ICSParametersRegistry.PivotsAndValues
+            memory data = ICSParametersRegistry.PivotsAndValues({
+                pivots: keyPivots,
+                values: performanceLeeways
+            });
 
         vm.prank(admin);
-        parametersRegistry.setPerformanceLeewayData(
-            curveId,
-            keyPivots,
-            performanceLeeways
-        );
+        parametersRegistry.setPerformanceLeewayData(curveId, data);
 
-        (
-            uint256[] memory keyPivotsOut,
-            uint256[] memory performanceLeewaysOut
-        ) = parametersRegistry.getPerformanceLeewayData(curveId);
+        ICSParametersRegistry.PivotsAndValues
+            memory dataOut = parametersRegistry.getPerformanceLeewayData(
+                curveId
+            );
 
-        assertEq(keyPivotsOut.length, keyPivots.length);
+        assertEq(dataOut.pivots.length, keyPivots.length);
 
-        assertEq(performanceLeewaysOut.length, performanceLeeways.length);
-        for (uint256 i = 0; i < performanceLeewaysOut.length; ++i) {
-            assertEq(performanceLeewaysOut[i], performanceLeeways[i]);
+        assertEq(dataOut.values.length, performanceLeeways.length);
+        for (uint256 i = 0; i < dataOut.values.length; ++i) {
+            assertEq(dataOut.values[i], performanceLeeways[i]);
         }
     }
 
     function test_get_defaultData() public view override {
         uint256 curveId = 10;
 
-        (
-            uint256[] memory keyPivotsOut,
-            uint256[] memory leewaysOut
-        ) = parametersRegistry.getPerformanceLeewayData(curveId);
+        ICSParametersRegistry.PivotsAndValues
+            memory dataOut = parametersRegistry.getPerformanceLeewayData(
+                curveId
+            );
 
-        assertEq(keyPivotsOut.length, 0);
+        assertEq(dataOut.pivots.length, 0);
 
-        assertEq(leewaysOut.length, 1);
-        assertEq(leewaysOut[0], defaultInitData.performanceLeeway);
+        assertEq(dataOut.values.length, 1);
+        assertEq(dataOut.values[0], defaultInitData.performanceLeeway);
     }
 }
 
@@ -1378,6 +1461,24 @@ contract CSParametersRegistryPerformanceCoefficientsTest is
         );
     }
 
+    function test_setDefault_RevertWhen_InvalidPerformanceCoefficients()
+        public
+    {
+        uint256 attestations = 0;
+        uint256 blocks = 0;
+        uint256 sync = 0;
+
+        vm.expectRevert(
+            ICSParametersRegistry.InvalidPerformanceCoefficients.selector
+        );
+        vm.prank(admin);
+        parametersRegistry.setDefaultPerformanceCoefficients(
+            attestations,
+            blocks,
+            sync
+        );
+    }
+
     function test_set() public override {
         uint256 curveId = 1;
         uint256 attestations = 100;
@@ -1409,6 +1510,24 @@ contract CSParametersRegistryPerformanceCoefficientsTest is
         bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
         expectRoleRevert(stranger, role);
         vm.prank(stranger);
+        parametersRegistry.setPerformanceCoefficients(
+            curveId,
+            attestations,
+            blocks,
+            sync
+        );
+    }
+
+    function test_set_RevertWhen_InvalidPerformanceCoefficients() public {
+        uint256 curveId = 1;
+        uint256 attestations = 0;
+        uint256 blocks = 0;
+        uint256 sync = 0;
+
+        vm.expectRevert(
+            ICSParametersRegistry.InvalidPerformanceCoefficients.selector
+        );
+        vm.prank(admin);
         parametersRegistry.setPerformanceCoefficients(
             curveId,
             attestations,
@@ -1527,6 +1646,34 @@ contract CSParametersRegistryQueueConfigTest is
         bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
         expectRoleRevert(stranger, role);
         vm.prank(stranger);
+        parametersRegistry.setDefaultQueueConfig(priority, maxDeposits);
+    }
+
+    function test_setDefault_RevertWhen_QueuePriorityIsLegacyQueue() public {
+        uint32 priority = uint32(parametersRegistry.QUEUE_LEGACY_PRIORITY());
+        uint32 maxDeposits = 42;
+
+        vm.expectRevert(ICSParametersRegistry.QueueCannotBeUsed.selector);
+        vm.prank(admin);
+        parametersRegistry.setDefaultQueueConfig(priority, maxDeposits);
+    }
+
+    function test_setDefault_RevertWhen_QueuePriorityAboveLimit() public {
+        uint32 priority = uint32(parametersRegistry.QUEUE_LOWEST_PRIORITY()) +
+            1;
+        uint32 maxDeposits = 42;
+
+        vm.expectRevert(ICSParametersRegistry.QueueCannotBeUsed.selector);
+        vm.prank(admin);
+        parametersRegistry.setDefaultQueueConfig(priority, maxDeposits);
+    }
+
+    function test_setDefault_RevertWhen_ZeroMaxDeposits() public {
+        uint32 priority = 1;
+        uint32 maxDeposits = 0;
+
+        vm.expectRevert(ICSParametersRegistry.ZeroMaxDeposits.selector);
+        vm.prank(admin);
         parametersRegistry.setDefaultQueueConfig(priority, maxDeposits);
     }
 
@@ -1655,6 +1802,19 @@ contract CSParametersRegistryQueueConfigTest is
         uint32 maxDeposits = 42;
 
         vm.expectRevert(ICSParametersRegistry.QueueCannotBeUsed.selector);
+        vm.prank(admin);
+        parametersRegistry.setQueueConfig(
+            curveId,
+            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
+        );
+    }
+
+    function test_set_RevertWhen_ZeroMaxDeposits() public {
+        uint256 curveId = 11;
+        uint32 priority = 1;
+        uint32 maxDeposits = 0;
+
+        vm.expectRevert(ICSParametersRegistry.ZeroMaxDeposits.selector);
         vm.prank(admin);
         parametersRegistry.setQueueConfig(
             curveId,
