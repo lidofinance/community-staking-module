@@ -124,6 +124,7 @@ struct DeployParams {
     uint256 attestationsWeight;
     uint256 blocksWeight;
     uint256 syncWeight;
+    // TODO rename other default parameters to be consistent
     uint256 defaultAllowedExitDelay;
     // VettedGate
     bytes32 vettedGateTreeRoot;

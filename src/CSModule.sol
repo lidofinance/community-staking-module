@@ -760,7 +760,7 @@ contract CSModule is
     }
 
     /// @inheritdoc IStakingModule
-    function handleActiveValidatorsExitingStatus(
+    function reportValidatorExitDelay(
         uint256 /* _nodeOperatorId */,
         uint256 /* _proofSlotTimestamp */,
         bytes calldata /* _publicKey */,
@@ -768,7 +768,7 @@ contract CSModule is
     ) external {}
 
     /// @inheritdoc IStakingModule
-    function onTriggerableExit(
+    function onValidatorExitTriggered(
         uint256 /* _nodeOperatorId */,
         bytes calldata /* _publicKey */,
         uint256 /* _withdrawalRequestPaidFee */,
@@ -1179,7 +1179,7 @@ contract CSModule is
     }
 
     /// @inheritdoc IStakingModule
-    function shouldValidatorBePenalized(
+    function isValidatorExitDelayPenaltyApplicable(
         uint256 /* _nodeOperatorId */,
         uint256 /* _proofSlotTimestamp */,
         bytes calldata /* _publicKey */,

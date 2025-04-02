@@ -177,7 +177,7 @@ interface IStakingModule {
     /// @param _proofSlotTimestamp The timestamp (slot time) when the validator was last known to be in an active ongoing state.
     /// @param _publicKey Public key of the validator being reported.
     /// @param _eligibleToExitInSec Duration (in seconds) indicating how long a validator has been eligible to exit but hasn't.
-    function handleActiveValidatorsExitingStatus(
+    function reportValidatorExitDelay(
         uint256 _nodeOperatorId,
         uint256 _proofSlotTimestamp,
         bytes calldata _publicKey,
@@ -191,7 +191,7 @@ interface IStakingModule {
     /// @param _withdrawalRequestPaidFee Fee amount paid to send withdrawal request on EL.
     /// @param _exitType The type of exit being performed.
     ///        This parameter may be interpreted differently across various staking modules, depending on their specific implementation.
-    function onTriggerableExit(
+    function onValidatorExitTriggered(
         uint256 _nodeOperatorId,
         bytes calldata _publicKey,
         uint256 _withdrawalRequestPaidFee,
@@ -204,7 +204,7 @@ interface IStakingModule {
     /// @param _publicKey Validator's public key.
     /// @param _eligibleToExitInSec The number of seconds the validator was eligible to exit but did not.
     /// @return bool Returns true if contract should receive updated validator's status.
-    function shouldValidatorBePenalized(
+    function isValidatorExitDelayPenaltyApplicable(
         uint256 _nodeOperatorId,
         uint256 _proofSlotTimestamp,
         bytes calldata _publicKey,
