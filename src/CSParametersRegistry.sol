@@ -568,7 +568,7 @@ contract CSParametersRegistry is
         }
         if (maxDeposits == 0) {
             revert ZeroMaxDeposits();
-        } 
+        }
     }
 
     function _validateStrikesParams(
