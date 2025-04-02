@@ -7,11 +7,13 @@ import "forge-std/Test.sol";
 
 import { NodeOperator, NodeOperatorManagementProperties } from "../../../src/interfaces/ICSModule.sol";
 import { CSModule } from "../../../src/CSModule.sol";
+import { Batch, IQueueLib } from "../../../src/lib/QueueLib.sol";
 import { CSAccounting } from "../../../src/CSAccounting.sol";
 import { IWstETH } from "../../../src/interfaces/IWstETH.sol";
 import { ILido } from "../../../src/interfaces/ILido.sol";
 import { ILidoLocator } from "../../../src/interfaces/ILidoLocator.sol";
 import { ICSAccounting } from "../../../src/interfaces/ICSAccounting.sol";
+import { ICSParametersRegistry } from "../../../src/interfaces/ICSParametersRegistry.sol";
 import { Utilities } from "../../helpers/Utilities.sol";
 import { PermitHelper } from "../../helpers/Permit.sol";
 import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
@@ -781,5 +783,157 @@ contract RemoveKeysTest is IntegrationTestBase {
 
         NodeOperator memory no = csm.getNodeOperator(defaultNoId);
         assertEq(no.totalAddedKeys, initialKeysCount - keysCount);
+    }
+}
+
+contract ObtainDepositDataTest is IntegrationTestBase {
+    function _deposit(uint256 noId, uint256 keysToDeposit) internal {
+        (bytes memory keys, bytes memory signatures) = keysSignatures(
+            keysToDeposit
+        );
+        uint256 curveId = accounting.getBondCurveId(noId);
+        uint256 amount = accounting.getBondAmountByKeysCount(
+            keysToDeposit,
+            curveId
+        );
+        address nodeOperatorAddress = csm
+            .getNodeOperatorManagementProperties(noId)
+            .managerAddress;
+        vm.deal(nodeOperatorAddress, amount);
+
+        vm.startPrank(nodeOperatorAddress);
+        csm.addValidatorKeysETH{ value: amount }(
+            nodeOperatorAddress,
+            noId,
+            keysToDeposit,
+            keys,
+            signatures
+        );
+        vm.stopPrank();
+    }
+
+    function _setPriorityQueue(
+        uint256 noId,
+        uint256 keysWithPriority
+    ) internal {
+        uint256 curveId = accounting.getBondCurveId(noId);
+        NodeOperator memory no = csm.getNodeOperator(noId);
+        address agent = stakingRouter.getRoleMember(
+            stakingRouter.DEFAULT_ADMIN_ROLE(),
+            0
+        );
+        vm.startPrank(agent);
+        parametersRegistry.setQueueConfig(
+            curveId,
+            ICSParametersRegistry.QueueConfig(
+                0,
+                no.totalDepositedKeys +
+                    no.enqueuedCount +
+                    uint32(keysWithPriority)
+            )
+        );
+        vm.stopPrank();
+    }
+
+    function test_withLegacyQueue_AddKeysToPriorityQueue()
+        public
+        assertInvariants
+    {
+        (uint128 legacyQueueHeadBefore, ) = csm.depositQueuePointers(
+            csm.QUEUE_LEGACY_PRIORITY()
+        );
+        Batch legacyQueueItemBefore = csm.depositQueueItem(
+            csm.QUEUE_LEGACY_PRIORITY(),
+            legacyQueueHeadBefore
+        );
+
+        // No need to run if the legacy queue is empty
+        vm.skip(legacyQueueItemBefore.isNil());
+
+        uint256 noId = legacyQueueItemBefore.noId();
+        uint256 keysWithPriority = 1;
+        uint256 keysWithNoPriority = 2;
+        _setPriorityQueue(noId, keysWithPriority);
+        _deposit(noId, keysWithPriority + keysWithNoPriority);
+
+        (, uint128 priorityQueueTailAfterDeposit) = csm.depositQueuePointers(0);
+        Batch priorityQueueItemAfterDeposit = csm.depositQueueItem(
+            0,
+            priorityQueueTailAfterDeposit - 1
+        );
+        assertEq(
+            priorityQueueItemAfterDeposit.keys(),
+            keysWithPriority,
+            "Priority queue should be filled with new keys"
+        );
+
+        (, uint128 lowestQueueTailAfterDeposit) = csm.depositQueuePointers(
+            csm.QUEUE_LOWEST_PRIORITY()
+        );
+        Batch lowestQueueItemAfterDeposit = csm.depositQueueItem(
+            csm.QUEUE_LOWEST_PRIORITY(),
+            lowestQueueTailAfterDeposit - 1
+        );
+        assertEq(
+            lowestQueueItemAfterDeposit.keys(),
+            keysWithNoPriority,
+            "Lowest queue should be filled with new keys"
+        );
+
+        (uint128 legacyQueueHeadAfterDeposit, ) = csm.depositQueuePointers(
+            csm.QUEUE_LEGACY_PRIORITY()
+        );
+        assertEq(
+            legacyQueueHeadBefore,
+            legacyQueueHeadAfterDeposit,
+            "Legacy queue head should not be changed after deposit"
+        );
+
+        vm.startPrank(address(stakingRouter));
+        // Obtain 1 key from the priority queue and last Node Operator's keys batch from the legacy queue.
+        // The rest should be in the lowest queue.
+        csm.obtainDepositData(
+            keysWithPriority + legacyQueueItemBefore.keys(),
+            ""
+        );
+        vm.stopPrank();
+
+        (uint128 priorityQueueHeadAfterObtain, ) = csm.depositQueuePointers(0);
+        Batch priorityQueueItemAfterObtain = csm.depositQueueItem(
+            0,
+            priorityQueueHeadAfterObtain
+        );
+        assertEq(
+            priorityQueueItemAfterObtain.keys(),
+            0,
+            "Priority queue should be empty"
+        );
+
+        (uint256 legacyQueueHeadAfterObtain, ) = csm.depositQueuePointers(
+            csm.QUEUE_LEGACY_PRIORITY()
+        );
+        assertNotEq(
+            legacyQueueHeadAfterObtain,
+            legacyQueueHeadAfterDeposit,
+            "Legacy queue head should be shifted"
+        );
+
+        (, uint128 lowestQueueTailAfter) = csm.depositQueuePointers(
+            csm.QUEUE_LOWEST_PRIORITY()
+        );
+        Batch lowestQueueItemAfterObtain = csm.depositQueueItem(
+            csm.QUEUE_LOWEST_PRIORITY(),
+            lowestQueueTailAfter - 1
+        );
+        assertEq(
+            lowestQueueItemAfterObtain.noId(),
+            noId,
+            "Node Operator batch should be in the tail of the lowest queue"
+        );
+        assertEq(
+            lowestQueueItemAfterObtain.keys(),
+            lowestQueueItemAfterDeposit.keys(),
+            "Lowest queue tail item should contain the same keys"
+        );
     }
 }
