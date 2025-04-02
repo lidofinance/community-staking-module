@@ -25,7 +25,6 @@ import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 
 contract CSModule is
     ICSModule,
-    IStakingModule,
     Initializable,
     AccessControlEnumerableUpgradeable,
     PausableUntil,
@@ -97,9 +96,13 @@ contract CSModule is
         address lidoLocator,
         address parametersRegistry
     ) {
-        if (lidoLocator == address(0)) revert ZeroLocatorAddress();
-        if (parametersRegistry == address(0))
+        if (lidoLocator == address(0)) {
+            revert ZeroLocatorAddress();
+        }
+
+        if (parametersRegistry == address(0)) {
             revert ZeroParametersRegistryAddress();
+        }
 
         MODULE_TYPE = moduleType;
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
@@ -116,8 +119,13 @@ contract CSModule is
         address _accounting,
         address admin
     ) external reinitializer(2) {
-        if (_accounting == address(0)) revert ZeroAccountingAddress();
-        if (admin == address(0)) revert ZeroAdminAddress();
+        if (_accounting == address(0)) {
+            revert ZeroAccountingAddress();
+        }
+
+        if (admin == address(0)) {
+            revert ZeroAdminAddress();
+        }
 
         __AccessControlEnumerable_init();
 
@@ -158,7 +166,9 @@ contract CSModule is
         whenResumed
         returns (uint256 nodeOperatorId)
     {
-        if (from == address(0)) revert ZeroSenderAddress();
+        if (from == address(0)) {
+            revert ZeroSenderAddress();
+        }
 
         nodeOperatorId = _nodeOperatorsCount;
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
@@ -172,8 +182,9 @@ contract CSModule is
             : managementProperties.rewardAddress;
         no.managerAddress = managerAddress;
         no.rewardAddress = rewardAddress;
-        if (managementProperties.extendedManagerPermissions)
+        if (managementProperties.extendedManagerPermissions) {
             no.extendedManagerPermissions = true;
+        }
 
         unchecked {
             ++_nodeOperatorsCount;
@@ -181,7 +192,10 @@ contract CSModule is
 
         emit NodeOperatorAdded(nodeOperatorId, managerAddress, rewardAddress);
 
-        if (referrer != address(0)) emit ReferrerSet(nodeOperatorId, referrer);
+        if (referrer != address(0)) {
+            emit ReferrerSet(nodeOperatorId, referrer);
+        }
+
         _incrementModuleNonce();
     }
 
@@ -396,7 +410,9 @@ contract CSModule is
         if (
             no.targetLimitMode == targetLimitMode &&
             no.targetLimit == targetLimit
-        ) return;
+        ) {
+            return;
+        }
 
         // @dev No need to safe cast due to conditions above
         no.targetLimitMode = uint8(targetLimitMode);
@@ -519,8 +535,9 @@ contract CSModule is
         // The Node Operator is charged for the every removed key. It's motivated by the fact that the DAO should cleanup
         // the queue from the empty batches related to the Node Operator. It's possible to have multiple batches with only one
         // key in it, so it means the DAO should be able to cover removal costs for as much batches as keys removed in this case.
+        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
         uint256 amountToCharge = PARAMETERS_REGISTRY.getKeyRemovalCharge(
-            accounting.getBondCurveId(nodeOperatorId)
+            curveId
         ) * keysCount;
         if (amountToCharge != 0) {
             accounting.chargeFee(nodeOperatorId, amountToCharge);
@@ -561,8 +578,9 @@ contract CSModule is
             revert PriorityQueueAlreadyUsed();
         }
 
+        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
         (uint32 priority, uint32 maxDeposits) = PARAMETERS_REGISTRY
-            .getQueueConfig(accounting.getBondCurveId(nodeOperatorId));
+            .getQueueConfig(curveId);
 
         if (priority < QUEUE_LEGACY_PRIORITY) {
             uint32 deposited = no.totalDepositedKeys;
@@ -603,11 +621,12 @@ contract CSModule is
         uint256 amount
     ) external onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
-        if (amount == 0) revert InvalidAmount();
+        if (amount == 0) {
+            revert InvalidAmount();
+        }
+        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
         uint256 additionalFine = PARAMETERS_REGISTRY
-            .getElRewardsStealingAdditionalFine(
-                accounting.getBondCurveId(nodeOperatorId)
-            );
+            .getElRewardsStealingAdditionalFine(curveId);
         accounting.lockBondETH(nodeOperatorId, amount + additionalFine);
         emit ELRewardsStealingPenaltyReported(
             nodeOperatorId,
@@ -702,7 +721,9 @@ contract CSModule is
                 withdrawalInfo.nodeOperatorId,
                 withdrawalInfo.keyIndex
             );
-            if (_isValidatorWithdrawn[pointer]) revert AlreadyWithdrawn();
+            if (_isValidatorWithdrawn[pointer]) {
+                revert AlreadyWithdrawn();
+            }
 
             _isValidatorWithdrawn[pointer] = true;
             unchecked {
@@ -770,16 +791,22 @@ contract CSModule is
         returns (bytes memory publicKeys, bytes memory signatures)
     {
         (publicKeys, signatures) = SigningKeys.initKeysSigsBuf(depositsCount);
-        if (depositsCount == 0) return (publicKeys, signatures);
+        if (depositsCount == 0) {
+            return (publicKeys, signatures);
+        }
 
         uint256 depositsLeft = depositsCount;
         uint256 loadedKeysCount = 0;
 
         QueueLib.Queue storage queue;
+        // Note: The highest priority to start iterations with. Priorities are ordered like 0, 1, 2, ...
         uint256 priority = 0;
 
-        for (;;) {
-            if (priority > QUEUE_LOWEST_PRIORITY || depositsLeft == 0) break;
+        while (true) {
+            if (priority > QUEUE_LOWEST_PRIORITY || depositsLeft == 0) {
+                break;
+            }
+
             queue = _getQueue(priority);
             unchecked {
                 ++priority;
@@ -820,6 +847,7 @@ contract CSModule is
                         queue.queue[queue.head] = item;
                     }
 
+                    // Note: This condition is located here to allow for the correct removal of the batch for the Node Operators with no depositable keys
                     if (keysCount == 0) {
                         continue;
                     }
@@ -837,11 +865,13 @@ contract CSModule is
                     // It's impossible in practice to reach the limit of these variables.
                     loadedKeysCount += keysCount;
                     // @dev No need to safe cast due to internal logic
-                    no.totalDepositedKeys += uint32(keysCount);
+                    uint32 totalDepositedKeys = no.totalDepositedKeys +
+                        uint32(keysCount);
+                    no.totalDepositedKeys = totalDepositedKeys;
 
                     emit DepositedSigningKeysCountChanged(
                         noId,
-                        no.totalDepositedKeys
+                        totalDepositedKeys
                     );
 
                     // No need for `_updateDepositableValidatorsCount` call since we update the number directly.
@@ -851,6 +881,7 @@ contract CSModule is
                         uint32(keysCount);
                     no.depositableValidatorsCount = newCount;
                     emit DepositableSigningKeysCountChanged(noId, newCount);
+
                     depositsLeft -= keysCount;
                     if (depositsLeft == 0) {
                         break;
@@ -883,10 +914,14 @@ contract CSModule is
         QueueLib.Queue storage queue;
 
         uint256 totalVisited = 0;
+        // Note: The highest priority to start iterations with. Priorities are ordered like 0, 1, 2, ...
         uint256 priority = 0;
 
-        for (;;) {
-            if (priority > QUEUE_LOWEST_PRIORITY) break;
+        while (true) {
+            if (priority > QUEUE_LOWEST_PRIORITY) {
+                break;
+            }
+
             queue = _getQueue(priority);
             unchecked {
                 ++priority;
@@ -934,16 +969,6 @@ contract CSModule is
     /// @inheritdoc ICSModule
     function getInitializedVersion() external view returns (uint64) {
         return _getInitializedVersion();
-    }
-
-    /// @inheritdoc IStakingModule
-    /// @dev Always reverts. Non supported in CSM
-    /// @dev `refundedValidatorsCount` is not used in the module
-    function updateRefundedValidatorsCount(
-        uint256 /* nodeOperatorId */,
-        uint256 /* refundedValidatorsCount */
-    ) external view onlyRole(STAKING_ROUTER_ROLE) {
-        revert NotSupported();
     }
 
     /// @inheritdoc ICSModule
@@ -1079,12 +1104,10 @@ contract CSModule is
             targetLimitMode = no.targetLimitMode;
             targetValidatorsCount = no.targetLimit;
         }
-        {
-            // TODO: Unused in CSM, remove with TW.
-            // stuckValidatorsCount = 0;
-            // refundedValidatorsCount = 0;
-            // stuckPenaltyEndTimestamp = 0;
-        }
+        // TODO: Unused in CSM, remove with TW.
+        // stuckValidatorsCount = 0;
+        // refundedValidatorsCount = 0;
+        // stuckPenaltyEndTimestamp = 0;
         totalExitedValidators = no.totalExitedKeys;
         totalDepositedValidators = no.totalDepositedKeys;
         depositableValidatorsCount = no.depositableValidatorsCount;
@@ -1157,7 +1180,10 @@ contract CSModule is
         uint256 limit
     ) external view returns (uint256[] memory nodeOperatorIds) {
         uint256 nodeOperatorsCount = _nodeOperatorsCount;
-        if (offset >= nodeOperatorsCount || limit == 0) return new uint256[](0);
+        if (offset >= nodeOperatorsCount || limit == 0) {
+            return new uint256[](0);
+        }
+
         uint256 idsCount = limit < nodeOperatorsCount - offset
             ? limit
             : nodeOperatorsCount - offset;
@@ -1181,37 +1207,41 @@ contract CSModule is
         bytes calldata signatures
     ) internal {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        uint256 startIndex = no.totalAddedKeys;
+        uint256 totalAddedKeys = no.totalAddedKeys;
 
         uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
         uint256 keysLimit = PARAMETERS_REGISTRY.getKeysLimit(curveId);
 
-        if (no.totalAddedKeys + keysCount - no.totalExitedKeys > keysLimit)
+        if (totalAddedKeys + keysCount - no.totalExitedKeys > keysLimit) {
             revert KeysLimitExceeded();
+        }
 
         // solhint-disable-next-line func-named-parameters
         SigningKeys.saveKeysSigs(
             nodeOperatorId,
-            startIndex,
+            totalAddedKeys,
             keysCount,
             publicKeys,
             signatures
         );
         unchecked {
             // Optimistic vetting takes place.
-            if (no.totalAddedKeys == no.totalVettedKeys) {
+            if (totalAddedKeys == no.totalVettedKeys) {
                 // @dev No need to safe cast due to internal logic
-                no.totalVettedKeys += uint32(keysCount);
+                uint32 totalVettedKeys = no.totalVettedKeys + uint32(keysCount);
+                no.totalVettedKeys = totalVettedKeys;
                 emit VettedSigningKeysCountChanged(
                     nodeOperatorId,
-                    no.totalVettedKeys
+                    totalVettedKeys
                 );
             }
 
+            totalAddedKeys += keysCount;
+
             // @dev No need to safe cast due to internal logic
-            no.totalAddedKeys += uint32(keysCount);
+            no.totalAddedKeys = uint32(totalAddedKeys);
         }
-        emit TotalSigningKeysCountChanged(nodeOperatorId, no.totalAddedKeys);
+        emit TotalSigningKeysCountChanged(nodeOperatorId, totalAddedKeys);
 
         // Nonce is updated below since in case of target limit depositable keys might not change
         _updateDepositableValidatorsCount({
@@ -1230,15 +1260,21 @@ contract CSModule is
     ) internal {
         _onlyExistingNodeOperator(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (exitedValidatorsCount == no.totalExitedKeys) return;
-        if (exitedValidatorsCount > no.totalDepositedKeys)
+        uint32 totalExitedKeys = no.totalExitedKeys;
+        if (exitedValidatorsCount == totalExitedKeys) {
+            return;
+        }
+        if (exitedValidatorsCount > no.totalDepositedKeys) {
             revert ExitedKeysHigherThanTotalDeposited();
-        if (!allowDecrease && exitedValidatorsCount < no.totalExitedKeys)
+        }
+        if (!allowDecrease && exitedValidatorsCount < totalExitedKeys) {
             revert ExitedKeysDecrease();
+        }
+
         unchecked {
             // @dev No need to safe cast due to conditions above
             _totalExitedValidators =
-                (_totalExitedValidators - no.totalExitedKeys) +
+                (_totalExitedValidators - totalExitedKeys) +
                 uint64(exitedValidatorsCount);
         }
         // @dev No need to safe cast due to conditions above
@@ -1256,11 +1292,12 @@ contract CSModule is
     ) internal {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
-        uint256 newCount = no.totalVettedKeys - no.totalDepositedKeys;
+        uint32 totalDepositedKeys = no.totalDepositedKeys;
+        uint256 newCount = no.totalVettedKeys - totalDepositedKeys;
         uint256 unbondedKeys = accounting.getUnbondedKeysCount(nodeOperatorId);
 
         {
-            uint256 nonDeposited = no.totalAddedKeys - no.totalDepositedKeys;
+            uint256 nonDeposited = no.totalAddedKeys - totalDepositedKeys;
             if (unbondedKeys >= nonDeposited) {
                 newCount = 0;
             } else if (unbondedKeys > no.totalAddedKeys - no.totalVettedKeys) {
@@ -1270,7 +1307,7 @@ contract CSModule is
 
         if (no.targetLimitMode > 0 && newCount > 0) {
             unchecked {
-                uint256 nonWithdrawnValidators = no.totalDepositedKeys -
+                uint256 nonWithdrawnValidators = totalDepositedKeys -
                     no.totalWithdrawnKeys;
                 newCount = Math.min(
                     no.targetLimit > nonWithdrawnValidators
@@ -1304,7 +1341,7 @@ contract CSModule is
         uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
         (uint32 priority, uint32 maxDeposits) = PARAMETERS_REGISTRY
             .getQueueConfig(curveId);
-
+        // Replace QUEUE_LEGACY_PRIORITY with QUEUE_LOWEST_PRIORITY after legacy queue removal in CSM v3
         if (priority < QUEUE_LEGACY_PRIORITY) {
             NodeOperator storage no = _nodeOperators[nodeOperatorId];
             uint32 enqueuedSoFar = no.totalDepositedKeys + no.enqueuedCount;
@@ -1341,8 +1378,11 @@ contract CSModule is
 
             unchecked {
                 count = depositable - enqueued;
-                if (count > maxKeys) count = maxKeys;
-                no.enqueuedCount += count;
+                if (count > maxKeys) {
+                    count = maxKeys;
+                }
+
+                no.enqueuedCount = enqueued + count;
             }
 
             QueueLib.Queue storage q = _getQueue(queuePriority);
@@ -1386,12 +1426,20 @@ contract CSModule is
         address from
     ) internal view {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (no.managerAddress == address(0)) revert NodeOperatorDoesNotExist();
-        if (no.managerAddress != from) revert SenderIsNotEligible();
+        if (no.managerAddress == address(0)) {
+            revert NodeOperatorDoesNotExist();
+        }
+
+        if (no.managerAddress != from) {
+            revert SenderIsNotEligible();
+        }
     }
 
     function _onlyExistingNodeOperator(uint256 nodeOperatorId) internal view {
-        if (nodeOperatorId < _nodeOperatorsCount) return;
+        if (nodeOperatorId < _nodeOperatorsCount) {
+            return;
+        }
+
         revert NodeOperatorDoesNotExist();
     }
 

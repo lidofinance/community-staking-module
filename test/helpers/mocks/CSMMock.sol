@@ -15,7 +15,9 @@ contract AccountingMock {
 
     function penalize(uint256 nodeOperatorId, uint256 amount) external {}
 
-    function getBondCurveId(uint256 nodeOperatorId) external returns (uint256) {
+    function getBondCurveId(
+        uint256 /* nodeOperatorId */
+    ) external pure returns (uint256) {
         return DEFAULT_BOND_CURVE_ID;
     }
 }
@@ -113,10 +115,10 @@ contract CSMMock is Utilities {
     ) external {}
 
     function getSigningKeys(
-        uint256 nodeOperatorId,
-        uint256 startIndex,
+        uint256 /* nodeOperatorId */,
+        uint256 /* startIndex */,
         uint256 keysCount
-    ) external returns (bytes memory pubkeys) {
+    ) external pure returns (bytes memory pubkeys) {
         (pubkeys, ) = keysSignatures(keysCount);
     }
 }

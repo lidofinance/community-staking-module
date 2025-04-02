@@ -273,7 +273,7 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         _enableInitializers(address(accounting));
 
         vm.expectEmit(address(accounting));
-        emit ICSBondCurve.BondCurveAdded(curve);
+        emit ICSBondCurve.BondCurveAdded(0, curve);
         vm.expectEmit(address(accounting));
         emit ICSBondLock.BondLockPeriodChanged(8 weeks);
         vm.expectEmit(address(accounting));
@@ -5123,7 +5123,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
 }
 
 contract CSAccountingMiscTest is CSAccountingBaseTest {
-    function test_getInitializedVersion() public {
+    function test_getInitializedVersion() public view {
         assertEq(accounting.getInitializedVersion(), 2);
     }
 

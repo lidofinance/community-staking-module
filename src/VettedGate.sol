@@ -35,7 +35,9 @@ contract VettedGate is
     mapping(address => bool) internal _consumedAddresses;
 
     constructor(address csm) {
-        if (csm == address(0)) revert ZeroModuleAddress();
+        if (csm == address(0)) {
+            revert ZeroModuleAddress();
+        }
 
         CSM = ICSModule(csm);
         ACCOUNTING = ICSAccounting(CSM.accounting());
@@ -50,13 +52,16 @@ contract VettedGate is
     ) external initializer {
         __AccessControlEnumerable_init();
 
-        if (_curveId == ACCOUNTING.DEFAULT_BOND_CURVE_ID())
+        if (_curveId == ACCOUNTING.DEFAULT_BOND_CURVE_ID()) {
             revert InvalidCurveId();
+        }
+
         /// @dev there is no check for curve existence as this contract might be created before the curve is added
         curveId = _curveId;
 
-        if (_treeRoot == bytes32(0)) revert InvalidTreeRoot();
-        if (admin == address(0)) revert ZeroAdminAddress();
+        if (admin == address(0)) {
+            revert ZeroAdminAddress();
+        }
 
         _setTreeRoot(_treeRoot);
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -163,7 +168,10 @@ contract VettedGate is
         address nodeOperatorAddress = nodeOperator.extendedManagerPermissions
             ? nodeOperator.managerAddress
             : nodeOperator.rewardAddress;
-        if (nodeOperatorAddress != msg.sender) revert NotAllowedToClaim();
+        if (nodeOperatorAddress != msg.sender) {
+            revert NotAllowedToClaim();
+        }
+
         _consume(proof);
 
         ACCOUNTING.setBondCurve(nodeOperatorId, curveId);
@@ -173,8 +181,6 @@ contract VettedGate is
     function setTreeRoot(
         bytes32 _treeRoot
     ) external onlyRole(SET_TREE_ROOT_ROLE) {
-        if (_treeRoot == bytes32(0)) revert InvalidTreeRoot();
-        if (_treeRoot == treeRoot) revert InvalidTreeRoot();
         _setTreeRoot(_treeRoot);
     }
 
@@ -197,13 +203,27 @@ contract VettedGate is
     }
 
     function _consume(bytes32[] calldata proof) internal whenResumed {
-        if (isConsumed(msg.sender)) revert AlreadyConsumed();
-        if (!verifyProof(msg.sender, proof)) revert InvalidProof();
+        if (isConsumed(msg.sender)) {
+            revert AlreadyConsumed();
+        }
+
+        if (!verifyProof(msg.sender, proof)) {
+            revert InvalidProof();
+        }
+
         _consumedAddresses[msg.sender] = true;
         emit Consumed(msg.sender);
     }
 
     function _setTreeRoot(bytes32 _treeRoot) internal {
+        if (_treeRoot == bytes32(0)) {
+            revert InvalidTreeRoot();
+        }
+
+        if (_treeRoot == treeRoot) {
+            revert InvalidTreeRoot();
+        }
+
         treeRoot = _treeRoot;
         emit TreeRootSet(_treeRoot);
     }

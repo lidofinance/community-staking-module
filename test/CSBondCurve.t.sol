@@ -86,8 +86,10 @@ contract CSBondCurveTest is Test {
         _bondCurve[0] = 16 ether;
         _bondCurve[1] = 32 ether;
 
+        uint256 curvesCount = bondCurve.getCurvesCount();
+
         vm.expectEmit(address(bondCurve));
-        emit ICSBondCurve.BondCurveAdded(_bondCurve);
+        emit ICSBondCurve.BondCurveAdded(curvesCount, _bondCurve);
 
         uint256 addedId = bondCurve.addBondCurve(_bondCurve);
 
@@ -239,7 +241,7 @@ contract CSBondCurveTest is Test {
         _bondCurve[0] = 16 ether;
         _bondCurve[1] = 32 ether;
 
-        uint256 addedId = bondCurve.addBondCurve(_bondCurve);
+        bondCurve.addBondCurve(_bondCurve);
 
         // default one + 1 extra curve
         assertEq(bondCurve.getCurvesCount(), 2);

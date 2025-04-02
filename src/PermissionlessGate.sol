@@ -17,7 +17,9 @@ contract PermissionlessGate is IPermissionlessGate {
     ICSModule public immutable CSM;
 
     constructor(address csm) {
-        if (csm == address(0)) revert ZeroModuleAddress();
+        if (csm == address(0)) {
+            revert ZeroModuleAddress();
+        }
 
         CSM = ICSModule(csm);
         CURVE_ID = CSM.accounting().DEFAULT_BOND_CURVE_ID();

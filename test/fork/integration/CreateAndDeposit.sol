@@ -707,7 +707,7 @@ contract AddValidatorKeysTest is IntegrationTestBase {
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysCount
         );
-        uint256 wstETHAmount = wstETH.wrap(
+        wstETH.wrap(
             accounting.getBondAmountByKeysCount(
                 keysCount,
                 permissionlessGate.CURVE_ID()

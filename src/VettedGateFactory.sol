@@ -11,7 +11,9 @@ contract VettedGateFactory is IVettedGateFactory {
     address public immutable VETTED_GATE_IMPL;
 
     constructor(address vettedGateImpl) {
-        if (vettedGateImpl == address(0)) revert ZeroImplementationAddress();
+        if (vettedGateImpl == address(0)) {
+            revert ZeroImplementationAddress();
+        }
 
         VETTED_GATE_IMPL = vettedGateImpl;
     }
@@ -24,7 +26,7 @@ contract VettedGateFactory is IVettedGateFactory {
     ) external returns (address instance) {
         instance = address(
             new OssifiableProxy({
-                implementation_: address(VETTED_GATE_IMPL),
+                implementation_: VETTED_GATE_IMPL,
                 data_: new bytes(0),
                 admin_: admin
             })

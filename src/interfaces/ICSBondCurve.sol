@@ -43,7 +43,7 @@ interface ICSBondCurve {
         uint256 trend;
     }
 
-    event BondCurveAdded(uint256[] bondCurve);
+    event BondCurveAdded(uint256 indexed curveId, uint256[] bondCurve);
     event BondCurveUpdated(uint256 indexed curveId, uint256[] bondCurve);
     event BondCurveSet(uint256 indexed nodeOperatorId, uint256 curveId);
 

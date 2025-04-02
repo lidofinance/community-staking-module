@@ -70,7 +70,10 @@ abstract contract CSBondCore is ICSBondCore {
 
     /// @dev Stake user's ETH with Lido and stores stETH shares as Node Operator's bond shares
     function _depositETH(address from, uint256 nodeOperatorId) internal {
-        if (msg.value == 0) return;
+        if (msg.value == 0) {
+            return;
+        }
+
         uint256 shares = LIDO.submit{ value: msg.value }({
             _referal: address(0)
         });
@@ -84,7 +87,10 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 nodeOperatorId,
         uint256 amount
     ) internal {
-        if (amount == 0) return;
+        if (amount == 0) {
+            return;
+        }
+
         uint256 shares = _sharesByEth(amount);
         LIDO.transferSharesFrom(from, address(this), shares);
         _increaseBond(nodeOperatorId, shares);
@@ -97,7 +103,10 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 nodeOperatorId,
         uint256 amount
     ) internal {
-        if (amount == 0) return;
+        if (amount == 0) {
+            return;
+        }
+
         WSTETH.transferFrom(from, address(this), amount);
         uint256 sharesBefore = LIDO.sharesOf(address(this));
         WSTETH.unwrap(amount);
@@ -107,7 +116,10 @@ abstract contract CSBondCore is ICSBondCore {
     }
 
     function _increaseBond(uint256 nodeOperatorId, uint256 shares) internal {
-        if (shares == 0) return;
+        if (shares == 0) {
+            return;
+        }
+
         CSBondCoreStorage storage $ = _getCSBondCoreStorage();
         unchecked {
             $.bondShares[nodeOperatorId] += shares;
@@ -127,7 +139,9 @@ abstract contract CSBondCore is ICSBondCore {
             _ethByShares(claimableShares)
             ? _sharesByEth(requestedAmountToClaim)
             : claimableShares;
-        if (sharesToClaim == 0) revert NothingToClaim();
+        if (sharesToClaim == 0) {
+            revert NothingToClaim();
+        }
 
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = _ethByShares(sharesToClaim);
@@ -149,7 +163,10 @@ abstract contract CSBondCore is ICSBondCore {
         sharesToClaim = requestedAmountToClaim < _ethByShares(claimableShares)
             ? _sharesByEth(requestedAmountToClaim)
             : claimableShares;
-        if (sharesToClaim == 0) revert NothingToClaim();
+        if (sharesToClaim == 0) {
+            revert NothingToClaim();
+        }
+
         _unsafeReduceBond(nodeOperatorId, sharesToClaim);
 
         uint256 ethAmount = LIDO.transferShares(to, sharesToClaim);
@@ -166,7 +183,10 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 sharesToClaim = requestedAmountToClaim < claimableShares
             ? requestedAmountToClaim
             : claimableShares;
-        if (sharesToClaim == 0) revert NothingToClaim();
+        if (sharesToClaim == 0) {
+            revert NothingToClaim();
+        }
+
         uint256 sharesBefore = LIDO.sharesOf(address(this));
         wstETHAmount = WSTETH.wrap(_ethByShares(sharesToClaim));
         uint256 sharesAfter = LIDO.sharesOf(address(this));
@@ -182,7 +202,10 @@ abstract contract CSBondCore is ICSBondCore {
         uint256 toBurnShares = _sharesByEth(amount);
         uint256 burnedShares = _reduceBond(nodeOperatorId, toBurnShares);
         // If no bond already
-        if (burnedShares == 0) return;
+        if (burnedShares == 0) {
+            return;
+        }
+
         uint256 burnedAmount = _ethByShares(burnedShares);
 
         IBurner(LIDO_LOCATOR.burner()).requestBurnMyStETH(burnedAmount);
@@ -219,13 +242,19 @@ abstract contract CSBondCore is ICSBondCore {
 
     /// @dev Shortcut for Lido's getSharesByPooledEth
     function _sharesByEth(uint256 ethAmount) internal view returns (uint256) {
-        if (ethAmount == 0) return 0;
+        if (ethAmount == 0) {
+            return 0;
+        }
+
         return LIDO.getSharesByPooledEth(ethAmount);
     }
 
     /// @dev Shortcut for Lido's getPooledEthByShares
     function _ethByShares(uint256 shares) internal view returns (uint256) {
-        if (shares == 0) return 0;
+        if (shares == 0) {
+            return 0;
+        }
+
         return LIDO.getPooledEthByShares(shares);
     }
 

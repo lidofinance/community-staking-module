@@ -97,7 +97,9 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         uint256 keysCount
     ) internal returns (uint256 nodeOperatorId) {
         nodeOperatorId = createNodeOperator(managerAddress, false);
-        if (keysCount > 0) uploadMoreKeys(nodeOperatorId, keysCount);
+        if (keysCount > 0) {
+            uploadMoreKeys(nodeOperatorId, keysCount);
+        }
     }
 
     function createNodeOperator(
@@ -243,7 +245,9 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
 
             for (;;) {
                 Batch item = csm.depositQueueItem(p, curr);
-                if (item.isNil()) break;
+                if (item.isNil()) {
+                    break;
+                }
 
                 uint256 noId = item.noId();
                 uint256 keysInBatch = item.keys();
@@ -4926,7 +4930,7 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.lockUntil, 0);
+        assertEq(lock.until, 0);
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs()
@@ -4975,11 +4979,11 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             firstNoId
         );
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.lockUntil, 0);
+        assertEq(lock.until, 0);
 
         lock = accounting.getLockedBondInfo(secondNoId);
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.lockUntil, 0);
+        assertEq(lock.until, 0);
     }
 
     function test_settleELRewardsStealingPenalty_NoLock()
@@ -4998,7 +5002,7 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.lockUntil, 0);
+        assertEq(lock.until, 0);
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs_NoLock()
@@ -5031,12 +5035,12 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             firstNoId
         );
         assertEq(firstLock.amount, 0 ether);
-        assertEq(firstLock.lockUntil, 0);
+        assertEq(firstLock.until, 0);
         CSBondLock.BondLock memory secondLock = accounting.getLockedBondInfo(
             secondNoId
         );
         assertEq(secondLock.amount, 0 ether);
-        assertEq(secondLock.lockUntil, 0);
+        assertEq(secondLock.until, 0);
     }
 
     function test_settleELRewardsStealingPenalty_multipleNOs_oneWithNoLock()
@@ -5076,12 +5080,12 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             firstNoId
         );
         assertEq(firstLock.amount, 0 ether);
-        assertEq(firstLock.lockUntil, 0);
+        assertEq(firstLock.until, 0);
         CSBondLock.BondLock memory secondLock = accounting.getLockedBondInfo(
             secondNoId
         );
         assertEq(secondLock.amount, 0 ether);
-        assertEq(secondLock.lockUntil, 0);
+        assertEq(secondLock.until, 0);
     }
 
     function test_settleELRewardsStealingPenalty_withDuplicates() public {
@@ -5118,7 +5122,7 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
             secondNoId
         );
         assertEq(currentLock.amount, 0 ether);
-        assertEq(currentLock.lockUntil, 0);
+        assertEq(currentLock.until, 0);
         assertEq(
             bondBalanceAfter,
             bondBalanceBefore -
@@ -5203,7 +5207,7 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
             secondNoId
         );
         assertEq(lock.amount, 0 ether);
-        assertEq(lock.lockUntil, 0);
+        assertEq(lock.until, 0);
     }
 
     function test_settleELRewardsStealingPenalty_CurveReset_NoNewUnbonded()
@@ -5894,28 +5898,6 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
         csm.updateExitedValidatorsCount("", "");
-    }
-
-    function test_stakingRouterRole_updateRefundedValidatorsCount() public {
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.STAKING_ROUTER_ROLE();
-        vm.prank(admin);
-        csm.grantRole(role, actor);
-
-        vm.expectRevert(ICSModule.NotSupported.selector);
-        vm.prank(actor);
-        csm.updateRefundedValidatorsCount(noId, 0);
-    }
-
-    function test_stakingRouterRole_updateRefundedValidatorsCount_revert()
-        public
-    {
-        uint256 noId = createNodeOperator();
-        bytes32 role = csm.STAKING_ROUTER_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.updateRefundedValidatorsCount(noId, 0);
     }
 
     function test_stakingRouterRole_updateTargetValidatorsLimits() public {
@@ -6667,13 +6649,6 @@ contract CSMRecoverERC20 is CSMCommon {
 contract CSMMisc is CSMCommon {
     function test_getInitializedVersion() public view {
         assertEq(csm.getInitializedVersion(), 2);
-    }
-
-    function test_updateRefundedValidatorsCount() public assertInvariants {
-        uint256 noId = createNodeOperator();
-        uint256 refunded = 1;
-        vm.expectRevert(ICSModule.NotSupported.selector);
-        csm.updateRefundedValidatorsCount(noId, refunded);
     }
 
     function test_getActiveNodeOperatorsCount_OneOperator()

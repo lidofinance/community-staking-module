@@ -127,7 +127,9 @@ library QueueLib {
             bool isFinished
         )
     {
-        if (maxItems == 0) revert IQueueLib.QueueLookupNoLimit();
+        if (maxItems == 0) {
+            revert IQueueLib.QueueLookupNoLimit();
+        }
 
         Batch prev;
         uint128 indexOfPrev;
