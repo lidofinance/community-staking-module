@@ -6,21 +6,21 @@ pragma solidity 0.8.24;
 interface ICSBondLock {
     /// @dev Bond lock structure.
     /// It contains:
-    ///  - amount       |> amount of locked bond
-    ///  - lockUntil    |> timestamp until locked bond is retained
+    ///  - amount   |> amount of locked bond
+    ///  - until    |> timestamp until locked bond is retained
     struct BondLock {
         uint128 amount;
-        uint128 lockUntil;
+        uint128 until;
     }
 
     event BondLockChanged(
         uint256 indexed nodeOperatorId,
         uint256 newAmount,
-        uint256 lockUntil
+        uint256 until
     );
     event BondLockRemoved(uint256 indexed nodeOperatorId);
 
-    event BondLockPeriodChanged(uint256 lockPeriod);
+    event BondLockPeriodChanged(uint256 period);
 
     error InvalidBondLockPeriod();
     error InvalidBondLockAmount();

@@ -80,12 +80,25 @@ contract CSVerifier is ICSVerifier, AccessControlEnumerable, PausableUntil {
         Slot pivotSlot,
         address admin
     ) {
-        if (withdrawalAddress == address(0)) revert ZeroWithdrawalAddress();
-        if (module == address(0)) revert ZeroModuleAddress();
-        if (admin == address(0)) revert ZeroAdminAddress();
+        if (withdrawalAddress == address(0)) {
+            revert ZeroWithdrawalAddress();
+        }
 
-        if (slotsPerEpoch == 0) revert InvalidChainConfig();
-        if (firstSupportedSlot > pivotSlot) revert InvalidPivotSlot();
+        if (module == address(0)) {
+            revert ZeroModuleAddress();
+        }
+
+        if (admin == address(0)) {
+            revert ZeroAdminAddress();
+        }
+
+        if (slotsPerEpoch == 0) {
+            revert InvalidChainConfig();
+        }
+
+        if (firstSupportedSlot > pivotSlot) {
+            revert InvalidPivotSlot();
+        }
 
         WITHDRAWAL_ADDRESS = withdrawalAddress;
         MODULE = ICSModule(module);

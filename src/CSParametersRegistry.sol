@@ -69,7 +69,9 @@ contract CSParametersRegistry is
         address admin,
         InitializationData calldata data
     ) external initializer {
-        if (admin == address(0)) revert ZeroAdminAddress();
+        if (admin == address(0)) {
+            revert ZeroAdminAddress();
+        }
 
         _setDefaultKeyRemovalCharge(data.keyRemovalCharge);
         _setDefaultElRewardsStealingAdditionalFine(
@@ -488,13 +490,19 @@ contract CSParametersRegistry is
     }
 
     function _setDefaultRewardShare(uint256 share) internal {
-        if (share > MAX_BP) revert InvalidRewardShareData();
+        if (share > MAX_BP) {
+            revert InvalidRewardShareData();
+        }
+
         defaultRewardShare = share;
         emit DefaultRewardShareSet(share);
     }
 
     function _setDefaultPerformanceLeeway(uint256 leeway) internal {
-        if (leeway > MAX_BP) revert InvalidPerformanceLeewayData();
+        if (leeway > MAX_BP) {
+            revert InvalidPerformanceLeewayData();
+        }
+
         defaultPerformanceLeeway = leeway;
         emit DefaultPerformanceLeewaySet(leeway);
     }
@@ -558,14 +566,18 @@ contract CSParametersRegistry is
         ) {
             revert QueueCannotBeUsed();
         }
-        if (maxDeposits == 0) revert ZeroMaxDeposits();
+        if (maxDeposits == 0) {
+            revert ZeroMaxDeposits();
+        }
     }
 
     function _validateStrikesParams(
         uint256 lifetime,
         uint256 threshold
     ) internal pure {
-        if (threshold == 0 || lifetime == 0) revert InvalidStrikesParams();
+        if (threshold == 0 || lifetime == 0) {
+            revert InvalidStrikesParams();
+        }
     }
 
     function _validatePerformanceCoefficients(
@@ -573,8 +585,9 @@ contract CSParametersRegistry is
         uint256 blocksWeight,
         uint256 syncWeight
     ) internal pure {
-        if (attestationsWeight == 0 && blocksWeight == 0 && syncWeight == 0)
+        if (attestationsWeight == 0 && blocksWeight == 0 && syncWeight == 0) {
             revert InvalidPerformanceCoefficients();
+        }
     }
 
     function _validatePivotsAndValues(
@@ -582,17 +595,23 @@ contract CSParametersRegistry is
     ) internal pure {
         uint256 pivotsLength = data.pivots.length;
         uint256 valuesLength = data.values.length;
-        if (pivotsLength + 1 != valuesLength) revert InvalidPivotsAndValues();
-        if (pivotsLength > 0 && data.pivots[0] == 0)
+        if (pivotsLength + 1 != valuesLength) {
             revert InvalidPivotsAndValues();
+        }
+        if (pivotsLength > 0 && data.pivots[0] == 0) {
+            revert InvalidPivotsAndValues();
+        }
         if (pivotsLength > 1) {
             for (uint256 i = 0; i < pivotsLength - 1; ++i) {
-                if (data.pivots[i] >= data.pivots[i + 1])
+                if (data.pivots[i] >= data.pivots[i + 1]) {
                     revert InvalidPivotsAndValues();
+                }
             }
         }
         for (uint256 i = 0; i < valuesLength; ++i) {
-            if (data.values[i] > MAX_BP) revert InvalidPivotsAndValues();
+            if (data.values[i] > MAX_BP) {
+                revert InvalidPivotsAndValues();
+            }
         }
     }
 }

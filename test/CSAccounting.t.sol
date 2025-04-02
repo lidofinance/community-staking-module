@@ -5063,7 +5063,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
 }
 
 contract CSAccountingMiscTest is CSAccountingBaseTest {
-    function test_getInitializedVersion() public {
+    function test_getInitializedVersion() public view {
         assertEq(accounting.getInitializedVersion(), 2);
     }
 

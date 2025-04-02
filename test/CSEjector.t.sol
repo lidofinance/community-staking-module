@@ -161,8 +161,6 @@ contract CSEjectorTest is Test, Utilities, Fixtures {
     function test_ejectBadPerformer_RevertWhen_InvalidKeyIndexOffset() public {
         uint256 keyIndex = 0;
         uint256 noId = 0;
-        bytes memory pubkey = csm.getSigningKeys(0, 0, 1);
-        csm.PARAMETERS_REGISTRY().setBadPerformancePenalty(0, 0);
         uint256[] memory strikesData = new uint256[](3);
         strikesData[0] = 1;
         strikesData[1] = 2;
@@ -178,8 +176,6 @@ contract CSEjectorTest is Test, Utilities, Fixtures {
     function test_ejectBadPerformer_RevertWhen_AlreadyEjected() public {
         uint256 keyIndex = 0;
         uint256 noId = 0;
-        bytes memory pubkey = csm.getSigningKeys(0, 0, 1);
-        uint256 penalty = csm.PARAMETERS_REGISTRY().getBadPerformancePenalty(0);
         uint256[] memory strikesData = new uint256[](3);
         strikesData[0] = 1;
         strikesData[1] = 2;
@@ -196,8 +192,6 @@ contract CSEjectorTest is Test, Utilities, Fixtures {
     function test_ejectBadPerformer_RevertWhen_AlreadyWithdrawn() public {
         uint256 keyIndex = 0;
         uint256 noId = 0;
-        bytes memory pubkey = csm.getSigningKeys(0, 0, 1);
-        uint256 penalty = csm.PARAMETERS_REGISTRY().getBadPerformancePenalty(0);
         uint256[] memory strikesData = new uint256[](3);
         strikesData[0] = 1;
         strikesData[1] = 2;
@@ -216,8 +210,6 @@ contract CSEjectorTest is Test, Utilities, Fixtures {
     {
         uint256 keyIndex = 0;
         uint256 noId = 0;
-        bytes memory pubkey = csm.getSigningKeys(0, 0, 1);
-        uint256 penalty = csm.PARAMETERS_REGISTRY().getBadPerformancePenalty(0);
         uint256[] memory strikesData = new uint256[](2);
         strikesData[0] = 1;
         strikesData[1] = 2;

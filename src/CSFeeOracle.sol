@@ -48,7 +48,9 @@ contract CSFeeOracle is
         address consensusContract,
         uint256 consensusVersion
     ) external {
-        if (admin == address(0)) revert ZeroAdminAddress();
+        if (admin == address(0)) {
+            revert ZeroAdminAddress();
+        }
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
@@ -129,14 +131,19 @@ contract CSFeeOracle is
     function _setFeeDistributorContract(
         address feeDistributorContract
     ) internal {
-        if (feeDistributorContract == address(0))
+        if (feeDistributorContract == address(0)) {
             revert ZeroFeeDistributorAddress();
+        }
+
         feeDistributor = ICSFeeDistributor(feeDistributorContract);
         emit FeeDistributorContractSet(feeDistributorContract);
     }
 
     function _setStrikesContract(address strikesContract) internal {
-        if (strikesContract == address(0)) revert ZeroStrikesAddress();
+        if (strikesContract == address(0)) {
+            revert ZeroStrikesAddress();
+        }
+
         strikes = ICSStrikes(strikesContract);
         emit StrikesContractSet(strikesContract);
     }
