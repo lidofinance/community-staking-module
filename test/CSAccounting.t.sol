@@ -1476,6 +1476,13 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.expectCall(
+            address(accounting.CSM()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
         vm.prank(user);
         accounting.claimRewardsStETH(
             leaf.nodeOperatorId,
@@ -1997,6 +2004,13 @@ contract CSAccountingClaimWstETHRewardsTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.expectCall(
+            address(accounting.CSM()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
         vm.prank(user);
         accounting.claimRewardsWstETH(
             leaf.nodeOperatorId,
@@ -2580,6 +2594,13 @@ contract CSAccountingClaimRewardsUnstETHTest is
         _rewards({ fee: 0.1 ether });
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
+        vm.expectCall(
+            address(accounting.CSM()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
         vm.prank(user);
         accounting.claimRewardsUnstETH(
             leaf.nodeOperatorId,
@@ -3486,6 +3507,13 @@ contract CSAccountingDepositEthPermissionlessTest is CSAccountingBaseTest {
         vm.deal(address(user), 32 ether);
         uint256 sharesToDeposit = stETH.getSharesByPooledEth(32 ether);
 
+        vm.expectCall(
+            address(accounting.CSM()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
         vm.prank(address(user));
         accounting.depositETH{ value: 32 ether }(0);
 
@@ -3834,6 +3862,14 @@ contract CSAccountingDepositStEthPermissionlessTest is CSAccountingBaseTest {
         vm.deal(user, 32 ether);
         vm.prank(user);
         uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
+
+        vm.expectCall(
+            address(accounting.CSM()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
 
         vm.prank(user);
         accounting.depositStETH(
@@ -4423,6 +4459,14 @@ contract CSAccountingDepositWstEthPermissionlessTest is CSAccountingBaseTest {
         );
         vm.stopPrank();
 
+        vm.expectCall(
+            address(accounting.CSM()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
+
         vm.prank(address(user));
         accounting.depositWstETH(
             0,
@@ -5001,6 +5045,14 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         vm.startPrank(admin);
 
         uint256 addedId = accounting.addBondCurve(curvePoints);
+
+        vm.expectCall(
+            address(accounting.CSM()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: addedId });
 
         vm.stopPrank();
@@ -5037,6 +5089,14 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: addedId });
 
         vm.stopPrank();
+
+        vm.expectCall(
+            address(accounting.CSM()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
 
         vm.prank(address(stakingModule));
         accounting.resetBondCurve({ nodeOperatorId: 0 });
@@ -5246,6 +5306,13 @@ contract CSAccountingPullFeeRewardsTest is CSAccountingBaseTest {
         uint256 bondSharesBefore = accounting.getBondShares(0);
         uint256 totalBondSharesBefore = accounting.totalBondShares();
 
+        vm.expectCall(
+            address(accounting.CSM()),
+            abi.encodeWithSelector(
+                ICSModule.updateDepositableValidatorsCount.selector,
+                0
+            )
+        );
         accounting.pullFeeRewards(0, feeShares, new bytes32[](0));
 
         uint256 bondSharesAfter = accounting.getBondShares(0);
