@@ -787,7 +787,7 @@ contract RemoveKeysTest is IntegrationTestBase {
 }
 
 contract ObtainDepositDataTest is IntegrationTestBase {
-    function _deposit(uint256 noId, uint256 keysToDeposit) internal {
+    function _addKeys(uint256 noId, uint256 keysToDeposit) internal {
         (bytes memory keys, bytes memory signatures) = keysSignatures(
             keysToDeposit
         );
@@ -839,9 +839,8 @@ contract ObtainDepositDataTest is IntegrationTestBase {
         public
         assertInvariants
     {
-        (uint128 legacyQueueHeadBefore, ) = csm.depositQueuePointers(
-            csm.QUEUE_LEGACY_PRIORITY()
-        );
+        (uint128 legacyQueueHeadBefore, uint128 legacyQueueTailBefore) = csm
+            .depositQueuePointers(csm.QUEUE_LEGACY_PRIORITY());
         Batch legacyQueueItemBefore = csm.depositQueueItem(
             csm.QUEUE_LEGACY_PRIORITY(),
             legacyQueueHeadBefore
@@ -854,7 +853,7 @@ contract ObtainDepositDataTest is IntegrationTestBase {
         uint256 keysWithPriority = 1;
         uint256 keysWithNoPriority = 2;
         _setPriorityQueue(noId, keysWithPriority);
-        _deposit(noId, keysWithPriority + keysWithNoPriority);
+        _addKeys(noId, keysWithPriority + keysWithNoPriority);
 
         (, uint128 priorityQueueTailAfterDeposit) = csm.depositQueuePointers(0);
         Batch priorityQueueItemAfterDeposit = csm.depositQueueItem(
@@ -880,13 +879,14 @@ contract ObtainDepositDataTest is IntegrationTestBase {
             "Lowest queue should be filled with new keys"
         );
 
-        (uint128 legacyQueueHeadAfterDeposit, ) = csm.depositQueuePointers(
-            csm.QUEUE_LEGACY_PRIORITY()
-        );
+        (
+            uint128 legacyQueueHeadAfterDeposit,
+            uint128 legacyQueueTailAfterDeposit
+        ) = csm.depositQueuePointers(csm.QUEUE_LEGACY_PRIORITY());
         assertEq(
-            legacyQueueHeadBefore,
-            legacyQueueHeadAfterDeposit,
-            "Legacy queue head should not be changed after deposit"
+            legacyQueueTailBefore,
+            legacyQueueTailAfterDeposit,
+            "Legacy queue tail should not be changed after deposit"
         );
 
         vm.startPrank(address(stakingRouter));
