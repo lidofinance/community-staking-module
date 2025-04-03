@@ -1195,9 +1195,7 @@ contract CSModule is
 
     function _incrementModuleNonce() internal {
         unchecked {
-            uint256 newNonce = _nonce + 1;
-            _nonce = newNonce;
-            emit NonceChanged(newNonce);
+            emit NonceChanged(++_nonce);
         }
     }
 
