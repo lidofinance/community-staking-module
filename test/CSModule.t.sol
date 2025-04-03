@@ -2546,10 +2546,18 @@ contract CsmQueueOps is CSMCommon {
         // `updateDepositableValidatorsCount` will be called on creating a node operator and uploading a key.
         uint256 noId = createNodeOperator();
 
+        (, , uint256 depositableBefore) = csm.getStakingModuleSummary();
+        uint256 nonceBefore = csm.getNonce();
+
         vm.recordLogs();
-        vm.prank(nodeOperator);
         csm.updateDepositableValidatorsCount(noId);
+
+        (, , uint256 depositableAfter) = csm.getStakingModuleSummary();
+        uint256 nonceAfter = csm.getNonce();
         Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        assertEq(depositableBefore, depositableAfter);
+        assertEq(nonceBefore, nonceAfter);
         assertEq(logs.length, 0);
     }
 
