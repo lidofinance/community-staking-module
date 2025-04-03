@@ -60,19 +60,14 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     function getCurveInfo(
         uint256 curveId
     ) public view returns (BondCurve memory) {
-        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        if (curveId > $.bondCurves.length - 1) {
-            revert InvalidBondCurveId();
-        }
-
-        return $.bondCurves[curveId];
+        return _getCurveInfo(curveId);
     }
 
     /// @inheritdoc ICSBondCurve
     function getBondCurve(
         uint256 nodeOperatorId
     ) public view returns (BondCurve memory) {
-        return getCurveInfo(getBondCurveId(nodeOperatorId));
+        return _getCurveInfo(getBondCurveId(nodeOperatorId));
     }
 
     /// @inheritdoc ICSBondCurve
@@ -87,7 +82,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         uint256 keys,
         uint256 curveId
     ) public view returns (uint256) {
-        return getBondAmountByKeysCount(keys, getCurveInfo(curveId));
+        return _getBondAmountByKeysCount(keys, _getCurveInfo(curveId));
     }
 
     /// @inheritdoc ICSBondCurve
@@ -95,14 +90,13 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         uint256 amount,
         uint256 curveId
     ) public view returns (uint256) {
-        return getKeysCountByBondAmount(amount, getCurveInfo(curveId));
+        return _getKeysCountByBondAmount(amount, _getCurveInfo(curveId));
     }
 
-    /// @inheritdoc ICSBondCurve
-    function getBondAmountByKeysCount(
+    function _getBondAmountByKeysCount(
         uint256 keys,
-        BondCurve memory curve
-    ) public pure returns (uint256) {
+        BondCurve storage curve
+    ) internal view returns (uint256) {
         if (keys == 0) {
             return 0;
         }
@@ -110,23 +104,22 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         uint256 len = curve.points.length;
         return
             keys > len
-                ? curve.points.unsafeMemoryAccess(len - 1) +
+                ? curve.points.unsafeAccess(len - 1).value +
                     (keys - len) *
                     curve.trend
-                : curve.points.unsafeMemoryAccess(keys - 1);
+                : curve.points.unsafeAccess(keys - 1).value;
     }
 
-    /// @inheritdoc ICSBondCurve
-    function getKeysCountByBondAmount(
+    function _getKeysCountByBondAmount(
         uint256 amount,
-        BondCurve memory curve
-    ) public pure returns (uint256) {
-        if (amount < curve.points.unsafeMemoryAccess(0)) {
+        BondCurve storage curve
+    ) internal view returns (uint256) {
+        if (amount < curve.points.unsafeAccess(0).value) {
             return 0;
         }
 
         uint256 len = curve.points.length;
-        uint256 maxCurveAmount = curve.points.unsafeMemoryAccess(len - 1);
+        uint256 maxCurveAmount = curve.points.unsafeAccess(len - 1).value;
         unchecked {
             return
                 amount < maxCurveAmount
@@ -242,10 +235,21 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         }
     }
 
+    function _getCurveInfo(
+        uint256 curveId
+    ) private view returns (BondCurve storage) {
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
+        if (curveId > $.bondCurves.length - 1) {
+            revert InvalidBondCurveId();
+        }
+
+        return $.bondCurves[curveId];
+    }
+
     function _searchKeysCount(
         uint256 amount,
-        uint256[] memory curvePoints
-    ) private pure returns (uint256) {
+        uint256[] storage curvePoints
+    ) private view returns (uint256) {
         unchecked {
             uint256 low;
             // @dev Curves of a length = 1 are handled in the parent method
@@ -254,7 +258,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             uint256 midAmount;
             while (low <= high) {
                 mid = (low + high) / 2;
-                midAmount = curvePoints.unsafeMemoryAccess(mid);
+                midAmount = curvePoints.unsafeAccess(mid).value;
                 if (amount == midAmount) {
                     return mid + 1;
                 }

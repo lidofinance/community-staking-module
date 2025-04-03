@@ -1394,21 +1394,19 @@ contract CSAccountingGetBondAmountByKeysCountWstETHTest is
     }
 
     function test_WithCurve() public override assertInvariants {
-        ICSBondCurve.BondCurve memory curve = ICSBondCurve.BondCurve({
-            points: defaultCurve,
-            trend: 1 ether
-        });
-        assertEq(accounting.getBondAmountByKeysCountWstETH(0, curve), 0);
+        vm.startPrank(admin);
+        uint256 curveId = accounting.addBondCurve(defaultCurve);
+        assertEq(accounting.getBondAmountByKeysCountWstETH(0, curveId), 0);
         assertEq(
-            accounting.getBondAmountByKeysCountWstETH(1, curve),
+            accounting.getBondAmountByKeysCountWstETH(1, curveId),
             wstETH.getWstETHByStETH(2 ether)
         );
         assertEq(
-            accounting.getBondAmountByKeysCountWstETH(2, curve),
+            accounting.getBondAmountByKeysCountWstETH(2, curveId),
             wstETH.getWstETHByStETH(3 ether)
         );
         assertEq(
-            accounting.getBondAmountByKeysCountWstETH(15, curve),
+            accounting.getBondAmountByKeysCountWstETH(15, curveId),
             wstETH.getWstETHByStETH(16 ether)
         );
     }

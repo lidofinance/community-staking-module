@@ -96,17 +96,6 @@ interface ICSBondCurve {
         uint256 curveId
     ) external view returns (uint256);
 
-    /// @notice Get required bond in ETH for the given number of keys for particular bond curve.
-    /// @dev To calculate the amount for the new keys 2 calls are required:
-    ///      getBondAmountByKeysCount(newTotal, curve) - getBondAmountByKeysCount(currentTotal, curve)
-    /// @param keys Number of keys to get required bond for
-    /// @param curve Bond curve to perform calculations against
-    /// @return Required bond amount in ETH (stETH) for particular keys count
-    function getBondAmountByKeysCount(
-        uint256 keys,
-        BondCurve memory curve
-    ) external view returns (uint256);
-
     /// @notice Get keys count for the given bond amount with default bond curve
     /// @param amount Bond amount in ETH (stETH)to get keys count for
     /// @param curveId Id of the curve to perform calculations against
@@ -114,14 +103,5 @@ interface ICSBondCurve {
     function getKeysCountByBondAmount(
         uint256 amount,
         uint256 curveId
-    ) external view returns (uint256);
-
-    /// @notice Get keys count for the given bond amount for particular bond curve.
-    /// @param amount Bond amount to get keys count for
-    /// @param curve Bond curve to perform calculations against
-    /// @return Keys count
-    function getKeysCountByBondAmount(
-        uint256 amount,
-        BondCurve memory curve
     ) external view returns (uint256);
 }
