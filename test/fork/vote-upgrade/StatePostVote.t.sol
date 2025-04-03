@@ -168,16 +168,6 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         );
         assertEq(accounting.getRoleMemberCount(accounting.PAUSE_ROLE()), 1);
 
-        assertTrue(
-            accounting.hasRole(
-                accounting.RESET_BOND_CURVE_ROLE(),
-                deployParams.setResetBondCurveAddress
-            )
-        );
-        assertEq(
-            accounting.getRoleMemberCount(accounting.RESET_BOND_CURVE_ROLE()),
-            2
-        );
         assertEq(accounting.getRoleMemberCount(accounting.RESUME_ROLE()), 0);
         assertEq(
             accounting.getRoleMemberCount(accounting.MANAGE_BOND_CURVES_ROLE()),

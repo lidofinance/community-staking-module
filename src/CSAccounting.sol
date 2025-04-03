@@ -35,8 +35,6 @@ contract CSAccounting is
         keccak256("MANAGE_BOND_CURVES_ROLE");
     bytes32 public constant SET_BOND_CURVE_ROLE =
         keccak256("SET_BOND_CURVE_ROLE");
-    bytes32 public constant RESET_BOND_CURVE_ROLE =
-        keccak256("RESET_BOND_CURVE_ROLE");
     bytes32 public constant PENALIZE_ROLE = keccak256("PENALIZE_ROLE");
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
@@ -100,7 +98,6 @@ contract CSAccounting is
         }
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
-        _grantRole(RESET_BOND_CURVE_ROLE, address(CSM));
 
         feeDistributor = ICSFeeDistributor(_feeDistributor);
 
@@ -159,15 +156,6 @@ contract CSAccounting is
     ) external onlyRole(SET_BOND_CURVE_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
         CSBondCurve._setBondCurve(nodeOperatorId, curveId);
-        CSM.updateDepositableValidatorsCount(nodeOperatorId);
-    }
-
-    /// @inheritdoc ICSAccounting
-    function resetBondCurve(
-        uint256 nodeOperatorId
-    ) external onlyRole(RESET_BOND_CURVE_ROLE) {
-        _onlyExistingNodeOperator(nodeOperatorId);
-        CSBondCurve._resetBondCurve(nodeOperatorId);
         CSM.updateDepositableValidatorsCount(nodeOperatorId);
     }
 

@@ -5075,51 +5075,6 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         vm.prank(stranger);
         accounting.setBondCurve({ nodeOperatorId: 0, curveId: 2 });
     }
-
-    function test_resetBondCurve() public assertInvariants {
-        uint256[] memory curvePoints = new uint256[](2);
-        curvePoints[0] = 1 ether;
-        curvePoints[1] = 2 ether;
-
-        mock_getNodeOperatorsCount(1);
-
-        vm.startPrank(admin);
-
-        uint256 addedId = accounting.addBondCurve(curvePoints);
-        accounting.setBondCurve({ nodeOperatorId: 0, curveId: addedId });
-
-        vm.stopPrank();
-
-        vm.expectCall(
-            address(accounting.CSM()),
-            abi.encodeWithSelector(
-                ICSModule.updateDepositableValidatorsCount.selector,
-                0
-            )
-        );
-
-        vm.prank(address(stakingModule));
-        accounting.resetBondCurve({ nodeOperatorId: 0 });
-
-        ICSBondCurve.BondCurve memory curve = accounting.getBondCurve(0);
-
-        uint256[] memory defaultPoints = accounting.getCurveInfo(0).points;
-
-        assertEq(curve.points[0], defaultPoints[0]);
-    }
-
-    function test_resetBondCurve_RevertWhen_OperatorDoesNotExist() public {
-        mock_getNodeOperatorsCount(0);
-        vm.expectRevert(ICSAccounting.NodeOperatorDoesNotExist.selector);
-        vm.prank(address(stakingModule));
-        accounting.resetBondCurve({ nodeOperatorId: 0 });
-    }
-
-    function test_resetBondCurve_RevertWhen_DoesNotHaveRole() public {
-        expectRoleRevert(stranger, accounting.RESET_BOND_CURVE_ROLE());
-        vm.prank(stranger);
-        accounting.resetBondCurve({ nodeOperatorId: 0 });
-    }
 }
 
 contract CSAccountingMiscTest is CSAccountingBaseTest {

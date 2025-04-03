@@ -4922,10 +4922,6 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
 
         vm.expectEmit(address(csm));
         emit ICSModule.ELRewardsStealingPenaltySettled(noId);
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
@@ -4957,22 +4953,6 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         emit ICSModule.ELRewardsStealingPenaltySettled(firstNoId);
         vm.expectEmit(address(csm));
         emit ICSModule.ELRewardsStealingPenaltySettled(secondNoId);
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondCurve.selector,
-                secondNoId
-            ),
-            1
-        );
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondCurve.selector,
-                firstNoId
-            ),
-            1
-        );
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(
@@ -4994,10 +4974,6 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         uint256[] memory idsToSettle = new uint256[](1);
         idsToSettle[0] = noId;
 
-        expectNoCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
         CSBondLock.BondLock memory lock = accounting.getLockedBondInfo(noId);
@@ -5015,20 +4991,6 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
         idsToSettle[0] = firstNoId;
         idsToSettle[1] = secondNoId;
 
-        expectNoCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondCurve.selector,
-                firstNoId
-            )
-        );
-        expectNoCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondCurve.selector,
-                secondNoId
-            )
-        );
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
         CSBondLock.BondLock memory firstLock = accounting.getLockedBondInfo(
@@ -5060,20 +5022,6 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
 
         vm.expectEmit(address(csm));
         emit ICSModule.ELRewardsStealingPenaltySettled(secondNoId);
-        expectNoCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondCurve.selector,
-                firstNoId
-            )
-        );
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondCurve.selector,
-                secondNoId
-            )
-        );
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
         CSBondLock.BondLock memory firstLock = accounting.getLockedBondInfo(
@@ -5107,13 +5055,6 @@ contract CsmSettleELRewardsStealingPenaltyBasic is CSMCommon {
 
         vm.expectEmit(address(csm));
         emit ICSModule.ELRewardsStealingPenaltySettled(secondNoId);
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondCurve.selector,
-                secondNoId
-            )
-        );
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
         uint256 bondBalanceAfter = accounting.getBond(secondNoId);
@@ -5159,10 +5100,6 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
 
         vm.warp(block.timestamp + period + 1 seconds);
 
-        expectNoCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
         assertEq(accounting.getActualLockedBond(noId), 0);
@@ -5191,14 +5128,6 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
 
         vm.expectEmit(address(csm));
         emit ICSModule.ELRewardsStealingPenaltySettled(secondNoId);
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(
-                accounting.resetBondCurve.selector,
-                secondNoId
-            ),
-            1 // called once for secondNoId
-        );
         csm.settleELRewardsStealingPenalty(idsToSettle);
 
         assertEq(accounting.getActualLockedBond(firstNoId), 0);
@@ -5208,90 +5137,6 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
         );
         assertEq(lock.amount, 0 ether);
         assertEq(lock.until, 0);
-    }
-
-    function test_settleELRewardsStealingPenalty_CurveReset_NoNewUnbonded()
-        public
-    {
-        uint256 noId = createNodeOperator();
-
-        uint256[] memory curvePoints = new uint256[](2);
-        curvePoints[0] = 2 ether;
-        curvePoints[1] = 3 ether;
-
-        uint256 curveId = accounting.addBondCurve(curvePoints);
-
-        accounting.setBondCurve(0, curveId);
-
-        uploadMoreKeys(0, 1);
-
-        vm.deal(nodeOperator, 3 ether);
-        vm.prank(nodeOperator);
-        accounting.depositETH{ value: 3 ether }(0);
-
-        uint256 amount = 1 ether;
-        uint256[] memory idsToSettle = new uint256[](1);
-        idsToSettle[0] = noId;
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            amount
-        );
-
-        uint256 nonce = csm.getNonce();
-        uint256 unbonded = accounting.getUnbondedKeysCount(noId);
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
-        csm.settleELRewardsStealingPenalty(idsToSettle);
-
-        assertEq(accounting.getBondCurveId(noId), 0);
-        assertEq(csm.getNonce(), nonce);
-        assertEq(accounting.getUnbondedKeysCount(noId), unbonded);
-    }
-
-    function test_settleELRewardsStealingPenalty_CurveReset_NewUnbonded()
-        public
-    {
-        uint256 noId = createNodeOperator();
-
-        uint256[] memory curvePoints = new uint256[](2);
-        curvePoints[0] = 2 ether;
-        curvePoints[1] = 3 ether;
-
-        uint256 curveId = accounting.addBondCurve(curvePoints);
-
-        accounting.setBondCurve(0, curveId);
-
-        uploadMoreKeys(0, 1);
-
-        vm.deal(nodeOperator, 2 ether);
-        vm.prank(nodeOperator);
-        accounting.depositETH{ value: 2 ether }(0);
-
-        uint256 amount = 1 ether;
-        uint256[] memory idsToSettle = new uint256[](1);
-        idsToSettle[0] = noId;
-        csm.reportELRewardsStealingPenalty(
-            noId,
-            blockhash(block.number),
-            amount
-        );
-
-        uint256 nonce = csm.getNonce();
-        uint256 unbonded = accounting.getUnbondedKeysCount(noId);
-
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
-        csm.settleELRewardsStealingPenalty(idsToSettle);
-
-        assertEq(accounting.getBondCurveId(noId), 0);
-        assertEq(csm.getNonce(), nonce + 1);
-        assertEq(accounting.getUnbondedKeysCount(noId), unbonded + 1);
     }
 
     function test_settleELRewardsStealingPenalty_NoBond()
@@ -5314,10 +5159,6 @@ contract CsmSettleELRewardsStealingPenaltyAdvanced is CSMCommon {
         );
         vm.expectEmit(address(csm));
         emit ICSModule.ELRewardsStealingPenaltySettled(noId);
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(accounting.resetBondCurve.selector, noId)
-        );
         csm.settleELRewardsStealingPenalty(idsToSettle);
     }
 }
@@ -5492,10 +5333,6 @@ contract CsmSubmitWithdrawals is CSMCommon {
             true
         );
 
-        vm.expectCall(
-            address(accounting),
-            abi.encodeWithSelector(ICSAccounting.resetBondCurve.selector, noId)
-        );
         vm.expectEmit(address(csm));
         emit ICSModule.WithdrawalSubmitted(
             noId,
