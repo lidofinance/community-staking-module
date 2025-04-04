@@ -1,8 +1,8 @@
 # ICSModule
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/86cbb28dad521bfac5576c8a7b405bc33b32f44d/src/interfaces/ICSModule.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/interfaces/ICSModule.sol)
 
 **Inherits:**
-[IQueueLib](/src/lib/QueueLib.sol/interface.IQueueLib.md), [INOAddresses](/src/lib/NOAddresses.sol/interface.INOAddresses.md), [IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md)
+[IQueueLib](/src/lib/QueueLib.sol/interface.IQueueLib.md), [INOAddresses](/src/lib/NOAddresses.sol/interface.INOAddresses.md), [IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md), [IStakingModule](/src/interfaces/IStakingModule.sol/interface.IStakingModule.md)
 
 
 ## Functions
@@ -116,15 +116,6 @@ Resume creation of the Node Operators and keys upload
 
 ```solidity
 function resume() external;
-```
-
-### publicRelease
-
-Public release mode status
-
-
-```solidity
-function publicRelease() external view returns (bool);
 ```
 
 ### getInitializedVersion
@@ -476,15 +467,15 @@ function cleanDepositQueue(uint256 maxItems) external returns (uint256 removed, 
 |`lastRemovedAtDepth`|`uint256`|The value to use as `maxItems` to remove `removed` batches if the static call of the method was used|
 
 
-### enqueueNodeOperatorKeys
+### updateDepositableValidatorsCount
 
-Enqueue all unqueued keys for the given Node Operator
+Update depositable validators data and enqueue all unqueued keys for the given Node Operator
 
 Unqueued stands for vetted but not enqueued keys
 
 
 ```solidity
-function enqueueNodeOperatorKeys(uint256 nodeOperatorId) external;
+function updateDepositableValidatorsCount(uint256 nodeOperatorId) external;
 ```
 **Parameters**
 
@@ -888,12 +879,6 @@ error AlreadyWithdrawn();
 error InvalidAmount();
 ```
 
-### NotSupported
-
-```solidity
-error NotSupported();
-```
-
 ### ZeroLocatorAddress
 
 ```solidity
@@ -916,12 +901,6 @@ error ZeroAdminAddress();
 
 ```solidity
 error ZeroSenderAddress();
-```
-
-### ZeroRewardAddress
-
-```solidity
-error ZeroRewardAddress();
 ```
 
 ### ZeroParametersRegistryAddress

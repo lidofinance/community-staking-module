@@ -1,5 +1,5 @@
 # INOAddresses
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/86cbb28dad521bfac5576c8a7b405bc33b32f44d/src/lib/NOAddresses.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/lib/NOAddresses.sol)
 
 Library for changing and reset node operator's manager and reward addresses
 
@@ -74,5 +74,11 @@ error SenderIsNotProposedAddress();
 
 ```solidity
 error MethodCallIsNotAllowed();
+```
+
+### ZeroRewardAddress
+
+```solidity
+error ZeroRewardAddress();
 ```
 

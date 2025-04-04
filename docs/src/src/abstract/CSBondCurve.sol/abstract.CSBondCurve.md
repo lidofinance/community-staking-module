@@ -1,5 +1,5 @@
 # CSBondCurve
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/86cbb28dad521bfac5576c8a7b405bc33b32f44d/src/abstract/CSBondCurve.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/abstract/CSBondCurve.sol)
 
 **Inherits:**
 [ICSBondCurve](/src/interfaces/ICSBondCurve.sol/interface.ICSBondCurve.md), Initializable
@@ -179,52 +179,19 @@ function getKeysCountByBondAmount(uint256 amount, uint256 curveId) public view r
 |`<none>`|`uint256`|Keys count|
 
 
-### getBondAmountByKeysCount
-
-Get required bond in ETH for the given number of keys for default bond curve
-
-*To calculate the amount for the new keys 2 calls are required:
-getBondAmountByKeysCount(newTotal) - getBondAmountByKeysCount(currentTotal)*
+### _getBondAmountByKeysCount
 
 
 ```solidity
-function getBondAmountByKeysCount(uint256 keys, BondCurve memory curve) public pure returns (uint256);
+function _getBondAmountByKeysCount(uint256 keys, BondCurve storage curve) internal view returns (uint256);
 ```
-**Parameters**
 
-|Name|Type|Description|
-|----|----|-----------|
-|`keys`|`uint256`|Number of keys to get required bond for|
-|`curve`|`BondCurve`||
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|Amount for particular keys count|
-
-
-### getKeysCountByBondAmount
-
-Get keys count for the given bond amount with default bond curve
+### _getKeysCountByBondAmount
 
 
 ```solidity
-function getKeysCountByBondAmount(uint256 amount, BondCurve memory curve) public pure returns (uint256);
+function _getKeysCountByBondAmount(uint256 amount, BondCurve storage curve) internal view returns (uint256);
 ```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`amount`|`uint256`|Bond amount in ETH (stETH)to get keys count for|
-|`curve`|`BondCurve`||
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|Keys count|
-
 
 ### __CSBondCurve_init
 
@@ -239,7 +206,7 @@ function __CSBondCurve_init(uint256[] calldata defaultBondCurvePoints) internal 
 
 
 ```solidity
-function _addBondCurve(uint256[] calldata curvePoints) internal returns (uint256);
+function _addBondCurve(uint256[] calldata curvePoints) internal returns (uint256 curveId);
 ```
 
 ### _updateBondCurve
@@ -261,16 +228,6 @@ It will be used for the Node Operator instead of the previously set curve*
 function _setBondCurve(uint256 nodeOperatorId, uint256 curveId) internal;
 ```
 
-### _resetBondCurve
-
-*Reset bond curve for the given Node Operator to default.
-(for example, because of breaking the rules by Node Operator)*
-
-
-```solidity
-function _resetBondCurve(uint256 nodeOperatorId) internal;
-```
-
 ### _checkBondCurve
 
 
@@ -278,11 +235,18 @@ function _resetBondCurve(uint256 nodeOperatorId) internal;
 function _checkBondCurve(uint256[] calldata curvePoints) private view;
 ```
 
+### _getCurveInfo
+
+
+```solidity
+function _getCurveInfo(uint256 curveId) private view returns (BondCurve storage);
+```
+
 ### _searchKeysCount
 
 
 ```solidity
-function _searchKeysCount(uint256 amount, uint256[] memory curvePoints) private pure returns (uint256);
+function _searchKeysCount(uint256 amount, uint256[] storage curvePoints) private view returns (uint256);
 ```
 
 ### _getCSBondCurveStorage

@@ -118,13 +118,13 @@ There also fork helper scripts to prepare a fork state for e.g. UI testing purpo
 see [fork.just](./fork.just) to get all available commands
 
 ```bash
-just vote
+just vote-upgrade
 ```
 
-After a vote, you can test the contracts in the new state. It includes both `integration` and `post-voting` tests
+After a vote, you can test the contracts in the new state. It includes both `integration` and `vote-upgrade` tests
 
 ```bash
-just test-post-voting
+just test-post-upgrade
 ```
 
 Kill fork after testing
@@ -140,7 +140,7 @@ The following commands are related to the deployment process:
 - Dry run of deploy script to be sure it works as expected
 
 ```bash
-just deploy-prod-dry
+just deploy-live-dry
 ```
 
 - Broadcast transactions
@@ -148,7 +148,7 @@ just deploy-prod-dry
 > Note: pass `--legacy` arg in case of the following error: `Failed to get EIP-1559 fees`
 
 ```bash
-just deploy-prod
+just deploy-live
 ```
 
 After that there should be artifacts in the `./artifacts/latest` directory,

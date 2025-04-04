@@ -1,5 +1,5 @@
 # ICSStrikes
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/86cbb28dad521bfac5576c8a7b405bc33b32f44d/src/interfaces/ICSStrikes.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/interfaces/ICSStrikes.sol)
 
 
 ## Functions
@@ -8,6 +8,20 @@
 
 ```solidity
 function ORACLE() external view returns (address);
+```
+
+### MODULE
+
+
+```solidity
+function MODULE() external view returns (ICSModule);
+```
+
+### EJECTOR
+
+
+```solidity
+function EJECTOR() external view returns (ICSEjector);
 ```
 
 ### treeRoot
