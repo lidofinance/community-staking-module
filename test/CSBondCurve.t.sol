@@ -29,10 +29,6 @@ contract CSBondCurveTestable is CSBondCurve(10) {
     function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external {
         _setBondCurve(nodeOperatorId, curveId);
     }
-
-    function resetBondCurve(uint256 nodeOperatorId) external {
-        _resetBondCurve(nodeOperatorId);
-    }
 }
 
 contract CSBondCurveInitTest is Test {
@@ -208,32 +204,6 @@ contract CSBondCurveTest is Test {
     function test_setBondCurve_RevertWhen_NoExistingCurveId() public {
         vm.expectRevert(ICSBondCurve.InvalidBondCurveId.selector);
         bondCurve.setBondCurve(0, 100500);
-    }
-
-    function test_resetBondCurve() public {
-        uint256 noId = 0;
-        uint256[] memory curvePoints = new uint256[](1);
-        curvePoints[0] = 16 ether;
-        uint256 addedId = bondCurve.addBondCurve(curvePoints);
-        bondCurve.setBondCurve(noId, addedId);
-
-        vm.expectEmit(address(bondCurve));
-        emit ICSBondCurve.BondCurveSet(noId, 0);
-
-        bondCurve.resetBondCurve(noId);
-        assertEq(bondCurve.getBondCurveId(noId), 0);
-    }
-
-    function test_resetBondCurve_nothingToChange() public {
-        uint256 noId = 0;
-        assertEq(bondCurve.getBondCurveId(noId), 0);
-
-        vm.recordLogs();
-        bondCurve.resetBondCurve(noId);
-
-        Vm.Log[] memory entries = vm.getRecordedLogs();
-        assertEq(entries.length, 0);
-        assertEq(bondCurve.getBondCurveId(noId), 0);
     }
 
     function test_getCurvesCount() public {
