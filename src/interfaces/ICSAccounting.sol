@@ -111,16 +111,6 @@ interface ICSAccounting is
         uint256 curveId
     ) external view returns (uint256);
 
-    /// @notice Get the bond amount in wstETH required for the `keysCount` keys using the custom bond curve
-    /// @param keysCount Keys count to calculate the required bond amount
-    /// @param curve Bond curve definition.
-    ///              Use CSBondCurve.getBondCurve(id) method to get the definition for the exiting curve
-    /// @return wstETH amount required for the `keysCount`
-    function getBondAmountByKeysCountWstETH(
-        uint256 keysCount,
-        BondCurve memory curve
-    ) external view returns (uint256);
-
     /// @notice Get the required bond in wstETH (inc. missed and excess) for the given Node Operator to upload new keys
     /// @param nodeOperatorId ID of the Node Operator
     /// @param additionalKeys Number of new keys to add
