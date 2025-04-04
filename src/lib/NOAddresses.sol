@@ -35,6 +35,7 @@ interface INOAddresses {
     error SenderIsNotRewardAddress();
     error SenderIsNotProposedAddress();
     error MethodCallIsNotAllowed();
+    error ZeroRewardAddress();
 }
 
 library NOAddresses {
@@ -210,6 +211,9 @@ library NOAddresses {
         uint256 nodeOperatorId,
         address newAddress
     ) external {
+        if (newAddress == address(0)) {
+            revert INOAddresses.ZeroRewardAddress();
+        }
         NodeOperator storage no = nodeOperators[nodeOperatorId];
         if (no.managerAddress == address(0)) {
             revert ICSModule.NodeOperatorDoesNotExist();

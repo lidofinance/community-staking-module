@@ -67,7 +67,7 @@ contract CSModule is
     mapping(uint256 queuePriority => QueueLib.Queue queue)
         internal _queueByPriority;
 
-    /// @dev Legacy queue (priority=QUEUE_LEGACY_PRIORITY), that we will probably may be able to remove in the future.
+    /// @dev Legacy queue (priority=QUEUE_LEGACY_PRIORITY), that should be removed in the future once there are no more batches in it.
     /// @custom:oz-renamed-from depositQueue
     QueueLib.Queue public legacyQueue;
 
@@ -341,10 +341,6 @@ contract CSModule is
         uint256 nodeOperatorId,
         address newAddress
     ) external {
-        if (newAddress == address(0)) {
-            revert ZeroRewardAddress();
-        }
-
         NOAddresses.changeNodeOperatorRewardAddress(
             _nodeOperators,
             nodeOperatorId,
@@ -628,6 +624,7 @@ contract CSModule is
         uint256 additionalFine = PARAMETERS_REGISTRY
             .getElRewardsStealingAdditionalFine(curveId);
         accounting.lockBondETH(nodeOperatorId, amount + additionalFine);
+
         emit ELRewardsStealingPenaltyReported(
             nodeOperatorId,
             blockHash,
@@ -675,12 +672,16 @@ contract CSModule is
             // settled amount might be zero either if the lock expired, or the bond is zero
             // so we need to check actual locked bond before to determine if the penalty was settled
             if (lockedBondBefore > 0) {
+                // Bond curve should be reset to default in case of confirmed MEV stealing. See https://hackmd.io/@lido/SygBLW5ja
+                _accounting.resetBondCurve(nodeOperatorId);
+
+                emit ELRewardsStealingPenaltySettled(nodeOperatorId);
+                
                 // Nonce should be updated if depositableValidators change
                 _updateDepositableValidatorsCount({
                     nodeOperatorId: nodeOperatorId,
                     incrementNonceIfUpdated: true
                 });
-                emit ELRewardsStealingPenaltySettled(nodeOperatorId);
             }
         }
     }
@@ -691,12 +692,14 @@ contract CSModule is
     ) external payable {
         _onlyNodeOperatorManager(nodeOperatorId, msg.sender);
         accounting.compensateLockedBondETH{ value: msg.value }(nodeOperatorId);
+
+        emit ELRewardsStealingPenaltyCompensated(nodeOperatorId, msg.value);
+
         // Nonce should be updated if depositableValidators change
         _updateDepositableValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             incrementNonceIfUpdated: true
         });
-        emit ELRewardsStealingPenaltyCompensated(nodeOperatorId, msg.value);
     }
 
     /// @inheritdoc ICSModule
@@ -1110,8 +1113,7 @@ contract CSModule is
     function getNodeOperatorTotalDepositedKeys(
         uint256 nodeOperatorId
     ) external view returns (uint256 totalDepositedKeys) {
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        totalDepositedKeys = no.totalDepositedKeys;
+        totalDepositedKeys = _nodeOperators[nodeOperatorId].totalDepositedKeys;
     }
 
     /// @inheritdoc ICSModule
@@ -1188,9 +1190,8 @@ contract CSModule is
 
     function _incrementModuleNonce() internal {
         unchecked {
-            ++_nonce;
+            emit NonceChanged(++_nonce);
         }
-        emit NonceChanged(_nonce);
     }
 
     function _addKeysAndUpdateDepositableValidatorsCount(
@@ -1418,12 +1419,12 @@ contract CSModule is
         uint256 nodeOperatorId,
         address from
     ) internal view {
-        NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        if (no.managerAddress == address(0)) {
+        address managerAddress = _nodeOperators[nodeOperatorId].managerAddress;
+        if (managerAddress == address(0)) {
             revert NodeOperatorDoesNotExist();
         }
 
-        if (no.managerAddress != from) {
+        if (managerAddress != from) {
             revert SenderIsNotEligible();
         }
     }

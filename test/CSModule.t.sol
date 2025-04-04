@@ -2318,7 +2318,7 @@ contract CsmChangeNodeOperatorRewardAddress is CSMCommon {
         public
     {
         uint256 noId = createNodeOperator(true);
-        vm.expectRevert(ICSModule.ZeroRewardAddress.selector);
+        vm.expectRevert(INOAddresses.ZeroRewardAddress.selector);
         vm.prank(nodeOperator);
         csm.changeNodeOperatorRewardAddress(noId, address(0));
     }
