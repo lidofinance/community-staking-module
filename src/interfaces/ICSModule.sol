@@ -155,6 +155,14 @@ interface ICSModule is
         bytes pubkey,
         uint256 withdrawalRequestFee
     );
+    event DelayedValidatorExitPenalized(
+        uint256 indexed nodeOperatorId,
+        uint256 penaltyValue
+    );
+    event WithdrawalRequestFeeCharged(
+        uint256 indexed nodeOperatorId,
+        uint256 feeAmount
+    );
 
     function LIDO_LOCATOR() external view returns (ILidoLocator);
 

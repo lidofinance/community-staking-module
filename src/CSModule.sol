@@ -75,7 +75,7 @@ contract CSModule is
 
     /// @custom:oz-renamed-from earlyAdoption
     /// @custom:oz-retyped-from address
-    mapping(bytes32 => ExitPenaltyInfo) private _exitPenaltyInfo;
+    mapping(bytes32 => ExitPenaltyInfo) private _delayedExitPenaltyInfo;
 
     uint256 private _nonce;
     mapping(uint256 => NodeOperator) private _nodeOperators;
@@ -140,7 +140,7 @@ contract CSModule is
     function finalizeUpgradeV2() external reinitializer(2) {
         assembly ("memory-safe") {
             sstore(_queueByPriority.slot, 0x00)
-            sstore(_exitPenaltyInfo.slot, 0x00)
+            sstore(_delayedExitPenaltyInfo.slot, 0x00)
         }
     }
 
@@ -744,7 +744,7 @@ contract CSModule is
                 withdrawalInfo.nodeOperatorId,
                 pubkey
             );
-            ExitPenaltyInfo storage exitPenaltyInfo = _exitPenaltyInfo[
+            ExitPenaltyInfo storage exitPenaltyInfo = _delayedExitPenaltyInfo[
                 noPublicKeyPacked
             ];
             if (exitPenaltyInfo.penaltyValue != 0) {
@@ -752,18 +752,33 @@ contract CSModule is
                     withdrawalInfo.nodeOperatorId,
                     exitPenaltyInfo.penaltyValue
                 );
+                emit DelayedValidatorExitPenalized(
+                    withdrawalInfo.nodeOperatorId,
+                    exitPenaltyInfo.penaltyValue
+                );
                 exitPenaltyInfo.penaltyValue = 0;
-            }
-            if (exitPenaltyInfo.withdrawalRequestFee != 0) {
-                uint256 maxFee = PARAMETERS_REGISTRY.getMaxWithdrawalRequestFee(
-                    accounting.getBondCurveId(withdrawalInfo.nodeOperatorId)
-                );
-                uint256 fee = Math.min(
-                    exitPenaltyInfo.withdrawalRequestFee,
-                    maxFee
-                );
-                accounting.chargeFee(withdrawalInfo.nodeOperatorId, fee);
-                exitPenaltyInfo.withdrawalRequestFee = 0;
+
+                // the withdrawal request fee is taken only if the penalty is applied
+                // if no penalty, the fee was paid by the node operator on the withdrawal trigger
+                // or the dao decided to withdraw the validator before that the withdrawal request becomes delayed
+                if (exitPenaltyInfo.withdrawalRequestFee != 0) {
+                    uint256 maxFee = PARAMETERS_REGISTRY
+                        .getMaxWithdrawalRequestFee(
+                            accounting.getBondCurveId(
+                                withdrawalInfo.nodeOperatorId
+                            )
+                        );
+                    uint256 fee = Math.min(
+                        exitPenaltyInfo.withdrawalRequestFee,
+                        maxFee
+                    );
+                    accounting.chargeFee(withdrawalInfo.nodeOperatorId, fee);
+                    emit WithdrawalRequestFeeCharged(
+                        withdrawalInfo.nodeOperatorId,
+                        fee
+                    );
+                    exitPenaltyInfo.withdrawalRequestFee = 0;
+                }
             }
 
             if (DEPOSIT_SIZE > withdrawalInfo.amount) {
@@ -810,17 +825,19 @@ contract CSModule is
         uint256 allowedExitDelay = PARAMETERS_REGISTRY.getAllowedExitDelay(
             curveId
         );
-        if (eligibleToExitInSec < allowedExitDelay) revert InvalidExitDelay();
+        if (eligibleToExitInSec < allowedExitDelay) {
+            revert InvalidExitDelay();
+        }
 
         bytes32 noPublicKeyPacked = _nodeOperatorPublicKeyPacked(
             nodeOperatorId,
             publicKey
         );
-        if (_exitPenaltyInfo[noPublicKeyPacked].penaltyValue != 0) {
+        if (_delayedExitPenaltyInfo[noPublicKeyPacked].penaltyValue != 0) {
             revert ExitDelayAlreadyReported();
         }
-        _exitPenaltyInfo[noPublicKeyPacked].penaltyValue = PARAMETERS_REGISTRY
-            .getExitDelayPenalty(curveId);
+        _delayedExitPenaltyInfo[noPublicKeyPacked]
+            .penaltyValue = PARAMETERS_REGISTRY.getExitDelayPenalty(curveId);
         emit ValidatorExitDelayReported(
             nodeOperatorId,
             eligibleToExitInSec - allowedExitDelay,
@@ -844,7 +861,7 @@ contract CSModule is
                 nodeOperatorId,
                 publicKey
             );
-            ExitPenaltyInfo storage exitPenaltyInfo = _exitPenaltyInfo[
+            ExitPenaltyInfo storage exitPenaltyInfo = _delayedExitPenaltyInfo[
                 noPublicKeyPacked
             ];
             exitPenaltyInfo.withdrawalRequestFee = withdrawalRequestPaidFee;
@@ -1287,7 +1304,7 @@ contract CSModule is
             nodeOperatorId,
             publicKey
         );
-        return _exitPenaltyInfo[noPublicKeyPacked].penaltyValue == 0;
+        return _delayedExitPenaltyInfo[noPublicKeyPacked].penaltyValue == 0;
     }
 
     /// @inheritdoc IStakingModule

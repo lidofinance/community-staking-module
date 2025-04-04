@@ -60,6 +60,41 @@ contract CSEjector is
         _pauseFor(duration);
     }
 
+    function voluntaryEject(uint256 nodeOperatorId, uint256 keyIndex) public {
+        NodeOperatorManagementProperties memory no = MODULE
+            .getNodeOperatorManagementProperties(nodeOperatorId);
+        if (no.managerAddress == address(0)) {
+            revert NodeOperatorDoesNotExist();
+        }
+        if (no.managerAddress != msg.sender && no.rewardAddress != msg.sender) {
+            revert SenderIsNotEligible();
+        }
+
+        if (
+            keyIndex >= MODULE.getNodeOperatorTotalDepositedKeys(nodeOperatorId)
+        ) {
+            revert SigningKeysInvalidOffset();
+        }
+
+        if (MODULE.isValidatorWithdrawn(nodeOperatorId, keyIndex)) {
+            revert AlreadyWithdrawn();
+        }
+
+        uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
+        if (_isValidatorEjected[pointer]) {
+            revert AlreadyEjected();
+        }
+
+        bytes memory pubkey = MODULE.getSigningKeys(
+            nodeOperatorId,
+            keyIndex,
+            1
+        );
+        // TODO: make the function payable and call `requestEjection{ value: msg.value }(pubkey)`
+        _isValidatorEjected[pointer] = true;
+        emit EjectionSubmitted(nodeOperatorId, keyIndex, pubkey);
+    }
+
     /// @inheritdoc ICSEjector
     function ejectBadPerformer(
         uint256 nodeOperatorId,

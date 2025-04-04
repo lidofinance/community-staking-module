@@ -101,6 +101,8 @@ contract CSParametersRegistry is
             data.defaultQueueMaxDeposits
         );
         _setDefaultAllowedExitDelay(data.defaultAllowedExitDelay);
+        _setDefaultExitDelayPenalty(data.defaultExitDelayPenalty);
+        _setDefaultMaxWithdrawalRequestFee(data.defaultMaxWithdrawalRequestFee);
 
         __AccessControlEnumerable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -678,11 +680,6 @@ contract CSParametersRegistry is
         if (maxDeposits == 0) {
             revert ZeroMaxDeposits();
         }
-    }
-
-    function _setDefaultAllowedExitDelay(uint256 delay) internal {
-        defaultAllowedExitDelay = delay;
-        emit DefaultAllowedExitDelaySet(delay);
     }
 
     function _setDefaultAllowedExitDelay(uint256 delay) internal {

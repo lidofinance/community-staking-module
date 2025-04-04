@@ -59,6 +59,8 @@ interface ICSParametersRegistry {
         uint256 blocksWeight;
         uint256 syncWeight;
         uint256 defaultAllowedExitDelay;
+        uint256 defaultExitDelayPenalty;
+        uint256 defaultMaxWithdrawalRequestFee;
     }
 
     /// @dev Pivots are the pivotal points after which the next value should be used.
