@@ -1,5 +1,5 @@
 # ICSBondLock
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/86cbb28dad521bfac5576c8a7b405bc33b32f44d/src/interfaces/ICSBondLock.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/interfaces/ICSBondLock.sol)
 
 
 ## Functions
@@ -78,7 +78,7 @@ function getActualLockedBond(uint256 nodeOperatorId) external view returns (uint
 ### BondLockChanged
 
 ```solidity
-event BondLockChanged(uint256 indexed nodeOperatorId, uint256 newAmount, uint256 lockUntil);
+event BondLockChanged(uint256 indexed nodeOperatorId, uint256 newAmount, uint256 until);
 ```
 
 ### BondLockRemoved
@@ -90,7 +90,7 @@ event BondLockRemoved(uint256 indexed nodeOperatorId);
 ### BondLockPeriodChanged
 
 ```solidity
-event BondLockPeriodChanged(uint256 lockPeriod);
+event BondLockPeriodChanged(uint256 period);
 ```
 
 ## Errors
@@ -110,14 +110,14 @@ error InvalidBondLockAmount();
 ### BondLock
 *Bond lock structure.
 It contains:
-- amount       |> amount of locked bond
-- lockUntil    |> timestamp until locked bond is retained*
+- amount   |> amount of locked bond
+- until    |> timestamp until locked bond is retained*
 
 
 ```solidity
 struct BondLock {
     uint128 amount;
-    uint128 lockUntil;
+    uint128 until;
 }
 ```
 

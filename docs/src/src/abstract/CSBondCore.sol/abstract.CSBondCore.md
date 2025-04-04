@@ -1,5 +1,5 @@
 # CSBondCore
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/86cbb28dad521bfac5576c8a7b405bc33b32f44d/src/abstract/CSBondCore.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/abstract/CSBondCore.sol)
 
 **Inherits:**
 [ICSBondCore](/src/interfaces/ICSBondCore.sol/interface.ICSBondCore.md)
