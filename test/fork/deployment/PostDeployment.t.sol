@@ -255,9 +255,6 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
             accounting.chargePenaltyRecipient(),
             deployParams.chargePenaltyRecipient
         );
-        assertTrue(
-            accounting.hasRole(accounting.RESET_BOND_CURVE_ROLE(), address(csm))
-        );
 
         IWithdrawalQueue wq = IWithdrawalQueue(locator.withdrawalQueue());
         assertEq(
@@ -298,26 +295,15 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
                 address(vettedGate)
             )
         );
-        assertTrue(
-            accounting.hasRole(
-                accounting.SET_BOND_CURVE_ROLE(),
-                deployParams.setResetBondCurveAddress
-            )
-        );
         assertFalse(
             accounting.hasRole(accounting.SET_BOND_CURVE_ROLE(), address(csm))
         );
 
-        assertTrue(
-            accounting.hasRole(
-                accounting.RESET_BOND_CURVE_ROLE(),
-                deployParams.setResetBondCurveAddress
-            )
-        );
         assertEq(
-            accounting.getRoleMemberCount(accounting.RESET_BOND_CURVE_ROLE()),
-            2
+            accounting.getRoleMemberCount(keccak256("RESET_BOND_CURVE_ROLE")),
+            0
         );
+
         assertEq(accounting.getRoleMemberCount(accounting.RESUME_ROLE()), 0);
         assertEq(
             accounting.getRoleMemberCount(accounting.MANAGE_BOND_CURVES_ROLE()),

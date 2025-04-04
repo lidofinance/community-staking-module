@@ -44,8 +44,6 @@ interface ICSAccounting is
 
     function SET_BOND_CURVE_ROLE() external view returns (bytes32);
 
-    function RESET_BOND_CURVE_ROLE() external view returns (bytes32);
-
     function PENALIZE_ROLE() external view returns (bytes32);
 
     function RECOVERER_ROLE() external view returns (bytes32);
@@ -313,11 +311,6 @@ interface ICSAccounting is
     /// @param nodeOperatorId ID of the Node Operator
     /// @param curveId ID of the bond curve to set
     function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external;
-
-    /// @notice Reset bond curve to the default one for the given Node Operator
-    /// @dev Updates depositable validators count in CSM to ensure key pointers consistency
-    /// @param nodeOperatorId ID of the Node Operator
-    function resetBondCurve(uint256 nodeOperatorId) external;
 
     /// @notice Penalize bond by burning stETH shares of the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator
