@@ -391,7 +391,7 @@ contract CSAccounting is
             required =
                 CSBondCurve.getBondAmountByKeysCount(
                     CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
-                    CSBondCurve.getBondCurve(nodeOperatorId)
+                    CSBondCurve.getBondCurveId(nodeOperatorId)
                 ) +
                 CSBondLock.getActualLockedBond(nodeOperatorId);
         }
@@ -407,7 +407,7 @@ contract CSAccounting is
             required = _sharesByEth(
                 CSBondCurve.getBondAmountByKeysCount(
                     CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
-                    CSBondCurve.getBondCurve(nodeOperatorId)
+                    CSBondCurve.getBondCurveId(nodeOperatorId)
                 ) + CSBondLock.getActualLockedBond(nodeOperatorId)
             );
         }
@@ -444,7 +444,7 @@ contract CSAccounting is
         uint256 requiredForNewTotalKeys = CSBondCurve.getBondAmountByKeysCount(
             CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId) +
                 additionalKeys,
-            CSBondCurve.getBondCurve(nodeOperatorId)
+            CSBondCurve.getBondCurveId(nodeOperatorId)
         );
         uint256 totalRequired = requiredForNewTotalKeys +
             CSBondLock.getActualLockedBond(nodeOperatorId);
@@ -462,17 +462,6 @@ contract CSAccounting is
         return
             _sharesByEth(
                 CSBondCurve.getBondAmountByKeysCount(keysCount, curveId)
-            );
-    }
-
-    /// @inheritdoc ICSAccounting
-    function getBondAmountByKeysCountWstETH(
-        uint256 keysCount,
-        BondCurve memory curve
-    ) public view returns (uint256) {
-        return
-            _sharesByEth(
-                CSBondCurve.getBondAmountByKeysCount(keysCount, curve)
             );
     }
 
@@ -576,7 +565,7 @@ contract CSAccounting is
             uint256 required = _sharesByEth(
                 CSBondCurve.getBondAmountByKeysCount(
                     CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
-                    CSBondCurve.getBondCurve(nodeOperatorId)
+                    CSBondCurve.getBondCurveId(nodeOperatorId)
                 ) + CSBondLock.getActualLockedBond(nodeOperatorId)
             );
             return current > required ? current - required : 0;
@@ -610,7 +599,7 @@ contract CSAccounting is
             }
             uint256 bondedKeys = CSBondCurve.getKeysCountByBondAmount(
                 currentBond,
-                CSBondCurve.getBondCurve(nodeOperatorId)
+                CSBondCurve.getBondCurveId(nodeOperatorId)
             );
             return
                 nonWithdrawnKeys > bondedKeys

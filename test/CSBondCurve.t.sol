@@ -266,63 +266,55 @@ contract CSBondCurveTest is Test {
         assertEq(bondCurve.getBondAmountByKeysCount(4, 0), 6 ether);
     }
 
-    function test_getKeysCountByCurveValue_individual() public view {
-        ICSBondCurve.BondCurve memory curve;
+    function test_getKeysCountByCurveValue_individual() public {
         uint256[] memory points = new uint256[](2);
         points[0] = 1 ether;
         points[1] = 2 ether;
-        curve.points = points;
-        curve.trend = 1 ether;
+        uint256 curveId = bondCurve.addBondCurve(points);
 
-        assertEq(bondCurve.getKeysCountByBondAmount(0 ether, curve), 0);
-        assertEq(bondCurve.getKeysCountByBondAmount(1 ether, curve), 1);
-        assertEq(bondCurve.getKeysCountByBondAmount(2 ether, curve), 2);
+        assertEq(bondCurve.getKeysCountByBondAmount(0 ether, curveId), 0);
+        assertEq(bondCurve.getKeysCountByBondAmount(1 ether, curveId), 1);
+        assertEq(bondCurve.getKeysCountByBondAmount(2 ether, curveId), 2);
 
         points[0] = 1.8 ether;
         points[1] = 3.6 ether;
-        curve.points = points;
-        curve.trend = 1.8 ether;
+        curveId = bondCurve.addBondCurve(points);
 
-        assertEq(bondCurve.getKeysCountByBondAmount(0 ether, curve), 0);
-        assertEq(bondCurve.getKeysCountByBondAmount(1.8 ether, curve), 1);
-        assertEq(bondCurve.getKeysCountByBondAmount(5.39 ether, curve), 2);
+        assertEq(bondCurve.getKeysCountByBondAmount(0 ether, curveId), 0);
+        assertEq(bondCurve.getKeysCountByBondAmount(1.8 ether, curveId), 1);
+        assertEq(bondCurve.getKeysCountByBondAmount(5.39 ether, curveId), 2);
     }
 
-    function test_getKeysCountByBondAmount_singlePointCurve() public view {
-        ICSBondCurve.BondCurve memory curve;
+    function test_getKeysCountByBondAmount_singlePointCurve() public {
         uint256[] memory points = new uint256[](1);
         points[0] = 2 ether;
-        curve.points = points;
-        curve.trend = 2 ether;
+        uint256 curveId = bondCurve.addBondCurve(points);
 
-        assertEq(bondCurve.getKeysCountByBondAmount(0 ether, curve), 0);
-        assertEq(bondCurve.getKeysCountByBondAmount(1 ether, curve), 0);
-        assertEq(bondCurve.getKeysCountByBondAmount(2 ether, curve), 1);
-        assertEq(bondCurve.getKeysCountByBondAmount(3 ether, curve), 1);
-        assertEq(bondCurve.getKeysCountByBondAmount(4 ether, curve), 2);
-        assertEq(bondCurve.getKeysCountByBondAmount(5 ether, curve), 2);
+        assertEq(bondCurve.getKeysCountByBondAmount(0 ether, curveId), 0);
+        assertEq(bondCurve.getKeysCountByBondAmount(1 ether, curveId), 0);
+        assertEq(bondCurve.getKeysCountByBondAmount(2 ether, curveId), 1);
+        assertEq(bondCurve.getKeysCountByBondAmount(3 ether, curveId), 1);
+        assertEq(bondCurve.getKeysCountByBondAmount(4 ether, curveId), 2);
+        assertEq(bondCurve.getKeysCountByBondAmount(5 ether, curveId), 2);
     }
 
-    function test_getKeysCountByBondAmount_twoPointsCurve() public view {
-        ICSBondCurve.BondCurve memory curve;
+    function test_getKeysCountByBondAmount_twoPointsCurve() public {
         uint256[] memory points = new uint256[](2);
         points[0] = 2 ether;
         points[1] = 3.5 ether;
-        curve.points = points;
-        curve.trend = 1.5 ether;
+        uint256 curveId = bondCurve.addBondCurve(points);
 
-        assertEq(bondCurve.getKeysCountByBondAmount(0 ether, curve), 0);
-        assertEq(bondCurve.getKeysCountByBondAmount(1 ether, curve), 0);
-        assertEq(bondCurve.getKeysCountByBondAmount(2 ether, curve), 1);
-        assertEq(bondCurve.getKeysCountByBondAmount(3 ether, curve), 1);
-        assertEq(bondCurve.getKeysCountByBondAmount(3.5 ether, curve), 2);
-        assertEq(bondCurve.getKeysCountByBondAmount(4 ether, curve), 2);
-        assertEq(bondCurve.getKeysCountByBondAmount(5 ether, curve), 3);
-        assertEq(bondCurve.getKeysCountByBondAmount(6 ether, curve), 3);
+        assertEq(bondCurve.getKeysCountByBondAmount(0 ether, curveId), 0);
+        assertEq(bondCurve.getKeysCountByBondAmount(1 ether, curveId), 0);
+        assertEq(bondCurve.getKeysCountByBondAmount(2 ether, curveId), 1);
+        assertEq(bondCurve.getKeysCountByBondAmount(3 ether, curveId), 1);
+        assertEq(bondCurve.getKeysCountByBondAmount(3.5 ether, curveId), 2);
+        assertEq(bondCurve.getKeysCountByBondAmount(4 ether, curveId), 2);
+        assertEq(bondCurve.getKeysCountByBondAmount(5 ether, curveId), 3);
+        assertEq(bondCurve.getKeysCountByBondAmount(6 ether, curveId), 3);
     }
 
-    function test_getKeysCountByBondAmount_tenPointsCurve() public view {
-        ICSBondCurve.BondCurve memory curve;
+    function test_getKeysCountByBondAmount_tenPointsCurve() public {
         uint256[] memory points = new uint256[](10);
         points[0] = 1 ether;
         points[1] = 2 ether;
@@ -334,60 +326,57 @@ contract CSBondCurveTest is Test {
         points[7] = 8 ether;
         points[8] = 9 ether;
         points[9] = 10 ether;
-        curve.points = points;
-        curve.trend = 1 ether;
+        uint256 curveId = bondCurve.addBondCurve(points);
 
         for (uint256 i = 0; i < 10; i++) {
-            assertEq(bondCurve.getKeysCountByBondAmount(i * 1 ether, curve), i);
+            assertEq(
+                bondCurve.getKeysCountByBondAmount(i * 1 ether, curveId),
+                i
+            );
             assertEq(
                 bondCurve.getKeysCountByBondAmount(
                     i * 1 ether + 0.5 ether,
-                    curve
+                    curveId
                 ),
                 i
             );
         }
     }
 
-    function test_getBondAmountByKeysCount_individual() public view {
-        ICSBondCurve.BondCurve memory curve;
+    function test_getBondAmountByKeysCount_individual() public {
         uint256[] memory points = new uint256[](2);
         points[0] = 1 ether;
         points[1] = 2 ether;
-        curve.points = points;
-        curve.trend = 1 ether;
+        uint256 curveId = bondCurve.addBondCurve(points);
 
-        assertEq(bondCurve.getBondAmountByKeysCount(0, curve), 0);
-        assertEq(bondCurve.getBondAmountByKeysCount(1, curve), 1 ether);
-        assertEq(bondCurve.getBondAmountByKeysCount(2, curve), 2 ether);
-        assertEq(bondCurve.getBondAmountByKeysCount(3, curve), 3 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(0, curveId), 0);
+        assertEq(bondCurve.getBondAmountByKeysCount(1, curveId), 1 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(2, curveId), 2 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(3, curveId), 3 ether);
 
         points[0] = 1.8 ether;
         points[1] = 3.6 ether;
-        curve.points = points;
-        curve.trend = 1.8 ether;
+        curveId = bondCurve.addBondCurve(points);
 
-        assertEq(bondCurve.getBondAmountByKeysCount(0, curve), 0);
-        assertEq(bondCurve.getBondAmountByKeysCount(1, curve), 1.8 ether);
-        assertEq(bondCurve.getBondAmountByKeysCount(2, curve), 3.6 ether);
-        assertEq(bondCurve.getBondAmountByKeysCount(3, curve), 5.4 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(0, curveId), 0);
+        assertEq(bondCurve.getBondAmountByKeysCount(1, curveId), 1.8 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(2, curveId), 3.6 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(3, curveId), 5.4 ether);
     }
 
-    function test_getBondAmountByKeysCount_bigCurve() public view {
-        ICSBondCurve.BondCurve memory curve;
+    function test_getBondAmountByKeysCount_bigCurve() public {
         uint256[] memory points = new uint256[](4);
         points[0] = 1.5 ether;
         points[1] = 2.5 ether;
         points[2] = 3.5 ether;
         points[3] = 4 ether;
-        curve.points = points;
-        curve.trend = 0.5 ether;
+        uint256 curveId = bondCurve.addBondCurve(points);
 
-        assertEq(bondCurve.getBondAmountByKeysCount(0, curve), 0);
-        assertEq(bondCurve.getBondAmountByKeysCount(1, curve), 1.5 ether);
-        assertEq(bondCurve.getBondAmountByKeysCount(2, curve), 2.5 ether);
-        assertEq(bondCurve.getBondAmountByKeysCount(3, curve), 3.5 ether);
-        assertEq(bondCurve.getBondAmountByKeysCount(4, curve), 4 ether);
-        assertEq(bondCurve.getBondAmountByKeysCount(16, curve), 10 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(0, curveId), 0);
+        assertEq(bondCurve.getBondAmountByKeysCount(1, curveId), 1.5 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(2, curveId), 2.5 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(3, curveId), 3.5 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(4, curveId), 4 ether);
+        assertEq(bondCurve.getBondAmountByKeysCount(16, curveId), 10 ether);
     }
 }
