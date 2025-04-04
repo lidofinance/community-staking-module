@@ -183,6 +183,17 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
             burner.REQUEST_BURN_MY_STETH_ROLE(),
             address(accounting)
         );
+
+        accounting.revokeRole(keccak256("RESET_BOND_CURVE_ROLE"), address(csm));
+        address csmCommittee = accounting.getRoleMember(
+            keccak256("RESET_BOND_CURVE_ROLE"),
+            0
+        );
+        accounting.revokeRole(
+            keccak256("RESET_BOND_CURVE_ROLE"),
+            address(csmCommittee)
+        );
+
         vm.stopBroadcast();
     }
 }

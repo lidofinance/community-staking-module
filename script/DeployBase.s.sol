@@ -404,10 +404,6 @@ abstract contract DeployBase is Script {
                 accounting.SET_BOND_CURVE_ROLE(),
                 address(vettedGate)
             );
-            accounting.grantRole(
-                accounting.RESET_BOND_CURVE_ROLE(),
-                config.setResetBondCurveAddress
-            );
 
             accounting.grantRole(accounting.PENALIZE_ROLE(), address(csm));
             accounting.grantRole(accounting.PENALIZE_ROLE(), address(ejector));
