@@ -672,11 +672,8 @@ contract CSModule is
             // settled amount might be zero either if the lock expired, or the bond is zero
             // so we need to check actual locked bond before to determine if the penalty was settled
             if (lockedBondBefore > 0) {
-                // Bond curve should be reset to default in case of confirmed MEV stealing. See https://hackmd.io/@lido/SygBLW5ja
-                _accounting.resetBondCurve(nodeOperatorId);
-
                 emit ELRewardsStealingPenaltySettled(nodeOperatorId);
-                
+
                 // Nonce should be updated if depositableValidators change
                 _updateDepositableValidatorsCount({
                     nodeOperatorId: nodeOperatorId,
