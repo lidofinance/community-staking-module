@@ -1,4 +1,4 @@
-.snapshots/
+snapshots/
 node_modules/
 
 .env
