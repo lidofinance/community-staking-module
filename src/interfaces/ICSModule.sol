@@ -75,7 +75,6 @@ interface ICSModule is
     error ZeroAccountingAddress();
     error ZeroAdminAddress();
     error ZeroSenderAddress();
-    error ZeroRewardAddress();
     error ZeroParametersRegistryAddress();
 
     event NodeOperatorAdded(
