@@ -70,6 +70,7 @@ contract DeployLocalDevNet is DeployBase {
         config.attestationsWeight = 54; // https://eth2book.info/capella/part2/incentives/rewards/
         config.blocksWeight = 8; // https://eth2book.info/capella/part2/incentives/rewards/
         config.syncWeight = 2; // https://eth2book.info/capella/part2/incentives/rewards/
+        config.defaultAllowedExitDelay = 4 days; // TODO: reconsider
         // VettedGate
         config.vettedGateTreeRoot = vm.envOr(
             "CSM_VETTED_GATE_TREE_ROOT",

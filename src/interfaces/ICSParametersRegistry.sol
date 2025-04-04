@@ -58,6 +58,7 @@ interface ICSParametersRegistry {
         uint256 attestationsWeight;
         uint256 blocksWeight;
         uint256 syncWeight;
+        uint256 defaultAllowedExitDelay;
     }
 
     /// @dev Pivots are the pivotal points after which the next value should be used.
@@ -80,6 +81,7 @@ interface ICSParametersRegistry {
         uint256 syncWeight
     );
     event DefaultQueueConfigSet(uint256 priority, uint256 maxDeposits);
+    event DefaultAllowedExitDelaySet(uint256 delay);
 
     event KeyRemovalChargeSet(
         uint256 indexed curveId,
@@ -122,6 +124,8 @@ interface ICSParametersRegistry {
         uint256 maxDeposits
     );
     event QueueConfigUnset(uint256 indexed curveId);
+    event AllowedExitDelaySet(uint256 indexed curveId, uint256 delay);
+    event AllowedExitDelayUnset(uint256 indexed curveId);
 
     error InvalidRewardShareData();
     error InvalidPerformanceLeewayData();
@@ -209,6 +213,13 @@ interface ICSParametersRegistry {
     function defaultPerformanceCoefficients()
         external
         returns (uint32, uint32, uint32);
+
+    /// @notice set default value for allowed exit delay. Default value is used if a specific value is not set for the curveId
+    /// @param delay value to be set as default for the allowed exit delay
+    function setDefaultAllowedExitDelay(uint256 delay) external;
+
+    /// @notice Get default value for the allowed exit delay
+    function defaultAllowedExitDelay() external returns (uint256);
 
     /// @notice Set key removal charge for the curveId.
     /// @param curveId Curve Id to associate key removal charge with
@@ -418,4 +429,20 @@ interface ICSParametersRegistry {
             uint256 blocksWeight,
             uint256 syncWeight
         );
+
+    /// @notice Set allowed exit delay for the curveId
+    /// @param curveId Curve Id to associate allowed exit delay with
+    /// @param delay allowed exit delay
+    function setAllowedExitDelay(uint256 curveId, uint256 delay) external;
+
+    /// @notice Unset exit timeframe deadline delay for the curveId
+    /// @param curveId Curve Id to unset allowed exit delay for
+    function unsetAllowedExitDelay(uint256 curveId) external;
+
+    /// @notice Get allowed exit delay by the curveId
+    /// @dev `defaultAllowedExitDelay` is returned if the value is not set for the given curveId.
+    /// @param curveId Curve Id to get allowed exit delay for
+    function getAllowedExitDelay(
+        uint256 curveId
+    ) external view returns (uint256 delay);
 }

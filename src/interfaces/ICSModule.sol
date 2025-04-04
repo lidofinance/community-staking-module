@@ -181,9 +181,6 @@ interface ICSModule is
     /// @notice Resume creation of the Node Operators and keys upload
     function resume() external;
 
-    /// @notice Public release mode status
-    function publicRelease() external view returns (bool);
-
     /// @notice Returns the initialized version of the contract
     function getInitializedVersion() external view returns (uint64);
 

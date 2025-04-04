@@ -202,7 +202,8 @@ contract CSParametersRegistryDeploymentTest is
                 badPerformancePenalty: deployParams.badPerformancePenalty,
                 attestationsWeight: deployParams.attestationsWeight,
                 blocksWeight: deployParams.blocksWeight,
-                syncWeight: deployParams.syncWeight
+                syncWeight: deployParams.syncWeight,
+                defaultAllowedExitDelay: deployParams.defaultAllowedExitDelay
             })
         });
     }

@@ -57,6 +57,9 @@ contract CSParametersRegistry is
     mapping(uint256 curveId => MarkedPerformanceCoefficients)
         internal _performanceCoefficients;
 
+    uint256 public defaultAllowedExitDelay;
+    mapping(uint256 => MarkedUint248) internal _allowedExitDelay;
+
     constructor(uint256 queueLowestPriority) {
         QUEUE_LOWEST_PRIORITY = queueLowestPriority;
         QUEUE_LEGACY_PRIORITY = queueLowestPriority - 1;
@@ -91,6 +94,7 @@ contract CSParametersRegistry is
             data.defaultQueuePriority,
             data.defaultQueueMaxDeposits
         );
+        _setDefaultAllowedExitDelay(data.defaultAllowedExitDelay);
 
         __AccessControlEnumerable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -165,6 +169,13 @@ contract CSParametersRegistry is
         uint256 maxDeposits
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setDefaultQueueConfig(priority, maxDeposits);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function setDefaultAllowedExitDelay(
+        uint256 delay
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _setDefaultAllowedExitDelay(delay);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -360,6 +371,23 @@ contract CSParametersRegistry is
     }
 
     /// @inheritdoc ICSParametersRegistry
+    function setAllowedExitDelay(
+        uint256 curveId,
+        uint256 delay
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _allowedExitDelay[curveId] = MarkedUint248(delay.toUint248(), true);
+        emit AllowedExitDelaySet(curveId, delay);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
+    function unsetAllowedExitDelay(
+        uint256 curveId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        delete _allowedExitDelay[curveId];
+        emit AllowedExitDelayUnset(curveId);
+    }
+
+    /// @inheritdoc ICSParametersRegistry
     function getKeyRemovalCharge(
         uint256 curveId
     ) external view returns (uint256 keyRemovalCharge) {
@@ -474,6 +502,13 @@ contract CSParametersRegistry is
         return (config.priority, config.maxDeposits);
     }
 
+    function getAllowedExitDelay(
+        uint256 curveId
+    ) external view returns (uint256 delay) {
+        MarkedUint248 memory data = _allowedExitDelay[curveId];
+        return data.isValue ? data.value : defaultAllowedExitDelay;
+    }
+
     function _setDefaultKeyRemovalCharge(uint256 keyRemovalCharge) internal {
         defaultKeyRemovalCharge = keyRemovalCharge;
         emit DefaultKeyRemovalChargeSet(keyRemovalCharge);
@@ -569,6 +604,11 @@ contract CSParametersRegistry is
         if (maxDeposits == 0) {
             revert ZeroMaxDeposits();
         }
+    }
+
+    function _setDefaultAllowedExitDelay(uint256 delay) internal {
+        defaultAllowedExitDelay = delay;
+        emit DefaultAllowedExitDelaySet(delay);
     }
 
     function _validateStrikesParams(
