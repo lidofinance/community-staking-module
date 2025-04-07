@@ -143,7 +143,7 @@ contract DeployCSVerifierMainnet is DeployCSVerifier {
             gIHistoricalSummariesPrev: HISTORICAL_SUMMARIES_DENEB,
             gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
             firstSupportedSlot: Slot.wrap(8626176), // 269_568 * 32, @see https://github.com/eth-clients/mainnet/blob/main/metadata/config.yaml#L52
-            pivotSlot: Slot.wrap(type(uint64).max), // TODO: Update with Electra slot.
+            pivotSlot: Slot.wrap(11649024), // 364032 * 32 https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7600.md#activation
             chainName: "mainnet"
         });
     }
