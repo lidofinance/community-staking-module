@@ -19,6 +19,7 @@ import { QueueLib, Batch } from "./lib/QueueLib.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
 import { NOAddresses } from "./lib/NOAddresses.sol";
 import { TransientUintUintMap, TransientUintUintMapLib } from "./lib/TransientUintUintMapLib.sol";
+import { MinFirstAllocationStrategy } from "./lib/MinFirstAllocationStrategy.sol";
 
 import { SigningKeys } from "./lib/SigningKeys.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
@@ -819,12 +820,152 @@ contract CSModule is
             return (publicKeys, signatures);
         }
 
+        if (isInCuratedMode()) {
+            _depositDataViaMinFirst(publicKeys, signatures, depositsCount);
+        } else {
+            _depositDataViaQueue(publicKeys, signatures, depositsCount);
+        }
+
+        unchecked {
+            // @dev depositsCount can not overflow in practice due to memory and gas limits
+            _depositableValidatorsCount -= uint64(depositsCount);
+            _totalDepositedValidators += uint64(depositsCount);
+        }
+
+        _incrementModuleNonce();
+    }
+
+    function _depositDataViaMinFirst(
+        bytes memory publicKeys,
+        bytes memory signatures,
+        uint256 depositsCount
+    ) internal {
+        uint256 totalOperators = _nodeOperatorsCount;
+
+        uint256[] memory activeKeysAfterAllocation = new uint256[](
+            totalOperators
+        );
+        uint256[] memory operators = new uint256[](totalOperators);
+
+        // FIXME: Stack too deep, try to extract to a function.
+        {
+            uint256[] memory activeKeysCapacities = new uint256[](
+                totalOperators
+            );
+
+            uint256 bucketIndex;
+
+            for (uint256 noId; noId < totalOperators; ++noId) {
+                NodeOperator storage no = _nodeOperators[noId];
+                uint256 depositableSigningKeysCount = no
+                    .depositableValidatorsCount;
+
+                if (depositableSigningKeysCount > 0) {
+                    uint256 depositedSigningKeysCount = no.totalDepositedKeys;
+
+                    unchecked {
+                        operators[bucketIndex] = noId;
+                        uint256 activeKeysCount = depositedSigningKeysCount -
+                            no.totalExitedKeys;
+                        activeKeysAfterAllocation[
+                            bucketIndex
+                        ] = activeKeysCount;
+                        activeKeysCapacities[bucketIndex] =
+                            activeKeysCount +
+                            depositableSigningKeysCount;
+                        ++bucketIndex;
+                    }
+                }
+            }
+
+            if (bucketIndex == 0) {
+                revert NotEnoughKeys();
+            }
+
+            // NOTE: Shrinking pre-allocated arrays before passing to MinFirstAllocationStrategy.
+            if (bucketIndex < totalOperators) {
+                assembly {
+                    mstore(operators, bucketIndex)
+                    mstore(activeKeysAfterAllocation, bucketIndex)
+                    mstore(activeKeysCapacities, bucketIndex)
+                }
+            }
+
+            uint256 allocatedKeysCount;
+
+            (
+                allocatedKeysCount,
+                activeKeysAfterAllocation
+            ) = MinFirstAllocationStrategy.allocate(
+                activeKeysAfterAllocation,
+                activeKeysCapacities,
+                depositsCount
+            );
+
+            if (allocatedKeysCount < depositsCount) {
+                revert NotEnoughKeys();
+            }
+        }
+
+        uint256 loadedKeysCount;
+
+        for (uint256 i; i < operators.length; ++i) {
+            uint256 noId = operators[i];
+            NodeOperator storage no = _nodeOperators[noId];
+
+            uint256 depositedSigningKeysCount = no.totalDepositedKeys;
+            uint256 keysCount;
+
+            unchecked {
+                // FIXME Check unchecked :)
+                keysCount =
+                    activeKeysAfterAllocation[i] -
+                    no.totalExitedKeys -
+                    depositedSigningKeysCount;
+            }
+
+            if (keysCount == 0) {
+                continue;
+            }
+
+            // solhint-disable-next-line func-named-parameters
+            SigningKeys.loadKeysSigs(
+                noId,
+                depositedSigningKeysCount,
+                keysCount,
+                publicKeys,
+                signatures,
+                loadedKeysCount
+            );
+
+            unchecked {
+                loadedKeysCount += keysCount;
+            }
+
+            uint32 totalDepositedKeys = uint32(
+                depositedSigningKeysCount + keysCount
+            );
+            no.totalDepositedKeys = totalDepositedKeys;
+
+            emit DepositedSigningKeysCountChanged(noId, totalDepositedKeys);
+
+            uint32 newCount = no.depositableValidatorsCount - uint32(keysCount);
+            no.depositableValidatorsCount = newCount;
+            emit DepositableSigningKeysCountChanged(noId, newCount);
+        }
+
+        if (loadedKeysCount != depositsCount) {
+            revert NotEnoughKeys();
+        }
+    }
+
+    function _depositDataViaQueue(
+        bytes memory publicKeys,
+        bytes memory signatures,
+        uint256 depositsCount
+    ) internal {
         uint256 depositsLeft = depositsCount;
         uint256 loadedKeysCount = 0;
-
-        if (isInCuratedMode()) {
-            revert NotImplemented();
-        }
 
         QueueLib.Queue storage queue;
         // Note: The highest priority to start iterations with. Priorities are ordered like 0, 1, 2, ...
@@ -921,14 +1062,6 @@ contract CSModule is
         if (loadedKeysCount != depositsCount) {
             revert NotEnoughKeys();
         }
-
-        unchecked {
-            // @dev depositsCount can not overflow in practice due to memory and gas limits
-            _depositableValidatorsCount -= uint64(depositsCount);
-            _totalDepositedValidators += uint64(depositsCount);
-        }
-
-        _incrementModuleNonce();
     }
 
     /// @inheritdoc ICSModule
