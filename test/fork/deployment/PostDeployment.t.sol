@@ -24,18 +24,30 @@ import { Slot } from "../../../src/lib/Types.sol";
 import { Versioned } from "../../../src/lib/utils/Versioned.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
-    DeployParams private deployParams;
+contract DeploymentBaseTest is Test, Utilities, DeploymentFixtures {
+    DeployParams internal deployParams;
     uint256 adminsCount;
 
     function setUp() public {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment();
-        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
+        DeployParams memory _deployParams = parseDeployParams(
+            env.DEPLOY_CONFIG
+        );
+        for (uint256 i = 0; i < _deployParams.bondCurve.length; i++) {
+            deployParams.bondCurve.push(_deployParams.bondCurve[i]);
+        }
+        for (uint256 i = 0; i < _deployParams.vettedGateBondCurve.length; i++) {
+            deployParams.vettedGateBondCurve.push(
+                _deployParams.vettedGateBondCurve[i]
+            );
+        }
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
+}
 
+contract CSModuleDeploymentTest is DeploymentBaseTest {
     function test_constructor() public view {
         assertEq(csm.getType(), deployParams.moduleType);
         assertEq(address(csm.LIDO_LOCATOR()), deployParams.lidoLocatorAddress);
@@ -103,20 +115,7 @@ contract CSModuleDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 }
 
-contract CSParametersRegistryDeploymentTest is
-    Test,
-    Utilities,
-    DeploymentFixtures
-{
-    DeployParams private deployParams;
-
-    function setUp() public {
-        Env memory env = envVars();
-        vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment();
-        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
-    }
-
+contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
     function test_initializer() public view {
         assertEq(
             parametersRegistry.defaultKeyRemovalCharge(),
@@ -209,18 +208,7 @@ contract CSParametersRegistryDeploymentTest is
     }
 }
 
-contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
-    DeployParams private deployParams;
-    uint256 adminsCount;
-
-    function setUp() public {
-        Env memory env = envVars();
-        vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment();
-        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
-        adminsCount = block.chainid == 1 ? 1 : 2;
-    }
-
+contract CSAccountingDeploymentTest is DeploymentBaseTest {
     function test_constructor() public view {
         assertEq(address(accounting.CSM()), address(csm));
         assertEq(address(accounting.LIDO_LOCATOR()), address(locator));
@@ -247,8 +235,9 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
 
     function test_initializer() public view {
         assertEq(
-            accounting.getCurveInfo(accounting.DEFAULT_BOND_CURVE_ID()).points,
-            deployParams.bondCurve
+            // TODO: check properly
+            accounting.getCurveInfo(accounting.DEFAULT_BOND_CURVE_ID()).length,
+            deployParams.bondCurve.length
         );
         assertEq(address(accounting.feeDistributor()), address(feeDistributor));
         assertEq(accounting.getBondLockPeriod(), deployParams.bondLockPeriod);
@@ -332,18 +321,7 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 }
 
-contract CSFeeDistributorDeploymentTest is Test, Utilities, DeploymentFixtures {
-    DeployParams private deployParams;
-    uint256 adminsCount;
-
-    function setUp() public {
-        Env memory env = envVars();
-        vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment();
-        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
-        adminsCount = block.chainid == 1 ? 1 : 2;
-    }
-
+contract CSFeeDistributorDeploymentTest is DeploymentBaseTest {
     function test_constructor() public view {
         assertEq(address(feeDistributor.STETH()), address(lido));
         assertEq(feeDistributor.ACCOUNTING(), address(accounting));
@@ -390,18 +368,7 @@ contract CSFeeDistributorDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 }
 
-contract CSStrikesDeploymentTest is Test, Utilities, DeploymentFixtures {
-    DeployParams private deployParams;
-    uint256 adminsCount;
-
-    function setUp() public {
-        Env memory env = envVars();
-        vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment();
-        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
-        adminsCount = block.chainid == 1 ? 1 : 2;
-    }
-
+contract CSStrikesDeploymentTest is DeploymentBaseTest {
     function test_constructor() public view {
         assertEq(address(strikes.ORACLE()), address(oracle));
         assertEq(address(strikes.MODULE()), address(csm));
@@ -409,18 +376,7 @@ contract CSStrikesDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 }
 
-contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
-    DeployParams private deployParams;
-    uint256 adminsCount;
-
-    function setUp() public {
-        Env memory env = envVars();
-        vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment();
-        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
-        adminsCount = block.chainid == 1 ? 1 : 2;
-    }
-
+contract CSFeeOracleDeploymentTest is DeploymentBaseTest {
     function test_constructor() public view {
         assertEq(oracle.SECONDS_PER_SLOT(), deployParams.secondsPerSlot);
         assertEq(oracle.GENESIS_TIME(), deployParams.clGenesisTime);
@@ -478,18 +434,7 @@ contract CSFeeOracleDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 }
 
-contract HashConsensusDeploymentTest is Test, Utilities, DeploymentFixtures {
-    DeployParams private deployParams;
-    uint256 adminsCount;
-
-    function setUp() public {
-        Env memory env = envVars();
-        vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment();
-        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
-        adminsCount = block.chainid == 1 ? 1 : 2;
-    }
-
+contract HashConsensusDeploymentTest is DeploymentBaseTest {
     function test_constructor() public view {
         (
             uint256 slotsPerEpoch,
@@ -554,16 +499,7 @@ contract HashConsensusDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 }
 
-contract VettedGateDeploymentTest is Test, Utilities, DeploymentFixtures {
-    DeployParams private deployParams;
-
-    function setUp() public {
-        Env memory env = envVars();
-        vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment();
-        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
-    }
-
+contract VettedGateDeploymentTest is DeploymentBaseTest {
     function test_constructor() public view {
         assertTrue(
             vettedGate.hasRole(
@@ -573,8 +509,9 @@ contract VettedGateDeploymentTest is Test, Utilities, DeploymentFixtures {
         );
         assertEq(vettedGate.treeRoot(), deployParams.vettedGateTreeRoot);
         assertEq(
-            accounting.getCurveInfo(vettedGate.curveId()).points,
-            deployParams.vettedGateBondCurve
+            // TODO: check properly
+            accounting.getCurveInfo(vettedGate.curveId()).length,
+            deployParams.vettedGateBondCurve.length
         );
         assertEq(address(vettedGate.CSM()), address(csm));
         assertEq(address(vettedGate.ACCOUNTING()), address(accounting));
@@ -586,16 +523,7 @@ contract VettedGateDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 }
 
-contract CSVerifierDeploymentTest is Test, Utilities, DeploymentFixtures {
-    DeployParams private deployParams;
-
-    function setUp() public {
-        Env memory env = envVars();
-        vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment();
-        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
-    }
-
+contract CSVerifierDeploymentTest is DeploymentBaseTest {
     function test_constructor() public view {
         assertEq(verifier.WITHDRAWAL_ADDRESS(), locator.withdrawalVault());
         assertEq(address(verifier.MODULE()), address(csm));
@@ -641,16 +569,7 @@ contract CSVerifierDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 }
 
-contract CSEjectorDeploymentTest is Test, Utilities, DeploymentFixtures {
-    DeployParams private deployParams;
-
-    function setUp() public {
-        Env memory env = envVars();
-        vm.createSelectFork(env.RPC_URL);
-        initializeFromDeployment();
-        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
-    }
-
+contract CSEjectorDeploymentTest is DeploymentBaseTest {
     function test_constructor() public view {
         assertEq(address(ejector.MODULE()), address(csm));
         assertEq(address(ejector.ACCOUNTING()), address(accounting));

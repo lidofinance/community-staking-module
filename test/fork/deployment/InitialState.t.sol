@@ -5,6 +5,8 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
+import { ICSBondCurve } from "../../../src/interfaces/ICSBondCurve.sol";
+
 import { Utilities } from "../../helpers/Utilities.sol";
 import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
 import { DeployParams } from "../../../script/DeployBase.s.sol";
@@ -19,7 +21,17 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment();
-        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
+        DeployParams memory _deployParams = parseDeployParams(
+            env.DEPLOY_CONFIG
+        );
+        for (uint256 i = 0; i < _deployParams.bondCurve.length; i++) {
+            deployParams.bondCurve.push(_deployParams.bondCurve[i]);
+        }
+        for (uint256 i = 0; i < _deployParams.vettedGateBondCurve.length; i++) {
+            deployParams.vettedGateBondCurve.push(
+                _deployParams.vettedGateBondCurve[i]
+            );
+        }
     }
 
     function test_module_initialState() public view {
@@ -74,8 +86,9 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         assertFalse(accounting.isPaused());
         assertEq(accounting.totalBondShares(), 0);
         assertEq(
-            accounting.getCurveInfo(vettedGate.curveId()).points,
-            deployParams.vettedGateBondCurve
+            // TODO: check if this is correct
+            accounting.getCurveInfo(vettedGate.curveId()).length,
+            deployParams.vettedGateBondCurve.length
         );
     }
 

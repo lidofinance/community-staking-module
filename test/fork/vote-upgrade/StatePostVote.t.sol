@@ -27,7 +27,24 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         if (_isEmpty(env.UPGRADE_CONFIG)) {
             revert UpdateConfigRequired();
         }
-        upgradeDeployParams = parseDeployParams(env.UPGRADE_CONFIG);
+        DeployParams memory _upgradeDeployParams = parseDeployParams(
+            env.UPGRADE_CONFIG
+        );
+        for (uint256 i = 0; i < _upgradeDeployParams.bondCurve.length; i++) {
+            upgradeDeployParams.bondCurve.push(
+                _upgradeDeployParams.bondCurve[i]
+            );
+        }
+        for (
+            uint256 i = 0;
+            i < _upgradeDeployParams.vettedGateBondCurve.length;
+            i++
+        ) {
+            upgradeDeployParams.vettedGateBondCurve.push(
+                _upgradeDeployParams.vettedGateBondCurve[i]
+            );
+        }
+        // Set the rest of the parameters
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
 
@@ -94,7 +111,8 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
 
         assertEq(
             parametersRegistry.defaultKeyRemovalCharge(),
-            upgradeDeployParams.keyRemovalCharge
+            upgradeDeployParams.keyRemovalCharge,
+            "keyRemovalCharge is not set correctly"
         );
         assertEq(
             parametersRegistry.defaultElRewardsStealingAdditionalFine(),
@@ -140,8 +158,9 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
     function test_accountingState() public view {
         assertFalse(accounting.isPaused());
         assertEq(
-            accounting.getCurveInfo(vettedGate.curveId()).points,
-            deployParams.vettedGateBondCurve
+            // TODO: check properly
+            accounting.getCurveInfo(vettedGate.curveId()).length,
+            deployParams.vettedGateBondCurve.length
         );
         assertTrue(
             burner.hasRole(

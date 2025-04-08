@@ -5,6 +5,7 @@ pragma solidity 0.8.24;
 
 import { DeployBase } from "./DeployBase.s.sol";
 import { GIndicies } from "./constants/GIndicies.sol";
+import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
 contract DeployMainnet is DeployBase {
     constructor() DeployBase("mainnet", 1) {
@@ -41,10 +42,19 @@ contract DeployMainnet is DeployBase {
         config.verifierSupportedEpoch = 269568;
         // Accounting
         config.maxCurveLength = 10;
-        config.bondCurve = new uint256[](2);
         // 2.4 -> 1.3
-        config.bondCurve[0] = 2.4 ether;
-        config.bondCurve[1] = 3.7 ether;
+        config.bondCurve.push(
+            ICSBondCurve.BondCurveIntervalCalldata({
+                fromKeysCount: 1,
+                trend: 2.4 ether
+            })
+        );
+        config.bondCurve.push(
+            ICSBondCurve.BondCurveIntervalCalldata({
+                fromKeysCount: 2,
+                trend: 1.3 ether
+            })
+        );
 
         config.minBondLockPeriod = 4 weeks;
         config.maxBondLockPeriod = 365 days;
@@ -76,10 +86,19 @@ contract DeployMainnet is DeployBase {
         // VettedGate
         config
             .vettedGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
-        config.vettedGateBondCurve = new uint256[](2);
         // 1.5 -> 1.3
-        config.vettedGateBondCurve[0] = 1.5 ether;
-        config.vettedGateBondCurve[1] = 2.8 ether;
+        config.vettedGateBondCurve.push(
+            ICSBondCurve.BondCurveIntervalCalldata({
+                fromKeysCount: 1,
+                trend: 1.5 ether
+            })
+        );
+        config.vettedGateBondCurve.push(
+            ICSBondCurve.BondCurveIntervalCalldata({
+                fromKeysCount: 2,
+                trend: 1.3 ether
+            })
+        );
 
         // GateSeal
         config.gateSealFactory = 0x6C82877cAC5a7A739f16Ca0A89c0A328B8764A24;

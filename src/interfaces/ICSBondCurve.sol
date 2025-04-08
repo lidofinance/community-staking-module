@@ -38,13 +38,32 @@ interface ICSBondCurve {
     ///       |----------|----------|----------|----------|----> Keys Count
     ///       |          1          2          3          i
     ///
+
+    /// @dev DEPRECATED. For backward compatibility in migration only.
     struct BondCurve {
         uint256[] points;
         uint256 trend;
     }
 
-    event BondCurveAdded(uint256 indexed curveId, uint256[] bondCurve);
-    event BondCurveUpdated(uint256 indexed curveId, uint256[] bondCurve);
+    struct BondCurveIntervalCalldata {
+        uint256 fromKeysCount;
+        uint256 trend;
+    }
+
+    struct BondCurveInterval {
+        uint256 fromKeysCount;
+        uint256 fromBond;
+        uint256 trend;
+    }
+
+    event BondCurveAdded(
+        uint256 indexed curveId,
+        BondCurveIntervalCalldata[] bondCurveIntervals
+    );
+    event BondCurveUpdated(
+        uint256 indexed curveId,
+        BondCurveIntervalCalldata[] bondCurveIntervals
+    );
     event BondCurveSet(uint256 indexed nodeOperatorId, uint256 curveId);
 
     error InvalidBondCurveLength();
@@ -69,14 +88,14 @@ interface ICSBondCurve {
     /// @dev Reverts if `curveId` is invalid
     function getCurveInfo(
         uint256 curveId
-    ) external view returns (BondCurve memory);
+    ) external view returns (BondCurveInterval[] memory);
 
     /// @notice Get bond curve for the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator
     /// @return Bond curve
     function getBondCurve(
         uint256 nodeOperatorId
-    ) external view returns (BondCurve memory);
+    ) external view returns (BondCurveInterval[] memory);
 
     /// @notice Get bond curve ID for the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator

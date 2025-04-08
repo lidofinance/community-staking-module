@@ -23,6 +23,7 @@ import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { IGateSealFactory } from "../src/interfaces/IGateSealFactory.sol";
 import { BaseOracle } from "../src/lib/base-oracle/BaseOracle.sol";
 import { ICSParametersRegistry } from "../src/interfaces/ICSParametersRegistry.sol";
+import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
@@ -100,7 +101,9 @@ struct DeployParams {
     uint256 verifierSupportedEpoch;
     // Accounting
     uint256 maxCurveLength;
-    uint256[] bondCurve;
+    // FIXME: Use some primitives instead of array of structs because of
+    //       `UnimplementedFeatureError: Copying of type struct memory to storage not yet supported`
+    ICSBondCurve.BondCurveIntervalCalldata[] bondCurve;
     uint256 minBondLockPeriod;
     uint256 maxBondLockPeriod;
     uint256 bondLockPeriod;
@@ -128,7 +131,7 @@ struct DeployParams {
     uint256 defaultAllowedExitDelay;
     // VettedGate
     bytes32 vettedGateTreeRoot;
-    uint256[] vettedGateBondCurve;
+    ICSBondCurve.BondCurveIntervalCalldata[] vettedGateBondCurve;
     // GateSeal
     address gateSealFactory;
     address sealingCommittee;
