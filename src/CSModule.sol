@@ -44,6 +44,8 @@ contract CSModule is
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
     bytes32 public constant CREATE_NODE_OPERATOR_ROLE =
         keccak256("CREATE_NODE_OPERATOR_ROLE");
+    bytes32 public constant MANAGE_NODE_OPERATORS_ROLE =
+        keccak256("MANAGE_NODE_OPERATORS_ROLE");
 
     uint256 private constant DEPOSIT_SIZE = 32 ether;
     // @dev see IStakingModule.sol
@@ -314,6 +316,7 @@ contract CSModule is
         uint256 nodeOperatorId,
         address proposedAddress
     ) external {
+        _onlyNonCuratedMode();
         NOAddresses.proposeNodeOperatorRewardAddressChange(
             _nodeOperators,
             nodeOperatorId,
@@ -325,6 +328,7 @@ contract CSModule is
     function confirmNodeOperatorRewardAddressChange(
         uint256 nodeOperatorId
     ) external {
+        _onlyNonCuratedMode();
         NOAddresses.confirmNodeOperatorRewardAddressChange(
             _nodeOperators,
             nodeOperatorId
@@ -344,10 +348,14 @@ contract CSModule is
         uint256 nodeOperatorId,
         address newAddress
     ) external {
+        if (isInCuratedMode()) {
+            _checkRole(MANAGE_NODE_OPERATORS_ROLE);
+        }
         NOAddresses.changeNodeOperatorRewardAddress(
             _nodeOperators,
             nodeOperatorId,
-            newAddress
+            newAddress,
+            isInCuratedMode()
         );
     }
 
@@ -1507,6 +1515,12 @@ contract CSModule is
 
     function _onlyRecoverer() internal view override {
         _checkRole(RECOVERER_ROLE);
+    }
+
+    function _onlyNonCuratedMode() internal view {
+        if (isInCuratedMode()) {
+            revert NotImplemented();
+        }
     }
 
     /// @dev Both nodeOperatorId and keyIndex are limited to uint64 by the contract
