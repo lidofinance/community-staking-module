@@ -130,11 +130,14 @@ contract CSModule is
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
         STETH = IStETH(LIDO_LOCATOR.lido());
         PARAMETERS_REGISTRY = ICSParametersRegistry(parametersRegistry);
-        QUEUE_LOWEST_PRIORITY = PARAMETERS_REGISTRY.QUEUE_LOWEST_PRIORITY();
-        QUEUE_LEGACY_PRIORITY = PARAMETERS_REGISTRY.QUEUE_LEGACY_PRIORITY();
         ACCOUNTING = ICSAccounting(_accounting);
         EXIT_PENALTIES = ICSExitPenalties(exitPenalties);
         FEE_DISTRIBUTOR = address(ACCOUNTING.feeDistributor());
+
+        if (!isInCuratedMode()) {
+            QUEUE_LOWEST_PRIORITY = PARAMETERS_REGISTRY.QUEUE_LOWEST_PRIORITY();
+            QUEUE_LEGACY_PRIORITY = PARAMETERS_REGISTRY.QUEUE_LEGACY_PRIORITY();
+        }
 
         _disableInitializers();
     }
@@ -585,6 +588,10 @@ contract CSModule is
 
     /// @inheritdoc ICSModule
     function migrateToPriorityQueue(uint256 nodeOperatorId) external {
+        if (isInCuratedMode()) {
+            revert NotImplemented();
+        }
+
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         if (no.usedPriorityQueue) {
@@ -878,6 +885,10 @@ contract CSModule is
         uint256 depositsLeft = depositsCount;
         uint256 loadedKeysCount = 0;
 
+        if (isInCuratedMode()) {
+            revert NotImplemented();
+        }
+
         QueueLib.Queue storage queue;
         // Note: The highest priority to start iterations with. Priorities are ordered like 0, 1, 2, ...
         uint256 priority = 0;
@@ -988,6 +999,10 @@ contract CSModule is
     function cleanDepositQueue(
         uint256 maxItems
     ) external returns (uint256 removed, uint256 lastRemovedAtDepth) {
+        if (isInCuratedMode()) {
+            revert NotImplemented();
+        }
+
         removed = 0;
         lastRemovedAtDepth = 0;
 
@@ -1322,6 +1337,11 @@ contract CSModule is
         return ACCOUNTING;
     }
 
+    /// @inheritdoc ICSModule
+    function isInCuratedMode() public pure virtual returns (bool) {
+        return false;
+    }
+
     function _incrementModuleNonce() internal {
         unchecked {
             emit NonceChanged(++_nonce);
@@ -1470,7 +1490,9 @@ contract CSModule is
             if (incrementNonceIfUpdated) {
                 _incrementModuleNonce();
             }
-            _enqueueNodeOperatorKeys(nodeOperatorId);
+            if (!isInCuratedMode()) {
+                _enqueueNodeOperatorKeys(nodeOperatorId);
+            }
         }
     }
 

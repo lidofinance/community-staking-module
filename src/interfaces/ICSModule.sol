@@ -79,6 +79,8 @@ interface ICSModule is
     error ZeroSenderAddress();
     error ZeroParametersRegistryAddress();
 
+    error NotImplemented();
+
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
         address indexed managerAddress,
@@ -183,6 +185,9 @@ interface ICSModule is
     function QUEUE_LOWEST_PRIORITY() external view returns (uint256);
 
     function QUEUE_LEGACY_PRIORITY() external view returns (uint256);
+
+    /// @notice Returns whether the module is deployed in the 'curated' mode of operation.
+    function isInCuratedMode() external pure returns (bool);
 
     /// @notice Returns the address of the accounting contract
     function accounting() external view returns (ICSAccounting);
