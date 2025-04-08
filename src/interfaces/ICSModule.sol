@@ -77,6 +77,8 @@ interface ICSModule is
     error ZeroSenderAddress();
     error ZeroParametersRegistryAddress();
 
+    error NotImplemented();
+
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
         address indexed managerAddress,
@@ -168,6 +170,9 @@ interface ICSModule is
         external
         view
         returns (ICSParametersRegistry);
+
+    /// @notice Returns whether the module is deployed in the 'curated' mode of operation.
+    function isInCuratedMode() external pure returns (bool);
 
     /// @notice Returns the address of the accounting contract
     function accounting() external view returns (ICSAccounting);
