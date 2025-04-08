@@ -38,18 +38,8 @@ contract DeployLocalDevNet is DeployBase {
         // Accounting
         config.maxCurveLength = 10;
         // 2.4 -> 1.3
-        config.bondCurve.push(
-            ICSBondCurve.BondCurveIntervalCalldata({
-                fromKeysCount: 1,
-                trend: 2.4 ether
-            })
-        );
-        config.bondCurve.push(
-            ICSBondCurve.BondCurveIntervalCalldata({
-                fromKeysCount: 2,
-                trend: 1.3 ether
-            })
-        );
+        config.bondCurve.push([1, 2.4 ether]);
+        config.bondCurve.push([2, 1.3 ether]);
 
         config.minBondLockPeriod = 1 days;
         config.maxBondLockPeriod = 7 days;
@@ -87,18 +77,8 @@ contract DeployLocalDevNet is DeployBase {
             bytes32(uint256(0xdeadbeef))
         );
         // 1.5 -> 1.3
-        config.vettedGateBondCurve.push(
-            ICSBondCurve.BondCurveIntervalCalldata({
-                fromKeysCount: 1,
-                trend: 1.5 ether
-            })
-        );
-        config.vettedGateBondCurve.push(
-            ICSBondCurve.BondCurveIntervalCalldata({
-                fromKeysCount: 2,
-                trend: 1.3 ether
-            })
-        );
+        config.vettedGateBondCurve.push([1, 1.5 ether]);
+        config.vettedGateBondCurve.push([2, 1.3 ether]);
 
         // GateSeal
         config.gateSealFactory = 0x0000000000000000000000000000000000000000;

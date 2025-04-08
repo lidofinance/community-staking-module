@@ -32,23 +32,7 @@ contract V2UpgradeTestBase is Test, Utilities, DeploymentFixtures {
         if (_isEmpty(env.UPGRADE_CONFIG)) {
             revert UpdateConfigRequired();
         }
-        DeployParams memory _upgradeDeployParams = parseDeployParams(
-            env.UPGRADE_CONFIG
-        );
-        for (uint256 i = 0; i < _upgradeDeployParams.bondCurve.length; i++) {
-            upgradeDeployParams.bondCurve.push(
-                _upgradeDeployParams.bondCurve[i]
-            );
-        }
-        for (
-            uint256 i = 0;
-            i < _upgradeDeployParams.vettedGateBondCurve.length;
-            i++
-        ) {
-            upgradeDeployParams.vettedGateBondCurve.push(
-                _upgradeDeployParams.vettedGateBondCurve[i]
-            );
-        }
+        upgradeDeployParams = parseDeployParams(env.UPGRADE_CONFIG);
     }
 }
 

@@ -101,9 +101,7 @@ struct DeployParams {
     uint256 verifierSupportedEpoch;
     // Accounting
     uint256 maxCurveLength;
-    // FIXME: Use some primitives instead of array of structs because of
-    //       `UnimplementedFeatureError: Copying of type struct memory to storage not yet supported`
-    ICSBondCurve.BondCurveIntervalCalldata[] bondCurve;
+    uint256[2][] bondCurve;
     uint256 minBondLockPeriod;
     uint256 maxBondLockPeriod;
     uint256 bondLockPeriod;
@@ -131,7 +129,7 @@ struct DeployParams {
     uint256 defaultAllowedExitDelay;
     // VettedGate
     bytes32 vettedGateTreeRoot;
-    ICSBondCurve.BondCurveIntervalCalldata[] vettedGateBondCurve;
+    uint256[2][] vettedGateBondCurve;
     // GateSeal
     address gateSealFactory;
     address sealingCommittee;
@@ -293,8 +291,19 @@ abstract contract DeployBase is Script {
                 })
             });
 
+            ICSBondCurve.BondCurveIntervalCalldata[]
+                memory bondCurve = new ICSBondCurve.BondCurveIntervalCalldata[](
+                    config.bondCurve.length
+                );
+            for (uint256 i = 0; i < config.bondCurve.length; i++) {
+                bondCurve[i] = ICSBondCurve.BondCurveIntervalCalldata({
+                    fromKeysCount: config.bondCurve[i][0],
+                    trend: config.bondCurve[i][1]
+                });
+            }
+
             accounting.initialize({
-                bondCurve: config.bondCurve,
+                bondCurve: bondCurve,
                 admin: deployer,
                 _feeDistributor: address(feeDistributor),
                 bondLockPeriod: config.bondLockPeriod,
@@ -305,8 +314,21 @@ abstract contract DeployBase is Script {
                 accounting.MANAGE_BOND_CURVES_ROLE(),
                 address(deployer)
             );
+
+            ICSBondCurve.BondCurveIntervalCalldata[]
+                memory vettedGateBondCurve = new ICSBondCurve.BondCurveIntervalCalldata[](
+                    config.vettedGateBondCurve.length
+                );
+            for (uint256 i = 0; i < config.vettedGateBondCurve.length; i++) {
+                vettedGateBondCurve[i] = ICSBondCurve
+                    .BondCurveIntervalCalldata({
+                        fromKeysCount: config.vettedGateBondCurve[i][0],
+                        trend: config.vettedGateBondCurve[i][1]
+                    });
+            }
+
             uint256 identifiedSolosCurve = accounting.addBondCurve(
-                config.vettedGateBondCurve
+                vettedGateBondCurve
             );
             accounting.revokeRole(
                 accounting.MANAGE_BOND_CURVES_ROLE(),

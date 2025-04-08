@@ -18,6 +18,7 @@ import { CSFeeDistributor } from "../../../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../../../src/CSFeeOracle.sol";
 import { IWithdrawalQueue } from "../../../src/interfaces/IWithdrawalQueue.sol";
 import { ICSParametersRegistry } from "../../../src/interfaces/ICSParametersRegistry.sol";
+import { ICSBondCurve } from "../../../src/interfaces/ICSBondCurve.sol";
 import { BaseOracle } from "../../../src/lib/base-oracle/BaseOracle.sol";
 import { GIndex } from "../../../src/lib/GIndex.sol";
 import { Slot } from "../../../src/lib/Types.sol";
@@ -32,17 +33,7 @@ contract DeploymentBaseTest is Test, Utilities, DeploymentFixtures {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment();
-        DeployParams memory _deployParams = parseDeployParams(
-            env.DEPLOY_CONFIG
-        );
-        for (uint256 i = 0; i < _deployParams.bondCurve.length; i++) {
-            deployParams.bondCurve.push(_deployParams.bondCurve[i]);
-        }
-        for (uint256 i = 0; i < _deployParams.vettedGateBondCurve.length; i++) {
-            deployParams.vettedGateBondCurve.push(
-                _deployParams.vettedGateBondCurve[i]
-            );
-        }
+        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
         adminsCount = block.chainid == 1 ? 1 : 2;
     }
 }
@@ -311,8 +302,20 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             proxy.proxy__getImplementation()
         );
         vm.expectRevert(Initializable.InvalidInitialization.selector);
+
+        ICSBondCurve.BondCurveIntervalCalldata[]
+            memory bondCurve = new ICSBondCurve.BondCurveIntervalCalldata[](
+                deployParams.bondCurve.length
+            );
+        for (uint256 i = 0; i < deployParams.bondCurve.length; i++) {
+            bondCurve[i] = ICSBondCurve.BondCurveIntervalCalldata({
+                fromKeysCount: deployParams.bondCurve[i][0],
+                trend: deployParams.bondCurve[i][1]
+            });
+        }
+
         accountingImpl.initialize({
-            bondCurve: deployParams.bondCurve,
+            bondCurve: bondCurve,
             admin: address(deployParams.aragonAgent),
             _feeDistributor: address(feeDistributor),
             bondLockPeriod: deployParams.bondLockPeriod,

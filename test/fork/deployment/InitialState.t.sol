@@ -21,17 +21,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         Env memory env = envVars();
         vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment();
-        DeployParams memory _deployParams = parseDeployParams(
-            env.DEPLOY_CONFIG
-        );
-        for (uint256 i = 0; i < _deployParams.bondCurve.length; i++) {
-            deployParams.bondCurve.push(_deployParams.bondCurve[i]);
-        }
-        for (uint256 i = 0; i < _deployParams.vettedGateBondCurve.length; i++) {
-            deployParams.vettedGateBondCurve.push(
-                _deployParams.vettedGateBondCurve[i]
-            );
-        }
+        deployParams = parseDeployParams(env.DEPLOY_CONFIG);
     }
 
     function test_module_initialState() public view {
