@@ -143,6 +143,7 @@ interface ICSParametersRegistry {
     error ZeroMaxDeposits();
     error ZeroAdminAddress();
     error QueueCannotBeUsed();
+    error InvalidExitDelayPenalty();
 
     /// @notice The lowest priority a deposit queue can be assigned with.
     function QUEUE_LOWEST_PRIORITY() external view returns (uint256);
@@ -463,6 +464,7 @@ interface ICSParametersRegistry {
     ) external view returns (uint256 delay);
 
     /// @notice Set exit delay penalty for the curveId
+    /// @dev cannot be zero
     /// @param curveId Curve Id to associate exit delay penalty with
     /// @param penalty exit delay penalty
     function setExitDelayPenalty(uint256 curveId, uint256 penalty) external;

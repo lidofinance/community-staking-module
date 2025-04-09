@@ -10,7 +10,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { IStakingModule } from "./interfaces/IStakingModule.sol";
 import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
-import { ICSModule } from "./interfaces/ICSModule.sol";
+import { ICSModule, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
 import { ICSEjector } from "./interfaces/ICSEjector.sol";
 
 contract CSEjector is

@@ -49,6 +49,8 @@ contract CSModule is
     // @dev see IStakingModule.sol
     uint8 private constant FORCED_TARGET_LIMIT_MODE_ID = 2;
 
+    uint8 private constant DIRECT_EXIT_TYPE_ID = 0;
+
     bytes32 private immutable MODULE_TYPE;
     ILidoLocator public immutable LIDO_LOCATOR;
     IStETH public immutable STETH;
@@ -775,6 +777,7 @@ contract CSModule is
                     accounting.chargeFee(withdrawalInfo.nodeOperatorId, fee);
                     emit WithdrawalRequestFeeCharged(
                         withdrawalInfo.nodeOperatorId,
+                        pubkey,
                         fee
                     );
                     exitPenaltyInfo.withdrawalRequestFee = 0;
@@ -822,27 +825,28 @@ contract CSModule is
         _onlyExistingNodeOperator(nodeOperatorId);
         uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
 
-        uint256 allowedExitDelay = PARAMETERS_REGISTRY.getAllowedExitDelay(
-            curveId
-        );
-        if (eligibleToExitInSec < allowedExitDelay) {
-            revert InvalidExitDelay();
-        }
-
         bytes32 noPublicKeyPacked = _nodeOperatorPublicKeyPacked(
             nodeOperatorId,
             publicKey
         );
-        if (_delayedExitPenaltyInfo[noPublicKeyPacked].penaltyValue != 0) {
-            revert ExitDelayAlreadyReported();
-        }
-        _delayedExitPenaltyInfo[noPublicKeyPacked]
-            .penaltyValue = PARAMETERS_REGISTRY.getExitDelayPenalty(curveId);
-        emit ValidatorExitDelayReported(
-            nodeOperatorId,
-            eligibleToExitInSec - allowedExitDelay,
-            publicKey
+        uint256 allowedExitDelay = PARAMETERS_REGISTRY.getAllowedExitDelay(
+            curveId
         );
+        if (eligibleToExitInSec < allowedExitDelay) {
+            revert ValidatorExitDelayNotApplicable();
+        }
+        // it is allowed to send the same report multiple times. Penalty is applied only once
+        if (_delayedExitPenaltyInfo[noPublicKeyPacked].penaltyValue == 0) {
+            _delayedExitPenaltyInfo[noPublicKeyPacked]
+                .penaltyValue = PARAMETERS_REGISTRY.getExitDelayPenalty(
+                curveId
+            );
+            emit ValidatorExitDelayReported(
+                nodeOperatorId,
+                proofSlotTimestamp,
+                publicKey
+            );
+        }
     }
 
     /// @inheritdoc IStakingModule
@@ -855,8 +859,7 @@ contract CSModule is
         _onlyExistingNodeOperator(nodeOperatorId);
 
         /// assuming exit type == 0 is an exit paid by the node operator
-        /// TODO make it const
-        if (exitType != 0) {
+        if (exitType != DIRECT_EXIT_TYPE_ID) {
             bytes32 noPublicKeyPacked = _nodeOperatorPublicKeyPacked(
                 nodeOperatorId,
                 publicKey
@@ -864,7 +867,16 @@ contract CSModule is
             ExitPenaltyInfo storage exitPenaltyInfo = _delayedExitPenaltyInfo[
                 noPublicKeyPacked
             ];
-            exitPenaltyInfo.withdrawalRequestFee = withdrawalRequestPaidFee;
+            // don't update the fee if it was already set to prevent hypothetical manipulations
+            // with double reporting to get lower/higher fee
+            if (exitPenaltyInfo.withdrawalRequestFee == 0) {
+                exitPenaltyInfo.withdrawalRequestFee = withdrawalRequestPaidFee;
+                emit WithdrawalRequestFeeCompensationReported(
+                    nodeOperatorId,
+                    publicKey,
+                    withdrawalRequestPaidFee
+                );
+            }
         }
 
         emit ValidatorExitTriggered(
@@ -1291,26 +1303,42 @@ contract CSModule is
     /// @inheritdoc IStakingModule
     function isValidatorExitDelayPenaltyApplicable(
         uint256 nodeOperatorId,
-        uint256 proofSlotTimestamp,
+        uint256 /* proofSlotTimestamp */,
         bytes calldata publicKey,
         uint256 eligibleToExitInSec
     ) external view returns (bool) {
+        _onlyExistingNodeOperator(nodeOperatorId);
         uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
         uint256 allowedExitDelay = PARAMETERS_REGISTRY.getAllowedExitDelay(
             curveId
         );
-        if (eligibleToExitInSec < allowedExitDelay) return false;
         bytes32 noPublicKeyPacked = _nodeOperatorPublicKeyPacked(
             nodeOperatorId,
             publicKey
         );
+        if (eligibleToExitInSec < allowedExitDelay) {
+            return false;
+        }
         return _delayedExitPenaltyInfo[noPublicKeyPacked].penaltyValue == 0;
+    }
+
+    /// @inheritdoc ICSModule
+    function getDelayedExitPenaltyInfo(
+        uint256 nodeOperatorId,
+        bytes calldata publicKey
+    ) external view returns (ExitPenaltyInfo memory) {
+        bytes32 noPublicKeyPacked = _nodeOperatorPublicKeyPacked(
+            nodeOperatorId,
+            publicKey
+        );
+        return _delayedExitPenaltyInfo[noPublicKeyPacked];
     }
 
     /// @inheritdoc IStakingModule
     function exitDeadlineThreshold(
         uint256 nodeOperatorId
     ) external view returns (uint256) {
+        _onlyExistingNodeOperator(nodeOperatorId);
         return
             PARAMETERS_REGISTRY.getAllowedExitDelay(
                 accounting.getBondCurveId(nodeOperatorId)
