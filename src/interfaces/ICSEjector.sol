@@ -16,6 +16,7 @@ interface ICSEjector is IAssetRecovererLib {
     error ZeroModuleAddress();
     error NotEnoughStrikesToEject();
     error NodeOperatorDoesNotExist();
+    error SenderIsNotEligible();
 
     event EjectionSubmitted(
         uint256 indexed nodeOperatorId,

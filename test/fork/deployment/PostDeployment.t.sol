@@ -203,7 +203,10 @@ contract CSParametersRegistryDeploymentTest is
                 attestationsWeight: deployParams.attestationsWeight,
                 blocksWeight: deployParams.blocksWeight,
                 syncWeight: deployParams.syncWeight,
-                defaultAllowedExitDelay: deployParams.defaultAllowedExitDelay
+                defaultAllowedExitDelay: deployParams.defaultAllowedExitDelay,
+                defaultExitDelayPenalty: deployParams.defaultExitDelayPenalty,
+                defaultMaxWithdrawalRequestFee: deployParams
+                    .defaultMaxWithdrawalRequestFee
             })
         });
     }

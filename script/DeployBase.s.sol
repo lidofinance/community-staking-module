@@ -126,6 +126,8 @@ struct DeployParams {
     uint256 syncWeight;
     // TODO rename other default parameters to be consistent
     uint256 defaultAllowedExitDelay;
+    uint256 defaultExitDelayPenalty;
+    uint256 defaultMaxWithdrawalRequestFee;
     // VettedGate
     bytes32 vettedGateTreeRoot;
     uint256[] vettedGateBondCurve;
@@ -286,7 +288,10 @@ abstract contract DeployBase is Script {
                     attestationsWeight: config.attestationsWeight,
                     blocksWeight: config.blocksWeight,
                     syncWeight: config.syncWeight,
-                    defaultAllowedExitDelay: config.defaultAllowedExitDelay
+                    defaultAllowedExitDelay: config.defaultAllowedExitDelay,
+                    defaultExitDelayPenalty: config.defaultExitDelayPenalty,
+                    defaultMaxWithdrawalRequestFee: config
+                        .defaultMaxWithdrawalRequestFee
                 })
             });
 

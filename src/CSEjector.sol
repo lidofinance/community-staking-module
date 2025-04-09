@@ -10,7 +10,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { IStakingModule } from "./interfaces/IStakingModule.sol";
 import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
-import { ICSModule } from "./interfaces/ICSModule.sol";
+import { ICSModule, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
 import { ICSEjector } from "./interfaces/ICSEjector.sol";
 
 contract CSEjector is
@@ -58,6 +58,41 @@ contract CSEjector is
     /// @inheritdoc ICSEjector
     function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
         _pauseFor(duration);
+    }
+
+    function voluntaryEject(uint256 nodeOperatorId, uint256 keyIndex) public {
+        NodeOperatorManagementProperties memory no = MODULE
+            .getNodeOperatorManagementProperties(nodeOperatorId);
+        if (no.managerAddress == address(0)) {
+            revert NodeOperatorDoesNotExist();
+        }
+        if (no.managerAddress != msg.sender && no.rewardAddress != msg.sender) {
+            revert SenderIsNotEligible();
+        }
+
+        if (
+            keyIndex >= MODULE.getNodeOperatorTotalDepositedKeys(nodeOperatorId)
+        ) {
+            revert SigningKeysInvalidOffset();
+        }
+
+        if (MODULE.isValidatorWithdrawn(nodeOperatorId, keyIndex)) {
+            revert AlreadyWithdrawn();
+        }
+
+        uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
+        if (_isValidatorEjected[pointer]) {
+            revert AlreadyEjected();
+        }
+
+        bytes memory pubkey = MODULE.getSigningKeys(
+            nodeOperatorId,
+            keyIndex,
+            1
+        );
+        // TODO: make the function payable and call `requestEjection{ value: msg.value }(pubkey)`
+        _isValidatorEjected[pointer] = true;
+        emit EjectionSubmitted(nodeOperatorId, keyIndex, pubkey);
     }
 
     /// @inheritdoc ICSEjector
