@@ -75,5 +75,20 @@ contract CuratedTest is CSMFixtures {
             emit ICSModule.DepositedSigningKeysCountChanged(2, 20);
         }
         csm.obtainDepositData(99, "");
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.DepositedSigningKeysCountChanged(0, 60);
+
+            vm.expectEmit(address(csm));
+            emit ICSModule.DepositedSigningKeysCountChanged(1, 50);
+        }
+        csm.obtainDepositData(31, "");
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.DepositedSigningKeysCountChanged(0, 100);
+        }
+        csm.obtainDepositData(40, "");
     }
 }
