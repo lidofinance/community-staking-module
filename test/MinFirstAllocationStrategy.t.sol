@@ -74,7 +74,6 @@ contract MinFirstAllocationStrategyTest is Test, Utilities {
         uint256[] memory capacities = UintArr(0);
         uint256 allocationSize = 0;
 
-        Library lib = new Library();
         (uint256 allocated, , ) = lib.allocateToBestCandidate(
             buckets,
             capacities,
@@ -89,7 +88,6 @@ contract MinFirstAllocationStrategyTest is Test, Utilities {
         uint256[] memory capacities = UintArr(10_000, 101, 100);
         uint256 allocationSize = 101;
 
-        Library lib = new Library();
         (uint256 allocated, uint256[] memory newBuckets, ) = lib.allocate(
             buckets,
             capacities,
