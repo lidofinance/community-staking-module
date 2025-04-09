@@ -13,7 +13,6 @@ import { CSBondLock } from "./abstract/CSBondLock.sol";
 import { IStakingModule } from "./interfaces/IStakingModule.sol";
 import { ICSModule, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
-import { ICSBondCurve } from "./interfaces/ICSBondCurve.sol";
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
@@ -81,7 +80,7 @@ contract CSAccounting is
     /// @param bondLockPeriod Bond lock period in seconds
     /// @param _chargePenaltyRecipient Recipient of the charge penalty type
     function initialize(
-        ICSBondCurve.BondCurveIntervalCalldata[] calldata bondCurve,
+        uint256[2][] calldata bondCurve,
         address admin,
         address _feeDistributor,
         uint256 bondLockPeriod,
@@ -110,7 +109,7 @@ contract CSAccounting is
     }
 
     function finalizeUpgradeV2() external reinitializer(2) {
-        CSBondCurve.__migrateLegacyBondCurves();
+        CSBondCurve.__addBondCurvesWithIntervals();
     }
 
     /// @inheritdoc ICSAccounting
@@ -139,7 +138,7 @@ contract CSAccounting is
 
     /// @inheritdoc ICSAccounting
     function addBondCurve(
-        ICSBondCurve.BondCurveIntervalCalldata[] calldata bondCurve
+        uint256[2][] calldata bondCurve
     ) external onlyRole(MANAGE_BOND_CURVES_ROLE) returns (uint256 id) {
         id = CSBondCurve._addBondCurve(bondCurve);
     }
@@ -147,7 +146,7 @@ contract CSAccounting is
     /// @inheritdoc ICSAccounting
     function updateBondCurve(
         uint256 curveId,
-        ICSBondCurve.BondCurveIntervalCalldata[] calldata bondCurve
+        uint256[2][] calldata bondCurve
     ) external onlyRole(MANAGE_BOND_CURVES_ROLE) {
         CSBondCurve._updateBondCurve(curveId, bondCurve);
     }

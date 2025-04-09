@@ -159,7 +159,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
     // solhint-disable-next-line func-name-mixedcase
     function __CSBondCurve_init(
-        BondCurveIntervalCalldata[] calldata defaultBondCurveIntervals
+        uint256[2][] calldata defaultBondCurveIntervals
     ) internal onlyInitializing {
         uint256 addedId = _addBondCurve(defaultBondCurveIntervals);
         if (addedId != DEFAULT_BOND_CURVE_ID) {
@@ -170,53 +170,50 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     /// @dev TODO: Remove the method in the next major release.
     ///      Migrate legacy bond curves to the new format.
     ///      It should be called only once during the upgrade to CSM v2.
-    function __migrateLegacyBondCurves() internal onlyInitializing {
-        // TODO: Are we going to change the values during v2 upgrade?
+    function __addBondCurvesWithIntervals() internal onlyInitializing {
         // TODO: Check values after upgrade in tests
+        uint256[2][] memory defaultBondCurve = new uint256[2][](2);
+        defaultBondCurve[0] = [uint256(1), 2.4 ether];
+        defaultBondCurve[1] = [uint256(2), 1.3 ether];
+        _addBondCurveOnMigration(defaultBondCurve);
+
+        uint256[2][] memory vettedGateBondCurve = new uint256[2][](2);
+        vettedGateBondCurve[0] = [uint256(1), 1.5 ether];
+        vettedGateBondCurve[1] = [uint256(2), 1.3 ether];
+        _addBondCurveOnMigration(vettedGateBondCurve);
+    }
+
+    /// @dev TODO: Remove the method in the next major release.
+    ///      Helper function for migrating legacy bond curves to the new format.
+    function _addBondCurveOnMigration(uint256[2][] memory intervals) internal {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        BondCurve storage defaultBondCurve = $.legacyBondCurves[0];
-        // FIXME: Can it be full migration using cycle?
-        BondCurveIntervalCalldata[]
-            memory defaultBondCurveIntervals = new BondCurveIntervalCalldata[](
-                2
-            );
-        defaultBondCurveIntervals[0] = BondCurveIntervalCalldata({
-            fromKeysCount: 1,
-            trend: defaultBondCurve.points[0]
-        });
-        defaultBondCurveIntervals[1] = BondCurveIntervalCalldata({
-            fromKeysCount: 2,
-            trend: defaultBondCurve.points[1] - defaultBondCurve.points[0]
-        });
         $.bondCurves.push();
-        _addIntervalsToBondCurveOnMigration(
-            $.bondCurves[0],
-            defaultBondCurveIntervals
-        );
-        BondCurve storage vettedGateBondCurve = $.legacyBondCurves[1];
-        BondCurveIntervalCalldata[]
-            memory vettedGateBondCurveIntervals = new BondCurveIntervalCalldata[](
-                2
+        uint256 curveId = $.bondCurves.length - 1;
+        BondCurveInterval[] storage bondCurve = $.bondCurves[curveId];
+        for (uint256 i = 0; i < intervals.length; ++i) {
+            BondCurveInterval storage interval = bondCurve.push();
+            (uint256 fromKeysCount, uint256 trend) = (
+                intervals[i][0],
+                intervals[i][1]
             );
-        vettedGateBondCurveIntervals[0] = BondCurveIntervalCalldata({
-            fromKeysCount: 1,
-            trend: vettedGateBondCurve.points[0]
-        });
-        vettedGateBondCurveIntervals[1] = BondCurveIntervalCalldata({
-            fromKeysCount: 2,
-            trend: vettedGateBondCurve.points[1] - defaultBondCurve.points[0]
-        });
-        $.bondCurves.push();
-        _addIntervalsToBondCurveOnMigration(
-            $.bondCurves[1],
-            vettedGateBondCurveIntervals
-        );
-        delete $.legacyBondCurves;
+            interval.fromKeysCount = fromKeysCount;
+            interval.trend = trend;
+            if (i != 0) {
+                BondCurveInterval storage prev = bondCurve[i - 1];
+                interval.fromBond =
+                    trend +
+                    prev.fromBond +
+                    (fromKeysCount - prev.fromKeysCount - 1) *
+                    prev.trend;
+            } else {
+                interval.fromBond = trend;
+            }
+        }
     }
 
     /// @dev Add a new bond curve to the array
     function _addBondCurve(
-        BondCurveIntervalCalldata[] calldata intervals
+        uint256[2][] calldata intervals
     ) internal returns (uint256 curveId) {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
 
@@ -232,7 +229,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     /// @dev Update existing bond curve
     function _updateBondCurve(
         uint256 curveId,
-        BondCurveIntervalCalldata[] calldata intervals
+        uint256[2][] calldata intervals
     ) internal {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
         if (curveId > $.bondCurves.length - 1) {
@@ -250,48 +247,25 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
     function _addIntervalsToBondCurve(
         BondCurveInterval[] storage bondCurve,
-        BondCurveIntervalCalldata[] calldata intervals
+        uint256[2][] calldata intervals
     ) private {
         for (uint256 i = 0; i < intervals.length; ++i) {
             BondCurveInterval storage interval = bondCurve.push();
-            interval.fromKeysCount = intervals[i].fromKeysCount;
-            interval.trend = intervals[i].trend;
+            (uint256 fromKeysCount, uint256 trend) = (
+                intervals[i][0],
+                intervals[i][1]
+            );
+            interval.fromKeysCount = fromKeysCount;
+            interval.trend = trend;
             if (i != 0) {
-                BondCurveInterval storage prevInterval = bondCurve[i - 1];
+                BondCurveInterval storage prev = bondCurve[i - 1];
                 interval.fromBond =
-                    intervals[i].trend +
-                    prevInterval.fromBond +
-                    (intervals[i].fromKeysCount -
-                        prevInterval.fromKeysCount -
-                        1) *
-                    prevInterval.trend;
+                    trend +
+                    prev.fromBond +
+                    (fromKeysCount - prev.fromKeysCount - 1) *
+                    prev.trend;
             } else {
-                interval.fromBond = intervals[i].trend;
-            }
-        }
-    }
-
-    /// @dev TODO: Remove the method in the next major release.
-    ///      Helper function for migrating legacy bond curves to the new format.
-    function _addIntervalsToBondCurveOnMigration(
-        BondCurveInterval[] storage bondCurve,
-        BondCurveIntervalCalldata[] memory intervals
-    ) private {
-        for (uint256 i = 0; i < intervals.length; ++i) {
-            BondCurveInterval storage interval = bondCurve.push();
-            interval.fromKeysCount = intervals[i].fromKeysCount;
-            interval.trend = intervals[i].trend;
-            if (i != 0) {
-                BondCurveInterval storage prevInterval = bondCurve[i - 1];
-                interval.fromBond =
-                    intervals[i].trend +
-                    prevInterval.fromBond +
-                    (intervals[i].fromKeysCount -
-                        prevInterval.fromKeysCount -
-                        1) *
-                    prevInterval.trend;
-            } else {
-                interval.fromBond = intervals[i].trend;
+                interval.fromBond = trend;
             }
         }
     }
@@ -321,9 +295,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         emit BondCurveSet(nodeOperatorId, DEFAULT_BOND_CURVE_ID);
     }
 
-    function _checkBondCurve(
-        BondCurveIntervalCalldata[] calldata intervals
-    ) private view {
+    function _checkBondCurve(uint256[2][] calldata intervals) private view {
         if (
             intervals.length < MIN_CURVE_LENGTH ||
             intervals.length > MAX_CURVE_LENGTH
@@ -331,19 +303,33 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             revert InvalidBondCurveLength();
         }
 
-        if (intervals[0].fromKeysCount != 1) {
+        (uint256 firstIntervalFromKeysCount, uint256 firstIntervalTrend) = (
+            intervals[0][0],
+            intervals[0][1]
+        );
+
+        if (firstIntervalFromKeysCount != 1) {
             revert InvalidBondCurveValues();
         }
 
-        if (intervals[0].trend == 0) {
+        if (firstIntervalTrend == 0) {
             revert InvalidBondCurveValues();
         }
 
         for (uint256 i = 1; i < intervals.length; ++i) {
             unchecked {
-                if (
-                    intervals[i].fromKeysCount <= intervals[i - 1].fromKeysCount
-                ) {
+                (uint256 fromKeysCount, uint256 trend) = (
+                    intervals[i][0],
+                    intervals[i][1]
+                );
+                (uint256 prevFromKeysCount, ) = (
+                    intervals[i - 1][0],
+                    intervals[i - 1][1]
+                );
+                if (fromKeysCount <= prevFromKeysCount) {
+                    revert InvalidBondCurveValues();
+                }
+                if (trend == 0) {
                     revert InvalidBondCurveValues();
                 }
             }

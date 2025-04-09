@@ -353,12 +353,9 @@ contract CSMCommon is CSMFixtures {
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
-        ICSBondCurve.BondCurveIntervalCalldata[]
-            memory curve = new ICSBondCurve.BondCurveIntervalCalldata[](1);
-        curve[0] = ICSBondCurve.BondCurveIntervalCalldata({
-            fromKeysCount: 1,
-            trend: BOND_SIZE
-        });
+        uint256[2][] memory curve = new uint256[2][](1);
+        curve[0] = [uint256(1), BOND_SIZE];
+
         accounting = new CSAccounting(
             address(locator),
             address(csm),
@@ -431,12 +428,8 @@ contract CSMCommonNoRoles is CSMFixtures {
             parametersRegistry: address(parametersRegistry)
         });
 
-        ICSBondCurve.BondCurveIntervalCalldata[]
-            memory curve = new ICSBondCurve.BondCurveIntervalCalldata[](1);
-        curve[0] = ICSBondCurve.BondCurveIntervalCalldata({
-            fromKeysCount: 1,
-            trend: BOND_SIZE
-        });
+        uint256[2][] memory curve = new uint256[2][](1);
+        curve[0] = [uint256(1), BOND_SIZE];
         accounting = new CSAccounting(
             address(locator),
             address(csm),
@@ -6015,22 +6008,14 @@ contract CSMDepositableValidatorsCount is CSMCommon {
 
 contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
     function updateToBetterCurve() public {
-        ICSBondCurve.BondCurveIntervalCalldata[]
-            memory newCurve = new ICSBondCurve.BondCurveIntervalCalldata[](1);
-        newCurve[0] = ICSBondCurve.BondCurveIntervalCalldata({
-            fromKeysCount: 1,
-            trend: BOND_SIZE - 0.5 ether
-        });
+        uint256[2][] memory newCurve = new uint256[2][](1);
+        newCurve[0] = [uint256(1), BOND_SIZE - 0.5 ether];
         accounting.updateBondCurve(0, newCurve);
     }
 
     function updateToWorseCurve() public {
-        ICSBondCurve.BondCurveIntervalCalldata[]
-            memory newCurve = new ICSBondCurve.BondCurveIntervalCalldata[](1);
-        newCurve[0] = ICSBondCurve.BondCurveIntervalCalldata({
-            fromKeysCount: 1,
-            trend: BOND_SIZE + 0.5 ether
-        });
+        uint256[2][] memory newCurve = new uint256[2][](1);
+        newCurve[0] = [uint256(1), BOND_SIZE + 0.5 ether];
         accounting.updateBondCurve(0, newCurve);
     }
 

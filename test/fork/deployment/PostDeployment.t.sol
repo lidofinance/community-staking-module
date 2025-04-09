@@ -303,19 +303,8 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
         );
         vm.expectRevert(Initializable.InvalidInitialization.selector);
 
-        ICSBondCurve.BondCurveIntervalCalldata[]
-            memory bondCurve = new ICSBondCurve.BondCurveIntervalCalldata[](
-                deployParams.bondCurve.length
-            );
-        for (uint256 i = 0; i < deployParams.bondCurve.length; i++) {
-            bondCurve[i] = ICSBondCurve.BondCurveIntervalCalldata({
-                fromKeysCount: deployParams.bondCurve[i][0],
-                trend: deployParams.bondCurve[i][1]
-            });
-        }
-
         accountingImpl.initialize({
-            bondCurve: bondCurve,
+            bondCurve: deployParams.bondCurve,
             admin: address(deployParams.aragonAgent),
             _feeDistributor: address(feeDistributor),
             bondLockPeriod: deployParams.bondLockPeriod,

@@ -291,19 +291,8 @@ abstract contract DeployBase is Script {
                 })
             });
 
-            ICSBondCurve.BondCurveIntervalCalldata[]
-                memory bondCurve = new ICSBondCurve.BondCurveIntervalCalldata[](
-                    config.bondCurve.length
-                );
-            for (uint256 i = 0; i < config.bondCurve.length; i++) {
-                bondCurve[i] = ICSBondCurve.BondCurveIntervalCalldata({
-                    fromKeysCount: config.bondCurve[i][0],
-                    trend: config.bondCurve[i][1]
-                });
-            }
-
             accounting.initialize({
-                bondCurve: bondCurve,
+                bondCurve: config.bondCurve,
                 admin: deployer,
                 _feeDistributor: address(feeDistributor),
                 bondLockPeriod: config.bondLockPeriod,
@@ -315,20 +304,8 @@ abstract contract DeployBase is Script {
                 address(deployer)
             );
 
-            ICSBondCurve.BondCurveIntervalCalldata[]
-                memory vettedGateBondCurve = new ICSBondCurve.BondCurveIntervalCalldata[](
-                    config.vettedGateBondCurve.length
-                );
-            for (uint256 i = 0; i < config.vettedGateBondCurve.length; i++) {
-                vettedGateBondCurve[i] = ICSBondCurve
-                    .BondCurveIntervalCalldata({
-                        fromKeysCount: config.vettedGateBondCurve[i][0],
-                        trend: config.vettedGateBondCurve[i][1]
-                    });
-            }
-
             uint256 identifiedSolosCurve = accounting.addBondCurve(
-                vettedGateBondCurve
+                config.vettedGateBondCurve
             );
             accounting.revokeRole(
                 accounting.MANAGE_BOND_CURVES_ROLE(),

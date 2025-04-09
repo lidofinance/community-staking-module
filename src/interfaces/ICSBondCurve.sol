@@ -45,11 +45,6 @@ interface ICSBondCurve {
         uint256 trend;
     }
 
-    struct BondCurveIntervalCalldata {
-        uint256 fromKeysCount;
-        uint256 trend;
-    }
-
     struct BondCurveInterval {
         uint256 fromKeysCount;
         uint256 fromBond;
@@ -58,11 +53,11 @@ interface ICSBondCurve {
 
     event BondCurveAdded(
         uint256 indexed curveId,
-        BondCurveIntervalCalldata[] bondCurveIntervals
+        uint256[2][] bondCurveIntervals
     );
     event BondCurveUpdated(
         uint256 indexed curveId,
-        BondCurveIntervalCalldata[] bondCurveIntervals
+        uint256[2][] bondCurveIntervals
     );
     event BondCurveSet(uint256 indexed nodeOperatorId, uint256 curveId);
 
