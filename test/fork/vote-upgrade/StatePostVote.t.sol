@@ -141,9 +141,12 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
     function test_accountingState() public view {
         assertFalse(accounting.isPaused());
         assertEq(
-            // TODO: check properly
-            accounting.getCurveInfo(vettedGate.curveId()).length,
-            deployParams.vettedGateBondCurve.length
+            accounting.getCurveInfo(vettedGate.curveId())[0].fromBond,
+            deployParams.vettedGateBondCurve[0]
+        );
+        assertEq(
+            accounting.getCurveInfo(vettedGate.curveId())[1].fromBond,
+            deployParams.vettedGateBondCurve[1]
         );
         assertTrue(
             burner.hasRole(

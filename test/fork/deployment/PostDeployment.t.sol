@@ -225,10 +225,23 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
     }
 
     function test_initializer() public view {
+        uint256 curveId = accounting.DEFAULT_BOND_CURVE_ID();
         assertEq(
-            // TODO: check properly
-            accounting.getCurveInfo(accounting.DEFAULT_BOND_CURVE_ID()).length,
-            deployParams.bondCurve.length
+            accounting.getCurveInfo(curveId)[0].fromKeysCount,
+            deployParams.bondCurve[0][0]
+        );
+        assertEq(
+            accounting.getCurveInfo(curveId)[0].trend,
+            deployParams.bondCurve[0][1]
+        );
+
+        assertEq(
+            accounting.getCurveInfo(curveId)[1].fromKeysCount,
+            deployParams.bondCurve[1][0]
+        );
+        assertEq(
+            accounting.getCurveInfo(curveId)[1].trend,
+            deployParams.bondCurve[1][1]
         );
         assertEq(address(accounting.feeDistributor()), address(feeDistributor));
         assertEq(accounting.getBondLockPeriod(), deployParams.bondLockPeriod);
@@ -500,10 +513,22 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
             )
         );
         assertEq(vettedGate.treeRoot(), deployParams.vettedGateTreeRoot);
+        uint256 curveId = vettedGate.curveId();
         assertEq(
-            // TODO: check properly
-            accounting.getCurveInfo(vettedGate.curveId()).length,
-            deployParams.vettedGateBondCurve.length
+            accounting.getCurveInfo(curveId)[0].fromKeysCount,
+            deployParams.vettedGateBondCurve[0][0]
+        );
+        assertEq(
+            accounting.getCurveInfo(curveId)[0].trend,
+            deployParams.vettedGateBondCurve[0][1]
+        );
+        assertEq(
+            accounting.getCurveInfo(curveId)[1].fromKeysCount,
+            deployParams.vettedGateBondCurve[1][0]
+        );
+        assertEq(
+            accounting.getCurveInfo(curveId)[1].trend,
+            deployParams.vettedGateBondCurve[1][1]
         );
         assertEq(address(vettedGate.CSM()), address(csm));
         assertEq(address(vettedGate.ACCOUNTING()), address(accounting));
