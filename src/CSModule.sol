@@ -1421,60 +1421,6 @@ contract CSModule is
         }
     }
 
-    function _allocateViaMinFirst(
-        uint256[] memory activeKeysAfterAllocation,
-        uint256[] memory operators,
-        uint256 operatorsCount,
-        uint256 depositsCount
-    ) internal view {
-        uint256[] memory activeKeysCapacities = new uint256[](operatorsCount);
-
-        uint256 bucketIndex;
-
-        for (uint256 noId; noId < operatorsCount; ++noId) {
-            NodeOperator storage no = _nodeOperators[noId];
-            uint256 depositableSigningKeysCount = no.depositableValidatorsCount;
-
-            if (depositableSigningKeysCount > 0) {
-                uint256 depositedSigningKeysCount = no.totalDepositedKeys;
-
-                unchecked {
-                    operators[bucketIndex] = noId;
-                    uint256 activeKeysCount = depositedSigningKeysCount -
-                        no.totalExitedKeys;
-                    activeKeysAfterAllocation[bucketIndex] = activeKeysCount;
-                    activeKeysCapacities[bucketIndex] =
-                        activeKeysCount +
-                        depositableSigningKeysCount;
-                    ++bucketIndex;
-                }
-            }
-        }
-
-        if (bucketIndex == 0) {
-            revert NotEnoughKeys();
-        }
-
-        // NOTE: Shrinking pre-allocated arrays before passing to MinFirstAllocationStrategy.
-        if (bucketIndex < operatorsCount) {
-            assembly ("memory-safe") {
-                mstore(operators, bucketIndex)
-                mstore(activeKeysAfterAllocation, bucketIndex)
-                mstore(activeKeysCapacities, bucketIndex)
-            }
-        }
-
-        uint256 allocated = MinFirstAllocationStrategy.allocate(
-            activeKeysAfterAllocation,
-            activeKeysCapacities,
-            depositsCount
-        );
-
-        if (allocated != depositsCount) {
-            revert NotEnoughKeys();
-        }
-    }
-
     function _depositDataViaQueue(
         bytes memory publicKeys,
         bytes memory signatures,
@@ -1576,6 +1522,60 @@ contract CSModule is
         }
 
         if (loadedKeysCount != depositsCount) {
+            revert NotEnoughKeys();
+        }
+    }
+
+    function _allocateViaMinFirst(
+        uint256[] memory activeKeysAfterAllocation,
+        uint256[] memory operators,
+        uint256 operatorsCount,
+        uint256 depositsCount
+    ) internal view {
+        uint256[] memory activeKeysCapacities = new uint256[](operatorsCount);
+
+        uint256 bucketIndex;
+
+        for (uint256 noId; noId < operatorsCount; ++noId) {
+            NodeOperator storage no = _nodeOperators[noId];
+            uint256 depositableSigningKeysCount = no.depositableValidatorsCount;
+
+            if (depositableSigningKeysCount > 0) {
+                uint256 depositedSigningKeysCount = no.totalDepositedKeys;
+
+                unchecked {
+                    operators[bucketIndex] = noId;
+                    uint256 activeKeysCount = depositedSigningKeysCount -
+                        no.totalExitedKeys;
+                    activeKeysAfterAllocation[bucketIndex] = activeKeysCount;
+                    activeKeysCapacities[bucketIndex] =
+                        activeKeysCount +
+                        depositableSigningKeysCount;
+                    ++bucketIndex;
+                }
+            }
+        }
+
+        if (bucketIndex == 0) {
+            revert NotEnoughKeys();
+        }
+
+        // NOTE: Shrinking pre-allocated arrays before passing to MinFirstAllocationStrategy.
+        if (bucketIndex < operatorsCount) {
+            assembly ("memory-safe") {
+                mstore(operators, bucketIndex)
+                mstore(activeKeysAfterAllocation, bucketIndex)
+                mstore(activeKeysCapacities, bucketIndex)
+            }
+        }
+
+        uint256 allocated = MinFirstAllocationStrategy.allocate(
+            activeKeysAfterAllocation,
+            activeKeysCapacities,
+            depositsCount
+        );
+
+        if (allocated != depositsCount) {
             revert NotEnoughKeys();
         }
     }
