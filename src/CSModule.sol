@@ -1464,11 +1464,15 @@ contract CSModule is
             }
         }
 
-        MinFirstAllocationStrategy.allocate(
+        uint256 allocated = MinFirstAllocationStrategy.allocate(
             activeKeysAfterAllocation,
             activeKeysCapacities,
             depositsCount
         );
+
+        if (allocated != depositsCount) {
+            revert NotEnoughKeys();
+        }
     }
 
     function _depositDataViaQueue(
