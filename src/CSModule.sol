@@ -1357,72 +1357,18 @@ contract CSModule is
         bytes memory signatures,
         uint256 depositsCount
     ) internal {
-        uint256 totalOperators = _nodeOperatorsCount;
+        uint256 operatorsCount = _nodeOperatorsCount;
 
+        uint256[] memory operators = new uint256[](operatorsCount);
         uint256[] memory activeKeysAfterAllocation = new uint256[](
-            totalOperators
+            operatorsCount
         );
-        uint256[] memory operators = new uint256[](totalOperators);
-
-        // FIXME: Stack too deep, try to extract to a function.
-        {
-            uint256[] memory activeKeysCapacities = new uint256[](
-                totalOperators
-            );
-
-            uint256 bucketIndex;
-
-            for (uint256 noId; noId < totalOperators; ++noId) {
-                NodeOperator storage no = _nodeOperators[noId];
-                uint256 depositableSigningKeysCount = no
-                    .depositableValidatorsCount;
-
-                if (depositableSigningKeysCount > 0) {
-                    uint256 depositedSigningKeysCount = no.totalDepositedKeys;
-
-                    unchecked {
-                        operators[bucketIndex] = noId;
-                        uint256 activeKeysCount = depositedSigningKeysCount -
-                            no.totalExitedKeys;
-                        activeKeysAfterAllocation[
-                            bucketIndex
-                        ] = activeKeysCount;
-                        activeKeysCapacities[bucketIndex] =
-                            activeKeysCount +
-                            depositableSigningKeysCount;
-                        ++bucketIndex;
-                    }
-                }
-            }
-
-            if (bucketIndex == 0) {
-                revert NotEnoughKeys();
-            }
-
-            // NOTE: Shrinking pre-allocated arrays before passing to MinFirstAllocationStrategy.
-            if (bucketIndex < totalOperators) {
-                assembly {
-                    mstore(operators, bucketIndex)
-                    mstore(activeKeysAfterAllocation, bucketIndex)
-                    mstore(activeKeysCapacities, bucketIndex)
-                }
-            }
-
-            uint256 allocatedKeysCount;
-
-            (
-                allocatedKeysCount,
-                activeKeysAfterAllocation
-            ) = MinFirstAllocationStrategy.allocate(
-                activeKeysAfterAllocation,
-                activeKeysCapacities,
-                depositsCount
-            );
-
-            if (allocatedKeysCount < depositsCount) {
-                revert NotEnoughKeys();
-            }
-        }
+        _allocateViaMinFirst(
+            activeKeysAfterAllocation,
+            operators,
+            operatorsCount,
+            depositsCount
+        );
 
         uint256 loadedKeysCount;
 
@@ -1434,7 +1380,6 @@ contract CSModule is
             uint256 keysCount;
 
             unchecked {
-                // FIXME Check unchecked :)
                 keysCount =
                     activeKeysAfterAllocation[i] -
                     no.totalExitedKeys -
@@ -1474,6 +1419,56 @@ contract CSModule is
         if (loadedKeysCount != depositsCount) {
             revert NotEnoughKeys();
         }
+    }
+
+    function _allocateViaMinFirst(
+        uint256[] memory activeKeysAfterAllocation,
+        uint256[] memory operators,
+        uint256 operatorsCount,
+        uint256 depositsCount
+    ) internal view {
+        uint256[] memory activeKeysCapacities = new uint256[](operatorsCount);
+
+        uint256 bucketIndex;
+
+        for (uint256 noId; noId < operatorsCount; ++noId) {
+            NodeOperator storage no = _nodeOperators[noId];
+            uint256 depositableSigningKeysCount = no.depositableValidatorsCount;
+
+            if (depositableSigningKeysCount > 0) {
+                uint256 depositedSigningKeysCount = no.totalDepositedKeys;
+
+                unchecked {
+                    operators[bucketIndex] = noId;
+                    uint256 activeKeysCount = depositedSigningKeysCount -
+                        no.totalExitedKeys;
+                    activeKeysAfterAllocation[bucketIndex] = activeKeysCount;
+                    activeKeysCapacities[bucketIndex] =
+                        activeKeysCount +
+                        depositableSigningKeysCount;
+                    ++bucketIndex;
+                }
+            }
+        }
+
+        if (bucketIndex == 0) {
+            revert NotEnoughKeys();
+        }
+
+        // NOTE: Shrinking pre-allocated arrays before passing to MinFirstAllocationStrategy.
+        if (bucketIndex < operatorsCount) {
+            assembly ("memory-safe") {
+                mstore(operators, bucketIndex)
+                mstore(activeKeysAfterAllocation, bucketIndex)
+                mstore(activeKeysCapacities, bucketIndex)
+            }
+        }
+
+        MinFirstAllocationStrategy.allocate(
+            activeKeysAfterAllocation,
+            activeKeysCapacities,
+            depositsCount
+        );
     }
 
     function _depositDataViaQueue(
