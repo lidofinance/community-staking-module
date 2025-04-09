@@ -1,5 +1,5 @@
 # CSAccounting
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/86cbb28dad521bfac5576c8a7b405bc33b32f44d/src/CSAccounting.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/CSAccounting.sol)
 
 **Inherits:**
 [ICSAccounting](/src/interfaces/ICSAccounting.sol/interface.ICSAccounting.md), [CSBondCore](/src/abstract/CSBondCore.sol/abstract.CSBondCore.md), [CSBondCurve](/src/abstract/CSBondCurve.sol/abstract.CSBondCurve.md), [CSBondLock](/src/abstract/CSBondLock.sol/abstract.CSBondLock.md), [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), AccessControlEnumerableUpgradeable, [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -37,13 +37,6 @@ bytes32 public constant MANAGE_BOND_CURVES_ROLE = keccak256("MANAGE_BOND_CURVES_
 
 ```solidity
 bytes32 public constant SET_BOND_CURVE_ROLE = keccak256("SET_BOND_CURVE_ROLE");
-```
-
-
-### RESET_BOND_CURVE_ROLE
-
-```solidity
-bytes32 public constant RESET_BOND_CURVE_ROLE = keccak256("RESET_BOND_CURVE_ROLE");
 ```
 
 
@@ -184,13 +177,13 @@ function setChargePenaltyRecipient(address _chargePenaltyRecipient) external onl
 |`_chargePenaltyRecipient`|`address`|Charge recipient address|
 
 
-### setLockedBondPeriod
+### setBondLockPeriod
 
 Set bond lock period
 
 
 ```solidity
-function setLockedBondPeriod(uint256 period) external onlyRole(DEFAULT_ADMIN_ROLE);
+function setBondLockPeriod(uint256 period) external onlyRole(DEFAULT_ADMIN_ROLE);
 ```
 **Parameters**
 
@@ -243,7 +236,7 @@ function updateBondCurve(uint256 curveId, uint256[] calldata bondCurve) external
 
 Set the bond curve for the given Node Operator
 
-*Normalizes the CSM queue to ensure key pointers consistency*
+*Updates depositable validators count in CSM to ensure key pointers consistency*
 
 
 ```solidity
@@ -255,41 +248,6 @@ function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external onlyRole
 |----|----|-----------|
 |`nodeOperatorId`|`uint256`|ID of the Node Operator|
 |`curveId`|`uint256`|ID of the bond curve to set|
-
-
-### resetBondCurve
-
-Reset bond curve to the default one for the given Node Operator
-
-*If called externally, the `enqueueNodeOperatorKeys` method from CSModule.sol should be called after
-to ensure key pointers consistency*
-
-
-```solidity
-function resetBondCurve(uint256 nodeOperatorId) external onlyRole(RESET_BOND_CURVE_ROLE);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`nodeOperatorId`|`uint256`|ID of the Node Operator|
-
-
-### depositETH
-
-Stake user's ETH with Lido and deposit stETH to the bond
-
-*Called by CSM exclusively*
-
-
-```solidity
-function depositETH(uint256 nodeOperatorId) external payable whenResumed;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`nodeOperatorId`|`uint256`|ID of the Node Operator|
 
 
 ### depositETH
@@ -307,6 +265,23 @@ function depositETH(address from, uint256 nodeOperatorId) external payable whenR
 |Name|Type|Description|
 |----|----|-----------|
 |`from`|`address`|Address to stake ETH and deposit stETH from|
+|`nodeOperatorId`|`uint256`|ID of the Node Operator|
+
+
+### depositETH
+
+Stake user's ETH with Lido and deposit stETH to the bond
+
+*Called by CSM exclusively*
+
+
+```solidity
+function depositETH(uint256 nodeOperatorId) external payable whenResumed;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
 |`nodeOperatorId`|`uint256`|ID of the Node Operator|
 
 
@@ -789,28 +764,6 @@ function getBondAmountByKeysCountWstETH(uint256 keysCount, uint256 curveId) publ
 |----|----|-----------|
 |`keysCount`|`uint256`|Keys count to calculate the required bond amount|
 |`curveId`|`uint256`|Id of the curve to perform calculations against|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|wstETH amount required for the `keysCount`|
-
-
-### getBondAmountByKeysCountWstETH
-
-Get the bond amount in wstETH required for the `keysCount` keys using the default bond curve
-
-
-```solidity
-function getBondAmountByKeysCountWstETH(uint256 keysCount, BondCurve memory curve) public view returns (uint256);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`keysCount`|`uint256`|Keys count to calculate the required bond amount|
-|`curve`|`BondCurve`||
 
 **Returns**
 

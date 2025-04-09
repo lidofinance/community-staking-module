@@ -1,5 +1,5 @@
 # IStakingModule
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/86cbb28dad521bfac5576c8a7b405bc33b32f44d/src/interfaces/IStakingModule.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/interfaces/IStakingModule.sol)
 
 
 ## Functions
@@ -195,22 +195,6 @@ function updateExitedValidatorsCount(bytes calldata nodeOperatorIds, bytes calld
 |`exitedValidatorsCounts`|`bytes`|bytes packed array of the new number of EXITED validators for the node operators|
 
 
-### updateRefundedValidatorsCount
-
-Updates the number of the refunded validators for node operator with the given id
-
-
-```solidity
-function updateRefundedValidatorsCount(uint256 nodeOperatorId, uint256 refundedValidatorsCount) external;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`nodeOperatorId`|`uint256`|Id of the node operator|
-|`refundedValidatorsCount`|`uint256`|New number of refunded validators of the node operator|
-
-
 ### updateTargetValidatorsLimits
 
 Updates the limit of the validators that can be used for deposit
@@ -309,6 +293,102 @@ Details about error data: https://docs.soliditylang.org/en/v0.8.9/control-struct
 ```solidity
 function onWithdrawalCredentialsChanged() external;
 ```
+
+### reportValidatorExitDelay
+
+Handles tracking and penalization logic for validators that remain active beyond their eligible exit window.
+
+*This function is called to report the current exit-related status of validator belonging to a specific node operator.
+It accepts a validator public key associated with the duration (in seconds) they was eligible to exit but have not.
+This data could be used to trigger penalties for the node operator if validator has been non-exiting for too long.*
+
+
+```solidity
+function reportValidatorExitDelay(
+    uint256 _nodeOperatorId,
+    uint256 _proofSlotTimestamp,
+    bytes calldata _publicKey,
+    uint256 _eligibleToExitInSec
+) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`_nodeOperatorId`|`uint256`|The ID of the node operator whose validator status being delivered.|
+|`_proofSlotTimestamp`|`uint256`|The timestamp (slot time) when the validator was last known to be in an active ongoing state.|
+|`_publicKey`|`bytes`|Public key of the validator being reported.|
+|`_eligibleToExitInSec`|`uint256`|Duration (in seconds) indicating how long a validator has been eligible to exit but hasn't.|
+
+
+### onValidatorExitTriggered
+
+Handles the triggerable exit event validator belonging to a specific node operator.
+
+*This function is called when a validator is exited using the triggerable exit request on EL.*
+
+
+```solidity
+function onValidatorExitTriggered(
+    uint256 _nodeOperatorId,
+    bytes calldata _publicKey,
+    uint256 _withdrawalRequestPaidFee,
+    uint256 _exitType
+) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`_nodeOperatorId`|`uint256`|The ID of the node operator.|
+|`_publicKey`|`bytes`|Public key of the validator being reported.|
+|`_withdrawalRequestPaidFee`|`uint256`|Fee amount paid to send withdrawal request on EL.|
+|`_exitType`|`uint256`|The type of exit being performed. This parameter may be interpreted differently across various staking modules, depending on their specific implementation.|
+
+
+### isValidatorExitDelayPenaltyApplicable
+
+Determines whether a validator exit status should be updated and will have affect on Node Operator.
+
+
+```solidity
+function isValidatorExitDelayPenaltyApplicable(
+    uint256 _nodeOperatorId,
+    uint256 _proofSlotTimestamp,
+    bytes calldata _publicKey,
+    uint256 _eligibleToExitInSec
+) external view returns (bool);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`_nodeOperatorId`|`uint256`|The ID of the node operator.|
+|`_proofSlotTimestamp`|`uint256`|The timestamp (slot time) when the validators were last known to be in an active ongoing state.|
+|`_publicKey`|`bytes`|Validator's public key.|
+|`_eligibleToExitInSec`|`uint256`|The number of seconds the validator was eligible to exit but did not.|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|bool Returns true if contract should receive updated validator's status.|
+
+
+### exitDeadlineThreshold
+
+Returns the delay after which a validator is considered late.
+
+
+```solidity
+function exitDeadlineThreshold(uint256 _nodeOperatorId) external view returns (uint256);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|The exit deadline threshold.|
+
 
 ## Events
 ### NonceChanged
