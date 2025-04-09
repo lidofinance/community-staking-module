@@ -1,5 +1,5 @@
 # CSParametersRegistry
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/86cbb28dad521bfac5576c8a7b405bc33b32f44d/src/CSParametersRegistry.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/CSParametersRegistry.sol)
 
 **Inherits:**
 [ICSParametersRegistry](/src/interfaces/ICSParametersRegistry.sol/interface.ICSParametersRegistry.md), Initializable, AccessControlEnumerableUpgradeable
@@ -13,6 +13,20 @@ uint256 internal constant MAX_BP = 10000;
 ```
 
 
+### QUEUE_LOWEST_PRIORITY
+
+```solidity
+uint256 public immutable QUEUE_LOWEST_PRIORITY;
+```
+
+
+### QUEUE_LEGACY_PRIORITY
+
+```solidity
+uint256 public immutable QUEUE_LEGACY_PRIORITY;
+```
+
+
 ### defaultKeyRemovalCharge
 
 ```solidity
@@ -23,7 +37,7 @@ uint256 public defaultKeyRemovalCharge;
 ### _keyRemovalCharges
 
 ```solidity
-mapping(uint256 => MarkedUint248) internal _keyRemovalCharges;
+mapping(uint256 curveId => MarkedUint248) internal _keyRemovalCharges;
 ```
 
 
@@ -37,7 +51,7 @@ uint256 public defaultElRewardsStealingAdditionalFine;
 ### _elRewardsStealingAdditionalFines
 
 ```solidity
-mapping(uint256 => MarkedUint248) internal _elRewardsStealingAdditionalFines;
+mapping(uint256 curveId => MarkedUint248) internal _elRewardsStealingAdditionalFines;
 ```
 
 
@@ -51,7 +65,7 @@ uint256 public defaultKeysLimit;
 ### _keysLimits
 
 ```solidity
-mapping(uint256 => MarkedUint248) internal _keysLimits;
+mapping(uint256 curveId => MarkedUint248) internal _keysLimits;
 ```
 
 
@@ -82,7 +96,7 @@ uint256 public defaultRewardShare;
 ### _rewardShareData
 
 ```solidity
-mapping(uint256 => PivotsAndValues) internal _rewardShareData;
+mapping(uint256 curveId => PivotsAndValues) internal _rewardShareData;
 ```
 
 
@@ -99,7 +113,7 @@ uint256 public defaultPerformanceLeeway;
 ### _performanceLeewayData
 
 ```solidity
-mapping(uint256 => PivotsAndValues) internal _performanceLeewayData;
+mapping(uint256 curveId => PivotsAndValues) internal _performanceLeewayData;
 ```
 
 
@@ -113,7 +127,7 @@ StrikesParams public defaultStrikesParams;
 ### _strikesParams
 
 ```solidity
-mapping(uint256 => MarkedStrikesParams) internal _strikesParams;
+mapping(uint256 curveId => MarkedStrikesParams) internal _strikesParams;
 ```
 
 
@@ -127,7 +141,7 @@ uint256 public defaultBadPerformancePenalty;
 ### _badPerformancePenalties
 
 ```solidity
-mapping(uint256 => MarkedUint248) internal _badPerformancePenalties;
+mapping(uint256 curveId => MarkedUint248) internal _badPerformancePenalties;
 ```
 
 
@@ -141,21 +155,21 @@ PerformanceCoefficients public defaultPerformanceCoefficients;
 ### _performanceCoefficients
 
 ```solidity
-mapping(uint256 => MarkedPerformanceCoefficients) internal _performanceCoefficients;
+mapping(uint256 curveId => MarkedPerformanceCoefficients) internal _performanceCoefficients;
 ```
 
 
-### QUEUE_LOWEST_PRIORITY
+### defaultAllowedExitDelay
 
 ```solidity
-uint256 public immutable QUEUE_LOWEST_PRIORITY;
+uint256 public defaultAllowedExitDelay;
 ```
 
 
-### QUEUE_LEGACY_PRIORITY
+### _allowedExitDelay
 
 ```solidity
-uint256 public immutable QUEUE_LEGACY_PRIORITY;
+mapping(uint256 => MarkedUint248) internal _allowedExitDelay;
 ```
 
 
@@ -317,6 +331,21 @@ function setDefaultQueueConfig(uint256 priority, uint256 maxDeposits) external o
 |`maxDeposits`|`uint256`|Maximum number of deposits a Node Operator can get via the priority queue.|
 
 
+### setDefaultAllowedExitDelay
+
+set default value for allowed exit delay. Default value is used if a specific value is not set for the curveId
+
+
+```solidity
+function setDefaultAllowedExitDelay(uint256 delay) external onlyRole(DEFAULT_ADMIN_ROLE);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`delay`|`uint256`|value to be set as default for the allowed exit delay|
+
+
 ### setKeyRemovalCharge
 
 Set key removal charge for the curveId.
@@ -419,17 +448,14 @@ Set reward share parameters for the curveId
 
 
 ```solidity
-function setRewardShareData(uint256 curveId, uint256[] calldata keyPivots, uint256[] calldata rewardShares)
-    external
-    onlyRole(DEFAULT_ADMIN_ROLE);
+function setRewardShareData(uint256 curveId, PivotsAndValues calldata data) external onlyRole(DEFAULT_ADMIN_ROLE);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`curveId`|`uint256`|Curve Id to associate reward share data with|
-|`keyPivots`|`uint256[]`|Pivot numbers of the keys (ex. [10, 50])|
-|`rewardShares`|`uint256[]`|Reward share percentages in BP (ex. [10000, 8000, 5000])|
+|`data`|`PivotsAndValues`|Pivot numbers of the keys (ex. [10, 50]) (data.pivots) and reward share percentages in BP (ex. [10000, 8000, 5000]) (data.values)|
 
 
 ### unsetRewardShareData
@@ -456,7 +482,7 @@ Set performance leeway parameters for the curveId
 
 
 ```solidity
-function setPerformanceLeewayData(uint256 curveId, uint256[] calldata keyPivots, uint256[] calldata performanceLeeways)
+function setPerformanceLeewayData(uint256 curveId, PivotsAndValues calldata data)
     external
     onlyRole(DEFAULT_ADMIN_ROLE);
 ```
@@ -465,8 +491,7 @@ function setPerformanceLeewayData(uint256 curveId, uint256[] calldata keyPivots,
 |Name|Type|Description|
 |----|----|-----------|
 |`curveId`|`uint256`|Curve Id to associate performance leeway data with|
-|`keyPivots`|`uint256[]`|Pivot numbers of the keys (ex. [20, 100])|
-|`performanceLeeways`|`uint256[]`|Performance leeway percentages in BP (ex. [500, 450, 400])|
+|`data`|`PivotsAndValues`|Pivot numbers of the keys (ex. [20, 100]) (data.pivots) and performance leeway percentages in BP (ex. [500, 450, 400]) (data.values)|
 
 
 ### unsetPerformanceLeewayData
@@ -616,6 +641,37 @@ function unsetQueueConfig(uint256 curveId) external onlyRole(DEFAULT_ADMIN_ROLE)
 |`curveId`|`uint256`|Curve Id to unset custom config.|
 
 
+### setAllowedExitDelay
+
+Set allowed exit delay for the curveId
+
+
+```solidity
+function setAllowedExitDelay(uint256 curveId, uint256 delay) external onlyRole(DEFAULT_ADMIN_ROLE);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`curveId`|`uint256`|Curve Id to associate allowed exit delay with|
+|`delay`|`uint256`|allowed exit delay|
+
+
+### unsetAllowedExitDelay
+
+Unset exit timeframe deadline delay for the curveId
+
+
+```solidity
+function unsetAllowedExitDelay(uint256 curveId) external onlyRole(DEFAULT_ADMIN_ROLE);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`curveId`|`uint256`|Curve Id to unset allowed exit delay for|
+
+
 ### getKeyRemovalCharge
 
 Get key removal charge by the curveId. A charge is taken from the bond for each removed key from CSM
@@ -693,10 +749,7 @@ Get reward share parameters by the curveId.
 
 
 ```solidity
-function getRewardShareData(uint256 curveId)
-    external
-    view
-    returns (uint256[] memory keyPivots, uint256[] memory rewardShares);
+function getRewardShareData(uint256 curveId) external view returns (PivotsAndValues memory data);
 ```
 **Parameters**
 
@@ -708,8 +761,7 @@ function getRewardShareData(uint256 curveId)
 
 |Name|Type|Description|
 |----|----|-----------|
-|`keyPivots`|`uint256[]`|Pivot numbers of the keys (ex. [10, 50])|
-|`rewardShares`|`uint256[]`|Reward share percentages in BP (ex. [10000, 8000, 5000])|
+|`data`|`PivotsAndValues`|Pivot numbers of the keys (ex. [10, 50]) (data.pivots) and reward share percentages in BP (ex. [10000, 8000, 5000]) (data.values)|
 
 
 ### getPerformanceLeewayData
@@ -720,10 +772,7 @@ Get performance leeway parameters by the curveId
 
 
 ```solidity
-function getPerformanceLeewayData(uint256 curveId)
-    external
-    view
-    returns (uint256[] memory keyPivots, uint256[] memory performanceLeeways);
+function getPerformanceLeewayData(uint256 curveId) external view returns (PivotsAndValues memory data);
 ```
 **Parameters**
 
@@ -735,8 +784,7 @@ function getPerformanceLeewayData(uint256 curveId)
 
 |Name|Type|Description|
 |----|----|-----------|
-|`keyPivots`|`uint256[]`|Pivot numbers of the keys (ex. [100, 500])|
-|`performanceLeeways`|`uint256[]`|Performance leeway percentages in BP (ex. [500, 450, 400])|
+|`data`|`PivotsAndValues`|Pivot numbers of the keys (ex. [100, 500]) (data.pivots) and performance leeway percentages in BP (ex. [500, 450, 400]) (data.values)|
 
 
 ### getStrikesParams
@@ -836,6 +884,13 @@ function getQueueConfig(uint256 curveId) external view returns (uint32 queuePrio
 |`maxDeposits`|`uint32`|Maximum number of deposits a Node Operator can get via the priority queue.|
 
 
+### getAllowedExitDelay
+
+
+```solidity
+function getAllowedExitDelay(uint256 curveId) external view returns (uint256 delay);
+```
+
 ### _setDefaultKeyRemovalCharge
 
 
@@ -900,10 +955,40 @@ function _setDefaultPerformanceCoefficients(uint256 attestationsWeight, uint256 
 function _setDefaultQueueConfig(uint256 priority, uint256 maxDeposits) internal;
 ```
 
+### _validateQueueConfig
+
+
+```solidity
+function _validateQueueConfig(uint256 priority, uint256 maxDeposits) internal view;
+```
+
+### _setDefaultAllowedExitDelay
+
+
+```solidity
+function _setDefaultAllowedExitDelay(uint256 delay) internal;
+```
+
 ### _validateStrikesParams
 
 
 ```solidity
 function _validateStrikesParams(uint256 lifetime, uint256 threshold) internal pure;
+```
+
+### _validatePerformanceCoefficients
+
+
+```solidity
+function _validatePerformanceCoefficients(uint256 attestationsWeight, uint256 blocksWeight, uint256 syncWeight)
+    internal
+    pure;
+```
+
+### _validatePivotsAndValues
+
+
+```solidity
+function _validatePivotsAndValues(PivotsAndValues memory data) internal pure;
 ```
 
