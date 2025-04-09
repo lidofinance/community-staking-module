@@ -103,6 +103,38 @@ contract CSBondCurveTest is Test {
         assertEq(added[0].trend, 16 ether);
     }
 
+    function test_addBondCurve_SeveralIntervals() public {
+        uint256[2][] memory _bondCurve = new uint256[2][](4);
+        _bondCurve[0] = [uint256(1), 16 ether];
+        _bondCurve[1] = [uint256(10), 1 ether];
+        _bondCurve[2] = [uint256(33), 0.5 ether];
+        _bondCurve[3] = [uint256(100), 10 ether];
+
+        uint256 addedId = bondCurve.addBondCurve(_bondCurve);
+
+        ICSBondCurve.BondCurveInterval[] memory added = bondCurve.getCurveInfo(
+            addedId
+        );
+
+        assertEq(addedId, 1);
+        assertEq(added.length, 4);
+        assertEq(added[0].fromKeysCount, 1);
+        assertEq(added[0].fromBond, 16 ether);
+        assertEq(added[0].trend, 16 ether);
+
+        assertEq(added[1].fromKeysCount, 10);
+        assertEq(added[1].fromBond, 145 ether);
+        assertEq(added[1].trend, 1 ether);
+
+        assertEq(added[2].fromKeysCount, 33);
+        assertEq(added[2].fromBond, 167.5 ether);
+        assertEq(added[2].trend, 0.5 ether);
+
+        assertEq(added[3].fromKeysCount, 100);
+        assertEq(added[3].fromBond, 210.5 ether);
+        assertEq(added[3].trend, 10 ether);
+    }
+
     function test_addBondCurve_RevertWhen_LessThanMinBondCurveLength() public {
         vm.expectRevert(ICSBondCurve.InvalidBondCurveLength.selector);
         bondCurve.addBondCurve(new uint256[2][](0));
@@ -148,6 +180,38 @@ contract CSBondCurveTest is Test {
         assertEq(updated[0].fromKeysCount, 1);
         assertEq(updated[0].fromBond, 16 ether);
         assertEq(updated[0].trend, 16 ether);
+    }
+
+    function test_updateBondCurve_SeveralIntervals() public {
+        uint256[2][] memory _bondCurve = new uint256[2][](4);
+        _bondCurve[0] = [uint256(1), 16 ether];
+        _bondCurve[1] = [uint256(10), 1 ether];
+        _bondCurve[2] = [uint256(33), 0.5 ether];
+        _bondCurve[3] = [uint256(100), 10 ether];
+
+        uint256 toUpdateId = 0;
+
+        bondCurve.updateBondCurve(toUpdateId, _bondCurve);
+
+        ICSBondCurve.BondCurveInterval[] memory updated = bondCurve
+            .getCurveInfo(toUpdateId);
+
+        assertEq(updated.length, 4);
+        assertEq(updated[0].fromKeysCount, 1);
+        assertEq(updated[0].fromBond, 16 ether);
+        assertEq(updated[0].trend, 16 ether);
+
+        assertEq(updated[1].fromKeysCount, 10);
+        assertEq(updated[1].fromBond, 145 ether);
+        assertEq(updated[1].trend, 1 ether);
+
+        assertEq(updated[2].fromKeysCount, 33);
+        assertEq(updated[2].fromBond, 167.5 ether);
+        assertEq(updated[2].trend, 0.5 ether);
+
+        assertEq(updated[3].fromKeysCount, 100);
+        assertEq(updated[3].fromBond, 210.5 ether);
+        assertEq(updated[3].trend, 10 ether);
     }
 
     function test_updateBondCurve_RevertWhen_LessThanMinBondCurveLength()
