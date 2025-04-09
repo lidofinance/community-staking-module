@@ -17,6 +17,8 @@ interface ICuratedExtension {
         string newName
     );
 
+    event NodeOperatorCreated(uint256 indexed nodeOperatorId, string name);
+
     error ZeroModuleAddress();
     error ZeroAdminAddress();
     error ZeroManagerAddress();

@@ -58,6 +58,7 @@ contract CuratedExtension is
         if (rewardAddress == address(0)) {
             revert ZeroRewardAddress();
         }
+
         nodeOperatorId = CSM.createNodeOperator(
             msg.sender,
             NodeOperatorManagementProperties({
@@ -67,7 +68,10 @@ contract CuratedExtension is
             }),
             address(0)
         );
+
         _nodeOperators[nodeOperatorId] = NodeOperatorProperties({ name: name });
+
+        emit NodeOperatorCreated(nodeOperatorId, name);
     }
 
     /// @inheritdoc ICuratedExtension
@@ -95,8 +99,8 @@ contract CuratedExtension is
 
     function _onlyValidNodeOperatorName(string calldata name) internal pure {
         if (
-            bytes(name).length > 0 ||
-            bytes(name).length <= MAX_NODE_OPERATOR_NAME_LENGTH
+            bytes(name).length == 0 ||
+            bytes(name).length > MAX_NODE_OPERATOR_NAME_LENGTH
         ) {
             revert InvalidNameLength();
         }

@@ -1517,7 +1517,7 @@ contract CSModule is
         _checkRole(RECOVERER_ROLE);
     }
 
-    function _onlyNonCuratedMode() internal view {
+    function _onlyNonCuratedMode() internal pure {
         if (isInCuratedMode()) {
             revert NotImplemented();
         }
