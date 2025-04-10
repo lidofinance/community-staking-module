@@ -170,45 +170,12 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     /// @dev TODO: Remove the method in the next major release.
     ///      Migrate legacy bond curves to the new format.
     ///      It should be called only once during the upgrade to CSM v2.
-    function __addBondCurvesWithIntervals() internal onlyInitializing {
-        // TODO: Check values after upgrade in tests
-        uint256[2][] memory defaultBondCurve = new uint256[2][](2);
-        defaultBondCurve[0] = [uint256(1), 2.4 ether];
-        defaultBondCurve[1] = [uint256(2), 1.3 ether];
-        _addBondCurveOnMigration(defaultBondCurve);
-
-        uint256[2][] memory vettedGateBondCurve = new uint256[2][](2);
-        vettedGateBondCurve[0] = [uint256(1), 1.5 ether];
-        vettedGateBondCurve[1] = [uint256(2), 1.3 ether];
-        _addBondCurveOnMigration(vettedGateBondCurve);
-    }
-
-    /// @dev TODO: Remove the method in the next major release.
-    ///      Helper function for migrating legacy bond curves to the new format.
-    function _addBondCurveOnMigration(uint256[2][] memory intervals) internal {
-        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        $.bondCurves.push();
-        uint256 curveId = $.bondCurves.length - 1;
-        BondCurveInterval[] storage bondCurve = $.bondCurves[curveId];
-        for (uint256 i = 0; i < intervals.length; ++i) {
-            BondCurveInterval storage interval = bondCurve.push();
-            (uint256 fromKeysCount, uint256 trend) = (
-                intervals[i][0],
-                intervals[i][1]
-            );
-            interval.fromKeysCount = fromKeysCount;
-            interval.trend = trend;
-            if (i != 0) {
-                BondCurveInterval storage prev = bondCurve[i - 1];
-                interval.fromBond =
-                    trend +
-                    prev.fromBond +
-                    (fromKeysCount - prev.fromKeysCount - 1) *
-                    prev.trend;
-            } else {
-                interval.fromBond = trend;
-            }
-        }
+    function __addBondCurvesWithIntervals(
+        uint256[2][] calldata defaultBondCurve,
+        uint256[2][] calldata vettedBondCurve
+    ) internal onlyInitializing {
+        _addBondCurve(defaultBondCurve);
+        _addBondCurve(vettedBondCurve);
     }
 
     /// @dev Add a new bond curve to the array

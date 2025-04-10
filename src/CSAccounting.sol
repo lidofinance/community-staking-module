@@ -108,8 +108,14 @@ contract CSAccounting is
         LIDO.approve(LIDO_LOCATOR.burner(), type(uint256).max);
     }
 
-    function finalizeUpgradeV2() external reinitializer(2) {
-        CSBondCurve.__addBondCurvesWithIntervals();
+    function finalizeUpgradeV2(
+        uint256[2][] calldata defaultBondCurve,
+        uint256[2][] calldata vettedBondCurve
+    ) external reinitializer(2) {
+        CSBondCurve.__addBondCurvesWithIntervals(
+            defaultBondCurve,
+            vettedBondCurve
+        );
     }
 
     /// @inheritdoc ICSAccounting
