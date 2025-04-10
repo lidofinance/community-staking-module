@@ -94,8 +94,7 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
 
         assertEq(
             parametersRegistry.defaultKeyRemovalCharge(),
-            upgradeDeployParams.keyRemovalCharge,
-            "keyRemovalCharge is not set correctly"
+            upgradeDeployParams.keyRemovalCharge
         );
         assertEq(
             parametersRegistry.defaultElRewardsStealingAdditionalFine(),

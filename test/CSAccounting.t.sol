@@ -532,10 +532,6 @@ abstract contract CSAccountingBondStateBaseTest is
     BondAmountModifiersTest,
     CSAccountingBaseTest
 {
-    uint256[2][] public curveWithDiscount = [[1, 2 ether], [2, 1 ether]];
-
-    uint256[2][] public individualCurve = [[1, 1.8 ether], [2, 0.9 ether]];
-
     function _operator(uint256 ongoing, uint256 withdrawn) internal virtual {
         mock_getNodeOperatorNonWithdrawnKeys(ongoing - withdrawn);
         mock_getNodeOperatorsCount(1);
@@ -549,6 +545,9 @@ abstract contract CSAccountingBondStateBaseTest is
             nodeOperatorId: 0
         });
     }
+
+    uint256[2][] public curveWithDiscount = [[1, 2 ether], [2, 1 ether]];
+    uint256[2][] public individualCurve = [[1, 1.8 ether], [2, 0.9 ether]];
 
     function _curve(uint256[2][] memory curve) internal virtual {
         vm.startPrank(admin);
@@ -1413,7 +1412,7 @@ abstract contract CSAccountingRewardsBaseTest is CSAccountingBondStateBaseTest {
 
     address internal rewardAddress;
 
-    function setUp() public virtual override {
+    function setUp() public override {
         super.setUp();
         rewardAddress = nextAddress("reward address");
         mock_getNodeOperatorManagementProperties(user, rewardAddress, false);
