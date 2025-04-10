@@ -4,7 +4,6 @@
 pragma solidity 0.8.24;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { Arrays } from "@openzeppelin/contracts/utils/Arrays.sol";
 import { ICSBondCurve } from "../interfaces/ICSBondCurve.sol";
 
 /// @dev Bond curve mechanics abstract contract
@@ -26,8 +25,6 @@ import { ICSBondCurve } from "../interfaces/ICSBondCurve.sol";
 ///
 /// @author vgorkavenko
 abstract contract CSBondCurve is ICSBondCurve, Initializable {
-    using Arrays for uint256[];
-
     /// @custom:storage-location erc7201:CSBondCurve
     struct CSBondCurveStorage {
         /// @dev DEPRECATED
