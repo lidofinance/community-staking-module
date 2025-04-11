@@ -556,7 +556,6 @@ contract CSModule is
         _incrementModuleNonce();
     }
 
-    /// TODO: Consider renaming
     /// @inheritdoc ICSModule
     function updateDepositableValidatorsCount(uint256 nodeOperatorId) external {
         _updateDepositableValidatorsCount({
@@ -1419,7 +1418,7 @@ contract CSModule is
     }
 
     /// @dev Acts as a proxy to `_queueByPriority` till `legacyQueue` deprecation.
-    /// @dev TODO: Remove in CSM v3.
+    /// @dev TODO: Remove the method in the next major release.
     function _getQueue(
         uint256 priority
     ) internal view returns (QueueLib.Queue storage q) {
