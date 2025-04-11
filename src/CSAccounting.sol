@@ -112,10 +112,9 @@ contract CSAccounting is
         uint256[2][] calldata defaultBondCurve,
         uint256[2][] calldata vettedBondCurve
     ) external reinitializer(2) {
-        CSBondCurve.__addBondCurvesWithIntervals(
-            defaultBondCurve,
-            vettedBondCurve
-        );
+        /// NOTE: It doesn't add new bond curves, but migrates existing ones to the new format (`BondCurve` to `BondCurveInterval[]`)
+        _addBondCurve(defaultBondCurve);
+        _addBondCurve(vettedBondCurve);
     }
 
     /// @inheritdoc ICSAccounting

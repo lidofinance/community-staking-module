@@ -164,17 +164,6 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         }
     }
 
-    /// @dev TODO: Remove the method in the next major release.
-    ///      Migrate legacy bond curves to the new format.
-    ///      It should be called only once during the upgrade to CSM v2.
-    function __addBondCurvesWithIntervals(
-        uint256[2][] calldata defaultBondCurve,
-        uint256[2][] calldata vettedBondCurve
-    ) internal onlyInitializing {
-        _addBondCurve(defaultBondCurve);
-        _addBondCurve(vettedBondCurve);
-    }
-
     /// @dev Add a new bond curve to the array
     function _addBondCurve(
         uint256[2][] calldata intervals
