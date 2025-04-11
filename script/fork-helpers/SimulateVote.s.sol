@@ -69,6 +69,15 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         hashConsensus.updateInitialEpoch(47480);
     }
 
+    uint256[2][] defaultBondCurve = [
+        [uint256(1), 2.4 ether],
+        [uint256(2), 1.3 ether]
+    ];
+    uint256[2][] vettedBondCurve = [
+        [uint256(1), 1.5 ether],
+        [uint256(2), 1.3 ether]
+    ];
+
     function upgrade() external {
         Env memory env = envVars();
         string memory deploymentConfigContent = vm.readFile(env.DEPLOY_CONFIG);
@@ -98,7 +107,10 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         vm.startBroadcast(_prepareProxyAdmin(address(accountingProxy)));
         {
             accountingProxy.proxy__upgradeTo(upgradeConfig.accountingImpl);
-            CSAccounting(deploymentConfig.accounting).finalizeUpgradeV2();
+            CSAccounting(deploymentConfig.accounting).finalizeUpgradeV2(
+                defaultBondCurve,
+                vettedBondCurve
+            );
         }
         vm.stopBroadcast();
 

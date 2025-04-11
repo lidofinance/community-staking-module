@@ -353,8 +353,9 @@ contract CSMCommon is CSMFixtures {
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
-        uint256[] memory curve = new uint256[](1);
-        curve[0] = BOND_SIZE;
+        uint256[2][] memory curve = new uint256[2][](1);
+        curve[0] = [uint256(1), BOND_SIZE];
+
         accounting = new CSAccounting(
             address(locator),
             address(csm),
@@ -427,8 +428,8 @@ contract CSMCommonNoRoles is CSMFixtures {
             parametersRegistry: address(parametersRegistry)
         });
 
-        uint256[] memory curve = new uint256[](1);
-        curve[0] = BOND_SIZE;
+        uint256[2][] memory curve = new uint256[2][](1);
+        curve[0] = [uint256(1), BOND_SIZE];
         accounting = new CSAccounting(
             address(locator),
             address(csm),
@@ -6007,14 +6008,14 @@ contract CSMDepositableValidatorsCount is CSMCommon {
 
 contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
     function updateToBetterCurve() public {
-        uint256[] memory newCurve = new uint256[](1);
-        newCurve[0] = BOND_SIZE - 0.5 ether;
+        uint256[2][] memory newCurve = new uint256[2][](1);
+        newCurve[0] = [uint256(1), BOND_SIZE - 0.5 ether];
         accounting.updateBondCurve(0, newCurve);
     }
 
     function updateToWorseCurve() public {
-        uint256[] memory newCurve = new uint256[](1);
-        newCurve[0] = BOND_SIZE + 0.5 ether;
+        uint256[2][] memory newCurve = new uint256[2][](1);
+        newCurve[0] = [uint256(1), BOND_SIZE + 0.5 ether];
         accounting.updateBondCurve(0, newCurve);
     }
 
