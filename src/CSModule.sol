@@ -879,7 +879,7 @@ contract CSModule is
             }
         }
 
-        emit ValidatorExitTriggered(
+        emit TriggeredExitReported(
             nodeOperatorId,
             exitType,
             publicKey,

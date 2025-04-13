@@ -6843,7 +6843,7 @@ contract CSMOnValidatorExitTriggered is CSMCommon {
             paidFee
         );
         vm.expectEmit(address(csm));
-        emit ICSModule.ValidatorExitTriggered(
+        emit ICSModule.TriggeredExitReported(
             noId,
             exitType,
             publicKey,
@@ -6868,7 +6868,7 @@ contract CSMOnValidatorExitTriggered is CSMCommon {
         uint256 exitType = 0;
 
         vm.expectEmit(address(csm));
-        emit ICSModule.ValidatorExitTriggered(
+        emit ICSModule.TriggeredExitReported(
             noId,
             exitType,
             publicKey,

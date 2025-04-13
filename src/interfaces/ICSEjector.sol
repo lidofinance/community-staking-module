@@ -19,6 +19,7 @@ interface ICSEjector is IAssetRecovererLib {
     error SenderIsNotEligible();
 
     event EjectionSubmitted(
+        uint256 indexed exitTypeId,
         uint256 indexed nodeOperatorId,
         uint256 keyIndex,
         bytes pubkey

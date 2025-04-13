@@ -148,7 +148,7 @@ interface ICSModule is
         uint256 proofSlotTimestamp,
         bytes pubkey
     );
-    event ValidatorExitTriggered(
+    event TriggeredExitReported(
         uint256 indexed nodeOperatorId,
         uint256 indexed exitType,
         bytes pubkey,

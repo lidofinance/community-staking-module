@@ -23,6 +23,8 @@ contract CSEjector is
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant BAD_PERFORMER_EJECTOR_ROLE =
         keccak256("BAD_PERFORMER_EJECTOR_ROLE");
+    uint256 public constant DIRECT_EXIT_TYPE_ID = 0;
+    uint256 public constant STRIKES_EXIT_TYPE_ID = 1;
 
     ICSModule public immutable MODULE;
     ICSAccounting public immutable ACCOUNTING;
@@ -66,7 +68,10 @@ contract CSEjector is
         if (no.managerAddress == address(0)) {
             revert NodeOperatorDoesNotExist();
         }
-        if (no.managerAddress != msg.sender && no.rewardAddress != msg.sender) {
+        address nodeOperatorAddress = no.extendedManagerPermissions
+            ? no.managerAddress
+            : no.rewardAddress;
+        if (nodeOperatorAddress != msg.sender) {
             revert SenderIsNotEligible();
         }
 
@@ -90,9 +95,14 @@ contract CSEjector is
             keyIndex,
             1
         );
-        // TODO: make the function payable and call `requestEjection{ value: msg.value }(pubkey)`
+        // TODO: make the function payable and call `requestEjection{ value: msg.value }(pubkey)`. Refund excess fee
         _isValidatorEjected[pointer] = true;
-        emit EjectionSubmitted(nodeOperatorId, keyIndex, pubkey);
+        emit EjectionSubmitted(
+            DIRECT_EXIT_TYPE_ID,
+            nodeOperatorId,
+            keyIndex,
+            pubkey
+        );
     }
 
     /// @inheritdoc ICSEjector
@@ -140,7 +150,12 @@ contract CSEjector is
         // TODO: make the function payable and call `requestEjection{ value: msg.value }(pubkey)`
 
         _isValidatorEjected[pointer] = true;
-        emit EjectionSubmitted(nodeOperatorId, keyIndex, pubkey);
+        emit EjectionSubmitted(
+            STRIKES_EXIT_TYPE_ID,
+            nodeOperatorId,
+            keyIndex,
+            pubkey
+        );
     }
 
     /// @inheritdoc ICSEjector
