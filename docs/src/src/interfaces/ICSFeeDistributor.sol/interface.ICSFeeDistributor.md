@@ -1,5 +1,5 @@
 # ICSFeeDistributor
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/86cbb28dad521bfac5576c8a7b405bc33b32f44d/src/interfaces/ICSFeeDistributor.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/interfaces/ICSFeeDistributor.sol)
 
 **Inherits:**
 [IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md)
@@ -278,6 +278,14 @@ event ModuleFeeDistributed(uint256 shares);
 event RebateTransferred(uint256 shares);
 ```
 
+### RebateRecipientSet
+*Emitted when rebate recipient is set*
+
+
+```solidity
+event RebateRecipientSet(address recipient);
+```
+
 ## Errors
 ### ZeroAccountingAddress
 
@@ -319,6 +327,12 @@ error NotAccounting();
 
 ```solidity
 error NotOracle();
+```
+
+### InvalidReportData
+
+```solidity
+error InvalidReportData();
 ```
 
 ### InvalidTreeRoot

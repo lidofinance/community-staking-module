@@ -7,7 +7,6 @@
 - [ICSBondCore](ICSBondCore.sol/interface.ICSBondCore.md)
 - [ICSBondCurve](ICSBondCurve.sol/interface.ICSBondCurve.md)
 - [ICSBondLock](ICSBondLock.sol/interface.ICSBondLock.md)
-- [ICSEarlyAdoption](ICSEarlyAdoption.sol/interface.ICSEarlyAdoption.md)
 - [ICSEjector](ICSEjector.sol/interface.ICSEjector.md)
 - [ICSFeeDistributor](ICSFeeDistributor.sol/interface.ICSFeeDistributor.md)
 - [ICSFeeOracle](ICSFeeOracle.sol/interface.ICSFeeOracle.md)

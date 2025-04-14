@@ -1,5 +1,5 @@
 # CSBondLock
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/86cbb28dad521bfac5576c8a7b405bc33b32f44d/src/abstract/CSBondLock.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/abstract/CSBondLock.sol)
 
 **Inherits:**
 [ICSBondLock](/src/interfaces/ICSBondLock.sol/interface.ICSBondLock.md), Initializable
@@ -142,7 +142,7 @@ function _remove(uint256 nodeOperatorId) internal;
 
 
 ```solidity
-function __CSBondLock_init(uint256 lockPeriod) internal onlyInitializing;
+function __CSBondLock_init(uint256 period) internal onlyInitializing;
 ```
 
 ### _setBondLockPeriod
@@ -151,14 +151,14 @@ function __CSBondLock_init(uint256 lockPeriod) internal onlyInitializing;
 
 
 ```solidity
-function _setBondLockPeriod(uint256 lockPeriod) internal;
+function _setBondLockPeriod(uint256 period) internal;
 ```
 
 ### _changeBondLock
 
 
 ```solidity
-function _changeBondLock(uint256 nodeOperatorId, uint256 amount, uint256 lockUntil) private;
+function _changeBondLock(uint256 nodeOperatorId, uint256 amount, uint256 until) private;
 ```
 
 ### _getCSBondLockStorage

@@ -1,5 +1,5 @@
 # ICSAccounting
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/86cbb28dad521bfac5576c8a7b405bc33b32f44d/src/interfaces/ICSAccounting.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/interfaces/ICSAccounting.sol)
 
 **Inherits:**
 [ICSBondCore](/src/interfaces/ICSBondCore.sol/interface.ICSBondCore.md), [ICSBondCurve](/src/interfaces/ICSBondCurve.sol/interface.ICSBondCurve.md), [ICSBondLock](/src/interfaces/ICSBondLock.sol/interface.ICSBondLock.md), [IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md)
@@ -32,13 +32,6 @@ function MANAGE_BOND_CURVES_ROLE() external view returns (bytes32);
 
 ```solidity
 function SET_BOND_CURVE_ROLE() external view returns (bytes32);
-```
-
-### RESET_BOND_CURVE_ROLE
-
-
-```solidity
-function RESET_BOND_CURVE_ROLE() external view returns (bytes32);
 ```
 
 ### PENALIZE_ROLE
@@ -128,13 +121,13 @@ function setChargePenaltyRecipient(address _chargePenaltyRecipient) external;
 |`_chargePenaltyRecipient`|`address`|Charge recipient address|
 
 
-### setLockedBondPeriod
+### setBondLockPeriod
 
 Set bond lock period
 
 
 ```solidity
-function setLockedBondPeriod(uint256 period) external;
+function setBondLockPeriod(uint256 period) external;
 ```
 **Parameters**
 
@@ -219,28 +212,6 @@ function getBondAmountByKeysCountWstETH(uint256 keysCount, uint256 curveId) exte
 |----|----|-----------|
 |`keysCount`|`uint256`|Keys count to calculate the required bond amount|
 |`curveId`|`uint256`|Id of the curve to perform calculations against|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|wstETH amount required for the `keysCount`|
-
-
-### getBondAmountByKeysCountWstETH
-
-Get the bond amount in wstETH required for the `keysCount` keys using the custom bond curve
-
-
-```solidity
-function getBondAmountByKeysCountWstETH(uint256 keysCount, BondCurve memory curve) external view returns (uint256);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`keysCount`|`uint256`|Keys count to calculate the required bond amount|
-|`curve`|`BondCurve`|Bond curve definition. Use CSBondCurve.getBondCurve(id) method to get the definition for the exiting curve|
 
 **Returns**
 
@@ -705,7 +676,7 @@ function compensateLockedBondETH(uint256 nodeOperatorId) external payable;
 
 Set the bond curve for the given Node Operator
 
-*Normalizes the CSM queue to ensure key pointers consistency*
+*Updates depositable validators count in CSM to ensure key pointers consistency*
 
 
 ```solidity
@@ -717,24 +688,6 @@ function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external;
 |----|----|-----------|
 |`nodeOperatorId`|`uint256`|ID of the Node Operator|
 |`curveId`|`uint256`|ID of the bond curve to set|
-
-
-### resetBondCurve
-
-Reset bond curve to the default one for the given Node Operator
-
-*If called externally, the `enqueueNodeOperatorKeys` method from CSModule.sol should be called after
-to ensure key pointers consistency*
-
-
-```solidity
-function resetBondCurve(uint256 nodeOperatorId) external;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`nodeOperatorId`|`uint256`|ID of the Node Operator|
 
 
 ### penalize
