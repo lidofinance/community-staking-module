@@ -5,10 +5,14 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+
 import { CSBondCurve } from "../src/abstract/CSBondCurve.sol";
 import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
-contract CSBondCurveTestable is CSBondCurve(10) {
+import { console } from "forge-std/console.sol";
+
+contract CSBondCurveTestable is CSBondCurve(1000) {
     function initialize(uint256[2][] calldata bondCurve) public initializer {
         __CSBondCurve_init(bondCurve);
     }
@@ -433,5 +437,222 @@ contract CSBondCurveTest is Test {
         assertEq(bondCurve.getBondAmountByKeysCount(3, curveId), 3.5 ether);
         assertEq(bondCurve.getBondAmountByKeysCount(4, curveId), 4 ether);
         assertEq(bondCurve.getBondAmountByKeysCount(16, curveId), 10 ether);
+    }
+}
+
+contract CSBondCurveFuzz is Test {
+    CSBondCurveTestable public bondCurve;
+
+    uint256 public constant MAX_BOND_CURVE_INTERVALS_COUNT = 100;
+    uint256 public constant MAX_FROM_KEYS_COUNT_VALUE = 10000;
+    uint256 public constant MAX_TREND_VALUE = 1000 ether;
+
+    function testFuzz_keysAndBondValues(
+        uint256[] memory fromKeysCount,
+        uint256[] memory trend,
+        uint256 keysToCheck,
+        uint256 bondToCheck
+    ) public {
+        uint256[2][] memory _bondCurve;
+        (_bondCurve, keysToCheck, bondToCheck) = prepareInputs(
+            fromKeysCount,
+            trend,
+            keysToCheck,
+            bondToCheck
+        );
+        bondCurve = new CSBondCurveTestable();
+        bondCurve.initialize(_bondCurve);
+        ICSBondCurve.BondCurveInterval[] memory intervals = bondCurve
+            .getCurveInfo(0);
+
+        // Compare contract output with different algorithm
+        uint256 keysCountSecondOpinion = getKeysCountByBondAmountSecondOpinion(
+            intervals,
+            bondToCheck
+        );
+        uint256 keysCount = bondCurve.getKeysCountByBondAmount(bondToCheck, 0);
+        assertEq(
+            keysCount,
+            keysCountSecondOpinion,
+            "keysCount != keysCountSecondOpinion"
+        );
+        // Can't check this fully, because of the rounding (`bondToCheck` can be "between" two keys amounts).
+        // So it is enough to check that one less or equal than another
+        uint256 bondFromKeysCount = bondCurve.getBondAmountByKeysCount(
+            keysCount,
+            0
+        );
+        assertGe(
+            bondToCheck,
+            bondFromKeysCount,
+            "bondFromKeysCount > bondToCheck"
+        );
+
+        uint256 bondAmountSecondOpinion = getBondAmountByKeysCountSecondOpinion(
+            intervals,
+            keysToCheck
+        );
+        uint256 bondAmount = bondCurve.getBondAmountByKeysCount(keysToCheck, 0);
+        assertEq(
+            bondAmount,
+            bondAmountSecondOpinion,
+            "bondAmount != bondOutSecondOpinion"
+        );
+        // Check that values are the same in both directions
+        uint256 keysFromBondAmount = bondCurve.getKeysCountByBondAmount(
+            bondAmount,
+            0
+        );
+        assertEq(
+            keysFromBondAmount,
+            keysToCheck,
+            "keysFromBondAmount != keysToCheck"
+        );
+    }
+
+    /// NOTE: Ugly, ineffective version of binary search algorithm from the contract.
+    //        Needed only as a second opinion to compare outputs.
+    function getBondAmountByKeysCountSecondOpinion(
+        ICSBondCurve.BondCurveInterval[] memory intervals,
+        uint256 keysToCheck
+    ) public pure returns (uint256) {
+        uint256 bondAmount = 0;
+        uint256 fromBondAcc = intervals[0].trend;
+        for (uint256 i = 0; i < intervals.length; ++i) {
+            if (i > 0) {
+                // Current trend + difference between current and previous fromKeysCount multiplied by previous trend
+                fromBondAcc +=
+                    intervals[i].trend +
+                    (intervals[i].fromKeysCount -
+                        intervals[i - 1].fromKeysCount -
+                        1) *
+                    intervals[i - 1].trend;
+            }
+            if (keysToCheck >= intervals[i].fromKeysCount) {
+                bondAmount =
+                    fromBondAcc +
+                    (keysToCheck - intervals[i].fromKeysCount) *
+                    intervals[i].trend;
+            } else {
+                break;
+            }
+        }
+        return bondAmount;
+    }
+
+    /// NOTE: Ugly, ineffective version of binary search algorithm from the contract.
+    //        Needed only as a second opinion to compare outputs.
+    function getKeysCountByBondAmountSecondOpinion(
+        ICSBondCurve.BondCurveInterval[] memory intervals,
+        uint256 bondToCheck
+    ) public pure returns (uint256) {
+        if (bondToCheck < intervals[0].fromBond) {
+            return 0;
+        }
+
+        uint256 neededIndex = 0;
+        uint256 fromBondAcc = intervals[0].trend;
+        for (uint256 i = 0; i < intervals.length; i++) {
+            if (i > 0) {
+                // Current trend + difference between current and previous fromKeysCount multiplied by previous trend
+                fromBondAcc +=
+                    intervals[i].trend +
+                    (intervals[i].fromKeysCount -
+                        intervals[i - 1].fromKeysCount -
+                        1) *
+                    intervals[i - 1].trend;
+            }
+            if (bondToCheck == fromBondAcc) {
+                return intervals[i].fromKeysCount;
+            }
+            if (i < intervals.length - 1) {
+                uint256 nextFromBond = fromBondAcc +
+                    intervals[i + 1].trend +
+                    (intervals[i + 1].fromKeysCount -
+                        intervals[i].fromKeysCount -
+                        1) *
+                    intervals[i].trend;
+                if (bondToCheck < nextFromBond) {
+                    uint256 maxBondInInterval = nextFromBond -
+                        intervals[i + 1].trend;
+                    if (bondToCheck > maxBondInInterval) {
+                        bondToCheck = maxBondInInterval;
+                    }
+                    neededIndex = i;
+                    break;
+                }
+            }
+            neededIndex = i;
+        }
+
+        return
+            intervals[neededIndex].fromKeysCount +
+            (bondToCheck - fromBondAcc) /
+            intervals[neededIndex].trend;
+    }
+
+    function prepareInputs(
+        uint256[] memory fromKeysCount,
+        uint256[] memory trend,
+        uint256 keysToCheck,
+        uint256 bondToCheck
+    ) public pure returns (uint256[2][] memory, uint256, uint256) {
+        vm.assume(fromKeysCount.length > 0);
+        vm.assume(trend.length > 0);
+
+        // Assume: intervals.length > 0
+        uint256 intervalsCount = Math.max(
+            1,
+            Math.min(fromKeysCount.length, trend.length) %
+                MAX_BOND_CURVE_INTERVALS_COUNT
+        );
+        for (uint256 i = 0; i < intervalsCount; ++i) {
+            // Assume: fromKeysCount[i] > 0
+            fromKeysCount[i] = Math.max(
+                1,
+                fromKeysCount[i] % MAX_FROM_KEYS_COUNT_VALUE
+            );
+            // Assume: trend[i] > 0
+            trend[i] = Math.max(1 wei, trend[i] % MAX_TREND_VALUE);
+        }
+        assembly ("memory-safe") {
+            // Shrink `fromKeysCount` and `trend` arrays to `intervalsCount`
+            mstore(fromKeysCount, intervalsCount)
+            mstore(trend, intervalsCount)
+        }
+
+        // Assume: fromKeysCount[i] < fromKeysCount[i + 1]
+        uint256 n = fromKeysCount.length;
+        for (uint256 i = 0; i < n; i++) {
+            for (uint256 j = 0; j < n - 1; j++) {
+                if (fromKeysCount[j] > fromKeysCount[j + 1]) {
+                    (fromKeysCount[j], fromKeysCount[j + 1]) = (
+                        fromKeysCount[j + 1],
+                        fromKeysCount[j]
+                    );
+                }
+                if (fromKeysCount[j] == fromKeysCount[j + 1]) {
+                    // Make it different because we need to have unique values
+                    fromKeysCount[j + 1] = fromKeysCount[j] + 1;
+                }
+            }
+        }
+        // Assume: first interval starts from "1" keys count
+        fromKeysCount[0] = 1;
+
+        assertEq(fromKeysCount.length, trend.length);
+
+        // Dev: zip `fromKeysCount` and `trend` arrays to `uint256[2][] intervals`
+        uint256[2][] memory _bondCurve = new uint256[2][](fromKeysCount.length);
+        for (uint256 i = 0; i < intervalsCount; ++i) {
+            _bondCurve[i] = [fromKeysCount[i], trend[i]];
+        }
+        keysToCheck = bound(keysToCheck, 1, MAX_FROM_KEYS_COUNT_VALUE);
+        bondToCheck = bound(
+            bondToCheck,
+            trend[0],
+            MAX_TREND_VALUE * MAX_FROM_KEYS_COUNT_VALUE
+        );
+        return (_bondCurve, keysToCheck, bondToCheck);
     }
 }
