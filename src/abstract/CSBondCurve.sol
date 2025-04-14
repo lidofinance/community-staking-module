@@ -147,6 +147,11 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
                 }
             }
             BondCurveInterval storage interval = intervals[low];
+            if (low < intervals.length - 1) {
+                uint256 maxBond = intervals[low + 1].fromBond -
+                    intervals[low + 1].trend;
+                amount = amount < maxBond ? amount : maxBond;
+            }
             return
                 interval.fromKeysCount +
                 (amount - interval.fromBond) /
