@@ -46,11 +46,6 @@ struct ValidatorWithdrawalInfo {
     bool isSlashed; // @dev If validator is slashed or not
 }
 
-struct ExitPenaltyInfo {
-    uint256 penaltyValue;
-    uint256 withdrawalRequestFee;
-}
-
 /// @title Lido's Community Staking Module interface
 interface ICSModule is
     IQueueLib,
@@ -81,7 +76,6 @@ interface ICSModule is
     error ZeroAdminAddress();
     error ZeroSenderAddress();
     error ZeroParametersRegistryAddress();
-    error ValidatorExitDelayNotApplicable();
 
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
@@ -143,30 +137,9 @@ interface ICSModule is
         uint256 amount
     );
     event ELRewardsStealingPenaltySettled(uint256 indexed nodeOperatorId);
-    event ValidatorExitDelayReported(
-        uint256 indexed nodeOperatorId,
-        uint256 proofSlotTimestamp,
-        bytes pubkey
-    );
-    event TriggeredExitReported(
-        uint256 indexed nodeOperatorId,
-        uint256 indexed exitType,
-        bytes pubkey,
-        uint256 withdrawalRequestFee
-    );
     event DelayedValidatorExitPenalized(
         uint256 indexed nodeOperatorId,
         uint256 penaltyValue
-    );
-    event WithdrawalRequestFeeCharged(
-        uint256 indexed nodeOperatorId,
-        bytes publicKey,
-        uint256 feeAmount
-    );
-    event WithdrawalRequestFeeCompensationReported(
-        uint256 indexed nodeOperatorId,
-        bytes publicKey,
-        uint256 feeAmount
     );
 
     function LIDO_LOCATOR() external view returns (ILidoLocator);
@@ -449,15 +422,6 @@ interface ICSModule is
         uint256 startIndex,
         uint256 keysCount
     ) external view returns (bytes memory keys, bytes memory signatures);
-
-    /// @notice get delayed exit penalty info for the given Node Operator
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param publicKey Public key of the validator
-    /// @return penaltyInfo Delayed exit penalty info
-    function getDelayedExitPenaltyInfo(
-        uint256 nodeOperatorId,
-        bytes calldata publicKey
-    ) external view returns (ExitPenaltyInfo memory penaltyInfo);
 
     /// @notice Report Node Operator's keys as withdrawn and settle withdrawn amount
     /// @notice Called by `CSVerifier` contract.

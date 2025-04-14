@@ -23,7 +23,7 @@ import { SigningKeys } from "../src/lib/SigningKeys.sol";
 import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 import { INOAddresses } from "../src/lib/NOAddresses.sol";
 import { InvariantAsserts } from "./helpers/InvariantAsserts.sol";
-import { ValidatorWithdrawalInfo, ExitPenaltyInfo } from "../src/interfaces/ICSModule.sol";
+import { ValidatorWithdrawalInfo } from "../src/interfaces/ICSModule.sol";
 
 abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     using Strings for uint256;
