@@ -12,7 +12,9 @@ import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
 import { console } from "forge-std/console.sol";
 
-contract CSBondCurveTestable is CSBondCurve(1000) {
+contract CSBondCurveTestable is CSBondCurve {
+    constructor(uint256 maxCurveLength) CSBondCurve(maxCurveLength) {}
+
     function initialize(uint256[2][] calldata bondCurve) public initializer {
         __CSBondCurve_init(bondCurve);
     }
@@ -39,7 +41,7 @@ contract CSBondCurveInitTest is Test {
     CSBondCurveTestable public bondCurve;
 
     function setUp() public {
-        bondCurve = new CSBondCurveTestable();
+        bondCurve = new CSBondCurveTestable(10);
     }
 
     function test_initialize_revertWhen_InvalidInitialisationCurveId() public {
@@ -60,7 +62,7 @@ contract CSBondCurveTest is Test {
         uint256[2][] memory _bondCurve = new uint256[2][](2);
         _bondCurve[0] = [uint256(1), 2 ether];
         _bondCurve[1] = [uint256(3), 1 ether];
-        bondCurve = new CSBondCurveTestable();
+        bondCurve = new CSBondCurveTestable(10);
         vm.startSnapshotGas("bondCurve.initialize");
         bondCurve.initialize(_bondCurve);
         vm.stopSnapshotGas();
@@ -443,7 +445,7 @@ contract CSBondCurveTest is Test {
 contract CSBondCurveFuzz is Test {
     CSBondCurveTestable public bondCurve;
 
-    uint256 public constant MAX_BOND_CURVE_INTERVALS_COUNT = 100;
+    uint256 public constant MAX_BOND_CURVE_INTERVALS_COUNT = 150;
     uint256 public constant MAX_FROM_KEYS_COUNT_VALUE = 10000;
     uint256 public constant MAX_TREND_VALUE = 1000 ether;
 
@@ -460,7 +462,7 @@ contract CSBondCurveFuzz is Test {
             keysToCheck,
             bondToCheck
         );
-        bondCurve = new CSBondCurveTestable();
+        bondCurve = new CSBondCurveTestable(MAX_BOND_CURVE_INTERVALS_COUNT);
         bondCurve.initialize(_bondCurve);
         ICSBondCurve.BondCurveInterval[] memory intervals = bondCurve
             .getCurveInfo(0);
