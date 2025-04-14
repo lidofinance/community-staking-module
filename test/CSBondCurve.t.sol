@@ -440,6 +440,41 @@ contract CSBondCurveTest is Test {
         assertEq(bondCurve.getBondAmountByKeysCount(4, curveId), 4 ether);
         assertEq(bondCurve.getBondAmountByKeysCount(16, curveId), 10 ether);
     }
+
+    function test_viceVersa() public {
+        uint256[2][] memory _bondCurve = new uint256[2][](3);
+        _bondCurve[0] = [uint256(1), 1.5 ether];
+        _bondCurve[1] = [uint256(2), 1 ether];
+        _bondCurve[2] = [uint256(4), 0.5 ether];
+
+        uint256 curveId = bondCurve.addBondCurve(_bondCurve);
+
+        for (uint256 keysIn = 0; keysIn < 17; ++keysIn) {
+            uint256 bondOut = bondCurve.getBondAmountByKeysCount(
+                keysIn,
+                curveId
+            );
+            assertEq(
+                bondCurve.getKeysCountByBondAmount(bondOut, curveId),
+                keysIn
+            );
+        }
+
+        for (
+            uint256 bondIn = 0 ether;
+            bondIn < 16 ether;
+            bondIn += 0.33 ether
+        ) {
+            uint256 keysOut = bondCurve.getKeysCountByBondAmount(
+                bondIn,
+                curveId
+            );
+            assertGe(
+                bondIn,
+                bondCurve.getBondAmountByKeysCount(keysOut, curveId)
+            );
+        }
+    }
 }
 
 contract CSBondCurveFuzz is Test {
