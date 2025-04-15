@@ -16,8 +16,8 @@ contract CuratedExtension is
 
     uint256 public constant MAX_NODE_OPERATOR_NAME_LENGTH = 255;
 
-    /// @dev Address of the Community Staking Module
-    ICSModule public immutable CSM;
+    /// @dev Address of the Community Staking Module in Curated mode.
+    ICSModule public immutable MODULE;
 
     mapping(uint256 => NodeOperatorProperties) private _nodeOperators;
 
@@ -26,7 +26,7 @@ contract CuratedExtension is
             revert ZeroModuleAddress();
         }
 
-        CSM = ICSModule(csm);
+        MODULE = ICSModule(csm);
 
         _disableInitializers();
     }
@@ -59,7 +59,7 @@ contract CuratedExtension is
             revert ZeroRewardAddress();
         }
 
-        nodeOperatorId = CSM.createNodeOperator(
+        nodeOperatorId = MODULE.createNodeOperator(
             msg.sender,
             NodeOperatorManagementProperties({
                 managerAddress: managerAddress,

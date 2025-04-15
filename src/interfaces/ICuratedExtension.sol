@@ -26,7 +26,7 @@ interface ICuratedExtension {
     error InvalidNameLength();
     error SameName();
 
-    function CSM() external view returns (ICSModule);
+    function MODULE() external view returns (ICSModule);
 
     /// @notice Add a new Node Operator
     /// @param managerAddress An address to use as a manager address for the Node Operator in the extension
