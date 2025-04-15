@@ -23,11 +23,12 @@ library MinFirstAllocationStrategy {
     /// @param capacities The array of capacities of the buckets
     /// @param allocationSize The desired value to allocate among the buckets
     /// @return allocated The total value allocated among the buckets. Can't exceed the allocationSize value
+    // solhint-disable-next-line gas-calldata-parameters
     function allocate(
         uint256[] memory buckets,
         uint256[] memory capacities,
         uint256 allocationSize
-    ) internal pure returns (uint256 allocated) {
+    ) external pure returns (uint256 allocated, uint256[] memory) {
         uint256 allocatedToBestCandidate = 0;
         while (allocated < allocationSize) {
             allocatedToBestCandidate = allocateToBestCandidate(
@@ -40,6 +41,8 @@ library MinFirstAllocationStrategy {
             }
             allocated += allocatedToBestCandidate;
         }
+
+        return (allocated, buckets);
     }
 
     /// @notice Allocates the max allowed value not exceeding allocationSize to the bucket with the least value.

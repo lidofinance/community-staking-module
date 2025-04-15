@@ -1357,18 +1357,15 @@ contract CSModule is
         bytes memory signatures,
         uint256 depositsCount
     ) internal {
-        uint256 operatorsCount = _nodeOperatorsCount;
+        (
+            uint256 allocated,
+            uint256[] memory operators,
+            uint256[] memory activeKeysAfterAllocation
+        ) = _allocateViaMinFirst(depositsCount);
 
-        uint256[] memory operators = new uint256[](operatorsCount);
-        uint256[] memory activeKeysAfterAllocation = new uint256[](
-            operatorsCount
-        );
-        _allocateViaMinFirst(
-            activeKeysAfterAllocation,
-            operators,
-            operatorsCount,
-            depositsCount
-        );
+        if (allocated != depositsCount) {
+            revert NotEnoughKeys();
+        }
 
         uint256 loadedKeysCount;
 
@@ -1527,12 +1524,21 @@ contract CSModule is
     }
 
     function _allocateViaMinFirst(
-        uint256[] memory activeKeysAfterAllocation,
-        uint256[] memory operators,
-        uint256 operatorsCount,
         uint256 depositsCount
-    ) internal view {
+    )
+        internal
+        view
+        returns (
+            uint256 allocated,
+            uint256[] memory operators,
+            uint256[] memory activeKeysAfterAllocation
+        )
+    {
+        uint256 operatorsCount = _nodeOperatorsCount;
+
         uint256[] memory activeKeysCapacities = new uint256[](operatorsCount);
+        activeKeysAfterAllocation = new uint256[](operatorsCount);
+        operators = new uint256[](operatorsCount);
 
         uint256 bucketIndex;
 
@@ -1569,15 +1575,13 @@ contract CSModule is
             }
         }
 
-        uint256 allocated = MinFirstAllocationStrategy.allocate(
-            activeKeysAfterAllocation,
-            activeKeysCapacities,
-            depositsCount
-        );
-
-        if (allocated != depositsCount) {
-            revert NotEnoughKeys();
-        }
+        // NOTE: `allocate` called via DELEGATECALL.
+        (allocated, activeKeysAfterAllocation) = MinFirstAllocationStrategy
+            .allocate(
+                activeKeysAfterAllocation,
+                activeKeysCapacities,
+                depositsCount
+            );
     }
 
     /// @dev Acts as a proxy to `_queueByPriority` till `legacyQueue` deprecation.

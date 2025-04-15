@@ -28,12 +28,11 @@ contract Library {
             uint256[] memory newCapacities
         )
     {
-        allocated = MinFirstAllocationStrategy.allocate(
+        (allocated, newBuckets) = MinFirstAllocationStrategy.allocate(
             buckets,
             capacities,
             allocationSize
         );
-        newBuckets = buckets;
         newCapacities = capacities;
     }
 
