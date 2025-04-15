@@ -138,14 +138,25 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
                     low = mid;
                 }
             }
-            BondCurveInterval storage interval = intervals[low];
+            //
+            //                          <-------> trend[B]
+            //               fromBond[A]        fromBond[B]
+            // bond      ----|----|----|----^---|--------|--> eth
+            // fromKeys      1         3    |   4
+            //           <---> trend[A]     |
+            //                              - amount
+            // Starting from keys count = 3 trend[B] is already in use, it means if the amount is
+            // somewhere within the interval (fromBond[B] - trend[B]; fromBond[B]), the maximum
+            // amount of keys it's possible to create is fromKeys[B] - 1
+            //
+            BondCurveInterval storage interval;
             if (low < intervals.length - 1) {
-                uint256 maxBond = intervals[low + 1].fromBond -
-                    intervals[low + 1].trend;
-                if (amount > maxBond) {
-                    amount = maxBond;
+                interval = intervals[low + 1];
+                if (amount > interval.fromBond - interval.trend) {
+                    return interval.fromKeysCount - 1;
                 }
             }
+            interval = intervals[low];
             return
                 interval.fromKeysCount +
                 (amount - interval.fromBond) /
