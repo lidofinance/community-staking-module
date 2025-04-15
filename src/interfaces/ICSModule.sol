@@ -182,8 +182,10 @@ interface ICSModule is
 
     function FEE_DISTRIBUTOR() external view returns (address);
 
+    /// @notice The lowest priority a deposit queue can be assigned with.
     function QUEUE_LOWEST_PRIORITY() external view returns (uint256);
 
+    /// @notice The priority reserved to be used for legacy queue only.
     function QUEUE_LEGACY_PRIORITY() external view returns (uint256);
 
     /// @notice Returns whether the module is deployed in the 'curated' mode of operation.

@@ -23,6 +23,8 @@ import { QueueLib, Batch } from "./lib/QueueLib.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
 import { NOAddresses } from "./lib/NOAddresses.sol";
 import { TransientUintUintMap, TransientUintUintMapLib } from "./lib/TransientUintUintMapLib.sol";
+import { MinFirstAllocationStrategy } from "./lib/MinFirstAllocationStrategy.sol";
+
 import { SigningKeys } from "./lib/SigningKeys.sol";
 
 contract CSModule is
@@ -890,108 +892,10 @@ contract CSModule is
             return (publicKeys, signatures);
         }
 
-        uint256 depositsLeft = depositsCount;
-        uint256 loadedKeysCount = 0;
-
         if (isInCuratedMode()) {
-            revert NotImplemented();
-        }
-
-        QueueLib.Queue storage queue;
-        // Note: The highest priority to start iterations with. Priorities are ordered like 0, 1, 2, ...
-        uint256 priority = 0;
-
-        while (true) {
-            if (priority > QUEUE_LOWEST_PRIORITY || depositsLeft == 0) {
-                break;
-            }
-
-            queue = _getQueue(priority);
-            unchecked {
-                // Note: unused below
-                ++priority;
-            }
-
-            for (
-                Batch item = queue.peek();
-                !item.isNil();
-                item = queue.peek()
-            ) {
-                // NOTE: see the `enqueuedCount` note below.
-                unchecked {
-                    uint256 noId = item.noId();
-                    uint256 keysInBatch = item.keys();
-                    NodeOperator storage no = _nodeOperators[noId];
-
-                    uint256 keysCount = Math.min(
-                        Math.min(no.depositableValidatorsCount, keysInBatch),
-                        depositsLeft
-                    );
-                    // `depositsLeft` is non-zero at this point all the time, so the check `depositsLeft > keysCount`
-                    // covers the case when no depositable keys on the Node Operator have been left.
-                    if (depositsLeft > keysCount || keysCount == keysInBatch) {
-                        // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
-                        // @dev No need to safe cast due to internal logic
-                        no.enqueuedCount -= uint32(keysInBatch);
-                        // We've consumed all the keys in the batch, so we dequeue it.
-                        queue.dequeue();
-                    } else {
-                        // This branch covers the case when we stop in the middle of the batch.
-                        // We release the amount of keys consumed only, the rest will be kept.
-                        // @dev No need to safe cast due to internal logic
-                        no.enqueuedCount -= uint32(keysCount);
-                        // NOTE: `keysInBatch` can't be less than `keysCount` at this point.
-                        // We update the batch with the remaining keys.
-                        item = item.setKeys(keysInBatch - keysCount);
-                        // Store the updated batch back to the queue.
-                        queue.queue[queue.head] = item;
-                    }
-
-                    // Note: This condition is located here to allow for the correct removal of the batch for the Node Operators with no depositable keys
-                    if (keysCount == 0) {
-                        continue;
-                    }
-
-                    // solhint-disable-next-line func-named-parameters
-                    SigningKeys.loadKeysSigs(
-                        noId,
-                        no.totalDepositedKeys,
-                        keysCount,
-                        publicKeys,
-                        signatures,
-                        loadedKeysCount
-                    );
-
-                    // It's impossible in practice to reach the limit of these variables.
-                    loadedKeysCount += keysCount;
-                    // @dev No need to safe cast due to internal logic
-                    uint32 totalDepositedKeys = no.totalDepositedKeys +
-                        uint32(keysCount);
-                    no.totalDepositedKeys = totalDepositedKeys;
-
-                    emit DepositedSigningKeysCountChanged(
-                        noId,
-                        totalDepositedKeys
-                    );
-
-                    // No need for `_updateDepositableValidatorsCount` call since we update the number directly.
-                    // `keysCount` is min of `depositableValidatorsCount` and `depositsLeft`.
-                    // @dev No need to safe cast due to internal logic
-                    uint32 newCount = no.depositableValidatorsCount -
-                        uint32(keysCount);
-                    no.depositableValidatorsCount = newCount;
-                    emit DepositableSigningKeysCountChanged(noId, newCount);
-
-                    depositsLeft -= keysCount;
-                    if (depositsLeft == 0) {
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (loadedKeysCount != depositsCount) {
-            revert NotEnoughKeys();
+            _depositDataViaMinFirst(publicKeys, signatures, depositsCount);
+        } else {
+            _depositDataViaQueue(publicKeys, signatures, depositsCount);
         }
 
         unchecked {
@@ -1589,6 +1493,240 @@ contract CSModule is
 
     /// @dev Acts as a proxy to `_queueByPriority` till `_legacyQueue` deprecation.
     /// @dev TODO: Remove the method in the next major release.
+    function _depositDataViaMinFirst(
+        bytes memory publicKeys,
+        bytes memory signatures,
+        uint256 depositsCount
+    ) internal {
+        (
+            uint256 allocated,
+            uint256[] memory operators,
+            uint256[] memory activeKeysAfterAllocation
+        ) = _allocateViaMinFirst(depositsCount);
+
+        if (allocated != depositsCount) {
+            revert NotEnoughKeys();
+        }
+
+        uint256 loadedKeysCount;
+
+        for (uint256 i; i < operators.length; ++i) {
+            uint256 noId = operators[i];
+            NodeOperator storage no = _nodeOperators[noId];
+
+            uint256 depositedSigningKeysCount = no.totalDepositedKeys;
+            uint256 keysCount;
+
+            unchecked {
+                keysCount =
+                    activeKeysAfterAllocation[i] -
+                    (depositedSigningKeysCount - no.totalExitedKeys);
+            }
+
+            if (keysCount == 0) {
+                continue;
+            }
+
+            // solhint-disable-next-line func-named-parameters
+            SigningKeys.loadKeysSigs(
+                noId,
+                depositedSigningKeysCount,
+                keysCount,
+                publicKeys,
+                signatures,
+                loadedKeysCount
+            );
+
+            unchecked {
+                loadedKeysCount += keysCount;
+            }
+
+            uint32 totalDepositedKeys = uint32(
+                depositedSigningKeysCount + keysCount
+            );
+            no.totalDepositedKeys = totalDepositedKeys;
+
+            emit DepositedSigningKeysCountChanged(noId, totalDepositedKeys);
+
+            uint32 newCount = no.depositableValidatorsCount - uint32(keysCount);
+            no.depositableValidatorsCount = newCount;
+            emit DepositableSigningKeysCountChanged(noId, newCount);
+        }
+
+        if (loadedKeysCount != depositsCount) {
+            revert NotEnoughKeys();
+        }
+    }
+
+    function _depositDataViaQueue(
+        bytes memory publicKeys,
+        bytes memory signatures,
+        uint256 depositsCount
+    ) internal {
+        uint256 depositsLeft = depositsCount;
+        uint256 loadedKeysCount = 0;
+
+        QueueLib.Queue storage queue;
+        // Note: The highest priority to start iterations with. Priorities are ordered like 0, 1, 2, ...
+        uint256 priority = 0;
+
+        while (true) {
+            if (priority > QUEUE_LOWEST_PRIORITY || depositsLeft == 0) {
+                break;
+            }
+
+            queue = _getQueue(priority);
+            unchecked {
+                // Note: unused below
+                ++priority;
+            }
+
+            for (
+                Batch item = queue.peek();
+                !item.isNil();
+                item = queue.peek()
+            ) {
+                // NOTE: see the `enqueuedCount` note below.
+                unchecked {
+                    uint256 noId = item.noId();
+                    uint256 keysInBatch = item.keys();
+                    NodeOperator storage no = _nodeOperators[noId];
+
+                    uint256 keysCount = Math.min(
+                        Math.min(no.depositableValidatorsCount, keysInBatch),
+                        depositsLeft
+                    );
+                    // `depositsLeft` is non-zero at this point all the time, so the check `depositsLeft > keysCount`
+                    // covers the case when no depositable keys on the Node Operator have been left.
+                    if (depositsLeft > keysCount || keysCount == keysInBatch) {
+                        // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
+                        // @dev No need to safe cast due to internal logic
+                        no.enqueuedCount -= uint32(keysInBatch);
+                        // We've consumed all the keys in the batch, so we dequeue it.
+                        queue.dequeue();
+                    } else {
+                        // This branch covers the case when we stop in the middle of the batch.
+                        // We release the amount of keys consumed only, the rest will be kept.
+                        // @dev No need to safe cast due to internal logic
+                        no.enqueuedCount -= uint32(keysCount);
+                        // NOTE: `keysInBatch` can't be less than `keysCount` at this point.
+                        // We update the batch with the remaining keys.
+                        item = item.setKeys(keysInBatch - keysCount);
+                        // Store the updated batch back to the queue.
+                        queue.queue[queue.head] = item;
+                    }
+
+                    // Note: This condition is located here to allow for the correct removal of the batch for the Node Operators with no depositable keys
+                    if (keysCount == 0) {
+                        continue;
+                    }
+
+                    // solhint-disable-next-line func-named-parameters
+                    SigningKeys.loadKeysSigs(
+                        noId,
+                        no.totalDepositedKeys,
+                        keysCount,
+                        publicKeys,
+                        signatures,
+                        loadedKeysCount
+                    );
+
+                    // It's impossible in practice to reach the limit of these variables.
+                    loadedKeysCount += keysCount;
+                    // @dev No need to safe cast due to internal logic
+                    uint32 totalDepositedKeys = no.totalDepositedKeys +
+                        uint32(keysCount);
+                    no.totalDepositedKeys = totalDepositedKeys;
+
+                    emit DepositedSigningKeysCountChanged(
+                        noId,
+                        totalDepositedKeys
+                    );
+
+                    // No need for `_updateDepositableValidatorsCount` call since we update the number directly.
+                    // `keysCount` is min of `depositableValidatorsCount` and `depositsLeft`.
+                    // @dev No need to safe cast due to internal logic
+                    uint32 newCount = no.depositableValidatorsCount -
+                        uint32(keysCount);
+                    no.depositableValidatorsCount = newCount;
+                    emit DepositableSigningKeysCountChanged(noId, newCount);
+
+                    depositsLeft -= keysCount;
+                    if (depositsLeft == 0) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (loadedKeysCount != depositsCount) {
+            revert NotEnoughKeys();
+        }
+    }
+
+    function _allocateViaMinFirst(
+        uint256 depositsCount
+    )
+        internal
+        view
+        returns (
+            uint256 allocated,
+            uint256[] memory operators,
+            uint256[] memory activeKeysAfterAllocation
+        )
+    {
+        uint256 operatorsCount = _nodeOperatorsCount;
+
+        uint256[] memory activeKeysCapacities = new uint256[](operatorsCount);
+        activeKeysAfterAllocation = new uint256[](operatorsCount);
+        operators = new uint256[](operatorsCount);
+
+        uint256 bucketIndex;
+
+        for (uint256 noId; noId < operatorsCount; ++noId) {
+            NodeOperator storage no = _nodeOperators[noId];
+            uint256 depositableSigningKeysCount = no.depositableValidatorsCount;
+
+            if (depositableSigningKeysCount > 0) {
+                uint256 depositedSigningKeysCount = no.totalDepositedKeys;
+
+                unchecked {
+                    operators[bucketIndex] = noId;
+                    uint256 activeKeysCount = depositedSigningKeysCount -
+                        no.totalExitedKeys;
+                    activeKeysAfterAllocation[bucketIndex] = activeKeysCount;
+                    activeKeysCapacities[bucketIndex] =
+                        activeKeysCount +
+                        depositableSigningKeysCount;
+                    ++bucketIndex;
+                }
+            }
+        }
+
+        if (bucketIndex == 0) {
+            revert NotEnoughKeys();
+        }
+
+        // NOTE: Shrinking pre-allocated arrays before passing to MinFirstAllocationStrategy.
+        if (bucketIndex < operatorsCount) {
+            assembly ("memory-safe") {
+                mstore(operators, bucketIndex)
+                mstore(activeKeysAfterAllocation, bucketIndex)
+                mstore(activeKeysCapacities, bucketIndex)
+            }
+        }
+
+        // NOTE: `allocate` called via DELEGATECALL.
+        (allocated, activeKeysAfterAllocation) = MinFirstAllocationStrategy
+            .allocate(
+                activeKeysAfterAllocation,
+                activeKeysCapacities,
+                depositsCount
+            );
+    }
+
+    /// @dev Acts as a proxy to `_queueByPriority` till `legacyQueue` deprecation.
+    /// @dev TODO: Remove in CSM v3.
     function _getQueue(
         uint256 priority
     ) internal view returns (QueueLib.Queue storage q) {

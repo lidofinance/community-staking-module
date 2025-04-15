@@ -4,10 +4,8 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 import { IStETH } from "../../src/interfaces/IStETH.sol";
-import { IBurner } from "../../src/interfaces/IBurner.sol";
 import { CSFeeDistributor } from "../../src/CSFeeDistributor.sol";
-import { CSModule } from "../../src/CSModule.sol";
-import { NodeOperator } from "../../src/interfaces/ICSModule.sol";
+import { ICSModule, NodeOperator } from "../../src/interfaces/ICSModule.sol";
 import { Batch } from "../../src/lib/QueueLib.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";
 import { CSStrikes } from "../../src/CSStrikes.sol";
@@ -37,7 +35,7 @@ contract InvariantAsserts is Test {
         }
     }
 
-    function assertCSMKeys(CSModule csm) public {
+    function assertCSMKeys(ICSModule csm) public {
         if (skipInvariants()) {
             return;
         }
@@ -126,10 +124,14 @@ contract InvariantAsserts is Test {
 
     mapping(uint256 => uint256) batchKeys;
 
-    function assertCSMEnqueuedCount(CSModule csm) public {
+    function assertCSMEnqueuedCount(ICSModule csm) public {
         if (skipInvariants()) {
             return;
         }
+        if (csm.isInCuratedMode()) {
+            return;
+        }
+
         uint256 noCount = csm.getNodeOperatorsCount();
         NodeOperator memory no;
 

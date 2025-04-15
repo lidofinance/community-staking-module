@@ -55,4 +55,10 @@ block_gas_limit = 60_000_000
 
 [profile.upgrades]
 extra_output = ["storageLayout"]
-build_info=true
+build_info = true
+
+[profile.minimum_ir]
+via_ir = true
+
+[profile.minimum_ir.optimizer_details.yulDetails]
+optimizerSteps = 'u' # @see with_via_ir_minimum_optimization in https://github.com/foundry-rs/compilers/blob/main/crates/artifacts/solc/src/lib.rs
