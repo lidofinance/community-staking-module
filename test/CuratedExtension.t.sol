@@ -37,7 +37,7 @@ contract CuratedExtensionTest is Test, Utilities, Fixtures {
 
     function test_constructor() public {
         curatedExtension = new CuratedExtension(csm);
-        assertEq(address(curatedExtension.CSM()), csm);
+        assertEq(address(curatedExtension.MODULE()), csm);
     }
 
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
@@ -75,11 +75,13 @@ contract CuratedExtensionTest is Test, Utilities, Fixtures {
     }
 
     function test_addNodeOperator() public {
-        uint256 nodeOperatorId = curatedExtension.CSM().getNodeOperatorsCount();
+        uint256 nodeOperatorId = curatedExtension
+            .MODULE()
+            .getNodeOperatorsCount();
         string memory name = "Awesome Curated NO";
 
         vm.expectCall(
-            address(curatedExtension.CSM()),
+            address(curatedExtension.MODULE()),
             abi.encodeWithSelector(
                 ICSModule.createNodeOperator.selector,
                 manager,
