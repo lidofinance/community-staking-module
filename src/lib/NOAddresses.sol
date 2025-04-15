@@ -203,14 +203,15 @@ library NOAddresses {
         );
     }
 
-    /// @notice Change rewardAddress if extendedManagerPermissions is enabled for the Node Operator.
-    ///         Should be called from the current manager address
+    /// @notice Change rewardAddress if extendedManagerPermissions is enabled for the Node Operator or curatedMode is enabled for CSM.
+    ///         Should be called from the current manager address in case of disabled curatedMode for CSM
     /// @param nodeOperatorId ID of the Node Operator
     /// @param newAddress New reward address
     function changeNodeOperatorRewardAddress(
         mapping(uint256 => NodeOperator) storage nodeOperators,
         uint256 nodeOperatorId,
-        address newAddress
+        address newAddress,
+        bool isInCuratedMode
     ) external {
         if (newAddress == address(0)) {
             revert INOAddresses.ZeroRewardAddress();
@@ -220,12 +221,15 @@ library NOAddresses {
             revert ICSModule.NodeOperatorDoesNotExist();
         }
 
-        if (!no.extendedManagerPermissions) {
-            revert INOAddresses.MethodCallIsNotAllowed();
-        }
+        // In curated mode this method is expected to be called by MANAGE_NODE_OPERATORS_ROLE role members. See CSM code
+        if (!isInCuratedMode) {
+            if (!no.extendedManagerPermissions) {
+                revert INOAddresses.MethodCallIsNotAllowed();
+            }
 
-        if (no.managerAddress != msg.sender) {
-            revert INOAddresses.SenderIsNotManagerAddress();
+            if (no.managerAddress != msg.sender) {
+                revert INOAddresses.SenderIsNotManagerAddress();
+            }
         }
 
         address oldAddress = no.rewardAddress;

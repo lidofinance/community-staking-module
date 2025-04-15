@@ -326,6 +326,7 @@ interface ICSModule is
     function resetNodeOperatorManagerAddress(uint256 nodeOperatorId) external;
 
     /// @notice Propose a new reward address for the Node Operator
+    ///         Disabled in the curated mode
     /// @param nodeOperatorId ID of the Node Operator
     /// @param proposedAddress Proposed reward address
     function proposeNodeOperatorRewardAddressChange(
@@ -334,13 +335,15 @@ interface ICSModule is
     ) external;
 
     /// @notice Confirm a new reward address for the Node Operator.
-    ///         Should be called from the currently proposed address
+    ///         Should be called from the currently proposed address.
+    ///         Disabled in the curated mode
     /// @param nodeOperatorId ID of the Node Operator
     function confirmNodeOperatorRewardAddressChange(
         uint256 nodeOperatorId
     ) external;
 
     /// @notice Change rewardAddress if extendedManagerPermissions is enabled for the Node Operator
+    ///         In the curated mode called by MANAGE_NODE_OPERATORS_ROLE role members
     /// @param nodeOperatorId ID of the Node Operator
     /// @param newAddress Proposed reward address
     function changeNodeOperatorRewardAddress(

@@ -106,8 +106,8 @@ contract CSMMock is Utilities, Fixtures {
         address /* from */,
         NodeOperatorManagementProperties memory /* managementProperties */,
         address /* referrer */
-    ) external pure returns (uint256) {
-        return 0;
+    ) external view returns (uint256) {
+        return nodeOperatorsCount;
     }
 
     function addValidatorKeysETH(
