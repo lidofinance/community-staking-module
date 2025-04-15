@@ -262,10 +262,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
                     intervals[i][0],
                     intervals[i][1]
                 );
-                (uint256 prevFromKeysCount, ) = (
-                    intervals[i - 1][0],
-                    intervals[i - 1][1]
-                );
+                uint256 prevFromKeysCount = intervals[i - 1][0];
                 if (fromKeysCount <= prevFromKeysCount) {
                     revert InvalidBondCurveValues();
                 }
