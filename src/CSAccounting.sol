@@ -112,7 +112,7 @@ contract CSAccounting is
         uint256[2][] calldata defaultBondCurve,
         uint256[2][] calldata vettedBondCurve
     ) external reinitializer(2) {
-        /// NOTE: It doesn't add new bond curves, but migrates existing ones to the new format (`BondCurve` to `BondCurveInterval[]`)
+        /// NOTE: This method is not for adding new bond curves, but for migration of the existing ones to the new format (`BondCurve` to `BondCurveInterval[]`). However, bond values can be different from the current.
         _addBondCurve(defaultBondCurve);
         _addBondCurve(vettedBondCurve);
     }
