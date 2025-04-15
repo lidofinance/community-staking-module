@@ -1,8 +1,8 @@
 # CSModule
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/86cbb28dad521bfac5576c8a7b405bc33b32f44d/src/CSModule.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/CSModule.sol)
 
 **Inherits:**
-[ICSModule](/src/interfaces/ICSModule.sol/interface.ICSModule.md), [IStakingModule](/src/interfaces/IStakingModule.sol/interface.IStakingModule.md), Initializable, AccessControlEnumerableUpgradeable, [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
+[ICSModule](/src/interfaces/ICSModule.sol/interface.ICSModule.md), Initializable, AccessControlEnumerableUpgradeable, [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
 
 
 ## State Variables
@@ -133,7 +133,7 @@ mapping(uint256 queuePriority => QueueLib.Queue queue) internal _queueByPriority
 
 
 ### legacyQueue
-*Legacy queue (priority=QUEUE_LEGACY_PRIORITY), that we will probably may be able to remove in the future.*
+*Legacy queue (priority=QUEUE_LEGACY_PRIORITY), that should be removed in the future once there are no more batches in it.*
 
 **Note:**
 oz-renamed-from: depositQueue
@@ -151,24 +151,15 @@ ICSAccounting public accounting;
 ```
 
 
-### _earlyAdoption
-*DEPRECATED*
+### _isValidatorExitDelayed
+**Notes:**
+- oz-renamed-from: earlyAdoption
 
-**Note:**
-oz-renamed-from: earlyAdoption
-
-
-```solidity
-address internal _earlyAdoption;
-```
-
-
-### publicRelease
-*DEPRECATED*
+- oz-retyped-from: address
 
 
 ```solidity
-bool public publicRelease;
+mapping(uint256 noKeyIndexPacked => uint256) private _isValidatorExitDelayed;
 ```
 
 
@@ -608,13 +599,13 @@ function removeKeys(uint256 nodeOperatorId, uint256 startIndex, uint256 keysCoun
 |`keysCount`|`uint256`|Keys count to delete|
 
 
-### enqueueNodeOperatorKeys
+### updateDepositableValidatorsCount
 
 TODO: Consider renaming
 
 
 ```solidity
-function enqueueNodeOperatorKeys(uint256 nodeOperatorId) external;
+function updateDepositableValidatorsCount(uint256 nodeOperatorId) external;
 ```
 **Parameters**
 
@@ -749,6 +740,48 @@ After keys removal the DAO should set the new key removal charge.*
 function onWithdrawalCredentialsChanged() external onlyRole(STAKING_ROUTER_ROLE);
 ```
 
+### reportValidatorExitDelay
+
+Handles tracking and penalization logic for validators that remain active beyond their eligible exit window.
+
+*This function is called to report the current exit-related status of validator belonging to a specific node operator.
+It accepts a validator public key associated with the duration (in seconds) they was eligible to exit but have not.
+This data could be used to trigger penalties for the node operator if validator has been non-exiting for too long.*
+
+
+```solidity
+function reportValidatorExitDelay(uint256, uint256, bytes calldata, uint256) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`||
+|`<none>`|`uint256`||
+|`<none>`|`bytes`||
+|`<none>`|`uint256`||
+
+
+### onValidatorExitTriggered
+
+Handles the triggerable exit event validator belonging to a specific node operator.
+
+*This function is called when a validator is exited using the triggerable exit request on EL.*
+
+
+```solidity
+function onValidatorExitTriggered(uint256, bytes calldata, uint256, uint256) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`||
+|`<none>`|`bytes`||
+|`<none>`|`uint256`||
+|`<none>`|`uint256`||
+
+
 ### obtainDepositData
 
 Get the next `depositsCount` of depositable keys with signatures from the queue
@@ -809,26 +842,6 @@ Returns the initialized version of the contract
 ```solidity
 function getInitializedVersion() external view returns (uint64);
 ```
-
-### updateRefundedValidatorsCount
-
-Updates the number of the refunded validators for node operator with the given id
-
-*Always reverts. Non supported in CSM*
-
-*`refundedValidatorsCount` is not used in the module*
-
-
-```solidity
-function updateRefundedValidatorsCount(uint256, uint256) external view onlyRole(STAKING_ROUTER_ROLE);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`||
-|`<none>`|`uint256`||
-
 
 ### depositQueuePointers
 
@@ -1172,6 +1185,48 @@ total node operators count or when `limit` is equal to 0 MUST be returned empty 
 ```solidity
 function getNodeOperatorIds(uint256 offset, uint256 limit) external view returns (uint256[] memory nodeOperatorIds);
 ```
+
+### isValidatorExitDelayPenaltyApplicable
+
+Determines whether a validator exit status should be updated and will have affect on Node Operator.
+
+
+```solidity
+function isValidatorExitDelayPenaltyApplicable(uint256, uint256, bytes calldata, uint256)
+    external
+    view
+    returns (bool);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`||
+|`<none>`|`uint256`||
+|`<none>`|`bytes`||
+|`<none>`|`uint256`||
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|bool Returns true if contract should receive updated validator's status.|
+
+
+### exitDeadlineThreshold
+
+Returns the delay after which a validator is considered late.
+
+
+```solidity
+function exitDeadlineThreshold(uint256 nodeOperatorId) external view returns (uint256);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|The exit deadline threshold.|
+
 
 ### _incrementModuleNonce
 

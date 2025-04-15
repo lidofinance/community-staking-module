@@ -1,5 +1,5 @@
 # ICSBondCurve
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/86cbb28dad521bfac5576c8a7b405bc33b32f44d/src/interfaces/ICSBondCurve.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/interfaces/ICSBondCurve.sol)
 
 
 ## Functions
@@ -129,31 +129,6 @@ function getBondAmountByKeysCount(uint256 keys, uint256 curveId) external view r
 |`<none>`|`uint256`|Amount for particular keys count|
 
 
-### getBondAmountByKeysCount
-
-Get required bond in ETH for the given number of keys for particular bond curve.
-
-*To calculate the amount for the new keys 2 calls are required:
-getBondAmountByKeysCount(newTotal, curve) - getBondAmountByKeysCount(currentTotal, curve)*
-
-
-```solidity
-function getBondAmountByKeysCount(uint256 keys, BondCurve memory curve) external view returns (uint256);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`keys`|`uint256`|Number of keys to get required bond for|
-|`curve`|`BondCurve`|Bond curve to perform calculations against|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|Required bond amount in ETH (stETH) for particular keys count|
-
-
 ### getKeysCountByBondAmount
 
 Get keys count for the given bond amount with default bond curve
@@ -176,33 +151,11 @@ function getKeysCountByBondAmount(uint256 amount, uint256 curveId) external view
 |`<none>`|`uint256`|Keys count|
 
 
-### getKeysCountByBondAmount
-
-Get keys count for the given bond amount for particular bond curve.
-
-
-```solidity
-function getKeysCountByBondAmount(uint256 amount, BondCurve memory curve) external view returns (uint256);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`amount`|`uint256`|Bond amount to get keys count for|
-|`curve`|`BondCurve`|Bond curve to perform calculations against|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|Keys count|
-
-
 ## Events
 ### BondCurveAdded
 
 ```solidity
-event BondCurveAdded(uint256[] bondCurve);
+event BondCurveAdded(uint256 indexed curveId, uint256[] bondCurve);
 ```
 
 ### BondCurveUpdated

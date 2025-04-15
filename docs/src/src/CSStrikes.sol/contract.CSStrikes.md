@@ -1,5 +1,5 @@
 # CSStrikes
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/86cbb28dad521bfac5576c8a7b405bc33b32f44d/src/CSStrikes.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/CSStrikes.sol)
 
 **Inherits:**
 [ICSStrikes](/src/interfaces/ICSStrikes.sol/interface.ICSStrikes.md)
@@ -13,6 +13,13 @@ vgorkavenko
 
 ```solidity
 address public immutable ORACLE;
+```
+
+
+### MODULE
+
+```solidity
+ICSModule public immutable MODULE;
 ```
 
 
@@ -142,14 +149,4 @@ function hashLeaf(uint256 nodeOperatorId, bytes memory pubkey, uint256[] calldat
 |----|----|-----------|
 |`<none>`|`bytes32`|Hash of the leaf|
 
-
-### _getSigningKeys
-
-
-```solidity
-function _getSigningKeys(uint256 nodeOperatorId, uint256 startIndex, uint256 keysCount)
-    internal
-    view
-    returns (bytes memory keys);
-```
 
