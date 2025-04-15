@@ -751,13 +751,13 @@ contract CSModule is
             ExitPenaltyInfo memory exitPenaltyInfo = EJECTOR.getDelayedExitPenaltyInfo(withdrawalInfo.nodeOperatorId, pubkey);
             if (exitPenaltyInfo.delayPenalty.isValue) {
                 unchecked {
-                    penaltySum += exitPenaltyInfo.delayPenalty;
+                    penaltySum += exitPenaltyInfo.delayPenalty.value;
                 }
                 chargeWithdrawalRequestFee = true;
             }
             if (exitPenaltyInfo.strikesPenalty.isValue) {
                 unchecked {
-                    penaltySum += exitPenaltyInfo.strikesPenalty;
+                    penaltySum += exitPenaltyInfo.strikesPenalty.value;
                 }
                 chargeWithdrawalRequestFee = true;
             }
@@ -773,10 +773,12 @@ contract CSModule is
                     penaltySum += DEPOSIT_SIZE - withdrawalInfo.amount;
                 }
             }
-            accounting.penalize(
-                withdrawalInfo.nodeOperatorId,
-                penaltySum
-            );
+            if (penaltySum > 0) {
+                accounting.penalize(
+                    withdrawalInfo.nodeOperatorId,
+                    penaltySum
+                );
+            }
 
             // Nonce should be updated if depositableValidators change
             _updateDepositableValidatorsCount({

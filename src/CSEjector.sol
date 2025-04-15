@@ -118,9 +118,7 @@ contract CSEjector is
                 nodeOperatorId,
                 publicKey
             );
-            ExitPenaltyInfoMarked storage exitPenaltyInfo = _exitPenaltyInfo[
-                noPublicKeyPacked
-            ];
+            ExitPenaltyInfo storage exitPenaltyInfo = _exitPenaltyInfo[noPublicKeyPacked];
             // don't update the fee if it was already set to prevent hypothetical manipulations
             // with double reporting to get lower/higher fee.
             // it's impossible to set it to zero legitimately
@@ -207,7 +205,7 @@ contract CSEjector is
             nodeOperatorId,
             pubkey
         );
-        if (_exitPenaltyInfo[noPubkeyPacked].strikesPenalty.isValue > 0) {
+        if (_exitPenaltyInfo[noPubkeyPacked].strikesPenalty.isValue) {
             _exitPenaltyInfo[noPubkeyPacked].strikesPenalty = MarkedUint248(penalty.toUint248(), true);
             emit BadPerformancePenaltyProcessed(
                 nodeOperatorId,
