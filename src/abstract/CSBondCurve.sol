@@ -105,11 +105,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             uint256 high = intervals.length - 1;
             while (low < high) {
                 uint256 mid = (low + high + 1) / 2;
-                BondCurveInterval storage midInterval = intervals[mid];
-                if (keys <= midInterval.fromKeysCount) {
-                    if (keys == midInterval.fromKeysCount) {
-                        return midInterval.fromBond;
-                    }
+                if (keys < intervals[mid].fromKeysCount) {
                     high = mid - 1;
                 } else {
                     low = mid;
@@ -136,11 +132,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             uint256 high = intervals.length - 1;
             while (low < high) {
                 uint256 mid = (low + high + 1) / 2;
-                BondCurveInterval storage midInterval = intervals[mid];
-                if (amount <= midInterval.fromBond) {
-                    if (amount == midInterval.fromBond) {
-                        return intervals[mid].fromKeysCount;
-                    }
+                if (amount < intervals[mid].fromBond) {
                     high = mid - 1;
                 } else {
                     low = mid;
@@ -150,7 +142,9 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             if (low < intervals.length - 1) {
                 uint256 maxBond = intervals[low + 1].fromBond -
                     intervals[low + 1].trend;
-                amount = amount < maxBond ? amount : maxBond;
+                if (amount > maxBond) {
+                    amount = maxBond;
+                }
             }
             return
                 interval.fromKeysCount +
