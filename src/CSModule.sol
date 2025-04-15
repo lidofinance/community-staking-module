@@ -1379,8 +1379,7 @@ contract CSModule is
             unchecked {
                 keysCount =
                     activeKeysAfterAllocation[i] -
-                    no.totalExitedKeys -
-                    depositedSigningKeysCount;
+                    (depositedSigningKeysCount - no.totalExitedKeys);
             }
 
             if (keysCount == 0) {

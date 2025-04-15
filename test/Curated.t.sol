@@ -91,4 +91,32 @@ contract CuratedTest is CSMFixtures {
         }
         csm.obtainDepositData(40, "");
     }
+
+    function test_obtainDepositData_UsesTheLeastActiveKeysFirst() public {
+        createNodeOperator(100);
+        createNodeOperator(100);
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.DepositedSigningKeysCountChanged(0, 50);
+
+            vm.expectEmit(address(csm));
+            emit ICSModule.DepositedSigningKeysCountChanged(1, 50);
+        }
+        csm.obtainDepositData(100, "");
+
+        csm.updateExitedValidatorsCount(
+            bytes.concat(bytes8(uint64(1))),
+            bytes.concat(bytes16(uint128(18)))
+        ); // -> NO{id: 1, active: 32}
+
+        {
+            vm.expectEmit(address(csm));
+            emit ICSModule.DepositedSigningKeysCountChanged(0, 50 + 1);
+
+            vm.expectEmit(address(csm));
+            emit ICSModule.DepositedSigningKeysCountChanged(1, 50 + 18 + 1);
+        }
+        csm.obtainDepositData(20, "");
+    }
 }
