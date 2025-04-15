@@ -14,15 +14,15 @@ contract PermissionlessGate is IPermissionlessGate {
     ///      No need to set it explicitly
     uint256 public immutable CURVE_ID;
 
-    ICSModule public immutable CSM;
+    ICSModule public immutable MODULE;
 
-    constructor(address csm) {
-        if (csm == address(0)) {
+    constructor(address module) {
+        if (module == address(0)) {
             revert ZeroModuleAddress();
         }
 
-        CSM = ICSModule(csm);
-        CURVE_ID = CSM.accounting().DEFAULT_BOND_CURVE_ID();
+        MODULE = ICSModule(module);
+        CURVE_ID = MODULE.accounting().DEFAULT_BOND_CURVE_ID();
     }
 
     /// @inheritdoc IPermissionlessGate
@@ -33,13 +33,13 @@ contract PermissionlessGate is IPermissionlessGate {
         NodeOperatorManagementProperties calldata managementProperties,
         address referrer
     ) external payable returns (uint256 nodeOperatorId) {
-        nodeOperatorId = CSM.createNodeOperator(
+        nodeOperatorId = MODULE.createNodeOperator(
             msg.sender,
             managementProperties,
             referrer
         );
 
-        CSM.addValidatorKeysETH{ value: msg.value }({
+        MODULE.addValidatorKeysETH{ value: msg.value }({
             from: msg.sender,
             nodeOperatorId: nodeOperatorId,
             keysCount: keysCount,
@@ -57,13 +57,13 @@ contract PermissionlessGate is IPermissionlessGate {
         ICSAccounting.PermitInput calldata permit,
         address referrer
     ) external returns (uint256 nodeOperatorId) {
-        nodeOperatorId = CSM.createNodeOperator(
+        nodeOperatorId = MODULE.createNodeOperator(
             msg.sender,
             managementProperties,
             referrer
         );
 
-        CSM.addValidatorKeysStETH({
+        MODULE.addValidatorKeysStETH({
             from: msg.sender,
             nodeOperatorId: nodeOperatorId,
             keysCount: keysCount,
@@ -82,13 +82,13 @@ contract PermissionlessGate is IPermissionlessGate {
         ICSAccounting.PermitInput calldata permit,
         address referrer
     ) external returns (uint256 nodeOperatorId) {
-        nodeOperatorId = CSM.createNodeOperator(
+        nodeOperatorId = MODULE.createNodeOperator(
             msg.sender,
             managementProperties,
             referrer
         );
 
-        CSM.addValidatorKeysWstETH({
+        MODULE.addValidatorKeysWstETH({
             from: msg.sender,
             nodeOperatorId: nodeOperatorId,
             keysCount: keysCount,

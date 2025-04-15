@@ -38,13 +38,13 @@ contract CSAccounting is
     bytes32 public constant PENALIZE_ROLE = keccak256("PENALIZE_ROLE");
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
-    ICSModule public immutable CSM;
+    ICSModule public immutable MODULE;
     ICSFeeDistributor public feeDistributor;
     address public chargePenaltyRecipient;
 
-    modifier onlyCSM() {
-        if (msg.sender != address(CSM)) {
-            revert SenderIsNotCSM();
+    modifier onlyModule() {
+        if (msg.sender != address(MODULE)) {
+            revert SenderIsNotModule();
         }
 
         _;
@@ -69,7 +69,7 @@ contract CSAccounting is
         if (communityStakingModule == address(0)) {
             revert ZeroModuleAddress();
         }
-        CSM = ICSModule(communityStakingModule);
+        MODULE = ICSModule(communityStakingModule);
 
         _disableInitializers();
     }
@@ -156,14 +156,14 @@ contract CSAccounting is
     ) external onlyRole(SET_BOND_CURVE_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
         CSBondCurve._setBondCurve(nodeOperatorId, curveId);
-        CSM.updateDepositableValidatorsCount(nodeOperatorId);
+        MODULE.updateDepositableValidatorsCount(nodeOperatorId);
     }
 
     /// @inheritdoc ICSAccounting
     function depositETH(
         address from,
         uint256 nodeOperatorId
-    ) external payable whenResumed onlyCSM {
+    ) external payable whenResumed onlyModule {
         CSBondCore._depositETH(from, nodeOperatorId);
     }
 
@@ -171,7 +171,7 @@ contract CSAccounting is
     function depositETH(uint256 nodeOperatorId) external payable whenResumed {
         _onlyExistingNodeOperator(nodeOperatorId);
         CSBondCore._depositETH(msg.sender, nodeOperatorId);
-        CSM.updateDepositableValidatorsCount(nodeOperatorId);
+        MODULE.updateDepositableValidatorsCount(nodeOperatorId);
     }
 
     /// @inheritdoc ICSAccounting
@@ -180,7 +180,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 stETHAmount,
         PermitInput calldata permit
-    ) external whenResumed onlyCSM {
+    ) external whenResumed onlyModule {
         _unwrapStETHPermitIfRequired(from, permit);
         CSBondCore._depositStETH(from, nodeOperatorId, stETHAmount);
     }
@@ -194,7 +194,7 @@ contract CSAccounting is
         _onlyExistingNodeOperator(nodeOperatorId);
         _unwrapStETHPermitIfRequired(msg.sender, permit);
         CSBondCore._depositStETH(msg.sender, nodeOperatorId, stETHAmount);
-        CSM.updateDepositableValidatorsCount(nodeOperatorId);
+        MODULE.updateDepositableValidatorsCount(nodeOperatorId);
     }
 
     /// @inheritdoc ICSAccounting
@@ -203,7 +203,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
         PermitInput calldata permit
-    ) external whenResumed onlyCSM {
+    ) external whenResumed onlyModule {
         _unwrapWstETHPermitIfRequired(from, permit);
         CSBondCore._depositWstETH(from, nodeOperatorId, wstETHAmount);
     }
@@ -217,7 +217,7 @@ contract CSAccounting is
         _onlyExistingNodeOperator(nodeOperatorId);
         _unwrapWstETHPermitIfRequired(msg.sender, permit);
         CSBondCore._depositWstETH(msg.sender, nodeOperatorId, wstETHAmount);
-        CSM.updateDepositableValidatorsCount(nodeOperatorId);
+        MODULE.updateDepositableValidatorsCount(nodeOperatorId);
     }
 
     /// @inheritdoc ICSAccounting
@@ -227,7 +227,7 @@ contract CSAccounting is
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
     ) external whenResumed returns (uint256 claimedShares) {
-        NodeOperatorManagementProperties memory no = CSM
+        NodeOperatorManagementProperties memory no = MODULE
             .getNodeOperatorManagementProperties(nodeOperatorId);
         _onlyNodeOperatorManagerOrRewardAddresses(no);
 
@@ -239,7 +239,7 @@ contract CSAccounting is
             stETHAmount,
             no.rewardAddress
         );
-        CSM.updateDepositableValidatorsCount(nodeOperatorId);
+        MODULE.updateDepositableValidatorsCount(nodeOperatorId);
     }
 
     /// @inheritdoc ICSAccounting
@@ -249,7 +249,7 @@ contract CSAccounting is
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
     ) external whenResumed returns (uint256 claimedWstETH) {
-        NodeOperatorManagementProperties memory no = CSM
+        NodeOperatorManagementProperties memory no = MODULE
             .getNodeOperatorManagementProperties(nodeOperatorId);
         _onlyNodeOperatorManagerOrRewardAddresses(no);
 
@@ -261,7 +261,7 @@ contract CSAccounting is
             wstETHAmount,
             no.rewardAddress
         );
-        CSM.updateDepositableValidatorsCount(nodeOperatorId);
+        MODULE.updateDepositableValidatorsCount(nodeOperatorId);
     }
 
     /// @inheritdoc ICSAccounting
@@ -271,7 +271,7 @@ contract CSAccounting is
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
     ) external whenResumed returns (uint256 requestId) {
-        NodeOperatorManagementProperties memory no = CSM
+        NodeOperatorManagementProperties memory no = MODULE
             .getNodeOperatorManagementProperties(nodeOperatorId);
         _onlyNodeOperatorManagerOrRewardAddresses(no);
 
@@ -283,14 +283,14 @@ contract CSAccounting is
             stEthAmount,
             no.rewardAddress
         );
-        CSM.updateDepositableValidatorsCount(nodeOperatorId);
+        MODULE.updateDepositableValidatorsCount(nodeOperatorId);
     }
 
     /// @inheritdoc ICSAccounting
     function lockBondETH(
         uint256 nodeOperatorId,
         uint256 amount
-    ) external onlyCSM {
+    ) external onlyModule {
         CSBondLock._lock(nodeOperatorId, amount);
     }
 
@@ -298,14 +298,14 @@ contract CSAccounting is
     function releaseLockedBondETH(
         uint256 nodeOperatorId,
         uint256 amount
-    ) external onlyCSM {
+    ) external onlyModule {
         CSBondLock._reduceAmount(nodeOperatorId, amount);
     }
 
     /// @inheritdoc ICSAccounting
     function compensateLockedBondETH(
         uint256 nodeOperatorId
-    ) external payable onlyCSM {
+    ) external payable onlyModule {
         (bool success, ) = LIDO_LOCATOR.elRewardsVault().call{
             value: msg.value
         }("");
@@ -318,7 +318,7 @@ contract CSAccounting is
     }
 
     /// @inheritdoc ICSAccounting
-    function settleLockedBondETH(uint256 nodeOperatorId) external onlyCSM {
+    function settleLockedBondETH(uint256 nodeOperatorId) external onlyModule {
         uint256 lockedAmount = CSBondLock.getActualLockedBond(nodeOperatorId);
         if (lockedAmount > 0) {
             CSBondCore._burn(nodeOperatorId, lockedAmount);
@@ -351,7 +351,7 @@ contract CSAccounting is
     ) external {
         _onlyExistingNodeOperator(nodeOperatorId);
         _pullFeeRewards(nodeOperatorId, cumulativeFeeShares, rewardsProof);
-        CSM.updateDepositableValidatorsCount(nodeOperatorId);
+        MODULE.updateDepositableValidatorsCount(nodeOperatorId);
     }
 
     /// @inheritdoc AssetRecoverer
@@ -390,7 +390,7 @@ contract CSAccounting is
             // @dev 'getActualLockedBond' is uint128, so no overflow expected in practice
             required =
                 CSBondCurve.getBondAmountByKeysCount(
-                    CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
+                    MODULE.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
                     CSBondCurve.getBondCurveId(nodeOperatorId)
                 ) +
                 CSBondLock.getActualLockedBond(nodeOperatorId);
@@ -406,7 +406,7 @@ contract CSAccounting is
             // @dev 'getActualLockedBond' is uint128, so no overflow expected in practice
             required = _sharesByEth(
                 CSBondCurve.getBondAmountByKeysCount(
-                    CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
+                    MODULE.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
                     CSBondCurve.getBondCurveId(nodeOperatorId)
                 ) + CSBondLock.getActualLockedBond(nodeOperatorId)
             );
@@ -442,7 +442,7 @@ contract CSAccounting is
     ) public view returns (uint256) {
         uint256 current = CSBondCore.getBond(nodeOperatorId);
         uint256 requiredForNewTotalKeys = CSBondCurve.getBondAmountByKeysCount(
-            CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId) +
+            MODULE.getNodeOperatorNonWithdrawnKeys(nodeOperatorId) +
                 additionalKeys,
             CSBondCurve.getBondCurveId(nodeOperatorId)
         );
@@ -564,7 +564,7 @@ contract CSAccounting is
             uint256 current = CSBondCore.getBondShares(nodeOperatorId);
             uint256 required = _sharesByEth(
                 CSBondCurve.getBondAmountByKeysCount(
-                    CSM.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
+                    MODULE.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
                     CSBondCurve.getBondCurveId(nodeOperatorId)
                 ) + CSBondLock.getActualLockedBond(nodeOperatorId)
             );
@@ -577,7 +577,7 @@ contract CSAccounting is
         uint256 nodeOperatorId,
         bool accountLockedBond
     ) internal view returns (uint256) {
-        uint256 nonWithdrawnKeys = CSM.getNodeOperatorNonWithdrawnKeys(
+        uint256 nonWithdrawnKeys = MODULE.getNodeOperatorNonWithdrawnKeys(
             nodeOperatorId
         );
         unchecked {
@@ -615,7 +615,7 @@ contract CSAccounting is
     function _onlyExistingNodeOperator(uint256 nodeOperatorId) internal view {
         if (
             nodeOperatorId <
-            IStakingModule(address(CSM)).getNodeOperatorsCount()
+            IStakingModule(address(MODULE)).getNodeOperatorsCount()
         ) {
             return;
         }

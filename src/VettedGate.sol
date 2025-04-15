@@ -21,7 +21,7 @@ contract VettedGate is
         keccak256("SET_TREE_ROOT_ROLE");
 
     /// @dev Address of the Community Staking Module
-    ICSModule public immutable CSM;
+    ICSModule public immutable MODULE;
 
     /// @dev Address of the CSM Accounting
     ICSAccounting public immutable ACCOUNTING;
@@ -34,13 +34,13 @@ contract VettedGate is
 
     mapping(address => bool) internal _consumedAddresses;
 
-    constructor(address csm) {
-        if (csm == address(0)) {
+    constructor(address module) {
+        if (module == address(0)) {
             revert ZeroModuleAddress();
         }
 
-        CSM = ICSModule(csm);
-        ACCOUNTING = ICSAccounting(CSM.accounting());
+        MODULE = ICSModule(module);
+        ACCOUNTING = ICSAccounting(MODULE.accounting());
 
         _disableInitializers();
     }
@@ -88,13 +88,13 @@ contract VettedGate is
     ) external payable returns (uint256 nodeOperatorId) {
         _consume(proof);
 
-        nodeOperatorId = CSM.createNodeOperator(
+        nodeOperatorId = MODULE.createNodeOperator(
             msg.sender,
             managementProperties,
             referrer
         );
         ACCOUNTING.setBondCurve(nodeOperatorId, curveId);
-        CSM.addValidatorKeysETH{ value: msg.value }({
+        MODULE.addValidatorKeysETH{ value: msg.value }({
             from: msg.sender,
             nodeOperatorId: nodeOperatorId,
             keysCount: keysCount,
@@ -115,13 +115,13 @@ contract VettedGate is
     ) external returns (uint256 nodeOperatorId) {
         _consume(proof);
 
-        nodeOperatorId = CSM.createNodeOperator(
+        nodeOperatorId = MODULE.createNodeOperator(
             msg.sender,
             managementProperties,
             referrer
         );
         ACCOUNTING.setBondCurve(nodeOperatorId, curveId);
-        CSM.addValidatorKeysStETH({
+        MODULE.addValidatorKeysStETH({
             from: msg.sender,
             nodeOperatorId: nodeOperatorId,
             keysCount: keysCount,
@@ -143,13 +143,13 @@ contract VettedGate is
     ) external returns (uint256 nodeOperatorId) {
         _consume(proof);
 
-        nodeOperatorId = CSM.createNodeOperator(
+        nodeOperatorId = MODULE.createNodeOperator(
             msg.sender,
             managementProperties,
             referrer
         );
         ACCOUNTING.setBondCurve(nodeOperatorId, curveId);
-        CSM.addValidatorKeysWstETH({
+        MODULE.addValidatorKeysWstETH({
             from: msg.sender,
             nodeOperatorId: nodeOperatorId,
             keysCount: keysCount,
@@ -164,7 +164,9 @@ contract VettedGate is
         uint256 nodeOperatorId,
         bytes32[] calldata proof
     ) external {
-        NodeOperator memory nodeOperator = CSM.getNodeOperator(nodeOperatorId);
+        NodeOperator memory nodeOperator = MODULE.getNodeOperator(
+            nodeOperatorId
+        );
         address nodeOperatorAddress = nodeOperator.extendedManagerPermissions
             ? nodeOperator.managerAddress
             : nodeOperator.rewardAddress;

@@ -27,7 +27,7 @@ interface ICSAccounting is
     event BondLockCompensated(uint256 indexed nodeOperatorId, uint256 amount);
     event ChargePenaltyRecipientSet(address chargePenaltyRecipient);
 
-    error SenderIsNotCSM();
+    error SenderIsNotModule();
     error SenderIsNotEligible();
     error ZeroModuleAddress();
     error ZeroAdminAddress();
@@ -48,7 +48,7 @@ interface ICSAccounting is
 
     function RECOVERER_ROLE() external view returns (bytes32);
 
-    function CSM() external view returns (ICSModule);
+    function MODULE() external view returns (ICSModule);
 
     function feeDistributor() external view returns (ICSFeeDistributor);
 

@@ -222,7 +222,7 @@ contract CSAccountingDeploymentTest is Test, Utilities, DeploymentFixtures {
     }
 
     function test_constructor() public view {
-        assertEq(address(accounting.CSM()), address(csm));
+        assertEq(address(accounting.MODULE()), address(csm));
         assertEq(address(accounting.LIDO_LOCATOR()), address(locator));
         assertEq(address(accounting.LIDO()), locator.lido());
         assertEq(
@@ -576,7 +576,7 @@ contract VettedGateDeploymentTest is Test, Utilities, DeploymentFixtures {
             accounting.getCurveInfo(vettedGate.curveId()).points,
             deployParams.vettedGateBondCurve
         );
-        assertEq(address(vettedGate.CSM()), address(csm));
+        assertEq(address(vettedGate.MODULE()), address(csm));
         assertEq(address(vettedGate.ACCOUNTING()), address(accounting));
         assertTrue(
             vettedGate.hasRole(vettedGate.PAUSE_ROLE(), address(gateSeal))
