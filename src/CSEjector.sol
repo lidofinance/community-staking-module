@@ -4,15 +4,17 @@
 pragma solidity 0.8.24;
 
 import "./interfaces/ICSEjector.sol";
-import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
-import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {AccessControlEnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import { ICSEjector, ExitPenaltyInfo } from "./interfaces/ICSEjector.sol";
-import { ICSModule, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
-import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
-import { IStakingModule } from "./interfaces/IStakingModule.sol";
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { PausableUntil } from "./lib/utils/PausableUntil.sol";
+import {ICSAccounting} from "./interfaces/ICSAccounting.sol";
+import {ICSEjector, ExitPenaltyInfo} from "./interfaces/ICSEjector.sol";
+import {ICSModule, NodeOperatorManagementProperties} from "./interfaces/ICSModule.sol";
+import {ICSParametersRegistry} from "./interfaces/ICSParametersRegistry.sol";
+import {IStakingModule} from "./interfaces/IStakingModule.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {PausableUntil} from "./lib/utils/PausableUntil.sol";
 
 contract CSEjector is
     ICSEjector,
@@ -20,11 +22,13 @@ contract CSEjector is
     AccessControlEnumerableUpgradeable,
     PausableUntil
 {
+    using SafeCast for uint256;
+
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant BAD_PERFORMER_EJECTOR_ROLE =
         keccak256("BAD_PERFORMER_EJECTOR_ROLE");
-    uint256 public constant DIRECT_EXIT_TYPE_ID = 0;
+    uint256 public constant VOLUNTARY_EXIT_TYPE_ID = 0;
     uint256 public constant STRIKES_EXIT_TYPE_ID = 1;
 
     ICSModule public immutable MODULE;
@@ -33,6 +37,7 @@ contract CSEjector is
 
     mapping(bytes32 => ExitPenaltyInfo) private _exitPenaltyInfo;
 
+    // parametersRegistry passed explicitly due to there is no address in the CSMv1 yet to fetch it from
     constructor(address module, address parametersRegistry) {
         if (module == address(0)) {
             revert ZeroModuleAddress();
@@ -72,25 +77,30 @@ contract CSEjector is
     ) external onlyCSM {
         uint256 curveId = ACCOUNTING.getBondCurveId(nodeOperatorId);
 
-        bytes32 noPublicKeyPacked = _nodeOperatorPublicKeyPacked(
-            nodeOperatorId,
-            publicKey
-        );
         uint256 allowedExitDelay = PARAMETERS_REGISTRY.getAllowedExitDelay(
             curveId
         );
         if (eligibleToExitInSec < allowedExitDelay) {
             revert ValidatorExitDelayNotApplicable();
         }
-        // it is allowed to send the same report multiple times. Penalty is applied only once
-        if (_exitPenaltyInfo[noPublicKeyPacked].penaltyValue == 0) {
-            _exitPenaltyInfo[noPublicKeyPacked]
-                .penaltyValue = PARAMETERS_REGISTRY.getExitDelayPenalty(
+
+        bytes32 noPublicKeyPacked = _nodeOperatorPublicKeyPacked(
+            nodeOperatorId,
+            publicKey
+        );
+        // It is allowed to send the same report multiple times. The penalty is recorded only once at the first report
+        if (!_exitPenaltyInfo[noPublicKeyPacked].delayPenalty.isValue) {
+            uint256 delayPenalty = PARAMETERS_REGISTRY.getExitDelayPenalty(
                 curveId
+            );
+            _exitPenaltyInfo[noPublicKeyPacked].delayPenalty = MarkedUint248(
+                delayPenalty.toUint248(),
+                true
             );
             emit ValidatorExitDelayProcessed(
                 nodeOperatorId,
-                publicKey
+                publicKey,
+                delayPenalty.toUint248()
             );
         }
     }
@@ -103,32 +113,35 @@ contract CSEjector is
         uint256 exitType
     ) external onlyCSM {
         /// assuming exit type == 0 is an exit paid by the node operator
-        if (exitType != DIRECT_EXIT_TYPE_ID) {
+        if (exitType != VOLUNTARY_EXIT_TYPE_ID) {
             bytes32 noPublicKeyPacked = _nodeOperatorPublicKeyPacked(
                 nodeOperatorId,
                 publicKey
             );
-            ExitPenaltyInfo storage exitPenaltyInfo = _exitPenaltyInfo[
+            ExitPenaltyInfoMarked storage exitPenaltyInfo = _exitPenaltyInfo[
                 noPublicKeyPacked
             ];
             // don't update the fee if it was already set to prevent hypothetical manipulations
-            // with double reporting to get lower/higher fee
+            // with double reporting to get lower/higher fee.
+            // it's impossible to set it to zero legitimately
             if (exitPenaltyInfo.withdrawalRequestFee == 0) {
-                exitPenaltyInfo.withdrawalRequestFee = withdrawalRequestPaidFee;
-                emit WithdrawalRequestFeeCompensationReported(
-                    nodeOperatorId,
-                    publicKey,
-                    withdrawalRequestPaidFee
+                uint256 maxFee = PARAMETERS_REGISTRY.getMaxWithdrawalRequestFee(
+                    ACCOUNTING.getBondCurveId(nodeOperatorId)
+                );
+                uint256 fee = Math.min(
+                    withdrawalRequestPaidFee,
+                    maxFee
+                );
+
+                exitPenaltyInfo.withdrawalRequestFee = fee;
+                emit TriggeredExitReported(
+                nodeOperatorId,
+                exitType,
+                publicKey,
+                fee
                 );
             }
         }
-
-        emit TriggeredExitReported(
-            nodeOperatorId,
-            exitType,
-            publicKey,
-            withdrawalRequestPaidFee
-        );
     }
 
     function voluntaryEject(uint256 nodeOperatorId, uint256 keyIndex) public {
@@ -144,15 +157,12 @@ contract CSEjector is
             revert SenderIsNotEligible();
         }
 
-        if (
-            keyIndex >= MODULE.getNodeOperatorTotalDepositedKeys(nodeOperatorId)
-        ) {
-            revert SigningKeysInvalidOffset();
-        }
-
-        if (MODULE.isValidatorWithdrawn(nodeOperatorId, keyIndex)) {
-            revert AlreadyWithdrawn();
-        }
+        // there are no sanity checks for the key range validity in the CSM to not make it too expensive (esp. for the large batch)
+        // and no bad effects for extra eip-7002 exits for the node operator can happen.
+        // possible idle triggerable withdrawal calls that can pass through this function are:
+        // - non-deposited yet (or not ready to be withdrawn) keys
+        // - keys that are already withdrawn
+        // so we need to be sure that the UIs restrict such cases
 
         bytes memory pubkey = MODULE.getSigningKeys(
             nodeOperatorId,
@@ -160,12 +170,6 @@ contract CSEjector is
             1
         );
         // TODO: make the function payable and call `requestEjection{ value: msg.value }(pubkey)`. Refund excess fee
-        emit EjectionSubmitted(
-            DIRECT_EXIT_TYPE_ID,
-            nodeOperatorId,
-            keyIndex,
-            pubkey
-        );
     }
 
     /// @inheritdoc ICSEjector
@@ -199,22 +203,20 @@ contract CSEjector is
             1
         );
         uint256 penalty = PARAMETERS_REGISTRY.getBadPerformancePenalty(curveId);
-        if (penalty > 0) {
-            bytes32 noPubkeyPacked = _nodeOperatorPublicKeyPacked(
+        bytes32 noPubkeyPacked = _nodeOperatorPublicKeyPacked(
+            nodeOperatorId,
+            pubkey
+        );
+        if (_exitPenaltyInfo[noPubkeyPacked].strikesPenalty.isValue > 0) {
+            _exitPenaltyInfo[noPubkeyPacked].strikesPenalty = MarkedUint248(penalty.toUint248(), true);
+            emit BadPerformancePenaltyProcessed(
                 nodeOperatorId,
-                pubkey
+                pubkey,
+                penalty.toUint248()
             );
-            _exitPenaltyInfo[noPubkeyPacked].strikesPenalty = penalty;
         }
 
         // TODO: make the function payable and call `requestEjection{ value: msg.value }(pubkey)`
-
-        emit EjectionSubmitted(
-            STRIKES_EXIT_TYPE_ID,
-            nodeOperatorId,
-            keyIndex,
-            pubkey
-        );
     }
 
     /// @inheritdoc ICSEjector
@@ -222,8 +224,7 @@ contract CSEjector is
         uint256 nodeOperatorId,
         bytes calldata publicKey,
         uint256 eligibleToExitInSec
-    ) external view returns (bool) {
-        _onlyExistingNodeOperator(nodeOperatorId);
+    ) external view onlyCSM returns (bool)  {
         uint256 curveId = ACCOUNTING.getBondCurveId(nodeOperatorId);
         uint256 allowedExitDelay = PARAMETERS_REGISTRY.getAllowedExitDelay(
             curveId
@@ -231,7 +232,7 @@ contract CSEjector is
         if (eligibleToExitInSec < allowedExitDelay) {
             return false;
         }
-        return _exitPenaltyInfo[_nodeOperatorPublicKeyPacked(nodeOperatorId, publicKey)].penaltyValue == 0;
+        return !_exitPenaltyInfo[_nodeOperatorPublicKeyPacked(nodeOperatorId, publicKey)].delayPenalty.isValue;
     }
 
     /// @inheritdoc ICSEjector

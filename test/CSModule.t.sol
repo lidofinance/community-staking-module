@@ -6735,7 +6735,7 @@ contract CSMReportValidatorExitDelay is CSMCommon {
             publicKey
         );
         assertEq(
-            exitPenaltyInfo.penaltyValue,
+            exitPenaltyInfo.delayPenalty,
             parametersRegistry.getExitDelayPenalty(0)
         );
     }

@@ -22,7 +22,8 @@ import { TransientUintUintMap, TransientUintUintMapLib } from "./lib/TransientUi
 
 import { SigningKeys } from "./lib/SigningKeys.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
-import { ICSEjector, ExitPenaltyInfo } from "./interfaces/ICSEjector.sol";
+import { ICSEjector } from "./interfaces/ICSEjector.sol";
+import { ExitPenaltyInfo } from "./interfaces/ICSEjector.sol";
 
 contract CSModule is
     ICSModule,
@@ -742,35 +743,29 @@ contract CSModule is
                 withdrawalInfo.amount,
                 pubkey
             );
+
+            // it is safe to use unchecked for penalty sum, due to it's limited to uint248 in the structure
             uint256 penaltySum;
+            bool chargeWithdrawalRequestFee;
 
             ExitPenaltyInfo memory exitPenaltyInfo = EJECTOR.getDelayedExitPenaltyInfo(withdrawalInfo.nodeOperatorId, pubkey);
-            if (exitPenaltyInfo.penaltyValue != 0) {
+            if (exitPenaltyInfo.delayPenalty.isValue) {
                 unchecked {
-                    penaltySum += exitPenaltyInfo.penaltyValue;
+                    penaltySum += exitPenaltyInfo.delayPenalty;
                 }
-
-                // the withdrawal request fee is taken only if the penalty is applied
-                // if no penalty, the fee has been paid by the node operator on the withdrawal trigger,
-                // or it is the dao decision to withdraw the validator before that the withdrawal request becomes delayed
-                if (exitPenaltyInfo.withdrawalRequestFee != 0) {
-                    uint256 maxFee = PARAMETERS_REGISTRY
-                        .getMaxWithdrawalRequestFee(
-                            accounting.getBondCurveId(
-                                withdrawalInfo.nodeOperatorId
-                            )
-                        );
-                    uint256 fee = Math.min(
-                        exitPenaltyInfo.withdrawalRequestFee,
-                        maxFee
-                    );
-                    accounting.chargeFee(withdrawalInfo.nodeOperatorId, fee);
-                }
+                chargeWithdrawalRequestFee = true;
             }
-            if (exitPenaltyInfo.strikesPenalty != 0) {
+            if (exitPenaltyInfo.strikesPenalty.isValue) {
                 unchecked {
                     penaltySum += exitPenaltyInfo.strikesPenalty;
                 }
+                chargeWithdrawalRequestFee = true;
+            }
+            // the withdrawal request fee is taken only if the penalty is applied
+            // if no penalty, the fee has been paid by the node operator on the withdrawal trigger,
+            // or it is the dao decision to withdraw the validator before that the withdrawal request becomes delayed
+            if (chargeWithdrawalRequestFee && exitPenaltyInfo.withdrawalRequestFee != 0) {
+                accounting.chargeFee(withdrawalInfo.nodeOperatorId, exitPenaltyInfo.withdrawalRequestFee);
             }
 
             if (DEPOSIT_SIZE > withdrawalInfo.amount) {
@@ -1543,12 +1538,5 @@ contract CSModule is
         uint256 keyIndex
     ) internal pure returns (uint256) {
         return (nodeOperatorId << 128) | keyIndex;
-    }
-
-    function _nodeOperatorPublicKeyPacked(
-        uint256 nodeOperatorId,
-        bytes memory publicKey
-    ) internal pure returns (bytes32) {
-        return keccak256(abi.encode(nodeOperatorId, publicKey));
     }
 }

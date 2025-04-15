@@ -414,7 +414,6 @@ contract CSParametersRegistry is
         uint256 curveId,
         uint256 penalty
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _validateExitDelayPenalty(penalty);
         _exitDelayPenalties[curveId] = MarkedUint248(penalty.toUint248(), true);
         emit ExitDelayPenaltySet(curveId, penalty);
     }
@@ -689,15 +688,8 @@ contract CSParametersRegistry is
     }
 
     function _setDefaultExitDelayPenalty(uint256 penalty) internal {
-        _validateExitDelayPenalty(penalty);
         defaultExitDelayPenalty = penalty;
         emit DefaultExitDelayPenaltySet(penalty);
-    }
-
-    function _validateExitDelayPenalty(uint256 penalty) internal pure {
-        if (penalty == 0) {
-            revert InvalidExitDelayPenalty();
-        }
     }
 
     function _setDefaultMaxWithdrawalRequestFee(uint256 fee) internal {

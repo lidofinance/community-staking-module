@@ -8,10 +8,15 @@ import { IAssetRecovererLib } from "../lib/AssetRecovererLib.sol";
 import { ICSParametersRegistry } from "./ICSParametersRegistry.sol";
 import { ICSModule } from "./ICSModule.sol";
 
+struct MarkedUint248 {
+    uint248 value;
+    bool isValue;
+}
+
 struct ExitPenaltyInfo {
-    uint256 penaltyValue;
+    MarkedUint248 delayPenalty;
+    MarkedUint248 strikesPenalty;
     uint256 withdrawalRequestFee;
-    uint256 strikesPenalty;
 }
 
 interface ICSEjector is IAssetRecovererLib {
@@ -26,15 +31,10 @@ interface ICSEjector is IAssetRecovererLib {
     error SenderIsNotCSM();
     error ValidatorExitDelayNotApplicable();
 
-    event EjectionSubmitted(
-        uint256 indexed exitTypeId,
-        uint256 indexed nodeOperatorId,
-        uint256 keyIndex,
-        bytes pubkey
-    );
     event ValidatorExitDelayProcessed(
         uint256 indexed nodeOperatorId,
-        bytes pubkey
+        bytes pubkey,
+        uint256 delayPenalty
     );
     event TriggeredExitReported(
         uint256 indexed nodeOperatorId,
@@ -42,10 +42,10 @@ interface ICSEjector is IAssetRecovererLib {
         bytes pubkey,
         uint256 withdrawalRequestFee
     );
-    event WithdrawalRequestFeeCompensationReported(
+    event BadPerformancePenaltyProcessed(
         uint256 indexed nodeOperatorId,
-        bytes publicKey,
-        uint256 feeAmount
+        bytes pubkey,
+        uint256 badPerformancePenalty
     );
 
     function PAUSE_ROLE() external view returns (bytes32);
@@ -100,6 +100,7 @@ interface ICSEjector is IAssetRecovererLib {
     ) external;
 
     /// @notice Determines whether a validator exit status should be updated and will have affect on Node Operator.
+    /// @dev called only by CSM
     /// @param nodeOperatorId The ID of the node operator.
     /// @param publicKey Validator's public key.
     /// @param eligibleToExitInSec The number of seconds the validator was eligible to exit but did not.
