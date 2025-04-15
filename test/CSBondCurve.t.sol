@@ -756,11 +756,7 @@ contract CSBondCurveFuzz is Test {
             _bondCurve[i] = [fromKeysCount[i], trend[i]];
         }
         keysToCheck = bound(keysToCheck, 1, MAX_FROM_KEYS_COUNT_VALUE);
-        bondToCheck = bound(
-            bondToCheck,
-            trend[0],
-            MAX_TREND_VALUE * MAX_FROM_KEYS_COUNT_VALUE
-        );
+        bondToCheck = bound(bondToCheck, trend[0], type(uint256).max);
         return (_bondCurve, keysToCheck, bondToCheck);
     }
 }
