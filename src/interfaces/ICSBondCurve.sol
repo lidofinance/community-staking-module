@@ -38,13 +38,6 @@ interface ICSBondCurve {
     ///       |----------|----------|----------|----------|----> Keys Count
     ///       |          1          2          3          i
     ///
-
-    /// @dev DEPRECATED. For backward compatibility in migration only.
-    struct BondCurve {
-        uint256[] points;
-        uint256 trend;
-    }
-
     struct BondCurveInterval {
         uint256 fromKeysCount;
         uint256 fromBond;
