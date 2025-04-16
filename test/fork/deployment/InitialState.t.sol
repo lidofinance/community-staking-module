@@ -5,6 +5,8 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
+import { ICSBondCurve } from "../../../src/interfaces/ICSBondCurve.sol";
+
 import { Utilities } from "../../helpers/Utilities.sol";
 import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
 import { DeployParams } from "../../../script/DeployBase.s.sol";
@@ -73,9 +75,40 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
     function test_accounting_initialState() public view {
         assertFalse(accounting.isPaused());
         assertEq(accounting.totalBondShares(), 0);
+        uint256 defaultCurveId = accounting.DEFAULT_BOND_CURVE_ID();
         assertEq(
-            accounting.getCurveInfo(vettedGate.curveId()).points,
-            deployParams.vettedGateBondCurve
+            accounting.getCurveInfo(defaultCurveId)[0].minKeysCount,
+            deployParams.bondCurve[0][0]
+        );
+        assertEq(
+            accounting.getCurveInfo(defaultCurveId)[0].trend,
+            deployParams.bondCurve[0][1]
+        );
+
+        assertEq(
+            accounting.getCurveInfo(defaultCurveId)[1].minKeysCount,
+            deployParams.bondCurve[1][0]
+        );
+        assertEq(
+            accounting.getCurveInfo(defaultCurveId)[1].trend,
+            deployParams.bondCurve[1][1]
+        );
+        uint256 vettedCurveId = vettedGate.curveId();
+        assertEq(
+            accounting.getCurveInfo(vettedCurveId)[0].minKeysCount,
+            deployParams.vettedGateBondCurve[0][0]
+        );
+        assertEq(
+            accounting.getCurveInfo(vettedCurveId)[0].trend,
+            deployParams.vettedGateBondCurve[0][1]
+        );
+        assertEq(
+            accounting.getCurveInfo(vettedCurveId)[1].minKeysCount,
+            deployParams.vettedGateBondCurve[1][0]
+        );
+        assertEq(
+            accounting.getCurveInfo(vettedCurveId)[1].trend,
+            deployParams.vettedGateBondCurve[1][1]
         );
     }
 

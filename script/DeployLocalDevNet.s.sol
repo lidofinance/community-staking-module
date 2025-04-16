@@ -5,6 +5,7 @@ pragma solidity 0.8.24;
 
 import { DeployBase } from "./DeployBase.s.sol";
 import { GIndicies } from "./constants/GIndicies.sol";
+import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
 contract DeployLocalDevNet is DeployBase {
     constructor() DeployBase("local-devnet", vm.envUint("DEVNET_CHAIN_ID")) {
@@ -36,10 +37,9 @@ contract DeployLocalDevNet is DeployBase {
         config.verifierSupportedEpoch = vm.envUint("DEVNET_ELECTRA_EPOCH");
         // Accounting
         config.maxCurveLength = 10;
-        config.bondCurve = new uint256[](2);
         // 2.4 -> 1.3
-        config.bondCurve[0] = 2.4 ether;
-        config.bondCurve[1] = 3.7 ether;
+        config.bondCurve.push([1, 2.4 ether]);
+        config.bondCurve.push([2, 1.3 ether]);
 
         config.minBondLockPeriod = 1 days;
         config.maxBondLockPeriod = 7 days;
@@ -76,10 +76,9 @@ contract DeployLocalDevNet is DeployBase {
             "CSM_VETTED_GATE_TREE_ROOT",
             bytes32(uint256(0xdeadbeef))
         );
-        config.vettedGateBondCurve = new uint256[](2);
         // 1.5 -> 1.3
-        config.vettedGateBondCurve[0] = 1.5 ether;
-        config.vettedGateBondCurve[1] = 2.8 ether;
+        config.vettedGateBondCurve.push([1, 1.5 ether]);
+        config.vettedGateBondCurve.push([2, 1.3 ether]);
 
         // GateSeal
         config.gateSealFactory = 0x0000000000000000000000000000000000000000;

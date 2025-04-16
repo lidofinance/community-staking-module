@@ -23,6 +23,7 @@ import { ILidoLocator } from "../src/interfaces/ILidoLocator.sol";
 import { IGateSealFactory } from "../src/interfaces/IGateSealFactory.sol";
 import { BaseOracle } from "../src/lib/base-oracle/BaseOracle.sol";
 import { ICSParametersRegistry } from "../src/interfaces/ICSParametersRegistry.sol";
+import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
@@ -100,7 +101,7 @@ struct DeployParams {
     uint256 verifierSupportedEpoch;
     // Accounting
     uint256 maxCurveLength;
-    uint256[] bondCurve;
+    uint256[2][] bondCurve;
     uint256 minBondLockPeriod;
     uint256 maxBondLockPeriod;
     uint256 bondLockPeriod;
@@ -128,7 +129,7 @@ struct DeployParams {
     uint256 defaultAllowedExitDelay;
     // VettedGate
     bytes32 vettedGateTreeRoot;
-    uint256[] vettedGateBondCurve;
+    uint256[2][] vettedGateBondCurve;
     // GateSeal
     address gateSealFactory;
     address sealingCommittee;
@@ -302,6 +303,7 @@ abstract contract DeployBase is Script {
                 accounting.MANAGE_BOND_CURVES_ROLE(),
                 address(deployer)
             );
+
             uint256 identifiedSolosCurve = accounting.addBondCurve(
                 config.vettedGateBondCurve
             );
