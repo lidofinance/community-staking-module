@@ -51,13 +51,13 @@ contract CSAccounting is
     }
 
     /// @param lidoLocator Lido locator contract address
-    /// @param communityStakingModule Community Staking Module contract address
+    /// @param module Community Staking Module contract address
     /// @param maxCurveLength Max number of the points in the bond curves
     /// @param minBondLockPeriod Min time in seconds for the bondLock period
     /// @param maxBondLockPeriod Max time in seconds for the bondLock period
     constructor(
         address lidoLocator,
-        address communityStakingModule,
+        address module,
         uint256 maxCurveLength,
         uint256 minBondLockPeriod,
         uint256 maxBondLockPeriod
@@ -66,10 +66,10 @@ contract CSAccounting is
         CSBondCurve(maxCurveLength)
         CSBondLock(minBondLockPeriod, maxBondLockPeriod)
     {
-        if (communityStakingModule == address(0)) {
+        if (module == address(0)) {
             revert ZeroModuleAddress();
         }
-        MODULE = ICSModule(communityStakingModule);
+        MODULE = ICSModule(module);
 
         _disableInitializers();
     }

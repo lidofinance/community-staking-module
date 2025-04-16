@@ -20,10 +20,10 @@ contract VettedGate is
     bytes32 public constant SET_TREE_ROOT_ROLE =
         keccak256("SET_TREE_ROOT_ROLE");
 
-    /// @dev Address of the Community Staking Module
+    /// @dev Address of the Staking Module
     ICSModule public immutable MODULE;
 
-    /// @dev Address of the CSM Accounting
+    /// @dev Address of the CS Accounting
     ICSAccounting public immutable ACCOUNTING;
 
     /// @dev Id of the bond curve to be assigned for the eligible members
