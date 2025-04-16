@@ -5,23 +5,29 @@ pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
 
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+
 import { CSBondCurve } from "../src/abstract/CSBondCurve.sol";
 import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
-contract CSBondCurveTestable is CSBondCurve(10) {
-    function initialize(uint256[] calldata bondCurve) public initializer {
+import { console } from "forge-std/console.sol";
+
+contract CSBondCurveTestable is CSBondCurve {
+    constructor(uint256 maxCurveLength) CSBondCurve(maxCurveLength) {}
+
+    function initialize(uint256[2][] calldata bondCurve) public initializer {
         __CSBondCurve_init(bondCurve);
     }
 
     function addBondCurve(
-        uint256[] calldata _bondCurve
+        uint256[2][] calldata _bondCurve
     ) external returns (uint256) {
         return _addBondCurve(_bondCurve);
     }
 
     function updateBondCurve(
         uint256 curveId,
-        uint256[] calldata _bondCurve
+        uint256[2][] calldata _bondCurve
     ) external {
         _updateBondCurve(curveId, _bondCurve);
     }
@@ -35,13 +41,12 @@ contract CSBondCurveInitTest is Test {
     CSBondCurveTestable public bondCurve;
 
     function setUp() public {
-        bondCurve = new CSBondCurveTestable();
+        bondCurve = new CSBondCurveTestable(10);
     }
 
     function test_initialize_revertWhen_InvalidInitialisationCurveId() public {
-        uint256[] memory _bondCurve = new uint256[](2);
-        _bondCurve[0] = 16 ether;
-        _bondCurve[1] = 32 ether;
+        uint256[2][] memory _bondCurve = new uint256[2][](1);
+        _bondCurve[0] = [uint256(1), 2 ether];
 
         bondCurve.addBondCurve(_bondCurve);
 
@@ -54,22 +59,27 @@ contract CSBondCurveTest is Test {
     CSBondCurveTestable public bondCurve;
 
     function setUp() public {
-        uint256[] memory _bondCurve = new uint256[](3);
-        _bondCurve[0] = 2 ether;
-        _bondCurve[1] = 4 ether;
-        _bondCurve[2] = 5 ether;
-        bondCurve = new CSBondCurveTestable();
+        uint256[2][] memory _bondCurve = new uint256[2][](2);
+        _bondCurve[0] = [uint256(1), 2 ether];
+        _bondCurve[1] = [uint256(3), 1 ether];
+        bondCurve = new CSBondCurveTestable(10);
+        vm.startSnapshotGas("bondCurve.initialize");
         bondCurve.initialize(_bondCurve);
+        vm.stopSnapshotGas();
     }
 
     function test_getCurveInfo() public view {
-        ICSBondCurve.BondCurve memory curve = bondCurve.getCurveInfo(0);
+        ICSBondCurve.BondCurveInterval[] memory curve = bondCurve.getCurveInfo(
+            0
+        );
 
-        assertEq(curve.points.length, 3);
-        assertEq(curve.points[0], 2 ether);
-        assertEq(curve.points[1], 4 ether);
-        assertEq(curve.points[2], 5 ether);
-        assertEq(curve.trend, 1 ether);
+        assertEq(curve.length, 2);
+        assertEq(curve[0].minKeysCount, 1);
+        assertEq(curve[0].minBond, 2 ether);
+        assertEq(curve[0].trend, 2 ether);
+        assertEq(curve[1].minKeysCount, 3);
+        assertEq(curve[1].minBond, 5 ether);
+        assertEq(curve[1].trend, 1 ether);
     }
 
     function test_getCurveInfo_RevertWhen_InvalidBondCurveId() public {
@@ -78,9 +88,8 @@ contract CSBondCurveTest is Test {
     }
 
     function test_addBondCurve() public {
-        uint256[] memory _bondCurve = new uint256[](2);
-        _bondCurve[0] = 16 ether;
-        _bondCurve[1] = 32 ether;
+        uint256[2][] memory _bondCurve = new uint256[2][](1);
+        _bondCurve[0] = [uint256(1), 16 ether];
 
         uint256 curvesCount = bondCurve.getCurvesCount();
 
@@ -89,46 +98,79 @@ contract CSBondCurveTest is Test {
 
         uint256 addedId = bondCurve.addBondCurve(_bondCurve);
 
-        ICSBondCurve.BondCurve memory added = bondCurve.getCurveInfo(addedId);
+        ICSBondCurve.BondCurveInterval[] memory added = bondCurve.getCurveInfo(
+            addedId
+        );
 
         assertEq(addedId, 1);
-        assertEq(added.points.length, 2);
-        assertEq(added.points[0], 16 ether);
-        assertEq(added.points[1], 32 ether);
-        assertEq(added.trend, 16 ether);
+        assertEq(added.length, 1);
+        assertEq(added[0].minKeysCount, 1);
+        assertEq(added[0].minBond, 16 ether);
+        assertEq(added[0].trend, 16 ether);
+    }
+
+    function test_addBondCurve_SeveralIntervals() public {
+        uint256[2][] memory _bondCurve = new uint256[2][](4);
+        _bondCurve[0] = [uint256(1), 16 ether];
+        _bondCurve[1] = [uint256(10), 1 ether];
+        _bondCurve[2] = [uint256(33), 0.5 ether];
+        _bondCurve[3] = [uint256(100), 10 ether];
+
+        uint256 addedId = bondCurve.addBondCurve(_bondCurve);
+
+        ICSBondCurve.BondCurveInterval[] memory added = bondCurve.getCurveInfo(
+            addedId
+        );
+
+        assertEq(addedId, 1);
+        assertEq(added.length, 4);
+        assertEq(added[0].minKeysCount, 1);
+        assertEq(added[0].minBond, 16 ether);
+        assertEq(added[0].trend, 16 ether);
+
+        assertEq(added[1].minKeysCount, 10);
+        assertEq(added[1].minBond, 145 ether);
+        assertEq(added[1].trend, 1 ether);
+
+        assertEq(added[2].minKeysCount, 33);
+        assertEq(added[2].minBond, 167.5 ether);
+        assertEq(added[2].trend, 0.5 ether);
+
+        assertEq(added[3].minKeysCount, 100);
+        assertEq(added[3].minBond, 210.5 ether);
+        assertEq(added[3].trend, 10 ether);
     }
 
     function test_addBondCurve_RevertWhen_LessThanMinBondCurveLength() public {
         vm.expectRevert(ICSBondCurve.InvalidBondCurveLength.selector);
-        bondCurve.addBondCurve(new uint256[](0));
+        bondCurve.addBondCurve(new uint256[2][](0));
     }
 
     function test_addBondCurve_RevertWhen_MoreThanMaxBondCurveLength() public {
         vm.expectRevert(ICSBondCurve.InvalidBondCurveLength.selector);
-        bondCurve.addBondCurve(new uint256[](21));
+        bondCurve.addBondCurve(new uint256[2][](21));
     }
 
     function test_addBondCurve_RevertWhen_ZeroValue() public {
-        uint256[] memory curvePoints = new uint256[](1);
-        curvePoints[0] = 0 ether;
+        uint256[2][] memory _bondCurve = new uint256[2][](1);
+        _bondCurve[0] = [uint256(1), 0 ether];
 
         vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
-        bondCurve.addBondCurve(curvePoints);
+        bondCurve.addBondCurve(_bondCurve);
     }
 
     function test_addBondCurve_RevertWhen_NextValueIsLessThanPrevious() public {
-        uint256[] memory curvePoints = new uint256[](2);
-        curvePoints[0] = 16 ether;
-        curvePoints[1] = 8 ether;
+        uint256[2][] memory _bondCurve = new uint256[2][](2);
+        _bondCurve[0] = [uint256(2), 10 ether];
+        _bondCurve[1] = [uint256(1), 9 ether];
 
         vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
-        bondCurve.addBondCurve(curvePoints);
+        bondCurve.addBondCurve(_bondCurve);
     }
 
     function test_updateBondCurve() public {
-        uint256[] memory _bondCurve = new uint256[](2);
-        _bondCurve[0] = 16 ether;
-        _bondCurve[1] = 32 ether;
+        uint256[2][] memory _bondCurve = new uint256[2][](1);
+        _bondCurve[0] = [uint256(1), 16 ether];
 
         uint256 toUpdateId = 0;
 
@@ -137,62 +179,91 @@ contract CSBondCurveTest is Test {
 
         bondCurve.updateBondCurve(toUpdateId, _bondCurve);
 
-        ICSBondCurve.BondCurve memory updated = bondCurve.getCurveInfo(
-            toUpdateId
-        );
+        ICSBondCurve.BondCurveInterval[] memory updated = bondCurve
+            .getCurveInfo(toUpdateId);
 
-        assertEq(updated.points.length, 2);
-        assertEq(updated.points[0], 16 ether);
-        assertEq(updated.points[1], 32 ether);
-        assertEq(updated.trend, 16 ether);
+        assertEq(updated.length, 1);
+        assertEq(updated[0].minKeysCount, 1);
+        assertEq(updated[0].minBond, 16 ether);
+        assertEq(updated[0].trend, 16 ether);
+    }
+
+    function test_updateBondCurve_SeveralIntervals() public {
+        uint256[2][] memory _bondCurve = new uint256[2][](4);
+        _bondCurve[0] = [uint256(1), 16 ether];
+        _bondCurve[1] = [uint256(10), 1 ether];
+        _bondCurve[2] = [uint256(33), 0.5 ether];
+        _bondCurve[3] = [uint256(100), 10 ether];
+
+        uint256 toUpdateId = 0;
+
+        bondCurve.updateBondCurve(toUpdateId, _bondCurve);
+
+        ICSBondCurve.BondCurveInterval[] memory updated = bondCurve
+            .getCurveInfo(toUpdateId);
+
+        assertEq(updated.length, 4);
+        assertEq(updated[0].minKeysCount, 1);
+        assertEq(updated[0].minBond, 16 ether);
+        assertEq(updated[0].trend, 16 ether);
+
+        assertEq(updated[1].minKeysCount, 10);
+        assertEq(updated[1].minBond, 145 ether);
+        assertEq(updated[1].trend, 1 ether);
+
+        assertEq(updated[2].minKeysCount, 33);
+        assertEq(updated[2].minBond, 167.5 ether);
+        assertEq(updated[2].trend, 0.5 ether);
+
+        assertEq(updated[3].minKeysCount, 100);
+        assertEq(updated[3].minBond, 210.5 ether);
+        assertEq(updated[3].trend, 10 ether);
     }
 
     function test_updateBondCurve_RevertWhen_LessThanMinBondCurveLength()
         public
     {
         vm.expectRevert(ICSBondCurve.InvalidBondCurveLength.selector);
-        bondCurve.updateBondCurve(0, new uint256[](0));
+        bondCurve.updateBondCurve(0, new uint256[2][](0));
     }
 
     function test_updateBondCurve_RevertWhen_MoreThanMaxBondCurveLength()
         public
     {
         vm.expectRevert(ICSBondCurve.InvalidBondCurveLength.selector);
-        bondCurve.updateBondCurve(0, new uint256[](21));
+        bondCurve.updateBondCurve(0, new uint256[2][](21));
     }
 
     function test_updateBondCurve_RevertWhen_ZeroValue() public {
-        uint256[] memory curvePoints = new uint256[](1);
-        curvePoints[0] = 0 ether;
-
+        uint256[2][] memory _bondCurve = new uint256[2][](1);
+        _bondCurve[0] = [uint256(1), 0 ether];
         vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
-        bondCurve.updateBondCurve(0, curvePoints);
+        bondCurve.updateBondCurve(0, _bondCurve);
     }
 
     function test_updateBondCurve_RevertWhen_NextValueIsLessThanPrevious()
         public
     {
-        uint256[] memory curvePoints = new uint256[](2);
-        curvePoints[0] = 16 ether;
-        curvePoints[1] = 8 ether;
+        uint256[2][] memory _bondCurve = new uint256[2][](2);
+        _bondCurve[0] = [uint256(2), 10 ether];
+        _bondCurve[1] = [uint256(1), 9 ether];
 
         vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
-        bondCurve.updateBondCurve(0, curvePoints);
+        bondCurve.updateBondCurve(0, _bondCurve);
     }
 
     function test_updateBondCurve_RevertWhen_InvalidBondCurveId() public {
-        uint256[] memory _bondCurve = new uint256[](2);
-        _bondCurve[0] = 16 ether;
-        _bondCurve[1] = 32 ether;
+        uint256[2][] memory _bondCurve = new uint256[2][](1);
+        _bondCurve[0] = [uint256(1), 16 ether];
         vm.expectRevert(ICSBondCurve.InvalidBondCurveId.selector);
         bondCurve.updateBondCurve(1, _bondCurve);
     }
 
     function test_setBondCurve() public {
         uint256 noId = 0;
-        uint256[] memory curvePoints = new uint256[](1);
-        curvePoints[0] = 16 ether;
-        uint256 addedId = bondCurve.addBondCurve(curvePoints);
+        uint256[2][] memory _bondCurve = new uint256[2][](1);
+        _bondCurve[0] = [uint256(1), 16 ether];
+        uint256 addedId = bondCurve.addBondCurve(_bondCurve);
 
         vm.expectEmit(address(bondCurve));
         emit ICSBondCurve.BondCurveSet(noId, addedId);
@@ -207,10 +278,8 @@ contract CSBondCurveTest is Test {
     }
 
     function test_getCurvesCount() public {
-        uint256[] memory _bondCurve = new uint256[](2);
-        _bondCurve[0] = 16 ether;
-        _bondCurve[1] = 32 ether;
-
+        uint256[2][] memory _bondCurve = new uint256[2][](1);
+        _bondCurve[0] = [uint256(1), 16 ether];
         bondCurve.addBondCurve(_bondCurve);
 
         // default one + 1 extra curve
@@ -234,21 +303,25 @@ contract CSBondCurveTest is Test {
     }
 
     function test_getKeysCountByBondAmount_noOverflowWithMaxUint() public view {
-        ICSBondCurve.BondCurve memory curve = bondCurve.getBondCurve(0);
-        uint256 len = curve.points.length;
-        uint256 maxCurveAmount = curve.points[len - 1];
+        ICSBondCurve.BondCurveInterval[] memory curve = bondCurve.getBondCurve(
+            0
+        );
+        uint256 len = curve.length;
+        ICSBondCurve.BondCurveInterval memory lastInterval = curve[len - 1];
         uint256 amount = type(uint256).max;
 
         assertEq(
             bondCurve.getKeysCountByBondAmount(amount, 0),
-            len + (amount - maxCurveAmount) / curve.trend
+            lastInterval.minKeysCount +
+                (amount - lastInterval.minBond) /
+                lastInterval.trend
         );
     }
 
     function test_getKeysCountByBondAmount_noOverflowWithMinUint() public {
-        uint256[] memory curvePoints = new uint256[](1);
-        curvePoints[0] = 1 wei;
-        uint256 curveId = bondCurve.addBondCurve(curvePoints);
+        uint256[2][] memory _bondCurve = new uint256[2][](1);
+        _bondCurve[0] = [uint256(1), 1 wei];
+        uint256 curveId = bondCurve.addBondCurve(_bondCurve);
 
         uint256 amount = type(uint256).max;
 
@@ -267,18 +340,16 @@ contract CSBondCurveTest is Test {
     }
 
     function test_getKeysCountByCurveValue_individual() public {
-        uint256[] memory points = new uint256[](2);
-        points[0] = 1 ether;
-        points[1] = 2 ether;
-        uint256 curveId = bondCurve.addBondCurve(points);
+        uint256[2][] memory _bondCurve = new uint256[2][](1);
+        _bondCurve[0] = [uint256(1), 1 ether];
+        uint256 curveId = bondCurve.addBondCurve(_bondCurve);
 
         assertEq(bondCurve.getKeysCountByBondAmount(0 ether, curveId), 0);
         assertEq(bondCurve.getKeysCountByBondAmount(1 ether, curveId), 1);
         assertEq(bondCurve.getKeysCountByBondAmount(2 ether, curveId), 2);
 
-        points[0] = 1.8 ether;
-        points[1] = 3.6 ether;
-        curveId = bondCurve.addBondCurve(points);
+        _bondCurve[0][1] = 1.8 ether;
+        curveId = bondCurve.addBondCurve(_bondCurve);
 
         assertEq(bondCurve.getKeysCountByBondAmount(0 ether, curveId), 0);
         assertEq(bondCurve.getKeysCountByBondAmount(1.8 ether, curveId), 1);
@@ -286,9 +357,9 @@ contract CSBondCurveTest is Test {
     }
 
     function test_getKeysCountByBondAmount_singlePointCurve() public {
-        uint256[] memory points = new uint256[](1);
-        points[0] = 2 ether;
-        uint256 curveId = bondCurve.addBondCurve(points);
+        uint256[2][] memory _bondCurve = new uint256[2][](1);
+        _bondCurve[0] = [uint256(1), 2 ether];
+        uint256 curveId = bondCurve.addBondCurve(_bondCurve);
 
         assertEq(bondCurve.getKeysCountByBondAmount(0 ether, curveId), 0);
         assertEq(bondCurve.getKeysCountByBondAmount(1 ether, curveId), 0);
@@ -299,10 +370,11 @@ contract CSBondCurveTest is Test {
     }
 
     function test_getKeysCountByBondAmount_twoPointsCurve() public {
-        uint256[] memory points = new uint256[](2);
-        points[0] = 2 ether;
-        points[1] = 3.5 ether;
-        uint256 curveId = bondCurve.addBondCurve(points);
+        uint256[2][] memory _bondCurve = new uint256[2][](2);
+        _bondCurve[0] = [uint256(1), 2 ether];
+        _bondCurve[1] = [uint256(2), 1.5 ether];
+
+        uint256 curveId = bondCurve.addBondCurve(_bondCurve);
 
         assertEq(bondCurve.getKeysCountByBondAmount(0 ether, curveId), 0);
         assertEq(bondCurve.getKeysCountByBondAmount(1 ether, curveId), 0);
@@ -315,18 +387,9 @@ contract CSBondCurveTest is Test {
     }
 
     function test_getKeysCountByBondAmount_tenPointsCurve() public {
-        uint256[] memory points = new uint256[](10);
-        points[0] = 1 ether;
-        points[1] = 2 ether;
-        points[2] = 3 ether;
-        points[3] = 4 ether;
-        points[4] = 5 ether;
-        points[5] = 6 ether;
-        points[6] = 7 ether;
-        points[7] = 8 ether;
-        points[8] = 9 ether;
-        points[9] = 10 ether;
-        uint256 curveId = bondCurve.addBondCurve(points);
+        uint256[2][] memory _bondCurve = new uint256[2][](1);
+        _bondCurve[0] = [uint256(1), 1 ether];
+        uint256 curveId = bondCurve.addBondCurve(_bondCurve);
 
         for (uint256 i = 0; i < 10; i++) {
             assertEq(
@@ -344,19 +407,17 @@ contract CSBondCurveTest is Test {
     }
 
     function test_getBondAmountByKeysCount_individual() public {
-        uint256[] memory points = new uint256[](2);
-        points[0] = 1 ether;
-        points[1] = 2 ether;
-        uint256 curveId = bondCurve.addBondCurve(points);
+        uint256[2][] memory _bondCurve = new uint256[2][](1);
+        _bondCurve[0] = [uint256(1), 1 ether];
+        uint256 curveId = bondCurve.addBondCurve(_bondCurve);
 
         assertEq(bondCurve.getBondAmountByKeysCount(0, curveId), 0);
         assertEq(bondCurve.getBondAmountByKeysCount(1, curveId), 1 ether);
         assertEq(bondCurve.getBondAmountByKeysCount(2, curveId), 2 ether);
         assertEq(bondCurve.getBondAmountByKeysCount(3, curveId), 3 ether);
 
-        points[0] = 1.8 ether;
-        points[1] = 3.6 ether;
-        curveId = bondCurve.addBondCurve(points);
+        _bondCurve[0][1] = 1.8 ether;
+        curveId = bondCurve.addBondCurve(_bondCurve);
 
         assertEq(bondCurve.getBondAmountByKeysCount(0, curveId), 0);
         assertEq(bondCurve.getBondAmountByKeysCount(1, curveId), 1.8 ether);
@@ -365,12 +426,12 @@ contract CSBondCurveTest is Test {
     }
 
     function test_getBondAmountByKeysCount_bigCurve() public {
-        uint256[] memory points = new uint256[](4);
-        points[0] = 1.5 ether;
-        points[1] = 2.5 ether;
-        points[2] = 3.5 ether;
-        points[3] = 4 ether;
-        uint256 curveId = bondCurve.addBondCurve(points);
+        uint256[2][] memory _bondCurve = new uint256[2][](3);
+        _bondCurve[0] = [uint256(1), 1.5 ether];
+        _bondCurve[1] = [uint256(2), 1 ether];
+        _bondCurve[2] = [uint256(4), 0.5 ether];
+
+        uint256 curveId = bondCurve.addBondCurve(_bondCurve);
 
         assertEq(bondCurve.getBondAmountByKeysCount(0, curveId), 0);
         assertEq(bondCurve.getBondAmountByKeysCount(1, curveId), 1.5 ether);
@@ -378,5 +439,324 @@ contract CSBondCurveTest is Test {
         assertEq(bondCurve.getBondAmountByKeysCount(3, curveId), 3.5 ether);
         assertEq(bondCurve.getBondAmountByKeysCount(4, curveId), 4 ether);
         assertEq(bondCurve.getBondAmountByKeysCount(16, curveId), 10 ether);
+    }
+
+    function test_viceVersa_OneInterval() public {
+        uint256[2][] memory _bondCurve = new uint256[2][](1);
+        _bondCurve[0] = [uint256(1), 0.33 ether];
+
+        uint256 curveId = bondCurve.addBondCurve(_bondCurve);
+
+        for (uint256 keysIn = 0; keysIn < 100; ++keysIn) {
+            uint256 bondOut = bondCurve.getBondAmountByKeysCount(
+                keysIn,
+                curveId
+            );
+            assertEq(
+                bondCurve.getKeysCountByBondAmount(bondOut, curveId),
+                keysIn
+            );
+        }
+
+        for (
+            uint256 bondIn = 0 ether;
+            bondIn < 33 ether;
+            bondIn += 0.33 ether
+        ) {
+            uint256 keysOut = bondCurve.getKeysCountByBondAmount(
+                bondIn,
+                curveId
+            );
+            assertGe(
+                bondIn,
+                bondCurve.getBondAmountByKeysCount(keysOut, curveId)
+            );
+        }
+    }
+
+    function test_viceVersa_ThreeIntervals() public {
+        uint256[2][] memory _bondCurve = new uint256[2][](3);
+        _bondCurve[0] = [uint256(1), 1.5 ether];
+        _bondCurve[1] = [uint256(2), 1 ether];
+        _bondCurve[2] = [uint256(4), 0.5 ether];
+
+        uint256 curveId = bondCurve.addBondCurve(_bondCurve);
+
+        for (uint256 keysIn = 0; keysIn < 100; ++keysIn) {
+            uint256 bondOut = bondCurve.getBondAmountByKeysCount(
+                keysIn,
+                curveId
+            );
+            assertEq(
+                bondCurve.getKeysCountByBondAmount(bondOut, curveId),
+                keysIn
+            );
+        }
+
+        for (
+            uint256 bondIn = 0 ether;
+            bondIn < 33 ether;
+            bondIn += 0.33 ether
+        ) {
+            uint256 keysOut = bondCurve.getKeysCountByBondAmount(
+                bondIn,
+                curveId
+            );
+            assertGe(
+                bondIn,
+                bondCurve.getBondAmountByKeysCount(keysOut, curveId)
+            );
+        }
+    }
+
+    function test_viceVersa_SixIntervals() public {
+        uint256[2][] memory _bondCurve = new uint256[2][](6);
+        _bondCurve[0] = [uint256(1), 1.5 ether];
+        _bondCurve[1] = [uint256(2), 1 ether];
+        _bondCurve[2] = [uint256(4), 0.5 ether];
+        _bondCurve[3] = [uint256(5), 0.5 ether + 1 wei];
+        _bondCurve[4] = [uint256(13), 1.11 ether - 1 wei];
+        _bondCurve[5] = [uint256(16), 0.01 ether];
+
+        uint256 curveId = bondCurve.addBondCurve(_bondCurve);
+
+        for (uint256 keysIn = 0; keysIn < 100; ++keysIn) {
+            uint256 bondOut = bondCurve.getBondAmountByKeysCount(
+                keysIn,
+                curveId
+            );
+            assertEq(
+                bondCurve.getKeysCountByBondAmount(bondOut, curveId),
+                keysIn
+            );
+        }
+
+        for (
+            uint256 bondIn = 0 ether;
+            bondIn < 33 ether;
+            bondIn += 0.33 ether
+        ) {
+            uint256 keysOut = bondCurve.getKeysCountByBondAmount(
+                bondIn,
+                curveId
+            );
+            assertGe(
+                bondIn,
+                bondCurve.getBondAmountByKeysCount(keysOut, curveId)
+            );
+        }
+    }
+}
+
+contract CSBondCurveFuzz is Test {
+    CSBondCurveTestable public bondCurve;
+
+    uint256 public constant MAX_BOND_CURVE_INTERVALS_COUNT = 150;
+    uint256 public constant MAX_FROM_KEYS_COUNT_VALUE = 10000;
+    uint256 public constant MAX_TREND_VALUE = 1000 ether;
+
+    function testFuzz_keysAndBondValues(
+        uint256[] memory minKeysCount,
+        uint256[] memory trend,
+        uint256 keysToCheck,
+        uint256 bondToCheck
+    ) public {
+        uint256[2][] memory _bondCurve;
+        (_bondCurve, keysToCheck, bondToCheck) = prepareInputs(
+            minKeysCount,
+            trend,
+            keysToCheck,
+            bondToCheck
+        );
+        bondCurve = new CSBondCurveTestable(MAX_BOND_CURVE_INTERVALS_COUNT);
+        bondCurve.initialize(_bondCurve);
+        ICSBondCurve.BondCurveInterval[] memory intervals = bondCurve
+            .getCurveInfo(0);
+
+        // Compare contract output with different algorithm
+        uint256 keysCountSecondOpinion = getKeysCountByBondAmountSecondOpinion(
+            intervals,
+            bondToCheck
+        );
+        uint256 keysCount = bondCurve.getKeysCountByBondAmount(bondToCheck, 0);
+        assertEq(
+            keysCount,
+            keysCountSecondOpinion,
+            "keysCount != keysCountSecondOpinion"
+        );
+        // Can't check this fully, because of the rounding (`bondToCheck` can be "between" two keys amounts).
+        // So it is enough to check that one less or equal than another
+        uint256 bondminKeysCount = bondCurve.getBondAmountByKeysCount(
+            keysCount,
+            0
+        );
+        assertGe(
+            bondToCheck,
+            bondminKeysCount,
+            "bondminKeysCount > bondToCheck"
+        );
+
+        uint256 bondAmountSecondOpinion = getBondAmountByKeysCountSecondOpinion(
+            intervals,
+            keysToCheck
+        );
+        uint256 bondAmount = bondCurve.getBondAmountByKeysCount(keysToCheck, 0);
+        assertEq(
+            bondAmount,
+            bondAmountSecondOpinion,
+            "bondAmount != bondOutSecondOpinion"
+        );
+        // Check that values are the same in both directions
+        uint256 keysminBondAmount = bondCurve.getKeysCountByBondAmount(
+            bondAmount,
+            0
+        );
+        assertEq(
+            keysminBondAmount,
+            keysToCheck,
+            "keysminBondAmount != keysToCheck"
+        );
+    }
+
+    /// NOTE: Ugly, ineffective version of binary search algorithm from the contract.
+    //        Needed only as a second opinion to compare outputs.
+    function getBondAmountByKeysCountSecondOpinion(
+        ICSBondCurve.BondCurveInterval[] memory intervals,
+        uint256 keysToCheck
+    ) public pure returns (uint256) {
+        uint256 bondAmount = 0;
+        uint256 minBondAcc = intervals[0].trend;
+        for (uint256 i = 0; i < intervals.length; ++i) {
+            if (i > 0) {
+                // Current trend + difference between current and previous minKeysCount multiplied by previous trend
+                minBondAcc +=
+                    intervals[i].trend +
+                    (intervals[i].minKeysCount -
+                        intervals[i - 1].minKeysCount -
+                        1) *
+                    intervals[i - 1].trend;
+            }
+            if (keysToCheck >= intervals[i].minKeysCount) {
+                bondAmount =
+                    minBondAcc +
+                    (keysToCheck - intervals[i].minKeysCount) *
+                    intervals[i].trend;
+            } else {
+                break;
+            }
+        }
+        return bondAmount;
+    }
+
+    /// NOTE: Ugly, ineffective version of binary search algorithm from the contract.
+    //        Needed only as a second opinion to compare outputs.
+    function getKeysCountByBondAmountSecondOpinion(
+        ICSBondCurve.BondCurveInterval[] memory intervals,
+        uint256 bondToCheck
+    ) public pure returns (uint256) {
+        if (bondToCheck < intervals[0].minBond) {
+            return 0;
+        }
+
+        uint256 neededIndex = 0;
+        uint256 minBondAcc = intervals[0].trend;
+        for (uint256 i = 0; i < intervals.length; i++) {
+            if (i > 0) {
+                // Current trend + difference between current and previous minKeysCount multiplied by previous trend
+                minBondAcc +=
+                    intervals[i].trend +
+                    (intervals[i].minKeysCount -
+                        intervals[i - 1].minKeysCount -
+                        1) *
+                    intervals[i - 1].trend;
+            }
+            if (bondToCheck == minBondAcc) {
+                return intervals[i].minKeysCount;
+            }
+            if (i < intervals.length - 1) {
+                uint256 nextminBond = minBondAcc +
+                    intervals[i + 1].trend +
+                    (intervals[i + 1].minKeysCount -
+                        intervals[i].minKeysCount -
+                        1) *
+                    intervals[i].trend;
+                if (bondToCheck < nextminBond) {
+                    uint256 maxBondInInterval = nextminBond -
+                        intervals[i + 1].trend;
+                    if (bondToCheck > maxBondInInterval) {
+                        bondToCheck = maxBondInInterval;
+                    }
+                    neededIndex = i;
+                    break;
+                }
+            }
+            neededIndex = i;
+        }
+
+        return
+            intervals[neededIndex].minKeysCount +
+            (bondToCheck - minBondAcc) /
+            intervals[neededIndex].trend;
+    }
+
+    function prepareInputs(
+        uint256[] memory minKeysCount,
+        uint256[] memory trend,
+        uint256 keysToCheck,
+        uint256 bondToCheck
+    ) public pure returns (uint256[2][] memory, uint256, uint256) {
+        vm.assume(minKeysCount.length > 0);
+        vm.assume(trend.length > 0);
+
+        // Assume: intervals.length > 0
+        uint256 intervalsCount = Math.max(
+            1,
+            Math.min(minKeysCount.length, trend.length) %
+                MAX_BOND_CURVE_INTERVALS_COUNT
+        );
+        for (uint256 i = 0; i < intervalsCount; ++i) {
+            // Assume: minKeysCount[i] > 0
+            minKeysCount[i] = Math.max(
+                1,
+                minKeysCount[i] % MAX_FROM_KEYS_COUNT_VALUE
+            );
+            // Assume: trend[i] > 0
+            trend[i] = Math.max(1 wei, trend[i] % MAX_TREND_VALUE);
+        }
+        assembly ("memory-safe") {
+            // Shrink `minKeysCount` and `trend` arrays to `intervalsCount`
+            mstore(minKeysCount, intervalsCount)
+            mstore(trend, intervalsCount)
+        }
+
+        // Assume: minKeysCount[i] < minKeysCount[i + 1]
+        uint256 n = minKeysCount.length;
+        for (uint256 i = 0; i < n; i++) {
+            for (uint256 j = 0; j < n - 1; j++) {
+                if (minKeysCount[j] > minKeysCount[j + 1]) {
+                    (minKeysCount[j], minKeysCount[j + 1]) = (
+                        minKeysCount[j + 1],
+                        minKeysCount[j]
+                    );
+                }
+                if (minKeysCount[j] == minKeysCount[j + 1]) {
+                    // Make it different because we need to have unique values
+                    minKeysCount[j + 1] = minKeysCount[j] + 1;
+                }
+            }
+        }
+        // Assume: first interval starts from "1" keys count
+        minKeysCount[0] = 1;
+
+        assertEq(minKeysCount.length, trend.length);
+
+        // Dev: zip `minKeysCount` and `trend` arrays to `uint256[2][] intervals`
+        uint256[2][] memory _bondCurve = new uint256[2][](minKeysCount.length);
+        for (uint256 i = 0; i < intervalsCount; ++i) {
+            _bondCurve[i] = [minKeysCount[i], trend[i]];
+        }
+        keysToCheck = bound(keysToCheck, 1, MAX_FROM_KEYS_COUNT_VALUE);
+        bondToCheck = bound(bondToCheck, trend[0], type(uint256).max);
+        return (_bondCurve, keysToCheck, bondToCheck);
     }
 }

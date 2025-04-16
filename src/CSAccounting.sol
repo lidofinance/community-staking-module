@@ -80,7 +80,7 @@ contract CSAccounting is
     /// @param bondLockPeriod Bond lock period in seconds
     /// @param _chargePenaltyRecipient Recipient of the charge penalty type
     function initialize(
-        uint256[] calldata bondCurve,
+        uint256[2][] calldata bondCurve,
         address admin,
         address _feeDistributor,
         uint256 bondLockPeriod,
@@ -108,7 +108,14 @@ contract CSAccounting is
         LIDO.approve(LIDO_LOCATOR.burner(), type(uint256).max);
     }
 
-    function finalizeUpgradeV2() external reinitializer(2) {}
+    function finalizeUpgradeV2(
+        uint256[2][] calldata defaultBondCurve,
+        uint256[2][] calldata vettedBondCurve
+    ) external reinitializer(2) {
+        /// NOTE: This method is not for adding new bond curves, but for migration of the existing ones to the new format (`BondCurve` to `BondCurveInterval[]`). However, bond values can be different from the current.
+        _addBondCurve(defaultBondCurve);
+        _addBondCurve(vettedBondCurve);
+    }
 
     /// @inheritdoc ICSAccounting
     function resume() external onlyRole(RESUME_ROLE) {
@@ -136,7 +143,7 @@ contract CSAccounting is
 
     /// @inheritdoc ICSAccounting
     function addBondCurve(
-        uint256[] calldata bondCurve
+        uint256[2][] calldata bondCurve
     ) external onlyRole(MANAGE_BOND_CURVES_ROLE) returns (uint256 id) {
         id = CSBondCurve._addBondCurve(bondCurve);
     }
@@ -144,7 +151,7 @@ contract CSAccounting is
     /// @inheritdoc ICSAccounting
     function updateBondCurve(
         uint256 curveId,
-        uint256[] calldata bondCurve
+        uint256[2][] calldata bondCurve
     ) external onlyRole(MANAGE_BOND_CURVES_ROLE) {
         CSBondCurve._updateBondCurve(curveId, bondCurve);
     }
