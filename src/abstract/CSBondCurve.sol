@@ -140,14 +140,14 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             }
             //
             //                          <-------> trend[B]
-            //               minBond[A]        minBond[B]
+            //               minBond[A]         minBond[B]
             // bond      ----|----|----|----^---|--------|--> eth
             // fromKeys      1         3    |   4
             //           <---> trend[A]     |
             //                              - amount
             // Starting from keys count = 3 trend[B] is already in use, it means if the amount is
             // somewhere within the interval (minBond[B] - trend[B]; minBond[B]), the maximum
-            // amount of keys it's possible to create is fromKeys[B] - 1
+            // amount of keys it's possible to create is minKeysCount[B] - 1
             //
             BondCurveInterval storage interval;
             if (low < intervals.length - 1) {
