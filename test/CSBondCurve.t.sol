@@ -74,11 +74,11 @@ contract CSBondCurveTest is Test {
         );
 
         assertEq(curve.length, 2);
-        assertEq(curve[0].fromKeysCount, 1);
-        assertEq(curve[0].fromBond, 2 ether);
+        assertEq(curve[0].minKeysCount, 1);
+        assertEq(curve[0].minBond, 2 ether);
         assertEq(curve[0].trend, 2 ether);
-        assertEq(curve[1].fromKeysCount, 3);
-        assertEq(curve[1].fromBond, 5 ether);
+        assertEq(curve[1].minKeysCount, 3);
+        assertEq(curve[1].minBond, 5 ether);
         assertEq(curve[1].trend, 1 ether);
     }
 
@@ -104,8 +104,8 @@ contract CSBondCurveTest is Test {
 
         assertEq(addedId, 1);
         assertEq(added.length, 1);
-        assertEq(added[0].fromKeysCount, 1);
-        assertEq(added[0].fromBond, 16 ether);
+        assertEq(added[0].minKeysCount, 1);
+        assertEq(added[0].minBond, 16 ether);
         assertEq(added[0].trend, 16 ether);
     }
 
@@ -124,20 +124,20 @@ contract CSBondCurveTest is Test {
 
         assertEq(addedId, 1);
         assertEq(added.length, 4);
-        assertEq(added[0].fromKeysCount, 1);
-        assertEq(added[0].fromBond, 16 ether);
+        assertEq(added[0].minKeysCount, 1);
+        assertEq(added[0].minBond, 16 ether);
         assertEq(added[0].trend, 16 ether);
 
-        assertEq(added[1].fromKeysCount, 10);
-        assertEq(added[1].fromBond, 145 ether);
+        assertEq(added[1].minKeysCount, 10);
+        assertEq(added[1].minBond, 145 ether);
         assertEq(added[1].trend, 1 ether);
 
-        assertEq(added[2].fromKeysCount, 33);
-        assertEq(added[2].fromBond, 167.5 ether);
+        assertEq(added[2].minKeysCount, 33);
+        assertEq(added[2].minBond, 167.5 ether);
         assertEq(added[2].trend, 0.5 ether);
 
-        assertEq(added[3].fromKeysCount, 100);
-        assertEq(added[3].fromBond, 210.5 ether);
+        assertEq(added[3].minKeysCount, 100);
+        assertEq(added[3].minBond, 210.5 ether);
         assertEq(added[3].trend, 10 ether);
     }
 
@@ -183,8 +183,8 @@ contract CSBondCurveTest is Test {
             .getCurveInfo(toUpdateId);
 
         assertEq(updated.length, 1);
-        assertEq(updated[0].fromKeysCount, 1);
-        assertEq(updated[0].fromBond, 16 ether);
+        assertEq(updated[0].minKeysCount, 1);
+        assertEq(updated[0].minBond, 16 ether);
         assertEq(updated[0].trend, 16 ether);
     }
 
@@ -203,20 +203,20 @@ contract CSBondCurveTest is Test {
             .getCurveInfo(toUpdateId);
 
         assertEq(updated.length, 4);
-        assertEq(updated[0].fromKeysCount, 1);
-        assertEq(updated[0].fromBond, 16 ether);
+        assertEq(updated[0].minKeysCount, 1);
+        assertEq(updated[0].minBond, 16 ether);
         assertEq(updated[0].trend, 16 ether);
 
-        assertEq(updated[1].fromKeysCount, 10);
-        assertEq(updated[1].fromBond, 145 ether);
+        assertEq(updated[1].minKeysCount, 10);
+        assertEq(updated[1].minBond, 145 ether);
         assertEq(updated[1].trend, 1 ether);
 
-        assertEq(updated[2].fromKeysCount, 33);
-        assertEq(updated[2].fromBond, 167.5 ether);
+        assertEq(updated[2].minKeysCount, 33);
+        assertEq(updated[2].minBond, 167.5 ether);
         assertEq(updated[2].trend, 0.5 ether);
 
-        assertEq(updated[3].fromKeysCount, 100);
-        assertEq(updated[3].fromBond, 210.5 ether);
+        assertEq(updated[3].minKeysCount, 100);
+        assertEq(updated[3].minBond, 210.5 ether);
         assertEq(updated[3].trend, 10 ether);
     }
 
@@ -312,8 +312,8 @@ contract CSBondCurveTest is Test {
 
         assertEq(
             bondCurve.getKeysCountByBondAmount(amount, 0),
-            lastInterval.fromKeysCount +
-                (amount - lastInterval.fromBond) /
+            lastInterval.minKeysCount +
+                (amount - lastInterval.minBond) /
                 lastInterval.trend
         );
     }
@@ -556,14 +556,14 @@ contract CSBondCurveFuzz is Test {
     uint256 public constant MAX_TREND_VALUE = 1000 ether;
 
     function testFuzz_keysAndBondValues(
-        uint256[] memory fromKeysCount,
+        uint256[] memory minKeysCount,
         uint256[] memory trend,
         uint256 keysToCheck,
         uint256 bondToCheck
     ) public {
         uint256[2][] memory _bondCurve;
         (_bondCurve, keysToCheck, bondToCheck) = prepareInputs(
-            fromKeysCount,
+            minKeysCount,
             trend,
             keysToCheck,
             bondToCheck
@@ -586,14 +586,14 @@ contract CSBondCurveFuzz is Test {
         );
         // Can't check this fully, because of the rounding (`bondToCheck` can be "between" two keys amounts).
         // So it is enough to check that one less or equal than another
-        uint256 bondFromKeysCount = bondCurve.getBondAmountByKeysCount(
+        uint256 bondminKeysCount = bondCurve.getBondAmountByKeysCount(
             keysCount,
             0
         );
         assertGe(
             bondToCheck,
-            bondFromKeysCount,
-            "bondFromKeysCount > bondToCheck"
+            bondminKeysCount,
+            "bondminKeysCount > bondToCheck"
         );
 
         uint256 bondAmountSecondOpinion = getBondAmountByKeysCountSecondOpinion(
@@ -607,14 +607,14 @@ contract CSBondCurveFuzz is Test {
             "bondAmount != bondOutSecondOpinion"
         );
         // Check that values are the same in both directions
-        uint256 keysFromBondAmount = bondCurve.getKeysCountByBondAmount(
+        uint256 keysminBondAmount = bondCurve.getKeysCountByBondAmount(
             bondAmount,
             0
         );
         assertEq(
-            keysFromBondAmount,
+            keysminBondAmount,
             keysToCheck,
-            "keysFromBondAmount != keysToCheck"
+            "keysminBondAmount != keysToCheck"
         );
     }
 
@@ -625,21 +625,21 @@ contract CSBondCurveFuzz is Test {
         uint256 keysToCheck
     ) public pure returns (uint256) {
         uint256 bondAmount = 0;
-        uint256 fromBondAcc = intervals[0].trend;
+        uint256 minBondAcc = intervals[0].trend;
         for (uint256 i = 0; i < intervals.length; ++i) {
             if (i > 0) {
-                // Current trend + difference between current and previous fromKeysCount multiplied by previous trend
-                fromBondAcc +=
+                // Current trend + difference between current and previous minKeysCount multiplied by previous trend
+                minBondAcc +=
                     intervals[i].trend +
-                    (intervals[i].fromKeysCount -
-                        intervals[i - 1].fromKeysCount -
+                    (intervals[i].minKeysCount -
+                        intervals[i - 1].minKeysCount -
                         1) *
                     intervals[i - 1].trend;
             }
-            if (keysToCheck >= intervals[i].fromKeysCount) {
+            if (keysToCheck >= intervals[i].minKeysCount) {
                 bondAmount =
-                    fromBondAcc +
-                    (keysToCheck - intervals[i].fromKeysCount) *
+                    minBondAcc +
+                    (keysToCheck - intervals[i].minKeysCount) *
                     intervals[i].trend;
             } else {
                 break;
@@ -654,34 +654,34 @@ contract CSBondCurveFuzz is Test {
         ICSBondCurve.BondCurveInterval[] memory intervals,
         uint256 bondToCheck
     ) public pure returns (uint256) {
-        if (bondToCheck < intervals[0].fromBond) {
+        if (bondToCheck < intervals[0].minBond) {
             return 0;
         }
 
         uint256 neededIndex = 0;
-        uint256 fromBondAcc = intervals[0].trend;
+        uint256 minBondAcc = intervals[0].trend;
         for (uint256 i = 0; i < intervals.length; i++) {
             if (i > 0) {
-                // Current trend + difference between current and previous fromKeysCount multiplied by previous trend
-                fromBondAcc +=
+                // Current trend + difference between current and previous minKeysCount multiplied by previous trend
+                minBondAcc +=
                     intervals[i].trend +
-                    (intervals[i].fromKeysCount -
-                        intervals[i - 1].fromKeysCount -
+                    (intervals[i].minKeysCount -
+                        intervals[i - 1].minKeysCount -
                         1) *
                     intervals[i - 1].trend;
             }
-            if (bondToCheck == fromBondAcc) {
-                return intervals[i].fromKeysCount;
+            if (bondToCheck == minBondAcc) {
+                return intervals[i].minKeysCount;
             }
             if (i < intervals.length - 1) {
-                uint256 nextFromBond = fromBondAcc +
+                uint256 nextminBond = minBondAcc +
                     intervals[i + 1].trend +
-                    (intervals[i + 1].fromKeysCount -
-                        intervals[i].fromKeysCount -
+                    (intervals[i + 1].minKeysCount -
+                        intervals[i].minKeysCount -
                         1) *
                     intervals[i].trend;
-                if (bondToCheck < nextFromBond) {
-                    uint256 maxBondInInterval = nextFromBond -
+                if (bondToCheck < nextminBond) {
+                    uint256 maxBondInInterval = nextminBond -
                         intervals[i + 1].trend;
                     if (bondToCheck > maxBondInInterval) {
                         bondToCheck = maxBondInInterval;
@@ -694,66 +694,66 @@ contract CSBondCurveFuzz is Test {
         }
 
         return
-            intervals[neededIndex].fromKeysCount +
-            (bondToCheck - fromBondAcc) /
+            intervals[neededIndex].minKeysCount +
+            (bondToCheck - minBondAcc) /
             intervals[neededIndex].trend;
     }
 
     function prepareInputs(
-        uint256[] memory fromKeysCount,
+        uint256[] memory minKeysCount,
         uint256[] memory trend,
         uint256 keysToCheck,
         uint256 bondToCheck
     ) public pure returns (uint256[2][] memory, uint256, uint256) {
-        vm.assume(fromKeysCount.length > 0);
+        vm.assume(minKeysCount.length > 0);
         vm.assume(trend.length > 0);
 
         // Assume: intervals.length > 0
         uint256 intervalsCount = Math.max(
             1,
-            Math.min(fromKeysCount.length, trend.length) %
+            Math.min(minKeysCount.length, trend.length) %
                 MAX_BOND_CURVE_INTERVALS_COUNT
         );
         for (uint256 i = 0; i < intervalsCount; ++i) {
-            // Assume: fromKeysCount[i] > 0
-            fromKeysCount[i] = Math.max(
+            // Assume: minKeysCount[i] > 0
+            minKeysCount[i] = Math.max(
                 1,
-                fromKeysCount[i] % MAX_FROM_KEYS_COUNT_VALUE
+                minKeysCount[i] % MAX_FROM_KEYS_COUNT_VALUE
             );
             // Assume: trend[i] > 0
             trend[i] = Math.max(1 wei, trend[i] % MAX_TREND_VALUE);
         }
         assembly ("memory-safe") {
-            // Shrink `fromKeysCount` and `trend` arrays to `intervalsCount`
-            mstore(fromKeysCount, intervalsCount)
+            // Shrink `minKeysCount` and `trend` arrays to `intervalsCount`
+            mstore(minKeysCount, intervalsCount)
             mstore(trend, intervalsCount)
         }
 
-        // Assume: fromKeysCount[i] < fromKeysCount[i + 1]
-        uint256 n = fromKeysCount.length;
+        // Assume: minKeysCount[i] < minKeysCount[i + 1]
+        uint256 n = minKeysCount.length;
         for (uint256 i = 0; i < n; i++) {
             for (uint256 j = 0; j < n - 1; j++) {
-                if (fromKeysCount[j] > fromKeysCount[j + 1]) {
-                    (fromKeysCount[j], fromKeysCount[j + 1]) = (
-                        fromKeysCount[j + 1],
-                        fromKeysCount[j]
+                if (minKeysCount[j] > minKeysCount[j + 1]) {
+                    (minKeysCount[j], minKeysCount[j + 1]) = (
+                        minKeysCount[j + 1],
+                        minKeysCount[j]
                     );
                 }
-                if (fromKeysCount[j] == fromKeysCount[j + 1]) {
+                if (minKeysCount[j] == minKeysCount[j + 1]) {
                     // Make it different because we need to have unique values
-                    fromKeysCount[j + 1] = fromKeysCount[j] + 1;
+                    minKeysCount[j + 1] = minKeysCount[j] + 1;
                 }
             }
         }
         // Assume: first interval starts from "1" keys count
-        fromKeysCount[0] = 1;
+        minKeysCount[0] = 1;
 
-        assertEq(fromKeysCount.length, trend.length);
+        assertEq(minKeysCount.length, trend.length);
 
-        // Dev: zip `fromKeysCount` and `trend` arrays to `uint256[2][] intervals`
-        uint256[2][] memory _bondCurve = new uint256[2][](fromKeysCount.length);
+        // Dev: zip `minKeysCount` and `trend` arrays to `uint256[2][] intervals`
+        uint256[2][] memory _bondCurve = new uint256[2][](minKeysCount.length);
         for (uint256 i = 0; i < intervalsCount; ++i) {
-            _bondCurve[i] = [fromKeysCount[i], trend[i]];
+            _bondCurve[i] = [minKeysCount[i], trend[i]];
         }
         keysToCheck = bound(keysToCheck, 1, MAX_FROM_KEYS_COUNT_VALUE);
         bondToCheck = bound(bondToCheck, trend[0], type(uint256).max);

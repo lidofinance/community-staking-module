@@ -4973,7 +4973,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         ICSBondCurve.BondCurveInterval[] memory curve = accounting
             .getCurveInfo({ curveId: addedId });
 
-        assertEq(curve[0].fromBond, 2 ether);
+        assertEq(curve[0].minBond, 2 ether);
         assertEq(curve[0].trend, 2 ether);
     }
 
@@ -4995,7 +4995,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         ICSBondCurve.BondCurveInterval[] memory curve = accounting
             .getCurveInfo({ curveId: toUpdate });
 
-        assertEq(curve[0].fromBond, 2 ether);
+        assertEq(curve[0].minBond, 2 ether);
         assertEq(curve[0].trend, 2 ether);
     }
 
@@ -5036,7 +5036,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
             0
         );
 
-        assertEq(curve[0].fromBond, 2 ether);
+        assertEq(curve[0].minBond, 2 ether);
         assertEq(curve[0].trend, 2 ether);
     }
 

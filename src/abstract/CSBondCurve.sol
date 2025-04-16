@@ -105,7 +105,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             uint256 high = intervals.length - 1;
             while (low < high) {
                 uint256 mid = (low + high + 1) / 2;
-                if (keys < intervals[mid].fromKeysCount) {
+                if (keys < intervals[mid].minKeysCount) {
                     high = mid - 1;
                 } else {
                     low = mid;
@@ -113,8 +113,8 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             }
             BondCurveInterval storage interval = intervals[low];
             return
-                interval.fromBond +
-                (keys - interval.fromKeysCount) *
+                interval.minBond +
+                (keys - interval.minKeysCount) *
                 interval.trend;
         }
     }
@@ -123,7 +123,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         uint256 amount,
         BondCurveInterval[] storage intervals
     ) internal view returns (uint256) {
-        if (amount < intervals[0].fromBond) {
+        if (amount < intervals[0].minBond) {
             return 0;
         }
 
@@ -132,7 +132,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             uint256 high = intervals.length - 1;
             while (low < high) {
                 uint256 mid = (low + high + 1) / 2;
-                if (amount < intervals[mid].fromBond) {
+                if (amount < intervals[mid].minBond) {
                     high = mid - 1;
                 } else {
                     low = mid;
@@ -140,26 +140,26 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             }
             //
             //                          <-------> trend[B]
-            //               fromBond[A]        fromBond[B]
+            //               minBond[A]        minBond[B]
             // bond      ----|----|----|----^---|--------|--> eth
             // fromKeys      1         3    |   4
             //           <---> trend[A]     |
             //                              - amount
             // Starting from keys count = 3 trend[B] is already in use, it means if the amount is
-            // somewhere within the interval (fromBond[B] - trend[B]; fromBond[B]), the maximum
+            // somewhere within the interval (minBond[B] - trend[B]; minBond[B]), the maximum
             // amount of keys it's possible to create is fromKeys[B] - 1
             //
             BondCurveInterval storage interval;
             if (low < intervals.length - 1) {
                 interval = intervals[low + 1];
-                if (amount > interval.fromBond - interval.trend) {
-                    return interval.fromKeysCount - 1;
+                if (amount > interval.minBond - interval.trend) {
+                    return interval.minKeysCount - 1;
                 }
             }
             interval = intervals[low];
             return
-                interval.fromKeysCount +
-                (amount - interval.fromBond) /
+                interval.minKeysCount +
+                (amount - interval.minBond) /
                 interval.trend;
         }
     }
@@ -214,21 +214,21 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     ) private {
         for (uint256 i = 0; i < intervals.length; ++i) {
             BondCurveInterval storage interval = bondCurve.push();
-            (uint256 fromKeysCount, uint256 trend) = (
+            (uint256 minKeysCount, uint256 trend) = (
                 intervals[i][0],
                 intervals[i][1]
             );
-            interval.fromKeysCount = fromKeysCount;
+            interval.minKeysCount = minKeysCount;
             interval.trend = trend;
             if (i != 0) {
                 BondCurveInterval storage prev = bondCurve[i - 1];
-                interval.fromBond =
+                interval.minBond =
                     trend +
-                    prev.fromBond +
-                    (fromKeysCount - prev.fromKeysCount - 1) *
+                    prev.minBond +
+                    (minKeysCount - prev.minKeysCount - 1) *
                     prev.trend;
             } else {
-                interval.fromBond = trend;
+                interval.minBond = trend;
             }
         }
     }
@@ -254,12 +254,12 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             revert InvalidBondCurveLength();
         }
 
-        (uint256 firstIntervalFromKeysCount, uint256 firstIntervalTrend) = (
+        (uint256 firstIntervalminKeysCount, uint256 firstIntervalTrend) = (
             intervals[0][0],
             intervals[0][1]
         );
 
-        if (firstIntervalFromKeysCount != 1) {
+        if (firstIntervalminKeysCount != 1) {
             revert InvalidBondCurveValues();
         }
 
@@ -269,12 +269,12 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
         for (uint256 i = 1; i < intervals.length; ++i) {
             unchecked {
-                (uint256 fromKeysCount, uint256 trend) = (
+                (uint256 minKeysCount, uint256 trend) = (
                     intervals[i][0],
                     intervals[i][1]
                 );
-                uint256 prevFromKeysCount = intervals[i - 1][0];
-                if (fromKeysCount <= prevFromKeysCount) {
+                uint256 prevminKeysCount = intervals[i - 1][0];
+                if (minKeysCount <= prevminKeysCount) {
                     revert InvalidBondCurveValues();
                 }
                 if (trend == 0) {

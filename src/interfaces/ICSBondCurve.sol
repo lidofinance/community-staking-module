@@ -39,8 +39,8 @@ interface ICSBondCurve {
     ///       |          1          2          3          i
     ///
     struct BondCurveInterval {
-        uint256 fromKeysCount;
-        uint256 fromBond;
+        uint256 minKeysCount;
+        uint256 minBond;
         uint256 trend;
     }
 

@@ -227,7 +227,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
     function test_initializer() public view {
         uint256 curveId = accounting.DEFAULT_BOND_CURVE_ID();
         assertEq(
-            accounting.getCurveInfo(curveId)[0].fromKeysCount,
+            accounting.getCurveInfo(curveId)[0].minKeysCount,
             deployParams.bondCurve[0][0]
         );
         assertEq(
@@ -236,7 +236,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
         );
 
         assertEq(
-            accounting.getCurveInfo(curveId)[1].fromKeysCount,
+            accounting.getCurveInfo(curveId)[1].minKeysCount,
             deployParams.bondCurve[1][0]
         );
         assertEq(
@@ -515,7 +515,7 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
         assertEq(vettedGate.treeRoot(), deployParams.vettedGateTreeRoot);
         uint256 curveId = vettedGate.curveId();
         assertEq(
-            accounting.getCurveInfo(curveId)[0].fromKeysCount,
+            accounting.getCurveInfo(curveId)[0].minKeysCount,
             deployParams.vettedGateBondCurve[0][0]
         );
         assertEq(
@@ -523,7 +523,7 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
             deployParams.vettedGateBondCurve[0][1]
         );
         assertEq(
-            accounting.getCurveInfo(curveId)[1].fromKeysCount,
+            accounting.getCurveInfo(curveId)[1].minKeysCount,
             deployParams.vettedGateBondCurve[1][0]
         );
         assertEq(

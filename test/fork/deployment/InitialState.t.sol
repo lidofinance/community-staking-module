@@ -77,7 +77,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         assertEq(accounting.totalBondShares(), 0);
         uint256 defaultCurveId = accounting.DEFAULT_BOND_CURVE_ID();
         assertEq(
-            accounting.getCurveInfo(defaultCurveId)[0].fromKeysCount,
+            accounting.getCurveInfo(defaultCurveId)[0].minKeysCount,
             deployParams.bondCurve[0][0]
         );
         assertEq(
@@ -86,7 +86,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         );
 
         assertEq(
-            accounting.getCurveInfo(defaultCurveId)[1].fromKeysCount,
+            accounting.getCurveInfo(defaultCurveId)[1].minKeysCount,
             deployParams.bondCurve[1][0]
         );
         assertEq(
@@ -95,7 +95,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         );
         uint256 vettedCurveId = vettedGate.curveId();
         assertEq(
-            accounting.getCurveInfo(vettedCurveId)[0].fromKeysCount,
+            accounting.getCurveInfo(vettedCurveId)[0].minKeysCount,
             deployParams.vettedGateBondCurve[0][0]
         );
         assertEq(
@@ -103,7 +103,7 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
             deployParams.vettedGateBondCurve[0][1]
         );
         assertEq(
-            accounting.getCurveInfo(vettedCurveId)[1].fromKeysCount,
+            accounting.getCurveInfo(vettedCurveId)[1].minKeysCount,
             deployParams.vettedGateBondCurve[1][0]
         );
         assertEq(
