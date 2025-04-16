@@ -78,7 +78,7 @@ abstract contract DeployImplementationsBase is DeployBase {
 
             CSAccounting accountingImpl = new CSAccounting({
                 lidoLocator: config.lidoLocatorAddress,
-                communityStakingModule: address(csm),
+                module: address(csm),
                 maxCurveLength: config.maxCurveLength,
                 minBondLockPeriod: config.minBondLockPeriod,
                 maxBondLockPeriod: config.maxBondLockPeriod

@@ -223,7 +223,7 @@ abstract contract DeployBase is Script {
 
             CSAccounting accountingImpl = new CSAccounting({
                 lidoLocator: config.lidoLocatorAddress,
-                communityStakingModule: address(csm),
+                module: address(csm),
                 maxCurveLength: config.maxCurveLength,
                 minBondLockPeriod: config.minBondLockPeriod,
                 maxBondLockPeriod: config.maxBondLockPeriod
