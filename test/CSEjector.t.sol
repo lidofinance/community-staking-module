@@ -114,8 +114,9 @@ contract CSEjectorTest is Test, Utilities, Fixtures {
         csm.mock_setNodeOperatorTotalDepositedKeys(1);
         csm.mock_setNodeOperatorsCount(1);
 
+        uint256 exitType = ejector.STRIKES_EXIT_TYPE_ID();
         vm.expectEmit(address(ejector));
-        emit ICSEjector.EjectionSubmitted(noId, keyIndex, pubkey);
+        emit ICSEjector.EjectionSubmitted(exitType, noId, keyIndex, pubkey);
         vm.expectCall(
             address(accounting),
             abi.encodeWithSelector(accounting.penalize.selector, noId, penalty)
@@ -140,8 +141,9 @@ contract CSEjectorTest is Test, Utilities, Fixtures {
         csm.mock_setNodeOperatorTotalDepositedKeys(1);
         csm.mock_setNodeOperatorsCount(1);
 
+        uint256 exitType = ejector.STRIKES_EXIT_TYPE_ID();
         vm.expectEmit(address(ejector));
-        emit ICSEjector.EjectionSubmitted(noId, keyIndex, pubkey);
+        emit ICSEjector.EjectionSubmitted(exitType, noId, keyIndex, pubkey);
         expectNoCall(
             address(accounting),
             abi.encodeWithSelector(accounting.penalize.selector, noId, 0)

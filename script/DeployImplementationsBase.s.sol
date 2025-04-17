@@ -66,7 +66,10 @@ abstract contract DeployImplementationsBase is DeployBase {
                     attestationsWeight: config.attestationsWeight,
                     blocksWeight: config.blocksWeight,
                     syncWeight: config.syncWeight,
-                    defaultAllowedExitDelay: config.defaultAllowedExitDelay
+                    defaultAllowedExitDelay: config.defaultAllowedExitDelay,
+                    defaultExitDelayPenalty: config.defaultExitDelayPenalty,
+                    defaultMaxWithdrawalRequestFee: config
+                        .defaultMaxWithdrawalRequestFee
                 })
             });
 

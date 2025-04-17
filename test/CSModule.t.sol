@@ -6694,3 +6694,221 @@ contract CSMMisc is CSMCommon {
         assertEq(props.extendedManagerPermissions, extended);
     }
 }
+
+contract CSMExitDeadlineThreshold is CSMCommon {
+    function test_exitDeadlineThreshold() public assertInvariants {
+        uint256 noId = createNodeOperator();
+        uint256 exitDeadlineThreshold = csm.exitDeadlineThreshold(noId);
+        assertEq(exitDeadlineThreshold, parametersRegistry.allowedExitDelay());
+    }
+
+    function test_exitDeadlineThreshold_revertWhenNoNodeOperator()
+        public
+        assertInvariants
+    {
+        uint256 noId = 0;
+        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
+        csm.exitDeadlineThreshold(noId);
+    }
+}
+
+contract CSMReportValidatorExitDelay is CSMCommon {
+    function test_reportValidatorExitDelay() public assertInvariants {
+        uint256 noId = createNodeOperator();
+        uint256 exitDeadlineThreshold = csm.exitDeadlineThreshold(noId);
+        bytes memory publicKey = randomBytes(48);
+
+        vm.expectEmit(address(csm));
+        emit ICSModule.ValidatorExitDelayReported(
+            noId,
+            block.timestamp,
+            publicKey
+        );
+        csm.reportValidatorExitDelay(
+            noId,
+            block.timestamp,
+            publicKey,
+            exitDeadlineThreshold
+        );
+
+        ExitPenaltyInfo memory exitPenaltyInfo = csm.getDelayedExitPenaltyInfo(
+            noId,
+            publicKey
+        );
+        assertEq(
+            exitPenaltyInfo.delayPenalty,
+            parametersRegistry.getExitDelayPenalty(0)
+        );
+    }
+
+    function test_reportValidatorExitDelay_revertWhen_invalidExitDelay()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        uint256 exitDeadlineThreshold = csm.exitDeadlineThreshold(noId);
+        bytes memory publicKey = randomBytes(48);
+
+        vm.expectRevert(ICSModule.ValidatorExitDelayNotApplicable.selector);
+        csm.reportValidatorExitDelay(
+            noId,
+            block.timestamp,
+            publicKey,
+            exitDeadlineThreshold - 1 seconds
+        );
+    }
+
+    function test_reportValidatorExitDelay_alreadyReported() public {
+        uint256 noId = createNodeOperator();
+        uint256 exitDeadlineThreshold = csm.exitDeadlineThreshold(noId);
+        bytes memory publicKey = randomBytes(48);
+
+        csm.reportValidatorExitDelay(
+            noId,
+            block.timestamp,
+            publicKey,
+            exitDeadlineThreshold
+        );
+
+        vm.recordLogs();
+        csm.reportValidatorExitDelay(
+            noId,
+            block.timestamp + 1,
+            publicKey,
+            exitDeadlineThreshold + 1
+        );
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        assertEq(entries.length, 0);
+    }
+
+    function test_reportValidatorExitDelay_alreadyReported_changePenalty()
+        public
+    {
+        uint256 noId = createNodeOperator();
+        uint256 exitDeadlineThreshold = csm.exitDeadlineThreshold(noId);
+        bytes memory publicKey = randomBytes(48);
+        uint256 prevExitDelayPenalty = parametersRegistry.getExitDelayPenalty(
+            0
+        );
+        csm.reportValidatorExitDelay(
+            noId,
+            block.timestamp,
+            publicKey,
+            exitDeadlineThreshold
+        );
+
+        parametersRegistry.setExitDelayPenalty(0, prevExitDelayPenalty + 1);
+
+        vm.recordLogs();
+        csm.reportValidatorExitDelay(
+            noId,
+            block.timestamp + 1,
+            publicKey,
+            exitDeadlineThreshold + 1
+        );
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        assertEq(entries.length, 0);
+
+        assertEq(
+            csm.getDelayedExitPenaltyInfo(noId, publicKey).penaltyValue,
+            prevExitDelayPenalty,
+            "exit delay penalty should not be updated"
+        );
+    }
+
+    function test_reportValidatorExitDelay_revertWhen_noNodeOperator() public {
+        uint256 noId = 0;
+        bytes memory publicKey = randomBytes(48);
+        uint256 exitDelay = parametersRegistry.allowedExitDelay();
+
+        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
+        csm.reportValidatorExitDelay(
+            noId,
+            block.timestamp,
+            publicKey,
+            exitDelay
+        );
+    }
+}
+
+contract CSMOnValidatorExitTriggered is CSMCommon {
+    function test_onValidatorExitTriggered() public assertInvariants {
+        uint256 noId = createNodeOperator();
+        bytes memory publicKey = randomBytes(48);
+        uint256 paidFee = 0.1 ether;
+        uint256 exitType = 1;
+
+        vm.expectEmit(address(csm));
+        emit ICSModule.WithdrawalRequestFeeCompensationReported(
+            noId,
+            publicKey,
+            paidFee
+        );
+        vm.expectEmit(address(csm));
+        emit ICSModule.TriggeredExitReported(
+            noId,
+            exitType,
+            publicKey,
+            paidFee
+        );
+        csm.onValidatorExitTriggered(noId, publicKey, paidFee, exitType);
+
+        ExitPenaltyInfo memory exitPenaltyInfo = csm.getDelayedExitPenaltyInfo(
+            noId,
+            publicKey
+        );
+        assertEq(exitPenaltyInfo.withdrawalRequestFee, paidFee);
+    }
+
+    function test_onValidatorExitTriggered_zeroExitType()
+        public
+        assertInvariants
+    {
+        uint256 noId = createNodeOperator();
+        bytes memory publicKey = randomBytes(48);
+        uint256 paidFee = 0.1 ether;
+        uint256 exitType = 0;
+
+        vm.expectEmit(address(csm));
+        emit ICSModule.TriggeredExitReported(
+            noId,
+            exitType,
+            publicKey,
+            paidFee
+        );
+        csm.onValidatorExitTriggered(noId, publicKey, paidFee, exitType);
+
+        ExitPenaltyInfo memory exitPenaltyInfo = csm.getDelayedExitPenaltyInfo(
+            noId,
+            publicKey
+        );
+        assertEq(exitPenaltyInfo.withdrawalRequestFee, 0);
+    }
+
+    function test_onValidatorExitTriggered_doubleReporting()
+        public
+        assertInvariants
+    {
+        uint256 noId = createNodeOperator();
+        bytes memory publicKey = randomBytes(48);
+        uint256 initialPaidFee = 0.1 ether;
+        uint256 newPaidFee = 0.2 ether;
+        uint256 exitType = 1;
+
+        csm.onValidatorExitTriggered(noId, publicKey, initialPaidFee, exitType);
+
+        vm.recordLogs();
+        csm.onValidatorExitTriggered(noId, publicKey, newPaidFee, exitType);
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        assertEq(entries.length, 1);
+
+        ExitPenaltyInfo memory exitPenaltyInfo = csm.getDelayedExitPenaltyInfo(
+            noId,
+            publicKey
+        );
+        assertEq(
+            exitPenaltyInfo.withdrawalRequestFee,
+            initialPaidFee,
+            "paid fee should not be updated"
+        );
+    }
+}

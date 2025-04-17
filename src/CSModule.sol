@@ -22,6 +22,8 @@ import { TransientUintUintMap, TransientUintUintMapLib } from "./lib/TransientUi
 
 import { SigningKeys } from "./lib/SigningKeys.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
+import { ICSEjector } from "./interfaces/ICSEjector.sol";
+import { ExitPenaltyInfo } from "./interfaces/ICSEjector.sol";
 
 contract CSModule is
     ICSModule,
@@ -53,6 +55,7 @@ contract CSModule is
     ILidoLocator public immutable LIDO_LOCATOR;
     IStETH public immutable STETH;
     ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
+    ICSEjector public immutable EJECTOR;
 
     /// @dev QUEUE_LOWEST_PRIORITY identifies the range of available priorities: [0; QUEUE_LOWEST_PRIORITY].
     uint256 public immutable QUEUE_LOWEST_PRIORITY;
@@ -75,8 +78,7 @@ contract CSModule is
 
     /// @custom:oz-renamed-from earlyAdoption
     /// @custom:oz-retyped-from address
-    mapping(uint256 noKeyIndexPacked => uint256)
-        private _isValidatorExitDelayed;
+    bytes32 internal _unused;
 
     uint256 private _nonce;
     mapping(uint256 => NodeOperator) private _nodeOperators;
@@ -93,7 +95,8 @@ contract CSModule is
     constructor(
         bytes32 moduleType,
         address lidoLocator,
-        address parametersRegistry
+        address parametersRegistry,
+        address ejector
     ) {
         if (lidoLocator == address(0)) {
             revert ZeroLocatorAddress();
@@ -107,6 +110,7 @@ contract CSModule is
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
         STETH = IStETH(LIDO_LOCATOR.lido());
         PARAMETERS_REGISTRY = ICSParametersRegistry(parametersRegistry);
+        EJECTOR = ICSEjector(ejector);
         QUEUE_LOWEST_PRIORITY = PARAMETERS_REGISTRY.QUEUE_LOWEST_PRIORITY();
         QUEUE_LEGACY_PRIORITY = PARAMETERS_REGISTRY.QUEUE_LEGACY_PRIORITY();
 
@@ -141,7 +145,7 @@ contract CSModule is
     function finalizeUpgradeV2() external reinitializer(2) {
         assembly ("memory-safe") {
             sstore(_queueByPriority.slot, 0x00)
-            sstore(_isValidatorExitDelayed.slot, 0x00)
+            sstore(_unused.slot, 0x00)
         }
     }
 
@@ -740,13 +744,40 @@ contract CSModule is
                 pubkey
             );
 
+            // it is safe to use unchecked for penalty sum, due to it's limited to uint248 in the structure
+            uint256 penaltySum;
+            bool chargeWithdrawalRequestFee;
+
+            ExitPenaltyInfo memory exitPenaltyInfo = EJECTOR.getDelayedExitPenaltyInfo(withdrawalInfo.nodeOperatorId, pubkey);
+            if (exitPenaltyInfo.delayPenalty.isValue) {
+                unchecked {
+                    penaltySum += exitPenaltyInfo.delayPenalty.value;
+                }
+                chargeWithdrawalRequestFee = true;
+            }
+            if (exitPenaltyInfo.strikesPenalty.isValue) {
+                unchecked {
+                    penaltySum += exitPenaltyInfo.strikesPenalty.value;
+                }
+                chargeWithdrawalRequestFee = true;
+            }
+            // the withdrawal request fee is taken only if the penalty is applied
+            // if no penalty, the fee has been paid by the node operator on the withdrawal trigger,
+            // or it is the dao decision to withdraw the validator before that the withdrawal request becomes delayed
+            if (chargeWithdrawalRequestFee && exitPenaltyInfo.withdrawalRequestFee != 0) {
+                accounting.chargeFee(withdrawalInfo.nodeOperatorId, exitPenaltyInfo.withdrawalRequestFee);
+            }
+
             if (DEPOSIT_SIZE > withdrawalInfo.amount) {
                 unchecked {
-                    accounting.penalize(
-                        withdrawalInfo.nodeOperatorId,
-                        DEPOSIT_SIZE - withdrawalInfo.amount
-                    );
+                    penaltySum += DEPOSIT_SIZE - withdrawalInfo.amount;
                 }
+            }
+            if (penaltySum > 0) {
+                accounting.penalize(
+                    withdrawalInfo.nodeOperatorId,
+                    penaltySum
+                );
             }
 
             // Nonce should be updated if depositableValidators change
@@ -773,19 +804,34 @@ contract CSModule is
 
     /// @inheritdoc IStakingModule
     function reportValidatorExitDelay(
-        uint256 /* _nodeOperatorId */,
-        uint256 /* _proofSlotTimestamp */,
-        bytes calldata /* _publicKey */,
-        uint256 /* _eligibleToExitInSec */
-    ) external {}
+        uint256 nodeOperatorId,
+        uint256 /* proofSlotTimestamp */,
+        bytes calldata publicKey,
+        uint256 eligibleToExitInSec
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        EJECTOR.processExitDelayReport(
+            nodeOperatorId,
+            publicKey,
+            eligibleToExitInSec
+        );
+    }
 
     /// @inheritdoc IStakingModule
     function onValidatorExitTriggered(
-        uint256 /* _nodeOperatorId */,
-        bytes calldata /* _publicKey */,
-        uint256 /* _withdrawalRequestPaidFee */,
-        uint256 /* _exitType */
-    ) external {}
+        uint256 nodeOperatorId,
+        bytes calldata publicKey,
+        uint256 withdrawalRequestPaidFee,
+        uint256 exitType
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        EJECTOR.processTriggeredExit(
+            nodeOperatorId,
+            publicKey,
+            withdrawalRequestPaidFee,
+            exitType
+        );
+    }
 
     /// @inheritdoc IStakingModule
     /// @notice Get the next `depositsCount` of depositable keys with signatures from the queue
@@ -1202,18 +1248,20 @@ contract CSModule is
 
     /// @inheritdoc IStakingModule
     function isValidatorExitDelayPenaltyApplicable(
-        uint256 /* _nodeOperatorId */,
-        uint256 /* _proofSlotTimestamp */,
-        bytes calldata /* _publicKey */,
-        uint256 /* _eligibleToExitInSec */
+        uint256 nodeOperatorId,
+        uint256 /* proofSlotTimestamp */,
+        bytes calldata publicKey,
+        uint256 eligibleToExitInSec
     ) external view returns (bool) {
-        return false;
+        _onlyExistingNodeOperator(nodeOperatorId);
+        return EJECTOR.isValidatorExitDelayPenaltyApplicable(nodeOperatorId, publicKey, eligibleToExitInSec);
     }
 
     /// @inheritdoc IStakingModule
     function exitDeadlineThreshold(
         uint256 nodeOperatorId
     ) external view returns (uint256) {
+        _onlyExistingNodeOperator(nodeOperatorId);
         return
             PARAMETERS_REGISTRY.getAllowedExitDelay(
                 accounting.getBondCurveId(nodeOperatorId)

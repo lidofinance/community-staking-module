@@ -181,9 +181,15 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
         vm.stopSnapshotGas();
         vm.stopPrank();
 
+        uint256 exitType = ejector.STRIKES_EXIT_TYPE_ID();
         bytes32[] memory proof = strikesTree.getProof(0);
         vm.expectEmit();
-        emit ICSEjector.EjectionSubmitted(nodeOperatorId, keyIndex, key);
+        emit ICSEjector.EjectionSubmitted(
+            exitType,
+            nodeOperatorId,
+            keyIndex,
+            key
+        );
         vm.startSnapshotGas("CSStrikes.processBadPerformanceProof");
         strikes.processBadPerformanceProof(
             nodeOperatorId,
