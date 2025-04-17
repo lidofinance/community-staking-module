@@ -52,7 +52,7 @@ contract VettedGateFactoryTest is Test, Utilities {
         address instance = factory.create(curveId, root, address(this));
         IVettedGate gate = IVettedGate(instance);
         assertEq(gate.curveId(), curveId);
-        assertEq(address(gate.CSM()), address(csm));
+        assertEq(address(gate.MODULE()), address(csm));
         assertEq(gate.treeRoot(), root);
 
         AccessControlEnumerableUpgradeable gateAccess = AccessControlEnumerableUpgradeable(

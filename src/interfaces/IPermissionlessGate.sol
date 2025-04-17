@@ -10,7 +10,7 @@ interface IPermissionlessGate {
 
     function CURVE_ID() external view returns (uint256);
 
-    function CSM() external view returns (ICSModule);
+    function MODULE() external view returns (ICSModule);
 
     /// @notice Add a new Node Operator using ETH as a bond.
     ///         At least one deposit data and corresponding bond should be provided

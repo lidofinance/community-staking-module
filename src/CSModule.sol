@@ -82,7 +82,7 @@ contract CSModule is
     mapping(uint256 => NodeOperator) private _nodeOperators;
     /// @dev see _keyPointer function for details of noKeyIndexPacked structure
     mapping(uint256 noKeyIndexPacked => bool) private _isValidatorWithdrawn;
-    /// @dev DEPRECATED! No writes expected after Pectra hard-fork
+    /// @dev DEPRECATED! No writes expected after CSM v2
     mapping(uint256 noKeyIndexPacked => bool) private _isValidatorSlashed;
 
     uint64 private _totalDepositedValidators;
