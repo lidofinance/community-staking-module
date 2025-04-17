@@ -77,6 +77,8 @@ interface ICSModule is
     error ZeroSenderAddress();
     error ZeroParametersRegistryAddress();
 
+    error NotImplemented();
+
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
         address indexed managerAddress,
@@ -168,6 +170,15 @@ interface ICSModule is
         external
         view
         returns (ICSParametersRegistry);
+
+    /// @notice The lowest priority a deposit queue can be assigned with.
+    function QUEUE_LOWEST_PRIORITY() external view returns (uint256);
+
+    /// @notice The priority reserved to be used for legacy queue only.
+    function QUEUE_LEGACY_PRIORITY() external view returns (uint256);
+
+    /// @notice Returns whether the module is deployed in the 'curated' mode of operation.
+    function isInCuratedMode() external pure returns (bool);
 
     /// @notice Returns the address of the accounting contract
     function accounting() external view returns (ICSAccounting);
@@ -305,6 +316,7 @@ interface ICSModule is
     function resetNodeOperatorManagerAddress(uint256 nodeOperatorId) external;
 
     /// @notice Propose a new reward address for the Node Operator
+    ///         Disabled in the curated mode
     /// @param nodeOperatorId ID of the Node Operator
     /// @param proposedAddress Proposed reward address
     function proposeNodeOperatorRewardAddressChange(
@@ -313,13 +325,15 @@ interface ICSModule is
     ) external;
 
     /// @notice Confirm a new reward address for the Node Operator.
-    ///         Should be called from the currently proposed address
+    ///         Should be called from the currently proposed address.
+    ///         Disabled in the curated mode
     /// @param nodeOperatorId ID of the Node Operator
     function confirmNodeOperatorRewardAddressChange(
         uint256 nodeOperatorId
     ) external;
 
     /// @notice Change rewardAddress if extendedManagerPermissions is enabled for the Node Operator
+    ///         In the curated mode called by MANAGE_NODE_OPERATORS_ROLE role members
     /// @param nodeOperatorId ID of the Node Operator
     /// @param newAddress Proposed reward address
     function changeNodeOperatorRewardAddress(
