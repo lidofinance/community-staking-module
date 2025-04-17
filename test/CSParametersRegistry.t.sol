@@ -361,6 +361,33 @@ contract CSParametersRegistryRewardShareDataTest is
         parametersRegistry.setRewardShareData(curveId, data);
     }
 
+    function test_set_Overwrite() public {
+        uint256 curveId = 1;
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory first = new ICSParametersRegistry.KeyIndexValueInterval[](2);
+        first[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 10000);
+        first[1] = ICSParametersRegistry.KeyIndexValueInterval(10, 8000);
+
+        vm.prank(admin);
+        parametersRegistry.setRewardShareData(curveId, first);
+
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory second = new ICSParametersRegistry.KeyIndexValueInterval[](
+                1
+            );
+        second[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 777);
+
+        vm.prank(admin);
+        parametersRegistry.setRewardShareData(curveId, second);
+
+        CSParametersRegistry.KeyIndexValueInterval[]
+            memory result = parametersRegistry.getRewardShareData(1);
+
+        assertEq(result.length, 1);
+        assertEq(result[0].minKeyIndex, 0);
+        assertEq(result[0].value, 777);
+    }
+
     function test_set_RevertWhen_notAdmin() public override {
         uint256 curveId = 1;
         ICSParametersRegistry.KeyIndexValueInterval[]
@@ -529,6 +556,33 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         emit ICSParametersRegistry.PerformanceLeewayDataSet(curveId, data);
         vm.prank(admin);
         parametersRegistry.setPerformanceLeewayData(curveId, data);
+    }
+
+    function test_set_Overwrite() public {
+        uint256 curveId = 1;
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory first = new ICSParametersRegistry.KeyIndexValueInterval[](2);
+        first[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 10000);
+        first[1] = ICSParametersRegistry.KeyIndexValueInterval(10, 8000);
+
+        vm.prank(admin);
+        parametersRegistry.setPerformanceLeewayData(curveId, first);
+
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory second = new ICSParametersRegistry.KeyIndexValueInterval[](
+                1
+            );
+        second[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 777);
+
+        vm.prank(admin);
+        parametersRegistry.setPerformanceLeewayData(curveId, second);
+
+        CSParametersRegistry.KeyIndexValueInterval[]
+            memory result = parametersRegistry.getPerformanceLeewayData(1);
+
+        assertEq(result.length, 1);
+        assertEq(result[0].minKeyIndex, 0);
+        assertEq(result[0].value, 777);
     }
 
     function test_set_RevertWhen_notAdmin() public override {
