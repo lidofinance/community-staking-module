@@ -165,7 +165,7 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
             4 weeks,
             365 days
         );
-        assertEq(address(accounting.CSM()), address(stakingModule));
+        assertEq(address(accounting.MODULE()), address(stakingModule));
     }
 
     function test_constructor_RevertWhen_InitOnImpl() public {
@@ -1458,7 +1458,7 @@ contract CSAccountingClaimStETHRewardsTest is CSAccountingClaimRewardsBaseTest {
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.expectCall(
-            address(accounting.CSM()),
+            address(accounting.MODULE()),
             abi.encodeWithSelector(
                 ICSModule.updateDepositableValidatorsCount.selector,
                 0
@@ -1986,7 +1986,7 @@ contract CSAccountingClaimWstETHRewardsTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.expectCall(
-            address(accounting.CSM()),
+            address(accounting.MODULE()),
             abi.encodeWithSelector(
                 ICSModule.updateDepositableValidatorsCount.selector,
                 0
@@ -2576,7 +2576,7 @@ contract CSAccountingClaimRewardsUnstETHTest is
 
         uint256 bondSharesBefore = accounting.getBondShares(0);
         vm.expectCall(
-            address(accounting.CSM()),
+            address(accounting.MODULE()),
             abi.encodeWithSelector(
                 ICSModule.updateDepositableValidatorsCount.selector,
                 0
@@ -3468,11 +3468,11 @@ contract CSAccountingDepositEthTest is CSAccountingBaseTest {
         assertEq(accounting.totalBondShares(), 0);
     }
 
-    function test_depositETH_revertWhen_SenderIsNotCSM() public {
+    function test_depositETH_revertWhen_SenderIsNotModule() public {
         vm.deal(stranger, 32 ether);
         vm.prank(stranger);
 
-        vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotModule.selector);
         accounting.depositETH{ value: 32 ether }(stranger, 0);
     }
 }
@@ -3489,7 +3489,7 @@ contract CSAccountingDepositEthPermissionlessTest is CSAccountingBaseTest {
         uint256 sharesToDeposit = stETH.getSharesByPooledEth(32 ether);
 
         vm.expectCall(
-            address(accounting.CSM()),
+            address(accounting.MODULE()),
             abi.encodeWithSelector(
                 ICSModule.updateDepositableValidatorsCount.selector,
                 0
@@ -3813,10 +3813,10 @@ contract CSAccountingDepositStEthTest is CSAccountingBaseTest {
         );
     }
 
-    function test_depositStETH_revertWhen_SenderIsNotCSM() public {
+    function test_depositStETH_revertWhen_SenderIsNotModule() public {
         vm.prank(stranger);
 
-        vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotModule.selector);
         accounting.depositStETH(
             stranger,
             0,
@@ -3845,7 +3845,7 @@ contract CSAccountingDepositStEthPermissionlessTest is CSAccountingBaseTest {
         uint256 sharesToDeposit = stETH.submit{ value: 32 ether }(address(0));
 
         vm.expectCall(
-            address(accounting.CSM()),
+            address(accounting.MODULE()),
             abi.encodeWithSelector(
                 ICSModule.updateDepositableValidatorsCount.selector,
                 0
@@ -4404,9 +4404,9 @@ contract CSAccountingDepositWstEthTest is CSAccountingBaseTest {
         );
     }
 
-    function test_depositWstETH_revertWhen_SenderIsNotCSM() public {
+    function test_depositWstETH_revertWhen_SenderIsNotModule() public {
         vm.prank(stranger);
-        vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotModule.selector);
         accounting.depositWstETH(
             stranger,
             0,
@@ -4441,7 +4441,7 @@ contract CSAccountingDepositWstEthPermissionlessTest is CSAccountingBaseTest {
         vm.stopPrank();
 
         vm.expectCall(
-            address(accounting.CSM()),
+            address(accounting.MODULE()),
             abi.encodeWithSelector(
                 ICSModule.updateDepositableValidatorsCount.selector,
                 0
@@ -4825,10 +4825,10 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         assertEq(accounting.getActualLockedBond(0), 1 ether);
     }
 
-    function test_lockBondETH_RevertWhen_SenderIsNotCSM() public {
+    function test_lockBondETH_RevertWhen_SenderIsNotModule() public {
         mock_getNodeOperatorsCount(1);
 
-        vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotModule.selector);
         vm.prank(stranger);
         accounting.lockBondETH(0, 1 ether);
     }
@@ -4857,10 +4857,10 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         assertEq(accounting.getActualLockedBond(0), 0.6 ether);
     }
 
-    function test_releaseLockedBondETH_RevertWhen_SenderIsNotCSM() public {
+    function test_releaseLockedBondETH_RevertWhen_SenderIsNotModule() public {
         mock_getNodeOperatorsCount(1);
 
-        vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotModule.selector);
         vm.prank(stranger);
         accounting.releaseLockedBondETH(0, 1 ether);
     }
@@ -4902,14 +4902,16 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         accounting.compensateLockedBondETH{ value: 0.4 ether }(0);
     }
 
-    function test_compensateLockedBondETH_RevertWhen_SenderIsNotCSM() public {
+    function test_compensateLockedBondETH_RevertWhen_SenderIsNotModule()
+        public
+    {
         mock_getNodeOperatorsCount(1);
         vm.deal(stranger, 1 ether);
 
         vm.prank(address(stakingModule));
         accounting.lockBondETH(0, 1 ether);
 
-        vm.expectRevert(ICSAccounting.SenderIsNotCSM.selector);
+        vm.expectRevert(ICSAccounting.SenderIsNotModule.selector);
         vm.prank(stranger);
         accounting.compensateLockedBondETH{ value: 1 ether }(0);
     }
@@ -5022,7 +5024,7 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
         uint256 addedId = accounting.addBondCurve(curvePoints);
 
         vm.expectCall(
-            address(accounting.CSM()),
+            address(accounting.MODULE()),
             abi.encodeWithSelector(
                 ICSModule.updateDepositableValidatorsCount.selector,
                 0
@@ -5239,7 +5241,7 @@ contract CSAccountingPullFeeRewardsTest is CSAccountingBaseTest {
         uint256 totalBondSharesBefore = accounting.totalBondShares();
 
         vm.expectCall(
-            address(accounting.CSM()),
+            address(accounting.MODULE()),
             abi.encodeWithSelector(
                 ICSModule.updateDepositableValidatorsCount.selector,
                 0

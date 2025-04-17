@@ -21,7 +21,7 @@ contract PermissionlessGateTest is Test, Utilities {
 
     function test_constructor() public view {
         assertEq(gate.CURVE_ID(), csm.accounting().DEFAULT_BOND_CURVE_ID());
-        assertEq(address(gate.CSM()), address(csm));
+        assertEq(address(gate.MODULE()), address(csm));
     }
 
     function test_constructor_revertWhen_zeroModuleAddress() public {

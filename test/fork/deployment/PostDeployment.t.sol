@@ -201,7 +201,7 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
 
 contract CSAccountingDeploymentTest is DeploymentBaseTest {
     function test_constructor() public view {
-        assertEq(address(accounting.CSM()), address(csm));
+        assertEq(address(accounting.MODULE()), address(csm));
         assertEq(address(accounting.LIDO_LOCATOR()), address(locator));
         assertEq(address(accounting.LIDO()), locator.lido());
         assertEq(
@@ -530,7 +530,7 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
             accounting.getCurveInfo(curveId)[1].trend,
             deployParams.vettedGateBondCurve[1][1]
         );
-        assertEq(address(vettedGate.CSM()), address(csm));
+        assertEq(address(vettedGate.MODULE()), address(csm));
         assertEq(address(vettedGate.ACCOUNTING()), address(accounting));
         assertTrue(
             vettedGate.hasRole(vettedGate.PAUSE_ROLE(), address(gateSeal))

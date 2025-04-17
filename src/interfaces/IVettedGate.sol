@@ -25,7 +25,7 @@ interface IVettedGate {
 
     function SET_TREE_ROOT_ROLE() external view returns (bytes32);
 
-    function CSM() external view returns (ICSModule);
+    function MODULE() external view returns (ICSModule);
 
     function curveId() external view returns (uint256);
 

@@ -63,7 +63,7 @@ contract ProxyUpgrades is Test, Utilities, DeploymentFixtures {
         uint256 currentMaxCurveLength = accounting.MAX_CURVE_LENGTH();
         CSAccounting newAccounting = new CSAccounting({
             lidoLocator: address(accounting.LIDO_LOCATOR()),
-            communityStakingModule: address(csm),
+            module: address(csm),
             maxCurveLength: currentMaxCurveLength + 10,
             minBondLockPeriod: accounting.MIN_BOND_LOCK_PERIOD(),
             maxBondLockPeriod: accounting.MAX_BOND_LOCK_PERIOD()
@@ -78,7 +78,7 @@ contract ProxyUpgrades is Test, Utilities, DeploymentFixtures {
         uint256 currentMaxCurveLength = accounting.MAX_CURVE_LENGTH();
         CSAccounting newAccounting = new CSAccounting({
             lidoLocator: address(accounting.LIDO_LOCATOR()),
-            communityStakingModule: address(csm),
+            module: address(csm),
             maxCurveLength: currentMaxCurveLength + 10,
             minBondLockPeriod: accounting.MIN_BOND_LOCK_PERIOD(),
             maxBondLockPeriod: accounting.MAX_BOND_LOCK_PERIOD()
