@@ -16,6 +16,8 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
     DeployParamsV1 private deployParams;
     DeployParams private upgradeDeployParams;
     uint256 adminsCount;
+    address[] private manageHashConsensusMembersRoleMembers;
+    address[] private manageHashConsensusConfigRoleMembers;
 
     error UpdateConfigRequired();
 
@@ -29,6 +31,22 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         }
         upgradeDeployParams = parseDeployParams(env.UPGRADE_CONFIG);
         adminsCount = block.chainid == 1 ? 1 : 2;
+
+        if (block.chainid == 560048) {
+            manageHashConsensusMembersRoleMembers = new address[](2);
+            // dev team known addresses
+            manageHashConsensusMembersRoleMembers[
+                0
+            ] = 0xE28f573b732632fdE03BD5507A7d475383e8512E;
+            manageHashConsensusMembersRoleMembers[
+                1
+            ] = 0x4022E0754d0cB6905B54306105D3346d1547988b;
+            manageHashConsensusConfigRoleMembers = manageHashConsensusMembersRoleMembers;
+        } else {
+            manageHashConsensusMembersRoleMembers = new address[](1);
+            manageHashConsensusMembersRoleMembers[0] = deployParams.aragonAgent;
+            manageHashConsensusConfigRoleMembers = new address[](0);
+        }
     }
 
     function test_moduleState() public view {
@@ -292,18 +310,42 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
             adminsCount
         );
 
-        assertTrue(
-            hashConsensus.hasRole(
-                hashConsensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(),
-                deployParams.aragonAgent
-            )
-        );
+        for (
+            uint256 i = 0;
+            i < manageHashConsensusMembersRoleMembers.length;
+            ++i
+        ) {
+            assertTrue(
+                hashConsensus.hasRole(
+                    hashConsensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(),
+                    manageHashConsensusMembersRoleMembers[i]
+                )
+            );
+        }
+        for (
+            uint256 i = 0;
+            i < manageHashConsensusConfigRoleMembers.length;
+            ++i
+        ) {
+            assertTrue(
+                hashConsensus.hasRole(
+                    hashConsensus.MANAGE_FRAME_CONFIG_ROLE(),
+                    manageHashConsensusConfigRoleMembers[i]
+                )
+            );
+            assertTrue(
+                hashConsensus.hasRole(
+                    hashConsensus.MANAGE_FAST_LANE_CONFIG_ROLE(),
+                    manageHashConsensusConfigRoleMembers[i]
+                )
+            );
+        }
 
         assertEq(
             hashConsensus.getRoleMemberCount(
                 hashConsensus.MANAGE_MEMBERS_AND_QUORUM_ROLE()
             ),
-            1
+            manageHashConsensusMembersRoleMembers.length
         );
         assertEq(
             hashConsensus.getRoleMemberCount(
@@ -311,17 +353,18 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
             ),
             0
         );
+
         assertEq(
             hashConsensus.getRoleMemberCount(
                 hashConsensus.MANAGE_FRAME_CONFIG_ROLE()
             ),
-            0
+            manageHashConsensusConfigRoleMembers.length
         );
         assertEq(
             hashConsensus.getRoleMemberCount(
                 hashConsensus.MANAGE_FAST_LANE_CONFIG_ROLE()
             ),
-            0
+            manageHashConsensusConfigRoleMembers.length
         );
         assertEq(
             hashConsensus.getRoleMemberCount(

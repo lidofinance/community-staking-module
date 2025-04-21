@@ -112,7 +112,7 @@ contract DeployCSVerifierHoodi is DeployCSVerifier {
             gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
             firstSupportedSlot: Slot.wrap(0), // @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L37
             pivotSlot: Slot.wrap(65536), // 2048 * 32, @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L41
-            chainName: "hoodi"
+            admin: 0x0534aA41907c9631fae990960bCC72d75fA7cfeD
         });
     }
 }

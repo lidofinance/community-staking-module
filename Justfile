@@ -14,6 +14,8 @@ deploy_script_name := if chain == "mainnet" {
 
 deploy_implementations_script_name := if chain == "mainnet" {
     "DeployImplementationsMainnet"
+} else if chain == "hoodi" {
+    "DeployImplementationsHoodi"
 } else if chain == "local-devnet" {
     "SCRIPT_IS_NOT_DEFINED"
 } else {
@@ -25,7 +27,7 @@ deploy_config_path := if chain == "mainnet" {
 } else if chain == "local-devnet" {
     "artifacts/local-devnet/deploy-local-devnet.json"
 } else if chain == "hoodi" {
-    "undefined"
+    "artifacts/hoodi/deploy-hoodi.json"
 } else {
     error("Unsupported chain " + chain)
 }

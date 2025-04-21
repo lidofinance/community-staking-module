@@ -161,7 +161,7 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
             parametersRegistry.getRoleMemberCount(
                 parametersRegistry.DEFAULT_ADMIN_ROLE()
             ),
-            1
+            adminsCount
         );
     }
 
