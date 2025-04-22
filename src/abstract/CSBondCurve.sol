@@ -254,12 +254,12 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             revert InvalidBondCurveLength();
         }
 
-        (uint256 firstIntervalminKeysCount, uint256 firstIntervalTrend) = (
+        (uint256 firstIntervalMinKeysCount, uint256 firstIntervalTrend) = (
             intervals[0][0],
             intervals[0][1]
         );
 
-        if (firstIntervalminKeysCount != 1) {
+        if (firstIntervalMinKeysCount != 1) {
             revert InvalidBondCurveValues();
         }
 
@@ -273,8 +273,8 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
                     intervals[i][0],
                     intervals[i][1]
                 );
-                uint256 prevminKeysCount = intervals[i - 1][0];
-                if (minKeysCount <= prevminKeysCount) {
+                uint256 prevMinKeysCount = intervals[i - 1][0];
+                if (minKeysCount <= prevMinKeysCount) {
                     revert InvalidBondCurveValues();
                 }
                 if (trend == 0) {
