@@ -98,6 +98,25 @@ contract DeployCSVerifierHolesky is DeployCSVerifier {
     }
 }
 
+contract DeployCSVerifierHoodi is DeployCSVerifier {
+    constructor() {
+        config = Config({
+            withdrawalVault: 0x4473dCDDbf77679A643BdB654dbd86D67F8d32f2,
+            module: 0x79CEf36D84743222f37765204Bec41E92a93E59d,
+            slotsPerEpoch: 32,
+            gIFirstWithdrawalPrev: FIRST_WITHDRAWAL_DENEB,
+            gIFirstWithdrawalCurr: FIRST_WITHDRAWAL_ELECTRA,
+            gIFirstValidatorPrev: FIRST_VALIDATOR_DENEB,
+            gIFirstValidatorCurr: FIRST_VALIDATOR_ELECTRA,
+            gIHistoricalSummariesPrev: HISTORICAL_SUMMARIES_DENEB,
+            gIHistoricalSummariesCurr: HISTORICAL_SUMMARIES_ELECTRA,
+            firstSupportedSlot: Slot.wrap(0), // @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L37
+            pivotSlot: Slot.wrap(65536), // 2048 * 32, @see https://github.com/eth-clients/hoodi/blob/main/metadata/config.yaml#L41
+            admin: 0x0534aA41907c9631fae990960bCC72d75fA7cfeD
+        });
+    }
+}
+
 contract DeployCSVerifierMainnet is DeployCSVerifier {
     constructor() {
         config = Config({

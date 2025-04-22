@@ -586,13 +586,13 @@ contract CSBondCurveFuzz is Test {
         );
         // Can't check this fully, because of the rounding (`bondToCheck` can be "between" two keys amounts).
         // So it is enough to check that one less or equal than another
-        uint256 bondminKeysCount = bondCurve.getBondAmountByKeysCount(
+        uint256 bondMinKeysCount = bondCurve.getBondAmountByKeysCount(
             keysCount,
             0
         );
         assertGe(
             bondToCheck,
-            bondminKeysCount,
+            bondMinKeysCount,
             "bondminKeysCount > bondToCheck"
         );
 
@@ -607,14 +607,14 @@ contract CSBondCurveFuzz is Test {
             "bondAmount != bondOutSecondOpinion"
         );
         // Check that values are the same in both directions
-        uint256 keysminBondAmount = bondCurve.getKeysCountByBondAmount(
+        uint256 keysMinBondAmount = bondCurve.getKeysCountByBondAmount(
             bondAmount,
             0
         );
         assertEq(
-            keysminBondAmount,
+            keysMinBondAmount,
             keysToCheck,
-            "keysminBondAmount != keysToCheck"
+            "keysMinBondAmount != keysToCheck"
         );
     }
 
@@ -674,14 +674,14 @@ contract CSBondCurveFuzz is Test {
                 return intervals[i].minKeysCount;
             }
             if (i < intervals.length - 1) {
-                uint256 nextminBond = minBondAcc +
+                uint256 nextMinBond = minBondAcc +
                     intervals[i + 1].trend +
                     (intervals[i + 1].minKeysCount -
                         intervals[i].minKeysCount -
                         1) *
                     intervals[i].trend;
-                if (bondToCheck < nextminBond) {
-                    uint256 maxBondInInterval = nextminBond -
+                if (bondToCheck < nextMinBond) {
+                    uint256 maxBondInInterval = nextMinBond -
                         intervals[i + 1].trend;
                     if (bondToCheck > maxBondInInterval) {
                         bondToCheck = maxBondInInterval;
