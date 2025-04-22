@@ -14,7 +14,7 @@ import { MerkleTree } from "./helpers/MerkleTree.sol";
 import { CSMMock } from "./helpers/mocks/CSMMock.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 
-contract VettedGateTest is Test, Utilities, Fixtures {
+contract VettedGateTestBase is Test, Utilities, Fixtures {
     VettedGate internal vettedGate;
     address internal csm;
     address internal nodeOperator;
@@ -39,16 +39,49 @@ contract VettedGateTest is Test, Utilities, Fixtures {
         merkleTree.pushLeaf(abi.encode(anotherNodeOperator));
 
         curveId = 1;
-        referralsThreshold = 2;
         root = merkleTree.root();
         vettedGate = new VettedGate(csm);
         _enableInitializers(address(vettedGate));
-        vettedGate.initialize(
-            curveId,
-            merkleTree.root(),
-            referralsThreshold,
-            admin
+        vettedGate.initialize(curveId, merkleTree.root(), admin);
+    }
+
+    function _addReferrals() internal {
+        uint256 keysCount = 1;
+        bytes32[] memory proof = merkleTree.getProof(0);
+        vm.prank(nodeOperator);
+        vettedGate.addNodeOperatorETH(
+            keysCount,
+            randomBytes(48 * keysCount),
+            randomBytes(96 * keysCount),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            proof,
+            stranger
         );
+
+        proof = merkleTree.getProof(2);
+        vm.prank(anotherNodeOperator);
+        vettedGate.addNodeOperatorETH(
+            keysCount,
+            randomBytes(48 * keysCount),
+            randomBytes(96 * keysCount),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            proof,
+            stranger
+        );
+    }
+}
+
+contract VettedGateTest is VettedGateTestBase {
+    function setUp() public override {
+        super.setUp();
     }
 
     function test_constructor() public {
@@ -71,12 +104,7 @@ contract VettedGateTest is Test, Utilities, Fixtures {
 
         vm.expectEmit();
         emit IVettedGate.TreeRootSet(root);
-        vettedGate.initialize(
-            curveId,
-            merkleTree.root(),
-            referralsThreshold,
-            admin
-        );
+        vettedGate.initialize(curveId, merkleTree.root(), admin);
 
         assertEq(vettedGate.curveId(), curveId);
         assertEq(vettedGate.treeRoot(), root);
@@ -95,7 +123,7 @@ contract VettedGateTest is Test, Utilities, Fixtures {
         _enableInitializers(address(vettedGate));
 
         vm.expectRevert(IVettedGate.InvalidCurveId.selector);
-        vettedGate.initialize(0, root, referralsThreshold, admin);
+        vettedGate.initialize(0, root, admin);
     }
 
     function test_initializer_RevertWhen_InvalidTreeRoot() public {
@@ -103,15 +131,7 @@ contract VettedGateTest is Test, Utilities, Fixtures {
         _enableInitializers(address(vettedGate));
 
         vm.expectRevert(IVettedGate.InvalidTreeRoot.selector);
-        vettedGate.initialize(curveId, bytes32(0), referralsThreshold, admin);
-    }
-
-    function test_initializer_RevertWhen_InvalidReferralsThreshold() public {
-        vettedGate = new VettedGate(csm);
-        _enableInitializers(address(vettedGate));
-
-        vm.expectRevert(IVettedGate.InvalidReferralsThreshold.selector);
-        vettedGate.initialize(curveId, root, 0, admin);
+        vettedGate.initialize(curveId, bytes32(0), admin);
     }
 
     function test_initializer_RevertWhen_ZeroAdminAddress() public {
@@ -119,7 +139,7 @@ contract VettedGateTest is Test, Utilities, Fixtures {
         _enableInitializers(address(vettedGate));
 
         vm.expectRevert(IVettedGate.ZeroAdminAddress.selector);
-        vettedGate.initialize(curveId, root, referralsThreshold, address(0));
+        vettedGate.initialize(curveId, root, address(0));
     }
 
     function test_pauseFor() public {
@@ -240,7 +260,8 @@ contract VettedGateTest is Test, Utilities, Fixtures {
         uint256 keysCount = 1;
         bytes32[] memory proof = merkleTree.getProof(0);
         assertFalse(vettedGate.isConsumed(nodeOperator));
-        assertEq(vettedGate.referralCounts(stranger), 0);
+        assertEq(vettedGate.getReferralsCount(stranger), 0);
+        assertFalse(vettedGate.referralProgramActive());
 
         vm.expectEmit(address(vettedGate));
         emit IVettedGate.Consumed(nodeOperator);
@@ -259,14 +280,15 @@ contract VettedGateTest is Test, Utilities, Fixtures {
         );
 
         assertTrue(vettedGate.isConsumed(nodeOperator));
-        assertEq(vettedGate.referralCounts(stranger), 1);
+        assertEq(vettedGate.getReferralsCount(stranger), 0);
     }
 
     function test_addNodeOperatorStETH() public {
         uint256 keysCount = 1;
         bytes32[] memory proof = merkleTree.getProof(0);
         assertFalse(vettedGate.isConsumed(nodeOperator));
-        assertEq(vettedGate.referralCounts(stranger), 0);
+        assertEq(vettedGate.getReferralsCount(stranger), 0);
+        assertFalse(vettedGate.referralProgramActive());
 
         vm.expectEmit(address(vettedGate));
         emit IVettedGate.Consumed(nodeOperator);
@@ -292,14 +314,15 @@ contract VettedGateTest is Test, Utilities, Fixtures {
         );
 
         assertTrue(vettedGate.isConsumed(nodeOperator));
-        assertEq(vettedGate.referralCounts(stranger), 1);
+        assertEq(vettedGate.getReferralsCount(stranger), 0);
     }
 
     function test_addNodeOperatorWstETH() public {
         uint256 keysCount = 1;
         bytes32[] memory proof = merkleTree.getProof(0);
         assertFalse(vettedGate.isConsumed(nodeOperator));
-        assertEq(vettedGate.referralCounts(stranger), 0);
+        assertEq(vettedGate.getReferralsCount(stranger), 0);
+        assertFalse(vettedGate.referralProgramActive());
 
         vm.expectEmit(address(vettedGate));
         emit IVettedGate.Consumed(nodeOperator);
@@ -325,7 +348,7 @@ contract VettedGateTest is Test, Utilities, Fixtures {
         );
 
         assertTrue(vettedGate.isConsumed(nodeOperator));
-        assertEq(vettedGate.referralCounts(stranger), 1);
+        assertEq(vettedGate.getReferralsCount(stranger), 0);
     }
 
     function test_addNodeOperatorETH_revertWhen_alreadyConsumed() public {
@@ -662,76 +685,116 @@ contract VettedGateTest is Test, Utilities, Fixtures {
     }
 }
 
-contract VettedGateReferralProgramTest is VettedGateTest {
+contract VettedGateReferralProgramTest is VettedGateTestBase {
     function setUp() public override {
         super.setUp();
-        vm.prank(admin);
-        vettedGate.setReferralCurveId(2);
+        vm.startPrank(admin);
+        vettedGate.grantRole(vettedGate.START_REFERRAL_SEASON_ROLE(), admin);
+        vettedGate.grantRole(vettedGate.END_REFERRAL_SEASON_ROLE(), admin);
+        vettedGate.startReferralProgramSeason(2, 2);
+        vm.stopPrank();
     }
 
-    function test_pauseReferralProgram() public {
+    function test_endReferralProgramSeason() public {
+        uint256 season = vettedGate.referralProgramSeason();
+
         vm.expectEmit(address(vettedGate));
-        emit IVettedGate.ReferralProgramPaused();
+        emit IVettedGate.ReferralProgramSeasonEnded(season);
         vm.prank(admin);
-        vettedGate.pauseReferralProgram();
+        vettedGate.endReferralProgramSeason();
 
         assertFalse(vettedGate.referralProgramActive());
     }
 
-    function test_pauseReferralProgram_revertWhen_noRole() public {
-        expectRoleRevert(stranger, vettedGate.DEFAULT_ADMIN_ROLE());
+    function test_endReferralProgramSeason_revertWhen_noRole() public {
+        expectRoleRevert(stranger, vettedGate.END_REFERRAL_SEASON_ROLE());
         vm.prank(stranger);
-        vettedGate.pauseReferralProgram();
+        vettedGate.endReferralProgramSeason();
     }
 
-    function test_pauseAndResumeReferralProgram() public {
+    function test_endReferralProgramSeason_revertWhen_noSeasonEnded() public {
         vm.prank(admin);
-        vettedGate.pauseReferralProgram();
-        assertFalse(vettedGate.referralProgramActive());
+        vettedGate.endReferralProgramSeason();
+
+        vm.expectRevert(IVettedGate.ReferralProgramIsNotActive.selector);
         vm.prank(admin);
-        vettedGate.resumeReferralProgram();
-        assertTrue(vettedGate.referralProgramActive());
-        vm.prank(admin);
-        vettedGate.pauseReferralProgram();
-        assertFalse(vettedGate.referralProgramActive());
+        vettedGate.endReferralProgramSeason();
     }
 
-    function test_resumeReferralProgram() public {
+    function test_startReferralProgramSeason() public {
+        _addReferrals();
+        assertEq(vettedGate.getReferralsCount(stranger), 2);
+
+        vm.prank(admin);
+        vettedGate.endReferralProgramSeason();
+
+        uint256 season = vettedGate.referralProgramSeason() + 1;
+        uint256 referralCurveId = 3;
+        uint256 referralsThreshold = 3;
+
         vm.expectEmit(address(vettedGate));
-        emit IVettedGate.ReferralProgramResumed();
+        emit IVettedGate.ReferralProgramSeasonStarted(
+            season,
+            referralCurveId,
+            referralsThreshold
+        );
         vm.prank(admin);
-        vettedGate.resumeReferralProgram();
+        vettedGate.startReferralProgramSeason(
+            referralCurveId,
+            referralsThreshold
+        );
 
+        assertEq(vettedGate.referralCurveId(), referralCurveId);
+        assertEq(vettedGate.referralsThreshold(), referralsThreshold);
+        assertEq(vettedGate.referralProgramSeason(), season);
         assertTrue(vettedGate.referralProgramActive());
+        assertEq(vettedGate.getReferralsCount(stranger), 0);
     }
 
-    function test_resumeReferralProgram_revertWhen_noRole() public {
-        expectRoleRevert(stranger, vettedGate.DEFAULT_ADMIN_ROLE());
+    function test_startReferralProgramSeason_revertWhen_noRole() public {
+        vm.prank(admin);
+        vettedGate.endReferralProgramSeason();
+
+        uint256 referralCurveId = 3;
+        uint256 referralsThreshold = 3;
+
+        expectRoleRevert(stranger, vettedGate.START_REFERRAL_SEASON_ROLE());
         vm.prank(stranger);
-        vettedGate.resumeReferralProgram();
+        vettedGate.startReferralProgramSeason(
+            referralCurveId,
+            referralsThreshold
+        );
     }
 
-    function test_resumeReferralProgram_revertWhen_ReferralCurveIdNotSet()
+    function test_startReferralProgramSeason_revertWhen_InvalidReferralsThreshold()
         public
     {
         vm.prank(admin);
-        vettedGate.setReferralCurveId(0);
-        vm.prank(admin);
-        vettedGate.pauseReferralProgram();
+        vettedGate.endReferralProgramSeason();
 
-        vm.expectRevert(IVettedGate.ReferralCurveIdNotSet.selector);
+        uint256 referralCurveId = 3;
+        uint256 referralsThreshold = 0;
+
+        vm.expectRevert(IVettedGate.InvalidReferralsThreshold.selector);
         vm.prank(admin);
-        vettedGate.resumeReferralProgram();
+        vettedGate.startReferralProgramSeason(
+            referralCurveId,
+            referralsThreshold
+        );
     }
 
-    function test_setReferralCurveId() public {
-        uint256 referralCurveId = 154;
-        vm.expectEmit(address(vettedGate));
-        emit IVettedGate.ReferralCurveIdSet(referralCurveId);
-        vm.prank(admin);
-        vettedGate.setReferralCurveId(referralCurveId);
+    function test_startReferralProgramSeason_revertWhen_ReferralProgramIsActive()
+        public
+    {
+        uint256 referralCurveId = 3;
+        uint256 referralsThreshold = 3;
 
-        assertEq(vettedGate.referralCurveId(), referralCurveId);
+        vm.expectRevert(IVettedGate.ReferralProgramIsActive.selector);
+        vm.prank(admin);
+        vettedGate.startReferralProgramSeason(
+            referralCurveId,
+            referralsThreshold
+        );
     }
 
     function test_claimReferrerBondCurve_fromRewardAddress() public {
@@ -742,9 +805,6 @@ contract VettedGateReferralProgramTest is VettedGateTest {
         CSMMock(csm).mock_setNodeOperator(no);
 
         _addReferrals();
-
-        vm.prank(admin);
-        vettedGate.resumeReferralProgram();
 
         vm.expectCall(
             address(vettedGate.ACCOUNTING()),
@@ -773,9 +833,6 @@ contract VettedGateReferralProgramTest is VettedGateTest {
 
         _addReferrals();
 
-        vm.prank(admin);
-        vettedGate.resumeReferralProgram();
-
         vm.expectRevert(IVettedGate.NotAllowedToClaim.selector);
         vm.prank(stranger);
         vettedGate.claimReferrerBondCurve(0);
@@ -789,9 +846,6 @@ contract VettedGateReferralProgramTest is VettedGateTest {
         CSMMock(csm).mock_setNodeOperator(no);
 
         _addReferrals();
-
-        vm.prank(admin);
-        vettedGate.resumeReferralProgram();
 
         vm.expectCall(
             address(vettedGate.ACCOUNTING()),
@@ -820,15 +874,12 @@ contract VettedGateReferralProgramTest is VettedGateTest {
 
         _addReferrals();
 
-        vm.prank(admin);
-        vettedGate.resumeReferralProgram();
-
         vm.expectRevert(IVettedGate.NotAllowedToClaim.selector);
         vm.prank(stranger);
         vettedGate.claimReferrerBondCurve(0);
     }
 
-    function test_claimReferrerBondCurve_revertWhen_ReferralProgramIsPaused()
+    function test_claimReferrerBondCurve_revertWhen_ReferralProgramIsNotActive()
         public
     {
         NodeOperator memory no;
@@ -839,7 +890,10 @@ contract VettedGateReferralProgramTest is VettedGateTest {
 
         _addReferrals();
 
-        vm.expectRevert(IVettedGate.ReferralProgramIsPaused.selector);
+        vm.prank(admin);
+        vettedGate.endReferralProgramSeason();
+
+        vm.expectRevert(IVettedGate.ReferralProgramIsNotActive.selector);
         vm.prank(stranger);
         vettedGate.claimReferrerBondCurve(0);
     }
@@ -867,9 +921,6 @@ contract VettedGateReferralProgramTest is VettedGateTest {
 
         _addReferrals();
 
-        vm.prank(admin);
-        vettedGate.resumeReferralProgram();
-
         vm.prank(stranger);
         vettedGate.claimReferrerBondCurve(0);
 
@@ -877,37 +928,73 @@ contract VettedGateReferralProgramTest is VettedGateTest {
         vm.prank(stranger);
         vettedGate.claimReferrerBondCurve(0);
     }
+}
 
-    function _addReferrals() internal {
-        uint256 keysCount = 1;
-        bytes32[] memory proof = merkleTree.getProof(0);
-        vm.prank(nodeOperator);
-        vettedGate.addNodeOperatorETH(
-            keysCount,
-            randomBytes(48 * keysCount),
-            randomBytes(96 * keysCount),
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            proof,
-            stranger
+contract VettedGateReferralProgramNoSeasonsTest is VettedGateTestBase {
+    function setUp() public override {
+        super.setUp();
+        vm.startPrank(admin);
+        vettedGate.grantRole(vettedGate.START_REFERRAL_SEASON_ROLE(), admin);
+        vettedGate.grantRole(vettedGate.END_REFERRAL_SEASON_ROLE(), admin);
+        vm.stopPrank();
+    }
+
+    function test_startReferralProgramSeason() public {
+        _addReferrals();
+        assertEq(vettedGate.getReferralsCount(stranger), 0);
+
+        uint256 season = vettedGate.referralProgramSeason() + 1;
+        uint256 referralCurveId = 3;
+        uint256 referralsThreshold = 3;
+
+        vm.expectEmit(address(vettedGate));
+        emit IVettedGate.ReferralProgramSeasonStarted(
+            season,
+            referralCurveId,
+            referralsThreshold
+        );
+        vm.prank(admin);
+        vettedGate.startReferralProgramSeason(
+            referralCurveId,
+            referralsThreshold
         );
 
-        proof = merkleTree.getProof(2);
-        vm.prank(anotherNodeOperator);
-        vettedGate.addNodeOperatorETH(
-            keysCount,
-            randomBytes(48 * keysCount),
-            randomBytes(96 * keysCount),
-            NodeOperatorManagementProperties({
-                managerAddress: address(0),
-                rewardAddress: address(0),
-                extendedManagerPermissions: false
-            }),
-            proof,
-            stranger
+        assertEq(vettedGate.referralCurveId(), referralCurveId);
+        assertEq(vettedGate.referralsThreshold(), referralsThreshold);
+        assertEq(vettedGate.referralProgramSeason(), season);
+        assertTrue(vettedGate.referralProgramActive());
+        assertEq(vettedGate.getReferralsCount(stranger), 0);
+    }
+
+    function test_startReferralProgramSeason_revertWhen_noRole() public {
+        uint256 referralCurveId = 3;
+        uint256 referralsThreshold = 3;
+
+        expectRoleRevert(stranger, vettedGate.START_REFERRAL_SEASON_ROLE());
+        vm.prank(stranger);
+        vettedGate.startReferralProgramSeason(
+            referralCurveId,
+            referralsThreshold
         );
+    }
+
+    function test_startReferralProgramSeason_revertWhen_InvalidReferralsThreshold()
+        public
+    {
+        uint256 referralCurveId = 3;
+        uint256 referralsThreshold = 0;
+
+        vm.expectRevert(IVettedGate.InvalidReferralsThreshold.selector);
+        vm.prank(admin);
+        vettedGate.startReferralProgramSeason(
+            referralCurveId,
+            referralsThreshold
+        );
+    }
+
+    function test_endReferralProgramSeason_revertWhen_noSeasonYet() public {
+        vm.expectRevert(IVettedGate.ReferralProgramIsNotActive.selector);
+        vm.prank(admin);
+        vettedGate.endReferralProgramSeason();
     }
 }

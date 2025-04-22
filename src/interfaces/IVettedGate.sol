@@ -11,9 +11,12 @@ interface IVettedGate {
     event TreeRootSet(bytes32 indexed treeRoot);
     event Consumed(address indexed member);
     event ReferrerConsumed(address indexed referrer);
-    event ReferralProgramResumed();
-    event ReferralProgramPaused();
-    event ReferralCurveIdSet(uint256 referralCurveId);
+    event ReferralProgramSeasonStarted(
+        uint256 indexed season,
+        uint256 referralCurveId,
+        uint256 referralsThreshold
+    );
+    event ReferralProgramSeasonEnded(uint256 indexed season);
 
     error InvalidProof();
     error AlreadyConsumed();
@@ -23,15 +26,19 @@ interface IVettedGate {
     error ZeroAdminAddress();
     error NotAllowedToClaim();
     error NotEnoughReferrals();
-    error ReferralProgramIsPaused();
+    error ReferralProgramIsNotActive();
+    error ReferralProgramIsActive();
     error InvalidReferralsThreshold();
-    error ReferralCurveIdNotSet();
 
     function PAUSE_ROLE() external view returns (bytes32);
 
     function RESUME_ROLE() external view returns (bytes32);
 
     function SET_TREE_ROOT_ROLE() external view returns (bytes32);
+
+    function START_REFERRAL_SEASON_ROLE() external view returns (bytes32);
+
+    function END_REFERRAL_SEASON_ROLE() external view returns (bytes32);
 
     function MODULE() external view returns (ICSModule);
 
@@ -48,11 +55,16 @@ interface IVettedGate {
     /// @notice Resume the contract
     function resume() external;
 
-    /// @notice Pause referral program bond curve claims
-    function pauseReferralProgram() external;
+    /// @notice Start referral program season
+    /// @param _referralCurveId Curve Id for the referral curve
+    /// @param _referralsThreshold Minimum number of referrals to be eligible to claim the curve
+    function startReferralProgramSeason(
+        uint256 _referralCurveId,
+        uint256 _referralsThreshold
+    ) external;
 
-    /// @notice Resume referral program bond curve claims
-    function resumeReferralProgram() external;
+    /// @notice End referral program season
+    function endReferralProgramSeason() external;
 
     /// @notice Add a new Node Operator using ETH as a bond.
     ///         At least one deposit data and corresponding bond should be provided
@@ -172,7 +184,8 @@ interface IVettedGate {
     /// @param _treeRoot New root of the Merkle Tree
     function setTreeRoot(bytes32 _treeRoot) external;
 
-    /// @notice Set curve Id to be used as referral curve
-    /// @param _referralCurveId Curve Id for the referral curve
-    function setReferralCurveId(uint256 _referralCurveId) external;
+    /// @notice Get the number of referrals for the given referrer
+    function getReferralsCount(
+        address referrer
+    ) external view returns (uint256);
 }

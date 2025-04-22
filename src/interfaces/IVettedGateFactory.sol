@@ -15,12 +15,10 @@ interface IVettedGateFactory {
     /// @dev Creates a new VettedGate instance behind the OssifiableProxy based on known implementation address
     /// @param curveId Id of the bond curve to be assigned for the eligible members
     /// @param treeRoot Root of the eligible members Merkle Tree
-    /// @param referralsThreshold Number of referrals required for bond curve claim
     /// @param admin Address of the admin role
     function create(
         uint256 curveId,
         bytes32 treeRoot,
-        uint256 referralsThreshold,
         address admin
     ) external returns (address instance);
 }

@@ -130,7 +130,6 @@ struct DeployParams {
     // VettedGate
     bytes32 vettedGateTreeRoot;
     uint256[2][] vettedGateBondCurve;
-    uint256 referralsThreshold;
     // GateSeal
     address gateSealFactory;
     address sealingCommittee;
@@ -335,7 +334,6 @@ abstract contract DeployBase is Script {
                 vettedGateFactory.create({
                     curveId: identifiedSolosCurve,
                     treeRoot: config.vettedGateTreeRoot,
-                    referralsThreshold: config.referralsThreshold,
                     admin: deployer
                 })
             );

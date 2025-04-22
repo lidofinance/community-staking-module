@@ -19,6 +19,10 @@ contract VettedGate is
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant SET_TREE_ROOT_ROLE =
         keccak256("SET_TREE_ROOT_ROLE");
+    bytes32 public constant START_REFERRAL_SEASON_ROLE =
+        keccak256("START_REFERRAL_SEASON_ROLE");
+    bytes32 public constant END_REFERRAL_SEASON_ROLE =
+        keccak256("END_REFERRAL_SEASON_ROLE");
 
     /// @dev Address of the Staking Module
     ICSModule public immutable MODULE;
@@ -40,16 +44,18 @@ contract VettedGate is
 
     bool public referralProgramActive;
 
+    uint256 public referralProgramSeason;
+
     /// @dev Id of the bond curve for referral program
     uint256 public referralCurveId;
 
     /// @dev Number of referrals required for bond curve claim
     uint256 public referralsThreshold;
 
-    /// @dev Referral counts for referrers
-    mapping(address referrer => uint256 count) public referralCounts;
+    /// @dev Referral counts for referrers for seasons
+    mapping(bytes32 => uint256) public referralCounts;
 
-    mapping(address => bool) internal _consumedReferrers;
+    mapping(bytes32 => bool) internal _consumedReferrers;
 
     constructor(address module) {
         if (module == address(0)) {
@@ -65,7 +71,6 @@ contract VettedGate is
     function initialize(
         uint256 _curveId,
         bytes32 _treeRoot,
-        uint256 _referralsThreshold,
         address admin
     ) external initializer {
         __AccessControlEnumerable_init();
@@ -81,11 +86,6 @@ contract VettedGate is
             revert ZeroAdminAddress();
         }
 
-        if (_referralsThreshold == 0) {
-            revert InvalidReferralsThreshold();
-        }
-
-        referralsThreshold = _referralsThreshold;
         _setTreeRoot(_treeRoot);
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
@@ -101,18 +101,40 @@ contract VettedGate is
     }
 
     /// @inheritdoc IVettedGate
-    function pauseReferralProgram() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        referralProgramActive = false;
-        emit ReferralProgramPaused();
+    function startReferralProgramSeason(
+        uint256 _referralCurveId,
+        uint256 _referralsThreshold
+    ) external onlyRole(START_REFERRAL_SEASON_ROLE) {
+        if (referralProgramActive) {
+            revert ReferralProgramIsActive();
+        }
+        if (_referralsThreshold == 0) {
+            revert InvalidReferralsThreshold();
+        }
+
+        referralsThreshold = _referralsThreshold;
+        referralCurveId = _referralCurveId;
+        referralProgramActive = true;
+
+        uint256 season = referralProgramSeason + 1;
+        referralProgramSeason = season;
+        emit ReferralProgramSeasonStarted(
+            season,
+            _referralCurveId,
+            _referralsThreshold
+        );
     }
 
     /// @inheritdoc IVettedGate
-    function resumeReferralProgram() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (referralCurveId == 0) {
-            revert ReferralCurveIdNotSet();
+    function endReferralProgramSeason()
+        external
+        onlyRole(END_REFERRAL_SEASON_ROLE)
+    {
+        if (!referralProgramActive || referralProgramSeason == 0) {
+            revert ReferralProgramIsNotActive();
         }
-        referralProgramActive = true;
-        emit ReferralProgramResumed();
+        referralProgramActive = false;
+        emit ReferralProgramSeasonEnded(referralProgramSeason);
     }
 
     /// @inheritdoc IVettedGate
@@ -235,7 +257,7 @@ contract VettedGate is
             revert NotAllowedToClaim();
         }
 
-        if (referralCounts[msg.sender] < referralsThreshold) {
+        if (referralCounts[_seasonedAddress(msg.sender)] < referralsThreshold) {
             revert NotEnoughReferrals();
         }
 
@@ -252,21 +274,18 @@ contract VettedGate is
     }
 
     /// @inheritdoc IVettedGate
-    function setReferralCurveId(
-        uint256 _referralCurveId
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        referralCurveId = _referralCurveId;
-        emit ReferralCurveIdSet(_referralCurveId);
-    }
-
-    /// @inheritdoc IVettedGate
     function isConsumed(address member) public view returns (bool) {
         return _consumedAddresses[member];
     }
 
     /// @inheritdoc IVettedGate
     function isReferrerConsumed(address referrer) public view returns (bool) {
-        return _consumedReferrers[referrer];
+        return _consumedReferrers[_seasonedAddress(referrer)];
+    }
+
+    /// @inheritdoc IVettedGate
+    function getReferralsCount(address referrer) public view returns (uint256) {
+        return referralCounts[_seasonedAddress(referrer)];
     }
 
     /// @inheritdoc IVettedGate
@@ -309,21 +328,27 @@ contract VettedGate is
     }
 
     function _bumpReferralCount(address referrer) internal {
-        if (referrer != address(0)) {
-            referralCounts[referrer] += 1;
+        if (referralProgramActive && referrer != address(0)) {
+            referralCounts[_seasonedAddress(referrer)] += 1;
         }
     }
 
     function _consumeReferrer() internal whenResumed {
         if (!referralProgramActive) {
-            revert ReferralProgramIsPaused();
+            revert ReferralProgramIsNotActive();
         }
 
         if (isReferrerConsumed(msg.sender)) {
             revert AlreadyConsumed();
         }
 
-        _consumedReferrers[msg.sender] = true;
+        _consumedReferrers[_seasonedAddress(msg.sender)] = true;
         emit ReferrerConsumed(msg.sender);
+    }
+
+    function _seasonedAddress(
+        address referrer
+    ) internal view returns (bytes32) {
+        return keccak256(abi.encode(referrer, referralProgramSeason));
     }
 }
