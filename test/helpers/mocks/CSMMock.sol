@@ -5,8 +5,11 @@ pragma solidity 0.8.24;
 import { NodeOperatorManagementProperties, NodeOperator } from "../../../src/interfaces/ICSModule.sol";
 import { ICSAccounting } from "../../../src/interfaces/ICSAccounting.sol";
 import { ICSParametersRegistry } from "../../../src/interfaces/ICSParametersRegistry.sol";
+import { ILidoLocator } from "../../../src/interfaces/ILidoLocator.sol";
 import { CSParametersRegistryMock } from "./CSParametersRegistryMock.sol";
 import { Utilities } from "../Utilities.sol";
+import { LidoLocatorMock } from "./LidoLocatorMock.sol";
+import { Fixtures } from "../Fixtures.sol";
 
 contract AccountingMock {
     uint256 public constant DEFAULT_BOND_CURVE_ID = 0;
@@ -22,13 +25,14 @@ contract AccountingMock {
     }
 }
 
-contract CSMMock is Utilities {
+contract CSMMock is Utilities, Fixtures {
     NodeOperator internal mockNodeOperator;
     uint256 internal nodeOperatorsCount;
     uint256 internal nodeOperatorTotalDepositedKeys;
     bool internal isValidatorWithdrawnMock;
     ICSAccounting public immutable ACCOUNTING;
     ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
+    LidoLocatorMock public immutable LIDO_LOCATOR;
     NodeOperatorManagementProperties internal managementProperties;
 
     constructor() {
@@ -36,6 +40,7 @@ contract CSMMock is Utilities {
         PARAMETERS_REGISTRY = ICSParametersRegistry(
             address(new CSParametersRegistryMock())
         );
+        (LIDO_LOCATOR, , , , ) = initLido();
     }
 
     function accounting() external view returns (ICSAccounting) {

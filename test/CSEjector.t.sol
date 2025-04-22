@@ -7,10 +7,12 @@ import { CSEjector } from "../src/CSEjector.sol";
 import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 import { ICSEjector, ExitPenaltyInfo } from "../src/interfaces/ICSEjector.sol";
 import { IStakingModule } from "../src/interfaces/IStakingModule.sol";
+import { IValidatorsExitBus } from "../src/interfaces/IValidatorsExitBus.sol";
 import { ICSModule, NodeOperator, NodeOperatorManagementProperties } from "../src/interfaces/ICSModule.sol";
 import { ICSAccounting } from "../src/interfaces/ICSAccounting.sol";
 import { Utilities } from "./helpers/Utilities.sol";
 import { CSMMock, AccountingMock } from "./helpers/mocks/CSMMock.sol";
+import { VEBMock } from "./helpers/mocks/VEBMock.sol";
 import { CSParametersRegistryMock } from "./helpers/mocks/CSParametersRegistryMock.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 
@@ -58,6 +60,10 @@ contract CSEjectorTestMisc is CSEjectorTestBase {
             address(parametersRegistry)
         );
         assertEq(address(ejector.ACCOUNTING()), address(accounting));
+        assertEq(
+            address(ejector.VEB()),
+            address(csm.LIDO_LOCATOR().validatorsExitBusOracle())
+        );
     }
 
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
@@ -162,9 +168,36 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
         );
 
         uint256 exitType = ejector.VOLUNTARY_EXIT_TYPE_ID();
+        vm.expectCall(
+            address(ejector.VEB()),
+            abi.encodeWithSelector(
+                IValidatorsExitBus.triggerExitsDirectly.selector,
+                IValidatorsExitBus.DirectExitData(noId, 0, pubkey)
+            )
+        );
         ejector.voluntaryEject(noId, keyIndex);
+    }
 
-        // TODO: check ejection contract call
+    function test_voluntaryEject_refund() public {
+        uint256 keyIndex = 0;
+        bytes memory pubkey = csm.getSigningKeys(0, 0, 1);
+        address nodeOperator = nextAddress("nodeOperator");
+
+        csm.mock_setNodeOperatorsCount(1);
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
+        csm.mock_setNodeOperatorManagementProperties(
+            NodeOperatorManagementProperties(nodeOperator, nodeOperator, false)
+        );
+
+        vm.deal(nodeOperator, 1 ether);
+
+        uint256 exitType = ejector.VOLUNTARY_EXIT_TYPE_ID();
+        vm.prank(nodeOperator);
+        ejector.voluntaryEject{ value: 1 ether }(noId, keyIndex);
+        uint256 expectedRefund = (1 ether *
+            VEBMock(payable(address(ejector.VEB())))
+                .MOCK_REFUND_PERCENTAGE_BP()) / 10000;
+        assertEq(nodeOperator.balance, expectedRefund);
     }
 
     function test_voluntaryEject_revertWhen_senderIsNotEligible() public {

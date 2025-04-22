@@ -88,6 +88,14 @@ interface ICSEjector is IAssetRecovererLib {
         uint256 exitType
     ) external;
 
+    /// @notice Withdraw the validator key from the Node Operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keyIndex Index of the withdrawn key in the Node Operator's keys storage
+    function voluntaryEject(
+        uint256 nodeOperatorId,
+        uint256 keyIndex
+    ) external payable;
+
     /// @notice Report Node Operator's key as bad performer and eject it with corresponding penalty
     /// @notice Called by the `CSStrikes` contract.
     ///         See `CSStrikes.processBadPerformanceProof` to use this method permissionless
@@ -98,7 +106,7 @@ interface ICSEjector is IAssetRecovererLib {
         uint256 nodeOperatorId,
         uint256 keyIndex,
         uint256 strikes
-    ) external;
+    ) external payable;
 
     /// @notice Determines whether a validator exit status should be updated and will have affect on Node Operator.
     /// @dev called only by CSM

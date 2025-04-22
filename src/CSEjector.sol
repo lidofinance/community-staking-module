@@ -4,6 +4,7 @@
 pragma solidity 0.8.24;
 
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
@@ -15,6 +16,7 @@ import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
 import { IStakingModule } from "./interfaces/IStakingModule.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { PausableUntil } from "./lib/utils/PausableUntil.sol";
+import { IValidatorsExitBus } from "./interfaces/IValidatorsExitBus.sol";
 
 contract CSEjector is
     ICSEjector,
@@ -30,10 +32,13 @@ contract CSEjector is
         keccak256("BAD_PERFORMER_EJECTOR_ROLE");
     uint256 public constant VOLUNTARY_EXIT_TYPE_ID = 0;
     uint256 public constant STRIKES_EXIT_TYPE_ID = 1;
+    // TODO reconsider
+    uint256 public constant STAKING_MODULE_ID = 0;
 
     ICSModule public immutable MODULE;
     ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
     ICSAccounting public immutable ACCOUNTING;
+    IValidatorsExitBus public immutable VEB;
 
     mapping(bytes32 => ExitPenaltyInfo) private _exitPenaltyInfo;
 
@@ -49,13 +54,18 @@ contract CSEjector is
             revert ZeroParametersRegistryAddress();
         }
         if (accounting == address(0)) {
-            revert ZeroParametersRegistryAddress();
+            revert ZeroAccountingAddress();
         }
 
         MODULE = ICSModule(module);
         PARAMETERS_REGISTRY = ICSParametersRegistry(parametersRegistry);
         ACCOUNTING = ICSAccounting(accounting);
+        VEB = IValidatorsExitBus(
+            MODULE.LIDO_LOCATOR().validatorsExitBusOracle()
+        );
     }
+
+    receive() external payable {}
 
     /// @notice initialize the contract from scratch
     function initialize(address admin) external initializer {
@@ -150,7 +160,10 @@ contract CSEjector is
         }
     }
 
-    function voluntaryEject(uint256 nodeOperatorId, uint256 keyIndex) public {
+    function voluntaryEject(
+        uint256 nodeOperatorId,
+        uint256 keyIndex
+    ) external payable {
         NodeOperatorManagementProperties memory no = MODULE
             .getNodeOperatorManagementProperties(nodeOperatorId);
         if (no.managerAddress == address(0)) {
@@ -177,7 +190,19 @@ contract CSEjector is
             keyIndex,
             1
         );
-        // TODO: make the function payable and call `requestEjection{ value: msg.value }(pubkey)`. Refund excess fee
+        IValidatorsExitBus.DirectExitData memory exitData = IValidatorsExitBus
+            .DirectExitData({
+                stakingModuleId: STAKING_MODULE_ID,
+                nodeOperatorId: nodeOperatorId,
+                validatorsPubkeys: pubkey
+            });
+
+        uint256 excessFee = VEB.triggerExitsDirectly{ value: msg.value }(
+            exitData
+        );
+        if (excessFee != 0) {
+            Address.sendValue(payable(msg.sender), excessFee);
+        }
     }
 
     /// @inheritdoc ICSEjector
@@ -185,7 +210,7 @@ contract CSEjector is
         uint256 nodeOperatorId,
         uint256 keyIndex,
         uint256 strikes
-    ) external whenResumed onlyRole(BAD_PERFORMER_EJECTOR_ROLE) {
+    ) external payable whenResumed onlyRole(BAD_PERFORMER_EJECTOR_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
 
         if (
@@ -227,7 +252,18 @@ contract CSEjector is
             );
         }
 
-        // TODO: make the function payable and call `requestEjection{ value: msg.value }(pubkey)`
+        IValidatorsExitBus.DirectExitData memory exitData = IValidatorsExitBus
+            .DirectExitData({
+                stakingModuleId: STAKING_MODULE_ID,
+                nodeOperatorId: nodeOperatorId,
+                validatorsPubkeys: pubkey
+            });
+        uint256 excessFee = VEB.triggerExitsDirectly{ value: msg.value }(
+            exitData
+        );
+        if (excessFee != 0) {
+            Address.sendValue(payable(msg.sender), excessFee);
+        }
     }
 
     /// @inheritdoc ICSEjector

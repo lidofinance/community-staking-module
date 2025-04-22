@@ -323,7 +323,7 @@ abstract contract DeployBase is Script {
                 address(accounting)
             );
             ejector = CSEjector(
-                _deployProxy(config.proxyAdmin, address(ejectorImpl))
+                payable(_deployProxy(config.proxyAdmin, address(ejectorImpl)))
             );
 
             ejector.initialize({ admin: deployer });

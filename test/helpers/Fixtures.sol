@@ -34,6 +34,7 @@ import { IACL } from "../../src/interfaces/IACL.sol";
 import { IKernel } from "../../src/interfaces/IKernel.sol";
 import { Utilities } from "./Utilities.sol";
 import { Batch } from "../../src/lib/QueueLib.sol";
+import { VEBMock } from "./mocks/VEBMock.sol";
 
 contract Fixtures is StdCheats, Test {
     bytes32 public constant INITIALIZABLE_STORAGE =
@@ -60,13 +61,15 @@ contract Fixtures is StdCheats, Test {
         wq = new WithdrawalQueueMock(address(wstETH), address(stETH));
         Stub treasury = new Stub();
         Stub stakingRouter = new Stub();
+        VEBMock veb = new VEBMock();
         locator = new LidoLocatorMock(
             address(stETH),
             address(burner),
             address(wq),
             address(elVault),
             address(treasury),
-            address(stakingRouter)
+            address(stakingRouter),
+            address(veb)
         );
         vm.label(address(stETH), "lido");
         vm.label(address(wstETH), "wstETH");
@@ -76,6 +79,7 @@ contract Fixtures is StdCheats, Test {
         vm.label(address(elVault), "elVault");
         vm.label(address(treasury), "treasury");
         vm.label(address(stakingRouter), "stakingRouter");
+        vm.label(address(veb), "validatorExitBus");
     }
 
     function _enableInitializers(address implementation) internal {
@@ -330,7 +334,7 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
         accounting = CSAccounting(deploymentConfig.accounting);
         oracle = CSFeeOracle(deploymentConfig.oracle);
         feeDistributor = CSFeeDistributor(deploymentConfig.feeDistributor);
-        ejector = CSEjector(deploymentConfig.ejector);
+        ejector = CSEjector(payable(deploymentConfig.ejector));
         strikes = CSStrikes(deploymentConfig.strikes);
         verifier = CSVerifier(deploymentConfig.verifier);
         hashConsensus = HashConsensus(deploymentConfig.hashConsensus);
@@ -355,7 +359,7 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
             parametersRegistry = CSParametersRegistry(
                 upgradeConfig.parametersRegistry
             );
-            ejector = CSEjector(upgradeConfig.ejector);
+            ejector = CSEjector(payable(upgradeConfig.ejector));
             strikes = CSStrikes(upgradeConfig.strikes);
             permissionlessGate = PermissionlessGate(
                 upgradeConfig.permissionlessGate
