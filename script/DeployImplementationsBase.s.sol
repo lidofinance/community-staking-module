@@ -92,6 +92,7 @@ abstract contract DeployImplementationsBase is DeployBase {
                 vettedGateFactory.create({
                     curveId: ICSEarlyAdoption(earlyAdoption).CURVE_ID(),
                     treeRoot: config.vettedGateTreeRoot,
+                    referralsThreshold: config.referralsThreshold,
                     admin: deployer
                 })
             );

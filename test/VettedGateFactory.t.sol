@@ -37,6 +37,7 @@ contract VettedGateFactoryTest is Test, Utilities {
     CSMMock csm;
     bytes32 root;
     uint256 curveId;
+    uint256 referralsThreshold;
 
     function setUp() public {
         csm = new CSMMock();
@@ -44,12 +45,18 @@ contract VettedGateFactoryTest is Test, Utilities {
         factory = new VettedGateFactory(vettedGateImpl);
         root = bytes32(randomBytes(32));
         curveId = 1;
+        referralsThreshold = 2;
     }
 
     function test_create() public {
         vm.expectEmit(false, false, false, false, address(factory));
         emit IVettedGateFactory.VettedGateCreated(address(0));
-        address instance = factory.create(curveId, root, address(this));
+        address instance = factory.create(
+            curveId,
+            root,
+            referralsThreshold,
+            address(this)
+        );
         IVettedGate gate = IVettedGate(instance);
         assertEq(gate.curveId(), curveId);
         assertEq(address(gate.MODULE()), address(csm));

@@ -10,6 +10,10 @@ import { ICSModule } from "./ICSModule.sol";
 interface IVettedGate {
     event TreeRootSet(bytes32 indexed treeRoot);
     event Consumed(address indexed member);
+    event ReferrerConsumed(address indexed referrer);
+    event ReferralProgramResumed();
+    event ReferralProgramPaused();
+    event ReferralCurveIdSet(uint256 referralCurveId);
 
     error InvalidProof();
     error AlreadyConsumed();
@@ -18,6 +22,10 @@ interface IVettedGate {
     error ZeroModuleAddress();
     error ZeroAdminAddress();
     error NotAllowedToClaim();
+    error NotEnoughReferrals();
+    error ReferralProgramIsPaused();
+    error InvalidReferralsThreshold();
+    error ReferralCurveIdNotSet();
 
     function PAUSE_ROLE() external view returns (bytes32);
 
@@ -39,6 +47,12 @@ interface IVettedGate {
 
     /// @notice Resume the contract
     function resume() external;
+
+    /// @notice Pause referral program bond curve claims
+    function pauseReferralProgram() external;
+
+    /// @notice Resume referral program bond curve claims
+    function resumeReferralProgram() external;
 
     /// @notice Add a new Node Operator using ETH as a bond.
     ///         At least one deposit data and corresponding bond should be provided
@@ -115,7 +129,7 @@ interface IVettedGate {
         address referrer
     ) external returns (uint256 nodeOperatorId);
 
-    /// @notice Consume the bond curve for the eligible Node Operator
+    /// @notice Claim the bond curve for the eligible Node Operator
     /// @param nodeOperatorId Id of the Node Operator
     /// @param proof Merkle proof of the sender being eligible for the beneficial curve
     /// @dev Should be called by the reward address of the Node Operator
@@ -124,6 +138,10 @@ interface IVettedGate {
         uint256 nodeOperatorId,
         bytes32[] calldata proof
     ) external;
+
+    /// @notice Claim the referral program bond curve for the eligible Node Operator
+    /// @param nodeOperatorId Id of the Node Operator
+    function claimReferrerBondCurve(uint256 nodeOperatorId) external;
 
     /// @notice Check is the address is eligible to consume beneficial curve
     /// @param member Address to check
@@ -139,6 +157,11 @@ interface IVettedGate {
     /// @return Consumed flag
     function isConsumed(address member) external view returns (bool);
 
+    /// @notice Check if the address has already consumed referral program bond curve
+    /// @param referrer Address to check
+    /// @return Consumed flag
+    function isReferrerConsumed(address referrer) external view returns (bool);
+
     /// @notice Get a hash of a leaf in the Merkle tree
     /// @param member eligible member address
     /// @return Hash of the leaf
@@ -148,4 +171,8 @@ interface IVettedGate {
     /// @notice Set the root of the eligible members Merkle Tree
     /// @param _treeRoot New root of the Merkle Tree
     function setTreeRoot(bytes32 _treeRoot) external;
+
+    /// @notice Set curve Id to be used as referral curve
+    /// @param _referralCurveId Curve Id for the referral curve
+    function setReferralCurveId(uint256 _referralCurveId) external;
 }

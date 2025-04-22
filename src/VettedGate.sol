@@ -34,6 +34,23 @@ contract VettedGate is
 
     mapping(address => bool) internal _consumedAddresses;
 
+    /////////////////////////////////
+    /// Optional referral program ///
+    /////////////////////////////////
+
+    bool public referralProgramActive;
+
+    /// @dev Id of the bond curve for referral program
+    uint256 public referralCurveId;
+
+    /// @dev Number of referrals required for bond curve claim
+    uint256 public referralsThreshold;
+
+    /// @dev Referral counts for referrers
+    mapping(address referrer => uint256 count) public referralCounts;
+
+    mapping(address => bool) internal _consumedReferrers;
+
     constructor(address module) {
         if (module == address(0)) {
             revert ZeroModuleAddress();
@@ -48,6 +65,7 @@ contract VettedGate is
     function initialize(
         uint256 _curveId,
         bytes32 _treeRoot,
+        uint256 _referralsThreshold,
         address admin
     ) external initializer {
         __AccessControlEnumerable_init();
@@ -63,6 +81,11 @@ contract VettedGate is
             revert ZeroAdminAddress();
         }
 
+        if (_referralsThreshold == 0) {
+            revert InvalidReferralsThreshold();
+        }
+
+        referralsThreshold = _referralsThreshold;
         _setTreeRoot(_treeRoot);
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
@@ -75,6 +98,21 @@ contract VettedGate is
     /// @inheritdoc IVettedGate
     function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE) {
         _pauseFor(duration);
+    }
+
+    /// @inheritdoc IVettedGate
+    function pauseReferralProgram() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        referralProgramActive = false;
+        emit ReferralProgramPaused();
+    }
+
+    /// @inheritdoc IVettedGate
+    function resumeReferralProgram() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (referralCurveId == 0) {
+            revert ReferralCurveIdNotSet();
+        }
+        referralProgramActive = true;
+        emit ReferralProgramResumed();
     }
 
     /// @inheritdoc IVettedGate
@@ -101,6 +139,8 @@ contract VettedGate is
             publicKeys: publicKeys,
             signatures: signatures
         });
+
+        _bumpReferralCount(referrer);
     }
 
     /// @inheritdoc IVettedGate
@@ -129,6 +169,8 @@ contract VettedGate is
             signatures: signatures,
             permit: permit
         });
+
+        _bumpReferralCount(referrer);
     }
 
     /// @inheritdoc IVettedGate
@@ -157,6 +199,8 @@ contract VettedGate is
             signatures: signatures,
             permit: permit
         });
+
+        _bumpReferralCount(referrer);
     }
 
     /// @inheritdoc IVettedGate
@@ -180,6 +224,27 @@ contract VettedGate is
     }
 
     /// @inheritdoc IVettedGate
+    function claimReferrerBondCurve(uint256 nodeOperatorId) external {
+        NodeOperator memory nodeOperator = MODULE.getNodeOperator(
+            nodeOperatorId
+        );
+        address nodeOperatorAddress = nodeOperator.extendedManagerPermissions
+            ? nodeOperator.managerAddress
+            : nodeOperator.rewardAddress;
+        if (nodeOperatorAddress != msg.sender) {
+            revert NotAllowedToClaim();
+        }
+
+        if (referralCounts[msg.sender] < referralsThreshold) {
+            revert NotEnoughReferrals();
+        }
+
+        _consumeReferrer();
+
+        ACCOUNTING.setBondCurve(nodeOperatorId, referralCurveId);
+    }
+
+    /// @inheritdoc IVettedGate
     function setTreeRoot(
         bytes32 _treeRoot
     ) external onlyRole(SET_TREE_ROOT_ROLE) {
@@ -187,8 +252,21 @@ contract VettedGate is
     }
 
     /// @inheritdoc IVettedGate
+    function setReferralCurveId(
+        uint256 _referralCurveId
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        referralCurveId = _referralCurveId;
+        emit ReferralCurveIdSet(_referralCurveId);
+    }
+
+    /// @inheritdoc IVettedGate
     function isConsumed(address member) public view returns (bool) {
         return _consumedAddresses[member];
+    }
+
+    /// @inheritdoc IVettedGate
+    function isReferrerConsumed(address referrer) public view returns (bool) {
+        return _consumedReferrers[referrer];
     }
 
     /// @inheritdoc IVettedGate
@@ -228,5 +306,24 @@ contract VettedGate is
 
         treeRoot = _treeRoot;
         emit TreeRootSet(_treeRoot);
+    }
+
+    function _bumpReferralCount(address referrer) internal {
+        if (referrer != address(0)) {
+            referralCounts[referrer] += 1;
+        }
+    }
+
+    function _consumeReferrer() internal whenResumed {
+        if (!referralProgramActive) {
+            revert ReferralProgramIsPaused();
+        }
+
+        if (isReferrerConsumed(msg.sender)) {
+            revert AlreadyConsumed();
+        }
+
+        _consumedReferrers[msg.sender] = true;
+        emit ReferrerConsumed(msg.sender);
     }
 }

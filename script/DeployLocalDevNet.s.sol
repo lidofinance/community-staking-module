@@ -76,6 +76,8 @@ contract DeployLocalDevNet is DeployBase {
             "CSM_VETTED_GATE_TREE_ROOT",
             bytes32(uint256(0xdeadbeef))
         );
+        config.referralsThreshold = 2;
+
         // 1.5 -> 1.3
         config.vettedGateBondCurve.push([1, 1.5 ether]);
         config.vettedGateBondCurve.push([2, 1.3 ether]);
