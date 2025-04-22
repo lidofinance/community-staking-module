@@ -130,6 +130,7 @@ struct DeployParams {
     // VettedGate
     bytes32 vettedGateTreeRoot;
     uint256[2][] vettedGateBondCurve;
+    address referralSeasonsEnder;
     // GateSeal
     address gateSealFactory;
     address sealingCommittee;
@@ -451,6 +452,14 @@ abstract contract DeployBase is Script {
             vettedGate.grantRole(
                 vettedGate.DEFAULT_ADMIN_ROLE(),
                 config.aragonAgent
+            );
+            vettedGate.grantRole(
+                vettedGate.START_REFERRAL_SEASON_ROLE(),
+                config.aragonAgent
+            );
+            vettedGate.grantRole(
+                vettedGate.END_REFERRAL_SEASON_ROLE(),
+                config.referralSeasonsEnder
             );
             vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
 
