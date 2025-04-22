@@ -384,15 +384,5 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         assertTrue(ejector.hasRole(ejector.PAUSE_ROLE(), address(gateSeal)));
         assertEq(ejector.getRoleMemberCount(ejector.PAUSE_ROLE()), 1);
         assertEq(ejector.getRoleMemberCount(ejector.RESUME_ROLE()), 0);
-        assertTrue(
-            ejector.hasRole(
-                ejector.BAD_PERFORMER_EJECTOR_ROLE(),
-                address(strikes)
-            )
-        );
-        assertEq(
-            ejector.getRoleMemberCount(ejector.BAD_PERFORMER_EJECTOR_ROLE()),
-            1
-        );
     }
 }

@@ -13,6 +13,7 @@ import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
 import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
+import { ICSExitPenalties } from "./interfaces/ICSExitPenalties.sol";
 import { ICSModule, NodeOperator, NodeOperatorManagementProperties, ValidatorWithdrawalInfo } from "./interfaces/ICSModule.sol";
 
 import { QueueLib, Batch } from "./lib/QueueLib.sol";
@@ -22,8 +23,7 @@ import { TransientUintUintMap, TransientUintUintMapLib } from "./lib/TransientUi
 
 import { SigningKeys } from "./lib/SigningKeys.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
-import { ICSEjector } from "./interfaces/ICSEjector.sol";
-import { ExitPenaltyInfo } from "./interfaces/ICSEjector.sol";
+import { ExitPenaltyInfo } from "./interfaces/ICSExitPenalties.sol";
 
 contract CSModule is
     ICSModule,
@@ -77,7 +77,7 @@ contract CSModule is
 
     /// @custom:oz-renamed-from earlyAdoption
     /// @custom:oz-retyped-from address
-    ICSEjector public ejector;
+    ICSExitPenalties public exitPenalties;
 
     uint256 private _nonce;
     mapping(uint256 => NodeOperator) private _nodeOperators;
@@ -117,14 +117,14 @@ contract CSModule is
     /// @notice initialize the module from scratch
     function initialize(
         address _accounting,
-        address _ejector,
+        address _exitPenalties,
         address admin
     ) external reinitializer(2) {
         if (_accounting == address(0)) {
             revert ZeroAccountingAddress();
         }
-        if (_ejector == address(0)) {
-            revert ZeroEjectorAddress();
+        if (_exitPenalties == address(0)) {
+            revert ZeroExitPenaltiesAddress();
         }
 
         if (admin == address(0)) {
@@ -134,7 +134,7 @@ contract CSModule is
         __AccessControlEnumerable_init();
 
         accounting = ICSAccounting(_accounting);
-        ejector = ICSEjector(_ejector);
+        exitPenalties = ICSExitPenalties(_exitPenalties);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(STAKING_ROUTER_ROLE, address(LIDO_LOCATOR.stakingRouter()));
@@ -144,16 +144,18 @@ contract CSModule is
     }
 
     /// @dev should be called after update on the proxy
-    function finalizeUpgradeV2(address _ejector) external reinitializer(2) {
+    function finalizeUpgradeV2(
+        address _exitPenalties
+    ) external reinitializer(2) {
         assembly ("memory-safe") {
             sstore(_queueByPriority.slot, 0x00)
-            sstore(ejector.slot, 0x00)
+            sstore(exitPenalties.slot, 0x00)
         }
 
-        if (_ejector == address(0)) {
-            revert ZeroEjectorAddress();
+        if (_exitPenalties == address(0)) {
+            revert ZeroExitPenaltiesAddress();
         }
-        ejector = ICSEjector(_ejector);
+        exitPenalties = ICSExitPenalties(_exitPenalties);
     }
 
     /// @inheritdoc ICSModule
@@ -755,7 +757,7 @@ contract CSModule is
             uint256 penaltySum;
             bool chargeWithdrawalRequestFee;
 
-            ExitPenaltyInfo memory exitPenaltyInfo = ejector
+            ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
                 .getDelayedExitPenaltyInfo(
                     withdrawalInfo.nodeOperatorId,
                     pubkey
@@ -824,7 +826,7 @@ contract CSModule is
         uint256 eligibleToExitInSec
     ) external onlyRole(STAKING_ROUTER_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
-        ejector.processExitDelayReport(
+        exitPenalties.processExitDelayReport(
             nodeOperatorId,
             publicKey,
             eligibleToExitInSec
@@ -839,7 +841,7 @@ contract CSModule is
         uint256 exitType
     ) external onlyRole(STAKING_ROUTER_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
-        ejector.processTriggeredExit(
+        exitPenalties.processTriggeredExit(
             nodeOperatorId,
             publicKey,
             withdrawalRequestPaidFee,
@@ -1269,7 +1271,7 @@ contract CSModule is
     ) external view returns (bool) {
         _onlyExistingNodeOperator(nodeOperatorId);
         return
-            ejector.isValidatorExitDelayPenaltyApplicable(
+            exitPenalties.isValidatorExitDelayPenaltyApplicable(
                 nodeOperatorId,
                 publicKey,
                 eligibleToExitInSec

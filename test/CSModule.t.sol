@@ -3,29 +3,32 @@
 pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
-import "../src/interfaces/IStakingModule.sol";
-import "../src/CSModule.sol";
-import "../src/CSAccounting.sol";
-import "./helpers/Fixtures.sol";
-import "./helpers/mocks/StETHMock.sol";
-import "./helpers/mocks/LidoLocatorMock.sol";
-import "./helpers/mocks/LidoMock.sol";
-import "./helpers/mocks/WstETHMock.sol";
-import "./helpers/mocks/CSParametersRegistryMock.sol";
-import "./helpers/Utilities.sol";
-import "./helpers/MerkleTree.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { IStakingModule } from "../src/interfaces/IStakingModule.sol";
+import { CSModule } from "../src/CSModule.sol";
+import { CSAccounting } from "../src/CSAccounting.sol";
+import { CSBondLock } from "../src/abstract/CSBondLock.sol";
+import { ICSAccounting } from "../src/interfaces/ICSAccounting.sol";
+import { Fixtures } from "./helpers/Fixtures.sol";
+import { StETHMock } from "./helpers/mocks/StETHMock.sol";
+import { LidoLocatorMock } from "./helpers/mocks/LidoLocatorMock.sol";
+import { LidoMock } from "./helpers/mocks/LidoMock.sol";
+import { WstETHMock } from "./helpers/mocks/WstETHMock.sol";
+import { CSParametersRegistryMock } from "./helpers/mocks/CSParametersRegistryMock.sol";
+import { Utilities } from "./helpers/Utilities.sol";
 import { console } from "forge-std/console.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
 import { IAssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
-import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
 import { Batch, IQueueLib } from "../src/lib/QueueLib.sol";
 import { SigningKeys } from "../src/lib/SigningKeys.sol";
 import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 import { INOAddresses } from "../src/lib/NOAddresses.sol";
 import { InvariantAsserts } from "./helpers/InvariantAsserts.sol";
-import { ValidatorWithdrawalInfo } from "../src/interfaces/ICSModule.sol";
-import { ExitPenaltyInfo, MarkedUint248 } from "../src/interfaces/ICSEjector.sol";
-import { EjectorMock } from "./helpers/mocks/EjectorMock.sol";
+import { ICSModule, NodeOperator, NodeOperatorManagementProperties, ValidatorWithdrawalInfo } from "../src/interfaces/ICSModule.sol";
+import { ICSExitPenalties, ExitPenaltyInfo, MarkedUint248 } from "../src/interfaces/ICSExitPenalties.sol";
+import { ExitPenaltiesMock } from "./helpers/mocks/ExitPenaltiesMock.sol";
+import { Stub } from "./helpers/mocks/Stub.sol";
 
 abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     using Strings for uint256;
@@ -46,15 +49,13 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     CSAccounting public accounting;
     Stub public feeDistributor;
     CSParametersRegistryMock public parametersRegistry;
-    EjectorMock public ejector;
+    ExitPenaltiesMock public exitPenalties;
 
     address internal admin;
     address internal stranger;
     address internal strangerNumberTwo;
     address internal nodeOperator;
     address internal testChargePenaltyRecipient;
-
-    MerkleTree internal merkleTree;
 
     struct NodeOperatorSummary {
         uint256 targetLimitMode;
@@ -356,7 +357,7 @@ contract CSMCommon is CSMFixtures {
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
-        ejector = new EjectorMock(address(csm));
+        exitPenalties = new ExitPenaltiesMock(address(csm));
 
         uint256[2][] memory curve = new uint256[2][](1);
         curve[0] = [uint256(1), BOND_SIZE];
@@ -378,13 +379,10 @@ contract CSMCommon is CSMFixtures {
             testChargePenaltyRecipient
         );
 
-        merkleTree = new MerkleTree();
-        merkleTree.pushLeaf(abi.encode(nodeOperator));
-
         _enableInitializers(address(csm));
         csm.initialize({
             _accounting: address(accounting),
-            _ejector: address(ejector),
+            _exitPenalties: address(exitPenalties),
             admin: admin
         });
 
@@ -435,7 +433,7 @@ contract CSMCommonNoRoles is CSMFixtures {
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
-        ejector = new EjectorMock(address(csm));
+        exitPenalties = new ExitPenaltiesMock(address(csm));
 
         uint256[2][] memory curve = new uint256[2][](1);
         curve[0] = [uint256(1), BOND_SIZE];
@@ -456,9 +454,6 @@ contract CSMCommonNoRoles is CSMFixtures {
             testChargePenaltyRecipient
         );
 
-        merkleTree = new MerkleTree();
-        merkleTree.pushLeaf(abi.encode(nodeOperator));
-
         vm.startPrank(admin);
         accounting.grantRole(
             accounting.MANAGE_BOND_CURVES_ROLE(),
@@ -470,7 +465,7 @@ contract CSMCommonNoRoles is CSMFixtures {
         _enableInitializers(address(csm));
         csm.initialize({
             _accounting: address(accounting),
-            _ejector: address(ejector),
+            _exitPenalties: address(exitPenalties),
             admin: admin
         });
 
@@ -559,7 +554,7 @@ contract CsmInitialize is CSMCommon {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         csm.initialize({
             _accounting: address(accounting),
-            _ejector: address(ejector),
+            _exitPenalties: address(exitPenalties),
             admin: address(this)
         });
     }
@@ -574,13 +569,13 @@ contract CsmInitialize is CSMCommon {
         _enableInitializers(address(csm));
         csm.initialize({
             _accounting: address(accounting),
-            _ejector: address(ejector),
+            _exitPenalties: address(exitPenalties),
             admin: address(this)
         });
         assertEq(csm.getType(), "community-staking-module");
         assertEq(address(csm.LIDO_LOCATOR()), address(locator));
         assertEq(address(csm.accounting()), address(accounting));
-        assertEq(address(csm.ejector()), address(ejector));
+        assertEq(address(csm.exitPenalties()), address(exitPenalties));
         assertTrue(csm.isPaused());
     }
 
@@ -595,12 +590,12 @@ contract CsmInitialize is CSMCommon {
         vm.expectRevert(ICSModule.ZeroAccountingAddress.selector);
         csm.initialize({
             _accounting: address(0),
-            _ejector: address(ejector),
+            _exitPenalties: address(exitPenalties),
             admin: address(this)
         });
     }
 
-    function test_initialize_RevertWhen_ZeroEjectorAddress() public {
+    function test_initialize_RevertWhen_ZeroExitPenaltiesAddress() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             lidoLocator: address(locator),
@@ -608,10 +603,10 @@ contract CsmInitialize is CSMCommon {
         });
 
         _enableInitializers(address(csm));
-        vm.expectRevert(ICSModule.ZeroEjectorAddress.selector);
+        vm.expectRevert(ICSModule.ZeroExitPenaltiesAddress.selector);
         csm.initialize({
             _accounting: address(accounting),
-            _ejector: address(0),
+            _exitPenalties: address(0),
             admin: address(this)
         });
     }
@@ -627,7 +622,7 @@ contract CsmInitialize is CSMCommon {
         vm.expectRevert(ICSModule.ZeroAdminAddress.selector);
         csm.initialize({
             _accounting: address(154),
-            _ejector: address(ejector),
+            _exitPenalties: address(exitPenalties),
             admin: address(0)
         });
     }
@@ -5450,7 +5445,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
-        ejector.mock_setDelayedExitPenaltyInfo(
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(1 ether, true),
                 strikesPenalty: MarkedUint248(0, false),
@@ -5481,7 +5476,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
-        ejector.mock_setDelayedExitPenaltyInfo(
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(0, false),
                 strikesPenalty: MarkedUint248(1 ether, true),
@@ -5512,7 +5507,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
-        ejector.mock_setDelayedExitPenaltyInfo(
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(1 ether, true),
                 strikesPenalty: MarkedUint248(1 ether, true),
@@ -5546,7 +5541,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
-        ejector.mock_setDelayedExitPenaltyInfo(
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(1 ether, true),
                 strikesPenalty: MarkedUint248(0, false),
@@ -5588,7 +5583,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
-        ejector.mock_setDelayedExitPenaltyInfo(
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(0, false),
                 strikesPenalty: MarkedUint248(1 ether, true),
@@ -5630,7 +5625,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
-        ejector.mock_setDelayedExitPenaltyInfo(
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(1 ether, true),
                 strikesPenalty: MarkedUint248(1 ether, true),
@@ -5672,7 +5667,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
-        ejector.mock_setDelayedExitPenaltyInfo(
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(0, true),
                 strikesPenalty: MarkedUint248(0, true),
@@ -5710,7 +5705,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
-        ejector.mock_setDelayedExitPenaltyInfo(
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(0, false),
                 strikesPenalty: MarkedUint248(0, false),
@@ -5748,7 +5743,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
-        ejector.mock_setDelayedExitPenaltyInfo(
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(0, false),
                 strikesPenalty: MarkedUint248(0, false),
@@ -5920,7 +5915,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
             parametersRegistry: address(parametersRegistry)
         });
         _enableInitializers(address(csm));
-        csm.initialize(address(accounting), address(ejector), actor);
+        csm.initialize(address(accounting), address(exitPenalties), actor);
 
         bytes32 role = csm.DEFAULT_ADMIN_ROLE();
         vm.prank(actor);
@@ -7092,9 +7087,9 @@ contract CSMReportValidatorExitDelay is CSMCommon {
         bytes memory publicKey = randomBytes(48);
 
         vm.expectCall(
-            address(ejector),
+            address(exitPenalties),
             abi.encodeWithSelector(
-                ICSEjector.processExitDelayReport.selector,
+                ICSExitPenalties.processExitDelayReport.selector,
                 noId,
                 publicKey,
                 exitDeadlineThreshold
@@ -7131,9 +7126,9 @@ contract CSMOnValidatorExitTriggered is CSMCommon {
         uint256 exitType = 1;
 
         vm.expectCall(
-            address(ejector),
+            address(exitPenalties),
             abi.encodeWithSelector(
-                ICSEjector.processTriggeredExit.selector,
+                ICSExitPenalties.processTriggeredExit.selector,
                 noId,
                 publicKey,
                 paidFee,

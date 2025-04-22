@@ -12,6 +12,7 @@ import { Batch } from "../lib/QueueLib.sol";
 import { ILidoLocator } from "./ILidoLocator.sol";
 import { IStETH } from "./IStETH.sol";
 import { ICSParametersRegistry } from "./ICSParametersRegistry.sol";
+import { ICSExitPenalties } from "./ICSExitPenalties.sol";
 
 struct NodeOperator {
     // All the counters below are used together e.g. in the _updateDepositableValidatorsCount
@@ -73,7 +74,7 @@ interface ICSModule is
 
     error ZeroLocatorAddress();
     error ZeroAccountingAddress();
-    error ZeroEjectorAddress();
+    error ZeroExitPenaltiesAddress();
     error ZeroAdminAddress();
     error ZeroSenderAddress();
     error ZeroParametersRegistryAddress();
@@ -176,6 +177,9 @@ interface ICSModule is
 
     /// @notice Returns the address of the accounting contract
     function accounting() external view returns (ICSAccounting);
+
+    /// @notice Returns the address of the ExitPenalties contract
+    function exitPenalties() external view returns (ICSExitPenalties);
 
     /// @notice Pause creation of the Node Operators and keys upload for `duration` seconds.
     ///         Existing NO management and reward claims are still available.

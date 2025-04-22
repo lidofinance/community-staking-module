@@ -112,9 +112,6 @@ contract VoteTest is V2UpgradeTestBase {
         assertTrue(
             accounting.hasRole(accounting.PENALIZE_ROLE(), address(csm))
         );
-        assertTrue(
-            accounting.hasRole(accounting.PENALIZE_ROLE(), address(ejector))
-        );
 
         assertEq(accounting.getInitializedVersion(), 2);
     }

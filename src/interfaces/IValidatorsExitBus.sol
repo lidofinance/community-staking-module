@@ -10,6 +10,7 @@ interface IValidatorsExitBus {
     }
 
     function triggerExitsDirectly(
-        DirectExitData calldata exitData
+        DirectExitData calldata exitData,
+        address refundRecipient
     ) external payable returns (uint256);
 }

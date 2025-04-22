@@ -27,6 +27,7 @@ import { CSAccounting } from "../../src/CSAccounting.sol";
 import { CSFeeOracle } from "../../src/CSFeeOracle.sol";
 import { CSFeeDistributor } from "../../src/CSFeeDistributor.sol";
 import { CSEjector } from "../../src/CSEjector.sol";
+import { CSExitPenalties } from "../../src/CSExitPenalties.sol";
 import { CSStrikes } from "../../src/CSStrikes.sol";
 import { CSVerifier } from "../../src/CSVerifier.sol";
 import { DeployParams, DeployParamsV1 } from "../../script/DeployBase.s.sol";
@@ -108,6 +109,7 @@ contract DeploymentHelpers is Test {
         address oracle;
         address feeDistributor;
         address ejector;
+        address exitPenalties;
         address strikes;
         address verifier;
         address hashConsensus;
@@ -177,6 +179,11 @@ contract DeploymentHelpers is Test {
                 ".CSParametersRegistry"
             );
             vm.label(deploymentConfig.parametersRegistry, "parametersRegistry");
+            deploymentConfig.exitPenalties = vm.parseJsonAddress(
+                config,
+                ".CSExitPenalties"
+            );
+            vm.label(deploymentConfig.exitPenalties, "exitPenalties");
             deploymentConfig.strikes = vm.parseJsonAddress(
                 config,
                 ".CSStrikes"
@@ -295,6 +302,7 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
     CSAccounting public accounting;
     CSFeeOracle public oracle;
     CSFeeDistributor public feeDistributor;
+    CSExitPenalties public exitPenalties;
     CSStrikes public strikes;
     CSEjector public ejector;
     CSVerifier public verifier;
@@ -335,6 +343,7 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
         oracle = CSFeeOracle(deploymentConfig.oracle);
         feeDistributor = CSFeeDistributor(deploymentConfig.feeDistributor);
         ejector = CSEjector(payable(deploymentConfig.ejector));
+        exitPenalties = CSExitPenalties(deploymentConfig.exitPenalties);
         strikes = CSStrikes(deploymentConfig.strikes);
         verifier = CSVerifier(deploymentConfig.verifier);
         hashConsensus = HashConsensus(deploymentConfig.hashConsensus);

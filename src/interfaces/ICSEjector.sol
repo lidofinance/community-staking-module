@@ -8,56 +8,25 @@ import { IAssetRecovererLib } from "../lib/AssetRecovererLib.sol";
 import { ICSParametersRegistry } from "./ICSParametersRegistry.sol";
 import { ICSModule } from "./ICSModule.sol";
 
-struct MarkedUint248 {
-    uint248 value;
-    bool isValue;
-}
-
-struct ExitPenaltyInfo {
-    MarkedUint248 delayPenalty;
-    MarkedUint248 strikesPenalty;
-    uint256 withdrawalRequestFee;
-}
-
 interface ICSEjector is IAssetRecovererLib {
     error SigningKeysInvalidOffset();
     error AlreadyWithdrawn();
     error ZeroAdminAddress();
     error ZeroModuleAddress();
-    error ZeroParametersRegistryAddress();
-    error ZeroAccountingAddress();
-    error NotEnoughStrikesToEject();
+    error ZeroStrikesAddress();
     error NodeOperatorDoesNotExist();
     error SenderIsNotEligible();
-    error SenderIsNotModule();
-    error ValidatorExitDelayNotApplicable();
-
-    event ValidatorExitDelayProcessed(
-        uint256 indexed nodeOperatorId,
-        bytes pubkey,
-        uint256 delayPenalty
-    );
-    event TriggeredExitFeeRecorded(
-        uint256 indexed nodeOperatorId,
-        uint256 indexed exitType,
-        bytes pubkey,
-        uint256 withdrawalRequestFee
-    );
-    event BadPerformancePenaltyProcessed(
-        uint256 indexed nodeOperatorId,
-        bytes pubkey,
-        uint256 badPerformancePenalty
-    );
+    error SenderIsNotStrikes();
 
     function PAUSE_ROLE() external view returns (bytes32);
 
     function RESUME_ROLE() external view returns (bytes32);
 
-    function BAD_PERFORMER_EJECTOR_ROLE() external view returns (bytes32);
+    function STAKING_MODULE_ID() external view returns (uint256);
 
     function MODULE() external view returns (ICSModule);
 
-    function ACCOUNTING() external view returns (ICSAccounting);
+    function strikes() external view returns (address);
 
     /// @notice Pause ejection methods calls
     /// @param duration Duration of the pause in seconds
@@ -66,68 +35,39 @@ interface ICSEjector is IAssetRecovererLib {
     /// @notice Resume ejection methods calls
     function resume() external;
 
-    /// @notice Process the delayed exit report
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param publicKey Public key of the validator
-    /// @param eligibleToExitInSec The time in seconds when the validator is eligible to exit
-    function processExitDelayReport(
-        uint256 nodeOperatorId,
-        bytes calldata publicKey,
-        uint256 eligibleToExitInSec
-    ) external;
-
-    /// @notice Process the triggered exit report
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param publicKey Public key of the validator
-    /// @param withdrawalRequestPaidFee The fee paid for the withdrawal request
-    /// @param exitType The type of the exit (0 - direct exit, 1 - forced exit)
-    function processTriggeredExit(
-        uint256 nodeOperatorId,
-        bytes calldata publicKey,
-        uint256 withdrawalRequestPaidFee,
-        uint256 exitType
-    ) external;
-
     /// @notice Withdraw the validator key from the Node Operator
+    /// @notice Called by the node operator
     /// @param nodeOperatorId ID of the Node Operator
     /// @param startFrom Index of the first key to withdraw
     /// @param keysCount Number of keys to withdraw
+    /// @param refundRecipient Address to send the refund to
     function voluntaryEject(
         uint256 nodeOperatorId,
         uint256 startFrom,
-        uint256 keysCount
+        uint256 keysCount,
+        address refundRecipient
     ) external payable;
 
-    /// @notice Report Node Operator's key as bad performer and eject it with corresponding penalty
+    /// @notice Withdraw the validator key from the Node Operator
+    /// @notice Called by the node operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keyIndices Array of indices of the keys to withdraw
+    /// @param refundRecipient Address to send the refund to
+    function voluntaryEjectByArray(
+        uint256 nodeOperatorId,
+        uint256[] calldata keyIndices,
+        address refundRecipient
+    ) external payable;
+
+    /// @notice Eject Node Operator's key as a bad performer
     /// @notice Called by the `CSStrikes` contract.
     ///         See `CSStrikes.processBadPerformanceProof` to use this method permissionless
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the withdrawn key in the Node Operator's keys storage
-    /// @param strikes Strikes of the Node Operator's validator key
+    /// @param publicKeys Concatenated public keys of the Node Operator's validators
+    /// @param refundRecipient Address to send the refund to
     function ejectBadPerformer(
         uint256 nodeOperatorId,
-        uint256 keyIndex,
-        uint256 strikes
+        bytes calldata publicKeys,
+        address refundRecipient
     ) external payable;
-
-    /// @notice Determines whether a validator exit status should be updated and will have affect on Node Operator.
-    /// @dev called only by CSM
-    /// @param nodeOperatorId The ID of the node operator.
-    /// @param publicKey Validator's public key.
-    /// @param eligibleToExitInSec The number of seconds the validator was eligible to exit but did not.
-    /// @return bool Returns true if contract should receive updated validator's status.
-    function isValidatorExitDelayPenaltyApplicable(
-        uint256 nodeOperatorId,
-        bytes calldata publicKey,
-        uint256 eligibleToExitInSec
-    ) external view returns (bool);
-
-    /// @notice get delayed exit penalty info for the given Node Operator
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param publicKey Public key of the validator
-    /// @return penaltyInfo Delayed exit penalty info
-    function getDelayedExitPenaltyInfo(
-        uint256 nodeOperatorId,
-        bytes calldata publicKey
-    ) external view returns (ExitPenaltyInfo memory penaltyInfo);
 }
