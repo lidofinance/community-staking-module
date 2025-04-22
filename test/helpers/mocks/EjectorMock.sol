@@ -39,7 +39,8 @@ contract EjectorMock is ICSEjector {
 
     function voluntaryEject(
         uint256 nodeOperatorId,
-        uint256 keyIndex
+        uint256 startFrom,
+        uint256 keysCount
     ) external payable {}
 
     function ejectBadPerformer(uint256, uint256, uint256) external payable {}

@@ -134,10 +134,10 @@ contract CSMMock is Utilities, Fixtures {
 
     function getSigningKeys(
         uint256 /* nodeOperatorId */,
-        uint256 /* startIndex */,
+        uint256 startIndex,
         uint256 keysCount
     ) external pure returns (bytes memory pubkeys) {
-        (pubkeys, ) = keysSignatures(keysCount);
+        (pubkeys, ) = keysSignatures(keysCount, startIndex);
     }
 
     function exitDeadlineThreshold(

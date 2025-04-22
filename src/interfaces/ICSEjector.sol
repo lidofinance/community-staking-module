@@ -90,10 +90,12 @@ interface ICSEjector is IAssetRecovererLib {
 
     /// @notice Withdraw the validator key from the Node Operator
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the withdrawn key in the Node Operator's keys storage
+    /// @param startFrom Index of the first key to withdraw
+    /// @param keysCount Number of keys to withdraw
     function voluntaryEject(
         uint256 nodeOperatorId,
-        uint256 keyIndex
+        uint256 startFrom,
+        uint256 keysCount
     ) external payable;
 
     /// @notice Report Node Operator's key as bad performer and eject it with corresponding penalty

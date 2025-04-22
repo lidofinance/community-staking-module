@@ -162,7 +162,8 @@ contract CSEjector is
 
     function voluntaryEject(
         uint256 nodeOperatorId,
-        uint256 keyIndex
+        uint256 startFrom,
+        uint256 keysCount
     ) external payable {
         NodeOperatorManagementProperties memory no = MODULE
             .getNodeOperatorManagementProperties(nodeOperatorId);
@@ -181,20 +182,70 @@ contract CSEjector is
         // so we need to be sure that the UIs restrict this case.
         // on the other hand, it is crucial to check that the key was deposited already
         if (
-            keyIndex >= MODULE.getNodeOperatorTotalDepositedKeys(nodeOperatorId)
+            startFrom + keysCount >
+            MODULE.getNodeOperatorTotalDepositedKeys(nodeOperatorId)
         ) {
             revert SigningKeysInvalidOffset();
         }
-        bytes memory pubkey = MODULE.getSigningKeys(
+        bytes memory pubkeys = MODULE.getSigningKeys(
             nodeOperatorId,
-            keyIndex,
-            1
+            startFrom,
+            keysCount
         );
         IValidatorsExitBus.DirectExitData memory exitData = IValidatorsExitBus
             .DirectExitData({
                 stakingModuleId: STAKING_MODULE_ID,
                 nodeOperatorId: nodeOperatorId,
-                validatorsPubkeys: pubkey
+                validatorsPubkeys: pubkeys
+            });
+
+        uint256 excessFee = VEB.triggerExitsDirectly{ value: msg.value }(
+            exitData
+        );
+        if (excessFee != 0) {
+            Address.sendValue(payable(msg.sender), excessFee);
+        }
+    }
+
+    /// @dev this method is intentionally copy-pasted from the voluntaryEject method with keys changes
+    function voluntaryEjectByArray(
+        uint256 nodeOperatorId,
+        uint256[] calldata keyIndices
+    ) external payable {
+        NodeOperatorManagementProperties memory no = MODULE
+            .getNodeOperatorManagementProperties(nodeOperatorId);
+        if (no.managerAddress == address(0)) {
+            revert NodeOperatorDoesNotExist();
+        }
+        address nodeOperatorAddress = no.extendedManagerPermissions
+            ? no.managerAddress
+            : no.rewardAddress;
+        if (nodeOperatorAddress != msg.sender) {
+            revert SenderIsNotEligible();
+        }
+
+        uint256 totalDepositedKeys = MODULE.getNodeOperatorTotalDepositedKeys(
+            nodeOperatorId
+        );
+        bytes memory pubkeys;
+        for (uint256 i = 0; i < keyIndices.length; i++) {
+            // there is no check that the key is not withdrawn yet to not make it too expensive (esp. for the large batch)
+            // and no bad effects for extra eip-7002 exit requests for the node operator can happen.
+            // so we need to be sure that the UIs restrict this case.
+            // on the other hand, it is crucial to check that the key was deposited already
+            if (keyIndices[i] >= totalDepositedKeys) {
+                revert SigningKeysInvalidOffset();
+            }
+            pubkeys = abi.encodePacked(
+                pubkeys,
+                MODULE.getSigningKeys(nodeOperatorId, keyIndices[i], 1)
+            );
+        }
+        IValidatorsExitBus.DirectExitData memory exitData = IValidatorsExitBus
+            .DirectExitData({
+                stakingModuleId: STAKING_MODULE_ID,
+                nodeOperatorId: nodeOperatorId,
+                validatorsPubkeys: pubkeys
             });
 
         uint256 excessFee = VEB.triggerExitsDirectly{ value: msg.value }(
@@ -211,6 +262,7 @@ contract CSEjector is
         uint256 keyIndex,
         uint256 strikes
     ) external payable whenResumed onlyRole(BAD_PERFORMER_EJECTOR_ROLE) {
+        /// TODO consider adding a batch processing. It might worth it to rework csstrikes as well to not read keys twice
         _onlyExistingNodeOperator(nodeOperatorId);
 
         if (

@@ -172,10 +172,36 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
             address(ejector.VEB()),
             abi.encodeWithSelector(
                 IValidatorsExitBus.triggerExitsDirectly.selector,
-                IValidatorsExitBus.DirectExitData(noId, 0, pubkey)
+                IValidatorsExitBus.DirectExitData(0, noId, pubkey)
             )
         );
-        ejector.voluntaryEject(noId, keyIndex);
+        ejector.voluntaryEject(noId, keyIndex, 1);
+    }
+
+    function test_voluntaryEject_multipleKeys() public {
+        uint256 keyIndex = 0;
+        uint256 keysCount = 5;
+        bytes memory pubkeys = csm.getSigningKeys(0, 0, 5);
+
+        csm.mock_setNodeOperatorsCount(1);
+        csm.mock_setNodeOperatorTotalDepositedKeys(5);
+        csm.mock_setNodeOperatorManagementProperties(
+            NodeOperatorManagementProperties(
+                address(this),
+                address(this),
+                false
+            )
+        );
+
+        uint256 exitType = ejector.VOLUNTARY_EXIT_TYPE_ID();
+        vm.expectCall(
+            address(ejector.VEB()),
+            abi.encodeWithSelector(
+                IValidatorsExitBus.triggerExitsDirectly.selector,
+                IValidatorsExitBus.DirectExitData(0, noId, pubkeys)
+            )
+        );
+        ejector.voluntaryEject(noId, keyIndex, keysCount);
     }
 
     function test_voluntaryEject_refund() public {
@@ -193,7 +219,7 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
 
         uint256 exitType = ejector.VOLUNTARY_EXIT_TYPE_ID();
         vm.prank(nodeOperator);
-        ejector.voluntaryEject{ value: 1 ether }(noId, keyIndex);
+        ejector.voluntaryEject{ value: 1 ether }(noId, keyIndex, 1);
         uint256 expectedRefund = (1 ether *
             VEBMock(payable(address(ejector.VEB())))
                 .MOCK_REFUND_PERCENTAGE_BP()) / 10000;
@@ -211,7 +237,7 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
         );
 
         vm.expectRevert(ICSEjector.SenderIsNotEligible.selector);
-        ejector.voluntaryEject(noId, keyIndex);
+        ejector.voluntaryEject(noId, keyIndex, 1);
     }
 
     function test_voluntaryEject_revertWhen_senderIsNotEligible_managerAddress()
@@ -227,7 +253,7 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
         );
 
         vm.expectRevert(ICSEjector.SenderIsNotEligible.selector);
-        ejector.voluntaryEject(noId, keyIndex);
+        ejector.voluntaryEject(noId, keyIndex, 1);
     }
 
     function test_voluntaryEject_revertWhen_senderIsNotEligible_extendedManager_fromRewardAddress()
@@ -243,7 +269,7 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
         );
 
         vm.expectRevert(ICSEjector.SenderIsNotEligible.selector);
-        ejector.voluntaryEject(noId, keyIndex);
+        ejector.voluntaryEject(noId, keyIndex, 1);
     }
 
     function test_voluntaryEject_revertWhen_signingKeysInvalidOffset() public {
@@ -261,7 +287,7 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
         );
 
         vm.expectRevert(ICSEjector.SigningKeysInvalidOffset.selector);
-        ejector.voluntaryEject(noId, keyIndex);
+        ejector.voluntaryEject(noId, keyIndex, 1);
     }
 
     function test_voluntaryEject_revertWhen_signingKeysInvalidOffset_nonDepositedKey()
@@ -281,7 +307,188 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
         );
 
         vm.expectRevert(ICSEjector.SigningKeysInvalidOffset.selector);
-        ejector.voluntaryEject(noId, keyIndex);
+        ejector.voluntaryEject(noId, keyIndex, 1);
+    }
+}
+
+contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
+    function test_voluntaryEjectByArray() public {
+        uint256 keyIndex = 0;
+        bytes memory pubkey = csm.getSigningKeys(0, 0, 1);
+
+        csm.mock_setNodeOperatorsCount(1);
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
+        csm.mock_setNodeOperatorManagementProperties(
+            NodeOperatorManagementProperties(
+                address(this),
+                address(this),
+                false
+            )
+        );
+
+        uint256 exitType = ejector.VOLUNTARY_EXIT_TYPE_ID();
+        uint256[] memory indices = new uint256[](1);
+        indices[0] = keyIndex;
+        vm.expectCall(
+            address(ejector.VEB()),
+            abi.encodeWithSelector(
+                IValidatorsExitBus.triggerExitsDirectly.selector,
+                IValidatorsExitBus.DirectExitData(0, noId, pubkey)
+            )
+        );
+        ejector.voluntaryEjectByArray(noId, indices);
+    }
+
+    function test_voluntaryEjectByArray_multipleKeys() public {
+        uint256 keysCount = 5;
+        bytes memory pubkeys = csm.getSigningKeys(0, 0, keysCount);
+
+        csm.mock_setNodeOperatorsCount(1);
+        csm.mock_setNodeOperatorTotalDepositedKeys(keysCount);
+        csm.mock_setNodeOperatorManagementProperties(
+            NodeOperatorManagementProperties(
+                address(this),
+                address(this),
+                false
+            )
+        );
+
+        uint256 exitType = ejector.VOLUNTARY_EXIT_TYPE_ID();
+        uint256[] memory indices = new uint256[](keysCount);
+        for (uint256 i = 0; i < keysCount; i++) {
+            indices[i] = i;
+        }
+        vm.expectCall(
+            address(ejector.VEB()),
+            abi.encodeWithSelector(
+                IValidatorsExitBus.triggerExitsDirectly.selector,
+                IValidatorsExitBus.DirectExitData(0, noId, pubkeys)
+            )
+        );
+        ejector.voluntaryEjectByArray(noId, indices);
+    }
+
+    function test_voluntaryEjectByArray_refund() public {
+        uint256 keyIndex = 0;
+        bytes memory pubkey = csm.getSigningKeys(0, 0, 1);
+        address nodeOperator = nextAddress("nodeOperator");
+
+        csm.mock_setNodeOperatorsCount(1);
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
+        csm.mock_setNodeOperatorManagementProperties(
+            NodeOperatorManagementProperties(nodeOperator, nodeOperator, false)
+        );
+
+        vm.deal(nodeOperator, 1 ether);
+
+        uint256 exitType = ejector.VOLUNTARY_EXIT_TYPE_ID();
+        uint256[] memory indices = new uint256[](1);
+        indices[0] = keyIndex;
+
+        vm.prank(nodeOperator);
+        ejector.voluntaryEjectByArray{ value: 1 ether }(noId, indices);
+        uint256 expectedRefund = (1 ether *
+            VEBMock(payable(address(ejector.VEB())))
+                .MOCK_REFUND_PERCENTAGE_BP()) / 10000;
+        assertEq(nodeOperator.balance, expectedRefund);
+    }
+
+    function test_voluntaryEjectByArray_revertWhen_senderIsNotEligible()
+        public
+    {
+        uint256 keyIndex = 0;
+        bytes memory pubkey = csm.getSigningKeys(0, 0, 1);
+
+        csm.mock_setNodeOperatorsCount(1);
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
+        csm.mock_setNodeOperatorManagementProperties(
+            NodeOperatorManagementProperties(stranger, stranger, false)
+        );
+        uint256[] memory indices = new uint256[](1);
+        indices[0] = keyIndex;
+
+        vm.expectRevert(ICSEjector.SenderIsNotEligible.selector);
+        ejector.voluntaryEjectByArray(noId, indices);
+    }
+
+    function test_voluntaryEjectByArray_revertWhen_senderIsNotEligible_managerAddress()
+        public
+    {
+        uint256 keyIndex = 0;
+        bytes memory pubkey = csm.getSigningKeys(0, 0, 1);
+
+        csm.mock_setNodeOperatorsCount(1);
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
+        csm.mock_setNodeOperatorManagementProperties(
+            NodeOperatorManagementProperties(address(this), stranger, false)
+        );
+        uint256[] memory indices = new uint256[](1);
+        indices[0] = keyIndex;
+
+        vm.expectRevert(ICSEjector.SenderIsNotEligible.selector);
+        ejector.voluntaryEjectByArray(noId, indices);
+    }
+
+    function test_voluntaryEjectByArray_revertWhen_senderIsNotEligible_extendedManager_fromRewardAddress()
+        public
+    {
+        uint256 keyIndex = 0;
+        bytes memory pubkey = csm.getSigningKeys(0, 0, 1);
+
+        csm.mock_setNodeOperatorsCount(1);
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
+        csm.mock_setNodeOperatorManagementProperties(
+            NodeOperatorManagementProperties(stranger, address(this), true)
+        );
+        uint256[] memory indices = new uint256[](1);
+        indices[0] = keyIndex;
+
+        vm.expectRevert(ICSEjector.SenderIsNotEligible.selector);
+        ejector.voluntaryEjectByArray(noId, indices);
+    }
+
+    function test_voluntaryEjectByArray_revertWhen_signingKeysInvalidOffset()
+        public
+    {
+        uint256 keyIndex = 1;
+        bytes memory pubkey = csm.getSigningKeys(0, 0, 1);
+
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
+        csm.mock_setNodeOperatorsCount(1);
+        csm.mock_setNodeOperatorManagementProperties(
+            NodeOperatorManagementProperties(
+                address(this),
+                address(this),
+                false
+            )
+        );
+        uint256[] memory indices = new uint256[](1);
+        indices[0] = keyIndex;
+
+        vm.expectRevert(ICSEjector.SigningKeysInvalidOffset.selector);
+        ejector.voluntaryEjectByArray(noId, indices);
+    }
+
+    function test_voluntaryEjectByArray_revertWhen_signingKeysInvalidOffset_nonDepositedKey()
+        public
+    {
+        uint256 keyIndex = 0;
+        bytes memory pubkey = csm.getSigningKeys(0, 0, 1);
+
+        csm.mock_setNodeOperatorTotalDepositedKeys(0);
+        csm.mock_setNodeOperatorsCount(1);
+        csm.mock_setNodeOperatorManagementProperties(
+            NodeOperatorManagementProperties(
+                address(this),
+                address(this),
+                false
+            )
+        );
+        uint256[] memory indices = new uint256[](1);
+        indices[0] = keyIndex;
+
+        vm.expectRevert(ICSEjector.SigningKeysInvalidOffset.selector);
+        ejector.voluntaryEjectByArray(noId, indices);
     }
 }
 

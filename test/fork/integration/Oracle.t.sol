@@ -149,6 +149,10 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
     }
 
     function test_reportStrikes() public {
+        vm.skip(
+            true,
+            "requires a core protocol upgrade. consider removing this check later"
+        );
         uint256 distributed = 0;
         feesTree.pushLeaf(abi.encode(type(uint64).max, 0));
         uint256 keyIndex = csm.getNodeOperatorTotalDepositedKeys(
