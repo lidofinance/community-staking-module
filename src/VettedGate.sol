@@ -232,15 +232,7 @@ contract VettedGate is
         uint256 nodeOperatorId,
         bytes32[] calldata proof
     ) external {
-        NodeOperator memory nodeOperator = MODULE.getNodeOperator(
-            nodeOperatorId
-        );
-        address nodeOperatorAddress = nodeOperator.extendedManagerPermissions
-            ? nodeOperator.managerAddress
-            : nodeOperator.rewardAddress;
-        if (nodeOperatorAddress != msg.sender) {
-            revert NotAllowedToClaim();
-        }
+        _verifySender(nodeOperatorId);
 
         _consume(proof);
 
@@ -248,25 +240,24 @@ contract VettedGate is
     }
 
     /// @inheritdoc IVettedGate
-    function claimReferrerBondCurve(uint256 nodeOperatorId) external {
-        NodeOperator memory nodeOperator = MODULE.getNodeOperator(
-            nodeOperatorId
-        );
-        address nodeOperatorAddress = nodeOperator.extendedManagerPermissions
-            ? nodeOperator.managerAddress
-            : nodeOperator.rewardAddress;
-        if (nodeOperatorAddress != msg.sender) {
-            revert NotAllowedToClaim();
+    function claimReferrerBondCurve(
+        uint256 nodeOperatorId,
+        bytes32[] calldata proof
+    ) external {
+        _verifySender(nodeOperatorId);
+
+        if (!isConsumed(msg.sender)) {
+            _consume(proof);
+        }
+
+        if (!isReferralProgramSeasonActive) {
+            revert ReferralProgramIsNotActive();
         }
 
         bytes32 referrer = _seasonedAddress(msg.sender);
 
         if (referralCounts[referrer] < referralsThreshold) {
             revert NotEnoughReferrals();
-        }
-
-        if (!isReferralProgramSeasonActive) {
-            revert ReferralProgramIsNotActive();
         }
 
         if (_consumedReferrers[referrer]) {
@@ -350,5 +341,18 @@ contract VettedGate is
         address referrer
     ) internal view returns (bytes32) {
         return keccak256(abi.encode(referrer, referralProgramSeasonNumber));
+    }
+
+    /// @dev Verifies that the sender is the owner of the node operator
+    function _verifySender(uint256 nodeOperatorId) internal view {
+        NodeOperator memory nodeOperator = MODULE.getNodeOperator(
+            nodeOperatorId
+        );
+        address nodeOperatorAddress = nodeOperator.extendedManagerPermissions
+            ? nodeOperator.managerAddress
+            : nodeOperator.rewardAddress;
+        if (nodeOperatorAddress != msg.sender) {
+            revert NotAllowedToClaim();
+        }
     }
 }

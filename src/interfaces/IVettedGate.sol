@@ -77,7 +77,7 @@ interface IVettedGate {
     ///                             rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used.
     ///                             extendedManagerPermissions: Flag indicating that `managerAddress` will be able to change `rewardAddress`.
     ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
-    /// @param proof Merkle proof of the sender being eligible for the beneficial curve
+    /// @param proof Merkle proof of the sender being eligible to join via the gate
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
     /// @return nodeOperatorId Id of the created Node Operator
     function addNodeOperatorETH(
@@ -102,7 +102,7 @@ interface IVettedGate {
     ///                             extendedManagerPermissions: Flag indicating that `managerAddress` will be able to change `rewardAddress`.
     ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
     /// @param permit Optional. Permit to use stETH as bond
-    /// @param proof Merkle proof of the sender being eligible for the beneficial curve
+    /// @param proof Merkle proof of the sender being eligible to join via the gate
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
     /// @return nodeOperatorId Id of the created Node Operator
     function addNodeOperatorStETH(
@@ -128,7 +128,7 @@ interface IVettedGate {
     ///                             extendedManagerPermissions: Flag indicating that `managerAddress` will be able to change `rewardAddress`.
     ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
     /// @param permit Optional. Permit to use wstETH as bond
-    /// @param proof Merkle proof of the sender being eligible for the beneficial curve
+    /// @param proof Merkle proof of the sender being eligible to join via the gate
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
     /// @return nodeOperatorId Id of the created Node Operator
     function addNodeOperatorWstETH(
@@ -143,7 +143,7 @@ interface IVettedGate {
 
     /// @notice Claim the bond curve for the eligible Node Operator
     /// @param nodeOperatorId Id of the Node Operator
-    /// @param proof Merkle proof of the sender being eligible for the beneficial curve
+    /// @param proof Merkle proof of the sender being eligible to join via the gate
     /// @dev Should be called by the reward address of the Node Operator
     ///      In case of the extended manager permissions, should be called by the manager address
     function claimBondCurve(
@@ -153,7 +153,11 @@ interface IVettedGate {
 
     /// @notice Claim the referral program bond curve for the eligible Node Operator
     /// @param nodeOperatorId Id of the Node Operator
-    function claimReferrerBondCurve(uint256 nodeOperatorId) external;
+    /// @param proof Merkle proof of the sender being eligible to join via the gate
+    function claimReferrerBondCurve(
+        uint256 nodeOperatorId,
+        bytes32[] calldata proof
+    ) external;
 
     /// @notice Check is the address is eligible to consume beneficial curve
     /// @param member Address to check

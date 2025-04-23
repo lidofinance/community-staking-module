@@ -77,6 +77,24 @@ contract VettedGateTestBase is Test, Utilities, Fixtures {
             stranger
         );
     }
+
+    function _consume() internal {
+        uint256 keysCount = 1;
+        bytes32[] memory proof = merkleTree.getProof(1);
+        vm.prank(stranger);
+        vettedGate.addNodeOperatorETH(
+            keysCount,
+            randomBytes(48 * keysCount),
+            randomBytes(96 * keysCount),
+            NodeOperatorManagementProperties({
+                managerAddress: address(0),
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            }),
+            proof,
+            address(0)
+        );
+    }
 }
 
 contract VettedGateTest is VettedGateTestBase {
@@ -805,6 +823,7 @@ contract VettedGateReferralProgramTest is VettedGateTestBase {
         no.rewardAddress = stranger;
         no.extendedManagerPermissions = false;
         CSMMock(csm).mock_setNodeOperator(no);
+        bytes32[] memory proof = merkleTree.getProof(1);
 
         _addReferrals();
 
@@ -817,9 +836,44 @@ contract VettedGateReferralProgramTest is VettedGateTestBase {
             )
         );
         vm.expectEmit(address(vettedGate));
+        emit IVettedGate.Consumed(stranger);
+        vm.expectEmit(address(vettedGate));
         emit IVettedGate.ReferrerConsumed(stranger);
         vm.prank(stranger);
-        vettedGate.claimReferrerBondCurve(0);
+        vettedGate.claimReferrerBondCurve(0, proof);
+
+        assertTrue(vettedGate.isReferrerConsumed(stranger));
+    }
+
+    function test_claimReferrerBondCurve_fromRewardAddress_joinedViaGateBefore()
+        public
+    {
+        NodeOperator memory no;
+        no.managerAddress = nextAddress();
+        no.rewardAddress = stranger;
+        no.extendedManagerPermissions = false;
+        CSMMock(csm).mock_setNodeOperator(no);
+        bytes32[] memory proof = merkleTree.getProof(1);
+
+        _addReferrals();
+        _consume();
+
+        vm.expectCall(
+            address(vettedGate.ACCOUNTING()),
+            abi.encodeWithSelector(
+                ICSAccounting.setBondCurve.selector,
+                0,
+                vettedGate.referralCurveId()
+            )
+        );
+        vm.expectEmit(address(vettedGate));
+        emit IVettedGate.ReferrerConsumed(stranger);
+        vm.recordLogs();
+        vm.prank(stranger);
+        vettedGate.claimReferrerBondCurve(0, proof);
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        assertEq(entries.length, 1);
 
         assertTrue(vettedGate.isReferrerConsumed(stranger));
     }
@@ -832,12 +886,13 @@ contract VettedGateReferralProgramTest is VettedGateTestBase {
         no.rewardAddress = stranger;
         no.extendedManagerPermissions = true;
         CSMMock(csm).mock_setNodeOperator(no);
+        bytes32[] memory proof = merkleTree.getProof(1);
 
         _addReferrals();
 
         vm.expectRevert(IVettedGate.NotAllowedToClaim.selector);
         vm.prank(stranger);
-        vettedGate.claimReferrerBondCurve(0);
+        vettedGate.claimReferrerBondCurve(0, proof);
     }
 
     function test_claimReferrerBondCurve_fromManagerAddress() public {
@@ -846,6 +901,7 @@ contract VettedGateReferralProgramTest is VettedGateTestBase {
         no.rewardAddress = nextAddress();
         no.extendedManagerPermissions = true;
         CSMMock(csm).mock_setNodeOperator(no);
+        bytes32[] memory proof = merkleTree.getProof(1);
 
         _addReferrals();
 
@@ -858,9 +914,44 @@ contract VettedGateReferralProgramTest is VettedGateTestBase {
             )
         );
         vm.expectEmit(address(vettedGate));
+        emit IVettedGate.Consumed(stranger);
+        vm.expectEmit(address(vettedGate));
         emit IVettedGate.ReferrerConsumed(stranger);
         vm.prank(stranger);
-        vettedGate.claimReferrerBondCurve(0);
+        vettedGate.claimReferrerBondCurve(0, proof);
+
+        assertTrue(vettedGate.isReferrerConsumed(stranger));
+    }
+
+    function test_claimReferrerBondCurve_fromManagerAddress_joinedViaGateBefore()
+        public
+    {
+        NodeOperator memory no;
+        no.managerAddress = stranger;
+        no.rewardAddress = nextAddress();
+        no.extendedManagerPermissions = true;
+        CSMMock(csm).mock_setNodeOperator(no);
+        bytes32[] memory proof = merkleTree.getProof(1);
+
+        _addReferrals();
+        _consume();
+
+        vm.expectCall(
+            address(vettedGate.ACCOUNTING()),
+            abi.encodeWithSelector(
+                ICSAccounting.setBondCurve.selector,
+                0,
+                vettedGate.referralCurveId()
+            )
+        );
+        vm.expectEmit(address(vettedGate));
+        emit IVettedGate.ReferrerConsumed(stranger);
+        vm.recordLogs();
+        vm.prank(stranger);
+        vettedGate.claimReferrerBondCurve(0, proof);
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        assertEq(entries.length, 1);
 
         assertTrue(vettedGate.isReferrerConsumed(stranger));
     }
@@ -873,12 +964,13 @@ contract VettedGateReferralProgramTest is VettedGateTestBase {
         no.rewardAddress = nextAddress();
         no.extendedManagerPermissions = false;
         CSMMock(csm).mock_setNodeOperator(no);
+        bytes32[] memory proof = merkleTree.getProof(1);
 
         _addReferrals();
 
         vm.expectRevert(IVettedGate.NotAllowedToClaim.selector);
         vm.prank(stranger);
-        vettedGate.claimReferrerBondCurve(0);
+        vettedGate.claimReferrerBondCurve(0, proof);
     }
 
     function test_claimReferrerBondCurve_revertWhen_ReferralProgramIsNotActive()
@@ -889,6 +981,7 @@ contract VettedGateReferralProgramTest is VettedGateTestBase {
         no.rewardAddress = nextAddress();
         no.extendedManagerPermissions = true;
         CSMMock(csm).mock_setNodeOperator(no);
+        bytes32[] memory proof = merkleTree.getProof(1);
 
         _addReferrals();
 
@@ -897,7 +990,7 @@ contract VettedGateReferralProgramTest is VettedGateTestBase {
 
         vm.expectRevert(IVettedGate.ReferralProgramIsNotActive.selector);
         vm.prank(stranger);
-        vettedGate.claimReferrerBondCurve(0);
+        vettedGate.claimReferrerBondCurve(0, proof);
     }
 
     function test_claimReferrerBondCurve_revertWhen_NotEnoughReferrals()
@@ -908,10 +1001,11 @@ contract VettedGateReferralProgramTest is VettedGateTestBase {
         no.rewardAddress = nextAddress();
         no.extendedManagerPermissions = true;
         CSMMock(csm).mock_setNodeOperator(no);
+        bytes32[] memory proof = merkleTree.getProof(1);
 
         vm.expectRevert(IVettedGate.NotEnoughReferrals.selector);
         vm.prank(stranger);
-        vettedGate.claimReferrerBondCurve(0);
+        vettedGate.claimReferrerBondCurve(0, proof);
     }
 
     function test_claimReferrerBondCurve_revertWhen_AlreadyConsumed() public {
@@ -920,15 +1014,31 @@ contract VettedGateReferralProgramTest is VettedGateTestBase {
         no.rewardAddress = stranger;
         no.extendedManagerPermissions = false;
         CSMMock(csm).mock_setNodeOperator(no);
+        bytes32[] memory proof = merkleTree.getProof(1);
 
         _addReferrals();
 
         vm.prank(stranger);
-        vettedGate.claimReferrerBondCurve(0);
+        vettedGate.claimReferrerBondCurve(0, proof);
 
         vm.expectRevert(IVettedGate.AlreadyConsumed.selector);
         vm.prank(stranger);
-        vettedGate.claimReferrerBondCurve(0);
+        vettedGate.claimReferrerBondCurve(0, proof);
+    }
+
+    function test_claimReferrerBondCurve_revertWhen_InvalidProof() public {
+        NodeOperator memory no;
+        no.managerAddress = nextAddress();
+        no.rewardAddress = stranger;
+        no.extendedManagerPermissions = false;
+        CSMMock(csm).mock_setNodeOperator(no);
+        bytes32[] memory proof = merkleTree.getProof(0);
+
+        _addReferrals();
+
+        vm.expectRevert(IVettedGate.InvalidProof.selector);
+        vm.prank(stranger);
+        vettedGate.claimReferrerBondCurve(0, proof);
     }
 }
 
