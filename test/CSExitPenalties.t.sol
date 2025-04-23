@@ -3,7 +3,7 @@
 pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
-import { CSExitPenalties } from "../src/CSexitPenalties.sol";
+import { CSExitPenalties } from "../src/CSExitPenalties.sol";
 import { ICSExitPenalties, ExitPenaltyInfo } from "../src/interfaces/ICSExitPenalties.sol";
 import { ICSAccounting } from "../src/interfaces/ICSAccounting.sol";
 import { Utilities } from "./helpers/Utilities.sol";
