@@ -730,7 +730,7 @@ contract VettedGateReferralProgramTest is VettedGateTestBase {
         vettedGate.endCurrentReferralProgramSeason();
     }
 
-    function test_endCurrentReferralProgramSeason_revertWhen_noSeasonEnded()
+    function test_endCurrentReferralProgramSeason_revertWhen_seasonAlreadyEnded()
         public
     {
         vm.prank(admin);
