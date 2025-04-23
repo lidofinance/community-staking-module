@@ -29,6 +29,7 @@ import { JsonObj, Json } from "./utils/Json.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 import { VettedGateFactory } from "../src/VettedGateFactory.sol";
+import { CSExitPenalties } from "../src/CSExitPenalties.sol";
 
 struct DeployParamsV1 {
     // Lido addresses
@@ -108,6 +109,7 @@ struct DeployParams {
     address setResetBondCurveAddress;
     address chargePenaltyRecipient;
     // Module
+    uint256 stakingModuleId;
     bytes32 moduleType;
     address elRewardsStealingReporter;
     // CSParameters
@@ -154,6 +156,7 @@ abstract contract DeployBase is Script {
     CSAccounting public accounting;
     CSFeeOracle public oracle;
     CSFeeDistributor public feeDistributor;
+    CSExitPenalties public exitPenalties;
     CSEjector public ejector;
     CSStrikes public strikes;
     CSVerifier public verifier;
@@ -317,24 +320,37 @@ abstract contract DeployBase is Script {
                 address(deployer)
             );
 
-            CSEjector ejectorImpl = new CSEjector(
+            CSExitPenalties exitPenaltiesImpl = new CSExitPenalties(
                 address(csm),
                 address(parametersRegistry),
                 address(accounting)
             );
-            ejector = CSEjector(
-                payable(_deployProxy(config.proxyAdmin, address(ejectorImpl)))
+
+            exitPenalties = CSExitPenalties(
+                _deployProxy(config.proxyAdmin, address(exitPenaltiesImpl))
             );
 
-            ejector.initialize({ admin: deployer });
+            ejector = new CSEjector(address(csm), config.stakingModuleId);
 
             csm.initialize({
                 _accounting: address(accounting),
-                _ejector: address(ejector),
+                _exitPenalties: address(exitPenalties),
                 admin: deployer
             });
 
-            strikes = new CSStrikes(address(ejector), address(oracle));
+            CSStrikes strikesImpl = new CSStrikes({
+                module: address(csm),
+                oracle: address(oracle),
+                exitPenalties: address(exitPenalties)
+            });
+
+            strikes = CSStrikes(
+                _deployProxy(config.proxyAdmin, address(strikesImpl))
+            );
+
+            exitPenalties.initialize(address(strikes));
+            ejector.initialize(deployer, address(strikes));
+            strikes.initialize(config.aragonAgent, address(ejector));
 
             permissionlessGate = new PermissionlessGate(address(csm));
 
@@ -404,10 +420,6 @@ abstract contract DeployBase is Script {
                 ejector.grantRole(ejector.PAUSE_ROLE(), gateSeal);
             }
 
-            ejector.grantRole(
-                ejector.BAD_PERFORMER_EJECTOR_ROLE(),
-                address(strikes)
-            );
             accounting.grantRole(
                 accounting.SET_BOND_CURVE_ROLE(),
                 address(config.setResetBondCurveAddress)
@@ -418,7 +430,6 @@ abstract contract DeployBase is Script {
             );
 
             accounting.grantRole(accounting.PENALIZE_ROLE(), address(csm));
-            accounting.grantRole(accounting.PENALIZE_ROLE(), address(ejector));
 
             csm.grantRole(
                 csm.CREATE_NODE_OPERATOR_ROLE(),
@@ -507,6 +518,7 @@ abstract contract DeployBase is Script {
             deployJson.set("CSAccounting", address(accounting));
             deployJson.set("CSFeeOracle", address(oracle));
             deployJson.set("CSFeeDistributor", address(feeDistributor));
+            deployJson.set("CSExitPenalties", address(exitPenalties));
             deployJson.set("CSEjector", address(ejector));
             deployJson.set("CSStrikes", address(strikes));
             deployJson.set("HashConsensus", address(hashConsensus));

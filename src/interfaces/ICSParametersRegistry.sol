@@ -229,7 +229,7 @@ interface ICSParametersRegistry {
         external
         returns (uint32, uint32, uint32);
 
-    /// @notice set default value for allowed exit delay. Default value is used if a specific value is not set for the curveId
+    /// @notice set default value for allowed exit delay in seconds. Default value is used if a specific value is not set for the curveId
     /// @param delay value to be set as default for the allowed exit delay
     function setDefaultAllowedExitDelay(uint256 delay) external;
 
@@ -454,7 +454,7 @@ interface ICSParametersRegistry {
             uint256 syncWeight
         );
 
-    /// @notice Set allowed exit delay for the curveId
+    /// @notice Set allowed exit delay for the curveId in seconds
     /// @param curveId Curve Id to associate allowed exit delay with
     /// @param delay allowed exit delay
     function setAllowedExitDelay(uint256 curveId, uint256 delay) external;
@@ -463,7 +463,7 @@ interface ICSParametersRegistry {
     /// @param curveId Curve Id to unset allowed exit delay for
     function unsetAllowedExitDelay(uint256 curveId) external;
 
-    /// @notice Get allowed exit delay by the curveId
+    /// @notice Get allowed exit delay by the curveId in seconds
     /// @dev `defaultAllowedExitDelay` is returned if the value is not set for the given curveId.
     /// @param curveId Curve Id to get allowed exit delay for
     function getAllowedExitDelay(

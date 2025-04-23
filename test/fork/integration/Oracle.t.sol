@@ -5,7 +5,7 @@ import "../../helpers/Fixtures.sol";
 import "../../helpers/MerkleTree.sol";
 import "forge-std/Test.sol";
 import { ICSFeeOracle } from "../../../src/interfaces/ICSFeeOracle.sol";
-import { ICSEjector } from "../../../src/interfaces/ICSEjector.sol";
+import { ICSExitPenalties } from "../../../src/interfaces/ICSExitPenalties.sol";
 import { NodeOperatorManagementProperties } from "../../../src/interfaces/ICSModule.sol";
 import { InvariantAsserts } from "../../helpers/InvariantAsserts.sol";
 import { Utilities } from "../../helpers/Utilities.sol";
@@ -190,8 +190,8 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
         uint256 penalty = parametersRegistry.getBadPerformancePenalty(
             accounting.getBondCurveId(nodeOperatorId)
         );
-        vm.expectEmit();
-        emit ICSEjector.BadPerformancePenaltyProcessed(
+        vm.expectEmit(address(exitPenalties));
+        emit ICSExitPenalties.StrikesPenaltyProcessed(
             nodeOperatorId,
             key,
             penalty
@@ -201,7 +201,8 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
             nodeOperatorId,
             keyIndex,
             strikesData,
-            proof
+            proof,
+            address(0)
         );
         vm.stopSnapshotGas();
     }
