@@ -269,7 +269,7 @@ contract VettedGate is
             revert ReferralProgramIsNotActive();
         }
 
-        if (isReferrerConsumed(msg.sender)) {
+        if (_consumedReferrers[referrer]) {
             revert AlreadyConsumed();
         }
 
