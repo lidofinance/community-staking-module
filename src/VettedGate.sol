@@ -42,9 +42,9 @@ contract VettedGate is
     /// Optional referral program ///
     /////////////////////////////////
 
-    bool public referralProgramActive;
+    bool public isReferralProgramSeasonActive;
 
-    uint256 public referralProgramSeason;
+    uint256 public referralProgramSeasonNumber;
 
     /// @dev Id of the bond curve for referral program
     uint256 public referralCurveId;
@@ -101,11 +101,11 @@ contract VettedGate is
     }
 
     /// @inheritdoc IVettedGate
-    function startReferralProgramSeason(
+    function startNewReferralProgramSeason(
         uint256 _referralCurveId,
         uint256 _referralsThreshold
     ) external onlyRole(START_REFERRAL_SEASON_ROLE) {
-        if (referralProgramActive) {
+        if (isReferralProgramSeasonActive) {
             revert ReferralProgramIsActive();
         }
         if (_referralsThreshold == 0) {
@@ -114,10 +114,10 @@ contract VettedGate is
 
         referralsThreshold = _referralsThreshold;
         referralCurveId = _referralCurveId;
-        referralProgramActive = true;
+        isReferralProgramSeasonActive = true;
 
-        uint256 season = referralProgramSeason + 1;
-        referralProgramSeason = season;
+        uint256 season = referralProgramSeasonNumber + 1;
+        referralProgramSeasonNumber = season;
         emit ReferralProgramSeasonStarted(
             season,
             _referralCurveId,
@@ -126,15 +126,17 @@ contract VettedGate is
     }
 
     /// @inheritdoc IVettedGate
-    function endReferralProgramSeason()
+    function endCurrentReferralProgramSeason()
         external
         onlyRole(END_REFERRAL_SEASON_ROLE)
     {
-        if (!referralProgramActive || referralProgramSeason == 0) {
+        if (
+            !isReferralProgramSeasonActive || referralProgramSeasonNumber == 0
+        ) {
             revert ReferralProgramIsNotActive();
         }
-        referralProgramActive = false;
-        emit ReferralProgramSeasonEnded(referralProgramSeason);
+        isReferralProgramSeasonActive = false;
+        emit ReferralProgramSeasonEnded(referralProgramSeasonNumber);
     }
 
     /// @inheritdoc IVettedGate
@@ -257,11 +259,22 @@ contract VettedGate is
             revert NotAllowedToClaim();
         }
 
-        if (referralCounts[_seasonedAddress(msg.sender)] < referralsThreshold) {
+        bytes32 referrer = _seasonedAddress(msg.sender);
+
+        if (referralCounts[referrer] < referralsThreshold) {
             revert NotEnoughReferrals();
         }
 
-        _consumeReferrer();
+        if (!isReferralProgramSeasonActive) {
+            revert ReferralProgramIsNotActive();
+        }
+
+        if (isReferrerConsumed(msg.sender)) {
+            revert AlreadyConsumed();
+        }
+
+        _consumedReferrers[referrer] = true;
+        emit ReferrerConsumed(msg.sender);
 
         ACCOUNTING.setBondCurve(nodeOperatorId, referralCurveId);
     }
@@ -328,27 +341,14 @@ contract VettedGate is
     }
 
     function _bumpReferralCount(address referrer) internal {
-        if (referralProgramActive && referrer != address(0)) {
+        if (isReferralProgramSeasonActive && referrer != address(0)) {
             referralCounts[_seasonedAddress(referrer)] += 1;
         }
-    }
-
-    function _consumeReferrer() internal whenResumed {
-        if (!referralProgramActive) {
-            revert ReferralProgramIsNotActive();
-        }
-
-        if (isReferrerConsumed(msg.sender)) {
-            revert AlreadyConsumed();
-        }
-
-        _consumedReferrers[_seasonedAddress(msg.sender)] = true;
-        emit ReferrerConsumed(msg.sender);
     }
 
     function _seasonedAddress(
         address referrer
     ) internal view returns (bytes32) {
-        return keccak256(abi.encode(referrer, referralProgramSeason));
+        return keccak256(abi.encode(referrer, referralProgramSeasonNumber));
     }
 }

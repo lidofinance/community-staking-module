@@ -261,7 +261,7 @@ contract VettedGateTest is VettedGateTestBase {
         bytes32[] memory proof = merkleTree.getProof(0);
         assertFalse(vettedGate.isConsumed(nodeOperator));
         assertEq(vettedGate.getReferralsCount(stranger), 0);
-        assertFalse(vettedGate.referralProgramActive());
+        assertFalse(vettedGate.isReferralProgramSeasonActive());
 
         vm.expectEmit(address(vettedGate));
         emit IVettedGate.Consumed(nodeOperator);
@@ -288,7 +288,7 @@ contract VettedGateTest is VettedGateTestBase {
         bytes32[] memory proof = merkleTree.getProof(0);
         assertFalse(vettedGate.isConsumed(nodeOperator));
         assertEq(vettedGate.getReferralsCount(stranger), 0);
-        assertFalse(vettedGate.referralProgramActive());
+        assertFalse(vettedGate.isReferralProgramSeasonActive());
 
         vm.expectEmit(address(vettedGate));
         emit IVettedGate.Consumed(nodeOperator);
@@ -322,7 +322,7 @@ contract VettedGateTest is VettedGateTestBase {
         bytes32[] memory proof = merkleTree.getProof(0);
         assertFalse(vettedGate.isConsumed(nodeOperator));
         assertEq(vettedGate.getReferralsCount(stranger), 0);
-        assertFalse(vettedGate.referralProgramActive());
+        assertFalse(vettedGate.isReferralProgramSeasonActive());
 
         vm.expectEmit(address(vettedGate));
         emit IVettedGate.Consumed(nodeOperator);
@@ -691,44 +691,46 @@ contract VettedGateReferralProgramTest is VettedGateTestBase {
         vm.startPrank(admin);
         vettedGate.grantRole(vettedGate.START_REFERRAL_SEASON_ROLE(), admin);
         vettedGate.grantRole(vettedGate.END_REFERRAL_SEASON_ROLE(), admin);
-        vettedGate.startReferralProgramSeason(2, 2);
+        vettedGate.startNewReferralProgramSeason(2, 2);
         vm.stopPrank();
     }
 
-    function test_endReferralProgramSeason() public {
-        uint256 season = vettedGate.referralProgramSeason();
+    function test_endCurrentReferralProgramSeason() public {
+        uint256 season = vettedGate.referralProgramSeasonNumber();
 
         vm.expectEmit(address(vettedGate));
         emit IVettedGate.ReferralProgramSeasonEnded(season);
         vm.prank(admin);
-        vettedGate.endReferralProgramSeason();
+        vettedGate.endCurrentReferralProgramSeason();
 
-        assertFalse(vettedGate.referralProgramActive());
+        assertFalse(vettedGate.isReferralProgramSeasonActive());
     }
 
-    function test_endReferralProgramSeason_revertWhen_noRole() public {
+    function test_endCurrentReferralProgramSeason_revertWhen_noRole() public {
         expectRoleRevert(stranger, vettedGate.END_REFERRAL_SEASON_ROLE());
         vm.prank(stranger);
-        vettedGate.endReferralProgramSeason();
+        vettedGate.endCurrentReferralProgramSeason();
     }
 
-    function test_endReferralProgramSeason_revertWhen_noSeasonEnded() public {
+    function test_endCurrentReferralProgramSeason_revertWhen_noSeasonEnded()
+        public
+    {
         vm.prank(admin);
-        vettedGate.endReferralProgramSeason();
+        vettedGate.endCurrentReferralProgramSeason();
 
         vm.expectRevert(IVettedGate.ReferralProgramIsNotActive.selector);
         vm.prank(admin);
-        vettedGate.endReferralProgramSeason();
+        vettedGate.endCurrentReferralProgramSeason();
     }
 
-    function test_startReferralProgramSeason() public {
+    function test_startNewReferralProgramSeason() public {
         _addReferrals();
         assertEq(vettedGate.getReferralsCount(stranger), 2);
 
         vm.prank(admin);
-        vettedGate.endReferralProgramSeason();
+        vettedGate.endCurrentReferralProgramSeason();
 
-        uint256 season = vettedGate.referralProgramSeason() + 1;
+        uint256 season = vettedGate.referralProgramSeasonNumber() + 1;
         uint256 referralCurveId = 3;
         uint256 referralsThreshold = 3;
 
@@ -739,51 +741,51 @@ contract VettedGateReferralProgramTest is VettedGateTestBase {
             referralsThreshold
         );
         vm.prank(admin);
-        vettedGate.startReferralProgramSeason(
+        vettedGate.startNewReferralProgramSeason(
             referralCurveId,
             referralsThreshold
         );
 
         assertEq(vettedGate.referralCurveId(), referralCurveId);
         assertEq(vettedGate.referralsThreshold(), referralsThreshold);
-        assertEq(vettedGate.referralProgramSeason(), season);
-        assertTrue(vettedGate.referralProgramActive());
+        assertEq(vettedGate.referralProgramSeasonNumber(), season);
+        assertTrue(vettedGate.isReferralProgramSeasonActive());
         assertEq(vettedGate.getReferralsCount(stranger), 0);
     }
 
-    function test_startReferralProgramSeason_revertWhen_noRole() public {
+    function test_startNewReferralProgramSeason_revertWhen_noRole() public {
         vm.prank(admin);
-        vettedGate.endReferralProgramSeason();
+        vettedGate.endCurrentReferralProgramSeason();
 
         uint256 referralCurveId = 3;
         uint256 referralsThreshold = 3;
 
         expectRoleRevert(stranger, vettedGate.START_REFERRAL_SEASON_ROLE());
         vm.prank(stranger);
-        vettedGate.startReferralProgramSeason(
+        vettedGate.startNewReferralProgramSeason(
             referralCurveId,
             referralsThreshold
         );
     }
 
-    function test_startReferralProgramSeason_revertWhen_InvalidReferralsThreshold()
+    function test_startNewReferralProgramSeason_revertWhen_InvalidReferralsThreshold()
         public
     {
         vm.prank(admin);
-        vettedGate.endReferralProgramSeason();
+        vettedGate.endCurrentReferralProgramSeason();
 
         uint256 referralCurveId = 3;
         uint256 referralsThreshold = 0;
 
         vm.expectRevert(IVettedGate.InvalidReferralsThreshold.selector);
         vm.prank(admin);
-        vettedGate.startReferralProgramSeason(
+        vettedGate.startNewReferralProgramSeason(
             referralCurveId,
             referralsThreshold
         );
     }
 
-    function test_startReferralProgramSeason_revertWhen_ReferralProgramIsActive()
+    function test_startNewReferralProgramSeason_revertWhen_ReferralProgramIsActive()
         public
     {
         uint256 referralCurveId = 3;
@@ -791,7 +793,7 @@ contract VettedGateReferralProgramTest is VettedGateTestBase {
 
         vm.expectRevert(IVettedGate.ReferralProgramIsActive.selector);
         vm.prank(admin);
-        vettedGate.startReferralProgramSeason(
+        vettedGate.startNewReferralProgramSeason(
             referralCurveId,
             referralsThreshold
         );
@@ -891,7 +893,7 @@ contract VettedGateReferralProgramTest is VettedGateTestBase {
         _addReferrals();
 
         vm.prank(admin);
-        vettedGate.endReferralProgramSeason();
+        vettedGate.endCurrentReferralProgramSeason();
 
         vm.expectRevert(IVettedGate.ReferralProgramIsNotActive.selector);
         vm.prank(stranger);
@@ -939,11 +941,11 @@ contract VettedGateReferralProgramNoSeasonsTest is VettedGateTestBase {
         vm.stopPrank();
     }
 
-    function test_startReferralProgramSeason() public {
+    function test_startNewReferralProgramSeason() public {
         _addReferrals();
         assertEq(vettedGate.getReferralsCount(stranger), 0);
 
-        uint256 season = vettedGate.referralProgramSeason() + 1;
+        uint256 season = vettedGate.referralProgramSeasonNumber() + 1;
         uint256 referralCurveId = 3;
         uint256 referralsThreshold = 3;
 
@@ -954,31 +956,31 @@ contract VettedGateReferralProgramNoSeasonsTest is VettedGateTestBase {
             referralsThreshold
         );
         vm.prank(admin);
-        vettedGate.startReferralProgramSeason(
+        vettedGate.startNewReferralProgramSeason(
             referralCurveId,
             referralsThreshold
         );
 
         assertEq(vettedGate.referralCurveId(), referralCurveId);
         assertEq(vettedGate.referralsThreshold(), referralsThreshold);
-        assertEq(vettedGate.referralProgramSeason(), season);
-        assertTrue(vettedGate.referralProgramActive());
+        assertEq(vettedGate.referralProgramSeasonNumber(), season);
+        assertTrue(vettedGate.isReferralProgramSeasonActive());
         assertEq(vettedGate.getReferralsCount(stranger), 0);
     }
 
-    function test_startReferralProgramSeason_revertWhen_noRole() public {
+    function test_startNewReferralProgramSeason_revertWhen_noRole() public {
         uint256 referralCurveId = 3;
         uint256 referralsThreshold = 3;
 
         expectRoleRevert(stranger, vettedGate.START_REFERRAL_SEASON_ROLE());
         vm.prank(stranger);
-        vettedGate.startReferralProgramSeason(
+        vettedGate.startNewReferralProgramSeason(
             referralCurveId,
             referralsThreshold
         );
     }
 
-    function test_startReferralProgramSeason_revertWhen_InvalidReferralsThreshold()
+    function test_startNewReferralProgramSeason_revertWhen_InvalidReferralsThreshold()
         public
     {
         uint256 referralCurveId = 3;
@@ -986,15 +988,17 @@ contract VettedGateReferralProgramNoSeasonsTest is VettedGateTestBase {
 
         vm.expectRevert(IVettedGate.InvalidReferralsThreshold.selector);
         vm.prank(admin);
-        vettedGate.startReferralProgramSeason(
+        vettedGate.startNewReferralProgramSeason(
             referralCurveId,
             referralsThreshold
         );
     }
 
-    function test_endReferralProgramSeason_revertWhen_noSeasonYet() public {
+    function test_endCurrentReferralProgramSeason_revertWhen_noSeasonYet()
+        public
+    {
         vm.expectRevert(IVettedGate.ReferralProgramIsNotActive.selector);
         vm.prank(admin);
-        vettedGate.endReferralProgramSeason();
+        vettedGate.endCurrentReferralProgramSeason();
     }
 }

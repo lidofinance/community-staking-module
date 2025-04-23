@@ -58,13 +58,13 @@ interface IVettedGate {
     /// @notice Start referral program season
     /// @param _referralCurveId Curve Id for the referral curve
     /// @param _referralsThreshold Minimum number of referrals to be eligible to claim the curve
-    function startReferralProgramSeason(
+    function startNewReferralProgramSeason(
         uint256 _referralCurveId,
         uint256 _referralsThreshold
     ) external;
 
     /// @notice End referral program season
-    function endReferralProgramSeason() external;
+    function endCurrentReferralProgramSeason() external;
 
     /// @notice Add a new Node Operator using ETH as a bond.
     ///         At least one deposit data and corresponding bond should be provided
