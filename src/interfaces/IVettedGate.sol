@@ -10,6 +10,13 @@ import { ICSModule } from "./ICSModule.sol";
 interface IVettedGate {
     event TreeRootSet(bytes32 indexed treeRoot);
     event Consumed(address indexed member);
+    event ReferrerConsumed(address indexed referrer);
+    event ReferralProgramSeasonStarted(
+        uint256 indexed season,
+        uint256 referralCurveId,
+        uint256 referralsThreshold
+    );
+    event ReferralProgramSeasonEnded(uint256 indexed season);
 
     error InvalidProof();
     error AlreadyConsumed();
@@ -18,12 +25,20 @@ interface IVettedGate {
     error ZeroModuleAddress();
     error ZeroAdminAddress();
     error NotAllowedToClaim();
+    error NotEnoughReferrals();
+    error ReferralProgramIsNotActive();
+    error ReferralProgramIsActive();
+    error InvalidReferralsThreshold();
 
     function PAUSE_ROLE() external view returns (bytes32);
 
     function RESUME_ROLE() external view returns (bytes32);
 
     function SET_TREE_ROOT_ROLE() external view returns (bytes32);
+
+    function START_REFERRAL_SEASON_ROLE() external view returns (bytes32);
+
+    function END_REFERRAL_SEASON_ROLE() external view returns (bytes32);
 
     function MODULE() external view returns (ICSModule);
 
@@ -40,6 +55,17 @@ interface IVettedGate {
     /// @notice Resume the contract
     function resume() external;
 
+    /// @notice Start referral program season
+    /// @param _referralCurveId Curve Id for the referral curve
+    /// @param _referralsThreshold Minimum number of referrals to be eligible to claim the curve
+    function startNewReferralProgramSeason(
+        uint256 _referralCurveId,
+        uint256 _referralsThreshold
+    ) external;
+
+    /// @notice End referral program season
+    function endCurrentReferralProgramSeason() external;
+
     /// @notice Add a new Node Operator using ETH as a bond.
     ///         At least one deposit data and corresponding bond should be provided
     /// @param keysCount Signing keys count
@@ -51,7 +77,7 @@ interface IVettedGate {
     ///                             rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used.
     ///                             extendedManagerPermissions: Flag indicating that `managerAddress` will be able to change `rewardAddress`.
     ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
-    /// @param proof Merkle proof of the sender being eligible for the beneficial curve
+    /// @param proof Merkle proof of the sender being eligible to join via the gate
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
     /// @return nodeOperatorId Id of the created Node Operator
     function addNodeOperatorETH(
@@ -76,7 +102,7 @@ interface IVettedGate {
     ///                             extendedManagerPermissions: Flag indicating that `managerAddress` will be able to change `rewardAddress`.
     ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
     /// @param permit Optional. Permit to use stETH as bond
-    /// @param proof Merkle proof of the sender being eligible for the beneficial curve
+    /// @param proof Merkle proof of the sender being eligible to join via the gate
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
     /// @return nodeOperatorId Id of the created Node Operator
     function addNodeOperatorStETH(
@@ -102,7 +128,7 @@ interface IVettedGate {
     ///                             extendedManagerPermissions: Flag indicating that `managerAddress` will be able to change `rewardAddress`.
     ///                                                         If set to true `resetNodeOperatorManagerAddress` method will be disabled
     /// @param permit Optional. Permit to use wstETH as bond
-    /// @param proof Merkle proof of the sender being eligible for the beneficial curve
+    /// @param proof Merkle proof of the sender being eligible to join via the gate
     /// @param referrer Optional. Referrer address. Should be passed when Node Operator is created using partners integration
     /// @return nodeOperatorId Id of the created Node Operator
     function addNodeOperatorWstETH(
@@ -115,12 +141,20 @@ interface IVettedGate {
         address referrer
     ) external returns (uint256 nodeOperatorId);
 
-    /// @notice Consume the bond curve for the eligible Node Operator
+    /// @notice Claim the bond curve for the eligible Node Operator
     /// @param nodeOperatorId Id of the Node Operator
-    /// @param proof Merkle proof of the sender being eligible for the beneficial curve
+    /// @param proof Merkle proof of the sender being eligible to join via the gate
     /// @dev Should be called by the reward address of the Node Operator
     ///      In case of the extended manager permissions, should be called by the manager address
     function claimBondCurve(
+        uint256 nodeOperatorId,
+        bytes32[] calldata proof
+    ) external;
+
+    /// @notice Claim the referral program bond curve for the eligible Node Operator
+    /// @param nodeOperatorId Id of the Node Operator
+    /// @param proof Merkle proof of the sender being eligible to join via the gate
+    function claimReferrerBondCurve(
         uint256 nodeOperatorId,
         bytes32[] calldata proof
     ) external;
@@ -139,6 +173,11 @@ interface IVettedGate {
     /// @return Consumed flag
     function isConsumed(address member) external view returns (bool);
 
+    /// @notice Check if the address has already consumed referral program bond curve
+    /// @param referrer Address to check
+    /// @return Consumed flag
+    function isReferrerConsumed(address referrer) external view returns (bool);
+
     /// @notice Get a hash of a leaf in the Merkle tree
     /// @param member eligible member address
     /// @return Hash of the leaf
@@ -148,4 +187,9 @@ interface IVettedGate {
     /// @notice Set the root of the eligible members Merkle Tree
     /// @param _treeRoot New root of the Merkle Tree
     function setTreeRoot(bytes32 _treeRoot) external;
+
+    /// @notice Get the number of referrals for the given referrer
+    function getReferralsCount(
+        address referrer
+    ) external view returns (uint256);
 }
