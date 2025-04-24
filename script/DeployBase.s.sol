@@ -429,8 +429,6 @@ abstract contract DeployBase is Script {
                 address(vettedGate)
             );
 
-            accounting.grantRole(accounting.PENALIZE_ROLE(), address(csm));
-
             csm.grantRole(
                 csm.CREATE_NODE_OPERATOR_ROLE(),
                 address(permissionlessGate)

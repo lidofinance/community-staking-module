@@ -173,7 +173,6 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
             accounting.PAUSE_ROLE(),
             address(deploymentConfig.gateSeal)
         );
-        accounting.grantRole(accounting.PENALIZE_ROLE(), address(csm));
         oracle.revokeRole(
             oracle.PAUSE_ROLE(),
             address(deploymentConfig.gateSeal)

@@ -44,8 +44,6 @@ interface ICSAccounting is
 
     function SET_BOND_CURVE_ROLE() external view returns (bytes32);
 
-    function PENALIZE_ROLE() external view returns (bytes32);
-
     function RECOVERER_ROLE() external view returns (bytes32);
 
     function MODULE() external view returns (ICSModule);

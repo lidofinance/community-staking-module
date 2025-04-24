@@ -109,10 +109,6 @@ contract VoteTest is V2UpgradeTestBase {
             accounting.hasRole(accounting.PAUSE_ROLE(), address(gateSeal))
         );
 
-        assertTrue(
-            accounting.hasRole(accounting.PENALIZE_ROLE(), address(csm))
-        );
-
         assertEq(accounting.getInitializedVersion(), 2);
     }
 

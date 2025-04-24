@@ -99,7 +99,7 @@ contract CSExitPenalties is ICSExitPenalties, Initializable {
         emit ValidatorExitDelayProcessed(
             nodeOperatorId,
             publicKey,
-            delayPenalty.toUint248()
+            delayPenalty
         );
     }
 
@@ -158,11 +158,7 @@ contract CSExitPenalties is ICSExitPenalties, Initializable {
                 penalty.toUint248(),
                 true
             );
-            emit StrikesPenaltyProcessed(
-                nodeOperatorId,
-                publicKey,
-                penalty.toUint248()
-            );
+            emit StrikesPenaltyProcessed(nodeOperatorId, publicKey, penalty);
         }
     }
 
