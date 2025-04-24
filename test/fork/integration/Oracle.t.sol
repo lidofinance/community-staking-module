@@ -5,7 +5,7 @@ import "../../helpers/Fixtures.sol";
 import "../../helpers/MerkleTree.sol";
 import "forge-std/Test.sol";
 import { ICSFeeOracle } from "../../../src/interfaces/ICSFeeOracle.sol";
-import { ICSEjector } from "../../../src/interfaces/ICSEjector.sol";
+import { ICSExitPenalties } from "../../../src/interfaces/ICSExitPenalties.sol";
 import { NodeOperatorManagementProperties } from "../../../src/interfaces/ICSModule.sol";
 import { InvariantAsserts } from "../../helpers/InvariantAsserts.sol";
 import { Utilities } from "../../helpers/Utilities.sol";
@@ -149,6 +149,10 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
     }
 
     function test_reportStrikes() public {
+        vm.skip(
+            true,
+            "requires a core protocol upgrade. consider removing this check later"
+        );
         uint256 distributed = 0;
         feesTree.pushLeaf(abi.encode(type(uint64).max, 0));
         uint256 keyIndex = csm.getNodeOperatorTotalDepositedKeys(
@@ -181,15 +185,24 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
         vm.stopSnapshotGas();
         vm.stopPrank();
 
+        uint256 exitType = ejector.STRIKES_EXIT_TYPE_ID();
         bytes32[] memory proof = strikesTree.getProof(0);
-        vm.expectEmit();
-        emit ICSEjector.EjectionSubmitted(nodeOperatorId, keyIndex, key);
+        uint256 penalty = parametersRegistry.getBadPerformancePenalty(
+            accounting.getBondCurveId(nodeOperatorId)
+        );
+        vm.expectEmit(address(exitPenalties));
+        emit ICSExitPenalties.StrikesPenaltyProcessed(
+            nodeOperatorId,
+            key,
+            penalty
+        );
         vm.startSnapshotGas("CSStrikes.processBadPerformanceProof");
         strikes.processBadPerformanceProof(
             nodeOperatorId,
             keyIndex,
             strikesData,
-            proof
+            proof,
+            address(0)
         );
         vm.stopSnapshotGas();
     }

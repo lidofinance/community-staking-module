@@ -13,6 +13,7 @@ import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
 import { IStETH } from "./interfaces/IStETH.sol";
 import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
+import { ICSExitPenalties } from "./interfaces/ICSExitPenalties.sol";
 import { ICSModule, NodeOperator, NodeOperatorManagementProperties, ValidatorWithdrawalInfo } from "./interfaces/ICSModule.sol";
 
 import { QueueLib, Batch } from "./lib/QueueLib.sol";
@@ -22,6 +23,7 @@ import { TransientUintUintMap, TransientUintUintMapLib } from "./lib/TransientUi
 
 import { SigningKeys } from "./lib/SigningKeys.sol";
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
+import { ExitPenaltyInfo } from "./interfaces/ICSExitPenalties.sol";
 
 contract CSModule is
     ICSModule,
@@ -74,9 +76,7 @@ contract CSModule is
     ICSAccounting public accounting;
 
     /// @custom:oz-renamed-from earlyAdoption
-    /// @custom:oz-retyped-from address
-    mapping(uint256 noKeyIndexPacked => uint256)
-        private _isValidatorExitDelayed;
+    ICSExitPenalties public exitPenalties;
 
     uint256 private _nonce;
     mapping(uint256 => NodeOperator) private _nodeOperators;
@@ -116,10 +116,14 @@ contract CSModule is
     /// @notice initialize the module from scratch
     function initialize(
         address _accounting,
+        address _exitPenalties,
         address admin
     ) external reinitializer(2) {
         if (_accounting == address(0)) {
             revert ZeroAccountingAddress();
+        }
+        if (_exitPenalties == address(0)) {
+            revert ZeroExitPenaltiesAddress();
         }
 
         if (admin == address(0)) {
@@ -129,6 +133,7 @@ contract CSModule is
         __AccessControlEnumerable_init();
 
         accounting = ICSAccounting(_accounting);
+        exitPenalties = ICSExitPenalties(_exitPenalties);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(STAKING_ROUTER_ROLE, address(LIDO_LOCATOR.stakingRouter()));
@@ -138,11 +143,18 @@ contract CSModule is
     }
 
     /// @dev should be called after update on the proxy
-    function finalizeUpgradeV2() external reinitializer(2) {
+    function finalizeUpgradeV2(
+        address _exitPenalties
+    ) external reinitializer(2) {
         assembly ("memory-safe") {
             sstore(_queueByPriority.slot, 0x00)
-            sstore(_isValidatorExitDelayed.slot, 0x00)
+            sstore(exitPenalties.slot, 0x00)
         }
+
+        if (_exitPenalties == address(0)) {
+            revert ZeroExitPenaltiesAddress();
+        }
+        exitPenalties = ICSExitPenalties(_exitPenalties);
     }
 
     /// @inheritdoc ICSModule
@@ -740,13 +752,47 @@ contract CSModule is
                 pubkey
             );
 
+            // it is safe to use unchecked for penalty sum, due to it's limited to uint248 in the structure
+            uint256 penaltySum;
+            bool chargeWithdrawalRequestFee;
+
+            ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
+                .getDelayedExitPenaltyInfo(
+                    withdrawalInfo.nodeOperatorId,
+                    pubkey
+                );
+            if (exitPenaltyInfo.delayPenalty.isValue) {
+                unchecked {
+                    penaltySum += exitPenaltyInfo.delayPenalty.value;
+                }
+                chargeWithdrawalRequestFee = true;
+            }
+            if (exitPenaltyInfo.strikesPenalty.isValue) {
+                unchecked {
+                    penaltySum += exitPenaltyInfo.strikesPenalty.value;
+                }
+                chargeWithdrawalRequestFee = true;
+            }
+            // the withdrawal request fee is taken only if the penalty is applied
+            // if no penalty, the fee has been paid by the node operator on the withdrawal trigger,
+            // or it is the dao decision to withdraw the validator before that the withdrawal request becomes delayed
+            if (
+                chargeWithdrawalRequestFee &&
+                exitPenaltyInfo.withdrawalRequestFee.value != 0
+            ) {
+                accounting.chargeFee(
+                    withdrawalInfo.nodeOperatorId,
+                    exitPenaltyInfo.withdrawalRequestFee.value
+                );
+            }
+
             if (DEPOSIT_SIZE > withdrawalInfo.amount) {
                 unchecked {
-                    accounting.penalize(
-                        withdrawalInfo.nodeOperatorId,
-                        DEPOSIT_SIZE - withdrawalInfo.amount
-                    );
+                    penaltySum += DEPOSIT_SIZE - withdrawalInfo.amount;
                 }
+            }
+            if (penaltySum > 0) {
+                accounting.penalize(withdrawalInfo.nodeOperatorId, penaltySum);
             }
 
             // Nonce should be updated if depositableValidators change
@@ -773,19 +819,34 @@ contract CSModule is
 
     /// @inheritdoc IStakingModule
     function reportValidatorExitDelay(
-        uint256 /* _nodeOperatorId */,
-        uint256 /* _proofSlotTimestamp */,
-        bytes calldata /* _publicKey */,
-        uint256 /* _eligibleToExitInSec */
-    ) external {}
+        uint256 nodeOperatorId,
+        uint256 /* proofSlotTimestamp */,
+        bytes calldata publicKey,
+        uint256 eligibleToExitInSec
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        exitPenalties.processExitDelayReport(
+            nodeOperatorId,
+            publicKey,
+            eligibleToExitInSec
+        );
+    }
 
     /// @inheritdoc IStakingModule
     function onValidatorExitTriggered(
-        uint256 /* _nodeOperatorId */,
-        bytes calldata /* _publicKey */,
-        uint256 /* _withdrawalRequestPaidFee */,
-        uint256 /* _exitType */
-    ) external {}
+        uint256 nodeOperatorId,
+        bytes calldata publicKey,
+        uint256 withdrawalRequestPaidFee,
+        uint256 exitType
+    ) external onlyRole(STAKING_ROUTER_ROLE) {
+        _onlyExistingNodeOperator(nodeOperatorId);
+        exitPenalties.processTriggeredExit(
+            nodeOperatorId,
+            publicKey,
+            withdrawalRequestPaidFee,
+            exitType
+        );
+    }
 
     /// @inheritdoc IStakingModule
     /// @notice Get the next `depositsCount` of depositable keys with signatures from the queue
@@ -1202,18 +1263,25 @@ contract CSModule is
 
     /// @inheritdoc IStakingModule
     function isValidatorExitDelayPenaltyApplicable(
-        uint256 /* _nodeOperatorId */,
-        uint256 /* _proofSlotTimestamp */,
-        bytes calldata /* _publicKey */,
-        uint256 /* _eligibleToExitInSec */
+        uint256 nodeOperatorId,
+        uint256 /* proofSlotTimestamp */,
+        bytes calldata publicKey,
+        uint256 eligibleToExitInSec
     ) external view returns (bool) {
-        return false;
+        _onlyExistingNodeOperator(nodeOperatorId);
+        return
+            exitPenalties.isValidatorExitDelayPenaltyApplicable(
+                nodeOperatorId,
+                publicKey,
+                eligibleToExitInSec
+            );
     }
 
     /// @inheritdoc IStakingModule
     function exitDeadlineThreshold(
         uint256 nodeOperatorId
     ) external view returns (uint256) {
+        _onlyExistingNodeOperator(nodeOperatorId);
         return
             PARAMETERS_REGISTRY.getAllowedExitDelay(
                 accounting.getBondCurveId(nodeOperatorId)

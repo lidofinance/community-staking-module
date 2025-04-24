@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0
 
 import { ICSModule } from "./ICSModule.sol";
+import { ICSAccounting } from "./ICSAccounting.sol";
+import { ICSParametersRegistry } from "./ICSParametersRegistry.sol";
+import { ICSExitPenalties } from "./ICSExitPenalties.sol";
 import { ICSEjector } from "./ICSEjector.sol";
 
 pragma solidity 0.8.24;
@@ -11,37 +14,57 @@ interface ICSStrikes {
     event StrikesDataUpdated(bytes32 treeRoot, string treeCid);
     /// @dev Emitted when strikes is updated from non-empty to empty
     event StrikesDataWiped();
+    event EjectorSet(address ejector);
 
     error ZeroEjectorAddress();
+    error ZeroModuleAddress();
     error ZeroOracleAddress();
+    error ZeroExitPenaltiesAddress();
+    error ZeroAdminAddress();
     error ZeroEjectionFeeAmount();
     error ZeroBadPerformancePenaltyAmount();
     error NotOracle();
 
     error InvalidReportData();
-
     error InvalidProof();
+    error SigningKeysInvalidOffset();
+    error NotEnoughStrikesToEject();
 
     function ORACLE() external view returns (address);
 
     function MODULE() external view returns (ICSModule);
 
-    function EJECTOR() external view returns (ICSEjector);
+    function ACCOUNTING() external view returns (ICSAccounting);
+
+    function EXIT_PENALTIES() external view returns (ICSExitPenalties);
+
+    function PARAMETERS_REGISTRY()
+        external
+        view
+        returns (ICSParametersRegistry);
+
+    function ejector() external view returns (ICSEjector);
 
     function treeRoot() external view returns (bytes32);
 
     function treeCid() external view returns (string calldata);
+
+    /// @notice Set the address of the Ejector contract
+    /// @param _ejector Address of the Ejector contract
+    function setEjector(address _ejector) external;
 
     /// @notice Report Node Operator's key as bad performing
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keyIndex Index of the withdrawn key in the Node Operator's keys storage
     /// @param strikesData Strikes of the Node Operator's validator key. TODO: value is to be defined (timestamps or refSlots ?)
     /// @param proof Proof of the strikes
+    /// @param refundRecipient Address to send the refund to
     function processBadPerformanceProof(
         uint256 nodeOperatorId,
         uint256 keyIndex,
         uint256[] calldata strikesData,
-        bytes32[] calldata proof
+        bytes32[] calldata proof,
+        address refundRecipient
     ) external;
 
     /// @notice Receive the data of the Merkle tree from the Oracle contract and process it

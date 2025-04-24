@@ -42,7 +42,9 @@ contract CSParametersRegistryBaseTest is Test, Utilities, Fixtures {
             attestationsWeight: 54,
             blocksWeight: 8,
             syncWeight: 2,
-            defaultAllowedExitDelay: 1 days
+            defaultAllowedExitDelay: 1 days,
+            defaultExitDelayPenalty: 0.05 ether,
+            defaultMaxWithdrawalRequestFee: 0.1 ether
         });
     }
 }
@@ -1754,5 +1756,189 @@ contract CSParametersRegistryAllowedExitDelayTest is
         uint256 delayOut = parametersRegistry.getAllowedExitDelay(curveId);
 
         assertEq(delayOut, defaultInitData.defaultAllowedExitDelay);
+    }
+}
+
+contract CSParametersRegistryExitDelayPenaltyTest is
+    CSParametersRegistryBaseTestInitialized,
+    ParametersTest
+{
+    function test_setDefault() public override {
+        uint256 penalty = 1 ether;
+
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.DefaultExitDelayPenaltySet(penalty);
+        vm.prank(admin);
+        parametersRegistry.setDefaultExitDelayPenalty(penalty);
+
+        assertEq(parametersRegistry.defaultExitDelayPenalty(), penalty);
+    }
+
+    function test_setDefault_RevertWhen_notAdmin() public override {
+        uint256 penalty = 1 ether;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.setDefaultExitDelayPenalty(penalty);
+    }
+
+    function test_set() public override {
+        uint256 curveId = 1;
+        uint256 penalty = 1 ether;
+
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.ExitDelayPenaltySet(curveId, penalty);
+        vm.prank(admin);
+        parametersRegistry.setExitDelayPenalty(curveId, penalty);
+    }
+
+    function test_set_RevertWhen_notAdmin() public override {
+        uint256 curveId = 1;
+        uint256 penalty = 1 ether;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.setExitDelayPenalty(curveId, penalty);
+    }
+
+    function test_unset() public override {
+        uint256 curveId = 1;
+        uint256 penalty = 1 ether;
+
+        vm.prank(admin);
+        parametersRegistry.setExitDelayPenalty(curveId, penalty);
+
+        uint256 penaltyOut = parametersRegistry.getExitDelayPenalty(curveId);
+
+        assertEq(penaltyOut, penalty);
+
+        vm.prank(admin);
+        parametersRegistry.unsetExitDelayPenalty(curveId);
+
+        penaltyOut = parametersRegistry.getExitDelayPenalty(curveId);
+
+        assertEq(penaltyOut, defaultInitData.defaultExitDelayPenalty);
+    }
+
+    function test_unset_RevertWhen_notAdmin() public override {
+        uint256 curveId = 1;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.unsetExitDelayPenalty(curveId);
+    }
+
+    function test_get_usualData() public override {
+        uint256 curveId = 1;
+        uint256 penalty = 1 ether;
+
+        vm.prank(admin);
+        parametersRegistry.setExitDelayPenalty(curveId, penalty);
+
+        uint256 penaltyOut = parametersRegistry.getExitDelayPenalty(curveId);
+
+        assertEq(penaltyOut, penalty);
+    }
+
+    function test_get_defaultData() public view override {
+        uint256 curveId = 10;
+        uint256 penaltyOut = parametersRegistry.getExitDelayPenalty(curveId);
+
+        assertEq(penaltyOut, defaultInitData.defaultExitDelayPenalty);
+    }
+}
+
+contract CSParametersRegistryMaxWithdrawalRequestFeeTest is
+    CSParametersRegistryBaseTestInitialized,
+    ParametersTest
+{
+    function test_setDefault() public override {
+        uint256 fee = 1 ether;
+
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.DefaultMaxWithdrawalRequestFeeSet(fee);
+        vm.prank(admin);
+        parametersRegistry.setDefaultMaxWithdrawalRequestFee(fee);
+
+        assertEq(parametersRegistry.defaultMaxWithdrawalRequestFee(), fee);
+    }
+
+    function test_setDefault_RevertWhen_notAdmin() public override {
+        uint256 fee = 1 ether;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.setDefaultMaxWithdrawalRequestFee(fee);
+    }
+
+    function test_set() public override {
+        uint256 curveId = 1;
+        uint256 fee = 1 ether;
+
+        vm.expectEmit(address(parametersRegistry));
+        emit ICSParametersRegistry.MaxWithdrawalRequestFeeSet(curveId, fee);
+        vm.prank(admin);
+        parametersRegistry.setMaxWithdrawalRequestFee(curveId, fee);
+    }
+
+    function test_set_RevertWhen_notAdmin() public override {
+        uint256 curveId = 1;
+        uint256 fee = 1 ether;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.setMaxWithdrawalRequestFee(curveId, fee);
+    }
+
+    function test_unset() public override {
+        uint256 curveId = 1;
+        uint256 fee = 1 ether;
+
+        vm.prank(admin);
+        parametersRegistry.setMaxWithdrawalRequestFee(curveId, fee);
+
+        uint256 feeOut = parametersRegistry.getMaxWithdrawalRequestFee(curveId);
+
+        assertEq(feeOut, fee);
+
+        vm.prank(admin);
+        parametersRegistry.unsetMaxWithdrawalRequestFee(curveId);
+
+        feeOut = parametersRegistry.getMaxWithdrawalRequestFee(curveId);
+
+        assertEq(feeOut, defaultInitData.defaultMaxWithdrawalRequestFee);
+    }
+
+    function test_unset_RevertWhen_notAdmin() public override {
+        uint256 curveId = 1;
+
+        bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
+        expectRoleRevert(stranger, role);
+        vm.prank(stranger);
+        parametersRegistry.unsetMaxWithdrawalRequestFee(curveId);
+    }
+
+    function test_get_usualData() public override {
+        uint256 curveId = 1;
+        uint256 fee = 1 ether;
+
+        vm.prank(admin);
+        parametersRegistry.setMaxWithdrawalRequestFee(curveId, fee);
+
+        uint256 feeOut = parametersRegistry.getMaxWithdrawalRequestFee(curveId);
+
+        assertEq(feeOut, fee);
+    }
+
+    function test_get_defaultData() public view override {
+        uint256 curveId = 10;
+        uint256 feeOut = parametersRegistry.getMaxWithdrawalRequestFee(curveId);
+
+        assertEq(feeOut, defaultInitData.defaultMaxWithdrawalRequestFee);
     }
 }

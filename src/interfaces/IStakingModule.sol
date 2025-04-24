@@ -173,15 +173,15 @@ interface IStakingModule {
     /// @dev This function is called to report the current exit-related status of validator belonging to a specific node operator.
     ///      It accepts a validator public key associated with the duration (in seconds) they was eligible to exit but have not.
     ///      This data could be used to trigger penalties for the node operator if validator has been non-exiting for too long.
-    /// @param _nodeOperatorId The ID of the node operator whose validator status being delivered.
-    /// @param _proofSlotTimestamp The timestamp (slot time) when the validator was last known to be in an active ongoing state.
-    /// @param _publicKey Public key of the validator being reported.
-    /// @param _eligibleToExitInSec Duration (in seconds) indicating how long a validator has been eligible to exit but hasn't.
+    /// @param nodeOperatorId The ID of the node operator whose validator status being delivered.
+    /// @param proofSlotTimestamp The timestamp (slot time) when the validator was last known to be in an active ongoing state.
+    /// @param publicKey Public key of the validator being reported.
+    /// @param eligibleToExitInSec Duration (in seconds) indicating how long a validator has been eligible to exit but hasn't.
     function reportValidatorExitDelay(
-        uint256 _nodeOperatorId,
-        uint256 _proofSlotTimestamp,
-        bytes calldata _publicKey,
-        uint256 _eligibleToExitInSec
+        uint256 nodeOperatorId,
+        uint256 proofSlotTimestamp,
+        bytes calldata publicKey,
+        uint256 eligibleToExitInSec
     ) external;
 
     /// @notice Handles the triggerable exit event validator belonging to a specific node operator.

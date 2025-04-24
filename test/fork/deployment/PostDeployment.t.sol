@@ -42,10 +42,24 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
     function test_constructor() public view {
         assertEq(csm.getType(), deployParams.moduleType);
         assertEq(address(csm.LIDO_LOCATOR()), deployParams.lidoLocatorAddress);
+        assertEq(
+            address(csm.PARAMETERS_REGISTRY()),
+            address(parametersRegistry)
+        );
+        assertEq(address(csm.STETH()), address(lido));
+        assertEq(
+            csm.QUEUE_LOWEST_PRIORITY(),
+            parametersRegistry.QUEUE_LOWEST_PRIORITY()
+        );
+        assertEq(
+            csm.QUEUE_LEGACY_PRIORITY(),
+            parametersRegistry.QUEUE_LEGACY_PRIORITY()
+        );
     }
 
     function test_initializer() public view {
         assertEq(address(csm.accounting()), address(accounting));
+        assertEq(address(csm.exitPenalties()), address(exitPenalties));
         assertTrue(
             csm.hasRole(csm.STAKING_ROUTER_ROLE(), locator.stakingRouter())
         );
@@ -101,6 +115,7 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         csmImpl.initialize({
             _accounting: address(accounting),
+            _exitPenalties: address(exitPenalties),
             admin: deployParams.aragonAgent
         });
     }
@@ -193,7 +208,10 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
                 attestationsWeight: deployParams.attestationsWeight,
                 blocksWeight: deployParams.blocksWeight,
                 syncWeight: deployParams.syncWeight,
-                defaultAllowedExitDelay: deployParams.defaultAllowedExitDelay
+                defaultAllowedExitDelay: deployParams.defaultAllowedExitDelay,
+                defaultExitDelayPenalty: deployParams.defaultExitDelayPenalty,
+                defaultMaxWithdrawalRequestFee: deployParams
+                    .defaultMaxWithdrawalRequestFee
             })
         });
     }
@@ -375,9 +393,29 @@ contract CSFeeDistributorDeploymentTest is DeploymentBaseTest {
 
 contract CSStrikesDeploymentTest is DeploymentBaseTest {
     function test_constructor() public view {
-        assertEq(address(strikes.ORACLE()), address(oracle));
         assertEq(address(strikes.MODULE()), address(csm));
-        assertEq(address(strikes.EJECTOR()), address(ejector));
+        assertEq(address(strikes.ACCOUNTING()), address(accounting));
+        assertEq(address(strikes.ORACLE()), address(oracle));
+        assertEq(address(strikes.EXIT_PENALTIES()), address(exitPenalties));
+    }
+
+    function test_initializer() public view {
+        assertEq(address(strikes.ejector()), address(ejector));
+    }
+
+    function test_roles() public view {
+        assertTrue(
+            strikes.hasRole(
+                strikes.DEFAULT_ADMIN_ROLE(),
+                deployParams.aragonAgent
+            )
+        );
+    }
+
+    function test_proxy() public view {
+        OssifiableProxy proxy = OssifiableProxy(payable(address(strikes)));
+        assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
+        assertFalse(proxy.proxy__getIsOssified());
     }
 }
 
@@ -589,28 +627,42 @@ contract CSVerifierDeploymentTest is DeploymentBaseTest {
 contract CSEjectorDeploymentTest is DeploymentBaseTest {
     function test_constructor() public view {
         assertEq(address(ejector.MODULE()), address(csm));
-        assertEq(address(ejector.ACCOUNTING()), address(accounting));
+        assertEq(address(ejector.VEB()), locator.validatorsExitBusOracle());
+        assertEq(ejector.STAKING_MODULE_ID(), deployParams.stakingModuleId);
+    }
+
+    function test_initializer() public view {
+        assertEq(address(ejector.strikes()), address(strikes));
     }
 
     function test_roles() public view {
-        assertTrue(ejector.hasRole(ejector.PAUSE_ROLE(), address(gateSeal)));
-        assertEq(ejector.getRoleMemberCount(verifier.PAUSE_ROLE()), 1);
-        assertEq(ejector.getRoleMemberCount(verifier.RESUME_ROLE()), 0);
         assertTrue(
             ejector.hasRole(
-                ejector.BAD_PERFORMER_EJECTOR_ROLE(),
-                address(strikes)
+                ejector.DEFAULT_ADMIN_ROLE(),
+                deployParams.aragonAgent
             )
         );
         assertEq(
-            ejector.getRoleMemberCount(ejector.BAD_PERFORMER_EJECTOR_ROLE()),
-            1
+            ejector.getRoleMemberCount(ejector.DEFAULT_ADMIN_ROLE()),
+            adminsCount
         );
+        assertTrue(ejector.hasRole(ejector.PAUSE_ROLE(), address(gateSeal)));
+        assertEq(ejector.getRoleMemberCount(verifier.PAUSE_ROLE()), 1);
+        assertEq(ejector.getRoleMemberCount(verifier.RESUME_ROLE()), 0);
+    }
+}
+
+contract CSExitPenaltiesDeploymentTest is DeploymentBaseTest {
+    function test_constructor() public view {
+        assertEq(address(exitPenalties.MODULE()), address(csm));
+        assertEq(
+            address(exitPenalties.PARAMETERS_REGISTRY()),
+            address(parametersRegistry)
+        );
+        assertEq(address(exitPenalties.ACCOUNTING()), address(accounting));
     }
 
-    function test_proxy() public view {
-        OssifiableProxy proxy = OssifiableProxy(payable(address(ejector)));
-        assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
-        assertFalse(proxy.proxy__getIsOssified());
+    function test_initializer() public view {
+        assertEq(address(exitPenalties.strikes()), address(strikes));
     }
 }
