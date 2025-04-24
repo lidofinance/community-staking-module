@@ -76,7 +76,6 @@ contract CSModule is
     ICSAccounting public accounting;
 
     /// @custom:oz-renamed-from earlyAdoption
-    /// @custom:oz-retyped-from address
     ICSExitPenalties public exitPenalties;
 
     uint256 private _nonce;
@@ -779,11 +778,11 @@ contract CSModule is
             // or it is the dao decision to withdraw the validator before that the withdrawal request becomes delayed
             if (
                 chargeWithdrawalRequestFee &&
-                exitPenaltyInfo.withdrawalRequestFee != 0
+                exitPenaltyInfo.withdrawalRequestFee.value != 0
             ) {
                 accounting.chargeFee(
                     withdrawalInfo.nodeOperatorId,
-                    exitPenaltyInfo.withdrawalRequestFee
+                    exitPenaltyInfo.withdrawalRequestFee.value
                 );
             }
 

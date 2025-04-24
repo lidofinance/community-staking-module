@@ -189,7 +189,30 @@ contract CSExitPenaltiesTestProcessTriggeredExit is CSExitPenaltiesTestBase {
 
         ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
             .getDelayedExitPenaltyInfo(noId, publicKey);
-        assertEq(exitPenaltyInfo.withdrawalRequestFee, paidFee);
+        assertEq(exitPenaltyInfo.withdrawalRequestFee.value, paidFee);
+    }
+
+    function test_processTriggeredExit_zeroMaxFeeValue() public {
+        bytes memory publicKey = randomBytes(48);
+        uint256 paidFee = 0.1 ether;
+        uint256 exitType = exitPenalties.VOLUNTARY_EXIT_TYPE_ID() + 1;
+
+        parametersRegistry.setMaxWithdrawalRequestFee(0, 0);
+
+        vm.expectEmit(address(exitPenalties));
+        emit ICSExitPenalties.TriggeredExitFeeRecorded(
+            noId,
+            exitType,
+            publicKey,
+            0
+        );
+        vm.prank(address(csm));
+        exitPenalties.processTriggeredExit(noId, publicKey, paidFee, exitType);
+
+        ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
+            .getDelayedExitPenaltyInfo(noId, publicKey);
+        assertEq(exitPenaltyInfo.withdrawalRequestFee.isValue, true);
+        assertEq(exitPenaltyInfo.withdrawalRequestFee.value, 0);
     }
 
     function test_processTriggeredExit_voluntaryExit() public {
@@ -207,7 +230,7 @@ contract CSExitPenaltiesTestProcessTriggeredExit is CSExitPenaltiesTestBase {
 
         ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
             .getDelayedExitPenaltyInfo(noId, publicKey);
-        assertEq(exitPenaltyInfo.withdrawalRequestFee, 0);
+        assertEq(exitPenaltyInfo.withdrawalRequestFee.value, 0);
     }
 
     function test_processTriggeredExit_doubleReporting() public {
@@ -240,7 +263,7 @@ contract CSExitPenaltiesTestProcessTriggeredExit is CSExitPenaltiesTestBase {
         ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
             .getDelayedExitPenaltyInfo(noId, publicKey);
         assertEq(
-            exitPenaltyInfo.withdrawalRequestFee,
+            exitPenaltyInfo.withdrawalRequestFee.value,
             initialPaidFee,
             "paid fee should not be updated"
         );
@@ -258,7 +281,7 @@ contract CSExitPenaltiesTestProcessTriggeredExit is CSExitPenaltiesTestBase {
         ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
             .getDelayedExitPenaltyInfo(noId, publicKey);
         assertEq(
-            exitPenaltyInfo.withdrawalRequestFee,
+            exitPenaltyInfo.withdrawalRequestFee.value,
             maxFee,
             "paid fee should be capped to max fee"
         );

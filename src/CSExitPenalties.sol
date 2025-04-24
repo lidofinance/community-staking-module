@@ -12,11 +12,10 @@ import { ExitPenaltyInfo } from "./interfaces/ICSExitPenalties.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { ExitTypes } from "./abstract/ExitTypes.sol";
 
-contract CSExitPenalties is ICSExitPenalties, Initializable {
+contract CSExitPenalties is ICSExitPenalties, ExitTypes, Initializable {
     using SafeCast for uint256;
-
-    uint8 public constant VOLUNTARY_EXIT_TYPE_ID = 0;
 
     ICSModule public immutable MODULE;
     ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
@@ -83,16 +82,14 @@ contract CSExitPenalties is ICSExitPenalties, Initializable {
             revert ValidatorExitDelayNotApplicable();
         }
 
-        bytes32 noPublicKeyPacked = _nodeOperatorPublicKeyPacked(
-            nodeOperatorId,
-            publicKey
-        );
-        if (_exitPenaltyInfo[noPublicKeyPacked].delayPenalty.isValue) {
+        bytes32 keyPointer = _keyPointer(nodeOperatorId, publicKey);
+        ExitPenaltyInfo storage exitPenaltyInfo = _exitPenaltyInfo[keyPointer];
+        if (exitPenaltyInfo.delayPenalty.isValue) {
             revert ValidatorExitDelayAlreadyReported();
         }
 
         uint256 delayPenalty = PARAMETERS_REGISTRY.getExitDelayPenalty(curveId);
-        _exitPenaltyInfo[noPublicKeyPacked].delayPenalty = MarkedUint248(
+        exitPenaltyInfo.delayPenalty = MarkedUint248(
             delayPenalty.toUint248(),
             true
         );
@@ -110,34 +107,29 @@ contract CSExitPenalties is ICSExitPenalties, Initializable {
         uint256 withdrawalRequestPaidFee,
         uint256 exitType
     ) external onlyModule {
-        /// assuming exit type == 0 is an exit paid by the node operator
-        if (exitType != VOLUNTARY_EXIT_TYPE_ID) {
-            bytes32 noPublicKeyPacked = _nodeOperatorPublicKeyPacked(
-                nodeOperatorId,
-                publicKey
-            );
-            ExitPenaltyInfo storage exitPenaltyInfo = _exitPenaltyInfo[
-                noPublicKeyPacked
-            ];
-            // don't update the fee if it was already set to prevent hypothetical manipulations
-            // with double reporting to get lower/higher fee.
-            // it's impossible to set it to zero legitimately
-            if (exitPenaltyInfo.withdrawalRequestFee == 0) {
-                uint256 curveId = ACCOUNTING.getBondCurveId(nodeOperatorId);
-                uint256 maxFee = PARAMETERS_REGISTRY.getMaxWithdrawalRequestFee(
-                    curveId
-                );
-                uint256 fee = Math.min(withdrawalRequestPaidFee, maxFee);
-
-                exitPenaltyInfo.withdrawalRequestFee = fee;
-                emit TriggeredExitFeeRecorded(
-                    nodeOperatorId,
-                    exitType,
-                    publicKey,
-                    fee
-                );
-            }
+        if (exitType == VOLUNTARY_EXIT_TYPE_ID) {
+            return;
         }
+
+        bytes32 keyPointer = _keyPointer(nodeOperatorId, publicKey);
+        ExitPenaltyInfo storage exitPenaltyInfo = _exitPenaltyInfo[keyPointer];
+        // don't update the fee if it was already set to prevent hypothetical manipulations
+        //    with double reporting to get lower/higher fee.
+        if (exitPenaltyInfo.withdrawalRequestFee.isValue) {
+            return;
+        }
+        uint256 curveId = ACCOUNTING.getBondCurveId(nodeOperatorId);
+        uint256 maxFee = PARAMETERS_REGISTRY.getMaxWithdrawalRequestFee(
+            curveId
+        );
+
+        uint256 fee = Math.min(withdrawalRequestPaidFee, maxFee);
+
+        exitPenaltyInfo.withdrawalRequestFee = MarkedUint248(
+            fee.toUint248(),
+            true
+        );
+        emit TriggeredExitFeeRecorded(nodeOperatorId, exitType, publicKey, fee);
     }
 
     /// @inheritdoc ICSExitPenalties
@@ -145,24 +137,24 @@ contract CSExitPenalties is ICSExitPenalties, Initializable {
         uint256 nodeOperatorId,
         bytes calldata publicKey
     ) external onlyStrikes {
-        bytes32 noPubkeyPacked = _nodeOperatorPublicKeyPacked(
-            nodeOperatorId,
-            publicKey
-        );
-        if (!_exitPenaltyInfo[noPubkeyPacked].strikesPenalty.isValue) {
-            uint256 curveId = ACCOUNTING.getBondCurveId(nodeOperatorId);
-            uint256 penalty = PARAMETERS_REGISTRY.getBadPerformancePenalty(
-                curveId
-            );
-            _exitPenaltyInfo[noPubkeyPacked].strikesPenalty = MarkedUint248(
-                penalty.toUint248(),
-                true
-            );
-            emit StrikesPenaltyProcessed(nodeOperatorId, publicKey, penalty);
+        bytes32 keyPointer = _keyPointer(nodeOperatorId, publicKey);
+        ExitPenaltyInfo storage exitPenaltyInfo = _exitPenaltyInfo[keyPointer];
+        if (_exitPenaltyInfo[keyPointer].strikesPenalty.isValue) {
+            return;
         }
+        uint256 curveId = ACCOUNTING.getBondCurveId(nodeOperatorId);
+        uint256 penalty = PARAMETERS_REGISTRY.getBadPerformancePenalty(curveId);
+        exitPenaltyInfo.strikesPenalty = MarkedUint248(
+            penalty.toUint248(),
+            true
+        );
+        emit StrikesPenaltyProcessed(nodeOperatorId, publicKey, penalty);
     }
 
     /// @inheritdoc ICSExitPenalties
+    /// @dev there is a `onlyModule` modifier to prevent using it from outside
+    ///     as it gives a false-positive information for non-existent node operators.
+    ///     use `isValidatorExitDelayPenaltyApplicable` in the CSModule instead
     function isValidatorExitDelayPenaltyApplicable(
         uint256 nodeOperatorId,
         bytes calldata publicKey,
@@ -176,9 +168,9 @@ contract CSExitPenalties is ICSExitPenalties, Initializable {
             return false;
         }
         return
-            !_exitPenaltyInfo[
-                _nodeOperatorPublicKeyPacked(nodeOperatorId, publicKey)
-            ].delayPenalty.isValue;
+            !_exitPenaltyInfo[_keyPointer(nodeOperatorId, publicKey)]
+                .delayPenalty
+                .isValue;
     }
 
     /// @inheritdoc ICSExitPenalties
@@ -186,14 +178,11 @@ contract CSExitPenalties is ICSExitPenalties, Initializable {
         uint256 nodeOperatorId,
         bytes calldata publicKey
     ) external view returns (ExitPenaltyInfo memory) {
-        bytes32 noPublicKeyPacked = _nodeOperatorPublicKeyPacked(
-            nodeOperatorId,
-            publicKey
-        );
-        return _exitPenaltyInfo[noPublicKeyPacked];
+        bytes32 keyPointer = _keyPointer(nodeOperatorId, publicKey);
+        return _exitPenaltyInfo[keyPointer];
     }
 
-    function _nodeOperatorPublicKeyPacked(
+    function _keyPointer(
         uint256 nodeOperatorId,
         bytes memory publicKey
     ) internal pure returns (bytes32) {

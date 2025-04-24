@@ -5447,7 +5447,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(1 ether, true),
                 strikesPenalty: MarkedUint248(0, false),
-                withdrawalRequestFee: 0
+                withdrawalRequestFee: MarkedUint248(0, false)
             })
         );
 
@@ -5478,7 +5478,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(0, false),
                 strikesPenalty: MarkedUint248(1 ether, true),
-                withdrawalRequestFee: 0
+                withdrawalRequestFee: MarkedUint248(0, false)
             })
         );
 
@@ -5509,7 +5509,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(1 ether, true),
                 strikesPenalty: MarkedUint248(1 ether, true),
-                withdrawalRequestFee: 0
+                withdrawalRequestFee: MarkedUint248(0, false)
             })
         );
 
@@ -5543,7 +5543,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(1 ether, true),
                 strikesPenalty: MarkedUint248(0, false),
-                withdrawalRequestFee: 0.1 ether
+                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
             })
         );
 
@@ -5585,7 +5585,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(0, false),
                 strikesPenalty: MarkedUint248(1 ether, true),
-                withdrawalRequestFee: 0.1 ether
+                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
             })
         );
 
@@ -5627,7 +5627,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(1 ether, true),
                 strikesPenalty: MarkedUint248(1 ether, true),
-                withdrawalRequestFee: 0.1 ether
+                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
             })
         );
 
@@ -5669,7 +5669,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(0, true),
                 strikesPenalty: MarkedUint248(0, true),
-                withdrawalRequestFee: 0.1 ether
+                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
             })
         );
 
@@ -5707,7 +5707,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(0, false),
                 strikesPenalty: MarkedUint248(0, false),
-                withdrawalRequestFee: 0.1 ether
+                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
             })
         );
 
@@ -5745,7 +5745,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
             ExitPenaltyInfo({
                 delayPenalty: MarkedUint248(0, false),
                 strikesPenalty: MarkedUint248(0, false),
-                withdrawalRequestFee: 0.1 ether
+                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
             })
         );
 

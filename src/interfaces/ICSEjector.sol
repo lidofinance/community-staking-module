@@ -4,11 +4,11 @@
 pragma solidity 0.8.24;
 
 import { ICSAccounting } from "./ICSAccounting.sol";
-import { IAssetRecovererLib } from "../lib/AssetRecovererLib.sol";
 import { ICSParametersRegistry } from "./ICSParametersRegistry.sol";
 import { ICSModule } from "./ICSModule.sol";
+import { IExitTypes } from "./IExitTypes.sol";
 
-interface ICSEjector is IAssetRecovererLib {
+interface ICSEjector is IExitTypes {
     error SigningKeysInvalidOffset();
     error AlreadyWithdrawn();
     error ZeroAdminAddress();

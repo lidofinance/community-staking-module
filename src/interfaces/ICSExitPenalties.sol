@@ -4,9 +4,9 @@
 pragma solidity 0.8.24;
 
 import { ICSAccounting } from "./ICSAccounting.sol";
-import { IAssetRecovererLib } from "../lib/AssetRecovererLib.sol";
 import { ICSParametersRegistry } from "./ICSParametersRegistry.sol";
 import { ICSModule } from "./ICSModule.sol";
+import { IExitTypes } from "./IExitTypes.sol";
 
 struct MarkedUint248 {
     uint248 value;
@@ -16,10 +16,10 @@ struct MarkedUint248 {
 struct ExitPenaltyInfo {
     MarkedUint248 delayPenalty;
     MarkedUint248 strikesPenalty;
-    uint256 withdrawalRequestFee;
+    MarkedUint248 withdrawalRequestFee;
 }
 
-interface ICSExitPenalties is IAssetRecovererLib {
+interface ICSExitPenalties is IExitTypes {
     error ZeroModuleAddress();
     error ZeroParametersRegistryAddress();
     error ZeroAccountingAddress();

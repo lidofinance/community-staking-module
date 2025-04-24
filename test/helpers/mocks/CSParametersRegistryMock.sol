@@ -24,6 +24,7 @@ contract CSParametersRegistryMock {
 
     uint256 public allowedExitDelay = 1 weeks;
     uint256 public exitDelayPenalty = 0.1 ether;
+    uint256 public maxWithdrawalRequestFee = 1 ether;
 
     mapping(uint256 curveId => MarkedQueueConfig) internal _queueConfigs;
 
@@ -131,6 +132,13 @@ contract CSParametersRegistryMock {
     function getMaxWithdrawalRequestFee(
         uint256 /* curveId */
     ) external view returns (uint256) {
-        return 1 ether;
+        return maxWithdrawalRequestFee;
+    }
+
+    function setMaxWithdrawalRequestFee(
+        uint256 /* curveId */,
+        uint256 _maxWithdrawalRequestFee
+    ) external {
+        maxWithdrawalRequestFee = _maxWithdrawalRequestFee;
     }
 }

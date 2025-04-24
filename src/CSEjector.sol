@@ -10,18 +10,17 @@ import { ICSModule, NodeOperatorManagementProperties } from "./interfaces/ICSMod
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { IValidatorsExitBus } from "./interfaces/IValidatorsExitBus.sol";
+import { ExitTypes } from "./abstract/ExitTypes.sol";
 
 contract CSEjector is
     ICSEjector,
+    ExitTypes,
     Initializable,
     AccessControlEnumerableUpgradeable,
     PausableUntil
 {
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
-
-    uint8 public constant VOLUNTARY_EXIT_TYPE_ID = 0;
-    uint8 public constant STRIKES_EXIT_TYPE_ID = 1;
 
     uint256 public immutable STAKING_MODULE_ID;
     ICSModule public immutable MODULE;
