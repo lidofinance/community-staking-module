@@ -19,6 +19,10 @@ contract VettedGate is
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
     bytes32 public constant SET_TREE_ROOT_ROLE =
         keccak256("SET_TREE_ROOT_ROLE");
+    bytes32 public constant START_REFERRAL_SEASON_ROLE =
+        keccak256("START_REFERRAL_SEASON_ROLE");
+    bytes32 public constant END_REFERRAL_SEASON_ROLE =
+        keccak256("END_REFERRAL_SEASON_ROLE");
 
     /// @dev Address of the Staking Module
     ICSModule public immutable MODULE;
@@ -33,6 +37,25 @@ contract VettedGate is
     bytes32 public treeRoot;
 
     mapping(address => bool) internal _consumedAddresses;
+
+    /////////////////////////////////
+    /// Optional referral program ///
+    /////////////////////////////////
+
+    bool public isReferralProgramSeasonActive;
+
+    uint256 public referralProgramSeasonNumber;
+
+    /// @dev Id of the bond curve for referral program
+    uint256 public referralCurveId;
+
+    /// @dev Number of referrals required for bond curve claim
+    uint256 public referralsThreshold;
+
+    /// @dev Referral counts for referrers for seasons
+    mapping(bytes32 => uint256) public referralCounts;
+
+    mapping(bytes32 => bool) internal _consumedReferrers;
 
     constructor(address module) {
         if (module == address(0)) {
@@ -78,6 +101,45 @@ contract VettedGate is
     }
 
     /// @inheritdoc IVettedGate
+    function startNewReferralProgramSeason(
+        uint256 _referralCurveId,
+        uint256 _referralsThreshold
+    ) external onlyRole(START_REFERRAL_SEASON_ROLE) {
+        if (isReferralProgramSeasonActive) {
+            revert ReferralProgramIsActive();
+        }
+        if (_referralsThreshold == 0) {
+            revert InvalidReferralsThreshold();
+        }
+
+        referralsThreshold = _referralsThreshold;
+        referralCurveId = _referralCurveId;
+        isReferralProgramSeasonActive = true;
+
+        uint256 season = referralProgramSeasonNumber + 1;
+        referralProgramSeasonNumber = season;
+        emit ReferralProgramSeasonStarted(
+            season,
+            _referralCurveId,
+            _referralsThreshold
+        );
+    }
+
+    /// @inheritdoc IVettedGate
+    function endCurrentReferralProgramSeason()
+        external
+        onlyRole(END_REFERRAL_SEASON_ROLE)
+    {
+        if (
+            !isReferralProgramSeasonActive || referralProgramSeasonNumber == 0
+        ) {
+            revert ReferralProgramIsNotActive();
+        }
+        isReferralProgramSeasonActive = false;
+        emit ReferralProgramSeasonEnded(referralProgramSeasonNumber);
+    }
+
+    /// @inheritdoc IVettedGate
     function addNodeOperatorETH(
         uint256 keysCount,
         bytes calldata publicKeys,
@@ -101,6 +163,8 @@ contract VettedGate is
             publicKeys: publicKeys,
             signatures: signatures
         });
+
+        _bumpReferralCount(referrer);
     }
 
     /// @inheritdoc IVettedGate
@@ -129,6 +193,8 @@ contract VettedGate is
             signatures: signatures,
             permit: permit
         });
+
+        _bumpReferralCount(referrer);
     }
 
     /// @inheritdoc IVettedGate
@@ -157,6 +223,8 @@ contract VettedGate is
             signatures: signatures,
             permit: permit
         });
+
+        _bumpReferralCount(referrer);
     }
 
     /// @inheritdoc IVettedGate
@@ -164,19 +232,42 @@ contract VettedGate is
         uint256 nodeOperatorId,
         bytes32[] calldata proof
     ) external {
-        NodeOperator memory nodeOperator = MODULE.getNodeOperator(
-            nodeOperatorId
-        );
-        address nodeOperatorAddress = nodeOperator.extendedManagerPermissions
-            ? nodeOperator.managerAddress
-            : nodeOperator.rewardAddress;
-        if (nodeOperatorAddress != msg.sender) {
-            revert NotAllowedToClaim();
-        }
+        _verifySender(nodeOperatorId);
 
         _consume(proof);
 
         ACCOUNTING.setBondCurve(nodeOperatorId, curveId);
+    }
+
+    /// @inheritdoc IVettedGate
+    function claimReferrerBondCurve(
+        uint256 nodeOperatorId,
+        bytes32[] calldata proof
+    ) external {
+        _verifySender(nodeOperatorId);
+
+        if (!isConsumed(msg.sender)) {
+            _consume(proof);
+        }
+
+        if (!isReferralProgramSeasonActive) {
+            revert ReferralProgramIsNotActive();
+        }
+
+        bytes32 referrer = _seasonedAddress(msg.sender);
+
+        if (referralCounts[referrer] < referralsThreshold) {
+            revert NotEnoughReferrals();
+        }
+
+        if (_consumedReferrers[referrer]) {
+            revert AlreadyConsumed();
+        }
+
+        _consumedReferrers[referrer] = true;
+        emit ReferrerConsumed(msg.sender);
+
+        ACCOUNTING.setBondCurve(nodeOperatorId, referralCurveId);
     }
 
     /// @inheritdoc IVettedGate
@@ -189,6 +280,16 @@ contract VettedGate is
     /// @inheritdoc IVettedGate
     function isConsumed(address member) public view returns (bool) {
         return _consumedAddresses[member];
+    }
+
+    /// @inheritdoc IVettedGate
+    function isReferrerConsumed(address referrer) public view returns (bool) {
+        return _consumedReferrers[_seasonedAddress(referrer)];
+    }
+
+    /// @inheritdoc IVettedGate
+    function getReferralsCount(address referrer) public view returns (uint256) {
+        return referralCounts[_seasonedAddress(referrer)];
     }
 
     /// @inheritdoc IVettedGate
@@ -228,5 +329,30 @@ contract VettedGate is
 
         treeRoot = _treeRoot;
         emit TreeRootSet(_treeRoot);
+    }
+
+    function _bumpReferralCount(address referrer) internal {
+        if (isReferralProgramSeasonActive && referrer != address(0)) {
+            referralCounts[_seasonedAddress(referrer)] += 1;
+        }
+    }
+
+    function _seasonedAddress(
+        address referrer
+    ) internal view returns (bytes32) {
+        return keccak256(abi.encode(referrer, referralProgramSeasonNumber));
+    }
+
+    /// @dev Verifies that the sender is the owner of the node operator
+    function _verifySender(uint256 nodeOperatorId) internal view {
+        NodeOperator memory nodeOperator = MODULE.getNodeOperator(
+            nodeOperatorId
+        );
+        address nodeOperatorAddress = nodeOperator.extendedManagerPermissions
+            ? nodeOperator.managerAddress
+            : nodeOperator.rewardAddress;
+        if (nodeOperatorAddress != msg.sender) {
+            revert NotAllowedToClaim();
+        }
     }
 }

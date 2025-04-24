@@ -82,6 +82,8 @@ contract DeployMainnet is DeployBase {
         // 1.5 -> 1.3
         config.vettedGateBondCurve.push([1, 1.5 ether]);
         config.vettedGateBondCurve.push([2, 1.3 ether]);
+        config
+            .referralSeasonsEnder = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
 
         // GateSeal
         config.gateSealFactory = 0x6C82877cAC5a7A739f16Ca0A89c0A328B8764A24;

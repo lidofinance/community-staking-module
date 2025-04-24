@@ -176,6 +176,14 @@ abstract contract DeployImplementationsBase is DeployBase {
                 vettedGate.DEFAULT_ADMIN_ROLE(),
                 config.aragonAgent
             );
+            vettedGate.grantRole(
+                vettedGate.START_REFERRAL_SEASON_ROLE(),
+                config.aragonAgent
+            );
+            vettedGate.grantRole(
+                vettedGate.END_REFERRAL_SEASON_ROLE(),
+                config.referralSeasonsEnder
+            );
             vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
 
             verifier.grantRole(verifier.PAUSE_ROLE(), address(gateSeal));
