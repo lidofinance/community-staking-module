@@ -129,6 +129,7 @@ struct DeployParams {
     uint256 defaultAllowedExitDelay;
     // VettedGate
     bytes32 vettedGateTreeRoot;
+    string vettedGateTreeCid;
     uint256[2][] vettedGateBondCurve;
     address referralSeasonsEnder;
     // GateSeal
@@ -335,6 +336,7 @@ abstract contract DeployBase is Script {
                 vettedGateFactory.create({
                     curveId: identifiedSolosCurve,
                     treeRoot: config.vettedGateTreeRoot,
+                    treeCid: config.vettedGateTreeCid,
                     admin: deployer
                 })
             );

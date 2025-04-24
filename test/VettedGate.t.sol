@@ -25,6 +25,7 @@ contract VettedGateTestBase is Test, Utilities, Fixtures {
     uint256 internal referralsThreshold;
     MerkleTree internal merkleTree;
     bytes32 internal root;
+    string internal cid;
 
     function setUp() public virtual {
         csm = address(new CSMMock());
@@ -37,12 +38,13 @@ contract VettedGateTestBase is Test, Utilities, Fixtures {
         merkleTree.pushLeaf(abi.encode(nodeOperator));
         merkleTree.pushLeaf(abi.encode(stranger));
         merkleTree.pushLeaf(abi.encode(anotherNodeOperator));
+        cid = "someCid";
 
         curveId = 1;
         root = merkleTree.root();
         vettedGate = new VettedGate(csm);
         _enableInitializers(address(vettedGate));
-        vettedGate.initialize(curveId, merkleTree.root(), admin);
+        vettedGate.initialize(curveId, merkleTree.root(), cid, admin);
     }
 
     function _addReferrals() internal {
@@ -121,8 +123,8 @@ contract VettedGateTest is VettedGateTestBase {
         _enableInitializers(address(vettedGate));
 
         vm.expectEmit();
-        emit IVettedGate.TreeRootSet(root);
-        vettedGate.initialize(curveId, merkleTree.root(), admin);
+        emit IVettedGate.TreeSet(root, cid);
+        vettedGate.initialize(curveId, merkleTree.root(), cid, admin);
 
         assertEq(vettedGate.curveId(), curveId);
         assertEq(vettedGate.treeRoot(), root);
@@ -134,6 +136,7 @@ contract VettedGateTest is VettedGateTestBase {
             vettedGate.getRoleMember(vettedGate.DEFAULT_ADMIN_ROLE(), 0),
             admin
         );
+        assertEq(vettedGate.getInitializedVersion(), 1);
     }
 
     function test_initializer_RevertWhen_InvalidCurveId() public {
@@ -141,7 +144,7 @@ contract VettedGateTest is VettedGateTestBase {
         _enableInitializers(address(vettedGate));
 
         vm.expectRevert(IVettedGate.InvalidCurveId.selector);
-        vettedGate.initialize(0, root, admin);
+        vettedGate.initialize(0, root, cid, admin);
     }
 
     function test_initializer_RevertWhen_InvalidTreeRoot() public {
@@ -149,7 +152,15 @@ contract VettedGateTest is VettedGateTestBase {
         _enableInitializers(address(vettedGate));
 
         vm.expectRevert(IVettedGate.InvalidTreeRoot.selector);
-        vettedGate.initialize(curveId, bytes32(0), admin);
+        vettedGate.initialize(curveId, bytes32(0), cid, admin);
+    }
+
+    function test_initializer_RevertWhen_InvalidTreeCid() public {
+        vettedGate = new VettedGate(csm);
+        _enableInitializers(address(vettedGate));
+
+        vm.expectRevert(IVettedGate.InvalidTreeCid.selector);
+        vettedGate.initialize(curveId, root, "", admin);
     }
 
     function test_initializer_RevertWhen_ZeroAdminAddress() public {
@@ -157,7 +168,7 @@ contract VettedGateTest is VettedGateTestBase {
         _enableInitializers(address(vettedGate));
 
         vm.expectRevert(IVettedGate.ZeroAdminAddress.selector);
-        vettedGate.initialize(curveId, root, address(0));
+        vettedGate.initialize(curveId, root, cid, address(0));
     }
 
     function test_pauseFor() public {
@@ -220,10 +231,11 @@ contract VettedGateTest is VettedGateTestBase {
         );
     }
 
-    function test_setTreeRoot() public {
+    function test_setTreeParams() public {
         MerkleTree newTree = new MerkleTree();
         newTree.pushLeaf(abi.encode(stranger));
         bytes32 newRoot = newTree.root();
+        string memory newCid = "newCid";
 
         assertTrue(
             vettedGate.verifyProof(nodeOperator, merkleTree.getProof(0))
@@ -231,46 +243,71 @@ contract VettedGateTest is VettedGateTestBase {
         assertFalse(vettedGate.verifyProof(stranger, newTree.getProof(0)));
 
         vm.startPrank(admin);
-        vettedGate.grantRole(vettedGate.SET_TREE_ROOT_ROLE(), admin);
+        vettedGate.grantRole(vettedGate.SET_TREE_ROLE(), admin);
 
         vm.expectEmit(address(vettedGate));
-        emit IVettedGate.TreeRootSet(newRoot);
-        vettedGate.setTreeRoot(newRoot);
+        emit IVettedGate.TreeSet(newRoot, newCid);
+        vettedGate.setTreeParams(newRoot, newCid);
 
         vm.stopPrank();
 
         assertEq(vettedGate.treeRoot(), newRoot);
+        assertEq(
+            keccak256(bytes(vettedGate.treeCid())),
+            keccak256(bytes(newCid))
+        );
         assertFalse(
             vettedGate.verifyProof(nodeOperator, merkleTree.getProof(0))
         );
         assertTrue(vettedGate.verifyProof(stranger, newTree.getProof(0)));
     }
 
-    function test_setTreeRoot_revert_zeroRoot() public {
+    function test_setTreeParams_revert_zeroRoot() public {
         vm.startPrank(admin);
-        vettedGate.grantRole(vettedGate.SET_TREE_ROOT_ROLE(), admin);
+        vettedGate.grantRole(vettedGate.SET_TREE_ROLE(), admin);
 
         vm.expectRevert(IVettedGate.InvalidTreeRoot.selector);
-        vettedGate.setTreeRoot(bytes32(0));
+        vettedGate.setTreeParams(bytes32(0), "newCid");
 
         vm.stopPrank();
     }
 
-    function test_setTreeRoot_revert_sameRoot() public {
+    function test_setTreeParams_revert_sameRoot() public {
         vm.startPrank(admin);
-        vettedGate.grantRole(vettedGate.SET_TREE_ROOT_ROLE(), admin);
+        vettedGate.grantRole(vettedGate.SET_TREE_ROLE(), admin);
         bytes32 currRoot = merkleTree.root();
 
         vm.expectRevert(IVettedGate.InvalidTreeRoot.selector);
-        vettedGate.setTreeRoot(currRoot);
+        vettedGate.setTreeParams(currRoot, "newCid");
 
         vm.stopPrank();
     }
 
-    function test_setTreeRoot_revert_noRole() public {
+    function test_setTreeParams_revert_zeroCid() public {
         vm.startPrank(admin);
-        expectRoleRevert(admin, vettedGate.SET_TREE_ROOT_ROLE());
-        vettedGate.setTreeRoot(bytes32(randomBytes(32)));
+        vettedGate.grantRole(vettedGate.SET_TREE_ROLE(), admin);
+
+        vm.expectRevert(IVettedGate.InvalidTreeCid.selector);
+        vettedGate.setTreeParams(bytes32(randomBytes(32)), "");
+
+        vm.stopPrank();
+    }
+
+    function test_setTreeParams_revert_sameCid() public {
+        vm.startPrank(admin);
+        vettedGate.grantRole(vettedGate.SET_TREE_ROLE(), admin);
+        bytes32 currRoot = merkleTree.root();
+
+        vm.expectRevert(IVettedGate.InvalidTreeCid.selector);
+        vettedGate.setTreeParams(bytes32(randomBytes(32)), cid);
+
+        vm.stopPrank();
+    }
+
+    function test_setTreeParams_revert_noRole() public {
+        vm.startPrank(admin);
+        expectRoleRevert(admin, vettedGate.SET_TREE_ROLE());
+        vettedGate.setTreeParams(bytes32(randomBytes(32)), "newCid");
         vm.stopPrank();
     }
 

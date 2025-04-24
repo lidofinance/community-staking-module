@@ -17,8 +17,7 @@ contract VettedGate is
 {
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
-    bytes32 public constant SET_TREE_ROOT_ROLE =
-        keccak256("SET_TREE_ROOT_ROLE");
+    bytes32 public constant SET_TREE_ROLE = keccak256("SET_TREE_ROLE");
     bytes32 public constant START_REFERRAL_SEASON_ROLE =
         keccak256("START_REFERRAL_SEASON_ROLE");
     bytes32 public constant END_REFERRAL_SEASON_ROLE =
@@ -35,6 +34,9 @@ contract VettedGate is
 
     /// @dev Root of the eligible members Merkle Tree
     bytes32 public treeRoot;
+
+    /// @dev CID of the eligible members Merkle Tree
+    string public treeCid;
 
     mapping(address => bool) internal _consumedAddresses;
 
@@ -71,6 +73,7 @@ contract VettedGate is
     function initialize(
         uint256 _curveId,
         bytes32 _treeRoot,
+        string calldata _treeCid,
         address admin
     ) external initializer {
         __AccessControlEnumerable_init();
@@ -86,7 +89,7 @@ contract VettedGate is
             revert ZeroAdminAddress();
         }
 
-        _setTreeRoot(_treeRoot);
+        _setTreeParams(_treeRoot, _treeCid);
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
@@ -271,10 +274,11 @@ contract VettedGate is
     }
 
     /// @inheritdoc IVettedGate
-    function setTreeRoot(
-        bytes32 _treeRoot
-    ) external onlyRole(SET_TREE_ROOT_ROLE) {
-        _setTreeRoot(_treeRoot);
+    function setTreeParams(
+        bytes32 _treeRoot,
+        string calldata _treeCid
+    ) external onlyRole(SET_TREE_ROLE) {
+        _setTreeParams(_treeRoot, _treeCid);
     }
 
     /// @inheritdoc IVettedGate
@@ -301,6 +305,11 @@ contract VettedGate is
     }
 
     /// @inheritdoc IVettedGate
+    function getInitializedVersion() external view returns (uint64) {
+        return _getInitializedVersion();
+    }
+
+    /// @inheritdoc IVettedGate
     function hashLeaf(address member) public pure returns (bytes32) {
         return keccak256(bytes.concat(keccak256(abi.encode(member))));
     }
@@ -318,7 +327,10 @@ contract VettedGate is
         emit Consumed(msg.sender);
     }
 
-    function _setTreeRoot(bytes32 _treeRoot) internal {
+    function _setTreeParams(
+        bytes32 _treeRoot,
+        string calldata _treeCid
+    ) internal {
         if (_treeRoot == bytes32(0)) {
             revert InvalidTreeRoot();
         }
@@ -327,8 +339,17 @@ contract VettedGate is
             revert InvalidTreeRoot();
         }
 
+        if (bytes(_treeCid).length == 0) {
+            revert InvalidTreeCid();
+        }
+
+        if (keccak256(bytes(_treeCid)) == keccak256(bytes(treeCid))) {
+            revert InvalidTreeCid();
+        }
+
         treeRoot = _treeRoot;
-        emit TreeRootSet(_treeRoot);
+        treeCid = _treeCid;
+        emit TreeSet(_treeRoot, _treeCid);
     }
 
     function _bumpReferralCount(address referrer) internal {

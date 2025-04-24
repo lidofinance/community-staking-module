@@ -823,7 +823,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
 
         stETH.mintShares(address(feeDistributor), shares);
 
-        vm.expectRevert(ICSFeeDistributor.InvalidTreeCID.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidTreeCid.selector);
         vm.prank(oracle);
         feeDistributor.processOracleReport(
             someBytes32(),
@@ -846,7 +846,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         stETH.mintShares(address(feeDistributor), shares);
         string memory lastTreeCid = feeDistributor.treeCid();
 
-        vm.expectRevert(ICSFeeDistributor.InvalidTreeCID.selector);
+        vm.expectRevert(ICSFeeDistributor.InvalidTreeCid.selector);
         vm.prank(oracle);
         feeDistributor.processOracleReport(
             someBytes32(),

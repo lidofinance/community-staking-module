@@ -33,6 +33,7 @@ contract IntegrationTestBase is
     uint256 internal userPrivateKey;
     uint256 internal strangerPrivateKey;
     MerkleTree internal merkleTree;
+    string internal cid;
 
     modifier assertInvariants() {
         _;
@@ -61,7 +62,7 @@ contract IntegrationTestBase is
         vm.stopPrank();
 
         vm.startPrank(vettedGate.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0));
-        vettedGate.grantRole(vettedGate.SET_TREE_ROOT_ROLE(), address(this));
+        vettedGate.grantRole(vettedGate.SET_TREE_ROLE(), address(this));
         vm.stopPrank();
 
         handleStakingLimit();
@@ -77,7 +78,9 @@ contract IntegrationTestBase is
         merkleTree.pushLeaf(abi.encode(nodeOperator));
         merkleTree.pushLeaf(abi.encode(stranger));
 
-        vettedGate.setTreeRoot(merkleTree.root());
+        cid = "someOtherCid";
+
+        vettedGate.setTreeParams(merkleTree.root(), cid);
     }
 }
 

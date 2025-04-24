@@ -22,6 +22,7 @@ contract VettedGateFactory is IVettedGateFactory {
     function create(
         uint256 curveId,
         bytes32 treeRoot,
+        string calldata treeCid,
         address admin
     ) external returns (address instance) {
         instance = address(
@@ -32,7 +33,7 @@ contract VettedGateFactory is IVettedGateFactory {
             })
         );
 
-        VettedGate(instance).initialize(curveId, treeRoot, admin);
+        VettedGate(instance).initialize(curveId, treeRoot, treeCid, admin);
 
         emit VettedGateCreated(instance);
     }

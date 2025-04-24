@@ -8,7 +8,7 @@ import { ICSAccounting } from "./ICSAccounting.sol";
 import { ICSModule } from "./ICSModule.sol";
 
 interface IVettedGate {
-    event TreeRootSet(bytes32 indexed treeRoot);
+    event TreeSet(bytes32 indexed treeRoot, string treeCid);
     event Consumed(address indexed member);
     event ReferrerConsumed(address indexed referrer);
     event ReferralProgramSeasonStarted(
@@ -21,6 +21,7 @@ interface IVettedGate {
     error InvalidProof();
     error AlreadyConsumed();
     error InvalidTreeRoot();
+    error InvalidTreeCid();
     error InvalidCurveId();
     error ZeroModuleAddress();
     error ZeroAdminAddress();
@@ -34,7 +35,7 @@ interface IVettedGate {
 
     function RESUME_ROLE() external view returns (bytes32);
 
-    function SET_TREE_ROOT_ROLE() external view returns (bytes32);
+    function SET_TREE_ROLE() external view returns (bytes32);
 
     function START_REFERRAL_SEASON_ROLE() external view returns (bytes32);
 
@@ -45,6 +46,8 @@ interface IVettedGate {
     function curveId() external view returns (uint256);
 
     function treeRoot() external view returns (bytes32);
+
+    function treeCid() external view returns (string memory);
 
     /// @notice Pause the contract for a given duration
     ///         Pausing the contract prevent creating new node operators using VettedGate
@@ -186,10 +189,17 @@ interface IVettedGate {
 
     /// @notice Set the root of the eligible members Merkle Tree
     /// @param _treeRoot New root of the Merkle Tree
-    function setTreeRoot(bytes32 _treeRoot) external;
+    /// @param _treeCid New CID of the Merkle Tree
+    function setTreeParams(
+        bytes32 _treeRoot,
+        string calldata _treeCid
+    ) external;
 
     /// @notice Get the number of referrals for the given referrer
     function getReferralsCount(
         address referrer
     ) external view returns (uint256);
+
+    /// @notice Returns the initialized version of the contract
+    function getInitializedVersion() external view returns (uint64);
 }

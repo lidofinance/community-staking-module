@@ -76,6 +76,7 @@ contract DeployHoodi is DeployBase {
         config.vettedGateBondCurve.push([2, 1.3 ether]);
         config
             .referralSeasonsEnder = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
+        config.vettedGateTreeCid = "someCid"; // TODO: to be set in the future
 
         // GateSeal
         config.gateSealFactory = 0xA402349F560D45310D301E92B1AA4DeCABe147B3;
