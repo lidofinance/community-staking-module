@@ -10,6 +10,7 @@ import { HashConsensus } from "../src/lib/base-oracle/HashConsensus.sol";
 import { CSModule } from "../src/CSModule.sol";
 import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSFeeDistributor } from "../src/CSFeeDistributor.sol";
+import { CSExitPenalties } from "../src/CSExitPenalties.sol";
 import { CSEjector } from "../src/CSEjector.sol";
 import { CSStrikes } from "../src/CSStrikes.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
@@ -66,7 +67,10 @@ abstract contract DeployImplementationsBase is DeployBase {
                     attestationsWeight: config.attestationsWeight,
                     blocksWeight: config.blocksWeight,
                     syncWeight: config.syncWeight,
-                    defaultAllowedExitDelay: config.defaultAllowedExitDelay
+                    defaultAllowedExitDelay: config.defaultAllowedExitDelay,
+                    defaultExitDelayPenalty: config.defaultExitDelayPenalty,
+                    defaultMaxWithdrawalRequestFee: config
+                        .defaultMaxWithdrawalRequestFee
                 })
             });
 
@@ -108,14 +112,31 @@ abstract contract DeployImplementationsBase is DeployBase {
                 oracle: address(oracle)
             });
 
-            CSEjector ejectorImpl = new CSEjector(address(csm));
-            ejector = CSEjector(
-                _deployProxy(config.proxyAdmin, address(ejectorImpl))
+            CSExitPenalties exitPenaltiesImpl = new CSExitPenalties(
+                address(csm),
+                address(parametersRegistry),
+                address(accounting)
             );
 
-            ejector.initialize({ admin: deployer });
+            exitPenalties = CSExitPenalties(
+                _deployProxy(config.proxyAdmin, address(exitPenaltiesImpl))
+            );
 
-            strikes = new CSStrikes(address(ejector), address(oracle));
+            ejector = new CSEjector(address(csm), config.stakingModuleId);
+
+            CSStrikes strikesImpl = new CSStrikes({
+                module: address(csm),
+                oracle: address(oracle),
+                exitPenalties: address(exitPenalties)
+            });
+
+            strikes = CSStrikes(
+                _deployProxy(config.proxyAdmin, address(strikesImpl))
+            );
+
+            exitPenalties.initialize(address(strikes));
+            ejector.initialize(deployer, address(strikes));
+            strikes.initialize(config.aragonAgent, address(ejector));
 
             verifier = new CSVerifier({
                 withdrawalAddress: locator.withdrawalVault(),
@@ -147,10 +168,6 @@ abstract contract DeployImplementationsBase is DeployBase {
             sealables[5] = address(ejector);
             gateSeal = _deployGateSeal(sealables);
 
-            ejector.grantRole(
-                ejector.BAD_PERFORMER_EJECTOR_ROLE(),
-                address(strikes)
-            );
             ejector.grantRole(ejector.PAUSE_ROLE(), gateSeal);
             ejector.grantRole(ejector.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
             ejector.revokeRole(ejector.DEFAULT_ADMIN_ROLE(), deployer);
@@ -199,6 +216,7 @@ abstract contract DeployImplementationsBase is DeployBase {
             deployJson.set("CSAccountingImpl", address(accountingImpl));
             deployJson.set("CSFeeOracleImpl", address(oracleImpl));
             deployJson.set("CSFeeDistributorImpl", address(feeDistributorImpl));
+            deployJson.set("CSExitPenalties", address(exitPenalties));
             deployJson.set("CSEjector", address(ejector));
             deployJson.set("CSStrikes", address(strikes));
             deployJson.set("CSVerifier", address(verifier));

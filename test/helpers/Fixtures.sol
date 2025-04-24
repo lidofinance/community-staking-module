@@ -27,6 +27,7 @@ import { CSAccounting } from "../../src/CSAccounting.sol";
 import { CSFeeOracle } from "../../src/CSFeeOracle.sol";
 import { CSFeeDistributor } from "../../src/CSFeeDistributor.sol";
 import { CSEjector } from "../../src/CSEjector.sol";
+import { CSExitPenalties } from "../../src/CSExitPenalties.sol";
 import { CSStrikes } from "../../src/CSStrikes.sol";
 import { CSVerifier } from "../../src/CSVerifier.sol";
 import { DeployParams, DeployParamsV1 } from "../../script/DeployBase.s.sol";
@@ -34,6 +35,7 @@ import { IACL } from "../../src/interfaces/IACL.sol";
 import { IKernel } from "../../src/interfaces/IKernel.sol";
 import { Utilities } from "./Utilities.sol";
 import { Batch } from "../../src/lib/QueueLib.sol";
+import { VEBMock } from "./mocks/VEBMock.sol";
 
 contract Fixtures is StdCheats, Test {
     bytes32 public constant INITIALIZABLE_STORAGE =
@@ -60,13 +62,15 @@ contract Fixtures is StdCheats, Test {
         wq = new WithdrawalQueueMock(address(wstETH), address(stETH));
         Stub treasury = new Stub();
         Stub stakingRouter = new Stub();
+        VEBMock veb = new VEBMock();
         locator = new LidoLocatorMock(
             address(stETH),
             address(burner),
             address(wq),
             address(elVault),
             address(treasury),
-            address(stakingRouter)
+            address(stakingRouter),
+            address(veb)
         );
         vm.label(address(stETH), "lido");
         vm.label(address(wstETH), "wstETH");
@@ -76,6 +80,7 @@ contract Fixtures is StdCheats, Test {
         vm.label(address(elVault), "elVault");
         vm.label(address(treasury), "treasury");
         vm.label(address(stakingRouter), "stakingRouter");
+        vm.label(address(veb), "validatorExitBus");
     }
 
     function _enableInitializers(address implementation) internal {
@@ -104,6 +109,7 @@ contract DeploymentHelpers is Test {
         address oracle;
         address feeDistributor;
         address ejector;
+        address exitPenalties;
         address strikes;
         address verifier;
         address hashConsensus;
@@ -173,6 +179,11 @@ contract DeploymentHelpers is Test {
                 ".CSParametersRegistry"
             );
             vm.label(deploymentConfig.parametersRegistry, "parametersRegistry");
+            deploymentConfig.exitPenalties = vm.parseJsonAddress(
+                config,
+                ".CSExitPenalties"
+            );
+            vm.label(deploymentConfig.exitPenalties, "exitPenalties");
             deploymentConfig.strikes = vm.parseJsonAddress(
                 config,
                 ".CSStrikes"
@@ -291,6 +302,7 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
     CSAccounting public accounting;
     CSFeeOracle public oracle;
     CSFeeDistributor public feeDistributor;
+    CSExitPenalties public exitPenalties;
     CSStrikes public strikes;
     CSEjector public ejector;
     CSVerifier public verifier;
@@ -330,7 +342,8 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
         accounting = CSAccounting(deploymentConfig.accounting);
         oracle = CSFeeOracle(deploymentConfig.oracle);
         feeDistributor = CSFeeDistributor(deploymentConfig.feeDistributor);
-        ejector = CSEjector(deploymentConfig.ejector);
+        ejector = CSEjector(payable(deploymentConfig.ejector));
+        exitPenalties = CSExitPenalties(deploymentConfig.exitPenalties);
         strikes = CSStrikes(deploymentConfig.strikes);
         verifier = CSVerifier(deploymentConfig.verifier);
         hashConsensus = HashConsensus(deploymentConfig.hashConsensus);
@@ -355,7 +368,7 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
             parametersRegistry = CSParametersRegistry(
                 upgradeConfig.parametersRegistry
             );
-            ejector = CSEjector(upgradeConfig.ejector);
+            ejector = CSEjector(payable(upgradeConfig.ejector));
             strikes = CSStrikes(upgradeConfig.strikes);
             permissionlessGate = PermissionlessGate(
                 upgradeConfig.permissionlessGate

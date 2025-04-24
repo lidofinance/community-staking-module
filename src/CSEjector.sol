@@ -3,47 +3,60 @@
 
 pragma solidity 0.8.24;
 
-import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import { IStakingModule } from "./interfaces/IStakingModule.sol";
-import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
-import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
-import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ICSEjector } from "./interfaces/ICSEjector.sol";
+import { ICSModule, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { PausableUntil } from "./lib/utils/PausableUntil.sol";
+import { IValidatorsExitBus } from "./interfaces/IValidatorsExitBus.sol";
+import { ExitTypes } from "./abstract/ExitTypes.sol";
 
 contract CSEjector is
     ICSEjector,
+    ExitTypes,
     Initializable,
     AccessControlEnumerableUpgradeable,
     PausableUntil
 {
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
-    bytes32 public constant BAD_PERFORMER_EJECTOR_ROLE =
-        keccak256("BAD_PERFORMER_EJECTOR_ROLE");
 
+    uint256 public immutable STAKING_MODULE_ID;
     ICSModule public immutable MODULE;
-    ICSAccounting public immutable ACCOUNTING;
+    IValidatorsExitBus public immutable VEB;
 
-    /// @dev see _keyPointer function for details of noKeyIndexPacked structure
-    mapping(uint256 noKeyIndexPacked => bool) private _isValidatorEjected;
+    address public strikes;
 
-    constructor(address module) {
+    modifier onlyStrikes() {
+        if (msg.sender != strikes) {
+            revert SenderIsNotStrikes();
+        }
+
+        _;
+    }
+
+    constructor(address module, uint256 stakingModuleId) {
         if (module == address(0)) {
             revert ZeroModuleAddress();
         }
 
         MODULE = ICSModule(module);
-        ACCOUNTING = ICSAccounting(MODULE.accounting());
+        VEB = IValidatorsExitBus(
+            MODULE.LIDO_LOCATOR().validatorsExitBusOracle()
+        );
+        STAKING_MODULE_ID = stakingModuleId;
     }
 
     /// @notice initialize the contract from scratch
-    function initialize(address admin) external initializer {
+    function initialize(address admin, address _strikes) external initializer {
         if (admin == address(0)) {
             revert ZeroAdminAddress();
         }
+        if (_strikes == address(0)) {
+            revert ZeroStrikesAddress();
+        }
+        strikes = _strikes;
 
         __AccessControlEnumerable_init();
 
@@ -61,77 +74,127 @@ contract CSEjector is
     }
 
     /// @inheritdoc ICSEjector
-    function ejectBadPerformer(
+    function voluntaryEject(
         uint256 nodeOperatorId,
-        uint256 keyIndex,
-        uint256 strikes
-    ) external whenResumed onlyRole(BAD_PERFORMER_EJECTOR_ROLE) {
-        _onlyExistingNodeOperator(nodeOperatorId);
+        uint256 startFrom,
+        uint256 keysCount,
+        address refundRecipient
+    ) external payable whenResumed {
+        NodeOperatorManagementProperties memory no = MODULE
+            .getNodeOperatorManagementProperties(nodeOperatorId);
+        if (no.managerAddress == address(0)) {
+            revert NodeOperatorDoesNotExist();
+        }
+        address nodeOperatorAddress = no.extendedManagerPermissions
+            ? no.managerAddress
+            : no.rewardAddress;
+        if (nodeOperatorAddress != msg.sender) {
+            revert SenderIsNotEligible();
+        }
 
+        // there is no check that the key is not withdrawn yet to not make it too expensive (esp. for the large batch)
+        // and no bad effects for extra eip-7002 exit requests for the node operator can happen.
+        // so we need to be sure that the UIs restrict this case.
+        // on the other hand, it is crucial to check that the key was deposited already
         if (
-            keyIndex >= MODULE.getNodeOperatorTotalDepositedKeys(nodeOperatorId)
+            startFrom + keysCount >
+            MODULE.getNodeOperatorTotalDepositedKeys(nodeOperatorId)
         ) {
             revert SigningKeysInvalidOffset();
         }
-
-        if (MODULE.isValidatorWithdrawn(nodeOperatorId, keyIndex)) {
-            revert AlreadyWithdrawn();
-        }
-
-        uint256 pointer = _keyPointer(nodeOperatorId, keyIndex);
-        if (_isValidatorEjected[pointer]) {
-            revert AlreadyEjected();
-        }
-
-        uint256 curveId = ACCOUNTING.getBondCurveId(nodeOperatorId);
-
-        ICSParametersRegistry registry = MODULE.PARAMETERS_REGISTRY();
-
-        (, uint256 threshold) = registry.getStrikesParams(curveId);
-        if (strikes < threshold) {
-            revert NotEnoughStrikesToEject();
-        }
-
-        uint256 penalty = registry.getBadPerformancePenalty(curveId);
-        if (penalty > 0) {
-            ACCOUNTING.penalize(nodeOperatorId, penalty);
-        }
-
-        bytes memory pubkey = MODULE.getSigningKeys(
+        bytes memory pubkeys = MODULE.getSigningKeys(
             nodeOperatorId,
-            keyIndex,
-            1
+            startFrom,
+            keysCount
         );
-        // TODO: make the function payable and call `requestEjection{ value: msg.value }(pubkey)`
+        IValidatorsExitBus.DirectExitData memory exitData = IValidatorsExitBus
+            .DirectExitData({
+                stakingModuleId: STAKING_MODULE_ID,
+                nodeOperatorId: nodeOperatorId,
+                validatorsPubkeys: pubkeys
+            });
 
-        _isValidatorEjected[pointer] = true;
-        emit EjectionSubmitted(nodeOperatorId, keyIndex, pubkey);
+        refundRecipient = refundRecipient == address(0)
+            ? msg.sender
+            : refundRecipient;
+
+        VEB.triggerExitsDirectly{ value: msg.value }(
+            exitData,
+            refundRecipient,
+            VOLUNTARY_EXIT_TYPE_ID
+        );
+    }
+
+    /// @dev this method is intentionally copy-pasted from the voluntaryEject method with keys changes
+    /// @inheritdoc ICSEjector
+    function voluntaryEjectByArray(
+        uint256 nodeOperatorId,
+        uint256[] calldata keyIndices,
+        address refundRecipient
+    ) external payable whenResumed {
+        NodeOperatorManagementProperties memory no = MODULE
+            .getNodeOperatorManagementProperties(nodeOperatorId);
+        if (no.managerAddress == address(0)) {
+            revert NodeOperatorDoesNotExist();
+        }
+        address nodeOperatorAddress = no.extendedManagerPermissions
+            ? no.managerAddress
+            : no.rewardAddress;
+        if (nodeOperatorAddress != msg.sender) {
+            revert SenderIsNotEligible();
+        }
+
+        uint256 totalDepositedKeys = MODULE.getNodeOperatorTotalDepositedKeys(
+            nodeOperatorId
+        );
+        bytes memory pubkeys;
+        for (uint256 i = 0; i < keyIndices.length; i++) {
+            // there is no check that the key is not withdrawn yet to not make it too expensive (esp. for the large batch)
+            // and no bad effects for extra eip-7002 exit requests for the node operator can happen.
+            // so we need to be sure that the UIs restrict this case.
+            // on the other hand, it is crucial to check that the key was deposited already
+            if (keyIndices[i] >= totalDepositedKeys) {
+                revert SigningKeysInvalidOffset();
+            }
+            pubkeys = abi.encodePacked(
+                pubkeys,
+                MODULE.getSigningKeys(nodeOperatorId, keyIndices[i], 1)
+            );
+        }
+        IValidatorsExitBus.DirectExitData memory exitData = IValidatorsExitBus
+            .DirectExitData({
+                stakingModuleId: STAKING_MODULE_ID,
+                nodeOperatorId: nodeOperatorId,
+                validatorsPubkeys: pubkeys
+            });
+
+        refundRecipient = refundRecipient == address(0)
+            ? msg.sender
+            : refundRecipient;
+
+        VEB.triggerExitsDirectly{ value: msg.value }(
+            exitData,
+            refundRecipient,
+            VOLUNTARY_EXIT_TYPE_ID
+        );
     }
 
     /// @inheritdoc ICSEjector
-    function isValidatorEjected(
+    function ejectBadPerformer(
         uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) external view returns (bool) {
-        return _isValidatorEjected[_keyPointer(nodeOperatorId, keyIndex)];
-    }
-
-    function _onlyExistingNodeOperator(uint256 nodeOperatorId) internal view {
-        if (
-            nodeOperatorId <
-            IStakingModule(address(MODULE)).getNodeOperatorsCount()
-        ) {
-            return;
-        }
-
-        revert NodeOperatorDoesNotExist();
-    }
-
-    /// @dev Both nodeOperatorId and keyIndex are limited to uint64 by the CSModule.sol
-    function _keyPointer(
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) internal pure returns (uint256) {
-        return (nodeOperatorId << 128) | keyIndex;
+        bytes calldata publicKeys,
+        address refundRecipient
+    ) external payable whenResumed onlyStrikes {
+        IValidatorsExitBus.DirectExitData memory exitData = IValidatorsExitBus
+            .DirectExitData({
+                stakingModuleId: STAKING_MODULE_ID,
+                nodeOperatorId: nodeOperatorId,
+                validatorsPubkeys: publicKeys
+            });
+        VEB.triggerExitsDirectly{ value: msg.value }(
+            exitData,
+            refundRecipient,
+            STRIKES_EXIT_TYPE_ID
+        );
     }
 }

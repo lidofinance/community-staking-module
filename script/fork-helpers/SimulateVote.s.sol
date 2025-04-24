@@ -97,7 +97,9 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         vm.startBroadcast(_prepareProxyAdmin(address(csmProxy)));
         {
             csmProxy.proxy__upgradeTo(upgradeConfig.csmImpl);
-            CSModule(deploymentConfig.csm).finalizeUpgradeV2();
+            CSModule(deploymentConfig.csm).finalizeUpgradeV2(
+                upgradeConfig.ejector
+            );
         }
         vm.stopBroadcast();
 
@@ -170,11 +172,6 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         accounting.revokeRole(
             accounting.PAUSE_ROLE(),
             address(deploymentConfig.gateSeal)
-        );
-        accounting.grantRole(accounting.PENALIZE_ROLE(), address(csm));
-        accounting.grantRole(
-            accounting.PENALIZE_ROLE(),
-            address(upgradeConfig.ejector)
         );
         oracle.revokeRole(
             oracle.PAUSE_ROLE(),

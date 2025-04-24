@@ -2,35 +2,34 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
-import "forge-std/Test.sol";
+import "./helpers/mocks/EjectorMock.sol";
 
+import "forge-std/Test.sol";
 import { CSFeeOracle } from "../src/CSFeeOracle.sol";
 import { CSStrikes } from "../src/CSStrikes.sol";
-import { ICSStrikes } from "../src/interfaces/ICSStrikes.sol";
-import { ICSModule } from "../src/interfaces/ICSModule.sol";
-import { ICSEjector } from "../src/interfaces/ICSEjector.sol";
-import { IAssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
+import { ERC20Testable } from "./helpers/ERCTestable.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
+import { IAssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
+import { ICSEjector } from "../src/interfaces/ICSEjector.sol";
+import { ICSExitPenalties } from "../src/interfaces/ICSExitPenalties.sol";
+
+import { ICSModule } from "../src/interfaces/ICSModule.sol";
+import { ICSStrikes } from "../src/interfaces/ICSStrikes.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { InvariantAsserts } from "./helpers/InvariantAsserts.sol";
 import { MerkleTree } from "./helpers/MerkleTree.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
-import { ERC20Testable } from "./helpers/ERCTestable.sol";
 import { Utilities } from "./helpers/Utilities.sol";
-import { InvariantAsserts } from "./helpers/InvariantAsserts.sol";
-
-contract EjectorMock {
-    address public MODULE;
-
-    constructor(address _module) {
-        MODULE = _module;
-    }
-}
+import { ExitPenaltiesMock } from "./helpers/mocks/ExitPenaltiesMock.sol";
+import { CSMMock } from "./helpers/mocks/CSMMock.sol";
 
 contract CSStrikesTestBase is Test, Fixtures, Utilities, InvariantAsserts {
+    address internal admin;
     address internal stranger;
+    address internal refundRecipient;
     address internal oracle;
-    address internal module;
+    CSMMock internal module;
+    address internal exitPenalties;
     address internal ejector;
     CSStrikes internal strikes;
     MerkleTree internal tree;
@@ -46,41 +45,98 @@ contract CSStrikesTestBase is Test, Fixtures, Utilities, InvariantAsserts {
 contract CSStrikesConstructorTest is CSStrikesTestBase {
     function setUp() public {
         stranger = nextAddress("STRANGER");
+        admin = nextAddress("ADMIN");
         oracle = nextAddress("ORACLE");
-        module = nextAddress("MODULE");
-        ejector = address(new EjectorMock(module));
+        module = new CSMMock();
+        exitPenalties = address(new ExitPenaltiesMock(address(module)));
+        ejector = address(new EjectorMock(address(module)));
     }
 
     function test_constructor_happyPath() public {
-        strikes = new CSStrikes(ejector, oracle);
+        strikes = new CSStrikes(address(module), oracle, exitPenalties);
+        assertEq(address(strikes.MODULE()), address(module));
         assertEq(strikes.ORACLE(), oracle);
-        assertEq(address(strikes.MODULE()), module);
-        assertEq(address(strikes.EJECTOR()), ejector);
+        assertEq(address(strikes.EXIT_PENALTIES()), exitPenalties);
+    }
+
+    function test_constructor_RevertWhen_ZeroModuleAddress() public {
+        vm.expectRevert(ICSStrikes.ZeroModuleAddress.selector);
+        new CSStrikes(address(0), oracle, exitPenalties);
+    }
+
+    function test_constructor_RevertWhen_ZeroExitPenaltiesAddress() public {
+        vm.expectRevert(ICSStrikes.ZeroExitPenaltiesAddress.selector);
+        new CSStrikes(address(module), oracle, address(0));
+    }
+
+    function test_constructor_RevertWhen_ZeroOracleAddress() public {
+        vm.expectRevert(ICSStrikes.ZeroOracleAddress.selector);
+        new CSStrikes(exitPenalties, address(0), exitPenalties);
+    }
+
+    function test_initialize_happyPath() public {
+        strikes = new CSStrikes(address(module), oracle, exitPenalties);
+        _enableInitializers(address(strikes));
+
+        vm.expectEmit(address(strikes));
+        emit ICSStrikes.EjectorSet(ejector);
+        strikes.initialize(admin, ejector);
+
+        assertEq(address(strikes.ejector()), ejector);
+        assertTrue(strikes.hasRole(strikes.DEFAULT_ADMIN_ROLE(), admin));
+    }
+
+    function test_initialize_RevertWhen_ZeroAdminAddress() public {
+        strikes = new CSStrikes(address(module), oracle, exitPenalties);
+        _enableInitializers(address(strikes));
+
+        vm.expectRevert(ICSStrikes.ZeroAdminAddress.selector);
+        strikes.initialize(address(0), ejector);
     }
 
     function test_initialize_RevertWhen_ZeroEjectorAddress() public {
-        vm.expectRevert(ICSStrikes.ZeroEjectorAddress.selector);
-        new CSStrikes(address(0), oracle);
-    }
+        strikes = new CSStrikes(address(module), oracle, exitPenalties);
+        _enableInitializers(address(strikes));
 
-    function test_initialize_RevertWhen_ZeroOracleAddress() public {
-        vm.expectRevert(ICSStrikes.ZeroOracleAddress.selector);
-        new CSStrikes(ejector, address(0));
+        vm.expectRevert(ICSStrikes.ZeroEjectorAddress.selector);
+        strikes.initialize(admin, address(0));
     }
 }
 
 contract CSStrikesTest is CSStrikesTestBase {
     function setUp() public {
         stranger = nextAddress("STRANGER");
+        admin = nextAddress("ADMIN");
+        refundRecipient = nextAddress("REFUND_RECIPIENT");
         oracle = nextAddress("ORACLE");
-        module = nextAddress("MODULE");
-        ejector = address(new EjectorMock(module));
+        module = new CSMMock();
+        exitPenalties = address(new ExitPenaltiesMock(address(module)));
+        ejector = address(new EjectorMock(address(module)));
 
-        strikes = new CSStrikes(ejector, oracle);
+        strikes = new CSStrikes(address(module), oracle, exitPenalties);
+        _enableInitializers(address(strikes));
+        strikes.initialize(admin, ejector);
 
         tree = new MerkleTree();
 
         vm.label(address(strikes), "STRIKES");
+    }
+
+    function test_setEjector() public {
+        ejector = address(new EjectorMock(address(module)));
+
+        vm.expectEmit(address(strikes));
+        emit ICSStrikes.EjectorSet(ejector);
+
+        vm.prank(admin);
+        strikes.setEjector(ejector);
+        assertEq(address(strikes.ejector()), ejector);
+    }
+
+    function test_setEjector_RevertWhen_ZeroEjectorAddress() public {
+        vm.expectRevert(ICSStrikes.ZeroEjectorAddress.selector);
+        vm.prank(admin);
+        strikes.setEjector(address(0));
     }
 
     function test_hashLeaf() public assertInvariants {
@@ -99,7 +155,7 @@ contract CSStrikesTest is CSStrikesTestBase {
         uint256 noId = 42;
         (bytes memory pubkey, ) = keysSignatures(1);
         uint256[] memory strikesData = new uint256[](6);
-        strikesData[0] = 100500;
+        strikesData[0] = 1;
 
         tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
         tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
@@ -123,7 +179,7 @@ contract CSStrikesTest is CSStrikesTestBase {
         uint256 noId = 42;
         (bytes memory pubkey, ) = keysSignatures(1);
         uint256[] memory strikesData = new uint256[](6);
-        strikesData[0] = 100500;
+        strikesData[0] = 1;
 
         tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
         tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
@@ -145,11 +201,12 @@ contract CSStrikesTest is CSStrikesTestBase {
 
     function test_processBadPerformanceProof() public {
         uint256 noId = 42;
-        (bytes memory pubkey, ) = keysSignatures(1);
+        module.mock_setNodeOperatorTotalDepositedKeys(1);
+        bytes memory pubkey = module.getSigningKeys(0, 0, 1);
         uint256[] memory strikesData = new uint256[](3);
-        strikesData[0] = 100500;
-        strikesData[1] = 100501;
-        strikesData[2] = 100502;
+        strikesData[0] = 1;
+        strikesData[1] = 1;
+        strikesData[2] = 1;
 
         tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
         tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
@@ -160,39 +217,74 @@ contract CSStrikesTest is CSStrikesTestBase {
 
         bytes32[] memory proof = tree.getProof(0);
 
-        vm.mockCall(
+        vm.expectCall(
             address(ejector),
-            abi.encodeWithSelector(ICSEjector.MODULE.selector),
-            abi.encode(module)
+            abi.encodeWithSelector(
+                ICSEjector.ejectBadPerformer.selector,
+                noId,
+                pubkey,
+                refundRecipient
+            )
         );
-        vm.mockCall(
-            module,
-            abi.encodeWithSelector(ICSModule.getSigningKeys.selector),
-            abi.encode(pubkey)
+        vm.expectCall(
+            address(exitPenalties),
+            abi.encodeWithSelector(
+                ICSExitPenalties.processStrikesReport.selector,
+                noId,
+                pubkey
+            )
         );
-        vm.mockCall(
-            address(ejector),
-            abi.encodeWithSelector(ICSEjector.ejectBadPerformer.selector),
-            ""
+        strikes.processBadPerformanceProof(
+            noId,
+            0,
+            strikesData,
+            proof,
+            refundRecipient
         );
+    }
+
+    function test_processBadPerformanceProof_defaultRefundRecipient() public {
+        uint256 noId = 42;
+        module.mock_setNodeOperatorTotalDepositedKeys(1);
+        bytes memory pubkey = module.getSigningKeys(0, 0, 1);
+        uint256[] memory strikesData = new uint256[](3);
+        strikesData[0] = 1;
+        strikesData[1] = 1;
+        strikesData[2] = 1;
+
+        tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
+        tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
+
+        bytes32 root = tree.root();
+        vm.prank(oracle);
+        strikes.processOracleReport(root, someCIDv0());
+
+        bytes32[] memory proof = tree.getProof(0);
 
         vm.expectCall(
             address(ejector),
             abi.encodeWithSelector(
                 ICSEjector.ejectBadPerformer.selector,
                 noId,
-                0,
-                301503
+                pubkey,
+                address(this)
             )
         );
-        strikes.processBadPerformanceProof(noId, 0, strikesData, proof);
+        strikes.processBadPerformanceProof(
+            noId,
+            0,
+            strikesData,
+            proof,
+            address(0)
+        );
     }
 
     function test_processBadPerformanceProof_RevertWhen_InvalidProof() public {
         uint256 noId = 42;
-        (bytes memory pubkey, ) = keysSignatures(1);
+        module.mock_setNodeOperatorTotalDepositedKeys(1);
+        bytes memory pubkey = module.getSigningKeys(0, 0, 1);
         uint256[] memory strikesData = new uint256[](1);
-        strikesData[0] = 100500;
+        strikesData[0] = 1;
 
         tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
         tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
@@ -203,26 +295,82 @@ contract CSStrikesTest is CSStrikesTestBase {
 
         bytes32[] memory proof = tree.getProof(1);
 
-        vm.mockCall(
-            address(ejector),
-            abi.encodeWithSelector(ICSEjector.MODULE.selector),
-            abi.encode(module)
-        );
-        vm.mockCall(
-            module,
-            abi.encodeWithSelector(ICSModule.getSigningKeys.selector),
-            abi.encode(pubkey)
-        );
-
         vm.expectRevert(ICSStrikes.InvalidProof.selector);
-        strikes.processBadPerformanceProof(noId, 0, strikesData, proof);
+        strikes.processBadPerformanceProof(
+            noId,
+            0,
+            strikesData,
+            proof,
+            refundRecipient
+        );
+    }
+
+    function test_processBadPerformanceProof_RevertWhen_NotEnoughStrikesToEject()
+        public
+    {
+        uint256 noId = 42;
+        module.mock_setNodeOperatorTotalDepositedKeys(1);
+        (bytes memory pubkey, ) = keysSignatures(1);
+        uint256[] memory strikesData = new uint256[](1);
+        strikesData[0] = 1;
+
+        tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
+        tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
+
+        bytes32 root = tree.root();
+        vm.prank(oracle);
+        strikes.processOracleReport(root, someCIDv0());
+
+        bytes32[] memory proof = tree.getProof(0);
+
+        vm.expectRevert(ICSStrikes.NotEnoughStrikesToEject.selector);
+        strikes.processBadPerformanceProof(
+            noId,
+            0,
+            strikesData,
+            proof,
+            refundRecipient
+        );
+    }
+
+    function test_processBadPerformanceProof_RevertWhen_SigningKeysInvalidOffset()
+        public
+    {
+        uint256 noId = 42;
+        module.mock_setNodeOperatorTotalDepositedKeys(1);
+        (bytes memory pubkey, ) = keysSignatures(1, 1);
+        uint256[] memory strikesData = new uint256[](3);
+        strikesData[0] = 1;
+        strikesData[1] = 1;
+        strikesData[2] = 1;
+
+        tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
+        tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
+
+        bytes32 root = tree.root();
+        vm.prank(oracle);
+        strikes.processOracleReport(root, someCIDv0());
+
+        bytes32[] memory proof = tree.getProof(0);
+
+        vm.expectRevert(ICSStrikes.SigningKeysInvalidOffset.selector);
+        strikes.processBadPerformanceProof(
+            noId,
+            1,
+            strikesData,
+            proof,
+            refundRecipient
+        );
     }
 
     function test_processBadPerformanceProof_Accepts_EmptyProof() public {
         uint256 noId = 42;
+        module.mock_setNodeOperatorTotalDepositedKeys(1);
         (bytes memory pubkey, ) = keysSignatures(1);
-        uint256[] memory strikesData = new uint256[](6);
-        strikesData[0] = 100500;
+        uint256[] memory strikesData = new uint256[](3);
+        strikesData[0] = 1;
+        strikesData[1] = 1;
+        strikesData[2] = 1;
 
         tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
 
@@ -233,32 +381,22 @@ contract CSStrikesTest is CSStrikesTestBase {
         bytes32[] memory proof = tree.getProof(0);
         assertEq(proof.length, 0);
 
-        vm.mockCall(
-            address(ejector),
-            abi.encodeWithSelector(ICSEjector.MODULE.selector),
-            abi.encode(module)
-        );
-        vm.mockCall(
-            address(module),
-            abi.encodeWithSelector(ICSModule.getSigningKeys.selector),
-            abi.encode(pubkey)
-        );
-        vm.mockCall(
-            address(ejector),
-            abi.encodeWithSelector(ICSEjector.ejectBadPerformer.selector),
-            ""
-        );
-
         vm.expectCall(
             address(ejector),
             abi.encodeWithSelector(
                 ICSEjector.ejectBadPerformer.selector,
                 noId,
-                0,
-                100500
+                pubkey,
+                refundRecipient
             )
         );
-        strikes.processBadPerformanceProof(noId, 0, strikesData, proof);
+        strikes.processBadPerformanceProof(
+            noId,
+            0,
+            strikesData,
+            proof,
+            refundRecipient
+        );
     }
 
     function test_processOracleReport() public assertInvariants {

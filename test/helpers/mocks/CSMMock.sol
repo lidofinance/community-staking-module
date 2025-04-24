@@ -5,8 +5,11 @@ pragma solidity 0.8.24;
 import { NodeOperatorManagementProperties, NodeOperator } from "../../../src/interfaces/ICSModule.sol";
 import { ICSAccounting } from "../../../src/interfaces/ICSAccounting.sol";
 import { ICSParametersRegistry } from "../../../src/interfaces/ICSParametersRegistry.sol";
+import { ILidoLocator } from "../../../src/interfaces/ILidoLocator.sol";
 import { CSParametersRegistryMock } from "./CSParametersRegistryMock.sol";
 import { Utilities } from "../Utilities.sol";
+import { LidoLocatorMock } from "./LidoLocatorMock.sol";
+import { Fixtures } from "../Fixtures.sol";
 
 contract AccountingMock {
     uint256 public constant DEFAULT_BOND_CURVE_ID = 0;
@@ -22,19 +25,22 @@ contract AccountingMock {
     }
 }
 
-contract CSMMock is Utilities {
+contract CSMMock is Utilities, Fixtures {
     NodeOperator internal mockNodeOperator;
     uint256 internal nodeOperatorsCount;
     uint256 internal nodeOperatorTotalDepositedKeys;
     bool internal isValidatorWithdrawnMock;
     ICSAccounting public immutable ACCOUNTING;
     ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
+    LidoLocatorMock public immutable LIDO_LOCATOR;
+    NodeOperatorManagementProperties internal managementProperties;
 
     constructor() {
         ACCOUNTING = ICSAccounting(address(new AccountingMock()));
         PARAMETERS_REGISTRY = ICSParametersRegistry(
             address(new CSParametersRegistryMock())
         );
+        (LIDO_LOCATOR, , , , ) = initLido();
     }
 
     function accounting() external view returns (ICSAccounting) {
@@ -49,6 +55,18 @@ contract CSMMock is Utilities {
         uint256 /* nodeOperatorId */
     ) external view returns (NodeOperator memory) {
         return mockNodeOperator;
+    }
+
+    function mock_setNodeOperatorManagementProperties(
+        NodeOperatorManagementProperties memory _managementProperties
+    ) external {
+        managementProperties = _managementProperties;
+    }
+
+    function getNodeOperatorManagementProperties(
+        uint256 nodeOperatorId
+    ) external view returns (NodeOperatorManagementProperties memory) {
+        return managementProperties;
     }
 
     function mock_setIsValidatorWithdrawn(bool value) external {
@@ -116,9 +134,15 @@ contract CSMMock is Utilities {
 
     function getSigningKeys(
         uint256 /* nodeOperatorId */,
-        uint256 /* startIndex */,
+        uint256 startIndex,
         uint256 keysCount
     ) external pure returns (bytes memory pubkeys) {
-        (pubkeys, ) = keysSignatures(keysCount);
+        (pubkeys, ) = keysSignatures(keysCount, startIndex);
+    }
+
+    function exitDeadlineThreshold(
+        uint256 nodeOperatorId
+    ) external view returns (uint256) {
+        return PARAMETERS_REGISTRY.getAllowedExitDelay(0);
     }
 }

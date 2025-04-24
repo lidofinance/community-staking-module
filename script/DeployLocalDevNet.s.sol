@@ -51,6 +51,7 @@ contract DeployLocalDevNet is DeployBase {
             "CSM_FIRST_ADMIN_ADDRESS"
         ); // Dev team EOA
         // Module
+        config.stakingModuleId = vm.envUint("CSM_STAKING_MODULE_ID");
         config.moduleType = "community-onchain-v1"; // Just a unique type name to be used by the off-chain tooling
         config.elRewardsStealingReporter = vm.envAddress(
             "CSM_FIRST_ADMIN_ADDRESS"
@@ -71,6 +72,8 @@ contract DeployLocalDevNet is DeployBase {
         config.blocksWeight = 8; // https://eth2book.info/capella/part2/incentives/rewards/
         config.syncWeight = 2; // https://eth2book.info/capella/part2/incentives/rewards/
         config.defaultAllowedExitDelay = 4 days; // TODO: reconsider
+        config.defaultExitDelayPenalty = 0.1 ether; // TODO: to be reviewed
+        config.defaultMaxWithdrawalRequestFee = 0.1 ether; // TODO: to be reviewed
         // VettedGate
         config.vettedGateTreeRoot = vm.envOr(
             "CSM_VETTED_GATE_TREE_ROOT",

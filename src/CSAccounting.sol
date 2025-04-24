@@ -35,7 +35,6 @@ contract CSAccounting is
         keccak256("MANAGE_BOND_CURVES_ROLE");
     bytes32 public constant SET_BOND_CURVE_ROLE =
         keccak256("SET_BOND_CURVE_ROLE");
-    bytes32 public constant PENALIZE_ROLE = keccak256("PENALIZE_ROLE");
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
     ICSModule public immutable MODULE;
@@ -338,7 +337,7 @@ contract CSAccounting is
     function penalize(
         uint256 nodeOperatorId,
         uint256 amount
-    ) external onlyRole(PENALIZE_ROLE) {
+    ) external onlyModule {
         CSBondCore._burn(nodeOperatorId, amount);
     }
 
@@ -346,7 +345,7 @@ contract CSAccounting is
     function chargeFee(
         uint256 nodeOperatorId,
         uint256 amount
-    ) external onlyRole(PENALIZE_ROLE) {
+    ) external onlyModule {
         CSBondCore._charge(nodeOperatorId, amount, chargePenaltyRecipient);
     }
 

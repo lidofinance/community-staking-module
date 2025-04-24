@@ -3,27 +3,32 @@
 pragma solidity 0.8.24;
 
 import "forge-std/Test.sol";
-import "../src/interfaces/IStakingModule.sol";
-import "../src/CSModule.sol";
-import "../src/CSAccounting.sol";
-import "./helpers/Fixtures.sol";
-import "./helpers/mocks/StETHMock.sol";
-import "./helpers/mocks/LidoLocatorMock.sol";
-import "./helpers/mocks/LidoMock.sol";
-import "./helpers/mocks/WstETHMock.sol";
-import "./helpers/mocks/CSParametersRegistryMock.sol";
-import "./helpers/Utilities.sol";
-import "./helpers/MerkleTree.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { IStakingModule } from "../src/interfaces/IStakingModule.sol";
+import { CSModule } from "../src/CSModule.sol";
+import { CSAccounting } from "../src/CSAccounting.sol";
+import { CSBondLock } from "../src/abstract/CSBondLock.sol";
+import { ICSAccounting } from "../src/interfaces/ICSAccounting.sol";
+import { Fixtures } from "./helpers/Fixtures.sol";
+import { StETHMock } from "./helpers/mocks/StETHMock.sol";
+import { LidoLocatorMock } from "./helpers/mocks/LidoLocatorMock.sol";
+import { LidoMock } from "./helpers/mocks/LidoMock.sol";
+import { WstETHMock } from "./helpers/mocks/WstETHMock.sol";
+import { CSParametersRegistryMock } from "./helpers/mocks/CSParametersRegistryMock.sol";
+import { Utilities } from "./helpers/Utilities.sol";
 import { console } from "forge-std/console.sol";
 import { ERC20Testable } from "./helpers/ERCTestable.sol";
 import { IAssetRecovererLib } from "../src/lib/AssetRecovererLib.sol";
-import { IWithdrawalQueue } from "../src/interfaces/IWithdrawalQueue.sol";
 import { Batch, IQueueLib } from "../src/lib/QueueLib.sol";
 import { SigningKeys } from "../src/lib/SigningKeys.sol";
 import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 import { INOAddresses } from "../src/lib/NOAddresses.sol";
 import { InvariantAsserts } from "./helpers/InvariantAsserts.sol";
-import { ValidatorWithdrawalInfo } from "../src/interfaces/ICSModule.sol";
+import { ICSModule, NodeOperator, NodeOperatorManagementProperties, ValidatorWithdrawalInfo } from "../src/interfaces/ICSModule.sol";
+import { ICSExitPenalties, ExitPenaltyInfo, MarkedUint248 } from "../src/interfaces/ICSExitPenalties.sol";
+import { ExitPenaltiesMock } from "./helpers/mocks/ExitPenaltiesMock.sol";
+import { Stub } from "./helpers/mocks/Stub.sol";
 
 abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     using Strings for uint256;
@@ -44,14 +49,13 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     CSAccounting public accounting;
     Stub public feeDistributor;
     CSParametersRegistryMock public parametersRegistry;
+    ExitPenaltiesMock public exitPenalties;
 
     address internal admin;
     address internal stranger;
     address internal strangerNumberTwo;
     address internal nodeOperator;
     address internal testChargePenaltyRecipient;
-
-    MerkleTree internal merkleTree;
 
     struct NodeOperatorSummary {
         uint256 targetLimitMode;
@@ -353,9 +357,10 @@ contract CSMCommon is CSMFixtures {
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
+        exitPenalties = new ExitPenaltiesMock(address(csm));
+
         uint256[2][] memory curve = new uint256[2][](1);
         curve[0] = [uint256(1), BOND_SIZE];
-
         accounting = new CSAccounting(
             address(locator),
             address(csm),
@@ -374,11 +379,12 @@ contract CSMCommon is CSMFixtures {
             testChargePenaltyRecipient
         );
 
-        merkleTree = new MerkleTree();
-        merkleTree.pushLeaf(abi.encode(nodeOperator));
-
         _enableInitializers(address(csm));
-        csm.initialize({ _accounting: address(accounting), admin: admin });
+        csm.initialize({
+            _accounting: address(accounting),
+            _exitPenalties: address(exitPenalties),
+            admin: admin
+        });
 
         vm.startPrank(admin);
         csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(this));
@@ -400,7 +406,6 @@ contract CSMCommon is CSMFixtures {
             address(this)
         );
         accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), address(this));
-        accounting.grantRole(accounting.PENALIZE_ROLE(), address(csm));
         vm.stopPrank();
 
         csm.resume();
@@ -427,6 +432,7 @@ contract CSMCommonNoRoles is CSMFixtures {
             lidoLocator: address(locator),
             parametersRegistry: address(parametersRegistry)
         });
+        exitPenalties = new ExitPenaltiesMock(address(csm));
 
         uint256[2][] memory curve = new uint256[2][](1);
         curve[0] = [uint256(1), BOND_SIZE];
@@ -447,19 +453,19 @@ contract CSMCommonNoRoles is CSMFixtures {
             testChargePenaltyRecipient
         );
 
-        merkleTree = new MerkleTree();
-        merkleTree.pushLeaf(abi.encode(nodeOperator));
-
         vm.startPrank(admin);
         accounting.grantRole(
             accounting.MANAGE_BOND_CURVES_ROLE(),
             address(this)
         );
-        accounting.grantRole(accounting.PENALIZE_ROLE(), address(csm));
         vm.stopPrank();
 
         _enableInitializers(address(csm));
-        csm.initialize({ _accounting: address(accounting), admin: admin });
+        csm.initialize({
+            _accounting: address(accounting),
+            _exitPenalties: address(exitPenalties),
+            admin: admin
+        });
 
         vm.startPrank(admin);
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
@@ -546,6 +552,7 @@ contract CsmInitialize is CSMCommon {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         csm.initialize({
             _accounting: address(accounting),
+            _exitPenalties: address(exitPenalties),
             admin: address(this)
         });
     }
@@ -560,11 +567,13 @@ contract CsmInitialize is CSMCommon {
         _enableInitializers(address(csm));
         csm.initialize({
             _accounting: address(accounting),
+            _exitPenalties: address(exitPenalties),
             admin: address(this)
         });
         assertEq(csm.getType(), "community-staking-module");
         assertEq(address(csm.LIDO_LOCATOR()), address(locator));
         assertEq(address(csm.accounting()), address(accounting));
+        assertEq(address(csm.exitPenalties()), address(exitPenalties));
         assertTrue(csm.isPaused());
     }
 
@@ -577,7 +586,27 @@ contract CsmInitialize is CSMCommon {
 
         _enableInitializers(address(csm));
         vm.expectRevert(ICSModule.ZeroAccountingAddress.selector);
-        csm.initialize({ _accounting: address(0), admin: address(this) });
+        csm.initialize({
+            _accounting: address(0),
+            _exitPenalties: address(exitPenalties),
+            admin: address(this)
+        });
+    }
+
+    function test_initialize_RevertWhen_ZeroExitPenaltiesAddress() public {
+        CSModule csm = new CSModule({
+            moduleType: "community-staking-module",
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry)
+        });
+
+        _enableInitializers(address(csm));
+        vm.expectRevert(ICSModule.ZeroExitPenaltiesAddress.selector);
+        csm.initialize({
+            _accounting: address(accounting),
+            _exitPenalties: address(0),
+            admin: address(this)
+        });
     }
 
     function test_initialize_RevertWhen_ZeroAdminAddress() public {
@@ -589,7 +618,11 @@ contract CsmInitialize is CSMCommon {
 
         _enableInitializers(address(csm));
         vm.expectRevert(ICSModule.ZeroAdminAddress.selector);
-        csm.initialize({ _accounting: address(154), admin: address(0) });
+        csm.initialize({
+            _accounting: address(154),
+            _exitPenalties: address(exitPenalties),
+            admin: address(0)
+        });
     }
 }
 
@@ -5404,6 +5437,339 @@ contract CsmSubmitWithdrawals is CSMCommon {
         csm.submitWithdrawals(withdrawalInfo);
     }
 
+    function test_submitWithdrawals_exitDelayPenalty() public assertInvariants {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        uint256 depositSize = DEPOSIT_SIZE;
+        csm.obtainDepositData(1, "");
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(1 ether, true),
+                strikesPenalty: MarkedUint248(0, false),
+                withdrawalRequestFee: MarkedUint248(0, false)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            depositSize,
+            false
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.penalize.selector, noId, 1 ether)
+        );
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+
+    function test_submitWithdrawals_strikesPenalty() public assertInvariants {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        uint256 depositSize = DEPOSIT_SIZE;
+        csm.obtainDepositData(1, "");
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(0, false),
+                strikesPenalty: MarkedUint248(1 ether, true),
+                withdrawalRequestFee: MarkedUint248(0, false)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            depositSize,
+            false
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.penalize.selector, noId, 1 ether)
+        );
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+
+    function test_submitWithdrawals_allPenalties() public assertInvariants {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        uint256 depositSize = DEPOSIT_SIZE;
+        csm.obtainDepositData(1, "");
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(1 ether, true),
+                strikesPenalty: MarkedUint248(1 ether, true),
+                withdrawalRequestFee: MarkedUint248(0, false)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            depositSize - 1 ether,
+            false
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.penalize.selector, noId, 3 ether)
+        );
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+
+    function test_submitWithdrawals_chargeWithdrawalFee_DelayPenalty()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        uint256 depositSize = DEPOSIT_SIZE;
+        csm.obtainDepositData(1, "");
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(1 ether, true),
+                strikesPenalty: MarkedUint248(0, false),
+                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            depositSize,
+            false
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.penalize.selector, noId, 1 ether)
+        );
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                0.1 ether
+            )
+        );
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+
+    function test_submitWithdrawals_chargeWithdrawalFee_StrikesPenalty()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        uint256 depositSize = DEPOSIT_SIZE;
+        csm.obtainDepositData(1, "");
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(0, false),
+                strikesPenalty: MarkedUint248(1 ether, true),
+                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            depositSize,
+            false
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.penalize.selector, noId, 1 ether)
+        );
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                0.1 ether
+            )
+        );
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+
+    function test_submitWithdrawals_chargeWithdrawalFee_DelayAndStrikesPenalties()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        uint256 depositSize = DEPOSIT_SIZE;
+        csm.obtainDepositData(1, "");
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(1 ether, true),
+                strikesPenalty: MarkedUint248(1 ether, true),
+                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            depositSize,
+            false
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(accounting.penalize.selector, noId, 2 ether)
+        );
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                0.1 ether
+            )
+        );
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+
+    function test_submitWithdrawals_chargeWithdrawalFee_zeroPenaltyValue()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        uint256 depositSize = DEPOSIT_SIZE;
+        csm.obtainDepositData(1, "");
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(0, true),
+                strikesPenalty: MarkedUint248(0, true),
+                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            depositSize,
+            false
+        );
+
+        vm.expectCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                0.1 ether
+            )
+        );
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+
+    function test_submitWithdrawals_dontChargeWithdrawalFee_noPenalties()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        uint256 depositSize = DEPOSIT_SIZE;
+        csm.obtainDepositData(1, "");
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(0, false),
+                strikesPenalty: MarkedUint248(0, false),
+                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            depositSize,
+            false
+        );
+
+        expectNoCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                0.1 ether
+            )
+        );
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+
+    function test_submitWithdrawals_dontChargeWithdrawalFee_exitBalancePenalty()
+        public
+        assertInvariants
+    {
+        uint256 keyIndex = 0;
+        uint256 noId = createNodeOperator();
+        uint256 depositSize = DEPOSIT_SIZE;
+        csm.obtainDepositData(1, "");
+
+        exitPenalties.mock_setDelayedExitPenaltyInfo(
+            ExitPenaltyInfo({
+                delayPenalty: MarkedUint248(0, false),
+                strikesPenalty: MarkedUint248(0, false),
+                withdrawalRequestFee: MarkedUint248(0.1 ether, true)
+            })
+        );
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
+
+        withdrawalInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            keyIndex,
+            depositSize - 1 ether,
+            false
+        );
+
+        expectNoCall(
+            address(accounting),
+            abi.encodeWithSelector(
+                accounting.chargeFee.selector,
+                noId,
+                0.1 ether
+            )
+        );
+        csm.submitWithdrawals(withdrawalInfo);
+    }
+
     function test_submitWithdrawals_unbondedKeys() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator(2);
@@ -5547,7 +5913,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
             parametersRegistry: address(parametersRegistry)
         });
         _enableInitializers(address(csm));
-        csm.initialize(address(accounting), actor);
+        csm.initialize(address(accounting), address(exitPenalties), actor);
 
         bytes32 role = csm.DEFAULT_ADMIN_ROLE();
         vm.prank(actor);
@@ -5652,7 +6018,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.settleELRewardsStealingPenalty(UintArr(noId));
     }
 
-    function test_verifierRole_submitWithdrawal() public {
+    function test_verifierRole_submitWithdrawals() public {
         uint256 noId = createNodeOperator();
         bytes32 role = csm.VERIFIER_ROLE();
 
@@ -5670,7 +6036,7 @@ contract CSMAccessControl is CSMCommonNoRoles {
         csm.submitWithdrawals(withdrawalInfo);
     }
 
-    function test_verifierRole_submitWithdrawal_revert() public {
+    function test_verifierRole_submitWithdrawals_revert() public {
         uint256 noId = createNodeOperator();
         bytes32 role = csm.VERIFIER_ROLE();
 
@@ -6692,5 +7058,91 @@ contract CSMMisc is CSMCommon {
         assertEq(props.managerAddress, manager);
         assertEq(props.rewardAddress, reward);
         assertEq(props.extendedManagerPermissions, extended);
+    }
+}
+
+contract CSMExitDeadlineThreshold is CSMCommon {
+    function test_exitDeadlineThreshold() public assertInvariants {
+        uint256 noId = createNodeOperator();
+        uint256 exitDeadlineThreshold = csm.exitDeadlineThreshold(noId);
+        assertEq(exitDeadlineThreshold, parametersRegistry.allowedExitDelay());
+    }
+
+    function test_exitDeadlineThreshold_revertWhenNoNodeOperator()
+        public
+        assertInvariants
+    {
+        uint256 noId = 0;
+        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
+        csm.exitDeadlineThreshold(noId);
+    }
+}
+
+contract CSMReportValidatorExitDelay is CSMCommon {
+    function test_reportValidatorExitDelay() public {
+        uint256 noId = createNodeOperator();
+        uint256 exitDeadlineThreshold = csm.exitDeadlineThreshold(noId);
+        bytes memory publicKey = randomBytes(48);
+
+        vm.expectCall(
+            address(exitPenalties),
+            abi.encodeWithSelector(
+                ICSExitPenalties.processExitDelayReport.selector,
+                noId,
+                publicKey,
+                exitDeadlineThreshold
+            )
+        );
+        csm.reportValidatorExitDelay(
+            noId,
+            block.timestamp,
+            publicKey,
+            exitDeadlineThreshold
+        );
+    }
+
+    function test_reportValidatorExitDelay_revertWhen_noNodeOperator() public {
+        uint256 noId = 0;
+        bytes memory publicKey = randomBytes(48);
+        uint256 exitDelay = parametersRegistry.allowedExitDelay();
+
+        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
+        csm.reportValidatorExitDelay(
+            noId,
+            block.timestamp,
+            publicKey,
+            exitDelay
+        );
+    }
+}
+
+contract CSMOnValidatorExitTriggered is CSMCommon {
+    function test_onValidatorExitTriggered() public assertInvariants {
+        uint256 noId = createNodeOperator();
+        bytes memory publicKey = randomBytes(48);
+        uint256 paidFee = 0.1 ether;
+        uint256 exitType = 1;
+
+        vm.expectCall(
+            address(exitPenalties),
+            abi.encodeWithSelector(
+                ICSExitPenalties.processTriggeredExit.selector,
+                noId,
+                publicKey,
+                paidFee,
+                exitType
+            )
+        );
+        csm.onValidatorExitTriggered(noId, publicKey, paidFee, exitType);
+    }
+
+    function test_onValidatorExitTriggered_revertWhen_noNodeOperator() public {
+        uint256 noId = 0;
+        bytes memory publicKey = randomBytes(48);
+        uint256 paidFee = 0.1 ether;
+        uint256 exitType = 1;
+
+        vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
+        csm.onValidatorExitTriggered(noId, publicKey, paidFee, exitType);
     }
 }

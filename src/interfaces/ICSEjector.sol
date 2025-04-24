@@ -4,34 +4,29 @@
 pragma solidity 0.8.24;
 
 import { ICSAccounting } from "./ICSAccounting.sol";
-import { IAssetRecovererLib } from "../lib/AssetRecovererLib.sol";
 import { ICSParametersRegistry } from "./ICSParametersRegistry.sol";
 import { ICSModule } from "./ICSModule.sol";
+import { IExitTypes } from "./IExitTypes.sol";
 
-interface ICSEjector is IAssetRecovererLib {
+interface ICSEjector is IExitTypes {
     error SigningKeysInvalidOffset();
     error AlreadyWithdrawn();
-    error AlreadyEjected();
     error ZeroAdminAddress();
     error ZeroModuleAddress();
-    error NotEnoughStrikesToEject();
+    error ZeroStrikesAddress();
     error NodeOperatorDoesNotExist();
-
-    event EjectionSubmitted(
-        uint256 indexed nodeOperatorId,
-        uint256 keyIndex,
-        bytes pubkey
-    );
+    error SenderIsNotEligible();
+    error SenderIsNotStrikes();
 
     function PAUSE_ROLE() external view returns (bytes32);
 
     function RESUME_ROLE() external view returns (bytes32);
 
-    function BAD_PERFORMER_EJECTOR_ROLE() external view returns (bytes32);
+    function STAKING_MODULE_ID() external view returns (uint256);
 
     function MODULE() external view returns (ICSModule);
 
-    function ACCOUNTING() external view returns (ICSAccounting);
+    function strikes() external view returns (address);
 
     /// @notice Pause ejection methods calls
     /// @param duration Duration of the pause in seconds
@@ -40,23 +35,39 @@ interface ICSEjector is IAssetRecovererLib {
     /// @notice Resume ejection methods calls
     function resume() external;
 
-    /// @notice Report Node Operator's key as bad performer and eject it with corresponding penalty
+    /// @notice Withdraw the validator key from the Node Operator
+    /// @notice Called by the node operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param startFrom Index of the first key to withdraw
+    /// @param keysCount Number of keys to withdraw
+    /// @param refundRecipient Address to send the refund to
+    function voluntaryEject(
+        uint256 nodeOperatorId,
+        uint256 startFrom,
+        uint256 keysCount,
+        address refundRecipient
+    ) external payable;
+
+    /// @notice Withdraw the validator key from the Node Operator
+    /// @notice Called by the node operator
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @param keyIndices Array of indices of the keys to withdraw
+    /// @param refundRecipient Address to send the refund to
+    function voluntaryEjectByArray(
+        uint256 nodeOperatorId,
+        uint256[] calldata keyIndices,
+        address refundRecipient
+    ) external payable;
+
+    /// @notice Eject Node Operator's key as a bad performer
     /// @notice Called by the `CSStrikes` contract.
     ///         See `CSStrikes.processBadPerformanceProof` to use this method permissionless
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the withdrawn key in the Node Operator's keys storage
-    /// @param strikes Strikes of the Node Operator's validator key
+    /// @param publicKeys Concatenated public keys of the Node Operator's validators
+    /// @param refundRecipient Address to send the refund to
     function ejectBadPerformer(
         uint256 nodeOperatorId,
-        uint256 keyIndex,
-        uint256 strikes
-    ) external;
-
-    /// @notice Check if the given Node Operator's key is reported as ejected
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex index of the key to check
-    function isValidatorEjected(
-        uint256 nodeOperatorId,
-        uint256 keyIndex
-    ) external view returns (bool);
+        bytes calldata publicKeys,
+        address refundRecipient
+    ) external payable;
 }
