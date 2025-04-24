@@ -145,7 +145,8 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
             abi.encodeWithSelector(
                 IValidatorsExitBus.triggerExitsDirectly.selector,
                 IValidatorsExitBus.DirectExitData(0, noId, pubkey),
-                refundRecipient
+                refundRecipient,
+                exitType
             )
         );
         ejector.voluntaryEject(noId, keyIndex, 1, refundRecipient);
@@ -173,7 +174,8 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
             abi.encodeWithSelector(
                 IValidatorsExitBus.triggerExitsDirectly.selector,
                 IValidatorsExitBus.DirectExitData(0, noId, pubkeys),
-                refundRecipient
+                refundRecipient,
+                exitType
             )
         );
         ejector.voluntaryEject(noId, keyIndex, keysCount, refundRecipient);
@@ -330,7 +332,8 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
             abi.encodeWithSelector(
                 IValidatorsExitBus.triggerExitsDirectly.selector,
                 IValidatorsExitBus.DirectExitData(0, noId, pubkey),
-                refundRecipient
+                refundRecipient,
+                exitType
             )
         );
         ejector.voluntaryEjectByArray(noId, indices, refundRecipient);
@@ -361,7 +364,8 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
             abi.encodeWithSelector(
                 IValidatorsExitBus.triggerExitsDirectly.selector,
                 IValidatorsExitBus.DirectExitData(0, noId, pubkeys),
-                refundRecipient
+                refundRecipient,
+                exitType
             )
         );
         ejector.voluntaryEjectByArray(noId, indices, refundRecipient);
@@ -541,7 +545,8 @@ contract CSEjectorTestEjectBadPerformer is CSEjectorTestBase {
             abi.encodeWithSelector(
                 IValidatorsExitBus.triggerExitsDirectly.selector,
                 IValidatorsExitBus.DirectExitData(0, noId, pubkey),
-                refundRecipient
+                refundRecipient,
+                exitType
             )
         );
 

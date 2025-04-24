@@ -20,8 +20,8 @@ contract CSEjector is
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
 
-    uint256 public constant VOLUNTARY_EXIT_TYPE_ID = 0;
-    uint256 public constant STRIKES_EXIT_TYPE_ID = 1;
+    uint8 public constant VOLUNTARY_EXIT_TYPE_ID = 0;
+    uint8 public constant STRIKES_EXIT_TYPE_ID = 1;
 
     uint256 public immutable STAKING_MODULE_ID;
     ICSModule public immutable MODULE;
@@ -63,8 +63,6 @@ contract CSEjector is
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
-
-    receive() external payable {}
 
     /// @inheritdoc ICSEjector
     function resume() external onlyRole(RESUME_ROLE) {
@@ -121,7 +119,11 @@ contract CSEjector is
             ? msg.sender
             : refundRecipient;
 
-        VEB.triggerExitsDirectly{ value: msg.value }(exitData, refundRecipient);
+        VEB.triggerExitsDirectly{ value: msg.value }(
+            exitData,
+            refundRecipient,
+            VOLUNTARY_EXIT_TYPE_ID
+        );
     }
 
     /// @dev this method is intentionally copy-pasted from the voluntaryEject method with keys changes
@@ -171,7 +173,11 @@ contract CSEjector is
             ? msg.sender
             : refundRecipient;
 
-        VEB.triggerExitsDirectly{ value: msg.value }(exitData, refundRecipient);
+        VEB.triggerExitsDirectly{ value: msg.value }(
+            exitData,
+            refundRecipient,
+            VOLUNTARY_EXIT_TYPE_ID
+        );
     }
 
     /// @inheritdoc ICSEjector
@@ -186,6 +192,10 @@ contract CSEjector is
                 nodeOperatorId: nodeOperatorId,
                 validatorsPubkeys: publicKeys
             });
-        VEB.triggerExitsDirectly{ value: msg.value }(exitData, refundRecipient);
+        VEB.triggerExitsDirectly{ value: msg.value }(
+            exitData,
+            refundRecipient,
+            STRIKES_EXIT_TYPE_ID
+        );
     }
 }

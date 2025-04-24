@@ -16,7 +16,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 contract CSExitPenalties is ICSExitPenalties, Initializable {
     using SafeCast for uint256;
 
-    uint256 public constant VOLUNTARY_EXIT_TYPE_ID = 0;
+    uint8 public constant VOLUNTARY_EXIT_TYPE_ID = 0;
 
     ICSModule public immutable MODULE;
     ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
