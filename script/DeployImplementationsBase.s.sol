@@ -244,16 +244,17 @@ abstract contract DeployImplementationsBase is DeployBase {
                 admin: deployer
             });
 
-            address[] memory sealables = new address[](6);
-            sealables[0] = address(csm);
-            sealables[1] = address(accounting);
-            sealables[2] = address(oracle);
-            sealables[3] = address(verifierV2);
-            sealables[4] = address(vettedGate);
-            sealables[5] = address(ejector);
-            gateSealV2 = _deployGateSeal(sealables);
+            if (config.gateSealFactory != address(0)) {
+                address[] memory sealables = new address[](6);
+                sealables[0] = address(csm);
+                sealables[1] = address(accounting);
+                sealables[2] = address(oracle);
+                sealables[3] = address(verifierV2);
+                sealables[4] = address(vettedGate);
+                sealables[5] = address(ejector);
+                gateSealV2 = _deployGateSeal(sealables);
 
-            if (config.secondAdminAddress != address(0)) {
+                if (config.secondAdminAddress != address(0)) {
                 if (config.secondAdminAddress == deployer) {
                     revert InvalidSecondAdmin();
                 }
@@ -261,6 +262,12 @@ abstract contract DeployImplementationsBase is DeployBase {
             }
 
             ejector.grantRole(ejector.PAUSE_ROLE(), gateSealV2);
+                vettedGate.grantRole(
+                    vettedGate.PAUSE_ROLE(),
+                    address(gateSeal)
+                );
+                verifier.grantRole(verifier.PAUSE_ROLE(), address(gateSeal));
+            }
             ejector.grantRole(ejector.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
             ejector.revokeRole(ejector.DEFAULT_ADMIN_ROLE(), deployer);
 
