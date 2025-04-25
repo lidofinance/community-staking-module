@@ -262,7 +262,7 @@ contract CSParametersRegistry is
     /// @inheritdoc ICSParametersRegistry
     function setRewardShareData(
         uint256 curveId,
-        KeyIndexValueInterval[] calldata data
+        uint256[2][] calldata data
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _validateKeysCountValueIntervals(data);
         KeyIndexValueInterval[] storage intervals = _rewardShareData[curveId];
@@ -270,7 +270,10 @@ contract CSParametersRegistry is
             delete _rewardShareData[curveId];
         }
         for (uint256 i = 0; i < data.length; ++i) {
-            intervals.push(data[i]);
+            (uint256 minKeyIndex, uint256 value) = (data[i][0], data[i][1]);
+            KeyIndexValueInterval storage interval = intervals.push();
+            interval.minKeyIndex = minKeyIndex;
+            interval.value = value;
         }
         emit RewardShareDataSet(curveId, data);
     }
@@ -286,7 +289,7 @@ contract CSParametersRegistry is
     /// @inheritdoc ICSParametersRegistry
     function setPerformanceLeewayData(
         uint256 curveId,
-        KeyIndexValueInterval[] calldata data
+        uint256[2][] calldata data
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _validateKeysCountValueIntervals(data);
         KeyIndexValueInterval[] storage intervals = _performanceLeewayData[
@@ -296,7 +299,10 @@ contract CSParametersRegistry is
             delete _performanceLeewayData[curveId];
         }
         for (uint256 i = 0; i < data.length; ++i) {
-            _performanceLeewayData[curveId].push(data[i]);
+            (uint256 minKeyIndex, uint256 value) = (data[i][0], data[i][1]);
+            KeyIndexValueInterval storage interval = intervals.push();
+            interval.minKeyIndex = minKeyIndex;
+            interval.value = value;
         }
         emit PerformanceLeewayDataSet(curveId, data);
     }
@@ -389,15 +395,16 @@ contract CSParametersRegistry is
     /// @inheritdoc ICSParametersRegistry
     function setQueueConfig(
         uint256 curveId,
-        QueueConfig calldata config
+        uint32 priority,
+        uint32 maxDeposits
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _validateQueueConfig(config.priority, config.maxDeposits);
+        _validateQueueConfig(priority, maxDeposits);
         _queueConfigs[curveId] = MarkedQueueConfig({
-            priority: config.priority,
-            maxDeposits: config.maxDeposits,
+            priority: priority,
+            maxDeposits: maxDeposits,
             isValue: true
         });
-        emit QueueConfigSet(curveId, config.priority, config.maxDeposits);
+        emit QueueConfigSet(curveId, priority, maxDeposits);
     }
 
     /// @inheritdoc ICSParametersRegistry
@@ -731,22 +738,31 @@ contract CSParametersRegistry is
     }
 
     function _validateKeysCountValueIntervals(
-        KeyIndexValueInterval[] calldata intervals
+        uint256[2][] calldata intervals
     ) private pure {
-        if (intervals[0].minKeyIndex != 0) {
+        (uint256 firstMinKeyIndex, uint256 firstValue) = (
+            intervals[0][0],
+            intervals[0][1]
+        );
+        if (firstMinKeyIndex != 0) {
             revert InvalidKeyIndexValueIntervals();
         }
 
-        if (intervals[0].value == 0 || intervals[0].value > MAX_BP) {
+        if (firstValue == 0 || firstValue > MAX_BP) {
             revert InvalidKeyIndexValueIntervals();
         }
 
         for (uint256 i = 1; i < intervals.length; ++i) {
             unchecked {
-                if (intervals[i].minKeyIndex <= intervals[i - 1].minKeyIndex) {
+                (uint256 minKeyIndex, uint256 value) = (
+                    intervals[i][0],
+                    intervals[i][1]
+                );
+                uint256 prevMinKeyIndex = intervals[i - 1][0];
+                if (minKeyIndex <= prevMinKeyIndex) {
                     revert InvalidKeyIndexValueIntervals();
                 }
-                if (intervals[i].value == 0 || intervals[i].value > MAX_BP) {
+                if (value == 0 || value > MAX_BP) {
                     revert InvalidKeyIndexValueIntervals();
                 }
             }

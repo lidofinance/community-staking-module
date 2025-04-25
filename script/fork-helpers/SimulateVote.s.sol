@@ -12,6 +12,7 @@ import { CSAccounting } from "../../src/CSAccounting.sol";
 import { CSFeeOracle } from "../../src/CSFeeOracle.sol";
 import { CSFeeDistributor } from "../../src/CSFeeDistributor.sol";
 import { CSEjector } from "../../src/CSEjector.sol";
+import { CSParametersRegistry } from "../../src/CSParametersRegistry.sol";
 import { IBurner } from "../../src/interfaces/IBurner.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
 import { ForkHelpersCommon } from "./Common.sol";
@@ -77,6 +78,24 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         [uint256(1), 1.5 ether],
         [uint256(2), 1.3 ether]
     ];
+
+    uint256 vettedGateKeyRemovalCharge = 0.01 ether;
+    uint256 vettedGateELRewardsStealingAdditionalFine = 0.5 ether;
+    uint256 vettedGateKeysLimit = type(uint248).max;
+    uint256[2][] vettedGateAvgPerfLeewayData = [[uint256(0), uint256(500)]];
+
+    uint256[2][] vettedGateRewardShareData = [[uint256(0), uint256(10000)]];
+    uint256 vettedGateStrikesLifetimeFrames = 6;
+    uint256 vettedGateStrikesThreshold = 3;
+    uint256 vettedGateQueuePriority = 0;
+    uint256 vettedGateQueueMaxDeposits = 10;
+    uint256 vettedGateBadPerformancePenalty = 0.1 ether;
+    uint256 vettedGateAttestationsWeight = 54;
+    uint256 vettedGateBlocksWeight = 8;
+    uint256 vettedGateSyncWeight = 2;
+    uint256 vettedGateAllowedExitDelay = 4 days;
+    uint256 vettedGateExitDelayPenalty = 0.1 ether;
+    uint256 vettedGateMaxWithdrawalRequestFee = 0.1 ether;
 
     function upgrade() external {
         Env memory env = envVars();
@@ -148,8 +167,65 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         accounting = CSAccounting(deploymentConfig.accounting);
         oracle = CSFeeOracle(deploymentConfig.oracle);
         IBurner burner = IBurner(locator.burner());
+        CSParametersRegistry parametersRegistry = CSParametersRegistry(
+            upgradeConfig.parametersRegistry
+        );
 
         vm.startBroadcast(admin);
+
+        uint256 identifiedSolosCurve = 1;
+        parametersRegistry.setKeyRemovalCharge(
+            identifiedSolosCurve,
+            vettedGateKeyRemovalCharge
+        );
+        parametersRegistry.setElRewardsStealingAdditionalFine(
+            identifiedSolosCurve,
+            vettedGateELRewardsStealingAdditionalFine
+        );
+        parametersRegistry.setKeysLimit(
+            identifiedSolosCurve,
+            vettedGateKeysLimit
+        );
+        parametersRegistry.setPerformanceLeewayData(
+            identifiedSolosCurve,
+            vettedGateAvgPerfLeewayData
+        );
+        parametersRegistry.setRewardShareData(
+            identifiedSolosCurve,
+            vettedGateRewardShareData
+        );
+        parametersRegistry.setStrikesParams(
+            identifiedSolosCurve,
+            vettedGateStrikesLifetimeFrames,
+            vettedGateStrikesThreshold
+        );
+        parametersRegistry.setQueueConfig(
+            identifiedSolosCurve,
+            uint32(vettedGateQueuePriority),
+            uint32(vettedGateQueueMaxDeposits)
+        );
+        parametersRegistry.setBadPerformancePenalty(
+            identifiedSolosCurve,
+            vettedGateBadPerformancePenalty
+        );
+        parametersRegistry.setPerformanceCoefficients(
+            identifiedSolosCurve,
+            vettedGateAttestationsWeight,
+            vettedGateBlocksWeight,
+            vettedGateSyncWeight
+        );
+        parametersRegistry.setAllowedExitDelay(
+            identifiedSolosCurve,
+            vettedGateAllowedExitDelay
+        );
+        parametersRegistry.setExitDelayPenalty(
+            identifiedSolosCurve,
+            vettedGateExitDelayPenalty
+        );
+        parametersRegistry.setMaxWithdrawalRequestFee(
+            identifiedSolosCurve,
+            vettedGateMaxWithdrawalRequestFee
+        );
 
         accounting.revokeRole(keccak256("SET_BOND_CURVE_ROLE"), address(csm));
         csm.grantRole(

@@ -34,12 +34,13 @@ contract DeployMainnet is DeployBase {
         config.oracleMembers[7] = 0xe57B3792aDCc5da47EF4fF588883F0ee0c9835C9; // MatrixedLink
         config.oracleMembers[8] = 0x73181107c8D9ED4ce0bbeF7A0b4ccf3320C41d12; // Instadapp
         config.hashConsensusQuorum = 5;
+
         // Verifier
         config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_CAPELLA;
         config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_CAPELLA;
         config.gIHistoricalSummaries = GIndicies.HISTORICAL_SUMMARIES_CAPELLA;
-
         config.verifierSupportedEpoch = 269568;
+
         // Accounting
         config.maxCurveLength = 10;
         // 2.4 -> 1.3
@@ -53,11 +54,13 @@ contract DeployMainnet is DeployBase {
             .setResetBondCurveAddress = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
         config
             .chargePenaltyRecipient = 0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c; // locator.treasury()
+
         // Module
         config.stakingModuleId = 3;
         config.moduleType = "community-onchain-v1"; // Just a unique type name to be used by the off-chain tooling
         config
             .elRewardsStealingReporter = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
+
         // CSParameters
         config.keyRemovalCharge = 0.05 ether;
         config.elRewardsStealingAdditionalFine = 0.1 ether;
@@ -76,6 +79,7 @@ contract DeployMainnet is DeployBase {
         config.defaultAllowedExitDelay = 4 days; // TODO: reconsider
         config.defaultExitDelayPenalty = 0.1 ether; // TODO: to be reviewed
         config.defaultMaxWithdrawalRequestFee = 0.1 ether; // TODO: to be reviewed
+
         // VettedGate
         config
             .vettedGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
@@ -85,6 +89,24 @@ contract DeployMainnet is DeployBase {
         config
             .referralSeasonsEnder = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
         config.vettedGateTreeCid = "someCid"; // TODO: to be set in the future
+        // TODO: Set proper values bellow
+        config.vettedGateKeyRemovalCharge = 0.01 ether;
+        config.vettedGateELRewardsStealingAdditionalFine = 0.5 ether;
+        config.vettedGateKeysLimit = type(uint248).max;
+        config.vettedGateAvgPerfLeewayData.push([0, 500]);
+        config.vettedGateRewardShareData.push([0, 10000]);
+        config.vettedGateStrikesLifetimeFrames = 6;
+        config.vettedGateStrikesThreshold = 3;
+        config.vettedGateQueuePriority = 0;
+        config.vettedGateQueueMaxDeposits = 10;
+        config.vettedGateBadPerformancePenalty = 0.1 ether;
+        config.vettedGateAttestationsWeight = 54;
+        config.vettedGateBlocksWeight = 8;
+        config.vettedGateSyncWeight = 2;
+        config.vettedGateAllowedExitDelay = 4 days;
+        config.vettedGateExitDelayPenalty = 0.1 ether;
+        config.vettedGateMaxWithdrawalRequestFee = 0.1 ether;
+
         // GateSeal
         config.gateSealFactory = 0x6C82877cAC5a7A739f16Ca0A89c0A328B8764A24;
         config.sealingCommittee = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS

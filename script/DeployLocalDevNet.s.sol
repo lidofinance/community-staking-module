@@ -56,6 +56,7 @@ contract DeployLocalDevNet is DeployBase {
         config.elRewardsStealingReporter = vm.envAddress(
             "CSM_FIRST_ADMIN_ADDRESS"
         ); // Dev team EOA
+
         // CSParameters
         config.keyRemovalCharge = 0.05 ether;
         config.elRewardsStealingAdditionalFine = 0.1 ether;
@@ -74,6 +75,7 @@ contract DeployLocalDevNet is DeployBase {
         config.defaultAllowedExitDelay = 4 days; // TODO: reconsider
         config.defaultExitDelayPenalty = 0.1 ether; // TODO: to be reviewed
         config.defaultMaxWithdrawalRequestFee = 0.1 ether; // TODO: to be reviewed
+
         // VettedGate
         config.vettedGateTreeRoot = vm.envOr(
             "CSM_VETTED_GATE_TREE_ROOT",
@@ -82,6 +84,26 @@ contract DeployLocalDevNet is DeployBase {
         // 1.5 -> 1.3
         config.vettedGateBondCurve.push([1, 1.5 ether]);
         config.vettedGateBondCurve.push([2, 1.3 ether]);
+        config
+            .referralSeasonsEnder = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
+        config.vettedGateTreeCid = "someCid"; // TODO: to be set in the future
+        // TODO: Set proper values bellow
+        config.vettedGateKeyRemovalCharge = 0.01 ether;
+        config.vettedGateELRewardsStealingAdditionalFine = 0.5 ether;
+        config.vettedGateKeysLimit = type(uint248).max;
+        config.vettedGateAvgPerfLeewayData.push([0, 500]);
+        config.vettedGateRewardShareData.push([0, 10000]);
+        config.vettedGateStrikesLifetimeFrames = 6;
+        config.vettedGateStrikesThreshold = 3;
+        config.vettedGateQueuePriority = 0;
+        config.vettedGateQueueMaxDeposits = 10;
+        config.vettedGateBadPerformancePenalty = 0.1 ether;
+        config.vettedGateAttestationsWeight = 54;
+        config.vettedGateBlocksWeight = 8;
+        config.vettedGateSyncWeight = 2;
+        config.vettedGateAllowedExitDelay = 4 days;
+        config.vettedGateExitDelayPenalty = 0.1 ether;
+        config.vettedGateMaxWithdrawalRequestFee = 0.1 ether;
 
         // GateSeal
         config.gateSealFactory = 0x0000000000000000000000000000000000000000;
