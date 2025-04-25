@@ -159,20 +159,27 @@ abstract contract DeployImplementationsBase is DeployBase {
                 admin: deployer
             });
 
-            address[] memory sealables = new address[](6);
-            sealables[0] = address(csm);
-            sealables[1] = address(accounting);
-            sealables[2] = address(oracle);
-            sealables[3] = address(verifier);
-            sealables[4] = address(vettedGate);
-            sealables[5] = address(ejector);
-            gateSeal = _deployGateSeal(sealables);
+            if (config.gateSealFactory != address(0)) {
+                address[] memory sealables = new address[](6);
+                sealables[0] = address(csm);
+                sealables[1] = address(accounting);
+                sealables[2] = address(oracle);
+                sealables[3] = address(verifier);
+                sealables[4] = address(vettedGate);
+                sealables[5] = address(ejector);
+                gateSeal = _deployGateSeal(sealables);
 
-            ejector.grantRole(ejector.PAUSE_ROLE(), gateSeal);
+                ejector.grantRole(ejector.PAUSE_ROLE(), gateSeal);
+                vettedGate.grantRole(
+                    vettedGate.PAUSE_ROLE(),
+                    address(gateSeal)
+                );
+                verifier.grantRole(verifier.PAUSE_ROLE(), address(gateSeal));
+            }
+
             ejector.grantRole(ejector.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
             ejector.revokeRole(ejector.DEFAULT_ADMIN_ROLE(), deployer);
 
-            vettedGate.grantRole(vettedGate.PAUSE_ROLE(), address(gateSeal));
             vettedGate.grantRole(
                 vettedGate.DEFAULT_ADMIN_ROLE(),
                 config.aragonAgent
@@ -187,7 +194,6 @@ abstract contract DeployImplementationsBase is DeployBase {
             );
             vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
 
-            verifier.grantRole(verifier.PAUSE_ROLE(), address(gateSeal));
             verifier.grantRole(
                 verifier.DEFAULT_ADMIN_ROLE(),
                 config.aragonAgent

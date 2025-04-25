@@ -82,6 +82,8 @@ contract DeployLocalDevNet is DeployBase {
         // 1.5 -> 1.3
         config.vettedGateBondCurve.push([1, 1.5 ether]);
         config.vettedGateBondCurve.push([2, 1.3 ether]);
+        config.referralSeasonsEnder = vm.envAddress("CSM_FIRST_ADMIN_ADDRESS"); // CSM Committee MS
+        config.vettedGateTreeCid = "someCid"; // TODO: to be set in the future
 
         // GateSeal
         config.gateSealFactory = 0x0000000000000000000000000000000000000000;
