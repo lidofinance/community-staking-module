@@ -183,7 +183,7 @@ abstract contract DeployImplementationsBase is DeployBase {
             );
             vettedGate.grantRole(
                 vettedGate.END_REFERRAL_SEASON_ROLE(),
-                config.referralSeasonsEnder
+                config.vettedGateManager
             );
             vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
 

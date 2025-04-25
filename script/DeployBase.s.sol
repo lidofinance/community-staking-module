@@ -135,7 +135,7 @@ struct DeployParams {
     bytes32 vettedGateTreeRoot;
     string vettedGateTreeCid;
     uint256[2][] vettedGateBondCurve;
-    address referralSeasonsEnder;
+    address vettedGateManager;
     // GateSeal
     address gateSealFactory;
     address sealingCommittee;
@@ -367,6 +367,12 @@ abstract contract DeployBase is Script {
                 })
             );
 
+            OssifiableProxy vettedGateProxy = OssifiableProxy(
+                payable(address(vettedGate))
+            );
+
+            vettedGateProxy.proxy__changeAdmin(config.aragonAgent);
+
             feeDistributor.initialize({
                 admin: address(deployer),
                 _rebateRecipient: config.aragonAgent
@@ -475,12 +481,16 @@ abstract contract DeployBase is Script {
                 config.aragonAgent
             );
             vettedGate.grantRole(
+                vettedGate.SET_TREE_ROLE(),
+                config.vettedGateManager
+            );
+            vettedGate.grantRole(
                 vettedGate.START_REFERRAL_SEASON_ROLE(),
                 config.aragonAgent
             );
             vettedGate.grantRole(
                 vettedGate.END_REFERRAL_SEASON_ROLE(),
-                config.referralSeasonsEnder
+                config.vettedGateManager
             );
             vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
 

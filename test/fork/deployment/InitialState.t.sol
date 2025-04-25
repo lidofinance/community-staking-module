@@ -27,89 +27,12 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
     function test_module_initialState() public view {
         assertTrue(csm.isPaused());
         assertEq(csm.getNodeOperatorsCount(), 0);
-    }
-
-    function test_parametersRegistry_initialState() public view {
-        assertEq(
-            parametersRegistry.defaultKeyRemovalCharge(),
-            deployParams.keyRemovalCharge
-        );
-        assertEq(
-            parametersRegistry.defaultElRewardsStealingAdditionalFine(),
-            deployParams.elRewardsStealingAdditionalFine
-        );
-        assertEq(
-            parametersRegistry.defaultRewardShare(),
-            deployParams.rewardShareBP
-        );
-        assertEq(
-            parametersRegistry.defaultPerformanceLeeway(),
-            deployParams.avgPerfLeewayBP
-        );
-        (uint256 strikesLifetime, uint256 strikesThreshold) = parametersRegistry
-            .defaultStrikesParams();
-        assertEq(strikesLifetime, deployParams.strikesLifetimeFrames);
-        assertEq(strikesThreshold, deployParams.strikesThreshold);
-
-        (uint256 priority, uint256 maxDeposits) = parametersRegistry
-            .defaultQueueConfig();
-
-        assertEq(priority, deployParams.defaultQueuePriority);
-        assertEq(maxDeposits, deployParams.defaultQueueMaxDeposits);
-
-        assertEq(
-            parametersRegistry.defaultBadPerformancePenalty(),
-            deployParams.badPerformancePenalty
-        );
-
-        (
-            uint256 attestationsWeight,
-            uint256 blocksWeight,
-            uint256 syncWeight
-        ) = parametersRegistry.defaultPerformanceCoefficients();
-        assertEq(attestationsWeight, deployParams.attestationsWeight);
-        assertEq(blocksWeight, deployParams.blocksWeight);
-        assertEq(syncWeight, deployParams.syncWeight);
+        assertEq(csm.getNonce(), 0);
     }
 
     function test_accounting_initialState() public view {
         assertFalse(accounting.isPaused());
         assertEq(accounting.totalBondShares(), 0);
-        uint256 defaultCurveId = accounting.DEFAULT_BOND_CURVE_ID();
-        assertEq(
-            accounting.getCurveInfo(defaultCurveId)[0].minKeysCount,
-            deployParams.bondCurve[0][0]
-        );
-        assertEq(
-            accounting.getCurveInfo(defaultCurveId)[0].trend,
-            deployParams.bondCurve[0][1]
-        );
-
-        assertEq(
-            accounting.getCurveInfo(defaultCurveId)[1].minKeysCount,
-            deployParams.bondCurve[1][0]
-        );
-        assertEq(
-            accounting.getCurveInfo(defaultCurveId)[1].trend,
-            deployParams.bondCurve[1][1]
-        );
-        uint256 vettedCurveId = vettedGate.curveId();
-        assertEq(
-            accounting.getCurveInfo(vettedCurveId)[0].minKeysCount,
-            deployParams.vettedGateBondCurve[0][0]
-        );
-        assertEq(
-            accounting.getCurveInfo(vettedCurveId)[0].trend,
-            deployParams.vettedGateBondCurve[0][1]
-        );
-        assertEq(
-            accounting.getCurveInfo(vettedCurveId)[1].minKeysCount,
-            deployParams.vettedGateBondCurve[1][0]
-        );
-        assertEq(
-            accounting.getCurveInfo(vettedCurveId)[1].trend,
-            deployParams.vettedGateBondCurve[1][1]
-        );
     }
 
     function test_feeDistributor_initialState() public view {
@@ -141,21 +64,11 @@ contract ContractsInitialStateTest is Test, Utilities, DeploymentFixtures {
         assertFalse(processingStarted);
     }
 
-    function test_hashConsensus_initialState() public {
-        vm.skip(block.chainid != 1);
-        assertEq(hashConsensus.getQuorum(), deployParams.hashConsensusQuorum);
-        (address[] memory members, ) = hashConsensus.getMembers();
-        assertEq(
-            keccak256(abi.encode(members)),
-            keccak256(abi.encode(deployParams.oracleMembers))
-        );
-
-        (members, ) = HashConsensus(
-            BaseOracle(locator.accountingOracle()).getConsensusContract()
-        ).getMembers();
-        assertEq(
-            keccak256(abi.encode(members)),
-            keccak256(abi.encode(deployParams.oracleMembers))
-        );
+    function test_vettedGate_initialState() public view {
+        assertFalse(vettedGate.isPaused());
+        assertFalse(vettedGate.isReferralProgramSeasonActive());
+        assertEq(vettedGate.referralProgramSeasonNumber(), 0);
+        assertEq(vettedGate.referralCurveId(), 0);
+        assertEq(vettedGate.referralsThreshold(), 0);
     }
 }

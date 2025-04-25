@@ -599,6 +599,11 @@ contract CSParametersRegistry is
         return data.isValue ? data.value : defaultMaxWithdrawalRequestFee;
     }
 
+    /// @inheritdoc ICSParametersRegistry
+    function getInitializedVersion() external view returns (uint64) {
+        return _getInitializedVersion();
+    }
+
     function _setDefaultKeyRemovalCharge(uint256 keyRemovalCharge) internal {
         defaultKeyRemovalCharge = keyRemovalCharge;
         emit DefaultKeyRemovalChargeSet(keyRemovalCharge);

@@ -16,6 +16,9 @@ import { HashConsensus } from "../../../src/lib/base-oracle/HashConsensus.sol";
 import { CSBondCurve } from "../../../src/abstract/CSBondCurve.sol";
 import { CSFeeDistributor } from "../../../src/CSFeeDistributor.sol";
 import { CSFeeOracle } from "../../../src/CSFeeOracle.sol";
+import { CSStrikes } from "../../../src/CSStrikes.sol";
+import { VettedGate } from "../../../src/VettedGate.sol";
+import { CSExitPenalties } from "../../../src/CSExitPenalties.sol";
 import { IWithdrawalQueue } from "../../../src/interfaces/IWithdrawalQueue.sol";
 import { ICSParametersRegistry } from "../../../src/interfaces/ICSParametersRegistry.sol";
 import { ICSBondCurve } from "../../../src/interfaces/ICSBondCurve.sol";
@@ -47,13 +50,10 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
             address(parametersRegistry)
         );
         assertEq(address(csm.STETH()), address(lido));
-        assertEq(
-            csm.QUEUE_LOWEST_PRIORITY(),
-            parametersRegistry.QUEUE_LOWEST_PRIORITY()
-        );
+        assertEq(csm.QUEUE_LOWEST_PRIORITY(), deployParams.queueLowestPriority);
         assertEq(
             csm.QUEUE_LEGACY_PRIORITY(),
-            parametersRegistry.QUEUE_LEGACY_PRIORITY()
+            deployParams.queueLowestPriority - 1
         );
     }
 
@@ -65,6 +65,7 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
         );
         assertTrue(csm.getRoleMemberCount(csm.STAKING_ROUTER_ROLE()) == 1);
         assertEq(csm.getInitializedVersion(), 2);
+        assertTrue(csm.isPaused());
     }
 
     function test_roles() public view {
@@ -104,9 +105,26 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
         assertTrue(csm.hasRole(csm.VERIFIER_ROLE(), address(verifier)));
         assertEq(csm.getRoleMemberCount(csm.VERIFIER_ROLE()), 1);
         assertEq(csm.getRoleMemberCount(csm.RECOVERER_ROLE()), 0);
+        assertEq(csm.getRoleMemberCount(csm.CREATE_NODE_OPERATOR_ROLE()), 2);
+        assertTrue(
+            csm.hasRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(vettedGate))
+        );
+        assertTrue(
+            csm.hasRole(
+                csm.CREATE_NODE_OPERATOR_ROLE(),
+                address(permissionlessGate)
+            )
+        );
     }
 
     function test_proxy() public {
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        csm.initialize({
+            _accounting: address(accounting),
+            _exitPenalties: address(exitPenalties),
+            admin: deployParams.aragonAgent
+        });
+
         OssifiableProxy proxy = OssifiableProxy(payable(address(csm)));
         assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
         assertFalse(proxy.proxy__getIsOssified());
@@ -122,6 +140,17 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
 }
 
 contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
+    function test_constructor() public view {
+        assertEq(
+            parametersRegistry.QUEUE_LOWEST_PRIORITY(),
+            deployParams.queueLowestPriority
+        );
+        assertEq(
+            parametersRegistry.QUEUE_LEGACY_PRIORITY(),
+            deployParams.queueLowestPriority - 1
+        );
+    }
+
     function test_initializer() public view {
         assertEq(
             parametersRegistry.defaultKeyRemovalCharge(),
@@ -163,6 +192,19 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
         assertEq(attestationsWeight, deployParams.attestationsWeight);
         assertEq(blocksWeight, deployParams.blocksWeight);
         assertEq(syncWeight, deployParams.syncWeight);
+        assertEq(
+            parametersRegistry.defaultAllowedExitDelay(),
+            deployParams.defaultAllowedExitDelay
+        );
+        assertEq(
+            parametersRegistry.defaultExitDelayPenalty(),
+            deployParams.defaultExitDelayPenalty
+        );
+        assertEq(
+            parametersRegistry.defaultMaxWithdrawalRequestFee(),
+            deployParams.defaultMaxWithdrawalRequestFee
+        );
+        assertEq(parametersRegistry.getInitializedVersion(), 1);
     }
 
     function test_roles() public view {
@@ -181,6 +223,31 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
     }
 
     function test_proxy() public {
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        parametersRegistry.initialize({
+            admin: deployParams.aragonAgent,
+            data: ICSParametersRegistry.InitializationData({
+                keyRemovalCharge: deployParams.keyRemovalCharge,
+                elRewardsStealingAdditionalFine: deployParams
+                    .elRewardsStealingAdditionalFine,
+                keysLimit: deployParams.keysLimit,
+                rewardShare: deployParams.rewardShareBP,
+                performanceLeeway: deployParams.avgPerfLeewayBP,
+                strikesLifetime: deployParams.strikesLifetimeFrames,
+                strikesThreshold: deployParams.strikesThreshold,
+                defaultQueuePriority: deployParams.defaultQueuePriority,
+                defaultQueueMaxDeposits: deployParams.defaultQueueMaxDeposits,
+                badPerformancePenalty: deployParams.badPerformancePenalty,
+                attestationsWeight: deployParams.attestationsWeight,
+                blocksWeight: deployParams.blocksWeight,
+                syncWeight: deployParams.syncWeight,
+                defaultAllowedExitDelay: deployParams.defaultAllowedExitDelay,
+                defaultExitDelayPenalty: deployParams.defaultExitDelayPenalty,
+                defaultMaxWithdrawalRequestFee: deployParams
+                    .defaultMaxWithdrawalRequestFee
+            })
+        });
+
         OssifiableProxy proxy = OssifiableProxy(
             payable(address(parametersRegistry))
         );
@@ -261,6 +328,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             accounting.getCurveInfo(curveId)[1].trend,
             deployParams.bondCurve[1][1]
         );
+
         assertEq(address(accounting.feeDistributor()), address(feeDistributor));
         assertEq(accounting.getBondLockPeriod(), deployParams.bondLockPeriod);
         assertEq(
@@ -282,6 +350,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             type(uint256).max
         );
         assertEq(accounting.getInitializedVersion(), 2);
+        assertFalse(accounting.isPaused());
     }
 
     function test_roles() public view {
@@ -307,8 +376,15 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
                 address(vettedGate)
             )
         );
-        assertFalse(
-            accounting.hasRole(accounting.SET_BOND_CURVE_ROLE(), address(csm))
+        assertTrue(
+            accounting.hasRole(
+                accounting.SET_BOND_CURVE_ROLE(),
+                deployParams.setResetBondCurveAddress
+            )
+        );
+        assertEq(
+            accounting.getRoleMemberCount(accounting.SET_BOND_CURVE_ROLE()),
+            2
         );
 
         assertEq(
@@ -325,6 +401,15 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
     }
 
     function test_proxy() public {
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        accounting.initialize({
+            bondCurve: deployParams.bondCurve,
+            admin: address(deployParams.aragonAgent),
+            _feeDistributor: address(feeDistributor),
+            bondLockPeriod: deployParams.bondLockPeriod,
+            _chargePenaltyRecipient: address(0)
+        });
+
         OssifiableProxy proxy = OssifiableProxy(payable(address(accounting)));
         assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
         assertFalse(proxy.proxy__getIsOssified());
@@ -333,7 +418,6 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             proxy.proxy__getImplementation()
         );
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-
         accountingImpl.initialize({
             bondCurve: deployParams.bondCurve,
             admin: address(deployParams.aragonAgent),
@@ -353,6 +437,7 @@ contract CSFeeDistributorDeploymentTest is DeploymentBaseTest {
 
     function test_initializer() public view {
         assertEq(feeDistributor.getInitializedVersion(), 2);
+        assertEq(feeDistributor.rebateRecipient(), deployParams.aragonAgent);
     }
 
     function test_roles() public view {
@@ -362,10 +447,11 @@ contract CSFeeDistributorDeploymentTest is DeploymentBaseTest {
                 deployParams.aragonAgent
             )
         );
-        assertTrue(
+        assertEq(
             feeDistributor.getRoleMemberCount(
                 feeDistributor.DEFAULT_ADMIN_ROLE()
-            ) == adminsCount
+            ),
+            adminsCount
         );
         assertEq(
             feeDistributor.getRoleMemberCount(feeDistributor.RECOVERER_ROLE()),
@@ -374,6 +460,12 @@ contract CSFeeDistributorDeploymentTest is DeploymentBaseTest {
     }
 
     function test_proxy() public {
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        feeDistributor.initialize({
+            admin: deployParams.aragonAgent,
+            _rebateRecipient: deployParams.aragonAgent
+        });
+
         OssifiableProxy proxy = OssifiableProxy(
             payable(address(feeDistributor))
         );
@@ -401,6 +493,7 @@ contract CSStrikesDeploymentTest is DeploymentBaseTest {
 
     function test_initializer() public view {
         assertEq(address(strikes.ejector()), address(ejector));
+        assertEq(strikes.getInitializedVersion(), 1);
     }
 
     function test_roles() public view {
@@ -410,12 +503,29 @@ contract CSStrikesDeploymentTest is DeploymentBaseTest {
                 deployParams.aragonAgent
             )
         );
+        assertEq(
+            strikes.getRoleMemberCount(strikes.DEFAULT_ADMIN_ROLE()),
+            adminsCount
+        );
     }
 
-    function test_proxy() public view {
+    function test_proxy() public {
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        strikes.initialize({
+            admin: deployParams.aragonAgent,
+            _ejector: address(ejector)
+        });
+
         OssifiableProxy proxy = OssifiableProxy(payable(address(strikes)));
         assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
         assertFalse(proxy.proxy__getIsOssified());
+
+        CSStrikes strikesImpl = CSStrikes(proxy.proxy__getImplementation());
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        strikesImpl.initialize({
+            admin: deployParams.aragonAgent,
+            _ejector: address(ejector)
+        });
     }
 }
 
@@ -432,6 +542,7 @@ contract CSFeeOracleDeploymentTest is DeploymentBaseTest {
         assertEq(oracle.getConsensusContract(), address(hashConsensus));
         assertEq(oracle.getConsensusVersion(), deployParams.consensusVersion);
         assertEq(oracle.getLastProcessingRefSlot(), 0);
+        assertFalse(oracle.isPaused());
     }
 
     function test_roles() public view {
@@ -461,6 +572,15 @@ contract CSFeeOracleDeploymentTest is DeploymentBaseTest {
     }
 
     function test_proxy() public {
+        vm.expectRevert(Versioned.NonZeroContractVersionOnInit.selector);
+        oracle.initialize({
+            admin: address(deployParams.aragonAgent),
+            feeDistributorContract: address(feeDistributor),
+            strikesContract: address(strikes),
+            consensusContract: address(hashConsensus),
+            consensusVersion: deployParams.consensusVersion
+        });
+
         OssifiableProxy proxy = OssifiableProxy(payable(address(oracle)));
         assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
         assertFalse(proxy.proxy__getIsOssified());
@@ -493,6 +613,20 @@ contract HashConsensusDeploymentTest is DeploymentBaseTest {
         assertEq(epochsPerFrame, deployParams.oracleReportEpochsPerFrame);
         assertEq(fastLaneLengthSlots, deployParams.fastLaneLengthSlots);
         assertEq(hashConsensus.getReportProcessor(), address(oracle));
+        assertEq(hashConsensus.getQuorum(), deployParams.hashConsensusQuorum);
+        (address[] memory members, ) = hashConsensus.getMembers();
+        assertEq(
+            keccak256(abi.encode(members)),
+            keccak256(abi.encode(deployParams.oracleMembers))
+        );
+
+        (address[] memory membersAo, ) = HashConsensus(
+            BaseOracle(locator.accountingOracle()).getConsensusContract()
+        ).getMembers();
+        assertEq(
+            keccak256(abi.encode(membersAo)),
+            keccak256(abi.encode(members))
+        );
     }
 
     function test_roles() public view {
@@ -544,13 +678,13 @@ contract HashConsensusDeploymentTest is DeploymentBaseTest {
 
 contract VettedGateDeploymentTest is DeploymentBaseTest {
     function test_constructor() public view {
-        assertTrue(
-            vettedGate.hasRole(
-                vettedGate.DEFAULT_ADMIN_ROLE(),
-                deployParams.aragonAgent
-            )
-        );
+        assertEq(address(vettedGate.MODULE()), address(csm));
+        assertEq(address(vettedGate.ACCOUNTING()), address(accounting));
+    }
+
+    function test_initializer() public view {
         assertEq(vettedGate.treeRoot(), deployParams.vettedGateTreeRoot);
+        assertEq(vettedGate.treeCid(), deployParams.vettedGateTreeCid);
         uint256 curveId = vettedGate.curveId();
         assertEq(
             accounting.getCurveInfo(curveId)[0].minKeysCount,
@@ -568,13 +702,82 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
             accounting.getCurveInfo(curveId)[1].trend,
             deployParams.vettedGateBondCurve[1][1]
         );
-        assertEq(address(vettedGate.MODULE()), address(csm));
-        assertEq(address(vettedGate.ACCOUNTING()), address(accounting));
+        assertFalse(vettedGate.isPaused());
+    }
+
+    function test_roles() public view {
+        assertTrue(
+            vettedGate.hasRole(
+                vettedGate.DEFAULT_ADMIN_ROLE(),
+                deployParams.aragonAgent
+            )
+        );
+        assertEq(
+            oracle.getRoleMemberCount(oracle.DEFAULT_ADMIN_ROLE()),
+            adminsCount
+        );
+
         assertTrue(
             vettedGate.hasRole(vettedGate.PAUSE_ROLE(), address(gateSeal))
         );
         assertEq(vettedGate.getRoleMemberCount(vettedGate.PAUSE_ROLE()), 1);
         assertEq(vettedGate.getRoleMemberCount(vettedGate.RESUME_ROLE()), 0);
+        assertTrue(
+            vettedGate.hasRole(
+                vettedGate.SET_TREE_ROLE(),
+                deployParams.vettedGateManager
+            )
+        );
+        assertEq(vettedGate.getRoleMemberCount(vettedGate.SET_TREE_ROLE()), 1);
+        assertTrue(
+            vettedGate.hasRole(
+                vettedGate.START_REFERRAL_SEASON_ROLE(),
+                deployParams.aragonAgent
+            )
+        );
+        assertEq(
+            vettedGate.getRoleMemberCount(
+                vettedGate.START_REFERRAL_SEASON_ROLE()
+            ),
+            1
+        );
+        assertTrue(
+            vettedGate.hasRole(
+                vettedGate.END_REFERRAL_SEASON_ROLE(),
+                deployParams.vettedGateManager
+            )
+        );
+        assertEq(
+            vettedGate.getRoleMemberCount(
+                vettedGate.END_REFERRAL_SEASON_ROLE()
+            ),
+            1
+        );
+    }
+
+    function test_proxy() public {
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        vettedGate.initialize({
+            _curveId: 1,
+            _treeRoot: deployParams.vettedGateTreeRoot,
+            _treeCid: deployParams.vettedGateTreeCid,
+            admin: deployParams.aragonAgent
+        });
+
+        OssifiableProxy proxy = OssifiableProxy(payable(address(vettedGate)));
+        assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
+        assertFalse(proxy.proxy__getIsOssified());
+
+        VettedGate vettedGateImpl = VettedGate(
+            proxy.proxy__getImplementation()
+        );
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        vettedGateImpl.initialize({
+            _curveId: 1,
+            _treeRoot: deployParams.vettedGateTreeRoot,
+            _treeCid: deployParams.vettedGateTreeCid,
+            admin: deployParams.aragonAgent
+        });
     }
 }
 
@@ -615,9 +818,20 @@ contract CSVerifierDeploymentTest is DeploymentBaseTest {
             Slot.unwrap(verifier.PIVOT_SLOT()),
             deployParams.verifierSupportedEpoch * deployParams.slotsPerEpoch
         );
+        assertFalse(verifier.isPaused());
     }
 
     function test_roles() public view {
+        assertTrue(
+            verifier.hasRole(
+                verifier.DEFAULT_ADMIN_ROLE(),
+                deployParams.aragonAgent
+            )
+        );
+        assertEq(
+            verifier.getRoleMemberCount(verifier.DEFAULT_ADMIN_ROLE()),
+            adminsCount
+        );
         assertTrue(verifier.hasRole(verifier.PAUSE_ROLE(), address(gateSeal)));
         assertEq(verifier.getRoleMemberCount(verifier.PAUSE_ROLE()), 1);
         assertEq(verifier.getRoleMemberCount(verifier.RESUME_ROLE()), 0);
@@ -633,6 +847,7 @@ contract CSEjectorDeploymentTest is DeploymentBaseTest {
 
     function test_initializer() public view {
         assertEq(address(ejector.strikes()), address(strikes));
+        assertFalse(ejector.isPaused());
     }
 
     function test_roles() public view {
@@ -664,5 +879,33 @@ contract CSExitPenaltiesDeploymentTest is DeploymentBaseTest {
 
     function test_initializer() public view {
         assertEq(address(exitPenalties.strikes()), address(strikes));
+        assertEq(exitPenalties.getInitializedVersion(), 1);
+    }
+
+    function test_proxy() public {
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        exitPenalties.initialize({ _strikes: address(strikes) });
+
+        OssifiableProxy proxy = OssifiableProxy(
+            payable(address(exitPenalties))
+        );
+        assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
+        assertFalse(proxy.proxy__getIsOssified());
+
+        CSExitPenalties exitPenaltiesImpl = CSExitPenalties(
+            proxy.proxy__getImplementation()
+        );
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        exitPenaltiesImpl.initialize({ _strikes: address(strikes) });
+    }
+}
+
+contract PermissionlessGateDeploymentTest is DeploymentBaseTest {
+    function test_constructor() public view {
+        assertEq(address(permissionlessGate.MODULE()), address(csm));
+        assertEq(
+            permissionlessGate.CURVE_ID(),
+            accounting.DEFAULT_BOND_CURVE_ID()
+        );
     }
 }

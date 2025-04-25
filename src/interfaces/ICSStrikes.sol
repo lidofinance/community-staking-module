@@ -99,4 +99,7 @@ interface ICSStrikes {
         bytes calldata pubkey,
         uint256[] calldata strikes
     ) external pure returns (bytes32);
+
+    /// @notice Returns the initialized version of the contract
+    function getInitializedVersion() external view returns (uint64);
 }

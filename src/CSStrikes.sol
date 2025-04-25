@@ -48,6 +48,8 @@ contract CSStrikes is
         ACCOUNTING = ICSAccounting(MODULE.accounting());
         EXIT_PENALTIES = ICSExitPenalties(exitPenalties);
         ORACLE = oracle;
+
+        _disableInitializers();
     }
 
     function initialize(address admin, address _ejector) external initializer {
@@ -170,6 +172,11 @@ contract CSStrikes is
                 treeRoot,
                 hashLeaf(nodeOperatorId, pubkey, strikesData)
             );
+    }
+
+    /// @inheritdoc ICSStrikes
+    function getInitializedVersion() external view returns (uint64) {
+        return _getInitializedVersion();
     }
 
     /// @inheritdoc ICSStrikes

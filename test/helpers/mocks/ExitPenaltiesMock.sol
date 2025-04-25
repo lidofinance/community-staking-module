@@ -59,4 +59,8 @@ contract ExitPenaltiesMock is ICSExitPenalties, ExitTypes {
     ) external view returns (ExitPenaltyInfo memory) {
         return penaltyInfo;
     }
+
+    function getInitializedVersion() external view returns (uint64) {
+        return 1;
+    }
 }
