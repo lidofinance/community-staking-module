@@ -36,6 +36,7 @@ contract VettedGateFactoryTest is Test, Utilities {
     VettedGateFactory factory;
     CSMMock csm;
     bytes32 root;
+    string cid;
     uint256 curveId;
 
     function setUp() public {
@@ -43,17 +44,19 @@ contract VettedGateFactoryTest is Test, Utilities {
         address vettedGateImpl = address(new VettedGate(address(csm)));
         factory = new VettedGateFactory(vettedGateImpl);
         root = bytes32(randomBytes(32));
+        cid = "someCid";
         curveId = 1;
     }
 
     function test_create() public {
         vm.expectEmit(false, false, false, false, address(factory));
         emit IVettedGateFactory.VettedGateCreated(address(0));
-        address instance = factory.create(curveId, root, address(this));
+        address instance = factory.create(curveId, root, cid, address(this));
         IVettedGate gate = IVettedGate(instance);
         assertEq(gate.curveId(), curveId);
         assertEq(address(gate.MODULE()), address(csm));
         assertEq(gate.treeRoot(), root);
+        assertEq(gate.treeCid(), cid);
 
         AccessControlEnumerableUpgradeable gateAccess = AccessControlEnumerableUpgradeable(
                 instance

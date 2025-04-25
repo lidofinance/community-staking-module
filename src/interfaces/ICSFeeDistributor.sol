@@ -60,7 +60,7 @@ interface ICSFeeDistributor is IAssetRecovererLib {
 
     error InvalidReportData();
     error InvalidTreeRoot();
-    error InvalidTreeCID();
+    error InvalidTreeCid();
     error InvalidLogCID();
     error InvalidShares();
     error InvalidProof();

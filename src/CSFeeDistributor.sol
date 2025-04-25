@@ -151,11 +151,11 @@ contract CSFeeDistributor is
 
         if (distributed > 0) {
             if (bytes(_treeCid).length == 0) {
-                revert InvalidTreeCID();
+                revert InvalidTreeCid();
             }
 
             if (keccak256(bytes(_treeCid)) == keccak256(bytes(treeCid))) {
-                revert InvalidTreeCID();
+                revert InvalidTreeCid();
             }
 
             if (_treeRoot == bytes32(0)) {
