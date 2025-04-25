@@ -1,5 +1,5 @@
 # ICSStrikes
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/interfaces/ICSStrikes.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/interfaces/ICSStrikes.sol)
 
 
 ## Functions
@@ -17,11 +17,32 @@ function ORACLE() external view returns (address);
 function MODULE() external view returns (ICSModule);
 ```
 
-### EJECTOR
+### ACCOUNTING
 
 
 ```solidity
-function EJECTOR() external view returns (ICSEjector);
+function ACCOUNTING() external view returns (ICSAccounting);
+```
+
+### EXIT_PENALTIES
+
+
+```solidity
+function EXIT_PENALTIES() external view returns (ICSExitPenalties);
+```
+
+### PARAMETERS_REGISTRY
+
+
+```solidity
+function PARAMETERS_REGISTRY() external view returns (ICSParametersRegistry);
+```
+
+### ejector
+
+
+```solidity
+function ejector() external view returns (ICSEjector);
 ```
 
 ### treeRoot
@@ -38,6 +59,21 @@ function treeRoot() external view returns (bytes32);
 function treeCid() external view returns (string calldata);
 ```
 
+### setEjector
+
+Set the address of the Ejector contract
+
+
+```solidity
+function setEjector(address _ejector) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`_ejector`|`address`|Address of the Ejector contract|
+
+
 ### processBadPerformanceProof
 
 Report Node Operator's key as bad performing
@@ -48,7 +84,8 @@ function processBadPerformanceProof(
     uint256 nodeOperatorId,
     uint256 keyIndex,
     uint256[] calldata strikesData,
-    bytes32[] calldata proof
+    bytes32[] calldata proof,
+    address refundRecipient
 ) external;
 ```
 **Parameters**
@@ -59,6 +96,7 @@ function processBadPerformanceProof(
 |`keyIndex`|`uint256`|Index of the withdrawn key in the Node Operator's keys storage|
 |`strikesData`|`uint256[]`|Strikes of the Node Operator's validator key. TODO: value is to be defined (timestamps or refSlots ?)|
 |`proof`|`bytes32[]`|Proof of the strikes|
+|`refundRecipient`|`address`|Address to send the refund to|
 
 
 ### processOracleReport
@@ -147,6 +185,12 @@ event StrikesDataUpdated(bytes32 treeRoot, string treeCid);
 event StrikesDataWiped();
 ```
 
+### EjectorSet
+
+```solidity
+event EjectorSet(address ejector);
+```
+
 ## Errors
 ### ZeroEjectorAddress
 
@@ -154,10 +198,28 @@ event StrikesDataWiped();
 error ZeroEjectorAddress();
 ```
 
+### ZeroModuleAddress
+
+```solidity
+error ZeroModuleAddress();
+```
+
 ### ZeroOracleAddress
 
 ```solidity
 error ZeroOracleAddress();
+```
+
+### ZeroExitPenaltiesAddress
+
+```solidity
+error ZeroExitPenaltiesAddress();
+```
+
+### ZeroAdminAddress
+
+```solidity
+error ZeroAdminAddress();
 ```
 
 ### ZeroEjectionFeeAmount
@@ -188,5 +250,17 @@ error InvalidReportData();
 
 ```solidity
 error InvalidProof();
+```
+
+### SigningKeysInvalidOffset
+
+```solidity
+error SigningKeysInvalidOffset();
+```
+
+### NotEnoughStrikesToEject
+
+```solidity
+error NotEnoughStrikesToEject();
 ```
 

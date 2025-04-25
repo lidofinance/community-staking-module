@@ -1,5 +1,5 @@
 # CSParametersRegistry
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/CSParametersRegistry.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/CSParametersRegistry.sol)
 
 **Inherits:**
 [ICSParametersRegistry](/src/interfaces/ICSParametersRegistry.sol/interface.ICSParametersRegistry.md), Initializable, AccessControlEnumerableUpgradeable
@@ -96,7 +96,7 @@ uint256 public defaultRewardShare;
 ### _rewardShareData
 
 ```solidity
-mapping(uint256 curveId => PivotsAndValues) internal _rewardShareData;
+mapping(uint256 curveId => KeyIndexValueInterval[]) internal _rewardShareData;
 ```
 
 
@@ -113,7 +113,7 @@ uint256 public defaultPerformanceLeeway;
 ### _performanceLeewayData
 
 ```solidity
-mapping(uint256 curveId => PivotsAndValues) internal _performanceLeewayData;
+mapping(uint256 curveId => KeyIndexValueInterval[]) internal _performanceLeewayData;
 ```
 
 
@@ -170,6 +170,34 @@ uint256 public defaultAllowedExitDelay;
 
 ```solidity
 mapping(uint256 => MarkedUint248) internal _allowedExitDelay;
+```
+
+
+### defaultExitDelayPenalty
+
+```solidity
+uint256 public defaultExitDelayPenalty;
+```
+
+
+### _exitDelayPenalties
+
+```solidity
+mapping(uint256 => MarkedUint248) internal _exitDelayPenalties;
+```
+
+
+### defaultMaxWithdrawalRequestFee
+
+```solidity
+uint256 public defaultMaxWithdrawalRequestFee;
+```
+
+
+### _maxWithdrawalRequestFees
+
+```solidity
+mapping(uint256 => MarkedUint248) internal _maxWithdrawalRequestFees;
 ```
 
 
@@ -333,7 +361,7 @@ function setDefaultQueueConfig(uint256 priority, uint256 maxDeposits) external o
 
 ### setDefaultAllowedExitDelay
 
-set default value for allowed exit delay. Default value is used if a specific value is not set for the curveId
+set default value for allowed exit delay in seconds. Default value is used if a specific value is not set for the curveId
 
 
 ```solidity
@@ -344,6 +372,36 @@ function setDefaultAllowedExitDelay(uint256 delay) external onlyRole(DEFAULT_ADM
 |Name|Type|Description|
 |----|----|-----------|
 |`delay`|`uint256`|value to be set as default for the allowed exit delay|
+
+
+### setDefaultExitDelayPenalty
+
+set default value for exit delay penalty. Default value is used if a specific value is not set for the curveId
+
+
+```solidity
+function setDefaultExitDelayPenalty(uint256 penalty) external onlyRole(DEFAULT_ADMIN_ROLE);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`penalty`|`uint256`|value to be set as default for the exit delay penalty|
+
+
+### setDefaultMaxWithdrawalRequestFee
+
+set default value for max withdrawal request fee. Default value is used if a specific value is not set for the curveId
+
+
+```solidity
+function setDefaultMaxWithdrawalRequestFee(uint256 fee) external onlyRole(DEFAULT_ADMIN_ROLE);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`fee`|`uint256`|value to be set as default for the max withdrawal request fee|
 
 
 ### setKeyRemovalCharge
@@ -443,19 +501,21 @@ function unsetKeysLimit(uint256 curveId) external onlyRole(DEFAULT_ADMIN_ROLE);
 
 Set reward share parameters for the curveId
 
-*keyPivots = [10, 50] and rewardShares = [10000, 8000, 5000] stands for
+*KeyIndexValueIntervals = [[0, 10000], [10, 8000], [50, 5000]] stands for
 100% rewards for the keys 1-10, 80% rewards for the keys 11-50, and 50% rewards for the keys > 50*
 
 
 ```solidity
-function setRewardShareData(uint256 curveId, PivotsAndValues calldata data) external onlyRole(DEFAULT_ADMIN_ROLE);
+function setRewardShareData(uint256 curveId, KeyIndexValueInterval[] calldata data)
+    external
+    onlyRole(DEFAULT_ADMIN_ROLE);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`curveId`|`uint256`|Curve Id to associate reward share data with|
-|`data`|`PivotsAndValues`|Pivot numbers of the keys (ex. [10, 50]) (data.pivots) and reward share percentages in BP (ex. [10000, 8000, 5000]) (data.values)|
+|`data`|`KeyIndexValueInterval[]`|Interval values for keys count and reward share percentages in BP (ex. [[0, 10000], [10, 8000], [50, 5000]])|
 
 
 ### unsetRewardShareData
@@ -477,12 +537,11 @@ function unsetRewardShareData(uint256 curveId) external onlyRole(DEFAULT_ADMIN_R
 
 Set performance leeway parameters for the curveId
 
-*keyPivots = [20, 100] and performanceLeeways = [500, 450, 400] stands for
-5% performance leeway for the keys 1-20, 4.5% performance leeway for the keys 21-100, and 4% performance leeway for the keys > 100*
+*Returns [[0, defaultPerformanceLeeway]] if no intervals are set for the given curveId.*
 
 
 ```solidity
-function setPerformanceLeewayData(uint256 curveId, PivotsAndValues calldata data)
+function setPerformanceLeewayData(uint256 curveId, KeyIndexValueInterval[] calldata data)
     external
     onlyRole(DEFAULT_ADMIN_ROLE);
 ```
@@ -491,7 +550,7 @@ function setPerformanceLeewayData(uint256 curveId, PivotsAndValues calldata data
 |Name|Type|Description|
 |----|----|-----------|
 |`curveId`|`uint256`|Curve Id to associate performance leeway data with|
-|`data`|`PivotsAndValues`|Pivot numbers of the keys (ex. [20, 100]) (data.pivots) and performance leeway percentages in BP (ex. [500, 450, 400]) (data.values)|
+|`data`|`KeyIndexValueInterval[]`|Interval values for keys count and performance leeway percentages in BP (ex. [[0, 500], [100, 450], [500, 400]])|
 
 
 ### unsetPerformanceLeewayData
@@ -643,7 +702,7 @@ function unsetQueueConfig(uint256 curveId) external onlyRole(DEFAULT_ADMIN_ROLE)
 
 ### setAllowedExitDelay
 
-Set allowed exit delay for the curveId
+Set allowed exit delay for the curveId in seconds
 
 
 ```solidity
@@ -670,6 +729,70 @@ function unsetAllowedExitDelay(uint256 curveId) external onlyRole(DEFAULT_ADMIN_
 |Name|Type|Description|
 |----|----|-----------|
 |`curveId`|`uint256`|Curve Id to unset allowed exit delay for|
+
+
+### setExitDelayPenalty
+
+Set exit delay penalty for the curveId
+
+*cannot be zero*
+
+
+```solidity
+function setExitDelayPenalty(uint256 curveId, uint256 penalty) external onlyRole(DEFAULT_ADMIN_ROLE);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`curveId`|`uint256`|Curve Id to associate exit delay penalty with|
+|`penalty`|`uint256`|exit delay penalty|
+
+
+### unsetExitDelayPenalty
+
+Unset exit delay penalty for the curveId
+
+
+```solidity
+function unsetExitDelayPenalty(uint256 curveId) external onlyRole(DEFAULT_ADMIN_ROLE);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`curveId`|`uint256`|Curve Id to unset exit delay penalty for|
+
+
+### setMaxWithdrawalRequestFee
+
+Set max withdrawal request fee for the curveId
+
+
+```solidity
+function setMaxWithdrawalRequestFee(uint256 curveId, uint256 fee) external onlyRole(DEFAULT_ADMIN_ROLE);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`curveId`|`uint256`|Curve Id to associate max withdrawal request fee with|
+|`fee`|`uint256`|max withdrawal request fee|
+
+
+### unsetMaxWithdrawalRequestFee
+
+Unset max withdrawal request fee for the curveId
+
+
+```solidity
+function unsetMaxWithdrawalRequestFee(uint256 curveId) external onlyRole(DEFAULT_ADMIN_ROLE);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`curveId`|`uint256`|Curve Id to unset max withdrawal request fee for|
 
 
 ### getKeyRemovalCharge
@@ -745,11 +868,11 @@ function getKeysLimit(uint256 curveId) external view returns (uint256 limit);
 
 Get reward share parameters by the curveId.
 
-*Reverts if the values are not set for the given curveId.*
+*Returns [[0, defaultRewardShare]] if no intervals are set for the given curveId.*
 
 
 ```solidity
-function getRewardShareData(uint256 curveId) external view returns (PivotsAndValues memory data);
+function getRewardShareData(uint256 curveId) external view returns (KeyIndexValueInterval[] memory data);
 ```
 **Parameters**
 
@@ -757,34 +880,22 @@ function getRewardShareData(uint256 curveId) external view returns (PivotsAndVal
 |----|----|-----------|
 |`curveId`|`uint256`|Curve Id to get reward share data for|
 
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`data`|`PivotsAndValues`|Pivot numbers of the keys (ex. [10, 50]) (data.pivots) and reward share percentages in BP (ex. [10000, 8000, 5000]) (data.values)|
-
 
 ### getPerformanceLeewayData
 
 Get performance leeway parameters by the curveId
 
-*Reverts if the values are not set for the given curveId.*
+*Returns [[0, defaultPerformanceLeeway]] if no intervals are set for the given curveId.*
 
 
 ```solidity
-function getPerformanceLeewayData(uint256 curveId) external view returns (PivotsAndValues memory data);
+function getPerformanceLeewayData(uint256 curveId) external view returns (KeyIndexValueInterval[] memory data);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`curveId`|`uint256`|Curve Id to get performance leeway data for|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`data`|`PivotsAndValues`|Pivot numbers of the keys (ex. [100, 500]) (data.pivots) and performance leeway percentages in BP (ex. [500, 450, 400]) (data.values)|
 
 
 ### getStrikesParams
@@ -886,10 +997,54 @@ function getQueueConfig(uint256 curveId) external view returns (uint32 queuePrio
 
 ### getAllowedExitDelay
 
+Get allowed exit delay by the curveId in seconds
+
+*`defaultAllowedExitDelay` is returned if the value is not set for the given curveId.*
+
 
 ```solidity
 function getAllowedExitDelay(uint256 curveId) external view returns (uint256 delay);
 ```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`curveId`|`uint256`|Curve Id to get allowed exit delay for|
+
+
+### getExitDelayPenalty
+
+Get exit delay penalty by the curveId
+
+*`defaultExitDelayPenalty` is returned if the value is not set for the given curveId.*
+
+
+```solidity
+function getExitDelayPenalty(uint256 curveId) external view returns (uint256 penalty);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`curveId`|`uint256`|Curve Id to get exit delay penalty for|
+
+
+### getMaxWithdrawalRequestFee
+
+Get max withdrawal request fee by the curveId
+
+*`defaultMaxWithdrawalRequestFee` is returned if the value is not set for the given curveId.*
+
+
+```solidity
+function getMaxWithdrawalRequestFee(uint256 curveId) external view returns (uint256 fee);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`curveId`|`uint256`|Curve Id to get max withdrawal request fee for|
+
 
 ### _setDefaultKeyRemovalCharge
 
@@ -969,6 +1124,20 @@ function _validateQueueConfig(uint256 priority, uint256 maxDeposits) internal vi
 function _setDefaultAllowedExitDelay(uint256 delay) internal;
 ```
 
+### _setDefaultExitDelayPenalty
+
+
+```solidity
+function _setDefaultExitDelayPenalty(uint256 penalty) internal;
+```
+
+### _setDefaultMaxWithdrawalRequestFee
+
+
+```solidity
+function _setDefaultMaxWithdrawalRequestFee(uint256 fee) internal;
+```
+
 ### _validateStrikesParams
 
 
@@ -985,10 +1154,10 @@ function _validatePerformanceCoefficients(uint256 attestationsWeight, uint256 bl
     pure;
 ```
 
-### _validatePivotsAndValues
+### _validateKeysCountValueIntervals
 
 
 ```solidity
-function _validatePivotsAndValues(PivotsAndValues memory data) internal pure;
+function _validateKeysCountValueIntervals(KeyIndexValueInterval[] calldata intervals) private pure;
 ```
 

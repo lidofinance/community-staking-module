@@ -1,8 +1,8 @@
 # CSStrikes
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/CSStrikes.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/CSStrikes.sol)
 
 **Inherits:**
-[ICSStrikes](/src/interfaces/ICSStrikes.sol/interface.ICSStrikes.md)
+[ICSStrikes](/src/interfaces/ICSStrikes.sol/interface.ICSStrikes.md), Initializable, AccessControlEnumerableUpgradeable
 
 **Author:**
 vgorkavenko
@@ -23,10 +23,31 @@ ICSModule public immutable MODULE;
 ```
 
 
-### EJECTOR
+### ACCOUNTING
 
 ```solidity
-ICSEjector public immutable EJECTOR;
+ICSAccounting public immutable ACCOUNTING;
+```
+
+
+### EXIT_PENALTIES
+
+```solidity
+ICSExitPenalties public immutable EXIT_PENALTIES;
+```
+
+
+### PARAMETERS_REGISTRY
+
+```solidity
+ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
+```
+
+
+### ejector
+
+```solidity
+ICSEjector public ejector;
 ```
 
 
@@ -53,8 +74,30 @@ string public treeCid;
 
 
 ```solidity
-constructor(address ejector, address oracle);
+constructor(address module, address oracle, address exitPenalties);
 ```
+
+### initialize
+
+
+```solidity
+function initialize(address admin, address _ejector) external initializer;
+```
+
+### setEjector
+
+Set the address of the Ejector contract
+
+
+```solidity
+function setEjector(address _ejector) external onlyRole(DEFAULT_ADMIN_ROLE);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`_ejector`|`address`|Address of the Ejector contract|
+
 
 ### processOracleReport
 
@@ -86,7 +129,8 @@ function processBadPerformanceProof(
     uint256 nodeOperatorId,
     uint256 keyIndex,
     uint256[] calldata strikesData,
-    bytes32[] calldata proof
+    bytes32[] calldata proof,
+    address refundRecipient
 ) external;
 ```
 **Parameters**
@@ -97,6 +141,7 @@ function processBadPerformanceProof(
 |`keyIndex`|`uint256`|Index of the withdrawn key in the Node Operator's keys storage|
 |`strikesData`|`uint256[]`|Strikes of the Node Operator's validator key. TODO: value is to be defined (timestamps or refSlots ?)|
 |`proof`|`bytes32[]`|Proof of the strikes|
+|`refundRecipient`|`address`|Address to send the refund to|
 
 
 ### verifyProof
@@ -149,4 +194,11 @@ function hashLeaf(uint256 nodeOperatorId, bytes memory pubkey, uint256[] calldat
 |----|----|-----------|
 |`<none>`|`bytes32`|Hash of the leaf|
 
+
+### _setEjector
+
+
+```solidity
+function _setEjector(address _ejector) internal;
+```
 

@@ -1,8 +1,8 @@
 # CSEjector
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/CSEjector.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/CSEjector.sol)
 
 **Inherits:**
-[ICSEjector](/src/interfaces/ICSEjector.sol/interface.ICSEjector.md), Initializable, AccessControlEnumerableUpgradeable, [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md)
+[ICSEjector](/src/interfaces/ICSEjector.sol/interface.ICSEjector.md), [ExitTypes](/src/abstract/ExitTypes.sol/abstract.ExitTypes.md), Initializable, AccessControlEnumerableUpgradeable, [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md)
 
 
 ## State Variables
@@ -20,10 +20,10 @@ bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
 ```
 
 
-### BAD_PERFORMER_EJECTOR_ROLE
+### STAKING_MODULE_ID
 
 ```solidity
-bytes32 public constant BAD_PERFORMER_EJECTOR_ROLE = keccak256("BAD_PERFORMER_EJECTOR_ROLE");
+uint256 public immutable STAKING_MODULE_ID;
 ```
 
 
@@ -34,28 +34,33 @@ ICSModule public immutable MODULE;
 ```
 
 
-### ACCOUNTING
+### VEB
 
 ```solidity
-ICSAccounting public immutable ACCOUNTING;
+IValidatorsExitBus public immutable VEB;
 ```
 
 
-### _isValidatorEjected
-*see _keyPointer function for details of noKeyIndexPacked structure*
-
+### strikes
 
 ```solidity
-mapping(uint256 noKeyIndexPacked => bool) private _isValidatorEjected;
+address public strikes;
 ```
 
 
 ## Functions
+### onlyStrikes
+
+
+```solidity
+modifier onlyStrikes();
+```
+
 ### constructor
 
 
 ```solidity
-constructor(address module);
+constructor(address module, uint256 stakingModuleId);
 ```
 
 ### initialize
@@ -64,7 +69,7 @@ initialize the contract from scratch
 
 
 ```solidity
-function initialize(address admin) external initializer;
+function initialize(address admin, address _strikes) external initializer;
 ```
 
 ### resume
@@ -91,55 +96,67 @@ function pauseFor(uint256 duration) external onlyRole(PAUSE_ROLE);
 |`duration`|`uint256`|Duration of the pause in seconds|
 
 
+### voluntaryEject
+
+Withdraw the validator key from the Node Operator
+
+
+```solidity
+function voluntaryEject(uint256 nodeOperatorId, uint256 startFrom, uint256 keysCount, address refundRecipient)
+    external
+    payable
+    whenResumed;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`nodeOperatorId`|`uint256`|ID of the Node Operator|
+|`startFrom`|`uint256`|Index of the first key to withdraw|
+|`keysCount`|`uint256`|Number of keys to withdraw|
+|`refundRecipient`|`address`|Address to send the refund to|
+
+
+### voluntaryEjectByArray
+
+Withdraw the validator key from the Node Operator
+
+*this method is intentionally copy-pasted from the voluntaryEject method with keys changes*
+
+
+```solidity
+function voluntaryEjectByArray(uint256 nodeOperatorId, uint256[] calldata keyIndices, address refundRecipient)
+    external
+    payable
+    whenResumed;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`nodeOperatorId`|`uint256`|ID of the Node Operator|
+|`keyIndices`|`uint256[]`|Array of indices of the keys to withdraw|
+|`refundRecipient`|`address`|Address to send the refund to|
+
+
 ### ejectBadPerformer
 
-Report Node Operator's key as bad performer and eject it with corresponding penalty
+Eject Node Operator's key as a bad performer
 
 
 ```solidity
-function ejectBadPerformer(uint256 nodeOperatorId, uint256 keyIndex, uint256 strikes)
+function ejectBadPerformer(uint256 nodeOperatorId, bytes calldata publicKeys, address refundRecipient)
     external
+    payable
     whenResumed
-    onlyRole(BAD_PERFORMER_EJECTOR_ROLE);
+    onlyStrikes;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`nodeOperatorId`|`uint256`|ID of the Node Operator|
-|`keyIndex`|`uint256`|Index of the withdrawn key in the Node Operator's keys storage|
-|`strikes`|`uint256`|Strikes of the Node Operator's validator key|
+|`publicKeys`|`bytes`|Concatenated public keys of the Node Operator's validators|
+|`refundRecipient`|`address`|Address to send the refund to|
 
-
-### isValidatorEjected
-
-Check if the given Node Operator's key is reported as ejected
-
-
-```solidity
-function isValidatorEjected(uint256 nodeOperatorId, uint256 keyIndex) external view returns (bool);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`nodeOperatorId`|`uint256`|ID of the Node Operator|
-|`keyIndex`|`uint256`|index of the key to check|
-
-
-### _onlyExistingNodeOperator
-
-
-```solidity
-function _onlyExistingNodeOperator(uint256 nodeOperatorId) internal view;
-```
-
-### _keyPointer
-
-*Both nodeOperatorId and keyIndex are limited to uint64 by the CSModule.sol*
-
-
-```solidity
-function _keyPointer(uint256 nodeOperatorId, uint256 keyIndex) internal pure returns (uint256);
-```
 

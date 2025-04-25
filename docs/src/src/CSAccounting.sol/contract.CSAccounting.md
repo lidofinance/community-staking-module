@@ -1,5 +1,5 @@
 # CSAccounting
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/CSAccounting.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/CSAccounting.sol)
 
 **Inherits:**
 [ICSAccounting](/src/interfaces/ICSAccounting.sol/interface.ICSAccounting.md), [CSBondCore](/src/abstract/CSBondCore.sol/abstract.CSBondCore.md), [CSBondCurve](/src/abstract/CSBondCurve.sol/abstract.CSBondCurve.md), [CSBondLock](/src/abstract/CSBondLock.sol/abstract.CSBondLock.md), [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), AccessControlEnumerableUpgradeable, [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -40,13 +40,6 @@ bytes32 public constant SET_BOND_CURVE_ROLE = keccak256("SET_BOND_CURVE_ROLE");
 ```
 
 
-### PENALIZE_ROLE
-
-```solidity
-bytes32 public constant PENALIZE_ROLE = keccak256("PENALIZE_ROLE");
-```
-
-
 ### RECOVERER_ROLE
 
 ```solidity
@@ -54,10 +47,10 @@ bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 ```
 
 
-### CSM
+### MODULE
 
 ```solidity
-ICSModule public immutable CSM;
+ICSModule public immutable MODULE;
 ```
 
 
@@ -76,11 +69,11 @@ address public chargePenaltyRecipient;
 
 
 ## Functions
-### onlyCSM
+### onlyModule
 
 
 ```solidity
-modifier onlyCSM();
+modifier onlyModule();
 ```
 
 ### constructor
@@ -89,7 +82,7 @@ modifier onlyCSM();
 ```solidity
 constructor(
     address lidoLocator,
-    address communityStakingModule,
+    address module,
     uint256 maxCurveLength,
     uint256 minBondLockPeriod,
     uint256 maxBondLockPeriod
@@ -100,7 +93,7 @@ constructor(
 |Name|Type|Description|
 |----|----|-----------|
 |`lidoLocator`|`address`|Lido locator contract address|
-|`communityStakingModule`|`address`|Community Staking Module contract address|
+|`module`|`address`|Community Staking Module contract address|
 |`maxCurveLength`|`uint256`|Max number of the points in the bond curves|
 |`minBondLockPeriod`|`uint256`|Min time in seconds for the bondLock period|
 |`maxBondLockPeriod`|`uint256`|Max time in seconds for the bondLock period|
@@ -111,7 +104,7 @@ constructor(
 
 ```solidity
 function initialize(
-    uint256[] calldata bondCurve,
+    uint256[2][] calldata bondCurve,
     address admin,
     address _feeDistributor,
     uint256 bondLockPeriod,
@@ -122,7 +115,7 @@ function initialize(
 
 |Name|Type|Description|
 |----|----|-----------|
-|`bondCurve`|`uint256[]`|Initial bond curve|
+|`bondCurve`|`uint256[2][]`|Initial bond curve|
 |`admin`|`address`|Admin role member address|
 |`_feeDistributor`|`address`|Fee Distributor contract address|
 |`bondLockPeriod`|`uint256`|Bond lock period in seconds|
@@ -133,12 +126,14 @@ function initialize(
 
 
 ```solidity
-function finalizeUpgradeV2() external reinitializer(2);
+function finalizeUpgradeV2(uint256[2][] calldata defaultBondCurve, uint256[2][] calldata vettedBondCurve)
+    external
+    reinitializer(2);
 ```
 
 ### resume
 
-Resume reward claims and deposits
+NOTE: This method is not for adding new bond curves, but for migration of the existing ones to the new format (`BondCurve` to `BondCurveInterval[]`). However, bond values can be different from the current.
 
 
 ```solidity
@@ -198,13 +193,16 @@ Add a new bond curve
 
 
 ```solidity
-function addBondCurve(uint256[] calldata bondCurve) external onlyRole(MANAGE_BOND_CURVES_ROLE) returns (uint256 id);
+function addBondCurve(uint256[2][] calldata bondCurve)
+    external
+    onlyRole(MANAGE_BOND_CURVES_ROLE)
+    returns (uint256 id);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`bondCurve`|`uint256[]`|Bond curve definition to add|
+|`bondCurve`|`uint256[2][]`|Bond curve definition to add|
 
 **Returns**
 
@@ -222,14 +220,14 @@ Extensive checks should be performed to avoid inconsistency in the keys accounti
 
 
 ```solidity
-function updateBondCurve(uint256 curveId, uint256[] calldata bondCurve) external onlyRole(MANAGE_BOND_CURVES_ROLE);
+function updateBondCurve(uint256 curveId, uint256[2][] calldata bondCurve) external onlyRole(MANAGE_BOND_CURVES_ROLE);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`curveId`|`uint256`|Bond curve ID to update|
-|`bondCurve`|`uint256[]`|Bond curve definition|
+|`bondCurve`|`uint256[2][]`|Bond curve definition|
 
 
 ### setBondCurve
@@ -258,7 +256,7 @@ Stake user's ETH with Lido and deposit stETH to the bond
 
 
 ```solidity
-function depositETH(address from, uint256 nodeOperatorId) external payable whenResumed onlyCSM;
+function depositETH(address from, uint256 nodeOperatorId) external payable whenResumed onlyModule;
 ```
 **Parameters**
 
@@ -296,7 +294,7 @@ Deposit user's stETH to the bond for the given Node Operator
 function depositStETH(address from, uint256 nodeOperatorId, uint256 stETHAmount, PermitInput calldata permit)
     external
     whenResumed
-    onlyCSM;
+    onlyModule;
 ```
 **Parameters**
 
@@ -338,7 +336,7 @@ Unwrap the user's wstETH and deposit stETH to the bond for the given Node Operat
 function depositWstETH(address from, uint256 nodeOperatorId, uint256 wstETHAmount, PermitInput calldata permit)
     external
     whenResumed
-    onlyCSM;
+    onlyModule;
 ```
 **Parameters**
 
@@ -477,7 +475,7 @@ Lock bond in ETH for the given Node Operator
 
 
 ```solidity
-function lockBondETH(uint256 nodeOperatorId, uint256 amount) external onlyCSM;
+function lockBondETH(uint256 nodeOperatorId, uint256 amount) external onlyModule;
 ```
 **Parameters**
 
@@ -495,7 +493,7 @@ Release locked bond in ETH for the given Node Operator
 
 
 ```solidity
-function releaseLockedBondETH(uint256 nodeOperatorId, uint256 amount) external onlyCSM;
+function releaseLockedBondETH(uint256 nodeOperatorId, uint256 amount) external onlyModule;
 ```
 **Parameters**
 
@@ -513,7 +511,7 @@ Compensate locked bond ETH for the given Node Operator
 
 
 ```solidity
-function compensateLockedBondETH(uint256 nodeOperatorId) external payable onlyCSM;
+function compensateLockedBondETH(uint256 nodeOperatorId) external payable onlyModule;
 ```
 **Parameters**
 
@@ -530,7 +528,7 @@ Settle locked bond ETH for the given Node Operator
 
 
 ```solidity
-function settleLockedBondETH(uint256 nodeOperatorId) external onlyCSM;
+function settleLockedBondETH(uint256 nodeOperatorId) external onlyModule;
 ```
 **Parameters**
 
@@ -545,7 +543,7 @@ Penalize bond by burning stETH shares of the given Node Operator
 
 
 ```solidity
-function penalize(uint256 nodeOperatorId, uint256 amount) external onlyRole(PENALIZE_ROLE);
+function penalize(uint256 nodeOperatorId, uint256 amount) external onlyModule;
 ```
 **Parameters**
 
@@ -561,7 +559,7 @@ Charge fee from bond by transferring stETH shares of the given Node Operator to 
 
 
 ```solidity
-function chargeFee(uint256 nodeOperatorId, uint256 amount) external onlyRole(PENALIZE_ROLE);
+function chargeFee(uint256 nodeOperatorId, uint256 amount) external onlyModule;
 ```
 **Parameters**
 
