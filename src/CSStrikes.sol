@@ -115,7 +115,7 @@ contract CSStrikes is
         bytes32[] calldata proof,
         bool[] calldata proofFlags,
         address refundRecipient
-    ) external {
+    ) external payable {
         // NOTE: We allow empty proofs to be delivered because there’s no way to use the tree’s
         // internal nodes without brute-forcing the input data.
 
@@ -214,7 +214,7 @@ contract CSStrikes is
             revert NotEnoughStrikesToEject();
         }
 
-        ejector.ejectBadPerformer(
+        ejector.ejectBadPerformer{ msg.value }(
             keyStrikes.nodeOperatorId,
             keyStrikes.keyIndex,
             refundRecipient
