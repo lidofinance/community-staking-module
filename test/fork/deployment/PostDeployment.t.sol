@@ -215,6 +215,96 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
             })
         });
     }
+
+    function test_vettedGateParams() public {
+        uint256 vettedGateCurveId = 1;
+        assertEq(
+            parametersRegistry.getKeyRemovalCharge(vettedGateCurveId),
+            deployParams.vettedGateKeyRemovalCharge
+        );
+        assertEq(
+            parametersRegistry.getElRewardsStealingAdditionalFine(
+                vettedGateCurveId
+            ),
+            deployParams.vettedGateELRewardsStealingAdditionalFine
+        );
+        assertEq(
+            parametersRegistry.getKeysLimit(vettedGateCurveId),
+            deployParams.vettedGateKeysLimit
+        );
+
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory rewardShareData = parametersRegistry.getRewardShareData(
+                vettedGateCurveId
+            );
+        assertEq(
+            rewardShareData.length,
+            deployParams.vettedGateRewardShareData.length
+        );
+        for (uint256 i = 0; i < rewardShareData.length; i++) {
+            assertEq(
+                rewardShareData[i].minKeyIndex,
+                deployParams.vettedGateRewardShareData[i][0]
+            );
+            assertEq(
+                rewardShareData[i].value,
+                deployParams.vettedGateRewardShareData[i][1]
+            );
+        }
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory performanceLeewayData = parametersRegistry
+                .getPerformanceLeewayData(vettedGateCurveId);
+        assertEq(
+            performanceLeewayData.length,
+            deployParams.vettedGateAvgPerfLeewayData.length
+        );
+        for (uint256 i = 0; i < performanceLeewayData.length; i++) {
+            assertEq(
+                performanceLeewayData[i].minKeyIndex,
+                deployParams.vettedGateAvgPerfLeewayData[i][0]
+            );
+            assertEq(
+                performanceLeewayData[i].value,
+                deployParams.vettedGateAvgPerfLeewayData[i][1]
+            );
+        }
+
+        (uint256 lifetime, uint256 threshold) = parametersRegistry
+            .getStrikesParams(vettedGateCurveId);
+        assertEq(lifetime, deployParams.vettedGateStrikesLifetimeFrames);
+        assertEq(threshold, deployParams.vettedGateStrikesThreshold);
+
+        (uint256 priority, uint256 maxDeposits) = parametersRegistry
+            .getQueueConfig(vettedGateCurveId);
+        assertEq(priority, deployParams.vettedGateQueuePriority);
+        assertEq(maxDeposits, deployParams.vettedGateQueueMaxDeposits);
+
+        assertEq(
+            parametersRegistry.getBadPerformancePenalty(vettedGateCurveId),
+            deployParams.vettedGateBadPerformancePenalty
+        );
+        (
+            uint256 attestationsWeight,
+            uint256 blocksWeight,
+            uint256 syncWeight
+        ) = parametersRegistry.getPerformanceCoefficients(vettedGateCurveId);
+        assertEq(attestationsWeight, deployParams.vettedGateAttestationsWeight);
+        assertEq(blocksWeight, deployParams.vettedGateBlocksWeight);
+        assertEq(syncWeight, deployParams.vettedGateSyncWeight);
+
+        assertEq(
+            parametersRegistry.getAllowedExitDelay(vettedGateCurveId),
+            deployParams.vettedGateAllowedExitDelay
+        );
+        assertEq(
+            parametersRegistry.getExitDelayPenalty(vettedGateCurveId),
+            deployParams.vettedGateExitDelayPenalty
+        );
+        assertEq(
+            parametersRegistry.getMaxWithdrawalRequestFee(vettedGateCurveId),
+            deployParams.vettedGateMaxWithdrawalRequestFee
+        );
+    }
 }
 
 contract CSAccountingDeploymentTest is DeploymentBaseTest {

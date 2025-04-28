@@ -11,6 +11,7 @@ import { DeployParams, DeployParamsV1 } from "../../../script/DeployBase.s.sol";
 import { HashConsensus } from "../../../src/lib/base-oracle/HashConsensus.sol";
 import { BaseOracle } from "../../../src/lib/base-oracle/BaseOracle.sol";
 import { Slot } from "../../../src/lib/Types.sol";
+import { ICSParametersRegistry } from "../../../src/interfaces/ICSParametersRegistry.sol";
 
 contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
     DeployParamsV1 private deployParams;
@@ -153,6 +154,99 @@ contract ContractsStateTest is Test, Utilities, DeploymentFixtures {
         assertEq(attestationsWeight, upgradeDeployParams.attestationsWeight);
         assertEq(blocksWeight, upgradeDeployParams.blocksWeight);
         assertEq(syncWeight, upgradeDeployParams.syncWeight);
+    }
+
+    function test_parametersRegistryState_vettedGateParams() public {
+        uint256 vettedGateCurveId = 1;
+        assertEq(
+            parametersRegistry.getKeyRemovalCharge(vettedGateCurveId),
+            upgradeDeployParams.vettedGateKeyRemovalCharge
+        );
+        assertEq(
+            parametersRegistry.getElRewardsStealingAdditionalFine(
+                vettedGateCurveId
+            ),
+            upgradeDeployParams.vettedGateELRewardsStealingAdditionalFine
+        );
+        assertEq(
+            parametersRegistry.getKeysLimit(vettedGateCurveId),
+            upgradeDeployParams.vettedGateKeysLimit
+        );
+
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory rewardShareData = parametersRegistry.getRewardShareData(
+                vettedGateCurveId
+            );
+        assertEq(
+            rewardShareData.length,
+            upgradeDeployParams.vettedGateRewardShareData.length
+        );
+        for (uint256 i = 0; i < rewardShareData.length; i++) {
+            assertEq(
+                rewardShareData[i].minKeyIndex,
+                upgradeDeployParams.vettedGateRewardShareData[i][0]
+            );
+            assertEq(
+                rewardShareData[i].value,
+                upgradeDeployParams.vettedGateRewardShareData[i][1]
+            );
+        }
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory performanceLeewayData = parametersRegistry
+                .getPerformanceLeewayData(vettedGateCurveId);
+        assertEq(
+            performanceLeewayData.length,
+            upgradeDeployParams.vettedGateAvgPerfLeewayData.length
+        );
+        for (uint256 i = 0; i < performanceLeewayData.length; i++) {
+            assertEq(
+                performanceLeewayData[i].minKeyIndex,
+                upgradeDeployParams.vettedGateAvgPerfLeewayData[i][0]
+            );
+            assertEq(
+                performanceLeewayData[i].value,
+                upgradeDeployParams.vettedGateAvgPerfLeewayData[i][1]
+            );
+        }
+
+        (uint256 lifetime, uint256 threshold) = parametersRegistry
+            .getStrikesParams(vettedGateCurveId);
+        assertEq(lifetime, upgradeDeployParams.vettedGateStrikesLifetimeFrames);
+        assertEq(threshold, upgradeDeployParams.vettedGateStrikesThreshold);
+
+        (uint256 priority, uint256 maxDeposits) = parametersRegistry
+            .getQueueConfig(vettedGateCurveId);
+        assertEq(priority, upgradeDeployParams.vettedGateQueuePriority);
+        assertEq(maxDeposits, upgradeDeployParams.vettedGateQueueMaxDeposits);
+
+        assertEq(
+            parametersRegistry.getBadPerformancePenalty(vettedGateCurveId),
+            upgradeDeployParams.vettedGateBadPerformancePenalty
+        );
+        (
+            uint256 attestationsWeight,
+            uint256 blocksWeight,
+            uint256 syncWeight
+        ) = parametersRegistry.getPerformanceCoefficients(vettedGateCurveId);
+        assertEq(
+            attestationsWeight,
+            upgradeDeployParams.vettedGateAttestationsWeight
+        );
+        assertEq(blocksWeight, upgradeDeployParams.vettedGateBlocksWeight);
+        assertEq(syncWeight, upgradeDeployParams.vettedGateSyncWeight);
+
+        assertEq(
+            parametersRegistry.getAllowedExitDelay(vettedGateCurveId),
+            upgradeDeployParams.vettedGateAllowedExitDelay
+        );
+        assertEq(
+            parametersRegistry.getExitDelayPenalty(vettedGateCurveId),
+            upgradeDeployParams.vettedGateExitDelayPenalty
+        );
+        assertEq(
+            parametersRegistry.getMaxWithdrawalRequestFee(vettedGateCurveId),
+            upgradeDeployParams.vettedGateMaxWithdrawalRequestFee
+        );
     }
 
     function test_accountingState() public view {
