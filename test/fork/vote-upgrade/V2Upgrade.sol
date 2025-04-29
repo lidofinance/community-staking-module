@@ -36,9 +36,10 @@ contract V2UpgradeTestBase is Test, Utilities, DeploymentFixtures {
     }
 }
 
-contract VoteTest is V2UpgradeTestBase {
+contract VoteChangesTest is V2UpgradeTestBase {
     function test_csmChanges() public {
         OssifiableProxy csmProxy = OssifiableProxy(payable(address(csm)));
+
         vm.selectFork(forkIdBeforeUpgrade);
         address implBefore = csmProxy.proxy__getImplementation();
         address verifierBefore = csm.getRoleMember(csm.VERIFIER_ROLE(), 0);
@@ -66,13 +67,20 @@ contract VoteTest is V2UpgradeTestBase {
         assertFalse(csm.hasRole(csm.PAUSE_ROLE(), gateSealBefore));
         assertTrue(csm.hasRole(csm.PAUSE_ROLE(), address(gateSeal)));
 
+        assertEq(csm.getRoleMemberCount(keccak256("MODULE_MANAGER_ROLE")), 0);
+
         assertEq(csm.getInitializedVersion(), 2);
+
+        assertFalse(
+            csm.depositQueueItem(csm.QUEUE_LEGACY_PRIORITY(), 0).isNil()
+        );
     }
 
     function test_accountingChanges() public {
         OssifiableProxy accountingProxy = OssifiableProxy(
             payable(address(accounting))
         );
+
         vm.selectFork(forkIdBeforeUpgrade);
         address implBefore = accountingProxy.proxy__getImplementation();
         address gateSealBefore = accounting.getRoleMember(
@@ -109,7 +117,23 @@ contract VoteTest is V2UpgradeTestBase {
             accounting.hasRole(accounting.PAUSE_ROLE(), address(gateSeal))
         );
 
+        assertEq(
+            accounting.getRoleMemberCount(keccak256("ACCOUNTING_MANAGER_ROLE")),
+            0
+        );
+        assertEq(
+            accounting.getRoleMemberCount(keccak256("RESET_BOND_CURVE_ROLE")),
+            0
+        );
+
         assertEq(accounting.getInitializedVersion(), 2);
+
+        assertTrue(
+            burner.hasRole(
+                burner.REQUEST_BURN_MY_STETH_ROLE(),
+                address(accounting)
+            )
+        );
     }
 
     function test_feeDistributorChanges() public {
@@ -126,6 +150,7 @@ contract VoteTest is V2UpgradeTestBase {
         assertEq(implAfter, address(feeDistributorImpl));
 
         assertEq(feeDistributor.getInitializedVersion(), 2);
+        assertEq(feeDistributor.rebateRecipient(), locator.treasury());
     }
 
     function test_feeOracleChanges() public {
@@ -161,5 +186,10 @@ contract VoteTest is V2UpgradeTestBase {
 
         assertEq(oracle.getContractVersion(), 2);
         assertEq(oracle.getConsensusVersion(), 3);
+
+        assertEq(
+            oracle.getRoleMemberCount(keccak256("CONTRACT_MANAGER_ROLE")),
+            0
+        );
     }
 }

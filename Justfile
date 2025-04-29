@@ -70,8 +70,14 @@ test-all:
 test-unit *args:
     forge test --no-match-path 'test/fork/*' -vvv {{args}}
 
-test-deployment *args:
-    forge test --match-path 'test/fork/deployment/*' -vvv --show-progress {{args}}
+test-deployment-full-scratch *args:
+    forge test --match-path 'test/fork/deployment/*' --no-match-test '.*_afterVote.*' -vvv --show-progress {{args}}
+
+test-deployment-v2-only-scratch *args:
+    forge test --match-path 'test/fork/deployment/*' --no-match-test '(.*_afterVote.*)|(.*_onlyFull.*)' -vvv --show-progress {{args}}
+
+test-deployment-full-afterVote *args:
+    forge test --match-path 'test/fork/deployment/*' --no-match-test '.*_scratch.*' -vvv --show-progress {{args}}
 
 test-integration *args:
     forge test --match-path 'test/fork/integration/*' -vvv --show-progress {{args}}
@@ -237,10 +243,18 @@ test-upgrade *args:
 
     export DEPLOY_CONFIG=./artifacts/{{chain}}/deploy-{{chain}}.json
     export UPGRADE_CONFIG=./artifacts/local/upgrade-{{chain}}.json
-    export RPC_URL={{anvil_rpc_url}}
     export VOTE_PREV_BLOCK=`cast block-number -r $RPC_URL`
 
     just vote-upgrade
+
+    export DEPLOY_CONFIG=./artifacts/local/upgrade-{{chain}}.json
+    export RPC_URL={{anvil_rpc_url}}
+
+    just test-deployment-full-afterVote {{args}}
+
+    export DEPLOY_CONFIG=./artifacts/{{chain}}/deploy-{{chain}}.json
+    export UPGRADE_CONFIG=./artifacts/local/upgrade-{{chain}}.json
+
     just test-post-upgrade {{args}}
 
     just kill-fork
@@ -256,9 +270,42 @@ test-local *args:
     export DEPLOY_CONFIG=./artifacts/local/deploy-{{chain}}.json
     export RPC_URL={{anvil_rpc_url}}
 
-    just test-deployment {{args}}
     just vote-add-module
+
+    just test-deployment-full-afterVote {{args}}
+    
     just test-integration {{args}}
+
+    just kill-fork
+
+test-full-deploy *args:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    just make-fork --silent &
+    while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
+    just deploy --silent --private-key=`cat localhost.json | jq -r ".private_keys[0]"`
+
+    export DEPLOY_CONFIG=./artifacts/local/deploy-{{chain}}.json
+    export RPC_URL={{anvil_rpc_url}}
+
+    just test-deployment-full-scratch {{args}}
+
+    just kill-fork
+
+test-v2-only-deploy *args:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    just make-fork --silent &
+    while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
+
+    just _deploy-impl --broadcast --private-key=`cat localhost.json | jq -r ".private_keys[0]"`
+
+    export DEPLOY_CONFIG=./artifacts/local/upgrade-{{chain}}.json
+    export RPC_URL={{anvil_rpc_url}}
+
+    just test-deployment-v2-only-scratch {{args}}
 
     just kill-fork
 

@@ -21,6 +21,7 @@ import { VettedGate } from "../src/VettedGate.sol";
 import { CSParametersRegistry } from "../src/CSParametersRegistry.sol";
 import { ICSParametersRegistry } from "../src/interfaces/ICSParametersRegistry.sol";
 import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
+import { OssifiableProxy } from "../src/lib/proxy/OssifiableProxy.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
@@ -101,6 +102,11 @@ abstract contract DeployImplementationsBase is DeployBase {
                 })
             );
 
+            OssifiableProxy vettedGateProxy = OssifiableProxy(
+                payable(address(vettedGate))
+            );
+            vettedGateProxy.proxy__changeAdmin(config.proxyAdmin);
+
             CSFeeOracle oracleImpl = new CSFeeOracle({
                 secondsPerSlot: config.secondsPerSlot,
                 genesisTime: config.clGenesisTime
@@ -136,7 +142,7 @@ abstract contract DeployImplementationsBase is DeployBase {
 
             exitPenalties.initialize(address(strikes));
             ejector.initialize(deployer, address(strikes));
-            strikes.initialize(config.aragonAgent, address(ejector));
+            strikes.initialize(deployer, address(ejector));
 
             verifier = new CSVerifier({
                 withdrawalAddress: locator.withdrawalVault(),
@@ -168,6 +174,13 @@ abstract contract DeployImplementationsBase is DeployBase {
             sealables[5] = address(ejector);
             gateSeal = _deployGateSeal(sealables);
 
+            if (config.secondAdminAddress != address(0)) {
+                if (config.secondAdminAddress == deployer) {
+                    revert InvalidSecondAdmin();
+                }
+                _grantSecondAdminsForNewContracts();
+            }
+
             ejector.grantRole(ejector.PAUSE_ROLE(), gateSeal);
             ejector.grantRole(ejector.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
             ejector.revokeRole(ejector.DEFAULT_ADMIN_ROLE(), deployer);
@@ -176,6 +189,10 @@ abstract contract DeployImplementationsBase is DeployBase {
             vettedGate.grantRole(
                 vettedGate.DEFAULT_ADMIN_ROLE(),
                 config.aragonAgent
+            );
+            vettedGate.grantRole(
+                vettedGate.SET_TREE_ROLE(),
+                config.vettedGateManager
             );
             vettedGate.grantRole(
                 vettedGate.START_REFERRAL_SEASON_ROLE(),
@@ -203,25 +220,37 @@ abstract contract DeployImplementationsBase is DeployBase {
                 deployer
             );
 
+            strikes.grantRole(strikes.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
+            strikes.revokeRole(strikes.DEFAULT_ADMIN_ROLE(), deployer);
+
             JsonObj memory deployJson = Json.newObj();
-            deployJson.set("PermissionlessGate", address(permissionlessGate));
-            deployJson.set("VettedGateFactory", address(vettedGateFactory));
-            deployJson.set("VettedGate", address(vettedGate));
+            deployJson.set("ChainId", chainId);
+            deployJson.set("CSModule", address(csm));
+            deployJson.set("CSModuleImpl", address(csmImpl));
+            deployJson.set("CSParametersRegistry", address(parametersRegistry));
             deployJson.set(
                 "CSParametersRegistryImpl",
                 address(parametersRegistryImpl)
             );
-            deployJson.set("CSParametersRegistry", address(parametersRegistry));
-            deployJson.set("CSModuleImpl", address(csmImpl));
+            deployJson.set("CSAccounting", address(accounting));
             deployJson.set("CSAccountingImpl", address(accountingImpl));
+            deployJson.set("CSFeeOracle", address(oracle));
             deployJson.set("CSFeeOracleImpl", address(oracleImpl));
+            deployJson.set("CSFeeDistributor", address(feeDistributor));
             deployJson.set("CSFeeDistributorImpl", address(feeDistributorImpl));
             deployJson.set("CSExitPenalties", address(exitPenalties));
+            deployJson.set("CSExitPenaltiesImpl", address(exitPenaltiesImpl));
             deployJson.set("CSEjector", address(ejector));
             deployJson.set("CSStrikes", address(strikes));
-            deployJson.set("CSVerifier", address(verifier));
+            deployJson.set("CSStrikesImpl", address(strikesImpl));
             deployJson.set("HashConsensus", address(hashConsensus));
-            deployJson.set("GateSeal", address(gateSeal));
+            deployJson.set("CSVerifier", address(verifier));
+            deployJson.set("PermissionlessGate", address(permissionlessGate));
+            deployJson.set("VettedGateFactory", address(vettedGateFactory));
+            deployJson.set("VettedGate", address(vettedGate));
+            deployJson.set("VettedGateImpl", address(vettedGateImpl));
+            deployJson.set("LidoLocator", config.lidoLocatorAddress);
+            deployJson.set("GateSeal", gateSeal);
             deployJson.set("DeployParams", abi.encode(config));
             deployJson.set("git-ref", gitRef);
             vm.writeJson(
@@ -238,6 +267,32 @@ abstract contract DeployImplementationsBase is DeployBase {
         }
 
         vm.stopBroadcast();
+    }
+
+    function _grantSecondAdminsForNewContracts() internal {
+        if (keccak256(abi.encodePacked(chainName)) == keccak256("mainnet")) {
+            revert CannotBeUsedInMainnet();
+        }
+        parametersRegistry.grantRole(
+            parametersRegistry.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        vettedGate.grantRole(
+            vettedGate.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        ejector.grantRole(
+            ejector.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        verifier.grantRole(
+            verifier.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        strikes.grantRole(
+            strikes.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
     }
 }
 

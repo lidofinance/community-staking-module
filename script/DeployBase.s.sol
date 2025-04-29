@@ -352,7 +352,7 @@ abstract contract DeployBase is Script {
 
             exitPenalties.initialize(address(strikes));
             ejector.initialize(deployer, address(strikes));
-            strikes.initialize(config.aragonAgent, address(ejector));
+            strikes.initialize(deployer, address(ejector));
 
             permissionlessGate = new PermissionlessGate(address(csm));
 
@@ -370,8 +370,7 @@ abstract contract DeployBase is Script {
             OssifiableProxy vettedGateProxy = OssifiableProxy(
                 payable(address(vettedGate))
             );
-
-            vettedGateProxy.proxy__changeAdmin(config.aragonAgent);
+            vettedGateProxy.proxy__changeAdmin(config.proxyAdmin);
 
             feeDistributor.initialize({
                 admin: address(deployer),
@@ -387,6 +386,10 @@ abstract contract DeployBase is Script {
                 admin: address(deployer),
                 reportProcessor: address(oracle)
             });
+            hashConsensus.grantRole(
+                hashConsensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(),
+                config.aragonAgent
+            );
             hashConsensus.grantRole(
                 hashConsensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(),
                 address(deployer)
@@ -527,21 +530,35 @@ abstract contract DeployBase is Script {
                 deployer
             );
 
+            strikes.grantRole(strikes.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
+            strikes.revokeRole(strikes.DEFAULT_ADMIN_ROLE(), deployer);
+
             JsonObj memory deployJson = Json.newObj();
             deployJson.set("ChainId", chainId);
+            deployJson.set("CSModule", address(csm));
+            deployJson.set("CSModuleImpl", address(csmImpl));
+            deployJson.set("CSParametersRegistry", address(parametersRegistry));
+            deployJson.set(
+                "CSParametersRegistryImpl",
+                address(parametersRegistryImpl)
+            );
+            deployJson.set("CSAccounting", address(accounting));
+            deployJson.set("CSAccountingImpl", address(accountingImpl));
+            deployJson.set("CSFeeOracle", address(oracle));
+            deployJson.set("CSFeeOracleImpl", address(oracleImpl));
+            deployJson.set("CSFeeDistributor", address(feeDistributor));
+            deployJson.set("CSFeeDistributorImpl", address(feeDistributorImpl));
+            deployJson.set("CSExitPenalties", address(exitPenalties));
+            deployJson.set("CSExitPenaltiesImpl", address(exitPenaltiesImpl));
+            deployJson.set("CSEjector", address(ejector));
+            deployJson.set("CSStrikes", address(strikes));
+            deployJson.set("CSStrikesImpl", address(strikesImpl));
+            deployJson.set("HashConsensus", address(hashConsensus));
+            deployJson.set("CSVerifier", address(verifier));
             deployJson.set("PermissionlessGate", address(permissionlessGate));
             deployJson.set("VettedGateFactory", address(vettedGateFactory));
             deployJson.set("VettedGate", address(vettedGate));
-            deployJson.set("CSParametersRegistry", address(parametersRegistry));
-            deployJson.set("CSModule", address(csm));
-            deployJson.set("CSAccounting", address(accounting));
-            deployJson.set("CSFeeOracle", address(oracle));
-            deployJson.set("CSFeeDistributor", address(feeDistributor));
-            deployJson.set("CSExitPenalties", address(exitPenalties));
-            deployJson.set("CSEjector", address(ejector));
-            deployJson.set("CSStrikes", address(strikes));
-            deployJson.set("HashConsensus", address(hashConsensus));
-            deployJson.set("CSVerifier", address(verifier));
+            deployJson.set("VettedGateImpl", address(vettedGateImpl));
             deployJson.set("LidoLocator", config.lidoLocatorAddress);
             deployJson.set("GateSeal", gateSeal);
             deployJson.set("DeployParams", abi.encode(config));
@@ -625,6 +642,14 @@ abstract contract DeployBase is Script {
         );
         ejector.grantRole(
             ejector.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        verifier.grantRole(
+            verifier.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        strikes.grantRole(
+            strikes.DEFAULT_ADMIN_ROLE(),
             config.secondAdminAddress
         );
     }
