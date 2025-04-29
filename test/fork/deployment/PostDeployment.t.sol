@@ -55,10 +55,6 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
     function test_state_onlyFull() public view {
         assertEq(address(csm.accounting()), address(accounting));
         assertEq(address(csm.exitPenalties()), address(exitPenalties));
-        assertTrue(
-            csm.hasRole(csm.STAKING_ROUTER_ROLE(), locator.stakingRouter())
-        );
-        assertTrue(csm.getRoleMemberCount(csm.STAKING_ROUTER_ROLE()) == 1);
         assertEq(csm.getInitializedVersion(), 2);
     }
 
@@ -90,9 +86,17 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
         assertTrue(
             csm.getRoleMemberCount(csm.DEFAULT_ADMIN_ROLE()) == adminsCount
         );
+
+        assertTrue(
+            csm.hasRole(csm.STAKING_ROUTER_ROLE(), locator.stakingRouter())
+        );
+        assertEq(csm.getRoleMemberCount(csm.STAKING_ROUTER_ROLE()), 1);
+
         assertTrue(csm.hasRole(csm.PAUSE_ROLE(), address(gateSeal)));
         assertEq(csm.getRoleMemberCount(csm.PAUSE_ROLE()), 1);
+
         assertEq(csm.getRoleMemberCount(csm.RESUME_ROLE()), 0);
+
         assertTrue(
             csm.hasRole(
                 csm.REPORT_EL_REWARDS_STEALING_PENALTY_ROLE(),
@@ -105,6 +109,7 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
             ),
             1
         );
+
         assertTrue(
             csm.hasRole(
                 csm.SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE(),
@@ -117,9 +122,12 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
             ),
             1
         );
+
         assertTrue(csm.hasRole(csm.VERIFIER_ROLE(), address(verifier)));
         assertEq(csm.getRoleMemberCount(csm.VERIFIER_ROLE()), 1);
+
         assertEq(csm.getRoleMemberCount(csm.RECOVERER_ROLE()), 0);
+
         assertEq(csm.getRoleMemberCount(csm.CREATE_NODE_OPERATOR_ROLE()), 2);
         assertTrue(
             csm.hasRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(vettedGate))
@@ -268,6 +276,8 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
         );
         assertEq(accounting.getRoleMemberCount(accounting.PAUSE_ROLE()), 1);
 
+        assertEq(accounting.getRoleMemberCount(accounting.RESUME_ROLE()), 0);
+
         assertTrue(
             accounting.hasRole(
                 accounting.SET_BOND_CURVE_ROLE(),
@@ -290,11 +300,11 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             0
         );
 
-        assertEq(accounting.getRoleMemberCount(accounting.RESUME_ROLE()), 0);
         assertEq(
             accounting.getRoleMemberCount(accounting.MANAGE_BOND_CURVES_ROLE()),
             0
         );
+
         assertEq(accounting.getRoleMemberCount(accounting.RECOVERER_ROLE()), 0);
     }
 
@@ -363,6 +373,7 @@ contract CSFeeDistributorDeploymentTest is DeploymentBaseTest {
             ),
             adminsCount
         );
+
         assertEq(
             feeDistributor.getRoleMemberCount(feeDistributor.RECOVERER_ROLE()),
             0
@@ -435,15 +446,21 @@ contract CSFeeOracleDeploymentTest is DeploymentBaseTest {
             oracle.getRoleMemberCount(oracle.DEFAULT_ADMIN_ROLE()),
             adminsCount
         );
+
         assertTrue(oracle.hasRole(oracle.PAUSE_ROLE(), address(gateSeal)));
         assertEq(oracle.getRoleMemberCount(oracle.PAUSE_ROLE()), 1);
+
         assertEq(oracle.getRoleMemberCount(oracle.RESUME_ROLE()), 0);
+
         assertEq(oracle.getRoleMemberCount(oracle.SUBMIT_DATA_ROLE()), 0);
+
         assertEq(oracle.getRoleMemberCount(oracle.RECOVERER_ROLE()), 0);
+
         assertEq(
             oracle.getRoleMemberCount(oracle.MANAGE_CONSENSUS_CONTRACT_ROLE()),
             0
         );
+
         assertEq(
             oracle.getRoleMemberCount(oracle.MANAGE_CONSENSUS_VERSION_ROLE()),
             0
@@ -526,12 +543,14 @@ contract HashConsensusDeploymentTest is DeploymentBaseTest {
             ),
             adminsCount
         );
+
         assertEq(
             hashConsensus.getRoleMemberCount(
                 hashConsensus.DISABLE_CONSENSUS_ROLE()
             ),
             0
         );
+
         assertEq(
             hashConsensus.getRoleMemberCount(
                 hashConsensus.MANAGE_REPORT_PROCESSOR_ROLE()
@@ -553,6 +572,7 @@ contract HashConsensusDeploymentTest is DeploymentBaseTest {
                 ),
                 1
             );
+
             assertEq(
                 hashConsensus.getRoleMemberCount(
                     hashConsensus.MANAGE_FRAME_CONFIG_ROLE()
@@ -623,12 +643,11 @@ contract CSVerifierDeploymentTest is DeploymentBaseTest {
             verifier.getRoleMemberCount(verifier.DEFAULT_ADMIN_ROLE()),
             adminsCount
         );
-        assertEq(verifier.getRoleMemberCount(verifier.RESUME_ROLE()), 0);
-    }
 
-    function test_roles_onlyFull() public view {
         assertTrue(verifier.hasRole(verifier.PAUSE_ROLE(), address(gateSeal)));
         assertEq(verifier.getRoleMemberCount(verifier.PAUSE_ROLE()), 1);
+
+        assertEq(verifier.getRoleMemberCount(verifier.RESUME_ROLE()), 0);
     }
 }
 
@@ -874,7 +893,9 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
             vettedGate.hasRole(vettedGate.PAUSE_ROLE(), address(gateSeal))
         );
         assertEq(vettedGate.getRoleMemberCount(vettedGate.PAUSE_ROLE()), 1);
+
         assertEq(vettedGate.getRoleMemberCount(vettedGate.RESUME_ROLE()), 0);
+
         assertTrue(
             vettedGate.hasRole(
                 vettedGate.SET_TREE_ROLE(),
@@ -882,6 +903,7 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
             )
         );
         assertEq(vettedGate.getRoleMemberCount(vettedGate.SET_TREE_ROLE()), 1);
+
         assertTrue(
             vettedGate.hasRole(
                 vettedGate.START_REFERRAL_SEASON_ROLE(),
@@ -894,6 +916,7 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
             ),
             1
         );
+
         assertTrue(
             vettedGate.hasRole(
                 vettedGate.END_REFERRAL_SEASON_ROLE(),
