@@ -850,6 +850,7 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
         uint256 curveId = vettedGate.curveId();
         // Check that the curve is set
         assertTrue(vettedGate.curveId() != 0);
+        assertEq(vettedGate.getInitializedVersion(), 1);
     }
 
     function test_immutables() public view {
