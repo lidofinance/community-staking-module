@@ -76,6 +76,38 @@ contract VoteChangesTest is V2UpgradeTestBase {
         );
     }
 
+    function test_csmState() public {
+        vm.selectFork(forkIdBeforeUpgrade);
+        address accountingBefore = address(csm.accounting());
+        uint256 nonceBefore = csm.getNonce();
+        (
+            uint256 totalExitedValidatorsBefore,
+            uint256 totalDepositedValidatorsBefore,
+            uint256 depositableValidatorsCountBefore
+        ) = csm.getStakingModuleSummary();
+        uint256 totalNodeOperatorsBefore = csm.getNodeOperatorsCount();
+
+        vm.selectFork(forkIdAfterUpgrade);
+        address accountingAfter = address(csm.accounting());
+        uint256 nonceAfter = csm.getNonce();
+        (
+            uint256 totalExitedValidatorsAfter,
+            uint256 totalDepositedValidatorsAfter,
+            uint256 depositableValidatorsCountAfter
+        ) = csm.getStakingModuleSummary();
+        uint256 totalNodeOperatorsAfter = csm.getNodeOperatorsCount();
+
+        assertEq(accountingBefore, accountingAfter);
+        assertEq(nonceBefore, nonceAfter);
+        assertEq(totalExitedValidatorsBefore, totalExitedValidatorsAfter);
+        assertEq(totalDepositedValidatorsBefore, totalDepositedValidatorsAfter);
+        assertEq(
+            depositableValidatorsCountBefore,
+            depositableValidatorsCountAfter
+        );
+        assertEq(totalNodeOperatorsBefore, totalNodeOperatorsAfter);
+    }
+
     function test_accountingChanges() public {
         OssifiableProxy accountingProxy = OssifiableProxy(
             payable(address(accounting))
@@ -136,6 +168,26 @@ contract VoteChangesTest is V2UpgradeTestBase {
         );
     }
 
+    function test_accountingState() public {
+        vm.selectFork(forkIdBeforeUpgrade);
+        address feeDistributorBefore = address(accounting.feeDistributor());
+        address chargePenaltyRecipientBefore = address(
+            accounting.chargePenaltyRecipient()
+        );
+        uint256 totalBondSharesBefore = accounting.totalBondShares();
+
+        vm.selectFork(forkIdAfterUpgrade);
+        address feeDistributorAfter = address(accounting.feeDistributor());
+        address chargePenaltyRecipientAfter = address(
+            accounting.chargePenaltyRecipient()
+        );
+        uint256 totalBondSharesAfter = accounting.totalBondShares();
+
+        assertEq(feeDistributorBefore, feeDistributorAfter);
+        assertEq(chargePenaltyRecipientBefore, chargePenaltyRecipientAfter);
+        assertEq(totalBondSharesBefore, totalBondSharesAfter);
+    }
+
     function test_feeDistributorChanges() public {
         OssifiableProxy feeDistributorProxy = OssifiableProxy(
             payable(address(feeDistributor))
@@ -151,6 +203,30 @@ contract VoteChangesTest is V2UpgradeTestBase {
 
         assertEq(feeDistributor.getInitializedVersion(), 2);
         assertEq(feeDistributor.rebateRecipient(), locator.treasury());
+    }
+
+    function test_feeDistributorState() public {
+        vm.selectFork(forkIdBeforeUpgrade);
+        bytes32 treeRootBefore = feeDistributor.treeRoot();
+        string memory treeCidBefore = feeDistributor.treeCid();
+        string memory logCidBefore = feeDistributor.logCid();
+        uint256 totalClaimableSharesBefore = feeDistributor
+            .totalClaimableShares();
+
+        vm.selectFork(forkIdAfterUpgrade);
+        bytes32 treeRootAfter = feeDistributor.treeRoot();
+        string memory treeCidAfter = feeDistributor.treeCid();
+        string memory logCidAfter = feeDistributor.logCid();
+        uint256 totalClaimableSharesAfter = feeDistributor
+            .totalClaimableShares();
+
+        assertEq(treeRootBefore, treeRootAfter);
+        assertEq(
+            keccak256(bytes(treeCidBefore)),
+            keccak256(bytes(treeCidAfter))
+        );
+        assertEq(keccak256(bytes(logCidBefore)), keccak256(bytes(logCidAfter)));
+        assertEq(totalClaimableSharesBefore, totalClaimableSharesAfter);
     }
 
     function test_feeOracleChanges() public {
@@ -191,5 +267,15 @@ contract VoteChangesTest is V2UpgradeTestBase {
             oracle.getRoleMemberCount(keccak256("CONTRACT_MANAGER_ROLE")),
             0
         );
+    }
+
+    function test_feeOracleState() public {
+        vm.selectFork(forkIdBeforeUpgrade);
+        address feeDistributorBefore = address(oracle.feeDistributor());
+
+        vm.selectFork(forkIdAfterUpgrade);
+        address feeDistributorAfter = address(oracle.feeDistributor());
+
+        assertEq(feeDistributorBefore, feeDistributorAfter);
     }
 }
