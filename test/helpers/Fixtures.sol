@@ -30,7 +30,7 @@ import { CSEjector } from "../../src/CSEjector.sol";
 import { CSExitPenalties } from "../../src/CSExitPenalties.sol";
 import { CSStrikes } from "../../src/CSStrikes.sol";
 import { CSVerifier } from "../../src/CSVerifier.sol";
-import { DeployParams, DeployParamsV1 } from "../../script/DeployBase.s.sol";
+import { DeployParams } from "../../script/DeployBase.s.sol";
 import { IACL } from "../../src/interfaces/IACL.sol";
 import { IKernel } from "../../src/interfaces/IKernel.sol";
 import { Utilities } from "./Utilities.sol";
@@ -93,7 +93,6 @@ contract DeploymentHelpers is Test {
     struct Env {
         string RPC_URL;
         string DEPLOY_CONFIG;
-        string UPGRADE_CONFIG;
         uint256 VOTE_PREV_BLOCK;
     }
 
@@ -120,37 +119,17 @@ contract DeploymentHelpers is Test {
         address strikes;
         address strikesImpl;
         address verifier;
+        address verifierV2;
         address hashConsensus;
         address lidoLocator;
         address gateSeal;
-    }
-
-    struct UpgradeConfig {
-        address permissionlessGate;
-        address vettedGate;
-        address vettedGateImpl;
-        address parametersRegistry;
-        address parametersRegistryImpl;
-        address ejector;
-        address strikes;
-        address strikesImpl;
-        address exitPenalties;
-        address exitPenaltiesImpl;
-        address csmImpl;
-        address accountingImpl;
-        address oracleImpl;
-        address feeDistributorImpl;
-        address verifier;
-        address earlyAdoption;
-        address hashConsensus;
-        address gateSeal;
+        address gateSealV2;
     }
 
     function envVars() public returns (Env memory) {
         Env memory env = Env(
             vm.envOr("RPC_URL", string("")),
             vm.envOr("DEPLOY_CONFIG", string("")),
-            vm.envOr("UPGRADE_CONFIG", string("")),
             vm.envOr("VOTE_PREV_BLOCK", uint256(0))
         );
         vm.skip(_isEmpty(env.RPC_URL));
@@ -278,6 +257,13 @@ contract DeploymentHelpers is Test {
         vm.label(deploymentConfig.feeDistributorImpl, "feeDistributorImpl");
 
         deploymentConfig.verifier = vm.parseJsonAddress(config, ".CSVerifier");
+        if (vm.keyExistsJson(config, ".CSVerifierV2")) {
+            deploymentConfig.verifierV2 = vm.parseJsonAddress(
+                config,
+                ".CSVerifierV2"
+            );
+            vm.label(deploymentConfig.verifierV2, "verifierV2");
+        }
         vm.label(deploymentConfig.verifier, "verifier");
 
         deploymentConfig.hashConsensus = vm.parseJsonAddress(
@@ -293,73 +279,14 @@ contract DeploymentHelpers is Test {
         vm.label(deploymentConfig.lidoLocator, "LidoLocator");
 
         deploymentConfig.gateSeal = vm.parseJsonAddress(config, ".GateSeal");
-        vm.label(deploymentConfig.gateSeal, "GateSeal");
-    }
-
-    function parseUpgradeConfig(
-        string memory config
-    ) internal pure returns (UpgradeConfig memory upgradeConfig) {
-        upgradeConfig.permissionlessGate = vm.parseJsonAddress(
-            config,
-            ".PermissionlessGate"
-        );
-        upgradeConfig.vettedGate = vm.parseJsonAddress(config, ".VettedGate");
-        upgradeConfig.vettedGateImpl = vm.parseJsonAddress(
-            config,
-            ".VettedGateImpl"
-        );
-        upgradeConfig.parametersRegistry = vm.parseJsonAddress(
-            config,
-            ".CSParametersRegistry"
-        );
-        upgradeConfig.parametersRegistryImpl = vm.parseJsonAddress(
-            config,
-            ".CSParametersRegistryImpl"
-        );
-        upgradeConfig.exitPenalties = vm.parseJsonAddress(
-            config,
-            ".CSExitPenalties"
-        );
-        upgradeConfig.exitPenaltiesImpl = vm.parseJsonAddress(
-            config,
-            ".CSExitPenaltiesImpl"
-        );
-        upgradeConfig.strikes = vm.parseJsonAddress(config, ".CSStrikes");
-        upgradeConfig.strikesImpl = vm.parseJsonAddress(
-            config,
-            ".CSStrikesImpl"
-        );
-        upgradeConfig.ejector = vm.parseJsonAddress(config, ".CSEjector");
-        upgradeConfig.csmImpl = vm.parseJsonAddress(config, ".CSModuleImpl");
-        upgradeConfig.accountingImpl = vm.parseJsonAddress(
-            config,
-            ".CSAccountingImpl"
-        );
-        upgradeConfig.oracleImpl = vm.parseJsonAddress(
-            config,
-            ".CSFeeOracleImpl"
-        );
-        upgradeConfig.feeDistributorImpl = vm.parseJsonAddress(
-            config,
-            ".CSFeeDistributorImpl"
-        );
-        upgradeConfig.verifier = vm.parseJsonAddress(config, ".CSVerifier");
-        upgradeConfig.hashConsensus = vm.parseJsonAddress(
-            config,
-            ".HashConsensus"
-        );
-        upgradeConfig.gateSeal = vm.parseJsonAddress(config, ".GateSeal");
-    }
-
-    function parseDeployParamsV1(
-        string memory deployConfigPath
-    ) internal view returns (DeployParamsV1 memory) {
-        string memory config = vm.readFile(deployConfigPath);
-        return
-            abi.decode(
-                vm.parseJsonBytes(config, ".DeployParams"),
-                (DeployParamsV1)
+        if (vm.keyExistsJson(config, ".GateSealV2")) {
+            deploymentConfig.gateSealV2 = vm.parseJsonAddress(
+                config,
+                ".GateSealV2"
             );
+            vm.label(deploymentConfig.gateSealV2, "GateSealV2");
+        }
+        vm.label(deploymentConfig.gateSeal, "GateSeal");
     }
 
     function parseDeployParams(
@@ -445,48 +372,22 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
         exitPenaltiesImpl = CSExitPenalties(deploymentConfig.exitPenaltiesImpl);
         strikes = CSStrikes(deploymentConfig.strikes);
         strikesImpl = CSStrikes(deploymentConfig.strikesImpl);
-        verifier = CSVerifier(deploymentConfig.verifier);
+        verifier = CSVerifier(
+            deploymentConfig.verifierV2 == address(0)
+                ? deploymentConfig.verifier
+                : deploymentConfig.verifierV2
+        );
         hashConsensus = HashConsensus(deploymentConfig.hashConsensus);
         locator = ILidoLocator(deploymentConfig.lidoLocator);
         lido = ILido(locator.lido());
         stakingRouter = IStakingRouter(locator.stakingRouter());
         wstETH = IWstETH(IWithdrawalQueue(locator.withdrawalQueue()).WSTETH());
-        gateSeal = IGateSeal(deploymentConfig.gateSeal);
+        gateSeal = IGateSeal(
+            deploymentConfig.gateSealV2 == address(0)
+                ? deploymentConfig.gateSeal
+                : deploymentConfig.gateSealV2
+        );
         burner = IBurner(locator.burner());
-
-        if (!_isEmpty(env.UPGRADE_CONFIG)) {
-            UpgradeConfig memory upgradeConfig = parseUpgradeConfig(
-                vm.readFile(env.UPGRADE_CONFIG)
-            );
-            csmImpl = CSModule(upgradeConfig.csmImpl);
-            accountingImpl = CSAccounting(upgradeConfig.accountingImpl);
-            oracleImpl = CSFeeOracle(upgradeConfig.oracleImpl);
-            feeDistributorImpl = CSFeeDistributor(
-                upgradeConfig.feeDistributorImpl
-            );
-
-            parametersRegistry = CSParametersRegistry(
-                upgradeConfig.parametersRegistry
-            );
-            parametersRegistryImpl = CSParametersRegistry(
-                upgradeConfig.parametersRegistryImpl
-            );
-            ejector = CSEjector(payable(upgradeConfig.ejector));
-            strikes = CSStrikes(upgradeConfig.strikes);
-            strikesImpl = CSStrikes(upgradeConfig.strikesImpl);
-            permissionlessGate = PermissionlessGate(
-                upgradeConfig.permissionlessGate
-            );
-            vettedGate = VettedGate(upgradeConfig.vettedGate);
-            vettedGateImpl = VettedGate(upgradeConfig.vettedGateImpl);
-            exitPenalties = CSExitPenalties(upgradeConfig.exitPenalties);
-            exitPenaltiesImpl = CSExitPenalties(
-                upgradeConfig.exitPenaltiesImpl
-            );
-            verifier = CSVerifier(upgradeConfig.verifier);
-            hashConsensus = HashConsensus(upgradeConfig.hashConsensus);
-            gateSeal = IGateSeal(upgradeConfig.gateSeal);
-        }
     }
 
     function handleStakingLimit() public {

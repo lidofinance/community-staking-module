@@ -239,22 +239,16 @@ test-upgrade *args:
     just make-fork --silent &
     while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
 
+    export RPC_URL={{anvil_rpc_url}}
+
     just _deploy-impl --broadcast --private-key=`cat localhost.json | jq -r ".private_keys[0]"`
 
-    export DEPLOY_CONFIG=./artifacts/{{chain}}/deploy-{{chain}}.json
-    export UPGRADE_CONFIG=./artifacts/local/upgrade-{{chain}}.json
+    export DEPLOY_CONFIG=./artifacts/local/upgrade-{{chain}}.json
     export VOTE_PREV_BLOCK=`cast block-number -r $RPC_URL`
 
     just vote-upgrade
 
-    export DEPLOY_CONFIG=./artifacts/local/upgrade-{{chain}}.json
-    export RPC_URL={{anvil_rpc_url}}
-
     just test-deployment-full-afterVote {{args}}
-
-    export DEPLOY_CONFIG=./artifacts/{{chain}}/deploy-{{chain}}.json
-    export UPGRADE_CONFIG=./artifacts/local/upgrade-{{chain}}.json
-
     just test-post-upgrade {{args}}
 
     just kill-fork

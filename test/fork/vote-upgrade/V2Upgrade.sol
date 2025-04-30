@@ -7,16 +7,13 @@ import "forge-std/Test.sol";
 
 import { Utilities } from "../../helpers/Utilities.sol";
 import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
-import { DeployParams, DeployParamsV1 } from "../../../script/DeployBase.s.sol";
+import { DeployParams } from "../../../script/DeployBase.s.sol";
 import { HashConsensus } from "../../../src/lib/base-oracle/HashConsensus.sol";
 import { BaseOracle } from "../../../src/lib/base-oracle/BaseOracle.sol";
 import { Slot } from "../../../src/lib/Types.sol";
 import { OssifiableProxy } from "../../../src/lib/proxy/OssifiableProxy.sol";
 
 contract V2UpgradeTestBase is Test, Utilities, DeploymentFixtures {
-    DeployParamsV1 private deployParams;
-    DeployParams private upgradeDeployParams;
-
     uint256 internal forkIdBeforeUpgrade;
     uint256 internal forkIdAfterUpgrade;
 
@@ -28,11 +25,6 @@ contract V2UpgradeTestBase is Test, Utilities, DeploymentFixtures {
         forkIdBeforeUpgrade = vm.createFork(env.RPC_URL, env.VOTE_PREV_BLOCK);
         forkIdAfterUpgrade = vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment();
-        deployParams = parseDeployParamsV1(env.DEPLOY_CONFIG);
-        if (_isEmpty(env.UPGRADE_CONFIG)) {
-            revert UpdateConfigRequired();
-        }
-        upgradeDeployParams = parseDeployParams(env.UPGRADE_CONFIG);
     }
 }
 

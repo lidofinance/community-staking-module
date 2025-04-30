@@ -30,55 +30,7 @@ import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 import { VettedGateFactory } from "../src/VettedGateFactory.sol";
 import { CSExitPenalties } from "../src/CSExitPenalties.sol";
-
-struct DeployParamsV1 {
-    // Lido addresses
-    address lidoLocatorAddress;
-    address aragonAgent;
-    address easyTrackEVMScriptExecutor;
-    address proxyAdmin;
-    // Oracle
-    uint256 secondsPerSlot;
-    uint256 slotsPerEpoch;
-    uint256 clGenesisTime;
-    uint256 oracleReportEpochsPerFrame;
-    uint256 fastLaneLengthSlots;
-    uint256 consensusVersion;
-    uint256 avgPerfLeewayBP;
-    address[] oracleMembers;
-    uint256 hashConsensusQuorum;
-    // Verifier
-    GIndex gIHistoricalSummaries;
-    GIndex gIFirstWithdrawal;
-    GIndex gIFirstValidator;
-    uint256 verifierSupportedEpoch;
-    // Accounting
-    uint256 maxCurveLength;
-    uint256[] bondCurve;
-    uint256 minBondLockPeriod;
-    uint256 maxBondLockPeriod;
-    uint256 bondLockPeriod;
-    address setResetBondCurveAddress;
-    address chargePenaltyRecipient;
-    // Module
-    bytes32 moduleType;
-    uint256 minSlashingPenaltyQuotient;
-    uint256 elRewardsStealingAdditionalFine;
-    uint256 maxKeysPerOperatorEA;
-    uint256 maxKeyRemovalCharge;
-    uint256 keyRemovalCharge;
-    address elRewardsStealingReporter;
-    // VettedGate
-    bytes32 vettedGateTreeRoot;
-    uint256[] vettedGateBondCurve;
-    // GateSeal
-    address gateSealFactory;
-    address sealingCommittee;
-    uint256 sealDuration;
-    uint256 sealExpiryTimestamp;
-    // Testnet stuff
-    address secondAdminAddress;
-}
+import { IGateSeal } from "../src/interfaces/IGateSeal.sol";
 
 struct DeployParams {
     // Lido addresses
@@ -162,6 +114,7 @@ abstract contract DeployBase is Script {
     CSEjector public ejector;
     CSStrikes public strikes;
     CSVerifier public verifier;
+    address public gateSeal;
     PermissionlessGate public permissionlessGate;
     VettedGateFactory public vettedGateFactory;
     VettedGate public vettedGate;
@@ -413,7 +366,6 @@ abstract contract DeployBase is Script {
                 consensusVersion: config.consensusVersion
             });
 
-            address gateSeal;
             if (config.gateSealFactory != address(0)) {
                 address[] memory sealables = new address[](6);
                 sealables[0] = address(csm);

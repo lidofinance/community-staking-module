@@ -29,8 +29,9 @@ import { Slot } from "../src/lib/Types.sol";
 import { DeployBase } from "./DeployBase.s.sol";
 
 abstract contract DeployImplementationsBase is DeployBase {
-    address gateSeal;
-    address earlyAdoption;
+    address public gateSealV2;
+    address public verifierV2;
+    address public earlyAdoption;
 
     function _deploy() internal {
         if (chainId != block.chainid) {
@@ -144,7 +145,7 @@ abstract contract DeployImplementationsBase is DeployBase {
             ejector.initialize(deployer, address(strikes));
             strikes.initialize(deployer, address(ejector));
 
-            verifier = new CSVerifier({
+            CSVerifier verifierV2 = new CSVerifier({
                 withdrawalAddress: locator.withdrawalVault(),
                 module: address(csm),
                 slotsPerEpoch: uint64(config.slotsPerEpoch),
@@ -169,10 +170,10 @@ abstract contract DeployImplementationsBase is DeployBase {
             sealables[0] = address(csm);
             sealables[1] = address(accounting);
             sealables[2] = address(oracle);
-            sealables[3] = address(verifier);
+            sealables[3] = address(verifierV2);
             sealables[4] = address(vettedGate);
             sealables[5] = address(ejector);
-            gateSeal = _deployGateSeal(sealables);
+            gateSealV2 = _deployGateSeal(sealables);
 
             if (config.secondAdminAddress != address(0)) {
                 if (config.secondAdminAddress == deployer) {
@@ -181,11 +182,11 @@ abstract contract DeployImplementationsBase is DeployBase {
                 _grantSecondAdminsForNewContracts();
             }
 
-            ejector.grantRole(ejector.PAUSE_ROLE(), gateSeal);
+            ejector.grantRole(ejector.PAUSE_ROLE(), gateSealV2);
             ejector.grantRole(ejector.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
             ejector.revokeRole(ejector.DEFAULT_ADMIN_ROLE(), deployer);
 
-            vettedGate.grantRole(vettedGate.PAUSE_ROLE(), address(gateSeal));
+            vettedGate.grantRole(vettedGate.PAUSE_ROLE(), gateSealV2);
             vettedGate.grantRole(
                 vettedGate.DEFAULT_ADMIN_ROLE(),
                 config.aragonAgent
@@ -204,12 +205,12 @@ abstract contract DeployImplementationsBase is DeployBase {
             );
             vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
 
-            verifier.grantRole(verifier.PAUSE_ROLE(), address(gateSeal));
-            verifier.grantRole(
-                verifier.DEFAULT_ADMIN_ROLE(),
+            verifierV2.grantRole(verifierV2.PAUSE_ROLE(), gateSealV2);
+            verifierV2.grantRole(
+                verifierV2.DEFAULT_ADMIN_ROLE(),
                 config.aragonAgent
             );
-            verifier.revokeRole(verifier.DEFAULT_ADMIN_ROLE(), deployer);
+            verifierV2.revokeRole(verifierV2.DEFAULT_ADMIN_ROLE(), deployer);
 
             parametersRegistry.grantRole(
                 parametersRegistry.DEFAULT_ADMIN_ROLE(),
@@ -245,12 +246,14 @@ abstract contract DeployImplementationsBase is DeployBase {
             deployJson.set("CSStrikesImpl", address(strikesImpl));
             deployJson.set("HashConsensus", address(hashConsensus));
             deployJson.set("CSVerifier", address(verifier));
+            deployJson.set("CSVerifierV2", address(verifierV2));
             deployJson.set("PermissionlessGate", address(permissionlessGate));
             deployJson.set("VettedGateFactory", address(vettedGateFactory));
             deployJson.set("VettedGate", address(vettedGate));
             deployJson.set("VettedGateImpl", address(vettedGateImpl));
             deployJson.set("LidoLocator", config.lidoLocatorAddress);
             deployJson.set("GateSeal", gateSeal);
+            deployJson.set("GateSealV2", gateSealV2);
             deployJson.set("DeployParams", abi.encode(config));
             deployJson.set("git-ref", gitRef);
             vm.writeJson(
