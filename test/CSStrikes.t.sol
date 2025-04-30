@@ -83,6 +83,20 @@ contract CSStrikesTestBase is Test, Fixtures, Utilities, InvariantAsserts {
     ) external {
         strikes.processBadPerformanceProof(keyStrikes, proof, refundRecipient);
     }
+
+    function processBadPerformanceMultiProof(
+        ICSStrikes.ModuleKeyStrikes[] calldata keyStrikesList,
+        bytes32[] calldata proof,
+        bool[] calldata proofFlags,
+        address refundRecipient
+    ) external {
+        strikes.processBadPerformanceMultiProof(
+            keyStrikesList,
+            proof,
+            proofFlags,
+            refundRecipient
+        );
+    }
 }
 
 contract CSStrikesConstructorTest is CSStrikesTestBase {
@@ -623,7 +637,7 @@ contract CSStrikesMultiProofTest is CSStrikesTestBase {
 
     modifier withTreeOfLeavesCount(uint256 leavesCount) {
         for (uint256 i; i < leavesCount; ++i) {
-            uint256[] memory strikesData = UintArr(1, 0, 0);
+            uint256[] memory strikesData = UintArr(100500, 0, 0);
             (bytes memory pubkey, ) = keysSignatures(1, i);
             leaves.push(
                 Leaf(
@@ -843,32 +857,49 @@ contract CSStrikesMultiProofTest is CSStrikesTestBase {
     {
         module.mock_setNodeOperatorTotalDepositedKeys(1);
 
-        bytes32[] memory proof = tree.getProof(0);
+        uint256[] memory indicies = UintArr(0, 1, 4);
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](
+                indicies.length
+            );
+        (bytes32[] memory proof, bool[] memory proofFlags) = tree.getMultiProof(
+            indicies
+        );
 
-        vm.expectCall(
-            address(ejector),
-            abi.encodeWithSelector(
-                ICSEjector.ejectBadPerformer.selector,
-                noId,
-                pubkey,
-                refundRecipient
-            )
-        );
-        vm.expectCall(
-            address(exitPenalties),
-            abi.encodeWithSelector(
-                ICSExitPenalties.processStrikesReport.selector,
-                noId,
-                pubkey
-            )
-        );
-        this.processBadPerformanceProof(
-            ICSStrikes.ModuleKeyStrikes({
-                nodeOperatorId: noId,
-                keyIndex: keyIndex,
-                data: strikesData
-            }),
+        for (uint256 i; i < indicies.length; i++) {
+            Leaf memory leaf = leaves[indicies[i]];
+            keyStrikesList[i] = leaf.keyStrikes;
+            vm.mockCall(
+                address(module),
+                abi.encodeWithSelector(
+                    ICSModule.getSigningKeys.selector,
+                    leaf.keyStrikes.nodeOperatorId,
+                    leaf.keyStrikes.keyIndex
+                ),
+                abi.encode(leaf.pubkey)
+            );
+            vm.expectCall(
+                address(ejector),
+                abi.encodeWithSelector(
+                    ICSEjector.ejectBadPerformer.selector,
+                    leaf.keyStrikes.nodeOperatorId,
+                    leaf.pubkey,
+                    refundRecipient
+                )
+            );
+            vm.expectCall(
+                address(exitPenalties),
+                abi.encodeWithSelector(
+                    ICSExitPenalties.processStrikesReport.selector,
+                    leaf.keyStrikes.nodeOperatorId,
+                    leaf.pubkey
+                )
+            );
+        }
+        this.processBadPerformanceMultiProof(
+            keyStrikesList,
             proof,
+            proofFlags,
             refundRecipient
         );
     }
