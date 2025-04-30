@@ -125,44 +125,65 @@ contract MerkleTreeTest is Test, Utilities {
         bytes32[] memory leaves;
         bool[] memory proofFlags;
 
-        leaves = new bytes32[](2);
-        leaves[0] = tree.hashLeaf(leaf0);
-        leaves[1] = tree.hashLeaf(leaf1);
+        {
+            leaves = new bytes32[](2);
+            leaves[0] = tree.hashLeaf(leaf0);
+            leaves[1] = tree.hashLeaf(leaf1);
 
-        (proof, proofFlags) = tree.getMultiProof(UintArr(0, 1));
-        isValid = MerkleProof.multiProofVerify(
-            proof,
-            proofFlags,
-            tree.root(),
-            leaves
-        );
-        assertTrue(isValid);
+            (proof, proofFlags) = tree.getMultiProof(UintArr(0, 1));
+            isValid = MerkleProof.multiProofVerify(
+                proof,
+                proofFlags,
+                tree.root(),
+                leaves
+            );
+            assertTrue(isValid);
+        }
 
-        leaves = new bytes32[](2);
-        leaves[0] = tree.hashLeaf(leaf1);
-        leaves[1] = tree.hashLeaf(leaf2);
+        {
+            leaves = new bytes32[](2);
+            leaves[0] = tree.hashLeaf(leaf1);
+            leaves[1] = tree.hashLeaf(leaf2);
 
-        (proof, proofFlags) = tree.getMultiProof(UintArr(1, 2));
-        isValid = MerkleProof.multiProofVerify(
-            proof,
-            proofFlags,
-            tree.root(),
-            leaves
-        );
-        assertTrue(isValid);
+            (proof, proofFlags) = tree.getMultiProof(UintArr(1, 2));
+            isValid = MerkleProof.multiProofVerify(
+                proof,
+                proofFlags,
+                tree.root(),
+                leaves
+            );
+            assertTrue(isValid);
+        }
 
-        leaves = new bytes32[](3);
-        leaves[0] = tree.hashLeaf(leaf0);
-        leaves[1] = tree.hashLeaf(leaf1);
-        leaves[2] = tree.hashLeaf(leaf2);
+        {
+            leaves = new bytes32[](2);
+            leaves[0] = tree.hashLeaf(leaf0);
+            leaves[1] = tree.hashLeaf(leaf2);
 
-        (proof, proofFlags) = tree.getMultiProof(UintArr(0, 1, 2));
-        isValid = MerkleProof.multiProofVerify(
-            proof,
-            proofFlags,
-            tree.root(),
-            leaves
-        );
-        assertTrue(isValid);
+            (proof, proofFlags) = tree.getMultiProof(UintArr(0, 2));
+            isValid = MerkleProof.multiProofVerify(
+                proof,
+                proofFlags,
+                tree.root(),
+                leaves
+            );
+            assertTrue(isValid);
+        }
+
+        {
+            leaves = new bytes32[](3);
+            leaves[0] = tree.hashLeaf(leaf0);
+            leaves[1] = tree.hashLeaf(leaf1);
+            leaves[2] = tree.hashLeaf(leaf2);
+
+            (proof, proofFlags) = tree.getMultiProof(UintArr(0, 1, 2));
+            isValid = MerkleProof.multiProofVerify(
+                proof,
+                proofFlags,
+                tree.root(),
+                leaves
+            );
+            assertTrue(isValid);
+        }
     }
 }
