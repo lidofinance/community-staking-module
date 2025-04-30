@@ -1,9 +1,14 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.10;
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
+// SPDX-License-Identifier: GPL-3.0
+
+pragma solidity ^0.8.24;
+
+import "forge-std/Test.sol";
 
 import "../../helpers/Fixtures.sol";
 import "../../helpers/MerkleTree.sol";
-import "forge-std/Test.sol";
+
+import { ICSStrikes } from "../../../src/interfaces/ICSStrikes.sol";
 import { ICSFeeOracle } from "../../../src/interfaces/ICSFeeOracle.sol";
 import { ICSExitPenalties } from "../../../src/interfaces/ICSExitPenalties.sol";
 import { NodeOperatorManagementProperties } from "../../../src/interfaces/ICSModule.sol";
@@ -196,13 +201,23 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
             penalty
         );
         vm.startSnapshotGas("CSStrikes.processBadPerformanceProof");
-        strikes.processBadPerformanceProof(
-            nodeOperatorId,
-            keyIndex,
-            strikesData,
+        this.processBadPerformanceProof(
+            ICSStrikes.ModuleKeyStrikes({
+                nodeOperatorId: nodeOperatorId,
+                keyIndex: keyIndex,
+                data: strikesData
+            }),
             proof,
             address(0)
         );
         vm.stopSnapshotGas();
+    }
+
+    function processBadPerformanceProof(
+        ICSStrikes.ModuleKeyStrikes calldata keyStrikes,
+        bytes32[] calldata proof,
+        address refundRecipient
+    ) external {
+        strikes.processBadPerformanceProof(keyStrikes, proof, refundRecipient);
     }
 }

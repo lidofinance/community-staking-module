@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
+
 pragma solidity 0.8.24;
 
 import "./helpers/mocks/EjectorMock.sol";
@@ -122,6 +123,31 @@ contract CSStrikesTest is CSStrikesTestBase {
         vm.label(address(strikes), "STRIKES");
     }
 
+    // A bunch of wrapper to test functions with calldata arguments.
+
+    function hashLeaf(
+        ICSStrikes.ModuleKeyStrikes calldata keyStrikes,
+        bytes memory pubkey
+    ) external view returns (bytes32) {
+        return strikes.hashLeaf(keyStrikes, pubkey);
+    }
+
+    function verifyProof(
+        ICSStrikes.ModuleKeyStrikes calldata keyStrikes,
+        bytes memory pubkey,
+        bytes32[] calldata proof
+    ) external view returns (bool) {
+        return strikes.verifyProof(keyStrikes, pubkey, proof);
+    }
+
+    function processBadPerformanceProof(
+        ICSStrikes.ModuleKeyStrikes calldata keyStrikes,
+        bytes32[] calldata proof,
+        address refundRecipient
+    ) external {
+        strikes.processBadPerformanceProof(keyStrikes, proof, refundRecipient);
+    }
+
     function test_setEjector() public {
         ejector = address(new EjectorMock(address(module)));
 
@@ -140,22 +166,25 @@ contract CSStrikesTest is CSStrikesTestBase {
     }
 
     function test_hashLeaf() public assertInvariants {
-        uint256 noId = 42;
         (bytes memory pubkey, ) = keysSignatures(1);
-        uint256[] memory strikesData = new uint256[](6);
-        strikesData[0] = 100500;
-        // keccak256(bytes.concat(keccak256(abi.encode(42, pubkey, [100500])))) = 0x01eba5ed7fb9c5ebb4262844c7125628afcbea15e57bc7f4dd0c80d34d633584
         assertEq(
-            strikes.hashLeaf(noId, pubkey, strikesData),
-            0x01eba5ed7fb9c5ebb4262844c7125628afcbea15e57bc7f4dd0c80d34d633584
+            this.hashLeaf(
+                ICSStrikes.ModuleKeyStrikes({
+                    nodeOperatorId: 42,
+                    keyIndex: 0,
+                    data: UintArr(100500)
+                }),
+                pubkey
+            ),
+            // keccak256(bytes.concat(keccak256(abi.encode(42, pubkey, [100500])))) = 0x3a1e33fb3e7fe10371e522cee19c593a324542e57e4da98719979d7490d2eed7
+            0x3a1e33fb3e7fe10371e522cee19c593a324542e57e4da98719979d7490d2eed7
         );
     }
 
     function test_verifyProof() public {
         uint256 noId = 42;
         (bytes memory pubkey, ) = keysSignatures(1);
-        uint256[] memory strikesData = new uint256[](6);
-        strikesData[0] = 1;
+        uint256[] memory strikesData = UintArr(1, 0);
 
         tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
         tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
@@ -166,20 +195,22 @@ contract CSStrikesTest is CSStrikesTestBase {
 
         bytes32[] memory proof = tree.getProof(0);
 
-        bool isValid = strikes.verifyProof({
-            nodeOperatorId: noId,
-            pubkey: pubkey,
-            strikesData: strikesData,
-            proof: proof
-        });
+        bool isValid = this.verifyProof(
+            ICSStrikes.ModuleKeyStrikes({
+                nodeOperatorId: noId,
+                keyIndex: 0,
+                data: strikesData
+            }),
+            pubkey,
+            proof
+        );
         assertTrue(isValid);
     }
 
     function test_verifyProof_WhenInvalid() public {
         uint256 noId = 42;
         (bytes memory pubkey, ) = keysSignatures(1);
-        uint256[] memory strikesData = new uint256[](6);
-        strikesData[0] = 1;
+        uint256[] memory strikesData = UintArr(1, 0);
 
         tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
         tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
@@ -190,23 +221,24 @@ contract CSStrikesTest is CSStrikesTestBase {
 
         bytes32[] memory proof = tree.getProof(1);
 
-        bool isValid = strikes.verifyProof({
-            nodeOperatorId: noId,
-            pubkey: pubkey,
-            strikesData: strikesData,
-            proof: proof
-        });
+        bool isValid = this.verifyProof(
+            ICSStrikes.ModuleKeyStrikes({
+                nodeOperatorId: noId,
+                keyIndex: 0,
+                data: strikesData
+            }),
+            pubkey,
+            proof
+        );
         assertFalse(isValid);
     }
 
     function test_processBadPerformanceProof() public {
         uint256 noId = 42;
+        uint256 keyIndex = 0;
         module.mock_setNodeOperatorTotalDepositedKeys(1);
-        bytes memory pubkey = module.getSigningKeys(0, 0, 1);
-        uint256[] memory strikesData = new uint256[](3);
-        strikesData[0] = 1;
-        strikesData[1] = 1;
-        strikesData[2] = 1;
+        bytes memory pubkey = module.getSigningKeys(noId, keyIndex, 1);
+        uint256[] memory strikesData = UintArr(1, 1, 1);
 
         tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
         tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
@@ -234,10 +266,12 @@ contract CSStrikesTest is CSStrikesTestBase {
                 pubkey
             )
         );
-        strikes.processBadPerformanceProof(
-            noId,
-            0,
-            strikesData,
+        this.processBadPerformanceProof(
+            ICSStrikes.ModuleKeyStrikes({
+                nodeOperatorId: noId,
+                keyIndex: keyIndex,
+                data: strikesData
+            }),
             proof,
             refundRecipient
         );
@@ -245,12 +279,10 @@ contract CSStrikesTest is CSStrikesTestBase {
 
     function test_processBadPerformanceProof_defaultRefundRecipient() public {
         uint256 noId = 42;
+        uint256 keyIndex = 0;
         module.mock_setNodeOperatorTotalDepositedKeys(1);
-        bytes memory pubkey = module.getSigningKeys(0, 0, 1);
-        uint256[] memory strikesData = new uint256[](3);
-        strikesData[0] = 1;
-        strikesData[1] = 1;
-        strikesData[2] = 1;
+        bytes memory pubkey = module.getSigningKeys(noId, keyIndex, 1);
+        uint256[] memory strikesData = UintArr(1, 1, 1);
 
         tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
         tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
@@ -270,10 +302,13 @@ contract CSStrikesTest is CSStrikesTestBase {
                 address(this)
             )
         );
-        strikes.processBadPerformanceProof(
-            noId,
-            0,
-            strikesData,
+
+        this.processBadPerformanceProof(
+            ICSStrikes.ModuleKeyStrikes({
+                nodeOperatorId: noId,
+                keyIndex: keyIndex,
+                data: strikesData
+            }),
             proof,
             address(0)
         );
@@ -281,10 +316,10 @@ contract CSStrikesTest is CSStrikesTestBase {
 
     function test_processBadPerformanceProof_RevertWhen_InvalidProof() public {
         uint256 noId = 42;
+        uint256 keyIndex = 0;
         module.mock_setNodeOperatorTotalDepositedKeys(1);
-        bytes memory pubkey = module.getSigningKeys(0, 0, 1);
-        uint256[] memory strikesData = new uint256[](1);
-        strikesData[0] = 1;
+        bytes memory pubkey = module.getSigningKeys(noId, keyIndex, 1);
+        uint256[] memory strikesData = UintArr(1);
 
         tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
         tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
@@ -296,10 +331,12 @@ contract CSStrikesTest is CSStrikesTestBase {
         bytes32[] memory proof = tree.getProof(1);
 
         vm.expectRevert(ICSStrikes.InvalidProof.selector);
-        strikes.processBadPerformanceProof(
-            noId,
-            0,
-            strikesData,
+        this.processBadPerformanceProof(
+            ICSStrikes.ModuleKeyStrikes({
+                nodeOperatorId: noId,
+                keyIndex: keyIndex,
+                data: strikesData
+            }),
             proof,
             refundRecipient
         );
@@ -309,10 +346,10 @@ contract CSStrikesTest is CSStrikesTestBase {
         public
     {
         uint256 noId = 42;
+        uint256 keyIndex = 0;
         module.mock_setNodeOperatorTotalDepositedKeys(1);
         (bytes memory pubkey, ) = keysSignatures(1);
-        uint256[] memory strikesData = new uint256[](1);
-        strikesData[0] = 1;
+        uint256[] memory strikesData = UintArr(1);
 
         tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
         tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
@@ -324,10 +361,12 @@ contract CSStrikesTest is CSStrikesTestBase {
         bytes32[] memory proof = tree.getProof(0);
 
         vm.expectRevert(ICSStrikes.NotEnoughStrikesToEject.selector);
-        strikes.processBadPerformanceProof(
-            noId,
-            0,
-            strikesData,
+        this.processBadPerformanceProof(
+            ICSStrikes.ModuleKeyStrikes({
+                nodeOperatorId: noId,
+                keyIndex: keyIndex,
+                data: strikesData
+            }),
             proof,
             refundRecipient
         );
@@ -337,12 +376,10 @@ contract CSStrikesTest is CSStrikesTestBase {
         public
     {
         uint256 noId = 42;
-        module.mock_setNodeOperatorTotalDepositedKeys(1);
-        (bytes memory pubkey, ) = keysSignatures(1, 1);
-        uint256[] memory strikesData = new uint256[](3);
-        strikesData[0] = 1;
-        strikesData[1] = 1;
-        strikesData[2] = 1;
+        uint256 keyIndex = 0;
+        module.mock_setNodeOperatorTotalDepositedKeys(keyIndex + 1);
+        (bytes memory pubkey, ) = keysSignatures(1);
+        uint256[] memory strikesData = UintArr(1, 1, 1);
 
         tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
         tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
@@ -354,10 +391,12 @@ contract CSStrikesTest is CSStrikesTestBase {
         bytes32[] memory proof = tree.getProof(0);
 
         vm.expectRevert(ICSStrikes.SigningKeysInvalidOffset.selector);
-        strikes.processBadPerformanceProof(
-            noId,
-            1,
-            strikesData,
+        this.processBadPerformanceProof(
+            ICSStrikes.ModuleKeyStrikes({
+                nodeOperatorId: noId,
+                keyIndex: keyIndex + 1,
+                data: strikesData
+            }),
             proof,
             refundRecipient
         );
@@ -365,12 +404,10 @@ contract CSStrikesTest is CSStrikesTestBase {
 
     function test_processBadPerformanceProof_Accepts_EmptyProof() public {
         uint256 noId = 42;
+        uint256 keyIndex = 0;
         module.mock_setNodeOperatorTotalDepositedKeys(1);
         (bytes memory pubkey, ) = keysSignatures(1);
-        uint256[] memory strikesData = new uint256[](3);
-        strikesData[0] = 1;
-        strikesData[1] = 1;
-        strikesData[2] = 1;
+        uint256[] memory strikesData = UintArr(1, 1, 1);
 
         tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
 
@@ -390,10 +427,12 @@ contract CSStrikesTest is CSStrikesTestBase {
                 refundRecipient
             )
         );
-        strikes.processBadPerformanceProof(
-            noId,
-            0,
-            strikesData,
+        this.processBadPerformanceProof(
+            ICSStrikes.ModuleKeyStrikes({
+                nodeOperatorId: noId,
+                keyIndex: keyIndex,
+                data: strikesData
+            }),
             proof,
             refundRecipient
         );
