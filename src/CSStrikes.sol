@@ -132,6 +132,34 @@ contract CSStrikes is
     }
 
     /// @inheritdoc ICSStrikes
+    function processBadPerformanceMultiProof(
+        ModuleKeyStrikes[] calldata keyStrikesList,
+        bytes32[] calldata proof,
+        bool[] calldata proofFlags,
+        address refundRecipient
+    ) external {
+        // NOTE: We allow empty proofs to be delivered because there’s no way to use the tree’s
+        // internal nodes without brute-forcing the input data.
+
+        bytes[] memory pubkeys = new bytes[](keyStrikesList.length);
+        for (uint256 i; i < pubkeys.length; ++i) {
+            pubkeys[i] = _loadPubKey(keyStrikesList[i]);
+        }
+
+        if (!verifyMultiProof(keyStrikesList, pubkeys, proof, proofFlags)) {
+            revert InvalidProof();
+        }
+
+        refundRecipient = refundRecipient == address(0)
+            ? msg.sender
+            : refundRecipient;
+
+        for (uint256 i; i < keyStrikesList.length; ++i) {
+            _ejectByStrikes(keyStrikesList[i], pubkeys[i], refundRecipient);
+        }
+    }
+
+    /// @inheritdoc ICSStrikes
     function getInitializedVersion() external view returns (uint64) {
         return _getInitializedVersion();
     }
@@ -147,6 +175,27 @@ contract CSStrikes is
                 proof,
                 treeRoot,
                 hashLeaf(keyStrikes, pubkey)
+            );
+    }
+
+    /// @inheritdoc ICSStrikes
+    function verifyMultiProof(
+        ModuleKeyStrikes[] calldata keyStrikesList,
+        bytes[] memory pubkeys,
+        bytes32[] calldata proof,
+        bool[] calldata proofFlags
+    ) public view returns (bool) {
+        bytes32[] memory leaves = new bytes32[](keyStrikesList.length);
+        for (uint256 i; i < leaves.length; i++) {
+            leaves[i] = hashLeaf(keyStrikesList[i], pubkeys[i]);
+        }
+
+        return
+            MerkleProof.multiProofVerifyCalldata(
+                proof,
+                proofFlags,
+                treeRoot,
+                leaves
             );
     }
 

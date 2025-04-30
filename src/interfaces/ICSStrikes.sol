@@ -59,13 +59,25 @@ interface ICSStrikes {
     /// @param _ejector Address of the Ejector contract
     function setEjector(address _ejector) external;
 
-    /// @notice Report Node Operator's key as bad performing
-    /// @param keyStrikes Strikes of a module's key
+    /// @notice Report CSM key as bad performing
+    /// @param keyStrikes ModuleKeyStrikes struct
     /// @param proof Proof of the strikes
     /// @param refundRecipient Address to send the refund to
     function processBadPerformanceProof(
         ModuleKeyStrikes calldata keyStrikes,
         bytes32[] calldata proof,
+        address refundRecipient
+    ) external;
+
+    /// @notice Report multiple CSM keys as bad performing
+    /// @param keyStrikesList List of ModuleKeyStrikes structs
+    /// @param proof Multi-proof of the strikes
+    /// @param proofFlags Flags to process the multi-proof, see OZ `processMultiProof`
+    /// @param refundRecipient Address to send the refund to
+    function processBadPerformanceMultiProof(
+        ModuleKeyStrikes[] calldata keyStrikesList,
+        bytes32[] calldata proof,
+        bool[] calldata proofFlags,
         address refundRecipient
     ) external;
 
@@ -78,18 +90,31 @@ interface ICSStrikes {
         string calldata _treeCid
     ) external;
 
-    /// @notice Check if Key is eligible to be ejected
-    /// @param keyStrikes Strikes of a module's key
-    /// @param proof Merkle proof of the leaf
+    /// @notice Check the contract accepts the provided proof
+    /// @param keyStrikes ModuleKeyStrikes struct
+    /// @param proof Proof of the leaf
+    /// @return bool True if proof is accepted
     function verifyProof(
         ModuleKeyStrikes calldata keyStrikes,
         bytes calldata pubkey,
         bytes32[] calldata proof
     ) external view returns (bool);
 
-    /// @notice Get a hash of a leaf
-    /// @param keyStrikes Strikes of a module's key
-    /// @param pubkey pubkey of the Node Operator
+    /// @notice Check the contract accepts the provided multi-proof
+    /// @param keyStrikesList List of ModuleKeyStrikes structs
+    /// @param proof Multi-proof of the strikes
+    /// @param proofFlags Flags to process the multi-proof, see OZ `processMultiProof`
+    /// @return bool True if proof is accepted
+    function verifyMultiProof(
+        ModuleKeyStrikes[] calldata keyStrikesList,
+        bytes[] memory pubkeys,
+        bytes32[] calldata proof,
+        bool[] calldata proofFlags
+    ) external view returns (bool);
+
+    /// @notice Get a hash of a leaf a tree of strikes
+    /// @param keyStrikes ModuleKeyStrikes struct
+    /// @param pubkey Public key
     /// @return Hash of the leaf
     /// @dev Double hash the leaf to prevent second pre-image attacks
     function hashLeaf(
