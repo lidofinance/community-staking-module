@@ -518,7 +518,7 @@ contract HashConsensusDeploymentTest is DeploymentBaseTest {
             keccak256(abi.encode(deployParams.oracleMembers))
         );
 
-        // For test purposes AO and CSM Oracle members might be different on Hoodi testnet (cainId = 560048)
+        // For test purposes AO and CSM Oracle members might be different on Hoodi testnet (chainId = 560048)
         if (block.chainid != 560048) {
             (address[] memory membersAo, ) = HashConsensus(
                 BaseOracle(locator.accountingOracle()).getConsensusContract()
