@@ -214,7 +214,7 @@ contract CSStrikes is
             revert NotEnoughStrikesToEject();
         }
 
-        ejector.ejectBadPerformer{ msg.value }(
+        ejector.ejectBadPerformer{ value: msg.value }(
             keyStrikes.nodeOperatorId,
             keyStrikes.keyIndex,
             refundRecipient
