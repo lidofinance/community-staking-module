@@ -3,6 +3,8 @@
 
 pragma solidity 0.8.24;
 
+import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+
 import "./helpers/mocks/EjectorMock.sol";
 
 import "forge-std/Test.sol";
@@ -40,6 +42,46 @@ contract CSStrikesTestBase is Test, Fixtures, Utilities, InvariantAsserts {
         vm.pauseGasMetering();
         assertStrikesTree(strikes);
         vm.resumeGasMetering();
+    }
+
+    // A bunch of wrapper to test functions with calldata arguments.
+
+    function hashLeaf(
+        ICSStrikes.ModuleKeyStrikes calldata keyStrikes,
+        bytes memory pubkey
+    ) external view returns (bytes32) {
+        return strikes.hashLeaf(keyStrikes, pubkey);
+    }
+
+    function verifyProof(
+        ICSStrikes.ModuleKeyStrikes calldata keyStrikes,
+        bytes memory pubkey,
+        bytes32[] calldata proof
+    ) external view returns (bool) {
+        return strikes.verifyProof(keyStrikes, pubkey, proof);
+    }
+
+    function verifyMultiProof(
+        ICSStrikes.ModuleKeyStrikes[] calldata keyStrikesList,
+        bytes[] memory pubkeys,
+        bytes32[] calldata proof,
+        bool[] calldata proofFlags
+    ) external view returns (bool) {
+        return
+            strikes.verifyMultiProof(
+                keyStrikesList,
+                pubkeys,
+                proof,
+                proofFlags
+            );
+    }
+
+    function processBadPerformanceProof(
+        ICSStrikes.ModuleKeyStrikes calldata keyStrikes,
+        bytes32[] calldata proof,
+        address refundRecipient
+    ) external {
+        strikes.processBadPerformanceProof(keyStrikes, proof, refundRecipient);
     }
 }
 
@@ -121,31 +163,6 @@ contract CSStrikesTest is CSStrikesTestBase {
         tree = new MerkleTree();
 
         vm.label(address(strikes), "STRIKES");
-    }
-
-    // A bunch of wrapper to test functions with calldata arguments.
-
-    function hashLeaf(
-        ICSStrikes.ModuleKeyStrikes calldata keyStrikes,
-        bytes memory pubkey
-    ) external view returns (bytes32) {
-        return strikes.hashLeaf(keyStrikes, pubkey);
-    }
-
-    function verifyProof(
-        ICSStrikes.ModuleKeyStrikes calldata keyStrikes,
-        bytes memory pubkey,
-        bytes32[] calldata proof
-    ) external view returns (bool) {
-        return strikes.verifyProof(keyStrikes, pubkey, proof);
-    }
-
-    function processBadPerformanceProof(
-        ICSStrikes.ModuleKeyStrikes calldata keyStrikes,
-        bytes32[] calldata proof,
-        address refundRecipient
-    ) external {
-        strikes.processBadPerformanceProof(keyStrikes, proof, refundRecipient);
     }
 
     function test_setEjector() public {
@@ -575,5 +592,284 @@ contract CSStrikesTest is CSStrikesTestBase {
         vm.expectRevert(ICSStrikes.InvalidReportData.selector);
         vm.prank(oracle);
         strikes.processOracleReport(root, someCIDv0());
+    }
+}
+
+contract CSStrikesMultiProofTest is CSStrikesTestBase {
+    struct Leaf {
+        ICSStrikes.ModuleKeyStrikes keyStrikes;
+        bytes pubkey;
+    }
+
+    Leaf[] internal leaves;
+
+    function setUp() public {
+        stranger = nextAddress("STRANGER");
+        admin = nextAddress("ADMIN");
+        refundRecipient = nextAddress("REFUND_RECIPIENT");
+        oracle = nextAddress("ORACLE");
+        module = new CSMMock();
+        exitPenalties = address(new ExitPenaltiesMock(address(module)));
+        ejector = address(new EjectorMock(address(module)));
+
+        strikes = new CSStrikes(address(module), oracle, exitPenalties);
+        _enableInitializers(address(strikes));
+        strikes.initialize(admin, ejector);
+
+        tree = new MerkleTree();
+
+        vm.label(address(strikes), "STRIKES");
+    }
+
+    modifier withTreeOfLeavesCount(uint256 leavesCount) {
+        for (uint256 i; i < leavesCount; ++i) {
+            uint256[] memory strikesData = UintArr(1, 0, 0);
+            (bytes memory pubkey, ) = keysSignatures(1, i);
+            leaves.push(
+                Leaf(
+                    ICSStrikes.ModuleKeyStrikes({
+                        nodeOperatorId: i,
+                        keyIndex: 0,
+                        data: strikesData
+                    }),
+                    pubkey
+                )
+            );
+            tree.pushLeaf(abi.encode(i, pubkey, strikesData));
+        }
+
+        bytes32 root = tree.root();
+        vm.prank(oracle);
+        strikes.processOracleReport(root, someCIDv0());
+
+        _;
+    }
+
+    function test_verifyMultiProofOneLeaf() public withTreeOfLeavesCount(7) {
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+        keyStrikesList[0] = leaves[0].keyStrikes;
+
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = leaves[0].pubkey;
+
+        bytes32[] memory proof = tree.getProof(0);
+
+        bool[] memory proofFlags = new bool[](proof.length);
+        for (uint256 i; i < proofFlags.length; ++i) {
+            proofFlags[i] = false;
+        }
+
+        bool isValid = this.verifyMultiProof(
+            keyStrikesList,
+            pubkeys,
+            proof,
+            proofFlags
+        );
+        assertTrue(isValid);
+    }
+
+    function test_verifyMultiProofAllLeaves() public withTreeOfLeavesCount(7) {
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](
+                leaves.length
+            );
+        bytes[] memory pubkeys = new bytes[](leaves.length);
+
+        for (uint256 i; i < leaves.length; ++i) {
+            keyStrikesList[i] = leaves[i].keyStrikes;
+            pubkeys[i] = leaves[i].pubkey;
+        }
+
+        bool[] memory proofFlags = new bool[](leaves.length - 1);
+        for (uint256 i; i < proofFlags.length; ++i) {
+            proofFlags[i] = true;
+        }
+
+        bool isValid = this.verifyMultiProof(
+            keyStrikesList,
+            pubkeys,
+            new bytes32[](0),
+            proofFlags
+        );
+        assertTrue(isValid);
+    }
+
+    function test_verifyMultiProofTwoSiblings()
+        public
+        withTreeOfLeavesCount(7)
+    {
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](2);
+        keyStrikesList[0] = leaves[0].keyStrikes;
+        keyStrikesList[1] = leaves[1].keyStrikes;
+
+        bytes[] memory pubkeys = new bytes[](2);
+        pubkeys[0] = leaves[0].pubkey;
+        pubkeys[1] = leaves[1].pubkey;
+
+        bytes32[] memory singleLeafProof = tree.getProof(0);
+        bytes32[] memory proof = new bytes32[](singleLeafProof.length - 1);
+        for (uint256 i; i < proof.length; ++i) {
+            proof[i] = singleLeafProof[i + 1];
+        }
+
+        bool[] memory proofFlags = new bool[](singleLeafProof.length);
+        proofFlags[0] = true; // Start from the sibling leaves
+        for (uint256 i = 1; i < proofFlags.length; ++i) {
+            proofFlags[i] = false; // The rest from the proof
+        }
+
+        bool isValid = this.verifyMultiProof(
+            keyStrikesList,
+            pubkeys,
+            proof,
+            proofFlags
+        );
+        assertTrue(isValid);
+    }
+
+    function test_verifyMultiProof_RevertsIfWrongFlagsLength()
+        public
+        withTreeOfLeavesCount(7)
+    {
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+        keyStrikesList[0] = leaves[0].keyStrikes;
+
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = leaves[0].pubkey;
+
+        bytes32[] memory proof = tree.getProof(0);
+
+        // Just right
+        {
+            bool[] memory proofFlags = new bool[](proof.length);
+            for (uint256 i; i < proofFlags.length; ++i) {
+                proofFlags[i] = false;
+            }
+
+            bool isValid = this.verifyMultiProof(
+                keyStrikesList,
+                pubkeys,
+                proof,
+                proofFlags
+            );
+            assertTrue(isValid);
+        }
+
+        // Not enough
+        {
+            bool[] memory proofFlags = new bool[](proof.length - 1);
+            for (uint256 i; i < proofFlags.length; ++i) {
+                proofFlags[i] = false;
+            }
+
+            vm.expectRevert(MerkleProof.MerkleProofInvalidMultiproof.selector);
+            this.verifyMultiProof(keyStrikesList, pubkeys, proof, proofFlags);
+        }
+
+        // Too much
+        {
+            bool[] memory proofFlags = new bool[](proof.length + 1);
+            for (uint256 i; i < proofFlags.length; ++i) {
+                proofFlags[i] = false;
+            }
+
+            vm.expectRevert(MerkleProof.MerkleProofInvalidMultiproof.selector);
+            this.verifyMultiProof(keyStrikesList, pubkeys, proof, proofFlags);
+        }
+    }
+
+    function test_verifyMultiProofFails_InvalidProof()
+        public
+        withTreeOfLeavesCount(7)
+    {
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+        keyStrikesList[0] = leaves[0].keyStrikes;
+
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = leaves[0].pubkey;
+
+        bytes32[] memory proof = tree.getProof(0);
+        assertGt(proof.length, 0);
+        proof[0] = bytes32(0);
+
+        bool[] memory proofFlags = new bool[](proof.length);
+        for (uint256 i; i < proofFlags.length; ++i) {
+            proofFlags[i] = false;
+        }
+
+        bool isValid = this.verifyMultiProof(
+            keyStrikesList,
+            pubkeys,
+            proof,
+            proofFlags
+        );
+        assertFalse(isValid);
+    }
+
+    function test_verifyMultiProofFails_InvalidLeaf()
+        public
+        withTreeOfLeavesCount(7)
+    {
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+        keyStrikesList[0] = leaves[0].keyStrikes;
+
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = leaves[1].pubkey; // <-- error
+
+        bytes32[] memory proof = tree.getProof(0);
+
+        bool[] memory proofFlags = new bool[](proof.length);
+        for (uint256 i; i < proofFlags.length; ++i) {
+            proofFlags[i] = false;
+        }
+
+        bool isValid = this.verifyMultiProof(
+            keyStrikesList,
+            pubkeys,
+            proof,
+            proofFlags
+        );
+        assertFalse(isValid);
+    }
+
+    function test_processBadPerformanceMultiProof()
+        public
+        withTreeOfLeavesCount(7)
+    {
+        module.mock_setNodeOperatorTotalDepositedKeys(1);
+
+        bytes32[] memory proof = tree.getProof(0);
+
+        vm.expectCall(
+            address(ejector),
+            abi.encodeWithSelector(
+                ICSEjector.ejectBadPerformer.selector,
+                noId,
+                pubkey,
+                refundRecipient
+            )
+        );
+        vm.expectCall(
+            address(exitPenalties),
+            abi.encodeWithSelector(
+                ICSExitPenalties.processStrikesReport.selector,
+                noId,
+                pubkey
+            )
+        );
+        this.processBadPerformanceProof(
+            ICSStrikes.ModuleKeyStrikes({
+                nodeOperatorId: noId,
+                keyIndex: keyIndex,
+                data: strikesData
+            }),
+            proof,
+            refundRecipient
+        );
     }
 }
