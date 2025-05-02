@@ -1,5 +1,5 @@
 # IStakingModule
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/interfaces/IStakingModule.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/interfaces/IStakingModule.sol)
 
 
 ## Functions
@@ -305,20 +305,20 @@ This data could be used to trigger penalties for the node operator if validator 
 
 ```solidity
 function reportValidatorExitDelay(
-    uint256 _nodeOperatorId,
-    uint256 _proofSlotTimestamp,
-    bytes calldata _publicKey,
-    uint256 _eligibleToExitInSec
+    uint256 nodeOperatorId,
+    uint256 proofSlotTimestamp,
+    bytes calldata publicKey,
+    uint256 eligibleToExitInSec
 ) external;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`_nodeOperatorId`|`uint256`|The ID of the node operator whose validator status being delivered.|
-|`_proofSlotTimestamp`|`uint256`|The timestamp (slot time) when the validator was last known to be in an active ongoing state.|
-|`_publicKey`|`bytes`|Public key of the validator being reported.|
-|`_eligibleToExitInSec`|`uint256`|Duration (in seconds) indicating how long a validator has been eligible to exit but hasn't.|
+|`nodeOperatorId`|`uint256`|The ID of the node operator whose validator status being delivered.|
+|`proofSlotTimestamp`|`uint256`|The timestamp (slot time) when the validator was last known to be in an active ongoing state.|
+|`publicKey`|`bytes`|Public key of the validator being reported.|
+|`eligibleToExitInSec`|`uint256`|Duration (in seconds) indicating how long a validator has been eligible to exit but hasn't.|
 
 
 ### onValidatorExitTriggered

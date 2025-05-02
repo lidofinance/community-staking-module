@@ -1,5 +1,5 @@
 # IPermissionlessGate
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/interfaces/IPermissionlessGate.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/interfaces/IPermissionlessGate.sol)
 
 
 ## Functions
@@ -10,11 +10,11 @@
 function CURVE_ID() external view returns (uint256);
 ```
 
-### CSM
+### MODULE
 
 
 ```solidity
-function CSM() external view returns (ICSModule);
+function MODULE() external view returns (ICSModule);
 ```
 
 ### addNodeOperatorETH

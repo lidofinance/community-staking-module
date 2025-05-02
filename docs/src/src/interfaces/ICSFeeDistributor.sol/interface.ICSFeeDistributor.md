@@ -1,5 +1,5 @@
 # ICSFeeDistributor
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/interfaces/ICSFeeDistributor.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/interfaces/ICSFeeDistributor.sol)
 
 **Inherits:**
 [IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md)
@@ -341,10 +341,10 @@ error InvalidReportData();
 error InvalidTreeRoot();
 ```
 
-### InvalidTreeCID
+### InvalidTreeCid
 
 ```solidity
-error InvalidTreeCID();
+error InvalidTreeCid();
 ```
 
 ### InvalidLogCID

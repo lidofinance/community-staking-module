@@ -1,5 +1,5 @@
 # ICSBondCurve
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/interfaces/ICSBondCurve.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/interfaces/ICSBondCurve.sol)
 
 
 ## Functions
@@ -47,7 +47,7 @@ Return bond curve for the given curve id
 
 
 ```solidity
-function getCurveInfo(uint256 curveId) external view returns (BondCurve memory);
+function getCurveInfo(uint256 curveId) external view returns (BondCurveInterval[] memory);
 ```
 **Parameters**
 
@@ -59,7 +59,7 @@ function getCurveInfo(uint256 curveId) external view returns (BondCurve memory);
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`BondCurve`|Bond curve|
+|`<none>`|`BondCurveInterval[]`|Bond curve|
 
 
 ### getBondCurve
@@ -68,7 +68,7 @@ Get bond curve for the given Node Operator
 
 
 ```solidity
-function getBondCurve(uint256 nodeOperatorId) external view returns (BondCurve memory);
+function getBondCurve(uint256 nodeOperatorId) external view returns (BondCurveInterval[] memory);
 ```
 **Parameters**
 
@@ -80,7 +80,7 @@ function getBondCurve(uint256 nodeOperatorId) external view returns (BondCurve m
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`BondCurve`|Bond curve|
+|`<none>`|`BondCurveInterval[]`|Bond curve|
 
 
 ### getBondCurveId
@@ -155,13 +155,13 @@ function getKeysCountByBondAmount(uint256 amount, uint256 curveId) external view
 ### BondCurveAdded
 
 ```solidity
-event BondCurveAdded(uint256 indexed curveId, uint256[] bondCurve);
+event BondCurveAdded(uint256 indexed curveId, uint256[2][] bondCurveIntervals);
 ```
 
 ### BondCurveUpdated
 
 ```solidity
-event BondCurveUpdated(uint256 indexed curveId, uint256[] bondCurve);
+event BondCurveUpdated(uint256 indexed curveId, uint256[2][] bondCurveIntervals);
 ```
 
 ### BondCurveSet
@@ -202,7 +202,7 @@ error InvalidInitialisationCurveId();
 ```
 
 ## Structs
-### BondCurve
+### BondCurveInterval
 *Bond curve structure.
 It contains:
 - points |> total bond amount for particular keys count
@@ -237,8 +237,9 @@ Bond Amount (ETH)
 
 
 ```solidity
-struct BondCurve {
-    uint256[] points;
+struct BondCurveInterval {
+    uint256 minKeysCount;
+    uint256 minBond;
     uint256 trend;
 }
 ```
