@@ -185,7 +185,6 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
         vm.stopSnapshotGas();
         vm.stopPrank();
 
-        uint256 exitType = ejector.STRIKES_EXIT_TYPE_ID();
         bytes32[] memory proof = strikesTree.getProof(0);
         uint256 penalty = parametersRegistry.getBadPerformancePenalty(
             accounting.getBondCurveId(nodeOperatorId)

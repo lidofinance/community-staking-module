@@ -17,7 +17,7 @@ contract ExitPenaltiesMock is ICSExitPenalties, ExitTypes {
         MODULE = ICSModule(_module);
     }
 
-    function strikes() external view returns (address) {
+    function strikes() external pure returns (address) {
         return address(0);
     }
 
@@ -43,7 +43,7 @@ contract ExitPenaltiesMock is ICSExitPenalties, ExitTypes {
         uint256,
         bytes calldata,
         uint256
-    ) external view returns (bool) {
+    ) external pure returns (bool) {
         return false;
     }
 
@@ -60,7 +60,7 @@ contract ExitPenaltiesMock is ICSExitPenalties, ExitTypes {
         return penaltyInfo;
     }
 
-    function getInitializedVersion() external view returns (uint64) {
+    function getInitializedVersion() external pure returns (uint64) {
         return 1;
     }
 }

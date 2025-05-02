@@ -866,7 +866,6 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
         assertFalse(vettedGate.isPaused());
         assertEq(vettedGate.treeRoot(), deployParams.vettedGateTreeRoot);
         assertEq(vettedGate.treeCid(), deployParams.vettedGateTreeCid);
-        uint256 curveId = vettedGate.curveId();
         // Check that the curve is set
         assertTrue(vettedGate.curveId() != 0);
         assertEq(vettedGate.getInitializedVersion(), 1);
