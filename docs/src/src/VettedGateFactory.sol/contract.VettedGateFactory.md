@@ -1,5 +1,5 @@
 # VettedGateFactory
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/VettedGateFactory.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/VettedGateFactory.sol)
 
 **Inherits:**
 [IVettedGateFactory](/src/interfaces/IVettedGateFactory.sol/interface.IVettedGateFactory.md)
@@ -27,7 +27,9 @@ constructor(address vettedGateImpl);
 
 
 ```solidity
-function create(uint256 curveId, bytes32 treeRoot, address admin) external returns (address instance);
+function create(uint256 curveId, bytes32 treeRoot, string calldata treeCid, address admin)
+    external
+    returns (address instance);
 ```
 **Parameters**
 
@@ -35,6 +37,7 @@ function create(uint256 curveId, bytes32 treeRoot, address admin) external retur
 |----|----|-----------|
 |`curveId`|`uint256`|Id of the bond curve to be assigned for the eligible members|
 |`treeRoot`|`bytes32`|Root of the eligible members Merkle Tree|
+|`treeCid`|`string`|CID of the eligible members Merkle Tree|
 |`admin`|`address`|Address of the admin role|
 
 

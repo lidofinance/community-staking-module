@@ -1,5 +1,5 @@
 # IVettedGate
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/interfaces/IVettedGate.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/interfaces/IVettedGate.sol)
 
 
 ## Functions
@@ -17,18 +17,32 @@ function PAUSE_ROLE() external view returns (bytes32);
 function RESUME_ROLE() external view returns (bytes32);
 ```
 
-### SET_TREE_ROOT_ROLE
+### SET_TREE_ROLE
 
 
 ```solidity
-function SET_TREE_ROOT_ROLE() external view returns (bytes32);
+function SET_TREE_ROLE() external view returns (bytes32);
 ```
 
-### CSM
+### START_REFERRAL_SEASON_ROLE
 
 
 ```solidity
-function CSM() external view returns (ICSModule);
+function START_REFERRAL_SEASON_ROLE() external view returns (bytes32);
+```
+
+### END_REFERRAL_SEASON_ROLE
+
+
+```solidity
+function END_REFERRAL_SEASON_ROLE() external view returns (bytes32);
+```
+
+### MODULE
+
+
+```solidity
+function MODULE() external view returns (ICSModule);
 ```
 
 ### curveId
@@ -43,6 +57,13 @@ function curveId() external view returns (uint256);
 
 ```solidity
 function treeRoot() external view returns (bytes32);
+```
+
+### treeCid
+
+
+```solidity
+function treeCid() external view returns (string memory);
 ```
 
 ### pauseFor
@@ -71,6 +92,31 @@ Resume the contract
 function resume() external;
 ```
 
+### startNewReferralProgramSeason
+
+Start referral program season
+
+
+```solidity
+function startNewReferralProgramSeason(uint256 _referralCurveId, uint256 _referralsThreshold) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`_referralCurveId`|`uint256`|Curve Id for the referral curve|
+|`_referralsThreshold`|`uint256`|Minimum number of referrals to be eligible to claim the curve|
+
+
+### endCurrentReferralProgramSeason
+
+End referral program season
+
+
+```solidity
+function endCurrentReferralProgramSeason() external;
+```
+
 ### addNodeOperatorETH
 
 Add a new Node Operator using ETH as a bond.
@@ -95,7 +141,7 @@ function addNodeOperatorETH(
 |`publicKeys`|`bytes`|Public keys to submit|
 |`signatures`|`bytes`|Signatures of `(deposit_message_root, domain)` tuples https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata|
 |`managementProperties`|`NodeOperatorManagementProperties`|Optional. Management properties to be used for the Node Operator. managerAddress: Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used. rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used. extendedManagerPermissions: Flag indicating that `managerAddress` will be able to change `rewardAddress`. If set to true `resetNodeOperatorManagerAddress` method will be disabled|
-|`proof`|`bytes32[]`|Merkle proof of the sender being eligible for the beneficial curve|
+|`proof`|`bytes32[]`|Merkle proof of the sender being eligible to join via the gate|
 |`referrer`|`address`|Optional. Referrer address. Should be passed when Node Operator is created using partners integration|
 
 **Returns**
@@ -133,7 +179,7 @@ function addNodeOperatorStETH(
 |`signatures`|`bytes`|Signatures of `(deposit_message_root, domain)` tuples https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata|
 |`managementProperties`|`NodeOperatorManagementProperties`|Optional. Management properties to be used for the Node Operator. managerAddress: Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used. rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used. extendedManagerPermissions: Flag indicating that `managerAddress` will be able to change `rewardAddress`. If set to true `resetNodeOperatorManagerAddress` method will be disabled|
 |`permit`|`ICSAccounting.PermitInput`|Optional. Permit to use stETH as bond|
-|`proof`|`bytes32[]`|Merkle proof of the sender being eligible for the beneficial curve|
+|`proof`|`bytes32[]`|Merkle proof of the sender being eligible to join via the gate|
 |`referrer`|`address`|Optional. Referrer address. Should be passed when Node Operator is created using partners integration|
 
 **Returns**
@@ -171,7 +217,7 @@ function addNodeOperatorWstETH(
 |`signatures`|`bytes`|Signatures of `(deposit_message_root, domain)` tuples https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#signingdata|
 |`managementProperties`|`NodeOperatorManagementProperties`|Optional. Management properties to be used for the Node Operator. managerAddress: Used as `managerAddress` for the Node Operator. If not passed `msg.sender` will be used. rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `msg.sender` will be used. extendedManagerPermissions: Flag indicating that `managerAddress` will be able to change `rewardAddress`. If set to true `resetNodeOperatorManagerAddress` method will be disabled|
 |`permit`|`ICSAccounting.PermitInput`|Optional. Permit to use wstETH as bond|
-|`proof`|`bytes32[]`|Merkle proof of the sender being eligible for the beneficial curve|
+|`proof`|`bytes32[]`|Merkle proof of the sender being eligible to join via the gate|
 |`referrer`|`address`|Optional. Referrer address. Should be passed when Node Operator is created using partners integration|
 
 **Returns**
@@ -183,7 +229,7 @@ function addNodeOperatorWstETH(
 
 ### claimBondCurve
 
-Consume the bond curve for the eligible Node Operator
+Claim the bond curve for the eligible Node Operator
 
 *Should be called by the reward address of the Node Operator
 In case of the extended manager permissions, should be called by the manager address*
@@ -197,7 +243,23 @@ function claimBondCurve(uint256 nodeOperatorId, bytes32[] calldata proof) extern
 |Name|Type|Description|
 |----|----|-----------|
 |`nodeOperatorId`|`uint256`|Id of the Node Operator|
-|`proof`|`bytes32[]`|Merkle proof of the sender being eligible for the beneficial curve|
+|`proof`|`bytes32[]`|Merkle proof of the sender being eligible to join via the gate|
+
+
+### claimReferrerBondCurve
+
+Claim the referral program bond curve for the eligible Node Operator
+
+
+```solidity
+function claimReferrerBondCurve(uint256 nodeOperatorId, bytes32[] calldata proof) external;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`nodeOperatorId`|`uint256`|Id of the Node Operator|
+|`proof`|`bytes32[]`|Merkle proof of the sender being eligible to join via the gate|
 
 
 ### verifyProof
@@ -243,6 +305,27 @@ function isConsumed(address member) external view returns (bool);
 |`<none>`|`bool`|Consumed flag|
 
 
+### isReferrerConsumed
+
+Check if the address has already consumed referral program bond curve
+
+
+```solidity
+function isReferrerConsumed(address referrer) external view returns (bool);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`referrer`|`address`|Address to check|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bool`|Consumed flag|
+
+
 ### hashLeaf
 
 Get a hash of a leaf in the Merkle tree
@@ -266,32 +349,69 @@ function hashLeaf(address member) external pure returns (bytes32);
 |`<none>`|`bytes32`|Hash of the leaf|
 
 
-### setTreeRoot
+### setTreeParams
 
 Set the root of the eligible members Merkle Tree
 
 
 ```solidity
-function setTreeRoot(bytes32 _treeRoot) external;
+function setTreeParams(bytes32 _treeRoot, string calldata _treeCid) external;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`_treeRoot`|`bytes32`|New root of the Merkle Tree|
+|`_treeCid`|`string`|New CID of the Merkle Tree|
 
 
-## Events
-### TreeRootSet
+### getReferralsCount
+
+Get the number of referrals for the given referrer
+
 
 ```solidity
-event TreeRootSet(bytes32 indexed treeRoot);
+function getReferralsCount(address referrer) external view returns (uint256);
+```
+
+### getInitializedVersion
+
+Returns the initialized version of the contract
+
+
+```solidity
+function getInitializedVersion() external view returns (uint64);
+```
+
+## Events
+### TreeSet
+
+```solidity
+event TreeSet(bytes32 indexed treeRoot, string treeCid);
 ```
 
 ### Consumed
 
 ```solidity
 event Consumed(address indexed member);
+```
+
+### ReferrerConsumed
+
+```solidity
+event ReferrerConsumed(address indexed referrer);
+```
+
+### ReferralProgramSeasonStarted
+
+```solidity
+event ReferralProgramSeasonStarted(uint256 indexed season, uint256 referralCurveId, uint256 referralsThreshold);
+```
+
+### ReferralProgramSeasonEnded
+
+```solidity
+event ReferralProgramSeasonEnded(uint256 indexed season);
 ```
 
 ## Errors
@@ -311,6 +431,12 @@ error AlreadyConsumed();
 
 ```solidity
 error InvalidTreeRoot();
+```
+
+### InvalidTreeCid
+
+```solidity
+error InvalidTreeCid();
 ```
 
 ### InvalidCurveId
@@ -335,5 +461,29 @@ error ZeroAdminAddress();
 
 ```solidity
 error NotAllowedToClaim();
+```
+
+### NotEnoughReferrals
+
+```solidity
+error NotEnoughReferrals();
+```
+
+### ReferralProgramIsNotActive
+
+```solidity
+error ReferralProgramIsNotActive();
+```
+
+### ReferralProgramIsActive
+
+```solidity
+error ReferralProgramIsActive();
+```
+
+### InvalidReferralsThreshold
+
+```solidity
+error InvalidReferralsThreshold();
 ```
 

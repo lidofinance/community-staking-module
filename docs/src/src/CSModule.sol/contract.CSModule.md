@@ -1,5 +1,5 @@
 # CSModule
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/CSModule.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/CSModule.sol)
 
 **Inherits:**
 [ICSModule](/src/interfaces/ICSModule.sol/interface.ICSModule.md), Initializable, AccessControlEnumerableUpgradeable, [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
@@ -151,15 +151,13 @@ ICSAccounting public accounting;
 ```
 
 
-### _isValidatorExitDelayed
-**Notes:**
-- oz-renamed-from: earlyAdoption
-
-- oz-retyped-from: address
+### exitPenalties
+**Note:**
+oz-renamed-from: earlyAdoption
 
 
 ```solidity
-mapping(uint256 noKeyIndexPacked => uint256) private _isValidatorExitDelayed;
+ICSExitPenalties public exitPenalties;
 ```
 
 
@@ -187,7 +185,7 @@ mapping(uint256 noKeyIndexPacked => bool) private _isValidatorWithdrawn;
 
 
 ### _isValidatorSlashed
-*DEPRECATED! No writes expected after Pectra hard-fork*
+*DEPRECATED! No writes expected after CSM v2*
 
 
 ```solidity
@@ -237,7 +235,7 @@ initialize the module from scratch
 
 
 ```solidity
-function initialize(address _accounting, address admin) external reinitializer(2);
+function initialize(address _accounting, address _exitPenalties, address admin) external reinitializer(2);
 ```
 
 ### finalizeUpgradeV2
@@ -246,7 +244,7 @@ function initialize(address _accounting, address admin) external reinitializer(2
 
 
 ```solidity
-function finalizeUpgradeV2() external reinitializer(2);
+function finalizeUpgradeV2(address _exitPenalties) external reinitializer(2);
 ```
 
 ### resume
@@ -601,7 +599,7 @@ function removeKeys(uint256 nodeOperatorId, uint256 startIndex, uint256 keysCoun
 
 ### updateDepositableValidatorsCount
 
-TODO: Consider renaming
+Update depositable validators data and enqueue all unqueued keys for the given Node Operator
 
 
 ```solidity
@@ -750,16 +748,21 @@ This data could be used to trigger penalties for the node operator if validator 
 
 
 ```solidity
-function reportValidatorExitDelay(uint256, uint256, bytes calldata, uint256) external;
+function reportValidatorExitDelay(
+    uint256 nodeOperatorId,
+    uint256,
+    bytes calldata publicKey,
+    uint256 eligibleToExitInSec
+) external onlyRole(STAKING_ROUTER_ROLE);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
+|`nodeOperatorId`|`uint256`|The ID of the node operator whose validator status being delivered.|
 |`<none>`|`uint256`||
-|`<none>`|`uint256`||
-|`<none>`|`bytes`||
-|`<none>`|`uint256`||
+|`publicKey`|`bytes`|Public key of the validator being reported.|
+|`eligibleToExitInSec`|`uint256`|Duration (in seconds) indicating how long a validator has been eligible to exit but hasn't.|
 
 
 ### onValidatorExitTriggered
@@ -770,16 +773,21 @@ Handles the triggerable exit event validator belonging to a specific node operat
 
 
 ```solidity
-function onValidatorExitTriggered(uint256, bytes calldata, uint256, uint256) external;
+function onValidatorExitTriggered(
+    uint256 nodeOperatorId,
+    bytes calldata publicKey,
+    uint256 withdrawalRequestPaidFee,
+    uint256 exitType
+) external onlyRole(STAKING_ROUTER_ROLE);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`uint256`||
-|`<none>`|`bytes`||
-|`<none>`|`uint256`||
-|`<none>`|`uint256`||
+|`nodeOperatorId`|`uint256`||
+|`publicKey`|`bytes`||
+|`withdrawalRequestPaidFee`|`uint256`||
+|`exitType`|`uint256`||
 
 
 ### obtainDepositData
@@ -1192,19 +1200,21 @@ Determines whether a validator exit status should be updated and will have affec
 
 
 ```solidity
-function isValidatorExitDelayPenaltyApplicable(uint256, uint256, bytes calldata, uint256)
-    external
-    view
-    returns (bool);
+function isValidatorExitDelayPenaltyApplicable(
+    uint256 nodeOperatorId,
+    uint256,
+    bytes calldata publicKey,
+    uint256 eligibleToExitInSec
+) external view returns (bool);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
+|`nodeOperatorId`|`uint256`||
 |`<none>`|`uint256`||
-|`<none>`|`uint256`||
-|`<none>`|`bytes`||
-|`<none>`|`uint256`||
+|`publicKey`|`bytes`||
+|`eligibleToExitInSec`|`uint256`||
 
 **Returns**
 
@@ -1284,7 +1294,7 @@ function _enqueueNodeOperatorKeys(uint256 nodeOperatorId, uint256 queuePriority,
 
 *Acts as a proxy to `_queueByPriority` till `legacyQueue` deprecation.*
 
-*TODO: Remove in CSM v3.*
+*TODO: Remove the method in the next major release.*
 
 
 ```solidity

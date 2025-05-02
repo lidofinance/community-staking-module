@@ -1,5 +1,5 @@
 # BaseOracle
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/lib/base-oracle/BaseOracle.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/lib/base-oracle/BaseOracle.sol)
 
 **Inherits:**
 [IReportAsyncProcessor](/src/lib/base-oracle/interfaces/IReportAsyncProcessor.sol/interface.IReportAsyncProcessor.md), AccessControlEnumerableUpgradeable, [Versioned](/src/lib/utils/Versioned.sol/contract.Versioned.md)

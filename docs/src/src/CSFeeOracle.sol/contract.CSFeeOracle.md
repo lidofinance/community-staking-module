@@ -1,5 +1,5 @@
 # CSFeeOracle
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/CSFeeOracle.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/CSFeeOracle.sol)
 
 **Inherits:**
 [ICSFeeOracle](/src/interfaces/ICSFeeOracle.sol/interface.ICSFeeOracle.md), [BaseOracle](/src/lib/base-oracle/BaseOracle.sol/abstract.BaseOracle.md), [PausableUntil](/src/lib/utils/PausableUntil.sol/contract.PausableUntil.md), [AssetRecoverer](/src/abstract/AssetRecoverer.sol/abstract.AssetRecoverer.md)
