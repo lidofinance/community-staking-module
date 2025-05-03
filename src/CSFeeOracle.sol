@@ -66,7 +66,7 @@ contract CSFeeOracle is
     function finalizeUpgradeV2(
         uint256 consensusVersion,
         address strikesContract
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external {
         _setConsensusVersion(consensusVersion);
 
         // nullify the storage slot. There is a transition from uint256 (32 bytes) to address (20 bytes)

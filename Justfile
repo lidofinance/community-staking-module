@@ -17,7 +17,7 @@ deploy_implementations_script_name := if chain == "mainnet" {
 } else if chain == "hoodi" {
     "DeployImplementationsHoodi"
 } else if chain == "local-devnet" {
-    "SCRIPT_IS_NOT_DEFINED"
+    "DeployImplementationsLocalDevnet"
 } else {
     error("Unsupported chain " + chain)
 }
@@ -205,12 +205,12 @@ verify-live *args:
     forge script {{deploy_script_path}} --sig="run(string)" --rpc-url ${RPC_URL} --verify {{args}} --unlocked -- `git rev-parse HEAD`
 
 _deploy-live-no-confirm *args:
-    forge script {{deploy_script_path}} --sig="run(string)" --force --rpc-url ${RPC_URL} {{args}} -- `git rev-parse HEAD`
+    FOUNDRY_PROFILE=deploy forge script {{deploy_script_path}} --sig="run(string)" --force --rpc-url ${RPC_URL} {{args}} -- `git rev-parse HEAD`
 
 _deploy-impl *args:
     FOUNDRY_PROFILE=deploy \
         forge script {{deploy_impls_script_path}} --sig="deploy(string,string)" \
-            --rpc-url {{anvil_rpc_url}} --slow {{args}} \
+            --rpc-url ${RPC_URL} {{args}} \
             -- {{deploy_config_path}} `git rev-parse HEAD`
 
 [confirm("You are about to broadcast deployment transactions to the network. Are you sure?")]
@@ -233,11 +233,12 @@ test-upgrade *args:
     just make-fork --silent &
     while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
 
+    export RPC_URL={{anvil_rpc_url}}
+
     just _deploy-impl --broadcast --private-key=`cat localhost.json | jq -r ".private_keys[0]"`
 
     export DEPLOY_CONFIG=./artifacts/{{chain}}/deploy-{{chain}}.json
     export UPGRADE_CONFIG=./artifacts/local/upgrade-{{chain}}.json
-    export RPC_URL={{anvil_rpc_url}}
     export VOTE_PREV_BLOCK=`cast block-number -r $RPC_URL`
 
     just vote-upgrade

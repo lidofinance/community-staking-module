@@ -121,6 +121,7 @@ contract DeploymentHelpers is Test {
         address permissionlessGate;
         address vettedGate;
         address parametersRegistry;
+        address exitPenalties;
         address ejector;
         address strikes;
         address csmImpl;
@@ -243,6 +244,10 @@ contract DeploymentHelpers is Test {
             ".CSParametersRegistry"
         );
         upgradeConfig.strikes = vm.parseJsonAddress(config, ".CSStrikes");
+        upgradeConfig.exitPenalties = vm.parseJsonAddress(
+            config,
+            ".CSExitPenalties"
+        );
         upgradeConfig.ejector = vm.parseJsonAddress(config, ".CSEjector");
         upgradeConfig.csmImpl = vm.parseJsonAddress(config, ".CSModuleImpl");
         upgradeConfig.accountingImpl = vm.parseJsonAddress(
