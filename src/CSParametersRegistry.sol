@@ -686,21 +686,6 @@ contract CSParametersRegistry is
         emit DefaultQueueConfigSet(priority, maxDeposits);
     }
 
-    function _validateQueueConfig(
-        uint256 priority,
-        uint256 maxDeposits
-    ) internal view {
-        if (
-            priority > QUEUE_LOWEST_PRIORITY ||
-            priority == QUEUE_LEGACY_PRIORITY
-        ) {
-            revert QueueCannotBeUsed();
-        }
-        if (maxDeposits == 0) {
-            revert ZeroMaxDeposits();
-        }
-    }
-
     function _setDefaultAllowedExitDelay(uint256 delay) internal {
         defaultAllowedExitDelay = delay;
         emit DefaultAllowedExitDelaySet(delay);
@@ -714,6 +699,21 @@ contract CSParametersRegistry is
     function _setDefaultMaxWithdrawalRequestFee(uint256 fee) internal {
         defaultMaxWithdrawalRequestFee = fee;
         emit DefaultMaxWithdrawalRequestFeeSet(fee);
+    }
+
+    function _validateQueueConfig(
+        uint256 priority,
+        uint256 maxDeposits
+    ) internal view {
+        if (
+            priority > QUEUE_LOWEST_PRIORITY ||
+            priority == QUEUE_LEGACY_PRIORITY
+        ) {
+            revert QueueCannotBeUsed();
+        }
+        if (maxDeposits == 0) {
+            revert ZeroMaxDeposits();
+        }
     }
 
     function _validateStrikesParams(

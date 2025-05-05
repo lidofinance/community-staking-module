@@ -381,7 +381,6 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
 
         vm.deal(nodeOperator, 1 ether);
 
-        uint256 exitType = ejector.VOLUNTARY_EXIT_TYPE_ID();
         uint256[] memory indices = new uint256[](1);
         indices[0] = keyIndex;
 

@@ -30,7 +30,7 @@ import { DeployBase } from "./DeployBase.s.sol";
 
 abstract contract DeployImplementationsBase is DeployBase {
     address public gateSealV2;
-    address public verifierV2;
+    CSVerifier public verifierV2;
     address public earlyAdoption;
 
     function _deploy() internal {
@@ -145,7 +145,7 @@ abstract contract DeployImplementationsBase is DeployBase {
             ejector.initialize(deployer, address(strikes));
             strikes.initialize(deployer, address(ejector));
 
-            CSVerifier verifierV2 = new CSVerifier({
+            verifierV2 = new CSVerifier({
                 withdrawalAddress: locator.withdrawalVault(),
                 module: address(csm),
                 slotsPerEpoch: uint64(config.slotsPerEpoch),

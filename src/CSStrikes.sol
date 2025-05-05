@@ -160,6 +160,11 @@ contract CSStrikes is
     }
 
     /// @inheritdoc ICSStrikes
+    function getInitializedVersion() external view returns (uint64) {
+        return _getInitializedVersion();
+    }
+
+    /// @inheritdoc ICSStrikes
     function verifyProof(
         uint256 nodeOperatorId,
         bytes memory pubkey,
@@ -172,11 +177,6 @@ contract CSStrikes is
                 treeRoot,
                 hashLeaf(nodeOperatorId, pubkey, strikesData)
             );
-    }
-
-    /// @inheritdoc ICSStrikes
-    function getInitializedVersion() external view returns (uint64) {
-        return _getInitializedVersion();
     }
 
     /// @inheritdoc ICSStrikes
