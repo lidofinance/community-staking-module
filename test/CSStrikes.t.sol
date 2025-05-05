@@ -610,6 +610,8 @@ contract CSStrikesTest is CSStrikesTestBase {
 }
 
 contract CSStrikesMultiProofTest is CSStrikesTestBase {
+    using DeepCopy for *;
+
     struct Leaf {
         ICSStrikes.ModuleKeyStrikes keyStrikes;
         bytes pubkey;
@@ -636,6 +638,7 @@ contract CSStrikesMultiProofTest is CSStrikesTestBase {
     }
 
     modifier withTreeOfLeavesCount(uint256 leavesCount) {
+        vm.pauseGasMetering();
         for (uint256 i; i < leavesCount; ++i) {
             uint256[] memory strikesData = UintArr(100500, 0, 0);
             (bytes memory pubkey, ) = keysSignatures(1, i);
@@ -651,6 +654,7 @@ contract CSStrikesMultiProofTest is CSStrikesTestBase {
             );
             tree.pushLeaf(abi.encode(i, pubkey, strikesData));
         }
+        vm.resumeGasMetering();
 
         bytes32 root = tree.root();
         vm.prank(oracle);
@@ -851,13 +855,20 @@ contract CSStrikesMultiProofTest is CSStrikesTestBase {
         assertFalse(isValid);
     }
 
-    function test_processBadPerformanceMultiProof()
-        public
-        withTreeOfLeavesCount(7)
-    {
+    function testFuzz_processBadPerformanceMultiProof_HappyPath(
+        uint256 a,
+        uint256 s
+    ) public withTreeOfLeavesCount(99) {
+        // ----------------------------| indicies.length
+        // <----------->| a
+        // <---->| s
+        // to make a+s+s < indicies.length
+        a = bound(a, 0, leaves.length / 2);
+        s = bound(s, 1, a / 2 == 0 ? 1 : a / 2);
+        uint256[] memory indicies = UintArr(a, a + s, a + s + s);
+
         module.mock_setNodeOperatorTotalDepositedKeys(1);
 
-        uint256[] memory indicies = UintArr(0, 1, 4);
         ICSStrikes.ModuleKeyStrikes[]
             memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](
                 indicies.length
@@ -902,5 +913,109 @@ contract CSStrikesMultiProofTest is CSStrikesTestBase {
             proofFlags,
             refundRecipient
         );
+    }
+
+    function testFuzz_processBadPerformanceMultiProof_InvalidProof(
+        uint256 a,
+        uint256 s
+    ) public withTreeOfLeavesCount(99) {
+        // ----------------------------| indicies.length
+        // <----------->| a
+        // <---->| s
+        // to make a+s+s < indicies.length
+        a = bound(a, 0, leaves.length / 2);
+        s = bound(s, 1, a / 2 == 0 ? 1 : a / 2);
+        uint256[] memory indicies = UintArr(a, a + s, a + s + s);
+
+        module.mock_setNodeOperatorTotalDepositedKeys(1);
+
+        (bytes32[] memory proof, bool[] memory proofFlags) = tree.getMultiProof(
+            indicies
+        );
+
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](
+                indicies.length
+            );
+        for (uint256 i; i < indicies.length; i++) {
+            Leaf memory leaf = leaves[indicies[i]];
+            keyStrikesList[i] = leaf.keyStrikes;
+            vm.mockCall(
+                address(module),
+                abi.encodeWithSelector(
+                    ICSModule.getSigningKeys.selector,
+                    leaf.keyStrikes.nodeOperatorId,
+                    leaf.keyStrikes.keyIndex
+                ),
+                abi.encode(leaf.pubkey)
+            );
+        }
+
+        {
+            ICSStrikes.ModuleKeyStrikes[]
+                memory brokenStrikesList = keyStrikesList.copy();
+            brokenStrikesList[0].nodeOperatorId++;
+
+            vm.expectRevert(ICSStrikes.InvalidProof.selector);
+            this.processBadPerformanceMultiProof(
+                brokenStrikesList,
+                proof,
+                proofFlags,
+                refundRecipient
+            );
+        }
+
+        {
+            bytes32[] memory brokenProof = proof.copy();
+            brokenProof[0] = bytes32(uint256(1));
+
+            vm.expectRevert(ICSStrikes.InvalidProof.selector);
+            this.processBadPerformanceMultiProof(
+                keyStrikesList,
+                brokenProof,
+                proofFlags,
+                refundRecipient
+            );
+        }
+
+        this.processBadPerformanceMultiProof(
+            keyStrikesList,
+            proof,
+            proofFlags,
+            refundRecipient
+        );
+    }
+}
+
+library DeepCopy {
+    function copy(
+        ICSStrikes.ModuleKeyStrikes[] memory arr
+    ) internal returns (ICSStrikes.ModuleKeyStrikes[] memory buf) {
+        buf = new ICSStrikes.ModuleKeyStrikes[](arr.length);
+        for (uint256 i; i < buf.length; ++i) {
+            buf[i] = ICSStrikes.ModuleKeyStrikes({
+                nodeOperatorId: arr[i].nodeOperatorId,
+                keyIndex: arr[i].keyIndex,
+                data: copy(arr[i].data)
+            });
+        }
+    }
+
+    function copy(
+        bytes32[] memory arr
+    ) internal returns (bytes32[] memory buf) {
+        buf = new bytes32[](arr.length);
+        for (uint256 i; i < buf.length; ++i) {
+            buf[i] = arr[i];
+        }
+    }
+
+    function copy(
+        uint256[] memory arr
+    ) internal returns (uint256[] memory buf) {
+        buf = new uint256[](arr.length);
+        for (uint256 i; i < buf.length; ++i) {
+            buf[i] = arr[i];
+        }
     }
 }
