@@ -1,5 +1,5 @@
 # PermissionlessGate
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/PermissionlessGate.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/PermissionlessGate.sol)
 
 **Inherits:**
 [IPermissionlessGate](/src/interfaces/IPermissionlessGate.sol/interface.IPermissionlessGate.md)
@@ -18,10 +18,10 @@ uint256 public immutable CURVE_ID;
 ```
 
 
-### CSM
+### MODULE
 
 ```solidity
-ICSModule public immutable CSM;
+ICSModule public immutable MODULE;
 ```
 
 
@@ -30,7 +30,7 @@ ICSModule public immutable CSM;
 
 
 ```solidity
-constructor(address csm);
+constructor(address module);
 ```
 
 ### addNodeOperatorETH

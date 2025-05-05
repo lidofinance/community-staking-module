@@ -1,5 +1,5 @@
 # CSBondCurve
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/abstract/CSBondCurve.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/abstract/CSBondCurve.sol)
 
 **Inherits:**
 [ICSBondCurve](/src/interfaces/ICSBondCurve.sol/interface.ICSBondCurve.md), Initializable
@@ -75,7 +75,7 @@ Return bond curve for the given curve id
 
 
 ```solidity
-function getCurveInfo(uint256 curveId) public view returns (BondCurve memory);
+function getCurveInfo(uint256 curveId) public view returns (BondCurveInterval[] memory);
 ```
 **Parameters**
 
@@ -87,7 +87,7 @@ function getCurveInfo(uint256 curveId) public view returns (BondCurve memory);
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`BondCurve`|Bond curve|
+|`<none>`|`BondCurveInterval[]`|Bond curve|
 
 
 ### getBondCurve
@@ -96,7 +96,7 @@ Get bond curve for the given Node Operator
 
 
 ```solidity
-function getBondCurve(uint256 nodeOperatorId) public view returns (BondCurve memory);
+function getBondCurve(uint256 nodeOperatorId) public view returns (BondCurveInterval[] memory);
 ```
 **Parameters**
 
@@ -108,7 +108,7 @@ function getBondCurve(uint256 nodeOperatorId) public view returns (BondCurve mem
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`BondCurve`|Bond curve|
+|`<none>`|`BondCurveInterval[]`|Bond curve|
 
 
 ### getBondCurveId
@@ -183,21 +183,27 @@ function getKeysCountByBondAmount(uint256 amount, uint256 curveId) public view r
 
 
 ```solidity
-function _getBondAmountByKeysCount(uint256 keys, BondCurve storage curve) internal view returns (uint256);
+function _getBondAmountByKeysCount(uint256 keys, BondCurveInterval[] storage intervals)
+    internal
+    view
+    returns (uint256);
 ```
 
 ### _getKeysCountByBondAmount
 
 
 ```solidity
-function _getKeysCountByBondAmount(uint256 amount, BondCurve storage curve) internal view returns (uint256);
+function _getKeysCountByBondAmount(uint256 amount, BondCurveInterval[] storage intervals)
+    internal
+    view
+    returns (uint256);
 ```
 
 ### __CSBondCurve_init
 
 
 ```solidity
-function __CSBondCurve_init(uint256[] calldata defaultBondCurvePoints) internal onlyInitializing;
+function __CSBondCurve_init(uint256[2][] calldata defaultBondCurveIntervals) internal onlyInitializing;
 ```
 
 ### _addBondCurve
@@ -206,7 +212,7 @@ function __CSBondCurve_init(uint256[] calldata defaultBondCurvePoints) internal 
 
 
 ```solidity
-function _addBondCurve(uint256[] calldata curvePoints) internal returns (uint256 curveId);
+function _addBondCurve(uint256[2][] calldata intervals) internal returns (uint256 curveId);
 ```
 
 ### _updateBondCurve
@@ -215,7 +221,14 @@ function _addBondCurve(uint256[] calldata curvePoints) internal returns (uint256
 
 
 ```solidity
-function _updateBondCurve(uint256 curveId, uint256[] calldata curvePoints) internal;
+function _updateBondCurve(uint256 curveId, uint256[2][] calldata intervals) internal;
+```
+
+### _addIntervalsToBondCurve
+
+
+```solidity
+function _addIntervalsToBondCurve(BondCurveInterval[] storage bondCurve, uint256[2][] calldata intervals) private;
 ```
 
 ### _setBondCurve
@@ -232,21 +245,14 @@ function _setBondCurve(uint256 nodeOperatorId, uint256 curveId) internal;
 
 
 ```solidity
-function _checkBondCurve(uint256[] calldata curvePoints) private view;
+function _checkBondCurve(uint256[2][] calldata intervals) private view;
 ```
 
 ### _getCurveInfo
 
 
 ```solidity
-function _getCurveInfo(uint256 curveId) private view returns (BondCurve storage);
-```
-
-### _searchKeysCount
-
-
-```solidity
-function _searchKeysCount(uint256 amount, uint256[] storage curvePoints) private view returns (uint256);
+function _getCurveInfo(uint256 curveId) private view returns (BondCurveInterval[] storage);
 ```
 
 ### _getCSBondCurveStorage
@@ -264,8 +270,9 @@ storage-location: erc7201:CSBondCurve
 
 ```solidity
 struct CSBondCurveStorage {
-    BondCurve[] bondCurves;
+    bytes32 legacyBondCurves;
     mapping(uint256 nodeOperatorId => uint256 bondCurveId) operatorBondCurveId;
+    BondCurveInterval[][] bondCurves;
 }
 ```
 

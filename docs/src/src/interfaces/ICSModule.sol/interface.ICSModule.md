@@ -1,5 +1,5 @@
 # ICSModule
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/interfaces/ICSModule.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/interfaces/ICSModule.sol)
 
 **Inherits:**
 [IQueueLib](/src/lib/QueueLib.sol/interface.IQueueLib.md), [INOAddresses](/src/lib/NOAddresses.sol/interface.INOAddresses.md), [IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md), [IStakingModule](/src/interfaces/IStakingModule.sol/interface.IStakingModule.md)
@@ -90,6 +90,15 @@ Returns the address of the accounting contract
 
 ```solidity
 function accounting() external view returns (ICSAccounting);
+```
+
+### exitPenalties
+
+Returns the address of the ExitPenalties contract
+
+
+```solidity
+function exitPenalties() external view returns (ICSExitPenalties);
 ```
 
 ### pauseFor
@@ -800,6 +809,12 @@ event ELRewardsStealingPenaltyCompensated(uint256 indexed nodeOperatorId, uint25
 event ELRewardsStealingPenaltySettled(uint256 indexed nodeOperatorId);
 ```
 
+### DelayedValidatorExitPenalized
+
+```solidity
+event DelayedValidatorExitPenalized(uint256 indexed nodeOperatorId, uint256 penaltyValue);
+```
+
 ## Errors
 ### NodeOperatorHasKeys
 
@@ -889,6 +904,12 @@ error ZeroLocatorAddress();
 
 ```solidity
 error ZeroAccountingAddress();
+```
+
+### ZeroExitPenaltiesAddress
+
+```solidity
+error ZeroExitPenaltiesAddress();
 ```
 
 ### ZeroAdminAddress

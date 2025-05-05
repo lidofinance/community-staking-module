@@ -1,5 +1,5 @@
 # ICSAccounting
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/interfaces/ICSAccounting.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/interfaces/ICSAccounting.sol)
 
 **Inherits:**
 [ICSBondCore](/src/interfaces/ICSBondCore.sol/interface.ICSBondCore.md), [ICSBondCurve](/src/interfaces/ICSBondCurve.sol/interface.ICSBondCurve.md), [ICSBondLock](/src/interfaces/ICSBondLock.sol/interface.ICSBondLock.md), [IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md)
@@ -34,13 +34,6 @@ function MANAGE_BOND_CURVES_ROLE() external view returns (bytes32);
 function SET_BOND_CURVE_ROLE() external view returns (bytes32);
 ```
 
-### PENALIZE_ROLE
-
-
-```solidity
-function PENALIZE_ROLE() external view returns (bytes32);
-```
-
 ### RECOVERER_ROLE
 
 
@@ -48,11 +41,11 @@ function PENALIZE_ROLE() external view returns (bytes32);
 function RECOVERER_ROLE() external view returns (bytes32);
 ```
 
-### CSM
+### MODULE
 
 
 ```solidity
-function CSM() external view returns (ICSModule);
+function MODULE() external view returns (ICSModule);
 ```
 
 ### feeDistributor
@@ -142,13 +135,13 @@ Add a new bond curve
 
 
 ```solidity
-function addBondCurve(uint256[] calldata bondCurve) external returns (uint256 id);
+function addBondCurve(uint256[2][] calldata bondCurve) external returns (uint256 id);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`bondCurve`|`uint256[]`|Bond curve definition to add|
+|`bondCurve`|`uint256[2][]`|Bond curve definition to add|
 
 **Returns**
 
@@ -166,14 +159,14 @@ Extensive checks should be performed to avoid inconsistency in the keys accounti
 
 
 ```solidity
-function updateBondCurve(uint256 curveId, uint256[] calldata bondCurve) external;
+function updateBondCurve(uint256 curveId, uint256[2][] calldata bondCurve) external;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`curveId`|`uint256`|Bond curve ID to update|
-|`bondCurve`|`uint256[]`|Bond curve definition|
+|`bondCurve`|`uint256[2][]`|Bond curve definition|
 
 
 ### getRequiredBondForNextKeys
@@ -765,10 +758,10 @@ event ChargePenaltyRecipientSet(address chargePenaltyRecipient);
 ```
 
 ## Errors
-### SenderIsNotCSM
+### SenderIsNotModule
 
 ```solidity
-error SenderIsNotCSM();
+error SenderIsNotModule();
 ```
 
 ### SenderIsNotEligible

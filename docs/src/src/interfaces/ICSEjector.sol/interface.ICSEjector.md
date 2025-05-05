@@ -1,8 +1,8 @@
 # ICSEjector
-[Git Source](https://github.com/lidofinance/community-staking-module/blob/a195b01bbb6171373c6b27ef341ec075aa98a44e/src/interfaces/ICSEjector.sol)
+[Git Source](https://github.com/lidofinance/community-staking-module/blob/d9f9dfd1023f7776110e7eb983ac3b5174e93893/src/interfaces/ICSEjector.sol)
 
 **Inherits:**
-[IAssetRecovererLib](/src/lib/AssetRecovererLib.sol/interface.IAssetRecovererLib.md)
+[IExitTypes](/src/interfaces/IExitTypes.sol/interface.IExitTypes.md)
 
 
 ## Functions
@@ -20,11 +20,11 @@ function PAUSE_ROLE() external view returns (bytes32);
 function RESUME_ROLE() external view returns (bytes32);
 ```
 
-### BAD_PERFORMER_EJECTOR_ROLE
+### STAKING_MODULE_ID
 
 
 ```solidity
-function BAD_PERFORMER_EJECTOR_ROLE() external view returns (bytes32);
+function STAKING_MODULE_ID() external view returns (uint256);
 ```
 
 ### MODULE
@@ -34,11 +34,11 @@ function BAD_PERFORMER_EJECTOR_ROLE() external view returns (bytes32);
 function MODULE() external view returns (ICSModule);
 ```
 
-### ACCOUNTING
+### strikes
 
 
 ```solidity
-function ACCOUNTING() external view returns (ICSAccounting);
+function strikes() external view returns (address);
 ```
 
 ### pauseFor
@@ -65,48 +65,70 @@ Resume ejection methods calls
 function resume() external;
 ```
 
+### voluntaryEject
+
+Withdraw the validator key from the Node Operator
+
+Called by the node operator
+
+
+```solidity
+function voluntaryEject(uint256 nodeOperatorId, uint256 startFrom, uint256 keysCount, address refundRecipient)
+    external
+    payable;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`nodeOperatorId`|`uint256`|ID of the Node Operator|
+|`startFrom`|`uint256`|Index of the first key to withdraw|
+|`keysCount`|`uint256`|Number of keys to withdraw|
+|`refundRecipient`|`address`|Address to send the refund to|
+
+
+### voluntaryEjectByArray
+
+Withdraw the validator key from the Node Operator
+
+Called by the node operator
+
+
+```solidity
+function voluntaryEjectByArray(uint256 nodeOperatorId, uint256[] calldata keyIndices, address refundRecipient)
+    external
+    payable;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`nodeOperatorId`|`uint256`|ID of the Node Operator|
+|`keyIndices`|`uint256[]`|Array of indices of the keys to withdraw|
+|`refundRecipient`|`address`|Address to send the refund to|
+
+
 ### ejectBadPerformer
 
-Report Node Operator's key as bad performer and eject it with corresponding penalty
+Eject Node Operator's key as a bad performer
 
 Called by the `CSStrikes` contract.
 See `CSStrikes.processBadPerformanceProof` to use this method permissionless
 
 
 ```solidity
-function ejectBadPerformer(uint256 nodeOperatorId, uint256 keyIndex, uint256 strikes) external;
+function ejectBadPerformer(uint256 nodeOperatorId, bytes calldata publicKeys, address refundRecipient)
+    external
+    payable;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`nodeOperatorId`|`uint256`|ID of the Node Operator|
-|`keyIndex`|`uint256`|Index of the withdrawn key in the Node Operator's keys storage|
-|`strikes`|`uint256`|Strikes of the Node Operator's validator key|
+|`publicKeys`|`bytes`|Concatenated public keys of the Node Operator's validators|
+|`refundRecipient`|`address`|Address to send the refund to|
 
-
-### isValidatorEjected
-
-Check if the given Node Operator's key is reported as ejected
-
-
-```solidity
-function isValidatorEjected(uint256 nodeOperatorId, uint256 keyIndex) external view returns (bool);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`nodeOperatorId`|`uint256`|ID of the Node Operator|
-|`keyIndex`|`uint256`|index of the key to check|
-
-
-## Events
-### EjectionSubmitted
-
-```solidity
-event EjectionSubmitted(uint256 indexed nodeOperatorId, uint256 keyIndex, bytes pubkey);
-```
 
 ## Errors
 ### SigningKeysInvalidOffset
@@ -121,12 +143,6 @@ error SigningKeysInvalidOffset();
 error AlreadyWithdrawn();
 ```
 
-### AlreadyEjected
-
-```solidity
-error AlreadyEjected();
-```
-
 ### ZeroAdminAddress
 
 ```solidity
@@ -139,15 +155,27 @@ error ZeroAdminAddress();
 error ZeroModuleAddress();
 ```
 
-### NotEnoughStrikesToEject
+### ZeroStrikesAddress
 
 ```solidity
-error NotEnoughStrikesToEject();
+error ZeroStrikesAddress();
 ```
 
 ### NodeOperatorDoesNotExist
 
 ```solidity
 error NodeOperatorDoesNotExist();
+```
+
+### SenderIsNotEligible
+
+```solidity
+error SenderIsNotEligible();
+```
+
+### SenderIsNotStrikes
+
+```solidity
+error SenderIsNotStrikes();
 ```
 

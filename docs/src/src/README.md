@@ -6,6 +6,7 @@
 - [lib](/src/lib)
 - [CSAccounting](CSAccounting.sol/contract.CSAccounting.md)
 - [CSEjector](CSEjector.sol/contract.CSEjector.md)
+- [CSExitPenalties](CSExitPenalties.sol/contract.CSExitPenalties.md)
 - [CSFeeDistributor](CSFeeDistributor.sol/contract.CSFeeDistributor.md)
 - [CSFeeOracle](CSFeeOracle.sol/contract.CSFeeOracle.md)
 - [CSModule](CSModule.sol/contract.CSModule.md)
