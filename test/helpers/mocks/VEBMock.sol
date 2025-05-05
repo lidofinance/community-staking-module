@@ -14,7 +14,7 @@ contract VEBMock {
     function triggerExitsDirectly(
         IValidatorsExitBus.DirectExitData calldata /* exitData */,
         address refundRecipient,
-        uint8 exitType
+        uint8 /* exitType */
     ) external payable {
         uint256 refund = (msg.value * MOCK_REFUND_PERCENTAGE_BP) / 10000;
         if (refund == 0) {

@@ -30,55 +30,7 @@ import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 import { VettedGateFactory } from "../src/VettedGateFactory.sol";
 import { CSExitPenalties } from "../src/CSExitPenalties.sol";
-
-struct DeployParamsV1 {
-    // Lido addresses
-    address lidoLocatorAddress;
-    address aragonAgent;
-    address easyTrackEVMScriptExecutor;
-    address proxyAdmin;
-    // Oracle
-    uint256 secondsPerSlot;
-    uint256 slotsPerEpoch;
-    uint256 clGenesisTime;
-    uint256 oracleReportEpochsPerFrame;
-    uint256 fastLaneLengthSlots;
-    uint256 consensusVersion;
-    uint256 avgPerfLeewayBP;
-    address[] oracleMembers;
-    uint256 hashConsensusQuorum;
-    // Verifier
-    GIndex gIHistoricalSummaries;
-    GIndex gIFirstWithdrawal;
-    GIndex gIFirstValidator;
-    uint256 verifierSupportedEpoch;
-    // Accounting
-    uint256 maxCurveLength;
-    uint256[] bondCurve;
-    uint256 minBondLockPeriod;
-    uint256 maxBondLockPeriod;
-    uint256 bondLockPeriod;
-    address setResetBondCurveAddress;
-    address chargePenaltyRecipient;
-    // Module
-    bytes32 moduleType;
-    uint256 minSlashingPenaltyQuotient;
-    uint256 elRewardsStealingAdditionalFine;
-    uint256 maxKeysPerOperatorEA;
-    uint256 maxKeyRemovalCharge;
-    uint256 keyRemovalCharge;
-    address elRewardsStealingReporter;
-    // VettedGate
-    bytes32 vettedGateTreeRoot;
-    uint256[] vettedGateBondCurve;
-    // GateSeal
-    address gateSealFactory;
-    address sealingCommittee;
-    uint256 sealDuration;
-    uint256 sealExpiryTimestamp;
-    // Testnet stuff
-    address secondAdminAddress;
-}
+import { IGateSeal } from "../src/interfaces/IGateSeal.sol";
 
 struct DeployParams {
     // Lido addresses
@@ -135,7 +87,7 @@ struct DeployParams {
     bytes32 vettedGateTreeRoot;
     string vettedGateTreeCid;
     uint256[2][] vettedGateBondCurve;
-    address referralSeasonsEnder;
+    address vettedGateManager;
     // GateSeal
     address gateSealFactory;
     address sealingCommittee;
@@ -162,6 +114,7 @@ abstract contract DeployBase is Script {
     CSEjector public ejector;
     CSStrikes public strikes;
     CSVerifier public verifier;
+    address public gateSeal;
     PermissionlessGate public permissionlessGate;
     VettedGateFactory public vettedGateFactory;
     VettedGate public vettedGate;
@@ -352,7 +305,7 @@ abstract contract DeployBase is Script {
 
             exitPenalties.initialize(address(strikes));
             ejector.initialize(deployer, address(strikes));
-            strikes.initialize(config.aragonAgent, address(ejector));
+            strikes.initialize(deployer, address(ejector));
 
             permissionlessGate = new PermissionlessGate(address(csm));
 
@@ -366,6 +319,11 @@ abstract contract DeployBase is Script {
                     admin: deployer
                 })
             );
+
+            OssifiableProxy vettedGateProxy = OssifiableProxy(
+                payable(address(vettedGate))
+            );
+            vettedGateProxy.proxy__changeAdmin(config.proxyAdmin);
 
             feeDistributor.initialize({
                 admin: address(deployer),
@@ -381,6 +339,10 @@ abstract contract DeployBase is Script {
                 admin: address(deployer),
                 reportProcessor: address(oracle)
             });
+            hashConsensus.grantRole(
+                hashConsensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(),
+                config.aragonAgent
+            );
             hashConsensus.grantRole(
                 hashConsensus.MANAGE_MEMBERS_AND_QUORUM_ROLE(),
                 address(deployer)
@@ -404,7 +366,6 @@ abstract contract DeployBase is Script {
                 consensusVersion: config.consensusVersion
             });
 
-            address gateSeal;
             if (config.gateSealFactory != address(0)) {
                 address[] memory sealables = new address[](6);
                 sealables[0] = address(csm);
@@ -475,12 +436,16 @@ abstract contract DeployBase is Script {
                 config.aragonAgent
             );
             vettedGate.grantRole(
+                vettedGate.SET_TREE_ROLE(),
+                config.vettedGateManager
+            );
+            vettedGate.grantRole(
                 vettedGate.START_REFERRAL_SEASON_ROLE(),
                 config.aragonAgent
             );
             vettedGate.grantRole(
                 vettedGate.END_REFERRAL_SEASON_ROLE(),
-                config.referralSeasonsEnder
+                config.vettedGateManager
             );
             vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
 
@@ -517,21 +482,35 @@ abstract contract DeployBase is Script {
                 deployer
             );
 
+            strikes.grantRole(strikes.DEFAULT_ADMIN_ROLE(), config.aragonAgent);
+            strikes.revokeRole(strikes.DEFAULT_ADMIN_ROLE(), deployer);
+
             JsonObj memory deployJson = Json.newObj();
             deployJson.set("ChainId", chainId);
+            deployJson.set("CSModule", address(csm));
+            deployJson.set("CSModuleImpl", address(csmImpl));
+            deployJson.set("CSParametersRegistry", address(parametersRegistry));
+            deployJson.set(
+                "CSParametersRegistryImpl",
+                address(parametersRegistryImpl)
+            );
+            deployJson.set("CSAccounting", address(accounting));
+            deployJson.set("CSAccountingImpl", address(accountingImpl));
+            deployJson.set("CSFeeOracle", address(oracle));
+            deployJson.set("CSFeeOracleImpl", address(oracleImpl));
+            deployJson.set("CSFeeDistributor", address(feeDistributor));
+            deployJson.set("CSFeeDistributorImpl", address(feeDistributorImpl));
+            deployJson.set("CSExitPenalties", address(exitPenalties));
+            deployJson.set("CSExitPenaltiesImpl", address(exitPenaltiesImpl));
+            deployJson.set("CSEjector", address(ejector));
+            deployJson.set("CSStrikes", address(strikes));
+            deployJson.set("CSStrikesImpl", address(strikesImpl));
+            deployJson.set("HashConsensus", address(hashConsensus));
+            deployJson.set("CSVerifier", address(verifier));
             deployJson.set("PermissionlessGate", address(permissionlessGate));
             deployJson.set("VettedGateFactory", address(vettedGateFactory));
             deployJson.set("VettedGate", address(vettedGate));
-            deployJson.set("CSParametersRegistry", address(parametersRegistry));
-            deployJson.set("CSModule", address(csm));
-            deployJson.set("CSAccounting", address(accounting));
-            deployJson.set("CSFeeOracle", address(oracle));
-            deployJson.set("CSFeeDistributor", address(feeDistributor));
-            deployJson.set("CSExitPenalties", address(exitPenalties));
-            deployJson.set("CSEjector", address(ejector));
-            deployJson.set("CSStrikes", address(strikes));
-            deployJson.set("HashConsensus", address(hashConsensus));
-            deployJson.set("CSVerifier", address(verifier));
+            deployJson.set("VettedGateImpl", address(vettedGateImpl));
             deployJson.set("LidoLocator", config.lidoLocatorAddress);
             deployJson.set("GateSeal", gateSeal);
             deployJson.set("DeployParams", abi.encode(config));
@@ -615,6 +594,14 @@ abstract contract DeployBase is Script {
         );
         ejector.grantRole(
             ejector.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        verifier.grantRole(
+            verifier.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        strikes.grantRole(
+            strikes.DEFAULT_ADMIN_ROLE(),
             config.secondAdminAddress
         );
     }

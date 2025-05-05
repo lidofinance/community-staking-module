@@ -58,14 +58,14 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     /// @inheritdoc ICSBondCurve
     function getCurveInfo(
         uint256 curveId
-    ) public view returns (BondCurveInterval[] memory) {
+    ) external view returns (BondCurveInterval[] memory) {
         return _getCurveInfo(curveId);
     }
 
     /// @inheritdoc ICSBondCurve
     function getBondCurve(
         uint256 nodeOperatorId
-    ) public view returns (BondCurveInterval[] memory) {
+    ) external view returns (BondCurveInterval[] memory) {
         return _getCurveInfo(getBondCurveId(nodeOperatorId));
     }
 
@@ -90,6 +90,63 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         uint256 curveId
     ) public view returns (uint256) {
         return _getKeysCountByBondAmount(amount, _getCurveInfo(curveId));
+    }
+
+    // solhint-disable-next-line func-name-mixedcase
+    function __CSBondCurve_init(
+        uint256[2][] calldata defaultBondCurveIntervals
+    ) internal onlyInitializing {
+        uint256 addedId = _addBondCurve(defaultBondCurveIntervals);
+        if (addedId != DEFAULT_BOND_CURVE_ID) {
+            revert InvalidInitialisationCurveId();
+        }
+    }
+
+    /// @dev Add a new bond curve to the array
+    function _addBondCurve(
+        uint256[2][] calldata intervals
+    ) internal returns (uint256 curveId) {
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
+
+        _checkBondCurve(intervals);
+
+        $.bondCurves.push();
+        curveId = $.bondCurves.length - 1;
+        _addIntervalsToBondCurve($.bondCurves[curveId], intervals);
+
+        emit BondCurveAdded(curveId, intervals);
+    }
+
+    /// @dev Update existing bond curve
+    function _updateBondCurve(
+        uint256 curveId,
+        uint256[2][] calldata intervals
+    ) internal {
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
+        if (curveId > $.bondCurves.length - 1) {
+            revert InvalidBondCurveId();
+        }
+
+        _checkBondCurve(intervals);
+
+        delete $.bondCurves[curveId];
+
+        _addIntervalsToBondCurve($.bondCurves[curveId], intervals);
+
+        emit BondCurveUpdated(curveId, intervals);
+    }
+
+    /// @dev Sets bond curve for the given Node Operator
+    ///      It will be used for the Node Operator instead of the previously set curve
+    function _setBondCurve(uint256 nodeOperatorId, uint256 curveId) internal {
+        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
+        unchecked {
+            if (curveId > $.bondCurves.length - 1) {
+                revert InvalidBondCurveId();
+            }
+        }
+        $.operatorBondCurveId[nodeOperatorId] = curveId;
+        emit BondCurveSet(nodeOperatorId, curveId);
     }
 
     function _getBondAmountByKeysCount(
@@ -164,50 +221,6 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         }
     }
 
-    // solhint-disable-next-line func-name-mixedcase
-    function __CSBondCurve_init(
-        uint256[2][] calldata defaultBondCurveIntervals
-    ) internal onlyInitializing {
-        uint256 addedId = _addBondCurve(defaultBondCurveIntervals);
-        if (addedId != DEFAULT_BOND_CURVE_ID) {
-            revert InvalidInitialisationCurveId();
-        }
-    }
-
-    /// @dev Add a new bond curve to the array
-    function _addBondCurve(
-        uint256[2][] calldata intervals
-    ) internal returns (uint256 curveId) {
-        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-
-        _checkBondCurve(intervals);
-
-        $.bondCurves.push();
-        curveId = $.bondCurves.length - 1;
-        _addIntervalsToBondCurve($.bondCurves[curveId], intervals);
-
-        emit BondCurveAdded(curveId, intervals);
-    }
-
-    /// @dev Update existing bond curve
-    function _updateBondCurve(
-        uint256 curveId,
-        uint256[2][] calldata intervals
-    ) internal {
-        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        if (curveId > $.bondCurves.length - 1) {
-            revert InvalidBondCurveId();
-        }
-
-        _checkBondCurve(intervals);
-
-        delete $.bondCurves[curveId];
-
-        _addIntervalsToBondCurve($.bondCurves[curveId], intervals);
-
-        emit BondCurveUpdated(curveId, intervals);
-    }
-
     function _addIntervalsToBondCurve(
         BondCurveInterval[] storage bondCurve,
         uint256[2][] calldata intervals
@@ -231,19 +244,6 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
                 interval.minBond = trend;
             }
         }
-    }
-
-    /// @dev Sets bond curve for the given Node Operator
-    ///      It will be used for the Node Operator instead of the previously set curve
-    function _setBondCurve(uint256 nodeOperatorId, uint256 curveId) internal {
-        CSBondCurveStorage storage $ = _getCSBondCurveStorage();
-        unchecked {
-            if (curveId > $.bondCurves.length - 1) {
-                revert InvalidBondCurveId();
-            }
-        }
-        $.operatorBondCurveId[nodeOperatorId] = curveId;
-        emit BondCurveSet(nodeOperatorId, curveId);
     }
 
     function _checkBondCurve(uint256[2][] calldata intervals) private view {

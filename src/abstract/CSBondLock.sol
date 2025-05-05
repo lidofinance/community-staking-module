@@ -65,7 +65,7 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
     /// @inheritdoc ICSBondLock
     function getLockedBondInfo(
         uint256 nodeOperatorId
-    ) public view returns (BondLock memory) {
+    ) external view returns (BondLock memory) {
         return _getCSBondLockStorage().bondLock[nodeOperatorId];
     }
 

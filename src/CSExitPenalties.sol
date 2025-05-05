@@ -58,6 +58,8 @@ contract CSExitPenalties is ICSExitPenalties, ExitTypes, Initializable {
         MODULE = ICSModule(module);
         PARAMETERS_REGISTRY = ICSParametersRegistry(parametersRegistry);
         ACCOUNTING = ICSAccounting(accounting);
+
+        _disableInitializers();
     }
 
     function initialize(address _strikes) external initializer {
@@ -180,6 +182,11 @@ contract CSExitPenalties is ICSExitPenalties, ExitTypes, Initializable {
     ) external view returns (ExitPenaltyInfo memory) {
         bytes32 keyPointer = _keyPointer(nodeOperatorId, publicKey);
         return _exitPenaltyInfo[keyPointer];
+    }
+
+    /// @inheritdoc ICSExitPenalties
+    function getInitializedVersion() external view returns (uint64) {
+        return _getInitializedVersion();
     }
 
     function _keyPointer(

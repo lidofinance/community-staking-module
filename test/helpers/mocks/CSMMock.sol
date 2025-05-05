@@ -64,7 +64,7 @@ contract CSMMock is Utilities, Fixtures {
     }
 
     function getNodeOperatorManagementProperties(
-        uint256 nodeOperatorId
+        uint256 /* nodeOperatorId */
     ) external view returns (NodeOperatorManagementProperties memory) {
         return managementProperties;
     }
@@ -141,7 +141,7 @@ contract CSMMock is Utilities, Fixtures {
     }
 
     function exitDeadlineThreshold(
-        uint256 nodeOperatorId
+        uint256 /* nodeOperatorId */
     ) external view returns (uint256) {
         return PARAMETERS_REGISTRY.getAllowedExitDelay(0);
     }

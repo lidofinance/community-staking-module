@@ -390,7 +390,7 @@ contract CSAccounting is
     /// @inheritdoc ICSAccounting
     function getBondSummary(
         uint256 nodeOperatorId
-    ) public view returns (uint256 current, uint256 required) {
+    ) external view returns (uint256 current, uint256 required) {
         unchecked {
             current = CSBondCore.getBond(nodeOperatorId);
             // @dev 'getActualLockedBond' is uint128, so no overflow expected in practice
@@ -401,6 +401,77 @@ contract CSAccounting is
                 ) +
                 CSBondLock.getActualLockedBond(nodeOperatorId);
         }
+    }
+
+    /// @inheritdoc ICSAccounting
+    function getUnbondedKeysCount(
+        uint256 nodeOperatorId
+    ) external view returns (uint256) {
+        return
+            _getUnbondedKeysCount({
+                nodeOperatorId: nodeOperatorId,
+                accountLockedBond: true
+            });
+    }
+
+    /// @inheritdoc ICSAccounting
+    function getUnbondedKeysCountToEject(
+        uint256 nodeOperatorId
+    ) external view returns (uint256) {
+        return
+            _getUnbondedKeysCount({
+                nodeOperatorId: nodeOperatorId,
+                accountLockedBond: false
+            });
+    }
+
+    /// @inheritdoc ICSAccounting
+    function getBondAmountByKeysCountWstETH(
+        uint256 keysCount,
+        uint256 curveId
+    ) external view returns (uint256) {
+        return
+            _sharesByEth(
+                CSBondCurve.getBondAmountByKeysCount(keysCount, curveId)
+            );
+    }
+
+    /// @inheritdoc ICSAccounting
+    function getRequiredBondForNextKeysWstETH(
+        uint256 nodeOperatorId,
+        uint256 additionalKeys
+    ) external view returns (uint256) {
+        return
+            _sharesByEth(
+                getRequiredBondForNextKeys(nodeOperatorId, additionalKeys)
+            );
+    }
+
+    /// @inheritdoc ICSAccounting
+    function getClaimableBondShares(
+        uint256 nodeOperatorId
+    ) external view returns (uint256) {
+        return _getClaimableBondShares(nodeOperatorId);
+    }
+
+    /// @inheritdoc ICSAccounting
+    function getClaimableRewardsAndBondShares(
+        uint256 nodeOperatorId,
+        uint256 cumulativeFeeShares,
+        bytes32[] calldata rewardsProof
+    ) external view returns (uint256 claimableShares) {
+        uint256 feesToDistribute = feeDistributor.getFeesToDistribute(
+            nodeOperatorId,
+            cumulativeFeeShares,
+            rewardsProof
+        );
+
+        (uint256 current, uint256 required) = getBondSummaryShares(
+            nodeOperatorId
+        );
+        current = current + feesToDistribute;
+
+        return current > required ? current - required : 0;
     }
 
     /// @inheritdoc ICSAccounting
@@ -420,28 +491,6 @@ contract CSAccounting is
     }
 
     /// @inheritdoc ICSAccounting
-    function getUnbondedKeysCount(
-        uint256 nodeOperatorId
-    ) public view returns (uint256) {
-        return
-            _getUnbondedKeysCount({
-                nodeOperatorId: nodeOperatorId,
-                accountLockedBond: true
-            });
-    }
-
-    /// @inheritdoc ICSAccounting
-    function getUnbondedKeysCountToEject(
-        uint256 nodeOperatorId
-    ) public view returns (uint256) {
-        return
-            _getUnbondedKeysCount({
-                nodeOperatorId: nodeOperatorId,
-                accountLockedBond: false
-            });
-    }
-
-    /// @inheritdoc ICSAccounting
     function getRequiredBondForNextKeys(
         uint256 nodeOperatorId,
         uint256 additionalKeys
@@ -458,55 +507,6 @@ contract CSAccounting is
         unchecked {
             return totalRequired > current ? totalRequired - current : 0;
         }
-    }
-
-    /// @inheritdoc ICSAccounting
-    function getBondAmountByKeysCountWstETH(
-        uint256 keysCount,
-        uint256 curveId
-    ) public view returns (uint256) {
-        return
-            _sharesByEth(
-                CSBondCurve.getBondAmountByKeysCount(keysCount, curveId)
-            );
-    }
-
-    /// @inheritdoc ICSAccounting
-    function getRequiredBondForNextKeysWstETH(
-        uint256 nodeOperatorId,
-        uint256 additionalKeys
-    ) public view returns (uint256) {
-        return
-            _sharesByEth(
-                getRequiredBondForNextKeys(nodeOperatorId, additionalKeys)
-            );
-    }
-
-    /// @inheritdoc ICSAccounting
-    function getClaimableBondShares(
-        uint256 nodeOperatorId
-    ) public view returns (uint256) {
-        return _getClaimableBondShares(nodeOperatorId);
-    }
-
-    /// @inheritdoc ICSAccounting
-    function getClaimableRewardsAndBondShares(
-        uint256 nodeOperatorId,
-        uint256 cumulativeFeeShares,
-        bytes32[] calldata rewardsProof
-    ) public view returns (uint256 claimableShares) {
-        uint256 feesToDistribute = feeDistributor.getFeesToDistribute(
-            nodeOperatorId,
-            cumulativeFeeShares,
-            rewardsProof
-        );
-
-        (uint256 current, uint256 required) = getBondSummaryShares(
-            nodeOperatorId
-        );
-        current = current + feesToDistribute;
-
-        return current > required ? current - required : 0;
     }
 
     function _pullFeeRewards(
