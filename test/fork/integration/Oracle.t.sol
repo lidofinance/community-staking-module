@@ -194,6 +194,15 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
         uint256 penalty = parametersRegistry.getBadPerformancePenalty(
             accounting.getBondCurveId(nodeOperatorId)
         );
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+        keyStrikesList[0] = ICSStrikes.ModuleKeyStrikes({
+            nodeOperatorId: nodeOperatorId,
+            keyIndex: keyIndex,
+            data: strikesData
+        });
+        bool[] memory proofFlags = new bool[](proof.length);
+
         vm.expectEmit(address(exitPenalties));
         emit ICSExitPenalties.StrikesPenaltyProcessed(
             nodeOperatorId,
@@ -202,22 +211,25 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
         );
         vm.startSnapshotGas("CSStrikes.processBadPerformanceProof");
         this.processBadPerformanceProof(
-            ICSStrikes.ModuleKeyStrikes({
-                nodeOperatorId: nodeOperatorId,
-                keyIndex: keyIndex,
-                data: strikesData
-            }),
+            keyStrikesList,
             proof,
+            proofFlags,
             address(0)
         );
         vm.stopSnapshotGas();
     }
 
     function processBadPerformanceProof(
-        ICSStrikes.ModuleKeyStrikes calldata keyStrikes,
+        ICSStrikes.ModuleKeyStrikes[] calldata keyStrikes,
         bytes32[] calldata proof,
+        bool[] calldata proofFlags,
         address refundRecipient
     ) external {
-        strikes.processBadPerformanceProof(keyStrikes, proof, refundRecipient);
+        strikes.processBadPerformanceProof(
+            keyStrikes,
+            proof,
+            proofFlags,
+            refundRecipient
+        );
     }
 }

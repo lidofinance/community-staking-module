@@ -111,28 +111,6 @@ contract CSStrikes is
 
     /// @inheritdoc ICSStrikes
     function processBadPerformanceProof(
-        ModuleKeyStrikes calldata keyStrikes,
-        bytes32[] calldata proof,
-        address refundRecipient
-    ) external {
-        // NOTE: We allow empty proofs to be delivered because there’s no way to use the tree’s
-        // internal nodes without brute-forcing the input data.
-
-        bytes memory pubkey = _loadPubKey(keyStrikes);
-
-        if (!verifyProof(keyStrikes, pubkey, proof)) {
-            revert InvalidProof();
-        }
-
-        refundRecipient = refundRecipient == address(0)
-            ? msg.sender
-            : refundRecipient;
-
-        _ejectByStrikes(keyStrikes, pubkey, refundRecipient);
-    }
-
-    /// @inheritdoc ICSStrikes
-    function processBadPerformanceMultiProof(
         ModuleKeyStrikes[] calldata keyStrikesList,
         bytes32[] calldata proof,
         bool[] calldata proofFlags,
@@ -146,7 +124,7 @@ contract CSStrikes is
             pubkeys[i] = _loadPubKey(keyStrikesList[i]);
         }
 
-        if (!verifyMultiProof(keyStrikesList, pubkeys, proof, proofFlags)) {
+        if (!verifyProof(keyStrikesList, pubkeys, proof, proofFlags)) {
             revert InvalidProof();
         }
 
@@ -166,20 +144,6 @@ contract CSStrikes is
 
     /// @inheritdoc ICSStrikes
     function verifyProof(
-        ModuleKeyStrikes calldata keyStrikes,
-        bytes memory pubkey,
-        bytes32[] calldata proof
-    ) public view returns (bool) {
-        return
-            MerkleProof.verifyCalldata(
-                proof,
-                treeRoot,
-                hashLeaf(keyStrikes, pubkey)
-            );
-    }
-
-    /// @inheritdoc ICSStrikes
-    function verifyMultiProof(
         ModuleKeyStrikes[] calldata keyStrikesList,
         bytes[] memory pubkeys,
         bytes32[] calldata proof,

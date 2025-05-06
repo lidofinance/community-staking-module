@@ -59,22 +59,12 @@ interface ICSStrikes {
     /// @param _ejector Address of the Ejector contract
     function setEjector(address _ejector) external;
 
-    /// @notice Report CSM key as bad performing
-    /// @param keyStrikes ModuleKeyStrikes struct
-    /// @param proof Proof of the strikes
-    /// @param refundRecipient Address to send the refund to
-    function processBadPerformanceProof(
-        ModuleKeyStrikes calldata keyStrikes,
-        bytes32[] calldata proof,
-        address refundRecipient
-    ) external;
-
     /// @notice Report multiple CSM keys as bad performing
     /// @param keyStrikesList List of ModuleKeyStrikes structs
     /// @param proof Multi-proof of the strikes
     /// @param proofFlags Flags to process the multi-proof, see OZ `processMultiProof`
     /// @param refundRecipient Address to send the refund to
-    function processBadPerformanceMultiProof(
+    function processBadPerformanceProof(
         ModuleKeyStrikes[] calldata keyStrikesList,
         bytes32[] calldata proof,
         bool[] calldata proofFlags,
@@ -90,22 +80,12 @@ interface ICSStrikes {
         string calldata _treeCid
     ) external;
 
-    /// @notice Check the contract accepts the provided proof
-    /// @param keyStrikes ModuleKeyStrikes struct
-    /// @param proof Proof of the leaf
-    /// @return bool True if proof is accepted
-    function verifyProof(
-        ModuleKeyStrikes calldata keyStrikes,
-        bytes calldata pubkey,
-        bytes32[] calldata proof
-    ) external view returns (bool);
-
     /// @notice Check the contract accepts the provided multi-proof
     /// @param keyStrikesList List of ModuleKeyStrikes structs
     /// @param proof Multi-proof of the strikes
     /// @param proofFlags Flags to process the multi-proof, see OZ `processMultiProof`
     /// @return bool True if proof is accepted
-    function verifyMultiProof(
+    function verifyProof(
         ModuleKeyStrikes[] calldata keyStrikesList,
         bytes[] memory pubkeys,
         bytes32[] calldata proof,
