@@ -762,10 +762,7 @@ contract CSModule is
             bool chargeWithdrawalRequestFee;
 
             ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
-                .getDelayedExitPenaltyInfo(
-                    withdrawalInfo.nodeOperatorId,
-                    pubkey
-                );
+                .getExitPenaltyInfo(withdrawalInfo.nodeOperatorId, pubkey);
             if (exitPenaltyInfo.delayPenalty.isValue) {
                 unchecked {
                     penaltySum += exitPenaltyInfo.delayPenalty.value;
