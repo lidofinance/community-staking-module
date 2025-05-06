@@ -58,18 +58,15 @@ function setKeys(Batch self, uint256 keysCount) pure returns (Batch) {
 }
 
 /// @dev can be unsafe if the From batch is previous to the self
-function setNext(Batch self, Batch from) pure returns (Batch) {
+function setNext(Batch self, uint128 next) pure returns (Batch) {
     assembly {
         self := or(
             and(
                 self,
                 0xffffffffffffffffffffffffffffffff00000000000000000000000000000000
             ),
-            and(
-                from,
-                0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff
-            )
-        ) // self.next = from.next
+            next
+        ) // self.next = next
     }
     return self;
 }
@@ -131,18 +128,20 @@ library QueueLib {
             revert IQueueLib.QueueLookupNoLimit();
         }
 
-        Batch prev;
+        Batch prevItem;
         uint128 indexOfPrev;
 
         uint128 head = self.head;
         uint128 curr = head;
 
-        for (; visited < maxItems; ++visited) {
+        while (visited < maxItems) {
             Batch item = self.queue[curr];
             if (item.isNil()) {
                 isFinished = true;
                 break;
             }
+
+            visited++;
 
             NodeOperator storage no = nodeOperators[item.noId()];
             if (queueLookup.get(item.noId()) >= no.depositableValidatorsCount) {
@@ -154,8 +153,8 @@ library QueueLib {
                 } else {
                     // There's no `prev` item while we call `dequeue`, and removing an item will keep the `prev` intact
                     // other than changing its `next` field.
-                    prev = prev.setNext(item);
-                    self.queue[indexOfPrev] = prev;
+                    prevItem = prevItem.setNext(item.next());
+                    self.queue[indexOfPrev] = prevItem;
                 }
 
                 // We assume that the invariant `enqueuedCount` >= `keys` is kept.
@@ -163,13 +162,13 @@ library QueueLib {
                 no.enqueuedCount -= uint32(item.keys());
 
                 unchecked {
-                    lastRemovedAtDepth = visited + 1;
+                    lastRemovedAtDepth = visited;
                     ++removed;
                 }
             } else {
                 queueLookup.add(item.noId(), item.keys());
                 indexOfPrev = curr;
-                prev = item;
+                prevItem = item;
             }
 
             curr = item.next();
