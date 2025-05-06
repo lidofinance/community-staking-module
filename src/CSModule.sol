@@ -210,7 +210,7 @@ contract CSModule is
             nodeOperatorId,
             managerAddress,
             rewardAddress,
-            no.extendedManagerPermissions
+            managementProperties.extendedManagerPermissions
         );
 
         if (referrer != address(0)) {
