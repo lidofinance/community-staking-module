@@ -144,6 +144,8 @@ interface ICSModule is
         uint256 penaltyValue
     );
 
+    function DEPOSIT_SIZE() external view returns (uint256);
+
     function LIDO_LOCATOR() external view returns (ILidoLocator);
 
     function PAUSE_ROLE() external view returns (bytes32);
@@ -195,7 +197,8 @@ interface ICSModule is
 
     /// @notice Permissioned method to add a new Node Operator
     ///         Should be called by `*Gate.sol` contracts. See `PermissionlessGate.sol` and `VettedGate.sol` for examples
-    /// @param from Sender address. Initial sender address to be used as a default manager and reward addresses
+    /// @param from Sender address. Initial sender address to be used as a default manager and reward addresses.
+    ///     Gates must pass the correct address in order to specify which address should be the owner of the Node Operator
     /// @param managementProperties Optional. Management properties to be used for the Node Operator.
     ///                             managerAddress: Used as `managerAddress` for the Node Operator. If not passed `from` will be used.
     ///                             rewardAddress: Used as `rewardAddress` for the Node Operator. If not passed `from` will be used.
