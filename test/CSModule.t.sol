@@ -588,6 +588,7 @@ contract CsmInitialize is CSMCommon {
         assertEq(address(csm.accounting()), address(accounting));
         assertEq(address(csm.exitPenalties()), address(exitPenalties));
         assertTrue(csm.isPaused());
+        assertEq(csm.getInitializedVersion(), 2);
     }
 
     function test_initialize_RevertWhen_ZeroAccountingAddress() public {
@@ -648,6 +649,7 @@ contract CsmInitialize is CSMCommon {
 
         csm.finalizeUpgradeV2(address(exitPenalties));
         assertEq(address(csm.exitPenalties()), address(exitPenalties));
+        assertEq(csm.getInitializedVersion(), 2);
     }
 
     function test_finalizeUpgradeV2_revertWhen_ZeroExitPenalties() public {
@@ -684,9 +686,9 @@ contract CsmInitialize is CSMCommon {
         );
 
         csm.finalizeUpgradeV2(address(exitPenalties));
-        vm.assertEq(vm.load(address(csm), 0), bytes32(0));
+        assertEq(vm.load(address(csm), 0), bytes32(0));
 
-        vm.assertEq(address(csm.exitPenalties()), address(exitPenalties));
+        assertEq(address(csm.exitPenalties()), address(exitPenalties));
         bytes12 head;
         address exitPenaltiesAddress;
         bytes32 storageValue = vm.load(address(csm), exitPenaltiesStorageSlot);
@@ -697,8 +699,8 @@ contract CsmInitialize is CSMCommon {
             )
             head := shr(160, storageValue)
         }
-        vm.assertEq(exitPenaltiesAddress, address(exitPenalties));
-        vm.assertEq(head, bytes12(0));
+        assertEq(exitPenaltiesAddress, address(exitPenalties));
+        assertEq(head, bytes12(0));
     }
 }
 
@@ -834,7 +836,7 @@ contract CSMCreateNodeOperator is CSMCommon {
     function test_createNodeOperator() public assertInvariants {
         uint256 nonce = csm.getNonce();
         vm.expectEmit(address(csm));
-        emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+        emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator, false);
 
         uint256 nodeOperatorId = csm.createNodeOperator(
             nodeOperator,
@@ -858,7 +860,7 @@ contract CSMCreateNodeOperator is CSMCommon {
         address reward = address(42);
 
         vm.expectEmit(address(csm));
-        emit ICSModule.NodeOperatorAdded(0, manager, reward);
+        emit ICSModule.NodeOperatorAdded(0, manager, reward, false);
         csm.createNodeOperator(
             nodeOperator,
             NodeOperatorManagementProperties({
@@ -872,12 +874,43 @@ contract CSMCreateNodeOperator is CSMCommon {
         NodeOperator memory no = csm.getNodeOperator(0);
         assertEq(no.managerAddress, manager);
         assertEq(no.rewardAddress, reward);
+        assertEq(no.extendedManagerPermissions, false);
+    }
+
+    function test_createNodeOperator_withExtendedManagerPermissions()
+        public
+        assertInvariants
+    {
+        address manager = address(154);
+        address reward = address(42);
+
+        vm.expectEmit(address(csm));
+        emit ICSModule.NodeOperatorAdded(0, manager, reward, true);
+        csm.createNodeOperator(
+            nodeOperator,
+            NodeOperatorManagementProperties({
+                managerAddress: manager,
+                rewardAddress: reward,
+                extendedManagerPermissions: true
+            }),
+            address(0)
+        );
+
+        NodeOperator memory no = csm.getNodeOperator(0);
+        assertEq(no.managerAddress, manager);
+        assertEq(no.rewardAddress, reward);
+        assertEq(no.extendedManagerPermissions, true);
     }
 
     function test_createNodeOperator_withReferrer() public assertInvariants {
         {
             vm.expectEmit(address(csm));
-            emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+            emit ICSModule.NodeOperatorAdded(
+                0,
+                nodeOperator,
+                nodeOperator,
+                false
+            );
             vm.expectEmit(address(csm));
             emit ICSModule.ReferrerSet(0, address(154));
         }

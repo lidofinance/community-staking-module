@@ -82,7 +82,8 @@ interface ICSModule is
     event NodeOperatorAdded(
         uint256 indexed nodeOperatorId,
         address indexed managerAddress,
-        address indexed rewardAddress
+        address indexed rewardAddress,
+        bool extendedManagerPermissions
     );
     event ReferrerSet(uint256 indexed nodeOperatorId, address indexed referrer);
     event DepositableSigningKeysCountChanged(

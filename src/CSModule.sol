@@ -147,7 +147,6 @@ contract CSModule is
     }
 
     /// @dev should be called after update on the proxy
-    // TODO add unit tests for this func. Need to modify storage before upgrading
     function finalizeUpgradeV2(
         address _exitPenalties
     ) external reinitializer(2) {
@@ -207,8 +206,12 @@ contract CSModule is
             ++_nodeOperatorsCount;
         }
 
-        // TODO consider adding extendedManagerPermissions to the event if if will not be painful for clients
-        emit NodeOperatorAdded(nodeOperatorId, managerAddress, rewardAddress);
+        emit NodeOperatorAdded(
+            nodeOperatorId,
+            managerAddress,
+            rewardAddress,
+            no.extendedManagerPermissions
+        );
 
         if (referrer != address(0)) {
             emit ReferrerSet(nodeOperatorId, referrer);
