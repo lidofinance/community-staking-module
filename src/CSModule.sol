@@ -452,10 +452,8 @@ contract CSModule is
 
     /// @inheritdoc IStakingModule
     /// @dev This method is not used in CSM, hence it is do nothing
-    function onExitedAndStuckValidatorsCountsUpdated()
-        external
-        onlyRole(STAKING_ROUTER_ROLE)
-    {
+    /// @dev NOTE: No role checks because of empty body to save bytecode.
+    function onExitedAndStuckValidatorsCountsUpdated() external {
         // solhint-disable-previous-line no-empty-blocks
         // Nothing to do, rewards are distributed by a performance oracle.
     }

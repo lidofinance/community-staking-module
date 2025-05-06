@@ -6344,16 +6344,6 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
         csm.onExitedAndStuckValidatorsCountsUpdated();
     }
 
-    function test_stakingRouterRole_onExitedAndStuckValidatorsCountsUpdated_revert()
-        public
-    {
-        bytes32 role = csm.STAKING_ROUTER_ROLE();
-
-        vm.prank(stranger);
-        expectRoleRevert(stranger, role);
-        csm.onExitedAndStuckValidatorsCountsUpdated();
-    }
-
     function test_stakingRouterRole_onWithdrawalCredentialsChanged() public {
         bytes32 role = csm.STAKING_ROUTER_ROLE();
         vm.prank(admin);
