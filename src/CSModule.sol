@@ -682,15 +682,10 @@ contract CSModule is
         for (uint256 i; i < nodeOperatorIds.length; ++i) {
             uint256 nodeOperatorId = nodeOperatorIds[i];
             _onlyExistingNodeOperator(nodeOperatorId);
-            uint256 lockedBondBefore = _accounting.getActualLockedBond(
-                nodeOperatorId
-            );
-
-            _accounting.settleLockedBondETH(nodeOperatorId);
-
-            // settled amount might be zero either if the lock expired, or the bond is zero
-            // so we need to check actual locked bond before to determine if the penalty was settled
-            if (lockedBondBefore > 0) {
+            // Settled amount might be zero either if the lock expired, or the bond is zero so we
+            // need to check if the penalty was applied.
+            bool applied = _accounting.settleLockedBondETH(nodeOperatorId);
+            if (applied) {
                 emit ELRewardsStealingPenaltySettled(nodeOperatorId);
 
                 // Nonce should be updated if depositableValidators change
