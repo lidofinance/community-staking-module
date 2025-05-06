@@ -425,6 +425,7 @@ contract CSModule is
             targetLimit = 0;
         }
 
+        // TODO: Consider removing to save bytecode.
         if (
             no.targetLimitMode == targetLimitMode &&
             no.targetLimit == targetLimit
@@ -462,7 +463,7 @@ contract CSModule is
     function unsafeUpdateValidatorsCount(
         uint256 nodeOperatorId,
         uint256 exitedValidatorsKeysCount,
-        uint256 stuckValidatorsKeysCount
+        uint256 stuckValidatorsKeysCount // TODO: Check function signature.
     ) external onlyRole(STAKING_ROUTER_ROLE) {
         // NOTE: Silence the unused argument warning.
         stuckValidatorsKeysCount;
@@ -720,6 +721,7 @@ contract CSModule is
         for (uint256 i; i < withdrawalsInfo.length; ++i) {
             ValidatorWithdrawalInfo memory withdrawalInfo = withdrawalsInfo[i];
 
+            // TODO: Check calldata version.
             _onlyExistingNodeOperator(withdrawalInfo.nodeOperatorId);
             NodeOperator storage no = _nodeOperators[
                 withdrawalInfo.nodeOperatorId
