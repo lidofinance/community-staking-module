@@ -1371,7 +1371,7 @@ contract CSModule is
         }
 
         unchecked {
-            // @dev No need to safe cast due to conditions above
+            // @dev Invariat sum(no.totalExitedKeys for no in nos) == _totalExitedValidators.
             _totalExitedValidators =
                 (_totalExitedValidators - totalExitedKeys) +
                 uint64(exitedValidatorsCount);
