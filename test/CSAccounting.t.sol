@@ -289,6 +289,7 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         );
 
         assertEq(address(accounting.feeDistributor()), address(feeDistributor));
+        assertEq(accounting.getInitializedVersion(), 2);
     }
 
     function test_initialize_RevertWhen_zeroAdmin() public {
@@ -339,6 +340,23 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
             8 weeks,
             address(0)
         );
+    }
+
+    function test_finalizeUpgradeV2() public {
+        uint256[2][] memory firstCurve = new uint256[2][](1);
+        firstCurve[0] = [uint256(1), 2 ether];
+        uint256[2][] memory secondCurve = new uint256[2][](1);
+        secondCurve[0] = [uint256(1), 1 ether];
+
+        _enableInitializers(address(accounting));
+
+        vm.expectEmit(address(accounting));
+        emit ICSBondCurve.BondCurveAdded(0, firstCurve);
+        vm.expectEmit(address(accounting));
+        emit ICSBondCurve.BondCurveAdded(1, secondCurve);
+        accounting.finalizeUpgradeV2(firstCurve, secondCurve);
+
+        assertEq(accounting.getInitializedVersion(), 2);
     }
 }
 

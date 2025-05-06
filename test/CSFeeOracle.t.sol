@@ -30,9 +30,14 @@ contract CSFeeOracleForTest is CSFeeOracle {
         // contract in tests with no proxy above, we need to set the version to 0.
         CONTRACT_VERSION_POSITION.setStorageUint256(0);
     }
+
+    function mock_setContractVersion(uint256 version) external {
+        CONTRACT_VERSION_POSITION.setStorageUint256(version);
+    }
 }
 
 contract CSFeeOracleTest is Test, Utilities {
+    using stdStorage for StdStorage;
     using Strings for uint256;
 
     struct ChainConfig {
@@ -334,6 +339,44 @@ contract CSFeeOracleTest is Test, Utilities {
         assertEq(oracle.getResumeSinceTimestamp(), type(uint256).max);
     }
 
+    function test_initialize() public {
+        oracle = new CSFeeOracleForTest({
+            secondsPerSlot: chainConfig.secondsPerSlot,
+            genesisTime: chainConfig.genesisTime
+        });
+
+        consensus = new HashConsensus({
+            slotsPerEpoch: chainConfig.slotsPerEpoch,
+            secondsPerSlot: chainConfig.secondsPerSlot,
+            genesisTime: chainConfig.genesisTime,
+            epochsPerFrame: _epochsInDays(28),
+            fastLaneLengthSlots: 0,
+            admin: ORACLE_ADMIN,
+            reportProcessor: address(oracle)
+        });
+
+        DistributorMock distributor = new DistributorMock(
+            address(0),
+            address(0)
+        );
+        CSStrikesMock strikes = new CSStrikesMock();
+
+        oracle.initialize(
+            address(this),
+            address(distributor),
+            address(strikes),
+            address(consensus),
+            CONSENSUS_VERSION
+        );
+
+        vm.assertTrue(
+            oracle.hasRole(oracle.DEFAULT_ADMIN_ROLE(), address(this))
+        );
+        assertEq(address(oracle.feeDistributor()), address(distributor));
+        assertEq(address(oracle.strikes()), address(strikes));
+        assertEq(oracle.getContractVersion(), 2);
+    }
+
     function test_initialize_RevertWhen_AdminCannotBeZero() public {
         oracle = new CSFeeOracleForTest({
             secondsPerSlot: chainConfig.secondsPerSlot,
@@ -363,6 +406,121 @@ contract CSFeeOracleTest is Test, Utilities {
             address(consensus),
             CONSENSUS_VERSION
         );
+    }
+
+    function test_initialize_RevertWhen_ZeroFeeDistributorAddress() public {
+        oracle = new CSFeeOracleForTest({
+            secondsPerSlot: chainConfig.secondsPerSlot,
+            genesisTime: chainConfig.genesisTime
+        });
+
+        consensus = new HashConsensus({
+            slotsPerEpoch: chainConfig.slotsPerEpoch,
+            secondsPerSlot: chainConfig.secondsPerSlot,
+            genesisTime: chainConfig.genesisTime,
+            epochsPerFrame: _epochsInDays(28),
+            fastLaneLengthSlots: 0,
+            admin: ORACLE_ADMIN,
+            reportProcessor: address(oracle)
+        });
+
+        CSStrikesMock strikes = new CSStrikesMock();
+        vm.expectRevert(ICSFeeOracle.ZeroFeeDistributorAddress.selector);
+        oracle.initialize(
+            address(this),
+            address(0),
+            address(strikes),
+            address(consensus),
+            CONSENSUS_VERSION
+        );
+    }
+
+    function test_initialize_RevertWhen_ZeroStrikesAddress() public {
+        oracle = new CSFeeOracleForTest({
+            secondsPerSlot: chainConfig.secondsPerSlot,
+            genesisTime: chainConfig.genesisTime
+        });
+
+        consensus = new HashConsensus({
+            slotsPerEpoch: chainConfig.slotsPerEpoch,
+            secondsPerSlot: chainConfig.secondsPerSlot,
+            genesisTime: chainConfig.genesisTime,
+            epochsPerFrame: _epochsInDays(28),
+            fastLaneLengthSlots: 0,
+            admin: ORACLE_ADMIN,
+            reportProcessor: address(oracle)
+        });
+
+        DistributorMock distributor = new DistributorMock(
+            address(0),
+            address(0)
+        );
+        vm.expectRevert(ICSFeeOracle.ZeroStrikesAddress.selector);
+        oracle.initialize(
+            address(this),
+            address(distributor),
+            address(0),
+            address(consensus),
+            CONSENSUS_VERSION
+        );
+    }
+
+    function test_finalizeUpgradeV2() public {
+        oracle = new CSFeeOracleForTest({
+            secondsPerSlot: chainConfig.secondsPerSlot,
+            genesisTime: chainConfig.genesisTime
+        });
+        oracle.mock_setContractVersion(1);
+
+        CSStrikesMock strikes = new CSStrikesMock();
+
+        oracle.finalizeUpgradeV2(CONSENSUS_VERSION, address(strikes));
+        assertEq(address(oracle.strikes()), address(strikes));
+        assertEq(oracle.getContractVersion(), 2);
+    }
+
+    function test_finalizeUpgradeV2_nullifyStorageSlot() public {
+        oracle = new CSFeeOracleForTest({
+            secondsPerSlot: chainConfig.secondsPerSlot,
+            genesisTime: chainConfig.genesisTime
+        });
+        oracle.mock_setContractVersion(1);
+
+        bytes32 strikesSlot = bytes32(
+            stdstore
+                .target(address(oracle))
+                .sig(ICSFeeOracle.strikes.selector)
+                .find()
+        );
+        vm.store(address(oracle), strikesSlot, bytes32(type(uint256).max));
+
+        CSStrikesMock strikes = new CSStrikesMock();
+
+        oracle.finalizeUpgradeV2(CONSENSUS_VERSION, address(strikes));
+
+        bytes12 head;
+        address strikesAddress;
+        bytes32 storageValue = vm.load(address(oracle), strikesSlot);
+        assembly {
+            strikesAddress := and(
+                storageValue,
+                0x000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+            )
+            head := shr(160, storageValue)
+        }
+        assertEq(strikesAddress, address(strikes));
+        assertEq(head, bytes12(0));
+    }
+
+    function test_finalizeUpgradeV2_revertWhen_ZeroStrikesAddress() public {
+        oracle = new CSFeeOracleForTest({
+            secondsPerSlot: chainConfig.secondsPerSlot,
+            genesisTime: chainConfig.genesisTime
+        });
+        oracle.mock_setContractVersion(1);
+
+        vm.expectRevert(ICSFeeOracle.ZeroStrikesAddress.selector);
+        oracle.finalizeUpgradeV2(CONSENSUS_VERSION, address(0));
     }
 
     function test_setFeeDistributorContract() public {

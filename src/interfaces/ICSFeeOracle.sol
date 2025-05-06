@@ -5,6 +5,7 @@ pragma solidity 0.8.24;
 
 import { IAssetRecovererLib } from "../lib/AssetRecovererLib.sol";
 import { ICSFeeDistributor } from "./ICSFeeDistributor.sol";
+import { ICSStrikes } from "./ICSStrikes.sol";
 
 interface ICSFeeOracle is IAssetRecovererLib {
     struct ReportData {
@@ -52,6 +53,8 @@ interface ICSFeeOracle is IAssetRecovererLib {
     function RECOVERER_ROLE() external view returns (bytes32);
 
     function feeDistributor() external view returns (ICSFeeDistributor);
+
+    function strikes() external view returns (ICSStrikes);
 
     /// @notice Set a new fee distributor contract
     /// @param feeDistributorContract Address of the new fee distributor contract
