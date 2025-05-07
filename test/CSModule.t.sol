@@ -4623,11 +4623,7 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         vm.expectEmit(address(csm));
         emit ICSModule.TargetValidatorsCountChanged(noId, 1, 1);
         csm.updateTargetValidatorsLimits(noId, 1, 1);
-
-        vm.recordLogs();
         csm.updateTargetValidatorsLimits(noId, 1, 1);
-        Vm.Log[] memory entries = vm.getRecordedLogs();
-        assertEq(entries.length, 0);
 
         NodeOperatorSummary memory summary = getNodeOperatorSummary(noId);
         assertEq(summary.targetLimitMode, 1);
@@ -4654,10 +4650,6 @@ contract CsmUpdateTargetValidatorsLimits is CSMCommon {
         vm.expectEmit(address(csm));
         emit ICSModule.TargetValidatorsCountChanged(noId, 0, 0);
         csm.updateTargetValidatorsLimits(noId, 0, 0);
-
-        vm.recordLogs();
-        csm.updateTargetValidatorsLimits(noId, 0, 8);
-        assertEq(vm.getRecordedLogs().length, 0);
 
         NodeOperator memory no = csm.getNodeOperator(noId);
         assertEq(no.targetLimit, 0);

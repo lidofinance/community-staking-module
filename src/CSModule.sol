@@ -425,13 +425,13 @@ contract CSModule is
             targetLimit = 0;
         }
 
-        // TODO: Consider removing to save bytecode.
-        if (
-            no.targetLimitMode == targetLimitMode &&
-            no.targetLimit == targetLimit
-        ) {
-            return;
-        }
+        // NOTE: Bytecode saving trick; increased gas cost in rare cases is fine.
+        // if (
+        //     no.targetLimitMode == targetLimitMode &&
+        //     no.targetLimit == targetLimit
+        // ) {
+        //     return;
+        // }
 
         // @dev No need to safe cast due to conditions above
         no.targetLimitMode = uint8(targetLimitMode);
