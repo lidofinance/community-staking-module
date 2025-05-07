@@ -111,52 +111,30 @@ contract CSStrikes is
 
     /// @inheritdoc ICSStrikes
     function processBadPerformanceProof(
-        uint256 nodeOperatorId,
-        uint256 keyIndex,
-        uint256[] calldata strikesData,
+        ModuleKeyStrikes[] calldata keyStrikesList,
         bytes32[] calldata proof,
+        bool[] calldata proofFlags,
         address refundRecipient
     ) external {
         // NOTE: We allow empty proofs to be delivered because there’s no way to use the tree’s
         // internal nodes without brute-forcing the input data.
 
-        bytes memory pubkey = MODULE.getSigningKeys(
-            nodeOperatorId,
-            keyIndex,
-            1
-        );
+        bytes[] memory pubkeys = new bytes[](keyStrikesList.length);
+        for (uint256 i; i < pubkeys.length; ++i) {
+            pubkeys[i] = _loadPubKey(keyStrikesList[i]);
+        }
 
-        if (!verifyProof(nodeOperatorId, pubkey, strikesData, proof)) {
+        if (!verifyProof(keyStrikesList, pubkeys, proof, proofFlags)) {
             revert InvalidProof();
-        }
-
-        uint256 strikes = 0;
-        for (uint256 i; i < strikesData.length; ++i) {
-            strikes += strikesData[i];
-        }
-
-        uint256 curveId = ACCOUNTING.getBondCurveId(nodeOperatorId);
-
-        (, uint256 threshold) = MODULE.PARAMETERS_REGISTRY().getStrikesParams(
-            curveId
-        );
-        if (strikes < threshold) {
-            revert NotEnoughStrikesToEject();
-        }
-
-        // Sanity check. This is possible only if there is invalid data in the tree
-        if (
-            keyIndex >= MODULE.getNodeOperatorTotalDepositedKeys(nodeOperatorId)
-        ) {
-            revert SigningKeysInvalidOffset();
         }
 
         refundRecipient = refundRecipient == address(0)
             ? msg.sender
             : refundRecipient;
 
-        ejector.ejectBadPerformer(nodeOperatorId, pubkey, refundRecipient);
-        EXIT_PENALTIES.processStrikesReport(nodeOperatorId, pubkey);
+        for (uint256 i; i < keyStrikesList.length; ++i) {
+            _ejectByStrikes(keyStrikesList[i], pubkeys[i], refundRecipient);
+        }
     }
 
     /// @inheritdoc ICSStrikes
@@ -166,29 +144,40 @@ contract CSStrikes is
 
     /// @inheritdoc ICSStrikes
     function verifyProof(
-        uint256 nodeOperatorId,
-        bytes memory pubkey,
-        uint256[] calldata strikesData,
-        bytes32[] calldata proof
+        ModuleKeyStrikes[] calldata keyStrikesList,
+        bytes[] memory pubkeys,
+        bytes32[] calldata proof,
+        bool[] calldata proofFlags
     ) public view returns (bool) {
+        bytes32[] memory leaves = new bytes32[](keyStrikesList.length);
+        for (uint256 i; i < leaves.length; i++) {
+            leaves[i] = hashLeaf(keyStrikesList[i], pubkeys[i]);
+        }
+
         return
-            MerkleProof.verifyCalldata(
+            MerkleProof.multiProofVerifyCalldata(
                 proof,
+                proofFlags,
                 treeRoot,
-                hashLeaf(nodeOperatorId, pubkey, strikesData)
+                leaves
             );
     }
 
     /// @inheritdoc ICSStrikes
     function hashLeaf(
-        uint256 nodeOperatorId,
-        bytes memory pubkey,
-        uint256[] calldata strikesData
+        ModuleKeyStrikes calldata keyStrikes,
+        bytes memory pubkey
     ) public pure returns (bytes32) {
         return
             keccak256(
                 bytes.concat(
-                    keccak256(abi.encode(nodeOperatorId, pubkey, strikesData))
+                    keccak256(
+                        abi.encode(
+                            keyStrikes.nodeOperatorId,
+                            pubkey,
+                            keyStrikes.data
+                        )
+                    )
                 )
             );
     }
@@ -199,5 +188,50 @@ contract CSStrikes is
         }
         ejector = ICSEjector(_ejector);
         emit EjectorSet(_ejector);
+    }
+
+    function _loadPubKey(
+        ModuleKeyStrikes calldata keyStrikes
+    ) internal view returns (bytes memory pubkey) {
+        // Sanity check. This is possible only if there is invalid data in the tree
+        if (
+            keyStrikes.keyIndex >=
+            MODULE.getNodeOperatorTotalDepositedKeys(keyStrikes.nodeOperatorId)
+        ) {
+            revert SigningKeysInvalidOffset();
+        }
+
+        pubkey = MODULE.getSigningKeys(
+            keyStrikes.nodeOperatorId,
+            keyStrikes.keyIndex,
+            1
+        );
+    }
+
+    function _ejectByStrikes(
+        ModuleKeyStrikes calldata keyStrikes,
+        bytes memory pubkey,
+        address refundRecipient
+    ) internal {
+        uint256 strikes = 0;
+        for (uint256 i; i < keyStrikes.data.length; ++i) {
+            strikes += keyStrikes.data[i];
+        }
+
+        uint256 curveId = ACCOUNTING.getBondCurveId(keyStrikes.nodeOperatorId);
+
+        (, uint256 threshold) = MODULE.PARAMETERS_REGISTRY().getStrikesParams(
+            curveId
+        );
+        if (strikes < threshold) {
+            revert NotEnoughStrikesToEject();
+        }
+
+        ejector.ejectBadPerformer(
+            keyStrikes.nodeOperatorId,
+            pubkey,
+            refundRecipient
+        );
+        EXIT_PENALTIES.processStrikesReport(keyStrikes.nodeOperatorId, pubkey);
     }
 }

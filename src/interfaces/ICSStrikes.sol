@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
+pragma solidity 0.8.24;
+
 import { ICSModule } from "./ICSModule.sol";
 import { ICSAccounting } from "./ICSAccounting.sol";
 import { ICSParametersRegistry } from "./ICSParametersRegistry.sol";
 import { ICSExitPenalties } from "./ICSExitPenalties.sol";
 import { ICSEjector } from "./ICSEjector.sol";
-
-pragma solidity 0.8.24;
 
 interface ICSStrikes {
     /// @dev Emitted when strikes data is updated
@@ -29,6 +29,12 @@ interface ICSStrikes {
     error InvalidProof();
     error SigningKeysInvalidOffset();
     error NotEnoughStrikesToEject();
+
+    struct ModuleKeyStrikes {
+        uint256 nodeOperatorId;
+        uint256 keyIndex;
+        uint256[] data;
+    }
 
     function ORACLE() external view returns (address);
 
@@ -53,17 +59,15 @@ interface ICSStrikes {
     /// @param _ejector Address of the Ejector contract
     function setEjector(address _ejector) external;
 
-    /// @notice Report Node Operator's key as bad performing
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param keyIndex Index of the withdrawn key in the Node Operator's keys storage
-    /// @param strikesData Strikes of the Node Operator's validator key. TODO: value is to be defined (timestamps or refSlots ?)
-    /// @param proof Proof of the strikes
+    /// @notice Report multiple CSM keys as bad performing
+    /// @param keyStrikesList List of ModuleKeyStrikes structs
+    /// @param proof Multi-proof of the strikes
+    /// @param proofFlags Flags to process the multi-proof, see OZ `processMultiProof`
     /// @param refundRecipient Address to send the refund to
     function processBadPerformanceProof(
-        uint256 nodeOperatorId,
-        uint256 keyIndex,
-        uint256[] calldata strikesData,
+        ModuleKeyStrikes[] calldata keyStrikesList,
         bytes32[] calldata proof,
+        bool[] calldata proofFlags,
         address refundRecipient
     ) external;
 
@@ -76,28 +80,26 @@ interface ICSStrikes {
         string calldata _treeCid
     ) external;
 
-    /// @notice Check if Key is eligible to be ejected
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param pubkey Pubkey of the Node Operator
-    /// @param strikesData Strikes of the Node Operator
-    /// @param proof Merkle proof of the leaf
+    /// @notice Check the contract accepts the provided multi-proof
+    /// @param keyStrikesList List of ModuleKeyStrikes structs
+    /// @param proof Multi-proof of the strikes
+    /// @param proofFlags Flags to process the multi-proof, see OZ `processMultiProof`
+    /// @return bool True if proof is accepted
     function verifyProof(
-        uint256 nodeOperatorId,
-        bytes calldata pubkey,
-        uint256[] calldata strikesData,
-        bytes32[] calldata proof
+        ModuleKeyStrikes[] calldata keyStrikesList,
+        bytes[] memory pubkeys,
+        bytes32[] calldata proof,
+        bool[] calldata proofFlags
     ) external view returns (bool);
 
-    /// @notice Get a hash of a leaf
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param pubkey pubkey of the Node Operator
-    /// @param strikes Strikes of the Node Operator
+    /// @notice Get a hash of a leaf a tree of strikes
+    /// @param keyStrikes ModuleKeyStrikes struct
+    /// @param pubkey Public key
     /// @return Hash of the leaf
     /// @dev Double hash the leaf to prevent second pre-image attacks
     function hashLeaf(
-        uint256 nodeOperatorId,
-        bytes calldata pubkey,
-        uint256[] calldata strikes
+        ModuleKeyStrikes calldata keyStrikes,
+        bytes calldata pubkey
     ) external pure returns (bytes32);
 
     /// @notice Returns the initialized version of the contract

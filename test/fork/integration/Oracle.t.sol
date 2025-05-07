@@ -1,9 +1,14 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.10;
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
+// SPDX-License-Identifier: GPL-3.0
+
+pragma solidity ^0.8.24;
+
+import "forge-std/Test.sol";
 
 import "../../helpers/Fixtures.sol";
 import "../../helpers/MerkleTree.sol";
-import "forge-std/Test.sol";
+
+import { ICSStrikes } from "../../../src/interfaces/ICSStrikes.sol";
 import { ICSFeeOracle } from "../../../src/interfaces/ICSFeeOracle.sol";
 import { ICSExitPenalties } from "../../../src/interfaces/ICSExitPenalties.sol";
 import { NodeOperatorManagementProperties } from "../../../src/interfaces/ICSModule.sol";
@@ -189,6 +194,15 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
         uint256 penalty = parametersRegistry.getBadPerformancePenalty(
             accounting.getBondCurveId(nodeOperatorId)
         );
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+        keyStrikesList[0] = ICSStrikes.ModuleKeyStrikes({
+            nodeOperatorId: nodeOperatorId,
+            keyIndex: keyIndex,
+            data: strikesData
+        });
+        bool[] memory proofFlags = new bool[](proof.length);
+
         vm.expectEmit(address(exitPenalties));
         emit ICSExitPenalties.StrikesPenaltyProcessed(
             nodeOperatorId,
@@ -196,13 +210,26 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
             penalty
         );
         vm.startSnapshotGas("CSStrikes.processBadPerformanceProof");
-        strikes.processBadPerformanceProof(
-            nodeOperatorId,
-            keyIndex,
-            strikesData,
+        this.processBadPerformanceProof(
+            keyStrikesList,
             proof,
+            proofFlags,
             address(0)
         );
         vm.stopSnapshotGas();
+    }
+
+    function processBadPerformanceProof(
+        ICSStrikes.ModuleKeyStrikes[] calldata keyStrikes,
+        bytes32[] calldata proof,
+        bool[] calldata proofFlags,
+        address refundRecipient
+    ) external {
+        strikes.processBadPerformanceProof(
+            keyStrikes,
+            proof,
+            proofFlags,
+            refundRecipient
+        );
     }
 }

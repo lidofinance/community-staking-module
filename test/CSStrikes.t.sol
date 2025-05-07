@@ -1,6 +1,9 @@
 // SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
+
 pragma solidity 0.8.24;
+
+import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 import "./helpers/mocks/EjectorMock.sol";
 
@@ -39,6 +42,38 @@ contract CSStrikesTestBase is Test, Fixtures, Utilities, InvariantAsserts {
         vm.pauseGasMetering();
         assertStrikesTree(strikes);
         vm.resumeGasMetering();
+    }
+
+    // A bunch of wrapper to test functions with calldata arguments.
+
+    function hashLeaf(
+        ICSStrikes.ModuleKeyStrikes calldata keyStrikes,
+        bytes memory pubkey
+    ) external view returns (bytes32) {
+        return strikes.hashLeaf(keyStrikes, pubkey);
+    }
+
+    function verifyProof(
+        ICSStrikes.ModuleKeyStrikes[] calldata keyStrikesList,
+        bytes[] memory pubkeys,
+        bytes32[] calldata proof,
+        bool[] calldata proofFlags
+    ) external view returns (bool) {
+        return strikes.verifyProof(keyStrikesList, pubkeys, proof, proofFlags);
+    }
+
+    function processBadPerformanceProof(
+        ICSStrikes.ModuleKeyStrikes[] calldata keyStrikesList,
+        bytes32[] calldata proof,
+        bool[] calldata proofFlags,
+        address refundRecipient
+    ) external {
+        strikes.processBadPerformanceProof(
+            keyStrikesList,
+            proof,
+            proofFlags,
+            refundRecipient
+        );
     }
 }
 
@@ -137,266 +172,6 @@ contract CSStrikesTest is CSStrikesTestBase {
         vm.expectRevert(ICSStrikes.ZeroEjectorAddress.selector);
         vm.prank(admin);
         strikes.setEjector(address(0));
-    }
-
-    function test_hashLeaf() public assertInvariants {
-        uint256 noId = 42;
-        (bytes memory pubkey, ) = keysSignatures(1);
-        uint256[] memory strikesData = new uint256[](6);
-        strikesData[0] = 100500;
-        // keccak256(bytes.concat(keccak256(abi.encode(42, pubkey, [100500])))) = 0x01eba5ed7fb9c5ebb4262844c7125628afcbea15e57bc7f4dd0c80d34d633584
-        assertEq(
-            strikes.hashLeaf(noId, pubkey, strikesData),
-            0x01eba5ed7fb9c5ebb4262844c7125628afcbea15e57bc7f4dd0c80d34d633584
-        );
-    }
-
-    function test_verifyProof() public {
-        uint256 noId = 42;
-        (bytes memory pubkey, ) = keysSignatures(1);
-        uint256[] memory strikesData = new uint256[](6);
-        strikesData[0] = 1;
-
-        tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
-        tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
-
-        bytes32 root = tree.root();
-        vm.prank(oracle);
-        strikes.processOracleReport(root, someCIDv0());
-
-        bytes32[] memory proof = tree.getProof(0);
-
-        bool isValid = strikes.verifyProof({
-            nodeOperatorId: noId,
-            pubkey: pubkey,
-            strikesData: strikesData,
-            proof: proof
-        });
-        assertTrue(isValid);
-    }
-
-    function test_verifyProof_WhenInvalid() public {
-        uint256 noId = 42;
-        (bytes memory pubkey, ) = keysSignatures(1);
-        uint256[] memory strikesData = new uint256[](6);
-        strikesData[0] = 1;
-
-        tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
-        tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
-
-        bytes32 root = tree.root();
-        vm.prank(oracle);
-        strikes.processOracleReport(root, someCIDv0());
-
-        bytes32[] memory proof = tree.getProof(1);
-
-        bool isValid = strikes.verifyProof({
-            nodeOperatorId: noId,
-            pubkey: pubkey,
-            strikesData: strikesData,
-            proof: proof
-        });
-        assertFalse(isValid);
-    }
-
-    function test_processBadPerformanceProof() public {
-        uint256 noId = 42;
-        module.mock_setNodeOperatorTotalDepositedKeys(1);
-        bytes memory pubkey = module.getSigningKeys(0, 0, 1);
-        uint256[] memory strikesData = new uint256[](3);
-        strikesData[0] = 1;
-        strikesData[1] = 1;
-        strikesData[2] = 1;
-
-        tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
-        tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
-
-        bytes32 root = tree.root();
-        vm.prank(oracle);
-        strikes.processOracleReport(root, someCIDv0());
-
-        bytes32[] memory proof = tree.getProof(0);
-
-        vm.expectCall(
-            address(ejector),
-            abi.encodeWithSelector(
-                ICSEjector.ejectBadPerformer.selector,
-                noId,
-                pubkey,
-                refundRecipient
-            )
-        );
-        vm.expectCall(
-            address(exitPenalties),
-            abi.encodeWithSelector(
-                ICSExitPenalties.processStrikesReport.selector,
-                noId,
-                pubkey
-            )
-        );
-        strikes.processBadPerformanceProof(
-            noId,
-            0,
-            strikesData,
-            proof,
-            refundRecipient
-        );
-    }
-
-    function test_processBadPerformanceProof_defaultRefundRecipient() public {
-        uint256 noId = 42;
-        module.mock_setNodeOperatorTotalDepositedKeys(1);
-        bytes memory pubkey = module.getSigningKeys(0, 0, 1);
-        uint256[] memory strikesData = new uint256[](3);
-        strikesData[0] = 1;
-        strikesData[1] = 1;
-        strikesData[2] = 1;
-
-        tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
-        tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
-
-        bytes32 root = tree.root();
-        vm.prank(oracle);
-        strikes.processOracleReport(root, someCIDv0());
-
-        bytes32[] memory proof = tree.getProof(0);
-
-        vm.expectCall(
-            address(ejector),
-            abi.encodeWithSelector(
-                ICSEjector.ejectBadPerformer.selector,
-                noId,
-                pubkey,
-                address(this)
-            )
-        );
-        strikes.processBadPerformanceProof(
-            noId,
-            0,
-            strikesData,
-            proof,
-            address(0)
-        );
-    }
-
-    function test_processBadPerformanceProof_RevertWhen_InvalidProof() public {
-        uint256 noId = 42;
-        module.mock_setNodeOperatorTotalDepositedKeys(1);
-        bytes memory pubkey = module.getSigningKeys(0, 0, 1);
-        uint256[] memory strikesData = new uint256[](1);
-        strikesData[0] = 1;
-
-        tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
-        tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
-
-        bytes32 root = tree.root();
-        vm.prank(oracle);
-        strikes.processOracleReport(root, someCIDv0());
-
-        bytes32[] memory proof = tree.getProof(1);
-
-        vm.expectRevert(ICSStrikes.InvalidProof.selector);
-        strikes.processBadPerformanceProof(
-            noId,
-            0,
-            strikesData,
-            proof,
-            refundRecipient
-        );
-    }
-
-    function test_processBadPerformanceProof_RevertWhen_NotEnoughStrikesToEject()
-        public
-    {
-        uint256 noId = 42;
-        module.mock_setNodeOperatorTotalDepositedKeys(1);
-        (bytes memory pubkey, ) = keysSignatures(1);
-        uint256[] memory strikesData = new uint256[](1);
-        strikesData[0] = 1;
-
-        tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
-        tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
-
-        bytes32 root = tree.root();
-        vm.prank(oracle);
-        strikes.processOracleReport(root, someCIDv0());
-
-        bytes32[] memory proof = tree.getProof(0);
-
-        vm.expectRevert(ICSStrikes.NotEnoughStrikesToEject.selector);
-        strikes.processBadPerformanceProof(
-            noId,
-            0,
-            strikesData,
-            proof,
-            refundRecipient
-        );
-    }
-
-    function test_processBadPerformanceProof_RevertWhen_SigningKeysInvalidOffset()
-        public
-    {
-        uint256 noId = 42;
-        module.mock_setNodeOperatorTotalDepositedKeys(1);
-        (bytes memory pubkey, ) = keysSignatures(1, 1);
-        uint256[] memory strikesData = new uint256[](3);
-        strikesData[0] = 1;
-        strikesData[1] = 1;
-        strikesData[2] = 1;
-
-        tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
-        tree.pushLeaf(abi.encode(noId + 1, pubkey, strikesData));
-
-        bytes32 root = tree.root();
-        vm.prank(oracle);
-        strikes.processOracleReport(root, someCIDv0());
-
-        bytes32[] memory proof = tree.getProof(0);
-
-        vm.expectRevert(ICSStrikes.SigningKeysInvalidOffset.selector);
-        strikes.processBadPerformanceProof(
-            noId,
-            1,
-            strikesData,
-            proof,
-            refundRecipient
-        );
-    }
-
-    function test_processBadPerformanceProof_Accepts_EmptyProof() public {
-        uint256 noId = 42;
-        module.mock_setNodeOperatorTotalDepositedKeys(1);
-        (bytes memory pubkey, ) = keysSignatures(1);
-        uint256[] memory strikesData = new uint256[](3);
-        strikesData[0] = 1;
-        strikesData[1] = 1;
-        strikesData[2] = 1;
-
-        tree.pushLeaf(abi.encode(noId, pubkey, strikesData));
-
-        bytes32 root = tree.root();
-        vm.prank(oracle);
-        strikes.processOracleReport(root, someCIDv0());
-
-        bytes32[] memory proof = tree.getProof(0);
-        assertEq(proof.length, 0);
-
-        vm.expectCall(
-            address(ejector),
-            abi.encodeWithSelector(
-                ICSEjector.ejectBadPerformer.selector,
-                noId,
-                pubkey,
-                refundRecipient
-            )
-        );
-        strikes.processBadPerformanceProof(
-            noId,
-            0,
-            strikesData,
-            proof,
-            refundRecipient
-        );
     }
 
     function test_processOracleReport() public assertInvariants {
@@ -536,5 +311,537 @@ contract CSStrikesTest is CSStrikesTestBase {
         vm.expectRevert(ICSStrikes.InvalidReportData.selector);
         vm.prank(oracle);
         strikes.processOracleReport(root, someCIDv0());
+    }
+}
+
+contract CSStrikesProofTest is CSStrikesTestBase {
+    using DeepCopy for *;
+
+    struct Leaf {
+        ICSStrikes.ModuleKeyStrikes keyStrikes;
+        bytes pubkey;
+    }
+
+    Leaf[] internal leaves;
+
+    function setUp() public {
+        stranger = nextAddress("STRANGER");
+        admin = nextAddress("ADMIN");
+        refundRecipient = nextAddress("REFUND_RECIPIENT");
+        oracle = nextAddress("ORACLE");
+        module = new CSMMock();
+        exitPenalties = address(new ExitPenaltiesMock(address(module)));
+        ejector = address(new EjectorMock(address(module)));
+
+        strikes = new CSStrikes(address(module), oracle, exitPenalties);
+        _enableInitializers(address(strikes));
+        strikes.initialize(admin, ejector);
+
+        tree = new MerkleTree();
+
+        vm.label(address(strikes), "STRIKES");
+    }
+
+    modifier withTreeOfLeavesCount(uint256 leavesCount) {
+        vm.pauseGasMetering();
+        for (uint256 i; i < leavesCount; ++i) {
+            uint256[] memory strikesData = UintArr(100500, 0, 0);
+            (bytes memory pubkey, ) = keysSignatures(1, i);
+            leaves.push(
+                Leaf(
+                    ICSStrikes.ModuleKeyStrikes({
+                        nodeOperatorId: i,
+                        keyIndex: 0,
+                        data: strikesData
+                    }),
+                    pubkey
+                )
+            );
+            tree.pushLeaf(abi.encode(i, pubkey, strikesData));
+        }
+        vm.resumeGasMetering();
+
+        bytes32 root = tree.root();
+        vm.prank(oracle);
+        strikes.processOracleReport(root, someCIDv0());
+
+        _;
+    }
+
+    function test_hashLeaf() public {
+        (bytes memory pubkey, ) = keysSignatures(1);
+        assertEq(
+            this.hashLeaf(
+                ICSStrikes.ModuleKeyStrikes({
+                    nodeOperatorId: 42,
+                    keyIndex: 0,
+                    data: UintArr(100500)
+                }),
+                pubkey
+            ),
+            // keccak256(bytes.concat(keccak256(abi.encode(42, pubkey, [100500])))) = 0x3a1e33fb3e7fe10371e522cee19c593a324542e57e4da98719979d7490d2eed7
+            0x3a1e33fb3e7fe10371e522cee19c593a324542e57e4da98719979d7490d2eed7
+        );
+    }
+
+    function test_verifyProofOneLeaf() public withTreeOfLeavesCount(7) {
+        for (uint256 i; i < leaves.length; i++) {
+            Leaf memory leaf = leaves[i];
+
+            ICSStrikes.ModuleKeyStrikes[]
+                memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+            keyStrikesList[0] = leaf.keyStrikes;
+
+            bytes[] memory pubkeys = new bytes[](1);
+            pubkeys[0] = leaf.pubkey;
+
+            bytes32[] memory proof = tree.getProof(i);
+            bool[] memory proofFlags = new bool[](proof.length);
+
+            bool isValid = this.verifyProof(
+                keyStrikesList,
+                pubkeys,
+                proof,
+                proofFlags
+            );
+            assertTrue(isValid);
+        }
+    }
+
+    function test_verifyProofAllLeaves() public withTreeOfLeavesCount(7) {
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](
+                leaves.length
+            );
+        bytes[] memory pubkeys = new bytes[](leaves.length);
+
+        for (uint256 i; i < leaves.length; ++i) {
+            keyStrikesList[i] = leaves[i].keyStrikes;
+            pubkeys[i] = leaves[i].pubkey;
+        }
+
+        bool[] memory proofFlags = new bool[](leaves.length - 1);
+        for (uint256 i; i < proofFlags.length; ++i) {
+            proofFlags[i] = true;
+        }
+
+        bool isValid = this.verifyProof(
+            keyStrikesList,
+            pubkeys,
+            new bytes32[](0),
+            proofFlags
+        );
+        assertTrue(isValid);
+    }
+
+    function test_verifyProofTwoSiblings() public withTreeOfLeavesCount(7) {
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](2);
+        keyStrikesList[0] = leaves[0].keyStrikes;
+        keyStrikesList[1] = leaves[1].keyStrikes;
+
+        bytes[] memory pubkeys = new bytes[](2);
+        pubkeys[0] = leaves[0].pubkey;
+        pubkeys[1] = leaves[1].pubkey;
+
+        bytes32[] memory singleLeafProof = tree.getProof(0);
+        bytes32[] memory proof = new bytes32[](singleLeafProof.length - 1);
+        for (uint256 i; i < proof.length; ++i) {
+            proof[i] = singleLeafProof[i + 1];
+        }
+
+        bool[] memory proofFlags = new bool[](singleLeafProof.length);
+        proofFlags[0] = true; // Start from the sibling leaves
+        for (uint256 i = 1; i < proofFlags.length; ++i) {
+            proofFlags[i] = false; // The rest from the proof
+        }
+
+        bool isValid = this.verifyProof(
+            keyStrikesList,
+            pubkeys,
+            proof,
+            proofFlags
+        );
+        assertTrue(isValid);
+    }
+
+    function test_verifyProof_RevertWhen_WrongFlagsLength()
+        public
+        withTreeOfLeavesCount(7)
+    {
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+        keyStrikesList[0] = leaves[0].keyStrikes;
+
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = leaves[0].pubkey;
+
+        bytes32[] memory proof = tree.getProof(0);
+
+        // Just right
+        {
+            bool[] memory proofFlags = new bool[](proof.length);
+            for (uint256 i; i < proofFlags.length; ++i) {
+                proofFlags[i] = false;
+            }
+
+            bool isValid = this.verifyProof(
+                keyStrikesList,
+                pubkeys,
+                proof,
+                proofFlags
+            );
+            assertTrue(isValid);
+        }
+
+        // Not enough
+        {
+            bool[] memory proofFlags = new bool[](proof.length - 1);
+            for (uint256 i; i < proofFlags.length; ++i) {
+                proofFlags[i] = false;
+            }
+
+            vm.expectRevert(MerkleProof.MerkleProofInvalidMultiproof.selector);
+            this.verifyProof(keyStrikesList, pubkeys, proof, proofFlags);
+        }
+
+        // Too much
+        {
+            bool[] memory proofFlags = new bool[](proof.length + 1);
+            for (uint256 i; i < proofFlags.length; ++i) {
+                proofFlags[i] = false;
+            }
+
+            vm.expectRevert(MerkleProof.MerkleProofInvalidMultiproof.selector);
+            this.verifyProof(keyStrikesList, pubkeys, proof, proofFlags);
+        }
+    }
+
+    function test_verifyProofFails_InvalidProof()
+        public
+        withTreeOfLeavesCount(7)
+    {
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+        keyStrikesList[0] = leaves[0].keyStrikes;
+
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = leaves[0].pubkey;
+
+        bytes32[] memory proof = tree.getProof(0);
+        assertGt(proof.length, 0);
+        proof[0] = bytes32(0);
+
+        bool[] memory proofFlags = new bool[](proof.length);
+        for (uint256 i; i < proofFlags.length; ++i) {
+            proofFlags[i] = false;
+        }
+
+        bool isValid = this.verifyProof(
+            keyStrikesList,
+            pubkeys,
+            proof,
+            proofFlags
+        );
+        assertFalse(isValid);
+    }
+
+    function test_verifyProofFails_InvalidLeaf()
+        public
+        withTreeOfLeavesCount(7)
+    {
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+        keyStrikesList[0] = leaves[0].keyStrikes;
+
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = leaves[1].pubkey; // <-- error
+
+        bytes32[] memory proof = tree.getProof(0);
+
+        bool[] memory proofFlags = new bool[](proof.length);
+        for (uint256 i; i < proofFlags.length; ++i) {
+            proofFlags[i] = false;
+        }
+
+        bool isValid = this.verifyProof(
+            keyStrikesList,
+            pubkeys,
+            proof,
+            proofFlags
+        );
+        assertFalse(isValid);
+    }
+
+    function testFuzz_processBadPerformanceProof_HappyPath(
+        uint256 a,
+        uint256 s
+    ) public withTreeOfLeavesCount(99) {
+        // ----------------------------| indicies.length
+        // <----------->| a
+        // <---->| s
+        // to make a+s+s < indicies.length
+        a = bound(a, 0, leaves.length / 2);
+        s = bound(s, 1, a / 2 == 0 ? 1 : a / 2);
+        uint256[] memory indicies = UintArr(a, a + s, a + s + s);
+
+        module.mock_setNodeOperatorTotalDepositedKeys(1);
+
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](
+                indicies.length
+            );
+        (bytes32[] memory proof, bool[] memory proofFlags) = tree.getMultiProof(
+            indicies
+        );
+
+        for (uint256 i; i < indicies.length; i++) {
+            Leaf memory leaf = leaves[indicies[i]];
+            keyStrikesList[i] = leaf.keyStrikes;
+            vm.mockCall(
+                address(module),
+                abi.encodeWithSelector(
+                    ICSModule.getSigningKeys.selector,
+                    leaf.keyStrikes.nodeOperatorId,
+                    leaf.keyStrikes.keyIndex
+                ),
+                abi.encode(leaf.pubkey)
+            );
+            vm.expectCall(
+                address(ejector),
+                abi.encodeWithSelector(
+                    ICSEjector.ejectBadPerformer.selector,
+                    leaf.keyStrikes.nodeOperatorId,
+                    leaf.pubkey,
+                    refundRecipient
+                )
+            );
+            vm.expectCall(
+                address(exitPenalties),
+                abi.encodeWithSelector(
+                    ICSExitPenalties.processStrikesReport.selector,
+                    leaf.keyStrikes.nodeOperatorId,
+                    leaf.pubkey
+                )
+            );
+        }
+        this.processBadPerformanceProof(
+            keyStrikesList,
+            proof,
+            proofFlags,
+            refundRecipient
+        );
+    }
+
+    function test_processBadPerformanceProof_DefaultRefundRecipient()
+        public
+        withTreeOfLeavesCount(3)
+    {
+        Leaf memory leaf = leaves[0];
+
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+        keyStrikesList[0] = leaf.keyStrikes;
+
+        bytes32[] memory proof = tree.getProof(0);
+        bool[] memory proofFlags = new bool[](proof.length);
+
+        module.mock_setNodeOperatorTotalDepositedKeys(1);
+
+        vm.mockCall(
+            address(module),
+            abi.encodeWithSelector(
+                ICSModule.getSigningKeys.selector,
+                leaf.keyStrikes.nodeOperatorId,
+                leaf.keyStrikes.keyIndex
+            ),
+            abi.encode(leaf.pubkey)
+        );
+        vm.expectCall(
+            address(ejector),
+            abi.encodeWithSelector(
+                ICSEjector.ejectBadPerformer.selector,
+                leaf.keyStrikes.nodeOperatorId,
+                leaf.pubkey,
+                address(this)
+            )
+        );
+
+        this.processBadPerformanceProof(
+            keyStrikesList,
+            proof,
+            proofFlags,
+            address(0)
+        );
+    }
+
+    function testFuzz_processBadPerformanceProof_RevertWhen_InvalidProof(
+        uint256 a,
+        uint256 s
+    ) public withTreeOfLeavesCount(99) {
+        // ----------------------------| indicies.length
+        // <----------->| a
+        // <---->| s
+        // to make a+s+s < indicies.length
+        a = bound(a, 0, leaves.length / 2);
+        s = bound(s, 1, a / 2 == 0 ? 1 : a / 2);
+        uint256[] memory indicies = UintArr(a, a + s, a + s + s);
+
+        module.mock_setNodeOperatorTotalDepositedKeys(1);
+
+        (bytes32[] memory proof, bool[] memory proofFlags) = tree.getMultiProof(
+            indicies
+        );
+
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](
+                indicies.length
+            );
+        for (uint256 i; i < indicies.length; i++) {
+            Leaf memory leaf = leaves[indicies[i]];
+            keyStrikesList[i] = leaf.keyStrikes;
+            vm.mockCall(
+                address(module),
+                abi.encodeWithSelector(
+                    ICSModule.getSigningKeys.selector,
+                    leaf.keyStrikes.nodeOperatorId,
+                    leaf.keyStrikes.keyIndex
+                ),
+                abi.encode(leaf.pubkey)
+            );
+        }
+
+        {
+            ICSStrikes.ModuleKeyStrikes[]
+                memory brokenStrikesList = keyStrikesList.copy();
+            brokenStrikesList[0].nodeOperatorId++;
+
+            vm.expectRevert(ICSStrikes.InvalidProof.selector);
+            this.processBadPerformanceProof(
+                brokenStrikesList,
+                proof,
+                proofFlags,
+                refundRecipient
+            );
+        }
+
+        {
+            bytes32[] memory brokenProof = proof.copy();
+            brokenProof[0] = bytes32(uint256(1));
+
+            vm.expectRevert(ICSStrikes.InvalidProof.selector);
+            this.processBadPerformanceProof(
+                keyStrikesList,
+                brokenProof,
+                proofFlags,
+                refundRecipient
+            );
+        }
+
+        this.processBadPerformanceProof(
+            keyStrikesList,
+            proof,
+            proofFlags,
+            refundRecipient
+        );
+    }
+
+    function test_processBadPerformanceProof_RevertWhen_NotEnoughStrikesToEject()
+        public
+        withTreeOfLeavesCount(3)
+    {
+        Leaf memory leaf = leaves[0];
+
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+        keyStrikesList[0] = leaf.keyStrikes;
+
+        bytes32[] memory proof = tree.getProof(0);
+        bool[] memory proofFlags = new bool[](proof.length);
+
+        module.mock_setNodeOperatorTotalDepositedKeys(1);
+        module.PARAMETERS_REGISTRY().setStrikesParams(0, 6, 100501);
+
+        vm.mockCall(
+            address(module),
+            abi.encodeWithSelector(
+                ICSModule.getSigningKeys.selector,
+                leaf.keyStrikes.nodeOperatorId,
+                leaf.keyStrikes.keyIndex
+            ),
+            abi.encode(leaf.pubkey)
+        );
+
+        vm.expectRevert(ICSStrikes.NotEnoughStrikesToEject.selector);
+        this.processBadPerformanceProof(
+            keyStrikesList,
+            proof,
+            proofFlags,
+            address(0)
+        );
+    }
+
+    function test_processBadPerformanceProof_RevertWhen_SigningKeysInvalidOffset()
+        public
+        withTreeOfLeavesCount(1)
+    {
+        Leaf memory leaf = leaves[0];
+
+        ICSStrikes.ModuleKeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+        keyStrikesList[0] = leaf.keyStrikes;
+
+        module.mock_setNodeOperatorTotalDepositedKeys(0);
+
+        vm.mockCall(
+            address(module),
+            abi.encodeWithSelector(
+                ICSModule.getSigningKeys.selector,
+                leaf.keyStrikes.nodeOperatorId,
+                leaf.keyStrikes.keyIndex
+            ),
+            abi.encode(leaf.pubkey)
+        );
+
+        vm.expectRevert(ICSStrikes.SigningKeysInvalidOffset.selector);
+        this.processBadPerformanceProof(
+            keyStrikesList,
+            new bytes32[](0),
+            new bool[](0),
+            address(0)
+        );
+    }
+}
+
+library DeepCopy {
+    function copy(
+        ICSStrikes.ModuleKeyStrikes[] memory arr
+    ) internal returns (ICSStrikes.ModuleKeyStrikes[] memory buf) {
+        buf = new ICSStrikes.ModuleKeyStrikes[](arr.length);
+        for (uint256 i; i < buf.length; ++i) {
+            buf[i] = ICSStrikes.ModuleKeyStrikes({
+                nodeOperatorId: arr[i].nodeOperatorId,
+                keyIndex: arr[i].keyIndex,
+                data: copy(arr[i].data)
+            });
+        }
+    }
+
+    function copy(
+        bytes32[] memory arr
+    ) internal returns (bytes32[] memory buf) {
+        buf = new bytes32[](arr.length);
+        for (uint256 i; i < buf.length; ++i) {
+            buf[i] = arr[i];
+        }
+    }
+
+    function copy(
+        uint256[] memory arr
+    ) internal returns (uint256[] memory buf) {
+        buf = new uint256[](arr.length);
+        for (uint256 i; i < buf.length; ++i) {
+            buf[i] = arr[i];
+        }
     }
 }
