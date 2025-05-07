@@ -721,7 +721,6 @@ contract CSModule is
         for (uint256 i; i < withdrawalsInfo.length; ++i) {
             ValidatorWithdrawalInfo memory withdrawalInfo = withdrawalsInfo[i];
 
-            // TODO: Check calldata version.
             _onlyExistingNodeOperator(withdrawalInfo.nodeOperatorId);
             NodeOperator storage no = _nodeOperators[
                 withdrawalInfo.nodeOperatorId
