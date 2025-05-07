@@ -757,7 +757,8 @@ contract CSModule is
                 pubkey
             );
 
-            // it is safe to use unchecked for penalty sum, due to it's limited to uint248 in the structure
+            // It is safe to use unchecked for penalty sum, due to it's limited to uint248 in the
+            // structure.
             uint256 penaltySum;
             bool chargeWithdrawalRequestFee;
 
@@ -775,9 +776,10 @@ contract CSModule is
                 }
                 chargeWithdrawalRequestFee = true;
             }
-            // the withdrawal request fee is taken only if the penalty is applied
-            // if no penalty, the fee has been paid by the node operator on the withdrawal trigger,
-            // or it is the dao decision to withdraw the validator before that the withdrawal request becomes delayed
+            // The withdrawal request fee is taken only if the penalty is applied if no penalty, the
+            // fee has been paid by the node operator on the withdrawal trigger, or it is the DAO
+            // decision to withdraw the validator before that the withdrawal request becomes
+            // delayed.
             if (
                 chargeWithdrawalRequestFee &&
                 exitPenaltyInfo.withdrawalRequestFee.value != 0
