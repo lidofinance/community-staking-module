@@ -54,7 +54,7 @@ interface ICSModule is
     IAssetRecovererLib,
     IStakingModule
 {
-    error NodeOperatorHasKeys();
+    error CannotAddKeys();
     error NodeOperatorDoesNotExist();
     error SenderIsNotEligible();
     error InvalidVetKeysPointer();

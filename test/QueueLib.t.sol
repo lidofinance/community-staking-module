@@ -74,7 +74,7 @@ contract QueueLibTest is Test {
     ) public pure {
         Batch p0 = createBatch(a, b);
         Batch p1 = createBatch(c, d);
-        p0 = p0.setNext(p1);
+        p0 = p0.setNext(p1.next());
         assertEq(p0.next(), p1.next());
     }
 
