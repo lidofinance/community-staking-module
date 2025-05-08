@@ -297,7 +297,9 @@ interface ICSAccounting is
     /// @notice Settle locked bond ETH for the given Node Operator
     /// @dev Called by CSM exclusively
     /// @param nodeOperatorId ID of the Node Operator
-    function settleLockedBondETH(uint256 nodeOperatorId) external;
+    function settleLockedBondETH(
+        uint256 nodeOperatorId
+    ) external returns (bool);
 
     /// @notice Compensate locked bond ETH for the given Node Operator
     /// @dev Called by CSM exclusively
