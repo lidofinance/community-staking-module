@@ -324,12 +324,15 @@ contract CSAccounting is
     }
 
     /// @inheritdoc ICSAccounting
-    function settleLockedBondETH(uint256 nodeOperatorId) external onlyModule {
+    function settleLockedBondETH(
+        uint256 nodeOperatorId
+    ) external onlyModule returns (bool applied) {
         uint256 lockedAmount = CSBondLock.getActualLockedBond(nodeOperatorId);
         if (lockedAmount > 0) {
             CSBondCore._burn(nodeOperatorId, lockedAmount);
             // reduce all locked bond even if bond isn't covered lock fully
             CSBondLock._remove(nodeOperatorId);
+            applied = true;
         }
     }
 

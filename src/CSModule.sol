@@ -50,6 +50,9 @@ contract CSModule is
     uint256 public constant DEPOSIT_SIZE = 32 ether;
     // @dev see IStakingModule.sol
     uint8 private constant FORCED_TARGET_LIMIT_MODE_ID = 2;
+    // keccak256(abi.encode(uint256(keccak256("OPERATORS_CREATED_IN_TX_MAP_TSLOT")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant OPERATORS_CREATED_IN_TX_MAP_TSLOT =
+        0x1b07bc0838fdc4254cbabb5dd0c94d936f872c6758547168d513d8ad1dc3a500;
 
     bytes32 private immutable MODULE_TYPE;
     ILidoLocator public immutable LIDO_LOCATOR;
@@ -187,6 +190,7 @@ contract CSModule is
         }
 
         nodeOperatorId = _nodeOperatorsCount;
+        _markOperatorIsCreatedInTX(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
         address managerAddress = managementProperties.managerAddress ==
@@ -425,12 +429,13 @@ contract CSModule is
             targetLimit = 0;
         }
 
-        if (
-            no.targetLimitMode == targetLimitMode &&
-            no.targetLimit == targetLimit
-        ) {
-            return;
-        }
+        // NOTE: Bytecode saving trick; increased gas cost in rare cases is fine.
+        // if (
+        //     no.targetLimitMode == targetLimitMode &&
+        //     no.targetLimit == targetLimit
+        // ) {
+        //     return;
+        // }
 
         // @dev No need to safe cast due to conditions above
         no.targetLimitMode = uint8(targetLimitMode);
@@ -452,10 +457,8 @@ contract CSModule is
 
     /// @inheritdoc IStakingModule
     /// @dev This method is not used in CSM, hence it is do nothing
-    function onExitedAndStuckValidatorsCountsUpdated()
-        external
-        onlyRole(STAKING_ROUTER_ROLE)
-    {
+    /// @dev NOTE: No role checks because of empty body to save bytecode.
+    function onExitedAndStuckValidatorsCountsUpdated() external {
         // solhint-disable-previous-line no-empty-blocks
         // Nothing to do, rewards are distributed by a performance oracle.
     }
@@ -464,7 +467,7 @@ contract CSModule is
     function unsafeUpdateValidatorsCount(
         uint256 nodeOperatorId,
         uint256 exitedValidatorsKeysCount,
-        uint256 stuckValidatorsKeysCount
+        uint256 stuckValidatorsKeysCount // TODO: Check function signature.
     ) external onlyRole(STAKING_ROUTER_ROLE) {
         // NOTE: Silence the unused argument warning.
         stuckValidatorsKeysCount;
@@ -684,15 +687,10 @@ contract CSModule is
         for (uint256 i; i < nodeOperatorIds.length; ++i) {
             uint256 nodeOperatorId = nodeOperatorIds[i];
             _onlyExistingNodeOperator(nodeOperatorId);
-            uint256 lockedBondBefore = _accounting.getActualLockedBond(
-                nodeOperatorId
-            );
-
-            _accounting.settleLockedBondETH(nodeOperatorId);
-
-            // settled amount might be zero either if the lock expired, or the bond is zero
-            // so we need to check actual locked bond before to determine if the penalty was settled
-            if (lockedBondBefore > 0) {
+            // Settled amount might be zero either if the lock expired, or the bond is zero so we
+            // need to check if the penalty was applied.
+            bool applied = _accounting.settleLockedBondETH(nodeOperatorId);
+            if (applied) {
                 emit ELRewardsStealingPenaltySettled(nodeOperatorId);
 
                 // Nonce should be updated if depositableValidators change
@@ -762,15 +760,13 @@ contract CSModule is
                 pubkey
             );
 
-            // it is safe to use unchecked for penalty sum, due to it's limited to uint248 in the structure
+            // It is safe to use unchecked for penalty sum, due to it's limited to uint248 in the
+            // structure.
             uint256 penaltySum;
             bool chargeWithdrawalRequestFee;
 
             ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
-                .getDelayedExitPenaltyInfo(
-                    withdrawalInfo.nodeOperatorId,
-                    pubkey
-                );
+                .getExitPenaltyInfo(withdrawalInfo.nodeOperatorId, pubkey);
             if (exitPenaltyInfo.delayPenalty.isValue) {
                 unchecked {
                     penaltySum += exitPenaltyInfo.delayPenalty.value;
@@ -783,9 +779,10 @@ contract CSModule is
                 }
                 chargeWithdrawalRequestFee = true;
             }
-            // the withdrawal request fee is taken only if the penalty is applied
-            // if no penalty, the fee has been paid by the node operator on the withdrawal trigger,
-            // or it is the dao decision to withdraw the validator before that the withdrawal request becomes delayed
+            // The withdrawal request fee is taken only if the penalty is applied if no penalty, the
+            // fee has been paid by the node operator on the withdrawal trigger, or it is the DAO
+            // decision to withdraw the validator before that the withdrawal request becomes
+            // delayed.
             if (
                 chargeWithdrawalRequestFee &&
                 exitPenaltyInfo.withdrawalRequestFee.value != 0
@@ -1378,7 +1375,7 @@ contract CSModule is
         }
 
         unchecked {
-            // @dev No need to safe cast due to conditions above
+            // @dev Invariat sum(no.totalExitedKeys for no in nos) == _totalExitedValidators.
             _totalExitedValidators =
                 (_totalExitedValidators - totalExitedKeys) +
                 uint64(exitedValidatorsCount);
@@ -1498,6 +1495,22 @@ contract CSModule is
         }
     }
 
+    function _markOperatorIsCreatedInTX(uint256 nodeOperatorId) internal {
+        TransientUintUintMap map = TransientUintUintMapLib.load(
+            OPERATORS_CREATED_IN_TX_MAP_TSLOT
+        );
+        map.set(nodeOperatorId, 1);
+    }
+
+    function _isOperatorCreatedInTX(
+        uint256 nodeOperatorId
+    ) internal view returns (bool) {
+        TransientUintUintMap map = TransientUintUintMapLib.load(
+            OPERATORS_CREATED_IN_TX_MAP_TSLOT
+        );
+        return map.get(nodeOperatorId) == 1;
+    }
+
     /// @dev Acts as a proxy to `_queueByPriority` till `legacyQueue` deprecation.
     /// @dev TODO: Remove the method in the next major release.
     function _getQueue(
@@ -1522,9 +1535,8 @@ contract CSModule is
         } else {
             // We're trying to add keys via gate, check if we can do it.
             _checkRole(CREATE_NODE_OPERATOR_ROLE);
-            // TODO rework this check using transient storage. Set it on the createNodeOperator and check here
-            if (_nodeOperators[nodeOperatorId].totalAddedKeys > 0) {
-                revert NodeOperatorHasKeys();
+            if (!_isOperatorCreatedInTX(nodeOperatorId)) {
+                revert CannotAddKeys();
             }
         }
     }
