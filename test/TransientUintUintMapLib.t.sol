@@ -46,6 +46,31 @@ contract TransientUintUintMapLibTest is Test, Utilities {
         );
     }
 
+    function testFuzz_dictSetAndGetValue(
+        uint256 k,
+        uint256 v
+    ) public brutalizeMemory {
+        uint256 r;
+
+        TransientUintUintMap dict = TransientUintUintMapLib.create();
+
+        dict.set(k, v);
+        r = dict.get(k);
+        assertEq(
+            r,
+            v,
+            string.concat("expected=", v.toString(), " actual=", r.toString())
+        );
+
+        // Consequent read of the same key should return the same value.
+        r = dict.get(k);
+        assertEq(
+            r,
+            v,
+            string.concat("expected=", v.toString(), " actual=", r.toString())
+        );
+    }
+
     function testFuzz_noIntersections(
         uint256 a,
         uint256 b
@@ -64,5 +89,32 @@ contract TransientUintUintMapLibTest is Test, Utilities {
         assertEq(r, 0, string.concat("expected=0 actual=", r.toString()));
         r = dict2.get(a);
         assertEq(r, 0, string.concat("expected=0 actual=", r.toString()));
+    }
+
+    function testFuzz_load(uint256 k, uint256 v) public brutalizeMemory {
+        TransientUintUintMap dict1 = TransientUintUintMapLib.create();
+        dict1.set(k, v);
+
+        bytes32 tslot;
+        assembly ("memory-safe") {
+            tslot := dict1
+        }
+        TransientUintUintMap dict2 = TransientUintUintMapLib.load(tslot);
+
+        uint256 r;
+
+        r = dict1.get(k);
+        assertEq(
+            r,
+            v,
+            string.concat("expected=", v.toString(), " actual=", r.toString())
+        );
+
+        r = dict2.get(k);
+        assertEq(
+            r,
+            v,
+            string.concat("expected=", v.toString(), " actual=", r.toString())
+        );
     }
 }

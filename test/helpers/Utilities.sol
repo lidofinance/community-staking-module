@@ -199,8 +199,17 @@ contract Utilities is CommonBase {
         uint256 length
     ) public pure returns (bytes memory result) {
         result = new bytes(length);
-        for (uint i; i < length; ++i) {
+        for (uint256 i; i < length; ++i) {
             result[i] = subject[offset + i];
+        }
+    }
+
+    function shuffle(uint256[] memory arr) public {
+        if (arr.length < 2) return;
+
+        for (uint256 i = arr.length - 1; i > 0; i--) {
+            uint256 j = uint256(someBytes32()) % (i + 1);
+            (arr[i], arr[j]) = (arr[j], arr[i]);
         }
     }
 
@@ -296,7 +305,7 @@ contract Utilities is CommonBase {
 }
 
 function hasLog(Vm.Log[] memory self, bytes32 topic) pure returns (bool) {
-    for (uint i = 0; i < self.length; ++i) {
+    for (uint256 i = 0; i < self.length; ++i) {
         if (self[i].topics[0] == topic) {
             return true;
         }

@@ -98,7 +98,7 @@ interface ICSExitPenalties is IExitTypes {
     /// @param nodeOperatorId ID of the Node Operator
     /// @param publicKey Public key of the validator
     /// @return penaltyInfo Delayed exit penalty info
-    function getDelayedExitPenaltyInfo(
+    function getExitPenaltyInfo(
         uint256 nodeOperatorId,
         bytes calldata publicKey
     ) external view returns (ExitPenaltyInfo memory penaltyInfo);
