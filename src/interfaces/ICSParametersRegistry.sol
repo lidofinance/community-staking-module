@@ -498,4 +498,7 @@ interface ICSParametersRegistry {
     function getMaxWithdrawalRequestFee(
         uint256 curveId
     ) external view returns (uint256 fee);
+
+    /// @notice Returns the initialized version of the contract
+    function getInitializedVersion() external view returns (uint64);
 }

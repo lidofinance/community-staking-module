@@ -86,8 +86,7 @@ contract DeployMainnet is DeployBase {
         // 1.5 -> 1.3
         config.vettedGateBondCurve.push([1, 1.5 ether]);
         config.vettedGateBondCurve.push([2, 1.3 ether]);
-        config
-            .referralSeasonsEnder = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
+        config.vettedGateManager = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
         config.vettedGateTreeCid = "someCid"; // TODO: to be set in the future
         // TODO: Set proper values bellow
         config.vettedGateKeyRemovalCharge = 0.01 ether;

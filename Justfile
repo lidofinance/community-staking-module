@@ -67,15 +67,27 @@ test-all:
     just test-unit &
     just test-local
 
+# Run all unit tests
 test-unit *args:
     forge test --no-match-path 'test/fork/*' -vvv {{args}}
 
-test-deployment *args:
-    forge test --match-path 'test/fork/deployment/*' -vvv --show-progress {{args}}
+# Run all deployment tests that should be executed against full scratch deployment before the module activation vote
+test-deployment-full-scratch *args:
+    forge test --match-path 'test/fork/deployment/*' --no-match-test '.*_afterVote.*' -vvv --show-progress {{args}}
 
+# Run all deployment tests that should be executed against CSM v2 scratch deployment before the module upgrade vote
+test-deployment-v2-only-scratch *args:
+    forge test --match-path 'test/fork/deployment/*' --no-match-test '(.*_afterVote.*)|(.*_onlyFull.*)' -vvv --show-progress {{args}}
+
+# Run all deployment tests that should be executed against full scratch deployment after the module activation vote
+test-deployment-full-afterVote *args:
+    forge test --match-path 'test/fork/deployment/*' --no-match-test '.*_scratch.*' -vvv --show-progress {{args}}
+
+# Run all integration tests
 test-integration *args:
     forge test --match-path 'test/fork/integration/*' -vvv --show-progress {{args}}
 
+# Run tests applicable after the module upgrade vote. Does not include deployment tests
 test-post-upgrade *args:
     forge test --match-path='test/fork/*' --no-match-path 'test/fork/deployment/*' -vvv --show-progress {{args}}
 
@@ -226,6 +238,7 @@ deploy-local:
     just deploy
     just _warn "anvil is kept running in the background: {{anvil_rpc_url}}"
 
+# Deploy CSM v2 components, upgrade CSM, run deployment, integration, and post-upgrade tests
 test-upgrade *args:
     #!/usr/bin/env bash
     set -euxo pipefail
@@ -233,18 +246,22 @@ test-upgrade *args:
     just make-fork --silent &
     while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
 
+    export RPC_URL={{anvil_rpc_url}}
+
     just _deploy-impl --broadcast --private-key=`cat localhost.json | jq -r ".private_keys[0]"`
 
-    export DEPLOY_CONFIG=./artifacts/{{chain}}/deploy-{{chain}}.json
-    export UPGRADE_CONFIG=./artifacts/local/upgrade-{{chain}}.json
-    export RPC_URL={{anvil_rpc_url}}
+    export DEPLOY_CONFIG=./artifacts/local/upgrade-{{chain}}.json
     export VOTE_PREV_BLOCK=`cast block-number -r $RPC_URL`
 
     just vote-upgrade
+
+    just test-deployment-full-afterVote {{args}}
+
     just test-post-upgrade {{args}}
 
     just kill-fork
 
+# Deploy CSM from scratch, add module to the SR, and run deployment and integration tests
 test-local *args:
     #!/usr/bin/env bash
     set -euxo pipefail
@@ -256,9 +273,44 @@ test-local *args:
     export DEPLOY_CONFIG=./artifacts/local/deploy-{{chain}}.json
     export RPC_URL={{anvil_rpc_url}}
 
-    just test-deployment {{args}}
     just vote-add-module
+
+    just test-deployment-full-afterVote {{args}}
+    
     just test-integration {{args}}
+
+    just kill-fork
+
+# Deploy CSM from scratch and run deployment tests
+test-full-deploy *args:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    just make-fork --silent &
+    while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
+    just deploy --silent --private-key=`cat localhost.json | jq -r ".private_keys[0]"`
+
+    export DEPLOY_CONFIG=./artifacts/local/deploy-{{chain}}.json
+    export RPC_URL={{anvil_rpc_url}}
+
+    just test-deployment-full-scratch {{args}}
+
+    just kill-fork
+
+# Deploy CSM v2 components and run deployment tests
+test-v2-only-deploy *args:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    just make-fork --silent &
+    while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
+
+    just _deploy-impl --broadcast --private-key=`cat localhost.json | jq -r ".private_keys[0]"`
+
+    export DEPLOY_CONFIG=./artifacts/local/upgrade-{{chain}}.json
+    export RPC_URL={{anvil_rpc_url}}
+
+    just test-deployment-v2-only-scratch {{args}}
 
     just kill-fork
 

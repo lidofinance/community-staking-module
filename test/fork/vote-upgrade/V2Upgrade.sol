@@ -7,16 +7,15 @@ import "forge-std/Test.sol";
 
 import { Utilities } from "../../helpers/Utilities.sol";
 import { DeploymentFixtures } from "../../helpers/Fixtures.sol";
-import { DeployParams, DeployParamsV1 } from "../../../script/DeployBase.s.sol";
+import { DeployParams } from "../../../script/DeployBase.s.sol";
 import { HashConsensus } from "../../../src/lib/base-oracle/HashConsensus.sol";
 import { BaseOracle } from "../../../src/lib/base-oracle/BaseOracle.sol";
 import { Slot } from "../../../src/lib/Types.sol";
 import { OssifiableProxy } from "../../../src/lib/proxy/OssifiableProxy.sol";
 
-contract V2UpgradeTestBase is Test, Utilities, DeploymentFixtures {
-    DeployParamsV1 private deployParams;
-    DeployParams private upgradeDeployParams;
+import { ICSParametersRegistry } from "../../../src/interfaces/ICSParametersRegistry.sol";
 
+contract V2UpgradeTestBase is Test, Utilities, DeploymentFixtures {
     uint256 internal forkIdBeforeUpgrade;
     uint256 internal forkIdAfterUpgrade;
 
@@ -28,17 +27,13 @@ contract V2UpgradeTestBase is Test, Utilities, DeploymentFixtures {
         forkIdBeforeUpgrade = vm.createFork(env.RPC_URL, env.VOTE_PREV_BLOCK);
         forkIdAfterUpgrade = vm.createSelectFork(env.RPC_URL);
         initializeFromDeployment();
-        deployParams = parseDeployParamsV1(env.DEPLOY_CONFIG);
-        if (_isEmpty(env.UPGRADE_CONFIG)) {
-            revert UpdateConfigRequired();
-        }
-        upgradeDeployParams = parseDeployParams(env.UPGRADE_CONFIG);
     }
 }
 
-contract VoteTest is V2UpgradeTestBase {
+contract VoteChangesTest is V2UpgradeTestBase {
     function test_csmChanges() public {
         OssifiableProxy csmProxy = OssifiableProxy(payable(address(csm)));
+
         vm.selectFork(forkIdBeforeUpgrade);
         address implBefore = csmProxy.proxy__getImplementation();
         address verifierBefore = csm.getRoleMember(csm.VERIFIER_ROLE(), 0);
@@ -66,13 +61,52 @@ contract VoteTest is V2UpgradeTestBase {
         assertFalse(csm.hasRole(csm.PAUSE_ROLE(), gateSealBefore));
         assertTrue(csm.hasRole(csm.PAUSE_ROLE(), address(gateSeal)));
 
+        assertEq(csm.getRoleMemberCount(keccak256("MODULE_MANAGER_ROLE")), 0);
+
         assertEq(csm.getInitializedVersion(), 2);
+
+        assertFalse(
+            csm.depositQueueItem(csm.QUEUE_LEGACY_PRIORITY(), 0).isNil()
+        );
+    }
+
+    function test_csmState() public {
+        vm.selectFork(forkIdBeforeUpgrade);
+        address accountingBefore = address(csm.accounting());
+        uint256 nonceBefore = csm.getNonce();
+        (
+            uint256 totalExitedValidatorsBefore,
+            uint256 totalDepositedValidatorsBefore,
+            uint256 depositableValidatorsCountBefore
+        ) = csm.getStakingModuleSummary();
+        uint256 totalNodeOperatorsBefore = csm.getNodeOperatorsCount();
+
+        vm.selectFork(forkIdAfterUpgrade);
+        address accountingAfter = address(csm.accounting());
+        uint256 nonceAfter = csm.getNonce();
+        (
+            uint256 totalExitedValidatorsAfter,
+            uint256 totalDepositedValidatorsAfter,
+            uint256 depositableValidatorsCountAfter
+        ) = csm.getStakingModuleSummary();
+        uint256 totalNodeOperatorsAfter = csm.getNodeOperatorsCount();
+
+        assertEq(accountingBefore, accountingAfter);
+        assertEq(nonceBefore, nonceAfter);
+        assertEq(totalExitedValidatorsBefore, totalExitedValidatorsAfter);
+        assertEq(totalDepositedValidatorsBefore, totalDepositedValidatorsAfter);
+        assertEq(
+            depositableValidatorsCountBefore,
+            depositableValidatorsCountAfter
+        );
+        assertEq(totalNodeOperatorsBefore, totalNodeOperatorsAfter);
     }
 
     function test_accountingChanges() public {
         OssifiableProxy accountingProxy = OssifiableProxy(
             payable(address(accounting))
         );
+
         vm.selectFork(forkIdBeforeUpgrade);
         address implBefore = accountingProxy.proxy__getImplementation();
         address gateSealBefore = accounting.getRoleMember(
@@ -109,7 +143,43 @@ contract VoteTest is V2UpgradeTestBase {
             accounting.hasRole(accounting.PAUSE_ROLE(), address(gateSeal))
         );
 
+        assertEq(
+            accounting.getRoleMemberCount(keccak256("ACCOUNTING_MANAGER_ROLE")),
+            0
+        );
+        assertEq(
+            accounting.getRoleMemberCount(keccak256("RESET_BOND_CURVE_ROLE")),
+            0
+        );
+
         assertEq(accounting.getInitializedVersion(), 2);
+
+        assertTrue(
+            burner.hasRole(
+                burner.REQUEST_BURN_MY_STETH_ROLE(),
+                address(accounting)
+            )
+        );
+    }
+
+    function test_accountingState() public {
+        vm.selectFork(forkIdBeforeUpgrade);
+        address feeDistributorBefore = address(accounting.feeDistributor());
+        address chargePenaltyRecipientBefore = address(
+            accounting.chargePenaltyRecipient()
+        );
+        uint256 totalBondSharesBefore = accounting.totalBondShares();
+
+        vm.selectFork(forkIdAfterUpgrade);
+        address feeDistributorAfter = address(accounting.feeDistributor());
+        address chargePenaltyRecipientAfter = address(
+            accounting.chargePenaltyRecipient()
+        );
+        uint256 totalBondSharesAfter = accounting.totalBondShares();
+
+        assertEq(feeDistributorBefore, feeDistributorAfter);
+        assertEq(chargePenaltyRecipientBefore, chargePenaltyRecipientAfter);
+        assertEq(totalBondSharesBefore, totalBondSharesAfter);
     }
 
     function test_feeDistributorChanges() public {
@@ -126,6 +196,31 @@ contract VoteTest is V2UpgradeTestBase {
         assertEq(implAfter, address(feeDistributorImpl));
 
         assertEq(feeDistributor.getInitializedVersion(), 2);
+        assertEq(feeDistributor.rebateRecipient(), locator.treasury());
+    }
+
+    function test_feeDistributorState() public {
+        vm.selectFork(forkIdBeforeUpgrade);
+        bytes32 treeRootBefore = feeDistributor.treeRoot();
+        string memory treeCidBefore = feeDistributor.treeCid();
+        string memory logCidBefore = feeDistributor.logCid();
+        uint256 totalClaimableSharesBefore = feeDistributor
+            .totalClaimableShares();
+
+        vm.selectFork(forkIdAfterUpgrade);
+        bytes32 treeRootAfter = feeDistributor.treeRoot();
+        string memory treeCidAfter = feeDistributor.treeCid();
+        string memory logCidAfter = feeDistributor.logCid();
+        uint256 totalClaimableSharesAfter = feeDistributor
+            .totalClaimableShares();
+
+        assertEq(treeRootBefore, treeRootAfter);
+        assertEq(
+            keccak256(bytes(treeCidBefore)),
+            keccak256(bytes(treeCidAfter))
+        );
+        assertEq(keccak256(bytes(logCidBefore)), keccak256(bytes(logCidAfter)));
+        assertEq(totalClaimableSharesBefore, totalClaimableSharesAfter);
     }
 
     function test_feeOracleChanges() public {
@@ -161,5 +256,118 @@ contract VoteTest is V2UpgradeTestBase {
 
         assertEq(oracle.getContractVersion(), 2);
         assertEq(oracle.getConsensusVersion(), 3);
+
+        assertEq(
+            oracle.getRoleMemberCount(keccak256("CONTRACT_MANAGER_ROLE")),
+            0
+        );
+    }
+
+    function test_feeOracleState() public {
+        vm.selectFork(forkIdBeforeUpgrade);
+        address feeDistributorBefore = address(oracle.feeDistributor());
+
+        vm.selectFork(forkIdAfterUpgrade);
+        address feeDistributorAfter = address(oracle.feeDistributor());
+
+        assertEq(feeDistributorBefore, feeDistributorAfter);
+    }
+
+    function test_parametersRegistryState_vettedGateParams() public {
+        Env memory env = envVars();
+        DeployParams memory upgradeDeployParams = parseDeployParams(
+            env.DEPLOY_CONFIG
+        );
+
+        uint256 vettedGateCurveId = 1;
+        assertEq(
+            parametersRegistry.getKeyRemovalCharge(vettedGateCurveId),
+            upgradeDeployParams.vettedGateKeyRemovalCharge
+        );
+        assertEq(
+            parametersRegistry.getElRewardsStealingAdditionalFine(
+                vettedGateCurveId
+            ),
+            upgradeDeployParams.vettedGateELRewardsStealingAdditionalFine
+        );
+        assertEq(
+            parametersRegistry.getKeysLimit(vettedGateCurveId),
+            upgradeDeployParams.vettedGateKeysLimit
+        );
+
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory rewardShareData = parametersRegistry.getRewardShareData(
+                vettedGateCurveId
+            );
+        assertEq(
+            rewardShareData.length,
+            upgradeDeployParams.vettedGateRewardShareData.length
+        );
+        for (uint256 i = 0; i < rewardShareData.length; i++) {
+            assertEq(
+                rewardShareData[i].minKeyIndex,
+                upgradeDeployParams.vettedGateRewardShareData[i][0]
+            );
+            assertEq(
+                rewardShareData[i].value,
+                upgradeDeployParams.vettedGateRewardShareData[i][1]
+            );
+        }
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory performanceLeewayData = parametersRegistry
+                .getPerformanceLeewayData(vettedGateCurveId);
+        assertEq(
+            performanceLeewayData.length,
+            upgradeDeployParams.vettedGateAvgPerfLeewayData.length
+        );
+        for (uint256 i = 0; i < performanceLeewayData.length; i++) {
+            assertEq(
+                performanceLeewayData[i].minKeyIndex,
+                upgradeDeployParams.vettedGateAvgPerfLeewayData[i][0]
+            );
+            assertEq(
+                performanceLeewayData[i].value,
+                upgradeDeployParams.vettedGateAvgPerfLeewayData[i][1]
+            );
+        }
+
+        (uint256 lifetime, uint256 threshold) = parametersRegistry
+            .getStrikesParams(vettedGateCurveId);
+        assertEq(lifetime, upgradeDeployParams.vettedGateStrikesLifetimeFrames);
+        assertEq(threshold, upgradeDeployParams.vettedGateStrikesThreshold);
+
+        (uint256 priority, uint256 maxDeposits) = parametersRegistry
+            .getQueueConfig(vettedGateCurveId);
+        assertEq(priority, upgradeDeployParams.vettedGateQueuePriority);
+        assertEq(maxDeposits, upgradeDeployParams.vettedGateQueueMaxDeposits);
+
+        assertEq(
+            parametersRegistry.getBadPerformancePenalty(vettedGateCurveId),
+            upgradeDeployParams.vettedGateBadPerformancePenalty
+        );
+        (
+            uint256 attestationsWeight,
+            uint256 blocksWeight,
+            uint256 syncWeight
+        ) = parametersRegistry.getPerformanceCoefficients(vettedGateCurveId);
+        assertEq(
+            attestationsWeight,
+            upgradeDeployParams.vettedGateAttestationsWeight
+        );
+        assertEq(blocksWeight, upgradeDeployParams.vettedGateBlocksWeight);
+        assertEq(syncWeight, upgradeDeployParams.vettedGateSyncWeight);
+
+        assertEq(
+            parametersRegistry.getAllowedExitDelay(vettedGateCurveId),
+            upgradeDeployParams.vettedGateAllowedExitDelay
+        );
+        assertEq(
+            parametersRegistry.getExitDelayPenalty(vettedGateCurveId),
+            upgradeDeployParams.vettedGateExitDelayPenalty
+        );
+        assertEq(
+            parametersRegistry.getMaxWithdrawalRequestFee(vettedGateCurveId),
+            upgradeDeployParams.vettedGateMaxWithdrawalRequestFee
+        );
     }
 }

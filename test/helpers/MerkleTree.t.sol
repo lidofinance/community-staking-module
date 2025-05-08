@@ -5,10 +5,11 @@ pragma solidity 0.8.24;
 import { Test } from "forge-std/Test.sol";
 import { console } from "forge-std/console.sol";
 
+import { Utilities } from "./Utilities.sol";
 import { MerkleTree } from "./MerkleTree.sol";
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
-contract MerkleTreeTest is Test {
+contract MerkleTreeTest is Test, Utilities {
     MerkleTree internal tree;
 
     function setUp() public {
@@ -82,6 +83,20 @@ contract MerkleTreeTest is Test {
         proof = tree.getProof(1);
         isValid = MerkleProof.verify(proof, tree.root(), tree.hashLeaf(leaf1));
         assertTrue(isValid);
+
+        bytes32[] memory leaves = new bytes32[](2);
+        leaves[0] = tree.hashLeaf(leaf0);
+        leaves[1] = tree.hashLeaf(leaf1);
+
+        bool[] memory proofFlags;
+        (proof, proofFlags) = tree.getMultiProof(UintArr(0, 1));
+        isValid = MerkleProof.multiProofVerify(
+            proof,
+            proofFlags,
+            tree.root(),
+            leaves
+        );
+        assertTrue(isValid);
     }
 
     function test_treeWithThreeElements() public {
@@ -106,5 +121,69 @@ contract MerkleTreeTest is Test {
         proof = tree.getProof(2);
         isValid = MerkleProof.verify(proof, tree.root(), tree.hashLeaf(leaf2));
         assertTrue(isValid);
+
+        bytes32[] memory leaves;
+        bool[] memory proofFlags;
+
+        {
+            leaves = new bytes32[](2);
+            leaves[0] = tree.hashLeaf(leaf0);
+            leaves[1] = tree.hashLeaf(leaf1);
+
+            (proof, proofFlags) = tree.getMultiProof(UintArr(0, 1));
+            isValid = MerkleProof.multiProofVerify(
+                proof,
+                proofFlags,
+                tree.root(),
+                leaves
+            );
+            assertTrue(isValid);
+        }
+
+        {
+            leaves = new bytes32[](2);
+            leaves[0] = tree.hashLeaf(leaf1);
+            leaves[1] = tree.hashLeaf(leaf2);
+
+            (proof, proofFlags) = tree.getMultiProof(UintArr(1, 2));
+            isValid = MerkleProof.multiProofVerify(
+                proof,
+                proofFlags,
+                tree.root(),
+                leaves
+            );
+            assertTrue(isValid);
+        }
+
+        {
+            leaves = new bytes32[](2);
+            leaves[0] = tree.hashLeaf(leaf0);
+            leaves[1] = tree.hashLeaf(leaf2);
+
+            (proof, proofFlags) = tree.getMultiProof(UintArr(0, 2));
+            isValid = MerkleProof.multiProofVerify(
+                proof,
+                proofFlags,
+                tree.root(),
+                leaves
+            );
+            assertTrue(isValid);
+        }
+
+        {
+            leaves = new bytes32[](3);
+            leaves[0] = tree.hashLeaf(leaf0);
+            leaves[1] = tree.hashLeaf(leaf1);
+            leaves[2] = tree.hashLeaf(leaf2);
+
+            (proof, proofFlags) = tree.getMultiProof(UintArr(0, 1, 2));
+            isValid = MerkleProof.multiProofVerify(
+                proof,
+                proofFlags,
+                tree.root(),
+                leaves
+            );
+            assertTrue(isValid);
+        }
     }
 }

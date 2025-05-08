@@ -47,7 +47,7 @@ contract CSModule is
     bytes32 public constant CREATE_NODE_OPERATOR_ROLE =
         keccak256("CREATE_NODE_OPERATOR_ROLE");
 
-    uint256 private constant DEPOSIT_SIZE = 32 ether;
+    uint256 public constant DEPOSIT_SIZE = 32 ether;
     // @dev see IStakingModule.sol
     uint8 private constant FORCED_TARGET_LIMIT_MODE_ID = 2;
 
@@ -58,6 +58,7 @@ contract CSModule is
 
     /// @dev QUEUE_LOWEST_PRIORITY identifies the range of available priorities: [0; QUEUE_LOWEST_PRIORITY].
     uint256 public immutable QUEUE_LOWEST_PRIORITY;
+    /// @dev QUEUE_LEGACY_PRIORITY is the priority for the CSM v1 queue.
     uint256 public immutable QUEUE_LEGACY_PRIORITY;
 
     ////////////////////////
@@ -77,6 +78,9 @@ contract CSModule is
 
     /// @custom:oz-renamed-from earlyAdoption
     ICSExitPenalties public exitPenalties;
+    /// @dev deprecated. Nullified in the finalizeUpgradeV2
+    /// @custom:oz-renamed-from publicRelease
+    bool internal _publicRelease;
 
     uint256 private _nonce;
     mapping(uint256 => NodeOperator) private _nodeOperators;
@@ -202,7 +206,12 @@ contract CSModule is
             ++_nodeOperatorsCount;
         }
 
-        emit NodeOperatorAdded(nodeOperatorId, managerAddress, rewardAddress);
+        emit NodeOperatorAdded(
+            nodeOperatorId,
+            managerAddress,
+            rewardAddress,
+            managementProperties.extendedManagerPermissions
+        );
 
         if (referrer != address(0)) {
             emit ReferrerSet(nodeOperatorId, referrer);
@@ -213,6 +222,7 @@ contract CSModule is
 
     /// @inheritdoc ICSModule
     function addValidatorKeysETH(
+        // TODO consider moving this after other arguments below
         address from,
         uint256 nodeOperatorId,
         uint256 keysCount,
@@ -1306,19 +1316,21 @@ contract CSModule is
         uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
         uint256 keysLimit = PARAMETERS_REGISTRY.getKeysLimit(curveId);
 
-        if (totalAddedKeys + keysCount - no.totalExitedKeys > keysLimit) {
-            revert KeysLimitExceeded();
-        }
-
-        // solhint-disable-next-line func-named-parameters
-        SigningKeys.saveKeysSigs(
-            nodeOperatorId,
-            totalAddedKeys,
-            keysCount,
-            publicKeys,
-            signatures
-        );
         unchecked {
+            if (
+                totalAddedKeys + keysCount - no.totalWithdrawnKeys > keysLimit
+            ) {
+                revert KeysLimitExceeded();
+            }
+
+            // solhint-disable-next-line func-named-parameters
+            SigningKeys.saveKeysSigs(
+                nodeOperatorId,
+                totalAddedKeys,
+                keysCount,
+                publicKeys,
+                signatures
+            );
             // Optimistic vetting takes place.
             if (totalAddedKeys == no.totalVettedKeys) {
                 // @dev No need to safe cast due to internal logic
@@ -1435,19 +1447,23 @@ contract CSModule is
         uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
         (uint32 priority, uint32 maxDeposits) = PARAMETERS_REGISTRY
             .getQueueConfig(curveId);
-        // Replace QUEUE_LEGACY_PRIORITY with QUEUE_LOWEST_PRIORITY after legacy queue removal in CSM v3
+        // TODO Replace QUEUE_LEGACY_PRIORITY with QUEUE_LOWEST_PRIORITY after legacy queue removal in CSM v3
         if (priority < QUEUE_LEGACY_PRIORITY) {
-            NodeOperator storage no = _nodeOperators[nodeOperatorId];
-            uint32 enqueuedSoFar = no.totalDepositedKeys + no.enqueuedCount;
+            unchecked {
+                NodeOperator storage no = _nodeOperators[nodeOperatorId];
+                uint32 enqueuedSoFar = no.totalDepositedKeys + no.enqueuedCount;
 
-            if (maxDeposits > enqueuedSoFar) {
-                uint32 leftForQueue = maxDeposits - enqueuedSoFar;
-                _enqueueNodeOperatorKeys(
-                    nodeOperatorId,
-                    priority,
-                    leftForQueue
-                );
-                no.usedPriorityQueue = true;
+                if (maxDeposits > enqueuedSoFar) {
+                    uint32 leftForQueue = maxDeposits - enqueuedSoFar;
+                    _enqueueNodeOperatorKeys(
+                        nodeOperatorId,
+                        priority,
+                        leftForQueue
+                    );
+                    if (!no.usedPriorityQueue) {
+                        no.usedPriorityQueue = true;
+                    }
+                }
             }
         }
 
@@ -1458,6 +1474,7 @@ contract CSModule is
         );
     }
 
+    // TODO refactor this method after removing migrateToPriorityQueue
     function _enqueueNodeOperatorKeys(
         uint256 nodeOperatorId,
         uint256 queuePriority,
@@ -1468,20 +1485,16 @@ contract CSModule is
         uint32 enqueued = no.enqueuedCount;
 
         if (enqueued < depositable) {
-            uint32 count;
-
             unchecked {
-                count = depositable - enqueued;
-                if (count > maxKeys) {
-                    count = maxKeys;
-                }
+                uint32 count = depositable - enqueued;
+                count = uint32(Math.min(count, maxKeys));
 
                 no.enqueuedCount = enqueued + count;
-            }
 
-            QueueLib.Queue storage q = _getQueue(queuePriority);
-            q.enqueue(nodeOperatorId, count);
-            emit BatchEnqueued(queuePriority, nodeOperatorId, count);
+                QueueLib.Queue storage q = _getQueue(queuePriority);
+                q.enqueue(nodeOperatorId, count);
+                emit BatchEnqueued(queuePriority, nodeOperatorId, count);
+            }
         }
     }
 
@@ -1509,6 +1522,7 @@ contract CSModule is
         } else {
             // We're trying to add keys via gate, check if we can do it.
             _checkRole(CREATE_NODE_OPERATOR_ROLE);
+            // TODO rework this check using transient storage. Set it on the createNodeOperator and check here
             if (_nodeOperators[nodeOperatorId].totalAddedKeys > 0) {
                 revert NodeOperatorHasKeys();
             }

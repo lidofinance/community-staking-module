@@ -171,6 +171,18 @@ contract Utilities is CommonBase {
         return arr;
     }
 
+    function UintArr(
+        uint256 e0,
+        uint256 e1,
+        uint256 e2
+    ) public pure returns (uint256[] memory) {
+        uint256[] memory arr = new uint256[](3);
+        arr[0] = e0;
+        arr[1] = e1;
+        arr[2] = e2;
+        return arr;
+    }
+
     function UintArr2(
         uint256 e0,
         uint256 e1

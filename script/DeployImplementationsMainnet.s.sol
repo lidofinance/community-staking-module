@@ -38,6 +38,8 @@ contract DeployImplementationsMainnet is
         oracle = CSFeeOracle(deploymentConfig.oracle);
         feeDistributor = CSFeeDistributor(deploymentConfig.feeDistributor);
         hashConsensus = HashConsensus(deploymentConfig.hashConsensus);
+        verifier = CSVerifier(deploymentConfig.verifier);
+        gateSeal = deploymentConfig.gateSeal;
 
         _deploy();
     }

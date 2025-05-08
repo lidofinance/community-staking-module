@@ -282,6 +282,18 @@ contract VettedGate is
     }
 
     /// @inheritdoc IVettedGate
+    function getReferralsCount(
+        address referrer
+    ) external view returns (uint256) {
+        return referralCounts[_seasonedAddress(referrer)];
+    }
+
+    /// @inheritdoc IVettedGate
+    function getInitializedVersion() external view returns (uint64) {
+        return _getInitializedVersion();
+    }
+
+    /// @inheritdoc IVettedGate
     function isConsumed(address member) public view returns (bool) {
         return _consumedAddresses[member];
     }
@@ -292,21 +304,11 @@ contract VettedGate is
     }
 
     /// @inheritdoc IVettedGate
-    function getReferralsCount(address referrer) public view returns (uint256) {
-        return referralCounts[_seasonedAddress(referrer)];
-    }
-
-    /// @inheritdoc IVettedGate
     function verifyProof(
         address member,
         bytes32[] calldata proof
     ) public view returns (bool) {
         return MerkleProof.verifyCalldata(proof, treeRoot, hashLeaf(member));
-    }
-
-    /// @inheritdoc IVettedGate
-    function getInitializedVersion() external view returns (uint64) {
-        return _getInitializedVersion();
     }
 
     /// @inheritdoc IVettedGate

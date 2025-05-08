@@ -103,10 +103,6 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         DeploymentConfig memory deploymentConfig = parseDeploymentConfig(
             deploymentConfigContent
         );
-        string memory upgradeConfigContent = vm.readFile(env.UPGRADE_CONFIG);
-        UpgradeConfig memory upgradeConfig = parseUpgradeConfig(
-            upgradeConfigContent
-        );
 
         address admin = _prepareAdmin(deploymentConfig.csm);
 
@@ -115,9 +111,9 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         );
         vm.startBroadcast(_prepareProxyAdmin(address(csmProxy)));
         {
-            csmProxy.proxy__upgradeTo(upgradeConfig.csmImpl);
+            csmProxy.proxy__upgradeTo(deploymentConfig.csmImpl);
             CSModule(deploymentConfig.csm).finalizeUpgradeV2(
-                upgradeConfig.ejector
+                deploymentConfig.exitPenalties
             );
         }
         vm.stopBroadcast();
@@ -127,7 +123,7 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         );
         vm.startBroadcast(_prepareProxyAdmin(address(accountingProxy)));
         {
-            accountingProxy.proxy__upgradeTo(upgradeConfig.accountingImpl);
+            accountingProxy.proxy__upgradeTo(deploymentConfig.accountingImpl);
             CSAccounting(deploymentConfig.accounting).finalizeUpgradeV2(
                 defaultBondCurve,
                 vettedBondCurve
@@ -140,10 +136,10 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         );
         vm.startBroadcast(_prepareProxyAdmin(address(oracleProxy)));
         {
-            oracleProxy.proxy__upgradeTo(upgradeConfig.oracleImpl);
+            oracleProxy.proxy__upgradeTo(deploymentConfig.oracleImpl);
             CSFeeOracle(deploymentConfig.oracle).finalizeUpgradeV2({
                 consensusVersion: 3,
-                strikesContract: upgradeConfig.strikes
+                strikesContract: deploymentConfig.strikes
             });
         }
         vm.stopBroadcast();
@@ -154,7 +150,7 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         vm.startBroadcast(_prepareProxyAdmin(address(feeDistributorProxy)));
         {
             feeDistributorProxy.proxy__upgradeTo(
-                upgradeConfig.feeDistributorImpl
+                deploymentConfig.feeDistributorImpl
             );
             CSFeeDistributor(deploymentConfig.feeDistributor).finalizeUpgradeV2(
                 admin
@@ -230,19 +226,22 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         accounting.revokeRole(keccak256("SET_BOND_CURVE_ROLE"), address(csm));
         csm.grantRole(
             csm.CREATE_NODE_OPERATOR_ROLE(),
-            upgradeConfig.permissionlessGate
+            deploymentConfig.permissionlessGate
         );
         csm.grantRole(
             csm.CREATE_NODE_OPERATOR_ROLE(),
-            upgradeConfig.vettedGate
+            deploymentConfig.vettedGate
         );
         accounting.grantRole(
             accounting.SET_BOND_CURVE_ROLE(),
-            upgradeConfig.vettedGate
+            deploymentConfig.vettedGate
         );
 
         csm.revokeRole(csm.VERIFIER_ROLE(), address(deploymentConfig.verifier));
-        csm.grantRole(csm.VERIFIER_ROLE(), address(upgradeConfig.verifier));
+        csm.grantRole(
+            csm.VERIFIER_ROLE(),
+            address(deploymentConfig.verifierV2)
+        );
 
         csm.revokeRole(csm.PAUSE_ROLE(), address(deploymentConfig.gateSeal));
         accounting.revokeRole(
@@ -254,12 +253,15 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
             address(deploymentConfig.gateSeal)
         );
 
-        csm.grantRole(csm.PAUSE_ROLE(), address(upgradeConfig.gateSeal));
+        csm.grantRole(csm.PAUSE_ROLE(), address(deploymentConfig.gateSealV2));
         accounting.grantRole(
             accounting.PAUSE_ROLE(),
-            address(upgradeConfig.gateSeal)
+            address(deploymentConfig.gateSealV2)
         );
-        oracle.grantRole(oracle.PAUSE_ROLE(), address(upgradeConfig.gateSeal));
+        oracle.grantRole(
+            oracle.PAUSE_ROLE(),
+            address(deploymentConfig.gateSealV2)
+        );
         burner.revokeRole(
             burner.REQUEST_BURN_SHARES_ROLE(),
             address(accounting)

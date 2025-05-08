@@ -7,6 +7,8 @@ contract MerkleTree {
     bytes32[] internal tree;
     bytes32[] internal leaves;
 
+    uint256 internal constant BUFFER_SIZE = 256;
+
     function root() external view returns (bytes32) {
         return tree.length == 0 ? bytes32(0) : tree[0];
     }
@@ -34,6 +36,45 @@ contract MerkleTree {
         }
 
         return proof;
+    }
+
+    function getMultiProof(
+        uint256[] memory indicies
+    ) public view returns (bytes32[] memory proof, bool[] memory proofFlags) {
+        uint256[] memory stack = new uint256[](BUFFER_SIZE);
+        for (uint256 i; i < indicies.length; ++i) {
+            stack[i] = tree.length - 1 - indicies[i];
+        }
+        uint256 stackPos;
+        uint256 stackLen = indicies.length;
+
+        proofFlags = new bool[](BUFFER_SIZE);
+        uint256 proofFlagsLen;
+
+        proof = new bytes32[](BUFFER_SIZE);
+        uint256 proofLen;
+
+        while (stackPos < stackLen && stack[stackPos] > 0) {
+            uint256 j = stack[stackPos++];
+
+            uint256 s = j % 2 == 0 ? j - 1 : j + 1;
+            uint256 p = (j - 1) / 2;
+
+            if (s == stack[stackPos]) {
+                proofFlags[proofFlagsLen++] = true;
+                stackPos++;
+            } else {
+                proofFlags[proofFlagsLen++] = false;
+                proof[proofLen++] = tree[s];
+            }
+
+            stack[stackLen++] = p;
+        }
+
+        assembly ("memory-safe") {
+            mstore(proofFlags, proofFlagsLen)
+            mstore(proof, proofLen)
+        }
     }
 
     function pushLeaf(bytes memory leafBytes) external {

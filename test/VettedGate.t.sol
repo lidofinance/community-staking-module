@@ -296,7 +296,6 @@ contract VettedGateTest is VettedGateTestBase {
     function test_setTreeParams_revert_sameCid() public {
         vm.startPrank(admin);
         vettedGate.grantRole(vettedGate.SET_TREE_ROLE(), admin);
-        bytes32 currRoot = merkleTree.root();
 
         vm.expectRevert(IVettedGate.InvalidTreeCid.selector);
         vettedGate.setTreeParams(bytes32(randomBytes(32)), cid);

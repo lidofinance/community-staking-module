@@ -81,17 +81,17 @@ contract CSFeeDistributorConstructorTest is CSFeeDistributorTestBase {
         feeDistributor.initialize(address(this), rebateRecipient);
     }
 
-    function test_initialize_RevertWhen_ZeroAccountingAddress() public {
+    function test_constructor_RevertWhen_ZeroAccountingAddress() public {
         vm.expectRevert(ICSFeeDistributor.ZeroAccountingAddress.selector);
         new CSFeeDistributor(address(stETH), address(0), oracle);
     }
 
-    function test_initialize_RevertWhen_ZeroStEthAddress() public {
+    function test_constructor_RevertWhen_ZeroStEthAddress() public {
         vm.expectRevert(ICSFeeDistributor.ZeroStEthAddress.selector);
         new CSFeeDistributor(address(0), address(accounting), oracle);
     }
 
-    function test_initialize_RevertWhen_ZeroOracleAddress() public {
+    function test_constructor_RevertWhen_ZeroOracleAddress() public {
         vm.expectRevert(ICSFeeDistributor.ZeroOracleAddress.selector);
         new CSFeeDistributor(address(stETH), address(accounting), address(0));
     }
@@ -114,6 +114,23 @@ contract CSFeeDistributorInitTest is CSFeeDistributorTestBase {
         );
     }
 
+    function test_initialize() public {
+        _enableInitializers(address(feeDistributor));
+
+        vm.expectEmit(address(feeDistributor));
+        emit ICSFeeDistributor.RebateRecipientSet(rebateRecipient);
+        feeDistributor.initialize(address(this), rebateRecipient);
+
+        vm.assertTrue(
+            feeDistributor.hasRole(
+                feeDistributor.DEFAULT_ADMIN_ROLE(),
+                address(this)
+            )
+        );
+        assertEq(feeDistributor.rebateRecipient(), rebateRecipient);
+        assertEq(feeDistributor.getInitializedVersion(), 2);
+    }
+
     function test_initialize_RevertWhen_zeroAdmin() public {
         _enableInitializers(address(feeDistributor));
 
@@ -126,6 +143,24 @@ contract CSFeeDistributorInitTest is CSFeeDistributorTestBase {
 
         vm.expectRevert(ICSFeeDistributor.ZeroRebateRecipientAddress.selector);
         feeDistributor.initialize(address(this), address(0));
+    }
+
+    function test_finalizeUpgradeV2() public {
+        _enableInitializers(address(feeDistributor));
+
+        vm.expectEmit(address(feeDistributor));
+        emit ICSFeeDistributor.RebateRecipientSet(rebateRecipient);
+        feeDistributor.finalizeUpgradeV2(rebateRecipient);
+
+        assertEq(feeDistributor.rebateRecipient(), rebateRecipient);
+        assertEq(feeDistributor.getInitializedVersion(), 2);
+    }
+
+    function test_finalizeUpgradeV2_RevertWhen_zeroRebateRecipient() public {
+        _enableInitializers(address(feeDistributor));
+
+        vm.expectRevert(ICSFeeDistributor.ZeroRebateRecipientAddress.selector);
+        feeDistributor.finalizeUpgradeV2(address(0));
     }
 }
 

@@ -117,6 +117,18 @@ jobs:
       - name: Run unit-tests
         run: just test-unit
 
+      - name: Run local deployment tests for scratch deploy
+        run: just test-full-deploy
+        env:
+          CHAIN: mainnet
+          RPC_URL: ${{ secrets.RPC_URL_MAINNET }}
+
+      - name: Run local deployment tests for v2 deploy
+        run: just test-v2-only-deploy
+        env:
+          CHAIN: mainnet
+          RPC_URL: ${{ secrets.RPC_URL_MAINNET }}
+
       - name: Run local integration tests
         run: just test-local
         env:

@@ -40,7 +40,6 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     }
 
     uint256 public constant BOND_SIZE = 2 ether;
-    uint256 public constant DEPOSIT_SIZE = 32 ether;
 
     LidoLocatorMock public locator;
     WstETHMock public wstETH;
@@ -171,6 +170,18 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
             bytes.concat(bytes8(uint64(noId))),
             bytes.concat(bytes16(uint128(to)))
         );
+    }
+
+    function withdrawKey(uint256 noId, uint256 keyIndex) internal {
+        ValidatorWithdrawalInfo[]
+            memory withdrawalsInfo = new ValidatorWithdrawalInfo[](1);
+        withdrawalsInfo[0] = ValidatorWithdrawalInfo(
+            noId,
+            0,
+            csm.DEPOSIT_SIZE(),
+            false
+        );
+        csm.submitWithdrawals(withdrawalsInfo);
     }
 
     // Checks that the queue is in the expected state starting from its head.
@@ -508,6 +519,8 @@ contract CsmFuzz is CSMCommon {
 }
 
 contract CsmInitialize is CSMCommon {
+    using stdStorage for StdStorage;
+
     function test_constructor() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
@@ -575,6 +588,7 @@ contract CsmInitialize is CSMCommon {
         assertEq(address(csm.accounting()), address(accounting));
         assertEq(address(csm.exitPenalties()), address(exitPenalties));
         assertTrue(csm.isPaused());
+        assertEq(csm.getInitializedVersion(), 2);
     }
 
     function test_initialize_RevertWhen_ZeroAccountingAddress() public {
@@ -623,6 +637,70 @@ contract CsmInitialize is CSMCommon {
             _exitPenalties: address(exitPenalties),
             admin: address(0)
         });
+    }
+
+    function test_finalizeUpgradeV2() public {
+        CSModule csm = new CSModule({
+            moduleType: "community-staking-module",
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry)
+        });
+        _enableInitializers(address(csm));
+
+        csm.finalizeUpgradeV2(address(exitPenalties));
+        assertEq(address(csm.exitPenalties()), address(exitPenalties));
+        assertEq(csm.getInitializedVersion(), 2);
+    }
+
+    function test_finalizeUpgradeV2_revertWhen_ZeroExitPenalties() public {
+        CSModule csm = new CSModule({
+            moduleType: "community-staking-module",
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry)
+        });
+        _enableInitializers(address(csm));
+
+        vm.expectRevert(ICSModule.ZeroExitPenaltiesAddress.selector);
+        csm.finalizeUpgradeV2(address(0));
+    }
+
+    function test_finalizeUpgradeV2_cleanStorageSlots() public {
+        CSModule csm = new CSModule({
+            moduleType: "community-staking-module",
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry)
+        });
+        _enableInitializers(address(csm));
+        bytes32 exitPenaltiesStorageSlot = bytes32(
+            stdstore
+                .target(address(csm))
+                .sig(ICSModule.exitPenalties.selector)
+                .find()
+        );
+        // 0 slot is an internal _queueByPriority mapping which is difficult to target
+        vm.store(address(csm), 0, bytes32(type(uint256).max));
+        vm.store(
+            address(csm),
+            exitPenaltiesStorageSlot,
+            bytes32(type(uint256).max)
+        );
+
+        csm.finalizeUpgradeV2(address(exitPenalties));
+        assertEq(vm.load(address(csm), 0), bytes32(0));
+
+        assertEq(address(csm.exitPenalties()), address(exitPenalties));
+        bytes12 head;
+        address exitPenaltiesAddress;
+        bytes32 storageValue = vm.load(address(csm), exitPenaltiesStorageSlot);
+        assembly {
+            exitPenaltiesAddress := and(
+                storageValue,
+                0x000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+            )
+            head := shr(160, storageValue)
+        }
+        assertEq(exitPenaltiesAddress, address(exitPenalties));
+        assertEq(head, bytes12(0));
     }
 }
 
@@ -758,7 +836,7 @@ contract CSMCreateNodeOperator is CSMCommon {
     function test_createNodeOperator() public assertInvariants {
         uint256 nonce = csm.getNonce();
         vm.expectEmit(address(csm));
-        emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+        emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator, false);
 
         uint256 nodeOperatorId = csm.createNodeOperator(
             nodeOperator,
@@ -782,7 +860,7 @@ contract CSMCreateNodeOperator is CSMCommon {
         address reward = address(42);
 
         vm.expectEmit(address(csm));
-        emit ICSModule.NodeOperatorAdded(0, manager, reward);
+        emit ICSModule.NodeOperatorAdded(0, manager, reward, false);
         csm.createNodeOperator(
             nodeOperator,
             NodeOperatorManagementProperties({
@@ -796,12 +874,43 @@ contract CSMCreateNodeOperator is CSMCommon {
         NodeOperator memory no = csm.getNodeOperator(0);
         assertEq(no.managerAddress, manager);
         assertEq(no.rewardAddress, reward);
+        assertEq(no.extendedManagerPermissions, false);
+    }
+
+    function test_createNodeOperator_withExtendedManagerPermissions()
+        public
+        assertInvariants
+    {
+        address manager = address(154);
+        address reward = address(42);
+
+        vm.expectEmit(address(csm));
+        emit ICSModule.NodeOperatorAdded(0, manager, reward, true);
+        csm.createNodeOperator(
+            nodeOperator,
+            NodeOperatorManagementProperties({
+                managerAddress: manager,
+                rewardAddress: reward,
+                extendedManagerPermissions: true
+            }),
+            address(0)
+        );
+
+        NodeOperator memory no = csm.getNodeOperator(0);
+        assertEq(no.managerAddress, manager);
+        assertEq(no.rewardAddress, reward);
+        assertEq(no.extendedManagerPermissions, true);
     }
 
     function test_createNodeOperator_withReferrer() public assertInvariants {
         {
             vm.expectEmit(address(csm));
-            emit ICSModule.NodeOperatorAdded(0, nodeOperator, nodeOperator);
+            emit ICSModule.NodeOperatorAdded(
+                0,
+                nodeOperator,
+                nodeOperator,
+                false
+            );
             vm.expectEmit(address(csm));
             emit ICSModule.ReferrerSet(0, address(154));
         }
@@ -887,6 +996,47 @@ contract CSMAddValidatorKeys is CSMCommon {
         parametersRegistry.setKeysLimit(0, 1);
 
         vm.expectRevert(ICSModule.KeysLimitExceeded.selector);
+        csm.addValidatorKeysWstETH(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: 0,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
+    function test_AddValidatorKeysWstETH_keysLimit_withdrawnKeys()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        parametersRegistry.setKeysLimit(0, 1);
+
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+        withdrawKey(noId, 0);
+
+        uint256 toWrap = BOND_SIZE + 1 wei;
+        vm.deal(nodeOperator, toWrap);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: toWrap }(address(0));
+        stETH.approve(address(wstETH), UINT256_MAX);
+        wstETH.wrap(toWrap);
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        {
+            vm.expectEmit(address(csm));
+            emit IStakingModule.SigningKeyAdded(noId, keys);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
+        }
         csm.addValidatorKeysWstETH(
             nodeOperator,
             noId,
@@ -1101,6 +1251,45 @@ contract CSMAddValidatorKeys is CSMCommon {
         );
     }
 
+    function test_AddValidatorKeysStETH_keysLimit_withdrawnKeys()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        parametersRegistry.setKeysLimit(0, 1);
+
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+        withdrawKey(noId, 0);
+
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        vm.deal(nodeOperator, BOND_SIZE + 1 wei);
+        vm.startPrank(nodeOperator);
+        stETH.submit{ value: BOND_SIZE + 1 wei }(address(0));
+
+        {
+            vm.expectEmit(address(csm));
+            emit IStakingModule.SigningKeyAdded(noId, keys);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
+        }
+        csm.addValidatorKeysStETH(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures,
+            ICSAccounting.PermitInput({
+                value: BOND_SIZE,
+                deadline: 0,
+                v: 0,
+                r: 0,
+                s: 0
+            })
+        );
+    }
+
     function test_AddValidatorKeysStETH_withTargetLimitSet()
         public
         assertInvariants
@@ -1269,6 +1458,38 @@ contract CSMAddValidatorKeys is CSMCommon {
         parametersRegistry.setKeysLimit(0, 1);
 
         vm.expectRevert(ICSModule.KeysLimitExceeded.selector);
+        vm.prank(nodeOperator);
+        csm.addValidatorKeysETH{ value: required }(
+            nodeOperator,
+            noId,
+            1,
+            keys,
+            signatures
+        );
+    }
+
+    function test_AddValidatorKeysETH_keysLimit_withdrawnKeys()
+        public
+        assertInvariants
+        brutalizeMemory
+    {
+        parametersRegistry.setKeysLimit(0, 1);
+
+        uint256 noId = createNodeOperator();
+        csm.obtainDepositData(1, "");
+        withdrawKey(noId, 0);
+
+        (bytes memory keys, bytes memory signatures) = keysSignatures(1, 1);
+
+        uint256 required = accounting.getRequiredBondForNextKeys(0, 1);
+        vm.deal(nodeOperator, required);
+
+        {
+            vm.expectEmit(address(csm));
+            emit IStakingModule.SigningKeyAdded(noId, keys);
+            vm.expectEmit(address(csm));
+            emit ICSModule.TotalSigningKeysCountChanged(noId, 2);
+        }
         vm.prank(nodeOperator);
         csm.addValidatorKeysETH{ value: required }(
             nodeOperator,
@@ -2635,7 +2856,7 @@ contract CsmQueueOps is CSMCommon {
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             0,
-            DEPOSIT_SIZE,
+            csm.DEPOSIT_SIZE(),
             false
         );
 
@@ -3713,7 +3934,7 @@ contract CsmGetNodeOperatorNonWithdrawnKeys is CSMCommon {
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             0,
-            DEPOSIT_SIZE,
+            csm.DEPOSIT_SIZE(),
             false
         );
 
@@ -5315,8 +5536,6 @@ contract CSMCompensateELRewardsStealingPenalty is CSMCommon {
 }
 
 contract CsmSubmitWithdrawals is CSMCommon {
-    using stdStorage for StdStorage;
-
     function test_submitWithdrawals() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
@@ -5330,7 +5549,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             keyIndex,
-            DEPOSIT_SIZE,
+            csm.DEPOSIT_SIZE(),
             false
         );
 
@@ -5338,7 +5557,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         emit ICSModule.WithdrawalSubmitted(
             noId,
             keyIndex,
-            DEPOSIT_SIZE,
+            csm.DEPOSIT_SIZE(),
             pubkey
         );
         csm.submitWithdrawals(withdrawalInfo);
@@ -5363,7 +5582,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             keyIndex,
-            DEPOSIT_SIZE,
+            csm.DEPOSIT_SIZE(),
             true
         );
 
@@ -5371,7 +5590,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         emit ICSModule.WithdrawalSubmitted(
             noId,
             keyIndex,
-            DEPOSIT_SIZE,
+            csm.DEPOSIT_SIZE(),
             pubkey
         );
         csm.submitWithdrawals(withdrawalInfo);
@@ -5395,7 +5614,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             keyIndex,
-            DEPOSIT_SIZE - BOND_SIZE - 1 ether,
+            csm.DEPOSIT_SIZE() - BOND_SIZE - 1 ether,
             false
         );
 
@@ -5403,7 +5622,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         emit ICSModule.WithdrawalSubmitted(
             noId,
             keyIndex,
-            DEPOSIT_SIZE - BOND_SIZE - 1 ether,
+            csm.DEPOSIT_SIZE() - BOND_SIZE - 1 ether,
             pubkey
         );
         csm.submitWithdrawals(withdrawalInfo);
@@ -5417,7 +5636,6 @@ contract CsmSubmitWithdrawals is CSMCommon {
     function test_submitWithdrawals_lowExitBalance() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
-        uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
         ValidatorWithdrawalInfo[]
@@ -5426,7 +5644,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             keyIndex,
-            depositSize - 1 ether,
+            csm.DEPOSIT_SIZE() - 1 ether,
             false
         );
 
@@ -5440,7 +5658,6 @@ contract CsmSubmitWithdrawals is CSMCommon {
     function test_submitWithdrawals_exitDelayPenalty() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
-        uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
         exitPenalties.mock_setDelayedExitPenaltyInfo(
@@ -5457,7 +5674,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             keyIndex,
-            depositSize,
+            csm.DEPOSIT_SIZE(),
             false
         );
 
@@ -5471,7 +5688,6 @@ contract CsmSubmitWithdrawals is CSMCommon {
     function test_submitWithdrawals_strikesPenalty() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
-        uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
         exitPenalties.mock_setDelayedExitPenaltyInfo(
@@ -5488,7 +5704,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             keyIndex,
-            depositSize,
+            csm.DEPOSIT_SIZE(),
             false
         );
 
@@ -5502,7 +5718,6 @@ contract CsmSubmitWithdrawals is CSMCommon {
     function test_submitWithdrawals_allPenalties() public assertInvariants {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
-        uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
         exitPenalties.mock_setDelayedExitPenaltyInfo(
@@ -5519,7 +5734,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             keyIndex,
-            depositSize - 1 ether,
+            csm.DEPOSIT_SIZE() - 1 ether,
             false
         );
 
@@ -5536,7 +5751,6 @@ contract CsmSubmitWithdrawals is CSMCommon {
     {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
-        uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
         exitPenalties.mock_setDelayedExitPenaltyInfo(
@@ -5553,7 +5767,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             keyIndex,
-            depositSize,
+            csm.DEPOSIT_SIZE(),
             false
         );
 
@@ -5578,7 +5792,6 @@ contract CsmSubmitWithdrawals is CSMCommon {
     {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
-        uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
         exitPenalties.mock_setDelayedExitPenaltyInfo(
@@ -5595,7 +5808,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             keyIndex,
-            depositSize,
+            csm.DEPOSIT_SIZE(),
             false
         );
 
@@ -5620,7 +5833,6 @@ contract CsmSubmitWithdrawals is CSMCommon {
     {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
-        uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
         exitPenalties.mock_setDelayedExitPenaltyInfo(
@@ -5637,7 +5849,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             keyIndex,
-            depositSize,
+            csm.DEPOSIT_SIZE(),
             false
         );
 
@@ -5662,7 +5874,6 @@ contract CsmSubmitWithdrawals is CSMCommon {
     {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
-        uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
         exitPenalties.mock_setDelayedExitPenaltyInfo(
@@ -5679,7 +5890,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             keyIndex,
-            depositSize,
+            csm.DEPOSIT_SIZE(),
             false
         );
 
@@ -5700,7 +5911,6 @@ contract CsmSubmitWithdrawals is CSMCommon {
     {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
-        uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
         exitPenalties.mock_setDelayedExitPenaltyInfo(
@@ -5717,7 +5927,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             keyIndex,
-            depositSize,
+            csm.DEPOSIT_SIZE(),
             false
         );
 
@@ -5738,7 +5948,6 @@ contract CsmSubmitWithdrawals is CSMCommon {
     {
         uint256 keyIndex = 0;
         uint256 noId = createNodeOperator();
-        uint256 depositSize = DEPOSIT_SIZE;
         csm.obtainDepositData(1, "");
 
         exitPenalties.mock_setDelayedExitPenaltyInfo(
@@ -5755,7 +5964,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             keyIndex,
-            depositSize - 1 ether,
+            csm.DEPOSIT_SIZE() - 1 ether,
             false
         );
 
@@ -5821,14 +6030,13 @@ contract CsmSubmitWithdrawals is CSMCommon {
     {
         uint256 noId = createNodeOperator();
         csm.obtainDepositData(1, "");
-        uint256 depositSize = DEPOSIT_SIZE;
 
         ValidatorWithdrawalInfo[]
             memory withdrawalInfo = new ValidatorWithdrawalInfo[](1);
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             0,
-            depositSize,
+            csm.DEPOSIT_SIZE(),
             false
         );
 
@@ -6300,19 +6508,19 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         withdrawalInfo[0] = ValidatorWithdrawalInfo(
             noId,
             0,
-            DEPOSIT_SIZE,
+            csm.DEPOSIT_SIZE(),
             false
         );
         withdrawalInfo[1] = ValidatorWithdrawalInfo(
             noId,
             1,
-            DEPOSIT_SIZE,
+            csm.DEPOSIT_SIZE(),
             false
         );
         withdrawalInfo[2] = ValidatorWithdrawalInfo(
             noId,
             2,
-            DEPOSIT_SIZE - BOND_SIZE,
+            csm.DEPOSIT_SIZE() - BOND_SIZE,
             false
         ); // Large CL balance drop, that doesn't change the unbonded count.
 
