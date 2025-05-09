@@ -533,7 +533,10 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
 
 contract CSEjectorTestEjectBadPerformer is CSEjectorTestBase {
     function test_ejectBadPerformer() public {
-        bytes memory pubkey = csm.getSigningKeys(0, 0, 1);
+        uint256 keyIndex = 0;
+        bytes memory pubkey = csm.getSigningKeys(0, keyIndex, 1);
+
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
 
         uint256 exitType = ejector.STRIKES_EXIT_TYPE_ID();
         vm.expectCall(
@@ -547,11 +550,23 @@ contract CSEjectorTestEjectBadPerformer is CSEjectorTestBase {
         );
 
         vm.prank(address(strikes));
-        ejector.ejectBadPerformer(noId, pubkey, refundRecipient);
+        ejector.ejectBadPerformer(noId, keyIndex, refundRecipient);
+    }
+
+    function test_ejectBadPerformer_revertWhen_SigningKeysInvalidOffset()
+        public
+    {
+        uint256 keyIndex = 1;
+
+        csm.mock_setNodeOperatorTotalDepositedKeys(0);
+
+        vm.prank(address(strikes));
+        vm.expectRevert(ICSEjector.SigningKeysInvalidOffset.selector);
+        ejector.ejectBadPerformer(noId, keyIndex, refundRecipient);
     }
 
     function test_ejectBadPerformer_revertWhen_onPause() public {
-        bytes memory pubkey = csm.getSigningKeys(0, 0, 1);
+        uint256 keyIndex = 0;
         vm.startPrank(admin);
         ejector.grantRole(ejector.PAUSE_ROLE(), admin);
         ejector.pauseFor(100);
@@ -559,14 +574,14 @@ contract CSEjectorTestEjectBadPerformer is CSEjectorTestBase {
 
         vm.prank(address(strikes));
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
-        ejector.ejectBadPerformer(noId, pubkey, refundRecipient);
+        ejector.ejectBadPerformer(noId, keyIndex, refundRecipient);
     }
 
     function test_ejectBadPerformer_revertWhen_notStrikes() public {
-        bytes memory pubkey = csm.getSigningKeys(0, 0, 1);
+        uint256 keyIndex = 0;
 
         vm.prank(stranger);
         vm.expectRevert(ICSEjector.SenderIsNotStrikes.selector);
-        ejector.ejectBadPerformer(noId, pubkey, refundRecipient);
+        ejector.ejectBadPerformer(noId, keyIndex, refundRecipient);
     }
 }
