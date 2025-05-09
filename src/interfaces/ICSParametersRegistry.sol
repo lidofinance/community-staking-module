@@ -99,14 +99,8 @@ interface ICSParametersRegistry {
         uint256 fine
     );
     event KeysLimitSet(uint256 indexed curveId, uint256 limit);
-    event RewardShareDataSet(
-        uint256 indexed curveId,
-        KeyIndexValueInterval[] data
-    );
-    event PerformanceLeewayDataSet(
-        uint256 indexed curveId,
-        KeyIndexValueInterval[] data
-    );
+    event RewardShareDataSet(uint256 indexed curveId, uint256[2][] data);
+    event PerformanceLeewayDataSet(uint256 indexed curveId, uint256[2][] data);
     event StrikesParamsSet(
         uint256 indexed curveId,
         uint256 lifetime,
@@ -308,7 +302,7 @@ interface ICSParametersRegistry {
     /// @param data Interval values for keys count and reward share percentages in BP (ex. [[0, 10000], [10, 8000], [50, 5000]])
     function setRewardShareData(
         uint256 curveId,
-        KeyIndexValueInterval[] calldata data
+        uint256[2][] calldata data
     ) external;
 
     /// @notice Unset reward share parameters for the curveId
@@ -335,10 +329,12 @@ interface ICSParametersRegistry {
 
     /// @notice Sets the provided config to the given curve.
     /// @param curveId Curve Id to set the config.
-    /// @param config Config to be used for the curve.
+    /// @param priority Priority of the queue
+    /// @param maxDeposits Max deposits in prioritized queue
     function setQueueConfig(
         uint256 curveId,
-        QueueConfig memory config
+        uint32 priority,
+        uint32 maxDeposits
     ) external;
 
     /// @notice Set the given curve's config to the default one.
@@ -361,7 +357,7 @@ interface ICSParametersRegistry {
     /// @param data Interval values for keys count and performance leeway percentages in BP (ex. [[0, 500], [100, 450], [500, 400]])
     function setPerformanceLeewayData(
         uint256 curveId,
-        KeyIndexValueInterval[] calldata data
+        uint256[2][] calldata data
     ) external;
 
     /// @notice Unset performance leeway parameters for the curveId

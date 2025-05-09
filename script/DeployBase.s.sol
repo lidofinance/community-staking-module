@@ -88,6 +88,22 @@ struct DeployParams {
     string vettedGateTreeCid;
     uint256[2][] vettedGateBondCurve;
     address vettedGateManager;
+    uint256 vettedGateKeyRemovalCharge;
+    uint256 vettedGateELRewardsStealingAdditionalFine;
+    uint256 vettedGateKeysLimit;
+    uint256[2][] vettedGateAvgPerfLeewayData;
+    uint256[2][] vettedGateRewardShareData;
+    uint256 vettedGateStrikesLifetimeFrames;
+    uint256 vettedGateStrikesThreshold;
+    uint256 vettedGateQueuePriority;
+    uint256 vettedGateQueueMaxDeposits;
+    uint256 vettedGateBadPerformancePenalty;
+    uint256 vettedGateAttestationsWeight;
+    uint256 vettedGateBlocksWeight;
+    uint256 vettedGateSyncWeight;
+    uint256 vettedGateAllowedExitDelay;
+    uint256 vettedGateExitDelayPenalty;
+    uint256 vettedGateMaxWithdrawalRequestFee;
     // GateSeal
     address gateSealFactory;
     address sealingCommittee;
@@ -324,6 +340,59 @@ abstract contract DeployBase is Script {
                 payable(address(vettedGate))
             );
             vettedGateProxy.proxy__changeAdmin(config.proxyAdmin);
+
+            parametersRegistry.setKeyRemovalCharge(
+                identifiedSolosCurve,
+                config.vettedGateKeyRemovalCharge
+            );
+            parametersRegistry.setElRewardsStealingAdditionalFine(
+                identifiedSolosCurve,
+                config.vettedGateELRewardsStealingAdditionalFine
+            );
+            parametersRegistry.setKeysLimit(
+                identifiedSolosCurve,
+                config.vettedGateKeysLimit
+            );
+            parametersRegistry.setPerformanceLeewayData(
+                identifiedSolosCurve,
+                config.vettedGateAvgPerfLeewayData
+            );
+            parametersRegistry.setRewardShareData(
+                identifiedSolosCurve,
+                config.vettedGateRewardShareData
+            );
+            parametersRegistry.setStrikesParams(
+                identifiedSolosCurve,
+                config.vettedGateStrikesLifetimeFrames,
+                config.vettedGateStrikesThreshold
+            );
+            parametersRegistry.setQueueConfig(
+                identifiedSolosCurve,
+                uint32(config.vettedGateQueuePriority),
+                uint32(config.vettedGateQueueMaxDeposits)
+            );
+            parametersRegistry.setBadPerformancePenalty(
+                identifiedSolosCurve,
+                config.vettedGateBadPerformancePenalty
+            );
+            parametersRegistry.setPerformanceCoefficients(
+                identifiedSolosCurve,
+                config.vettedGateAttestationsWeight,
+                config.vettedGateBlocksWeight,
+                config.vettedGateSyncWeight
+            );
+            parametersRegistry.setAllowedExitDelay(
+                identifiedSolosCurve,
+                config.vettedGateAllowedExitDelay
+            );
+            parametersRegistry.setExitDelayPenalty(
+                identifiedSolosCurve,
+                config.vettedGateExitDelayPenalty
+            );
+            parametersRegistry.setMaxWithdrawalRequestFee(
+                identifiedSolosCurve,
+                config.vettedGateMaxWithdrawalRequestFee
+            );
 
             feeDistributor.initialize({
                 admin: address(deployer),

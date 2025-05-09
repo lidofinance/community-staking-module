@@ -828,12 +828,8 @@ contract ObtainDepositDataTest is IntegrationTestBase {
         vm.startPrank(agent);
         parametersRegistry.setQueueConfig(
             curveId,
-            ICSParametersRegistry.QueueConfig(
-                0,
-                no.totalDepositedKeys +
-                    no.enqueuedCount +
-                    uint32(keysWithPriority)
-            )
+            0,
+            no.totalDepositedKeys + no.enqueuedCount + uint32(keysWithPriority)
         );
         vm.stopPrank();
     }
