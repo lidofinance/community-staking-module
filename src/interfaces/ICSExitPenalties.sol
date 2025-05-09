@@ -52,6 +52,7 @@ interface ICSExitPenalties is IExitTypes {
 
     function strikes() external view returns (address);
 
+    // TODO: update the description according to IStakingModule.reportValidatorExitDelay
     /// @notice Process the delayed exit report
     /// @param nodeOperatorId ID of the Node Operator
     /// @param publicKey Public key of the validator

@@ -885,6 +885,7 @@ contract CSModule is
 
             queue = _getQueue(priority);
             unchecked {
+                // Note: unused below
                 ++priority;
             }
 
@@ -906,6 +907,7 @@ contract CSModule is
                     // `depositsLeft` is non-zero at this point all the time, so the check `depositsLeft > keysCount`
                     // covers the case when no depositable keys on the Node Operator have been left.
                     if (depositsLeft > keysCount || keysCount == keysInBatch) {
+                        // TODO: check `assert invariants` modifier in tests
                         // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
                         // @dev No need to safe cast due to internal logic
                         no.enqueuedCount -= uint32(keysInBatch);
@@ -1006,8 +1008,8 @@ contract CSModule is
             (
                 uint256 removedPerQueue,
                 uint256 lastRemovedAtDepthPerQueue,
-                uint256 visited,
-                bool isFinished
+                uint256 visitedPerQueue,
+                bool reachedOutOfQueue
             ) = queue.clean(_nodeOperators, maxItems, queueLookup);
 
             if (removedPerQueue > 0) {
@@ -1028,16 +1030,16 @@ contract CSModule is
                 }
             }
 
-            // NOTE: If `maxItems` is set to the total length of the queue(s), `isFinished` is equal
-            // to false, effectively breaking the cycle, because in `QueueLib.clean` we don't reach
+            // NOTE: If `maxItems` is set to the total length of the queue(s), `reachedOutOfQueue` is equal
+            // to `false`, effectively breaking the cycle, because in `QueueLib.clean` we don't reach
             // an empty batch after the end of a queue.
-            if (!isFinished) {
+            if (!reachedOutOfQueue) {
                 break;
             }
 
             unchecked {
-                totalVisited += visited;
-                maxItems -= visited;
+                totalVisited += visitedPerQueue;
+                maxItems -= visitedPerQueue;
             }
         }
     }
@@ -1130,7 +1132,6 @@ contract CSModule is
     ///      - targetLimitMode
     ///      - targetValidatorsCount
     ///      - totalUnbondedKeys
-    ///      - totalStuckKeys
     function getNodeOperatorSummary(
         uint256 nodeOperatorId
     )
@@ -1227,7 +1228,7 @@ contract CSModule is
         );
     }
 
-    /// @notice Get nonce of the module
+    /// @inheritdoc IStakingModule
     function getNonce() external view returns (uint256) {
         return _nonce;
     }

@@ -121,7 +121,7 @@ library QueueLib {
             uint256 removed,
             uint256 lastRemovedAtDepth,
             uint256 visited,
-            bool isFinished
+            bool reachedOutOfQueue
         )
     {
         if (maxItems == 0) {
@@ -137,7 +137,7 @@ library QueueLib {
         while (visited < maxItems) {
             Batch item = self.queue[curr];
             if (item.isNil()) {
-                isFinished = true;
+                reachedOutOfQueue = true;
                 break;
             }
 

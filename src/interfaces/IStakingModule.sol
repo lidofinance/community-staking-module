@@ -25,6 +25,7 @@ interface IStakingModule {
             uint256 depositableValidatorsCount
         );
 
+    // TODO: check interface
     /// @notice Returns all-validators summary belonging to the node operator with the given id
     /// @param nodeOperatorId id of the operator to return report for
     /// @return targetLimitMode shows whether the current target limit applied to the node operator (1 = soft mode, 2 = forced mode)
@@ -169,6 +170,7 @@ interface IStakingModule {
     ///      Details about error data: https://docs.soliditylang.org/en/v0.8.9/control-structures.html#error-handling-assert-require-revert-and-exceptions
     function onWithdrawalCredentialsChanged() external;
 
+    /// TODO: update the description
     /// @notice Handles tracking and penalization logic for validators that remain active beyond their eligible exit window.
     /// @dev This function is called to report the current exit-related status of validator belonging to a specific node operator.
     ///      It accepts a validator public key associated with the duration (in seconds) they was eligible to exit but have not.
@@ -184,6 +186,7 @@ interface IStakingModule {
         uint256 eligibleToExitInSec
     ) external;
 
+    /// TODO: update the description
     /// @notice Handles the triggerable exit event validator belonging to a specific node operator.
     /// @dev This function is called when a validator is exited using the triggerable exit request on EL.
     /// @param _nodeOperatorId The ID of the node operator.
