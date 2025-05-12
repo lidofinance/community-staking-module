@@ -52,10 +52,11 @@ interface ICSExitPenalties is IExitTypes {
 
     function strikes() external view returns (address);
 
-    /// @notice Process the delayed exit report
-    /// @param nodeOperatorId ID of the Node Operator
-    /// @param publicKey Public key of the validator
-    /// @param eligibleToExitInSec The time in seconds when the validator is eligible to exit
+    /// @notice Handles tracking and penalization logic for a validator that remains active beyond its eligible exit window.
+    /// @dev see IStakingModule.reportValidatorExitDelay for details
+    /// @param nodeOperatorId The ID of the node operator whose validator's status is being delivered.
+    /// @param publicKey The public key of the validator being reported.
+    /// @param eligibleToExitInSec The duration (in seconds) indicating how long the validator has been eligible to exit but has not exited.
     function processExitDelayReport(
         uint256 nodeOperatorId,
         bytes calldata publicKey,
