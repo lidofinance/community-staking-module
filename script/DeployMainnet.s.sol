@@ -89,8 +89,8 @@ contract DeployMainnet is DeployBase {
         config.vettedGateManager = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
         config.vettedGateTreeCid = "someCid"; // TODO: to be set in the future
         // TODO: Set proper values bellow
-        config.vettedGateKeyRemovalCharge = 0.01 ether;
-        config.vettedGateELRewardsStealingAdditionalFine = 0.5 ether;
+        config.vettedGateKeyRemovalCharge = 0.05 ether;
+        config.vettedGateELRewardsStealingAdditionalFine = 0.1 ether;
         config.vettedGateKeysLimit = type(uint248).max;
         config.vettedGateAvgPerfLeewayData.push([0, 500]);
         config.vettedGateRewardShareData.push([0, 10000]);

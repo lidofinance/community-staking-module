@@ -79,8 +79,8 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         [uint256(2), 1.3 ether]
     ];
 
-    uint256 vettedGateKeyRemovalCharge = 0.01 ether;
-    uint256 vettedGateELRewardsStealingAdditionalFine = 0.5 ether;
+    uint256 vettedGateKeyRemovalCharge = 0.05 ether;
+    uint256 vettedGateELRewardsStealingAdditionalFine = 0.1 ether;
     uint256 vettedGateKeysLimit = type(uint248).max;
     uint256[2][] vettedGateAvgPerfLeewayData = [[uint256(0), uint256(500)]];
 

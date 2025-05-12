@@ -88,8 +88,8 @@ contract DeployHoodi is DeployBase {
         config.vettedGateManager = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
         config.vettedGateTreeCid = "someCid"; // TODO: to be set in the future
         // TODO: Set proper values bellow
-        config.vettedGateKeyRemovalCharge = 0.01 ether;
-        config.vettedGateELRewardsStealingAdditionalFine = 0.5 ether;
+        config.vettedGateKeyRemovalCharge = 0.05 ether;
+        config.vettedGateELRewardsStealingAdditionalFine = 0.1 ether;
         config.vettedGateKeysLimit = type(uint248).max;
         config.vettedGateAvgPerfLeewayData.push([0, 500]);
         config.vettedGateRewardShareData.push([0, 10000]);
