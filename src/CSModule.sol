@@ -907,7 +907,6 @@ contract CSModule is
                     // `depositsLeft` is non-zero at this point all the time, so the check `depositsLeft > keysCount`
                     // covers the case when no depositable keys on the Node Operator have been left.
                     if (depositsLeft > keysCount || keysCount == keysInBatch) {
-                        // TODO: check `assert invariants` modifier in tests
                         // NOTE: `enqueuedCount` >= keysInBatch invariant should be checked.
                         // @dev No need to safe cast due to internal logic
                         no.enqueuedCount -= uint32(keysInBatch);
