@@ -585,8 +585,6 @@ contract CSStrikesProofTest is CSStrikesTestBase {
         s = bound(s, 1, a / 2 == 0 ? 1 : a / 2);
         uint256[] memory indicies = UintArr(a, a + s, a + s + s);
 
-        module.mock_setNodeOperatorTotalDepositedKeys(1);
-
         ICSStrikes.ModuleKeyStrikes[]
             memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](
                 indicies.length
@@ -612,7 +610,7 @@ contract CSStrikesProofTest is CSStrikesTestBase {
                 abi.encodeWithSelector(
                     ICSEjector.ejectBadPerformer.selector,
                     leaf.keyStrikes.nodeOperatorId,
-                    leaf.pubkey,
+                    leaf.keyStrikes.keyIndex,
                     refundRecipient
                 )
             );
@@ -646,8 +644,6 @@ contract CSStrikesProofTest is CSStrikesTestBase {
         bytes32[] memory proof = tree.getProof(0);
         bool[] memory proofFlags = new bool[](proof.length);
 
-        module.mock_setNodeOperatorTotalDepositedKeys(1);
-
         vm.mockCall(
             address(module),
             abi.encodeWithSelector(
@@ -662,7 +658,7 @@ contract CSStrikesProofTest is CSStrikesTestBase {
             abi.encodeWithSelector(
                 ICSEjector.ejectBadPerformer.selector,
                 leaf.keyStrikes.nodeOperatorId,
-                leaf.pubkey,
+                leaf.keyStrikes.keyIndex,
                 address(this)
             )
         );
@@ -686,8 +682,6 @@ contract CSStrikesProofTest is CSStrikesTestBase {
         a = bound(a, 0, leaves.length / 2);
         s = bound(s, 1, a / 2 == 0 ? 1 : a / 2);
         uint256[] memory indicies = UintArr(a, a + s, a + s + s);
-
-        module.mock_setNodeOperatorTotalDepositedKeys(1);
 
         (bytes32[] memory proof, bool[] memory proofFlags) = tree.getMultiProof(
             indicies
@@ -759,7 +753,6 @@ contract CSStrikesProofTest is CSStrikesTestBase {
         bytes32[] memory proof = tree.getProof(0);
         bool[] memory proofFlags = new bool[](proof.length);
 
-        module.mock_setNodeOperatorTotalDepositedKeys(1);
         module.PARAMETERS_REGISTRY().setStrikesParams(0, 6, 100501);
 
         vm.mockCall(
@@ -777,37 +770,6 @@ contract CSStrikesProofTest is CSStrikesTestBase {
             keyStrikesList,
             proof,
             proofFlags,
-            address(0)
-        );
-    }
-
-    function test_processBadPerformanceProof_RevertWhen_SigningKeysInvalidOffset()
-        public
-        withTreeOfLeavesCount(1)
-    {
-        Leaf memory leaf = leaves[0];
-
-        ICSStrikes.ModuleKeyStrikes[]
-            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
-        keyStrikesList[0] = leaf.keyStrikes;
-
-        module.mock_setNodeOperatorTotalDepositedKeys(0);
-
-        vm.mockCall(
-            address(module),
-            abi.encodeWithSelector(
-                ICSModule.getSigningKeys.selector,
-                leaf.keyStrikes.nodeOperatorId,
-                leaf.keyStrikes.keyIndex
-            ),
-            abi.encode(leaf.pubkey)
-        );
-
-        vm.expectRevert(ICSStrikes.SigningKeysInvalidOffset.selector);
-        this.processBadPerformanceProof(
-            keyStrikesList,
-            new bytes32[](0),
-            new bool[](0),
             address(0)
         );
     }
