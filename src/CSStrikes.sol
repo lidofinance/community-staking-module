@@ -121,7 +121,12 @@ contract CSStrikes is
 
         bytes[] memory pubkeys = new bytes[](keyStrikesList.length);
         for (uint256 i; i < pubkeys.length; ++i) {
-            pubkeys[i] = _loadPubKey(keyStrikesList[i]);
+            ModuleKeyStrikes memory keyStrikes = keyStrikesList[i];
+            pubkeys[i] = MODULE.getSigningKeys(
+                keyStrikes.nodeOperatorId,
+                keyStrikes.keyIndex,
+                1
+            );
         }
 
         if (!verifyProof(keyStrikesList, pubkeys, proof, proofFlags)) {
@@ -190,24 +195,6 @@ contract CSStrikes is
         emit EjectorSet(_ejector);
     }
 
-    function _loadPubKey(
-        ModuleKeyStrikes calldata keyStrikes
-    ) internal view returns (bytes memory pubkey) {
-        // Sanity check. This is possible only if there is invalid data in the tree
-        if (
-            keyStrikes.keyIndex >=
-            MODULE.getNodeOperatorTotalDepositedKeys(keyStrikes.nodeOperatorId)
-        ) {
-            revert SigningKeysInvalidOffset();
-        }
-
-        pubkey = MODULE.getSigningKeys(
-            keyStrikes.nodeOperatorId,
-            keyStrikes.keyIndex,
-            1
-        );
-    }
-
     function _ejectByStrikes(
         ModuleKeyStrikes calldata keyStrikes,
         bytes memory pubkey,
@@ -229,7 +216,7 @@ contract CSStrikes is
 
         ejector.ejectBadPerformer(
             keyStrikes.nodeOperatorId,
-            pubkey,
+            keyStrikes.keyIndex,
             refundRecipient
         );
         EXIT_PENALTIES.processStrikesReport(keyStrikes.nodeOperatorId, pubkey);

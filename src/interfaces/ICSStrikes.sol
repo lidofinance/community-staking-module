@@ -27,7 +27,6 @@ interface ICSStrikes {
 
     error InvalidReportData();
     error InvalidProof();
-    error SigningKeysInvalidOffset();
     error NotEnoughStrikesToEject();
 
     struct ModuleKeyStrikes {
