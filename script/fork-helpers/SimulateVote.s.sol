@@ -79,29 +79,29 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         [uint256(2), 1.3 ether]
     ];
 
-    uint256 vettedGateKeyRemovalCharge = 0.01 ether;
-    uint256 vettedGateELRewardsStealingAdditionalFine = 0.05 ether;
-    uint256 vettedGateKeysLimit = type(uint248).max;
-    uint256[2][] vettedGateAvgPerfLeewayData = [
+    uint256 identifiedSoloOperatorKeyRemovalCharge = 0.01 ether;
+    uint256 identifiedSoloOperatorELRewardsStealingAdditionalFine = 0.05 ether;
+    uint256 identifiedSoloOperatorKeysLimit = type(uint248).max;
+    uint256[2][] identifiedSoloOperatorAvgPerfLeewayData = [
         [uint256(0), uint256(500)],
         [uint256(100), uint256(600)]
     ];
 
-    uint256[2][] vettedGateRewardShareData = [
+    uint256[2][] identifiedSoloOperatorRewardShareData = [
         [uint256(0), uint256(10000)],
         [uint256(100), uint256(9900)]
     ];
-    uint256 vettedGateStrikesLifetimeFrames = 8;
-    uint256 vettedGateStrikesThreshold = 4;
-    uint256 vettedGateQueuePriority = 0;
-    uint256 vettedGateQueueMaxDeposits = 10;
-    uint256 vettedGateBadPerformancePenalty = 0.05 ether;
-    uint256 vettedGateAttestationsWeight = 60;
-    uint256 vettedGateBlocksWeight = 4;
-    uint256 vettedGateSyncWeight = 0;
-    uint256 vettedGateAllowedExitDelay = 8 days;
-    uint256 vettedGateExitDelayPenalty = 0.05 ether;
-    uint256 vettedGateMaxWithdrawalRequestFee = 0.05 ether;
+    uint256 identifiedSoloOperatorStrikesLifetimeFrames = 8;
+    uint256 identifiedSoloOperatorStrikesThreshold = 4;
+    uint256 identifiedSoloOperatorQueuePriority = 0;
+    uint256 identifiedSoloOperatorQueueMaxDeposits = 10;
+    uint256 identifiedSoloOperatorBadPerformancePenalty = 0.05 ether;
+    uint256 identifiedSoloOperatorAttestationsWeight = 60;
+    uint256 identifiedSoloOperatorBlocksWeight = 4;
+    uint256 identifiedSoloOperatorSyncWeight = 0;
+    uint256 identifiedSoloOperatorAllowedExitDelay = 8 days;
+    uint256 identifiedSoloOperatorExitDelayPenalty = 0.05 ether;
+    uint256 identifiedSoloOperatorMaxWithdrawalRequestFee = 0.05 ether;
 
     function upgrade() external {
         Env memory env = envVars();
@@ -175,58 +175,58 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
 
         vm.startBroadcast(admin);
 
-        uint256 identifiedSolosCurve = 1;
+        uint256 identifiedSoloOperatorCurve = 1;
         parametersRegistry.setKeyRemovalCharge(
-            identifiedSolosCurve,
-            vettedGateKeyRemovalCharge
+            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorKeyRemovalCharge
         );
         parametersRegistry.setElRewardsStealingAdditionalFine(
-            identifiedSolosCurve,
-            vettedGateELRewardsStealingAdditionalFine
+            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorELRewardsStealingAdditionalFine
         );
         parametersRegistry.setKeysLimit(
-            identifiedSolosCurve,
-            vettedGateKeysLimit
+            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorKeysLimit
         );
         parametersRegistry.setPerformanceLeewayData(
-            identifiedSolosCurve,
-            vettedGateAvgPerfLeewayData
+            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorAvgPerfLeewayData
         );
         parametersRegistry.setRewardShareData(
-            identifiedSolosCurve,
-            vettedGateRewardShareData
+            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorRewardShareData
         );
         parametersRegistry.setStrikesParams(
-            identifiedSolosCurve,
-            vettedGateStrikesLifetimeFrames,
-            vettedGateStrikesThreshold
+            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorStrikesLifetimeFrames,
+            identifiedSoloOperatorStrikesThreshold
         );
         parametersRegistry.setQueueConfig(
-            identifiedSolosCurve,
-            uint32(vettedGateQueuePriority),
-            uint32(vettedGateQueueMaxDeposits)
+            identifiedSoloOperatorCurve,
+            uint32(identifiedSoloOperatorQueuePriority),
+            uint32(identifiedSoloOperatorQueueMaxDeposits)
         );
         parametersRegistry.setBadPerformancePenalty(
-            identifiedSolosCurve,
-            vettedGateBadPerformancePenalty
+            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorBadPerformancePenalty
         );
         parametersRegistry.setPerformanceCoefficients(
-            identifiedSolosCurve,
-            vettedGateAttestationsWeight,
-            vettedGateBlocksWeight,
-            vettedGateSyncWeight
+            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorAttestationsWeight,
+            identifiedSoloOperatorBlocksWeight,
+            identifiedSoloOperatorSyncWeight
         );
         parametersRegistry.setAllowedExitDelay(
-            identifiedSolosCurve,
-            vettedGateAllowedExitDelay
+            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorAllowedExitDelay
         );
         parametersRegistry.setExitDelayPenalty(
-            identifiedSolosCurve,
-            vettedGateExitDelayPenalty
+            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorExitDelayPenalty
         );
         parametersRegistry.setMaxWithdrawalRequestFee(
-            identifiedSolosCurve,
-            vettedGateMaxWithdrawalRequestFee
+            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorMaxWithdrawalRequestFee
         );
 
         accounting.revokeRole(keccak256("SET_BOND_CURVE_ROLE"), address(csm));

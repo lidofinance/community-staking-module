@@ -188,22 +188,24 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             deployParams.bondCurve[1][1]
         );
 
-        uint256 vettedCurveId = vettedGate.curveId();
+        uint256 identifiedSoloOperatorBondCurveId = vettedGate.curveId();
         assertEq(
-            accounting.getCurveInfo(vettedCurveId)[0].minKeysCount,
-            deployParams.vettedGateBondCurve[0][0]
+            accounting
+            .getCurveInfo(identifiedSoloOperatorBondCurveId)[0].minKeysCount,
+            deployParams.identifiedSoloOperatorBondCurve[0][0]
         );
         assertEq(
-            accounting.getCurveInfo(vettedCurveId)[0].trend,
-            deployParams.vettedGateBondCurve[0][1]
+            accounting.getCurveInfo(identifiedSoloOperatorBondCurveId)[0].trend,
+            deployParams.identifiedSoloOperatorBondCurve[0][1]
         );
         assertEq(
-            accounting.getCurveInfo(vettedCurveId)[1].minKeysCount,
-            deployParams.vettedGateBondCurve[1][0]
+            accounting
+            .getCurveInfo(identifiedSoloOperatorBondCurveId)[1].minKeysCount,
+            deployParams.identifiedSoloOperatorBondCurve[1][0]
         );
         assertEq(
-            accounting.getCurveInfo(vettedCurveId)[1].trend,
-            deployParams.vettedGateBondCurve[1][1]
+            accounting.getCurveInfo(identifiedSoloOperatorBondCurveId)[1].trend,
+            deployParams.identifiedSoloOperatorBondCurve[1][1]
         );
         assertEq(address(accounting.feeDistributor()), address(feeDistributor));
         assertEq(accounting.getBondLockPeriod(), deployParams.bondLockPeriod);
@@ -800,93 +802,117 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
         });
     }
 
-    function test_vettedGateParams_afterVote() public view {
-        uint256 vettedGateCurveId = 1;
+    function test_identifiedSoloOperatorParams_afterVote() public view {
+        uint256 identifiedSoloOperatorCurveId = 1;
         assertEq(
-            parametersRegistry.getKeyRemovalCharge(vettedGateCurveId),
-            deployParams.vettedGateKeyRemovalCharge
+            parametersRegistry.getKeyRemovalCharge(
+                identifiedSoloOperatorCurveId
+            ),
+            deployParams.identifiedSoloOperatorKeyRemovalCharge
         );
         assertEq(
             parametersRegistry.getElRewardsStealingAdditionalFine(
-                vettedGateCurveId
+                identifiedSoloOperatorCurveId
             ),
-            deployParams.vettedGateELRewardsStealingAdditionalFine
+            deployParams.identifiedSoloOperatorELRewardsStealingAdditionalFine
         );
         assertEq(
-            parametersRegistry.getKeysLimit(vettedGateCurveId),
-            deployParams.vettedGateKeysLimit
+            parametersRegistry.getKeysLimit(identifiedSoloOperatorCurveId),
+            deployParams.identifiedSoloOperatorKeysLimit
         );
 
         ICSParametersRegistry.KeyIndexValueInterval[]
             memory rewardShareData = parametersRegistry.getRewardShareData(
-                vettedGateCurveId
+                identifiedSoloOperatorCurveId
             );
         assertEq(
             rewardShareData.length,
-            deployParams.vettedGateRewardShareData.length
+            deployParams.identifiedSoloOperatorRewardShareData.length
         );
         for (uint256 i = 0; i < rewardShareData.length; i++) {
             assertEq(
                 rewardShareData[i].minKeyIndex,
-                deployParams.vettedGateRewardShareData[i][0]
+                deployParams.identifiedSoloOperatorRewardShareData[i][0]
             );
             assertEq(
                 rewardShareData[i].value,
-                deployParams.vettedGateRewardShareData[i][1]
+                deployParams.identifiedSoloOperatorRewardShareData[i][1]
             );
         }
         ICSParametersRegistry.KeyIndexValueInterval[]
             memory performanceLeewayData = parametersRegistry
-                .getPerformanceLeewayData(vettedGateCurveId);
+                .getPerformanceLeewayData(identifiedSoloOperatorCurveId);
         assertEq(
             performanceLeewayData.length,
-            deployParams.vettedGateAvgPerfLeewayData.length
+            deployParams.identifiedSoloOperatorAvgPerfLeewayData.length
         );
         for (uint256 i = 0; i < performanceLeewayData.length; i++) {
             assertEq(
                 performanceLeewayData[i].minKeyIndex,
-                deployParams.vettedGateAvgPerfLeewayData[i][0]
+                deployParams.identifiedSoloOperatorAvgPerfLeewayData[i][0]
             );
             assertEq(
                 performanceLeewayData[i].value,
-                deployParams.vettedGateAvgPerfLeewayData[i][1]
+                deployParams.identifiedSoloOperatorAvgPerfLeewayData[i][1]
             );
         }
 
         (uint256 lifetime, uint256 threshold) = parametersRegistry
-            .getStrikesParams(vettedGateCurveId);
-        assertEq(lifetime, deployParams.vettedGateStrikesLifetimeFrames);
-        assertEq(threshold, deployParams.vettedGateStrikesThreshold);
+            .getStrikesParams(identifiedSoloOperatorCurveId);
+        assertEq(
+            lifetime,
+            deployParams.identifiedSoloOperatorStrikesLifetimeFrames
+        );
+        assertEq(
+            threshold,
+            deployParams.identifiedSoloOperatorStrikesThreshold
+        );
 
         (uint256 priority, uint256 maxDeposits) = parametersRegistry
-            .getQueueConfig(vettedGateCurveId);
-        assertEq(priority, deployParams.vettedGateQueuePriority);
-        assertEq(maxDeposits, deployParams.vettedGateQueueMaxDeposits);
+            .getQueueConfig(identifiedSoloOperatorCurveId);
+        assertEq(priority, deployParams.identifiedSoloOperatorQueuePriority);
+        assertEq(
+            maxDeposits,
+            deployParams.identifiedSoloOperatorQueueMaxDeposits
+        );
 
         assertEq(
-            parametersRegistry.getBadPerformancePenalty(vettedGateCurveId),
-            deployParams.vettedGateBadPerformancePenalty
+            parametersRegistry.getBadPerformancePenalty(
+                identifiedSoloOperatorCurveId
+            ),
+            deployParams.identifiedSoloOperatorBadPerformancePenalty
         );
         (
             uint256 attestationsWeight,
             uint256 blocksWeight,
             uint256 syncWeight
-        ) = parametersRegistry.getPerformanceCoefficients(vettedGateCurveId);
-        assertEq(attestationsWeight, deployParams.vettedGateAttestationsWeight);
-        assertEq(blocksWeight, deployParams.vettedGateBlocksWeight);
-        assertEq(syncWeight, deployParams.vettedGateSyncWeight);
+        ) = parametersRegistry.getPerformanceCoefficients(
+                identifiedSoloOperatorCurveId
+            );
+        assertEq(
+            attestationsWeight,
+            deployParams.identifiedSoloOperatorAttestationsWeight
+        );
+        assertEq(blocksWeight, deployParams.identifiedSoloOperatorBlocksWeight);
+        assertEq(syncWeight, deployParams.identifiedSoloOperatorSyncWeight);
 
         assertEq(
-            parametersRegistry.getAllowedExitDelay(vettedGateCurveId),
-            deployParams.vettedGateAllowedExitDelay
+            parametersRegistry.getAllowedExitDelay(
+                identifiedSoloOperatorCurveId
+            ),
+            deployParams.identifiedSoloOperatorAllowedExitDelay
         );
         assertEq(
-            parametersRegistry.getExitDelayPenalty(vettedGateCurveId),
-            deployParams.vettedGateExitDelayPenalty
+            parametersRegistry.getExitDelayPenalty(
+                identifiedSoloOperatorCurveId
+            ),
+            deployParams.identifiedSoloOperatorExitDelayPenalty
         );
         assertEq(
-            parametersRegistry.getMaxWithdrawalRequestFee(vettedGateCurveId),
-            deployParams.vettedGateMaxWithdrawalRequestFee
+            parametersRegistry.getMaxWithdrawalRequestFee(
+                identifiedSoloOperatorCurveId
+            ),
+            deployParams.identifiedSoloOperatorMaxWithdrawalRequestFee
         );
     }
 }
@@ -954,8 +980,14 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
 
     function test_state() public view {
         assertFalse(vettedGate.isPaused());
-        assertEq(vettedGate.treeRoot(), deployParams.vettedGateTreeRoot);
-        assertEq(vettedGate.treeCid(), deployParams.vettedGateTreeCid);
+        assertEq(
+            vettedGate.treeRoot(),
+            deployParams.identifiedSoloOperatorTreeRoot
+        );
+        assertEq(
+            vettedGate.treeCid(),
+            deployParams.identifiedSoloOperatorTreeCid
+        );
         // Check that the curve is set
         assertTrue(vettedGate.curveId() != 0);
         assertEq(vettedGate.getInitializedVersion(), 1);
@@ -988,7 +1020,7 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
         assertTrue(
             vettedGate.hasRole(
                 vettedGate.SET_TREE_ROLE(),
-                deployParams.vettedGateManager
+                deployParams.identifiedSoloOperatorManager
             )
         );
         assertEq(vettedGate.getRoleMemberCount(vettedGate.SET_TREE_ROLE()), 1);
@@ -1009,7 +1041,7 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
         assertTrue(
             vettedGate.hasRole(
                 vettedGate.END_REFERRAL_SEASON_ROLE(),
-                deployParams.vettedGateManager
+                deployParams.identifiedSoloOperatorManager
             )
         );
         assertEq(
@@ -1024,8 +1056,8 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         vettedGate.initialize({
             _curveId: 1,
-            _treeRoot: deployParams.vettedGateTreeRoot,
-            _treeCid: deployParams.vettedGateTreeCid,
+            _treeRoot: deployParams.identifiedSoloOperatorTreeRoot,
+            _treeCid: deployParams.identifiedSoloOperatorTreeCid,
             admin: deployParams.aragonAgent
         });
 
@@ -1041,8 +1073,8 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         vettedGateImpl.initialize({
             _curveId: 1,
-            _treeRoot: deployParams.vettedGateTreeRoot,
-            _treeCid: deployParams.vettedGateTreeCid,
+            _treeRoot: deployParams.identifiedSoloOperatorTreeRoot,
+            _treeCid: deployParams.identifiedSoloOperatorTreeCid,
             admin: deployParams.aragonAgent
         });
     }

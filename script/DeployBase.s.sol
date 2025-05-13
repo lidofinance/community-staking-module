@@ -84,26 +84,27 @@ struct DeployParams {
     uint256 defaultExitDelayPenalty;
     uint256 defaultMaxWithdrawalRequestFee;
     // VettedGate
-    bytes32 vettedGateTreeRoot;
-    string vettedGateTreeCid;
-    uint256[2][] vettedGateBondCurve;
-    address vettedGateManager;
-    uint256 vettedGateKeyRemovalCharge;
-    uint256 vettedGateELRewardsStealingAdditionalFine;
-    uint256 vettedGateKeysLimit;
-    uint256[2][] vettedGateAvgPerfLeewayData;
-    uint256[2][] vettedGateRewardShareData;
-    uint256 vettedGateStrikesLifetimeFrames;
-    uint256 vettedGateStrikesThreshold;
-    uint256 vettedGateQueuePriority;
-    uint256 vettedGateQueueMaxDeposits;
-    uint256 vettedGateBadPerformancePenalty;
-    uint256 vettedGateAttestationsWeight;
-    uint256 vettedGateBlocksWeight;
-    uint256 vettedGateSyncWeight;
-    uint256 vettedGateAllowedExitDelay;
-    uint256 vettedGateExitDelayPenalty;
-    uint256 vettedGateMaxWithdrawalRequestFee;
+    address identifiedSoloOperatorManager;
+    bytes32 identifiedSoloOperatorTreeRoot;
+    string identifiedSoloOperatorTreeCid;
+    uint256[2][] identifiedSoloOperatorBondCurve;
+    // Parameters for Identified Solo Operator type
+    uint256 identifiedSoloOperatorKeyRemovalCharge;
+    uint256 identifiedSoloOperatorELRewardsStealingAdditionalFine;
+    uint256 identifiedSoloOperatorKeysLimit;
+    uint256[2][] identifiedSoloOperatorAvgPerfLeewayData;
+    uint256[2][] identifiedSoloOperatorRewardShareData;
+    uint256 identifiedSoloOperatorStrikesLifetimeFrames;
+    uint256 identifiedSoloOperatorStrikesThreshold;
+    uint256 identifiedSoloOperatorQueuePriority;
+    uint256 identifiedSoloOperatorQueueMaxDeposits;
+    uint256 identifiedSoloOperatorBadPerformancePenalty;
+    uint256 identifiedSoloOperatorAttestationsWeight;
+    uint256 identifiedSoloOperatorBlocksWeight;
+    uint256 identifiedSoloOperatorSyncWeight;
+    uint256 identifiedSoloOperatorAllowedExitDelay;
+    uint256 identifiedSoloOperatorExitDelayPenalty;
+    uint256 identifiedSoloOperatorMaxWithdrawalRequestFee;
     // GateSeal
     address gateSealFactory;
     address sealingCommittee;
@@ -283,8 +284,8 @@ abstract contract DeployBase is Script {
                 address(deployer)
             );
 
-            uint256 identifiedSolosCurve = accounting.addBondCurve(
-                config.vettedGateBondCurve
+            uint256 identifiedSoloOperatorBondCurveId = accounting.addBondCurve(
+                config.identifiedSoloOperatorBondCurve
             );
             accounting.revokeRole(
                 accounting.MANAGE_BOND_CURVES_ROLE(),
@@ -329,9 +330,9 @@ abstract contract DeployBase is Script {
             vettedGateFactory = new VettedGateFactory(vettedGateImpl);
             vettedGate = VettedGate(
                 vettedGateFactory.create({
-                    curveId: identifiedSolosCurve,
-                    treeRoot: config.vettedGateTreeRoot,
-                    treeCid: config.vettedGateTreeCid,
+                    curveId: identifiedSoloOperatorBondCurveId,
+                    treeRoot: config.identifiedSoloOperatorTreeRoot,
+                    treeCid: config.identifiedSoloOperatorTreeCid,
                     admin: deployer
                 })
             );
@@ -342,56 +343,56 @@ abstract contract DeployBase is Script {
             vettedGateProxy.proxy__changeAdmin(config.proxyAdmin);
 
             parametersRegistry.setKeyRemovalCharge(
-                identifiedSolosCurve,
-                config.vettedGateKeyRemovalCharge
+                identifiedSoloOperatorBondCurveId,
+                config.identifiedSoloOperatorKeyRemovalCharge
             );
             parametersRegistry.setElRewardsStealingAdditionalFine(
-                identifiedSolosCurve,
-                config.vettedGateELRewardsStealingAdditionalFine
+                identifiedSoloOperatorBondCurveId,
+                config.identifiedSoloOperatorELRewardsStealingAdditionalFine
             );
             parametersRegistry.setKeysLimit(
-                identifiedSolosCurve,
-                config.vettedGateKeysLimit
+                identifiedSoloOperatorBondCurveId,
+                config.identifiedSoloOperatorKeysLimit
             );
             parametersRegistry.setPerformanceLeewayData(
-                identifiedSolosCurve,
-                config.vettedGateAvgPerfLeewayData
+                identifiedSoloOperatorBondCurveId,
+                config.identifiedSoloOperatorAvgPerfLeewayData
             );
             parametersRegistry.setRewardShareData(
-                identifiedSolosCurve,
-                config.vettedGateRewardShareData
+                identifiedSoloOperatorBondCurveId,
+                config.identifiedSoloOperatorRewardShareData
             );
             parametersRegistry.setStrikesParams(
-                identifiedSolosCurve,
-                config.vettedGateStrikesLifetimeFrames,
-                config.vettedGateStrikesThreshold
+                identifiedSoloOperatorBondCurveId,
+                config.identifiedSoloOperatorStrikesLifetimeFrames,
+                config.identifiedSoloOperatorStrikesThreshold
             );
             parametersRegistry.setQueueConfig(
-                identifiedSolosCurve,
-                uint32(config.vettedGateQueuePriority),
-                uint32(config.vettedGateQueueMaxDeposits)
+                identifiedSoloOperatorBondCurveId,
+                uint32(config.identifiedSoloOperatorQueuePriority),
+                uint32(config.identifiedSoloOperatorQueueMaxDeposits)
             );
             parametersRegistry.setBadPerformancePenalty(
-                identifiedSolosCurve,
-                config.vettedGateBadPerformancePenalty
+                identifiedSoloOperatorBondCurveId,
+                config.identifiedSoloOperatorBadPerformancePenalty
             );
             parametersRegistry.setPerformanceCoefficients(
-                identifiedSolosCurve,
-                config.vettedGateAttestationsWeight,
-                config.vettedGateBlocksWeight,
-                config.vettedGateSyncWeight
+                identifiedSoloOperatorBondCurveId,
+                config.identifiedSoloOperatorAttestationsWeight,
+                config.identifiedSoloOperatorBlocksWeight,
+                config.identifiedSoloOperatorSyncWeight
             );
             parametersRegistry.setAllowedExitDelay(
-                identifiedSolosCurve,
-                config.vettedGateAllowedExitDelay
+                identifiedSoloOperatorBondCurveId,
+                config.identifiedSoloOperatorAllowedExitDelay
             );
             parametersRegistry.setExitDelayPenalty(
-                identifiedSolosCurve,
-                config.vettedGateExitDelayPenalty
+                identifiedSoloOperatorBondCurveId,
+                config.identifiedSoloOperatorExitDelayPenalty
             );
             parametersRegistry.setMaxWithdrawalRequestFee(
-                identifiedSolosCurve,
-                config.vettedGateMaxWithdrawalRequestFee
+                identifiedSoloOperatorBondCurveId,
+                config.identifiedSoloOperatorMaxWithdrawalRequestFee
             );
 
             feeDistributor.initialize({
@@ -506,7 +507,7 @@ abstract contract DeployBase is Script {
             );
             vettedGate.grantRole(
                 vettedGate.SET_TREE_ROLE(),
-                config.vettedGateManager
+                config.identifiedSoloOperatorManager
             );
             vettedGate.grantRole(
                 vettedGate.START_REFERRAL_SEASON_ROLE(),
@@ -514,7 +515,7 @@ abstract contract DeployBase is Script {
             );
             vettedGate.grantRole(
                 vettedGate.END_REFERRAL_SEASON_ROLE(),
-                config.vettedGateManager
+                config.identifiedSoloOperatorManager
             );
             vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
 

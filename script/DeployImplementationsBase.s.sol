@@ -97,8 +97,8 @@ abstract contract DeployImplementationsBase is DeployBase {
             vettedGate = VettedGate(
                 vettedGateFactory.create({
                     curveId: ICSEarlyAdoption(earlyAdoption).CURVE_ID(),
-                    treeRoot: config.vettedGateTreeRoot,
-                    treeCid: config.vettedGateTreeCid,
+                    treeRoot: config.identifiedSoloOperatorTreeRoot,
+                    treeCid: config.identifiedSoloOperatorTreeCid,
                     admin: deployer
                 })
             );
@@ -193,7 +193,7 @@ abstract contract DeployImplementationsBase is DeployBase {
             );
             vettedGate.grantRole(
                 vettedGate.SET_TREE_ROLE(),
-                config.vettedGateManager
+                config.identifiedSoloOperatorManager
             );
             vettedGate.grantRole(
                 vettedGate.START_REFERRAL_SEASON_ROLE(),
@@ -201,7 +201,7 @@ abstract contract DeployImplementationsBase is DeployBase {
             );
             vettedGate.grantRole(
                 vettedGate.END_REFERRAL_SEASON_ROLE(),
-                config.vettedGateManager
+                config.identifiedSoloOperatorManager
             );
             vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
 

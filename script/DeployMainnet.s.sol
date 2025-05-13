@@ -82,31 +82,35 @@ contract DeployMainnet is DeployBase {
 
         // VettedGate
         config
-            .vettedGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
+            .identifiedSoloOperatorManager = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
+        config
+            .identifiedSoloOperatorTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
+        config.identifiedSoloOperatorTreeCid = "someCid"; // TODO: to be set in the future
         // 1.5 -> 1.3
-        config.vettedGateBondCurve.push([1, 1.5 ether]);
-        config.vettedGateBondCurve.push([2, 1.3 ether]);
-        config.vettedGateManager = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
-        config.vettedGateTreeCid = "someCid"; // TODO: to be set in the future
+        config.identifiedSoloOperatorBondCurve.push([1, 1.5 ether]);
+        config.identifiedSoloOperatorBondCurve.push([2, 1.3 ether]);
+
+        // Parameters for Identified Solo Operator type
         // TODO: Set proper values bellow
-        config.vettedGateKeyRemovalCharge = 0.01 ether;
-        config.vettedGateELRewardsStealingAdditionalFine = 0.05 ether;
-        config.vettedGateKeysLimit = type(uint248).max;
-        config.vettedGateAvgPerfLeewayData.push([0, 500]);
-        config.vettedGateAvgPerfLeewayData.push([100, 600]);
-        config.vettedGateRewardShareData.push([0, 10000]);
-        config.vettedGateRewardShareData.push([100, 9900]);
-        config.vettedGateStrikesLifetimeFrames = 8;
-        config.vettedGateStrikesThreshold = 4;
-        config.vettedGateQueuePriority = 0;
-        config.vettedGateQueueMaxDeposits = 10;
-        config.vettedGateBadPerformancePenalty = 0.05 ether;
-        config.vettedGateAttestationsWeight = 60;
-        config.vettedGateBlocksWeight = 4;
-        config.vettedGateSyncWeight = 0;
-        config.vettedGateAllowedExitDelay = 8 days;
-        config.vettedGateExitDelayPenalty = 0.05 ether;
-        config.vettedGateMaxWithdrawalRequestFee = 0.05 ether;
+        config.identifiedSoloOperatorKeyRemovalCharge = 0.01 ether;
+        config
+            .identifiedSoloOperatorELRewardsStealingAdditionalFine = 0.05 ether;
+        config.identifiedSoloOperatorKeysLimit = type(uint248).max;
+        config.identifiedSoloOperatorAvgPerfLeewayData.push([0, 500]);
+        config.identifiedSoloOperatorAvgPerfLeewayData.push([100, 600]);
+        config.identifiedSoloOperatorRewardShareData.push([0, 10000]);
+        config.identifiedSoloOperatorRewardShareData.push([100, 9900]);
+        config.identifiedSoloOperatorStrikesLifetimeFrames = 8;
+        config.identifiedSoloOperatorStrikesThreshold = 4;
+        config.identifiedSoloOperatorQueuePriority = 0;
+        config.identifiedSoloOperatorQueueMaxDeposits = 10;
+        config.identifiedSoloOperatorBadPerformancePenalty = 0.05 ether;
+        config.identifiedSoloOperatorAttestationsWeight = 60;
+        config.identifiedSoloOperatorBlocksWeight = 4;
+        config.identifiedSoloOperatorSyncWeight = 0;
+        config.identifiedSoloOperatorAllowedExitDelay = 8 days;
+        config.identifiedSoloOperatorExitDelayPenalty = 0.05 ether;
+        config.identifiedSoloOperatorMaxWithdrawalRequestFee = 0.05 ether;
 
         // GateSeal
         config.gateSealFactory = 0x6C82877cAC5a7A739f16Ca0A89c0A328B8764A24;
