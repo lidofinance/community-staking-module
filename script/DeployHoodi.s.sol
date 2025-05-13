@@ -88,22 +88,24 @@ contract DeployHoodi is DeployBase {
         config.vettedGateManager = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
         config.vettedGateTreeCid = "someCid"; // TODO: to be set in the future
         // TODO: Set proper values bellow
-        config.vettedGateKeyRemovalCharge = 0.05 ether;
-        config.vettedGateELRewardsStealingAdditionalFine = 0.1 ether;
+        config.vettedGateKeyRemovalCharge = 0.01 ether;
+        config.vettedGateELRewardsStealingAdditionalFine = 0.05 ether;
         config.vettedGateKeysLimit = type(uint248).max;
         config.vettedGateAvgPerfLeewayData.push([0, 500]);
+        config.vettedGateAvgPerfLeewayData.push([100, 600]);
         config.vettedGateRewardShareData.push([0, 10000]);
-        config.vettedGateStrikesLifetimeFrames = 6;
-        config.vettedGateStrikesThreshold = 3;
+        config.vettedGateRewardShareData.push([100, 9900]);
+        config.vettedGateStrikesLifetimeFrames = 8;
+        config.vettedGateStrikesThreshold = 4;
         config.vettedGateQueuePriority = 0;
         config.vettedGateQueueMaxDeposits = 10;
-        config.vettedGateBadPerformancePenalty = 0.1 ether;
-        config.vettedGateAttestationsWeight = 54;
-        config.vettedGateBlocksWeight = 8;
-        config.vettedGateSyncWeight = 2;
-        config.vettedGateAllowedExitDelay = 4 days;
-        config.vettedGateExitDelayPenalty = 0.1 ether;
-        config.vettedGateMaxWithdrawalRequestFee = 0.1 ether;
+        config.vettedGateBadPerformancePenalty = 0.05 ether;
+        config.vettedGateAttestationsWeight = 60;
+        config.vettedGateBlocksWeight = 4;
+        config.vettedGateSyncWeight = 0;
+        config.vettedGateAllowedExitDelay = 8 days;
+        config.vettedGateExitDelayPenalty = 0.05 ether;
+        config.vettedGateMaxWithdrawalRequestFee = 0.05 ether;
 
         // GateSeal
         config.gateSealFactory = 0xA402349F560D45310D301E92B1AA4DeCABe147B3;

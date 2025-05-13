@@ -79,23 +79,29 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         [uint256(2), 1.3 ether]
     ];
 
-    uint256 vettedGateKeyRemovalCharge = 0.05 ether;
-    uint256 vettedGateELRewardsStealingAdditionalFine = 0.1 ether;
+    uint256 vettedGateKeyRemovalCharge = 0.01 ether;
+    uint256 vettedGateELRewardsStealingAdditionalFine = 0.05 ether;
     uint256 vettedGateKeysLimit = type(uint248).max;
-    uint256[2][] vettedGateAvgPerfLeewayData = [[uint256(0), uint256(500)]];
+    uint256[2][] vettedGateAvgPerfLeewayData = [
+        [uint256(0), uint256(500)],
+        [uint256(100), uint256(600)]
+    ];
 
-    uint256[2][] vettedGateRewardShareData = [[uint256(0), uint256(10000)]];
-    uint256 vettedGateStrikesLifetimeFrames = 6;
-    uint256 vettedGateStrikesThreshold = 3;
+    uint256[2][] vettedGateRewardShareData = [
+        [uint256(0), uint256(10000)],
+        [uint256(100), uint256(9900)]
+    ];
+    uint256 vettedGateStrikesLifetimeFrames = 8;
+    uint256 vettedGateStrikesThreshold = 4;
     uint256 vettedGateQueuePriority = 0;
     uint256 vettedGateQueueMaxDeposits = 10;
-    uint256 vettedGateBadPerformancePenalty = 0.1 ether;
-    uint256 vettedGateAttestationsWeight = 54;
-    uint256 vettedGateBlocksWeight = 8;
-    uint256 vettedGateSyncWeight = 2;
-    uint256 vettedGateAllowedExitDelay = 4 days;
-    uint256 vettedGateExitDelayPenalty = 0.1 ether;
-    uint256 vettedGateMaxWithdrawalRequestFee = 0.1 ether;
+    uint256 vettedGateBadPerformancePenalty = 0.05 ether;
+    uint256 vettedGateAttestationsWeight = 60;
+    uint256 vettedGateBlocksWeight = 4;
+    uint256 vettedGateSyncWeight = 0;
+    uint256 vettedGateAllowedExitDelay = 8 days;
+    uint256 vettedGateExitDelayPenalty = 0.05 ether;
+    uint256 vettedGateMaxWithdrawalRequestFee = 0.05 ether;
 
     function upgrade() external {
         Env memory env = envVars();
