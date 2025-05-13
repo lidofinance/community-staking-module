@@ -304,6 +304,24 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
         vm.expectRevert(ICSEjector.SigningKeysInvalidOffset.selector);
         ejector.voluntaryEject(noId, keyIndex, 1, address(0));
     }
+
+    function test_voluntaryEject_revertWhen_alreadyWithdrawn() public {
+        uint256 keyIndex = 0;
+
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
+        csm.mock_setNodeOperatorsCount(1);
+        csm.mock_setIsValidatorWithdrawn(true);
+        csm.mock_setNodeOperatorManagementProperties(
+            NodeOperatorManagementProperties(
+                address(this),
+                address(this),
+                false
+            )
+        );
+
+        vm.expectRevert(ICSEjector.AlreadyWithdrawn.selector);
+        ejector.voluntaryEject(noId, keyIndex, 1, address(0));
+    }
 }
 
 contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
@@ -529,6 +547,26 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
         vm.expectRevert(PausableUntil.ResumedExpected.selector);
         ejector.voluntaryEjectByArray(noId, indices, address(0));
     }
+
+    function test_voluntaryEjectByArray_revertWhen_alreadyWithdrawn() public {
+        uint256 keyIndex = 0;
+
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
+        csm.mock_setNodeOperatorsCount(1);
+        csm.mock_setIsValidatorWithdrawn(true);
+        csm.mock_setNodeOperatorManagementProperties(
+            NodeOperatorManagementProperties(
+                address(this),
+                address(this),
+                false
+            )
+        );
+        uint256[] memory indices = new uint256[](1);
+        indices[0] = keyIndex;
+
+        vm.expectRevert(ICSEjector.AlreadyWithdrawn.selector);
+        ejector.voluntaryEjectByArray(noId, indices, address(0));
+    }
 }
 
 contract CSEjectorTestEjectBadPerformer is CSEjectorTestBase {
@@ -582,6 +620,17 @@ contract CSEjectorTestEjectBadPerformer is CSEjectorTestBase {
 
         vm.prank(stranger);
         vm.expectRevert(ICSEjector.SenderIsNotStrikes.selector);
+        ejector.ejectBadPerformer(noId, keyIndex, refundRecipient);
+    }
+
+    function test_ejectBadPerformer_revertWhen_alreadyWithdrawn() public {
+        uint256 keyIndex = 0;
+
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
+        csm.mock_setIsValidatorWithdrawn(true);
+
+        vm.prank(address(strikes));
+        vm.expectRevert(ICSEjector.AlreadyWithdrawn.selector);
         ejector.ejectBadPerformer(noId, keyIndex, refundRecipient);
     }
 }
