@@ -991,7 +991,7 @@ contract CSExitPenaltiesDeploymentTest is DeploymentBaseTest {
         assertEq(address(exitPenaltiesImpl.STRIKES()), address(strikes));
     }
 
-    function test_proxy() public {
+    function test_proxy() public view {
         OssifiableProxy proxy = OssifiableProxy(
             payable(address(exitPenalties))
         );

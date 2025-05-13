@@ -173,7 +173,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
         );
     }
 
-    function withdrawKey(uint256 noId, uint256 keyIndex) internal {
+    function withdrawKey(uint256 noId, uint256 /* keyIndex */) internal {
         ValidatorWithdrawalInfo[]
             memory withdrawalsInfo = new ValidatorWithdrawalInfo[](1);
         withdrawalsInfo[0] = ValidatorWithdrawalInfo(

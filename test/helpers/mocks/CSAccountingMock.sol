@@ -35,7 +35,10 @@ contract CSAccountingMock {
         feeDistributor = _feeDistributor;
     }
 
-    function depositETH(address from, uint256 nodeOperatorId) external payable {
+    function depositETH(
+        address /* from */,
+        uint256 nodeOperatorId
+    ) external payable {
         bond[nodeOperatorId] += msg.value;
     }
 
@@ -44,10 +47,10 @@ contract CSAccountingMock {
     }
 
     function depositStETH(
-        address from,
+        address /* from */,
         uint256 nodeOperatorId,
         uint256 stETHAmount,
-        ICSAccounting.PermitInput calldata permit
+        ICSAccounting.PermitInput calldata /* permit */
     ) external {
         bond[nodeOperatorId] += stETHAmount;
     }
@@ -55,16 +58,16 @@ contract CSAccountingMock {
     function depositStETH(
         uint256 nodeOperatorId,
         uint256 stETHAmount,
-        ICSAccounting.PermitInput calldata permit
+        ICSAccounting.PermitInput calldata /* permit */
     ) external {
         bond[nodeOperatorId] += stETHAmount;
     }
 
     function depositWstETH(
-        address from,
+        address /* from */,
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
-        ICSAccounting.PermitInput calldata permit
+        ICSAccounting.PermitInput calldata /* permit */
     ) external {
         bond[nodeOperatorId] += wstETH.getStETHByWstETH(wstETHAmount);
     }
@@ -72,7 +75,7 @@ contract CSAccountingMock {
     function depositWstETH(
         uint256 nodeOperatorId,
         uint256 wstETHAmount,
-        ICSAccounting.PermitInput calldata permit
+        ICSAccounting.PermitInput calldata /* permit */
     ) external {
         bond[nodeOperatorId] += wstETH.getStETHByWstETH(wstETHAmount);
     }
@@ -92,10 +95,11 @@ contract CSAccountingMock {
     }
 
     function settleLockedBondETH(uint256 nodeOperatorId) external {
-        if (getActualLockedBond(nodeOperatorId) > bond[nodeOperatorId]) {
+        uint256 lockedBond = getActualLockedBond(nodeOperatorId);
+        if (lockedBond > bond[nodeOperatorId]) {
             bond[nodeOperatorId] = 0;
         } else {
-            bond[nodeOperatorId] -= getActualLockedBond(nodeOperatorId);
+            bond[nodeOperatorId] -= lockedBond;
         }
         bondLock[nodeOperatorId].amount = 0;
         bondLock[nodeOperatorId].until = 0;
