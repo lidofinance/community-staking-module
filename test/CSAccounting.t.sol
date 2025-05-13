@@ -4925,8 +4925,9 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         assertEq(accounting.getActualLockedBond(noId), amount);
 
         vm.prank(address(stakingModule));
-        accounting.settleLockedBondETH(noId);
+        bool applied = accounting.settleLockedBondETH(noId);
         assertEq(accounting.getActualLockedBond(noId), 0);
+        assertTrue(applied);
     }
 
     function test_settleLockedBondETH_noLocked() public assertInvariants {
@@ -4938,9 +4939,10 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
         uint256 bond = accounting.getBondShares(noId);
 
         vm.prank(address(stakingModule));
-        accounting.settleLockedBondETH(noId);
+        bool applied = accounting.settleLockedBondETH(noId);
         assertEq(accounting.getActualLockedBond(noId), 0);
         assertEq(accounting.getBondShares(noId), bond);
+        assertFalse(applied);
     }
 
     function test_settleLockedBondETH_noBond() public assertInvariants {
@@ -4955,11 +4957,12 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
             address(burner),
             abi.encodeWithSelector(IBurner.requestBurnMyStETH.selector)
         );
-        accounting.settleLockedBondETH(noId);
+        bool applied = accounting.settleLockedBondETH(noId);
         vm.stopPrank();
 
         assertEq(accounting.getActualLockedBond(noId), 0);
         assertEq(accounting.getBondShares(noId), 0);
+        assertTrue(applied);
     }
 }
 

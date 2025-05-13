@@ -49,7 +49,7 @@ contract ExitPenaltiesMock is ICSExitPenalties, ExitTypes {
         penaltyInfo = _penaltyInfo;
     }
 
-    function getDelayedExitPenaltyInfo(
+    function getExitPenaltyInfo(
         uint256,
         bytes calldata
     ) external view returns (ExitPenaltyInfo memory) {

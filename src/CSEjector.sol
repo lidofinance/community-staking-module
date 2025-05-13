@@ -181,14 +181,26 @@ contract CSEjector is
     /// @inheritdoc ICSEjector
     function ejectBadPerformer(
         uint256 nodeOperatorId,
-        bytes calldata publicKeys,
+        uint256 keyIndex,
         address refundRecipient
     ) external payable whenResumed onlyStrikes {
+        // it must be a valid deposited key
+        if (
+            keyIndex >= MODULE.getNodeOperatorTotalDepositedKeys(nodeOperatorId)
+        ) {
+            revert SigningKeysInvalidOffset();
+        }
+
+        bytes memory publicKey = MODULE.getSigningKeys(
+            nodeOperatorId,
+            keyIndex,
+            1
+        );
         IValidatorsExitBus.DirectExitData memory exitData = IValidatorsExitBus
             .DirectExitData({
                 stakingModuleId: STAKING_MODULE_ID,
                 nodeOperatorId: nodeOperatorId,
-                validatorsPubkeys: publicKeys
+                validatorsPubkeys: publicKey
             });
         VEB.triggerExitsDirectly{ value: msg.value }(
             exitData,

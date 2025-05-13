@@ -101,7 +101,7 @@ contract CSExitPenaltiesTestProcessExitDelayReport is CSExitPenaltiesTestBase {
         exitPenalties.processExitDelayReport(noId, publicKey, eligibleToExit);
 
         ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
-            .getDelayedExitPenaltyInfo(noId, publicKey);
+            .getExitPenaltyInfo(noId, publicKey);
         assertEq(exitPenaltyInfo.delayPenalty.value, penalty);
     }
 
@@ -165,7 +165,7 @@ contract CSExitPenaltiesTestProcessTriggeredExit is CSExitPenaltiesTestBase {
         exitPenalties.processTriggeredExit(noId, publicKey, paidFee, exitType);
 
         ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
-            .getDelayedExitPenaltyInfo(noId, publicKey);
+            .getExitPenaltyInfo(noId, publicKey);
         assertEq(exitPenaltyInfo.withdrawalRequestFee.value, paidFee);
     }
 
@@ -187,7 +187,7 @@ contract CSExitPenaltiesTestProcessTriggeredExit is CSExitPenaltiesTestBase {
         exitPenalties.processTriggeredExit(noId, publicKey, paidFee, exitType);
 
         ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
-            .getDelayedExitPenaltyInfo(noId, publicKey);
+            .getExitPenaltyInfo(noId, publicKey);
         assertEq(exitPenaltyInfo.withdrawalRequestFee.isValue, true);
         assertEq(exitPenaltyInfo.withdrawalRequestFee.value, 0);
     }
@@ -206,7 +206,7 @@ contract CSExitPenaltiesTestProcessTriggeredExit is CSExitPenaltiesTestBase {
         assertEq(entries.length, 0);
 
         ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
-            .getDelayedExitPenaltyInfo(noId, publicKey);
+            .getExitPenaltyInfo(noId, publicKey);
         assertEq(exitPenaltyInfo.withdrawalRequestFee.value, 0);
     }
 
@@ -238,7 +238,7 @@ contract CSExitPenaltiesTestProcessTriggeredExit is CSExitPenaltiesTestBase {
         assertEq(entries.length, 0);
 
         ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
-            .getDelayedExitPenaltyInfo(noId, publicKey);
+            .getExitPenaltyInfo(noId, publicKey);
         assertEq(
             exitPenaltyInfo.withdrawalRequestFee.value,
             initialPaidFee,
@@ -256,7 +256,7 @@ contract CSExitPenaltiesTestProcessTriggeredExit is CSExitPenaltiesTestBase {
         exitPenalties.processTriggeredExit(noId, publicKey, paidFee, exitType);
 
         ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
-            .getDelayedExitPenaltyInfo(noId, publicKey);
+            .getExitPenaltyInfo(noId, publicKey);
         assertEq(
             exitPenaltyInfo.withdrawalRequestFee.value,
             maxFee,
@@ -286,7 +286,7 @@ contract CSExitPenaltiesTestProcessStrikesReport is CSExitPenaltiesTestBase {
         exitPenalties.processStrikesReport(noId, publicKey);
 
         ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
-            .getDelayedExitPenaltyInfo(noId, publicKey);
+            .getExitPenaltyInfo(noId, publicKey);
         assertEq(exitPenaltyInfo.strikesPenalty.value, penalty);
     }
 
@@ -307,7 +307,7 @@ contract CSExitPenaltiesTestProcessStrikesReport is CSExitPenaltiesTestBase {
         assertEq(entries.length, 0);
 
         ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
-            .getDelayedExitPenaltyInfo(noId, publicKey);
+            .getExitPenaltyInfo(noId, publicKey);
         assertEq(
             exitPenaltyInfo.strikesPenalty.value,
             penalty,

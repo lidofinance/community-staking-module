@@ -63,11 +63,11 @@ interface ICSEjector is IExitTypes {
     /// @notice Called by the `CSStrikes` contract.
     ///         See `CSStrikes.processBadPerformanceProof` to use this method permissionless
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param publicKeys Concatenated public keys of the Node Operator's validators
+    /// @param keyIndex index of deposited key to eject
     /// @param refundRecipient Address to send the refund to
     function ejectBadPerformer(
         uint256 nodeOperatorId,
-        bytes calldata publicKeys,
+        uint256 keyIndex,
         address refundRecipient
     ) external payable;
 }

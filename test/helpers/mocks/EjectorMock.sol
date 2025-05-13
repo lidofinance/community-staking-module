@@ -16,7 +16,7 @@ contract EjectorMock {
 
     function ejectBadPerformer(
         uint256 nodeOperatorId,
-        bytes calldata publicKeys,
+        uint256 keyIndex,
         address refundRecipient
     ) external payable {}
 }

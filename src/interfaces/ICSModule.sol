@@ -54,7 +54,7 @@ interface ICSModule is
     IAssetRecovererLib,
     IStakingModule
 {
-    error NodeOperatorHasKeys();
+    error CannotAddKeys();
     error NodeOperatorDoesNotExist();
     error SenderIsNotEligible();
     error InvalidVetKeysPointer();
@@ -351,8 +351,8 @@ interface ICSModule is
 
     /// @notice Get the deposit queue item by an index
     /// @param queuePriority Priority of the queue to get an item from
-    /// @param index Index of a queue item (continuous numbering)
-    /// @return Deposit queue item and the priority of the queue
+    /// @param index Index of a queue item
+    /// @return Deposit queue item from the priority queue
     function depositQueueItem(
         uint256 queuePriority,
         uint128 index
@@ -444,7 +444,7 @@ interface ICSModule is
     /// @notice Check if the given Node Operator's key is reported as withdrawn
     /// @param nodeOperatorId ID of the Node Operator
     /// @param keyIndex index of the key to check
-    /// @return Validator reported as withdrawn flag
+    /// @return Is validator reported as withdrawn or not
     function isValidatorWithdrawn(
         uint256 nodeOperatorId,
         uint256 keyIndex

@@ -171,14 +171,35 @@ contract Utilities is CommonBase {
         return arr;
     }
 
+    function UintArr(
+        uint256 e0,
+        uint256 e1,
+        uint256 e2
+    ) public pure returns (uint256[] memory) {
+        uint256[] memory arr = new uint256[](3);
+        arr[0] = e0;
+        arr[1] = e1;
+        arr[2] = e2;
+        return arr;
+    }
+
     function slice(
         bytes memory subject,
         uint256 offset,
         uint256 length
     ) public pure returns (bytes memory result) {
         result = new bytes(length);
-        for (uint i; i < length; ++i) {
+        for (uint256 i; i < length; ++i) {
             result[i] = subject[offset + i];
+        }
+    }
+
+    function shuffle(uint256[] memory arr) public {
+        if (arr.length < 2) return;
+
+        for (uint256 i = arr.length - 1; i > 0; i--) {
+            uint256 j = uint256(someBytes32()) % (i + 1);
+            (arr[i], arr[j]) = (arr[j], arr[i]);
         }
     }
 
@@ -274,7 +295,7 @@ contract Utilities is CommonBase {
 }
 
 function hasLog(Vm.Log[] memory self, bytes32 topic) pure returns (bool) {
-    for (uint i = 0; i < self.length; ++i) {
+    for (uint256 i = 0; i < self.length; ++i) {
         if (self[i].topics[0] == topic) {
             return true;
         }

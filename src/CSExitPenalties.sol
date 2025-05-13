@@ -163,7 +163,7 @@ contract CSExitPenalties is ICSExitPenalties, ExitTypes {
     }
 
     /// @inheritdoc ICSExitPenalties
-    function getDelayedExitPenaltyInfo(
+    function getExitPenaltyInfo(
         uint256 nodeOperatorId,
         bytes calldata publicKey
     ) external view returns (ExitPenaltyInfo memory) {
