@@ -92,12 +92,16 @@ contract CSEjector is
             revert SenderIsNotEligible();
         }
 
+        // a key must be deposited to prevent ejecting unvetted keys that can be the ones from other modules
         if (
             startFrom + keysCount >
             MODULE.getNodeOperatorTotalDepositedKeys(nodeOperatorId)
         ) {
             revert SigningKeysInvalidOffset();
         }
+        // a key must be non-withdrawn to restrict unlimited exit requests consuming sanity checker limits
+        // although the deposited key can be requested to exit multiple times also, it will eventually be withdrawn
+        // so potentially malicious behaviour stops when there are no active keys available
         for (uint256 i = startFrom; i < startFrom + keysCount; i++) {
             if (MODULE.isValidatorWithdrawn(nodeOperatorId, i)) {
                 revert AlreadyWithdrawn();
@@ -150,9 +154,13 @@ contract CSEjector is
         );
         bytes memory pubkeys;
         for (uint256 i = 0; i < keyIndices.length; i++) {
+            // a key must be deposited to prevent ejecting unvetted keys that can be the ones from other modules
             if (keyIndices[i] >= totalDepositedKeys) {
                 revert SigningKeysInvalidOffset();
             }
+            // a key must be non-withdrawn to restrict unlimited exit requests consuming sanity checker limits
+            // although the deposited key can be requested to exit multiple times also, it will eventually be withdrawn
+            // so potentially malicious behaviour stops when there are no active keys available
             if (MODULE.isValidatorWithdrawn(nodeOperatorId, keyIndices[i])) {
                 revert AlreadyWithdrawn();
             }
@@ -185,11 +193,15 @@ contract CSEjector is
         uint256 keyIndex,
         address refundRecipient
     ) external payable whenResumed onlyStrikes {
+        // a key must be deposited to prevent ejecting unvetted keys that can be the ones from other modules
         if (
             keyIndex >= MODULE.getNodeOperatorTotalDepositedKeys(nodeOperatorId)
         ) {
             revert SigningKeysInvalidOffset();
         }
+        // a key must be non-withdrawn to restrict unlimited exit requests consuming sanity checker limits
+        // although the deposited key can be requested to exit multiple times also, it will eventually be withdrawn
+        // so potentially malicious behaviour stops when there are no active keys available
         if (MODULE.isValidatorWithdrawn(nodeOperatorId, keyIndex)) {
             revert AlreadyWithdrawn();
         }
