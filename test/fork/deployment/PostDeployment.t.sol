@@ -800,7 +800,7 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
         });
     }
 
-    function test_vettedGateParams_afterVote() public {
+    function test_vettedGateParams_afterVote() public view {
         uint256 vettedGateCurveId = 1;
         assertEq(
             parametersRegistry.getKeyRemovalCharge(vettedGateCurveId),
