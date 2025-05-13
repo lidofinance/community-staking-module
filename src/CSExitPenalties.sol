@@ -11,17 +11,16 @@ import { ICSExitPenalties, MarkedUint248 } from "./interfaces/ICSExitPenalties.s
 import { ExitPenaltyInfo } from "./interfaces/ICSExitPenalties.sol";
 import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { ExitTypes } from "./abstract/ExitTypes.sol";
 
-contract CSExitPenalties is ICSExitPenalties, ExitTypes, Initializable {
+contract CSExitPenalties is ICSExitPenalties, ExitTypes {
     using SafeCast for uint256;
 
     ICSModule public immutable MODULE;
     ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
     ICSAccounting public immutable ACCOUNTING;
+    address public immutable STRIKES;
 
-    address public strikes;
     mapping(bytes32 => ExitPenaltyInfo) private _exitPenaltyInfo;
 
     modifier onlyModule() {
@@ -33,40 +32,28 @@ contract CSExitPenalties is ICSExitPenalties, ExitTypes, Initializable {
     }
 
     modifier onlyStrikes() {
-        if (msg.sender != strikes) {
+        if (msg.sender != STRIKES) {
             revert SenderIsNotStrikes();
         }
 
         _;
     }
 
-    constructor(
-        address module,
-        address parametersRegistry,
-        address accounting
-    ) {
+    constructor(address module, address parametersRegistry, address strikes) {
         if (module == address(0)) {
             revert ZeroModuleAddress();
         }
         if (parametersRegistry == address(0)) {
             revert ZeroParametersRegistryAddress();
         }
-        if (accounting == address(0)) {
-            revert ZeroAccountingAddress();
+        if (strikes == address(0)) {
+            revert ZeroStrikesAddress();
         }
 
         MODULE = ICSModule(module);
         PARAMETERS_REGISTRY = ICSParametersRegistry(parametersRegistry);
-        ACCOUNTING = ICSAccounting(accounting);
-
-        _disableInitializers();
-    }
-
-    function initialize(address _strikes) external initializer {
-        if (_strikes == address(0)) {
-            revert ZeroStrikesAddress();
-        }
-        strikes = _strikes;
+        ACCOUNTING = MODULE.accounting();
+        STRIKES = strikes;
     }
 
     // @inheritdoc ICSExitPenalties
@@ -182,11 +169,6 @@ contract CSExitPenalties is ICSExitPenalties, ExitTypes, Initializable {
     ) external view returns (ExitPenaltyInfo memory) {
         bytes32 keyPointer = _keyPointer(nodeOperatorId, publicKey);
         return _exitPenaltyInfo[keyPointer];
-    }
-
-    /// @inheritdoc ICSExitPenalties
-    function getInitializedVersion() external view returns (uint64) {
-        return _getInitializedVersion();
     }
 
     function _keyPointer(

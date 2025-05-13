@@ -93,9 +93,7 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         vm.startBroadcast(_prepareProxyAdmin(address(csmProxy)));
         {
             csmProxy.proxy__upgradeTo(deploymentConfig.csmImpl);
-            CSModule(deploymentConfig.csm).finalizeUpgradeV2(
-                deploymentConfig.exitPenalties
-            );
+            CSModule(deploymentConfig.csm).finalizeUpgradeV2();
         }
         vm.stopBroadcast();
 
@@ -119,8 +117,7 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         {
             oracleProxy.proxy__upgradeTo(deploymentConfig.oracleImpl);
             CSFeeOracle(deploymentConfig.oracle).finalizeUpgradeV2({
-                consensusVersion: 3,
-                strikesContract: deploymentConfig.strikes
+                consensusVersion: 3
             });
         }
         vm.stopBroadcast();

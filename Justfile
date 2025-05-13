@@ -288,7 +288,7 @@ test-full-deploy *args:
 
     just make-fork --silent &
     while ! echo exit | nc {{anvil_host}} {{anvil_port}} > /dev/null; do sleep 1; done
-    just deploy --silent --private-key=`cat localhost.json | jq -r ".private_keys[0]"`
+    just deploy --private-key=`cat localhost.json | jq -r ".private_keys[0]"`
 
     export DEPLOY_CONFIG=./artifacts/local/deploy-{{chain}}.json
     export RPC_URL={{anvil_rpc_url}}

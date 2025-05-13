@@ -152,7 +152,7 @@ contract CSAccountingBaseConstructorTest is CSAccountingFixtures {
         (locator, wstETH, stETH, , ) = initLido();
 
         stakingModule = new Stub();
-        feeDistributor = new DistributorMock(address(stETH), address(0));
+        feeDistributor = new DistributorMock(address(stETH));
     }
 }
 
@@ -161,17 +161,24 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
         accounting = new CSAccounting(
             address(locator),
             address(stakingModule),
+            address(feeDistributor),
             10,
             4 weeks,
             365 days
         );
         assertEq(address(accounting.MODULE()), address(stakingModule));
+        assertEq(
+            address(accounting.FEE_DISTRIBUTOR()),
+            address(feeDistributor)
+        );
+        assertEq(address(accounting.feeDistributor()), address(feeDistributor));
     }
 
     function test_constructor_RevertWhen_InitOnImpl() public {
         accounting = new CSAccounting(
             address(locator),
             address(stakingModule),
+            address(feeDistributor),
             10,
             4 weeks,
             365 days
@@ -184,7 +191,6 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
         accounting.initialize(
             curve,
             admin,
-            address(feeDistributor),
             8 weeks,
             testChargePenaltyRecipient
         );
@@ -195,6 +201,7 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
         accounting = new CSAccounting(
             address(locator),
             address(0),
+            address(feeDistributor),
             10,
             4 weeks,
             365 days
@@ -208,6 +215,7 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
         accounting = new CSAccounting(
             address(locator),
             address(0),
+            address(feeDistributor),
             10,
             4 weeks,
             2 weeks
@@ -221,6 +229,7 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
         accounting = new CSAccounting(
             address(locator),
             address(0),
+            address(feeDistributor),
             10,
             4 weeks,
             uint256(type(uint64).max) + 1
@@ -232,6 +241,7 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
         accounting = new CSAccounting(
             address(locator),
             address(0),
+            address(feeDistributor),
             0,
             4 weeks,
             365 days
@@ -250,18 +260,18 @@ contract CSAccountingBaseInitTest is CSAccountingFixtures {
         (locator, wstETH, stETH, burner, ) = initLido();
 
         stakingModule = new Stub();
+        feeDistributor = new DistributorMock(address(stETH));
 
         accounting = new CSAccounting(
             address(locator),
             address(stakingModule),
+            address(feeDistributor),
             10,
             4 weeks,
             365 days
         );
-        feeDistributor = new DistributorMock(
-            address(stETH),
-            address(accounting)
-        );
+
+        feeDistributor.setAccounting(address(accounting));
     }
 }
 
@@ -283,12 +293,10 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         accounting.initialize(
             curve,
             admin,
-            address(feeDistributor),
             8 weeks,
             testChargePenaltyRecipient
         );
 
-        assertEq(address(accounting.feeDistributor()), address(feeDistributor));
         assertEq(accounting.getInitializedVersion(), 2);
     }
 
@@ -301,23 +309,6 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         vm.expectRevert(ICSAccounting.ZeroAdminAddress.selector);
         accounting.initialize(
             curve,
-            address(0),
-            address(feeDistributor),
-            8 weeks,
-            testChargePenaltyRecipient
-        );
-    }
-
-    function test_initialize_RevertWhen_zeroFeeDistributor() public {
-        uint256[2][] memory curve = new uint256[2][](1);
-        curve[0] = [uint256(1), 2 ether];
-
-        _enableInitializers(address(accounting));
-
-        vm.expectRevert(ICSAccounting.ZeroFeeDistributorAddress.selector);
-        accounting.initialize(
-            curve,
-            admin,
             address(0),
             8 weeks,
             testChargePenaltyRecipient
@@ -333,13 +324,7 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         vm.expectRevert(
             ICSAccounting.ZeroChargePenaltyRecipientAddress.selector
         );
-        accounting.initialize(
-            curve,
-            admin,
-            address(feeDistributor),
-            8 weeks,
-            address(0)
-        );
+        accounting.initialize(curve, admin, 8 weeks, address(0));
     }
 
     function test_finalizeUpgradeV2() public {
@@ -376,25 +361,24 @@ contract CSAccountingBaseTest is CSAccountingFixtures {
         uint256[2][] memory curve = new uint256[2][](1);
         curve[0] = [uint256(1), 2 ether];
 
+        feeDistributor = new DistributorMock(address(stETH));
+
         accounting = new CSAccounting(
             address(locator),
             address(stakingModule),
+            address(feeDistributor),
             10,
             4 weeks,
             365 days
         );
 
-        feeDistributor = new DistributorMock(
-            address(stETH),
-            address(accounting)
-        );
+        feeDistributor.setAccounting(address(accounting));
 
         _enableInitializers(address(accounting));
 
         accounting.initialize(
             curve,
             admin,
-            address(feeDistributor),
             8 weeks,
             testChargePenaltyRecipient
         );

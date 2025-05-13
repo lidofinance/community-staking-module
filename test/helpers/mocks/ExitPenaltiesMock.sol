@@ -13,11 +13,7 @@ contract ExitPenaltiesMock is ICSExitPenalties, ExitTypes {
     ICSAccounting public ACCOUNTING;
     ExitPenaltyInfo internal penaltyInfo;
 
-    constructor(address _module) {
-        MODULE = ICSModule(_module);
-    }
-
-    function strikes() external pure returns (address) {
+    function STRIKES() external pure returns (address) {
         return address(0);
     }
 

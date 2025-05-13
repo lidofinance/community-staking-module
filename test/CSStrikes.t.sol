@@ -48,7 +48,7 @@ contract CSStrikesConstructorTest is CSStrikesTestBase {
         admin = nextAddress("ADMIN");
         oracle = nextAddress("ORACLE");
         module = new CSMMock();
-        exitPenalties = address(new ExitPenaltiesMock(address(module)));
+        exitPenalties = address(new ExitPenaltiesMock());
         ejector = address(new EjectorMock(address(module)));
     }
 
@@ -110,7 +110,7 @@ contract CSStrikesTest is CSStrikesTestBase {
         refundRecipient = nextAddress("REFUND_RECIPIENT");
         oracle = nextAddress("ORACLE");
         module = new CSMMock();
-        exitPenalties = address(new ExitPenaltiesMock(address(module)));
+        exitPenalties = address(new ExitPenaltiesMock());
         ejector = address(new EjectorMock(address(module)));
 
         strikes = new CSStrikes(address(module), oracle, exitPenalties);

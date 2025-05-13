@@ -38,7 +38,9 @@ contract CSAccounting is
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
     ICSModule public immutable MODULE;
-    ICSFeeDistributor public feeDistributor;
+    ICSFeeDistributor public immutable FEE_DISTRIBUTOR;
+    /// @dev DEPRECATED
+    ICSFeeDistributor internal _feeDistributorOld;
     address public chargePenaltyRecipient;
 
     modifier onlyModule() {
@@ -57,6 +59,7 @@ contract CSAccounting is
     constructor(
         address lidoLocator,
         address module,
+        address _feeDistributor,
         uint256 maxCurveLength,
         uint256 minBondLockPeriod,
         uint256 maxBondLockPeriod
@@ -68,20 +71,23 @@ contract CSAccounting is
         if (module == address(0)) {
             revert ZeroModuleAddress();
         }
+        if (_feeDistributor == address(0)) {
+            revert ZeroFeeDistributorAddress();
+        }
+
         MODULE = ICSModule(module);
+        FEE_DISTRIBUTOR = ICSFeeDistributor(_feeDistributor);
 
         _disableInitializers();
     }
 
     /// @param bondCurve Initial bond curve
     /// @param admin Admin role member address
-    /// @param _feeDistributor Fee Distributor contract address
     /// @param bondLockPeriod Bond lock period in seconds
     /// @param _chargePenaltyRecipient Recipient of the charge penalty type
     function initialize(
         uint256[2][] calldata bondCurve,
         address admin,
-        address _feeDistributor,
         uint256 bondLockPeriod,
         address _chargePenaltyRecipient
     ) external reinitializer(2) {
@@ -92,13 +98,8 @@ contract CSAccounting is
         if (admin == address(0)) {
             revert ZeroAdminAddress();
         }
-        if (_feeDistributor == address(0)) {
-            revert ZeroFeeDistributorAddress();
-        }
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
-
-        feeDistributor = ICSFeeDistributor(_feeDistributor);
 
         _setChargePenaltyRecipient(_chargePenaltyRecipient);
 
@@ -114,6 +115,10 @@ contract CSAccounting is
         /// NOTE: This method is not for adding new bond curves, but for migration of the existing ones to the new format (`BondCurve` to `BondCurveInterval[]`). However, bond values can be different from the current.
         _addBondCurve(defaultBondCurve);
         _addBondCurve(vettedBondCurve);
+
+        assembly ("memory-safe") {
+            sstore(_feeDistributorOld.slot, 0x00)
+        }
     }
 
     /// @inheritdoc ICSAccounting
@@ -460,7 +465,7 @@ contract CSAccounting is
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
     ) external view returns (uint256 claimableShares) {
-        uint256 feesToDistribute = feeDistributor.getFeesToDistribute(
+        uint256 feesToDistribute = FEE_DISTRIBUTOR.getFeesToDistribute(
             nodeOperatorId,
             cumulativeFeeShares,
             rewardsProof
@@ -509,12 +514,17 @@ contract CSAccounting is
         }
     }
 
+    /// @inheritdoc ICSAccounting
+    function feeDistributor() external view returns (ICSFeeDistributor) {
+        return FEE_DISTRIBUTOR;
+    }
+
     function _pullFeeRewards(
         uint256 nodeOperatorId,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
     ) internal {
-        uint256 distributed = feeDistributor.distributeFees(
+        uint256 distributed = FEE_DISTRIBUTOR.distributeFees(
             nodeOperatorId,
             cumulativeFeeShares,
             rewardsProof

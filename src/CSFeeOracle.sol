@@ -31,20 +31,34 @@ contract CSFeeOracle is
     /// @notice An ACL role granting the permission to recover assets
     bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
-    ICSFeeDistributor public feeDistributor;
-    /// @custom:oz-retyped-from uint256
-    ICSStrikes public strikes;
+    ICSFeeDistributor public immutable FEE_DISTRIBUTOR;
+    ICSStrikes public immutable STRIKES;
+
+    /// @dev DEPRECATED
+    ICSFeeDistributor internal _feeDistributor;
+    /// @dev DEPRECATED
+    uint256 internal _avgPerfLeewayBP;
 
     constructor(
+        address feeDistributor,
+        address strikes,
         uint256 secondsPerSlot,
         uint256 genesisTime
-    ) BaseOracle(secondsPerSlot, genesisTime) {}
+    ) BaseOracle(secondsPerSlot, genesisTime) {
+        if (feeDistributor == address(0)) {
+            revert ZeroFeeDistributorAddress();
+        }
+        if (strikes == address(0)) {
+            revert ZeroStrikesAddress();
+        }
+
+        FEE_DISTRIBUTOR = ICSFeeDistributor(feeDistributor);
+        STRIKES = ICSStrikes(strikes);
+    }
 
     /// @dev initialize contract from scratch
     function initialize(
         address admin,
-        address feeDistributorContract,
-        address strikesContract,
         address consensusContract,
         uint256 consensusVersion
     ) external {
@@ -55,43 +69,21 @@ contract CSFeeOracle is
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
         BaseOracle._initialize(consensusContract, consensusVersion, 0);
-        /// @dev _setFeeDistributorContract() reverts if zero address
-        _setFeeDistributorContract(feeDistributorContract);
-        /// @dev _setStrikesContract() reverts if zero address
-        _setStrikesContract(strikesContract);
+
         _updateContractVersion(2);
     }
 
     /// @dev should be called after update on the proxy
-    function finalizeUpgradeV2(
-        uint256 consensusVersion,
-        address strikesContract
-    ) external {
+    function finalizeUpgradeV2(uint256 consensusVersion) external {
         _setConsensusVersion(consensusVersion);
 
-        // nullify the storage slot. There is a transition from uint256 (32 bytes) to address (20 bytes)
-        // so we need to clear the complete slot to avoid any data corruption
+        // nullify storage slots
         assembly ("memory-safe") {
-            sstore(strikes.slot, 0x00)
+            sstore(_feeDistributor.slot, 0x00)
+            sstore(_avgPerfLeewayBP.slot, 0x00)
         }
 
-        /// @dev _setStrikesContract() reverts if zero address
-        _setStrikesContract(strikesContract);
         _updateContractVersion(2);
-    }
-
-    /// @inheritdoc ICSFeeOracle
-    function setFeeDistributorContract(
-        address feeDistributorContract
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setFeeDistributorContract(feeDistributorContract);
-    }
-
-    /// @inheritdoc ICSFeeOracle
-    function setStrikesContract(
-        address strikesContract
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _setStrikesContract(strikesContract);
     }
 
     /// @inheritdoc ICSFeeOracle
@@ -128,26 +120,6 @@ contract CSFeeOracle is
         _pauseUntil(pauseUntilInclusive);
     }
 
-    function _setFeeDistributorContract(
-        address feeDistributorContract
-    ) internal {
-        if (feeDistributorContract == address(0)) {
-            revert ZeroFeeDistributorAddress();
-        }
-
-        feeDistributor = ICSFeeDistributor(feeDistributorContract);
-        emit FeeDistributorContractSet(feeDistributorContract);
-    }
-
-    function _setStrikesContract(address strikesContract) internal {
-        if (strikesContract == address(0)) {
-            revert ZeroStrikesAddress();
-        }
-
-        strikes = ICSStrikes(strikesContract);
-        emit StrikesContractSet(strikesContract);
-    }
-
     /// @dev Called in `submitConsensusReport` after a consensus is reached.
     function _handleConsensusReport(
         ConsensusReport memory /* report */,
@@ -159,7 +131,7 @@ contract CSFeeOracle is
     }
 
     function _handleConsensusReportData(ReportData calldata data) internal {
-        feeDistributor.processOracleReport({
+        FEE_DISTRIBUTOR.processOracleReport({
             _treeRoot: data.treeRoot,
             _treeCid: data.treeCid,
             _logCid: data.logCid,
@@ -167,7 +139,7 @@ contract CSFeeOracle is
             rebate: data.rebate,
             refSlot: data.refSlot
         });
-        strikes.processOracleReport(data.strikesTreeRoot, data.strikesTreeCid);
+        STRIKES.processOracleReport(data.strikesTreeRoot, data.strikesTreeCid);
     }
 
     function _checkMsgSenderIsAllowedToSubmitData() internal view {

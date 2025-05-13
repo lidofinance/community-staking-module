@@ -25,7 +25,9 @@ contract ProxyUpgrades is Test, Utilities, DeploymentFixtures {
         CSModule newModule = new CSModule({
             moduleType: "CSMv2",
             lidoLocator: address(csm.LIDO_LOCATOR()),
-            parametersRegistry: address(csm.PARAMETERS_REGISTRY())
+            parametersRegistry: address(csm.PARAMETERS_REGISTRY()),
+            _accounting: address(csm.ACCOUNTING()),
+            exitPenalties: address(csm.EXIT_PENALTIES())
         });
         vm.prank(proxy.proxy__getAdmin());
         proxy.proxy__upgradeTo(address(newModule));
@@ -37,7 +39,9 @@ contract ProxyUpgrades is Test, Utilities, DeploymentFixtures {
         CSModule newModule = new CSModule({
             moduleType: "CSMv2",
             lidoLocator: address(csm.LIDO_LOCATOR()),
-            parametersRegistry: address(csm.PARAMETERS_REGISTRY())
+            parametersRegistry: address(csm.PARAMETERS_REGISTRY()),
+            _accounting: address(csm.ACCOUNTING()),
+            exitPenalties: address(csm.EXIT_PENALTIES())
         });
         address contractAdmin = csm.getRoleMember(csm.DEFAULT_ADMIN_ROLE(), 0);
         vm.startPrank(contractAdmin);
@@ -64,6 +68,7 @@ contract ProxyUpgrades is Test, Utilities, DeploymentFixtures {
         CSAccounting newAccounting = new CSAccounting({
             lidoLocator: address(accounting.LIDO_LOCATOR()),
             module: address(csm),
+            _feeDistributor: address(feeDistributor),
             maxCurveLength: currentMaxCurveLength + 10,
             minBondLockPeriod: accounting.MIN_BOND_LOCK_PERIOD(),
             maxBondLockPeriod: accounting.MAX_BOND_LOCK_PERIOD()
@@ -79,6 +84,7 @@ contract ProxyUpgrades is Test, Utilities, DeploymentFixtures {
         CSAccounting newAccounting = new CSAccounting({
             lidoLocator: address(accounting.LIDO_LOCATOR()),
             module: address(csm),
+            _feeDistributor: address(feeDistributor),
             maxCurveLength: currentMaxCurveLength + 10,
             minBondLockPeriod: accounting.MIN_BOND_LOCK_PERIOD(),
             maxBondLockPeriod: accounting.MAX_BOND_LOCK_PERIOD()
@@ -106,6 +112,8 @@ contract ProxyUpgrades is Test, Utilities, DeploymentFixtures {
     function test_CSFeeOracleUpgradeTo() public {
         OssifiableProxy proxy = OssifiableProxy(payable(address(oracle)));
         CSFeeOracle newFeeOracle = new CSFeeOracle({
+            feeDistributor: address(feeDistributor),
+            strikes: address(strikes),
             secondsPerSlot: oracle.SECONDS_PER_SLOT(),
             genesisTime: block.timestamp
         });
@@ -117,6 +125,8 @@ contract ProxyUpgrades is Test, Utilities, DeploymentFixtures {
     function test_CSFeeOracleUpgradeToAndCall() public {
         OssifiableProxy proxy = OssifiableProxy(payable(address(oracle)));
         CSFeeOracle newFeeOracle = new CSFeeOracle({
+            feeDistributor: address(feeDistributor),
+            strikes: address(strikes),
             secondsPerSlot: oracle.SECONDS_PER_SLOT(),
             genesisTime: block.timestamp
         });

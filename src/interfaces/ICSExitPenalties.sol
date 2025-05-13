@@ -50,7 +50,7 @@ interface ICSExitPenalties is IExitTypes {
 
     function ACCOUNTING() external view returns (ICSAccounting);
 
-    function strikes() external view returns (address);
+    function STRIKES() external view returns (address);
 
     /// @notice Process the delayed exit report
     /// @param nodeOperatorId ID of the Node Operator
@@ -102,7 +102,4 @@ interface ICSExitPenalties is IExitTypes {
         uint256 nodeOperatorId,
         bytes calldata publicKey
     ) external view returns (ExitPenaltyInfo memory penaltyInfo);
-
-    /// @notice Returns the initialized version of the contract
-    function getInitializedVersion() external view returns (uint64);
 }

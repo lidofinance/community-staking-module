@@ -28,6 +28,7 @@ import { InvariantAsserts } from "./helpers/InvariantAsserts.sol";
 import { ICSModule, NodeOperator, NodeOperatorManagementProperties, ValidatorWithdrawalInfo } from "../src/interfaces/ICSModule.sol";
 import { ICSExitPenalties, ExitPenaltyInfo, MarkedUint248 } from "../src/interfaces/ICSExitPenalties.sol";
 import { ExitPenaltiesMock } from "./helpers/mocks/ExitPenaltiesMock.sol";
+import { CSAccountingMock } from "./helpers/mocks/CSAccountingMock.sol";
 import { Stub } from "./helpers/mocks/Stub.sol";
 
 abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
@@ -45,7 +46,7 @@ abstract contract CSMFixtures is Test, Fixtures, Utilities, InvariantAsserts {
     WstETHMock public wstETH;
     LidoMock public stETH;
     CSModule public csm;
-    CSAccounting public accounting;
+    CSAccountingMock public accounting;
     Stub public feeDistributor;
     CSParametersRegistryMock public parametersRegistry;
     ExitPenaltiesMock public exitPenalties;
@@ -362,40 +363,25 @@ contract CSMCommon is CSMFixtures {
 
         feeDistributor = new Stub();
         parametersRegistry = new CSParametersRegistryMock();
+        exitPenalties = new ExitPenaltiesMock();
+
+        uint256[2][] memory curve = new uint256[2][](1);
+        curve[0] = [uint256(1), BOND_SIZE];
+        accounting = new CSAccountingMock(BOND_SIZE, address(wstETH));
+        accounting.setFeeDistributor(address(feeDistributor));
 
         csm = new CSModule({
             moduleType: "community-staking-module",
             lidoLocator: address(locator),
-            parametersRegistry: address(parametersRegistry)
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
         });
-        exitPenalties = new ExitPenaltiesMock(address(csm));
 
-        uint256[2][] memory curve = new uint256[2][](1);
-        curve[0] = [uint256(1), BOND_SIZE];
-        accounting = new CSAccounting(
-            address(locator),
-            address(csm),
-            10,
-            4 weeks,
-            365 days
-        );
-
-        _enableInitializers(address(accounting));
-
-        accounting.initialize(
-            curve,
-            admin,
-            address(feeDistributor),
-            8 weeks,
-            testChargePenaltyRecipient
-        );
+        accounting.setCSM(address(csm));
 
         _enableInitializers(address(csm));
-        csm.initialize({
-            _accounting: address(accounting),
-            _exitPenalties: address(exitPenalties),
-            admin: admin
-        });
+        csm.initialize({ admin: admin });
 
         vm.startPrank(admin);
         csm.grantRole(csm.CREATE_NODE_OPERATOR_ROLE(), address(this));
@@ -412,11 +398,6 @@ contract CSMCommon is CSMFixtures {
             address(this)
         );
         csm.grantRole(csm.VERIFIER_ROLE(), address(this));
-        accounting.grantRole(
-            accounting.MANAGE_BOND_CURVES_ROLE(),
-            address(this)
-        );
-        accounting.grantRole(accounting.SET_BOND_CURVE_ROLE(), address(this));
         vm.stopPrank();
 
         csm.resume();
@@ -437,46 +418,24 @@ contract CSMCommonNoRoles is CSMFixtures {
 
         feeDistributor = new Stub();
         parametersRegistry = new CSParametersRegistryMock();
+        exitPenalties = new ExitPenaltiesMock();
+        uint256[2][] memory curve = new uint256[2][](1);
+        curve[0] = [uint256(1), BOND_SIZE];
+        accounting = new CSAccountingMock(BOND_SIZE, address(wstETH));
+        accounting.setFeeDistributor(address(feeDistributor));
 
         csm = new CSModule({
             moduleType: "community-staking-module",
             lidoLocator: address(locator),
-            parametersRegistry: address(parametersRegistry)
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
         });
-        exitPenalties = new ExitPenaltiesMock(address(csm));
 
-        uint256[2][] memory curve = new uint256[2][](1);
-        curve[0] = [uint256(1), BOND_SIZE];
-        accounting = new CSAccounting(
-            address(locator),
-            address(csm),
-            10,
-            4 weeks,
-            365 days
-        );
-
-        _enableInitializers(address(accounting));
-        accounting.initialize(
-            curve,
-            admin,
-            address(feeDistributor),
-            8 weeks,
-            testChargePenaltyRecipient
-        );
-
-        vm.startPrank(admin);
-        accounting.grantRole(
-            accounting.MANAGE_BOND_CURVES_ROLE(),
-            address(this)
-        );
-        vm.stopPrank();
+        accounting.setCSM(address(csm));
 
         _enableInitializers(address(csm));
-        csm.initialize({
-            _accounting: address(accounting),
-            _exitPenalties: address(exitPenalties),
-            admin: admin
-        });
+        csm.initialize({ admin: admin });
 
         vm.startPrank(admin);
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), address(this));
@@ -525,7 +484,9 @@ contract CsmInitialize is CSMCommon {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             lidoLocator: address(locator),
-            parametersRegistry: address(parametersRegistry)
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
         });
         assertEq(csm.getType(), "community-staking-module");
         assertEq(address(csm.LIDO_LOCATOR()), address(locator));
@@ -533,6 +494,9 @@ contract CsmInitialize is CSMCommon {
             address(csm.PARAMETERS_REGISTRY()),
             address(parametersRegistry)
         );
+        assertEq(address(csm.ACCOUNTING()), address(accounting));
+        assertEq(address(csm.accounting()), address(accounting));
+        assertEq(address(csm.EXIT_PENALTIES()), address(exitPenalties));
     }
 
     function test_constructor_RevertWhen_ZeroLocator() public {
@@ -540,7 +504,9 @@ contract CsmInitialize is CSMCommon {
         new CSModule({
             moduleType: "community-staking-module",
             lidoLocator: address(0),
-            parametersRegistry: address(parametersRegistry)
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
         });
     }
 
@@ -551,7 +517,31 @@ contract CsmInitialize is CSMCommon {
         new CSModule({
             moduleType: "community-staking-module",
             lidoLocator: address(locator),
-            parametersRegistry: address(0)
+            parametersRegistry: address(0),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
+        });
+    }
+
+    function test_constructor_RevertWhen_ZeroAccountingAddress() public {
+        vm.expectRevert(ICSModule.ZeroAccountingAddress.selector);
+        new CSModule({
+            moduleType: "community-staking-module",
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(0),
+            exitPenalties: address(exitPenalties)
+        });
+    }
+
+    function test_constructor_RevertWhen_ZeroExitPenaltiesAddress() public {
+        vm.expectRevert(ICSModule.ZeroExitPenaltiesAddress.selector);
+        new CSModule({
+            moduleType: "community-staking-module",
+            lidoLocator: address(locator),
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(0)
         });
     }
 
@@ -559,148 +549,58 @@ contract CsmInitialize is CSMCommon {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             lidoLocator: address(locator),
-            parametersRegistry: address(parametersRegistry)
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
         });
 
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        csm.initialize({
-            _accounting: address(accounting),
-            _exitPenalties: address(exitPenalties),
-            admin: address(this)
-        });
+        csm.initialize({ admin: address(this) });
     }
 
     function test_initialize() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             lidoLocator: address(locator),
-            parametersRegistry: address(parametersRegistry)
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
         });
 
         _enableInitializers(address(csm));
-        csm.initialize({
-            _accounting: address(accounting),
-            _exitPenalties: address(exitPenalties),
-            admin: address(this)
-        });
-        assertEq(csm.getType(), "community-staking-module");
-        assertEq(address(csm.LIDO_LOCATOR()), address(locator));
-        assertEq(address(csm.accounting()), address(accounting));
-        assertEq(address(csm.exitPenalties()), address(exitPenalties));
+        csm.initialize({ admin: address(this) });
+        assertTrue(csm.hasRole(csm.DEFAULT_ADMIN_ROLE(), address(this)));
+        assertEq(csm.getRoleMemberCount(csm.DEFAULT_ADMIN_ROLE()), 1);
         assertTrue(csm.isPaused());
         assertEq(csm.getInitializedVersion(), 2);
-    }
-
-    function test_initialize_RevertWhen_ZeroAccountingAddress() public {
-        CSModule csm = new CSModule({
-            moduleType: "community-staking-module",
-            lidoLocator: address(locator),
-            parametersRegistry: address(parametersRegistry)
-        });
-
-        _enableInitializers(address(csm));
-        vm.expectRevert(ICSModule.ZeroAccountingAddress.selector);
-        csm.initialize({
-            _accounting: address(0),
-            _exitPenalties: address(exitPenalties),
-            admin: address(this)
-        });
-    }
-
-    function test_initialize_RevertWhen_ZeroExitPenaltiesAddress() public {
-        CSModule csm = new CSModule({
-            moduleType: "community-staking-module",
-            lidoLocator: address(locator),
-            parametersRegistry: address(parametersRegistry)
-        });
-
-        _enableInitializers(address(csm));
-        vm.expectRevert(ICSModule.ZeroExitPenaltiesAddress.selector);
-        csm.initialize({
-            _accounting: address(accounting),
-            _exitPenalties: address(0),
-            admin: address(this)
-        });
     }
 
     function test_initialize_RevertWhen_ZeroAdminAddress() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             lidoLocator: address(locator),
-            parametersRegistry: address(parametersRegistry)
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
         });
 
         _enableInitializers(address(csm));
         vm.expectRevert(ICSModule.ZeroAdminAddress.selector);
-        csm.initialize({
-            _accounting: address(154),
-            _exitPenalties: address(exitPenalties),
-            admin: address(0)
-        });
+        csm.initialize({ admin: address(0) });
     }
 
     function test_finalizeUpgradeV2() public {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             lidoLocator: address(locator),
-            parametersRegistry: address(parametersRegistry)
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
         });
         _enableInitializers(address(csm));
 
-        csm.finalizeUpgradeV2(address(exitPenalties));
-        assertEq(address(csm.exitPenalties()), address(exitPenalties));
+        csm.finalizeUpgradeV2();
         assertEq(csm.getInitializedVersion(), 2);
-    }
-
-    function test_finalizeUpgradeV2_revertWhen_ZeroExitPenalties() public {
-        CSModule csm = new CSModule({
-            moduleType: "community-staking-module",
-            lidoLocator: address(locator),
-            parametersRegistry: address(parametersRegistry)
-        });
-        _enableInitializers(address(csm));
-
-        vm.expectRevert(ICSModule.ZeroExitPenaltiesAddress.selector);
-        csm.finalizeUpgradeV2(address(0));
-    }
-
-    function test_finalizeUpgradeV2_cleanStorageSlots() public {
-        CSModule csm = new CSModule({
-            moduleType: "community-staking-module",
-            lidoLocator: address(locator),
-            parametersRegistry: address(parametersRegistry)
-        });
-        _enableInitializers(address(csm));
-        bytes32 exitPenaltiesStorageSlot = bytes32(
-            stdstore
-                .target(address(csm))
-                .sig(ICSModule.exitPenalties.selector)
-                .find()
-        );
-        // 0 slot is an internal _queueByPriority mapping which is difficult to target
-        vm.store(address(csm), 0, bytes32(type(uint256).max));
-        vm.store(
-            address(csm),
-            exitPenaltiesStorageSlot,
-            bytes32(type(uint256).max)
-        );
-
-        csm.finalizeUpgradeV2(address(exitPenalties));
-        assertEq(vm.load(address(csm), 0), bytes32(0));
-
-        assertEq(address(csm.exitPenalties()), address(exitPenalties));
-        bytes12 head;
-        address exitPenaltiesAddress;
-        bytes32 storageValue = vm.load(address(csm), exitPenaltiesStorageSlot);
-        assembly {
-            exitPenaltiesAddress := and(
-                storageValue,
-                0x000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
-            )
-            head := shr(160, storageValue)
-        }
-        assertEq(exitPenaltiesAddress, address(exitPenalties));
-        assertEq(head, bytes12(0));
     }
 }
 
@@ -1153,12 +1053,6 @@ contract CSMAddValidatorKeys is CSMCommon {
         uint256 wstETHAmount = wstETH.wrap(toWrap);
         uint256 nonce = csm.getNonce();
         {
-            vm.expectEmit(address(wstETH));
-            emit WstETHMock.Approval(
-                nodeOperator,
-                address(accounting),
-                wstETHAmount
-            );
             vm.expectEmit(address(csm));
             emit IStakingModule.SigningKeyAdded(noId, keys);
             vm.expectEmit(address(csm));
@@ -1383,12 +1277,6 @@ contract CSMAddValidatorKeys is CSMCommon {
         uint256 nonce = csm.getNonce();
 
         {
-            vm.expectEmit(address(stETH));
-            emit StETHMock.Approval(
-                nodeOperator,
-                address(accounting),
-                required
-            );
             vm.expectEmit(address(csm));
             emit IStakingModule.SigningKeyAdded(noId, keys);
             vm.expectEmit(address(csm));
@@ -6118,10 +6006,12 @@ contract CSMAccessControl is CSMCommonNoRoles {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             lidoLocator: address(locator),
-            parametersRegistry: address(parametersRegistry)
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
         });
         _enableInitializers(address(csm));
-        csm.initialize(address(accounting), address(exitPenalties), actor);
+        csm.initialize(actor);
 
         bytes32 role = csm.DEFAULT_ADMIN_ROLE();
         vm.prank(actor);
@@ -6137,7 +6027,9 @@ contract CSMAccessControl is CSMCommonNoRoles {
         CSModule csm = new CSModule({
             moduleType: "community-staking-module",
             lidoLocator: address(locator),
-            parametersRegistry: address(parametersRegistry)
+            parametersRegistry: address(parametersRegistry),
+            _accounting: address(accounting),
+            exitPenalties: address(exitPenalties)
         });
         bytes32 role = csm.DEFAULT_ADMIN_ROLE();
         bytes32 adminRole = csm.DEFAULT_ADMIN_ROLE();
@@ -6582,15 +6474,11 @@ contract CSMDepositableValidatorsCount is CSMCommon {
 
 contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
     function updateToBetterCurve() public {
-        uint256[2][] memory newCurve = new uint256[2][](1);
-        newCurve[0] = [uint256(1), BOND_SIZE - 0.5 ether];
-        accounting.updateBondCurve(0, newCurve);
+        accounting.updateBondCurve(0, 1.5 ether);
     }
 
     function updateToWorseCurve() public {
-        uint256[2][] memory newCurve = new uint256[2][](1);
-        newCurve[0] = [uint256(1), BOND_SIZE + 0.5 ether];
-        accounting.updateBondCurve(0, newCurve);
+        accounting.updateBondCurve(0, 2.5 ether);
     }
 
     function test_depositedOnly_UpdateToBetterCurve() public assertInvariants {

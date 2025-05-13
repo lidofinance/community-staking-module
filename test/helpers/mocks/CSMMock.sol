@@ -7,23 +7,11 @@ import { ICSAccounting } from "../../../src/interfaces/ICSAccounting.sol";
 import { ICSParametersRegistry } from "../../../src/interfaces/ICSParametersRegistry.sol";
 import { ILidoLocator } from "../../../src/interfaces/ILidoLocator.sol";
 import { CSParametersRegistryMock } from "./CSParametersRegistryMock.sol";
+import { CSAccountingMock } from "./CSAccountingMock.sol";
+import { WstETHMock } from "./WstETHMock.sol";
 import { Utilities } from "../Utilities.sol";
 import { LidoLocatorMock } from "./LidoLocatorMock.sol";
 import { Fixtures } from "../Fixtures.sol";
-
-contract AccountingMock {
-    uint256 public constant DEFAULT_BOND_CURVE_ID = 0;
-
-    function setBondCurve(uint256 nodeOperatorId, uint256 curveId) external {}
-
-    function penalize(uint256 nodeOperatorId, uint256 amount) external {}
-
-    function getBondCurveId(
-        uint256 /* nodeOperatorId */
-    ) external pure returns (uint256) {
-        return DEFAULT_BOND_CURVE_ID;
-    }
-}
 
 contract CSMMock is Utilities, Fixtures {
     NodeOperator internal mockNodeOperator;
@@ -36,11 +24,14 @@ contract CSMMock is Utilities, Fixtures {
     NodeOperatorManagementProperties internal managementProperties;
 
     constructor() {
-        ACCOUNTING = ICSAccounting(address(new AccountingMock()));
         PARAMETERS_REGISTRY = ICSParametersRegistry(
             address(new CSParametersRegistryMock())
         );
-        (LIDO_LOCATOR, , , , ) = initLido();
+        WstETHMock wstETH;
+        (LIDO_LOCATOR, wstETH, , , ) = initLido();
+        ACCOUNTING = ICSAccounting(
+            address(new CSAccountingMock(2 ether, address(wstETH)))
+        );
     }
 
     function accounting() external view returns (ICSAccounting) {

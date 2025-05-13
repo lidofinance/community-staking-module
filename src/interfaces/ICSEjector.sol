@@ -26,7 +26,7 @@ interface ICSEjector is IExitTypes {
 
     function MODULE() external view returns (ICSModule);
 
-    function strikes() external view returns (address);
+    function STRIKES() external view returns (address);
 
     /// @notice Pause ejection methods calls
     /// @param duration Duration of the pause in seconds

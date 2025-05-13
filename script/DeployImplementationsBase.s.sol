@@ -24,6 +24,7 @@ import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { OssifiableProxy } from "../src/lib/proxy/OssifiableProxy.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
+import { Dummy } from "./utils/Dummy.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 import { DeployBase } from "./DeployBase.s.sol";
@@ -76,15 +77,10 @@ abstract contract DeployImplementationsBase is DeployBase {
                 })
             });
 
-            CSModule csmImpl = new CSModule({
-                moduleType: config.moduleType,
-                lidoLocator: config.lidoLocatorAddress,
-                parametersRegistry: address(parametersRegistry)
-            });
-
             CSAccounting accountingImpl = new CSAccounting({
                 lidoLocator: config.lidoLocatorAddress,
                 module: address(csm),
+                _feeDistributor: address(feeDistributor),
                 maxCurveLength: config.maxCurveLength,
                 minBondLockPeriod: config.minBondLockPeriod,
                 maxBondLockPeriod: config.maxBondLockPeriod
@@ -108,28 +104,25 @@ abstract contract DeployImplementationsBase is DeployBase {
             );
             vettedGateProxy.proxy__changeAdmin(config.proxyAdmin);
 
-            CSFeeOracle oracleImpl = new CSFeeOracle({
-                secondsPerSlot: config.secondsPerSlot,
-                genesisTime: config.clGenesisTime
-            });
-
             CSFeeDistributor feeDistributorImpl = new CSFeeDistributor({
                 stETH: locator.lido(),
                 accounting: address(accounting),
                 oracle: address(oracle)
             });
 
-            CSExitPenalties exitPenaltiesImpl = new CSExitPenalties(
-                address(csm),
-                address(parametersRegistry),
-                address(accounting)
-            );
+            Dummy dummyImpl = new Dummy();
 
             exitPenalties = CSExitPenalties(
-                _deployProxy(config.proxyAdmin, address(exitPenaltiesImpl))
+                _deployProxy(deployer, address(dummyImpl))
             );
 
-            ejector = new CSEjector(address(csm), config.stakingModuleId);
+            CSModule csmImpl = new CSModule({
+                moduleType: config.moduleType,
+                lidoLocator: config.lidoLocatorAddress,
+                parametersRegistry: address(parametersRegistry),
+                _accounting: address(accounting),
+                exitPenalties: address(exitPenalties)
+            });
 
             CSStrikes strikesImpl = new CSStrikes({
                 module: address(csm),
@@ -141,8 +134,32 @@ abstract contract DeployImplementationsBase is DeployBase {
                 _deployProxy(config.proxyAdmin, address(strikesImpl))
             );
 
-            exitPenalties.initialize(address(strikes));
-            ejector.initialize(deployer, address(strikes));
+            CSFeeOracle oracleImpl = new CSFeeOracle({
+                feeDistributor: address(feeDistributor),
+                strikes: address(strikes),
+                secondsPerSlot: config.secondsPerSlot,
+                genesisTime: config.clGenesisTime
+            });
+
+            CSExitPenalties exitPenaltiesImpl = new CSExitPenalties(
+                address(csm),
+                address(parametersRegistry),
+                address(strikes)
+            );
+
+            OssifiableProxy exitPenaltiesProxy = OssifiableProxy(
+                payable(address(exitPenalties))
+            );
+            exitPenaltiesProxy.proxy__upgradeTo(address(exitPenaltiesImpl));
+            exitPenaltiesProxy.proxy__changeAdmin(config.proxyAdmin);
+
+            ejector = new CSEjector(
+                address(csm),
+                address(strikes),
+                config.stakingModuleId
+            );
+
+            ejector.initialize(deployer);
             strikes.initialize(deployer, address(ejector));
 
             verifierV2 = new CSVerifier({

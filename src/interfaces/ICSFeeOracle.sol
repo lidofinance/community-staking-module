@@ -33,12 +33,6 @@ interface ICSFeeOracle is IAssetRecovererLib {
         string strikesTreeCid;
     }
 
-    /// @dev Emitted when a new fee distributor contract is set
-    event FeeDistributorContractSet(address feeDistributorContract);
-
-    /// @dev Emitted when a new strikes contract is set
-    event StrikesContractSet(address strikesContract);
-
     error ZeroAdminAddress();
     error ZeroFeeDistributorAddress();
     error ZeroStrikesAddress();
@@ -52,17 +46,9 @@ interface ICSFeeOracle is IAssetRecovererLib {
 
     function RECOVERER_ROLE() external view returns (bytes32);
 
-    function feeDistributor() external view returns (ICSFeeDistributor);
+    function FEE_DISTRIBUTOR() external view returns (ICSFeeDistributor);
 
-    function strikes() external view returns (ICSStrikes);
-
-    /// @notice Set a new fee distributor contract
-    /// @param feeDistributorContract Address of the new fee distributor contract
-    function setFeeDistributorContract(address feeDistributorContract) external;
-
-    /// @notice Set a new strikes contract
-    /// @param strikesContract Address of the new strikes contract
-    function setStrikesContract(address strikesContract) external;
+    function STRIKES() external view returns (ICSStrikes);
 
     /// @notice Submit the data for a committee report
     /// @param data Data for a committee report

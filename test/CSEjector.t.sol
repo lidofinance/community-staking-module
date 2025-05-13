@@ -35,53 +35,66 @@ contract CSEjectorTestBase is Test, Utilities, Fixtures {
         admin = nextAddress("ADMIN");
         refundRecipient = nextAddress("refundRecipient");
 
-        ejector = new CSEjector(address(csm), stakingModuleId);
+        ejector = new CSEjector(
+            address(csm),
+            address(strikes),
+            stakingModuleId
+        );
         _enableInitializers(address(ejector));
-        ejector.initialize(admin, address(strikes));
+        ejector.initialize(admin);
     }
 }
 
 contract CSEjectorTestMisc is CSEjectorTestBase {
     function test_constructor() public {
-        ejector = new CSEjector(address(csm), stakingModuleId);
+        ejector = new CSEjector(
+            address(csm),
+            address(strikes),
+            stakingModuleId
+        );
         assertEq(address(ejector.MODULE()), address(csm));
         assertEq(
             address(ejector.VEB()),
             address(csm.LIDO_LOCATOR().validatorsExitBusOracle())
         );
         assertEq(ejector.STAKING_MODULE_ID(), stakingModuleId);
+        assertEq(ejector.STRIKES(), address(strikes));
     }
 
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
         vm.expectRevert(ICSEjector.ZeroModuleAddress.selector);
-        new CSEjector(address(0), stakingModuleId);
+        new CSEjector(address(0), address(strikes), stakingModuleId);
+    }
+
+    function test_constructor_RevertWhen_ZeroStrikesAddress() public {
+        vm.expectRevert(ICSEjector.ZeroStrikesAddress.selector);
+        new CSEjector(address(csm), address(0), stakingModuleId);
     }
 
     function test_initializer() public {
-        ejector = new CSEjector(address(csm), stakingModuleId);
+        ejector = new CSEjector(
+            address(csm),
+            address(strikes),
+            stakingModuleId
+        );
         _enableInitializers(address(ejector));
 
-        ejector.initialize(admin, address(strikes));
+        ejector.initialize(admin);
 
-        assertEq(ejector.strikes(), address(strikes));
         assertEq(ejector.getRoleMemberCount(ejector.DEFAULT_ADMIN_ROLE()), 1);
         assertEq(ejector.getRoleMember(ejector.DEFAULT_ADMIN_ROLE(), 0), admin);
     }
 
     function test_initializer_RevertWhen_ZeroAdminAddress() public {
-        ejector = new CSEjector(address(csm), stakingModuleId);
+        ejector = new CSEjector(
+            address(csm),
+            address(strikes),
+            stakingModuleId
+        );
         _enableInitializers(address(ejector));
 
         vm.expectRevert(ICSEjector.ZeroAdminAddress.selector);
-        ejector.initialize(address(0), address(strikes));
-    }
-
-    function test_initializer_RevertWhen_ZeroStrikesAddress() public {
-        ejector = new CSEjector(address(csm), stakingModuleId);
-        _enableInitializers(address(ejector));
-
-        vm.expectRevert(ICSEjector.ZeroStrikesAddress.selector);
-        ejector.initialize(admin, address(0));
+        ejector.initialize(address(0));
     }
 
     function test_pauseFor() public {
