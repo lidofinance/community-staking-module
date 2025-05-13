@@ -685,7 +685,7 @@ contract CSModule is
         for (uint256 i; i < nodeOperatorIds.length; ++i) {
             uint256 nodeOperatorId = nodeOperatorIds[i];
             _onlyExistingNodeOperator(nodeOperatorId);
-            
+
             // Settled amount might be zero either if the lock expired, or the bond is zero so we
             // need to check if the penalty was applied.
             bool applied = accounting().settleLockedBondETH(nodeOperatorId);
