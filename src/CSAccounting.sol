@@ -108,12 +108,15 @@ contract CSAccounting is
     }
 
     function finalizeUpgradeV2(
-        uint256[2][] calldata defaultBondCurve,
-        uint256[2][] calldata vettedBondCurve
+        uint256[2][][] calldata bondCurves
     ) external reinitializer(2) {
         /// NOTE: This method is not for adding new bond curves, but for migration of the existing ones to the new format (`BondCurve` to `BondCurveInterval[]`). However, bond values can be different from the current.
-        _addBondCurve(defaultBondCurve);
-        _addBondCurve(vettedBondCurve);
+        if (bondCurves.length != _getLegacyBondCurvesLength()) {
+            revert InvalidBondCurvesLength();
+        }
+        for (uint256 i = 0; i < bondCurves.length; i++) {
+            _addBondCurve(bondCurves[i]);
+        }
     }
 
     /// @inheritdoc ICSAccounting

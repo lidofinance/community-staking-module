@@ -83,6 +83,10 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         DeploymentConfig memory deploymentConfig = parseDeploymentConfig(
             deploymentConfigContent
         );
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
+        uint256[2][][] memory bondCurves = new uint256[2][][](2);
+        bondCurves[0] = deployParams.bondCurve;
+        bondCurves[1] = deployParams.identifiedCommunityStakersGateBondCurve;
 
         DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
 
@@ -107,8 +111,7 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         {
             accountingProxy.proxy__upgradeTo(deploymentConfig.accountingImpl);
             CSAccounting(deploymentConfig.accounting).finalizeUpgradeV2(
-                deployParams.bondCurve,
-                deployParams.identifiedCommunityStakersGateBondCurve
+                bondCurves
             );
         }
         vm.stopBroadcast();
