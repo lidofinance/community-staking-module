@@ -88,8 +88,6 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         bondCurves[0] = deployParams.bondCurve;
         bondCurves[1] = deployParams.identifiedCommunityStakersGateBondCurve;
 
-        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
-
         address admin = _prepareAdmin(deploymentConfig.csm);
 
         OssifiableProxy csmProxy = OssifiableProxy(
