@@ -31,7 +31,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         bytes32[] legacyBondCurves;
         /// @dev Mapping of Node Operator id to bond curve id
         mapping(uint256 nodeOperatorId => uint256 bondCurveId) operatorBondCurveId;
-        BondCurveInterval[][] bondCurves;
+        BondCurve[] bondCurves;
     }
 
     // keccak256(abi.encode(uint256(keccak256("CSBondCurve")) - 1)) & ~bytes32(uint256(0xff))
@@ -58,14 +58,14 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     /// @inheritdoc ICSBondCurve
     function getCurveInfo(
         uint256 curveId
-    ) external view returns (BondCurveInterval[] memory) {
+    ) external view returns (BondCurve memory) {
         return _getCurveInfo(curveId);
     }
 
     /// @inheritdoc ICSBondCurve
     function getBondCurve(
         uint256 nodeOperatorId
-    ) external view returns (BondCurveInterval[] memory) {
+    ) external view returns (BondCurve memory) {
         return _getCurveInfo(getBondCurveId(nodeOperatorId));
     }
 
@@ -81,7 +81,8 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         uint256 keys,
         uint256 curveId
     ) public view returns (uint256) {
-        return _getBondAmountByKeysCount(keys, _getCurveInfo(curveId));
+        return
+            _getBondAmountByKeysCount(keys, _getCurveInfo(curveId).intervals);
     }
 
     /// @inheritdoc ICSBondCurve
@@ -89,12 +90,13 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         uint256 amount,
         uint256 curveId
     ) public view returns (uint256) {
-        return _getKeysCountByBondAmount(amount, _getCurveInfo(curveId));
+        return
+            _getKeysCountByBondAmount(amount, _getCurveInfo(curveId).intervals);
     }
 
     // solhint-disable-next-line func-name-mixedcase
     function __CSBondCurve_init(
-        uint256[2][] calldata defaultBondCurveIntervals
+        BondCurveIntervalInput[] calldata defaultBondCurveIntervals
     ) internal onlyInitializing {
         uint256 addedId = _addBondCurve(defaultBondCurveIntervals);
         if (addedId != DEFAULT_BOND_CURVE_ID) {
@@ -105,7 +107,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
     /// @dev Add a new bond curve to the array
     function _addBondCurve(
-        uint256[2][] calldata intervals
+        BondCurveIntervalInput[] calldata intervals
     ) internal returns (uint256 curveId) {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
 
@@ -121,7 +123,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     // TODO: add fuzzing tests for 5 calls with the same curveId
     function _updateBondCurve(
         uint256 curveId,
-        uint256[2][] calldata intervals
+        BondCurveIntervalInput[] calldata intervals
     ) internal {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
         if (curveId > $.bondCurves.length - 1) {
@@ -230,34 +232,31 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     }
 
     function _addIntervalsToBondCurve(
-        BondCurveInterval[] storage bondCurve,
-        uint256[2][] calldata intervals
+        BondCurve storage bondCurve,
+        BondCurveIntervalInput[] calldata intervals
     ) private {
-        BondCurveInterval storage interval = bondCurve.push();
+        BondCurveInterval storage interval = bondCurve.intervals.push();
 
-        (uint256 minKeysCount, uint256 trend) = (
-            intervals[0][0],
-            intervals[0][1]
-        );
-        interval.minKeysCount = minKeysCount;
-        interval.trend = trend;
-        interval.minBond = trend;
+        interval.minKeysCount = intervals[0].minKeysCount;
+        interval.trend = intervals[0].trend;
+        interval.minBond = intervals[0].trend;
 
         for (uint256 i = 1; i < intervals.length; ++i) {
             BondCurveInterval storage prev = interval;
-            interval = bondCurve.push();
-            (minKeysCount, trend) = (intervals[i][0], intervals[i][1]);
-            interval.minKeysCount = minKeysCount;
-            interval.trend = trend;
+            interval = bondCurve.intervals.push();
+            interval.minKeysCount = intervals[i].minKeysCount;
+            interval.trend = intervals[i].trend;
             interval.minBond =
-                trend +
+                intervals[i].trend +
                 prev.minBond +
-                (minKeysCount - prev.minKeysCount - 1) *
+                (intervals[i].minKeysCount - prev.minKeysCount - 1) *
                 prev.trend;
         }
     }
 
-    function _checkBondCurve(uint256[2][] calldata intervals) private view {
+    function _checkBondCurve(
+        BondCurveIntervalInput[] calldata intervals
+    ) private view {
         if (
             intervals.length < MIN_CURVE_LENGTH ||
             intervals.length > MAX_CURVE_LENGTH
@@ -265,31 +264,22 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
             revert InvalidBondCurveLength();
         }
 
-        // TODO: change to structs
-        (uint256 firstIntervalMinKeysCount, uint256 firstIntervalTrend) = (
-            intervals[0][0],
-            intervals[0][1]
-        );
-
-        if (firstIntervalMinKeysCount != 1) {
+        if (intervals[0].minKeysCount != 1) {
             revert InvalidBondCurveValues();
         }
 
-        if (firstIntervalTrend == 0) {
+        if (intervals[0].trend == 0) {
             revert InvalidBondCurveValues();
         }
 
         for (uint256 i = 1; i < intervals.length; ++i) {
             unchecked {
-                (uint256 minKeysCount, uint256 trend) = (
-                    intervals[i][0],
-                    intervals[i][1]
-                );
-                uint256 prevMinKeysCount = intervals[i - 1][0];
-                if (minKeysCount <= prevMinKeysCount) {
+                if (
+                    intervals[i].minKeysCount <= intervals[i - 1].minKeysCount
+                ) {
                     revert InvalidBondCurveValues();
                 }
-                if (trend == 0) {
+                if (intervals[i].trend == 0) {
                     revert InvalidBondCurveValues();
                 }
             }
@@ -298,7 +288,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
     function _getCurveInfo(
         uint256 curveId
-    ) private view returns (BondCurveInterval[] storage) {
+    ) private view returns (BondCurve storage) {
         CSBondCurveStorage storage $ = _getCSBondCurveStorage();
         if (curveId > $.bondCurves.length - 1) {
             revert InvalidBondCurveId();

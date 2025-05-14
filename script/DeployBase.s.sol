@@ -273,9 +273,19 @@ abstract contract DeployBase is Script {
                 accountingProxy.proxy__upgradeTo(address(accountingImpl));
                 accountingProxy.proxy__changeAdmin(config.proxyAdmin);
             }
-
+ 
+            ICSBondCurve.BondCurveIntervalInput[]
+                memory bondCurve = new ICSBondCurve.BondCurveIntervalInput[](
+                    config.bondCurve.length
+                );
+            for (uint256 i = 0; i < config.bondCurve.length; i++) {
+                bondCurve[i] = ICSBondCurve.BondCurveIntervalInput({
+                    minKeysCount: config.bondCurve[i][0],
+                    trend: config.bondCurve[i][1]
+                });
+            }
             accounting.initialize({
-                bondCurve: config.bondCurve,
+                bondCurve: bondCurve,
                 admin: deployer,
                 bondLockPeriod: config.bondLockPeriod,
                 _chargePenaltyRecipient: config.chargePenaltyRecipient
@@ -286,8 +296,18 @@ abstract contract DeployBase is Script {
                 address(deployer)
             );
 
+            ICSBondCurve.BondCurveIntervalInput[]
+                memory identifiedCommunityStakersGateBondCurve = new ICSBondCurve.BondCurveIntervalInput[](
+                    config.identifiedCommunityStakersGateBondCurve.length
+                );
+            for (uint256 i = 0; i < config.identifiedCommunityStakersGateBondCurve.length; i++) {
+                identifiedCommunityStakersGateBondCurve[i] = ICSBondCurve.BondCurveIntervalInput({
+                    minKeysCount: config.identifiedCommunityStakersGateBondCurve[i][0],
+                    trend: config.identifiedCommunityStakersGateBondCurve[i][1]
+                });
+            }
             uint256 identifiedCommunityStakersGateBondCurveId = accounting
-                .addBondCurve(config.identifiedCommunityStakersGateBondCurve);
+                .addBondCurve(identifiedCommunityStakersGateBondCurve);
             accounting.revokeRole(
                 accounting.MANAGE_BOND_CURVES_ROLE(),
                 address(deployer)

@@ -10,6 +10,7 @@ import { CSModule } from "../src/CSModule.sol";
 import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSBondLock } from "../src/abstract/CSBondLock.sol";
 import { ICSAccounting } from "../src/interfaces/ICSAccounting.sol";
+import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 import { StETHMock } from "./helpers/mocks/StETHMock.sol";
 import { LidoLocatorMock } from "./helpers/mocks/LidoLocatorMock.sol";
@@ -365,8 +366,12 @@ contract CSMCommon is CSMFixtures {
         parametersRegistry = new CSParametersRegistryMock();
         exitPenalties = new ExitPenaltiesMock();
 
-        uint256[2][] memory curve = new uint256[2][](1);
-        curve[0] = [uint256(1), BOND_SIZE];
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: BOND_SIZE
+        });
         accounting = new CSAccountingMock(BOND_SIZE, address(wstETH));
         accounting.setFeeDistributor(address(feeDistributor));
 
@@ -419,8 +424,12 @@ contract CSMCommonNoRoles is CSMFixtures {
         feeDistributor = new Stub();
         parametersRegistry = new CSParametersRegistryMock();
         exitPenalties = new ExitPenaltiesMock();
-        uint256[2][] memory curve = new uint256[2][](1);
-        curve[0] = [uint256(1), BOND_SIZE];
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: BOND_SIZE
+        });
         accounting = new CSAccountingMock(BOND_SIZE, address(wstETH));
         accounting.setFeeDistributor(address(feeDistributor));
 
@@ -6599,11 +6608,23 @@ contract CSMDepositableValidatorsCount is CSMCommon {
 
 contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
     function updateToBetterCurve() public {
-        accounting.updateBondCurve(0, 1.5 ether);
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory newCurve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        newCurve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: BOND_SIZE - 0.5 ether
+        });
+        accounting.updateBondCurve(0, newCurve);
     }
 
     function updateToWorseCurve() public {
-        accounting.updateBondCurve(0, 2.5 ether);
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory newCurve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        newCurve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: BOND_SIZE + 0.5 ether
+        });
+        accounting.updateBondCurve(0, newCurve);
     }
 
     function test_depositedOnly_UpdateToBetterCurve() public assertInvariants {

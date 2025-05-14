@@ -16,6 +16,7 @@ import { CSParametersRegistry } from "../../src/CSParametersRegistry.sol";
 
 import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
+import { ICSBondCurve } from "../../src/interfaces/ICSBondCurve.sol";
 import { IBurner } from "../../src/interfaces/IBurner.sol";
 import { ICSParametersRegistry } from "../../src/interfaces/ICSParametersRegistry.sol";
 
@@ -87,6 +88,15 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         uint256[2][][] memory bondCurves = new uint256[2][][](2);
         bondCurves[0] = deployParams.bondCurve;
         bondCurves[1] = deployParams.identifiedCommunityStakersGateBondCurve;
+
+        ICSBondCurve.BondCurveIntervalInput[][] memory bondCurveIntervals = new ICSBondCurve
+            .BondCurveIntervalInput[][](2);
+        bondCurveIntervals[0] = CommonScriptUtils.arraysToBondCurveIntervalsInputs(
+            deployParams.bondCurve
+        );
+        bondCurveIntervals[1] = CommonScriptUtils.arraysToBondCurveIntervalsInputs(
+            deployParams.identifiedCommunityStakersGateBondCurve
+        );
 
         address admin = _prepareAdmin(deploymentConfig.csm);
 
