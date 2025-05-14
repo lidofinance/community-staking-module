@@ -24,6 +24,7 @@ import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { OssifiableProxy } from "../src/lib/proxy/OssifiableProxy.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
+import { CommonScriptUtils } from "./utils/Common.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 import { DeployBase } from "./DeployBase.s.sol";
@@ -97,10 +98,70 @@ abstract contract DeployImplementationsBase is DeployBase {
             vettedGate = VettedGate(
                 vettedGateFactory.create({
                     curveId: ICSEarlyAdoption(earlyAdoption).CURVE_ID(),
-                    treeRoot: config.identifiedCommunityStakerTreeRoot,
-                    treeCid: config.identifiedCommunityStakerTreeCid,
+                    treeRoot: config.identifiedCommunityStakersGateTreeRoot,
+                    treeCid: config.identifiedCommunityStakersGateTreeCid,
                     admin: deployer
                 })
+            );
+
+            uint256 identifiedCommunityStakersGateBondCurveId = vettedGate
+                .curveId();
+            parametersRegistry.setKeyRemovalCharge(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateKeyRemovalCharge
+            );
+            parametersRegistry.setElRewardsStealingAdditionalFine(
+                identifiedCommunityStakersGateBondCurveId,
+                config
+                    .identifiedCommunityStakersGateELRewardsStealingAdditionalFine
+            );
+            parametersRegistry.setKeysLimit(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateKeysLimit
+            );
+            parametersRegistry.setPerformanceLeewayData(
+                identifiedCommunityStakersGateBondCurveId,
+                CommonScriptUtils.arraysToKeyIndexValueIntervals(
+                    config.identifiedCommunityStakersGateAvgPerfLeewayData
+                )
+            );
+            parametersRegistry.setRewardShareData(
+                identifiedCommunityStakersGateBondCurveId,
+                CommonScriptUtils.arraysToKeyIndexValueIntervals(
+                    config.identifiedCommunityStakersGateRewardShareData
+                )
+            );
+            parametersRegistry.setStrikesParams(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateStrikesLifetimeFrames,
+                config.identifiedCommunityStakersGateStrikesThreshold
+            );
+            parametersRegistry.setQueueConfig(
+                identifiedCommunityStakersGateBondCurveId,
+                uint32(config.identifiedCommunityStakersGateQueuePriority),
+                uint32(config.identifiedCommunityStakersGateQueueMaxDeposits)
+            );
+            parametersRegistry.setBadPerformancePenalty(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateBadPerformancePenalty
+            );
+            parametersRegistry.setPerformanceCoefficients(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateAttestationsWeight,
+                config.identifiedCommunityStakersGateBlocksWeight,
+                config.identifiedCommunityStakersGateSyncWeight
+            );
+            parametersRegistry.setAllowedExitDelay(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateAllowedExitDelay
+            );
+            parametersRegistry.setExitDelayPenalty(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateExitDelayPenalty
+            );
+            parametersRegistry.setMaxWithdrawalRequestFee(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateMaxWithdrawalRequestFee
             );
 
             OssifiableProxy vettedGateProxy = OssifiableProxy(
@@ -193,7 +254,7 @@ abstract contract DeployImplementationsBase is DeployBase {
             );
             vettedGate.grantRole(
                 vettedGate.SET_TREE_ROLE(),
-                config.identifiedCommunityStakerManager
+                config.identifiedCommunityStakersGateManager
             );
             vettedGate.grantRole(
                 vettedGate.START_REFERRAL_SEASON_ROLE(),
@@ -201,7 +262,7 @@ abstract contract DeployImplementationsBase is DeployBase {
             );
             vettedGate.grantRole(
                 vettedGate.END_REFERRAL_SEASON_ROLE(),
-                config.identifiedCommunityStakerManager
+                config.identifiedCommunityStakersGateManager
             );
             vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
 

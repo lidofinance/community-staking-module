@@ -108,7 +108,7 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
             accountingProxy.proxy__upgradeTo(deploymentConfig.accountingImpl);
             CSAccounting(deploymentConfig.accounting).finalizeUpgradeV2(
                 deployParams.bondCurve,
-                deployParams.identifiedCommunityStakerBondCurve
+                deployParams.identifiedCommunityStakersGateBondCurve
             );
         }
         vm.stopBroadcast();
@@ -151,64 +151,64 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
 
         vm.startBroadcast(admin);
 
-        uint256 identifiedCommunityStakerCurveId = 1;
-        parametersRegistry.setKeyRemovalCharge(
-            identifiedCommunityStakerCurveId,
-            deployParams.identifiedCommunityStakerKeyRemovalCharge
-        );
-        parametersRegistry.setElRewardsStealingAdditionalFine(
-            identifiedCommunityStakerCurveId,
-            deployParams
-                .identifiedCommunityStakerELRewardsStealingAdditionalFine
-        );
-        parametersRegistry.setKeysLimit(
-            identifiedCommunityStakerCurveId,
-            deployParams.identifiedCommunityStakerKeysLimit
-        );
-        parametersRegistry.setPerformanceLeewayData(
-            identifiedCommunityStakerCurveId,
-            CommonScriptUtils.arraysToKeyIndexValueIntervals(
-                deployParams.identifiedCommunityStakerAvgPerfLeewayData
-            )
-        );
-        parametersRegistry.setRewardShareData(
-            identifiedCommunityStakerCurveId,
-            CommonScriptUtils.arraysToKeyIndexValueIntervals(
-                deployParams.identifiedCommunityStakerRewardShareData
-            )
-        );
-        parametersRegistry.setStrikesParams(
-            identifiedCommunityStakerCurveId,
-            deployParams.identifiedCommunityStakerStrikesLifetimeFrames,
-            deployParams.identifiedCommunityStakerStrikesThreshold
-        );
-        parametersRegistry.setQueueConfig(
-            identifiedCommunityStakerCurveId,
-            uint32(deployParams.identifiedCommunityStakerQueuePriority),
-            uint32(deployParams.identifiedCommunityStakerQueueMaxDeposits)
-        );
-        parametersRegistry.setBadPerformancePenalty(
-            identifiedCommunityStakerCurveId,
-            deployParams.identifiedCommunityStakerBadPerformancePenalty
-        );
-        parametersRegistry.setPerformanceCoefficients(
-            identifiedCommunityStakerCurveId,
-            deployParams.identifiedCommunityStakerAttestationsWeight,
-            deployParams.identifiedCommunityStakerBlocksWeight,
-            deployParams.identifiedCommunityStakerSyncWeight
-        );
-        parametersRegistry.setAllowedExitDelay(
-            identifiedCommunityStakerCurveId,
-            deployParams.identifiedCommunityStakerAllowedExitDelay
-        );
-        parametersRegistry.setExitDelayPenalty(
-            identifiedCommunityStakerCurveId,
-            deployParams.identifiedCommunityStakerExitDelayPenalty
-        );
-        parametersRegistry.setMaxWithdrawalRequestFee(
-            identifiedCommunityStakerCurveId,
-            deployParams.identifiedCommunityStakerMaxWithdrawalRequestFee
-        );
+        // uint256 identifiedCommunityStakersGateCurveId = 1;
+        // parametersRegistry.setKeyRemovalCharge(
+        //     identifiedCommunityStakersGateCurveId,
+        //     deployParams.identifiedCommunityStakersGateKeyRemovalCharge
+        // );
+        // parametersRegistry.setElRewardsStealingAdditionalFine(
+        //     identifiedCommunityStakersGateCurveId,
+        //     deployParams
+        //         .identifiedCommunityStakersGateELRewardsStealingAdditionalFine
+        // );
+        // parametersRegistry.setKeysLimit(
+        //     identifiedCommunityStakersGateCurveId,
+        //     deployParams.identifiedCommunityStakersGateKeysLimit
+        // );
+        // parametersRegistry.setPerformanceLeewayData(
+        //     identifiedCommunityStakersGateCurveId,
+        //     CommonScriptUtils.arraysToKeyIndexValueIntervals(
+        //         deployParams.identifiedCommunityStakersGateAvgPerfLeewayData
+        //     )
+        // );
+        // parametersRegistry.setRewardShareData(
+        //     identifiedCommunityStakersGateCurveId,
+        //     CommonScriptUtils.arraysToKeyIndexValueIntervals(
+        //         deployParams.identifiedCommunityStakersGateRewardShareData
+        //     )
+        // );
+        // parametersRegistry.setStrikesParams(
+        //     identifiedCommunityStakersGateCurveId,
+        //     deployParams.identifiedCommunityStakersGateStrikesLifetimeFrames,
+        //     deployParams.identifiedCommunityStakersGateStrikesThreshold
+        // );
+        // parametersRegistry.setQueueConfig(
+        //     identifiedCommunityStakersGateCurveId,
+        //     uint32(deployParams.identifiedCommunityStakersGateQueuePriority),
+        //     uint32(deployParams.identifiedCommunityStakersGateQueueMaxDeposits)
+        // );
+        // parametersRegistry.setBadPerformancePenalty(
+        //     identifiedCommunityStakersGateCurveId,
+        //     deployParams.identifiedCommunityStakersGateBadPerformancePenalty
+        // );
+        // parametersRegistry.setPerformanceCoefficients(
+        //     identifiedCommunityStakersGateCurveId,
+        //     deployParams.identifiedCommunityStakersGateAttestationsWeight,
+        //     deployParams.identifiedCommunityStakersGateBlocksWeight,
+        //     deployParams.identifiedCommunityStakersGateSyncWeight
+        // );
+        // parametersRegistry.setAllowedExitDelay(
+        //     identifiedCommunityStakersGateCurveId,
+        //     deployParams.identifiedCommunityStakersGateAllowedExitDelay
+        // );
+        // parametersRegistry.setExitDelayPenalty(
+        //     identifiedCommunityStakersGateCurveId,
+        //     deployParams.identifiedCommunityStakersGateExitDelayPenalty
+        // );
+        // parametersRegistry.setMaxWithdrawalRequestFee(
+        //     identifiedCommunityStakersGateCurveId,
+        //     deployParams.identifiedCommunityStakersGateMaxWithdrawalRequestFee
+        // );
 
         accounting.revokeRole(keccak256("SET_BOND_CURVE_ROLE"), address(csm));
         csm.grantRole(

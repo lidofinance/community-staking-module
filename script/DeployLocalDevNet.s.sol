@@ -61,7 +61,7 @@ contract DeployLocalDevNet is DeployBase {
         config.keyRemovalCharge = 0.05 ether;
         config.elRewardsStealingAdditionalFine = 0.1 ether;
         config.keysLimit = type(uint256).max;
-        config.avgPerfLeewayBP = 500;
+        config.avgPerfLeewayBP = 450;
         config.rewardShareBP = 10000;
         config.strikesLifetimeFrames = 6;
         config.strikesThreshold = 3;
@@ -78,40 +78,40 @@ contract DeployLocalDevNet is DeployBase {
 
         // VettedGate
         config
-            .identifiedCommunityStakerManager = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
-        config.identifiedCommunityStakerTreeRoot = vm.envOr(
+            .identifiedCommunityStakersGateManager = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
+        config.identifiedCommunityStakersGateTreeRoot = vm.envOr(
             "CSM_VETTED_GATE_TREE_ROOT",
             bytes32(uint256(0xdeadbeef))
         );
-        config.identifiedCommunityStakerTreeCid = vm.envOr(
+        config.identifiedCommunityStakersGateTreeCid = vm.envOr(
             "CSM_VETTED_GATE_TREE_CID",
             string("someCid")
         );
         // 1.5 -> 1.3
-        config.identifiedCommunityStakerBondCurve.push([1, 1.5 ether]);
-        config.identifiedCommunityStakerBondCurve.push([2, 1.3 ether]);
+        config.identifiedCommunityStakersGateBondCurve.push([1, 1.5 ether]);
+        config.identifiedCommunityStakersGateBondCurve.push([2, 1.3 ether]);
 
-        // Parameters for Identified Solo Operator type
+        // Parameters for Identified Community Staker type
         // TODO: Set proper values bellow
-        config.identifiedCommunityStakerKeyRemovalCharge = 0.01 ether;
+        config.identifiedCommunityStakersGateKeyRemovalCharge = 0.01 ether;
         config
-            .identifiedCommunityStakerELRewardsStealingAdditionalFine = 0.05 ether;
-        config.identifiedCommunityStakerKeysLimit = type(uint248).max;
-        config.identifiedCommunityStakerAvgPerfLeewayData.push([0, 500]);
-        config.identifiedCommunityStakerAvgPerfLeewayData.push([100, 600]);
-        config.identifiedCommunityStakerRewardShareData.push([0, 10000]);
-        config.identifiedCommunityStakerRewardShareData.push([100, 9900]);
-        config.identifiedCommunityStakerStrikesLifetimeFrames = 8;
-        config.identifiedCommunityStakerStrikesThreshold = 4;
-        config.identifiedCommunityStakerQueuePriority = 0;
-        config.identifiedCommunityStakerQueueMaxDeposits = 10;
-        config.identifiedCommunityStakerBadPerformancePenalty = 0.05 ether;
-        config.identifiedCommunityStakerAttestationsWeight = 60;
-        config.identifiedCommunityStakerBlocksWeight = 4;
-        config.identifiedCommunityStakerSyncWeight = 0;
-        config.identifiedCommunityStakerAllowedExitDelay = 8 days;
-        config.identifiedCommunityStakerExitDelayPenalty = 0.05 ether;
-        config.identifiedCommunityStakerMaxWithdrawalRequestFee = 0.05 ether;
+            .identifiedCommunityStakersGateELRewardsStealingAdditionalFine = 0.05 ether;
+        config.identifiedCommunityStakersGateKeysLimit = type(uint248).max;
+        config.identifiedCommunityStakersGateAvgPerfLeewayData.push([0, 500]);
+        config.identifiedCommunityStakersGateRewardShareData.push([0, 10000]);
+        config.identifiedCommunityStakersGateRewardShareData.push([16, 5834]);
+        config.identifiedCommunityStakersGateStrikesLifetimeFrames = 8;
+        config.identifiedCommunityStakersGateStrikesThreshold = 4;
+        config.identifiedCommunityStakersGateQueuePriority = 0;
+        config.identifiedCommunityStakersGateQueueMaxDeposits = 10;
+        config.identifiedCommunityStakersGateBadPerformancePenalty = 0.05 ether;
+        config.identifiedCommunityStakersGateAttestationsWeight = 60;
+        config.identifiedCommunityStakersGateBlocksWeight = 4;
+        config.identifiedCommunityStakersGateSyncWeight = 0;
+        config.identifiedCommunityStakersGateAllowedExitDelay = 8 days;
+        config.identifiedCommunityStakersGateExitDelayPenalty = 0.05 ether;
+        config
+            .identifiedCommunityStakersGateMaxWithdrawalRequestFee = 0.05 ether;
 
         // GateSeal
         config.gateSealFactory = 0x0000000000000000000000000000000000000000;
