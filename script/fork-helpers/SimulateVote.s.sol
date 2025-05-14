@@ -22,6 +22,7 @@ import { ICSParametersRegistry } from "../../src/interfaces/ICSParametersRegistr
 import { CommonScriptUtils } from "../utils/Common.sol";
 
 import { ForkHelpersCommon } from "./Common.sol";
+import { DeployParams } from "../DeployBase.s.sol";
 
 contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
     function addModule() external {
@@ -76,46 +77,14 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         hashConsensus.updateInitialEpoch(47480);
     }
 
-    uint256[2][] defaultBondCurve = [
-        [uint256(1), 2.4 ether],
-        [uint256(2), 1.3 ether]
-    ];
-    uint256[2][] vettedBondCurve = [
-        [uint256(1), 1.5 ether],
-        [uint256(2), 1.3 ether]
-    ];
-
-    uint256 identifiedCommunityStakerKeyRemovalCharge = 0.01 ether;
-    uint256 identifiedCommunityStakerELRewardsStealingAdditionalFine =
-        0.05 ether;
-    uint256 identifiedCommunityStakerKeysLimit = type(uint248).max;
-    uint256[2][] identifiedCommunityStakerAvgPerfLeewayData = [
-        [uint256(0), uint256(500)],
-        [uint256(100), uint256(600)]
-    ];
-
-    uint256[2][] identifiedCommunityStakerRewardShareData = [
-        [uint256(0), uint256(10000)],
-        [uint256(100), uint256(9900)]
-    ];
-    uint256 identifiedCommunityStakerStrikesLifetimeFrames = 8;
-    uint256 identifiedCommunityStakerStrikesThreshold = 4;
-    uint256 identifiedCommunityStakerQueuePriority = 0;
-    uint256 identifiedCommunityStakerQueueMaxDeposits = 10;
-    uint256 identifiedCommunityStakerBadPerformancePenalty = 0.05 ether;
-    uint256 identifiedCommunityStakerAttestationsWeight = 60;
-    uint256 identifiedCommunityStakerBlocksWeight = 4;
-    uint256 identifiedCommunityStakerSyncWeight = 0;
-    uint256 identifiedCommunityStakerAllowedExitDelay = 8 days;
-    uint256 identifiedCommunityStakerExitDelayPenalty = 0.05 ether;
-    uint256 identifiedCommunityStakerMaxWithdrawalRequestFee = 0.05 ether;
-
     function upgrade() external {
         Env memory env = envVars();
         string memory deploymentConfigContent = vm.readFile(env.DEPLOY_CONFIG);
         DeploymentConfig memory deploymentConfig = parseDeploymentConfig(
             deploymentConfigContent
         );
+
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
 
         address admin = _prepareAdmin(deploymentConfig.csm);
 
@@ -138,8 +107,8 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         {
             accountingProxy.proxy__upgradeTo(deploymentConfig.accountingImpl);
             CSAccounting(deploymentConfig.accounting).finalizeUpgradeV2(
-                defaultBondCurve,
-                vettedBondCurve
+                deployParams.bondCurve,
+                deployParams.identifiedCommunityStakerBondCurve
             );
         }
         vm.stopBroadcast();
@@ -185,59 +154,60 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         uint256 identifiedCommunityStakerCurveId = 1;
         parametersRegistry.setKeyRemovalCharge(
             identifiedCommunityStakerCurveId,
-            identifiedCommunityStakerKeyRemovalCharge
+            deployParams.identifiedCommunityStakerKeyRemovalCharge
         );
         parametersRegistry.setElRewardsStealingAdditionalFine(
             identifiedCommunityStakerCurveId,
-            identifiedCommunityStakerELRewardsStealingAdditionalFine
+            deployParams
+                .identifiedCommunityStakerELRewardsStealingAdditionalFine
         );
         parametersRegistry.setKeysLimit(
             identifiedCommunityStakerCurveId,
-            identifiedCommunityStakerKeysLimit
+            deployParams.identifiedCommunityStakerKeysLimit
         );
         parametersRegistry.setPerformanceLeewayData(
             identifiedCommunityStakerCurveId,
             CommonScriptUtils.arraysToKeyIndexValueIntervals(
-                identifiedCommunityStakerAvgPerfLeewayData
+                deployParams.identifiedCommunityStakerAvgPerfLeewayData
             )
         );
         parametersRegistry.setRewardShareData(
             identifiedCommunityStakerCurveId,
             CommonScriptUtils.arraysToKeyIndexValueIntervals(
-                identifiedCommunityStakerRewardShareData
+                deployParams.identifiedCommunityStakerRewardShareData
             )
         );
         parametersRegistry.setStrikesParams(
             identifiedCommunityStakerCurveId,
-            identifiedCommunityStakerStrikesLifetimeFrames,
-            identifiedCommunityStakerStrikesThreshold
+            deployParams.identifiedCommunityStakerStrikesLifetimeFrames,
+            deployParams.identifiedCommunityStakerStrikesThreshold
         );
         parametersRegistry.setQueueConfig(
             identifiedCommunityStakerCurveId,
-            uint32(identifiedCommunityStakerQueuePriority),
-            uint32(identifiedCommunityStakerQueueMaxDeposits)
+            uint32(deployParams.identifiedCommunityStakerQueuePriority),
+            uint32(deployParams.identifiedCommunityStakerQueueMaxDeposits)
         );
         parametersRegistry.setBadPerformancePenalty(
             identifiedCommunityStakerCurveId,
-            identifiedCommunityStakerBadPerformancePenalty
+            deployParams.identifiedCommunityStakerBadPerformancePenalty
         );
         parametersRegistry.setPerformanceCoefficients(
             identifiedCommunityStakerCurveId,
-            identifiedCommunityStakerAttestationsWeight,
-            identifiedCommunityStakerBlocksWeight,
-            identifiedCommunityStakerSyncWeight
+            deployParams.identifiedCommunityStakerAttestationsWeight,
+            deployParams.identifiedCommunityStakerBlocksWeight,
+            deployParams.identifiedCommunityStakerSyncWeight
         );
         parametersRegistry.setAllowedExitDelay(
             identifiedCommunityStakerCurveId,
-            identifiedCommunityStakerAllowedExitDelay
+            deployParams.identifiedCommunityStakerAllowedExitDelay
         );
         parametersRegistry.setExitDelayPenalty(
             identifiedCommunityStakerCurveId,
-            identifiedCommunityStakerExitDelayPenalty
+            deployParams.identifiedCommunityStakerExitDelayPenalty
         );
         parametersRegistry.setMaxWithdrawalRequestFee(
             identifiedCommunityStakerCurveId,
-            identifiedCommunityStakerMaxWithdrawalRequestFee
+            deployParams.identifiedCommunityStakerMaxWithdrawalRequestFee
         );
 
         accounting.revokeRole(keccak256("SET_BOND_CURVE_ROLE"), address(csm));
