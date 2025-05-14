@@ -92,15 +92,20 @@ contract CSEjector is
             revert SenderIsNotEligible();
         }
 
-        // there is no check that the key is not withdrawn yet to not make it too expensive (esp. for the large batch)
-        // and no bad effects for extra eip-7002 exit requests for the node operator can happen.
-        // so we need to be sure that the UIs restrict this case.
-        // on the other hand, it is crucial to check that the key was deposited already
+        // a key must be deposited to prevent ejecting unvetted keys that can be the ones from other modules
         if (
             startFrom + keysCount >
             MODULE.getNodeOperatorTotalDepositedKeys(nodeOperatorId)
         ) {
             revert SigningKeysInvalidOffset();
+        }
+        // a key must be non-withdrawn to restrict unlimited exit requests consuming sanity checker limits
+        // although the deposited key can be requested to exit multiple times also, it will eventually be withdrawn
+        // so potentially malicious behaviour stops when there are no active keys available
+        for (uint256 i = startFrom; i < startFrom + keysCount; i++) {
+            if (MODULE.isValidatorWithdrawn(nodeOperatorId, i)) {
+                revert AlreadyWithdrawn();
+            }
         }
         bytes memory pubkeys = MODULE.getSigningKeys(
             nodeOperatorId,
@@ -149,12 +154,15 @@ contract CSEjector is
         );
         bytes memory pubkeys;
         for (uint256 i = 0; i < keyIndices.length; i++) {
-            // there is no check that the key is not withdrawn yet to not make it too expensive (esp. for the large batch)
-            // and no bad effects for extra eip-7002 exit requests for the node operator can happen.
-            // so we need to be sure that the UIs restrict this case.
-            // on the other hand, it is crucial to check that the key was deposited already
+            // a key must be deposited to prevent ejecting unvetted keys that can be the ones from other modules
             if (keyIndices[i] >= totalDepositedKeys) {
                 revert SigningKeysInvalidOffset();
+            }
+            // a key must be non-withdrawn to restrict unlimited exit requests consuming sanity checker limits
+            // although the deposited key can be requested to exit multiple times also, it will eventually be withdrawn
+            // so potentially malicious behaviour stops when there are no active keys available
+            if (MODULE.isValidatorWithdrawn(nodeOperatorId, keyIndices[i])) {
+                revert AlreadyWithdrawn();
             }
             pubkeys = abi.encodePacked(
                 pubkeys,
@@ -185,11 +193,17 @@ contract CSEjector is
         uint256 keyIndex,
         address refundRecipient
     ) external payable whenResumed onlyStrikes {
-        // it must be a valid deposited key
+        // a key must be deposited to prevent ejecting unvetted keys that can be the ones from other modules
         if (
             keyIndex >= MODULE.getNodeOperatorTotalDepositedKeys(nodeOperatorId)
         ) {
             revert SigningKeysInvalidOffset();
+        }
+        // a key must be non-withdrawn to restrict unlimited exit requests consuming sanity checker limits
+        // although the deposited key can be requested to exit multiple times also, it will eventually be withdrawn
+        // so potentially malicious behaviour stops when there are no active keys available
+        if (MODULE.isValidatorWithdrawn(nodeOperatorId, keyIndex)) {
+            revert AlreadyWithdrawn();
         }
 
         bytes memory publicKey = MODULE.getSigningKeys(
