@@ -26,6 +26,7 @@ import { ICSParametersRegistry } from "../src/interfaces/ICSParametersRegistry.s
 import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
+import { CommonScriptUtils } from "./utils/Common.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 import { VettedGateFactory } from "../src/VettedGateFactory.sol";
@@ -356,11 +357,15 @@ abstract contract DeployBase is Script {
             );
             parametersRegistry.setPerformanceLeewayData(
                 identifiedSoloOperatorBondCurveId,
-                config.identifiedSoloOperatorAvgPerfLeewayData
+                CommonScriptUtils.arraysToKeyIndexValueIntervals(
+                    config.identifiedSoloOperatorAvgPerfLeewayData
+                )
             );
             parametersRegistry.setRewardShareData(
                 identifiedSoloOperatorBondCurveId,
-                config.identifiedSoloOperatorRewardShareData
+                CommonScriptUtils.arraysToKeyIndexValueIntervals(
+                    config.identifiedSoloOperatorRewardShareData
+                )
             );
             parametersRegistry.setStrikesParams(
                 identifiedSoloOperatorBondCurveId,

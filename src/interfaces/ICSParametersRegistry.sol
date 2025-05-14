@@ -99,8 +99,14 @@ interface ICSParametersRegistry {
         uint256 fine
     );
     event KeysLimitSet(uint256 indexed curveId, uint256 limit);
-    event RewardShareDataSet(uint256 indexed curveId, uint256[2][] data);
-    event PerformanceLeewayDataSet(uint256 indexed curveId, uint256[2][] data);
+    event RewardShareDataSet(
+        uint256 indexed curveId,
+        KeyIndexValueInterval[] data
+    );
+    event PerformanceLeewayDataSet(
+        uint256 indexed curveId,
+        KeyIndexValueInterval[] data
+    );
     event StrikesParamsSet(
         uint256 indexed curveId,
         uint256 lifetime,
@@ -302,7 +308,7 @@ interface ICSParametersRegistry {
     /// @param data Interval values for keys count and reward share percentages in BP (ex. [[0, 10000], [10, 8000], [50, 5000]])
     function setRewardShareData(
         uint256 curveId,
-        uint256[2][] calldata data
+        KeyIndexValueInterval[] calldata data
     ) external;
 
     /// @notice Unset reward share parameters for the curveId
@@ -357,7 +363,7 @@ interface ICSParametersRegistry {
     /// @param data Interval values for keys count and performance leeway percentages in BP (ex. [[0, 500], [100, 450], [500, 400]])
     function setPerformanceLeewayData(
         uint256 curveId,
-        uint256[2][] calldata data
+        KeyIndexValueInterval[] calldata data
     ) external;
 
     /// @notice Unset performance leeway parameters for the curveId

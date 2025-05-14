@@ -352,9 +352,10 @@ contract CSParametersRegistryRewardShareDataTest is
 
     function test_set() public override {
         uint256 curveId = 1;
-        uint256[2][] memory data = new uint256[2][](2);
-        data[0] = UintArr2(0, 1000);
-        data[1] = UintArr2(10, 8000);
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory data = new ICSParametersRegistry.KeyIndexValueInterval[](2);
+        data[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 10000);
+        data[1] = ICSParametersRegistry.KeyIndexValueInterval(10, 8000);
 
         vm.expectEmit(address(parametersRegistry));
         emit ICSParametersRegistry.RewardShareDataSet(curveId, data);
@@ -364,15 +365,19 @@ contract CSParametersRegistryRewardShareDataTest is
 
     function test_set_Overwrite() public {
         uint256 curveId = 1;
-        uint256[2][] memory first = new uint256[2][](2);
-        first[0] = UintArr2(0, 1000);
-        first[1] = UintArr2(10, 8000);
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory first = new ICSParametersRegistry.KeyIndexValueInterval[](2);
+        first[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 10000);
+        first[1] = ICSParametersRegistry.KeyIndexValueInterval(10, 8000);
 
         vm.prank(admin);
         parametersRegistry.setRewardShareData(curveId, first);
 
-        uint256[2][] memory second = new uint256[2][](1);
-        second[0] = UintArr2(0, 777);
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory second = new ICSParametersRegistry.KeyIndexValueInterval[](
+                1
+            );
+        second[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 777);
 
         vm.prank(admin);
         parametersRegistry.setRewardShareData(curveId, second);
@@ -387,9 +392,10 @@ contract CSParametersRegistryRewardShareDataTest is
 
     function test_set_RevertWhen_notAdmin() public override {
         uint256 curveId = 1;
-        uint256[2][] memory data = new uint256[2][](2);
-        data[0] = UintArr2(0, 1000);
-        data[1] = UintArr2(10, 8000);
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory data = new ICSParametersRegistry.KeyIndexValueInterval[](2);
+        data[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 10000);
+        data[1] = ICSParametersRegistry.KeyIndexValueInterval(10, 8000);
 
         bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
         expectRoleRevert(stranger, role);
@@ -399,10 +405,11 @@ contract CSParametersRegistryRewardShareDataTest is
 
     function test_set_RevertWhen_invalidIntervalsSort() public {
         uint256 curveId = 1;
-        uint256[2][] memory data = new uint256[2][](3);
-        data[0] = UintArr2(0, 1000);
-        data[1] = UintArr2(100, 8000);
-        data[2] = UintArr2(10, 5000);
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory data = new ICSParametersRegistry.KeyIndexValueInterval[](3);
+        data[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 10000);
+        data[1] = ICSParametersRegistry.KeyIndexValueInterval(100, 8000);
+        data[2] = ICSParametersRegistry.KeyIndexValueInterval(10, 5000);
 
         vm.expectRevert(
             ICSParametersRegistry.InvalidKeyIndexValueIntervals.selector
@@ -413,8 +420,9 @@ contract CSParametersRegistryRewardShareDataTest is
 
     function test_set_RevertWhen_firstIntervalStartsFromNotZero() public {
         uint256 curveId = 1;
-        uint256[2][] memory data = new uint256[2][](1);
-        data[0] = UintArr2(100, 10000);
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory data = new ICSParametersRegistry.KeyIndexValueInterval[](1);
+        data[0] = ICSParametersRegistry.KeyIndexValueInterval(100, 10000);
 
         vm.expectRevert(
             ICSParametersRegistry.InvalidKeyIndexValueIntervals.selector
@@ -425,9 +433,10 @@ contract CSParametersRegistryRewardShareDataTest is
 
     function test_set_RevertWhen_invalidBpValues() public {
         uint256 curveId = 1;
-        uint256[2][] memory data = new uint256[2][](2);
-        data[0] = UintArr2(0, 100000);
-        data[1] = UintArr2(10, 8000);
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory data = new ICSParametersRegistry.KeyIndexValueInterval[](2);
+        data[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 100000);
+        data[1] = ICSParametersRegistry.KeyIndexValueInterval(10, 8000);
 
         vm.expectRevert(
             ICSParametersRegistry.InvalidKeyIndexValueIntervals.selector
@@ -438,9 +447,10 @@ contract CSParametersRegistryRewardShareDataTest is
 
     function test_unset() public override {
         uint256 curveId = 1;
-        uint256[2][] memory data = new uint256[2][](2);
-        data[0] = UintArr2(0, 10000);
-        data[1] = UintArr2(10, 8000);
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory data = new ICSParametersRegistry.KeyIndexValueInterval[](2);
+        data[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 10000);
+        data[1] = ICSParametersRegistry.KeyIndexValueInterval(10, 8000);
 
         vm.prank(admin);
         parametersRegistry.setRewardShareData(curveId, data);
@@ -450,8 +460,8 @@ contract CSParametersRegistryRewardShareDataTest is
 
         assertEq(dataOut.length, data.length);
         for (uint256 i = 0; i < dataOut.length; ++i) {
-            assertEq(dataOut[i].minKeyIndex, data[i][0]);
-            assertEq(dataOut[i].value, data[i][1]);
+            assertEq(dataOut[i].minKeyIndex, data[i].minKeyIndex);
+            assertEq(dataOut[i].value, data[i].value);
         }
 
         vm.prank(admin);
@@ -474,9 +484,10 @@ contract CSParametersRegistryRewardShareDataTest is
 
     function test_get_usualData() public override {
         uint256 curveId = 1;
-        uint256[2][] memory data = new uint256[2][](2);
-        data[0] = UintArr2(0, 10000);
-        data[1] = UintArr2(10, 8000);
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory data = new ICSParametersRegistry.KeyIndexValueInterval[](2);
+        data[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 10000);
+        data[1] = ICSParametersRegistry.KeyIndexValueInterval(10, 8000);
 
         vm.prank(admin);
         parametersRegistry.setRewardShareData(curveId, data);
@@ -486,8 +497,8 @@ contract CSParametersRegistryRewardShareDataTest is
 
         assertEq(dataOut.length, data.length);
         for (uint256 i = 0; i < dataOut.length; ++i) {
-            assertEq(dataOut[i].minKeyIndex, data[i][0]);
-            assertEq(dataOut[i].value, data[i][1]);
+            assertEq(dataOut[i].minKeyIndex, data[i].minKeyIndex);
+            assertEq(dataOut[i].value, data[i].value);
         }
     }
 
@@ -538,9 +549,10 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
 
     function test_set() public override {
         uint256 curveId = 1;
-        uint256[2][] memory data = new uint256[2][](2);
-        data[0] = UintArr2(0, 500);
-        data[1] = UintArr2(100, 400);
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory data = new ICSParametersRegistry.KeyIndexValueInterval[](2);
+        data[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 500);
+        data[1] = ICSParametersRegistry.KeyIndexValueInterval(100, 400);
 
         vm.expectEmit(address(parametersRegistry));
         emit ICSParametersRegistry.PerformanceLeewayDataSet(curveId, data);
@@ -550,15 +562,19 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
 
     function test_set_Overwrite() public {
         uint256 curveId = 1;
-        uint256[2][] memory first = new uint256[2][](2);
-        first[0] = UintArr2(0, 10000);
-        first[1] = UintArr2(10, 8000);
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory first = new ICSParametersRegistry.KeyIndexValueInterval[](2);
+        first[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 10000);
+        first[1] = ICSParametersRegistry.KeyIndexValueInterval(10, 8000);
 
         vm.prank(admin);
         parametersRegistry.setPerformanceLeewayData(curveId, first);
 
-        uint256[2][] memory second = new uint256[2][](1);
-        second[0] = UintArr2(0, 777);
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory second = new ICSParametersRegistry.KeyIndexValueInterval[](
+                1
+            );
+        second[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 777);
 
         vm.prank(admin);
         parametersRegistry.setPerformanceLeewayData(curveId, second);
@@ -573,9 +589,10 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
 
     function test_set_RevertWhen_notAdmin() public override {
         uint256 curveId = 1;
-        uint256[2][] memory data = new uint256[2][](2);
-        data[0] = UintArr2(0, 500);
-        data[1] = UintArr2(100, 400);
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory data = new ICSParametersRegistry.KeyIndexValueInterval[](2);
+        data[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 500);
+        data[1] = ICSParametersRegistry.KeyIndexValueInterval(100, 400);
 
         bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
         expectRoleRevert(stranger, role);
@@ -585,10 +602,11 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
 
     function test_set_RevertWhen_invalidIntervalsSort() public {
         uint256 curveId = 1;
-        uint256[2][] memory data = new uint256[2][](3);
-        data[0] = UintArr2(0, 500);
-        data[1] = UintArr2(100, 400);
-        data[2] = UintArr2(10, 300);
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory data = new ICSParametersRegistry.KeyIndexValueInterval[](3);
+        data[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 500);
+        data[1] = ICSParametersRegistry.KeyIndexValueInterval(100, 400);
+        data[2] = ICSParametersRegistry.KeyIndexValueInterval(10, 300);
 
         vm.expectRevert(
             ICSParametersRegistry.InvalidKeyIndexValueIntervals.selector
@@ -599,8 +617,9 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
 
     function test_set_RevertWhen_firstIntervalStartsFromNotZero() public {
         uint256 curveId = 1;
-        uint256[2][] memory data = new uint256[2][](1);
-        data[0] = UintArr2(100, 10000);
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory data = new ICSParametersRegistry.KeyIndexValueInterval[](1);
+        data[0] = ICSParametersRegistry.KeyIndexValueInterval(100, 10000);
 
         vm.expectRevert(
             ICSParametersRegistry.InvalidKeyIndexValueIntervals.selector
@@ -611,9 +630,10 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
 
     function test_set_RevertWhen_invalidBpValues() public {
         uint256 curveId = 1;
-        uint256[2][] memory data = new uint256[2][](2);
-        data[0] = UintArr2(0, 100000);
-        data[1] = UintArr2(10, 8000);
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory data = new ICSParametersRegistry.KeyIndexValueInterval[](2);
+        data[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 100000);
+        data[1] = ICSParametersRegistry.KeyIndexValueInterval(10, 8000);
 
         vm.expectRevert(
             ICSParametersRegistry.InvalidKeyIndexValueIntervals.selector
@@ -624,9 +644,10 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
 
     function test_unset() public override {
         uint256 curveId = 1;
-        uint256[2][] memory data = new uint256[2][](2);
-        data[0] = UintArr2(0, 450);
-        data[1] = UintArr2(100, 400);
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory data = new ICSParametersRegistry.KeyIndexValueInterval[](2);
+        data[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 450);
+        data[1] = ICSParametersRegistry.KeyIndexValueInterval(100, 400);
 
         vm.prank(admin);
         parametersRegistry.setPerformanceLeewayData(curveId, data);
@@ -638,8 +659,8 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
 
         assertEq(dataOut.length, data.length);
         for (uint256 i = 0; i < dataOut.length; ++i) {
-            assertEq(dataOut[i].minKeyIndex, data[i][0]);
-            assertEq(dataOut[i].value, data[i][1]);
+            assertEq(dataOut[i].minKeyIndex, data[i].minKeyIndex);
+            assertEq(dataOut[i].value, data[i].value);
         }
 
         vm.prank(admin);
@@ -663,9 +684,10 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
 
     function test_get_usualData() public override {
         uint256 curveId = 1;
-        uint256[2][] memory data = new uint256[2][](2);
-        data[0] = UintArr2(0, 500);
-        data[1] = UintArr2(100, 400);
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory data = new ICSParametersRegistry.KeyIndexValueInterval[](2);
+        data[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 500);
+        data[1] = ICSParametersRegistry.KeyIndexValueInterval(100, 400);
 
         vm.prank(admin);
         parametersRegistry.setPerformanceLeewayData(curveId, data);
@@ -677,8 +699,8 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
 
         assertEq(dataOut.length, data.length);
         for (uint256 i = 0; i < dataOut.length; ++i) {
-            assertEq(dataOut[i].minKeyIndex, data[i][0]);
-            assertEq(dataOut[i].value, data[i][1]);
+            assertEq(dataOut[i].minKeyIndex, data[i].minKeyIndex);
+            assertEq(dataOut[i].value, data[i].value);
         }
     }
 

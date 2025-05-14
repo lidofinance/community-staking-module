@@ -5,7 +5,7 @@ pragma solidity 0.8.24;
 
 import "forge-std/Script.sol";
 import { DeploymentFixtures } from "test/helpers/Fixtures.sol";
-import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
+
 import { OssifiableProxy } from "../../src/lib/proxy/OssifiableProxy.sol";
 import { CSModule } from "../../src/CSModule.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";
@@ -13,8 +13,14 @@ import { CSFeeOracle } from "../../src/CSFeeOracle.sol";
 import { CSFeeDistributor } from "../../src/CSFeeDistributor.sol";
 import { CSEjector } from "../../src/CSEjector.sol";
 import { CSParametersRegistry } from "../../src/CSParametersRegistry.sol";
-import { IBurner } from "../../src/interfaces/IBurner.sol";
+
+import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
+import { IBurner } from "../../src/interfaces/IBurner.sol";
+import { ICSParametersRegistry } from "../../src/interfaces/ICSParametersRegistry.sol";
+
+import { CommonScriptUtils } from "../utils/Common.sol";
+
 import { ForkHelpersCommon } from "./Common.sol";
 
 contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
@@ -175,57 +181,61 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
 
         vm.startBroadcast(admin);
 
-        uint256 identifiedSoloOperatorCurve = 1;
+        uint256 identifiedSoloOperatorCurveId = 1;
         parametersRegistry.setKeyRemovalCharge(
-            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorCurveId,
             identifiedSoloOperatorKeyRemovalCharge
         );
         parametersRegistry.setElRewardsStealingAdditionalFine(
-            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorCurveId,
             identifiedSoloOperatorELRewardsStealingAdditionalFine
         );
         parametersRegistry.setKeysLimit(
-            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorCurveId,
             identifiedSoloOperatorKeysLimit
         );
         parametersRegistry.setPerformanceLeewayData(
-            identifiedSoloOperatorCurve,
-            identifiedSoloOperatorAvgPerfLeewayData
+            identifiedSoloOperatorCurveId,
+            CommonScriptUtils.arraysToKeyIndexValueIntervals(
+                identifiedSoloOperatorAvgPerfLeewayData
+            )
         );
         parametersRegistry.setRewardShareData(
-            identifiedSoloOperatorCurve,
-            identifiedSoloOperatorRewardShareData
+            identifiedSoloOperatorCurveId,
+            CommonScriptUtils.arraysToKeyIndexValueIntervals(
+                identifiedSoloOperatorRewardShareData
+            )
         );
         parametersRegistry.setStrikesParams(
-            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorCurveId,
             identifiedSoloOperatorStrikesLifetimeFrames,
             identifiedSoloOperatorStrikesThreshold
         );
         parametersRegistry.setQueueConfig(
-            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorCurveId,
             uint32(identifiedSoloOperatorQueuePriority),
             uint32(identifiedSoloOperatorQueueMaxDeposits)
         );
         parametersRegistry.setBadPerformancePenalty(
-            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorCurveId,
             identifiedSoloOperatorBadPerformancePenalty
         );
         parametersRegistry.setPerformanceCoefficients(
-            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorCurveId,
             identifiedSoloOperatorAttestationsWeight,
             identifiedSoloOperatorBlocksWeight,
             identifiedSoloOperatorSyncWeight
         );
         parametersRegistry.setAllowedExitDelay(
-            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorCurveId,
             identifiedSoloOperatorAllowedExitDelay
         );
         parametersRegistry.setExitDelayPenalty(
-            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorCurveId,
             identifiedSoloOperatorExitDelayPenalty
         );
         parametersRegistry.setMaxWithdrawalRequestFee(
-            identifiedSoloOperatorCurve,
+            identifiedSoloOperatorCurveId,
             identifiedSoloOperatorMaxWithdrawalRequestFee
         );
 
