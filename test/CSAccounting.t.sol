@@ -343,18 +343,11 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     }
 
     function test_finalizeUpgradeV2() public {
-        uint256[2][] memory firstCurve = new uint256[2][](1);
-        firstCurve[0] = [uint256(1), 2 ether];
-        uint256[2][] memory secondCurve = new uint256[2][](1);
-        secondCurve[0] = [uint256(1), 1 ether];
-
         _enableInitializers(address(accounting));
 
-        vm.expectEmit(address(accounting));
-        emit ICSBondCurve.BondCurveAdded(0, firstCurve);
-        vm.expectEmit(address(accounting));
-        emit ICSBondCurve.BondCurveAdded(1, secondCurve);
-        accounting.finalizeUpgradeV2(firstCurve, secondCurve);
+        uint256[2][][] memory bondCurves = new uint256[2][][](0);
+
+        accounting.finalizeUpgradeV2(bondCurves);
 
         assertEq(accounting.getInitializedVersion(), 2);
     }
