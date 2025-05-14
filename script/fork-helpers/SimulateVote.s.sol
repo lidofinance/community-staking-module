@@ -151,65 +151,6 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
 
         vm.startBroadcast(admin);
 
-        // uint256 identifiedCommunityStakersGateCurveId = 1;
-        // parametersRegistry.setKeyRemovalCharge(
-        //     identifiedCommunityStakersGateCurveId,
-        //     deployParams.identifiedCommunityStakersGateKeyRemovalCharge
-        // );
-        // parametersRegistry.setElRewardsStealingAdditionalFine(
-        //     identifiedCommunityStakersGateCurveId,
-        //     deployParams
-        //         .identifiedCommunityStakersGateELRewardsStealingAdditionalFine
-        // );
-        // parametersRegistry.setKeysLimit(
-        //     identifiedCommunityStakersGateCurveId,
-        //     deployParams.identifiedCommunityStakersGateKeysLimit
-        // );
-        // parametersRegistry.setPerformanceLeewayData(
-        //     identifiedCommunityStakersGateCurveId,
-        //     CommonScriptUtils.arraysToKeyIndexValueIntervals(
-        //         deployParams.identifiedCommunityStakersGateAvgPerfLeewayData
-        //     )
-        // );
-        // parametersRegistry.setRewardShareData(
-        //     identifiedCommunityStakersGateCurveId,
-        //     CommonScriptUtils.arraysToKeyIndexValueIntervals(
-        //         deployParams.identifiedCommunityStakersGateRewardShareData
-        //     )
-        // );
-        // parametersRegistry.setStrikesParams(
-        //     identifiedCommunityStakersGateCurveId,
-        //     deployParams.identifiedCommunityStakersGateStrikesLifetimeFrames,
-        //     deployParams.identifiedCommunityStakersGateStrikesThreshold
-        // );
-        // parametersRegistry.setQueueConfig(
-        //     identifiedCommunityStakersGateCurveId,
-        //     uint32(deployParams.identifiedCommunityStakersGateQueuePriority),
-        //     uint32(deployParams.identifiedCommunityStakersGateQueueMaxDeposits)
-        // );
-        // parametersRegistry.setBadPerformancePenalty(
-        //     identifiedCommunityStakersGateCurveId,
-        //     deployParams.identifiedCommunityStakersGateBadPerformancePenalty
-        // );
-        // parametersRegistry.setPerformanceCoefficients(
-        //     identifiedCommunityStakersGateCurveId,
-        //     deployParams.identifiedCommunityStakersGateAttestationsWeight,
-        //     deployParams.identifiedCommunityStakersGateBlocksWeight,
-        //     deployParams.identifiedCommunityStakersGateSyncWeight
-        // );
-        // parametersRegistry.setAllowedExitDelay(
-        //     identifiedCommunityStakersGateCurveId,
-        //     deployParams.identifiedCommunityStakersGateAllowedExitDelay
-        // );
-        // parametersRegistry.setExitDelayPenalty(
-        //     identifiedCommunityStakersGateCurveId,
-        //     deployParams.identifiedCommunityStakersGateExitDelayPenalty
-        // );
-        // parametersRegistry.setMaxWithdrawalRequestFee(
-        //     identifiedCommunityStakersGateCurveId,
-        //     deployParams.identifiedCommunityStakersGateMaxWithdrawalRequestFee
-        // );
-
         accounting.revokeRole(keccak256("SET_BOND_CURVE_ROLE"), address(csm));
         csm.grantRole(
             csm.CREATE_NODE_OPERATOR_ROLE(),
