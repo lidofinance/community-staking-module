@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
@@ -3083,12 +3083,21 @@ contract CsmPriorityQueue is CSMCommon {
         _assertQueueEmpty(PRIORITY_QUEUE);
         _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
+        uint256 initialNonce = csm.getNonce(); // Capture initial nonce
+
         {
             vm.expectEmit(address(csm));
             emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 8);
 
             csm.migrateToPriorityQueue(noId);
         }
+
+        uint256 updatedNonce = csm.getNonce(); // Capture updated nonce
+        assertEq(
+            updatedNonce,
+            initialNonce + 1,
+            "Module nonce should increment by 1"
+        ); // Assert increment
 
         BatchInfo[] memory exp = new BatchInfo[](1);
 

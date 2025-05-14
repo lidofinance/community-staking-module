@@ -44,6 +44,10 @@ interface ICSBondCurve {
         uint256 trend;
     }
 
+    struct BondCurve {
+        BondCurveInterval[] intervals;
+    }
+
     event BondCurveAdded(
         uint256 indexed curveId,
         uint256[2][] bondCurveIntervals

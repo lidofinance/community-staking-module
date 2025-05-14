@@ -65,10 +65,11 @@ interface ICSParametersRegistry {
 
     /// @dev Defines a value interval starting from `minKeyIndex`.
     ///      All keys with indices >= `minKeyIndex` are assigned the corresponding `value`
-    ///      until the next interval begins. Intervals must be sorted by ascending `minKeyIndex`
+    ///      until the next interval begins. Intervals must be sorted by ascending `minKeysCount`
     ///      and must start from zero (i.e., the first interval must have minKeyIndex == 0).
-    ///      Example: [{0, 10000}, {10, 8000}] means keys indexes 0–9 with 10000, keys indexes 10+ with 8000.
+    ///      Example: [{1, 10000}, {11, 8000}] means first 10 keys with 10000, other keys with 8000.
     struct KeyIndexValueInterval {
+        // TODO: change to minKeysNumber
         uint256 minKeyIndex;
         uint256 value;
     }

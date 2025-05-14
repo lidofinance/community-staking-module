@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -53,7 +53,7 @@ contract CSAccounting is
 
     /// @param lidoLocator Lido locator contract address
     /// @param module Community Staking Module contract address
-    /// @param maxCurveLength Max number of the points in the bond curves
+    /// @param maxCurveLength Max number of the intervals in the bond curves
     /// @param minBondLockPeriod Min time in seconds for the bondLock period
     /// @param maxBondLockPeriod Max time in seconds for the bondLock period
     constructor(
