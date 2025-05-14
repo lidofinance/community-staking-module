@@ -229,7 +229,7 @@ interface ICSParametersRegistry {
         external
         returns (uint32, uint32, uint32);
 
-    /// @notice set default value for allowed exit delay in seconds. Default value is used if a specific value is not set for the curveId
+    /// @notice set default value for allowed delay before the exit was initiated exit delay in seconds. Default value is used if a specific value is not set for the curveId
     /// @param delay value to be set as default for the allowed exit delay
     function setDefaultAllowedExitDelay(uint256 delay) external;
 
