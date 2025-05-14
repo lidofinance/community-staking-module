@@ -85,29 +85,30 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         [uint256(2), 1.3 ether]
     ];
 
-    uint256 identifiedSoloOperatorKeyRemovalCharge = 0.01 ether;
-    uint256 identifiedSoloOperatorELRewardsStealingAdditionalFine = 0.05 ether;
-    uint256 identifiedSoloOperatorKeysLimit = type(uint248).max;
-    uint256[2][] identifiedSoloOperatorAvgPerfLeewayData = [
+    uint256 identifiedCommunityStakerKeyRemovalCharge = 0.01 ether;
+    uint256 identifiedCommunityStakerELRewardsStealingAdditionalFine =
+        0.05 ether;
+    uint256 identifiedCommunityStakerKeysLimit = type(uint248).max;
+    uint256[2][] identifiedCommunityStakerAvgPerfLeewayData = [
         [uint256(0), uint256(500)],
         [uint256(100), uint256(600)]
     ];
 
-    uint256[2][] identifiedSoloOperatorRewardShareData = [
+    uint256[2][] identifiedCommunityStakerRewardShareData = [
         [uint256(0), uint256(10000)],
         [uint256(100), uint256(9900)]
     ];
-    uint256 identifiedSoloOperatorStrikesLifetimeFrames = 8;
-    uint256 identifiedSoloOperatorStrikesThreshold = 4;
-    uint256 identifiedSoloOperatorQueuePriority = 0;
-    uint256 identifiedSoloOperatorQueueMaxDeposits = 10;
-    uint256 identifiedSoloOperatorBadPerformancePenalty = 0.05 ether;
-    uint256 identifiedSoloOperatorAttestationsWeight = 60;
-    uint256 identifiedSoloOperatorBlocksWeight = 4;
-    uint256 identifiedSoloOperatorSyncWeight = 0;
-    uint256 identifiedSoloOperatorAllowedExitDelay = 8 days;
-    uint256 identifiedSoloOperatorExitDelayPenalty = 0.05 ether;
-    uint256 identifiedSoloOperatorMaxWithdrawalRequestFee = 0.05 ether;
+    uint256 identifiedCommunityStakerStrikesLifetimeFrames = 8;
+    uint256 identifiedCommunityStakerStrikesThreshold = 4;
+    uint256 identifiedCommunityStakerQueuePriority = 0;
+    uint256 identifiedCommunityStakerQueueMaxDeposits = 10;
+    uint256 identifiedCommunityStakerBadPerformancePenalty = 0.05 ether;
+    uint256 identifiedCommunityStakerAttestationsWeight = 60;
+    uint256 identifiedCommunityStakerBlocksWeight = 4;
+    uint256 identifiedCommunityStakerSyncWeight = 0;
+    uint256 identifiedCommunityStakerAllowedExitDelay = 8 days;
+    uint256 identifiedCommunityStakerExitDelayPenalty = 0.05 ether;
+    uint256 identifiedCommunityStakerMaxWithdrawalRequestFee = 0.05 ether;
 
     function upgrade() external {
         Env memory env = envVars();
@@ -181,62 +182,62 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
 
         vm.startBroadcast(admin);
 
-        uint256 identifiedSoloOperatorCurveId = 1;
+        uint256 identifiedCommunityStakerCurveId = 1;
         parametersRegistry.setKeyRemovalCharge(
-            identifiedSoloOperatorCurveId,
-            identifiedSoloOperatorKeyRemovalCharge
+            identifiedCommunityStakerCurveId,
+            identifiedCommunityStakerKeyRemovalCharge
         );
         parametersRegistry.setElRewardsStealingAdditionalFine(
-            identifiedSoloOperatorCurveId,
-            identifiedSoloOperatorELRewardsStealingAdditionalFine
+            identifiedCommunityStakerCurveId,
+            identifiedCommunityStakerELRewardsStealingAdditionalFine
         );
         parametersRegistry.setKeysLimit(
-            identifiedSoloOperatorCurveId,
-            identifiedSoloOperatorKeysLimit
+            identifiedCommunityStakerCurveId,
+            identifiedCommunityStakerKeysLimit
         );
         parametersRegistry.setPerformanceLeewayData(
-            identifiedSoloOperatorCurveId,
+            identifiedCommunityStakerCurveId,
             CommonScriptUtils.arraysToKeyIndexValueIntervals(
-                identifiedSoloOperatorAvgPerfLeewayData
+                identifiedCommunityStakerAvgPerfLeewayData
             )
         );
         parametersRegistry.setRewardShareData(
-            identifiedSoloOperatorCurveId,
+            identifiedCommunityStakerCurveId,
             CommonScriptUtils.arraysToKeyIndexValueIntervals(
-                identifiedSoloOperatorRewardShareData
+                identifiedCommunityStakerRewardShareData
             )
         );
         parametersRegistry.setStrikesParams(
-            identifiedSoloOperatorCurveId,
-            identifiedSoloOperatorStrikesLifetimeFrames,
-            identifiedSoloOperatorStrikesThreshold
+            identifiedCommunityStakerCurveId,
+            identifiedCommunityStakerStrikesLifetimeFrames,
+            identifiedCommunityStakerStrikesThreshold
         );
         parametersRegistry.setQueueConfig(
-            identifiedSoloOperatorCurveId,
-            uint32(identifiedSoloOperatorQueuePriority),
-            uint32(identifiedSoloOperatorQueueMaxDeposits)
+            identifiedCommunityStakerCurveId,
+            uint32(identifiedCommunityStakerQueuePriority),
+            uint32(identifiedCommunityStakerQueueMaxDeposits)
         );
         parametersRegistry.setBadPerformancePenalty(
-            identifiedSoloOperatorCurveId,
-            identifiedSoloOperatorBadPerformancePenalty
+            identifiedCommunityStakerCurveId,
+            identifiedCommunityStakerBadPerformancePenalty
         );
         parametersRegistry.setPerformanceCoefficients(
-            identifiedSoloOperatorCurveId,
-            identifiedSoloOperatorAttestationsWeight,
-            identifiedSoloOperatorBlocksWeight,
-            identifiedSoloOperatorSyncWeight
+            identifiedCommunityStakerCurveId,
+            identifiedCommunityStakerAttestationsWeight,
+            identifiedCommunityStakerBlocksWeight,
+            identifiedCommunityStakerSyncWeight
         );
         parametersRegistry.setAllowedExitDelay(
-            identifiedSoloOperatorCurveId,
-            identifiedSoloOperatorAllowedExitDelay
+            identifiedCommunityStakerCurveId,
+            identifiedCommunityStakerAllowedExitDelay
         );
         parametersRegistry.setExitDelayPenalty(
-            identifiedSoloOperatorCurveId,
-            identifiedSoloOperatorExitDelayPenalty
+            identifiedCommunityStakerCurveId,
+            identifiedCommunityStakerExitDelayPenalty
         );
         parametersRegistry.setMaxWithdrawalRequestFee(
-            identifiedSoloOperatorCurveId,
-            identifiedSoloOperatorMaxWithdrawalRequestFee
+            identifiedCommunityStakerCurveId,
+            identifiedCommunityStakerMaxWithdrawalRequestFee
         );
 
         accounting.revokeRole(keccak256("SET_BOND_CURVE_ROLE"), address(csm));

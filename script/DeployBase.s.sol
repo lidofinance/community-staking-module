@@ -85,27 +85,27 @@ struct DeployParams {
     uint256 defaultExitDelayPenalty;
     uint256 defaultMaxWithdrawalRequestFee;
     // VettedGate
-    address identifiedSoloOperatorManager;
-    bytes32 identifiedSoloOperatorTreeRoot;
-    string identifiedSoloOperatorTreeCid;
-    uint256[2][] identifiedSoloOperatorBondCurve;
+    address identifiedCommunityStakerManager;
+    bytes32 identifiedCommunityStakerTreeRoot;
+    string identifiedCommunityStakerTreeCid;
+    uint256[2][] identifiedCommunityStakerBondCurve;
     // Parameters for Identified Solo Operator type
-    uint256 identifiedSoloOperatorKeyRemovalCharge;
-    uint256 identifiedSoloOperatorELRewardsStealingAdditionalFine;
-    uint256 identifiedSoloOperatorKeysLimit;
-    uint256[2][] identifiedSoloOperatorAvgPerfLeewayData;
-    uint256[2][] identifiedSoloOperatorRewardShareData;
-    uint256 identifiedSoloOperatorStrikesLifetimeFrames;
-    uint256 identifiedSoloOperatorStrikesThreshold;
-    uint256 identifiedSoloOperatorQueuePriority;
-    uint256 identifiedSoloOperatorQueueMaxDeposits;
-    uint256 identifiedSoloOperatorBadPerformancePenalty;
-    uint256 identifiedSoloOperatorAttestationsWeight;
-    uint256 identifiedSoloOperatorBlocksWeight;
-    uint256 identifiedSoloOperatorSyncWeight;
-    uint256 identifiedSoloOperatorAllowedExitDelay;
-    uint256 identifiedSoloOperatorExitDelayPenalty;
-    uint256 identifiedSoloOperatorMaxWithdrawalRequestFee;
+    uint256 identifiedCommunityStakerKeyRemovalCharge;
+    uint256 identifiedCommunityStakerELRewardsStealingAdditionalFine;
+    uint256 identifiedCommunityStakerKeysLimit;
+    uint256[2][] identifiedCommunityStakerAvgPerfLeewayData;
+    uint256[2][] identifiedCommunityStakerRewardShareData;
+    uint256 identifiedCommunityStakerStrikesLifetimeFrames;
+    uint256 identifiedCommunityStakerStrikesThreshold;
+    uint256 identifiedCommunityStakerQueuePriority;
+    uint256 identifiedCommunityStakerQueueMaxDeposits;
+    uint256 identifiedCommunityStakerBadPerformancePenalty;
+    uint256 identifiedCommunityStakerAttestationsWeight;
+    uint256 identifiedCommunityStakerBlocksWeight;
+    uint256 identifiedCommunityStakerSyncWeight;
+    uint256 identifiedCommunityStakerAllowedExitDelay;
+    uint256 identifiedCommunityStakerExitDelayPenalty;
+    uint256 identifiedCommunityStakerMaxWithdrawalRequestFee;
     // GateSeal
     address gateSealFactory;
     address sealingCommittee;
@@ -285,9 +285,8 @@ abstract contract DeployBase is Script {
                 address(deployer)
             );
 
-            uint256 identifiedSoloOperatorBondCurveId = accounting.addBondCurve(
-                config.identifiedSoloOperatorBondCurve
-            );
+            uint256 identifiedCommunityStakerBondCurveId = accounting
+                .addBondCurve(config.identifiedCommunityStakerBondCurve);
             accounting.revokeRole(
                 accounting.MANAGE_BOND_CURVES_ROLE(),
                 address(deployer)
@@ -331,9 +330,9 @@ abstract contract DeployBase is Script {
             vettedGateFactory = new VettedGateFactory(vettedGateImpl);
             vettedGate = VettedGate(
                 vettedGateFactory.create({
-                    curveId: identifiedSoloOperatorBondCurveId,
-                    treeRoot: config.identifiedSoloOperatorTreeRoot,
-                    treeCid: config.identifiedSoloOperatorTreeCid,
+                    curveId: identifiedCommunityStakerBondCurveId,
+                    treeRoot: config.identifiedCommunityStakerTreeRoot,
+                    treeCid: config.identifiedCommunityStakerTreeCid,
                     admin: deployer
                 })
             );
@@ -344,60 +343,60 @@ abstract contract DeployBase is Script {
             vettedGateProxy.proxy__changeAdmin(config.proxyAdmin);
 
             parametersRegistry.setKeyRemovalCharge(
-                identifiedSoloOperatorBondCurveId,
-                config.identifiedSoloOperatorKeyRemovalCharge
+                identifiedCommunityStakerBondCurveId,
+                config.identifiedCommunityStakerKeyRemovalCharge
             );
             parametersRegistry.setElRewardsStealingAdditionalFine(
-                identifiedSoloOperatorBondCurveId,
-                config.identifiedSoloOperatorELRewardsStealingAdditionalFine
+                identifiedCommunityStakerBondCurveId,
+                config.identifiedCommunityStakerELRewardsStealingAdditionalFine
             );
             parametersRegistry.setKeysLimit(
-                identifiedSoloOperatorBondCurveId,
-                config.identifiedSoloOperatorKeysLimit
+                identifiedCommunityStakerBondCurveId,
+                config.identifiedCommunityStakerKeysLimit
             );
             parametersRegistry.setPerformanceLeewayData(
-                identifiedSoloOperatorBondCurveId,
+                identifiedCommunityStakerBondCurveId,
                 CommonScriptUtils.arraysToKeyIndexValueIntervals(
-                    config.identifiedSoloOperatorAvgPerfLeewayData
+                    config.identifiedCommunityStakerAvgPerfLeewayData
                 )
             );
             parametersRegistry.setRewardShareData(
-                identifiedSoloOperatorBondCurveId,
+                identifiedCommunityStakerBondCurveId,
                 CommonScriptUtils.arraysToKeyIndexValueIntervals(
-                    config.identifiedSoloOperatorRewardShareData
+                    config.identifiedCommunityStakerRewardShareData
                 )
             );
             parametersRegistry.setStrikesParams(
-                identifiedSoloOperatorBondCurveId,
-                config.identifiedSoloOperatorStrikesLifetimeFrames,
-                config.identifiedSoloOperatorStrikesThreshold
+                identifiedCommunityStakerBondCurveId,
+                config.identifiedCommunityStakerStrikesLifetimeFrames,
+                config.identifiedCommunityStakerStrikesThreshold
             );
             parametersRegistry.setQueueConfig(
-                identifiedSoloOperatorBondCurveId,
-                uint32(config.identifiedSoloOperatorQueuePriority),
-                uint32(config.identifiedSoloOperatorQueueMaxDeposits)
+                identifiedCommunityStakerBondCurveId,
+                uint32(config.identifiedCommunityStakerQueuePriority),
+                uint32(config.identifiedCommunityStakerQueueMaxDeposits)
             );
             parametersRegistry.setBadPerformancePenalty(
-                identifiedSoloOperatorBondCurveId,
-                config.identifiedSoloOperatorBadPerformancePenalty
+                identifiedCommunityStakerBondCurveId,
+                config.identifiedCommunityStakerBadPerformancePenalty
             );
             parametersRegistry.setPerformanceCoefficients(
-                identifiedSoloOperatorBondCurveId,
-                config.identifiedSoloOperatorAttestationsWeight,
-                config.identifiedSoloOperatorBlocksWeight,
-                config.identifiedSoloOperatorSyncWeight
+                identifiedCommunityStakerBondCurveId,
+                config.identifiedCommunityStakerAttestationsWeight,
+                config.identifiedCommunityStakerBlocksWeight,
+                config.identifiedCommunityStakerSyncWeight
             );
             parametersRegistry.setAllowedExitDelay(
-                identifiedSoloOperatorBondCurveId,
-                config.identifiedSoloOperatorAllowedExitDelay
+                identifiedCommunityStakerBondCurveId,
+                config.identifiedCommunityStakerAllowedExitDelay
             );
             parametersRegistry.setExitDelayPenalty(
-                identifiedSoloOperatorBondCurveId,
-                config.identifiedSoloOperatorExitDelayPenalty
+                identifiedCommunityStakerBondCurveId,
+                config.identifiedCommunityStakerExitDelayPenalty
             );
             parametersRegistry.setMaxWithdrawalRequestFee(
-                identifiedSoloOperatorBondCurveId,
-                config.identifiedSoloOperatorMaxWithdrawalRequestFee
+                identifiedCommunityStakerBondCurveId,
+                config.identifiedCommunityStakerMaxWithdrawalRequestFee
             );
 
             feeDistributor.initialize({
@@ -512,7 +511,7 @@ abstract contract DeployBase is Script {
             );
             vettedGate.grantRole(
                 vettedGate.SET_TREE_ROLE(),
-                config.identifiedSoloOperatorManager
+                config.identifiedCommunityStakerManager
             );
             vettedGate.grantRole(
                 vettedGate.START_REFERRAL_SEASON_ROLE(),
@@ -520,7 +519,7 @@ abstract contract DeployBase is Script {
             );
             vettedGate.grantRole(
                 vettedGate.END_REFERRAL_SEASON_ROLE(),
-                config.identifiedSoloOperatorManager
+                config.identifiedCommunityStakerManager
             );
             vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
 

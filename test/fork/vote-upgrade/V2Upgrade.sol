@@ -273,7 +273,7 @@ contract VoteChangesTest is V2UpgradeTestBase {
         assertEq(feeDistributorBefore, feeDistributorAfter);
     }
 
-    function test_parametersRegistryState_identifiedSoloOperatorParams()
+    function test_parametersRegistryState_identifiedCommunityStakerParams()
         public
     {
         Env memory env = envVars();
@@ -281,130 +281,136 @@ contract VoteChangesTest is V2UpgradeTestBase {
             env.DEPLOY_CONFIG
         );
 
-        uint256 identifiedSoloOperatorCurveId = 1;
+        uint256 identifiedCommunityStakerCurveId = 1;
         assertEq(
             parametersRegistry.getKeyRemovalCharge(
-                identifiedSoloOperatorCurveId
+                identifiedCommunityStakerCurveId
             ),
-            upgradeDeployParams.identifiedSoloOperatorKeyRemovalCharge
+            upgradeDeployParams.identifiedCommunityStakerKeyRemovalCharge
         );
         assertEq(
             parametersRegistry.getElRewardsStealingAdditionalFine(
-                identifiedSoloOperatorCurveId
+                identifiedCommunityStakerCurveId
             ),
             upgradeDeployParams
-                .identifiedSoloOperatorELRewardsStealingAdditionalFine
+                .identifiedCommunityStakerELRewardsStealingAdditionalFine
         );
         assertEq(
-            parametersRegistry.getKeysLimit(identifiedSoloOperatorCurveId),
-            upgradeDeployParams.identifiedSoloOperatorKeysLimit
+            parametersRegistry.getKeysLimit(identifiedCommunityStakerCurveId),
+            upgradeDeployParams.identifiedCommunityStakerKeysLimit
         );
 
         ICSParametersRegistry.KeyIndexValueInterval[]
             memory rewardShareData = parametersRegistry.getRewardShareData(
-                identifiedSoloOperatorCurveId
+                identifiedCommunityStakerCurveId
             );
         assertEq(
             rewardShareData.length,
-            upgradeDeployParams.identifiedSoloOperatorRewardShareData.length
+            upgradeDeployParams.identifiedCommunityStakerRewardShareData.length
         );
         for (uint256 i = 0; i < rewardShareData.length; i++) {
             assertEq(
                 rewardShareData[i].minKeyIndex,
-                upgradeDeployParams.identifiedSoloOperatorRewardShareData[i][0]
-            );
-            assertEq(
-                rewardShareData[i].value,
-                upgradeDeployParams.identifiedSoloOperatorRewardShareData[i][1]
-            );
-        }
-        ICSParametersRegistry.KeyIndexValueInterval[]
-            memory performanceLeewayData = parametersRegistry
-                .getPerformanceLeewayData(identifiedSoloOperatorCurveId);
-        assertEq(
-            performanceLeewayData.length,
-            upgradeDeployParams.identifiedSoloOperatorAvgPerfLeewayData.length
-        );
-        for (uint256 i = 0; i < performanceLeewayData.length; i++) {
-            assertEq(
-                performanceLeewayData[i].minKeyIndex,
-                upgradeDeployParams.identifiedSoloOperatorAvgPerfLeewayData[i][
+                upgradeDeployParams.identifiedCommunityStakerRewardShareData[i][
                     0
                 ]
             );
             assertEq(
-                performanceLeewayData[i].value,
-                upgradeDeployParams.identifiedSoloOperatorAvgPerfLeewayData[i][
+                rewardShareData[i].value,
+                upgradeDeployParams.identifiedCommunityStakerRewardShareData[i][
                     1
                 ]
             );
         }
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory performanceLeewayData = parametersRegistry
+                .getPerformanceLeewayData(identifiedCommunityStakerCurveId);
+        assertEq(
+            performanceLeewayData.length,
+            upgradeDeployParams
+                .identifiedCommunityStakerAvgPerfLeewayData
+                .length
+        );
+        for (uint256 i = 0; i < performanceLeewayData.length; i++) {
+            assertEq(
+                performanceLeewayData[i].minKeyIndex,
+                upgradeDeployParams.identifiedCommunityStakerAvgPerfLeewayData[
+                    i
+                ][0]
+            );
+            assertEq(
+                performanceLeewayData[i].value,
+                upgradeDeployParams.identifiedCommunityStakerAvgPerfLeewayData[
+                    i
+                ][1]
+            );
+        }
 
         (uint256 lifetime, uint256 threshold) = parametersRegistry
-            .getStrikesParams(identifiedSoloOperatorCurveId);
+            .getStrikesParams(identifiedCommunityStakerCurveId);
         assertEq(
             lifetime,
-            upgradeDeployParams.identifiedSoloOperatorStrikesLifetimeFrames
+            upgradeDeployParams.identifiedCommunityStakerStrikesLifetimeFrames
         );
         assertEq(
             threshold,
-            upgradeDeployParams.identifiedSoloOperatorStrikesThreshold
+            upgradeDeployParams.identifiedCommunityStakerStrikesThreshold
         );
 
         (uint256 priority, uint256 maxDeposits) = parametersRegistry
-            .getQueueConfig(identifiedSoloOperatorCurveId);
+            .getQueueConfig(identifiedCommunityStakerCurveId);
         assertEq(
             priority,
-            upgradeDeployParams.identifiedSoloOperatorQueuePriority
+            upgradeDeployParams.identifiedCommunityStakerQueuePriority
         );
         assertEq(
             maxDeposits,
-            upgradeDeployParams.identifiedSoloOperatorQueueMaxDeposits
+            upgradeDeployParams.identifiedCommunityStakerQueueMaxDeposits
         );
 
         assertEq(
             parametersRegistry.getBadPerformancePenalty(
-                identifiedSoloOperatorCurveId
+                identifiedCommunityStakerCurveId
             ),
-            upgradeDeployParams.identifiedSoloOperatorBadPerformancePenalty
+            upgradeDeployParams.identifiedCommunityStakerBadPerformancePenalty
         );
         (
             uint256 attestationsWeight,
             uint256 blocksWeight,
             uint256 syncWeight
         ) = parametersRegistry.getPerformanceCoefficients(
-                identifiedSoloOperatorCurveId
+                identifiedCommunityStakerCurveId
             );
         assertEq(
             attestationsWeight,
-            upgradeDeployParams.identifiedSoloOperatorAttestationsWeight
+            upgradeDeployParams.identifiedCommunityStakerAttestationsWeight
         );
         assertEq(
             blocksWeight,
-            upgradeDeployParams.identifiedSoloOperatorBlocksWeight
+            upgradeDeployParams.identifiedCommunityStakerBlocksWeight
         );
         assertEq(
             syncWeight,
-            upgradeDeployParams.identifiedSoloOperatorSyncWeight
+            upgradeDeployParams.identifiedCommunityStakerSyncWeight
         );
 
         assertEq(
             parametersRegistry.getAllowedExitDelay(
-                identifiedSoloOperatorCurveId
+                identifiedCommunityStakerCurveId
             ),
-            upgradeDeployParams.identifiedSoloOperatorAllowedExitDelay
+            upgradeDeployParams.identifiedCommunityStakerAllowedExitDelay
         );
         assertEq(
             parametersRegistry.getExitDelayPenalty(
-                identifiedSoloOperatorCurveId
+                identifiedCommunityStakerCurveId
             ),
-            upgradeDeployParams.identifiedSoloOperatorExitDelayPenalty
+            upgradeDeployParams.identifiedCommunityStakerExitDelayPenalty
         );
         assertEq(
             parametersRegistry.getMaxWithdrawalRequestFee(
-                identifiedSoloOperatorCurveId
+                identifiedCommunityStakerCurveId
             ),
-            upgradeDeployParams.identifiedSoloOperatorMaxWithdrawalRequestFee
+            upgradeDeployParams.identifiedCommunityStakerMaxWithdrawalRequestFee
         );
     }
 }

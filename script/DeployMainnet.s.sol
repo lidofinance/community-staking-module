@@ -82,35 +82,35 @@ contract DeployMainnet is DeployBase {
 
         // VettedGate
         config
-            .identifiedSoloOperatorManager = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
+            .identifiedCommunityStakerManager = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
         config
-            .identifiedSoloOperatorTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
-        config.identifiedSoloOperatorTreeCid = "someCid"; // TODO: to be set in the future
+            .identifiedCommunityStakerTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
+        config.identifiedCommunityStakerTreeCid = "someCid"; // TODO: to be set in the future
         // 1.5 -> 1.3
-        config.identifiedSoloOperatorBondCurve.push([1, 1.5 ether]);
-        config.identifiedSoloOperatorBondCurve.push([2, 1.3 ether]);
+        config.identifiedCommunityStakerBondCurve.push([1, 1.5 ether]);
+        config.identifiedCommunityStakerBondCurve.push([2, 1.3 ether]);
 
         // Parameters for Identified Solo Operator type
         // TODO: Set proper values bellow
-        config.identifiedSoloOperatorKeyRemovalCharge = 0.01 ether;
+        config.identifiedCommunityStakerKeyRemovalCharge = 0.01 ether;
         config
-            .identifiedSoloOperatorELRewardsStealingAdditionalFine = 0.05 ether;
-        config.identifiedSoloOperatorKeysLimit = type(uint248).max;
-        config.identifiedSoloOperatorAvgPerfLeewayData.push([0, 500]);
-        config.identifiedSoloOperatorAvgPerfLeewayData.push([100, 600]);
-        config.identifiedSoloOperatorRewardShareData.push([0, 10000]);
-        config.identifiedSoloOperatorRewardShareData.push([100, 9900]);
-        config.identifiedSoloOperatorStrikesLifetimeFrames = 8;
-        config.identifiedSoloOperatorStrikesThreshold = 4;
-        config.identifiedSoloOperatorQueuePriority = 0;
-        config.identifiedSoloOperatorQueueMaxDeposits = 10;
-        config.identifiedSoloOperatorBadPerformancePenalty = 0.05 ether;
-        config.identifiedSoloOperatorAttestationsWeight = 60;
-        config.identifiedSoloOperatorBlocksWeight = 4;
-        config.identifiedSoloOperatorSyncWeight = 0;
-        config.identifiedSoloOperatorAllowedExitDelay = 8 days;
-        config.identifiedSoloOperatorExitDelayPenalty = 0.05 ether;
-        config.identifiedSoloOperatorMaxWithdrawalRequestFee = 0.05 ether;
+            .identifiedCommunityStakerELRewardsStealingAdditionalFine = 0.05 ether;
+        config.identifiedCommunityStakerKeysLimit = type(uint248).max;
+        config.identifiedCommunityStakerAvgPerfLeewayData.push([0, 500]);
+        config.identifiedCommunityStakerAvgPerfLeewayData.push([100, 600]);
+        config.identifiedCommunityStakerRewardShareData.push([0, 10000]);
+        config.identifiedCommunityStakerRewardShareData.push([100, 9900]);
+        config.identifiedCommunityStakerStrikesLifetimeFrames = 8;
+        config.identifiedCommunityStakerStrikesThreshold = 4;
+        config.identifiedCommunityStakerQueuePriority = 0;
+        config.identifiedCommunityStakerQueueMaxDeposits = 10;
+        config.identifiedCommunityStakerBadPerformancePenalty = 0.05 ether;
+        config.identifiedCommunityStakerAttestationsWeight = 60;
+        config.identifiedCommunityStakerBlocksWeight = 4;
+        config.identifiedCommunityStakerSyncWeight = 0;
+        config.identifiedCommunityStakerAllowedExitDelay = 8 days;
+        config.identifiedCommunityStakerExitDelayPenalty = 0.05 ether;
+        config.identifiedCommunityStakerMaxWithdrawalRequestFee = 0.05 ether;
 
         // GateSeal
         config.gateSealFactory = 0x6C82877cAC5a7A739f16Ca0A89c0A328B8764A24;
