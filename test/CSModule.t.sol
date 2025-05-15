@@ -6667,23 +6667,11 @@ contract CSMDepositableValidatorsCount is CSMCommon {
 
 contract CSMNodeOperatorStateAfterUpdateCurve is CSMCommon {
     function updateToBetterCurve() public {
-        ICSBondCurve.BondCurveIntervalInput[]
-            memory newCurve = new ICSBondCurve.BondCurveIntervalInput[](1);
-        newCurve[0] = ICSBondCurve.BondCurveIntervalInput({
-            minKeysCount: 1,
-            trend: BOND_SIZE - 0.5 ether
-        });
-        accounting.updateBondCurve(0, newCurve);
+        accounting.updateBondCurve(0, 1.5 ether);
     }
 
     function updateToWorseCurve() public {
-        ICSBondCurve.BondCurveIntervalInput[]
-            memory newCurve = new ICSBondCurve.BondCurveIntervalInput[](1);
-        newCurve[0] = ICSBondCurve.BondCurveIntervalInput({
-            minKeysCount: 1,
-            trend: BOND_SIZE + 0.5 ether
-        });
-        accounting.updateBondCurve(0, newCurve);
+        accounting.updateBondCurve(0, 2.5 ether);
     }
 
     function test_depositedOnly_UpdateToBetterCurve() public assertInvariants {
