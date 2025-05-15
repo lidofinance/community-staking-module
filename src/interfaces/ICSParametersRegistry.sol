@@ -335,10 +335,12 @@ interface ICSParametersRegistry {
 
     /// @notice Sets the provided config to the given curve.
     /// @param curveId Curve Id to set the config.
-    /// @param config Config to be used for the curve.
+    /// @param priority Priority of the queue
+    /// @param maxDeposits Max deposits in prioritized queue
     function setQueueConfig(
         uint256 curveId,
-        QueueConfig memory config
+        uint32 priority,
+        uint32 maxDeposits
     ) external;
 
     /// @notice Set the given curve's config to the default one.

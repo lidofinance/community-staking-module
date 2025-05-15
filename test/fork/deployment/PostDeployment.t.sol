@@ -188,22 +188,29 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             deployParams.bondCurve[1][1]
         );
 
-        uint256 vettedCurveId = vettedGate.curveId();
+        uint256 identifiedCommunityStakersGateBondCurveId = vettedGate
+            .curveId();
         assertEq(
-            accounting.getCurveInfo(vettedCurveId)[0].minKeysCount,
-            deployParams.vettedGateBondCurve[0][0]
+            accounting
+            .getCurveInfo(identifiedCommunityStakersGateBondCurveId)[0]
+                .minKeysCount,
+            deployParams.identifiedCommunityStakersGateBondCurve[0][0]
         );
         assertEq(
-            accounting.getCurveInfo(vettedCurveId)[0].trend,
-            deployParams.vettedGateBondCurve[0][1]
+            accounting
+            .getCurveInfo(identifiedCommunityStakersGateBondCurveId)[0].trend,
+            deployParams.identifiedCommunityStakersGateBondCurve[0][1]
         );
         assertEq(
-            accounting.getCurveInfo(vettedCurveId)[1].minKeysCount,
-            deployParams.vettedGateBondCurve[1][0]
+            accounting
+            .getCurveInfo(identifiedCommunityStakersGateBondCurveId)[1]
+                .minKeysCount,
+            deployParams.identifiedCommunityStakersGateBondCurve[1][0]
         );
         assertEq(
-            accounting.getCurveInfo(vettedCurveId)[1].trend,
-            deployParams.vettedGateBondCurve[1][1]
+            accounting
+            .getCurveInfo(identifiedCommunityStakersGateBondCurveId)[1].trend,
+            deployParams.identifiedCommunityStakersGateBondCurve[1][1]
         );
         assertEq(address(accounting.feeDistributor()), address(feeDistributor));
         assertEq(accounting.getBondLockPeriod(), deployParams.bondLockPeriod);
@@ -717,6 +724,137 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
             deployParams.defaultMaxWithdrawalRequestFee
         );
         assertEq(parametersRegistry.getInitializedVersion(), 1);
+
+        // Params for Identified Community Staker type
+        uint256 identifiedCommunityStakersGateCurveId = vettedGate.curveId();
+        assertEq(
+            parametersRegistry.getKeyRemovalCharge(
+                identifiedCommunityStakersGateCurveId
+            ),
+            deployParams.identifiedCommunityStakersGateKeyRemovalCharge
+        );
+        assertEq(
+            parametersRegistry.getElRewardsStealingAdditionalFine(
+                identifiedCommunityStakersGateCurveId
+            ),
+            deployParams
+                .identifiedCommunityStakersGateELRewardsStealingAdditionalFine
+        );
+        assertEq(
+            parametersRegistry.getKeysLimit(
+                identifiedCommunityStakersGateCurveId
+            ),
+            deployParams.identifiedCommunityStakersGateKeysLimit
+        );
+
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory rewardShareData = parametersRegistry.getRewardShareData(
+                identifiedCommunityStakersGateCurveId
+            );
+        assertEq(
+            rewardShareData.length,
+            deployParams.identifiedCommunityStakersGateRewardShareData.length
+        );
+        for (uint256 i = 0; i < rewardShareData.length; i++) {
+            assertEq(
+                rewardShareData[i].minKeyIndex,
+                deployParams.identifiedCommunityStakersGateRewardShareData[i][0]
+            );
+            assertEq(
+                rewardShareData[i].value,
+                deployParams.identifiedCommunityStakersGateRewardShareData[i][1]
+            );
+        }
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory performanceLeewayData = parametersRegistry
+                .getPerformanceLeewayData(
+                    identifiedCommunityStakersGateCurveId
+                );
+        assertEq(
+            performanceLeewayData.length,
+            deployParams.identifiedCommunityStakersGateAvgPerfLeewayData.length
+        );
+        for (uint256 i = 0; i < performanceLeewayData.length; i++) {
+            assertEq(
+                performanceLeewayData[i].minKeyIndex,
+                deployParams.identifiedCommunityStakersGateAvgPerfLeewayData[i][
+                    0
+                ]
+            );
+            assertEq(
+                performanceLeewayData[i].value,
+                deployParams.identifiedCommunityStakersGateAvgPerfLeewayData[i][
+                    1
+                ]
+            );
+        }
+
+        (uint256 lifetime, uint256 threshold) = parametersRegistry
+            .getStrikesParams(identifiedCommunityStakersGateCurveId);
+        assertEq(
+            lifetime,
+            deployParams.identifiedCommunityStakersGateStrikesLifetimeFrames
+        );
+        assertEq(
+            threshold,
+            deployParams.identifiedCommunityStakersGateStrikesThreshold
+        );
+
+        (uint256 icsPriority, uint256 icsMaxDeposits) = parametersRegistry
+            .getQueueConfig(identifiedCommunityStakersGateCurveId);
+        assertEq(
+            icsPriority,
+            deployParams.identifiedCommunityStakersGateQueuePriority
+        );
+        assertEq(
+            icsMaxDeposits,
+            deployParams.identifiedCommunityStakersGateQueueMaxDeposits
+        );
+
+        assertEq(
+            parametersRegistry.getBadPerformancePenalty(
+                identifiedCommunityStakersGateCurveId
+            ),
+            deployParams.identifiedCommunityStakersGateBadPerformancePenalty
+        );
+        (
+            uint256 icsAttestationsWeight,
+            uint256 icsBlocksWeight,
+            uint256 icsSyncWeight
+        ) = parametersRegistry.getPerformanceCoefficients(
+                identifiedCommunityStakersGateCurveId
+            );
+        assertEq(
+            icsAttestationsWeight,
+            deployParams.identifiedCommunityStakersGateAttestationsWeight
+        );
+        assertEq(
+            icsBlocksWeight,
+            deployParams.identifiedCommunityStakersGateBlocksWeight
+        );
+        assertEq(
+            icsSyncWeight,
+            deployParams.identifiedCommunityStakersGateSyncWeight
+        );
+
+        assertEq(
+            parametersRegistry.getAllowedExitDelay(
+                identifiedCommunityStakersGateCurveId
+            ),
+            deployParams.identifiedCommunityStakersGateAllowedExitDelay
+        );
+        assertEq(
+            parametersRegistry.getExitDelayPenalty(
+                identifiedCommunityStakersGateCurveId
+            ),
+            deployParams.identifiedCommunityStakersGateExitDelayPenalty
+        );
+        assertEq(
+            parametersRegistry.getMaxWithdrawalRequestFee(
+                identifiedCommunityStakersGateCurveId
+            ),
+            deployParams.identifiedCommunityStakersGateMaxWithdrawalRequestFee
+        );
     }
 
     function test_roles() public view {
@@ -864,8 +1002,14 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
 
     function test_state() public view {
         assertFalse(vettedGate.isPaused());
-        assertEq(vettedGate.treeRoot(), deployParams.vettedGateTreeRoot);
-        assertEq(vettedGate.treeCid(), deployParams.vettedGateTreeCid);
+        assertEq(
+            vettedGate.treeRoot(),
+            deployParams.identifiedCommunityStakersGateTreeRoot
+        );
+        assertEq(
+            vettedGate.treeCid(),
+            deployParams.identifiedCommunityStakersGateTreeCid
+        );
         // Check that the curve is set
         assertTrue(vettedGate.curveId() != 0);
         assertEq(vettedGate.getInitializedVersion(), 1);
@@ -898,7 +1042,7 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
         assertTrue(
             vettedGate.hasRole(
                 vettedGate.SET_TREE_ROLE(),
-                deployParams.vettedGateManager
+                deployParams.identifiedCommunityStakersGateManager
             )
         );
         assertEq(vettedGate.getRoleMemberCount(vettedGate.SET_TREE_ROLE()), 1);
@@ -919,7 +1063,7 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
         assertTrue(
             vettedGate.hasRole(
                 vettedGate.END_REFERRAL_SEASON_ROLE(),
-                deployParams.vettedGateManager
+                deployParams.identifiedCommunityStakersGateManager
             )
         );
         assertEq(
@@ -934,8 +1078,8 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         vettedGate.initialize({
             _curveId: 1,
-            _treeRoot: deployParams.vettedGateTreeRoot,
-            _treeCid: deployParams.vettedGateTreeCid,
+            _treeRoot: deployParams.identifiedCommunityStakersGateTreeRoot,
+            _treeCid: deployParams.identifiedCommunityStakersGateTreeCid,
             admin: deployParams.aragonAgent
         });
 
@@ -951,8 +1095,8 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         vettedGateImpl.initialize({
             _curveId: 1,
-            _treeRoot: deployParams.vettedGateTreeRoot,
-            _treeCid: deployParams.vettedGateTreeCid,
+            _treeRoot: deployParams.identifiedCommunityStakersGateTreeRoot,
+            _treeCid: deployParams.identifiedCommunityStakersGateTreeCid,
             admin: deployParams.aragonAgent
         });
     }

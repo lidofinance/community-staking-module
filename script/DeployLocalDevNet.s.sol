@@ -56,11 +56,12 @@ contract DeployLocalDevNet is DeployBase {
         config.elRewardsStealingReporter = vm.envAddress(
             "CSM_FIRST_ADMIN_ADDRESS"
         ); // Dev team EOA
+
         // CSParameters
         config.keyRemovalCharge = 0.05 ether;
         config.elRewardsStealingAdditionalFine = 0.1 ether;
         config.keysLimit = type(uint256).max;
-        config.avgPerfLeewayBP = 500;
+        config.avgPerfLeewayBP = 450;
         config.rewardShareBP = 10000;
         config.strikesLifetimeFrames = 6;
         config.strikesThreshold = 3;
@@ -74,14 +75,43 @@ contract DeployLocalDevNet is DeployBase {
         config.defaultAllowedExitDelay = 4 days; // TODO: reconsider
         config.defaultExitDelayPenalty = 0.1 ether; // TODO: to be reviewed
         config.defaultMaxWithdrawalRequestFee = 0.1 ether; // TODO: to be reviewed
+
         // VettedGate
-        config.vettedGateTreeRoot = vm.envOr(
+        config
+            .identifiedCommunityStakersGateManager = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
+        config.identifiedCommunityStakersGateTreeRoot = vm.envOr(
             "CSM_VETTED_GATE_TREE_ROOT",
             bytes32(uint256(0xdeadbeef))
         );
+        config.identifiedCommunityStakersGateTreeCid = vm.envOr(
+            "CSM_VETTED_GATE_TREE_CID",
+            string("someCid")
+        );
         // 1.5 -> 1.3
-        config.vettedGateBondCurve.push([1, 1.5 ether]);
-        config.vettedGateBondCurve.push([2, 1.3 ether]);
+        config.identifiedCommunityStakersGateBondCurve.push([1, 1.5 ether]);
+        config.identifiedCommunityStakersGateBondCurve.push([2, 1.3 ether]);
+
+        // Parameters for Identified Community Staker type
+        // TODO: Set proper values bellow
+        config.identifiedCommunityStakersGateKeyRemovalCharge = 0.01 ether;
+        config
+            .identifiedCommunityStakersGateELRewardsStealingAdditionalFine = 0.05 ether;
+        config.identifiedCommunityStakersGateKeysLimit = type(uint248).max;
+        config.identifiedCommunityStakersGateAvgPerfLeewayData.push([0, 500]);
+        config.identifiedCommunityStakersGateRewardShareData.push([0, 10000]);
+        config.identifiedCommunityStakersGateRewardShareData.push([16, 5834]);
+        config.identifiedCommunityStakersGateStrikesLifetimeFrames = 8;
+        config.identifiedCommunityStakersGateStrikesThreshold = 4;
+        config.identifiedCommunityStakersGateQueuePriority = 0;
+        config.identifiedCommunityStakersGateQueueMaxDeposits = 10;
+        config.identifiedCommunityStakersGateBadPerformancePenalty = 0.05 ether;
+        config.identifiedCommunityStakersGateAttestationsWeight = 60;
+        config.identifiedCommunityStakersGateBlocksWeight = 4;
+        config.identifiedCommunityStakersGateSyncWeight = 0;
+        config.identifiedCommunityStakersGateAllowedExitDelay = 8 days;
+        config.identifiedCommunityStakersGateExitDelayPenalty = 0.05 ether;
+        config
+            .identifiedCommunityStakersGateMaxWithdrawalRequestFee = 0.05 ether;
 
         // GateSeal
         config.gateSealFactory = 0x0000000000000000000000000000000000000000;

@@ -66,7 +66,7 @@ contract DeployHoodi is DeployBase {
         config.keyRemovalCharge = 0.05 ether;
         config.elRewardsStealingAdditionalFine = 0.1 ether;
         config.keysLimit = type(uint256).max;
-        config.avgPerfLeewayBP = 500;
+        config.avgPerfLeewayBP = 450;
         config.rewardShareBP = 10000;
         config.strikesLifetimeFrames = 6;
         config.strikesThreshold = 3;
@@ -81,12 +81,35 @@ contract DeployHoodi is DeployBase {
 
         // VettedGate
         config
-            .vettedGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
+            .identifiedCommunityStakersGateManager = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
+        config
+            .identifiedCommunityStakersGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
+        config.identifiedCommunityStakersGateTreeCid = "someCid"; // TODO: to be set in the future
         // 1.5 -> 1.3
-        config.vettedGateBondCurve.push([1, 1.5 ether]);
-        config.vettedGateBondCurve.push([2, 1.3 ether]);
-        config.vettedGateManager = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
-        config.vettedGateTreeCid = "someCid"; // TODO: to be set in the future
+        config.identifiedCommunityStakersGateBondCurve.push([1, 1.5 ether]);
+        config.identifiedCommunityStakersGateBondCurve.push([2, 1.3 ether]);
+
+        // Parameters for Identified Community Staker type
+        // TODO: Set proper values bellow
+        config.identifiedCommunityStakersGateKeyRemovalCharge = 0.01 ether;
+        config
+            .identifiedCommunityStakersGateELRewardsStealingAdditionalFine = 0.05 ether;
+        config.identifiedCommunityStakersGateKeysLimit = type(uint248).max;
+        config.identifiedCommunityStakersGateAvgPerfLeewayData.push([0, 500]);
+        config.identifiedCommunityStakersGateRewardShareData.push([0, 10000]);
+        config.identifiedCommunityStakersGateRewardShareData.push([16, 5834]);
+        config.identifiedCommunityStakersGateStrikesLifetimeFrames = 8;
+        config.identifiedCommunityStakersGateStrikesThreshold = 4;
+        config.identifiedCommunityStakersGateQueuePriority = 0;
+        config.identifiedCommunityStakersGateQueueMaxDeposits = 10;
+        config.identifiedCommunityStakersGateBadPerformancePenalty = 0.05 ether;
+        config.identifiedCommunityStakersGateAttestationsWeight = 60;
+        config.identifiedCommunityStakersGateBlocksWeight = 4;
+        config.identifiedCommunityStakersGateSyncWeight = 0;
+        config.identifiedCommunityStakersGateAllowedExitDelay = 8 days;
+        config.identifiedCommunityStakersGateExitDelayPenalty = 0.05 ether;
+        config
+            .identifiedCommunityStakersGateMaxWithdrawalRequestFee = 0.05 ether;
 
         // GateSeal
         config.gateSealFactory = 0xA402349F560D45310D301E92B1AA4DeCABe147B3;

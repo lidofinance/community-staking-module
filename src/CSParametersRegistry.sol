@@ -389,15 +389,16 @@ contract CSParametersRegistry is
     /// @inheritdoc ICSParametersRegistry
     function setQueueConfig(
         uint256 curveId,
-        QueueConfig calldata config
+        uint32 priority,
+        uint32 maxDeposits
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _validateQueueConfig(config.priority, config.maxDeposits);
+        _validateQueueConfig(priority, maxDeposits);
         _queueConfigs[curveId] = MarkedQueueConfig({
-            priority: config.priority,
-            maxDeposits: config.maxDeposits,
+            priority: priority,
+            maxDeposits: maxDeposits,
             isValue: true
         });
-        emit QueueConfigSet(curveId, config.priority, config.maxDeposits);
+        emit QueueConfigSet(curveId, priority, maxDeposits);
     }
 
     /// @inheritdoc ICSParametersRegistry

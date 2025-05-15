@@ -13,6 +13,8 @@ import { BaseOracle } from "../../../src/lib/base-oracle/BaseOracle.sol";
 import { Slot } from "../../../src/lib/Types.sol";
 import { OssifiableProxy } from "../../../src/lib/proxy/OssifiableProxy.sol";
 
+import { ICSParametersRegistry } from "../../../src/interfaces/ICSParametersRegistry.sol";
+
 contract V2UpgradeTestBase is Test, Utilities, DeploymentFixtures {
     uint256 internal forkIdBeforeUpgrade;
     uint256 internal forkIdAfterUpgrade;

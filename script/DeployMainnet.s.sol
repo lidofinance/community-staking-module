@@ -34,12 +34,13 @@ contract DeployMainnet is DeployBase {
         config.oracleMembers[7] = 0xe57B3792aDCc5da47EF4fF588883F0ee0c9835C9; // MatrixedLink
         config.oracleMembers[8] = 0x73181107c8D9ED4ce0bbeF7A0b4ccf3320C41d12; // Instadapp
         config.hashConsensusQuorum = 5;
+
         // Verifier
         config.gIFirstWithdrawal = GIndicies.FIRST_WITHDRAWAL_CAPELLA;
         config.gIFirstValidator = GIndicies.FIRST_VALIDATOR_CAPELLA;
         config.gIHistoricalSummaries = GIndicies.HISTORICAL_SUMMARIES_CAPELLA;
-
         config.verifierSupportedEpoch = 269568;
+
         // Accounting
         config.maxCurveLength = 10;
         // 2.4 -> 1.3
@@ -53,16 +54,18 @@ contract DeployMainnet is DeployBase {
             .setResetBondCurveAddress = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
         config
             .chargePenaltyRecipient = 0x3e40D73EB977Dc6a537aF587D48316feE66E9C8c; // locator.treasury()
+
         // Module
         config.stakingModuleId = 3;
         config.moduleType = "community-onchain-v1"; // Just a unique type name to be used by the off-chain tooling
         config
             .elRewardsStealingReporter = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
+
         // CSParameters
         config.keyRemovalCharge = 0.05 ether;
         config.elRewardsStealingAdditionalFine = 0.1 ether;
         config.keysLimit = type(uint256).max;
-        config.avgPerfLeewayBP = 500;
+        config.avgPerfLeewayBP = 450;
         config.rewardShareBP = 10000;
         config.strikesLifetimeFrames = 6;
         config.strikesThreshold = 3;
@@ -76,14 +79,39 @@ contract DeployMainnet is DeployBase {
         config.defaultAllowedExitDelay = 4 days; // TODO: reconsider
         config.defaultExitDelayPenalty = 0.1 ether; // TODO: to be reviewed
         config.defaultMaxWithdrawalRequestFee = 0.1 ether; // TODO: to be reviewed
+
         // VettedGate
         config
-            .vettedGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
+            .identifiedCommunityStakersGateManager = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
+        config
+            .identifiedCommunityStakersGateTreeRoot = 0x359e02c5c065c682839661c9bdfaf38db472629bf5f7a7e8f0261b31dc9332c2; // See the first value in artifacts/mainnet/early-adoption/merkle-tree.json
+        config.identifiedCommunityStakersGateTreeCid = "someCid"; // TODO: to be set in the future
         // 1.5 -> 1.3
-        config.vettedGateBondCurve.push([1, 1.5 ether]);
-        config.vettedGateBondCurve.push([2, 1.3 ether]);
-        config.vettedGateManager = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
-        config.vettedGateTreeCid = "someCid"; // TODO: to be set in the future
+        config.identifiedCommunityStakersGateBondCurve.push([1, 1.5 ether]);
+        config.identifiedCommunityStakersGateBondCurve.push([2, 1.3 ether]);
+
+        // Parameters for Identified Community Staker type
+        // TODO: Set proper values bellow
+        config.identifiedCommunityStakersGateKeyRemovalCharge = 0.01 ether;
+        config
+            .identifiedCommunityStakersGateELRewardsStealingAdditionalFine = 0.05 ether;
+        config.identifiedCommunityStakersGateKeysLimit = type(uint248).max;
+        config.identifiedCommunityStakersGateAvgPerfLeewayData.push([0, 500]);
+        config.identifiedCommunityStakersGateRewardShareData.push([0, 10000]);
+        config.identifiedCommunityStakersGateRewardShareData.push([16, 5834]);
+        config.identifiedCommunityStakersGateStrikesLifetimeFrames = 8;
+        config.identifiedCommunityStakersGateStrikesThreshold = 4;
+        config.identifiedCommunityStakersGateQueuePriority = 0;
+        config.identifiedCommunityStakersGateQueueMaxDeposits = 10;
+        config.identifiedCommunityStakersGateBadPerformancePenalty = 0.05 ether;
+        config.identifiedCommunityStakersGateAttestationsWeight = 60;
+        config.identifiedCommunityStakersGateBlocksWeight = 4;
+        config.identifiedCommunityStakersGateSyncWeight = 0;
+        config.identifiedCommunityStakersGateAllowedExitDelay = 8 days;
+        config.identifiedCommunityStakersGateExitDelayPenalty = 0.05 ether;
+        config
+            .identifiedCommunityStakersGateMaxWithdrawalRequestFee = 0.05 ether;
+
         // GateSeal
         config.gateSealFactory = 0x6C82877cAC5a7A739f16Ca0A89c0A328B8764A24;
         config.sealingCommittee = 0xC52fC3081123073078698F1EAc2f1Dc7Bd71880f; // CSM Committee MS
