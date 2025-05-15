@@ -27,6 +27,7 @@ import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
 import { Dummy } from "./utils/Dummy.sol";
+import { CommonScriptUtils } from "./utils/Common.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
 import { VettedGateFactory } from "../src/VettedGateFactory.sol";
@@ -85,10 +86,27 @@ struct DeployParams {
     uint256 defaultExitDelayPenalty;
     uint256 defaultMaxWithdrawalRequestFee;
     // VettedGate
-    bytes32 vettedGateTreeRoot;
-    string vettedGateTreeCid;
-    uint256[2][] vettedGateBondCurve;
-    address vettedGateManager;
+    address identifiedCommunityStakersGateManager;
+    bytes32 identifiedCommunityStakersGateTreeRoot;
+    string identifiedCommunityStakersGateTreeCid;
+    uint256[2][] identifiedCommunityStakersGateBondCurve;
+    // Parameters for Identified Community Staker type
+    uint256 identifiedCommunityStakersGateKeyRemovalCharge;
+    uint256 identifiedCommunityStakersGateELRewardsStealingAdditionalFine;
+    uint256 identifiedCommunityStakersGateKeysLimit;
+    uint256[2][] identifiedCommunityStakersGateAvgPerfLeewayData;
+    uint256[2][] identifiedCommunityStakersGateRewardShareData;
+    uint256 identifiedCommunityStakersGateStrikesLifetimeFrames;
+    uint256 identifiedCommunityStakersGateStrikesThreshold;
+    uint256 identifiedCommunityStakersGateQueuePriority;
+    uint256 identifiedCommunityStakersGateQueueMaxDeposits;
+    uint256 identifiedCommunityStakersGateBadPerformancePenalty;
+    uint256 identifiedCommunityStakersGateAttestationsWeight;
+    uint256 identifiedCommunityStakersGateBlocksWeight;
+    uint256 identifiedCommunityStakersGateSyncWeight;
+    uint256 identifiedCommunityStakersGateAllowedExitDelay;
+    uint256 identifiedCommunityStakersGateExitDelayPenalty;
+    uint256 identifiedCommunityStakersGateMaxWithdrawalRequestFee;
     // GateSeal
     address gateSealFactory;
     address sealingCommittee;
@@ -268,9 +286,8 @@ abstract contract DeployBase is Script {
                 address(deployer)
             );
 
-            uint256 identifiedSolosCurve = accounting.addBondCurve(
-                config.vettedGateBondCurve
-            );
+            uint256 identifiedCommunityStakersGateBondCurveId = accounting
+                .addBondCurve(config.identifiedCommunityStakersGateBondCurve);
             accounting.revokeRole(
                 accounting.MANAGE_BOND_CURVES_ROLE(),
                 address(deployer)
@@ -337,9 +354,9 @@ abstract contract DeployBase is Script {
             vettedGateFactory = new VettedGateFactory(vettedGateImpl);
             vettedGate = VettedGate(
                 vettedGateFactory.create({
-                    curveId: identifiedSolosCurve,
-                    treeRoot: config.vettedGateTreeRoot,
-                    treeCid: config.vettedGateTreeCid,
+                    curveId: identifiedCommunityStakersGateBondCurveId,
+                    treeRoot: config.identifiedCommunityStakersGateTreeRoot,
+                    treeCid: config.identifiedCommunityStakersGateTreeCid,
                     admin: deployer
                 })
             );
@@ -348,6 +365,64 @@ abstract contract DeployBase is Script {
                 payable(address(vettedGate))
             );
             vettedGateProxy.proxy__changeAdmin(config.proxyAdmin);
+
+            parametersRegistry.setKeyRemovalCharge(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateKeyRemovalCharge
+            );
+            parametersRegistry.setElRewardsStealingAdditionalFine(
+                identifiedCommunityStakersGateBondCurveId,
+                config
+                    .identifiedCommunityStakersGateELRewardsStealingAdditionalFine
+            );
+            parametersRegistry.setKeysLimit(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateKeysLimit
+            );
+            parametersRegistry.setPerformanceLeewayData(
+                identifiedCommunityStakersGateBondCurveId,
+                CommonScriptUtils.arraysToKeyIndexValueIntervals(
+                    config.identifiedCommunityStakersGateAvgPerfLeewayData
+                )
+            );
+            parametersRegistry.setRewardShareData(
+                identifiedCommunityStakersGateBondCurveId,
+                CommonScriptUtils.arraysToKeyIndexValueIntervals(
+                    config.identifiedCommunityStakersGateRewardShareData
+                )
+            );
+            parametersRegistry.setStrikesParams(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateStrikesLifetimeFrames,
+                config.identifiedCommunityStakersGateStrikesThreshold
+            );
+            parametersRegistry.setQueueConfig(
+                identifiedCommunityStakersGateBondCurveId,
+                uint32(config.identifiedCommunityStakersGateQueuePriority),
+                uint32(config.identifiedCommunityStakersGateQueueMaxDeposits)
+            );
+            parametersRegistry.setBadPerformancePenalty(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateBadPerformancePenalty
+            );
+            parametersRegistry.setPerformanceCoefficients(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateAttestationsWeight,
+                config.identifiedCommunityStakersGateBlocksWeight,
+                config.identifiedCommunityStakersGateSyncWeight
+            );
+            parametersRegistry.setAllowedExitDelay(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateAllowedExitDelay
+            );
+            parametersRegistry.setExitDelayPenalty(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateExitDelayPenalty
+            );
+            parametersRegistry.setMaxWithdrawalRequestFee(
+                identifiedCommunityStakersGateBondCurveId,
+                config.identifiedCommunityStakersGateMaxWithdrawalRequestFee
+            );
 
             feeDistributor.initialize({
                 admin: address(deployer),
@@ -474,7 +549,7 @@ abstract contract DeployBase is Script {
             );
             vettedGate.grantRole(
                 vettedGate.SET_TREE_ROLE(),
-                config.vettedGateManager
+                config.identifiedCommunityStakersGateManager
             );
             vettedGate.grantRole(
                 vettedGate.START_REFERRAL_SEASON_ROLE(),
@@ -482,7 +557,7 @@ abstract contract DeployBase is Script {
             );
             vettedGate.grantRole(
                 vettedGate.END_REFERRAL_SEASON_ROLE(),
-                config.vettedGateManager
+                config.identifiedCommunityStakersGateManager
             );
             vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
 

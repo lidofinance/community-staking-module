@@ -1,0 +1,28 @@
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
+// SPDX-License-Identifier: GPL-3.0
+
+pragma solidity 0.8.24;
+
+import { ICSParametersRegistry } from "../../src/interfaces/ICSParametersRegistry.sol";
+
+library CommonScriptUtils {
+    function arraysToKeyIndexValueIntervals(
+        uint256[2][] memory data
+    )
+        public
+        pure
+        returns (ICSParametersRegistry.KeyIndexValueInterval[] memory)
+    {
+        ICSParametersRegistry.KeyIndexValueInterval[]
+            memory keyIndexValues = new ICSParametersRegistry.KeyIndexValueInterval[](
+                data.length
+            );
+        for (uint256 i = 0; i < data.length; i++) {
+            keyIndexValues[i] = ICSParametersRegistry.KeyIndexValueInterval({
+                minKeyIndex: data[i][0],
+                value: data[i][1]
+            });
+        }
+        return keyIndexValues;
+    }
+}

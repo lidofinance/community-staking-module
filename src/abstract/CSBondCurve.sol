@@ -28,7 +28,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     /// @custom:storage-location erc7201:CSBondCurve
     struct CSBondCurveStorage {
         /// @dev DEPRECATED. DO NOT USE. Preserves storage layout.
-        bytes32 legacyBondCurves;
+        bytes32[] legacyBondCurves;
         /// @dev Mapping of Node Operator id to bond curve id
         mapping(uint256 nodeOperatorId => uint256 bondCurveId) operatorBondCurveId;
         BondCurveInterval[][] bondCurves;
@@ -219,6 +219,11 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
                 (amount - interval.minBond) /
                 interval.trend;
         }
+    }
+
+    // Deprecated. To be removed in the next upgrade
+    function _getLegacyBondCurvesLength() internal view returns (uint256) {
+        return _getCSBondCurveStorage().legacyBondCurves.length;
     }
 
     function _addIntervalsToBondCurve(

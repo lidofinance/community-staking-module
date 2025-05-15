@@ -229,7 +229,7 @@ interface ICSParametersRegistry {
         external
         returns (uint32, uint32, uint32);
 
-    /// @notice set default value for allowed exit delay in seconds. Default value is used if a specific value is not set for the curveId
+    /// @notice set default value for allowed delay before the exit was initiated exit delay in seconds. Default value is used if a specific value is not set for the curveId
     /// @param delay value to be set as default for the allowed exit delay
     function setDefaultAllowedExitDelay(uint256 delay) external;
 
@@ -335,10 +335,12 @@ interface ICSParametersRegistry {
 
     /// @notice Sets the provided config to the given curve.
     /// @param curveId Curve Id to set the config.
-    /// @param config Config to be used for the curve.
+    /// @param priority Priority of the queue
+    /// @param maxDeposits Max deposits in prioritized queue
     function setQueueConfig(
         uint256 curveId,
-        QueueConfig memory config
+        uint32 priority,
+        uint32 maxDeposits
     ) external;
 
     /// @notice Set the given curve's config to the default one.

@@ -1533,10 +1533,7 @@ contract CSParametersRegistryQueueConfigTest is
             maxDeposits
         );
         vm.prank(admin);
-        parametersRegistry.setQueueConfig(
-            curveId,
-            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
-        );
+        parametersRegistry.setQueueConfig(curveId, priority, maxDeposits);
 
         (uint256 priorityOut, uint256 maxDepositsOut) = parametersRegistry
             .getQueueConfig(curveId);
@@ -1552,10 +1549,7 @@ contract CSParametersRegistryQueueConfigTest is
         bytes32 role = parametersRegistry.DEFAULT_ADMIN_ROLE();
         expectRoleRevert(stranger, role);
         vm.prank(stranger);
-        parametersRegistry.setQueueConfig(
-            curveId,
-            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
-        );
+        parametersRegistry.setQueueConfig(curveId, priority, maxDeposits);
     }
 
     function test_unset() public override {
@@ -1564,10 +1558,7 @@ contract CSParametersRegistryQueueConfigTest is
         uint32 maxDeposits = 42;
 
         vm.prank(admin);
-        parametersRegistry.setQueueConfig(
-            curveId,
-            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
-        );
+        parametersRegistry.setQueueConfig(curveId, priority, maxDeposits);
 
         (uint256 priorityOut, uint256 maxDepositsOut) = parametersRegistry
             .getQueueConfig(curveId);
@@ -1606,10 +1597,7 @@ contract CSParametersRegistryQueueConfigTest is
             maxDeposits
         );
         vm.prank(admin);
-        parametersRegistry.setQueueConfig(
-            curveId,
-            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
-        );
+        parametersRegistry.setQueueConfig(curveId, priority, maxDeposits);
 
         (uint256 priorityOut, uint256 maxDepositsOut) = parametersRegistry
             .getQueueConfig(curveId);
@@ -1633,10 +1621,7 @@ contract CSParametersRegistryQueueConfigTest is
 
         vm.expectRevert(ICSParametersRegistry.QueueCannotBeUsed.selector);
         vm.prank(admin);
-        parametersRegistry.setQueueConfig(
-            curveId,
-            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
-        );
+        parametersRegistry.setQueueConfig(curveId, priority, maxDeposits);
     }
 
     function test_set_RevertWhen_QueuePriorityAboveLimit() public {
@@ -1647,10 +1632,7 @@ contract CSParametersRegistryQueueConfigTest is
 
         vm.expectRevert(ICSParametersRegistry.QueueCannotBeUsed.selector);
         vm.prank(admin);
-        parametersRegistry.setQueueConfig(
-            curveId,
-            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
-        );
+        parametersRegistry.setQueueConfig(curveId, priority, maxDeposits);
     }
 
     function test_set_RevertWhen_ZeroMaxDeposits() public {
@@ -1660,10 +1642,7 @@ contract CSParametersRegistryQueueConfigTest is
 
         vm.expectRevert(ICSParametersRegistry.ZeroMaxDeposits.selector);
         vm.prank(admin);
-        parametersRegistry.setQueueConfig(
-            curveId,
-            ICSParametersRegistry.QueueConfig(priority, maxDeposits)
-        );
+        parametersRegistry.setQueueConfig(curveId, priority, maxDeposits);
     }
 }
 

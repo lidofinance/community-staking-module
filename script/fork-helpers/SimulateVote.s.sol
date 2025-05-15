@@ -5,16 +5,24 @@ pragma solidity 0.8.24;
 
 import "forge-std/Script.sol";
 import { DeploymentFixtures } from "test/helpers/Fixtures.sol";
-import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
+
 import { OssifiableProxy } from "../../src/lib/proxy/OssifiableProxy.sol";
 import { CSModule } from "../../src/CSModule.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";
 import { CSFeeOracle } from "../../src/CSFeeOracle.sol";
 import { CSFeeDistributor } from "../../src/CSFeeDistributor.sol";
 import { CSEjector } from "../../src/CSEjector.sol";
-import { IBurner } from "../../src/interfaces/IBurner.sol";
+import { CSParametersRegistry } from "../../src/CSParametersRegistry.sol";
+
+import { IStakingRouter } from "../../src/interfaces/IStakingRouter.sol";
 import { ILidoLocator } from "../../src/interfaces/ILidoLocator.sol";
+import { IBurner } from "../../src/interfaces/IBurner.sol";
+import { ICSParametersRegistry } from "../../src/interfaces/ICSParametersRegistry.sol";
+
+import { CommonScriptUtils } from "../utils/Common.sol";
+
 import { ForkHelpersCommon } from "./Common.sol";
+import { DeployParams } from "../DeployBase.s.sol";
 
 contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
     function addModule() external {
@@ -69,21 +77,16 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         hashConsensus.updateInitialEpoch(47480);
     }
 
-    uint256[2][] defaultBondCurve = [
-        [uint256(1), 2.4 ether],
-        [uint256(2), 1.3 ether]
-    ];
-    uint256[2][] vettedBondCurve = [
-        [uint256(1), 1.5 ether],
-        [uint256(2), 1.3 ether]
-    ];
-
     function upgrade() external {
         Env memory env = envVars();
         string memory deploymentConfigContent = vm.readFile(env.DEPLOY_CONFIG);
         DeploymentConfig memory deploymentConfig = parseDeploymentConfig(
             deploymentConfigContent
         );
+        DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
+        uint256[2][][] memory bondCurves = new uint256[2][][](2);
+        bondCurves[0] = deployParams.bondCurve;
+        bondCurves[1] = deployParams.identifiedCommunityStakersGateBondCurve;
 
         address admin = _prepareAdmin(deploymentConfig.csm);
 
@@ -104,8 +107,7 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         {
             accountingProxy.proxy__upgradeTo(deploymentConfig.accountingImpl);
             CSAccounting(deploymentConfig.accounting).finalizeUpgradeV2(
-                defaultBondCurve,
-                vettedBondCurve
+                bondCurves
             );
         }
         vm.stopBroadcast();
@@ -141,6 +143,9 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         accounting = CSAccounting(deploymentConfig.accounting);
         oracle = CSFeeOracle(deploymentConfig.oracle);
         IBurner burner = IBurner(locator.burner());
+        CSParametersRegistry parametersRegistry = CSParametersRegistry(
+            deploymentConfig.parametersRegistry
+        );
 
         vm.startBroadcast(admin);
 
