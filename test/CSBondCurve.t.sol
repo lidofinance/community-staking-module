@@ -46,14 +46,14 @@ contract CSBondCurveInitTest is Test {
         bondCurve = new CSBondCurveTestable(10);
     }
 
-    function test_initialize_revertWhen_InvalidInitialisationCurveId() public {
+    function test_initialize_revertWhen_InvalidInitializationCurveId() public {
         ICSBondCurve.BondCurveIntervalInput[]
             memory _bondCurve = new ICSBondCurve.BondCurveIntervalInput[](1);
         _bondCurve[0] = ICSBondCurve.BondCurveIntervalInput(1, 2 ether);
 
         bondCurve.addBondCurve(_bondCurve);
 
-        vm.expectRevert(ICSBondCurve.InvalidInitialisationCurveId.selector);
+        vm.expectRevert(ICSBondCurve.InvalidInitializationCurveId.selector);
         bondCurve.initialize(_bondCurve);
     }
 }

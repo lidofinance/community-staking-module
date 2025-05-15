@@ -100,8 +100,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
     ) internal onlyInitializing {
         uint256 addedId = _addBondCurve(defaultBondCurveIntervals);
         if (addedId != DEFAULT_BOND_CURVE_ID) {
-            // TODO: rename to InitialiZation
-            revert InvalidInitialisationCurveId();
+            revert InvalidInitializationCurveId();
         }
     }
 
