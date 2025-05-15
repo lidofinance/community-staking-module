@@ -4,6 +4,7 @@
 pragma solidity 0.8.24;
 
 import { ICSParametersRegistry } from "../../src/interfaces/ICSParametersRegistry.sol";
+import { ICSBondCurve } from "../../src/interfaces/ICSBondCurve.sol";
 
 library CommonScriptUtils {
     function arraysToKeyIndexValueIntervals(
@@ -24,5 +25,21 @@ library CommonScriptUtils {
             });
         }
         return keyIndexValues;
+    }
+
+    function arraysToBondCurveIntervalsInputs(
+        uint256[2][] memory data
+    ) public pure returns (ICSBondCurve.BondCurveIntervalInput[] memory) {
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory bondCurveInputs = new ICSBondCurve.BondCurveIntervalInput[](
+                data.length
+            );
+        for (uint256 i = 0; i < data.length; i++) {
+            bondCurveInputs[i] = ICSBondCurve.BondCurveIntervalInput({
+                minKeysCount: data[i][0],
+                trend: data[i][1]
+            });
+        }
+        return bondCurveInputs;
     }
 }

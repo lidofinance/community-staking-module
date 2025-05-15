@@ -358,8 +358,8 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     function test_finalizeUpgradeV2() public {
         _enableInitializers(address(accounting));
 
-        // TODO: add a test with non zero bond curves
-        ICSBondCurve.BondCurveIntervalInput[][] memory bondCurves = new ICSBondCurve.BondCurveIntervalInput[][](0);
+        ICSBondCurve.BondCurveIntervalInput[][]
+            memory bondCurves = new ICSBondCurve.BondCurveIntervalInput[][](0);
 
         accounting.finalizeUpgradeV2(bondCurves);
 

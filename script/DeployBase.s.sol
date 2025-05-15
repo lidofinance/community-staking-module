@@ -273,17 +273,10 @@ abstract contract DeployBase is Script {
                 accountingProxy.proxy__upgradeTo(address(accountingImpl));
                 accountingProxy.proxy__changeAdmin(config.proxyAdmin);
             }
- 
+
             ICSBondCurve.BondCurveIntervalInput[]
-                memory bondCurve = new ICSBondCurve.BondCurveIntervalInput[](
-                    config.bondCurve.length
-                );
-            for (uint256 i = 0; i < config.bondCurve.length; i++) {
-                bondCurve[i] = ICSBondCurve.BondCurveIntervalInput({
-                    minKeysCount: config.bondCurve[i][0],
-                    trend: config.bondCurve[i][1]
-                });
-            }
+                memory bondCurve = CommonScriptUtils
+                    .arraysToBondCurveIntervalsInputs(config.bondCurve);
             accounting.initialize({
                 bondCurve: bondCurve,
                 admin: deployer,
@@ -297,15 +290,10 @@ abstract contract DeployBase is Script {
             );
 
             ICSBondCurve.BondCurveIntervalInput[]
-                memory identifiedCommunityStakersGateBondCurve = new ICSBondCurve.BondCurveIntervalInput[](
-                    config.identifiedCommunityStakersGateBondCurve.length
-                );
-            for (uint256 i = 0; i < config.identifiedCommunityStakersGateBondCurve.length; i++) {
-                identifiedCommunityStakersGateBondCurve[i] = ICSBondCurve.BondCurveIntervalInput({
-                    minKeysCount: config.identifiedCommunityStakersGateBondCurve[i][0],
-                    trend: config.identifiedCommunityStakersGateBondCurve[i][1]
-                });
-            }
+                memory identifiedCommunityStakersGateBondCurve = CommonScriptUtils
+                    .arraysToBondCurveIntervalsInputs(
+                        config.identifiedCommunityStakersGateBondCurve
+                    );
             uint256 identifiedCommunityStakersGateBondCurveId = accounting
                 .addBondCurve(identifiedCommunityStakersGateBondCurve);
             accounting.revokeRole(

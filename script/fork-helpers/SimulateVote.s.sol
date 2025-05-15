@@ -85,16 +85,13 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
             deploymentConfigContent
         );
         DeployParams memory deployParams = parseDeployParams(env.DEPLOY_CONFIG);
-        uint256[2][][] memory bondCurves = new uint256[2][][](2);
-        bondCurves[0] = deployParams.bondCurve;
-        bondCurves[1] = deployParams.identifiedCommunityStakersGateBondCurve;
 
-        ICSBondCurve.BondCurveIntervalInput[][] memory bondCurveIntervals = new ICSBondCurve
+        ICSBondCurve.BondCurveIntervalInput[][] memory bondCurves = new ICSBondCurve
             .BondCurveIntervalInput[][](2);
-        bondCurveIntervals[0] = CommonScriptUtils.arraysToBondCurveIntervalsInputs(
+        bondCurves[0] = CommonScriptUtils.arraysToBondCurveIntervalsInputs(
             deployParams.bondCurve
         );
-        bondCurveIntervals[1] = CommonScriptUtils.arraysToBondCurveIntervalsInputs(
+        bondCurves[1] = CommonScriptUtils.arraysToBondCurveIntervalsInputs(
             deployParams.identifiedCommunityStakersGateBondCurve
         );
 
@@ -109,7 +106,6 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
             CSModule(deploymentConfig.csm).finalizeUpgradeV2();
         }
         vm.stopBroadcast();
-
         OssifiableProxy accountingProxy = OssifiableProxy(
             payable(deploymentConfig.accounting)
         );
