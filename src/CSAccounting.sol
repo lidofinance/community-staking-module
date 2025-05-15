@@ -113,7 +113,8 @@ contract CSAccounting is
     ) external reinitializer(2) {
         assembly ("memory-safe") {
             sstore(_feeDistributorOld.slot, 0x00)
-            
+        }
+
         /// NOTE: This method is not for adding new bond curves, but for migration of the existing ones to the new format (`BondCurve` to `BondCurveInterval[]`). However, bond values can be different from the current.
         if (bondCurves.length != _getLegacyBondCurvesLength()) {
             revert InvalidBondCurvesLength();
