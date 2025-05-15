@@ -178,11 +178,12 @@ interface ICSModule is
         view
         returns (ICSParametersRegistry);
 
+    function ACCOUNTING() external view returns (ICSAccounting);
+
+    function EXIT_PENALTIES() external view returns (ICSExitPenalties);
+
     /// @notice Returns the address of the accounting contract
     function accounting() external view returns (ICSAccounting);
-
-    /// @notice Returns the address of the ExitPenalties contract
-    function exitPenalties() external view returns (ICSExitPenalties);
 
     /// @notice Pause creation of the Node Operators and keys upload for `duration` seconds.
     ///         Existing NO management and reward claims are still available.

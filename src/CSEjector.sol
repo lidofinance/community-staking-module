@@ -25,22 +25,25 @@ contract CSEjector is
     uint256 public immutable STAKING_MODULE_ID;
     ICSModule public immutable MODULE;
     IValidatorsExitBus public immutable VEB;
-
-    address public strikes;
+    address public immutable STRIKES;
 
     modifier onlyStrikes() {
-        if (msg.sender != strikes) {
+        if (msg.sender != STRIKES) {
             revert SenderIsNotStrikes();
         }
 
         _;
     }
 
-    constructor(address module, uint256 stakingModuleId) {
+    constructor(address module, address strikes, uint256 stakingModuleId) {
         if (module == address(0)) {
             revert ZeroModuleAddress();
         }
+        if (strikes == address(0)) {
+            revert ZeroStrikesAddress();
+        }
 
+        STRIKES = strikes;
         MODULE = ICSModule(module);
         VEB = IValidatorsExitBus(
             MODULE.LIDO_LOCATOR().validatorsExitBusOracle()
@@ -49,14 +52,10 @@ contract CSEjector is
     }
 
     /// @notice initialize the contract from scratch
-    function initialize(address admin, address _strikes) external initializer {
+    function initialize(address admin) external initializer {
         if (admin == address(0)) {
             revert ZeroAdminAddress();
         }
-        if (_strikes == address(0)) {
-            revert ZeroStrikesAddress();
-        }
-        strikes = _strikes;
 
         __AccessControlEnumerable_init();
 

@@ -26,6 +26,7 @@ import { ICSParametersRegistry } from "../src/interfaces/ICSParametersRegistry.s
 import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 
 import { JsonObj, Json } from "./utils/Json.sol";
+import { Dummy } from "./utils/Dummy.sol";
 import { CommonScriptUtils } from "./utils/Common.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
@@ -192,31 +193,15 @@ abstract contract DeployBase is Script {
                 _deployProxy(config.proxyAdmin, address(parametersRegistryImpl))
             );
 
-            CSModule csmImpl = new CSModule({
-                moduleType: config.moduleType,
-                lidoLocator: config.lidoLocatorAddress,
-                parametersRegistry: address(parametersRegistry)
-            });
-            csm = CSModule(_deployProxy(config.proxyAdmin, address(csmImpl)));
+            Dummy dummyImpl = new Dummy();
 
-            CSAccounting accountingImpl = new CSAccounting({
-                lidoLocator: config.lidoLocatorAddress,
-                module: address(csm),
-                maxCurveLength: config.maxCurveLength,
-                minBondLockPeriod: config.minBondLockPeriod,
-                maxBondLockPeriod: config.maxBondLockPeriod
-            });
+            csm = CSModule(_deployProxy(deployer, address(dummyImpl)));
+
             accounting = CSAccounting(
-                _deployProxy(config.proxyAdmin, address(accountingImpl))
+                _deployProxy(deployer, address(dummyImpl))
             );
 
-            CSFeeOracle oracleImpl = new CSFeeOracle({
-                secondsPerSlot: config.secondsPerSlot,
-                genesisTime: config.clGenesisTime
-            });
-            oracle = CSFeeOracle(
-                _deployProxy(config.proxyAdmin, address(oracleImpl))
-            );
+            oracle = CSFeeOracle(_deployProxy(deployer, address(dummyImpl)));
 
             CSFeeDistributor feeDistributorImpl = new CSFeeDistributor({
                 stETH: locator.lido(),
@@ -272,10 +257,26 @@ abstract contract DeployBase is Script {
                 })
             });
 
+            CSAccounting accountingImpl = new CSAccounting({
+                lidoLocator: config.lidoLocatorAddress,
+                module: address(csm),
+                _feeDistributor: address(feeDistributor),
+                maxCurveLength: config.maxCurveLength,
+                minBondLockPeriod: config.minBondLockPeriod,
+                maxBondLockPeriod: config.maxBondLockPeriod
+            });
+
+            {
+                OssifiableProxy accountingProxy = OssifiableProxy(
+                    payable(address(accounting))
+                );
+                accountingProxy.proxy__upgradeTo(address(accountingImpl));
+                accountingProxy.proxy__changeAdmin(config.proxyAdmin);
+            }
+
             accounting.initialize({
                 bondCurve: config.bondCurve,
                 admin: deployer,
-                _feeDistributor: address(feeDistributor),
                 bondLockPeriod: config.bondLockPeriod,
                 _chargePenaltyRecipient: config.chargePenaltyRecipient
             });
@@ -292,23 +293,27 @@ abstract contract DeployBase is Script {
                 address(deployer)
             );
 
-            CSExitPenalties exitPenaltiesImpl = new CSExitPenalties(
-                address(csm),
-                address(parametersRegistry),
-                address(accounting)
-            );
-
             exitPenalties = CSExitPenalties(
-                _deployProxy(config.proxyAdmin, address(exitPenaltiesImpl))
+                _deployProxy(deployer, address(dummyImpl))
             );
 
-            ejector = new CSEjector(address(csm), config.stakingModuleId);
-
-            csm.initialize({
+            CSModule csmImpl = new CSModule({
+                moduleType: config.moduleType,
+                lidoLocator: config.lidoLocatorAddress,
+                parametersRegistry: address(parametersRegistry),
                 _accounting: address(accounting),
-                _exitPenalties: address(exitPenalties),
-                admin: deployer
+                exitPenalties: address(exitPenalties)
             });
+
+            {
+                OssifiableProxy csmProxy = OssifiableProxy(
+                    payable(address(csm))
+                );
+                csmProxy.proxy__upgradeTo(address(csmImpl));
+                csmProxy.proxy__changeAdmin(config.proxyAdmin);
+            }
+
+            csm.initialize({ admin: deployer });
 
             CSStrikes strikesImpl = new CSStrikes({
                 module: address(csm),
@@ -320,8 +325,27 @@ abstract contract DeployBase is Script {
                 _deployProxy(config.proxyAdmin, address(strikesImpl))
             );
 
-            exitPenalties.initialize(address(strikes));
-            ejector.initialize(deployer, address(strikes));
+            CSExitPenalties exitPenaltiesImpl = new CSExitPenalties(
+                address(csm),
+                address(parametersRegistry),
+                address(strikes)
+            );
+
+            {
+                OssifiableProxy exitPenaltiesProxy = OssifiableProxy(
+                    payable(address(exitPenalties))
+                );
+                exitPenaltiesProxy.proxy__upgradeTo(address(exitPenaltiesImpl));
+                exitPenaltiesProxy.proxy__changeAdmin(config.proxyAdmin);
+            }
+
+            ejector = new CSEjector(
+                address(csm),
+                address(strikes),
+                config.stakingModuleId
+            );
+
+            ejector.initialize(deployer);
             strikes.initialize(deployer, address(ejector));
 
             permissionlessGate = new PermissionlessGate(address(csm));
@@ -433,10 +457,23 @@ abstract contract DeployBase is Script {
                 address(deployer)
             );
 
+            CSFeeOracle oracleImpl = new CSFeeOracle({
+                feeDistributor: address(feeDistributor),
+                strikes: address(strikes),
+                secondsPerSlot: config.secondsPerSlot,
+                genesisTime: config.clGenesisTime
+            });
+
+            {
+                OssifiableProxy oracleProxy = OssifiableProxy(
+                    payable(address(oracle))
+                );
+                oracleProxy.proxy__upgradeTo(address(oracleImpl));
+                oracleProxy.proxy__changeAdmin(config.proxyAdmin);
+            }
+
             oracle.initialize({
                 admin: address(deployer),
-                feeDistributorContract: address(feeDistributor),
-                strikesContract: address(strikes),
                 consensusContract: address(hashConsensus),
                 consensusVersion: config.consensusVersion
             });

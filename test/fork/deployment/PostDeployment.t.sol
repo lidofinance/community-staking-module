@@ -53,8 +53,6 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
     }
 
     function test_state_onlyFull() public view {
-        assertEq(address(csm.accounting()), address(accounting));
-        assertEq(address(csm.exitPenalties()), address(exitPenalties));
         assertEq(csm.getInitializedVersion(), 2);
     }
 
@@ -77,6 +75,8 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
             csmImpl.QUEUE_LEGACY_PRIORITY(),
             deployParams.queueLowestPriority - 1
         );
+        assertEq(address(csmImpl.ACCOUNTING()), address(accounting));
+        assertEq(address(csmImpl.EXIT_PENALTIES()), address(exitPenalties));
     }
 
     function test_roles_onlyFull() public view {
@@ -142,11 +142,7 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
 
     function test_proxy_onlyFull() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        csm.initialize({
-            _accounting: address(accounting),
-            _exitPenalties: address(exitPenalties),
-            admin: deployParams.aragonAgent
-        });
+        csm.initialize({ admin: deployParams.aragonAgent });
 
         OssifiableProxy proxy = OssifiableProxy(payable(address(csm)));
 
@@ -156,11 +152,7 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
 
         CSModule csmImpl = CSModule(proxy.proxy__getImplementation());
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        csmImpl.initialize({
-            _accounting: address(accounting),
-            _exitPenalties: address(exitPenalties),
-            admin: deployParams.aragonAgent
-        });
+        csmImpl.initialize({ admin: deployParams.aragonAgent });
     }
 }
 
@@ -264,6 +256,10 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             accountingImpl.MAX_CURVE_LENGTH(),
             deployParams.maxCurveLength
         );
+        assertEq(
+            address(accountingImpl.FEE_DISTRIBUTOR()),
+            address(feeDistributor)
+        );
     }
 
     function test_roles_onlyFull() public view {
@@ -320,7 +316,6 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
         accounting.initialize({
             bondCurve: deployParams.bondCurve,
             admin: address(deployParams.aragonAgent),
-            _feeDistributor: address(feeDistributor),
             bondLockPeriod: deployParams.bondLockPeriod,
             _chargePenaltyRecipient: address(0)
         });
@@ -338,7 +333,6 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
         accountingImpl.initialize({
             bondCurve: deployParams.bondCurve,
             admin: address(deployParams.aragonAgent),
-            _feeDistributor: address(feeDistributor),
             bondLockPeriod: deployParams.bondLockPeriod,
             _chargePenaltyRecipient: address(0)
         });
@@ -430,8 +424,6 @@ contract CSFeeOracleDeploymentTest is DeploymentBaseTest {
 
     function test_state_onlyFull() public view {
         assertFalse(oracle.isPaused());
-        assertEq(address(oracle.feeDistributor()), address(feeDistributor));
-        assertEq(address(oracle.strikes()), address(strikes));
         assertEq(oracle.getContractVersion(), 2);
         assertEq(oracle.getConsensusContract(), address(hashConsensus));
         assertEq(oracle.getConsensusVersion(), deployParams.consensusVersion);
@@ -440,6 +432,11 @@ contract CSFeeOracleDeploymentTest is DeploymentBaseTest {
     function test_immutables() public view {
         assertEq(oracleImpl.SECONDS_PER_SLOT(), deployParams.secondsPerSlot);
         assertEq(oracleImpl.GENESIS_TIME(), deployParams.clGenesisTime);
+        assertEq(
+            address(oracleImpl.FEE_DISTRIBUTOR()),
+            address(feeDistributor)
+        );
+        assertEq(address(oracleImpl.STRIKES()), address(strikes));
     }
 
     function test_roles_onlyFull() public view {
@@ -478,8 +475,6 @@ contract CSFeeOracleDeploymentTest is DeploymentBaseTest {
         vm.expectRevert(Versioned.NonZeroContractVersionOnInit.selector);
         oracle.initialize({
             admin: address(deployParams.aragonAgent),
-            feeDistributorContract: address(feeDistributor),
-            strikesContract: address(strikes),
             consensusContract: address(hashConsensus),
             consensusVersion: deployParams.consensusVersion
         });
@@ -494,8 +489,6 @@ contract CSFeeOracleDeploymentTest is DeploymentBaseTest {
         vm.expectRevert(Versioned.NonZeroContractVersionOnInit.selector);
         oracleImpl.initialize({
             admin: address(deployParams.aragonAgent),
-            feeDistributorContract: address(feeDistributor),
-            strikesContract: address(strikes),
             consensusContract: address(hashConsensus),
             consensusVersion: deployParams.consensusVersion
         });
@@ -1105,13 +1098,13 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
 contract CSEjectorDeploymentTest is DeploymentBaseTest {
     function test_state() public view {
         assertFalse(ejector.isPaused());
-        assertEq(address(ejector.strikes()), address(strikes));
     }
 
     function test_immutables() public view {
         assertEq(address(ejector.MODULE()), address(csm));
         assertEq(address(ejector.VEB()), locator.validatorsExitBusOracle());
         assertEq(ejector.STAKING_MODULE_ID(), deployParams.stakingModuleId);
+        assertEq(address(ejector.STRIKES()), address(strikes));
     }
 
     function test_roles() public view {
@@ -1132,11 +1125,6 @@ contract CSEjectorDeploymentTest is DeploymentBaseTest {
 }
 
 contract CSExitPenaltiesDeploymentTest is DeploymentBaseTest {
-    function test_state() public view {
-        assertEq(address(exitPenalties.strikes()), address(strikes));
-        assertEq(exitPenalties.getInitializedVersion(), 1);
-    }
-
     function test_immutables() public view {
         assertEq(address(exitPenaltiesImpl.MODULE()), address(csm));
         assertEq(
@@ -1144,12 +1132,10 @@ contract CSExitPenaltiesDeploymentTest is DeploymentBaseTest {
             address(parametersRegistry)
         );
         assertEq(address(exitPenaltiesImpl.ACCOUNTING()), address(accounting));
+        assertEq(address(exitPenaltiesImpl.STRIKES()), address(strikes));
     }
 
-    function test_proxy() public {
-        vm.expectRevert(Initializable.InvalidInitialization.selector);
-        exitPenalties.initialize({ _strikes: address(strikes) });
-
+    function test_proxy() public view {
         OssifiableProxy proxy = OssifiableProxy(
             payable(address(exitPenalties))
         );
@@ -1157,12 +1143,6 @@ contract CSExitPenaltiesDeploymentTest is DeploymentBaseTest {
         assertEq(proxy.proxy__getImplementation(), address(exitPenaltiesImpl));
         assertEq(proxy.proxy__getAdmin(), address(deployParams.proxyAdmin));
         assertFalse(proxy.proxy__getIsOssified());
-
-        CSExitPenalties exitPenaltiesImpl = CSExitPenalties(
-            proxy.proxy__getImplementation()
-        );
-        vm.expectRevert(Initializable.InvalidInitialization.selector);
-        exitPenaltiesImpl.initialize({ _strikes: address(strikes) });
     }
 }
 

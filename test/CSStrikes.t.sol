@@ -66,13 +66,13 @@ contract CSStrikesTestBase is Test, Fixtures, Utilities, InvariantAsserts {
         ICSStrikes.ModuleKeyStrikes[] calldata keyStrikesList,
         bytes32[] calldata proof,
         bool[] calldata proofFlags,
-        address refundRecipient
+        address _refundRecipient
     ) external {
         strikes.processBadPerformanceProof(
             keyStrikesList,
             proof,
             proofFlags,
-            refundRecipient
+            _refundRecipient
         );
     }
 }
@@ -83,7 +83,7 @@ contract CSStrikesConstructorTest is CSStrikesTestBase {
         admin = nextAddress("ADMIN");
         oracle = nextAddress("ORACLE");
         module = new CSMMock();
-        exitPenalties = address(new ExitPenaltiesMock(address(module)));
+        exitPenalties = address(new ExitPenaltiesMock());
         ejector = address(new EjectorMock(address(module)));
     }
 
@@ -119,6 +119,7 @@ contract CSStrikesConstructorTest is CSStrikesTestBase {
 
         assertEq(address(strikes.ejector()), ejector);
         assertTrue(strikes.hasRole(strikes.DEFAULT_ADMIN_ROLE(), admin));
+        assertEq(strikes.getInitializedVersion(), 1);
     }
 
     function test_initialize_RevertWhen_ZeroAdminAddress() public {
@@ -145,7 +146,7 @@ contract CSStrikesTest is CSStrikesTestBase {
         refundRecipient = nextAddress("REFUND_RECIPIENT");
         oracle = nextAddress("ORACLE");
         module = new CSMMock();
-        exitPenalties = address(new ExitPenaltiesMock(address(module)));
+        exitPenalties = address(new ExitPenaltiesMock());
         ejector = address(new EjectorMock(address(module)));
 
         strikes = new CSStrikes(address(module), oracle, exitPenalties);
@@ -330,7 +331,7 @@ contract CSStrikesProofTest is CSStrikesTestBase {
         refundRecipient = nextAddress("REFUND_RECIPIENT");
         oracle = nextAddress("ORACLE");
         module = new CSMMock();
-        exitPenalties = address(new ExitPenaltiesMock(address(module)));
+        exitPenalties = address(new ExitPenaltiesMock());
         ejector = address(new EjectorMock(address(module)));
 
         strikes = new CSStrikes(address(module), oracle, exitPenalties);
@@ -368,7 +369,7 @@ contract CSStrikesProofTest is CSStrikesTestBase {
         _;
     }
 
-    function test_hashLeaf() public {
+    function test_hashLeaf() public view {
         (bytes memory pubkey, ) = keysSignatures(1);
         assertEq(
             this.hashLeaf(
@@ -778,7 +779,7 @@ contract CSStrikesProofTest is CSStrikesTestBase {
 library DeepCopy {
     function copy(
         ICSStrikes.ModuleKeyStrikes[] memory arr
-    ) internal returns (ICSStrikes.ModuleKeyStrikes[] memory buf) {
+    ) internal pure returns (ICSStrikes.ModuleKeyStrikes[] memory buf) {
         buf = new ICSStrikes.ModuleKeyStrikes[](arr.length);
         for (uint256 i; i < buf.length; ++i) {
             buf[i] = ICSStrikes.ModuleKeyStrikes({
@@ -791,7 +792,7 @@ library DeepCopy {
 
     function copy(
         bytes32[] memory arr
-    ) internal returns (bytes32[] memory buf) {
+    ) internal pure returns (bytes32[] memory buf) {
         buf = new bytes32[](arr.length);
         for (uint256 i; i < buf.length; ++i) {
             buf[i] = arr[i];
@@ -800,7 +801,7 @@ library DeepCopy {
 
     function copy(
         uint256[] memory arr
-    ) internal returns (uint256[] memory buf) {
+    ) internal pure returns (uint256[] memory buf) {
         buf = new uint256[](arr.length);
         for (uint256 i; i < buf.length; ++i) {
             buf[i] = arr[i];

@@ -238,22 +238,6 @@ contract VoteChangesTest is V2UpgradeTestBase {
         assertFalse(oracle.hasRole(oracle.PAUSE_ROLE(), gateSealBefore));
         assertTrue(oracle.hasRole(oracle.PAUSE_ROLE(), address(gateSeal)));
 
-        assertEq(address(oracle.strikes()), address(strikes));
-        // strikes address is in the retyped 2nd slot
-        bytes32 strikesSlotValue = vm.load(
-            address(oracle),
-            bytes32(uint256(1))
-        );
-        address strikesSlotAddress = address(
-            uint160(uint256(strikesSlotValue))
-        );
-        bytes12 strikesSlotTail = bytes12(
-            uint96(uint256(strikesSlotValue) >> 160)
-        );
-
-        assertEq(strikesSlotAddress, address(strikes));
-        assertEq(strikesSlotTail, bytes12(0));
-
         assertEq(oracle.getContractVersion(), 2);
         assertEq(oracle.getConsensusVersion(), 3);
 
@@ -261,15 +245,5 @@ contract VoteChangesTest is V2UpgradeTestBase {
             oracle.getRoleMemberCount(keccak256("CONTRACT_MANAGER_ROLE")),
             0
         );
-    }
-
-    function test_feeOracleState() public {
-        vm.selectFork(forkIdBeforeUpgrade);
-        address feeDistributorBefore = address(oracle.feeDistributor());
-
-        vm.selectFork(forkIdAfterUpgrade);
-        address feeDistributorAfter = address(oracle.feeDistributor());
-
-        assertEq(feeDistributorBefore, feeDistributorAfter);
     }
 }

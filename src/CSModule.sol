@@ -58,6 +58,8 @@ contract CSModule is
     ILidoLocator public immutable LIDO_LOCATOR;
     IStETH public immutable STETH;
     ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
+    ICSAccounting public immutable ACCOUNTING;
+    ICSExitPenalties public immutable EXIT_PENALTIES;
 
     /// @dev QUEUE_LOWEST_PRIORITY identifies the range of available priorities: [0; QUEUE_LOWEST_PRIORITY].
     uint256 public immutable QUEUE_LOWEST_PRIORITY;
@@ -77,10 +79,12 @@ contract CSModule is
     /// @custom:oz-renamed-from depositQueue
     QueueLib.Queue public legacyQueue;
 
-    ICSAccounting public accounting;
+    /// @dev Unused
+    ICSAccounting internal _accountingOld;
 
+    /// @dev Unused
     /// @custom:oz-renamed-from earlyAdoption
-    ICSExitPenalties public exitPenalties;
+    address internal _earlyAdoption;
     /// @dev deprecated. Nullified in the finalizeUpgradeV2
     /// @custom:oz-renamed-from publicRelease
     bool internal _publicRelease;
@@ -100,7 +104,9 @@ contract CSModule is
     constructor(
         bytes32 moduleType,
         address lidoLocator,
-        address parametersRegistry
+        address parametersRegistry,
+        address _accounting,
+        address exitPenalties
     ) {
         if (lidoLocator == address(0)) {
             revert ZeroLocatorAddress();
@@ -110,37 +116,33 @@ contract CSModule is
             revert ZeroParametersRegistryAddress();
         }
 
+        if (_accounting == address(0)) {
+            revert ZeroAccountingAddress();
+        }
+
+        if (exitPenalties == address(0)) {
+            revert ZeroExitPenaltiesAddress();
+        }
+
         MODULE_TYPE = moduleType;
         LIDO_LOCATOR = ILidoLocator(lidoLocator);
         STETH = IStETH(LIDO_LOCATOR.lido());
         PARAMETERS_REGISTRY = ICSParametersRegistry(parametersRegistry);
         QUEUE_LOWEST_PRIORITY = PARAMETERS_REGISTRY.QUEUE_LOWEST_PRIORITY();
         QUEUE_LEGACY_PRIORITY = PARAMETERS_REGISTRY.QUEUE_LEGACY_PRIORITY();
+        ACCOUNTING = ICSAccounting(_accounting);
+        EXIT_PENALTIES = ICSExitPenalties(exitPenalties);
 
         _disableInitializers();
     }
 
     /// @notice initialize the module from scratch
-    function initialize(
-        address _accounting,
-        address _exitPenalties,
-        address admin
-    ) external reinitializer(2) {
-        if (_accounting == address(0)) {
-            revert ZeroAccountingAddress();
-        }
-        if (_exitPenalties == address(0)) {
-            revert ZeroExitPenaltiesAddress();
-        }
-
+    function initialize(address admin) external reinitializer(2) {
         if (admin == address(0)) {
             revert ZeroAdminAddress();
         }
 
         __AccessControlEnumerable_init();
-
-        accounting = ICSAccounting(_accounting);
-        exitPenalties = ICSExitPenalties(_exitPenalties);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(STAKING_ROUTER_ROLE, address(LIDO_LOCATOR.stakingRouter()));
@@ -150,18 +152,12 @@ contract CSModule is
     }
 
     /// @dev should be called after update on the proxy
-    function finalizeUpgradeV2(
-        address _exitPenalties
-    ) external reinitializer(2) {
+    function finalizeUpgradeV2() external reinitializer(2) {
         assembly ("memory-safe") {
             sstore(_queueByPriority.slot, 0x00)
-            sstore(exitPenalties.slot, 0x00)
+            sstore(_earlyAdoption.slot, 0x00)
+            sstore(_accountingOld.slot, 0x00)
         }
-
-        if (_exitPenalties == address(0)) {
-            revert ZeroExitPenaltiesAddress();
-        }
-        exitPenalties = ICSExitPenalties(_exitPenalties);
     }
 
     /// @inheritdoc ICSModule
@@ -237,13 +233,13 @@ contract CSModule is
 
         if (
             msg.value <
-            accounting.getRequiredBondForNextKeys(nodeOperatorId, keysCount)
+            accounting().getRequiredBondForNextKeys(nodeOperatorId, keysCount)
         ) {
             revert InvalidAmount();
         }
 
         if (msg.value != 0) {
-            accounting.depositETH{ value: msg.value }(from, nodeOperatorId);
+            accounting().depositETH{ value: msg.value }(from, nodeOperatorId);
         }
 
         _addKeysAndUpdateDepositableValidatorsCount(
@@ -265,13 +261,13 @@ contract CSModule is
     ) external whenResumed {
         _checkCanAddKeys(nodeOperatorId, from);
 
-        uint256 amount = accounting.getRequiredBondForNextKeys(
+        uint256 amount = accounting().getRequiredBondForNextKeys(
             nodeOperatorId,
             keysCount
         );
 
         if (amount != 0) {
-            accounting.depositStETH(from, nodeOperatorId, amount, permit);
+            accounting().depositStETH(from, nodeOperatorId, amount, permit);
         }
 
         _addKeysAndUpdateDepositableValidatorsCount(
@@ -293,13 +289,13 @@ contract CSModule is
     ) external whenResumed {
         _checkCanAddKeys(nodeOperatorId, from);
 
-        uint256 amount = accounting.getRequiredBondForNextKeysWstETH(
+        uint256 amount = accounting().getRequiredBondForNextKeysWstETH(
             nodeOperatorId,
             keysCount
         );
 
         if (amount != 0) {
-            accounting.depositWstETH(from, nodeOperatorId, amount, permit);
+            accounting().depositWstETH(from, nodeOperatorId, amount, permit);
         }
 
         _addKeysAndUpdateDepositableValidatorsCount(
@@ -379,7 +375,10 @@ contract CSModule is
     function onRewardsMinted(
         uint256 totalShares
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        STETH.transferShares(address(accounting.feeDistributor()), totalShares);
+        STETH.transferShares(
+            address(accounting().feeDistributor()),
+            totalShares
+        );
     }
 
     /// @inheritdoc IStakingModule
@@ -556,12 +555,12 @@ contract CSModule is
         // The Node Operator is charged for the every removed key. It's motivated by the fact that the DAO should cleanup
         // the queue from the empty batches related to the Node Operator. It's possible to have multiple batches with only one
         // key in it, so it means the DAO should be able to cover removal costs for as much batches as keys removed in this case.
-        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
+        uint256 curveId = accounting().getBondCurveId(nodeOperatorId);
         uint256 amountToCharge = PARAMETERS_REGISTRY.getKeyRemovalCharge(
             curveId
         ) * keysCount;
         if (amountToCharge != 0) {
-            accounting.chargeFee(nodeOperatorId, amountToCharge);
+            accounting().chargeFee(nodeOperatorId, amountToCharge);
             emit KeyRemovalChargeApplied(nodeOperatorId);
         }
 
@@ -598,7 +597,7 @@ contract CSModule is
             revert PriorityQueueAlreadyUsed();
         }
 
-        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
+        uint256 curveId = accounting().getBondCurveId(nodeOperatorId);
         (uint32 priority, uint32 maxDeposits) = PARAMETERS_REGISTRY
             .getQueueConfig(curveId);
 
@@ -644,10 +643,10 @@ contract CSModule is
         if (amount == 0) {
             revert InvalidAmount();
         }
-        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
+        uint256 curveId = accounting().getBondCurveId(nodeOperatorId);
         uint256 additionalFine = PARAMETERS_REGISTRY
             .getElRewardsStealingAdditionalFine(curveId);
-        accounting.lockBondETH(nodeOperatorId, amount + additionalFine);
+        accounting().lockBondETH(nodeOperatorId, amount + additionalFine);
 
         emit ELRewardsStealingPenaltyReported(
             nodeOperatorId,
@@ -668,7 +667,7 @@ contract CSModule is
         uint256 amount
     ) external onlyRole(REPORT_EL_REWARDS_STEALING_PENALTY_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
-        accounting.releaseLockedBondETH(nodeOperatorId, amount);
+        accounting().releaseLockedBondETH(nodeOperatorId, amount);
 
         emit ELRewardsStealingPenaltyCancelled(nodeOperatorId, amount);
 
@@ -683,13 +682,13 @@ contract CSModule is
     function settleELRewardsStealingPenalty(
         uint256[] calldata nodeOperatorIds
     ) external onlyRole(SETTLE_EL_REWARDS_STEALING_PENALTY_ROLE) {
-        ICSAccounting _accounting = accounting;
         for (uint256 i; i < nodeOperatorIds.length; ++i) {
             uint256 nodeOperatorId = nodeOperatorIds[i];
             _onlyExistingNodeOperator(nodeOperatorId);
+
             // Settled amount might be zero either if the lock expired, or the bond is zero so we
             // need to check if the penalty was applied.
-            bool applied = _accounting.settleLockedBondETH(nodeOperatorId);
+            bool applied = accounting().settleLockedBondETH(nodeOperatorId);
             if (applied) {
                 emit ELRewardsStealingPenaltySettled(nodeOperatorId);
 
@@ -707,7 +706,9 @@ contract CSModule is
         uint256 nodeOperatorId
     ) external payable {
         _onlyNodeOperatorManager(nodeOperatorId, msg.sender);
-        accounting.compensateLockedBondETH{ value: msg.value }(nodeOperatorId);
+        accounting().compensateLockedBondETH{ value: msg.value }(
+            nodeOperatorId
+        );
 
         emit ELRewardsStealingPenaltyCompensated(nodeOperatorId, msg.value);
 
@@ -765,7 +766,7 @@ contract CSModule is
             uint256 penaltySum;
             bool chargeWithdrawalRequestFee;
 
-            ExitPenaltyInfo memory exitPenaltyInfo = exitPenalties
+            ExitPenaltyInfo memory exitPenaltyInfo = EXIT_PENALTIES
                 .getExitPenaltyInfo(withdrawalInfo.nodeOperatorId, pubkey);
             if (exitPenaltyInfo.delayPenalty.isValue) {
                 unchecked {
@@ -787,7 +788,7 @@ contract CSModule is
                 chargeWithdrawalRequestFee &&
                 exitPenaltyInfo.withdrawalRequestFee.value != 0
             ) {
-                accounting.chargeFee(
+                accounting().chargeFee(
                     withdrawalInfo.nodeOperatorId,
                     exitPenaltyInfo.withdrawalRequestFee.value
                 );
@@ -799,7 +800,10 @@ contract CSModule is
                 }
             }
             if (penaltySum > 0) {
-                accounting.penalize(withdrawalInfo.nodeOperatorId, penaltySum);
+                accounting().penalize(
+                    withdrawalInfo.nodeOperatorId,
+                    penaltySum
+                );
             }
 
             // Nonce should be updated if depositableValidators change
@@ -832,7 +836,7 @@ contract CSModule is
         uint256 eligibleToExitInSec
     ) external onlyRole(STAKING_ROUTER_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
-        exitPenalties.processExitDelayReport(
+        EXIT_PENALTIES.processExitDelayReport(
             nodeOperatorId,
             publicKey,
             eligibleToExitInSec
@@ -847,7 +851,7 @@ contract CSModule is
         uint256 exitType
     ) external onlyRole(STAKING_ROUTER_ROLE) {
         _onlyExistingNodeOperator(nodeOperatorId);
-        exitPenalties.processTriggeredExit(
+        EXIT_PENALTIES.processTriggeredExit(
             nodeOperatorId,
             publicKey,
             withdrawalRequestPaidFee,
@@ -1148,7 +1152,7 @@ contract CSModule is
         )
     {
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
-        uint256 totalUnbondedKeys = accounting.getUnbondedKeysCountToEject(
+        uint256 totalUnbondedKeys = accounting().getUnbondedKeysCountToEject(
             nodeOperatorId
         );
         uint256 totalNonDepositedKeys = no.totalAddedKeys -
@@ -1268,6 +1272,7 @@ contract CSModule is
         }
     }
 
+    /// TODO: Cover with tests
     /// @inheritdoc IStakingModule
     function isValidatorExitDelayPenaltyApplicable(
         uint256 nodeOperatorId,
@@ -1277,7 +1282,7 @@ contract CSModule is
     ) external view returns (bool) {
         _onlyExistingNodeOperator(nodeOperatorId);
         return
-            exitPenalties.isValidatorExitDelayPenaltyApplicable(
+            EXIT_PENALTIES.isValidatorExitDelayPenaltyApplicable(
                 nodeOperatorId,
                 publicKey,
                 eligibleToExitInSec
@@ -1291,7 +1296,7 @@ contract CSModule is
         _onlyExistingNodeOperator(nodeOperatorId);
         return
             PARAMETERS_REGISTRY.getAllowedExitDelay(
-                accounting.getBondCurveId(nodeOperatorId)
+                accounting().getBondCurveId(nodeOperatorId)
             );
     }
 
@@ -1310,7 +1315,7 @@ contract CSModule is
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
         uint256 totalAddedKeys = no.totalAddedKeys;
 
-        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
+        uint256 curveId = accounting().getBondCurveId(nodeOperatorId);
         uint256 keysLimit = PARAMETERS_REGISTRY.getKeysLimit(curveId);
 
         unchecked {
@@ -1397,7 +1402,9 @@ contract CSModule is
 
         uint32 totalDepositedKeys = no.totalDepositedKeys;
         uint256 newCount = no.totalVettedKeys - totalDepositedKeys;
-        uint256 unbondedKeys = accounting.getUnbondedKeysCount(nodeOperatorId);
+        uint256 unbondedKeys = accounting().getUnbondedKeysCount(
+            nodeOperatorId
+        );
 
         {
             uint256 nonDeposited = no.totalAddedKeys - totalDepositedKeys;
@@ -1441,7 +1448,7 @@ contract CSModule is
     }
 
     function _enqueueNodeOperatorKeys(uint256 nodeOperatorId) internal {
-        uint256 curveId = accounting.getBondCurveId(nodeOperatorId);
+        uint256 curveId = accounting().getBondCurveId(nodeOperatorId);
         (uint32 priority, uint32 maxDeposits) = PARAMETERS_REGISTRY
             .getQueueConfig(curveId);
         // TODO Replace QUEUE_LEGACY_PRIORITY with QUEUE_LOWEST_PRIORITY after legacy queue removal in CSM v3
@@ -1578,6 +1585,11 @@ contract CSModule is
 
     function _onlyRecoverer() internal view override {
         _checkRole(RECOVERER_ROLE);
+    }
+
+    /// @dev This function is used to get the accounting contract from immutables to save bytecode and for backwards compatibility
+    function accounting() public view returns (ICSAccounting) {
+        return ACCOUNTING;
     }
 
     /// @dev Both nodeOperatorId and keyIndex are limited to uint64 by the contract

@@ -109,7 +109,7 @@ contract VettedGateTest is VettedGateTestBase {
         assertEq(address(vettedGate.MODULE()), csm);
         assertEq(
             address(vettedGate.ACCOUNTING()),
-            address(ICSModule(csm).accounting())
+            address(ICSModule(csm).ACCOUNTING())
         );
     }
 

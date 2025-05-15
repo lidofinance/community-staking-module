@@ -7,11 +7,10 @@ import "../../../src/interfaces/IStETH.sol";
 contract DistributorMock {
     uint256 internal mockShares;
     IStETH public immutable STETH;
-    address public immutable ACCOUNTING;
+    address public accounting;
 
-    constructor(address stETH, address accounting) {
+    constructor(address stETH) {
         STETH = IStETH(stETH);
-        ACCOUNTING = accounting;
     }
 
     function processOracleReport(
@@ -33,12 +32,16 @@ contract DistributorMock {
         return STETH.sharesOf(address(this));
     }
 
+    function setAccounting(address _accounting) external {
+        accounting = _accounting;
+    }
+
     function distributeFees(
         uint256 /* nodeOperatorId */,
         uint256 shares,
         bytes32[] calldata /* proof */
     ) external returns (uint256) {
-        STETH.transferShares(ACCOUNTING, shares);
+        STETH.transferShares(accounting, shares);
         return shares;
     }
 }

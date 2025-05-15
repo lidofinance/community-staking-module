@@ -35,10 +35,9 @@ contract CSExitPenaltiesTestBase is Test, Utilities, Fixtures {
         exitPenalties = new CSExitPenalties(
             address(csm),
             address(parametersRegistry),
-            address(accounting)
+            address(strikes)
         );
         _enableInitializers(address(exitPenalties));
-        exitPenalties.initialize(address(strikes));
     }
 }
 
@@ -47,7 +46,7 @@ contract CSExitPenaltiesTestMisc is CSExitPenaltiesTestBase {
         exitPenalties = new CSExitPenalties(
             address(csm),
             address(parametersRegistry),
-            address(accounting)
+            address(strikes)
         );
         assertEq(address(exitPenalties.MODULE()), address(csm));
         assertEq(
@@ -55,6 +54,7 @@ contract CSExitPenaltiesTestMisc is CSExitPenaltiesTestBase {
             address(parametersRegistry)
         );
         assertEq(address(exitPenalties.ACCOUNTING()), address(accounting));
+        assertEq(address(exitPenalties.STRIKES()), address(strikes));
     }
 
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
@@ -62,7 +62,7 @@ contract CSExitPenaltiesTestMisc is CSExitPenaltiesTestBase {
         new CSExitPenalties(
             address(0),
             address(parametersRegistry),
-            address(accounting)
+            address(strikes)
         );
     }
 
@@ -72,39 +72,16 @@ contract CSExitPenaltiesTestMisc is CSExitPenaltiesTestBase {
         vm.expectRevert(
             ICSExitPenalties.ZeroParametersRegistryAddress.selector
         );
-        new CSExitPenalties(address(csm), address(0), address(accounting));
+        new CSExitPenalties(address(csm), address(0), address(strikes));
     }
 
-    function test_constructor_RevertWhen_ZeroAccountingAddress() public {
-        vm.expectRevert(ICSExitPenalties.ZeroAccountingAddress.selector);
+    function test_constructor_RevertWhen_ZeroStrikesAddress() public {
+        vm.expectRevert(ICSExitPenalties.ZeroStrikesAddress.selector);
         new CSExitPenalties(
             address(csm),
             address(parametersRegistry),
             address(0)
         );
-    }
-
-    function test_initializer() public {
-        exitPenalties = new CSExitPenalties(
-            address(csm),
-            address(parametersRegistry),
-            address(accounting)
-        );
-        _enableInitializers(address(exitPenalties));
-
-        exitPenalties.initialize(address(strikes));
-    }
-
-    function test_initializer_RevertWhen_ZeroStrikesAddress() public {
-        exitPenalties = new CSExitPenalties(
-            address(csm),
-            address(parametersRegistry),
-            address(accounting)
-        );
-        _enableInitializers(address(exitPenalties));
-
-        vm.expectRevert(ICSExitPenalties.ZeroStrikesAddress.selector);
-        exitPenalties.initialize(address(0));
     }
 }
 
