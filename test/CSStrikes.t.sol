@@ -119,6 +119,7 @@ contract CSStrikesConstructorTest is CSStrikesTestBase {
 
         assertEq(address(strikes.ejector()), ejector);
         assertTrue(strikes.hasRole(strikes.DEFAULT_ADMIN_ROLE(), admin));
+        assertEq(strikes.getInitializedVersion(), 1);
     }
 
     function test_initialize_RevertWhen_ZeroAdminAddress() public {

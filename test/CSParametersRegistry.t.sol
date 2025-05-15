@@ -162,6 +162,8 @@ contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
             parametersRegistry.defaultAllowedExitDelay(),
             defaultInitData.defaultAllowedExitDelay
         );
+
+        assertEq(parametersRegistry.getInitializedVersion(), 1);
     }
 
     function test_initialize_RevertWhen_ZeroAdminAddress() public {

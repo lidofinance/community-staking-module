@@ -208,6 +208,18 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
         );
     }
 
+    function test_constructor_RevertWhen_ZeroFeeDistributorAddress() public {
+        vm.expectRevert(ICSAccounting.ZeroFeeDistributorAddress.selector);
+        accounting = new CSAccounting(
+            address(locator),
+            address(stakingModule),
+            address(0),
+            10,
+            4 weeks,
+            365 days
+        );
+    }
+
     function test_constructor_RevertWhen_InvalidBondLockPeriod_MinMoreThanMax()
         public
     {
@@ -330,11 +342,23 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     function test_finalizeUpgradeV2() public {
         _enableInitializers(address(accounting));
 
+        // TODO: add a test with non zero bond curves
         uint256[2][][] memory bondCurves = new uint256[2][][](0);
 
         accounting.finalizeUpgradeV2(bondCurves);
 
         assertEq(accounting.getInitializedVersion(), 2);
+    }
+
+    function test_finalizeUpgradeV2_revertWhen_InvalidBondCurvesLength()
+        public
+    {
+        _enableInitializers(address(accounting));
+
+        uint256[2][][] memory bondCurves = new uint256[2][][](1);
+
+        vm.expectRevert(ICSAccounting.InvalidBondCurvesLength.selector);
+        accounting.finalizeUpgradeV2(bondCurves);
     }
 }
 
