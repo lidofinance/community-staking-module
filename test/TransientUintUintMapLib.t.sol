@@ -17,10 +17,7 @@ contract TransientUintUintMapLibTest is Test, Utilities {
         uint256 v,
         uint256 s
     ) public brutalizeMemory {
-        // There's no overflow check in the `add` function.
-        unchecked {
-            vm.assume(v + s > v);
-        }
+        assumeSumDoesNotOverflow(v, s);
 
         uint256 sum = v + s;
         uint256 r;

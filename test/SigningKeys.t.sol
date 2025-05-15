@@ -279,9 +279,7 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
         uint32 keysCount
     ) public {
         keysCount = uint32(bound(keysCount, 1, 100));
-        unchecked {
-            vm.assume(startIndex + keysCount > startIndex);
-        }
+        assumeSumDoesNotOverflow(startIndex, keysCount);
 
         (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
             keysCount,
@@ -313,9 +311,7 @@ contract SigningKeysSaveTest is SigningKeysTestBase {
     ) public {
         keysCount = uint32(bound(keysCount, 1, 100));
         vm.assume(offset < keysCount);
-        unchecked {
-            vm.assume(startIndex + keysCount > startIndex);
-        }
+        assumeSumDoesNotOverflow(startIndex, keysCount);
 
         (
             bytes memory pubkeys,
@@ -442,9 +438,7 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
     ) public {
         keysCount = uint32(bound(keysCount, 1, 100));
         vm.assume(offset < keysCount);
-        unchecked {
-            vm.assume(startIndex + keysCount > startIndex);
-        }
+        assumeSumDoesNotOverflow(startIndex, keysCount);
 
         (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -477,9 +471,7 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
         keysCount = uint32(bound(keysCount, 1, 100));
         vm.assume(offset < startIndex);
         vm.assume(offset < keysCount);
-        unchecked {
-            vm.assume(startIndex + keysCount > startIndex);
-        }
+        assumeSumDoesNotOverflow(startIndex, keysCount);
 
         (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
             keysCount
@@ -508,9 +500,7 @@ contract SigningKeysRemoveTest is SigningKeysTestBase {
         uint32 keysCount
     ) public {
         keysCount = uint32(bound(keysCount, 1, 200));
-        unchecked {
-            vm.assume(startIndex + keysCount > startIndex);
-        }
+        assumeSumDoesNotOverflow(startIndex, keysCount);
 
         uint256 totalKeysCount = startIndex + keysCount;
 
@@ -589,9 +579,7 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
         uint32 keysCount
     ) public {
         keysCount = uint32(bound(keysCount, 1, 100));
-        unchecked {
-            vm.assume(startIndex + keysCount > startIndex);
-        }
+        assumeSumDoesNotOverflow(startIndex, keysCount);
 
         (bytes memory pubkeys, bytes memory signatures) = keysSignatures(
             keysCount,
@@ -620,9 +608,7 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
         uint32 keysCount
     ) public view {
         keysCount = uint32(bound(keysCount, 1, 500));
-        unchecked {
-            vm.assume(startIndex + keysCount > startIndex);
-        }
+        assumeSumDoesNotOverflow(startIndex, keysCount);
 
         bytes memory loadedPubkeys = signingKeys.loadKeys(
             nodeOperatorId,
@@ -663,9 +649,7 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
         uint32 keysCount
     ) public {
         keysCount = uint32(bound(keysCount, 1, 100));
-        unchecked {
-            vm.assume(startIndex + keysCount > startIndex);
-        }
+        assumeSumDoesNotOverflow(startIndex, keysCount);
 
         (bytes memory pubkeys, bytes memory sigs) = keysSignatures(
             keysCount,
@@ -692,9 +676,7 @@ contract SigningKeysLoadTest is SigningKeysTestBase {
         uint32 keysCount
     ) public view {
         keysCount = uint32(bound(keysCount, 1, 200));
-        unchecked {
-            vm.assume(startIndex + keysCount > startIndex);
-        }
+        assumeSumDoesNotOverflow(startIndex, keysCount);
 
         (bytes memory loadedKeys, bytes memory loadedSigs) = signingKeys
             .loadKeysSigs(nodeOperatorId, startIndex, keysCount, 0);

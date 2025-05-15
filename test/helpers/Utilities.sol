@@ -203,6 +203,12 @@ contract Utilities is CommonBase {
         }
     }
 
+    function assumeSumDoesNotOverflow(uint256 a, uint256 b) public pure {
+        unchecked {
+            vm.assume(a + b > a);
+        }
+    }
+
     /// See https://github.com/Vectorized/solady - MIT licensed.
     /// @dev Fills the memory with junk, for more robust testing of inline assembly
     /// which reads/write to the memory.

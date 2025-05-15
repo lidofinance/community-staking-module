@@ -7,6 +7,8 @@ import { Test } from "forge-std/Test.sol";
 import { GIndex, pack, IndexOutOfRange, fls } from "../src/lib/GIndex.sol";
 import { SSZ } from "../src/lib/SSZ.sol";
 
+import { Utilities } from "./helpers/Utilities.sol";
+
 // Wrap the library internal methods to make an actual call to them.
 // Supposed to be used with `expectRevert` cheatcode.
 contract Library {
@@ -23,7 +25,7 @@ contract Library {
     }
 }
 
-contract GIndexTest is Test {
+contract GIndexTest is Test, Utilities {
     GIndex internal ZERO = GIndex.wrap(bytes32(0));
     GIndex internal ROOT =
         GIndex.wrap(
@@ -292,12 +294,8 @@ contract GIndexTest is Test {
         // Indices concatenation overflow protection.
         vm.assume(fls(lhs.index()) + 1 + fls(rhs.index()) < 248);
         vm.assume(rhs.index() >= rhs.width());
-        unchecked {
-            vm.assume(rhs.width() + shift > rhs.width());
-            vm.assume(
-                lhs.concat(rhs).index() + shift > lhs.concat(rhs).index()
-            );
-        }
+        assumeSumDoesNotOverflow(rhs.width(), shift);
+        assumeSumDoesNotOverflow(lhs.concat(rhs).index(), shift);
 
         vm.expectRevert(IndexOutOfRange.selector);
         lib.shr(lhs.concat(rhs), rhs.width() + shift);
