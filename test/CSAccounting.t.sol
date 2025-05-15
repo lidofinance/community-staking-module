@@ -371,7 +371,8 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     {
         _enableInitializers(address(accounting));
 
-        ICSBondCurve.BondCurveIntervalInput[][] memory bondCurves = new ICSBondCurve.BondCurveIntervalInput[][](1);
+        ICSBondCurve.BondCurveIntervalInput[][]
+            memory bondCurves = new ICSBondCurve.BondCurveIntervalInput[][](1);
 
         vm.expectRevert(ICSAccounting.InvalidBondCurvesLength.selector);
         accounting.finalizeUpgradeV2(bondCurves);
