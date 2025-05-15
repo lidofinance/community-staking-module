@@ -186,7 +186,6 @@ contract CSModule is
         }
 
         nodeOperatorId = _nodeOperatorsCount;
-        // TODO: check to create node operator multiple times in the same tx
         _markOperatorIsCreatedInTX(nodeOperatorId);
         NodeOperator storage no = _nodeOperators[nodeOperatorId];
 
@@ -618,7 +617,7 @@ contract CSModule is
 
             no.usedPriorityQueue = true;
         }
-        _incrementModuleNonce(); // TODO: add test for this
+        _incrementModuleNonce();
 
         // An alternative version to fit into the bytecode requirements is below. Please consider
         // the described caveat of the approach.
@@ -814,7 +813,7 @@ contract CSModule is
                 incrementNonceIfUpdated: false
             });
         }
-        _incrementModuleNonce(); // TODO: add test for this
+        _incrementModuleNonce();
     }
 
     /// @inheritdoc IStakingModule
@@ -826,7 +825,7 @@ contract CSModule is
         external
         onlyRole(STAKING_ROUTER_ROLE)
     {
-        _incrementModuleNonce(); // TODO: add test for this
+        _incrementModuleNonce();
     }
 
     /// @inheritdoc IStakingModule
