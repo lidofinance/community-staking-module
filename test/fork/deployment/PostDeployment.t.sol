@@ -184,24 +184,30 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             .curveId();
         assertEq(
             accounting
-            .getCurveInfo(identifiedCommunityStakersGateBondCurveId).intervals[0]
+                .getCurveInfo(identifiedCommunityStakersGateBondCurveId)
+                .intervals[0]
                 .minKeysCount,
             deployParams.identifiedCommunityStakersGateBondCurve[0][0]
         );
         assertEq(
             accounting
-            .getCurveInfo(identifiedCommunityStakersGateBondCurveId).intervals[0].trend,
+                .getCurveInfo(identifiedCommunityStakersGateBondCurveId)
+                .intervals[0]
+                .trend,
             deployParams.identifiedCommunityStakersGateBondCurve[0][1]
         );
         assertEq(
             accounting
-            .getCurveInfo(identifiedCommunityStakersGateBondCurveId).intervals[1]
+                .getCurveInfo(identifiedCommunityStakersGateBondCurveId)
+                .intervals[1]
                 .minKeysCount,
             deployParams.identifiedCommunityStakersGateBondCurve[1][0]
         );
         assertEq(
             accounting
-            .getCurveInfo(identifiedCommunityStakersGateBondCurveId).intervals[1].trend,
+                .getCurveInfo(identifiedCommunityStakersGateBondCurveId)
+                .intervals[1]
+                .trend,
             deployParams.identifiedCommunityStakersGateBondCurve[1][1]
         );
         assertEq(address(accounting.feeDistributor()), address(feeDistributor));
@@ -751,42 +757,42 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
             deployParams.identifiedCommunityStakersGateKeysLimit
         );
 
-        ICSParametersRegistry.KeyIndexValueInterval[]
+        ICSParametersRegistry.KeyNumberValue
             memory rewardShareData = parametersRegistry.getRewardShareData(
                 identifiedCommunityStakersGateCurveId
             );
         assertEq(
-            rewardShareData.length,
+            rewardShareData.intervals.length,
             deployParams.identifiedCommunityStakersGateRewardShareData.length
         );
-        for (uint256 i = 0; i < rewardShareData.length; i++) {
+        for (uint256 i = 0; i < rewardShareData.intervals.length; i++) {
             assertEq(
-                rewardShareData[i].minKeyIndex,
+                rewardShareData.intervals[i].minKeyNumber,
                 deployParams.identifiedCommunityStakersGateRewardShareData[i][0]
             );
             assertEq(
-                rewardShareData[i].value,
+                rewardShareData.intervals[i].value,
                 deployParams.identifiedCommunityStakersGateRewardShareData[i][1]
             );
         }
-        ICSParametersRegistry.KeyIndexValueInterval[]
+        ICSParametersRegistry.KeyNumberValue
             memory performanceLeewayData = parametersRegistry
                 .getPerformanceLeewayData(
                     identifiedCommunityStakersGateCurveId
                 );
         assertEq(
-            performanceLeewayData.length,
+            performanceLeewayData.intervals.length,
             deployParams.identifiedCommunityStakersGateAvgPerfLeewayData.length
         );
-        for (uint256 i = 0; i < performanceLeewayData.length; i++) {
+        for (uint256 i = 0; i < performanceLeewayData.intervals.length; i++) {
             assertEq(
-                performanceLeewayData[i].minKeyIndex,
+                performanceLeewayData.intervals[i].minKeyNumber,
                 deployParams.identifiedCommunityStakersGateAvgPerfLeewayData[i][
                     0
                 ]
             );
             assertEq(
-                performanceLeewayData[i].value,
+                performanceLeewayData.intervals[i].value,
                 deployParams.identifiedCommunityStakersGateAvgPerfLeewayData[i][
                     1
                 ]

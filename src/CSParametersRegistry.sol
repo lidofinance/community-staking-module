@@ -40,14 +40,12 @@ contract CSParametersRegistry is
     /// @dev Default value for the reward share. Can be only be set as a flat value due to possible sybil attacks
     ///      Decreased reward share for some validators > N will promote sybils. Increased reward share for validators > N will give large operators an advantage
     uint256 public defaultRewardShare;
-    mapping(uint256 curveId => KeyIndexValueInterval[])
-        internal _rewardShareData;
+    mapping(uint256 curveId => KeyNumberValue) internal _rewardShareData;
 
     /// @dev Default value for the performance leeway. Can be only be set as a flat value due to possible sybil attacks
     ///      Decreased performance leeway for some validators > N will promote sybils. Increased performance leeway for validators > N will give large operators an advantage
     uint256 public defaultPerformanceLeeway;
-    mapping(uint256 curveId => KeyIndexValueInterval[])
-        internal _performanceLeewayData;
+    mapping(uint256 curveId => KeyNumberValue) internal _performanceLeewayData;
 
     StrikesParams public defaultStrikesParams;
     mapping(uint256 curveId => MarkedStrikesParams) internal _strikesParams;
@@ -262,10 +260,11 @@ contract CSParametersRegistry is
     /// @inheritdoc ICSParametersRegistry
     function setRewardShareData(
         uint256 curveId,
-        KeyIndexValueInterval[] calldata data
+        KeyNumberValueInterval[] calldata data
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _validateKeysCountValueIntervals(data);
-        KeyIndexValueInterval[] storage intervals = _rewardShareData[curveId];
+        KeyNumberValueInterval[] storage intervals = _rewardShareData[curveId]
+            .intervals;
         if (intervals.length > 0) {
             delete _rewardShareData[curveId];
         }
@@ -286,17 +285,17 @@ contract CSParametersRegistry is
     /// @inheritdoc ICSParametersRegistry
     function setPerformanceLeewayData(
         uint256 curveId,
-        KeyIndexValueInterval[] calldata data
+        KeyNumberValueInterval[] calldata data
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _validateKeysCountValueIntervals(data);
-        KeyIndexValueInterval[] storage intervals = _performanceLeewayData[
+        KeyNumberValueInterval[] storage intervals = _performanceLeewayData[
             curveId
-        ];
+        ].intervals;
         if (intervals.length > 0) {
             delete _performanceLeewayData[curveId];
         }
         for (uint256 i = 0; i < data.length; ++i) {
-            _performanceLeewayData[curveId].push(data[i]);
+            intervals.push(data[i]);
         }
         emit PerformanceLeewayDataSet(curveId, data);
     }
@@ -491,22 +490,25 @@ contract CSParametersRegistry is
     /// @inheritdoc ICSParametersRegistry
     function getRewardShareData(
         uint256 curveId
-    ) external view returns (KeyIndexValueInterval[] memory data) {
+    ) external view returns (KeyNumberValue memory data) {
         data = _rewardShareData[curveId];
-        if (data.length == 0) {
-            data = new KeyIndexValueInterval[](1);
-            data[0] = KeyIndexValueInterval(0, defaultRewardShare);
+        if (data.intervals.length == 0) {
+            data.intervals = new KeyNumberValueInterval[](1);
+            data.intervals[0] = KeyNumberValueInterval(1, defaultRewardShare);
         }
     }
 
     /// @inheritdoc ICSParametersRegistry
     function getPerformanceLeewayData(
         uint256 curveId
-    ) external view returns (KeyIndexValueInterval[] memory data) {
+    ) external view returns (KeyNumberValue memory data) {
         data = _performanceLeewayData[curveId];
-        if (data.length == 0) {
-            data = new KeyIndexValueInterval[](1);
-            data[0] = KeyIndexValueInterval(0, defaultPerformanceLeeway);
+        if (data.intervals.length == 0) {
+            data.intervals = new KeyNumberValueInterval[](1);
+            data.intervals[0] = KeyNumberValueInterval(
+                1,
+                defaultPerformanceLeeway
+            );
         }
     }
 
@@ -737,9 +739,9 @@ contract CSParametersRegistry is
     }
 
     function _validateKeysCountValueIntervals(
-        KeyIndexValueInterval[] calldata intervals
+        KeyNumberValueInterval[] calldata intervals
     ) private pure {
-        if (intervals[0].minKeyIndex != 0) {
+        if (intervals[0].minKeyNumber != 1) {
             revert InvalidKeyIndexValueIntervals();
         }
 
@@ -749,7 +751,9 @@ contract CSParametersRegistry is
 
         for (uint256 i = 1; i < intervals.length; ++i) {
             unchecked {
-                if (intervals[i].minKeyIndex <= intervals[i - 1].minKeyIndex) {
+                if (
+                    intervals[i].minKeyNumber <= intervals[i - 1].minKeyNumber
+                ) {
                     revert InvalidKeyIndexValueIntervals();
                 }
                 if (intervals[i].value == 0 || intervals[i].value > MAX_BP) {

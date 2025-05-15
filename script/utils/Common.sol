@@ -12,15 +12,15 @@ library CommonScriptUtils {
     )
         public
         pure
-        returns (ICSParametersRegistry.KeyIndexValueInterval[] memory)
+        returns (ICSParametersRegistry.KeyNumberValueInterval[] memory)
     {
-        ICSParametersRegistry.KeyIndexValueInterval[]
-            memory keyIndexValues = new ICSParametersRegistry.KeyIndexValueInterval[](
+        ICSParametersRegistry.KeyNumberValueInterval[]
+            memory keyIndexValues = new ICSParametersRegistry.KeyNumberValueInterval[](
                 data.length
             );
         for (uint256 i = 0; i < data.length; i++) {
-            keyIndexValues[i] = ICSParametersRegistry.KeyIndexValueInterval({
-                minKeyIndex: data[i][0],
+            keyIndexValues[i] = ICSParametersRegistry.KeyNumberValueInterval({
+                minKeyNumber: data[i][0],
                 value: data[i][1]
             });
         }

@@ -63,14 +63,18 @@ interface ICSParametersRegistry {
         uint256 defaultMaxWithdrawalRequestFee;
     }
 
-    /// @dev Defines a value interval starting from `minKeyIndex`.
-    ///      All keys with indices >= `minKeyIndex` are assigned the corresponding `value`
-    ///      until the next interval begins. Intervals must be sorted by ascending `minKeysCount`
-    ///      and must start from zero (i.e., the first interval must have minKeyIndex == 0).
+    // TODO: Write diff between this and curve intervals
+    struct KeyNumberValue {
+        KeyNumberValueInterval[] intervals;
+    }
+
+    /// @dev Defines a value interval starting from `minKeyNumber`.
+    ///      All keys with number >= `minKeyNumber` are assigned the corresponding `value`
+    ///      until the next interval begins. Intervals must be sorted by ascending `minKeyNumber`
+    ///      and must start from one (i.e., the first interval must have minKeyNumber == 1).
     ///      Example: [{1, 10000}, {11, 8000}] means first 10 keys with 10000, other keys with 8000.
-    struct KeyIndexValueInterval {
-        // TODO: change to minKeysNumber
-        uint256 minKeyIndex;
+    struct KeyNumberValueInterval {
+        uint256 minKeyNumber;
         uint256 value;
     }
 
@@ -102,11 +106,11 @@ interface ICSParametersRegistry {
     event KeysLimitSet(uint256 indexed curveId, uint256 limit);
     event RewardShareDataSet(
         uint256 indexed curveId,
-        KeyIndexValueInterval[] data
+        KeyNumberValueInterval[] data
     );
     event PerformanceLeewayDataSet(
         uint256 indexed curveId,
-        KeyIndexValueInterval[] data
+        KeyNumberValueInterval[] data
     );
     event StrikesParamsSet(
         uint256 indexed curveId,
@@ -309,7 +313,7 @@ interface ICSParametersRegistry {
     /// @param data Interval values for keys count and reward share percentages in BP (ex. [[0, 10000], [10, 8000], [50, 5000]])
     function setRewardShareData(
         uint256 curveId,
-        KeyIndexValueInterval[] calldata data
+        KeyNumberValueInterval[] calldata data
     ) external;
 
     /// @notice Unset reward share parameters for the curveId
@@ -324,7 +328,7 @@ interface ICSParametersRegistry {
     /// @param data Interval values for keys count and reward share percentages in BP (ex. [[0, 10000], [10, 8000], [50, 5000]])
     function getRewardShareData(
         uint256 curveId
-    ) external view returns (KeyIndexValueInterval[] memory data);
+    ) external view returns (KeyNumberValue memory data);
 
     /// @notice Set default value for QueueConfig. Default value is used if a specific value is not set for the curveId.
     /// @param priority Queue priority.
@@ -364,7 +368,7 @@ interface ICSParametersRegistry {
     /// @param data Interval values for keys count and performance leeway percentages in BP (ex. [[0, 500], [100, 450], [500, 400]])
     function setPerformanceLeewayData(
         uint256 curveId,
-        KeyIndexValueInterval[] calldata data
+        KeyNumberValueInterval[] calldata data
     ) external;
 
     /// @notice Unset performance leeway parameters for the curveId
@@ -379,7 +383,7 @@ interface ICSParametersRegistry {
     /// @param data Interval values for keys count and performance leeway percentages in BP (ex. [[0, 500], [100, 450], [500, 400]])
     function getPerformanceLeewayData(
         uint256 curveId
-    ) external view returns (KeyIndexValueInterval[] memory data);
+    ) external view returns (KeyNumberValue memory data);
 
     /// @notice Set performance strikes lifetime and threshold for the curveId
     /// @param curveId Curve Id to associate performance strikes lifetime and threshold with
