@@ -2848,6 +2848,21 @@ contract CsmQueueOps is CSMCommon {
         csm.cleanDepositQueue(0);
     }
 
+    function test_cleanup_DepthIsOne() public assertInvariants {
+        createNodeOperator({ keysCount: 3 });
+
+        uint256 toRemove;
+
+        (toRemove, ) = csm.cleanDepositQueue(1);
+        assertEq(toRemove, 0, "should remove nothing");
+
+        unvetKeys({ noId: 0, to: 0 });
+        (toRemove, ) = csm.cleanDepositQueue(1);
+        assertEq(toRemove, 1, "should remove 1 batch");
+
+        _assertQueueIsEmpty();
+    }
+
     function test_cleanup_WhenMultipleInvalidBatchesInRow()
         public
         assertInvariants
