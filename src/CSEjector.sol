@@ -9,7 +9,7 @@ import { ICSEjector } from "./interfaces/ICSEjector.sol";
 import { ICSModule, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { PausableUntil } from "./lib/utils/PausableUntil.sol";
-import { IValidatorsExitBus } from "./interfaces/IValidatorsExitBus.sol";
+import { TriggerableWithdrawalGateway } from "./interfaces/TriggerableWithdrawalGateway.sol";
 import { ExitTypes } from "./abstract/ExitTypes.sol";
 
 contract CSEjector is
@@ -24,7 +24,7 @@ contract CSEjector is
 
     uint256 public immutable STAKING_MODULE_ID;
     ICSModule public immutable MODULE;
-    IValidatorsExitBus public immutable VEB;
+    TriggerableWithdrawalGateway public immutable TWG;
     address public immutable STRIKES;
 
     modifier onlyStrikes() {
@@ -45,8 +45,8 @@ contract CSEjector is
 
         STRIKES = strikes;
         MODULE = ICSModule(module);
-        VEB = IValidatorsExitBus(
-            MODULE.LIDO_LOCATOR().validatorsExitBusOracle()
+        TWG = TriggerableWithdrawalGateway(
+            MODULE.LIDO_LOCATOR().triggerableWithdrawalGateway()
         );
         STAKING_MODULE_ID = stakingModuleId;
     }
@@ -111,18 +111,18 @@ contract CSEjector is
             startFrom,
             keysCount
         );
-        IValidatorsExitBus.DirectExitData memory exitData = IValidatorsExitBus
-            .DirectExitData({
-                stakingModuleId: STAKING_MODULE_ID,
-                nodeOperatorId: nodeOperatorId,
-                validatorsPubkeys: pubkeys
-            });
+        //        IValidatorsExitBus.DirectExitData memory exitData = IValidatorsExitBus
+        //            .DirectExitData({
+        //                stakingModuleId: STAKING_MODULE_ID,
+        //                nodeOperatorId: nodeOperatorId,
+        //                validatorsPubkeys: pubkeys
+        //            });
 
         refundRecipient = refundRecipient == address(0)
             ? msg.sender
             : refundRecipient;
 
-        VEB.triggerExitsDirectly{ value: msg.value }(
+        TWG.triggerFullWithdrawals{ value: msg.value }(
             exitData,
             refundRecipient,
             VOLUNTARY_EXIT_TYPE_ID
@@ -168,18 +168,18 @@ contract CSEjector is
                 MODULE.getSigningKeys(nodeOperatorId, keyIndices[i], 1)
             );
         }
-        IValidatorsExitBus.DirectExitData memory exitData = IValidatorsExitBus
-            .DirectExitData({
-                stakingModuleId: STAKING_MODULE_ID,
-                nodeOperatorId: nodeOperatorId,
-                validatorsPubkeys: pubkeys
-            });
+        //        IValidatorsExitBus.DirectExitData memory exitData = TriggerableWithdrawalGateway
+        //            .DirectExitData({
+        //                stakingModuleId: STAKING_MODULE_ID,
+        //                nodeOperatorId: nodeOperatorId,
+        //                validatorsPubkeys: pubkeys
+        //            });
 
         refundRecipient = refundRecipient == address(0)
             ? msg.sender
             : refundRecipient;
 
-        VEB.triggerExitsDirectly{ value: msg.value }(
+        TWG.triggerFullWithdrawals{ value: msg.value }(
             exitData,
             refundRecipient,
             VOLUNTARY_EXIT_TYPE_ID
@@ -210,13 +210,13 @@ contract CSEjector is
             keyIndex,
             1
         );
-        IValidatorsExitBus.DirectExitData memory exitData = IValidatorsExitBus
-            .DirectExitData({
-                stakingModuleId: STAKING_MODULE_ID,
-                nodeOperatorId: nodeOperatorId,
-                validatorsPubkeys: publicKey
-            });
-        VEB.triggerExitsDirectly{ value: msg.value }(
+        //        IValidatorsExitBus.DirectExitData memory exitData = TriggerableWithdrawalGateway
+        //            .DirectExitData({
+        //                stakingModuleId: STAKING_MODULE_ID,
+        //                nodeOperatorId: nodeOperatorId,
+        //                validatorsPubkeys: publicKey
+        //            });
+        TWG.triggerFullWithdrawals{ value: msg.value }(
             exitData,
             refundRecipient,
             STRIKES_EXIT_TYPE_ID

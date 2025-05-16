@@ -6,12 +6,12 @@ import "forge-std/Test.sol";
 import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 import { CSEjector } from "../src/CSEjector.sol";
 import { ICSEjector } from "../src/interfaces/ICSEjector.sol";
-import { IValidatorsExitBus } from "../src/interfaces/IValidatorsExitBus.sol";
+import { TriggerableWithdrawalGateway } from "../src/interfaces/TriggerableWithdrawalGateway.sol";
 import { NodeOperatorManagementProperties } from "../src/interfaces/ICSModule.sol";
 import { ICSAccounting } from "../src/interfaces/ICSAccounting.sol";
 import { Utilities } from "./helpers/Utilities.sol";
 import { CSMMock } from "./helpers/mocks/CSMMock.sol";
-import { VEBMock } from "./helpers/mocks/VEBMock.sol";
+import { TWGMock } from "./helpers/mocks/TWGMock.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 import { CSStrikesMock } from "./helpers/mocks/CSStrikesMock.sol";
 
@@ -54,7 +54,7 @@ contract CSEjectorTestMisc is CSEjectorTestBase {
         );
         assertEq(address(ejector.MODULE()), address(csm));
         assertEq(
-            address(ejector.VEB()),
+            address(ejector.TWG()),
             address(csm.LIDO_LOCATOR().validatorsExitBusOracle())
         );
         assertEq(ejector.STAKING_MODULE_ID(), stakingModuleId);
@@ -154,10 +154,10 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
         uint256 exitType = ejector.VOLUNTARY_EXIT_TYPE_ID();
 
         vm.expectCall(
-            address(ejector.VEB()),
+            address(ejector.TWG()),
             abi.encodeWithSelector(
-                IValidatorsExitBus.triggerExitsDirectly.selector,
-                IValidatorsExitBus.DirectExitData(0, noId, pubkey),
+                TriggerableWithdrawalGateway.triggerFullWithdrawals.selector,
+                TriggerableWithdrawalGateway.DirectExitData(0, noId, pubkey),
                 refundRecipient,
                 exitType
             )
@@ -183,10 +183,10 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
         uint256 exitType = ejector.VOLUNTARY_EXIT_TYPE_ID();
 
         vm.expectCall(
-            address(ejector.VEB()),
+            address(ejector.TWG()),
             abi.encodeWithSelector(
-                IValidatorsExitBus.triggerExitsDirectly.selector,
-                IValidatorsExitBus.DirectExitData(0, noId, pubkeys),
+                TriggerableWithdrawalGateway.triggerFullWithdrawals.selector,
+                TriggerableWithdrawalGateway.DirectExitData(0, noId, pubkeys),
                 refundRecipient,
                 exitType
             )
@@ -214,7 +214,7 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
             nodeOperator
         );
         uint256 expectedRefund = (1 ether *
-            VEBMock(payable(address(ejector.VEB())))
+            TWGMock(payable(address(ejector.TWG())))
                 .MOCK_REFUND_PERCENTAGE_BP()) / 10000;
         assertEq(nodeOperator.balance, expectedRefund);
     }
@@ -234,7 +234,7 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
         vm.prank(nodeOperator);
         ejector.voluntaryEject{ value: 1 ether }(noId, keyIndex, 1, address(0));
         uint256 expectedRefund = (1 ether *
-            VEBMock(payable(address(ejector.VEB())))
+            TWGMock(payable(address(ejector.TWG())))
                 .MOCK_REFUND_PERCENTAGE_BP()) / 10000;
         assertEq(nodeOperator.balance, expectedRefund);
     }
@@ -364,10 +364,10 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
         uint256[] memory indices = new uint256[](1);
         indices[0] = keyIndex;
         vm.expectCall(
-            address(ejector.VEB()),
+            address(ejector.TWG()),
             abi.encodeWithSelector(
-                IValidatorsExitBus.triggerExitsDirectly.selector,
-                IValidatorsExitBus.DirectExitData(0, noId, pubkey),
+                TriggerableWithdrawalGateway.triggerFullWithdrawals.selector,
+                TriggerableWithdrawalGateway.DirectExitData(0, noId, pubkey),
                 refundRecipient,
                 exitType
             )
@@ -396,10 +396,10 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
             indices[i] = i;
         }
         vm.expectCall(
-            address(ejector.VEB()),
+            address(ejector.TWG()),
             abi.encodeWithSelector(
-                IValidatorsExitBus.triggerExitsDirectly.selector,
-                IValidatorsExitBus.DirectExitData(0, noId, pubkeys),
+                TriggerableWithdrawalGateway.triggerFullWithdrawals.selector,
+                TriggerableWithdrawalGateway.DirectExitData(0, noId, pubkeys),
                 refundRecipient,
                 exitType
             )
@@ -429,7 +429,7 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
             nodeOperator
         );
         uint256 expectedRefund = (1 ether *
-            VEBMock(payable(address(ejector.VEB())))
+            TWGMock(payable(address(ejector.TWG())))
                 .MOCK_REFUND_PERCENTAGE_BP()) / 10000;
         assertEq(nodeOperator.balance, expectedRefund);
     }
@@ -456,7 +456,7 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
             address(0)
         );
         uint256 expectedRefund = (1 ether *
-            VEBMock(payable(address(ejector.VEB())))
+            TWGMock(payable(address(ejector.TWG())))
                 .MOCK_REFUND_PERCENTAGE_BP()) / 10000;
         assertEq(nodeOperator.balance, expectedRefund);
     }
@@ -610,10 +610,10 @@ contract CSEjectorTestEjectBadPerformer is CSEjectorTestBase {
 
         uint256 exitType = ejector.STRIKES_EXIT_TYPE_ID();
         vm.expectCall(
-            address(ejector.VEB()),
+            address(ejector.TWG()),
             abi.encodeWithSelector(
-                IValidatorsExitBus.triggerExitsDirectly.selector,
-                IValidatorsExitBus.DirectExitData(0, noId, pubkey),
+                TriggerableWithdrawalGateway.triggerFullWithdrawals.selector,
+                TriggerableWithdrawalGateway.DirectExitData(0, noId, pubkey),
                 refundRecipient,
                 exitType
             )

@@ -10,7 +10,7 @@ contract LidoLocatorMock {
     address public el;
     address public t;
     address public sr;
-    address public veb;
+    address public twg;
 
     constructor(
         address _lido,
@@ -19,7 +19,7 @@ contract LidoLocatorMock {
         address _el,
         address _t,
         address _sr,
-        address _veb
+        address _twg
     ) {
         l = _lido;
         b = _burner;
@@ -27,7 +27,7 @@ contract LidoLocatorMock {
         el = _el;
         t = _t;
         sr = _sr;
-        veb = _veb;
+        twg = _twg;
     }
 
     function lido() external view returns (address) {
@@ -54,7 +54,7 @@ contract LidoLocatorMock {
         return payable(sr);
     }
 
-    function validatorsExitBusOracle() external view returns (address) {
-        return veb;
+    function triggerableWithdrawalGateway() external view returns (address) {
+        return twg;
     }
 }
