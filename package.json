@@ -31,7 +31,7 @@
   },
   "lint-staged": {
     "*": "prettier --ignore-unknown --write",
-    "src/**/*.sol": "solhint"
+    "src/**/*.sol": "solhint './src/**/*.sol'"
   },
   "packageManager": "yarn@4.1.1"
 }

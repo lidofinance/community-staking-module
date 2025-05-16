@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -53,7 +53,7 @@ contract CSAccounting is
 
     /// @param lidoLocator Lido locator contract address
     /// @param module Community Staking Module contract address
-    /// @param maxCurveLength Max number of the points in the bond curves
+    /// @param maxCurveLength Max number of the intervals in the bond curves
     /// @param minBondLockPeriod Min time in seconds for the bondLock period
     /// @param maxBondLockPeriod Max time in seconds for the bondLock period
     constructor(
@@ -86,7 +86,7 @@ contract CSAccounting is
     /// @param bondLockPeriod Bond lock period in seconds
     /// @param _chargePenaltyRecipient Recipient of the charge penalty type
     function initialize(
-        uint256[2][] calldata bondCurve,
+        BondCurveIntervalInput[] calldata bondCurve,
         address admin,
         uint256 bondLockPeriod,
         address _chargePenaltyRecipient
@@ -109,18 +109,18 @@ contract CSAccounting is
     }
 
     function finalizeUpgradeV2(
-        uint256[2][][] calldata bondCurves
+        BondCurveIntervalInput[][] calldata bondCurvesInputs
     ) external reinitializer(2) {
         assembly ("memory-safe") {
             sstore(_feeDistributorOld.slot, 0x00)
         }
 
         /// NOTE: This method is not for adding new bond curves, but for migration of the existing ones to the new format (`BondCurve` to `BondCurveInterval[]`). However, bond values can be different from the current.
-        if (bondCurves.length != _getLegacyBondCurvesLength()) {
+        if (bondCurvesInputs.length != _getLegacyBondCurvesLength()) {
             revert InvalidBondCurvesLength();
         }
-        for (uint256 i = 0; i < bondCurves.length; i++) {
-            _addBondCurve(bondCurves[i]);
+        for (uint256 i = 0; i < bondCurvesInputs.length; i++) {
+            _addBondCurve(bondCurvesInputs[i]);
         }
     }
 
@@ -150,7 +150,7 @@ contract CSAccounting is
 
     /// @inheritdoc ICSAccounting
     function addBondCurve(
-        uint256[2][] calldata bondCurve
+        BondCurveIntervalInput[] calldata bondCurve
     ) external onlyRole(MANAGE_BOND_CURVES_ROLE) returns (uint256 id) {
         id = CSBondCurve._addBondCurve(bondCurve);
     }
@@ -158,7 +158,7 @@ contract CSAccounting is
     /// @inheritdoc ICSAccounting
     function updateBondCurve(
         uint256 curveId,
-        uint256[2][] calldata bondCurve
+        BondCurveIntervalInput[] calldata bondCurve
     ) external onlyRole(MANAGE_BOND_CURVES_ROLE) {
         CSBondCurve._updateBondCurve(curveId, bondCurve);
     }

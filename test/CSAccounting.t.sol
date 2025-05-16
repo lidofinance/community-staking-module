@@ -184,8 +184,12 @@ contract CSAccountingConstructorTest is CSAccountingBaseConstructorTest {
             365 days
         );
 
-        uint256[2][] memory curve = new uint256[2][](1);
-        curve[0] = [uint256(1), 2 ether];
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
 
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         accounting.initialize(
@@ -289,8 +293,12 @@ contract CSAccountingBaseInitTest is CSAccountingFixtures {
 
 contract CSAccountingInitTest is CSAccountingBaseInitTest {
     function test_initialize_happyPath() public assertInvariants {
-        uint256[2][] memory curve = new uint256[2][](1);
-        curve[0] = [uint256(1), 2 ether];
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
 
         _enableInitializers(address(accounting));
 
@@ -313,8 +321,12 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     }
 
     function test_initialize_RevertWhen_zeroAdmin() public {
-        uint256[2][] memory curve = new uint256[2][](1);
-        curve[0] = [uint256(1), 2 ether];
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
 
         _enableInitializers(address(accounting));
 
@@ -328,8 +340,12 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     }
 
     function test_initialize_RevertWhen_zeroChargePenaltyRecipient() public {
-        uint256[2][] memory curve = new uint256[2][](1);
-        curve[0] = [uint256(1), 2 ether];
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
 
         _enableInitializers(address(accounting));
 
@@ -342,8 +358,8 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     function test_finalizeUpgradeV2() public {
         _enableInitializers(address(accounting));
 
-        // TODO: add a test with non zero bond curves
-        uint256[2][][] memory bondCurves = new uint256[2][][](0);
+        ICSBondCurve.BondCurveIntervalInput[][]
+            memory bondCurves = new ICSBondCurve.BondCurveIntervalInput[][](0);
 
         accounting.finalizeUpgradeV2(bondCurves);
 
@@ -355,7 +371,8 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
     {
         _enableInitializers(address(accounting));
 
-        uint256[2][][] memory bondCurves = new uint256[2][][](1);
+        ICSBondCurve.BondCurveIntervalInput[][]
+            memory bondCurves = new ICSBondCurve.BondCurveIntervalInput[][](1);
 
         vm.expectRevert(ICSAccounting.InvalidBondCurvesLength.selector);
         accounting.finalizeUpgradeV2(bondCurves);
@@ -400,8 +417,12 @@ contract CSAccountingBaseTest is CSAccountingFixtures {
         stakingModule = new Stub();
         mock_updateDepositableValidatorsCount();
 
-        uint256[2][] memory curve = new uint256[2][](1);
-        curve[0] = [uint256(1), 2 ether];
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
 
         feeDistributor = new DistributorMock(address(stETH));
 
@@ -572,6 +593,36 @@ abstract contract CSAccountingBondStateBaseTest is
     BondAmountModifiersTest,
     CSAccountingBaseTest
 {
+    ICSBondCurve.BondCurveIntervalInput[] public curveWithDiscount;
+    ICSBondCurve.BondCurveIntervalInput[] public individualCurve;
+
+    constructor() {
+        curveWithDiscount.push(
+            ICSBondCurve.BondCurveIntervalInput({
+                minKeysCount: 1,
+                trend: 2 ether
+            })
+        );
+        curveWithDiscount.push(
+            ICSBondCurve.BondCurveIntervalInput({
+                minKeysCount: 2,
+                trend: 1 ether
+            })
+        );
+        individualCurve.push(
+            ICSBondCurve.BondCurveIntervalInput({
+                minKeysCount: 1,
+                trend: 1.8 ether
+            })
+        );
+        individualCurve.push(
+            ICSBondCurve.BondCurveIntervalInput({
+                minKeysCount: 2,
+                trend: 0.9 ether
+            })
+        );
+    }
+
     function _operator(uint256 ongoing, uint256 withdrawn) internal virtual {
         mock_getNodeOperatorNonWithdrawnKeys(ongoing - withdrawn);
         mock_getNodeOperatorsCount(1);
@@ -586,10 +637,9 @@ abstract contract CSAccountingBondStateBaseTest is
         });
     }
 
-    uint256[2][] public curveWithDiscount = [[1, 2 ether], [2, 1 ether]];
-    uint256[2][] public individualCurve = [[1, 1.8 ether], [2, 0.9 ether]];
-
-    function _curve(uint256[2][] memory curve) internal virtual {
+    function _curve(
+        ICSBondCurve.BondCurveIntervalInput[] memory curve
+    ) internal virtual {
         vm.startPrank(admin);
         uint256 curveId = accounting.addBondCurve(curve);
         accounting.setBondCurve(0, curveId);
@@ -950,9 +1000,16 @@ contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
 
     function test_WithCustomSmolCurve() public assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        uint256[2][] memory curve = new uint256[2][](2);
-        curve[0] = [uint256(1), 2 ether];
-        curve[1] = [uint256(2), 1 ether];
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](2);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
+        curve[1] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 2,
+            trend: 1 ether
+        });
         _curve(curve);
         _deposit({ bond: 2.5 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 15);
@@ -960,8 +1017,12 @@ contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
 
     function test_WithCustomHugeCurve_1() public assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        uint256[2][] memory curve = new uint256[2][](1);
-        curve[0] = [uint256(1), 1 ether];
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 1 ether
+        });
         _curve(curve);
         _deposit({ bond: 3.5 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 13);
@@ -969,8 +1030,12 @@ contract CSAccountingGetUnbondedKeysCountTest is CSAccountingBondStateBaseTest {
 
     function test_WithCustomHugeCurve_2() public assertInvariants {
         _operator({ ongoing: 16, withdrawn: 0 });
-        uint256[2][] memory curve = new uint256[2][](1);
-        curve[0] = [uint256(1), 1 ether];
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 1 ether
+        });
         _curve(curve);
         _deposit({ bond: 8.5 ether });
         assertEq(accounting.getUnbondedKeysCount(0), 8);
@@ -1383,9 +1448,9 @@ contract CSAccountingGetRequiredWstETHBondTest is
 abstract contract CSAccountingGetRequiredBondForKeysBaseTest is
     CSAccountingBaseTest
 {
-    uint256[2][] public defaultCurve = [[1, 2 ether], [2, 1 ether]];
-
-    function _curve(uint256[2][] memory curve) internal virtual {
+    function _curve(
+        ICSBondCurve.BondCurveIntervalInput[] memory curve
+    ) internal virtual {
         vm.startPrank(admin);
         uint256 curveId = accounting.addBondCurve(curve);
         accounting.setBondCurve(0, curveId);
@@ -1417,6 +1482,17 @@ contract CSAccountingGetBondAmountByKeysCountWstETHTest is
     }
 
     function test_WithCurve() public override assertInvariants {
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory defaultCurve = new ICSBondCurve.BondCurveIntervalInput[](2);
+        defaultCurve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
+        defaultCurve[1] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 2,
+            trend: 1 ether
+        });
+
         vm.startPrank(admin);
         uint256 curveId = accounting.addBondCurve(defaultCurve);
         assertEq(accounting.getBondAmountByKeysCountWstETH(0, curveId), 0);
@@ -5010,55 +5086,75 @@ contract CSAccountingLockBondETHTest is CSAccountingBaseTest {
 
 contract CSAccountingBondCurveTest is CSAccountingBaseTest {
     function test_addBondCurve() public {
-        uint256[2][] memory curvePoints = new uint256[2][](1);
-        curvePoints[0] = [uint256(1), 2 ether];
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curvePoints = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curvePoints[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
         vm.prank(admin);
         uint256 addedId = accounting.addBondCurve(curvePoints);
 
-        ICSBondCurve.BondCurveInterval[] memory curve = accounting
-            .getCurveInfo({ curveId: addedId });
+        ICSBondCurve.BondCurve memory curve = accounting.getCurveInfo({
+            curveId: addedId
+        });
 
-        assertEq(curve[0].minBond, 2 ether);
-        assertEq(curve[0].trend, 2 ether);
+        assertEq(curve.intervals[0].minBond, 2 ether);
+        assertEq(curve.intervals[0].trend, 2 ether);
     }
 
     function test_addBondCurve_RevertWhen_DoesNotHaveRole() public {
         expectRoleRevert(stranger, accounting.MANAGE_BOND_CURVES_ROLE());
         vm.prank(stranger);
-        accounting.addBondCurve(new uint256[2][](0));
+        accounting.addBondCurve(new ICSBondCurve.BondCurveIntervalInput[](0));
     }
 
     function test_updateBondCurve() public assertInvariants {
-        uint256[2][] memory curvePoints = new uint256[2][](1);
-        curvePoints[0] = [uint256(1), 2 ether];
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curvePoints = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curvePoints[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
 
         uint256 toUpdate = 0;
 
         vm.prank(admin);
         accounting.updateBondCurve(toUpdate, curvePoints);
 
-        ICSBondCurve.BondCurveInterval[] memory curve = accounting
-            .getCurveInfo({ curveId: toUpdate });
+        ICSBondCurve.BondCurve memory curve = accounting.getCurveInfo({
+            curveId: toUpdate
+        });
 
-        assertEq(curve[0].minBond, 2 ether);
-        assertEq(curve[0].trend, 2 ether);
+        assertEq(curve.intervals[0].minBond, 2 ether);
+        assertEq(curve.intervals[0].trend, 2 ether);
     }
 
     function test_updateBondCurve_RevertWhen_DoesNotHaveRole() public {
         expectRoleRevert(stranger, accounting.MANAGE_BOND_CURVES_ROLE());
         vm.prank(stranger);
-        accounting.updateBondCurve(0, new uint256[2][](0));
+        accounting.updateBondCurve(
+            0,
+            new ICSBondCurve.BondCurveIntervalInput[](0)
+        );
     }
 
     function test_updateBondCurve_RevertWhen_InvalidBondCurveId() public {
         vm.expectRevert(ICSBondCurve.InvalidBondCurveId.selector);
         vm.prank(admin);
-        accounting.updateBondCurve(1, new uint256[2][](0));
+        accounting.updateBondCurve(
+            1,
+            new ICSBondCurve.BondCurveIntervalInput[](0)
+        );
     }
 
     function test_setBondCurve() public assertInvariants {
-        uint256[2][] memory curvePoints = new uint256[2][](1);
-        curvePoints[0] = [uint256(1), 2 ether];
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curvePoints = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curvePoints[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
 
         mock_getNodeOperatorsCount(1);
 
@@ -5077,12 +5173,10 @@ contract CSAccountingBondCurveTest is CSAccountingBaseTest {
 
         vm.stopPrank();
 
-        ICSBondCurve.BondCurveInterval[] memory curve = accounting.getBondCurve(
-            0
-        );
+        ICSBondCurve.BondCurve memory curve = accounting.getBondCurve(0);
 
-        assertEq(curve[0].minBond, 2 ether);
-        assertEq(curve[0].trend, 2 ether);
+        assertEq(curve.intervals[0].minBond, 2 ether);
+        assertEq(curve.intervals[0].trend, 2 ether);
     }
 
     function test_setBondCurve_RevertWhen_OperatorDoesNotExist() public {

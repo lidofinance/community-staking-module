@@ -164,19 +164,19 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
     function test_state_onlyFull() public view {
         uint256 defaultCurveId = accounting.DEFAULT_BOND_CURVE_ID();
         assertEq(
-            accounting.getCurveInfo(defaultCurveId)[0].minKeysCount,
+            accounting.getCurveInfo(defaultCurveId).intervals[0].minKeysCount,
             deployParams.bondCurve[0][0]
         );
         assertEq(
-            accounting.getCurveInfo(defaultCurveId)[0].trend,
+            accounting.getCurveInfo(defaultCurveId).intervals[0].trend,
             deployParams.bondCurve[0][1]
         );
         assertEq(
-            accounting.getCurveInfo(defaultCurveId)[1].minKeysCount,
+            accounting.getCurveInfo(defaultCurveId).intervals[1].minKeysCount,
             deployParams.bondCurve[1][0]
         );
         assertEq(
-            accounting.getCurveInfo(defaultCurveId)[1].trend,
+            accounting.getCurveInfo(defaultCurveId).intervals[1].trend,
             deployParams.bondCurve[1][1]
         );
 
@@ -184,24 +184,30 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
             .curveId();
         assertEq(
             accounting
-            .getCurveInfo(identifiedCommunityStakersGateBondCurveId)[0]
+                .getCurveInfo(identifiedCommunityStakersGateBondCurveId)
+                .intervals[0]
                 .minKeysCount,
             deployParams.identifiedCommunityStakersGateBondCurve[0][0]
         );
         assertEq(
             accounting
-            .getCurveInfo(identifiedCommunityStakersGateBondCurveId)[0].trend,
+                .getCurveInfo(identifiedCommunityStakersGateBondCurveId)
+                .intervals[0]
+                .trend,
             deployParams.identifiedCommunityStakersGateBondCurve[0][1]
         );
         assertEq(
             accounting
-            .getCurveInfo(identifiedCommunityStakersGateBondCurveId)[1]
+                .getCurveInfo(identifiedCommunityStakersGateBondCurveId)
+                .intervals[1]
                 .minKeysCount,
             deployParams.identifiedCommunityStakersGateBondCurve[1][0]
         );
         assertEq(
             accounting
-            .getCurveInfo(identifiedCommunityStakersGateBondCurveId)[1].trend,
+                .getCurveInfo(identifiedCommunityStakersGateBondCurveId)
+                .intervals[1]
+                .trend,
             deployParams.identifiedCommunityStakersGateBondCurve[1][1]
         );
         assertEq(address(accounting.feeDistributor()), address(feeDistributor));
@@ -312,9 +318,20 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
     }
 
     function test_proxy_onlyFull() public {
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory bondCurve = new ICSBondCurve.BondCurveIntervalInput[](
+                deployParams.bondCurve.length
+            );
+        for (uint256 i = 0; i < deployParams.bondCurve.length; i++) {
+            bondCurve[i] = ICSBondCurve.BondCurveIntervalInput({
+                minKeysCount: deployParams.bondCurve[i][0],
+                trend: deployParams.bondCurve[i][1]
+            });
+        }
+
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         accounting.initialize({
-            bondCurve: deployParams.bondCurve,
+            bondCurve: bondCurve,
             admin: address(deployParams.aragonAgent),
             bondLockPeriod: deployParams.bondLockPeriod,
             _chargePenaltyRecipient: address(0)
@@ -331,7 +348,7 @@ contract CSAccountingDeploymentTest is DeploymentBaseTest {
         );
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         accountingImpl.initialize({
-            bondCurve: deployParams.bondCurve,
+            bondCurve: bondCurve,
             admin: address(deployParams.aragonAgent),
             bondLockPeriod: deployParams.bondLockPeriod,
             _chargePenaltyRecipient: address(0)
@@ -740,42 +757,42 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
             deployParams.identifiedCommunityStakersGateKeysLimit
         );
 
-        ICSParametersRegistry.KeyIndexValueInterval[]
+        ICSParametersRegistry.KeyNumberValue
             memory rewardShareData = parametersRegistry.getRewardShareData(
                 identifiedCommunityStakersGateCurveId
             );
         assertEq(
-            rewardShareData.length,
+            rewardShareData.intervals.length,
             deployParams.identifiedCommunityStakersGateRewardShareData.length
         );
-        for (uint256 i = 0; i < rewardShareData.length; i++) {
+        for (uint256 i = 0; i < rewardShareData.intervals.length; i++) {
             assertEq(
-                rewardShareData[i].minKeyIndex,
+                rewardShareData.intervals[i].minKeyNumber,
                 deployParams.identifiedCommunityStakersGateRewardShareData[i][0]
             );
             assertEq(
-                rewardShareData[i].value,
+                rewardShareData.intervals[i].value,
                 deployParams.identifiedCommunityStakersGateRewardShareData[i][1]
             );
         }
-        ICSParametersRegistry.KeyIndexValueInterval[]
+        ICSParametersRegistry.KeyNumberValue
             memory performanceLeewayData = parametersRegistry
                 .getPerformanceLeewayData(
                     identifiedCommunityStakersGateCurveId
                 );
         assertEq(
-            performanceLeewayData.length,
+            performanceLeewayData.intervals.length,
             deployParams.identifiedCommunityStakersGateAvgPerfLeewayData.length
         );
-        for (uint256 i = 0; i < performanceLeewayData.length; i++) {
+        for (uint256 i = 0; i < performanceLeewayData.intervals.length; i++) {
             assertEq(
-                performanceLeewayData[i].minKeyIndex,
+                performanceLeewayData.intervals[i].minKeyNumber,
                 deployParams.identifiedCommunityStakersGateAvgPerfLeewayData[i][
                     0
                 ]
             );
             assertEq(
-                performanceLeewayData[i].value,
+                performanceLeewayData.intervals[i].value,
                 deployParams.identifiedCommunityStakersGateAvgPerfLeewayData[i][
                     1
                 ]

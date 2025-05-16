@@ -5,14 +5,19 @@ pragma solidity 0.8.24;
 
 interface ICSBondCurve {
     /// @dev Bond curve structure.
-    /// It contains:
-    ///  - points |> total bond amount for particular keys count
-    ///  - trend  |> value for the next keys after described points
     ///
-    /// For example, how the curve points look like:
-    ///   Points Array Index  |>       0          1          2          i
-    ///   Bond Amount         |>   [ 2 ETH ] [ 3.9 ETH ] [ 5.7 ETH ] [ ... ]
-    ///   Keys Count          |>       1          2          3        i + 1
+    /// It contains:
+    ///  - internals    |> intervals-based representation of the bond curve
+    ///
+    /// The interval is defined by:
+    ///  - minKeysCount |> minimum keys count (inclusive) of the interval
+    ///  - minBond      |> minimum bond amount (inclusive) of the interval
+    ///  - trend        |> trend of the bond amount in the interval
+    ///
+    /// For example, how the curve intervals look like:
+    ///   Interval 0: minKeysCount = 1, minBond = 2 ETH, trend = 2 ETH
+    ///   Interval 1: minKeysCount = 2, minBond = 3.9 ETH, trend = 1.9 ETH
+    ///   Interval 2: minKeysCount = 3, minBond = 5.7 ETH, trend = 1.8 ETH
     ///
     ///   Bond Amount (ETH)
     ///       ^
@@ -38,19 +43,28 @@ interface ICSBondCurve {
     ///       |----------|----------|----------|----------|----> Keys Count
     ///       |          1          2          3          i
     ///
+    struct BondCurve {
+        BondCurveInterval[] intervals;
+    }
+
     struct BondCurveInterval {
         uint256 minKeysCount;
         uint256 minBond;
         uint256 trend;
     }
 
+    struct BondCurveIntervalInput {
+        uint256 minKeysCount;
+        uint256 trend;
+    }
+
     event BondCurveAdded(
         uint256 indexed curveId,
-        uint256[2][] bondCurveIntervals
+        BondCurveIntervalInput[] bondCurveIntervals
     );
     event BondCurveUpdated(
         uint256 indexed curveId,
-        uint256[2][] bondCurveIntervals
+        BondCurveIntervalInput[] bondCurveIntervals
     );
     event BondCurveSet(uint256 indexed nodeOperatorId, uint256 curveId);
 
@@ -58,7 +72,7 @@ interface ICSBondCurve {
     error InvalidBondCurveMaxLength();
     error InvalidBondCurveValues();
     error InvalidBondCurveId();
-    error InvalidInitialisationCurveId();
+    error InvalidInitializationCurveId();
 
     function MIN_CURVE_LENGTH() external view returns (uint256);
 
@@ -76,14 +90,14 @@ interface ICSBondCurve {
     /// @dev Reverts if `curveId` is invalid
     function getCurveInfo(
         uint256 curveId
-    ) external view returns (BondCurveInterval[] memory);
+    ) external view returns (BondCurve memory);
 
     /// @notice Get bond curve for the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator
     /// @return Bond curve
     function getBondCurve(
         uint256 nodeOperatorId
-    ) external view returns (BondCurveInterval[] memory);
+    ) external view returns (BondCurve memory);
 
     /// @notice Get bond curve ID for the given Node Operator
     /// @param nodeOperatorId ID of the Node Operator
