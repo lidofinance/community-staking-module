@@ -416,7 +416,7 @@ contract CSParametersRegistryRewardShareDataTest is
         data[2] = ICSParametersRegistry.KeyNumberValueInterval(10, 5000);
 
         vm.expectRevert(
-            ICSParametersRegistry.InvalidKeyIndexValueIntervals.selector
+            ICSParametersRegistry.InvalidKeyNumberValueIntervals.selector
         );
         vm.prank(admin);
         parametersRegistry.setRewardShareData(curveId, data);
@@ -429,7 +429,7 @@ contract CSParametersRegistryRewardShareDataTest is
         data[0] = ICSParametersRegistry.KeyNumberValueInterval(100, 10000);
 
         vm.expectRevert(
-            ICSParametersRegistry.InvalidKeyIndexValueIntervals.selector
+            ICSParametersRegistry.InvalidKeyNumberValueIntervals.selector
         );
         vm.prank(admin);
         parametersRegistry.setRewardShareData(curveId, data);
@@ -443,7 +443,7 @@ contract CSParametersRegistryRewardShareDataTest is
         data[1] = ICSParametersRegistry.KeyNumberValueInterval(10, 8000);
 
         vm.expectRevert(
-            ICSParametersRegistry.InvalidKeyIndexValueIntervals.selector
+            ICSParametersRegistry.InvalidKeyNumberValueIntervals.selector
         );
         vm.prank(admin);
         parametersRegistry.setRewardShareData(curveId, data);
@@ -615,7 +615,7 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         data[2] = ICSParametersRegistry.KeyNumberValueInterval(10, 300);
 
         vm.expectRevert(
-            ICSParametersRegistry.InvalidKeyIndexValueIntervals.selector
+            ICSParametersRegistry.InvalidKeyNumberValueIntervals.selector
         );
         vm.prank(admin);
         parametersRegistry.setPerformanceLeewayData(curveId, data);
@@ -628,7 +628,7 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         data[0] = ICSParametersRegistry.KeyNumberValueInterval(100, 10000);
 
         vm.expectRevert(
-            ICSParametersRegistry.InvalidKeyIndexValueIntervals.selector
+            ICSParametersRegistry.InvalidKeyNumberValueIntervals.selector
         );
         vm.prank(admin);
         parametersRegistry.setPerformanceLeewayData(curveId, data);
@@ -642,7 +642,7 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         data[1] = ICSParametersRegistry.KeyNumberValueInterval(10, 8000);
 
         vm.expectRevert(
-            ICSParametersRegistry.InvalidKeyIndexValueIntervals.selector
+            ICSParametersRegistry.InvalidKeyNumberValueIntervals.selector
         );
         vm.prank(admin);
         parametersRegistry.setPerformanceLeewayData(curveId, data);

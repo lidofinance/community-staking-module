@@ -148,7 +148,7 @@ interface ICSParametersRegistry {
 
     error InvalidRewardShareData();
     error InvalidPerformanceLeewayData();
-    error InvalidKeyIndexValueIntervals();
+    error InvalidKeyNumberValueIntervals();
     error InvalidPerformanceCoefficients();
     error InvalidStrikesParams();
     error ZeroMaxDeposits();

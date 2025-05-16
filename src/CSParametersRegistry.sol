@@ -262,7 +262,7 @@ contract CSParametersRegistry is
         uint256 curveId,
         KeyNumberValueInterval[] calldata data
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _validateKeysCountValueIntervals(data);
+        _validateKeyNumberValueIntervals(data);
         KeyNumberValueInterval[] storage intervals = _rewardShareData[curveId]
             .intervals;
         if (intervals.length > 0) {
@@ -287,7 +287,7 @@ contract CSParametersRegistry is
         uint256 curveId,
         KeyNumberValueInterval[] calldata data
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _validateKeysCountValueIntervals(data);
+        _validateKeyNumberValueIntervals(data);
         KeyNumberValueInterval[] storage intervals = _performanceLeewayData[
             curveId
         ].intervals;
@@ -738,15 +738,15 @@ contract CSParametersRegistry is
         }
     }
 
-    function _validateKeysCountValueIntervals(
+    function _validateKeyNumberValueIntervals(
         KeyNumberValueInterval[] calldata intervals
     ) private pure {
         if (intervals[0].minKeyNumber != 1) {
-            revert InvalidKeyIndexValueIntervals();
+            revert InvalidKeyNumberValueIntervals();
         }
 
         if (intervals[0].value == 0 || intervals[0].value > MAX_BP) {
-            revert InvalidKeyIndexValueIntervals();
+            revert InvalidKeyNumberValueIntervals();
         }
 
         for (uint256 i = 1; i < intervals.length; ++i) {
@@ -754,10 +754,10 @@ contract CSParametersRegistry is
                 if (
                     intervals[i].minKeyNumber <= intervals[i - 1].minKeyNumber
                 ) {
-                    revert InvalidKeyIndexValueIntervals();
+                    revert InvalidKeyNumberValueIntervals();
                 }
                 if (intervals[i].value == 0 || intervals[i].value > MAX_BP) {
-                    revert InvalidKeyIndexValueIntervals();
+                    revert InvalidKeyNumberValueIntervals();
                 }
             }
         }
