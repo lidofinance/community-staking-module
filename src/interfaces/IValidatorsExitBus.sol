@@ -9,6 +9,14 @@ interface IValidatorsExitBus {
         bytes validatorsPubkeys;
     }
 
+    event DirectExitRequest(
+        uint256 indexed stakingModuleId,
+        uint256 indexed nodeOperatorId,
+        bytes validatoPubkey,
+        uint256 timestamp,
+        address indexed refundRecipient
+    );
+
     function triggerExitsDirectly(
         DirectExitData calldata exitData,
         address refundRecipient,

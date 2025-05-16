@@ -474,4 +474,13 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
         keysCount = 5;
         noId = addNodeOperator(nodeOperatorAddress, keysCount);
     }
+
+    function getDepositedNodeOperator(address nodeOperatorAddress, uint256 keysCount) internal returns (uint256) {
+        for (uint256 noId;;++noId) {
+            if (csm.getNodeOperatorTotalDepositedKeys(noId) >= keysCount) {
+                return noId;
+            }
+        }
+        return addNodeOperator(nodeOperatorAddress, keysCount);
+    }
 }
