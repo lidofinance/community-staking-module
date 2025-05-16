@@ -138,8 +138,6 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         emit BondCurveUpdated(curveId, intervals);
     }
 
-    // THE END OF THE ROUND 4
-
     /// @dev Sets bond curve for the given Node Operator
     ///      It will be used for the Node Operator instead of the previously set curve
     function _setBondCurve(uint256 nodeOperatorId, uint256 curveId) internal {

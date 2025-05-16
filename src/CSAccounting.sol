@@ -281,7 +281,7 @@ contract CSAccounting is
     /// @inheritdoc ICSAccounting
     function claimRewardsUnstETH(
         uint256 nodeOperatorId,
-        uint256 stEthAmount,
+        uint256 stETHAmount,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
     ) external whenResumed returns (uint256 requestId) {
@@ -294,7 +294,7 @@ contract CSAccounting is
         }
         requestId = CSBondCore._claimUnstETH(
             nodeOperatorId,
-            stEthAmount,
+            stETHAmount,
             no.rewardAddress
         );
         MODULE.updateDepositableValidatorsCount(nodeOperatorId);
@@ -343,6 +343,8 @@ contract CSAccounting is
             applied = true;
         }
     }
+
+    /// Resume round 6 from this line
 
     /// @inheritdoc ICSAccounting
     function penalize(
@@ -402,15 +404,22 @@ contract CSAccounting is
     function getBondSummary(
         uint256 nodeOperatorId
     ) external view returns (uint256 current, uint256 required) {
+        current = CSBondCore.getBond(nodeOperatorId);
+        uint256 nonWithdrawnKeys = MODULE.getNodeOperatorNonWithdrawnKeys(
+            nodeOperatorId
+        );
+        uint256 curveId = CSBondCurve.getBondCurveId(nodeOperatorId);
+        uint256 requiredBondForKeys = CSBondCurve.getBondAmountByKeysCount(
+            nonWithdrawnKeys,
+            curveId
+        );
+        uint256 actualLockedBond = CSBondLock.getActualLockedBond(
+            nodeOperatorId
+        );
+
         unchecked {
-            current = CSBondCore.getBond(nodeOperatorId);
             // @dev 'getActualLockedBond' is uint128, so no overflow expected in practice
-            required =
-                CSBondCurve.getBondAmountByKeysCount(
-                    MODULE.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
-                    CSBondCurve.getBondCurveId(nodeOperatorId)
-                ) +
-                CSBondLock.getActualLockedBond(nodeOperatorId);
+            required = requiredBondForKeys + actualLockedBond;
         }
     }
 
@@ -582,15 +591,28 @@ contract CSAccounting is
     function _getClaimableBondShares(
         uint256 nodeOperatorId
     ) internal view override returns (uint256) {
+        uint256 curveId = CSBondCurve.getBondCurveId(nodeOperatorId);
+        uint256 nonWithdrawnKeys = MODULE.getNodeOperatorNonWithdrawnKeys(
+            nodeOperatorId
+        );
+        uint256 requiredBondForKeys = CSBondCurve.getBondAmountByKeysCount(
+            nonWithdrawnKeys,
+            curveId
+        );
+        uint256 actualLockedBond = CSBondLock.getActualLockedBond(
+            nodeOperatorId
+        );
+
+        uint256 currentShares = CSBondCore.getBondShares(nodeOperatorId);
+
         unchecked {
-            uint256 current = CSBondCore.getBondShares(nodeOperatorId);
-            uint256 required = _sharesByEth(
-                CSBondCurve.getBondAmountByKeysCount(
-                    MODULE.getNodeOperatorNonWithdrawnKeys(nodeOperatorId),
-                    CSBondCurve.getBondCurveId(nodeOperatorId)
-                ) + CSBondLock.getActualLockedBond(nodeOperatorId)
+            uint256 requiredShares = _sharesByEth(
+                requiredBondForKeys + actualLockedBond
             );
-            return current > required ? current - required : 0;
+            return
+                currentShares > requiredShares
+                    ? currentShares - requiredShares
+                    : 0;
         }
     }
 

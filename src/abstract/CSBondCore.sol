@@ -145,10 +145,11 @@ abstract contract CSBondCore is ICSBondCore {
 
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = _ethByShares(sharesToClaim);
-        uint256 sharesBefore = LIDO.sharesOf(address(this));
 
+        uint256 sharesBefore = LIDO.sharesOf(address(this));
         requestId = WITHDRAWAL_QUEUE.requestWithdrawals(amounts, to)[0];
         uint256 sharesAfter = LIDO.sharesOf(address(this));
+
         _unsafeReduceBond(nodeOperatorId, sharesBefore - sharesAfter);
         emit BondClaimedUnstETH(nodeOperatorId, to, amounts[0], requestId);
     }
@@ -199,8 +200,8 @@ abstract contract CSBondCore is ICSBondCore {
     /// @dev The method sender should be granted as `Burner.REQUEST_BURN_MY_STETH_ROLE` and make stETH allowance for `Burner`
     /// @param amount Bond amount to burn in ETH (stETH)
     function _burn(uint256 nodeOperatorId, uint256 amount) internal {
-        uint256 toBurnShares = _sharesByEth(amount);
-        uint256 burnedShares = _reduceBond(nodeOperatorId, toBurnShares);
+        uint256 sharesToBurn = _sharesByEth(amount);
+        uint256 burnedShares = _reduceBond(nodeOperatorId, sharesToBurn);
         // If no bond already
         if (burnedShares == 0) {
             return;
@@ -211,7 +212,7 @@ abstract contract CSBondCore is ICSBondCore {
         IBurner(LIDO_LOCATOR.burner()).requestBurnMyStETH(burnedAmount);
         emit BondBurned(
             nodeOperatorId,
-            _ethByShares(toBurnShares),
+            _ethByShares(sharesToBurn),
             burnedAmount
         );
     }

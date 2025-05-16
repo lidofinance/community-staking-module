@@ -42,7 +42,7 @@ interface ICSBondCore {
     );
     event BondBurned(
         uint256 indexed nodeOperatorId,
-        uint256 toBurnAmount,
+        uint256 amountToBurn,
         uint256 burnedAmount
     );
     event BondCharged(
