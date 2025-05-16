@@ -453,7 +453,7 @@ contract CSParametersRegistryRewardShareDataTest is
         uint256 curveId = 1;
         ICSParametersRegistry.KeyNumberValueInterval[]
             memory data = new ICSParametersRegistry.KeyNumberValueInterval[](2);
-        data[0] = ICSParametersRegistry.KeyNumberValueInterval(0, 8000);
+        data[0] = ICSParametersRegistry.KeyNumberValueInterval(1, 8000);
         data[1] = ICSParametersRegistry.KeyNumberValueInterval(10, 80000);
 
         vm.expectRevert(
