@@ -449,14 +449,14 @@ Set reward share parameters for the curveId
 
 
 ```solidity
-function setRewardShareData(uint256 curveId, KeyIndexValueInterval[] calldata data) external;
+function setRewardShareData(uint256 curveId, KeyNumberValueInterval[] calldata data) external;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`curveId`|`uint256`|Curve Id to associate reward share data with|
-|`data`|`KeyIndexValueInterval[]`|Interval values for keys count and reward share percentages in BP (ex. [[0, 10000], [10, 8000], [50, 5000]])|
+|`data`|`KeyNumberValueInterval[]`|Interval values for keys count and reward share percentages in BP (ex. [[0, 10000], [10, 8000], [50, 5000]])|
 
 
 ### unsetRewardShareData
@@ -485,7 +485,7 @@ Get reward share parameters by the curveId.
 
 
 ```solidity
-function getRewardShareData(uint256 curveId) external view returns (KeyIndexValueInterval[] memory data);
+function getRewardShareData(uint256 curveId) external view returns (KeyNumberValueInterval[] memory data);
 ```
 **Parameters**
 
@@ -574,14 +574,14 @@ Set performance leeway parameters for the curveId
 
 
 ```solidity
-function setPerformanceLeewayData(uint256 curveId, KeyIndexValueInterval[] calldata data) external;
+function setPerformanceLeewayData(uint256 curveId, KeyNumberValueInterval[] calldata data) external;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`curveId`|`uint256`|Curve Id to associate performance leeway data with|
-|`data`|`KeyIndexValueInterval[]`|Interval values for keys count and performance leeway percentages in BP (ex. [[0, 500], [100, 450], [500, 400]])|
+|`data`|`KeyNumberValueInterval[]`|Interval values for keys count and performance leeway percentages in BP (ex. [[0, 500], [100, 450], [500, 400]])|
 
 
 ### unsetPerformanceLeewayData
@@ -610,7 +610,7 @@ Get performance leeway parameters by the curveId
 
 
 ```solidity
-function getPerformanceLeewayData(uint256 curveId) external view returns (KeyIndexValueInterval[] memory data);
+function getPerformanceLeewayData(uint256 curveId) external view returns (KeyNumberValueInterval[] memory data);
 ```
 **Parameters**
 
@@ -1035,13 +1035,13 @@ event KeysLimitSet(uint256 indexed curveId, uint256 limit);
 ### RewardShareDataSet
 
 ```solidity
-event RewardShareDataSet(uint256 indexed curveId, KeyIndexValueInterval[] data);
+event RewardShareDataSet(uint256 indexed curveId, KeyNumberValueInterval[] data);
 ```
 
 ### PerformanceLeewayDataSet
 
 ```solidity
-event PerformanceLeewayDataSet(uint256 indexed curveId, KeyIndexValueInterval[] data);
+event PerformanceLeewayDataSet(uint256 indexed curveId, KeyNumberValueInterval[] data);
 ```
 
 ### StrikesParamsSet
@@ -1307,7 +1307,7 @@ struct InitializationData {
 }
 ```
 
-### KeyIndexValueInterval
+### KeyNumberValueInterval
 *Defines a value interval starting from `minKeyIndex`.
 All keys with indices >= `minKeyIndex` are assigned the corresponding `value`
 until the next interval begins. Intervals must be sorted by ascending `minKeyIndex`
@@ -1316,7 +1316,7 @@ Example: [{0, 10000}, {10, 8000}] means keys indexes 0–9 with 10000, keys inde
 
 
 ```solidity
-struct KeyIndexValueInterval {
+struct KeyNumberValueInterval {
     uint256 minKeyIndex;
     uint256 value;
 }

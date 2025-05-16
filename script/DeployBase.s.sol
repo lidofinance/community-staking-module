@@ -274,8 +274,11 @@ abstract contract DeployBase is Script {
                 accountingProxy.proxy__changeAdmin(config.proxyAdmin);
             }
 
+            ICSBondCurve.BondCurveIntervalInput[]
+                memory bondCurve = CommonScriptUtils
+                    .arraysToBondCurveIntervalsInputs(config.bondCurve);
             accounting.initialize({
-                bondCurve: config.bondCurve,
+                bondCurve: bondCurve,
                 admin: deployer,
                 bondLockPeriod: config.bondLockPeriod,
                 _chargePenaltyRecipient: config.chargePenaltyRecipient
@@ -286,8 +289,13 @@ abstract contract DeployBase is Script {
                 address(deployer)
             );
 
+            ICSBondCurve.BondCurveIntervalInput[]
+                memory identifiedCommunityStakersGateBondCurve = CommonScriptUtils
+                    .arraysToBondCurveIntervalsInputs(
+                        config.identifiedCommunityStakersGateBondCurve
+                    );
             uint256 identifiedCommunityStakersGateBondCurveId = accounting
-                .addBondCurve(config.identifiedCommunityStakersGateBondCurve);
+                .addBondCurve(identifiedCommunityStakersGateBondCurve);
             accounting.revokeRole(
                 accounting.MANAGE_BOND_CURVES_ROLE(),
                 address(deployer)

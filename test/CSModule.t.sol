@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
@@ -10,6 +10,7 @@ import { CSModule } from "../src/CSModule.sol";
 import { CSAccounting } from "../src/CSAccounting.sol";
 import { CSBondLock } from "../src/abstract/CSBondLock.sol";
 import { ICSAccounting } from "../src/interfaces/ICSAccounting.sol";
+import { ICSBondCurve } from "../src/interfaces/ICSBondCurve.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 import { StETHMock } from "./helpers/mocks/StETHMock.sol";
 import { LidoLocatorMock } from "./helpers/mocks/LidoLocatorMock.sol";
@@ -365,8 +366,12 @@ contract CSMCommon is CSMFixtures {
         parametersRegistry = new CSParametersRegistryMock();
         exitPenalties = new ExitPenaltiesMock();
 
-        uint256[2][] memory curve = new uint256[2][](1);
-        curve[0] = [uint256(1), BOND_SIZE];
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: BOND_SIZE
+        });
         accounting = new CSAccountingMock(BOND_SIZE, address(wstETH));
         accounting.setFeeDistributor(address(feeDistributor));
 
@@ -419,8 +424,12 @@ contract CSMCommonNoRoles is CSMFixtures {
         feeDistributor = new Stub();
         parametersRegistry = new CSParametersRegistryMock();
         exitPenalties = new ExitPenaltiesMock();
-        uint256[2][] memory curve = new uint256[2][](1);
-        curve[0] = [uint256(1), BOND_SIZE];
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory curve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        curve[0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: BOND_SIZE
+        });
         accounting = new CSAccountingMock(BOND_SIZE, address(wstETH));
         accounting.setFeeDistributor(address(feeDistributor));
 
@@ -836,6 +845,34 @@ contract CSMCreateNodeOperator is CSMCommon {
             }),
             address(0)
         );
+    }
+
+    function test_createNodeOperator_multipleInSameTx() public {
+        address manager = nextAddress("MANAGER");
+        address referrer = nextAddress("REFERRER");
+        NodeOperatorManagementProperties
+            memory props = NodeOperatorManagementProperties({
+                managerAddress: manager,
+                rewardAddress: address(0),
+                extendedManagerPermissions: false
+            });
+        uint256 nonceBefore = csm.getNonce();
+        uint256 countBefore = csm.getNodeOperatorsCount();
+
+        // Act: create two node operators in the same transaction
+        uint256 id1 = csm.createNodeOperator(manager, props, referrer);
+        uint256 id2 = csm.createNodeOperator(manager, props, referrer);
+
+        // Assert: both created, ids are sequential, nonce incremented twice
+        assertEq(id1, countBefore);
+        assertEq(id2, countBefore + 1);
+        assertEq(csm.getNodeOperatorsCount(), countBefore + 2);
+        assertEq(csm.getNonce(), nonceBefore + 2);
+        // Check events and referrer
+        NodeOperator memory no1 = csm.getNodeOperator(id1);
+        assertEq(no1.managerAddress, manager);
+        NodeOperator memory no2 = csm.getNodeOperator(id2);
+        assertEq(no2.managerAddress, manager);
     }
 }
 
@@ -3083,12 +3120,21 @@ contract CsmPriorityQueue is CSMCommon {
         _assertQueueEmpty(PRIORITY_QUEUE);
         _enablePriorityQueue(PRIORITY_QUEUE, MAX_DEPOSITS);
 
+        uint256 initialNonce = csm.getNonce(); // Capture initial nonce
+
         {
             vm.expectEmit(address(csm));
             emit ICSModule.BatchEnqueued(PRIORITY_QUEUE, noId, 8);
 
             csm.migrateToPriorityQueue(noId);
         }
+
+        uint256 updatedNonce = csm.getNonce(); // Capture updated nonce
+        assertEq(
+            updatedNonce,
+            initialNonce + 1,
+            "Module nonce should increment by 1"
+        ); // Assert increment
 
         BatchInfo[] memory exp = new BatchInfo[](1);
 
@@ -5581,8 +5627,7 @@ contract CsmSubmitWithdrawals is CSMCommon {
         bool withdrawn = csm.isValidatorWithdrawn(noId, keyIndex);
         assertTrue(withdrawn);
 
-        // no changes in depositable keys or keys in general
-        assertEq(csm.getNonce(), nonce);
+        assertEq(csm.getNonce(), nonce + 1);
     }
 
     function test_submitWithdrawals_slashed() public assertInvariants {
@@ -6058,6 +6103,32 @@ contract CsmSubmitWithdrawals is CSMCommon {
         vm.expectRevert(ICSModule.AlreadyWithdrawn.selector);
         csm.submitWithdrawals(withdrawalInfo);
     }
+
+    function test_submitWithdrawals_nonceIncrementsOnceForManyWithdrawals()
+        public
+        assertInvariants
+    {
+        uint256 noId = createNodeOperator(3);
+        csm.obtainDepositData(3, "");
+        uint256 nonceBefore = csm.getNonce();
+
+        ValidatorWithdrawalInfo[]
+            memory withdrawalInfo = new ValidatorWithdrawalInfo[](3);
+        for (uint256 i = 0; i < 3; ++i) {
+            withdrawalInfo[i] = ValidatorWithdrawalInfo(
+                noId,
+                i,
+                csm.DEPOSIT_SIZE(),
+                false
+            );
+        }
+        csm.submitWithdrawals(withdrawalInfo);
+        assertEq(
+            csm.getNonce(),
+            nonceBefore + 1,
+            "Module nonce should increment only once for batch withdrawals"
+        );
+    }
 }
 
 contract CsmGetStakingModuleSummary is CSMCommon {
@@ -6367,8 +6438,14 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
         vm.prank(admin);
         csm.grantRole(role, actor);
 
+        uint256 nonceBefore = csm.getNonce();
         vm.prank(actor);
         csm.onWithdrawalCredentialsChanged();
+        assertEq(
+            csm.getNonce(),
+            nonceBefore + 1,
+            "Module nonce should increment by 1"
+        );
     }
 
     function test_stakingRouterRole_onWithdrawalCredentialsChanged_revert()

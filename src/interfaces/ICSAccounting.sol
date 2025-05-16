@@ -79,7 +79,7 @@ interface ICSAccounting is
     /// @param bondCurve Bond curve definition to add
     /// @return id Id of the added curve
     function addBondCurve(
-        uint256[2][] calldata bondCurve
+        BondCurveIntervalInput[] calldata bondCurve
     ) external returns (uint256 id);
 
     /// @notice Update existing bond curve
@@ -89,7 +89,7 @@ interface ICSAccounting is
     /// @param bondCurve Bond curve definition
     function updateBondCurve(
         uint256 curveId,
-        uint256[2][] calldata bondCurve
+        BondCurveIntervalInput[] calldata bondCurve
     ) external;
 
     /// @notice Get the required bond in ETH (inc. missed and excess) for the given Node Operator to upload new deposit data

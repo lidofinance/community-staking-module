@@ -617,6 +617,7 @@ contract CSModule is
 
             no.usedPriorityQueue = true;
         }
+        _incrementModuleNonce();
 
         // An alternative version to fit into the bytecode requirements is below. Please consider
         // the described caveat of the approach.
@@ -806,16 +807,16 @@ contract CSModule is
                 );
             }
 
-            // Nonce should be updated if depositableValidators change
+            // Nonce will be updated below even if depositable count was not changed
             _updateDepositableValidatorsCount({
                 nodeOperatorId: withdrawalInfo.nodeOperatorId,
-                incrementNonceIfUpdated: true
+                incrementNonceIfUpdated: false
             });
         }
+        _incrementModuleNonce();
     }
 
     /// @inheritdoc IStakingModule
-    /// @dev Does nothing
     /// @dev Changing the WC means that the current deposit data in the queue is not valid anymore and can't be deposited.
     ///      DSM will unvet current keys.
     ///      The key removal charge should be reset to 0 to allow Node Operators to remove the keys without any charge.
@@ -824,8 +825,7 @@ contract CSModule is
         external
         onlyRole(STAKING_ROUTER_ROLE)
     {
-        // solhint-disable-previous-line no-empty-blocks
-        // Nothing to do. The key removal charge should be reset separately to 0 to allow Node Operators to remove the keys without any charge.
+        _incrementModuleNonce();
     }
 
     /// @inheritdoc IStakingModule
