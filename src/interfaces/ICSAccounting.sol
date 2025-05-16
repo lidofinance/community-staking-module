@@ -173,7 +173,7 @@ interface ICSAccounting is
     ) external view returns (uint256);
 
     /// @notice Unwrap the user's wstETH and deposit stETH to the bond for the given Node Operator
-    /// @dev Called by CSM exclusively
+    /// @dev Called by CSM exclusively. CSM should check node operator existence and update depositable validators count
     /// @param from Address to unwrap wstETH from
     /// @param nodeOperatorId ID of the Node Operator
     /// @param wstETHAmount Amount of wstETH to deposit
@@ -197,8 +197,8 @@ interface ICSAccounting is
     ) external;
 
     /// @notice Deposit user's stETH to the bond for the given Node Operator
-    /// @dev Called by CSM exclusively
-    /// @param from Address to deposit stETH from
+    /// @dev Called by CSM exclusively. CSM should check node operator existence and update depositable validators count
+    /// @param from Address to deposit stETH from.
     /// @param nodeOperatorId ID of the Node Operator
     /// @param stETHAmount Amount of stETH to deposit
     /// @param permit stETH permit for the contract
@@ -221,7 +221,7 @@ interface ICSAccounting is
     ) external;
 
     /// @notice Stake user's ETH with Lido and deposit stETH to the bond
-    /// @dev Called by CSM exclusively
+    /// @dev Called by CSM exclusively. CSM should check node operator existence and update depositable validators count
     /// @param from Address to stake ETH and deposit stETH from
     /// @param nodeOperatorId ID of the Node Operator
     function depositETH(address from, uint256 nodeOperatorId) external payable;
@@ -267,7 +267,7 @@ interface ICSAccounting is
     ///         `rewardsProof` and `cumulativeFeeShares` might be empty in order to claim only excess bond
     /// @dev Reverts if amount isn't between `MIN_STETH_WITHDRAWAL_AMOUNT` and `MAX_STETH_WITHDRAWAL_AMOUNT`
     /// @param nodeOperatorId ID of the Node Operator
-    /// @param stEthAmount Amount of ETH to request
+    /// @param stETHAmount Amount of ETH to request
     /// @param cumulativeFeeShares Cumulative fee stETH shares for the Node Operator
     /// @param rewardsProof Merkle proof of the rewards
     /// @return requestId Withdrawal NFT ID
@@ -275,7 +275,7 @@ interface ICSAccounting is
     /// off-chain tooling, e.g. to make sure a tree has at least 2 leafs.
     function claimRewardsUnstETH(
         uint256 nodeOperatorId,
-        uint256 stEthAmount,
+        uint256 stETHAmount,
         uint256 cumulativeFeeShares,
         bytes32[] calldata rewardsProof
     ) external returns (uint256 requestId);
