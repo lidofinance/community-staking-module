@@ -87,6 +87,14 @@ contract Fixtures is StdCheats, Test {
         // cheat to allow implementation initialisation
         vm.store(implementation, INITIALIZABLE_STORAGE, bytes32(0));
     }
+
+    function _setStorage(
+        address implementation,
+        bytes32 storageLocation,
+        bytes32 value
+    ) internal {
+        vm.store(implementation, storageLocation, value);
+    }
 }
 
 contract DeploymentHelpers is Test {

@@ -151,7 +151,7 @@ contract CSBondCurveTest is Test {
         bondCurve.addBondCurve(new uint256[2][](21));
     }
 
-    function test_addBondCurve_RevertWhen_ZeroValue() public {
+    function test_addBondCurve_RevertWhen_ZeroTrend() public {
         uint256[2][] memory _bondCurve = new uint256[2][](1);
         _bondCurve[0] = [uint256(1), 0 ether];
 
@@ -159,10 +159,29 @@ contract CSBondCurveTest is Test {
         bondCurve.addBondCurve(_bondCurve);
     }
 
-    function test_addBondCurve_RevertWhen_NextValueIsLessThanPrevious() public {
+    function test_addBondCurve_RevertWhen_ZeroTrendSecondInterval() public {
         uint256[2][] memory _bondCurve = new uint256[2][](2);
-        _bondCurve[0] = [uint256(2), 10 ether];
-        _bondCurve[1] = [uint256(1), 9 ether];
+        _bondCurve[0] = [uint256(1), 1 ether];
+        _bondCurve[1] = [uint256(2), 0 ether];
+
+        vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
+        bondCurve.addBondCurve(_bondCurve);
+    }
+
+    function test_addBondCurve_RevertWhen_FirstIntervalStartsFromNonOne()
+        public
+    {
+        uint256[2][] memory _bondCurve = new uint256[2][](1);
+        _bondCurve[0] = [uint256(2), 0 ether];
+
+        vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
+        bondCurve.addBondCurve(_bondCurve);
+    }
+
+    function test_addBondCurve_RevertWhen_UnsortedIntervals() public {
+        uint256[2][] memory _bondCurve = new uint256[2][](2);
+        _bondCurve[0] = [uint256(1), 1 ether];
+        _bondCurve[1] = [uint256(1), 0 ether];
 
         vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
         bondCurve.addBondCurve(_bondCurve);
@@ -234,19 +253,36 @@ contract CSBondCurveTest is Test {
         bondCurve.updateBondCurve(0, new uint256[2][](21));
     }
 
-    function test_updateBondCurve_RevertWhen_ZeroValue() public {
+    function test_updateBondCurve_RevertWhen_ZeroTrend() public {
         uint256[2][] memory _bondCurve = new uint256[2][](1);
         _bondCurve[0] = [uint256(1), 0 ether];
         vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
         bondCurve.updateBondCurve(0, _bondCurve);
     }
 
-    function test_updateBondCurve_RevertWhen_NextValueIsLessThanPrevious()
+    function test_updateBondCurve_RevertWhen_ZeroTrendSecondInterval() public {
+        uint256[2][] memory _bondCurve = new uint256[2][](2);
+        _bondCurve[0] = [uint256(1), 1 ether];
+        _bondCurve[1] = [uint256(2), 0 ether];
+
+        vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
+        bondCurve.updateBondCurve(0, _bondCurve);
+    }
+
+    function test_updateBondCurve_RevertWhen_FirstIntervalStartsFromNonOne()
         public
     {
+        uint256[2][] memory _bondCurve = new uint256[2][](1);
+        _bondCurve[0] = [uint256(2), 0 ether];
+
+        vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
+        bondCurve.updateBondCurve(0, _bondCurve);
+    }
+
+    function test_updateBondCurve_RevertWhen_UnsortedIntervals() public {
         uint256[2][] memory _bondCurve = new uint256[2][](2);
-        _bondCurve[0] = [uint256(2), 10 ether];
-        _bondCurve[1] = [uint256(1), 9 ether];
+        _bondCurve[0] = [uint256(1), 1 ether];
+        _bondCurve[1] = [uint256(1), 0 ether];
 
         vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
         bondCurve.updateBondCurve(0, _bondCurve);

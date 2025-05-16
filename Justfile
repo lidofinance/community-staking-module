@@ -128,11 +128,11 @@ gas-report:
     print(f"Done. Gas report saved to {filename}")
 
 coverage *args:
-    FOUNDRY_PROFILE=coverage forge coverage --no-match-coverage 'test' --no-match-path 'test/fork/*' {{args}}
+    FOUNDRY_PROFILE=coverage forge coverage --no-match-coverage '(test|script)' --no-match-path 'test/fork/*' {{args}}
 
 # Run coverage and save the report in LCOV file.
 coverage-lcov *args:
-    FOUNDRY_PROFILE=coverage forge coverage --no-match-path 'test/fork/*' --report lcov {{args}}
+    FOUNDRY_PROFILE=coverage forge coverage --no-match-coverage '(test|script)' --no-match-path 'test/fork/*' --report lcov {{args}}
 
 diffyscan-contracts *args:
     yarn generate:diffyscan {{args}}

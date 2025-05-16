@@ -239,6 +239,13 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
         assertEq(nodeOperator.balance, expectedRefund);
     }
 
+    function test_voluntaryEject_revertWhen_NodeOperatorDoesNotExist() public {
+        uint256 keyIndex = 0;
+
+        vm.expectRevert(ICSEjector.NodeOperatorDoesNotExist.selector);
+        ejector.voluntaryEject(noId, keyIndex, 1, address(0));
+    }
+
     function test_voluntaryEject_revertWhen_senderIsNotEligible() public {
         uint256 keyIndex = 0;
 
@@ -468,6 +475,18 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
         indices[0] = keyIndex;
 
         vm.expectRevert(ICSEjector.SenderIsNotEligible.selector);
+        ejector.voluntaryEjectByArray(noId, indices, address(0));
+    }
+
+    function test_voluntaryEjectByArray_revertWhen_NodeOperatorDoesNotExist()
+        public
+    {
+        uint256 keyIndex = 0;
+
+        uint256[] memory indices = new uint256[](1);
+        indices[0] = keyIndex;
+
+        vm.expectRevert(ICSEjector.NodeOperatorDoesNotExist.selector);
         ejector.voluntaryEjectByArray(noId, indices, address(0));
     }
 

@@ -7290,6 +7290,58 @@ contract CSMExitDeadlineThreshold is CSMCommon {
     }
 }
 
+contract CSMIsValidatorExitDelayPenaltyApplicable is CSMCommon {
+    function test_isValidatorExitDelayPenaltyApplicable_notApplicable() public {
+        uint256 noId = createNodeOperator();
+        uint256 eligibleToExit = csm.exitDeadlineThreshold(noId);
+        bytes memory publicKey = randomBytes(48);
+
+        exitPenalties.mock_isValidatorExitDelayPenaltyApplicable(false);
+
+        vm.expectCall(
+            address(exitPenalties),
+            abi.encodeWithSelector(
+                ICSExitPenalties.isValidatorExitDelayPenaltyApplicable.selector,
+                noId,
+                publicKey,
+                eligibleToExit
+            )
+        );
+        bool applicable = csm.isValidatorExitDelayPenaltyApplicable(
+            noId,
+            154,
+            publicKey,
+            eligibleToExit
+        );
+        assertFalse(applicable);
+    }
+
+    function test_isValidatorExitDelayPenaltyApplicable_applicable() public {
+        uint256 noId = createNodeOperator();
+        uint256 eligibleToExit = csm.exitDeadlineThreshold(noId) + 1;
+        bytes memory publicKey = randomBytes(48);
+
+        exitPenalties.mock_isValidatorExitDelayPenaltyApplicable(true);
+
+        vm.expectCall(
+            address(exitPenalties),
+            abi.encodeWithSelector(
+                ICSExitPenalties.isValidatorExitDelayPenaltyApplicable.selector,
+                noId,
+                publicKey,
+                eligibleToExit
+            )
+        );
+        bool applicable = csm.isValidatorExitDelayPenaltyApplicable(
+            noId,
+            154,
+            publicKey,
+            eligibleToExit
+        );
+        assertTrue(applicable);
+    }
+}
+
 contract CSMReportValidatorExitDelay is CSMCommon {
     function test_reportValidatorExitDelay() public {
         uint256 noId = createNodeOperator();
