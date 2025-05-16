@@ -161,9 +161,10 @@ contract CSBondCurveTest is Test {
     }
 
     function test_addBondCurve_RevertWhen_ZeroTrendSecondInterval() public {
-        uint256[2][] memory _bondCurve = new uint256[2][](2);
-        _bondCurve[0] = [uint256(1), 1 ether];
-        _bondCurve[1] = [uint256(2), 0 ether];
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory _bondCurve = new ICSBondCurve.BondCurveIntervalInput[](2);
+        _bondCurve[0] = ICSBondCurve.BondCurveIntervalInput(1, 1 ether);
+        _bondCurve[1] = ICSBondCurve.BondCurveIntervalInput(2, 0 ether);
 
         vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
         bondCurve.addBondCurve(_bondCurve);
@@ -276,9 +277,10 @@ contract CSBondCurveTest is Test {
     }
 
     function test_updateBondCurve_RevertWhen_ZeroTrendSecondInterval() public {
-        uint256[2][] memory _bondCurve = new uint256[2][](2);
-        _bondCurve[0] = [uint256(1), 1 ether];
-        _bondCurve[1] = [uint256(2), 0 ether];
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory _bondCurve = new ICSBondCurve.BondCurveIntervalInput[](2);
+        _bondCurve[0] = ICSBondCurve.BondCurveIntervalInput(1, 1 ether);
+        _bondCurve[1] = ICSBondCurve.BondCurveIntervalInput(2, 0 ether);
 
         vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
         bondCurve.updateBondCurve(0, _bondCurve);

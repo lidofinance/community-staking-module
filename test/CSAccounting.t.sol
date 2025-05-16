@@ -388,15 +388,27 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
             bytes32(abi.encode(2))
         );
 
-        // TODO: add a test with non zero bond curves
-        uint256[2][][] memory bondCurves = new uint256[2][][](2);
-        bondCurves[0] = new uint256[2][](2);
-        bondCurves[0][0] = [uint256(1), 2 ether];
-        bondCurves[0][1] = [uint256(2), 1 ether];
+        ICSBondCurve.BondCurveIntervalInput[][]
+            memory bondCurves = new ICSBondCurve.BondCurveIntervalInput[][](2);
+        bondCurves[0] = new ICSBondCurve.BondCurveIntervalInput[](2);
+        bondCurves[0][0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
+        bondCurves[0][1] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 2,
+            trend: 1 ether
+        });
 
-        bondCurves[1] = new uint256[2][](2);
-        bondCurves[1][0] = [uint256(1), 1.5 ether];
-        bondCurves[1][1] = [uint256(2), 1 ether];
+        bondCurves[1] = new ICSBondCurve.BondCurveIntervalInput[](2);
+        bondCurves[1][0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
+        bondCurves[1][1] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 2,
+            trend: 1 ether
+        });
 
         accounting.finalizeUpgradeV2(bondCurves);
 

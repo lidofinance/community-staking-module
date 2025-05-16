@@ -451,13 +451,13 @@ contract CSParametersRegistryRewardShareDataTest is
 
     function test_set_RevertWhen_invalidBpValues_nonFirstItem() public {
         uint256 curveId = 1;
-        ICSParametersRegistry.KeyIndexValueInterval[]
-            memory data = new ICSParametersRegistry.KeyIndexValueInterval[](2);
-        data[0] = ICSParametersRegistry.KeyIndexValueInterval(0, 8000);
-        data[1] = ICSParametersRegistry.KeyIndexValueInterval(10, 80000);
+        ICSParametersRegistry.KeyNumberValueInterval[]
+            memory data = new ICSParametersRegistry.KeyNumberValueInterval[](2);
+        data[0] = ICSParametersRegistry.KeyNumberValueInterval(0, 8000);
+        data[1] = ICSParametersRegistry.KeyNumberValueInterval(10, 80000);
 
         vm.expectRevert(
-            ICSParametersRegistry.InvalidKeyIndexValueIntervals.selector
+            ICSParametersRegistry.InvalidKeyNumberValueIntervals.selector
         );
         vm.prank(admin);
         parametersRegistry.setRewardShareData(curveId, data);
