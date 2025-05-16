@@ -745,7 +745,7 @@ contract CSParametersRegistry is
             revert InvalidKeyNumberValueIntervals();
         }
 
-        if (intervals[0].value == 0 || intervals[0].value > MAX_BP) {
+        if (intervals[0].value > MAX_BP) {
             revert InvalidKeyNumberValueIntervals();
         }
 
@@ -756,7 +756,7 @@ contract CSParametersRegistry is
                 ) {
                     revert InvalidKeyNumberValueIntervals();
                 }
-                if (intervals[i].value == 0 || intervals[i].value > MAX_BP) {
+                if (intervals[i].value > MAX_BP) {
                     revert InvalidKeyNumberValueIntervals();
                 }
             }

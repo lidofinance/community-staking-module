@@ -151,7 +151,7 @@ contract CSBondCurveTest is Test {
         bondCurve.addBondCurve(new ICSBondCurve.BondCurveIntervalInput[](21));
     }
 
-    function test_addBondCurve_RevertWhen_ZeroValue() public {
+    function test_addBondCurve_RevertWhen_ZeroTrend() public {
         ICSBondCurve.BondCurveIntervalInput[]
             memory _bondCurve = new ICSBondCurve.BondCurveIntervalInput[](1);
         _bondCurve[0] = ICSBondCurve.BondCurveIntervalInput(1, 0 ether);
@@ -160,11 +160,32 @@ contract CSBondCurveTest is Test {
         bondCurve.addBondCurve(_bondCurve);
     }
 
-    function test_addBondCurve_RevertWhen_NextValueIsLessThanPrevious() public {
+    function test_addBondCurve_RevertWhen_ZeroTrendSecondInterval() public {
         ICSBondCurve.BondCurveIntervalInput[]
             memory _bondCurve = new ICSBondCurve.BondCurveIntervalInput[](2);
-        _bondCurve[0] = ICSBondCurve.BondCurveIntervalInput(2, 10 ether);
-        _bondCurve[1] = ICSBondCurve.BondCurveIntervalInput(1, 9 ether);
+        _bondCurve[0] = ICSBondCurve.BondCurveIntervalInput(1, 1 ether);
+        _bondCurve[1] = ICSBondCurve.BondCurveIntervalInput(2, 0 ether);
+
+        vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
+        bondCurve.addBondCurve(_bondCurve);
+    }
+
+    function test_addBondCurve_RevertWhen_FirstIntervalStartsFromNonOne()
+        public
+    {
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory _bondCurve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        _bondCurve[0] = ICSBondCurve.BondCurveIntervalInput(2, 1 ether);
+
+        vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
+        bondCurve.addBondCurve(_bondCurve);
+    }
+
+    function test_addBondCurve_RevertWhen_UnsortedIntervals() public {
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory _bondCurve = new ICSBondCurve.BondCurveIntervalInput[](2);
+        _bondCurve[0] = ICSBondCurve.BondCurveIntervalInput(1, 2 ether);
+        _bondCurve[1] = ICSBondCurve.BondCurveIntervalInput(1, 1 ether);
 
         vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
         bondCurve.addBondCurve(_bondCurve);
@@ -246,7 +267,7 @@ contract CSBondCurveTest is Test {
         );
     }
 
-    function test_updateBondCurve_RevertWhen_ZeroValue() public {
+    function test_updateBondCurve_RevertWhen_ZeroTrend() public {
         ICSBondCurve.BondCurveIntervalInput[]
             memory _bondCurve = new ICSBondCurve.BondCurveIntervalInput[](1);
         _bondCurve[0] = ICSBondCurve.BondCurveIntervalInput(1, 0 ether);
@@ -255,13 +276,32 @@ contract CSBondCurveTest is Test {
         bondCurve.updateBondCurve(0, _bondCurve);
     }
 
-    function test_updateBondCurve_RevertWhen_NextValueIsLessThanPrevious()
+    function test_updateBondCurve_RevertWhen_ZeroTrendSecondInterval() public {
+        ICSBondCurve.BondCurveIntervalInput[]
+            memory _bondCurve = new ICSBondCurve.BondCurveIntervalInput[](2);
+        _bondCurve[0] = ICSBondCurve.BondCurveIntervalInput(1, 1 ether);
+        _bondCurve[1] = ICSBondCurve.BondCurveIntervalInput(2, 0 ether);
+
+        vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
+        bondCurve.updateBondCurve(0, _bondCurve);
+    }
+
+    function test_updateBondCurve_RevertWhen_FirstIntervalStartsFromNonOne()
         public
     {
         ICSBondCurve.BondCurveIntervalInput[]
+            memory _bondCurve = new ICSBondCurve.BondCurveIntervalInput[](1);
+        _bondCurve[0] = ICSBondCurve.BondCurveIntervalInput(2, 1 ether);
+
+        vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
+        bondCurve.updateBondCurve(0, _bondCurve);
+    }
+
+    function test_updateBondCurve_RevertWhen_UnsortedIntervals() public {
+        ICSBondCurve.BondCurveIntervalInput[]
             memory _bondCurve = new ICSBondCurve.BondCurveIntervalInput[](2);
-        _bondCurve[0] = ICSBondCurve.BondCurveIntervalInput(2, 10 ether);
-        _bondCurve[1] = ICSBondCurve.BondCurveIntervalInput(1, 9 ether);
+        _bondCurve[0] = ICSBondCurve.BondCurveIntervalInput(1, 2 ether);
+        _bondCurve[1] = ICSBondCurve.BondCurveIntervalInput(1, 1 ether);
 
         vm.expectRevert(ICSBondCurve.InvalidBondCurveValues.selector);
         bondCurve.updateBondCurve(0, _bondCurve);

@@ -12,6 +12,7 @@ contract ExitPenaltiesMock is ICSExitPenalties, ExitTypes {
     ICSModule public MODULE;
     ICSAccounting public ACCOUNTING;
     ExitPenaltyInfo internal penaltyInfo;
+    bool applicable;
 
     function STRIKES() external pure returns (address) {
         return address(0);
@@ -35,12 +36,16 @@ contract ExitPenaltiesMock is ICSExitPenalties, ExitTypes {
         bytes calldata publicKey
     ) external {}
 
+    function mock_isValidatorExitDelayPenaltyApplicable(bool flag) external {
+        applicable = flag;
+    }
+
     function isValidatorExitDelayPenaltyApplicable(
         uint256,
         bytes calldata,
         uint256
-    ) external pure returns (bool) {
-        return false;
+    ) external view returns (bool) {
+        return applicable;
     }
 
     function mock_setDelayedExitPenaltyInfo(

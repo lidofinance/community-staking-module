@@ -449,6 +449,20 @@ contract CSParametersRegistryRewardShareDataTest is
         parametersRegistry.setRewardShareData(curveId, data);
     }
 
+    function test_set_RevertWhen_invalidBpValues_nonFirstItem() public {
+        uint256 curveId = 1;
+        ICSParametersRegistry.KeyNumberValueInterval[]
+            memory data = new ICSParametersRegistry.KeyNumberValueInterval[](2);
+        data[0] = ICSParametersRegistry.KeyNumberValueInterval(1, 8000);
+        data[1] = ICSParametersRegistry.KeyNumberValueInterval(10, 80000);
+
+        vm.expectRevert(
+            ICSParametersRegistry.InvalidKeyNumberValueIntervals.selector
+        );
+        vm.prank(admin);
+        parametersRegistry.setRewardShareData(curveId, data);
+    }
+
     function test_unset() public override {
         uint256 curveId = 1;
         ICSParametersRegistry.KeyNumberValueInterval[]

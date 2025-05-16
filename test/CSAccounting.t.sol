@@ -377,6 +377,43 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         vm.expectRevert(ICSAccounting.InvalidBondCurvesLength.selector);
         accounting.finalizeUpgradeV2(bondCurves);
     }
+
+    function test_finalizeUpgradeV2_withLegacyCurves() public {
+        _enableInitializers(address(accounting));
+
+        bytes32 bondCurveStorageLocation = 0x8f22e270e477f5becb8793b61d439ab7ae990ed8eba045eb72061c0e6cfe1500;
+        vm.store(
+            address(accounting),
+            bondCurveStorageLocation,
+            bytes32(abi.encode(2))
+        );
+
+        ICSBondCurve.BondCurveIntervalInput[][]
+            memory bondCurves = new ICSBondCurve.BondCurveIntervalInput[][](2);
+        bondCurves[0] = new ICSBondCurve.BondCurveIntervalInput[](2);
+        bondCurves[0][0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
+        bondCurves[0][1] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 2,
+            trend: 1 ether
+        });
+
+        bondCurves[1] = new ICSBondCurve.BondCurveIntervalInput[](2);
+        bondCurves[1][0] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 1,
+            trend: 2 ether
+        });
+        bondCurves[1][1] = ICSBondCurve.BondCurveIntervalInput({
+            minKeysCount: 2,
+            trend: 1 ether
+        });
+
+        accounting.finalizeUpgradeV2(bondCurves);
+
+        assertEq(accounting.getInitializedVersion(), 2);
+    }
 }
 
 contract CSAccountingBaseTest is CSAccountingFixtures {
