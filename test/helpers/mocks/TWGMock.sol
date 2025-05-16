@@ -2,17 +2,17 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.24;
 
-import { IValidatorsExitBus } from "../../../src/interfaces/IValidatorsExitBus.sol";
+import { TriggerableWithdrawalGateway } from "../../../src/interfaces/TriggerableWithdrawalGateway.sol";
 
-contract VEBMock {
+contract TWGMock {
     uint256 public constant MOCK_REFUND_PERCENTAGE_BP = 1000;
     event Refund(address indexed to, uint256 amount);
     error TransferFailed();
 
     receive() external payable {}
 
-    function triggerExitsDirectly(
-        IValidatorsExitBus.DirectExitData calldata /* exitData */,
+    function triggerFullWithdrawals(
+        bytes calldata /* exitData */,
         address refundRecipient,
         uint8 /* exitType */
     ) external payable {

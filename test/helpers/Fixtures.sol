@@ -35,7 +35,7 @@ import { IACL } from "../../src/interfaces/IACL.sol";
 import { IKernel } from "../../src/interfaces/IKernel.sol";
 import { Utilities } from "./Utilities.sol";
 import { Batch } from "../../src/lib/QueueLib.sol";
-import { VEBMock } from "./mocks/VEBMock.sol";
+import { TWGMock } from "./mocks/TWGMock.sol";
 
 contract Fixtures is StdCheats, Test {
     bytes32 public constant INITIALIZABLE_STORAGE =
@@ -62,7 +62,7 @@ contract Fixtures is StdCheats, Test {
         wq = new WithdrawalQueueMock(address(wstETH), address(stETH));
         Stub treasury = new Stub();
         Stub stakingRouter = new Stub();
-        VEBMock veb = new VEBMock();
+        TWGMock twg = new TWGMock();
         locator = new LidoLocatorMock(
             address(stETH),
             address(burner),
@@ -70,7 +70,7 @@ contract Fixtures is StdCheats, Test {
             address(elVault),
             address(treasury),
             address(stakingRouter),
-            address(veb)
+            address(twg)
         );
         vm.label(address(stETH), "lido");
         vm.label(address(wstETH), "wstETH");
@@ -80,7 +80,7 @@ contract Fixtures is StdCheats, Test {
         vm.label(address(elVault), "elVault");
         vm.label(address(treasury), "treasury");
         vm.label(address(stakingRouter), "stakingRouter");
-        vm.label(address(veb), "validatorExitBus");
+        vm.label(address(twg), "triggerableWithdrawalGateway");
     }
 
     function _enableInitializers(address implementation) internal {
