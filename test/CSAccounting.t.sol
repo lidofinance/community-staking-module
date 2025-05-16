@@ -382,7 +382,7 @@ contract CSAccountingInitTest is CSAccountingBaseInitTest {
         _enableInitializers(address(accounting));
 
         bytes32 bondCurveStorageLocation = 0x8f22e270e477f5becb8793b61d439ab7ae990ed8eba045eb72061c0e6cfe1500;
-        _setStorage(
+        vm.store(
             address(accounting),
             bondCurveStorageLocation,
             bytes32(abi.encode(2))
