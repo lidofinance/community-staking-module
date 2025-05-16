@@ -307,10 +307,10 @@ interface ICSParametersRegistry {
     ) external view returns (uint256 limit);
 
     /// @notice Set reward share parameters for the curveId
-    /// @dev KeyIndexValueIntervals = [[0, 10000], [10, 8000], [50, 5000]] stands for
-    ///      100% rewards for the keys 1-10, 80% rewards for the keys 11-50, and 50% rewards for the keys > 50
+    /// @dev KeyNumberValueInterval = [[1, 10000], [11, 8000], [51, 5000]] stands for
+    ///      100% rewards for the first 10 keys, 80% rewards for the keys 11-50, and 50% rewards for the keys > 50
     /// @param curveId Curve Id to associate reward share data with
-    /// @param data Interval values for keys count and reward share percentages in BP (ex. [[0, 10000], [10, 8000], [50, 5000]])
+    /// @param data Interval values for keys count and reward share percentages in BP (ex. [[1, 10000], [11, 8000], [51, 5000]])
     function setRewardShareData(
         uint256 curveId,
         KeyNumberValueInterval[] calldata data
@@ -321,11 +321,11 @@ interface ICSParametersRegistry {
     function unsetRewardShareData(uint256 curveId) external;
 
     /// @notice Get reward share parameters by the curveId.
-    /// @dev Returns [[0, defaultRewardShare]] if no intervals are set for the given curveId.
-    /// @dev KeyIndexValueIntervals = [[0, 10000], [10, 8000], [50, 5000]] stands for
-    ///      100% rewards for the keys 1-10, 80% rewards for the keys 11-50, and 50% rewards for the keys > 50
+    /// @dev Returns [[1, defaultRewardShare]] if no intervals are set for the given curveId.
+    /// @dev KeyNumberValueInterval = [[1, 10000], [11, 8000], [51, 5000]] stands for
+    ///      100% rewards for the first 10 keys, 80% rewards for the keys 11-50, and 50% rewards for the keys > 50
     /// @param curveId Curve Id to get reward share data for
-    /// @param data Interval values for keys count and reward share percentages in BP (ex. [[0, 10000], [10, 8000], [50, 5000]])
+    /// @param data Interval values for keys count and reward share percentages in BP (ex. [[1, 10000], [11, 8000], [51, 5000]])
     function getRewardShareData(
         uint256 curveId
     ) external view returns (KeyNumberValue memory data);
@@ -361,11 +361,11 @@ interface ICSParametersRegistry {
     ) external view returns (uint32 priority, uint32 maxDeposits);
 
     /// @notice Set performance leeway parameters for the curveId
-    /// @dev Returns [[0, defaultPerformanceLeeway]] if no intervals are set for the given curveId.
-    /// @dev KeyIndexValueIntervals = [[0, 500], [100, 450], [500, 400]] stands for
-    ///      5% performance leeway for the keys 1-100, 4.5% performance leeway for the keys 101-500, and 4% performance leeway for the keys > 500
+    /// @dev Returns [[1, defaultPerformanceLeeway]] if no intervals are set for the given curveId.
+    /// @dev KeyNumberValueInterval = [[1, 500], [101, 450], [501, 400]] stands for
+    ///      5% performance leeway for the first 100 keys, 4.5% performance leeway for the keys 101-500, and 4% performance leeway for the keys > 500
     /// @param curveId Curve Id to associate performance leeway data with
-    /// @param data Interval values for keys count and performance leeway percentages in BP (ex. [[0, 500], [100, 450], [500, 400]])
+    /// @param data Interval values for keys count and performance leeway percentages in BP (ex. [[1, 500], [101, 450], [501, 400]])
     function setPerformanceLeewayData(
         uint256 curveId,
         KeyNumberValueInterval[] calldata data
@@ -376,11 +376,11 @@ interface ICSParametersRegistry {
     function unsetPerformanceLeewayData(uint256 curveId) external;
 
     /// @notice Get performance leeway parameters by the curveId
-    /// @dev Returns [[0, defaultPerformanceLeeway]] if no intervals are set for the given curveId.
-    /// @dev KeyIndexValueIntervals = [[0, 500], [100, 450], [500, 400]] stands for
-    ///      5% performance leeway for the keys 1-100, 4.5% performance leeway for the keys 101-500, and 4% performance leeway for the keys > 500
+    /// @dev Returns [[1, defaultPerformanceLeeway]] if no intervals are set for the given curveId.
+    /// @dev KeyNumberValueInterval = [[1, 500], [101, 450], [501, 400]] stands for
+    ///      5% performance leeway for the first 100 keys, 4.5% performance leeway for the keys 101-500, and 4% performance leeway for the keys > 500
     /// @param curveId Curve Id to get performance leeway data for
-    /// @param data Interval values for keys count and performance leeway percentages in BP (ex. [[0, 500], [100, 450], [500, 400]])
+    /// @param data Interval values for keys count and performance leeway percentages in BP (ex. [[1, 500], [101, 450], [501, 400]])
     function getPerformanceLeewayData(
         uint256 curveId
     ) external view returns (KeyNumberValue memory data);
