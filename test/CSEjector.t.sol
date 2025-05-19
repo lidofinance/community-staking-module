@@ -666,6 +666,30 @@ contract CSEjectorTestEjectBadPerformer is CSEjectorTestBase {
         ejector.ejectBadPerformer(noId, keyIndex, refundRecipient);
     }
 
+    function test_ejectBadPerformer_NoRefundRecipient() public {
+        uint256 keyIndex = 0;
+        bytes memory pubkey = csm.getSigningKeys(0, keyIndex, 1);
+
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
+
+        ValidatorData[] memory expectedExitsData = new ValidatorData[](1);
+        expectedExitsData[0] = ValidatorData(0, noId, pubkey);
+        uint256 exitType = ejector.STRIKES_EXIT_TYPE_ID();
+
+        vm.expectCall(
+            address(twg),
+            abi.encodeWithSelector(
+                ITriggerableWithdrawalsGateway.triggerFullWithdrawals.selector,
+                expectedExitsData,
+                address(strikes),
+                exitType
+            )
+        );
+
+        vm.prank(address(strikes));
+        ejector.ejectBadPerformer(noId, keyIndex, address(0));
+    }
+
     function test_ejectBadPerformer_revertWhen_SigningKeysInvalidOffset()
         public
     {

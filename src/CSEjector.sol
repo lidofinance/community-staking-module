@@ -114,10 +114,6 @@ contract CSEjector is
             }
         }
 
-        refundRecipient = refundRecipient == address(0)
-            ? msg.sender
-            : refundRecipient;
-
         bytes memory pubkeys = MODULE.getSigningKeys(
             nodeOperatorId,
             startFrom,
@@ -141,7 +137,7 @@ contract CSEjector is
 
         TWG.triggerFullWithdrawals{ value: msg.value }(
             exitsData,
-            refundRecipient,
+            refundRecipient == address(0) ? msg.sender : refundRecipient,
             VOLUNTARY_EXIT_TYPE_ID
         );
     }
@@ -194,13 +190,9 @@ contract CSEjector is
             });
         }
 
-        refundRecipient = refundRecipient == address(0)
-            ? msg.sender
-            : refundRecipient;
-
         TWG.triggerFullWithdrawals{ value: msg.value }(
             exitsData,
-            refundRecipient,
+            refundRecipient == address(0) ? msg.sender : refundRecipient,
             VOLUNTARY_EXIT_TYPE_ID
         );
     }
@@ -238,7 +230,7 @@ contract CSEjector is
 
         TWG.triggerFullWithdrawals{ value: msg.value }(
             exitsData,
-            refundRecipient,
+            refundRecipient == address(0) ? msg.sender : refundRecipient,
             STRIKES_EXIT_TYPE_ID
         );
     }
