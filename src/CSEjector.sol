@@ -36,19 +36,25 @@ contract CSEjector is
         _;
     }
 
-    constructor(address module, address strikes, uint256 stakingModuleId) {
+    constructor(
+        address module,
+        address strikes,
+        address twg,
+        uint256 stakingModuleId
+    ) {
         if (module == address(0)) {
             revert ZeroModuleAddress();
         }
         if (strikes == address(0)) {
             revert ZeroStrikesAddress();
         }
+        if (twg == address(0)) {
+            revert ZeroTWGAddress();
+        }
 
         STRIKES = strikes;
         MODULE = ICSModule(module);
-        TWG = ITriggerableWithdrawalsGateway(
-            MODULE.LIDO_LOCATOR().triggerableWithdrawalGateway()
-        );
+        TWG = ITriggerableWithdrawalsGateway(twg);
         STAKING_MODULE_ID = stakingModuleId;
     }
 

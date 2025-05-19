@@ -20,6 +20,7 @@ contract CSEjectorTestBase is Test, Utilities, Fixtures {
     CSMMock internal csm;
     CSStrikesMock internal strikes;
     ICSAccounting internal accounting;
+    TWGMock internal twg;
 
     address internal stranger;
     address internal admin;
@@ -29,8 +30,11 @@ contract CSEjectorTestBase is Test, Utilities, Fixtures {
 
     function setUp() public {
         csm = new CSMMock();
-        accounting = CSMMock(csm).accounting();
+        accounting = csm.accounting();
         strikes = new CSStrikesMock();
+        twg = TWGMock(
+            payable(csm.LIDO_LOCATOR().triggerableWithdrawalGateway())
+        );
         stranger = nextAddress("STRANGER");
         admin = nextAddress("ADMIN");
         refundRecipient = nextAddress("refundRecipient");
@@ -38,6 +42,7 @@ contract CSEjectorTestBase is Test, Utilities, Fixtures {
         ejector = new CSEjector(
             address(csm),
             address(strikes),
+            address(twg),
             stakingModuleId
         );
         _enableInitializers(address(ejector));
@@ -50,31 +55,45 @@ contract CSEjectorTestMisc is CSEjectorTestBase {
         ejector = new CSEjector(
             address(csm),
             address(strikes),
+            address(twg),
             stakingModuleId
         );
         assertEq(address(ejector.MODULE()), address(csm));
-        assertEq(
-            address(ejector.TWG()),
-            address(csm.LIDO_LOCATOR().triggerableWithdrawalGateway())
-        );
+        assertEq(address(ejector.TWG()), address(twg));
         assertEq(ejector.STAKING_MODULE_ID(), stakingModuleId);
         assertEq(ejector.STRIKES(), address(strikes));
     }
 
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
         vm.expectRevert(ICSEjector.ZeroModuleAddress.selector);
-        new CSEjector(address(0), address(strikes), stakingModuleId);
+        new CSEjector(
+            address(0),
+            address(strikes),
+            address(twg),
+            stakingModuleId
+        );
     }
 
     function test_constructor_RevertWhen_ZeroStrikesAddress() public {
         vm.expectRevert(ICSEjector.ZeroStrikesAddress.selector);
-        new CSEjector(address(csm), address(0), stakingModuleId);
+        new CSEjector(address(csm), address(0), address(twg), stakingModuleId);
+    }
+
+    function test_constructor_RevertWhen_ZeroTWGAddress() public {
+        vm.expectRevert(ICSEjector.ZeroTWGAddress.selector);
+        new CSEjector(
+            address(csm),
+            address(strikes),
+            address(0),
+            stakingModuleId
+        );
     }
 
     function test_initializer() public {
         ejector = new CSEjector(
             address(csm),
             address(strikes),
+            address(twg),
             stakingModuleId
         );
         _enableInitializers(address(ejector));
@@ -89,6 +108,7 @@ contract CSEjectorTestMisc is CSEjectorTestBase {
         ejector = new CSEjector(
             address(csm),
             address(strikes),
+            address(twg),
             stakingModuleId
         );
         _enableInitializers(address(ejector));
@@ -156,7 +176,7 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
         uint256 exitType = ejector.VOLUNTARY_EXIT_TYPE_ID();
 
         vm.expectCall(
-            address(ejector.TWG()),
+            address(twg),
             abi.encodeWithSelector(
                 ITriggerableWithdrawalsGateway.triggerFullWithdrawals.selector,
                 expectedExitsData,
@@ -195,7 +215,7 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
         uint256 exitType = ejector.VOLUNTARY_EXIT_TYPE_ID();
 
         vm.expectCall(
-            address(ejector.TWG()),
+            address(twg),
             abi.encodeWithSelector(
                 ITriggerableWithdrawalsGateway.triggerFullWithdrawals.selector,
                 expectedExitsData,
@@ -225,9 +245,8 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
             1,
             nodeOperator
         );
-        uint256 expectedRefund = (1 ether *
-            TWGMock(payable(address(ejector.TWG())))
-                .MOCK_REFUND_PERCENTAGE_BP()) / 10000;
+        uint256 expectedRefund = (1 ether * twg.MOCK_REFUND_PERCENTAGE_BP()) /
+            10000;
         assertEq(nodeOperator.balance, expectedRefund);
     }
 
@@ -245,9 +264,8 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
 
         vm.prank(nodeOperator);
         ejector.voluntaryEject{ value: 1 ether }(noId, keyIndex, 1, address(0));
-        uint256 expectedRefund = (1 ether *
-            TWGMock(payable(address(ejector.TWG())))
-                .MOCK_REFUND_PERCENTAGE_BP()) / 10000;
+        uint256 expectedRefund = (1 ether * twg.MOCK_REFUND_PERCENTAGE_BP()) /
+            10000;
         assertEq(nodeOperator.balance, expectedRefund);
     }
 
@@ -378,7 +396,7 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
         uint256[] memory indices = new uint256[](1);
         indices[0] = keyIndex;
         vm.expectCall(
-            address(ejector.TWG()),
+            address(twg),
             abi.encodeWithSelector(
                 ITriggerableWithdrawalsGateway.triggerFullWithdrawals.selector,
                 expectedExitsData,
@@ -420,7 +438,7 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
             indices[i] = i;
         }
         vm.expectCall(
-            address(ejector.TWG()),
+            address(twg),
             abi.encodeWithSelector(
                 ITriggerableWithdrawalsGateway.triggerFullWithdrawals.selector,
                 expectedExitsData,
@@ -452,9 +470,8 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
             indices,
             nodeOperator
         );
-        uint256 expectedRefund = (1 ether *
-            TWGMock(payable(address(ejector.TWG())))
-                .MOCK_REFUND_PERCENTAGE_BP()) / 10000;
+        uint256 expectedRefund = (1 ether * twg.MOCK_REFUND_PERCENTAGE_BP()) /
+            10000;
         assertEq(nodeOperator.balance, expectedRefund);
     }
 
@@ -479,9 +496,8 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
             indices,
             address(0)
         );
-        uint256 expectedRefund = (1 ether *
-            TWGMock(payable(address(ejector.TWG())))
-                .MOCK_REFUND_PERCENTAGE_BP()) / 10000;
+        uint256 expectedRefund = (1 ether * twg.MOCK_REFUND_PERCENTAGE_BP()) /
+            10000;
         assertEq(nodeOperator.balance, expectedRefund);
     }
 
@@ -637,7 +653,7 @@ contract CSEjectorTestEjectBadPerformer is CSEjectorTestBase {
         uint256 exitType = ejector.STRIKES_EXIT_TYPE_ID();
 
         vm.expectCall(
-            address(ejector.TWG()),
+            address(twg),
             abi.encodeWithSelector(
                 ITriggerableWithdrawalsGateway.triggerFullWithdrawals.selector,
                 expectedExitsData,

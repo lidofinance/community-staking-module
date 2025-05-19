@@ -1119,7 +1119,10 @@ contract CSEjectorDeploymentTest is DeploymentBaseTest {
 
     function test_immutables() public view {
         assertEq(address(ejector.MODULE()), address(csm));
-        assertEq(address(ejector.TWG()), locator.validatorsExitBusOracle());
+        assertEq(
+            address(ejector.TWG()),
+            deployParams.triggerableWithdrawalGateway
+        );
         assertEq(ejector.STAKING_MODULE_ID(), deployParams.stakingModuleId);
         assertEq(address(ejector.STRIKES()), address(strikes));
     }
