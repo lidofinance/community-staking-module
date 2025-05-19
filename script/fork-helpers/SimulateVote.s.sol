@@ -149,9 +149,6 @@ contract SimulateVote is Script, DeploymentFixtures, ForkHelpersCommon {
         accounting = CSAccounting(deploymentConfig.accounting);
         oracle = CSFeeOracle(deploymentConfig.oracle);
         IBurner burner = IBurner(locator.burner());
-        CSParametersRegistry parametersRegistry = CSParametersRegistry(
-            deploymentConfig.parametersRegistry
-        );
 
         vm.startBroadcast(admin);
 
