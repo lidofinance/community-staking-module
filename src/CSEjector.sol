@@ -9,7 +9,8 @@ import { ICSEjector } from "./interfaces/ICSEjector.sol";
 import { ICSModule, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { PausableUntil } from "./lib/utils/PausableUntil.sol";
-import { TriggerableWithdrawalGateway } from "./interfaces/TriggerableWithdrawalGateway.sol";
+import { SigningKeys } from "./lib/SigningKeys.sol";
+import { ITriggerableWithdrawalsGateway, ValidatorData } from "./interfaces/ITriggerableWithdrawalsGateway.sol";
 import { ExitTypes } from "./abstract/ExitTypes.sol";
 
 contract CSEjector is
@@ -24,7 +25,7 @@ contract CSEjector is
 
     uint256 public immutable STAKING_MODULE_ID;
     ICSModule public immutable MODULE;
-    TriggerableWithdrawalGateway public immutable TWG;
+    ITriggerableWithdrawalsGateway public immutable TWG;
     address public immutable STRIKES;
 
     modifier onlyStrikes() {
@@ -45,7 +46,7 @@ contract CSEjector is
 
         STRIKES = strikes;
         MODULE = ICSModule(module);
-        TWG = TriggerableWithdrawalGateway(
+        TWG = ITriggerableWithdrawalsGateway(
             MODULE.LIDO_LOCATOR().triggerableWithdrawalGateway()
         );
         STAKING_MODULE_ID = stakingModuleId;
@@ -106,24 +107,34 @@ contract CSEjector is
                 revert AlreadyWithdrawn();
             }
         }
-        bytes memory pubkeys = MODULE.getSigningKeys(
-            nodeOperatorId,
-            startFrom,
-            keysCount
-        );
-        //        IValidatorsExitBus.DirectExitData memory exitData = IValidatorsExitBus
-        //            .DirectExitData({
-        //                stakingModuleId: STAKING_MODULE_ID,
-        //                nodeOperatorId: nodeOperatorId,
-        //                validatorsPubkeys: pubkeys
-        //            });
 
         refundRecipient = refundRecipient == address(0)
             ? msg.sender
             : refundRecipient;
 
+        bytes memory pubkeys = MODULE.getSigningKeys(
+            nodeOperatorId,
+            startFrom,
+            keysCount
+        );
+        ValidatorData[] memory exitsData = new ValidatorData[](keysCount);
+        for (uint256 i; i < keysCount; ++i) {
+            bytes memory pk = new bytes(SigningKeys.PUBKEY_LENGTH);
+            assembly {
+                let keyLen := mload(pk) // SigningKeys.PUBKEY_LENGTH
+                let offset := mul(keyLen, i) // SigningKeys.PUBKEY_LENGTH * i
+                let keyPos := add(add(pubkeys, 0x20), offset) // pubkeys[offset]
+                mcopy(add(pk, 0x20), keyPos, keyLen) // pk = pubkeys[offset]
+            }
+            exitsData[i] = ValidatorData({
+                stakingModuleId: STAKING_MODULE_ID,
+                nodeOperatorId: nodeOperatorId,
+                pubkey: pk
+            });
+        }
+
         TWG.triggerFullWithdrawals{ value: msg.value }(
-            exitData,
+            exitsData,
             refundRecipient,
             VOLUNTARY_EXIT_TYPE_ID
         );
@@ -151,7 +162,9 @@ contract CSEjector is
         uint256 totalDepositedKeys = MODULE.getNodeOperatorTotalDepositedKeys(
             nodeOperatorId
         );
-        bytes memory pubkeys;
+        ValidatorData[] memory exitsData = new ValidatorData[](
+            keyIndices.length
+        );
         for (uint256 i = 0; i < keyIndices.length; i++) {
             // a key must be deposited to prevent ejecting unvetted keys that can be the ones from other modules
             if (keyIndices[i] >= totalDepositedKeys) {
@@ -163,24 +176,24 @@ contract CSEjector is
             if (MODULE.isValidatorWithdrawn(nodeOperatorId, keyIndices[i])) {
                 revert AlreadyWithdrawn();
             }
-            pubkeys = abi.encodePacked(
-                pubkeys,
-                MODULE.getSigningKeys(nodeOperatorId, keyIndices[i], 1)
+            bytes memory pubkey = MODULE.getSigningKeys(
+                nodeOperatorId,
+                keyIndices[i],
+                1
             );
+            exitsData[i] = ValidatorData({
+                stakingModuleId: STAKING_MODULE_ID,
+                nodeOperatorId: nodeOperatorId,
+                pubkey: pubkey
+            });
         }
-        //        IValidatorsExitBus.DirectExitData memory exitData = TriggerableWithdrawalGateway
-        //            .DirectExitData({
-        //                stakingModuleId: STAKING_MODULE_ID,
-        //                nodeOperatorId: nodeOperatorId,
-        //                validatorsPubkeys: pubkeys
-        //            });
 
         refundRecipient = refundRecipient == address(0)
             ? msg.sender
             : refundRecipient;
 
         TWG.triggerFullWithdrawals{ value: msg.value }(
-            exitData,
+            exitsData,
             refundRecipient,
             VOLUNTARY_EXIT_TYPE_ID
         );
@@ -205,19 +218,20 @@ contract CSEjector is
             revert AlreadyWithdrawn();
         }
 
-        bytes memory publicKey = MODULE.getSigningKeys(
+        ValidatorData[] memory exitsData = new ValidatorData[](1);
+        bytes memory pubkey = MODULE.getSigningKeys(
             nodeOperatorId,
             keyIndex,
             1
         );
-        //        IValidatorsExitBus.DirectExitData memory exitData = TriggerableWithdrawalGateway
-        //            .DirectExitData({
-        //                stakingModuleId: STAKING_MODULE_ID,
-        //                nodeOperatorId: nodeOperatorId,
-        //                validatorsPubkeys: publicKey
-        //            });
+        exitsData[0] = ValidatorData({
+            stakingModuleId: STAKING_MODULE_ID,
+            nodeOperatorId: nodeOperatorId,
+            pubkey: pubkey
+        });
+
         TWG.triggerFullWithdrawals{ value: msg.value }(
-            exitData,
+            exitsData,
             refundRecipient,
             STRIKES_EXIT_TYPE_ID
         );
