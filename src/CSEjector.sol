@@ -121,17 +121,17 @@ contract CSEjector is
         );
         ValidatorData[] memory exitsData = new ValidatorData[](keysCount);
         for (uint256 i; i < keysCount; ++i) {
-            bytes memory pk = new bytes(SigningKeys.PUBKEY_LENGTH);
+            bytes memory pubkey = new bytes(SigningKeys.PUBKEY_LENGTH);
             assembly {
-                let keyLen := mload(pk) // SigningKeys.PUBKEY_LENGTH
+                let keyLen := mload(pubkey) // SigningKeys.PUBKEY_LENGTH
                 let offset := mul(keyLen, i) // SigningKeys.PUBKEY_LENGTH * i
                 let keyPos := add(add(pubkeys, 0x20), offset) // pubkeys[offset]
-                mcopy(add(pk, 0x20), keyPos, keyLen) // pk = pubkeys[offset]
+                mcopy(add(pubkey, 0x20), keyPos, keyLen) // pubkey = pubkeys[offset]
             }
             exitsData[i] = ValidatorData({
                 stakingModuleId: STAKING_MODULE_ID,
                 nodeOperatorId: nodeOperatorId,
-                pubkey: pk
+                pubkey: pubkey
             });
         }
 
