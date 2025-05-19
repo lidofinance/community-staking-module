@@ -68,7 +68,7 @@ interface ICSStrikes {
         bytes32[] calldata proof,
         bool[] calldata proofFlags,
         address refundRecipient
-    ) external;
+    ) external payable;
 
     /// @notice Receive the data of the Merkle tree from the Oracle contract and process it
     /// @param _treeRoot Root of the Merkle tree

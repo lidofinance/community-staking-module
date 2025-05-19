@@ -85,29 +85,32 @@ abstract contract CSBondLock is ICSBondLock, Initializable {
         if (amount == 0) {
             revert InvalidBondLockAmount();
         }
-        if ($.bondLock[nodeOperatorId].until > block.timestamp) {
-            amount += $.bondLock[nodeOperatorId].amount;
+        BondLock memory lock = $.bondLock[nodeOperatorId];
+        if (lock.until > block.timestamp) {
+            amount += lock.amount;
         }
-        _changeBondLock({
-            nodeOperatorId: nodeOperatorId,
-            amount: amount,
-            until: block.timestamp + $.bondLockPeriod
-        });
+        unchecked {
+            _changeBondLock({
+                nodeOperatorId: nodeOperatorId,
+                amount: amount,
+                until: block.timestamp + $.bondLockPeriod
+            });
+        }
     }
 
     /// @dev Reduce the locked bond amount for the given Node Operator without changing the lock period
     function _reduceAmount(uint256 nodeOperatorId, uint256 amount) internal {
-        uint256 blocked = getActualLockedBond(nodeOperatorId);
         if (amount == 0) {
             revert InvalidBondLockAmount();
         }
-        if (blocked < amount) {
+        uint256 locked = getActualLockedBond(nodeOperatorId);
+        if (locked < amount) {
             revert InvalidBondLockAmount();
         }
         unchecked {
             _changeBondLock(
                 nodeOperatorId,
-                blocked - amount,
+                locked - amount,
                 _getCSBondLockStorage().bondLock[nodeOperatorId].until
             );
         }
