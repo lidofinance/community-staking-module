@@ -6,12 +6,12 @@ import "forge-std/Test.sol";
 import { PausableUntil } from "../src/lib/utils/PausableUntil.sol";
 import { CSEjector } from "../src/CSEjector.sol";
 import { ICSEjector } from "../src/interfaces/ICSEjector.sol";
-import { IValidatorsExitBus } from "../src/interfaces/IValidatorsExitBus.sol";
+import { ITriggerableWithdrawalsGateway, ValidatorData } from "../src/interfaces/ITriggerableWithdrawalsGateway.sol";
 import { NodeOperatorManagementProperties } from "../src/interfaces/ICSModule.sol";
 import { ICSAccounting } from "../src/interfaces/ICSAccounting.sol";
 import { Utilities } from "./helpers/Utilities.sol";
 import { CSMMock } from "./helpers/mocks/CSMMock.sol";
-import { VEBMock } from "./helpers/mocks/VEBMock.sol";
+import { TWGMock } from "./helpers/mocks/TWGMock.sol";
 import { Fixtures } from "./helpers/Fixtures.sol";
 import { CSStrikesMock } from "./helpers/mocks/CSStrikesMock.sol";
 
@@ -20,6 +20,7 @@ contract CSEjectorTestBase is Test, Utilities, Fixtures {
     CSMMock internal csm;
     CSStrikesMock internal strikes;
     ICSAccounting internal accounting;
+    TWGMock internal twg;
 
     address internal stranger;
     address internal admin;
@@ -29,8 +30,11 @@ contract CSEjectorTestBase is Test, Utilities, Fixtures {
 
     function setUp() public {
         csm = new CSMMock();
-        accounting = CSMMock(csm).accounting();
+        accounting = csm.accounting();
         strikes = new CSStrikesMock();
+        twg = TWGMock(
+            payable(csm.LIDO_LOCATOR().triggerableWithdrawalGateway())
+        );
         stranger = nextAddress("STRANGER");
         admin = nextAddress("ADMIN");
         refundRecipient = nextAddress("refundRecipient");
@@ -38,6 +42,7 @@ contract CSEjectorTestBase is Test, Utilities, Fixtures {
         ejector = new CSEjector(
             address(csm),
             address(strikes),
+            address(twg),
             stakingModuleId
         );
         _enableInitializers(address(ejector));
@@ -50,31 +55,45 @@ contract CSEjectorTestMisc is CSEjectorTestBase {
         ejector = new CSEjector(
             address(csm),
             address(strikes),
+            address(twg),
             stakingModuleId
         );
         assertEq(address(ejector.MODULE()), address(csm));
-        assertEq(
-            address(ejector.VEB()),
-            address(csm.LIDO_LOCATOR().validatorsExitBusOracle())
-        );
+        assertEq(address(ejector.TWG()), address(twg));
         assertEq(ejector.STAKING_MODULE_ID(), stakingModuleId);
         assertEq(ejector.STRIKES(), address(strikes));
     }
 
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
         vm.expectRevert(ICSEjector.ZeroModuleAddress.selector);
-        new CSEjector(address(0), address(strikes), stakingModuleId);
+        new CSEjector(
+            address(0),
+            address(strikes),
+            address(twg),
+            stakingModuleId
+        );
     }
 
     function test_constructor_RevertWhen_ZeroStrikesAddress() public {
         vm.expectRevert(ICSEjector.ZeroStrikesAddress.selector);
-        new CSEjector(address(csm), address(0), stakingModuleId);
+        new CSEjector(address(csm), address(0), address(twg), stakingModuleId);
+    }
+
+    function test_constructor_RevertWhen_ZeroTWGAddress() public {
+        vm.expectRevert(ICSEjector.ZeroTWGAddress.selector);
+        new CSEjector(
+            address(csm),
+            address(strikes),
+            address(0),
+            stakingModuleId
+        );
     }
 
     function test_initializer() public {
         ejector = new CSEjector(
             address(csm),
             address(strikes),
+            address(twg),
             stakingModuleId
         );
         _enableInitializers(address(ejector));
@@ -89,6 +108,7 @@ contract CSEjectorTestMisc is CSEjectorTestBase {
         ejector = new CSEjector(
             address(csm),
             address(strikes),
+            address(twg),
             stakingModuleId
         );
         _enableInitializers(address(ejector));
@@ -137,7 +157,7 @@ contract CSEjectorTestMisc is CSEjectorTestBase {
 }
 
 contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
-    function test_voluntaryEject() public {
+    function test_voluntaryEject_HappyPath() public {
         uint256 keyIndex = 0;
         bytes memory pubkey = csm.getSigningKeys(0, 0, 1);
 
@@ -151,13 +171,15 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
             )
         );
 
+        ValidatorData[] memory expectedExitsData = new ValidatorData[](1);
+        expectedExitsData[0] = ValidatorData(0, noId, pubkey);
         uint256 exitType = ejector.VOLUNTARY_EXIT_TYPE_ID();
 
         vm.expectCall(
-            address(ejector.VEB()),
+            address(twg),
             abi.encodeWithSelector(
-                IValidatorsExitBus.triggerExitsDirectly.selector,
-                IValidatorsExitBus.DirectExitData(0, noId, pubkey),
+                ITriggerableWithdrawalsGateway.triggerFullWithdrawals.selector,
+                expectedExitsData,
                 refundRecipient,
                 exitType
             )
@@ -165,7 +187,7 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
         ejector.voluntaryEject(noId, keyIndex, 1, refundRecipient);
     }
 
-    function test_voluntaryEject_multipleKeys() public {
+    function test_voluntaryEject_multipleSequentialKeys() public {
         uint256 keyIndex = 0;
         uint256 keysCount = 5;
         bytes memory pubkeys = csm.getSigningKeys(0, 0, 5);
@@ -180,13 +202,23 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
             )
         );
 
+        ValidatorData[] memory expectedExitsData = new ValidatorData[](
+            keysCount
+        );
+        for (uint256 i; i < keysCount; ++i) {
+            expectedExitsData[i] = ValidatorData(
+                0,
+                noId,
+                slice(pubkeys, 48 * i, 48)
+            );
+        }
         uint256 exitType = ejector.VOLUNTARY_EXIT_TYPE_ID();
 
         vm.expectCall(
-            address(ejector.VEB()),
+            address(twg),
             abi.encodeWithSelector(
-                IValidatorsExitBus.triggerExitsDirectly.selector,
-                IValidatorsExitBus.DirectExitData(0, noId, pubkeys),
+                ITriggerableWithdrawalsGateway.triggerFullWithdrawals.selector,
+                expectedExitsData,
                 refundRecipient,
                 exitType
             )
@@ -213,9 +245,8 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
             1,
             nodeOperator
         );
-        uint256 expectedRefund = (1 ether *
-            VEBMock(payable(address(ejector.VEB())))
-                .MOCK_REFUND_PERCENTAGE_BP()) / 10000;
+        uint256 expectedRefund = (1 ether * twg.MOCK_REFUND_PERCENTAGE_BP()) /
+            10000;
         assertEq(nodeOperator.balance, expectedRefund);
     }
 
@@ -233,9 +264,8 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
 
         vm.prank(nodeOperator);
         ejector.voluntaryEject{ value: 1 ether }(noId, keyIndex, 1, address(0));
-        uint256 expectedRefund = (1 ether *
-            VEBMock(payable(address(ejector.VEB())))
-                .MOCK_REFUND_PERCENTAGE_BP()) / 10000;
+        uint256 expectedRefund = (1 ether * twg.MOCK_REFUND_PERCENTAGE_BP()) /
+            10000;
         assertEq(nodeOperator.balance, expectedRefund);
     }
 
@@ -345,7 +375,7 @@ contract CSEjectorTestVoluntaryEject is CSEjectorTestBase {
 }
 
 contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
-    function test_voluntaryEjectByArray() public {
+    function test_voluntaryEjectByArray_SingleKey() public {
         uint256 keyIndex = 0;
         bytes memory pubkey = csm.getSigningKeys(0, 0, 1);
 
@@ -359,15 +389,17 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
             )
         );
 
+        ValidatorData[] memory expectedExitsData = new ValidatorData[](1);
+        expectedExitsData[0] = ValidatorData(0, noId, pubkey);
         uint256 exitType = ejector.VOLUNTARY_EXIT_TYPE_ID();
 
         uint256[] memory indices = new uint256[](1);
         indices[0] = keyIndex;
         vm.expectCall(
-            address(ejector.VEB()),
+            address(twg),
             abi.encodeWithSelector(
-                IValidatorsExitBus.triggerExitsDirectly.selector,
-                IValidatorsExitBus.DirectExitData(0, noId, pubkey),
+                ITriggerableWithdrawalsGateway.triggerFullWithdrawals.selector,
+                expectedExitsData,
                 refundRecipient,
                 exitType
             )
@@ -375,7 +407,7 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
         ejector.voluntaryEjectByArray(noId, indices, refundRecipient);
     }
 
-    function test_voluntaryEjectByArray_multipleKeys() public {
+    function test_voluntaryEjectByArray_MultipleKeys() public {
         uint256 keysCount = 5;
         bytes memory pubkeys = csm.getSigningKeys(0, 0, keysCount);
 
@@ -389,6 +421,16 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
             )
         );
 
+        ValidatorData[] memory expectedExitsData = new ValidatorData[](
+            keysCount
+        );
+        for (uint256 i; i < keysCount; ++i) {
+            expectedExitsData[i] = ValidatorData(
+                0,
+                noId,
+                slice(pubkeys, 48 * i, 48)
+            );
+        }
         uint256 exitType = ejector.VOLUNTARY_EXIT_TYPE_ID();
 
         uint256[] memory indices = new uint256[](keysCount);
@@ -396,10 +438,10 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
             indices[i] = i;
         }
         vm.expectCall(
-            address(ejector.VEB()),
+            address(twg),
             abi.encodeWithSelector(
-                IValidatorsExitBus.triggerExitsDirectly.selector,
-                IValidatorsExitBus.DirectExitData(0, noId, pubkeys),
+                ITriggerableWithdrawalsGateway.triggerFullWithdrawals.selector,
+                expectedExitsData,
                 refundRecipient,
                 exitType
             )
@@ -428,9 +470,8 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
             indices,
             nodeOperator
         );
-        uint256 expectedRefund = (1 ether *
-            VEBMock(payable(address(ejector.VEB())))
-                .MOCK_REFUND_PERCENTAGE_BP()) / 10000;
+        uint256 expectedRefund = (1 ether * twg.MOCK_REFUND_PERCENTAGE_BP()) /
+            10000;
         assertEq(nodeOperator.balance, expectedRefund);
     }
 
@@ -455,9 +496,8 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
             indices,
             address(0)
         );
-        uint256 expectedRefund = (1 ether *
-            VEBMock(payable(address(ejector.VEB())))
-                .MOCK_REFUND_PERCENTAGE_BP()) / 10000;
+        uint256 expectedRefund = (1 ether * twg.MOCK_REFUND_PERCENTAGE_BP()) /
+            10000;
         assertEq(nodeOperator.balance, expectedRefund);
     }
 
@@ -602,18 +642,21 @@ contract CSEjectorTestVoluntaryEjectByArray is CSEjectorTestBase {
 }
 
 contract CSEjectorTestEjectBadPerformer is CSEjectorTestBase {
-    function test_ejectBadPerformer() public {
+    function test_ejectBadPerformer_HappyPath() public {
         uint256 keyIndex = 0;
         bytes memory pubkey = csm.getSigningKeys(0, keyIndex, 1);
 
         csm.mock_setNodeOperatorTotalDepositedKeys(1);
 
+        ValidatorData[] memory expectedExitsData = new ValidatorData[](1);
+        expectedExitsData[0] = ValidatorData(0, noId, pubkey);
         uint256 exitType = ejector.STRIKES_EXIT_TYPE_ID();
+
         vm.expectCall(
-            address(ejector.VEB()),
+            address(twg),
             abi.encodeWithSelector(
-                IValidatorsExitBus.triggerExitsDirectly.selector,
-                IValidatorsExitBus.DirectExitData(0, noId, pubkey),
+                ITriggerableWithdrawalsGateway.triggerFullWithdrawals.selector,
+                expectedExitsData,
                 refundRecipient,
                 exitType
             )
@@ -621,6 +664,30 @@ contract CSEjectorTestEjectBadPerformer is CSEjectorTestBase {
 
         vm.prank(address(strikes));
         ejector.ejectBadPerformer(noId, keyIndex, refundRecipient);
+    }
+
+    function test_ejectBadPerformer_NoRefundRecipient() public {
+        uint256 keyIndex = 0;
+        bytes memory pubkey = csm.getSigningKeys(0, keyIndex, 1);
+
+        csm.mock_setNodeOperatorTotalDepositedKeys(1);
+
+        ValidatorData[] memory expectedExitsData = new ValidatorData[](1);
+        expectedExitsData[0] = ValidatorData(0, noId, pubkey);
+        uint256 exitType = ejector.STRIKES_EXIT_TYPE_ID();
+
+        vm.expectCall(
+            address(twg),
+            abi.encodeWithSelector(
+                ITriggerableWithdrawalsGateway.triggerFullWithdrawals.selector,
+                expectedExitsData,
+                address(strikes),
+                exitType
+            )
+        );
+
+        vm.prank(address(strikes));
+        ejector.ejectBadPerformer(noId, keyIndex, address(0));
     }
 
     function test_ejectBadPerformer_revertWhen_SigningKeysInvalidOffset()

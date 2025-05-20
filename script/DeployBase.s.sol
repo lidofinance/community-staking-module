@@ -40,6 +40,7 @@ struct DeployParams {
     address aragonAgent;
     address easyTrackEVMScriptExecutor;
     address proxyAdmin;
+    address triggerableWithdrawalGateway;
     // Oracle
     uint256 secondsPerSlot;
     uint256 slotsPerEpoch;
@@ -350,6 +351,7 @@ abstract contract DeployBase is Script {
             ejector = new CSEjector(
                 address(csm),
                 address(strikes),
+                config.triggerableWithdrawalGateway,
                 config.stakingModuleId
             );
 
