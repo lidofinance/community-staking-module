@@ -8,6 +8,7 @@ import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgr
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
+// solhint-disable-next-line max-states-count
 contract CSParametersRegistry is
     ICSParametersRegistry,
     Initializable,

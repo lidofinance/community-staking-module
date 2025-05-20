@@ -1298,6 +1298,11 @@ contract CSModule is
             );
     }
 
+    /// @dev This function is used to get the accounting contract from immutables to save bytecode and for backwards compatibility
+    function accounting() public view returns (ICSAccounting) {
+        return ACCOUNTING;
+    }
+
     function _incrementModuleNonce() internal {
         unchecked {
             emit NonceChanged(++_nonce);
@@ -1583,11 +1588,6 @@ contract CSModule is
 
     function _onlyRecoverer() internal view override {
         _checkRole(RECOVERER_ROLE);
-    }
-
-    /// @dev This function is used to get the accounting contract from immutables to save bytecode and for backwards compatibility
-    function accounting() public view returns (ICSAccounting) {
-        return ACCOUNTING;
     }
 
     /// @dev Both nodeOperatorId and keyIndex are limited to uint64 by the contract

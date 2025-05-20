@@ -407,14 +407,6 @@ contract CSAccounting is
     }
 
     /// @inheritdoc ICSAccounting
-    function getBondSummaryShares(
-        uint256 nodeOperatorId
-    ) public view returns (uint256 current, uint256 required) {
-        current = CSBondCore.getBondShares(nodeOperatorId);
-        required = _getRequiredBondShares(nodeOperatorId, 0);
-    }
-
-    /// @inheritdoc ICSAccounting
     function getUnbondedKeysCount(
         uint256 nodeOperatorId
     ) external view returns (uint256) {
@@ -434,22 +426,6 @@ contract CSAccounting is
                 nodeOperatorId: nodeOperatorId,
                 includeLockedBond: false
             });
-    }
-
-    /// @inheritdoc ICSAccounting
-    function getRequiredBondForNextKeys(
-        uint256 nodeOperatorId,
-        uint256 additionalKeys
-    ) public view returns (uint256) {
-        uint256 current = CSBondCore.getBond(nodeOperatorId);
-        uint256 totalRequired = _getRequiredBond(
-            nodeOperatorId,
-            additionalKeys
-        );
-
-        unchecked {
-            return totalRequired > current ? totalRequired - current : 0;
-        }
     }
 
     /// @inheritdoc ICSAccounting
@@ -504,6 +480,30 @@ contract CSAccounting is
     /// @inheritdoc ICSAccounting
     function feeDistributor() external view returns (ICSFeeDistributor) {
         return FEE_DISTRIBUTOR;
+    }
+
+    /// @inheritdoc ICSAccounting
+    function getBondSummaryShares(
+        uint256 nodeOperatorId
+    ) public view returns (uint256 current, uint256 required) {
+        current = CSBondCore.getBondShares(nodeOperatorId);
+        required = _getRequiredBondShares(nodeOperatorId, 0);
+    }
+
+    /// @inheritdoc ICSAccounting
+    function getRequiredBondForNextKeys(
+        uint256 nodeOperatorId,
+        uint256 additionalKeys
+    ) public view returns (uint256) {
+        uint256 current = CSBondCore.getBond(nodeOperatorId);
+        uint256 totalRequired = _getRequiredBond(
+            nodeOperatorId,
+            additionalKeys
+        );
+
+        unchecked {
+            return totalRequired > current ? totalRequired - current : 0;
+        }
     }
 
     function _pullFeeRewards(
@@ -578,7 +578,7 @@ contract CSAccounting is
     function _getRequiredBond(
         uint256 nodeOperatorId,
         uint256 additionalKeys
-    ) public view returns (uint256) {
+    ) internal view returns (uint256) {
         uint256 curveId = CSBondCurve.getBondCurveId(nodeOperatorId);
         uint256 nonWithdrawnKeys = MODULE.getNodeOperatorNonWithdrawnKeys(
             nodeOperatorId
@@ -597,7 +597,7 @@ contract CSAccounting is
     function _getRequiredBondShares(
         uint256 nodeOperatorId,
         uint256 additionalKeys
-    ) public view returns (uint256) {
+    ) internal view returns (uint256) {
         return _sharesByEth(_getRequiredBond(nodeOperatorId, additionalKeys));
     }
 
