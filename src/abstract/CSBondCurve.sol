@@ -81,8 +81,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         uint256 keys,
         uint256 curveId
     ) public view returns (uint256) {
-        return
-            _getBondAmountByKeysCount(keys, _getCurveInfo(curveId).intervals);
+        return _getBondAmountByKeysCount(keys, _getCurveInfo(curveId));
     }
 
     /// @inheritdoc ICSBondCurve
@@ -90,8 +89,7 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
         uint256 amount,
         uint256 curveId
     ) public view returns (uint256) {
-        return
-            _getKeysCountByBondAmount(amount, _getCurveInfo(curveId).intervals);
+        return _getKeysCountByBondAmount(amount, _getCurveInfo(curveId));
     }
 
     // solhint-disable-next-line func-name-mixedcase
@@ -153,8 +151,9 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
     function _getBondAmountByKeysCount(
         uint256 keys,
-        BondCurveInterval[] storage intervals
+        BondCurve storage curve
     ) internal view returns (uint256) {
+        BondCurveInterval[] storage intervals = curve.intervals;
         if (keys == 0) {
             return 0;
         }
@@ -180,8 +179,11 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
 
     function _getKeysCountByBondAmount(
         uint256 amount,
-        BondCurveInterval[] storage intervals
+        BondCurve storage curve
     ) internal view returns (uint256) {
+        BondCurveInterval[] storage intervals = curve.intervals;
+
+        // intervals[0].minBond is essentially the amount of bond required for the very first key
         if (amount < intervals[0].minBond) {
             return 0;
         }
@@ -197,18 +199,17 @@ abstract contract CSBondCurve is ICSBondCurve, Initializable {
                     low = mid;
                 }
             }
-            //
-            //                          <-------> trend[B]
-            //               minBond[A]         minBond[B]
-            // bond      ----|----|----|----^---|--------|--> eth
-            // fromKeys      1         3    |   4
-            //           <---> trend[A]     |
-            //                              - amount
-            // Starting from keys count = 3 trend[B] is already in use, it means if the amount is
-            // somewhere within the interval (minBond[B] - trend[B]; minBond[B]), the maximum
-            // amount of keys it's possible to create is minKeysCount[B] - 1
-            //
+
             BondCurveInterval storage interval;
+
+            //
+            // Imagine we have:
+            //  Interval 0: minKeysCount = 1, minBond = 2 ETH, trend = 2 ETH
+            //  Interval 1: minKeysCount = 4, minBond = 9 ETH, trend = 3 ETH (more expensive than Interval 0)
+            //  Amount = 8.5 ETH
+            // In this case low = 0, and if we count the keys count using data from Interval 0 we will get 4 keys, which is wrong.
+            // So we need a special check for bond amounts between Interval 0 maxBond and Interval 1 minBond.
+            //
             if (low < intervals.length - 1) {
                 interval = intervals[low + 1];
                 if (amount > interval.minBond - interval.trend) {

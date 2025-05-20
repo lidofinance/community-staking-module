@@ -197,7 +197,7 @@ abstract contract CSBondCore is ICSBondCore {
     }
 
     /// @dev Burn Node Operator's bond shares (stETH). Shares will be burned on the next stETH rebase
-    /// @dev The method sender should be granted as `Burner.REQUEST_BURN_MY_STETH_ROLE` and make stETH allowance for `Burner`
+    /// @dev The contract that uses this implementation should be granted `Burner.REQUEST_BURN_MY_STETH_ROLE` and have stETH allowance for `Burner`
     /// @param amount Bond amount to burn in ETH (stETH)
     function _burn(uint256 nodeOperatorId, uint256 amount) internal {
         uint256 sharesToBurn = _sharesByEth(amount);
@@ -208,8 +208,8 @@ abstract contract CSBondCore is ICSBondCore {
         }
 
         uint256 burnedAmount = _ethByShares(burnedShares);
-
         IBurner(LIDO_LOCATOR.burner()).requestBurnMyStETH(burnedAmount);
+
         emit BondBurned(
             nodeOperatorId,
             _ethByShares(sharesToBurn),
@@ -217,8 +217,9 @@ abstract contract CSBondCore is ICSBondCore {
         );
     }
 
-    /// @dev Transfer Node Operator's bond shares (stETH) to charge recipient to pay some fee
+    /// @dev Transfer Node Operator's bond shares (stETH) to charge recipient
     /// @param amount Bond amount to charge in ETH (stETH)
+    /// @param recipient Address to send charged shares
     function _charge(
         uint256 nodeOperatorId,
         uint256 amount,
