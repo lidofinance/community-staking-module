@@ -14,6 +14,7 @@ interface ICSEjector is IExitTypes {
     error ZeroAdminAddress();
     error ZeroModuleAddress();
     error ZeroStrikesAddress();
+    error ZeroTWGAddress();
     error NodeOperatorDoesNotExist();
     error SenderIsNotEligible();
     error SenderIsNotStrikes();

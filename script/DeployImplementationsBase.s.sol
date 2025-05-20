@@ -217,6 +217,7 @@ abstract contract DeployImplementationsBase is DeployBase {
             ejector = new CSEjector(
                 address(csm),
                 address(strikes),
+                config.triggerableWithdrawalGateway,
                 config.stakingModuleId
             );
 
