@@ -23,14 +23,6 @@ library TransientUintUintMapLib {
         }
     }
 
-    function load(
-        bytes32 tslot
-    ) internal pure returns (TransientUintUintMap self) {
-        assembly ("memory-safe") {
-            self := tslot
-        }
-    }
-
     function add(
         TransientUintUintMap self,
         uint256 key,
@@ -63,6 +55,14 @@ library TransientUintUintMapLib {
         uint256 slot = _slot(self, key);
         assembly ("memory-safe") {
             v := tload(slot)
+        }
+    }
+
+    function load(
+        bytes32 tslot
+    ) internal pure returns (TransientUintUintMap self) {
+        assembly ("memory-safe") {
+            self := tslot
         }
     }
 

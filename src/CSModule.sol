@@ -222,7 +222,6 @@ contract CSModule is
 
     /// @inheritdoc ICSModule
     function addValidatorKeysETH(
-        // TODO consider moving this after other arguments below
         address from,
         uint256 nodeOperatorId,
         uint256 keysCount,
@@ -1272,7 +1271,6 @@ contract CSModule is
         }
     }
 
-    /// TODO: Cover with tests
     /// @inheritdoc IStakingModule
     function isValidatorExitDelayPenaltyApplicable(
         uint256 nodeOperatorId,
@@ -1298,6 +1296,11 @@ contract CSModule is
             PARAMETERS_REGISTRY.getAllowedExitDelay(
                 accounting().getBondCurveId(nodeOperatorId)
             );
+    }
+
+    /// @dev This function is used to get the accounting contract from immutables to save bytecode and for backwards compatibility
+    function accounting() public view returns (ICSAccounting) {
+        return ACCOUNTING;
     }
 
     function _incrementModuleNonce() internal {
@@ -1585,11 +1588,6 @@ contract CSModule is
 
     function _onlyRecoverer() internal view override {
         _checkRole(RECOVERER_ROLE);
-    }
-
-    /// @dev This function is used to get the accounting contract from immutables to save bytecode and for backwards compatibility
-    function accounting() public view returns (ICSAccounting) {
-        return ACCOUNTING;
     }
 
     /// @dev Both nodeOperatorId and keyIndex are limited to uint64 by the contract
