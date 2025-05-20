@@ -222,7 +222,6 @@ contract CSModule is
 
     /// @inheritdoc ICSModule
     function addValidatorKeysETH(
-        // TODO consider moving this after other arguments below
         address from,
         uint256 nodeOperatorId,
         uint256 keysCount,
@@ -1272,7 +1271,6 @@ contract CSModule is
         }
     }
 
-    /// TODO: Cover with tests
     /// @inheritdoc IStakingModule
     function isValidatorExitDelayPenaltyApplicable(
         uint256 nodeOperatorId,
