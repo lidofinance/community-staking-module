@@ -388,13 +388,6 @@ contract VettedGate is
         return _seasonedAddress(referrer, referralProgramSeasonNumber);
     }
 
-    function _seasonedAddress(
-        address referrer,
-        uint256 season
-    ) internal view returns (bytes32) {
-        return keccak256(abi.encode(referrer, season));
-    }
-
     /// @dev Verifies that the sender is the owner of the node operator
     function _onlyNodeOperatorOwner(uint256 nodeOperatorId) internal view {
         address owner = MODULE.getNodeOperatorOwner(nodeOperatorId);
@@ -408,5 +401,12 @@ contract VettedGate is
 
     function _onlyRecoverer() internal view override {
         _checkRole(RECOVERER_ROLE);
+    }
+
+    function _seasonedAddress(
+        address referrer,
+        uint256 season
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encode(referrer, season));
     }
 }

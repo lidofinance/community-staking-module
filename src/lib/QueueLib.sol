@@ -58,14 +58,14 @@ function setKeys(Batch self, uint256 keysCount) pure returns (Batch) {
 }
 
 /// @dev can be unsafe if the From batch is previous to the self
-function setNext(Batch self, uint128 next) pure returns (Batch) {
+function setNext(Batch self, uint128 nextIndex) pure returns (Batch) {
     assembly {
         self := or(
             and(
                 self,
                 0xffffffffffffffffffffffffffffffff00000000000000000000000000000000
             ),
-            next
+            nextIndex
         ) // self.next = next
     }
     return self;

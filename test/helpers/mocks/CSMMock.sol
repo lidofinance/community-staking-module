@@ -61,7 +61,7 @@ contract CSMMock is Utilities, Fixtures {
     }
 
     function getNodeOperatorOwner(
-        uint256 nodeOperatorId
+        uint256 /* nodeOperatorId */
     ) external view returns (address) {
         return
             managementProperties.extendedManagerPermissions
