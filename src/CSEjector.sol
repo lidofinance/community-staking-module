@@ -86,31 +86,26 @@ contract CSEjector is
         uint256 keysCount,
         address refundRecipient
     ) external payable whenResumed {
-        NodeOperatorManagementProperties memory no = MODULE
-            .getNodeOperatorManagementProperties(nodeOperatorId);
-        if (no.managerAddress == address(0)) {
-            revert NodeOperatorDoesNotExist();
-        }
-        address nodeOperatorAddress = no.extendedManagerPermissions
-            ? no.managerAddress
-            : no.rewardAddress;
-        if (nodeOperatorAddress != msg.sender) {
-            revert SenderIsNotEligible();
-        }
+        _onlyNodeOperatorOwner(nodeOperatorId);
 
-        // a key must be deposited to prevent ejecting unvetted keys that can be the ones from other modules
-        if (
-            startFrom + keysCount >
-            MODULE.getNodeOperatorTotalDepositedKeys(nodeOperatorId)
-        ) {
-            revert SigningKeysInvalidOffset();
-        }
-        // a key must be non-withdrawn to restrict unlimited exit requests consuming sanity checker limits
-        // although the deposited key can be requested to exit multiple times also, it will eventually be withdrawn
-        // so potentially malicious behaviour stops when there are no active keys available
-        for (uint256 i = startFrom; i < startFrom + keysCount; i++) {
-            if (MODULE.isValidatorWithdrawn(nodeOperatorId, i)) {
-                revert AlreadyWithdrawn();
+        {
+            // A key must be deposited to prevent ejecting unvetted keys that can intersect with
+            // other modules.
+            uint256 maxKeyIndex = startFrom + keysCount;
+            if (
+                maxKeyIndex >
+                MODULE.getNodeOperatorTotalDepositedKeys(nodeOperatorId)
+            ) {
+                revert SigningKeysInvalidOffset();
+            }
+            // A key must be non-withdrawn to restrict unlimited exit requests consuming sanity
+            // checker limits, although a deposited key can be requested to exit multiple times.
+            // But, it will eventually be withdrawn, so potentially malicious behaviour stops when
+            // there are no active keys available
+            for (uint256 i = startFrom; i < maxKeyIndex; ++i) {
+                if (MODULE.isValidatorWithdrawn(nodeOperatorId, i)) {
+                    revert AlreadyWithdrawn();
+                }
             }
         }
 
@@ -123,10 +118,10 @@ contract CSEjector is
         for (uint256 i; i < keysCount; ++i) {
             bytes memory pubkey = new bytes(SigningKeys.PUBKEY_LENGTH);
             assembly {
-                let keyLen := mload(pubkey) // SigningKeys.PUBKEY_LENGTH
-                let offset := mul(keyLen, i) // SigningKeys.PUBKEY_LENGTH * i
+                let keyLen := mload(pubkey) // PUBKEY_LENGTH
+                let offset := mul(keyLen, i) // PUBKEY_LENGTH * i
                 let keyPos := add(add(pubkeys, 0x20), offset) // pubkeys[offset]
-                mcopy(add(pubkey, 0x20), keyPos, keyLen) // pubkey = pubkeys[offset]
+                mcopy(add(pubkey, 0x20), keyPos, keyLen) // pubkey = pubkeys[offset:offset+PUBKEY_LENGTH]
             }
             exitsData[i] = ValidatorData({
                 stakingModuleId: STAKING_MODULE_ID,
@@ -142,24 +137,15 @@ contract CSEjector is
         );
     }
 
-    /// @dev this method is intentionally copy-pasted from the voluntaryEject method with keys changes
+    /// @dev Additional method for non-sequential keys to save gas and decrease fee amount compared
+    /// to separate transactions.
     /// @inheritdoc ICSEjector
     function voluntaryEjectByArray(
         uint256 nodeOperatorId,
         uint256[] calldata keyIndices,
         address refundRecipient
     ) external payable whenResumed {
-        NodeOperatorManagementProperties memory no = MODULE
-            .getNodeOperatorManagementProperties(nodeOperatorId);
-        if (no.managerAddress == address(0)) {
-            revert NodeOperatorDoesNotExist();
-        }
-        address nodeOperatorAddress = no.extendedManagerPermissions
-            ? no.managerAddress
-            : no.rewardAddress;
-        if (nodeOperatorAddress != msg.sender) {
-            revert SenderIsNotEligible();
-        }
+        _onlyNodeOperatorOwner(nodeOperatorId);
 
         uint256 totalDepositedKeys = MODULE.getNodeOperatorTotalDepositedKeys(
             nodeOperatorId
@@ -168,13 +154,15 @@ contract CSEjector is
             keyIndices.length
         );
         for (uint256 i = 0; i < keyIndices.length; i++) {
-            // a key must be deposited to prevent ejecting unvetted keys that can be the ones from other modules
+            // A key must be deposited to prevent ejecting unvetted keys that can intersect with
+            // other modules.
             if (keyIndices[i] >= totalDepositedKeys) {
                 revert SigningKeysInvalidOffset();
             }
-            // a key must be non-withdrawn to restrict unlimited exit requests consuming sanity checker limits
-            // although the deposited key can be requested to exit multiple times also, it will eventually be withdrawn
-            // so potentially malicious behaviour stops when there are no active keys available
+            // A key must be non-withdrawn to restrict unlimited exit requests consuming sanity
+            // checker limits, although a deposited key can be requested to exit multiple times.
+            // But, it will eventually be withdrawn, so potentially malicious behaviour stops when
+            // there are no active keys available
             if (MODULE.isValidatorWithdrawn(nodeOperatorId, keyIndices[i])) {
                 revert AlreadyWithdrawn();
             }
@@ -203,15 +191,17 @@ contract CSEjector is
         uint256 keyIndex,
         address refundRecipient
     ) external payable whenResumed onlyStrikes {
-        // a key must be deposited to prevent ejecting unvetted keys that can be the ones from other modules
+        // A key must be deposited to prevent ejecting unvetted keys that can intersect with
+        // other modules.
         if (
             keyIndex >= MODULE.getNodeOperatorTotalDepositedKeys(nodeOperatorId)
         ) {
             revert SigningKeysInvalidOffset();
         }
-        // a key must be non-withdrawn to restrict unlimited exit requests consuming sanity checker limits
-        // although the deposited key can be requested to exit multiple times also, it will eventually be withdrawn
-        // so potentially malicious behaviour stops when there are no active keys available
+        // A key must be non-withdrawn to restrict unlimited exit requests consuming sanity checker
+        // limits, although a deposited key can be requested to exit multiple times. But, it will
+        // eventually be withdrawn, so potentially malicious behaviour stops when there are no
+        // active keys available
         if (MODULE.isValidatorWithdrawn(nodeOperatorId, keyIndex)) {
             revert AlreadyWithdrawn();
         }
@@ -233,5 +223,19 @@ contract CSEjector is
             refundRecipient == address(0) ? msg.sender : refundRecipient,
             STRIKES_EXIT_TYPE_ID
         );
+    }
+
+    function _onlyNodeOperatorOwner(uint256 nodeOperatorId) internal view {
+        NodeOperatorManagementProperties memory no = MODULE
+            .getNodeOperatorManagementProperties(nodeOperatorId);
+        if (no.managerAddress == address(0)) {
+            revert NodeOperatorDoesNotExist();
+        }
+        address nodeOperatorAddress = no.extendedManagerPermissions
+            ? no.managerAddress
+            : no.rewardAddress;
+        if (nodeOperatorAddress != msg.sender) {
+            revert SenderIsNotEligible();
+        }
     }
 }
