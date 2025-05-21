@@ -1049,6 +1049,8 @@ contract VettedGateDeploymentTest is DeploymentBaseTest {
 
         assertEq(vettedGate.getRoleMemberCount(vettedGate.RESUME_ROLE()), 0);
 
+        assertEq(vettedGate.getRoleMemberCount(vettedGate.RECOVERER_ROLE()), 0);
+
         assertTrue(
             vettedGate.hasRole(
                 vettedGate.SET_TREE_ROLE(),
@@ -1172,6 +1174,27 @@ contract PermissionlessGateDeploymentTest is DeploymentBaseTest {
         assertEq(
             permissionlessGate.CURVE_ID(),
             accounting.DEFAULT_BOND_CURVE_ID()
+        );
+    }
+
+    function test_roles() public view {
+        assertTrue(
+            permissionlessGate.hasRole(
+                permissionlessGate.DEFAULT_ADMIN_ROLE(),
+                deployParams.aragonAgent
+            )
+        );
+        assertEq(
+            permissionlessGate.getRoleMemberCount(
+                permissionlessGate.DEFAULT_ADMIN_ROLE()
+            ),
+            adminsCount
+        );
+        assertEq(
+            permissionlessGate.getRoleMemberCount(
+                permissionlessGate.RECOVERER_ROLE()
+            ),
+            0
         );
     }
 }

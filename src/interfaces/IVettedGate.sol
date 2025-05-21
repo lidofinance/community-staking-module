@@ -10,13 +10,18 @@ import { ICSModule } from "./ICSModule.sol";
 interface IVettedGate {
     event TreeSet(bytes32 indexed treeRoot, string treeCid);
     event Consumed(address indexed member);
-    event ReferrerConsumed(address indexed referrer);
+    event ReferrerConsumed(address indexed referrer, uint256 indexed season);
     event ReferralProgramSeasonStarted(
         uint256 indexed season,
         uint256 referralCurveId,
         uint256 referralsThreshold
     );
     event ReferralProgramSeasonEnded(uint256 indexed season);
+    event ReferralRecorded(
+        address indexed referrer,
+        uint256 indexed season,
+        uint256 indexed referralNodeOperatorId
+    );
 
     error InvalidProof();
     error AlreadyConsumed();
@@ -26,6 +31,7 @@ interface IVettedGate {
     error ZeroModuleAddress();
     error ZeroAdminAddress();
     error NotAllowedToClaim();
+    error NodeOperatorDoesNotExist();
     error NotEnoughReferrals();
     error ReferralProgramIsNotActive();
     error ReferralProgramIsActive();
@@ -34,6 +40,8 @@ interface IVettedGate {
     function PAUSE_ROLE() external view returns (bytes32);
 
     function RESUME_ROLE() external view returns (bytes32);
+
+    function RECOVERER_ROLE() external view returns (bytes32);
 
     function SET_TREE_ROLE() external view returns (bytes32);
 
@@ -61,10 +69,11 @@ interface IVettedGate {
     /// @notice Start referral program season
     /// @param _referralCurveId Curve Id for the referral curve
     /// @param _referralsThreshold Minimum number of referrals to be eligible to claim the curve
+    /// @return season Id of the started season
     function startNewReferralProgramSeason(
         uint256 _referralCurveId,
         uint256 _referralsThreshold
-    ) external;
+    ) external returns (uint256 season);
 
     /// @notice End referral program season
     function endCurrentReferralProgramSeason() external;
@@ -195,9 +204,20 @@ interface IVettedGate {
         string calldata _treeCid
     ) external;
 
-    /// @notice Get the number of referrals for the given referrer
+    /// @notice Get the number of referrals for the given referrer in the current or last season
+    /// @param referrer Referrer address
+    /// @return Number of referrals for the given referrer in the current or last season
     function getReferralsCount(
         address referrer
+    ) external view returns (uint256);
+
+    /// @notice Get the number of referrals for the given referrer in the given season
+    /// @param referrer Referrer address
+    /// @param season Season number
+    /// @return Number of referrals for the given referrer in the given season
+    function getReferralsCount(
+        address referrer,
+        uint256 season
     ) external view returns (uint256);
 
     /// @notice Returns the initialized version of the contract

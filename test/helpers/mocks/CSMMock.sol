@@ -60,6 +60,15 @@ contract CSMMock is Utilities, Fixtures {
         return managementProperties;
     }
 
+    function getNodeOperatorOwner(
+        uint256 nodeOperatorId
+    ) external view returns (address) {
+        return
+            managementProperties.extendedManagerPermissions
+                ? managementProperties.managerAddress
+                : managementProperties.rewardAddress;
+    }
+
     function mock_setIsValidatorWithdrawn(bool value) external {
         isValidatorWithdrawnMock = value;
     }

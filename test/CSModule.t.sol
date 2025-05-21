@@ -7348,6 +7348,45 @@ contract CSMMisc is CSMCommon {
         assertEq(props.rewardAddress, reward);
         assertEq(props.extendedManagerPermissions, extended);
     }
+
+    function test_getNodeOperatorOwner() public assertInvariants {
+        address manager = nextAddress();
+        address reward = nextAddress();
+        bool extended = false;
+
+        uint256 noId = csm.createNodeOperator(
+            manager,
+            NodeOperatorManagementProperties({
+                managerAddress: manager,
+                rewardAddress: reward,
+                extendedManagerPermissions: extended
+            }),
+            address(0)
+        );
+
+        assertEq(csm.getNodeOperatorOwner(noId), reward);
+    }
+
+    function test_getNodeOperatorOwner_ExtendedPermissions()
+        public
+        assertInvariants
+    {
+        address manager = nextAddress();
+        address reward = nextAddress();
+        bool extended = true;
+
+        uint256 noId = csm.createNodeOperator(
+            manager,
+            NodeOperatorManagementProperties({
+                managerAddress: manager,
+                rewardAddress: reward,
+                extendedManagerPermissions: extended
+            }),
+            address(0)
+        );
+
+        assertEq(csm.getNodeOperatorOwner(noId), manager);
+    }
 }
 
 contract CSMExitDeadlineThreshold is CSMCommon {
