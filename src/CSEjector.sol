@@ -3,11 +3,11 @@
 
 pragma solidity 0.8.24;
 
-import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
+import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
+import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 
 import { ICSEjector } from "./interfaces/ICSEjector.sol";
-import { ICSModule, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { ICSModule } from "./interfaces/ICSModule.sol";
 import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { SigningKeys } from "./lib/SigningKeys.sol";
 import { ITriggerableWithdrawalsGateway, ValidatorData } from "./interfaces/ITriggerableWithdrawalsGateway.sol";
@@ -16,12 +16,13 @@ import { ExitTypes } from "./abstract/ExitTypes.sol";
 contract CSEjector is
     ICSEjector,
     ExitTypes,
-    Initializable,
-    AccessControlEnumerableUpgradeable,
-    PausableUntil
+    AccessControlEnumerable,
+    PausableUntil,
+    AssetRecoverer
 {
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
+    bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
 
     uint256 public immutable STAKING_MODULE_ID;
     ICSModule public immutable MODULE;
@@ -40,7 +41,8 @@ contract CSEjector is
         address module,
         address strikes,
         address twg,
-        uint256 stakingModuleId
+        uint256 stakingModuleId,
+        address admin
     ) {
         if (module == address(0)) {
             revert ZeroModuleAddress();
@@ -51,20 +53,14 @@ contract CSEjector is
         if (twg == address(0)) {
             revert ZeroTWGAddress();
         }
+        if (admin == address(0)) {
+            revert ZeroAdminAddress();
+        }
 
         STRIKES = strikes;
         MODULE = ICSModule(module);
         TWG = ITriggerableWithdrawalsGateway(twg);
         STAKING_MODULE_ID = stakingModuleId;
-    }
-
-    /// @notice initialize the contract from scratch
-    function initialize(address admin) external initializer {
-        if (admin == address(0)) {
-            revert ZeroAdminAddress();
-        }
-
-        __AccessControlEnumerable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
@@ -225,17 +221,18 @@ contract CSEjector is
         );
     }
 
+    /// @dev Verifies that the sender is the owner of the node operator
     function _onlyNodeOperatorOwner(uint256 nodeOperatorId) internal view {
-        NodeOperatorManagementProperties memory no = MODULE
-            .getNodeOperatorManagementProperties(nodeOperatorId);
-        if (no.managerAddress == address(0)) {
+        address owner = MODULE.getNodeOperatorOwner(nodeOperatorId);
+        if (owner == address(0)) {
             revert NodeOperatorDoesNotExist();
         }
-        address nodeOperatorAddress = no.extendedManagerPermissions
-            ? no.managerAddress
-            : no.rewardAddress;
-        if (nodeOperatorAddress != msg.sender) {
+        if (owner != msg.sender) {
             revert SenderIsNotEligible();
         }
+    }
+
+    function _onlyRecoverer() internal view override {
+        _checkRole(RECOVERER_ROLE);
     }
 }

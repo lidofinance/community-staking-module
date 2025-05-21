@@ -218,10 +218,10 @@ abstract contract DeployImplementationsBase is DeployBase {
                 address(csm),
                 address(strikes),
                 config.triggerableWithdrawalGateway,
-                config.stakingModuleId
+                config.stakingModuleId,
+                deployer
             );
 
-            ejector.initialize(deployer);
             strikes.initialize(deployer, address(ejector));
 
             verifierV2 = new CSVerifier({

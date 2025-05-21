@@ -352,10 +352,10 @@ abstract contract DeployBase is Script {
                 address(csm),
                 address(strikes),
                 config.triggerableWithdrawalGateway,
-                config.stakingModuleId
+                config.stakingModuleId,
+                deployer
             );
 
-            ejector.initialize(deployer);
             strikes.initialize(deployer, address(ejector));
 
             permissionlessGate = new PermissionlessGate(address(csm), deployer);
