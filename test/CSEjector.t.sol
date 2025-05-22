@@ -43,10 +43,9 @@ contract CSEjectorTestBase is Test, Utilities, Fixtures {
             address(csm),
             address(strikes),
             address(twg),
-            stakingModuleId
+            stakingModuleId,
+            admin
         );
-        _enableInitializers(address(ejector));
-        ejector.initialize(admin);
     }
 }
 
@@ -56,12 +55,15 @@ contract CSEjectorTestMisc is CSEjectorTestBase {
             address(csm),
             address(strikes),
             address(twg),
-            stakingModuleId
+            stakingModuleId,
+            admin
         );
         assertEq(address(ejector.MODULE()), address(csm));
         assertEq(address(ejector.TWG()), address(twg));
         assertEq(ejector.STAKING_MODULE_ID(), stakingModuleId);
         assertEq(ejector.STRIKES(), address(strikes));
+        assertEq(ejector.getRoleMemberCount(ejector.DEFAULT_ADMIN_ROLE()), 1);
+        assertEq(ejector.getRoleMember(ejector.DEFAULT_ADMIN_ROLE(), 0), admin);
     }
 
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
@@ -70,13 +72,20 @@ contract CSEjectorTestMisc is CSEjectorTestBase {
             address(0),
             address(strikes),
             address(twg),
-            stakingModuleId
+            stakingModuleId,
+            admin
         );
     }
 
     function test_constructor_RevertWhen_ZeroStrikesAddress() public {
         vm.expectRevert(ICSEjector.ZeroStrikesAddress.selector);
-        new CSEjector(address(csm), address(0), address(twg), stakingModuleId);
+        new CSEjector(
+            address(csm),
+            address(0),
+            address(twg),
+            stakingModuleId,
+            admin
+        );
     }
 
     function test_constructor_RevertWhen_ZeroTWGAddress() public {
@@ -85,36 +94,20 @@ contract CSEjectorTestMisc is CSEjectorTestBase {
             address(csm),
             address(strikes),
             address(0),
-            stakingModuleId
+            stakingModuleId,
+            admin
         );
     }
 
-    function test_initializer() public {
-        ejector = new CSEjector(
-            address(csm),
-            address(strikes),
-            address(twg),
-            stakingModuleId
-        );
-        _enableInitializers(address(ejector));
-
-        ejector.initialize(admin);
-
-        assertEq(ejector.getRoleMemberCount(ejector.DEFAULT_ADMIN_ROLE()), 1);
-        assertEq(ejector.getRoleMember(ejector.DEFAULT_ADMIN_ROLE(), 0), admin);
-    }
-
-    function test_initializer_RevertWhen_ZeroAdminAddress() public {
-        ejector = new CSEjector(
-            address(csm),
-            address(strikes),
-            address(twg),
-            stakingModuleId
-        );
-        _enableInitializers(address(ejector));
-
+    function test_constructor_RevertWhen_ZeroAdminAddress() public {
         vm.expectRevert(ICSEjector.ZeroAdminAddress.selector);
-        ejector.initialize(address(0));
+        new CSEjector(
+            address(csm),
+            address(strikes),
+            address(twg),
+            stakingModuleId,
+            address(0)
+        );
     }
 
     function test_pauseFor() public {
@@ -153,6 +146,15 @@ contract CSEjectorTestMisc is CSEjectorTestBase {
         expectRoleRevert(admin, ejector.RESUME_ROLE());
         vm.prank(admin);
         ejector.resume();
+    }
+
+    function test_recovererRole() public {
+        bytes32 role = ejector.RECOVERER_ROLE();
+        vm.prank(admin);
+        ejector.grantRole(role, address(1337));
+
+        vm.prank(address(1337));
+        ejector.recoverEther();
     }
 }
 

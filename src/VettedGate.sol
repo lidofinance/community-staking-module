@@ -4,8 +4,9 @@
 pragma solidity 0.8.24;
 
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
+import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
-import { ICSModule, NodeOperatorManagementProperties, NodeOperator } from "./interfaces/ICSModule.sol";
+import { ICSModule, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
 import { IVettedGate } from "./interfaces/IVettedGate.sol";
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import { PausableUntil } from "./lib/utils/PausableUntil.sol";
@@ -13,10 +14,12 @@ import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 contract VettedGate is
     IVettedGate,
     AccessControlEnumerableUpgradeable,
-    PausableUntil
+    PausableUntil,
+    AssetRecoverer
 {
     bytes32 public constant PAUSE_ROLE = keccak256("PAUSE_ROLE");
     bytes32 public constant RESUME_ROLE = keccak256("RESUME_ROLE");
+    bytes32 public constant RECOVERER_ROLE = keccak256("RECOVERER_ROLE");
     bytes32 public constant SET_TREE_ROLE = keccak256("SET_TREE_ROLE");
     bytes32 public constant START_REFERRAL_SEASON_ROLE =
         keccak256("START_REFERRAL_SEASON_ROLE");
@@ -107,20 +110,24 @@ contract VettedGate is
     function startNewReferralProgramSeason(
         uint256 _referralCurveId,
         uint256 _referralsThreshold
-    ) external onlyRole(START_REFERRAL_SEASON_ROLE) {
+    ) external onlyRole(START_REFERRAL_SEASON_ROLE) returns (uint256 season) {
         if (isReferralProgramSeasonActive) {
             revert ReferralProgramIsActive();
+        }
+        if (_referralCurveId == ACCOUNTING.DEFAULT_BOND_CURVE_ID()) {
+            revert InvalidCurveId();
         }
         if (_referralsThreshold == 0) {
             revert InvalidReferralsThreshold();
         }
 
-        referralsThreshold = _referralsThreshold;
         referralCurveId = _referralCurveId;
+        referralsThreshold = _referralsThreshold;
         isReferralProgramSeasonActive = true;
 
-        uint256 season = referralProgramSeasonNumber + 1;
+        season = referralProgramSeasonNumber + 1;
         referralProgramSeasonNumber = season;
+
         emit ReferralProgramSeasonStarted(
             season,
             _referralCurveId,
@@ -138,7 +145,9 @@ contract VettedGate is
         ) {
             revert ReferralProgramIsNotActive();
         }
+
         isReferralProgramSeasonActive = false;
+
         emit ReferralProgramSeasonEnded(referralProgramSeasonNumber);
     }
 
@@ -150,14 +159,14 @@ contract VettedGate is
         NodeOperatorManagementProperties calldata managementProperties,
         bytes32[] calldata proof,
         address referrer
-    ) external payable returns (uint256 nodeOperatorId) {
+    ) external payable whenResumed returns (uint256 nodeOperatorId) {
         _consume(proof);
 
-        nodeOperatorId = MODULE.createNodeOperator(
-            msg.sender,
-            managementProperties,
-            referrer
-        );
+        nodeOperatorId = MODULE.createNodeOperator({
+            from: msg.sender,
+            managementProperties: managementProperties,
+            referrer: referrer
+        });
         ACCOUNTING.setBondCurve(nodeOperatorId, curveId);
         MODULE.addValidatorKeysETH{ value: msg.value }({
             from: msg.sender,
@@ -167,7 +176,7 @@ contract VettedGate is
             signatures: signatures
         });
 
-        _bumpReferralCount(referrer);
+        _bumpReferralCount(referrer, nodeOperatorId);
     }
 
     /// @inheritdoc IVettedGate
@@ -179,14 +188,14 @@ contract VettedGate is
         ICSAccounting.PermitInput calldata permit,
         bytes32[] calldata proof,
         address referrer
-    ) external returns (uint256 nodeOperatorId) {
+    ) external whenResumed returns (uint256 nodeOperatorId) {
         _consume(proof);
 
-        nodeOperatorId = MODULE.createNodeOperator(
-            msg.sender,
-            managementProperties,
-            referrer
-        );
+        nodeOperatorId = MODULE.createNodeOperator({
+            from: msg.sender,
+            managementProperties: managementProperties,
+            referrer: referrer
+        });
         ACCOUNTING.setBondCurve(nodeOperatorId, curveId);
         MODULE.addValidatorKeysStETH({
             from: msg.sender,
@@ -197,7 +206,7 @@ contract VettedGate is
             permit: permit
         });
 
-        _bumpReferralCount(referrer);
+        _bumpReferralCount(referrer, nodeOperatorId);
     }
 
     /// @inheritdoc IVettedGate
@@ -209,14 +218,14 @@ contract VettedGate is
         ICSAccounting.PermitInput calldata permit,
         bytes32[] calldata proof,
         address referrer
-    ) external returns (uint256 nodeOperatorId) {
+    ) external whenResumed returns (uint256 nodeOperatorId) {
         _consume(proof);
 
-        nodeOperatorId = MODULE.createNodeOperator(
-            msg.sender,
-            managementProperties,
-            referrer
-        );
+        nodeOperatorId = MODULE.createNodeOperator({
+            from: msg.sender,
+            managementProperties: managementProperties,
+            referrer: referrer
+        });
         ACCOUNTING.setBondCurve(nodeOperatorId, curveId);
         MODULE.addValidatorKeysWstETH({
             from: msg.sender,
@@ -227,15 +236,15 @@ contract VettedGate is
             permit: permit
         });
 
-        _bumpReferralCount(referrer);
+        _bumpReferralCount(referrer, nodeOperatorId);
     }
 
     /// @inheritdoc IVettedGate
     function claimBondCurve(
         uint256 nodeOperatorId,
         bytes32[] calldata proof
-    ) external {
-        _verifySender(nodeOperatorId);
+    ) external whenResumed {
+        _onlyNodeOperatorOwner(nodeOperatorId);
 
         _consume(proof);
 
@@ -246,18 +255,20 @@ contract VettedGate is
     function claimReferrerBondCurve(
         uint256 nodeOperatorId,
         bytes32[] calldata proof
-    ) external {
-        _verifySender(nodeOperatorId);
+    ) external whenResumed {
+        _onlyNodeOperatorOwner(nodeOperatorId);
 
-        if (!isConsumed(msg.sender)) {
-            _consume(proof);
+        /// @dev Only members from the current merkle tree can claim the referral bond curve
+        if (!verifyProof(msg.sender, proof)) {
+            revert InvalidProof();
         }
 
         if (!isReferralProgramSeasonActive) {
             revert ReferralProgramIsNotActive();
         }
 
-        bytes32 referrer = _seasonedAddress(msg.sender);
+        uint256 season = referralProgramSeasonNumber;
+        bytes32 referrer = _seasonedAddress(msg.sender, season);
 
         if (referralCounts[referrer] < referralsThreshold) {
             revert NotEnoughReferrals();
@@ -268,7 +279,8 @@ contract VettedGate is
         }
 
         _consumedReferrers[referrer] = true;
-        emit ReferrerConsumed(msg.sender);
+
+        emit ReferrerConsumed(msg.sender, season);
 
         ACCOUNTING.setBondCurve(nodeOperatorId, referralCurveId);
     }
@@ -289,18 +301,26 @@ contract VettedGate is
     }
 
     /// @inheritdoc IVettedGate
+    function getReferralsCount(
+        address referrer,
+        uint256 season
+    ) external view returns (uint256) {
+        return referralCounts[_seasonedAddress(referrer, season)];
+    }
+
+    /// @inheritdoc IVettedGate
     function getInitializedVersion() external view returns (uint64) {
         return _getInitializedVersion();
     }
 
     /// @inheritdoc IVettedGate
-    function isConsumed(address member) public view returns (bool) {
-        return _consumedAddresses[member];
+    function isReferrerConsumed(address referrer) external view returns (bool) {
+        return _consumedReferrers[_seasonedAddress(referrer)];
     }
 
     /// @inheritdoc IVettedGate
-    function isReferrerConsumed(address referrer) public view returns (bool) {
-        return _consumedReferrers[_seasonedAddress(referrer)];
+    function isConsumed(address member) public view returns (bool) {
+        return _consumedAddresses[member];
     }
 
     /// @inheritdoc IVettedGate
@@ -316,7 +336,7 @@ contract VettedGate is
         return keccak256(bytes.concat(keccak256(abi.encode(member))));
     }
 
-    function _consume(bytes32[] calldata proof) internal whenResumed {
+    function _consume(bytes32[] calldata proof) internal {
         if (isConsumed(msg.sender)) {
             revert AlreadyConsumed();
         }
@@ -326,6 +346,7 @@ contract VettedGate is
         }
 
         _consumedAddresses[msg.sender] = true;
+
         emit Consumed(msg.sender);
     }
 
@@ -333,49 +354,59 @@ contract VettedGate is
         bytes32 _treeRoot,
         string calldata _treeCid
     ) internal {
-        if (_treeRoot == bytes32(0)) {
+        if (_treeRoot == bytes32(0) || _treeRoot == treeRoot) {
             revert InvalidTreeRoot();
         }
 
-        if (_treeRoot == treeRoot) {
-            revert InvalidTreeRoot();
-        }
-
-        if (bytes(_treeCid).length == 0) {
-            revert InvalidTreeCid();
-        }
-
-        if (keccak256(bytes(_treeCid)) == keccak256(bytes(treeCid))) {
+        if (
+            bytes(_treeCid).length == 0 ||
+            keccak256(bytes(_treeCid)) == keccak256(bytes(treeCid))
+        ) {
             revert InvalidTreeCid();
         }
 
         treeRoot = _treeRoot;
         treeCid = _treeCid;
+
         emit TreeSet(_treeRoot, _treeCid);
     }
 
-    function _bumpReferralCount(address referrer) internal {
+    function _bumpReferralCount(
+        address referrer,
+        uint256 referralNodeOperatorId
+    ) internal {
+        uint256 season = referralProgramSeasonNumber;
         if (isReferralProgramSeasonActive && referrer != address(0)) {
-            referralCounts[_seasonedAddress(referrer)] += 1;
+            referralCounts[_seasonedAddress(referrer, season)] += 1;
         }
+        emit ReferralRecorded(referrer, season, referralNodeOperatorId);
     }
 
     function _seasonedAddress(
         address referrer
     ) internal view returns (bytes32) {
-        return keccak256(abi.encode(referrer, referralProgramSeasonNumber));
+        return _seasonedAddress(referrer, referralProgramSeasonNumber);
     }
 
     /// @dev Verifies that the sender is the owner of the node operator
-    function _verifySender(uint256 nodeOperatorId) internal view {
-        NodeOperator memory nodeOperator = MODULE.getNodeOperator(
-            nodeOperatorId
-        );
-        address nodeOperatorAddress = nodeOperator.extendedManagerPermissions
-            ? nodeOperator.managerAddress
-            : nodeOperator.rewardAddress;
-        if (nodeOperatorAddress != msg.sender) {
+    function _onlyNodeOperatorOwner(uint256 nodeOperatorId) internal view {
+        address owner = MODULE.getNodeOperatorOwner(nodeOperatorId);
+        if (owner == address(0)) {
+            revert NodeOperatorDoesNotExist();
+        }
+        if (owner != msg.sender) {
             revert NotAllowedToClaim();
         }
+    }
+
+    function _onlyRecoverer() internal view override {
+        _checkRole(RECOVERER_ROLE);
+    }
+
+    function _seasonedAddress(
+        address referrer,
+        uint256 season
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encode(referrer, season));
     }
 }

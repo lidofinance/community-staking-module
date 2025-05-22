@@ -16,7 +16,7 @@ contract PermissionlessGateTest is Test, Utilities {
 
     constructor() {
         csm = new CSMMock();
-        gate = new PermissionlessGate(address(csm));
+        gate = new PermissionlessGate(address(csm), address(this));
     }
 
     function test_constructor() public view {
@@ -26,7 +26,20 @@ contract PermissionlessGateTest is Test, Utilities {
 
     function test_constructor_revertWhen_zeroModuleAddress() public {
         vm.expectRevert(IPermissionlessGate.ZeroModuleAddress.selector);
-        new PermissionlessGate(address(0));
+        new PermissionlessGate(address(0), address(this));
+    }
+
+    function test_constructor_revertWhen_zeroAdminAddress() public {
+        vm.expectRevert(IPermissionlessGate.ZeroAdminAddress.selector);
+        new PermissionlessGate(address(csm), address(0));
+    }
+
+    function test_recovererRole() public {
+        bytes32 role = gate.RECOVERER_ROLE();
+        gate.grantRole(role, address(1337));
+
+        vm.prank(address(1337));
+        gate.recoverEther();
     }
 
     function test_addNodeOperatorETH() public {

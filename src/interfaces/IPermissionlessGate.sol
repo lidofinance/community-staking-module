@@ -7,6 +7,9 @@ import { ICSAccounting } from "./ICSAccounting.sol";
 
 interface IPermissionlessGate {
     error ZeroModuleAddress();
+    error ZeroAdminAddress();
+
+    function RECOVERER_ROLE() external view returns (bytes32);
 
     function CURVE_ID() external view returns (uint256);
 

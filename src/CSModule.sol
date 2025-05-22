@@ -1117,6 +1117,17 @@ contract CSModule is
     }
 
     /// @inheritdoc ICSModule
+    function getNodeOperatorOwner(
+        uint256 nodeOperatorId
+    ) external view returns (address) {
+        NodeOperator storage no = _nodeOperators[nodeOperatorId];
+        return
+            no.extendedManagerPermissions
+                ? no.managerAddress
+                : no.rewardAddress;
+    }
+
+    /// @inheritdoc ICSModule
     function getNodeOperatorNonWithdrawnKeys(
         uint256 nodeOperatorId
     ) external view returns (uint256) {

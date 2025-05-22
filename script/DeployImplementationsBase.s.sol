@@ -87,7 +87,7 @@ abstract contract DeployImplementationsBase is DeployBase {
                 maxBondLockPeriod: config.maxBondLockPeriod
             });
 
-            permissionlessGate = new PermissionlessGate(address(csm));
+            permissionlessGate = new PermissionlessGate(address(csm), deployer);
 
             address vettedGateImpl = address(new VettedGate(address(csm)));
             vettedGateFactory = new VettedGateFactory(vettedGateImpl);
@@ -218,10 +218,10 @@ abstract contract DeployImplementationsBase is DeployBase {
                 address(csm),
                 address(strikes),
                 config.triggerableWithdrawalGateway,
-                config.stakingModuleId
+                config.stakingModuleId,
+                deployer
             );
 
-            ejector.initialize(deployer);
             strikes.initialize(deployer, address(ejector));
 
             verifierV2 = new CSVerifier({
@@ -283,6 +283,15 @@ abstract contract DeployImplementationsBase is DeployBase {
                 config.identifiedCommunityStakersGateManager
             );
             vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
+
+            permissionlessGate.grantRole(
+                permissionlessGate.DEFAULT_ADMIN_ROLE(),
+                config.aragonAgent
+            );
+            permissionlessGate.revokeRole(
+                permissionlessGate.DEFAULT_ADMIN_ROLE(),
+                deployer
+            );
 
             verifierV2.grantRole(verifierV2.PAUSE_ROLE(), gateSealV2);
             verifierV2.grantRole(
@@ -361,6 +370,10 @@ abstract contract DeployImplementationsBase is DeployBase {
         );
         vettedGate.grantRole(
             vettedGate.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        permissionlessGate.grantRole(
+            permissionlessGate.DEFAULT_ADMIN_ROLE(),
             config.secondAdminAddress
         );
         ejector.grantRole(
