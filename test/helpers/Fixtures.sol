@@ -23,6 +23,7 @@ import { CSModule } from "../../src/CSModule.sol";
 import { CSParametersRegistry } from "../../src/CSParametersRegistry.sol";
 import { PermissionlessGate } from "../../src/PermissionlessGate.sol";
 import { VettedGate } from "../../src/VettedGate.sol";
+import { VettedGateFactory } from "../../src/VettedGateFactory.sol";
 import { CSAccounting } from "../../src/CSAccounting.sol";
 import { CSFeeOracle } from "../../src/CSFeeOracle.sol";
 import { CSFeeDistributor } from "../../src/CSFeeDistributor.sol";
@@ -101,6 +102,7 @@ contract DeploymentHelpers is Test {
         address csm;
         address csmImpl;
         address permissionlessGate;
+        address vettedGateFactory;
         address vettedGate;
         address vettedGateImpl;
         address parametersRegistry;
@@ -164,6 +166,12 @@ contract DeploymentHelpers is Test {
                 ".PermissionlessGate"
             );
             vm.label(deploymentConfig.permissionlessGate, "permissionlessGate");
+
+            deploymentConfig.vettedGateFactory = vm.parseJsonAddress(
+                config,
+                ".VettedGateFactory"
+            );
+            vm.label(deploymentConfig.vettedGateFactory, "vettedGateFactory");
 
             deploymentConfig.vettedGate = vm.parseJsonAddress(
                 config,
@@ -312,6 +320,7 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
     CSParametersRegistry public parametersRegistry;
     CSParametersRegistry public parametersRegistryImpl;
     PermissionlessGate public permissionlessGate;
+    VettedGateFactory public vettedGateFactory;
     VettedGate public vettedGate;
     VettedGate public vettedGateImpl;
     address public earlyAdoption;
@@ -355,6 +364,9 @@ contract DeploymentFixtures is StdCheats, DeploymentHelpers {
         );
         permissionlessGate = PermissionlessGate(
             deploymentConfig.permissionlessGate
+        );
+        vettedGateFactory = VettedGateFactory(
+            deploymentConfig.vettedGateFactory
         );
         vettedGate = VettedGate(deploymentConfig.vettedGate);
         vettedGateImpl = VettedGate(deploymentConfig.vettedGateImpl);
