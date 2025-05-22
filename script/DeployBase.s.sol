@@ -352,13 +352,13 @@ abstract contract DeployBase is Script {
                 address(csm),
                 address(strikes),
                 config.triggerableWithdrawalGateway,
-                config.stakingModuleId
+                config.stakingModuleId,
+                deployer
             );
 
-            ejector.initialize(deployer);
             strikes.initialize(deployer, address(ejector));
 
-            permissionlessGate = new PermissionlessGate(address(csm));
+            permissionlessGate = new PermissionlessGate(address(csm), deployer);
 
             address vettedGateImpl = address(new VettedGate(address(csm)));
             vettedGateFactory = new VettedGateFactory(vettedGateImpl);
@@ -571,6 +571,15 @@ abstract contract DeployBase is Script {
             );
             vettedGate.revokeRole(vettedGate.DEFAULT_ADMIN_ROLE(), deployer);
 
+            permissionlessGate.grantRole(
+                permissionlessGate.DEFAULT_ADMIN_ROLE(),
+                config.aragonAgent
+            );
+            permissionlessGate.revokeRole(
+                permissionlessGate.DEFAULT_ADMIN_ROLE(),
+                deployer
+            );
+
             verifier.grantRole(
                 verifier.DEFAULT_ADMIN_ROLE(),
                 config.aragonAgent
@@ -691,7 +700,7 @@ abstract contract DeployBase is Script {
         }
         csm.grantRole(csm.DEFAULT_ADMIN_ROLE(), config.secondAdminAddress);
         accounting.grantRole(
-            csm.DEFAULT_ADMIN_ROLE(),
+            accounting.DEFAULT_ADMIN_ROLE(),
             config.secondAdminAddress
         );
         oracle.grantRole(
@@ -712,6 +721,10 @@ abstract contract DeployBase is Script {
         );
         vettedGate.grantRole(
             vettedGate.DEFAULT_ADMIN_ROLE(),
+            config.secondAdminAddress
+        );
+        permissionlessGate.grantRole(
+            permissionlessGate.DEFAULT_ADMIN_ROLE(),
             config.secondAdminAddress
         );
         ejector.grantRole(

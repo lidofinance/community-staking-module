@@ -395,6 +395,13 @@ interface ICSModule is
         uint256 nodeOperatorId
     ) external view returns (NodeOperatorManagementProperties memory);
 
+    /// @notice Get Node Operator owner. Owner is manager address if `extendedManagerPermissions` is enabled and reward address otherwise
+    /// @param nodeOperatorId ID of the Node Operator
+    /// @return Node Operator owner
+    function getNodeOperatorOwner(
+        uint256 nodeOperatorId
+    ) external view returns (address);
+
     /// @notice Get Node Operator non-withdrawn keys
     /// @param nodeOperatorId ID of the Node Operator
     /// @return Non-withdrawn keys count

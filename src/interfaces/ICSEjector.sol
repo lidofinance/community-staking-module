@@ -23,6 +23,8 @@ interface ICSEjector is IExitTypes {
 
     function RESUME_ROLE() external view returns (bytes32);
 
+    function RECOVERER_ROLE() external view returns (bytes32);
+
     function STAKING_MODULE_ID() external view returns (uint256);
 
     function MODULE() external view returns (ICSModule);
