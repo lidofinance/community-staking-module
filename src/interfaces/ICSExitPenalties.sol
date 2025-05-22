@@ -38,7 +38,8 @@ interface ICSExitPenalties is IExitTypes {
         uint256 indexed nodeOperatorId,
         uint256 indexed exitType,
         bytes pubkey,
-        uint256 withdrawalRequestFee
+        uint256 withdrawalRequestPaidFee,
+        uint256 withdrawalRequestRecordedFee
     );
     event StrikesPenaltyProcessed(
         uint256 indexed nodeOperatorId,
@@ -49,6 +50,11 @@ interface ICSExitPenalties is IExitTypes {
     function MODULE() external view returns (ICSModule);
 
     function ACCOUNTING() external view returns (ICSAccounting);
+
+    function PARAMETERS_REGISTRY()
+        external
+        view
+        returns (ICSParametersRegistry);
 
     function STRIKES() external view returns (address);
 

@@ -216,7 +216,7 @@ contract CSEjector is
 
         TWG.triggerFullWithdrawals{ value: msg.value }(
             exitsData,
-            refundRecipient == address(0) ? msg.sender : refundRecipient,
+            refundRecipient,
             STRIKES_EXIT_TYPE_ID
         );
     }

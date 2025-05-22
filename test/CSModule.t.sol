@@ -372,7 +372,11 @@ contract CSMCommon is CSMFixtures {
             minKeysCount: 1,
             trend: BOND_SIZE
         });
-        accounting = new CSAccountingMock(BOND_SIZE, address(wstETH));
+        accounting = new CSAccountingMock(
+            BOND_SIZE,
+            address(wstETH),
+            address(stETH)
+        );
         accounting.setFeeDistributor(address(feeDistributor));
 
         csm = new CSModule({
@@ -430,7 +434,11 @@ contract CSMCommonNoRoles is CSMFixtures {
             minKeysCount: 1,
             trend: BOND_SIZE
         });
-        accounting = new CSAccountingMock(BOND_SIZE, address(wstETH));
+        accounting = new CSAccountingMock(
+            BOND_SIZE,
+            address(wstETH),
+            address(stETH)
+        );
         accounting.setFeeDistributor(address(feeDistributor));
 
         csm = new CSModule({

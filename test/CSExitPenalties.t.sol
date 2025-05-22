@@ -159,6 +159,7 @@ contract CSExitPenaltiesTestProcessTriggeredExit is CSExitPenaltiesTestBase {
             noId,
             exitType,
             publicKey,
+            paidFee,
             paidFee
         );
         vm.prank(address(csm));
@@ -181,6 +182,7 @@ contract CSExitPenaltiesTestProcessTriggeredExit is CSExitPenaltiesTestBase {
             noId,
             exitType,
             publicKey,
+            paidFee,
             0
         );
         vm.prank(address(csm));

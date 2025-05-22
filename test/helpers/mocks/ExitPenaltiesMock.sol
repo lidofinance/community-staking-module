@@ -5,12 +5,14 @@ pragma solidity 0.8.24;
 import { ICSModule } from "../../../src/interfaces/ICSModule.sol";
 import { ICSAccounting } from "../../../src/interfaces/ICSAccounting.sol";
 import { ICSExitPenalties } from "../../../src/interfaces/ICSExitPenalties.sol";
+import { ICSParametersRegistry } from "../../../src/interfaces/ICSParametersRegistry.sol";
 import { ExitPenaltyInfo } from "../../../src/interfaces/ICSExitPenalties.sol";
 import { ExitTypes } from "../../../src/abstract/ExitTypes.sol";
 
 contract ExitPenaltiesMock is ICSExitPenalties, ExitTypes {
     ICSModule public MODULE;
     ICSAccounting public ACCOUNTING;
+    ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
     ExitPenaltyInfo internal penaltyInfo;
     bool applicable;
 

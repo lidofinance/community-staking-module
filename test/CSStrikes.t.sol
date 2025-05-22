@@ -47,14 +47,14 @@ contract CSStrikesTestBase is Test, Fixtures, Utilities, InvariantAsserts {
     // A bunch of wrapper to test functions with calldata arguments.
 
     function hashLeaf(
-        ICSStrikes.ModuleKeyStrikes calldata keyStrikes,
+        ICSStrikes.KeyStrikes calldata keyStrikes,
         bytes memory pubkey
     ) external view returns (bytes32) {
         return strikes.hashLeaf(keyStrikes, pubkey);
     }
 
     function verifyProof(
-        ICSStrikes.ModuleKeyStrikes[] calldata keyStrikesList,
+        ICSStrikes.KeyStrikes[] calldata keyStrikesList,
         bytes[] memory pubkeys,
         bytes32[] calldata proof,
         bool[] calldata proofFlags
@@ -63,12 +63,26 @@ contract CSStrikesTestBase is Test, Fixtures, Utilities, InvariantAsserts {
     }
 
     function processBadPerformanceProof(
-        ICSStrikes.ModuleKeyStrikes[] calldata keyStrikesList,
+        ICSStrikes.KeyStrikes[] calldata keyStrikesList,
         bytes32[] calldata proof,
         bool[] calldata proofFlags,
         address _refundRecipient
     ) external {
         strikes.processBadPerformanceProof(
+            keyStrikesList,
+            proof,
+            proofFlags,
+            _refundRecipient
+        );
+    }
+
+    function processBadPerformanceProofPayable(
+        ICSStrikes.KeyStrikes[] calldata keyStrikesList,
+        bytes32[] calldata proof,
+        bool[] calldata proofFlags,
+        address _refundRecipient
+    ) external payable {
+        strikes.processBadPerformanceProof{ value: msg.value }(
             keyStrikesList,
             proof,
             proofFlags,
@@ -88,29 +102,54 @@ contract CSStrikesConstructorTest is CSStrikesTestBase {
     }
 
     function test_constructor_happyPath() public {
-        strikes = new CSStrikes(address(module), oracle, exitPenalties);
+        strikes = new CSStrikes(
+            address(module),
+            oracle,
+            exitPenalties,
+            address(module.PARAMETERS_REGISTRY())
+        );
         assertEq(address(strikes.MODULE()), address(module));
         assertEq(strikes.ORACLE(), oracle);
         assertEq(address(strikes.EXIT_PENALTIES()), exitPenalties);
     }
 
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
+        address parametersRegistry = address(module.PARAMETERS_REGISTRY());
         vm.expectRevert(ICSStrikes.ZeroModuleAddress.selector);
-        new CSStrikes(address(0), oracle, exitPenalties);
+        new CSStrikes(address(0), oracle, exitPenalties, parametersRegistry);
     }
 
     function test_constructor_RevertWhen_ZeroExitPenaltiesAddress() public {
+        address parametersRegistry = address(module.PARAMETERS_REGISTRY());
         vm.expectRevert(ICSStrikes.ZeroExitPenaltiesAddress.selector);
-        new CSStrikes(address(module), oracle, address(0));
+        new CSStrikes(address(module), oracle, address(0), parametersRegistry);
+    }
+
+    function test_constructor_RevertWhen_ZeroParametersRegistryAddress()
+        public
+    {
+        vm.expectRevert(ICSStrikes.ZeroParametersRegistryAddress.selector);
+        new CSStrikes(exitPenalties, oracle, exitPenalties, address(0));
     }
 
     function test_constructor_RevertWhen_ZeroOracleAddress() public {
+        address parametersRegistry = address(module.PARAMETERS_REGISTRY());
         vm.expectRevert(ICSStrikes.ZeroOracleAddress.selector);
-        new CSStrikes(exitPenalties, address(0), exitPenalties);
+        new CSStrikes(
+            exitPenalties,
+            address(0),
+            exitPenalties,
+            parametersRegistry
+        );
     }
 
     function test_initialize_happyPath() public {
-        strikes = new CSStrikes(address(module), oracle, exitPenalties);
+        strikes = new CSStrikes(
+            address(module),
+            oracle,
+            exitPenalties,
+            address(module.PARAMETERS_REGISTRY())
+        );
         _enableInitializers(address(strikes));
 
         vm.expectEmit(address(strikes));
@@ -123,7 +162,12 @@ contract CSStrikesConstructorTest is CSStrikesTestBase {
     }
 
     function test_initialize_RevertWhen_ZeroAdminAddress() public {
-        strikes = new CSStrikes(address(module), oracle, exitPenalties);
+        strikes = new CSStrikes(
+            address(module),
+            oracle,
+            exitPenalties,
+            address(module.PARAMETERS_REGISTRY())
+        );
         _enableInitializers(address(strikes));
 
         vm.expectRevert(ICSStrikes.ZeroAdminAddress.selector);
@@ -131,7 +175,12 @@ contract CSStrikesConstructorTest is CSStrikesTestBase {
     }
 
     function test_initialize_RevertWhen_ZeroEjectorAddress() public {
-        strikes = new CSStrikes(address(module), oracle, exitPenalties);
+        strikes = new CSStrikes(
+            address(module),
+            oracle,
+            exitPenalties,
+            address(module.PARAMETERS_REGISTRY())
+        );
         _enableInitializers(address(strikes));
 
         vm.expectRevert(ICSStrikes.ZeroEjectorAddress.selector);
@@ -149,7 +198,12 @@ contract CSStrikesTest is CSStrikesTestBase {
         exitPenalties = address(new ExitPenaltiesMock());
         ejector = address(new EjectorMock(address(module)));
 
-        strikes = new CSStrikes(address(module), oracle, exitPenalties);
+        strikes = new CSStrikes(
+            address(module),
+            oracle,
+            exitPenalties,
+            address(module.PARAMETERS_REGISTRY())
+        );
         _enableInitializers(address(strikes));
         strikes.initialize(admin, ejector);
 
@@ -256,7 +310,7 @@ contract CSStrikesTest is CSStrikesTestBase {
         public
         assertInvariants
     {
-        vm.expectRevert(ICSStrikes.NotOracle.selector);
+        vm.expectRevert(ICSStrikes.SenderIsNotOracle.selector);
         strikes.processOracleReport(bytes32(0), someCIDv0());
     }
 
@@ -319,7 +373,7 @@ contract CSStrikesProofTest is CSStrikesTestBase {
     using DeepCopy for *;
 
     struct Leaf {
-        ICSStrikes.ModuleKeyStrikes keyStrikes;
+        ICSStrikes.KeyStrikes keyStrikes;
         bytes pubkey;
     }
 
@@ -334,7 +388,12 @@ contract CSStrikesProofTest is CSStrikesTestBase {
         exitPenalties = address(new ExitPenaltiesMock());
         ejector = address(new EjectorMock(address(module)));
 
-        strikes = new CSStrikes(address(module), oracle, exitPenalties);
+        strikes = new CSStrikes(
+            address(module),
+            oracle,
+            exitPenalties,
+            address(module.PARAMETERS_REGISTRY())
+        );
         _enableInitializers(address(strikes));
         strikes.initialize(admin, ejector);
 
@@ -350,7 +409,7 @@ contract CSStrikesProofTest is CSStrikesTestBase {
             (bytes memory pubkey, ) = keysSignatures(1, i);
             leaves.push(
                 Leaf(
-                    ICSStrikes.ModuleKeyStrikes({
+                    ICSStrikes.KeyStrikes({
                         nodeOperatorId: i,
                         keyIndex: 0,
                         data: strikesData
@@ -373,7 +432,7 @@ contract CSStrikesProofTest is CSStrikesTestBase {
         (bytes memory pubkey, ) = keysSignatures(1);
         assertEq(
             this.hashLeaf(
-                ICSStrikes.ModuleKeyStrikes({
+                ICSStrikes.KeyStrikes({
                     nodeOperatorId: 42,
                     keyIndex: 0,
                     data: UintArr(100500)
@@ -389,8 +448,8 @@ contract CSStrikesProofTest is CSStrikesTestBase {
         for (uint256 i; i < leaves.length; i++) {
             Leaf memory leaf = leaves[i];
 
-            ICSStrikes.ModuleKeyStrikes[]
-                memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+            ICSStrikes.KeyStrikes[]
+                memory keyStrikesList = new ICSStrikes.KeyStrikes[](1);
             keyStrikesList[0] = leaf.keyStrikes;
 
             bytes[] memory pubkeys = new bytes[](1);
@@ -410,10 +469,8 @@ contract CSStrikesProofTest is CSStrikesTestBase {
     }
 
     function test_verifyProofAllLeaves() public withTreeOfLeavesCount(7) {
-        ICSStrikes.ModuleKeyStrikes[]
-            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](
-                leaves.length
-            );
+        ICSStrikes.KeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.KeyStrikes[](leaves.length);
         bytes[] memory pubkeys = new bytes[](leaves.length);
 
         for (uint256 i; i < leaves.length; ++i) {
@@ -436,8 +493,8 @@ contract CSStrikesProofTest is CSStrikesTestBase {
     }
 
     function test_verifyProofTwoSiblings() public withTreeOfLeavesCount(7) {
-        ICSStrikes.ModuleKeyStrikes[]
-            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](2);
+        ICSStrikes.KeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.KeyStrikes[](2);
         keyStrikesList[0] = leaves[0].keyStrikes;
         keyStrikesList[1] = leaves[1].keyStrikes;
 
@@ -470,8 +527,8 @@ contract CSStrikesProofTest is CSStrikesTestBase {
         public
         withTreeOfLeavesCount(7)
     {
-        ICSStrikes.ModuleKeyStrikes[]
-            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+        ICSStrikes.KeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.KeyStrikes[](1);
         keyStrikesList[0] = leaves[0].keyStrikes;
 
         bytes[] memory pubkeys = new bytes[](1);
@@ -522,8 +579,8 @@ contract CSStrikesProofTest is CSStrikesTestBase {
         public
         withTreeOfLeavesCount(7)
     {
-        ICSStrikes.ModuleKeyStrikes[]
-            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+        ICSStrikes.KeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.KeyStrikes[](1);
         keyStrikesList[0] = leaves[0].keyStrikes;
 
         bytes[] memory pubkeys = new bytes[](1);
@@ -551,8 +608,8 @@ contract CSStrikesProofTest is CSStrikesTestBase {
         public
         withTreeOfLeavesCount(7)
     {
-        ICSStrikes.ModuleKeyStrikes[]
-            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+        ICSStrikes.KeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.KeyStrikes[](1);
         keyStrikesList[0] = leaves[0].keyStrikes;
 
         bytes[] memory pubkeys = new bytes[](1);
@@ -586,8 +643,8 @@ contract CSStrikesProofTest is CSStrikesTestBase {
         s = bound(s, 1, a / 2 == 0 ? 1 : a / 2);
         uint256[] memory indicies = UintArr(a, a + s, a + s + s);
 
-        ICSStrikes.ModuleKeyStrikes[]
-            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](
+        ICSStrikes.KeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.KeyStrikes[](
                 indicies.length
             );
         (bytes32[] memory proof, bool[] memory proofFlags) = tree.getMultiProof(
@@ -638,8 +695,8 @@ contract CSStrikesProofTest is CSStrikesTestBase {
     {
         Leaf memory leaf = leaves[0];
 
-        ICSStrikes.ModuleKeyStrikes[]
-            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+        ICSStrikes.KeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.KeyStrikes[](1);
         keyStrikesList[0] = leaf.keyStrikes;
 
         bytes32[] memory proof = tree.getProof(0);
@@ -688,8 +745,8 @@ contract CSStrikesProofTest is CSStrikesTestBase {
             indicies
         );
 
-        ICSStrikes.ModuleKeyStrikes[]
-            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](
+        ICSStrikes.KeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.KeyStrikes[](
                 indicies.length
             );
         for (uint256 i; i < indicies.length; i++) {
@@ -707,8 +764,8 @@ contract CSStrikesProofTest is CSStrikesTestBase {
         }
 
         {
-            ICSStrikes.ModuleKeyStrikes[]
-                memory brokenStrikesList = keyStrikesList.copy();
+            ICSStrikes.KeyStrikes[] memory brokenStrikesList = keyStrikesList
+                .copy();
             brokenStrikesList[0].nodeOperatorId++;
 
             vm.expectRevert(ICSStrikes.InvalidProof.selector);
@@ -747,8 +804,8 @@ contract CSStrikesProofTest is CSStrikesTestBase {
     {
         Leaf memory leaf = leaves[0];
 
-        ICSStrikes.ModuleKeyStrikes[]
-            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
+        ICSStrikes.KeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.KeyStrikes[](1);
         keyStrikesList[0] = leaf.keyStrikes;
 
         bytes32[] memory proof = tree.getProof(0);
@@ -774,15 +831,103 @@ contract CSStrikesProofTest is CSStrikesTestBase {
             address(0)
         );
     }
+
+    function test_processBadPerformanceProof_RevertWhen_ValueNotEvenlyDivisible()
+        public
+        withTreeOfLeavesCount(3)
+    {
+        uint256[] memory indicies = UintArr(1, 2);
+
+        ICSStrikes.KeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.KeyStrikes[](
+                indicies.length
+            );
+        (bytes32[] memory proof, bool[] memory proofFlags) = tree.getMultiProof(
+            indicies
+        );
+
+        for (uint256 i; i < indicies.length; i++) {
+            Leaf memory leaf = leaves[indicies[i]];
+            keyStrikesList[i] = leaf.keyStrikes;
+            vm.mockCall(
+                address(module),
+                abi.encodeWithSelector(
+                    ICSModule.getSigningKeys.selector,
+                    leaf.keyStrikes.nodeOperatorId,
+                    leaf.keyStrikes.keyIndex
+                ),
+                abi.encode(leaf.pubkey)
+            );
+        }
+        vm.expectRevert(ICSStrikes.ValueNotEvenlyDivisible.selector);
+        this.processBadPerformanceProofPayable{ value: 11 wei }(
+            keyStrikesList,
+            proof,
+            proofFlags,
+            refundRecipient
+        );
+    }
+
+    function test_processBadPerformanceProof_okValue()
+        public
+        withTreeOfLeavesCount(3)
+    {
+        uint256[] memory indicies = UintArr(1, 2);
+
+        ICSStrikes.KeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.KeyStrikes[](
+                indicies.length
+            );
+        (bytes32[] memory proof, bool[] memory proofFlags) = tree.getMultiProof(
+            indicies
+        );
+
+        for (uint256 i; i < indicies.length; i++) {
+            Leaf memory leaf = leaves[indicies[i]];
+            keyStrikesList[i] = leaf.keyStrikes;
+            vm.mockCall(
+                address(module),
+                abi.encodeWithSelector(
+                    ICSModule.getSigningKeys.selector,
+                    leaf.keyStrikes.nodeOperatorId,
+                    leaf.keyStrikes.keyIndex
+                ),
+                abi.encode(leaf.pubkey)
+            );
+            vm.expectCall(
+                address(ejector),
+                abi.encodeWithSelector(
+                    ICSEjector.ejectBadPerformer.selector,
+                    leaf.keyStrikes.nodeOperatorId,
+                    leaf.keyStrikes.keyIndex,
+                    refundRecipient
+                )
+            );
+            vm.expectCall(
+                address(exitPenalties),
+                abi.encodeWithSelector(
+                    ICSExitPenalties.processStrikesReport.selector,
+                    leaf.keyStrikes.nodeOperatorId,
+                    leaf.pubkey
+                )
+            );
+        }
+        this.processBadPerformanceProofPayable{ value: 10 wei }(
+            keyStrikesList,
+            proof,
+            proofFlags,
+            refundRecipient
+        );
+    }
 }
 
 library DeepCopy {
     function copy(
-        ICSStrikes.ModuleKeyStrikes[] memory arr
-    ) internal pure returns (ICSStrikes.ModuleKeyStrikes[] memory buf) {
-        buf = new ICSStrikes.ModuleKeyStrikes[](arr.length);
+        ICSStrikes.KeyStrikes[] memory arr
+    ) internal pure returns (ICSStrikes.KeyStrikes[] memory buf) {
+        buf = new ICSStrikes.KeyStrikes[](arr.length);
         for (uint256 i; i < buf.length; ++i) {
-            buf[i] = ICSStrikes.ModuleKeyStrikes({
+            buf[i] = ICSStrikes.KeyStrikes({
                 nodeOperatorId: arr[i].nodeOperatorId,
                 keyIndex: arr[i].keyIndex,
                 data: copy(arr[i].data)

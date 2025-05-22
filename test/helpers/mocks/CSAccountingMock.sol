@@ -7,10 +7,13 @@ import { ICSAccounting } from "../../../src/interfaces/ICSAccounting.sol";
 import { ICSBondLock } from "../../../src/interfaces/ICSBondLock.sol";
 import { ICSModule } from "../../../src/interfaces/ICSModule.sol";
 import { IWstETH } from "../../../src/interfaces/IWstETH.sol";
+import { ILido } from "../../../src/interfaces/ILido.sol";
 
 contract CSAccountingMock {
     uint256 public constant DEFAULT_BOND_CURVE_ID = 0;
     uint256 public constant DEFAULT_BOND_LOCK_PERIOD = 1 days;
+
+    ILido public immutable LIDO;
 
     mapping(uint256 nodeOperatorId => ICSBondLock.BondLock) bondLock;
     mapping(uint256 nodeOperatorId => uint256) bond;
@@ -22,9 +25,10 @@ contract CSAccountingMock {
     address public feeDistributor;
     IWstETH public wstETH;
 
-    constructor(uint256 _bond, address _wstETH) {
+    constructor(uint256 _bond, address _wstETH, address lido) {
         bondCurves.push(_bond);
         wstETH = IWstETH(_wstETH);
+        LIDO = ILido(lido);
     }
 
     function setCSM(address _csm) external {

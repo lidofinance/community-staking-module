@@ -9,6 +9,7 @@ import { ILidoLocator } from "../../../src/interfaces/ILidoLocator.sol";
 import { CSParametersRegistryMock } from "./CSParametersRegistryMock.sol";
 import { CSAccountingMock } from "./CSAccountingMock.sol";
 import { WstETHMock } from "./WstETHMock.sol";
+import { LidoMock } from "./LidoMock.sol";
 import { Utilities } from "../Utilities.sol";
 import { LidoLocatorMock } from "./LidoLocatorMock.sol";
 import { Fixtures } from "../Fixtures.sol";
@@ -28,9 +29,12 @@ contract CSMMock is Utilities, Fixtures {
             address(new CSParametersRegistryMock())
         );
         WstETHMock wstETH;
-        (LIDO_LOCATOR, wstETH, , , ) = initLido();
+        LidoMock lido;
+        (LIDO_LOCATOR, wstETH, lido, , ) = initLido();
         ACCOUNTING = ICSAccounting(
-            address(new CSAccountingMock(2 ether, address(wstETH)))
+            address(
+                new CSAccountingMock(2 ether, address(wstETH), address(lido))
+            )
         );
     }
 

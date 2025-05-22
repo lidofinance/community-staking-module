@@ -965,6 +965,10 @@ contract CSStrikesDeploymentTest is DeploymentBaseTest {
         assertEq(address(strikesImpl.ACCOUNTING()), address(accounting));
         assertEq(address(strikesImpl.ORACLE()), address(oracle));
         assertEq(address(strikesImpl.EXIT_PENALTIES()), address(exitPenalties));
+        assertEq(
+            address(strikesImpl.PARAMETERS_REGISTRY()),
+            address(parametersRegistry)
+        );
     }
 
     function test_roles() public view {
