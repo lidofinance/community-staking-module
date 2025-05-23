@@ -23,6 +23,7 @@ interface INOAddresses {
         address indexed oldAddress,
         address indexed newAddress
     );
+    // args order as in https://github.com/OpenZeppelin/openzeppelin-contracts/blob/11dc5e3809ebe07d5405fe524385cbe4f890a08b/contracts/access/Ownable.sol#L33
     event NodeOperatorRewardAddressChanged(
         uint256 indexed nodeOperatorId,
         address indexed oldAddress,

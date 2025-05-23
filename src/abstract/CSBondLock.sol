@@ -5,6 +5,7 @@ pragma solidity 0.8.24;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
 import { ICSBondLock } from "../interfaces/ICSBondLock.sol";
 
 /// @dev Bond lock mechanics abstract contract.

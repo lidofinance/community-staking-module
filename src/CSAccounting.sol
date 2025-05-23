@@ -2,20 +2,20 @@
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
-
-import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 
 import { CSBondCore } from "./abstract/CSBondCore.sol";
 import { CSBondCurve } from "./abstract/CSBondCurve.sol";
 import { CSBondLock } from "./abstract/CSBondLock.sol";
+import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
+
+import { PausableUntil } from "./lib/utils/PausableUntil.sol";
+import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
 import { IStakingModule } from "./interfaces/IStakingModule.sol";
 import { ICSModule, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSFeeDistributor } from "./interfaces/ICSFeeDistributor.sol";
-import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
-import { AssetRecovererLib } from "./lib/AssetRecovererLib.sol";
 
 /// @author vgorkavenko
 /// @notice This contract stores the Node Operators' bonds in the form of stETH shares,
@@ -115,7 +115,7 @@ contract CSAccounting is
             sstore(_feeDistributorOld.slot, 0x00)
         }
 
-        /// NOTE: This method is not for adding new bond curves, but for migration of the existing ones to the new format (`BondCurve` to `BondCurveInterval[]`). However, bond values can be different from the current.
+        // NOTE: This method is not for adding new bond curves, but for migration of the existing ones to the new format (`BondCurve` to `BondCurveInterval[]`). However, bond values can be different from the current.
         if (bondCurvesInputs.length != _getLegacyBondCurvesLength()) {
             revert InvalidBondCurvesLength();
         }
@@ -622,9 +622,9 @@ contract CSAccounting is
 
                 currentBond -= lockedBond;
             }
-            /// 10 wei is added to account for possible stETH rounding errors
-            /// https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205.
-            /// Should be sufficient for ~ 40 years
+            // 10 wei is added to account for possible stETH rounding errors
+            // https://github.com/lidofinance/lido-dao/issues/442#issuecomment-1182264205.
+            // Should be sufficient for ~ 40 years
             uint256 bondedKeys = CSBondCurve.getKeysCountByBondAmount(
                 currentBond + 10 wei,
                 CSBondCurve.getBondCurveId(nodeOperatorId)

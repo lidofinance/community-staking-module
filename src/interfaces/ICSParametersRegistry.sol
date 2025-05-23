@@ -9,12 +9,6 @@ interface ICSParametersRegistry {
         bool isValue;
     }
 
-    struct MarkedQueueConfig {
-        uint32 priority;
-        uint32 maxDeposits;
-        bool isValue;
-    }
-
     struct QueueConfig {
         uint32 priority;
         uint32 maxDeposits;
@@ -25,23 +19,10 @@ interface ICSParametersRegistry {
         uint32 threshold;
     }
 
-    struct MarkedStrikesParams {
-        uint32 lifetime;
-        uint32 threshold;
-        bool isValue;
-    }
-
     struct PerformanceCoefficients {
         uint32 attestationsWeight;
         uint32 blocksWeight;
         uint32 syncWeight;
-    }
-
-    struct MarkedPerformanceCoefficients {
-        uint32 attestationsWeight;
-        uint32 blocksWeight;
-        uint32 syncWeight;
-        bool isValue;
     }
 
     struct InitializationData {
@@ -61,11 +42,6 @@ interface ICSParametersRegistry {
         uint256 defaultAllowedExitDelay;
         uint256 defaultExitDelayPenalty;
         uint256 defaultMaxWithdrawalRequestFee;
-    }
-
-    // TODO: Write diff between this and curve intervals
-    struct KeyNumberValue {
-        KeyNumberValueInterval[] intervals;
     }
 
     /// @dev Defines a value interval starting from `minKeyNumber`.
@@ -155,6 +131,8 @@ interface ICSParametersRegistry {
     error ZeroAdminAddress();
     error QueueCannotBeUsed();
     error InvalidExitDelayPenalty();
+    error InvalidAllowedExitDelay();
+    error ZeroQueueLowestPriority();
 
     /// @notice The lowest priority a deposit queue can be assigned with.
     function QUEUE_LOWEST_PRIORITY() external view returns (uint256);
@@ -328,7 +306,7 @@ interface ICSParametersRegistry {
     /// @param data Interval values for keys count and reward share percentages in BP (ex. [[1, 10000], [11, 8000], [51, 5000]])
     function getRewardShareData(
         uint256 curveId
-    ) external view returns (KeyNumberValue memory data);
+    ) external view returns (KeyNumberValueInterval[] memory data);
 
     /// @notice Set default value for QueueConfig. Default value is used if a specific value is not set for the curveId.
     /// @param priority Queue priority.
@@ -344,8 +322,8 @@ interface ICSParametersRegistry {
     /// @param maxDeposits Max deposits in prioritized queue
     function setQueueConfig(
         uint256 curveId,
-        uint32 priority,
-        uint32 maxDeposits
+        uint256 priority,
+        uint256 maxDeposits
     ) external;
 
     /// @notice Set the given curve's config to the default one.
@@ -383,7 +361,7 @@ interface ICSParametersRegistry {
     /// @param data Interval values for keys count and performance leeway percentages in BP (ex. [[1, 500], [101, 450], [501, 400]])
     function getPerformanceLeewayData(
         uint256 curveId
-    ) external view returns (KeyNumberValue memory data);
+    ) external view returns (KeyNumberValueInterval[] memory data);
 
     /// @notice Set performance strikes lifetime and threshold for the curveId
     /// @param curveId Curve Id to associate performance strikes lifetime and threshold with

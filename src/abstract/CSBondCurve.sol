@@ -4,6 +4,7 @@
 pragma solidity 0.8.24;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 import { ICSBondCurve } from "../interfaces/ICSBondCurve.sol";
 
 /// @dev Bond curve mechanics abstract contract

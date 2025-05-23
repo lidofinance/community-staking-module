@@ -3,9 +3,11 @@
 
 pragma solidity 0.8.24;
 
-import { IVettedGateFactory } from "./interfaces/IVettedGateFactory.sol";
-import { OssifiableProxy } from "./lib/proxy/OssifiableProxy.sol";
 import { VettedGate } from "./VettedGate.sol";
+
+import { OssifiableProxy } from "./lib/proxy/OssifiableProxy.sol";
+
+import { IVettedGateFactory } from "./interfaces/IVettedGateFactory.sol";
 
 contract VettedGateFactory is IVettedGateFactory {
     address public immutable VETTED_GATE_IMPL;

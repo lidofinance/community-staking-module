@@ -25,7 +25,7 @@ library SSZ {
             bytes32(0)
         ];
 
-        /// @solidity memory-safe-assembly
+        // @solidity memory-safe-assembly
         assembly {
             // Count of nodes to hash
             let count := 8
@@ -115,7 +115,7 @@ library SSZ {
             toLittleEndian(validator.withdrawableEpoch)
         ];
 
-        /// @solidity memory-safe-assembly
+        // @solidity memory-safe-assembly
         assembly {
             // Count of nodes to hash
             let count := 8
@@ -181,7 +181,7 @@ library SSZ {
     ) internal view {
         uint256 index = gI.index();
 
-        /// @solidity memory-safe-assembly
+        // @solidity memory-safe-assembly
         assembly {
             // Check if `proof` is empty.
             if iszero(proof.length) {

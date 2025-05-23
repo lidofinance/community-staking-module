@@ -77,6 +77,7 @@ contract CSModuleDeploymentTest is DeploymentBaseTest {
         );
         assertEq(address(csmImpl.ACCOUNTING()), address(accounting));
         assertEq(address(csmImpl.EXIT_PENALTIES()), address(exitPenalties));
+        assertEq(address(csmImpl.FEE_DISTRIBUTOR()), address(feeDistributor));
     }
 
     function test_roles_onlyFull() public view {
@@ -757,42 +758,42 @@ contract CSParametersRegistryDeploymentTest is DeploymentBaseTest {
             deployParams.identifiedCommunityStakersGateKeysLimit
         );
 
-        ICSParametersRegistry.KeyNumberValue
+        ICSParametersRegistry.KeyNumberValueInterval[]
             memory rewardShareData = parametersRegistry.getRewardShareData(
                 identifiedCommunityStakersGateCurveId
             );
         assertEq(
-            rewardShareData.intervals.length,
+            rewardShareData.length,
             deployParams.identifiedCommunityStakersGateRewardShareData.length
         );
-        for (uint256 i = 0; i < rewardShareData.intervals.length; i++) {
+        for (uint256 i = 0; i < rewardShareData.length; i++) {
             assertEq(
-                rewardShareData.intervals[i].minKeyNumber,
+                rewardShareData[i].minKeyNumber,
                 deployParams.identifiedCommunityStakersGateRewardShareData[i][0]
             );
             assertEq(
-                rewardShareData.intervals[i].value,
+                rewardShareData[i].value,
                 deployParams.identifiedCommunityStakersGateRewardShareData[i][1]
             );
         }
-        ICSParametersRegistry.KeyNumberValue
+        ICSParametersRegistry.KeyNumberValueInterval[]
             memory performanceLeewayData = parametersRegistry
                 .getPerformanceLeewayData(
                     identifiedCommunityStakersGateCurveId
                 );
         assertEq(
-            performanceLeewayData.intervals.length,
+            performanceLeewayData.length,
             deployParams.identifiedCommunityStakersGateAvgPerfLeewayData.length
         );
-        for (uint256 i = 0; i < performanceLeewayData.intervals.length; i++) {
+        for (uint256 i = 0; i < performanceLeewayData.length; i++) {
             assertEq(
-                performanceLeewayData.intervals[i].minKeyNumber,
+                performanceLeewayData[i].minKeyNumber,
                 deployParams.identifiedCommunityStakersGateAvgPerfLeewayData[i][
                     0
                 ]
             );
             assertEq(
-                performanceLeewayData.intervals[i].value,
+                performanceLeewayData[i].value,
                 deployParams.identifiedCommunityStakersGateAvgPerfLeewayData[i][
                     1
                 ]

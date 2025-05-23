@@ -4,12 +4,15 @@
 pragma solidity 0.8.24;
 
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
+import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+
 import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
+
+import { PausableUntil } from "./lib/utils/PausableUntil.sol";
+
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSModule, NodeOperatorManagementProperties } from "./interfaces/ICSModule.sol";
 import { IVettedGate } from "./interfaces/IVettedGate.sol";
-import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 
 contract VettedGate is
     IVettedGate,
@@ -85,7 +88,7 @@ contract VettedGate is
             revert InvalidCurveId();
         }
 
-        /// @dev there is no check for curve existence as this contract might be created before the curve is added
+        // @dev there is no check for curve existence as this contract might be created before the curve is added
         curveId = _curveId;
 
         if (admin == address(0)) {
@@ -258,7 +261,7 @@ contract VettedGate is
     ) external whenResumed {
         _onlyNodeOperatorOwner(nodeOperatorId);
 
-        /// @dev Only members from the current merkle tree can claim the referral bond curve
+        // @dev Only members from the current merkle tree can claim the referral bond curve
         if (!verifyProof(msg.sender, proof)) {
             revert InvalidProof();
         }
