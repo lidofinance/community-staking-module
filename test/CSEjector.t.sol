@@ -33,7 +33,7 @@ contract CSEjectorTestBase is Test, Utilities, Fixtures {
         accounting = csm.accounting();
         strikes = new CSStrikesMock();
         twg = TWGMock(
-            payable(csm.LIDO_LOCATOR().triggerableWithdrawalGateway())
+            payable(csm.LIDO_LOCATOR().triggerableWithdrawalsGateway())
         );
         stranger = nextAddress("STRANGER");
         admin = nextAddress("ADMIN");
@@ -42,7 +42,6 @@ contract CSEjectorTestBase is Test, Utilities, Fixtures {
         ejector = new CSEjector(
             address(csm),
             address(strikes),
-            address(twg),
             stakingModuleId,
             admin
         );
@@ -54,12 +53,10 @@ contract CSEjectorTestMisc is CSEjectorTestBase {
         ejector = new CSEjector(
             address(csm),
             address(strikes),
-            address(twg),
             stakingModuleId,
             admin
         );
         assertEq(address(ejector.MODULE()), address(csm));
-        assertEq(address(ejector.TWG()), address(twg));
         assertEq(ejector.STAKING_MODULE_ID(), stakingModuleId);
         assertEq(ejector.STRIKES(), address(strikes));
         assertEq(ejector.getRoleMemberCount(ejector.DEFAULT_ADMIN_ROLE()), 1);
@@ -68,35 +65,12 @@ contract CSEjectorTestMisc is CSEjectorTestBase {
 
     function test_constructor_RevertWhen_ZeroModuleAddress() public {
         vm.expectRevert(ICSEjector.ZeroModuleAddress.selector);
-        new CSEjector(
-            address(0),
-            address(strikes),
-            address(twg),
-            stakingModuleId,
-            admin
-        );
+        new CSEjector(address(0), address(strikes), stakingModuleId, admin);
     }
 
     function test_constructor_RevertWhen_ZeroStrikesAddress() public {
         vm.expectRevert(ICSEjector.ZeroStrikesAddress.selector);
-        new CSEjector(
-            address(csm),
-            address(0),
-            address(twg),
-            stakingModuleId,
-            admin
-        );
-    }
-
-    function test_constructor_RevertWhen_ZeroTWGAddress() public {
-        vm.expectRevert(ICSEjector.ZeroTWGAddress.selector);
-        new CSEjector(
-            address(csm),
-            address(strikes),
-            address(0),
-            stakingModuleId,
-            admin
-        );
+        new CSEjector(address(csm), address(0), stakingModuleId, admin);
     }
 
     function test_constructor_RevertWhen_ZeroAdminAddress() public {
@@ -104,7 +78,6 @@ contract CSEjectorTestMisc is CSEjectorTestBase {
         new CSEjector(
             address(csm),
             address(strikes),
-            address(twg),
             stakingModuleId,
             address(0)
         );

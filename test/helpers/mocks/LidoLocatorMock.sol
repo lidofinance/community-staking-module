@@ -54,7 +54,7 @@ contract LidoLocatorMock {
         return payable(sr);
     }
 
-    function triggerableWithdrawalGateway() external view returns (address) {
+    function triggerableWithdrawalsGateway() external view returns (address) {
         return twg;
     }
 }

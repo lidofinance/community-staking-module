@@ -44,5 +44,5 @@ interface ILidoLocator {
 
     function withdrawalVault() external view returns (address);
 
-    function triggerableWithdrawalGateway() external view returns (address);
+    function triggerableWithdrawalsGateway() external view returns (address);
 }

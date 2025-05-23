@@ -93,7 +93,7 @@ contract CSStrikes is
         bytes32 _treeRoot,
         string calldata _treeCid
     ) external onlyOracle {
-        /// @dev should be both empty or not empty
+        // @dev should be both empty or not empty
         bool isNewRootEmpty = _treeRoot == bytes32(0);
         bool isNewCidEmpty = bytes(_treeCid).length == 0;
         if (isNewRootEmpty != isNewCidEmpty) {

@@ -50,6 +50,11 @@ contract CSParametersRegistryBaseTest is Test, Utilities, Fixtures {
 }
 
 contract CSParametersRegistryInitTest is CSParametersRegistryBaseTest {
+    function test_constructor_RevertWhen_ZeroQueueLowestPriority() public {
+        vm.expectRevert(ICSParametersRegistry.ZeroQueueLowestPriority.selector);
+        new CSParametersRegistry({ queueLowestPriority: 0 });
+    }
+
     function test_constructor_RevertWhen_InitOnImpl() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         parametersRegistry.initialize(admin, defaultInitData);
@@ -386,12 +391,12 @@ contract CSParametersRegistryRewardShareDataTest is
         vm.prank(admin);
         parametersRegistry.setRewardShareData(curveId, second);
 
-        CSParametersRegistry.KeyNumberValue memory result = parametersRegistry
-            .getRewardShareData(1);
+        CSParametersRegistry.KeyNumberValueInterval[]
+            memory result = parametersRegistry.getRewardShareData(1);
 
-        assertEq(result.intervals.length, 1);
-        assertEq(result.intervals[0].minKeyNumber, 1);
-        assertEq(result.intervals[0].value, 777);
+        assertEq(result.length, 1);
+        assertEq(result[0].minKeyNumber, 1);
+        assertEq(result[0].value, 777);
     }
 
     function test_set_RevertWhen_notAdmin() public override {
@@ -473,22 +478,22 @@ contract CSParametersRegistryRewardShareDataTest is
         vm.prank(admin);
         parametersRegistry.setRewardShareData(curveId, data);
 
-        ICSParametersRegistry.KeyNumberValue memory dataOut = parametersRegistry
-            .getRewardShareData(curveId);
+        ICSParametersRegistry.KeyNumberValueInterval[]
+            memory dataOut = parametersRegistry.getRewardShareData(curveId);
 
-        assertEq(dataOut.intervals.length, data.length);
-        for (uint256 i = 0; i < dataOut.intervals.length; ++i) {
-            assertEq(dataOut.intervals[i].minKeyNumber, data[i].minKeyNumber);
-            assertEq(dataOut.intervals[i].value, data[i].value);
+        assertEq(dataOut.length, data.length);
+        for (uint256 i = 0; i < dataOut.length; ++i) {
+            assertEq(dataOut[i].minKeyNumber, data[i].minKeyNumber);
+            assertEq(dataOut[i].value, data[i].value);
         }
 
         vm.prank(admin);
         parametersRegistry.unsetRewardShareData(curveId);
 
         dataOut = parametersRegistry.getRewardShareData(curveId);
-        assertEq(dataOut.intervals.length, 1);
-        assertEq(dataOut.intervals[0].minKeyNumber, 1);
-        assertEq(dataOut.intervals[0].value, defaultInitData.rewardShare);
+        assertEq(dataOut.length, 1);
+        assertEq(dataOut[0].minKeyNumber, 1);
+        assertEq(dataOut[0].value, defaultInitData.rewardShare);
     }
 
     function test_unset_RevertWhen_notAdmin() public override {
@@ -510,25 +515,25 @@ contract CSParametersRegistryRewardShareDataTest is
         vm.prank(admin);
         parametersRegistry.setRewardShareData(curveId, data);
 
-        ICSParametersRegistry.KeyNumberValue memory dataOut = parametersRegistry
-            .getRewardShareData(curveId);
+        ICSParametersRegistry.KeyNumberValueInterval[]
+            memory dataOut = parametersRegistry.getRewardShareData(curveId);
 
-        assertEq(dataOut.intervals.length, data.length);
-        for (uint256 i = 0; i < dataOut.intervals.length; ++i) {
-            assertEq(dataOut.intervals[i].minKeyNumber, data[i].minKeyNumber);
-            assertEq(dataOut.intervals[i].value, data[i].value);
+        assertEq(dataOut.length, data.length);
+        for (uint256 i = 0; i < dataOut.length; ++i) {
+            assertEq(dataOut[i].minKeyNumber, data[i].minKeyNumber);
+            assertEq(dataOut[i].value, data[i].value);
         }
     }
 
     function test_get_defaultData() public view override {
         uint256 curveId = 10;
 
-        ICSParametersRegistry.KeyNumberValue memory dataOut = parametersRegistry
-            .getRewardShareData(curveId);
+        ICSParametersRegistry.KeyNumberValueInterval[]
+            memory dataOut = parametersRegistry.getRewardShareData(curveId);
 
-        assertEq(dataOut.intervals.length, 1);
-        assertEq(dataOut.intervals[0].minKeyNumber, 1);
-        assertEq(dataOut.intervals[0].value, defaultInitData.rewardShare);
+        assertEq(dataOut.length, 1);
+        assertEq(dataOut[0].minKeyNumber, 1);
+        assertEq(dataOut[0].value, defaultInitData.rewardShare);
     }
 }
 
@@ -599,12 +604,12 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         vm.prank(admin);
         parametersRegistry.setPerformanceLeewayData(curveId, second);
 
-        CSParametersRegistry.KeyNumberValue memory result = parametersRegistry
-            .getPerformanceLeewayData(1);
+        CSParametersRegistry.KeyNumberValueInterval[]
+            memory result = parametersRegistry.getPerformanceLeewayData(1);
 
-        assertEq(result.intervals.length, 1);
-        assertEq(result.intervals[0].minKeyNumber, 1);
-        assertEq(result.intervals[0].value, 777);
+        assertEq(result.length, 1);
+        assertEq(result[0].minKeyNumber, 1);
+        assertEq(result[0].value, 777);
     }
 
     function test_set_RevertWhen_notAdmin() public override {
@@ -672,13 +677,15 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         vm.prank(admin);
         parametersRegistry.setPerformanceLeewayData(curveId, data);
 
-        ICSParametersRegistry.KeyNumberValue memory dataOut = parametersRegistry
-            .getPerformanceLeewayData(curveId);
+        ICSParametersRegistry.KeyNumberValueInterval[]
+            memory dataOut = parametersRegistry.getPerformanceLeewayData(
+                curveId
+            );
 
-        assertEq(dataOut.intervals.length, data.length);
-        for (uint256 i = 0; i < dataOut.intervals.length; ++i) {
-            assertEq(dataOut.intervals[i].minKeyNumber, data[i].minKeyNumber);
-            assertEq(dataOut.intervals[i].value, data[i].value);
+        assertEq(dataOut.length, data.length);
+        for (uint256 i = 0; i < dataOut.length; ++i) {
+            assertEq(dataOut[i].minKeyNumber, data[i].minKeyNumber);
+            assertEq(dataOut[i].value, data[i].value);
         }
 
         vm.prank(admin);
@@ -686,9 +693,9 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
 
         dataOut = parametersRegistry.getPerformanceLeewayData(curveId);
 
-        assertEq(dataOut.intervals.length, 1);
-        assertEq(dataOut.intervals[0].minKeyNumber, 1);
-        assertEq(dataOut.intervals[0].value, defaultInitData.performanceLeeway);
+        assertEq(dataOut.length, 1);
+        assertEq(dataOut[0].minKeyNumber, 1);
+        assertEq(dataOut[0].value, defaultInitData.performanceLeeway);
     }
 
     function test_unset_RevertWhen_notAdmin() public override {
@@ -710,25 +717,29 @@ contract CSParametersRegistryPerformanceLeewayDataTest is
         vm.prank(admin);
         parametersRegistry.setPerformanceLeewayData(curveId, data);
 
-        ICSParametersRegistry.KeyNumberValue memory dataOut = parametersRegistry
-            .getPerformanceLeewayData(curveId);
+        ICSParametersRegistry.KeyNumberValueInterval[]
+            memory dataOut = parametersRegistry.getPerformanceLeewayData(
+                curveId
+            );
 
-        assertEq(dataOut.intervals.length, data.length);
-        for (uint256 i = 0; i < dataOut.intervals.length; ++i) {
-            assertEq(dataOut.intervals[i].minKeyNumber, data[i].minKeyNumber);
-            assertEq(dataOut.intervals[i].value, data[i].value);
+        assertEq(dataOut.length, data.length);
+        for (uint256 i = 0; i < dataOut.length; ++i) {
+            assertEq(dataOut[i].minKeyNumber, data[i].minKeyNumber);
+            assertEq(dataOut[i].value, data[i].value);
         }
     }
 
     function test_get_defaultData() public view override {
         uint256 curveId = 10;
 
-        ICSParametersRegistry.KeyNumberValue memory dataOut = parametersRegistry
-            .getPerformanceLeewayData(curveId);
+        ICSParametersRegistry.KeyNumberValueInterval[]
+            memory dataOut = parametersRegistry.getPerformanceLeewayData(
+                curveId
+            );
 
-        assertEq(dataOut.intervals.length, 1);
-        assertEq(dataOut.intervals[0].minKeyNumber, 1);
-        assertEq(dataOut.intervals[0].value, defaultInitData.performanceLeeway);
+        assertEq(dataOut.length, 1);
+        assertEq(dataOut[0].minKeyNumber, 1);
+        assertEq(dataOut[0].value, defaultInitData.performanceLeeway);
     }
 }
 
@@ -1675,6 +1686,14 @@ contract CSParametersRegistryAllowedExitDelayTest is
         assertEq(parametersRegistry.defaultAllowedExitDelay(), delay);
     }
 
+    function test_setDefault_RevertWhen_InvalidAllowedExitDelay() public {
+        uint256 delay = 0;
+
+        vm.expectRevert(ICSParametersRegistry.InvalidAllowedExitDelay.selector);
+        vm.prank(admin);
+        parametersRegistry.setDefaultAllowedExitDelay(delay);
+    }
+
     function test_setDefault_RevertWhen_notAdmin() public override {
         uint256 delay = 7 days;
 
@@ -1690,6 +1709,15 @@ contract CSParametersRegistryAllowedExitDelayTest is
 
         vm.expectEmit(address(parametersRegistry));
         emit ICSParametersRegistry.AllowedExitDelaySet(curveId, delay);
+        vm.prank(admin);
+        parametersRegistry.setAllowedExitDelay(curveId, delay);
+    }
+
+    function test_set_RevertWhen_InvalidAllowedExitDelay() public {
+        uint256 curveId = 1;
+        uint256 delay = 0;
+
+        vm.expectRevert(ICSParametersRegistry.InvalidAllowedExitDelay.selector);
         vm.prank(admin);
         parametersRegistry.setAllowedExitDelay(curveId, delay);
     }

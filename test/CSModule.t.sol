@@ -4957,8 +4957,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         emit ICSModule.ExitedSigningKeysCountChanged(noId, 1);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
-            exitedValidatorsKeysCount: 1,
-            stuckValidatorsKeysCount: 1
+            exitedValidatorsKeysCount: 1
         });
 
         NodeOperator memory no = csm.getNodeOperator(noId);
@@ -4978,8 +4977,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         vm.expectRevert(ICSModule.NodeOperatorDoesNotExist.selector);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: 100500,
-            exitedValidatorsKeysCount: 1,
-            stuckValidatorsKeysCount: 1
+            exitedValidatorsKeysCount: 1
         });
     }
 
@@ -4990,8 +4988,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         vm.prank(stranger);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: 100500,
-            exitedValidatorsKeysCount: 1,
-            stuckValidatorsKeysCount: 1
+            exitedValidatorsKeysCount: 1
         });
     }
 
@@ -5003,8 +5000,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
         vm.expectRevert(ICSModule.ExitedKeysHigherThanTotalDeposited.selector);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
-            exitedValidatorsKeysCount: 100500,
-            stuckValidatorsKeysCount: 1
+            exitedValidatorsKeysCount: 100500
         });
     }
 
@@ -5019,8 +5015,7 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
 
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
-            exitedValidatorsKeysCount: 0,
-            stuckValidatorsKeysCount: 0
+            exitedValidatorsKeysCount: 0
         });
 
         NodeOperator memory no = csm.getNodeOperator(noId);
@@ -5036,15 +5031,13 @@ contract CsmUnsafeUpdateValidatorsCount is CSMCommon {
 
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
-            exitedValidatorsKeysCount: 1,
-            stuckValidatorsKeysCount: 1
+            exitedValidatorsKeysCount: 1
         });
 
         vm.recordLogs();
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
-            exitedValidatorsKeysCount: 1,
-            stuckValidatorsKeysCount: 1
+            exitedValidatorsKeysCount: 1
         });
         Vm.Log[] memory logs = vm.getRecordedLogs();
         // One event is NonceChanged
@@ -6490,7 +6483,7 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
         csm.grantRole(role, actor);
 
         vm.prank(actor);
-        csm.unsafeUpdateValidatorsCount(noId, 0, 0);
+        csm.unsafeUpdateValidatorsCount(noId, 0);
     }
 
     function test_stakingRouterRole_unsafeUpdateValidatorsCountRole_revert()
@@ -6501,7 +6494,7 @@ contract CSMStakingRouterAccessControl is CSMCommonNoRoles {
 
         vm.prank(stranger);
         expectRoleRevert(stranger, role);
-        csm.unsafeUpdateValidatorsCount(noId, 0, 0);
+        csm.unsafeUpdateValidatorsCount(noId, 0);
     }
 
     function test_stakingRouterRole_unvetKeys() public {
@@ -6548,8 +6541,7 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
-            exitedValidatorsKeysCount: 1,
-            stuckValidatorsKeysCount: 0
+            exitedValidatorsKeysCount: 1
         });
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 3);
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
@@ -6566,8 +6558,7 @@ contract CSMDepositableValidatorsCount is CSMCommon {
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);
         csm.unsafeUpdateValidatorsCount({
             nodeOperatorId: noId,
-            exitedValidatorsKeysCount: 0,
-            stuckValidatorsKeysCount: 1
+            exitedValidatorsKeysCount: 0
         });
         assertEq(csm.getNodeOperator(noId).depositableValidatorsCount, 3);
         assertEq(getStakingModuleSummary().depositableValidatorsCount, 5);

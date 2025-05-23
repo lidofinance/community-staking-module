@@ -1,16 +1,17 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
 
-import { ICSVerifier } from "./interfaces/ICSVerifier.sol";
-import { ICSModule, ValidatorWithdrawalInfo } from "./interfaces/ICSModule.sol";
 import { AccessControlEnumerable } from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
-import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 
 import { BeaconBlockHeader, Slot, Validator, Withdrawal } from "./lib/Types.sol";
+import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { GIndex } from "./lib/GIndex.sol";
 import { SSZ } from "./lib/SSZ.sol";
+
+import { ICSVerifier } from "./interfaces/ICSVerifier.sol";
+import { ICSModule, ValidatorWithdrawalInfo } from "./interfaces/ICSModule.sol";
 
 /// @notice Convert withdrawal amount to wei
 /// @param withdrawal Withdrawal struct

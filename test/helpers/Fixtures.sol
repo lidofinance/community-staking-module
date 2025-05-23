@@ -81,7 +81,7 @@ contract Fixtures is StdCheats, Test {
         vm.label(address(elVault), "elVault");
         vm.label(address(treasury), "treasury");
         vm.label(address(stakingRouter), "stakingRouter");
-        vm.label(address(twg), "triggerableWithdrawalGateway");
+        vm.label(address(twg), "triggerableWithdrawalsGateway");
     }
 
     function _enableInitializers(address implementation) internal {

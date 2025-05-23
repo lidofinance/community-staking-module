@@ -3,10 +3,11 @@
 
 pragma solidity 0.8.24;
 
-import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
 
 import { IStakingModule } from "./interfaces/IStakingModule.sol";
 import { ILidoLocator } from "./interfaces/ILidoLocator.sol";
@@ -15,15 +16,14 @@ import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
 import { ICSExitPenalties } from "./interfaces/ICSExitPenalties.sol";
 import { ICSModule, NodeOperator, NodeOperatorManagementProperties, ValidatorWithdrawalInfo } from "./interfaces/ICSModule.sol";
+import { ExitPenaltyInfo } from "./interfaces/ICSExitPenalties.sol";
 
+import { PausableUntil } from "./lib/utils/PausableUntil.sol";
 import { QueueLib, Batch } from "./lib/QueueLib.sol";
 import { ValidatorCountsReport } from "./lib/ValidatorCountsReport.sol";
 import { NOAddresses } from "./lib/NOAddresses.sol";
 import { TransientUintUintMap, TransientUintUintMapLib } from "./lib/TransientUintUintMapLib.sol";
-
 import { SigningKeys } from "./lib/SigningKeys.sol";
-import { AssetRecoverer } from "./abstract/AssetRecoverer.sol";
-import { ExitPenaltyInfo } from "./interfaces/ICSExitPenalties.sol";
 
 contract CSModule is
     ICSModule,
@@ -60,6 +60,7 @@ contract CSModule is
     ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
     ICSAccounting public immutable ACCOUNTING;
     ICSExitPenalties public immutable EXIT_PENALTIES;
+    address public immutable FEE_DISTRIBUTOR;
 
     /// @dev QUEUE_LOWEST_PRIORITY identifies the range of available priorities: [0; QUEUE_LOWEST_PRIORITY].
     uint256 public immutable QUEUE_LOWEST_PRIORITY;
@@ -79,10 +80,10 @@ contract CSModule is
     /// @custom:oz-renamed-from depositQueue
     QueueLib.Queue public legacyQueue;
 
-    /// @dev Unused
+    /// @dev Unused. Nullified in the finalizeUpgradeV2
     ICSAccounting internal _accountingOld;
 
-    /// @dev Unused
+    /// @dev Unused. Nullified in the finalizeUpgradeV2
     /// @custom:oz-renamed-from earlyAdoption
     address internal _earlyAdoption;
     /// @dev deprecated. Nullified in the finalizeUpgradeV2
@@ -132,6 +133,7 @@ contract CSModule is
         QUEUE_LEGACY_PRIORITY = PARAMETERS_REGISTRY.QUEUE_LEGACY_PRIORITY();
         ACCOUNTING = ICSAccounting(_accounting);
         EXIT_PENALTIES = ICSExitPenalties(exitPenalties);
+        FEE_DISTRIBUTOR = address(ACCOUNTING.feeDistributor());
 
         _disableInitializers();
     }
@@ -374,10 +376,7 @@ contract CSModule is
     function onRewardsMinted(
         uint256 totalShares
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        STETH.transferShares(
-            address(accounting().feeDistributor()),
-            totalShares
-        );
+        STETH.transferShares(FEE_DISTRIBUTOR, totalShares);
     }
 
     /// @inheritdoc IStakingModule
@@ -464,12 +463,8 @@ contract CSModule is
     /// @inheritdoc IStakingModule
     function unsafeUpdateValidatorsCount(
         uint256 nodeOperatorId,
-        uint256 exitedValidatorsKeysCount,
-        uint256 stuckValidatorsKeysCount // TODO: Check function signature.
+        uint256 exitedValidatorsKeysCount
     ) external onlyRole(STAKING_ROUTER_ROLE) {
-        // NOTE: Silence the unused argument warning.
-        stuckValidatorsKeysCount;
-
         _updateExitedValidatorsCount({
             nodeOperatorId: nodeOperatorId,
             exitedValidatorsCount: exitedValidatorsKeysCount,
@@ -1194,10 +1189,9 @@ contract CSModule is
             targetLimitMode = no.targetLimitMode;
             targetValidatorsCount = no.targetLimit;
         }
-        // TODO: Unused in CSM, remove with TW.
-        // stuckValidatorsCount = 0;
-        // refundedValidatorsCount = 0;
-        // stuckPenaltyEndTimestamp = 0;
+        stuckValidatorsCount = 0;
+        refundedValidatorsCount = 0;
+        stuckPenaltyEndTimestamp = 0;
         totalExitedValidators = no.totalExitedKeys;
         totalDepositedValidators = no.totalDepositedKeys;
         depositableValidatorsCount = no.depositableValidatorsCount;

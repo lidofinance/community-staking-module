@@ -16,7 +16,6 @@ contract DeployLocalDevNet is DeployBase {
             "EVM_SCRIPT_EXECUTOR_ADDRESS"
         );
         config.proxyAdmin = vm.envAddress("CSM_FIRST_ADMIN_ADDRESS"); // Dev team EOA
-        config.triggerableWithdrawalGateway = vm.envAddress("CSM_TWG");
 
         // Oracle
         config.secondsPerSlot = 12;
