@@ -15,8 +15,6 @@ contract DeployHoodi is DeployBase {
         config
             .easyTrackEVMScriptExecutor = 0x79a20FD0FA36453B2F45eAbab19bfef43575Ba9E;
         config.proxyAdmin = 0x4AF43Ee34a6fcD1fEcA1e1F832124C763561dA53; // Dev team EOA
-        config
-            .triggerableWithdrawalGateway = 0x0000000000000000000000000000000000007002; // FIXME
 
         // Oracle
         config.secondsPerSlot = 12;
