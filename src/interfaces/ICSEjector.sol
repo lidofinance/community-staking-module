@@ -4,9 +4,10 @@
 pragma solidity 0.8.24;
 
 import { ICSAccounting } from "./ICSAccounting.sol";
-import { ICSParametersRegistry } from "./ICSParametersRegistry.sol";
 import { ICSModule } from "./ICSModule.sol";
+import { ICSParametersRegistry } from "./ICSParametersRegistry.sol";
 import { IExitTypes } from "./IExitTypes.sol";
+import { ITriggerableWithdrawalsGateway } from "./ITriggerableWithdrawalsGateway.sol";
 
 interface ICSEjector is IExitTypes {
     error SigningKeysInvalidOffset();
@@ -14,7 +15,6 @@ interface ICSEjector is IExitTypes {
     error ZeroAdminAddress();
     error ZeroModuleAddress();
     error ZeroStrikesAddress();
-    error ZeroTWGAddress();
     error NodeOperatorDoesNotExist();
     error SenderIsNotEligible();
     error SenderIsNotStrikes();
@@ -73,4 +73,10 @@ interface ICSEjector is IExitTypes {
         uint256 keyIndex,
         address refundRecipient
     ) external payable;
+
+    /// @notice TriggerableWithdrawalsGateway implementation used by the contract.
+    function triggerableWithdrawalsGateway()
+        external
+        view
+        returns (ITriggerableWithdrawalsGateway);
 }

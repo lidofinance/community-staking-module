@@ -15,8 +15,6 @@ contract DeployMainnet is DeployBase {
         config
             .easyTrackEVMScriptExecutor = 0xFE5986E06210aC1eCC1aDCafc0cc7f8D63B3F977;
         config.proxyAdmin = config.aragonAgent;
-        config
-            .triggerableWithdrawalGateway = 0x0000000000000000000000000000000000007002; // FIXME
 
         // Oracle
         config.secondsPerSlot = 12; // https://github.com/eth-clients/mainnet/blob/f6b7882618a5ad2c1d2731ae35e5d16a660d5bb7/metadata/config.yaml#L58

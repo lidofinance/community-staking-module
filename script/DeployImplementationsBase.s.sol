@@ -218,7 +218,6 @@ abstract contract DeployImplementationsBase is DeployBase {
             ejector = new CSEjector(
                 address(csm),
                 address(strikes),
-                config.triggerableWithdrawalGateway,
                 config.stakingModuleId,
                 deployer
             );
@@ -381,8 +380,8 @@ abstract contract DeployImplementationsBase is DeployBase {
             ejector.DEFAULT_ADMIN_ROLE(),
             config.secondAdminAddress
         );
-        verifier.grantRole(
-            verifier.DEFAULT_ADMIN_ROLE(),
+        verifierV2.grantRole(
+            verifierV2.DEFAULT_ADMIN_ROLE(),
             config.secondAdminAddress
         );
         strikes.grantRole(
