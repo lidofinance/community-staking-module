@@ -327,7 +327,8 @@ abstract contract DeployBase is Script {
             CSStrikes strikesImpl = new CSStrikes({
                 module: address(csm),
                 oracle: address(oracle),
-                exitPenalties: address(exitPenalties)
+                exitPenalties: address(exitPenalties),
+                parametersRegistry: address(parametersRegistry)
             });
 
             strikes = CSStrikes(

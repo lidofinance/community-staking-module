@@ -4,6 +4,8 @@
 pragma solidity 0.8.24;
 
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 
 import { ICSModule } from "./interfaces/ICSModule.sol";
 import { ICSAccounting } from "./interfaces/ICSAccounting.sol";
@@ -11,8 +13,6 @@ import { ICSExitPenalties } from "./interfaces/ICSExitPenalties.sol";
 import { ICSParametersRegistry } from "./interfaces/ICSParametersRegistry.sol";
 import { ICSEjector } from "./interfaces/ICSEjector.sol";
 import { ICSStrikes } from "./interfaces/ICSStrikes.sol";
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { AccessControlEnumerableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
 
 /// @author vgorkavenko
 contract CSStrikes is
@@ -27,13 +27,27 @@ contract CSStrikes is
     ICSParametersRegistry public immutable PARAMETERS_REGISTRY;
 
     ICSEjector public ejector;
+
     /// @notice The latest Merkle Tree root
     bytes32 public treeRoot;
 
     /// @notice CID of the last published Merkle tree
     string public treeCid;
 
-    constructor(address module, address oracle, address exitPenalties) {
+    modifier onlyOracle() {
+        if (msg.sender != ORACLE) {
+            revert SenderIsNotOracle();
+        }
+
+        _;
+    }
+
+    constructor(
+        address module,
+        address oracle,
+        address exitPenalties,
+        address parametersRegistry
+    ) {
         if (module == address(0)) {
             revert ZeroModuleAddress();
         }
@@ -43,11 +57,15 @@ contract CSStrikes is
         if (exitPenalties == address(0)) {
             revert ZeroExitPenaltiesAddress();
         }
+        if (parametersRegistry == address(0)) {
+            revert ZeroParametersRegistryAddress();
+        }
 
         MODULE = ICSModule(module);
-        ACCOUNTING = ICSAccounting(MODULE.accounting());
+        ACCOUNTING = MODULE.accounting();
         EXIT_PENALTIES = ICSExitPenalties(exitPenalties);
         ORACLE = oracle;
+        PARAMETERS_REGISTRY = ICSParametersRegistry(parametersRegistry);
 
         _disableInitializers();
     }
@@ -74,11 +92,7 @@ contract CSStrikes is
     function processOracleReport(
         bytes32 _treeRoot,
         string calldata _treeCid
-    ) external {
-        if (msg.sender != ORACLE) {
-            revert NotOracle();
-        }
-
+    ) external onlyOracle {
         /// @dev should be both empty or not empty
         bool isNewRootEmpty = _treeRoot == bytes32(0);
         bool isNewCidEmpty = bytes(_treeCid).length == 0;
@@ -111,7 +125,7 @@ contract CSStrikes is
 
     /// @inheritdoc ICSStrikes
     function processBadPerformanceProof(
-        ModuleKeyStrikes[] calldata keyStrikesList,
+        KeyStrikes[] calldata keyStrikesList,
         bytes32[] calldata proof,
         bool[] calldata proofFlags,
         address refundRecipient
@@ -119,12 +133,15 @@ contract CSStrikes is
         // NOTE: We allow empty proofs to be delivered because there’s no way to use the tree’s
         // internal nodes without brute-forcing the input data.
 
+        if (msg.value % keyStrikesList.length > 0) {
+            revert ValueNotEvenlyDivisible();
+        }
+
         bytes[] memory pubkeys = new bytes[](keyStrikesList.length);
         for (uint256 i; i < pubkeys.length; ++i) {
-            ModuleKeyStrikes memory keyStrikes = keyStrikesList[i];
             pubkeys[i] = MODULE.getSigningKeys(
-                keyStrikes.nodeOperatorId,
-                keyStrikes.keyIndex,
+                keyStrikesList[i].nodeOperatorId,
+                keyStrikesList[i].keyIndex,
                 1
             );
         }
@@ -155,7 +172,7 @@ contract CSStrikes is
 
     /// @inheritdoc ICSStrikes
     function verifyProof(
-        ModuleKeyStrikes[] calldata keyStrikesList,
+        KeyStrikes[] calldata keyStrikesList,
         bytes[] memory pubkeys,
         bytes32[] calldata proof,
         bool[] calldata proofFlags
@@ -176,7 +193,7 @@ contract CSStrikes is
 
     /// @inheritdoc ICSStrikes
     function hashLeaf(
-        ModuleKeyStrikes calldata keyStrikes,
+        KeyStrikes calldata keyStrikes,
         bytes memory pubkey
     ) public pure returns (bytes32) {
         return
@@ -202,7 +219,7 @@ contract CSStrikes is
     }
 
     function _ejectByStrikes(
-        ModuleKeyStrikes calldata keyStrikes,
+        KeyStrikes calldata keyStrikes,
         bytes memory pubkey,
         uint256 value,
         address refundRecipient
@@ -214,9 +231,7 @@ contract CSStrikes is
 
         uint256 curveId = ACCOUNTING.getBondCurveId(keyStrikes.nodeOperatorId);
 
-        (, uint256 threshold) = MODULE.PARAMETERS_REGISTRY().getStrikesParams(
-            curveId
-        );
+        (, uint256 threshold) = PARAMETERS_REGISTRY.getStrikesParams(curveId);
         if (strikes < threshold) {
             revert NotEnoughStrikesToEject();
         }

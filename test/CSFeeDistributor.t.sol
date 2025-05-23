@@ -221,7 +221,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         feeDistributor.distributeFees({
             proof: proof,
             nodeOperatorId: nodeOperatorId,
-            shares: shares
+            cumulativeFeeShares: shares
         });
 
         assertEq(stETH.sharesOf(address(accounting)), shares);
@@ -253,7 +253,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         uint256 sharesToDistribute = feeDistributor.getFeesToDistribute({
             proof: proof,
             nodeOperatorId: nodeOperatorId,
-            shares: shares
+            cumulativeFeeShares: shares
         });
 
         assertEq(sharesToDistribute, shares);
@@ -286,13 +286,13 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         feeDistributor.distributeFees({
             proof: proof,
             nodeOperatorId: nodeOperatorId,
-            shares: shares
+            cumulativeFeeShares: shares
         });
 
         uint256 sharesToDistribute = feeDistributor.getFeesToDistribute({
             proof: proof,
             nodeOperatorId: nodeOperatorId,
-            shares: shares
+            cumulativeFeeShares: shares
         });
 
         assertEq(sharesToDistribute, 0);
@@ -312,7 +312,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         feeDistributor.getFeesToDistribute({
             proof: new bytes32[](0),
             nodeOperatorId: noId,
-            shares: shares
+            cumulativeFeeShares: shares
         });
     }
 
@@ -407,12 +407,12 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         public
         assertInvariants
     {
-        vm.expectRevert(ICSFeeDistributor.NotAccounting.selector);
+        vm.expectRevert(ICSFeeDistributor.SenderIsNotAccounting.selector);
 
         feeDistributor.distributeFees({
             proof: new bytes32[](1),
             nodeOperatorId: 0,
-            shares: 0
+            cumulativeFeeShares: 0
         });
     }
 
@@ -426,7 +426,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         feeDistributor.distributeFees({
             proof: new bytes32[](1),
             nodeOperatorId: 0,
-            shares: 0
+            cumulativeFeeShares: 0
         });
     }
 
@@ -464,7 +464,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         feeDistributor.distributeFees({
             proof: proof,
             nodeOperatorId: nodeOperatorId,
-            shares: shares
+            cumulativeFeeShares: shares
         });
     }
 
@@ -496,7 +496,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         feeDistributor.distributeFees({
             proof: proof,
             nodeOperatorId: nodeOperatorId,
-            shares: shares
+            cumulativeFeeShares: shares
         });
     }
 
@@ -534,7 +534,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         uint256 sharesToDistribute = feeDistributor.distributeFees({
             proof: proof,
             nodeOperatorId: nodeOperatorId,
-            shares: shares
+            cumulativeFeeShares: shares
         });
         Vm.Log[] memory logs = vm.getRecordedLogs();
         assertEq(logs.length, 0); // could be changed after resolving https://github.com/foundry-rs/foundry/issues/509
@@ -951,7 +951,7 @@ contract CSFeeDistributorTest is CSFeeDistributorTestBase {
         assertInvariants
     {
         uint256 refSlot = 154;
-        vm.expectRevert(ICSFeeDistributor.NotOracle.selector);
+        vm.expectRevert(ICSFeeDistributor.SenderIsNotOracle.selector);
         vm.prank(stranger);
         feeDistributor.processOracleReport(
             someBytes32(),

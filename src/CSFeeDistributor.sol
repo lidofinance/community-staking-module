@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Lido <info@lido.fi>
+// SPDX-FileCopyrightText: 2025 Lido <info@lido.fi>
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity 0.8.24;
@@ -35,13 +35,15 @@ contract CSFeeDistributor is
     string public logCid;
 
     /// @notice Amount of stETH shares sent to the Accounting in favor of the NO
-    mapping(uint256 => uint256) public distributedShares;
+    mapping(uint256 nodeOperatorId => uint256 distributed)
+        public distributedShares;
 
     /// @notice Total Amount of stETH shares available for claiming by NOs
     uint256 public totalClaimableShares;
 
     /// @notice Array of the distribution data history
-    mapping(uint256 => DistributionData) internal _distributionDataHistory;
+    mapping(uint256 index => DistributionData)
+        internal _distributionDataHistory;
 
     /// @notice The number of _distributionDataHistory records
     uint256 public distributionDataHistoryCount;
@@ -49,11 +51,26 @@ contract CSFeeDistributor is
     /// @notice The address to transfer rebate to
     address public rebateRecipient;
 
+    modifier onlyAccounting() {
+        if (msg.sender != ACCOUNTING) {
+            revert SenderIsNotAccounting();
+        }
+
+        _;
+    }
+
+    modifier onlyOracle() {
+        if (msg.sender != ORACLE) {
+            revert SenderIsNotOracle();
+        }
+
+        _;
+    }
+
     constructor(address stETH, address accounting, address oracle) {
         if (accounting == address(0)) {
             revert ZeroAccountingAddress();
         }
-
         if (oracle == address(0)) {
             revert ZeroOracleAddress();
         }
@@ -73,12 +90,13 @@ contract CSFeeDistributor is
         address admin,
         address _rebateRecipient
     ) external reinitializer(2) {
-        __AccessControlEnumerable_init();
         if (admin == address(0)) {
             revert ZeroAdminAddress();
         }
 
         _setRebateRecipient(_rebateRecipient);
+
+        __AccessControlEnumerable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
@@ -99,14 +117,14 @@ contract CSFeeDistributor is
     /// @inheritdoc ICSFeeDistributor
     function distributeFees(
         uint256 nodeOperatorId,
-        uint256 shares,
+        uint256 cumulativeFeeShares,
         bytes32[] calldata proof
-    ) external returns (uint256 sharesToDistribute) {
-        if (msg.sender != ACCOUNTING) {
-            revert NotAccounting();
-        }
-
-        sharesToDistribute = getFeesToDistribute(nodeOperatorId, shares, proof);
+    ) external onlyAccounting returns (uint256 sharesToDistribute) {
+        sharesToDistribute = getFeesToDistribute(
+            nodeOperatorId,
+            cumulativeFeeShares,
+            proof
+        );
 
         if (sharesToDistribute == 0) {
             return 0;
@@ -133,11 +151,7 @@ contract CSFeeDistributor is
         uint256 distributed,
         uint256 rebate,
         uint256 refSlot
-    ) external {
-        if (msg.sender != ORACLE) {
-            revert NotOracle();
-        }
-
+    ) external onlyOracle {
         if (
             totalClaimableShares + distributed + rebate >
             STETH.sharesOf(address(this))
@@ -153,7 +167,6 @@ contract CSFeeDistributor is
             if (bytes(_treeCid).length == 0) {
                 revert InvalidTreeCid();
             }
-
             if (keccak256(bytes(_treeCid)) == keccak256(bytes(treeCid))) {
                 revert InvalidTreeCid();
             }
@@ -161,7 +174,6 @@ contract CSFeeDistributor is
             if (_treeRoot == bytes32(0)) {
                 revert InvalidTreeRoot();
             }
-
             if (_treeRoot == treeRoot) {
                 revert InvalidTreeRoot();
             }
@@ -193,7 +205,6 @@ contract CSFeeDistributor is
         if (bytes(_logCid).length == 0) {
             revert InvalidLogCID();
         }
-
         if (keccak256(bytes(_logCid)) == keccak256(bytes(logCid))) {
             revert InvalidLogCID();
         }
@@ -246,7 +257,7 @@ contract CSFeeDistributor is
     /// @inheritdoc ICSFeeDistributor
     function getFeesToDistribute(
         uint256 nodeOperatorId,
-        uint256 shares,
+        uint256 cumulativeFeeShares,
         bytes32[] calldata proof
     ) public view returns (uint256 sharesToDistribute) {
         // NOTE: We reject empty proofs to separate two business logic paths on the level of
@@ -258,20 +269,20 @@ contract CSFeeDistributor is
         bool isValid = MerkleProof.verifyCalldata(
             proof,
             treeRoot,
-            hashLeaf(nodeOperatorId, shares)
+            hashLeaf(nodeOperatorId, cumulativeFeeShares)
         );
         if (!isValid) {
             revert InvalidProof();
         }
 
         uint256 _distributedShares = distributedShares[nodeOperatorId];
-        if (_distributedShares > shares) {
+        if (_distributedShares > cumulativeFeeShares) {
             // This error means the fee oracle brought invalid data.
             revert FeeSharesDecrease();
         }
 
         unchecked {
-            sharesToDistribute = shares - _distributedShares;
+            sharesToDistribute = cumulativeFeeShares - _distributedShares;
         }
     }
 

@@ -20,16 +20,18 @@ interface ICSStrikes {
     error ZeroModuleAddress();
     error ZeroOracleAddress();
     error ZeroExitPenaltiesAddress();
+    error ZeroParametersRegistryAddress();
     error ZeroAdminAddress();
     error ZeroEjectionFeeAmount();
     error ZeroBadPerformancePenaltyAmount();
-    error NotOracle();
+    error SenderIsNotOracle();
+    error ValueNotEvenlyDivisible();
 
     error InvalidReportData();
     error InvalidProof();
     error NotEnoughStrikesToEject();
 
-    struct ModuleKeyStrikes {
+    struct KeyStrikes {
         uint256 nodeOperatorId;
         uint256 keyIndex;
         uint256[] data;
@@ -59,12 +61,12 @@ interface ICSStrikes {
     function setEjector(address _ejector) external;
 
     /// @notice Report multiple CSM keys as bad performing
-    /// @param keyStrikesList List of ModuleKeyStrikes structs
+    /// @param keyStrikesList List of KeyStrikes structs
     /// @param proof Multi-proof of the strikes
     /// @param proofFlags Flags to process the multi-proof, see OZ `processMultiProof`
     /// @param refundRecipient Address to send the refund to
     function processBadPerformanceProof(
-        ModuleKeyStrikes[] calldata keyStrikesList,
+        KeyStrikes[] calldata keyStrikesList,
         bytes32[] calldata proof,
         bool[] calldata proofFlags,
         address refundRecipient
@@ -80,24 +82,24 @@ interface ICSStrikes {
     ) external;
 
     /// @notice Check the contract accepts the provided multi-proof
-    /// @param keyStrikesList List of ModuleKeyStrikes structs
+    /// @param keyStrikesList List of KeyStrikes structs
     /// @param proof Multi-proof of the strikes
     /// @param proofFlags Flags to process the multi-proof, see OZ `processMultiProof`
     /// @return bool True if proof is accepted
     function verifyProof(
-        ModuleKeyStrikes[] calldata keyStrikesList,
+        KeyStrikes[] calldata keyStrikesList,
         bytes[] memory pubkeys,
         bytes32[] calldata proof,
         bool[] calldata proofFlags
     ) external view returns (bool);
 
     /// @notice Get a hash of a leaf a tree of strikes
-    /// @param keyStrikes ModuleKeyStrikes struct
+    /// @param keyStrikes KeyStrikes struct
     /// @param pubkey Public key
     /// @return Hash of the leaf
     /// @dev Double hash the leaf to prevent second pre-image attacks
     function hashLeaf(
-        ModuleKeyStrikes calldata keyStrikes,
+        KeyStrikes calldata keyStrikes,
         bytes calldata pubkey
     ) external pure returns (bytes32);
 

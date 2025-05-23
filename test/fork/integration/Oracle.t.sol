@@ -194,9 +194,9 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
         uint256 penalty = parametersRegistry.getBadPerformancePenalty(
             accounting.getBondCurveId(nodeOperatorId)
         );
-        ICSStrikes.ModuleKeyStrikes[]
-            memory keyStrikesList = new ICSStrikes.ModuleKeyStrikes[](1);
-        keyStrikesList[0] = ICSStrikes.ModuleKeyStrikes({
+        ICSStrikes.KeyStrikes[]
+            memory keyStrikesList = new ICSStrikes.KeyStrikes[](1);
+        keyStrikesList[0] = ICSStrikes.KeyStrikes({
             nodeOperatorId: nodeOperatorId,
             keyIndex: keyIndex,
             data: strikesData
@@ -220,7 +220,7 @@ contract OracleTest is Test, Utilities, DeploymentFixtures, InvariantAsserts {
     }
 
     function processBadPerformanceProof(
-        ICSStrikes.ModuleKeyStrikes[] calldata keyStrikes,
+        ICSStrikes.KeyStrikes[] calldata keyStrikes,
         bytes32[] calldata proof,
         bool[] calldata proofFlags,
         address refundRecipient

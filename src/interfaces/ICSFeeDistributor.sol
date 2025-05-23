@@ -55,8 +55,8 @@ interface ICSFeeDistributor is IAssetRecovererLib {
     error ZeroAdminAddress();
     error ZeroOracleAddress();
     error ZeroRebateRecipientAddress();
-    error NotAccounting();
-    error NotOracle();
+    error SenderIsNotAccounting();
+    error SenderIsNotOracle();
 
     error InvalidReportData();
     error InvalidTreeRoot();

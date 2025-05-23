@@ -354,14 +354,17 @@ contract VettedGate is
         bytes32 _treeRoot,
         string calldata _treeCid
     ) internal {
-        if (_treeRoot == bytes32(0) || _treeRoot == treeRoot) {
+        if (_treeRoot == bytes32(0)) {
+            revert InvalidTreeRoot();
+        }
+        if (_treeRoot == treeRoot) {
             revert InvalidTreeRoot();
         }
 
-        if (
-            bytes(_treeCid).length == 0 ||
-            keccak256(bytes(_treeCid)) == keccak256(bytes(treeCid))
-        ) {
+        if (bytes(_treeCid).length == 0) {
+            revert InvalidTreeCid();
+        }
+        if (keccak256(bytes(_treeCid)) == keccak256(bytes(treeCid))) {
             revert InvalidTreeCid();
         }
 
