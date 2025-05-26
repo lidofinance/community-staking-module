@@ -61,7 +61,7 @@ contract VettedGate is
     uint256 public referralsThreshold;
 
     /// @dev Referral counts for referrers for seasons
-    mapping(bytes32 => uint256) public referralCounts;
+    mapping(bytes32 => uint256) internal _referralCounts;
 
     mapping(bytes32 => bool) internal _consumedReferrers;
 
@@ -273,7 +273,7 @@ contract VettedGate is
         uint256 season = referralProgramSeasonNumber;
         bytes32 referrer = _seasonedAddress(msg.sender, season);
 
-        if (referralCounts[referrer] < referralsThreshold) {
+        if (_referralCounts[referrer] < referralsThreshold) {
             revert NotEnoughReferrals();
         }
 
@@ -300,7 +300,7 @@ contract VettedGate is
     function getReferralsCount(
         address referrer
     ) external view returns (uint256) {
-        return referralCounts[_seasonedAddress(referrer)];
+        return _referralCounts[_seasonedAddress(referrer)];
     }
 
     /// @inheritdoc IVettedGate
@@ -308,7 +308,7 @@ contract VettedGate is
         address referrer,
         uint256 season
     ) external view returns (uint256) {
-        return referralCounts[_seasonedAddress(referrer, season)];
+        return _referralCounts[_seasonedAddress(referrer, season)];
     }
 
     /// @inheritdoc IVettedGate
@@ -383,7 +383,7 @@ contract VettedGate is
     ) internal {
         uint256 season = referralProgramSeasonNumber;
         if (isReferralProgramSeasonActive && referrer != address(0)) {
-            referralCounts[_seasonedAddress(referrer, season)] += 1;
+            _referralCounts[_seasonedAddress(referrer, season)] += 1;
         }
         emit ReferralRecorded(referrer, season, referralNodeOperatorId);
     }

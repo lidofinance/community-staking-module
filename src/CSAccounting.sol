@@ -477,6 +477,7 @@ contract CSAccounting is
         return current > required ? current - required : 0;
     }
 
+    /// @dev TODO: Remove in the next major release
     /// @inheritdoc ICSAccounting
     function feeDistributor() external view returns (ICSFeeDistributor) {
         return FEE_DISTRIBUTOR;

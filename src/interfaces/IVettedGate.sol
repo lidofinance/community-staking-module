@@ -51,11 +51,21 @@ interface IVettedGate {
 
     function MODULE() external view returns (ICSModule);
 
+    function ACCOUNTING() external view returns (ICSAccounting);
+
     function curveId() external view returns (uint256);
 
     function treeRoot() external view returns (bytes32);
 
     function treeCid() external view returns (string memory);
+
+    function isReferralProgramSeasonActive() external view returns (bool);
+
+    function referralProgramSeasonNumber() external view returns (uint256);
+
+    function referralCurveId() external view returns (uint256);
+
+    function referralsThreshold() external view returns (uint256);
 
     /// @notice Pause the contract for a given duration
     ///         Pausing the contract prevent creating new node operators using VettedGate
