@@ -12,6 +12,7 @@ import { CSVerifier } from "../src/CSVerifier.sol";
 import { ICSVerifier } from "../src/interfaces/ICSVerifier.sol";
 import { GIndex } from "../src/lib/GIndex.sol";
 import { Slot } from "../src/lib/Types.sol";
+import { JsonObj, Json } from "./utils/Json.sol";
 
 struct Config {
     address withdrawalVault;
